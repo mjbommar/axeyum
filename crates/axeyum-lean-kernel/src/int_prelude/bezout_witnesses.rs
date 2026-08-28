@@ -122,7 +122,8 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 
-use super::ops::IntDev;
+use super::gcd::{neg_mul, neg_neg};
+use super::ops::{Branch, IntDev, Shape, case_split};
 
 /// Delta height for `Nat.xgcdAux`: above every `Int` and `Nat` definition it
 /// calls (`Int.sub`/`Int.mul`/`Int.ofNat`, `Nat.div`/`Nat.mod`).
@@ -374,5 +375,546 @@ pub(super) fn declare_int_gcd_ab(d: &mut IntDev<'_>) -> Result<(), KernelError> 
             hint: ReducibilityHint::Regular(INT_GCD_AB_HEIGHT),
         })?;
     }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// The identity.
+// ---------------------------------------------------------------------------
+
+/// `Eq Int (ofNat (Nat.gcd m n))
+///         (ofNat m * xgcdAux fuel m n true + ofNat n * xgcdAux fuel m n false)`
+/// — the statement [`declare_xgcd_aux_sound`] proves, at explicit arguments.
+fn sound_statement(d: &mut IntDev<'_>, fuel: ExprId, m: ExprId, n: ExprId) -> ExprId {
+    let common = NatOps::gcd(d, m, n);
+    let lhs = d.of_nat(common);
+    let m_i = d.of_nat(m);
+    let n_i = d.of_nat(n);
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let coeff_a = xgcd_aux(d, fuel, m, n, true_);
+    let coeff_b = xgcd_aux(d, fuel, m, n, false_);
+    let left = d.imul(m_i, coeff_a);
+    let right = d.imul(n_i, coeff_b);
+    let rhs = d.iadd(left, right);
+    d.ieq(lhs, rhs)
+}
+
+/// [`sound_statement`] when the recursion has bottomed out — either because the
+/// fuel is `zero` or because `m` is, both of which ι-reduce `xgcdAux` to the
+/// base pair `(0, 1)`.
+///
+/// The whole content is `gcd 0 n = n` plus `0*0 + n*1 = n`; the algebra runs on
+/// the right-hand side and is then reversed, because `ichain` composes forwards
+/// from the goal's left-hand side.
+fn zero_row_proof(d: &mut IntDev<'_>, fuel: ExprId, n: ExprId) -> ExprId {
+    let p = d.int();
+    let np = p.nat;
+    let zero = d.zero();
+    let zero_i = d.of_nat(zero);
+    let n_i = d.of_nat(n);
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let coeff_a = xgcd_aux(d, fuel, zero, n, true_);
+    let coeff_b = xgcd_aux(d, fuel, zero, n, false_);
+    let left = d.imul(zero_i, coeff_a);
+    let right = d.imul(n_i, coeff_b);
+    let rhs = d.iadd(left, right);
+    let izero = d.izero();
+
+    // `coeff_a` reduces to `Int.zero` and `coeff_b` to `Int.one`, so
+    // `mul_zero`/`mul_one` apply up to defeq with no rewriting of the selector.
+    let mul_zero_proof = d.lemma(p.mul_zero, &[zero_i]);
+    let target_one = d.iadd(izero, right);
+    let step_one = d.icongr(left, izero, mul_zero_proof, &|d, x| d.iadd(x, right));
+
+    let mul_one_proof = d.lemma(p.mul_one, &[n_i]);
+    let target_two = d.iadd(izero, n_i);
+    let step_two = d.icongr(right, n_i, mul_one_proof, &|d, x| d.iadd(izero, x));
+
+    let target_three = d.iadd(n_i, izero);
+    let step_three = d.lemma(p.add_comm, &[izero, n_i]);
+    let step_four = d.lemma(p.add_zero, &[n_i]);
+
+    let (_, rhs_to_n) = d.ichain(
+        rhs,
+        &[
+            (target_one, step_one),
+            (target_two, step_two),
+            (target_three, step_three),
+            (n_i, step_four),
+        ],
+    );
+    let n_to_rhs = d.isymm(rhs, n_i, rhs_to_n);
+
+    let common = NatOps::gcd(d, zero, n);
+    let gcd_zero = d.lemma(np.gcd_zero_left, &[n]);
+    let lhs_to_n = d.nat_eq_to_int(common, n, gcd_zero, &|d, x| d.of_nat(x));
+    let lhs = d.of_nat(common);
+    d.itrans(lhs, n_i, rhs, lhs_to_n, n_to_rhs)
+}
+
+/// The inductive step at `fuel = succ pred_fuel`, `m = succ k`: a proof of
+/// `Nat.le (succ k) (succ pred_fuel) → sound_statement (succ pred_fuel) (succ k) n`.
+///
+/// `induction_hypothesis` is the fuel induction's own hypothesis, already
+/// generalized over both `m` and `n` — the generalization is what makes this
+/// step possible at all, since it is applied at the *different* pair
+/// `(n % succ k, succ k)`.
+fn step_case(
+    d: &mut IntDev<'_>,
+    pred_fuel: ExprId,
+    induction_hypothesis: ExprId,
+    k: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let np = p.nat;
+    let fuel = d.succ(pred_fuel);
+    let divisor = d.succ(k);
+    let hypothesis = d.le(divisor, fuel);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let quotient = d.div(n, divisor);
+    let remainder = d.modulo(n, divisor);
+
+    // The fuel bound is preserved: `succ k <= succ f` gives `k <= f`, and
+    // `mod_lt` gives `n % succ k < succ k`, hence `n % succ k <= k <= f`.
+    let h_k = d.lemma(np.le_of_succ_le_succ, &[k, pred_fuel, h]);
+    let h_pos = d.lemma(np.zero_lt_succ, &[k]);
+    let h_lt = d.lemma(np.mod_lt, &[n, divisor, h_pos]);
+    let h_rk = d.lemma(np.le_of_lt_succ, &[remainder, k, h_lt]);
+    let h_le = d.lemma(np.le_trans, &[remainder, k, pred_fuel, h_rk, h_k]);
+
+    let recursive = d.apply(induction_hypothesis, &[remainder, divisor, h_le]);
+
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let coeff_a = xgcd_aux(d, pred_fuel, remainder, divisor, true_);
+    let coeff_b = xgcd_aux(d, pred_fuel, remainder, divisor, false_);
+
+    let s = d.of_nat(divisor);
+    let q = d.of_nat(quotient);
+    let r = d.of_nat(remainder);
+    let n_i = d.of_nat(n);
+
+    let r_a = d.imul(r, coeff_a);
+    let s_b = d.imul(s, coeff_b);
+    let recursive_rhs = d.iadd(r_a, s_b);
+    let swapped = d.iadd(s_b, r_a);
+
+    // Left-hand side: `gcd (succ k) n = gcd (n % succ k) (succ k)` is exactly
+    // `gcd_succ`, which is why this orientation was chosen.
+    let common_left = NatOps::gcd(d, divisor, n);
+    let common_right = NatOps::gcd(d, remainder, divisor);
+    let lhs = d.of_nat(common_left);
+    let gcd_succ_proof = d.lemma(np.gcd_succ, &[k, n]);
+    let unfold = d.nat_eq_to_int(common_left, common_right, gcd_succ_proof, &|d, x| {
+        d.of_nat(x)
+    });
+    let recursed = d.of_nat(common_right);
+    let commute = d.lemma(p.add_comm, &[r_a, s_b]);
+    let (_, lhs_to_swapped) = d.ichain(
+        lhs,
+        &[
+            (recursed, unfold),
+            (recursive_rhs, recursive),
+            (swapped, commute),
+        ],
+    );
+
+    // Right-hand side: the goal's `xgcdAux (succ f) (succ k) n true` ι-reduces
+    // to `coeff_b - ofNat q * coeff_a` and the `false` selector to `coeff_a`,
+    // so the goal is stated here at those reducts.
+    let q_a = d.imul(q, coeff_a);
+    let difference = d.isub(coeff_b, q_a);
+    let scaled = d.imul(s, difference);
+    let n_a = d.imul(n_i, coeff_a);
+    let goal_rhs = d.iadd(scaled, n_a);
+
+    // `T`, the term that appears once negatively and once positively and whose
+    // cancellation is the whole point of the algebra.
+    let t = d.imul(s, q_a);
+
+    let mul_sub_proof = d.lemma(p.mul_sub, &[s, coeff_b, q_a]);
+    let head = d.isub(s_b, t);
+    let after_a = d.iadd(head, n_a);
+    let step_a = d.icongr(scaled, head, mul_sub_proof, &|d, x| d.iadd(x, n_a));
+
+    // `n = succ k * q + r`, cast into `ℤ` for free: `ofNat` of a `Nat` sum of
+    // products is *definitionally* the `Int` sum of products of `ofNat`s.
+    let product_nat = d.mul(divisor, quotient);
+    let reconstructed = d.add(product_nat, remainder);
+    let equation_ty = d.eq(n, reconstructed);
+    let bound_ty = d.lt(remainder, divisor);
+    let relation = d.lemma(np.div_mod_exec, &[k, n]);
+    let h_n = d.and_left(equation_ty, bound_ty, relation);
+    let s_q = d.imul(s, q);
+    let expanded = d.iadd(s_q, r);
+    let expanded_a = d.imul(expanded, coeff_a);
+    let after_b = d.iadd(head, expanded_a);
+    let step_b = d.nat_eq_to_int(n, reconstructed, h_n, &|d, x| {
+        let x_i = d.of_nat(x);
+        let product = d.imul(x_i, coeff_a);
+        d.iadd(head, product)
+    });
+
+    let comm_one = d.lemma(p.mul_comm, &[expanded, coeff_a]);
+    let a_expanded = d.imul(coeff_a, expanded);
+    let after_c = d.iadd(head, a_expanded);
+    let step_c = d.icongr(expanded_a, a_expanded, comm_one, &|d, x| d.iadd(head, x));
+
+    let distrib = d.lemma(p.left_distrib, &[coeff_a, s_q, r]);
+    let a_sq = d.imul(coeff_a, s_q);
+    let a_r = d.imul(coeff_a, r);
+    let distributed = d.iadd(a_sq, a_r);
+    let after_d = d.iadd(head, distributed);
+    let step_d = d.icongr(a_expanded, distributed, distrib, &|d, x| d.iadd(head, x));
+
+    let comm_two = d.lemma(p.mul_comm, &[coeff_a, s_q]);
+    let sq_a = d.imul(s_q, coeff_a);
+    let sum_e = d.iadd(sq_a, a_r);
+    let after_e = d.iadd(head, sum_e);
+    let step_e = d.icongr(a_sq, sq_a, comm_two, &|d, x| {
+        let inner = d.iadd(x, a_r);
+        d.iadd(head, inner)
+    });
+
+    let assoc = d.lemma(p.mul_assoc, &[s, q, coeff_a]);
+    let sum_f = d.iadd(t, a_r);
+    let after_f = d.iadd(head, sum_f);
+    let step_f = d.icongr(sq_a, t, assoc, &|d, x| {
+        let inner = d.iadd(x, a_r);
+        d.iadd(head, inner)
+    });
+
+    let comm_three = d.lemma(p.mul_comm, &[coeff_a, r]);
+    let sum_g = d.iadd(t, r_a);
+    let after_g = d.iadd(head, sum_g);
+    let step_g = d.icongr(a_r, r_a, comm_three, &|d, x| {
+        let inner = d.iadd(t, x);
+        d.iadd(head, inner)
+    });
+
+    // `Int.sub x y` is *defined* as `add x (neg y)`, so `head` needs no
+    // rewriting to become the left operand `add_assoc` expects.
+    let neg_t = d.ineg(t);
+    let step_h = d.lemma(p.add_assoc, &[s_b, neg_t, sum_g]);
+    let regrouped = d.iadd(neg_t, sum_g);
+    let after_h = d.iadd(s_b, regrouped);
+
+    let cancel_pair = d.iadd(neg_t, t);
+    let assoc_inner = d.lemma(p.add_assoc, &[neg_t, t, r_a]);
+    let left_grouped = d.iadd(cancel_pair, r_a);
+    let assoc_reversed = d.isymm(left_grouped, regrouped, assoc_inner);
+    let after_i = d.iadd(s_b, left_grouped);
+    let step_i = d.icongr(regrouped, left_grouped, assoc_reversed, &|d, x| {
+        d.iadd(s_b, x)
+    });
+
+    let comm_neg = d.lemma(p.add_comm, &[neg_t, t]);
+    let t_neg_t = d.iadd(t, neg_t);
+    let add_neg_proof = d.lemma(p.add_neg, &[t]);
+    let izero = d.izero();
+    let cancels = d.itrans(cancel_pair, t_neg_t, izero, comm_neg, add_neg_proof);
+    let zero_plus = d.iadd(izero, r_a);
+    let after_j = d.iadd(s_b, zero_plus);
+    let step_j = d.icongr(cancel_pair, izero, cancels, &|d, x| {
+        let inner = d.iadd(x, r_a);
+        d.iadd(s_b, inner)
+    });
+
+    let comm_zero = d.lemma(p.add_comm, &[izero, r_a]);
+    let plus_zero = d.iadd(r_a, izero);
+    let drop_zero = d.lemma(p.add_zero, &[r_a]);
+    let identity = d.itrans(zero_plus, plus_zero, r_a, comm_zero, drop_zero);
+    let after_k = d.iadd(s_b, r_a);
+    let step_k = d.icongr(zero_plus, r_a, identity, &|d, x| d.iadd(s_b, x));
+
+    let (_, rhs_to_swapped) = d.ichain(
+        goal_rhs,
+        &[
+            (after_a, step_a),
+            (after_b, step_b),
+            (after_c, step_c),
+            (after_d, step_d),
+            (after_e, step_e),
+            (after_f, step_f),
+            (after_g, step_g),
+            (after_h, step_h),
+            (after_i, step_i),
+            (after_j, step_j),
+            (after_k, step_k),
+        ],
+    );
+    let swapped_to_rhs = d.isymm(goal_rhs, after_k, rhs_to_swapped);
+    let full = d.itrans(lhs, swapped, goal_rhs, lhs_to_swapped, swapped_to_rhs);
+    d.lam_fv(h_fv, hypothesis, full)
+}
+
+/// `Nat.xgcdAux_sound : ∀ f m n, Nat.le m f → ofNat (gcd m n) =
+/// ofNat m * xgcdAux f m n true + ofNat n * xgcdAux f m n false`.
+///
+/// Induction on the **fuel**, with `m` and `n` both generalized in the motive
+/// — the recursive call is at `(n % succ k, succ k)`, a different pair in both
+/// coordinates, so a motive that fixed either one could not be applied at it.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_xgcd_aux_sound(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let np = p.nat;
+    let nat = d.nat_ty();
+
+    d.theorem(p.xgcd_aux_sound, 3, &|d, values| {
+        let (fuel, m, n) = (values[0], values[1], values[2]);
+        let hypothesis = d.le(m, fuel);
+        let conclusion = sound_statement(d, fuel, m, n);
+        let statement = d.arrow(hypothesis, conclusion);
+
+        let motive = |d: &mut IntDev<'_>, f: ExprId| {
+            let m_fv = d.fresh_fvar();
+            let inner_m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let inner_n = d.kernel().fvar(n_fv);
+            let bound = d.le(inner_m, f);
+            let concl = sound_statement(d, f, inner_m, inner_n);
+            let body = d.arrow(bound, concl);
+            let with_n = d.pi_fv(n_fv, nat, body);
+            d.pi_fv(m_fv, nat, with_n)
+        };
+        let base = |d: &mut IntDev<'_>| {
+            let m_fv = d.fresh_fvar();
+            let inner_m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let inner_n = d.kernel().fvar(n_fv);
+            let zero = d.zero();
+            let bound = d.le(inner_m, zero);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            // `m <= 0` forces `m = 0`, and the whole statement transports.
+            let zero_le = d.lemma(np.zero_le, &[inner_m]);
+            let m_is_zero = d.lemma(np.le_antisymm, &[inner_m, zero, h, zero_le]);
+            let zero_is_m = d.symm(inner_m, zero, m_is_zero);
+            let at_zero = zero_row_proof(d, zero, inner_n);
+            let eq_motive = d.eq_motive(zero, &|d, x| sound_statement(d, zero, x, inner_n));
+            let moved = d.transport(zero, eq_motive, at_zero, inner_m, zero_is_m);
+            let with_h = d.lam_fv(h_fv, bound, moved);
+            let with_n = d.lam_fv(n_fv, nat, with_h);
+            d.lam_fv(m_fv, nat, with_n)
+        };
+        let step = |d: &mut IntDev<'_>, pred_fuel: ExprId, ih: ExprId| {
+            let m_fv = d.fresh_fvar();
+            let inner_m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let inner_n = d.kernel().fvar(n_fv);
+            let fuel = d.succ(pred_fuel);
+            let case_motive = |d: &mut IntDev<'_>, x: ExprId| {
+                let bound = d.le(x, fuel);
+                let concl = sound_statement(d, fuel, x, inner_n);
+                d.arrow(bound, concl)
+            };
+            let case_zero = |d: &mut IntDev<'_>| {
+                let zero = d.zero();
+                let bound = d.le(zero, fuel);
+                let h_fv = d.fresh_fvar();
+                let body = zero_row_proof(d, fuel, inner_n);
+                d.lam_fv(h_fv, bound, body)
+            };
+            let case_succ = |d: &mut IntDev<'_>, k: ExprId, _unused: ExprId| {
+                step_case(d, pred_fuel, ih, k, inner_n)
+            };
+            let split = d.induct(&case_motive, &case_zero, &case_succ, inner_m);
+            let bound = d.le(inner_m, fuel);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let applied = d.apply(split, &[h]);
+            let with_h = d.lam_fv(h_fv, bound, applied);
+            let with_n = d.lam_fv(n_fv, nat, with_h);
+            d.lam_fv(m_fv, nat, with_n)
+        };
+        let induction = d.induct(&motive, &base, &step, fuel);
+        let proof = d.apply(induction, &[m, n]);
+        (statement, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.gcd_eq_gcd_ab : ∀ m n, ofNat (gcd m n) = ofNat m * gcdA m n + ofNat n * gcdB m n`.
+///
+/// [`declare_xgcd_aux_sound`] at `fuel := m`, whose hypothesis is then just
+/// `Nat.le_refl`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_nat_gcd_eq_gcd_ab(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let np = p.nat;
+    d.theorem(p.nat_gcd_eq_gcd_ab, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let common = NatOps::gcd(d, m, n);
+        let lhs = d.of_nat(common);
+        let m_i = d.of_nat(m);
+        let n_i = d.of_nat(n);
+        let coeff_a = nat_gcd_a(d, m, n);
+        let coeff_b = nat_gcd_b(d, m, n);
+        let left = d.imul(m_i, coeff_a);
+        let right = d.imul(n_i, coeff_b);
+        let rhs = d.iadd(left, right);
+        let statement = d.ieq(lhs, rhs);
+
+        let reflexive = d.lemma(np.le_refl_thm, &[m]);
+        let sound = d.lemma(p.xgcd_aux_sound, &[m, m, n]);
+        let proof = d.apply(sound, &[reflexive]);
+        (statement, proof)
+    })?;
+    Ok(())
+}
+
+/// `Eq Int (mul (neg a) (neg b)) (mul a b)`.
+///
+/// Built from `gcd.rs`'s already-derived `neg_mul` / `neg_neg` plus the public
+/// `Int.mul_neg`, rather than re-derived: the two lemmas were private helpers
+/// there and are now `pub(super)`, so this is an extraction, not a second proof
+/// of the same fact.
+fn neg_mul_neg(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let p = d.int();
+    let neg_a = d.ineg(a);
+    let neg_b = d.ineg(b);
+    let product = d.imul(a, b);
+    let neg_product = d.ineg(product);
+    let a_neg_b = d.imul(a, neg_b);
+    let neg_a_neg_b = d.imul(neg_a, neg_b);
+
+    let step_one = neg_mul(d, a, neg_b);
+    let neg_a_neg_b_folded = d.ineg(a_neg_b);
+    let mul_neg_proof = d.lemma(p.mul_neg, &[a, b]);
+    let double_neg = d.ineg(neg_product);
+    let step_two = d.icongr(a_neg_b, neg_product, mul_neg_proof, &|d, x| d.ineg(x));
+    let step_three = neg_neg(d, product);
+
+    let (_, chained) = d.ichain(
+        neg_a_neg_b,
+        &[
+            (neg_a_neg_b_folded, step_one),
+            (double_neg, step_two),
+            (product, step_three),
+        ],
+    );
+    chained
+}
+
+/// One side of the `Int` lift: `Eq Int (mul x coefficient) (mul (ofNat magnitude) base)`
+/// where `x` is the branch's constructor application and `coefficient` its
+/// (possibly negated) `Nat` coefficient.
+///
+/// On `ofNat` both sides are literally the same term. On `negSucc` the value is
+/// `neg (ofNat magnitude)` and the coefficient is `neg base`, and the two
+/// negations cancel — which is exactly why [`declare_int_gcd_ab`] negates.
+fn branch_factor(d: &mut IntDev<'_>, branch: Branch, base: ExprId) -> ExprId {
+    match branch.0 {
+        Shape::OfNat => {
+            let value = d.of_nat(branch.1);
+            let product = d.imul(value, base);
+            d.irefl(product)
+        }
+        Shape::NegSucc => {
+            let magnitude = d.succ(branch.1);
+            let value = d.of_nat(magnitude);
+            neg_mul_neg(d, value, base)
+        }
+    }
+}
+
+/// `Int.gcd_eq_gcd_ab_witnesses : ∀ x y,
+/// Eq Int (ofNat (Int.gcd x y)) (add (mul x (gcdA x y)) (mul y (gcdB x y)))`
+/// — Mathlib v4.30's `Int.gcd_eq_gcd_ab`, at the named computable witnesses.
+///
+/// Four branches, and in each one `Int.gcd`, `Int.gcdA` and `Int.gcdB` all
+/// ι-reduce to their `Nat` counterparts at the branch's magnitudes, so the
+/// content is [`declare_nat_gcd_eq_gcd_ab`] plus one `neg_mul_neg` per negative
+/// argument.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_gcd_eq_gcd_ab_witnesses(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.gcd_eq_gcd_ab_witnesses, 2, &|d, values| {
+        let statement = |d: &mut IntDev<'_>, args: &[ExprId]| {
+            let (x, y) = (args[0], args[1]);
+            let common = d.const_app(p.gcd, &[x, y]);
+            let lhs = d.of_nat(common);
+            let coeff_a = d.const_app(p.gcd_a, &[x, y]);
+            let coeff_b = d.const_app(p.gcd_b, &[x, y]);
+            let left = d.imul(x, coeff_a);
+            let right = d.imul(y, coeff_b);
+            let rhs = d.iadd(left, right);
+            d.ieq(lhs, rhs)
+        };
+        let stmt = statement(d, values);
+        let proof = case_split(d, values, &statement, &|d, branches| {
+            let magnitude = |d: &mut IntDev<'_>, branch: Branch| match branch.0 {
+                Shape::OfNat => branch.1,
+                Shape::NegSucc => d.succ(branch.1),
+            };
+            let mx = magnitude(d, branches[0]);
+            let my = magnitude(d, branches[1]);
+            let base_a = nat_gcd_a(d, mx, my);
+            let base_b = nat_gcd_b(d, mx, my);
+
+            // `ofNat (gcd mx my) = ofNat mx * A + ofNat my * B`.
+            let over_nat = d.lemma(p.nat_gcd_eq_gcd_ab, &[mx, my]);
+            let mx_i = d.of_nat(mx);
+            let my_i = d.of_nat(my);
+            let nat_left = d.imul(mx_i, base_a);
+            let nat_right = d.imul(my_i, base_b);
+            let nat_rhs = d.iadd(nat_left, nat_right);
+
+            // Each side's `x * gcdA x y` equals the `Nat` product it reduces
+            // from, up to the two cancelling negations on a `negSucc` branch.
+            let left_factor = branch_factor(d, branches[0], base_a);
+            let right_factor = branch_factor(d, branches[1], base_b);
+            let x = d.branch_term(branches[0]);
+            let y = d.branch_term(branches[1]);
+            // The goal's coefficients are the `Int`-level ones, which ι-reduce
+            // to `base_a`/`base_b` on an `ofNat` branch and to their NEGATIONS
+            // on a `negSucc` one. Writing `base_a` here instead was this
+            // module's one kernel rejection: the two differ by exactly the sign
+            // flip `declare_int_gcd_ab` exists to apply.
+            let goal_coeff_a = d.const_app(p.gcd_a, &[x, y]);
+            let goal_coeff_b = d.const_app(p.gcd_b, &[x, y]);
+            let goal_left = d.imul(x, goal_coeff_a);
+            let goal_right = d.imul(y, goal_coeff_b);
+            // `left_factor : goal_left = nat_left`, so reverse both to rebuild
+            // the goal's right-hand side from the `Nat` theorem's.
+            let left_reversed = d.isymm(goal_left, nat_left, left_factor);
+            let right_reversed = d.isymm(goal_right, nat_right, right_factor);
+            let after_left = d.iadd(goal_left, nat_right);
+            let step_left = d.icongr(nat_left, goal_left, left_reversed, &|d, z| {
+                d.iadd(z, nat_right)
+            });
+            let after_right = d.iadd(goal_left, goal_right);
+            let step_right = d.icongr(nat_right, goal_right, right_reversed, &|d, z| {
+                d.iadd(goal_left, z)
+            });
+
+            let common = NatOps::gcd(d, mx, my);
+            let lhs = d.of_nat(common);
+            let (_, chained) = d.ichain(
+                lhs,
+                &[
+                    (nat_rhs, over_nat),
+                    (after_left, step_left),
+                    (after_right, step_right),
+                ],
+            );
+            chained
+        });
+        (stmt, proof)
+    })?;
     Ok(())
 }

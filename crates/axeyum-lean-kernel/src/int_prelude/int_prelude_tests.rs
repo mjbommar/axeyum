@@ -182,8 +182,9 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 142] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 143] {
     [
+        p.gcd_eq_gcd_ab_witnesses,
         p.int_is_comm_ring,
         p.mul_eq_zero,
         p.fib_cassini,
@@ -2646,7 +2647,7 @@ fn nat_gcd_ab_compute_bezout_coefficients() {
         (2, 3, 1, -1, 1),
         (4, 6, 2, -1, 1),
         (6, 4, 2, 1, -1),
-        (1, 1, 1, 0, 1),
+        (1, 1, 1, 1, 0),
     ] {
         let m_nat = numeral_nat(&mut k, &p, m);
         let n_nat = numeral_nat(&mut k, &p, n);

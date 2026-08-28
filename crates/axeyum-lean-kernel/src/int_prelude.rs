@@ -1443,6 +1443,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_gcd_eq_gcd_ab(&mut d)?;
         bezout_witnesses::declare_xgcd_aux(&mut d)?;
         bezout_witnesses::declare_int_gcd_ab(&mut d)?;
+        bezout_witnesses::declare_xgcd_aux_sound(&mut d)?;
+        bezout_witnesses::declare_nat_gcd_eq_gcd_ab(&mut d)?;
+        bezout_witnesses::declare_gcd_eq_gcd_ab_witnesses(&mut d)?;
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
