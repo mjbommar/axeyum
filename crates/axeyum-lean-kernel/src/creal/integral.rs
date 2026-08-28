@@ -2346,6 +2346,7 @@ use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
     modulus, sample, shift, weaken, within,
 };
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
@@ -2356,6 +2357,7 @@ use crate::rat_prelude::ops::{
     nat_eq_to_rat, nat_rewrite_prop, normalize, one_le_succ, radd, rat_eq_rewrite, rat_ty, rchain,
     rcongr, req, rle, rmul, rneg, rone, rsymm, rtrans, rzero,
 };
+use crate::tc::{LocalContext, LocalDecl};
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
 /// (`DERIVED_HEIGHT + 41`) and `CReal.ofNat` (`DERIVED_HEIGHT + 14`), the two
@@ -28763,10 +28765,16 @@ fn unapp(d: &mut IntDev<'_>, e: ExprId) -> (ExprId, ExprId) {
 
 /// `CReal.bounded_of_uniformly_continuous` applied at `f, a, b, huc, hab`,
 /// with its computed `K` read back via [`unapp`] rather than hand-derived —
-/// this file's own copy of `trig_fn.rs`'s `bounded_via_uc`, simplified for a
-/// proof with no open free variables (plain `Kernel::infer`, not
-/// `infer_in` — nothing here is built inside an induction). Returns `(K,
-/// proof)`, `proof : BoundedOn f a b K`.
+/// this file's own copy of `trig_fn.rs`'s `bounded_via_uc`. Every universally
+/// quantified binder of `declare_integral_by_parts`'s own theorem
+/// (`u, u', v, v', a, b, hab, ...`) is still an OPEN free variable at the
+/// point this runs (nothing is bound into a `LocalContext` until the final
+/// `lam_fv` wrapping at the very end), so `Kernel::infer`'s fresh empty
+/// context rejects it with `UnboundFVar` — `free_vars` lists every
+/// `(fvar id, type)` pair in scope, registered into a scratch
+/// [`LocalContext`] for `Kernel::infer_in`, exactly as `trig_fn.rs`'s own
+/// `bounded_via_uc` does for an enclosing induction's open `j`/`ih`.
+/// Returns `(K, proof)`, `proof : BoundedOn f a b K`.
 fn bounded_via_uc(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -28775,14 +28783,37 @@ fn bounded_via_uc(
     b: ExprId,
     huc: ExprId,
     hab: ExprId,
+    free_vars: &[(u64, ExprId)],
 ) -> (ExprId, ExprId) {
     let proof = d.lemma(p.bounded_of_uniformly_continuous, &[f, a, b, huc, hab]);
+    let anon = d.anon_name();
+    let mut ctx = LocalContext::new();
+    for &(fvar, ty) in free_vars {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
     let ty = d
         .kernel()
-        .infer(proof)
+        .infer_in(proof, &mut ctx)
         .expect("bounded_of_uniformly_continuous application must infer a type");
     let (_inner, k) = unapp(d, ty);
     (k, proof)
+}
+
+/// Peel one `App`-built [`ExprId`] back to its raw free-variable id — used
+/// only to build [`bounded_via_uc`]'s `free_vars` list from the `ExprId`s
+/// this file's own `d.fresh_fvar()`/`d.kernel().fvar(..)` calls minted
+/// (never parsed from anything untrusted). Mirrors `trig_fn.rs`'s own
+/// `fvar_id`.
+fn fvar_id(d: &mut IntDev<'_>, e: ExprId) -> u64 {
+    match d.kernel().expr_node(e).clone() {
+        ExprNode::FVar(id) => id,
+        other => panic!("expected a free variable, found {other:?}"),
+    }
 }
 
 /// `CReal.integral_by_parts : ∀ u u' v v' a b (hab : le a b),
@@ -28850,11 +28881,31 @@ pub(super) fn declare_integral_by_parts(
     let huc_vp_fv = d.fresh_fvar();
     let huc_vp = d.kernel().fvar(huc_vp_fv);
 
+    // --- every outer Pi binder is still an OPEN free variable here (nothing
+    // is bound into a `LocalContext` until the final `lam_fv` wrapping at the
+    // very end), so every `bounded_via_uc` call below needs the full list —
+    // see that function's own doc comment.
+    let free_vars: Vec<(u64, ExprId)> = vec![
+        (fvar_id(d, u), f_ty),
+        (fvar_id(d, up), f_ty),
+        (fvar_id(d, v), f_ty),
+        (fvar_id(d, vp), f_ty),
+        (fvar_id(d, a), carrier),
+        (fvar_id(d, b), carrier),
+        (fvar_id(d, hab), hab_ty),
+        (fvar_id(d, hu), hu_ty),
+        (fvar_id(d, hv), hv_ty),
+        (fvar_id(d, huc_u), huc_u_ty),
+        (fvar_id(d, huc_up), huc_up_ty),
+        (fvar_id(d, huc_v), huc_v_ty),
+        (fvar_id(d, huc_vp), huc_vp_ty),
+    ];
+
     // --- BoundedOn witnesses for u, u', v, v', all from the UC hypotheses --
-    let (k_u, hb_u) = bounded_via_uc(d, p, u, a, b, huc_u, hab);
-    let (k_up, hb_up) = bounded_via_uc(d, p, up, a, b, huc_up, hab);
-    let (k_v, hb_v) = bounded_via_uc(d, p, v, a, b, huc_v, hab);
-    let (k_vp, hb_vp) = bounded_via_uc(d, p, vp, a, b, huc_vp, hab);
+    let (k_u, hb_u) = bounded_via_uc(d, p, u, a, b, huc_u, hab, &free_vars);
+    let (k_up, hb_up) = bounded_via_uc(d, p, up, a, b, huc_up, hab, &free_vars);
+    let (k_v, hb_v) = bounded_via_uc(d, p, v, a, b, huc_v, hab, &free_vars);
+    let (k_vp, hb_vp) = bounded_via_uc(d, p, vp, a, b, huc_vp, hab, &free_vars);
 
     // --- product rule: HasDerivativeOn (u*v) (u'v + uv') a b ---------------
     let hd_uv = d.const_app(
@@ -28920,7 +28971,8 @@ pub(super) fn declare_integral_by_parts(
     // uc_deriv : UniformlyContinuousOn (fun r => add (upv_lambda r) (uvp_lambda r)) a b
     //   ~beta~ UniformlyContinuousOn deriv_lambda a b
 
-    let (kb_deriv, hbnd_deriv) = bounded_via_uc(d, p, deriv_lambda, a, b, uc_deriv, hab);
+    let (kb_deriv, hbnd_deriv) =
+        bounded_via_uc(d, p, deriv_lambda, a, b, uc_deriv, hab, &free_vars);
 
     // --- FTC-II applied to derivative (u'v+uv'), antiderivative (u*v) ------
     let h_ftc2 = d.const_app(
@@ -29004,13 +29056,21 @@ pub(super) fn declare_integral_by_parts(
     let concl = equiv(d, p, i1, final_rhs);
 
     let ty = {
-        let t = d.arrow(huc_vp_ty, concl);
-        let t = d.arrow(huc_v_ty, t);
-        let t = d.arrow(huc_up_ty, t);
-        let t = d.arrow(huc_u_ty, t);
+        // `hab`, `huc_u`, `huc_up`, `huc_v`, `huc_vp` are all referenced BY
+        // VALUE later in `concl` (embedded in `i1`/`i2`/`uc_upv`/`uc_uvp`),
+        // so they need `pi_fv` (which abstracts every occurrence), not
+        // `arrow` (a plain non-dependent Pi that leaves them free) --
+        // exactly `integral_eq_antideriv_diff`'s own `pi_fv(hab_fv, ...)`
+        // for the same reason. `hu`/`hv` are used only inside the PROOF
+        // (never inside `concl`), so `arrow` is correct for them, matching
+        // that same theorem's `hg`/`hbnd`.
+        let t = d.pi_fv(huc_vp_fv, huc_vp_ty, concl);
+        let t = d.pi_fv(huc_v_fv, huc_v_ty, t);
+        let t = d.pi_fv(huc_up_fv, huc_up_ty, t);
+        let t = d.pi_fv(huc_u_fv, huc_u_ty, t);
         let t = d.arrow(hv_ty, t);
         let t = d.arrow(hu_ty, t);
-        let t = d.arrow(hab_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
         let t = d.pi_fv(b_fv, carrier, t);
         let t = d.pi_fv(a_fv, carrier, t);
         let t = d.pi_fv(vp_fv, f_ty, t);
