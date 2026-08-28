@@ -1,0 +1,63 @@
+# Lane: parity-coprime — `Coprime 2 n ↔ Odd n` and the two facts the last cascade left
+
+<!-- plan-section: lane-status -->
+
+**Your lane's block (`DONE`, parity-coprime, 2026-08-28).** All six targeted
+facts landed, all kernel-checked and axiom-free (`nat` trusted surface = 0
+throughout). `nat_prelude::` went 96 -> 98 passed, 0 failed.
+
+Two facts were cheap: `F:ml430-nat-choose-le-choose-907b5042` needed one new
+declaration (`choose_le_choose`, monotone-in-the-row-index, via `choose_le_add`
+transported along an additive witness extracted from `Le a b` by
+`sub_add_cancel`). `F:ml430-nat-coprime-of-lt-prime-1978a919` needed no new
+Rust at all — `declare_coprime_of_lt_prime` (`nat_prelude/primes.rs`) had
+already been admitted to the kernel in an earlier commit (`de2e39eee`), via a
+direct route that does not actually go through `coprime_or_dvd_of_prime`
+despite the fact's recorded `depends_on` edge naming it (that edge predates
+the direct proof and was never revisited). Found already-proved, status
+flipped, no re-derivation.
+
+The substantive piece, `F:ml430-nat-coprime-two-left-1b47e7c4` (`Coprime 2 n
+↔ Odd n`), needed real construction: `2` is prime (a private `prime_two`
+helper rebuilding `prime_condition(2)`), `coprime_or_dvd_of_prime` splits
+`gcd 2 n = 1 ∨ dvd 2 n`, `prime_dvd_iff_not_coprime` relates `dvd 2 n` to
+`Not (gcd 2 n = 1)`, and a private bridge (`even_of_dvd_two`/
+`dvd_two_of_even`, via a rebuilt `2*k = k+k` identity) connects `dvd 2 n` and
+`Even n` so `even_or_odd_exists`/`even_not_odd` can rule out the even case in
+each `Iff` direction. `coprime_two_right`, `coprime_odd_of_left`,
+`coprime_odd_of_right` were thin corollaries once `coprime_two_left` existed,
+exactly as the brief predicted.
+
+**Did NOT need `add_self_ne_succ_add_self`** (the brief flagged it as a
+likely dependency) — the whole construction routes through `dvd`/`gcd`
+machinery instead of directly comparing two existential witnesses, so that
+theorem never came up.
+
+**One kernel rejection, and it was a Rust-level ordering bug, not a proof
+error.** The first attempt wired the four new `declare_coprime_two_*`/
+`declare_coprime_odd_of_*` calls in next to the other `coprime_*`
+declarations near `declare_primes`, which runs *before* `declare_parity_all`
+(the call that declares `Nat.Even`/`Nat.Odd`). Every one of the 97
+`nat_prelude::` tests failed with `UnknownConst { name: NameId(510) }` —
+build-wide poisoning from one bad declaration, per the standing gotcha.
+Moved the four calls to run right after `declare_parity_all`; the kernel
+then accepted all four proof terms on the first attempt with no further
+changes.
+
+**Duplicated two private helpers rather than promoting them.** The
+divisor-of-2 dichotomy (`dvd c 2 → c=1 ∨ c=2`) already has two file-private
+copies (`irrational.rs`'s `two_divisor_dichotomy`, `perfect.rs`'s
+`divisors_of_two`); this lane added a third, in `primes.rs`. The `2*k = k+k`
+identity (`powsq.rs`'s private `two_mul_eq_add_self`) got a second, rebuilt
+locally in `primes.rs`. `ops.rs` — the only place either could be shared
+from — is out of scope for this lane (shared, concurrently edited by other
+lanes per its own module doc in `parity.rs`), and the repository's own
+history already tolerates this shape of duplicate (`bool_true_or_false` has
+two copies for the same reason). Said so in the commit rather than silently
+re-deriving.
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-28 | parity-coprime | `Nat.choose_le_choose` proved (`nat_prelude/choose.rs`); pinned `67+342`->`67+343` in `the_build_is_deterministic` |
+| 2026-08-28 | parity-coprime | `Nat.coprime_of_lt_prime` fact flipped to proved (already admitted pre-existing kernel declaration, no new Rust) |
+| 2026-08-28 | parity-coprime | `Nat.coprime_two_left`, `Nat.coprime_two_right`, `Nat.Coprime.odd_of_left`, `Nat.Coprime.odd_of_right` proved (`nat_prelude/primes.rs`); pinned `67+343`->`67+347` |
