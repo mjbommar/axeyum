@@ -45,7 +45,7 @@
     },
     {
       "id": "evaluation-Int.Odd-concrete-both-signs",
-      "kind": "unit-test",
+      "kind": "witness-replay",
       "supports": "The TRUSTED GATE only checks that Int.Odd : Int -> Prop is WELL-TYPED, not that it means the right thing (CLAUDE.md's documented gotcha for exactly this class of defect, with Nat.lor as the sharpest instance -- a predicate accidentally true of the wrong parity would type-check identically). This test instantiates it at concrete values of BOTH signs with a genuine positive AND negative witness, never an absence-of-proof argument: Odd (ofNat 3) is inhabited by the Nat.Odd 3 witness (3 = succ(1+1)); Not (Odd (ofNat 4)) is inhabited by even_not_odd(4) applied to a hand-built Even 4 (4 = 2+2); Odd (negSucc 2) [-3] and Not (Odd (negSucc 3)) [-4] reuse the SAME two witnesses respectively, confirming natAbs (negSucc m) reducing to succ m is what makes sign handling free, as the definition's own design claims.",
       "check_status": "checked",
       "checkers": [
