@@ -1,0 +1,59 @@
+# How expensive the `creal` prelude is to TYPE-CHECK, as a load-invariant ratio.
+#
+# subject<TAB>reference<TAB>budget_ratio
+#
+# ## What this file replaces
+#
+# Nothing. That is the point. Until 2026-08-28 the only thing watching
+# `creal_prelude_builds` was a "94-123 s band" that appears in four lane status
+# files, is derived from nothing, and was established by lanes observing each
+# other DURING a window in which the prelude was already ~8x its documented
+# cost. Every lane that measured 95-120 s reported "in band, no regression", and
+# the aggregate was wrong.
+# See docs/research/11-design-review/2026-08-28-the-band-is-the-regression.md.
+#
+# ## Why a ratio and not seconds
+#
+# Seconds are not a gate on this box. Measured 2026-08-28 on s4, same binary,
+# same commit, with one busy core competing against the test pinned beside it:
+#
+#   condition                rat_prelude_builds   creal_prelude_builds   ratio
+#   idle (load ~1)                    5.22 s             105.51 s        20.21
+#   one competing core               10.44 s             210.57 s        20.17
+#
+# Absolute time moved 2.02x. The RATIO moved 0.2%. Both tests are single-thread
+# kernel type-checking in the same binary, so contention scales them together
+# and divides out. A seconds budget on a 16-core box shared by a dozen lanes
+# would spend its life crying wolf, which is worse than no gate; this one does
+# not have to be loose to be quiet.
+#
+# The same ratio separates the regression at full strength. At `77b71bf10`
+# (2026-08-26) the pair was 12.60 s / 4.85 s = 2.60. At HEAD it is 20.21 --
+# 7.8x, while the reference itself moved 4.85 -> 5.22 s (+7.6%, ordinary
+# growth of the rat prelude).
+#
+# ## What the number means
+#
+# `creal_prelude_builds` costs at most `budget_ratio` times what
+# `rat_prelude_builds` costs, on the same binary, in the same run.
+#
+# The pin is the measured value rounded UP to the next whole unit and no more:
+# 20.21 -> 21. That is ~4% headroom, which the contention experiment above says
+# is roughly 20x the observed load sensitivity. Do not widen it to "be safe" --
+# a budget nobody had to justify is exactly the band this file exists to
+# replace. RAISE it deliberately, in a commit that says what grew and why.
+#
+# ## How to re-measure
+#
+#   scripts/check-creal-prelude-build-ratio.sh --measure
+#
+# `--check` (the gate) re-demonstrates on EVERY run that it can go red: it
+# re-runs its own verdict against a halved budget and fails if that does not
+# come back RED, and against a transcript reporting zero tests and fails if
+# that is not rejected. A green result has therefore shown it is not vacuous.
+#
+# Measured 2026-08-28 on s4, debug profile, rustc via the repo's default
+# toolchain, at HEAD of `worktree-agent-a8ff7080544ddcafa`.
+#
+subject	reference	budget_ratio
+creal::creal_tests::creal_prelude_builds	rat_prelude::rat_prelude_tests::rat_prelude_builds	21
