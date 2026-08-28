@@ -176,9 +176,22 @@ both `nat_rewrite` transports — was accepted first time.
 --lib creal::creal_tests::creal_prelude_builds`, host load 2.4–2.7:
 
 - after step 1: **93.18 s, green** (`1 passed`).
-- after step 2: see the landed-changes rows below for the settled verdict.
+- after step 2: **98.76 s, green** (`1 passed`) — so the four step-2
+  declarations cost nothing measurable against the 91–112 s band.
 
-`cargo check -p axeyum-lean-kernel --lib` clean for both.
+`every_creal_declaration_is_checked_and_axiom_free` (`--release`): **15.22 s,
+green**. That is the check that matters for the headline, because it derives
+coverage from `kernel.environment()` in BOTH directions — an environment
+declaration missing from every shard, and a shard entry naming a declaration
+no longer in the environment — so it confirms all eight are present, are
+`Theorem`-kind, and have `axiom_footprint` **0**. A shard list alone would
+confirm none of that.
+
+`clippy -p axeyum-lean-kernel --lib --all-features -- -D warnings`: green
+(it caught one dead helper this section built and never used;
+`creal_prelude_builds` cannot see that).
+
+`cargo check -p axeyum-lean-kernel --lib` clean throughout.
 
 <!-- plan-section: landed-changes -->
 
@@ -187,3 +200,6 @@ both `nat_rewrite` transports — was accepted first time.
 | 2026-08-27 | cos-deriv2 | measured: `hasDerivative_pow`'s two Skolem `BoundedOn` functions cost one `d.lam_fv` each -- `trig_fn.rs` already had `pow` uniform continuity at a symbolic exponent, inline and duplicated; `bounded_of_uniformly_continuous` computes the index |
 | 2026-08-27 | cos-deriv2 | measured: the `succ n`/`n` index shift does NOT reach `hasDerivative_congr` (`sumRange`'s ι-reduction makes both function sides defeq); it bites at `hasDerivative_uniform_limit`, and the missing fact is one-step antitonicity of `Rat.natDivSucc` in its INDEX at a symbolic numerator -- `natDivSucc_antitone` is numerator-1, `natDivSucc_le_scaled` wants a `(c+1)n+c` index |
 | 2026-08-27 | cos-deriv2 | `trig_fn.rs`'s inline `pow_uc` induction extracted to `pow_uc_fn` from two byte-identical copies; 4 more `derivative.rs` helpers promoted to `pub(super)` rather than reproduced |
+| 2026-08-27 | cos-deriv2 | `CReal.cosFnWideHasDerivative` -- **the target**: `HasDerivativeOn cosFnWide (fun x => neg (sinFn x)) zero (8/5)`, axiom-free, accepted on the first `add_declaration`; `creal_prelude_builds` 98.76 s green, `every_creal_declaration_is_checked_and_axiom_free` (`--release`) 15.22 s green |
+| 2026-08-27 | cos-deriv2 | `CReal.natDivSuccStepLe` -- one-step antitonicity of `Rat.natDivSucc` in its INDEX at a symbolic numerator, the fact `rat_prelude` lacks and every `UniformConvergesOn` re-indexing needs; via `natDivSucc_mul` factoring the index into the numerator-1 factor, no new cross-multiplication. Belongs in `rat_prelude`; parked in `CReal` because that file is another lane's |
+| 2026-08-27 | cos-deriv2 | `CReal.uniformConvergesShift` + `CReal.uniformConvergesNeg` -- re-index a uniform-convergence witness by one, and negate one; both leave the rate unchanged |
