@@ -51,14 +51,12 @@ fn run() -> Result<(), String> {
             input.display()
         ));
     }
-    if script
-        .commands
-        .iter()
-        .any(|command| !matches!(command, ScriptCommand::Assert(_) | ScriptCommand::CheckSat))
-    {
+    if let Some(offending) = script.commands.iter().find(|command| !is_flat(command)) {
         return Err(format!(
-            "{} must be a flat assertion script without push/pop/reset/check-sat-assuming",
-            input.display()
+            "{} must be a flat assertion script without push/pop/reset/check-sat-assuming; \
+             found {}",
+            input.display(),
+            command_name(offending)
         ));
     }
     if script.assertions.is_empty() {
@@ -118,6 +116,82 @@ fn run() -> Result<(), String> {
     write(&output.join("manifest.json"), rendered.as_bytes())?;
     print!("{rendered}");
     Ok(())
+}
+
+/// Whether `command` leaves the flat, single-`check-sat` assertion view — the
+/// one thing this exporter can honestly claim a DRAT proof is *about*.
+///
+/// Written as an **exhaustive** match with no wildcard arm, deliberately. The
+/// predicate this replaced was `matches!(command, Assert(_) | CheckSat)`, an
+/// allowlist of two: correct when the exporter landed (`ba9ff7c6c`, 2026-07-19),
+/// and silently wrong from `81361cdd1` (2026-08-21) onward, which made
+/// `set-logic` and `set-option` **positional** `ScriptCommand`s rather than
+/// parser-side metadata. From that commit the binary could not succeed on any
+/// input at all: it *requires* `(set-logic QF_BV)` ten lines above, then
+/// refused the script for containing a `set-logic` command. Both tests in
+/// `tests/qfbv_proof_export.rs` went red and stayed red.
+///
+/// A wildcard would have let that happen again. With every variant named, a new
+/// `ScriptCommand` fails to compile here until someone decides which side of the
+/// line it falls on — which is the decision that was skipped last time.
+// The accepting arms are kept apart on purpose: each group states a DIFFERENT
+// reason a command leaves the flat view alone, and merging them into one arm
+// would delete exactly the reasoning that was missing when this predicate went
+// stale.
+#[allow(clippy::match_same_arms)]
+fn is_flat(command: &ScriptCommand) -> bool {
+    match command {
+        // Assertions and the single decision point are the flat view itself.
+        ScriptCommand::Assert(_) | ScriptCommand::CheckSat => true,
+        // Recorded positionally by the parser, but they neither add nor remove
+        // an assertion, so the CNF this exporter proves is unchanged by them.
+        // `set-logic` in particular is *mandatory* for this binary.
+        ScriptCommand::SetLogic(_) | ScriptCommand::SetOption { .. } | ScriptCommand::Echo(_) => {
+            true
+        }
+        // Output commands. They report on the preceding `check-sat` and cannot
+        // change what was decided; this binary simply does not answer them.
+        ScriptCommand::GetAssertions
+        | ScriptCommand::GetModel
+        | ScriptCommand::GetValue(_)
+        | ScriptCommand::GetUnsatCore
+        | ScriptCommand::GetProof
+        | ScriptCommand::UnansweredOutput(_) => true,
+        // These move the assertion stack, or decide something other than the
+        // conjunction of every assertion in the file. A DRAT proof over the flat
+        // CNF would then be a proof about a different problem.
+        ScriptCommand::Push(_)
+        | ScriptCommand::Pop(_)
+        | ScriptCommand::CheckSatAssuming(_)
+        | ScriptCommand::ResetAssertions => false,
+    }
+}
+
+/// The SMT-LIB spelling of `command`, for the refusal message. Naming the
+/// offender is the difference between a five-minute fix and a month unnoticed.
+fn command_name(command: &ScriptCommand) -> &'static str {
+    match command {
+        ScriptCommand::Assert(_) => "assert",
+        ScriptCommand::Push(_) => "push",
+        ScriptCommand::Pop(_) => "pop",
+        ScriptCommand::CheckSat => "check-sat",
+        ScriptCommand::CheckSatAssuming(_) => "check-sat-assuming",
+        ScriptCommand::ResetAssertions => "reset-assertions",
+        ScriptCommand::GetAssertions => "get-assertions",
+        ScriptCommand::SetLogic(_) => "set-logic",
+        ScriptCommand::SetOption { .. } => "set-option",
+        ScriptCommand::GetModel => "get-model",
+        ScriptCommand::GetValue(_) => "get-value",
+        ScriptCommand::GetUnsatCore => "get-unsat-core",
+        ScriptCommand::GetProof => "get-proof",
+        ScriptCommand::Echo(_) => "echo",
+        ScriptCommand::UnansweredOutput(keyword) => {
+            // Borrowed as `&'static` is impossible here; the keyword is only
+            // ever one of a fixed parser-side set, so name the class instead.
+            let _ = keyword;
+            "an unanswered output command"
+        }
+    }
 }
 
 fn usage(detail: &str) -> String {

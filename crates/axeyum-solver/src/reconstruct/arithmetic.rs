@@ -140,6 +140,55 @@ impl LinR {
     }
 }
 
+/// Stack for one constructed-real prelude build.
+///
+/// `build_creal_prelude` type-checks every `CReal` declaration, and
+/// `Kernel::add_declaration` recurses directly over the term, so the stack it
+/// needs grows with the deepest proof term in the library. A thread that runs
+/// out does not return an error — the process **aborts** (`fatal runtime error:
+/// stack overflow`, SIGABRT, exit 134), taking every other test in the binary
+/// with it. That is why this is a sized worker and not a `Result`.
+///
+/// The default stack for a spawned thread — which is what a `#[test]` runs on,
+/// and what a library consumer most plausibly calls from — is 2 MiB, and the
+/// constructed reals have outgrown it. Measured 2026-08-28 on this tree with
+/// `scripts/check-kernel-stack-envelope.sh --measure --prelude creal`, the
+/// smallest power of two on which the build completes is **8,388,608 bytes in
+/// release and 16,777,216 in debug**; the pinned rows in
+/// `artifacts/kernel-stack-envelope.tsv` (measured 2026-08-26) are 131,072 and
+/// 2,097,152, so the requirement grew 64x and 8x in two days. Bisected finely
+/// against this crate's own release test binary, the true release requirement
+/// lies between 4,456,448 (aborts) and 4,587,520 (completes) bytes.
+///
+/// 256 MiB is 16x the measured debug requirement and matches the
+/// `DEEP_STACK_BYTES` used elsewhere in the workspace. It is reserved address
+/// space, not committed memory, so unused margin costs nothing.
+///
+/// This bounds a measured requirement; it does not silence a failure. The
+/// requirement was shown finite by bisection in **both** profiles, and the
+/// growth that crossed 2 MiB is reported independently — and red, today — by
+/// `scripts/check-kernel-stack-envelope.sh --check --prelude creal`. If some
+/// future term fails to terminate, this margin will not hide it: the abort
+/// simply moves to 256 MiB.
+const CREAL_PRELUDE_STACK_BYTES: usize = 256 * 1024 * 1024;
+
+/// Run `build` on a thread carrying [`CREAL_PRELUDE_STACK_BYTES`] of stack.
+///
+/// Scoped, so `build` may borrow from the caller and the result is moved back.
+/// A panic inside `build` is re-raised on the calling thread, so a genuine
+/// kernel rejection is never converted into a quieter failure by the move.
+pub(super) fn on_a_deep_stack<T: Send>(build: impl FnOnce() -> T + Send) -> T {
+    std::thread::scope(|scope| {
+        std::thread::Builder::new()
+            .name("axeyum-creal-prelude".to_owned())
+            .stack_size(CREAL_PRELUDE_STACK_BYTES)
+            .spawn_scoped(scope, build)
+            .expect("spawn the constructed-real prelude worker")
+            .join()
+            .unwrap_or_else(|payload| std::panic::resume_unwind(payload))
+    })
+}
+
 /// The reconstruction context for LRA Farkas proofs: a [`Kernel`] seeded with the
 /// arithmetic prelude (linear ordered field `R`), plus a deterministic map from a
 /// dense real-variable index to its opaque `R`-typed [`NameId`].
@@ -356,7 +405,16 @@ impl LraReconstructCtx {
     /// # Errors
     ///
     /// As [`Self::try_new_over_constructed_reals`].
+    /// The build runs on a worker thread carrying 256 MiB of stack
+    /// (`CREAL_PRELUDE_STACK_BYTES`): the constructed-real development no
+    /// longer type-checks within the 2 MiB a spawned thread gets by default,
+    /// and running out aborts the whole process rather than returning an error.
     pub fn try_new_over_constructed_reals_reporting()
+    -> Result<(Self, ordered_ring::setoid::SetoidAdoption), ReconstructError> {
+        on_a_deep_stack(Self::try_new_over_constructed_reals_reporting_impl)
+    }
+
+    fn try_new_over_constructed_reals_reporting_impl()
     -> Result<(Self, ordered_ring::setoid::SetoidAdoption), ReconstructError> {
         let mut kernel = Kernel::new();
         let creal =
