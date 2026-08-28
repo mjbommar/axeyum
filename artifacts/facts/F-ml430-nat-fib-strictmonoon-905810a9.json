@@ -8,12 +8,31 @@
     "statement": "StrictMonoOn Nat.fib (Set.Ici 2)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
     "F:ml430-nat-fib-add-two-strictmono-c1e86d4d"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.fib_strictmonoOn",
+      "kind": "kernel-term",
+      "supports": "StrictMonoOn Nat.fib (Set.Ici 2)",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- fib_strictmonoOn 2>/dev/null | grep -xFc 'Nat.fib_strictmonoOn\t5\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> ((x3 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) -> ((x4 : AxNat.lt x0 x1) -> AxNat.lt (AxNat.fib x0) (AxNat.fib x1))))))')\" -ge 1",
+      "notes": "The kernel re-infers the theorem type from the constructed term. `Set.Ici 2` is unwound to two explicit `Le 2` hypotheses (`succ (succ zero)` for the literal `2`), matching Mathlib's `StrictMonoOn Nat.fib (Set.Ici 2)` unfolded to `forall a b, 2 <= a -> 2 <= b -> a < b -> fib a < fib b`. Proved from fib_add_two_strictmono by peeling two succs off each bound (two applications of pos_implies_succ_pred per side) and transporting back."
+    },
+    {
+      "id": "footprint-Nat.fib_strictmonoOn",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: []",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example theorem_axiom_footprint -- Nat.fib_strictmonoOn 2>/dev/null | grep -xFc $'nat\\tNat.fib_strictmonoOn\\t0\\t')\" -ge 1",
+      "notes": "The theorem-specific footprint command reports zero dependencies on axioms in the constructed Nat environment."
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -28,5 +47,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-28 by a native, axiom-free kernel construction (crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs), composing the sibling fact F:ml430-nat-fib-add-two-strictmono-c1e86d4d. Kernel name is `fib_strictmonoOn` (matching Mathlib's exact capitalization here, unlike the sibling fact's lower-camel `fib_add_two_strictmono`). This is a hand-written reference construction, not autonomous production; the external Mathlib theorem remains prior art and its proof term/tactic trace were not consulted."
 }
