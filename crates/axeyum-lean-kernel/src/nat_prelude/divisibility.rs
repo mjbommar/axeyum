@@ -3,7 +3,7 @@
 use super::NatPrelude;
 use super::division::declare_executable_division_spec;
 use super::helpers::and_left;
-use super::helpers::{iff_forward, iff_reverse};
+use super::helpers::{iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -2027,4 +2027,207 @@ pub(super) fn declare_factorial_order(
     })?;
 
     Ok(())
+}
+
+// ============================================================================
+// `Nat.div_dvd_div_left : ∀ n m k, dvd m k → dvd n m → dvd (k/m) (k/n)`.
+// ============================================================================
+
+/// See [`NatPrelude::div_dvd_div_left`] for the route. Case-split on `m`
+/// (`d.induct`, ignoring the induction hypothesis -- this is a case split,
+/// not a recursion) to isolate `m`'s positivity, which `div_mul_cancel_of_dvd`
+/// needs:
+///
+/// - `m = 0`: `dvd 0 k` forces `k = 0` (`zero_mul` on the witness), so both
+///   `k/0` and `k/n` reduce to `0` (`zero_div`) and `dvd_refl` closes it.
+///   `dvd n 0` is unused.
+/// - `m = succ pred`: `dvd (succ pred) k` gives `k = (succ pred)*p` for a
+///   witness `p`, and `div_mul_cancel_of_dvd` gives
+///   `(succ pred)*(k/succ pred) = k`. `dvd n (succ pred)` gives
+///   `succ pred = n*q` for a witness `q`; substituting shows `n ∣ k` with
+///   witness `q*p` (`mul_assoc`), so `n` is positive too
+///   (`one_le_of_dvd_pos`, since `succ pred` is positive) and
+///   `div_mul_cancel_of_dvd` again gives `n*(k/n) = k`. Cancelling `n` from
+///   both expressions for `k` (`mul_left_cancel_of_pos`) gives
+///   `k/n = q*(k/succ pred)`, i.e. (`mul_comm`) `k/n = (k/succ pred)*q` --
+///   exactly the witness `div_dvd_div_left` needs.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_div_dvd_div_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.div_dvd_div_left, 3, &|d, values| {
+        let (n, m, k) = (values[0], values[1], values[2]);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let dvd_x_k = d.dvd(x, k);
+            let dvd_n_x = d.dvd(n, x);
+            let kdivx = d.div(k, x);
+            let kdivn = d.div(k, n);
+            let concl = d.dvd(kdivx, kdivn);
+            let inner = d.arrow(dvd_n_x, concl);
+            d.arrow(dvd_x_k, inner)
+        };
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let dvd0k_ty = d.dvd(zero, k);
+            let dvd0k_fv = d.fresh_fvar();
+            let dvd0k = d.kernel().fvar(dvd0k_fv);
+            let dvdn0_ty = d.dvd(n, zero);
+            let dvdn0_fv = d.fresh_fvar();
+
+            let k_eq_zero_ty = d.eq(k, zero);
+            let k_eq_zero = dvd_elim(d, zero, k, k_eq_zero_ty, dvd0k, &|d, q, eq_k_0q| {
+                let zero_q = d.mul(zero, q);
+                let zero_mul_eq = d.lemma(p.zero_mul, &[q]); // Eq zero_q zero
+                let (_, chained) = d.chain(k, &[(zero_q, eq_k_0q), (zero, zero_mul_eq)]);
+                chained
+            });
+            let eq_zero_k = d.symm(k, zero, k_eq_zero);
+
+            let div00 = d.div(zero, zero);
+            let div0n = d.div(zero, n);
+            let div00_eq_zero = d.lemma(p.zero_div, &[zero]); // Eq div00 zero
+            let div0n_eq_zero = d.lemma(p.zero_div, &[n]); // Eq div0n zero
+            let eq_zero_div00 = d.symm(div00, zero, div00_eq_zero);
+            let eq_zero_div0n = d.symm(div0n, zero, div0n_eq_zero);
+            let dvd_zero_zero = d.lemma(p.dvd_refl, &[zero]);
+            let dvd_div00_zero =
+                transport_dvd_left(d, zero, div00, eq_zero_div00, zero, dvd_zero_zero);
+            let proof_at_zero =
+                transport_dvd_right(d, div00, zero, div0n, eq_zero_div0n, dvd_div00_zero);
+
+            let goal_motive = d.eq_motive(zero, &|d, x| {
+                let divx0 = d.div(x, zero);
+                let divxn = d.div(x, n);
+                d.dvd(divx0, divxn)
+            });
+            let goal_proof = d.transport(zero, goal_motive, proof_at_zero, k, eq_zero_k);
+
+            let inner = d.lam_fv(dvdn0_fv, dvdn0_ty, goal_proof);
+            d.lam_fv(dvd0k_fv, dvd0k_ty, inner)
+        };
+        let step = |d: &mut NatDev<'_>, pred: ExprId, _ih: ExprId| -> ExprId {
+            let succ_pred = d.succ(pred);
+            let dvd_succpred_k_ty = d.dvd(succ_pred, k);
+            let dvd_succpred_k_fv = d.fresh_fvar();
+            let dvd_succpred_k = d.kernel().fvar(dvd_succpred_k_fv);
+            let dvd_n_succpred_ty = d.dvd(n, succ_pred);
+            let dvd_n_succpred_fv = d.fresh_fvar();
+            let dvd_n_succpred = d.kernel().fvar(dvd_n_succpred_fv);
+
+            let one_le_succ_pred = d.zero_lt_succ(pred); // defeq to `1 <= succ pred`
+            let kdivm = d.div(k, succ_pred);
+            let kdivm_eq = d.lemma(
+                p.div_mul_cancel_of_dvd,
+                &[succ_pred, k, one_le_succ_pred, dvd_succpred_k],
+            ); // Eq (mul succ_pred kdivm) k
+            let succpred_kdivm = d.mul(succ_pred, kdivm);
+            let k_eq_succpred_kdivm = d.symm(succpred_kdivm, k, kdivm_eq);
+
+            let one_le_n = d.lemma(
+                p.one_le_of_dvd_pos,
+                &[n, succ_pred, one_le_succ_pred, dvd_n_succpred],
+            );
+
+            let kdivn = d.div(k, n);
+            let goal = d.dvd(kdivm, kdivn);
+            let goal_proof = dvd_elim(
+                d,
+                n,
+                succ_pred,
+                goal,
+                dvd_n_succpred,
+                &|d, q, succpred_eq_nq| {
+                    let nq = d.mul(n, q);
+                    let step_congr =
+                        d.congr(succ_pred, nq, succpred_eq_nq, &|d, x| d.mul(x, kdivm));
+                    let assoc_eq = d.lemma(p.mul_assoc, &[n, q, kdivm]); // Eq (mul nq kdivm) (mul n (mul q kdivm))
+                    let nq_kdivm = d.mul(nq, kdivm);
+                    let qkdivm = d.mul(q, kdivm);
+                    let n_qkdivm = d.mul(n, qkdivm);
+                    let (_, eq_k_n_qkdivm) = d.chain(
+                        k,
+                        &[
+                            (succpred_kdivm, k_eq_succpred_kdivm),
+                            (nq_kdivm, step_congr),
+                            (n_qkdivm, assoc_eq),
+                        ],
+                    );
+                    let dvd_n_k = dvd_intro(d, n, k, qkdivm, eq_k_n_qkdivm);
+                    let eq_cancel_n = d.lemma(p.div_mul_cancel_of_dvd, &[n, k, one_le_n, dvd_n_k]); // Eq (mul n kdivn) k
+                    let n_kdivn = d.mul(n, kdivn);
+                    let (_, combined_eq) =
+                        d.chain(n_kdivn, &[(k, eq_cancel_n), (n_qkdivm, eq_k_n_qkdivm)]);
+                    let kdivn_eq_qkdivm = d.lemma(
+                        p.mul_left_cancel_of_pos,
+                        &[n, kdivn, qkdivm, one_le_n, combined_eq],
+                    ); // Eq kdivn qkdivm
+                    let comm_eq = d.lemma(p.mul_comm, &[q, kdivm]); // Eq qkdivm (mul kdivm q)
+                    let kdivm_q = d.mul(kdivm, q);
+                    let (_, kdivn_eq_kdivm_q) =
+                        d.chain(kdivn, &[(qkdivm, kdivn_eq_qkdivm), (kdivm_q, comm_eq)]);
+                    dvd_intro(d, kdivm, kdivn, q, kdivn_eq_kdivm_q)
+                },
+            );
+
+            let inner = d.lam_fv(dvd_n_succpred_fv, dvd_n_succpred_ty, goal_proof);
+            d.lam_fv(dvd_succpred_k_fv, dvd_succpred_k_ty, inner)
+        };
+        let proof = d.induct(&motive, &base, &step, m);
+        (motive(d, m), proof)
+    })?;
+    Ok(())
+}
+
+/// Eliminate `dvd_hyp : dvd divisor dividend`, continuing with the witness `q`
+/// and `eq_proof : Eq dividend (mul divisor q)` to build a proof of `goal`
+/// (which must not mention `q`).
+fn dvd_elim(
+    d: &mut NatDev<'_>,
+    divisor: ExprId,
+    dividend: ExprId,
+    goal: ExprId,
+    dvd_hyp: ExprId,
+    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let predicate = d.dvd_predicate(divisor, dividend);
+    let dvd_ty = d.dvd(divisor, dividend);
+    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let divisor_q = d.mul(divisor, q);
+        let eq_ty = d.eq(dividend, divisor_q);
+        let eq_fv = d.fresh_fvar();
+        let eq_proof = d.kernel().fvar(eq_fv);
+        let body = continuation(d, q, eq_proof);
+        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
+        d.lam_fv(q_fv, nat, with_eq)
+    };
+    let exists_rec_name = d.prelude().logic.exists_rec;
+    let rec = d.kernel().const_(exists_rec_name, vec![one]);
+    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
+}
+
+/// Build a proof of `dvd a n` from a witness `q` and `eq_proof : Eq n (mul a q)`.
+fn dvd_intro(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    n: ExprId,
+    witness: ExprId,
+    eq_proof: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let predicate = d.dvd_predicate(a, n);
+    let intro_name = d.prelude().logic.exists_intro;
+    let intro = d.kernel().const_(intro_name, vec![one]);
+    d.apply(intro, &[nat, predicate, witness, eq_proof])
 }

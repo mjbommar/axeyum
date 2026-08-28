@@ -646,6 +646,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_of_mod_eq_zero_of_pos,
         p.mod_eq_zero_iff_dvd,
         p.mod_eq_cancel,
+        p.mod_eq_gcd_eq,
         p.dvd_mul,
         p.dvd_refl,
         p.dvd_zero,
@@ -666,6 +667,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_of_dvd_left,
         p.coprime_of_dvd_right,
         p.coprime_of_dvd,
+        p.coprime_of_forall_prime_dvd,
         p.prime_dvd_iff_not_coprime,
         p.coprime_add_self_right,
         p.coprime_self_add_right,
@@ -876,6 +878,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bezout_of_scaled,
         p.gcd_cofactors_coprime,
         p.div_mul_cancel_of_dvd,
+        p.div_dvd_div_left,
         p.one_le_right_of_mul,
         p.one_le_left_of_mul,
         p.one_le_of_dvd_pos,
@@ -6211,7 +6214,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        79 + 402,
+        77 + 407,
         "every promised definition and theorem must be rendered"
     );
 }

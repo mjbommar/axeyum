@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "axiom_footprint": [],
   "id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
   "title": "Mathlib v4.30 source proposition Nat.div_dvd_div_left",
   "statement": "The proposition declared as `Nat.div_dvd_div_left` in the pinned Mathlib v4.30 source.",
@@ -8,10 +9,31 @@
     "statement": "∀ {n m k : ℕ}, m ∣ k → n ∣ m → k / m ∣ k / n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- div_dvd_div_left 2>/dev/null | grep -Ec '^Nat\\.div_dvd_div_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.div_dvd_div_left",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.div_dvd_div_left` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Confirmed kernel type: `dvd x1 x2 -> dvd x0 x1 -> dvd (div x2 x1) (div x2 x0)` for `x0 x1 x2`, matching the formal statement's `n m k` order (`m ∣ k -> n ∣ m -> k/m ∣ k/n`). Proved directly via `declare_div_dvd_div_left` (`nat_prelude/divisibility.rs`): case-split on `m` (`d.induct`, ignoring the induction hypothesis -- a case split, not a recursion) to isolate its positivity. `m=0`: `dvd 0 k` forces `k=0` (`zero_mul` on the witness), so both `k/0` and `k/n` reduce to `0` (`zero_div`) and `dvd_refl` closes it; `dvd n 0` is unused. `m=succ pred`: `dvd (succ pred) k` plus `div_mul_cancel_of_dvd` gives `(succ pred)*(k/succ pred)=k`; `dvd n (succ pred)` gives `succ pred=n*q` for a witness `q`, so substituting shows `n ∣ k` with witness `q*(k/succ pred)` (`mul_assoc`) -- hence `n` is positive too (`one_le_of_dvd_pos`) and `div_mul_cancel_of_dvd` again gives `n*(k/n)=k`. Cancelling `n` from both expressions for `k` (`mul_left_cancel_of_pos`) gives `k/n=q*(k/succ pred)`, i.e. (`mul_comm`) `k/n=(k/succ pred)*q` -- exactly the witness needed. No positivity hypothesis on `n`, `m` or `k` was required; the zero cases fall out of the case split rather than being assumed away.",
+      "supports": "∀ n m k, Nat.dvd m k -> Nat.dvd n m -> Nat.dvd (k/m) (k/n)"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.div_dvd_div_left",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +48,6 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_div_dvd_div_left` (`nat_prelude/divisibility.rs`), a case split on `m` (zero vs successor) that isolates the positivity `div_mul_cancel_of_dvd` needs -- no additional positivity hypothesis on `n`, `m` or `k` was assumed. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }

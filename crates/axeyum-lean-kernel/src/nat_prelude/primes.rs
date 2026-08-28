@@ -3046,3 +3046,244 @@ pub(super) fn declare_prime_dvd_of_dvd_pow(
     })?;
     Ok(())
 }
+
+// ============================================================================
+// `Nat.coprime_of_dvd' : ∀ m n, (∀ k, prime_condition k → dvd k m → dvd k n →
+// dvd k one) → gcd m n = one`.
+// ============================================================================
+
+/// Eliminate `exists_proof : ∃ pw, prime_condition pw ∧ dvd pw target`,
+/// continuing with the witness `pw` and the split-out `(prime_pw, dvd_pw_target)`
+/// pair to build a proof of `goal` (which must not mention `pw`). Mirrors the
+/// inline elimination [`declare_euclid`] already builds for the same
+/// `exists_prime_dvd` result shape, pulled out because this file needs it a
+/// second time.
+fn eliminate_prime_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    target: ExprId,
+    goal: ExprId,
+    exists_proof: ExprId,
+    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let level = d.level_one();
+    let anon = d.anon_name();
+    let predicate = prime_divisor_predicate(d, &p, target);
+    let source_ty = {
+        let exists = d.kernel().const_(p.logic.exists_, vec![level]);
+        d.apply(exists, &[nat, predicate])
+    };
+    let motive = d.kernel().lam(anon, source_ty, goal, BinderInfo::Default);
+    let minor = {
+        let pw_fv = d.fresh_fvar();
+        let pw = d.kernel().fvar(pw_fv);
+        let prime_pw_ty = prime_condition(d, &p, pw);
+        let dvd_pw_target_ty = d.dvd(pw, target);
+        let hpand_ty = d.const_app(p.logic.and, &[prime_pw_ty, dvd_pw_target_ty]);
+        let hpand_fv = d.fresh_fvar();
+        let hpand = d.kernel().fvar(hpand_fv);
+        let prime_pw = and_left(d, prime_pw_ty, dvd_pw_target_ty, hpand);
+        let dvd_pw_target = and_right(d, prime_pw_ty, dvd_pw_target_ty, hpand);
+        let body = continuation(d, pw, prime_pw, dvd_pw_target);
+        let with_hpand = d.lam_fv(hpand_fv, hpand_ty, body);
+        d.lam_fv(pw_fv, nat, with_hpand)
+    };
+    let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![level]);
+    d.apply(exists_rec, &[nat, predicate, motive, minor, exists_proof])
+}
+
+/// Eliminate `dvd_hyp : dvd divisor dividend`, continuing with the witness `q`
+/// and `eq_proof : Eq dividend (mul divisor q)` to build a proof of `goal`
+/// (which must not mention `q`). A private per-file copy, matching the ones
+/// already in `lcm.rs`, `irrational.rs`, `perfect.rs` and `divisibility.rs`.
+fn dvd_elim(
+    d: &mut NatDev<'_>,
+    divisor: ExprId,
+    dividend: ExprId,
+    goal: ExprId,
+    dvd_hyp: ExprId,
+    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let predicate = d.dvd_predicate(divisor, dividend);
+    let dvd_ty = d.dvd(divisor, dividend);
+    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let divisor_q = d.mul(divisor, q);
+        let eq_ty = d.eq(dividend, divisor_q);
+        let eq_fv = d.fresh_fvar();
+        let eq_proof = d.kernel().fvar(eq_fv);
+        let body = continuation(d, q, eq_proof);
+        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
+        d.lam_fv(q_fv, nat, with_eq)
+    };
+    let exists_rec_name = d.prelude().logic.exists_rec;
+    let rec = d.kernel().const_(exists_rec_name, vec![one]);
+    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
+}
+
+/// See [`NatPrelude::coprime_of_forall_prime_dvd`] for the route. Trichotomy
+/// on `g := gcd m n` via `lt_or_ge` twice:
+///
+/// - `g < 1` (so `g = 0`, via `le_of_succ_le_succ` + `zero_le` +
+///   `le_antisymm`): `g ∣ m` and `g ∣ n` (`gcd_dvd_left`/`_right`) transport
+///   along `g = 0` to `dvd 0 m`/`dvd 0 n`, which force `m = 0`/`n = 0`
+///   (`zero_mul` on the witness, `dvd_elim`). Apply the hypothesis at `k = 2`
+///   (`prime_two`, already proved in this file) -- `dvd 2 m`/`dvd 2 n` hold
+///   trivially once `m`/`n` are `0` (`dvd_zero`) -- to get `dvd 2 one`, which
+///   [`refute_dvd_one_against_prime`] refutes. `False.rec` closes this branch.
+/// - `1 ≤ g` and `g < 2` (so `g = 1` directly via `le_of_succ_le_succ` +
+///   `le_antisymm`): this **is** the goal.
+/// - `1 ≤ g` and `2 ≤ g`: `exists_prime_dvd` gives a prime `pw ∣ g`, hence
+///   `pw ∣ m` and `pw ∣ n` (`dvd_trans` through `gcd_dvd_left`/`_right`), so
+///   the hypothesis gives `pw ∣ 1` -- refuted by
+///   [`refute_dvd_one_against_prime`] again. `False.rec` closes this branch
+///   too.
+///
+/// No case needs decidable equality or classical choice beyond the two
+/// order trichotomies already proved (`lt_or_ge`); everything else is a
+/// direct construction.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_of_forall_prime_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    d.theorem(p.coprime_of_forall_prime_dvd, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let g = d.gcd(m, n);
+        let one = d.num(1);
+        let two = d.num(2);
+        let zero = d.zero();
+
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let prime_k_ty = prime_condition(d, &p, k);
+        let dvd_k_m_ty = d.dvd(k, m);
+        let dvd_k_n_ty = d.dvd(k, n);
+        let dvd_k_1_ty = d.dvd(k, one);
+        let inner1 = d.arrow(dvd_k_n_ty, dvd_k_1_ty);
+        let inner2 = d.arrow(dvd_k_m_ty, inner1);
+        let body0 = d.arrow(prime_k_ty, inner2);
+        let hyp_ty = d.pi_fv(k_fv, nat, body0);
+
+        let target = d.eq(g, one);
+        let stmt = d.arrow(hyp_ty, target);
+
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        let g_dvd_m = d.lemma(p.gcd_dvd_left, &[m, n]);
+        let g_dvd_n = d.lemma(p.gcd_dvd_right, &[m, n]);
+
+        let dich1 = d.lemma(p.lt_or_ge, &[g, one]); // Or (Lt g one) (Le one g)
+        let lt_g1_ty = d.lt(g, one);
+        let le_1g_ty = d.le(one, g);
+
+        // Branch A: g < 1, i.e. g = 0. Forces m = n = 0, and the hypothesis
+        // at k = 2 then contradicts itself.
+        let branch_a = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let le_g_zero = d.lemma(p.le_of_succ_le_succ, &[g, zero, h]);
+            let zero_le_g = d.lemma(p.zero_le, &[g]);
+            let g_eq_zero = d.lemma(p.le_antisymm, &[g, zero, le_g_zero, zero_le_g]);
+
+            let zero_dvd_m = transport_dvd_left(d, g, zero, g_eq_zero, m, g_dvd_m);
+            let zero_dvd_n = transport_dvd_left(d, g, zero, g_eq_zero, n, g_dvd_n);
+
+            let m_eq_zero_ty = d.eq(m, zero);
+            let m_eq_zero = dvd_elim(d, zero, m, m_eq_zero_ty, zero_dvd_m, &|d, q, eq_m_0q| {
+                let zero_q = d.mul(zero, q);
+                let zero_mul_eq = d.lemma(p.zero_mul, &[q]);
+                let (_, chained) = d.chain(m, &[(zero_q, eq_m_0q), (zero, zero_mul_eq)]);
+                chained
+            });
+            let n_eq_zero_ty = d.eq(n, zero);
+            let n_eq_zero = dvd_elim(d, zero, n, n_eq_zero_ty, zero_dvd_n, &|d, q, eq_n_0q| {
+                let zero_q = d.mul(zero, q);
+                let zero_mul_eq = d.lemma(p.zero_mul, &[q]);
+                let (_, chained) = d.chain(n, &[(zero_q, eq_n_0q), (zero, zero_mul_eq)]);
+                chained
+            });
+
+            let prime_2 = prime_two(d, &p);
+            let dvd_2_zero = d.lemma(p.dvd_zero, &[two]);
+            let eq_zero_m = d.symm(m, zero, m_eq_zero);
+            let eq_zero_n = d.symm(n, zero, n_eq_zero);
+            let dvd_2_m = transport_dvd_right(d, two, zero, m, eq_zero_m, dvd_2_zero);
+            let dvd_2_n = transport_dvd_right(d, two, zero, n, eq_zero_n, dvd_2_zero);
+
+            let hyp_at_2 = d.apply(hyp, &[two]);
+            let step1 = d.apply(hyp_at_2, &[prime_2]);
+            let step2 = d.apply(step1, &[dvd_2_m]);
+            let dvd_2_1 = d.apply(step2, &[dvd_2_n]);
+
+            let false_pf = refute_dvd_one_against_prime(d, &p, two, prime_2, dvd_2_1);
+            let branch_proof = absurd(d, &p, target, false_pf);
+            d.lam_fv(h_fv, lt_g1_ty, branch_proof)
+        };
+
+        // Branch B: 1 ≤ g. Split again on g < 2 vs 2 ≤ g.
+        let branch_b = {
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+
+            let dich2 = d.lemma(p.lt_or_ge, &[g, two]); // Or (Lt g two) (Le two g)
+            let lt_g2_ty = d.lt(g, two);
+            let le_2g_ty = d.le(two, g);
+
+            let branch_b1 = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let le_g_1 = d.lemma(p.le_of_succ_le_succ, &[g, one, h2]);
+                let eq_g_1 = d.lemma(p.le_antisymm, &[g, one, le_g_1, h1]);
+                d.lam_fv(h2_fv, lt_g2_ty, eq_g_1)
+            };
+
+            let branch_b2 = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let ex_proof = d.lemma(p.exists_prime_dvd, &[g, h2]);
+                let branch_proof = eliminate_prime_dvd(
+                    d,
+                    &p,
+                    g,
+                    target,
+                    ex_proof,
+                    &|d, pw, prime_pw, dvd_pw_g| {
+                        let dvd_pw_m = d.lemma(p.dvd_trans, &[pw, g, m, dvd_pw_g, g_dvd_m]);
+                        let dvd_pw_n = d.lemma(p.dvd_trans, &[pw, g, n, dvd_pw_g, g_dvd_n]);
+                        let hyp_at_pw = d.apply(hyp, &[pw]);
+                        let step1 = d.apply(hyp_at_pw, &[prime_pw]);
+                        let step2 = d.apply(step1, &[dvd_pw_m]);
+                        let dvd_pw_1 = d.apply(step2, &[dvd_pw_n]);
+                        let false_pf = refute_dvd_one_against_prime(d, &p, pw, prime_pw, dvd_pw_1);
+                        absurd(d, &p, target, false_pf)
+                    },
+                );
+                d.lam_fv(h2_fv, le_2g_ty, branch_proof)
+            };
+
+            let body = or_cases(
+                d, &p, lt_g2_ty, le_2g_ty, target, branch_b1, branch_b2, dich2,
+            );
+            d.lam_fv(h1_fv, le_1g_ty, body)
+        };
+
+        let body = or_cases(d, &p, lt_g1_ty, le_1g_ty, target, branch_a, branch_b, dich1);
+        let proof = d.lam_fv(hyp_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
