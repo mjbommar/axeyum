@@ -159,6 +159,7 @@ mod ops;
 mod order;
 mod order_extra;
 mod order_more;
+mod parity;
 mod perfect;
 mod permutation;
 mod powsq;
@@ -217,6 +218,7 @@ use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
+use parity::declare_parity_all;
 use perfect::declare_perfect_all;
 use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
@@ -1926,6 +1928,48 @@ pub struct NatPrelude {
     /// `sqrt`, no rational embedding). Infinite descent on `q` via
     /// `WellFounded.fix`.
     pub no_rational_sqrt_two: NameId,
+
+    // --- parity (`parity.rs`) -------------------------------------------------
+    /// `Nat.Even n := Exists (fun k => Eq n (add k k))` — an EXISTENTIAL
+    /// witness, deliberately in the `k + k` form rather than `2 * k`:
+    /// [`Self::even_or_odd`]'s own proof already produces exactly `n = half +
+    /// half` (`half := div n 2`) as its even-branch intermediate, so
+    /// [`Self::even_or_odd_exists`] below reuses that term verbatim as the
+    /// witness equation instead of converting between `k+k` and `2*k` first.
+    pub even: NameId,
+    /// `Nat.Odd n := Exists (fun k => Eq n (succ (add k k)))` — `succ (k+k)`
+    /// rather than `k+k+1`, for the same reason: [`Self::even_or_odd`]'s
+    /// odd-branch intermediate is already exactly `n = succ (half + half)`.
+    pub odd: NameId,
+    /// `Nat.even_or_odd_exists : ∀ n, Or (Even n) (Odd n)` — [`Self::even_or_odd`]
+    /// restated with an existential witness instead of the computed `div n
+    /// 2`, derived from it directly (`Or.rec` over the same two branches,
+    /// each closed by `Exists.intro` at witness `div n 2`) rather than
+    /// re-run through `div_mod_exec` a second time.
+    pub even_or_odd_exists: NameId,
+    /// `Nat.add_self_ne_succ_add_self : ∀ k j, Not (Eq (add k k) (succ (add j
+    /// j)))` — no doubled number equals the successor of a doubled number.
+    /// The load-bearing step under [`Self::even_not_odd`]/[`Self::odd_not_even`],
+    /// proved by induction on `k` with an inner case split on `j` (`k = 0` is
+    /// immediate from `succ_ne_zero`; the successor case peels one `succ` off
+    /// each side via `add_succ`/`succ_add` and closes with two rounds of
+    /// `succ_injective` against the outer induction hypothesis). Registered
+    /// as its own theorem, not a private helper, because both bridge lemmas
+    /// need it applied at two *independently* existentially-bound witnesses.
+    pub add_self_ne_succ_add_self: NameId,
+    /// `Nat.even_not_odd : ∀ n, Even n → Not (Odd n)`. Both existentials are
+    /// eliminated (`Exists.rec`, `Prop`-valued so this is legal even though
+    /// the witnesses are never returned) down to `Eq (add k k) (succ (add j
+    /// j))` for some `k, j`, refuted by [`Self::add_self_ne_succ_add_self`].
+    pub even_not_odd: NameId,
+    /// `Nat.odd_not_even : ∀ n, Odd n → Not (Even n)` — [`Self::even_not_odd`]
+    /// with its two hypotheses supplied in the opposite order; no new
+    /// construction.
+    pub odd_not_even: NameId,
+    /// `Nat.even_iff_odd_succ : ∀ n, Iff (Even n) (Odd (succ n))`. Both
+    /// directions are direct `congrArg succ`/`succ_injective` on the
+    /// existential witness — `parity_ne` is not needed here.
+    pub even_iff_odd_succ: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2394,6 +2438,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_divisors_two_pow: kernel.name_str(nat, "sumDivisors_two_pow"),
             even_of_even_sq: kernel.name_str(nat, "even_of_even_sq"),
             no_rational_sqrt_two: kernel.name_str(nat, "no_rational_sqrt_two"),
+            even: kernel.name_str(nat, "Even"),
+            odd: kernel.name_str(nat, "Odd"),
+            even_or_odd_exists: kernel.name_str(nat, "even_or_odd_exists"),
+            add_self_ne_succ_add_self: kernel.name_str(nat, "add_self_ne_succ_add_self"),
+            even_not_odd: kernel.name_str(nat, "even_not_odd"),
+            odd_not_even: kernel.name_str(nat, "odd_not_even"),
+            even_iff_odd_succ: kernel.name_str(nat, "even_iff_odd_succ"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2497,6 +2548,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_exists_prime_factorization(&mut d, &p)?;
         declare_crt(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;
+        // Needs `Nat.even_or_odd`, just declared by `declare_powsq_all` above.
+        declare_parity_all(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;
