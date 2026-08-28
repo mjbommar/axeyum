@@ -47,6 +47,40 @@ killed **all five** guard tests rather than the predicted one, because
 `build_nat_prelude` itself stops admitting. That arm became load-bearing for
 the prelude, where it had not been.
 
+## MEASUREMENT UPDATE (2026-08-28): the "zero benefit" number is STALE
+
+The decision above rests on an A/B measuring `creal` at 14.91 s -> 14.23 s
+(4.6%, noise exceeding effect). **That A/B ran before `trig_fn`, `cos_sign`
+and `uniform_convergence` landed on 2026-08-27**, and those three files are
+now 78% of the prelude build (`creal_prelude_builds` 12.60 s -> 105.51 s).
+
+Re-measured on the current tree: literal numerals are **-11% overall**, and
+**81x on one declaration** — `cos_sign::declare_cos_wide_nonpositive`, 9.74 s
+-> 0.12 s. The mechanism is confirmed by δ-unfold counting: healthy
+declarations run 1.6-3 `unfold_def` attempts per successful unfold, the
+regressed ones run 40-120 : 1, and `CReal.sinFn` alone is 2,426 unfolds
+against 291,261 attempts, 98% of them `Nat.succ`. `whnf` is walking unary
+towers, not unfolding definitions.
+
+**The decision does not change, and the reason it does not change is
+unaffected**: the cost is still a ledger-wide RENDERING change moving 12
+pinned statements, 3 autogenesis scripts, 5 `checker_command`s and 388 fact
+`formal.statement` strings that would drift silently. -11% does not buy that.
+
+What changes is that **"measured at zero" must no longer be quoted as the
+reason.** The honest statement is: the benefit is real but modest in
+aggregate, concentrated in a small number of declarations, and the local
+remedy is strictly better — bounding the magnitude a declaration FORMS took
+one declaration 587 s -> 113 s and another 9.74 s -> a fraction of that,
+without touching how any numeral renders.
+
+Note also the second flavour, which literals do **not** fix: a concrete
+witness threaded through an application (`geom_16_over_25_k_final` builds
+`633` as a unary `Nat.mul` and carries `K = ka*633 + ka*2` through the whole
+M-test), so every `whnf` re-derives the tower. That is
+`declare_e_converges`'s hazard arriving as a magnitude, and only a proof
+change reaches it.
+
 ## Context
 
 The kernel carries Lean's `reduce_nat` acceleration. `Kernel::reduce_nat_binop`

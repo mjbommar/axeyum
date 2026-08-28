@@ -48,10 +48,47 @@ recent observations cannot detect a drift that was already underway when the
 observations began.** It is self-confirming. Each lane's "in band" reading was
 honest and locally correct, and the aggregate was wrong.
 
+## Bisected (2026-08-28) — and "cumulative and ordinary" is REFUTED
+
+Endpoints re-confirmed independently: **12.60 s** at `77b71bf10`, **105.51 s**
+at HEAD, prebuilt binary run directly, `--exact`, one test confirmed each time.
+
+No bisect over 378 commits was needed. `creal.rs`'s `STEPS` is a loop, so an
+`Instant::now()` around `(step.run)` gave the whole distribution in ONE run:
+
+| file | cost |
+| --- | ---: |
+| `trig_fn` | 59.24 s |
+| `cos_sign` | 11.46 s |
+| `uniform_convergence` | 8.32 s |
+| **the other 165 steps, combined** | **22.2 s** |
+
+Three files are **79.0 s of 101.25 s — 78%** — and all three were added on
+2026-08-27. Eight declarations carry 67.75 s of 94.22 s across 1,559. Ordinary
+growth is 12.60 → ~22 s. `integral`, the largest family by step count (46), is
+4.82 s.
+
+**And the `Definition`-unfold mechanism is NOT implicated** — measured, not
+assumed, by counting δ-unfolds against `unfold_def` attempts. Healthy
+declarations run 1.6–3 attempts per successful unfold; the regressed ones run
+**40–120 : 1**. `CReal.sinFn` is 2,426 unfolds against **291,261 attempts, 98%
+of them `Nat.succ`/`Nat`**. Almost nothing is being delta-unfolded; `whnf` is
+traversing **unary `Nat` towers**. Cost is uncorrelated with term size —
+`cosWideNonpositive` is 864 nodes / 9.74 s while `sinFnLowerBoundOneToR` is
+8,174 nodes / 1.49 s, ~60x apart per node.
+
+So it is the documented *"keep formed magnitudes small"* mechanism, in two
+flavours: **(A)** source numerals (`cos_sign`, 9.7 s → **0.12 s** with
+`Lit::Nat`, 81x), and **(B)** a concrete witness threaded through
+(`geom_16_over_25_k_final` builds `25*25+8 = 633` as unary `Nat.mul`, and
+`K = ka*633 + ka*2` is carried through the whole M-test application, so every
+`whnf` re-derives the tower). (B) is `declare_e_converges`'s concrete-witness
+hazard arriving as a magnitude, and literals do not help it.
+
 ## What is NOT claimed
 
-- Not that any particular lane caused it. **378 commits touched `creal.rs` or
-  `creal/` since 2026-08-26**; the growth is plausibly cumulative and ordinary.
+- Not that any particular lane caused it — the three files are ordinary,
+  correct mathematics that happens to form large `Nat`s.
 - Not that 12.19 s is achievable now. The prelude has genuinely gained
   content — EVT row 2 and its gap closure, supOn rungs 1–6, pi rungs 2–3, the
   integral family. Some growth is real work.
