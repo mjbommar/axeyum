@@ -184,7 +184,7 @@ pub(super) fn declare_converges_upper_bound_shift(
 /// file builds are alpha-equivalent (hence defeq) to the ones
 /// [`CRealPrelude::alternating_bracket_upper`]'s stored type mentions once `a`
 /// is substituted.
-fn build_t_lam(d: &mut IntDev<'_>, p: CRealPrelude, a_fn: ExprId) -> ExprId {
+pub(super) fn build_t_lam(d: &mut IntDev<'_>, p: CRealPrelude, a_fn: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
@@ -197,7 +197,7 @@ fn build_t_lam(d: &mut IntDev<'_>, p: CRealPrelude, a_fn: ExprId) -> ExprId {
 }
 
 /// `sumRange t n`.
-fn sum_at(d: &mut IntDev<'_>, p: CRealPrelude, t_lam: ExprId, n: ExprId) -> ExprId {
+pub(super) fn sum_at(d: &mut IntDev<'_>, p: CRealPrelude, t_lam: ExprId, n: ExprId) -> ExprId {
     d.const_app(p.sum_range, &[t_lam, n])
 }
 
