@@ -878,6 +878,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.log_one_right,
         p.ble_eq_false_of_lt,
         p.log_of_lt,
+        p.log_aux_le_fuel,
+        p.log_le_self,
     ]
 }
 
