@@ -502,6 +502,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.log,
         p.sqrt_aux,
         p.sqrt,
+        p.clog_aux,
+        p.clog,
     ]
 }
 
@@ -882,6 +884,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.log_of_lt,
         p.sqrt_zero,
         p.sqrt_one,
+        p.clog_zero_right,
+        p.clog_zero_left,
+        p.clog_one_left,
+        p.clog_one_right,
     ]
 }
 
@@ -6164,7 +6170,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        71 + 363,
+        73 + 367,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8716,4 +8722,87 @@ fn sqrt_computes_and_its_boundary_equations_apply() {
         f.k.axiom_footprint(p.sqrt).is_empty(),
         "Nat.sqrt must rest on zero axioms"
     );
+}
+
+/// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
+/// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
+/// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
+/// recursion's guard, exercising `(n + b - 1) / b` at each). The boundary
+/// equations then apply at a concrete argument and are axiom-free.
+///
+/// Negative controls differ from the truth by ONE successor, deliberately
+/// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
+#[test]
+fn clog_computes_and_its_boundary_equations_apply() {
+    let mut f = Fixture::new();
+    let clog = f.p.clog;
+
+    for (base, value, expected) in [
+        (2u32, 8u32, 3u32),
+        (2, 7, 3),
+        (2, 5, 3),
+        (2, 1, 0),
+        (3, 9, 2),
+        (5, 4, 1),
+        (0, 6, 0),
+        (1, 6, 0),
+        (7, 0, 0),
+    ] {
+        let b = f.num(base);
+        let n = f.num(value);
+        let lhs = f.const_app(clog, &[b, n]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "clog {base} {value} must reduce to {expected}"
+        );
+    }
+
+    let two = f.num(2);
+    let seven = f.num(7);
+    let clog_two_seven = f.const_app(clog, &[two, seven]);
+    let four = f.num(4);
+    assert!(
+        !f.k.def_eq(clog_two_seven, four),
+        "negative control: clog 2 7 is 3, not 4 -- def_eq must not be vacuous"
+    );
+    let three = f.num(3);
+    let nine = f.num(9);
+    let clog_three_nine = f.const_app(clog, &[three, nine]);
+    let one = f.num(1);
+    assert!(
+        !f.k.def_eq(clog_three_nine, one),
+        "negative control: clog 3 9 is 2, not 1"
+    );
+
+    // The boundary equations apply, and each lands on the statement its name
+    // promises rather than on some vacuously true instance.
+    let p = f.p;
+    let zero = f.zero();
+    for (name, expected_lhs) in [
+        (p.clog_zero_right, (7u32, 0u32)),
+        (p.clog_zero_left, (0, 7)),
+        (p.clog_one_left, (1, 7)),
+        (p.clog_one_right, (7, 1)),
+    ] {
+        let applied = f.const_app(name, &[seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("{name:?} must apply at a concrete argument: {shown}")
+        });
+        let b = f.num(expected_lhs.0);
+        let n = f.num(expected_lhs.1);
+        let lhs = f.const_app(clog, &[b, n]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "{name:?} at 7 must state Eq (clog {} {}) 0",
+            expected_lhs.0,
+            expected_lhs.1
+        );
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{name:?} must rest on zero axioms"
+        );
+    }
 }

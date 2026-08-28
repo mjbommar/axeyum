@@ -137,6 +137,7 @@ mod cantor;
 mod cardinality;
 mod catalan;
 mod choose;
+mod clog;
 mod crt;
 mod defs;
 mod diagonal;
@@ -191,6 +192,7 @@ use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
+use clog::declare_clog_all;
 use crt::declare_crt;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
@@ -2142,6 +2144,32 @@ pub struct NatPrelude {
     /// `Nat.sqrt_one : Eq (sqrt 1) 1` — `refl`: fully concrete, one fuel step
     /// finds `1 * 1 ≤ 1` (`Mathlib`: `Nat.sqrt_one`).
     pub sqrt_one: NameId,
+    // --- the ceiling logarithm (`clog.rs`) ----------------------------------
+    /// `Nat.clogAux : Nat → Nat → Nat → Nat` — `clogAux b f n`, the ceiling
+    /// base-`b` logarithm of `n` computed with **fuel** `f`, by structural
+    /// recursion on `f`. `clogAux b zero n ≡ 0` and `clogAux b (succ f) n ≡
+    /// if 2 ≤ b then (if 2 ≤ n then succ (clogAux b f (div (sub (add n b) 1)
+    /// b)) else 0) else 0`, both definitionally. Same fuel device as
+    /// [`log_aux`](Self::log_aux); the recursive call is at `(n + b - 1) /
+    /// b`, not `n / b`.
+    pub clog_aux: NameId,
+    /// `Nat.clog : Nat → Nat → Nat` — `clog b n := clogAux b n n`.
+    pub clog: NameId,
+    /// `Nat.clog_zero_right : ∀ b, Eq (clog b 0) 0` — `refl`: the fuel is
+    /// `0`, so `clogAux` is already at its base case.
+    pub clog_zero_right: NameId,
+    /// `Nat.clog_zero_left : ∀ n, Eq (clog 0 n) 0` — `ble 2 0` is `false`,
+    /// so the outer cut collapses in every fuel case (`Mathlib`:
+    /// `Nat.clog_zero_left`).
+    pub clog_zero_left: NameId,
+    /// `Nat.clog_one_left : ∀ n, Eq (clog 1 n) 0` — `ble 2 1` reduces to
+    /// `ble 1 0`, i.e. `false` (`Mathlib`: `Nat.clog_one_left`).
+    pub clog_one_left: NameId,
+    /// `Nat.clog_one_right : ∀ b, Eq (clog b 1) 0` — a three-way case
+    /// analysis on `b`: `0` and `1` fail the `2 ≤ b` cut, and `succ (succ
+    /// k)` passes it and then fails the INNER cut `2 ≤ 1` (`Mathlib`:
+    /// `Nat.clog_one_right`).
+    pub clog_one_right: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2642,6 +2670,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sqrt: kernel.name_str(nat, "sqrt"),
             sqrt_zero: kernel.name_str(nat, "sqrt_zero"),
             sqrt_one: kernel.name_str(nat, "sqrt_one"),
+            clog_aux: kernel.name_str(nat, "clogAux"),
+            clog: kernel.name_str(nat, "clog"),
+            clog_zero_right: kernel.name_str(nat, "clog_zero_right"),
+            clog_zero_left: kernel.name_str(nat, "clog_zero_left"),
+            clog_one_left: kernel.name_str(nat, "clog_one_left"),
+            clog_one_right: kernel.name_str(nat, "clog_one_right"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2777,6 +2811,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Needs `Nat.mul` (`declare_arithmetic`) and `Nat.ble`
         // (`declare_boolean_le`), both far above; nothing needs `Nat.sqrt`.
         declare_sqrt_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.sub`/`Nat.div`/`Nat.ble`, all far above, and
+        // nothing needs `Nat.clog`, so it goes last too.
+        declare_clog_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

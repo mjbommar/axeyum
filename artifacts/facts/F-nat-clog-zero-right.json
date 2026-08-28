@@ -1,0 +1,60 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- clog_zero_right 2>/dev/null | grep -Ec '^Nat\\.clog_zero_right[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.clog_zero_right",
+      "kernel_declaration": "Nat.clog_zero_right",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `Nat.clog b n := Nat.clogAux b n n`, so at `n = 0` both the fuel AND the value argument are `Nat.zero`; `Nat.rec` on a `zero`-headed fuel selects the constant-zero minor premise directly, without the guard ever being evaluated. The proof is a bare `Eq.refl`, no induction needed. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Controls run 2026-08-28: the real name exits 0 and `clog_zero_rightXX` exits 1.",
+      "supports": "For every b, clog_b(0) = 0."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::clog_computes_and_its_boundary_equations_apply",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.clog_zero_right",
+      "kernel_declaration": "Nat.clog",
+      "kind": "kernel-term",
+      "notes": "A fuel-based definition is only correct if the fuel always suffices, and an EXHAUSTED fuel returns `0` -- which is exactly what a wrong answer looks like for a logarithm. So the computation test is the fuel-sufficiency check: `Kernel::def_eq` reduces `clog 2 8` to `3`, `clog 2 7` to `3` (deliberately chosen to differ from the FLOOR logarithm `log 2 7 = 2`, so the test cannot pass by accidentally computing the wrong function), `clog 2 5` to `3` (three levels of the recursive `(n + b - 1) / b` step), `clog 5 4` to `1` and `clog 3 9` to `2`, with two negative controls differing by ONE successor (`clog 2 7 = 4` and `clog 3 9 = 1` must both be rejected) so that `def_eq` cannot pass vacuously.",
+      "supports": "the fuel recursion terminates with the right value, not with an exhausted fuel"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.clog_zero_right",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Mathlib's `Nat.clog` is defined by WELL-FOUNDED recursion on `(n + b - 1) / b`, and the Lean equation compiler's route to that carries `Quot.sound`/`propext`. The fuel-based structural definition in `nat_prelude/clog.rs` -- the same device `nat_prelude/log.rs` uses for `Nat.log` -- was chosen so that this row stays empty, and this command is what makes the claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.clog_zero_right : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.clog x0 AxNat.zero) AxNat.zero)"
+  },
+  "id": "F:nat-clog-zero-right",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis statement could not be expressed in this kernel at all before `Nat.clog` was declared: Mathlib defines `Nat.clog b n = if 1 < b and 1 < n then clog b ((n + b - 1) / b) + 1 else 0`, whose recursive call is at `(n + b - 1) / b` -- not a constructor predecessor, so not structural. `nat_prelude/clog.rs` recurses structurally on a FUEL argument instead, instantiated at `n` itself, transferring the device `nat_prelude/log.rs` established for `Nat.log` verbatim.\n\nThe existence of the DEFINITION `Nat.clog` is entailed by this row rather than separately checked: the statement mentions `AxNat.clog`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain. A theorem inventory lists theorems only and would return zero rows for the definition itself, so it is deliberately not used as the discriminator for the construction.\n\nThis is one of the four boundary lemmas this lane landed. `Nat.clog_pos` and `Nat.log_le_clog` need `clogAux b f n <= f`-style motives generalized over the fuel -- a real induction, not a case split -- and are a separate task; this fact does not claim them.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 204-nat-clog",
+    "source": "one of the four boundary equations `declare_clog_all` (`crates/axeyum-lean-kernel/src/nat_prelude/clog.rs`) admits alongside the `Nat.clogAux`/`Nat.clog` definitions"
+  },
+  "schema_version": 1,
+  "statement": "For every b, clog_b(0) = 0.",
+  "title": "The ceiling logarithm at n = 0 is zero"
+}
