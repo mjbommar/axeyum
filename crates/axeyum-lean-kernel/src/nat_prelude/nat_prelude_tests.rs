@@ -642,6 +642,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.least_divisor_search,
         p.exists_prime_dvd,
         p.coprime_of_lt_prime,
+        p.coprime_of_dvd_left,
+        p.coprime_of_dvd_right,
+        p.prime_dvd_iff_not_coprime,
+        p.coprime_add_self_right,
         p.choose_zero_right,
         p.choose_succ_succ,
         p.zero_choose_succ,
@@ -6112,7 +6116,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        65 + 322,
+        65 + 326,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6156,6 +6160,111 @@ fn eq_one_of_dvd_one_is_derived_and_applies() {
         rendered.contains("dvd") && rendered.contains("Eq"),
         "unexpected residue type: {rendered}"
     );
+}
+
+/// The four `Nat.Coprime`-import-backlog theorems
+/// (`coprime_of_dvd_left`/`_right`, `prime_dvd_iff_not_coprime`,
+/// `coprime_add_self_right`) are `Theorem`s, rest on no axiom, and each
+/// *applies* at concrete numerals — instantiating their leading `Nat`
+/// arguments produces the residual `Pi`/`Iff` type the doc comments promise,
+/// not merely a type that admits.
+#[test]
+fn coprime_import_backlog_theorems_apply_at_concrete_numerals() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let numeral = |k: &mut Kernel, n: usize| {
+        let mut value = k.const_(p.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.succ, vec![]);
+            value = k.app(succ, value);
+        }
+        value
+    };
+
+    for name in [
+        p.coprime_of_dvd_left,
+        p.coprime_of_dvd_right,
+        p.prime_dvd_iff_not_coprime,
+        p.coprime_add_self_right,
+    ] {
+        let declaration = k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{name:?} must be declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "{name:?} must be a Theorem"
+        );
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{name:?} rests on a trusted declaration"
+        );
+    }
+
+    // `coprime_of_dvd_left 2 6 3 : dvd 2 6 -> gcd 6 3 = 1 -> gcd 2 3 = 1`.
+    {
+        let two = numeral(&mut k, 2);
+        let six = numeral(&mut k, 6);
+        let three = numeral(&mut k, 3);
+        let theorem = k.const_(p.coprime_of_dvd_left, vec![]);
+        let step1 = k.app(theorem, two);
+        let step2 = k.app(step1, six);
+        let applied = k.app(step2, three);
+        let inferred = k.infer(applied).expect("must type-check");
+        let rendered = k.render_lean(inferred);
+        assert!(
+            rendered.contains("dvd") && rendered.contains("gcd"),
+            "unexpected residue type: {rendered}"
+        );
+    }
+
+    // `coprime_of_dvd_right 3 2 6 : dvd 2 6 -> gcd 3 6 = 1 -> gcd 3 2 = 1`.
+    {
+        let three = numeral(&mut k, 3);
+        let two = numeral(&mut k, 2);
+        let six = numeral(&mut k, 6);
+        let theorem = k.const_(p.coprime_of_dvd_right, vec![]);
+        let step1 = k.app(theorem, three);
+        let step2 = k.app(step1, two);
+        let applied = k.app(step2, six);
+        let inferred = k.infer(applied).expect("must type-check");
+        let rendered = k.render_lean(inferred);
+        assert!(
+            rendered.contains("dvd") && rendered.contains("gcd"),
+            "unexpected residue type: {rendered}"
+        );
+    }
+
+    // `prime_dvd_iff_not_coprime 3 5 : prime_condition 3 -> Iff (dvd 3 5) (Not (gcd 3 5 = 1))`.
+    {
+        let three = numeral(&mut k, 3);
+        let five = numeral(&mut k, 5);
+        let theorem = k.const_(p.prime_dvd_iff_not_coprime, vec![]);
+        let step1 = k.app(theorem, three);
+        let applied = k.app(step1, five);
+        let inferred = k.infer(applied).expect("must type-check");
+        let rendered = k.render_lean(inferred);
+        assert!(
+            rendered.contains("dvd") && rendered.contains("Not") && rendered.contains("gcd"),
+            "unexpected residue type: {rendered}"
+        );
+    }
+
+    // `coprime_add_self_right 3 4 : Iff (gcd 3 (4+3) = 1) (gcd 3 4 = 1)`.
+    {
+        let three = numeral(&mut k, 3);
+        let four = numeral(&mut k, 4);
+        let theorem = k.const_(p.coprime_add_self_right, vec![]);
+        let step1 = k.app(theorem, three);
+        let applied = k.app(step1, four);
+        let inferred = k.infer(applied).expect("must type-check");
+        let rendered = k.render_lean(inferred);
+        assert!(
+            rendered.contains("gcd") && rendered.contains("Iff"),
+            "unexpected residue type: {rendered}"
+        );
+    }
 }
 
 /// `Nat.coprime_of_bezout_one` composes with the *executable* gcd: at a coprime

@@ -26,7 +26,9 @@
 //! `div_mod_remainder_eq_zero_iff_dvd`.
 
 use super::NatPrelude;
-use super::helpers::{and_left, and_right, iff_forward, iff_reverse};
+use super::helpers::{
+    and_left, and_right, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right,
+};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -1059,6 +1061,267 @@ pub(super) fn declare_coprime_of_lt_prime(
         let with_pos = d.lam_fv(pos_fv, pos_ty, with_ub);
         let proof = d.lam_fv(prime_fv, prime_ty, with_pos);
         (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.coprime_of_dvd_left` / `Nat.coprime_of_dvd_right`: coprimality
+// descends along a divisor on either side of `gcd`.
+// ============================================================================
+
+/// `Nat.coprime_of_dvd_left : ∀ a1 a2 b, dvd a1 a2 → Eq (gcd a2 b) one → Eq
+/// (gcd a1 b) one` and `Nat.coprime_of_dvd_right : ∀ a b1 b2, dvd b1 b2 →
+/// Eq (gcd a b2) one → Eq (gcd a b1) one`.
+///
+/// See the field doc comments on [`NatPrelude::coprime_of_dvd_left`] and
+/// [`NatPrelude::coprime_of_dvd_right`] for the route: `gcd a1 b` (resp.
+/// `gcd a b1`) divides both the shrunk argument and the shared one, hence
+/// divides the shrunk `gcd`'s witness of `1` via `dvd_gcd` +
+/// `eq_one_of_dvd_one`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_of_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.coprime_of_dvd_left, 3, &|d, v| {
+        let (a1, a2, b) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+
+        let dvd_ty = d.dvd(a1, a2);
+        let gcd_a2b = d.gcd(a2, b);
+        let cop_ty = d.eq(gcd_a2b, one);
+        let gcd_a1b = d.gcd(a1, b);
+        let concl = d.eq(gcd_a1b, one);
+
+        let dvd_fv = d.fresh_fvar();
+        let dvd_hyp = d.kernel().fvar(dvd_fv);
+        let cop_fv = d.fresh_fvar();
+        let cop_hyp = d.kernel().fvar(cop_fv);
+
+        let g_dvd_a1 = d.lemma(p.gcd_dvd_left, &[a1, b]);
+        let g_dvd_a2 = d.lemma(p.dvd_trans, &[gcd_a1b, a1, a2, g_dvd_a1, dvd_hyp]);
+        let g_dvd_b = d.lemma(p.gcd_dvd_right, &[a1, b]);
+        let g_dvd_gcd = d.lemma(p.dvd_gcd, &[gcd_a1b, a2, b, g_dvd_a2, g_dvd_b]);
+        let dvd_g_1 = transport_dvd_right(d, gcd_a1b, gcd_a2b, one, cop_hyp, g_dvd_gcd);
+        let g_eq_1 = d.lemma(p.eq_one_of_dvd_one, &[gcd_a1b, dvd_g_1]);
+
+        let body = d.lam_fv(cop_fv, cop_ty, g_eq_1);
+        let proof = d.lam_fv(dvd_fv, dvd_ty, body);
+        let inner = d.arrow(cop_ty, concl);
+        let stmt = d.arrow(dvd_ty, inner);
+        (stmt, proof)
+    })?;
+
+    d.theorem(p.coprime_of_dvd_right, 3, &|d, v| {
+        let (a, b1, b2) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+
+        let dvd_ty = d.dvd(b1, b2);
+        let gcd_ab2 = d.gcd(a, b2);
+        let cop_ty = d.eq(gcd_ab2, one);
+        let gcd_ab1 = d.gcd(a, b1);
+        let concl = d.eq(gcd_ab1, one);
+
+        let dvd_fv = d.fresh_fvar();
+        let dvd_hyp = d.kernel().fvar(dvd_fv);
+        let cop_fv = d.fresh_fvar();
+        let cop_hyp = d.kernel().fvar(cop_fv);
+
+        let g_dvd_a = d.lemma(p.gcd_dvd_left, &[a, b1]);
+        let g_dvd_b1 = d.lemma(p.gcd_dvd_right, &[a, b1]);
+        let g_dvd_b2 = d.lemma(p.dvd_trans, &[gcd_ab1, b1, b2, g_dvd_b1, dvd_hyp]);
+        let g_dvd_gcd = d.lemma(p.dvd_gcd, &[gcd_ab1, a, b2, g_dvd_a, g_dvd_b2]);
+        let dvd_g_1 = transport_dvd_right(d, gcd_ab1, gcd_ab2, one, cop_hyp, g_dvd_gcd);
+        let g_eq_1 = d.lemma(p.eq_one_of_dvd_one, &[gcd_ab1, dvd_g_1]);
+
+        let body = d.lam_fv(cop_fv, cop_ty, g_eq_1);
+        let proof = d.lam_fv(dvd_fv, dvd_ty, body);
+        let inner = d.arrow(cop_ty, concl);
+        let stmt = d.arrow(dvd_ty, inner);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.prime_dvd_iff_not_coprime : ∀ p n, prime_condition p → Iff (dvd p n)
+// (Not (Eq (gcd p n) one))`.
+// ============================================================================
+
+/// See [`NatPrelude::prime_dvd_iff_not_coprime`] for the route.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_dvd_iff_not_coprime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_dvd_iff_not_coprime, 2, &|d, v| {
+        let (p_var, n_var) = (v[0], v[1]);
+        let one = d.num(1);
+        let two = d.num(2);
+        let zero = d.zero();
+        let nat = d.nat_ty();
+
+        let prime_ty = prime_condition(d, &p, p_var);
+
+        // Rebuilt to match `prime_condition`'s own inner shape exactly.
+        let two_le = d.le(two, p_var);
+        let clause = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hyp = d.dvd(x, p_var);
+            let is_one = d.eq(x, one);
+            let is_p = d.eq(x, p_var);
+            let disjunction = d.const_app(p.logic.or, &[is_one, is_p]);
+            let inner = d.arrow(hyp, disjunction);
+            d.pi_fv(x_fv, nat, inner)
+        };
+
+        let dvd_ty = d.dvd(p_var, n_var);
+        let gcd_pn = d.gcd(p_var, n_var);
+        let cop_ty = d.eq(gcd_pn, one);
+        let not_cop_ty = d.const_app(p.logic.not, &[cop_ty]);
+        let iff_target = d.const_app(p.logic.iff, &[dvd_ty, not_cop_ty]);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let two_le_p = and_left(d, two_le, clause, prime_hyp);
+        let clause_proof = and_right(d, two_le, clause, prime_hyp);
+
+        // Forward: dvd p n -> Not (gcd p n = 1).
+        let mp = {
+            let dvd_fv = d.fresh_fvar();
+            let dvd_hyp = d.kernel().fvar(dvd_fv);
+            let cop_fv = d.fresh_fvar();
+            let cop_hyp = d.kernel().fvar(cop_fv);
+
+            let dvd_p_p = d.lemma(p.dvd_refl, &[p_var]);
+            let dvd_p_gcd = d.lemma(p.dvd_gcd, &[p_var, p_var, n_var, dvd_p_p, dvd_hyp]);
+            let dvd_p_1 = transport_dvd_right(d, p_var, gcd_pn, one, cop_hyp, dvd_p_gcd);
+            let one_le_one = d.lemma(p.le_refl_thm, &[one]);
+            let p_le_1 = d.lemma(p.le_of_dvd, &[p_var, one, one_le_one, dvd_p_1]);
+            let two_le_1 = d.lemma(p.le_trans, &[two, p_var, one, two_le_p, p_le_1]);
+            let one_le_zero = d.lemma(p.le_of_succ_le_succ, &[one, zero, two_le_1]);
+            let false_pf = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
+            let not_cop_proof = d.lam_fv(cop_fv, cop_ty, false_pf);
+            d.lam_fv(dvd_fv, dvd_ty, not_cop_proof)
+        };
+
+        // Reverse: Not (gcd p n = 1) -> dvd p n.
+        let mpr = {
+            let notcop_fv = d.fresh_fvar();
+            let notcop_hyp = d.kernel().fvar(notcop_fv);
+
+            let dvd_gcd_p = d.lemma(p.gcd_dvd_left, &[p_var, n_var]);
+            let disj = d.apply(clause_proof, &[gcd_pn, dvd_gcd_p]);
+
+            let is_one_ty = d.eq(gcd_pn, one);
+            let is_p_ty = d.eq(gcd_pn, p_var);
+
+            let on_one = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let false_pf = d.apply(notcop_hyp, &[h]);
+                let body = absurd(d, &p, dvd_ty, false_pf);
+                d.lam_fv(h_fv, is_one_ty, body)
+            };
+            let on_p = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let dvd_gcd_n = d.lemma(p.gcd_dvd_right, &[p_var, n_var]);
+                let result = transport_dvd_left(d, gcd_pn, p_var, h, n_var, dvd_gcd_n);
+                d.lam_fv(h_fv, is_p_ty, result)
+            };
+            let case_result = or_cases(d, &p, is_one_ty, is_p_ty, dvd_ty, on_one, on_p, disj);
+            d.lam_fv(notcop_fv, not_cop_ty, case_result)
+        };
+
+        let iff_proof = d.const_app(p.logic.iff_intro, &[dvd_ty, not_cop_ty, mp, mpr]);
+        let stmt = d.arrow(prime_ty, iff_target);
+        let proof = d.lam_fv(prime_fv, prime_ty, iff_proof);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.coprime_add_self_right : ∀ m n, Iff (Eq (gcd m (add n m)) one) (Eq
+// (gcd m n) one)`.
+// ============================================================================
+
+/// See [`NatPrelude::coprime_add_self_right`] for the route: `gcd m (n+m) =
+/// gcd m n` by `dvd_antisymm`, then the `Iff` follows from that one equation
+/// by substitution.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_add_self_right(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_add_self_right, 2, &|d, v| {
+        let (m_var, n_var) = (v[0], v[1]);
+        let one = d.num(1);
+
+        let sum = d.add(n_var, m_var);
+        let swapped_sum = d.add(m_var, n_var);
+        let g1 = d.gcd(m_var, sum);
+        let g2 = d.gcd(m_var, n_var);
+
+        // g1 | m, g1 | (n+m); reorder to (m+n) to match `dvd_add_iff_right`,
+        // cancel the shared `m` to get g1 | n, so g1 | gcd m n = g2.
+        let g1_dvd_m = d.lemma(p.gcd_dvd_left, &[m_var, sum]);
+        let g1_dvd_sum = d.lemma(p.gcd_dvd_right, &[m_var, sum]);
+        let comm_eq = d.lemma(p.add_comm, &[n_var, m_var]);
+        let g1_dvd_swapped = transport_dvd_right(d, g1, sum, swapped_sum, comm_eq, g1_dvd_sum);
+        let dvd_g1_n_ty = d.dvd(g1, n_var);
+        let dvd_g1_swapped_ty = d.dvd(g1, swapped_sum);
+        let iff_add = d.lemma(p.dvd_add_iff_right, &[g1, m_var, n_var, g1_dvd_m]);
+        let mpr_fn = iff_reverse(d, dvd_g1_n_ty, dvd_g1_swapped_ty, iff_add);
+        let g1_dvd_n = d.apply(mpr_fn, &[g1_dvd_swapped]);
+        let g1_dvd_g2 = d.lemma(p.dvd_gcd, &[g1, m_var, n_var, g1_dvd_m, g1_dvd_n]);
+
+        // g2 | m, g2 | n, so g2 | (n+m) directly (already the right order),
+        // hence g2 | gcd m (n+m) = g1.
+        let g2_dvd_m = d.lemma(p.gcd_dvd_left, &[m_var, n_var]);
+        let g2_dvd_n = d.lemma(p.gcd_dvd_right, &[m_var, n_var]);
+        let g2_dvd_sum = d.lemma(p.dvd_add, &[g2, n_var, m_var, g2_dvd_n, g2_dvd_m]);
+        let g2_dvd_g1 = d.lemma(p.dvd_gcd, &[g2, m_var, sum, g2_dvd_m, g2_dvd_sum]);
+
+        let heq = d.lemma(p.dvd_antisymm, &[g1, g2, g1_dvd_g2, g2_dvd_g1]);
+
+        let cop1_ty = d.eq(g1, one);
+        let cop2_ty = d.eq(g2, one);
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let symm_heq = d.symm(g1, g2, heq);
+            let (_e, g2_eq_1) = d.chain(g2, &[(g1, symm_heq), (one, h)]);
+            d.lam_fv(h_fv, cop1_ty, g2_eq_1)
+        };
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let (_e, g1_eq_1) = d.chain(g1, &[(g2, heq), (one, h)]);
+            d.lam_fv(h_fv, cop2_ty, g1_eq_1)
+        };
+
+        let iff_proof = d.const_app(p.logic.iff_intro, &[cop1_ty, cop2_ty, mp, mpr]);
+        let stmt = d.const_app(p.logic.iff, &[cop1_ty, cop2_ty]);
+        (stmt, iff_proof)
     })?;
     Ok(())
 }
