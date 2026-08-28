@@ -521,6 +521,10 @@ pub struct IntPrelude {
     /// special case of [`Self::mod_eq_of_dvd`] at `dvd n (m*n)`
     /// (`Int.dvd_mul_left`).
     pub mod_eq_of_mul_left: NameId,
+    /// `ModEq.of_mul_right : ∀ n a b m, ModEq (n*m) a b → ModEq n a b` — the
+    /// same special case of [`Self::mod_eq_of_dvd`] at the mirrored witness
+    /// `dvd n (n*m)` (`Int.dvd_mul_right`).
+    pub mod_eq_of_mul_right: NameId,
     /// `ModEq.mul_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c*a) (c*b)`
     /// — the primitive multiplicative congruence.
     pub mod_eq_mul_left: NameId,
@@ -1119,6 +1123,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_of_dvd: child(kernel, "modEq_of_dvd"),
         mod_eq_dvd_iff: child(kernel, "modEq_dvd_iff"),
         mod_eq_of_mul_left: child(kernel, "modEq_of_mul_left"),
+        mod_eq_of_mul_right: child(kernel, "modEq_of_mul_right"),
         mod_eq_mul_left: child(kernel, "modEq_mul_left"),
         mod_eq_mul_right: child(kernel, "modEq_mul_right"),
         mod_eq_mul: child(kernel, "modEq_mul"),
@@ -1316,6 +1321,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_of_dvd(&mut d)?;
         modeq::declare_modeq_dvd_iff(&mut d)?;
         modeq::declare_modeq_of_mul_left(&mut d)?;
+        modeq_family::declare_modeq_of_mul_right(&mut d)?;
         modeq::declare_modeq_mul_left(&mut d)?;
         modeq::declare_modeq_mul_right(&mut d)?;
         modeq::declare_modeq_mul(&mut d)?;
