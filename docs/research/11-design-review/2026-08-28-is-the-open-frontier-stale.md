@@ -173,3 +173,41 @@ from the count. **A large block of open facts in one family is as likely to be
 a preregistered evaluation set as a neglected opportunity**, and the frontier's
 own row count cannot tell them apart. Check the partition before sizing the
 prize.
+
+## A boundary I over-generalized: `Quot.sound` blocks a ROUTE, not provability
+
+The producer lane measured, correctly, that **`Nat.gcd.eq_def` carries
+`Quot.sound`** (as do `Nat.gcd_zero_left`, `Nat.gcd_succ`), because `Nat.gcd`
+is defined by well-founded recursion. It concluded that
+`Nat.ModEq.gcd_eq` **"cannot be produced this way"**, and named it among the
+targets its transport route could not reach.
+
+I turned that into a general constraint and put it in three subsequent briefs
+as *"nothing axiom-free can unfold `Nat.gcd`'s well-founded recursion, so any
+family whose statements mention `Nat.gcd` is out of reach."*
+
+**The first half is true and the conclusion is too broad.** A lane proved
+`Nat.ModEq.gcd_eq` outright, axiom-free — `Nat.mod_eq_gcd_eq`, footprint 0
+(verified here against `Nat.add_comm` as a control). It never unfolds the
+recursion: it eliminates the balanced-witness `modEq` definition twice, derives
+`gcd a m ∣ gcd b m` and its mirror through `dvd_add` / `dvd_add_iff_right` /
+`dvd_mul_right_of_dvd`, and closes with `dvd_antisymm`. Accepted first attempt.
+
+The precise statement, which is what the briefs should have said:
+
+> **`Quot.sound` blocks unfolding `Nat.gcd`'s recursion, so it blocks the
+> IMPORT/TRANSPORT route, which needs an axiom-free candidate that steps the
+> definition. It does not block proving facts ABOUT `gcd` by other means** —
+> the divisibility characterisation (`gcd_dvd_left`/`_right`, `dvd_gcd`,
+> `dvd_antisymm`, `eq_one_of_dvd_one`) reaches many of them and needs no
+> unfolding at all.
+
+Every `gcd` fact closed in this repository has gone the second way, including
+nine in one lane. So the boundary is real, narrow, and about a *mechanism*, not
+about a subject.
+
+**The general shape, since I have now made this error twice**: a lane reports
+what blocked *its* route. Promoting that to "this cannot be done" is the same
+over-generalization as `[[dont-generalize-a-lanes-local-finding]]`, and it is
+easy precisely because the measurement is sound. Ask which route the finding
+constrains before writing it into a brief.
