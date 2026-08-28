@@ -8,10 +8,29 @@
     "statement": "∀ {p : ℕ}, Nat.Prime p → p ≠ 2 → p ≠ 3 → 5 ≤ p",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.five_le_of_ne_two_of_ne_three",
+      "kind": "kernel-term",
+      "supports": "prime_condition p -> p != 2 -> p != 3 -> 5 <= p",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- five_le_of_ne_two_of_ne_three 2>/dev/null | grep -xFc 'Nat.five_le_of_ne_two_of_ne_three\t6\t((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> ((x2 : Not (Eq.{1} AxNat x0 (AxNat.succ (AxNat.succ AxNat.zero)))) -> ((x3 : Not (Eq.{1} AxNat x0 (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))) -> AxNat.le (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))) x0))))')\" -ge 1",
+      "notes": "The kernel re-infers the theorem type from the constructed term, matching Mathlib's `Prime p -> p != 2 -> p != 3 -> 5 <= p`. Primality is spelled inline (2 <= x /\\ forall c, c|x -> c=1 \\/ c=x), matching this prelude's convention (no bare `Prime` predicate; see primes.rs module doc). Proved by splitting at Nat.lt_or_ge p 5 (ops::cases_lt_or_ge): the Le 5 p side is the hypothesis itself; the Lt p 5 side is a genuine 5-way case split to concrete p in {0,1,2,3,4} (ops::cases_lt_bound_absurd, a new finite-cases eliminator whose branches discharge a FIXED goal by contradiction) -- p=0,1 contradict the primality lower bound 2<=p, p=2,3 contradict the two Not hypotheses directly, p=4 is refuted as composite (4=2*2) via the already-declared not_prime_of_dvd_of_ne."
+    },
+    {
+      "id": "footprint-Nat.five_le_of_ne_two_of_ne_three",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: []",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example theorem_axiom_footprint -- Nat.five_le_of_ne_two_of_ne_three 2>/dev/null | grep -xFc $'nat\\tNat.five_le_of_ne_two_of_ne_three\\t0\\t')\" -ge 1",
+      "notes": "The theorem-specific footprint command reports zero dependencies on axioms in the constructed Nat environment."
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +45,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-28 by a native, axiom-free kernel construction (crates/axeyum-lean-kernel/src/nat_prelude/primes.rs, declare_five_le_of_ne_two_of_ne_three), using a new general-purpose finite-cases-by-contradiction eliminator (ops::cases_lt_bound_absurd) built alongside the fib-2 lane's ops::cases_lt_bound/cases_lt_or_ge for docs/plan/status/230-nat-bounded-cases.md. Twice deferred before this ('needs a bounded case split over p in {2,3,4} plus small-numeral facts'); accepted by the kernel on the first attempt. This is a hand-written reference construction, not autonomous production; the external Mathlib theorem remains prior art and its proof term/tactic trace were not consulted."
 }
