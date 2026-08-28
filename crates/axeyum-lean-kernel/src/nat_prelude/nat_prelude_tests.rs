@@ -856,6 +856,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.desc_factorial_succ_eq_succ_mul,
         p.desc_factorial_eq_factorial_mul_choose,
         p.factorial_dvd_desc_factorial,
+        p.desc_factorial_self,
+        p.desc_factorial_le,
+        p.self_le_factorial,
         p.monotone_of_le_succ,
         p.le_refl_thm,
         p.le_succ,
@@ -6244,7 +6247,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 429,
+        85 + 432,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6901,6 +6904,111 @@ fn desc_factorial_computes_and_collapses_past_its_base() {
     assert!(
         f.k.infer(wrong_bound).is_err(),
         "accepted a proof of `5 < 5` where `5 < 6` was required"
+    );
+}
+
+/// `descFactorial_self` and `descFactorial_le` apply at concrete instances.
+///
+/// `descFactorial_self` at `n := 5`: `5.descFactorial 5 = 5!`, i.e. `120 =
+/// 120`. `descFactorial_le` at `n := 2, k := 3, m := 5` with a proof of
+/// `3 <= 5`: `3.descFactorial 2 = 6 <= 20 = 5.descFactorial 2`. NEGATIVE
+/// control: swapping in a proof of `5 <= 5` where `3 <= 5` was required (the
+/// hypothesis slot, not the conclusion) must be rejected — the same
+/// wrong-bound shape [`desc_factorial_computes_and_collapses_past_its_base`]
+/// already exercises for `descFactorial_of_lt`.
+#[test]
+fn desc_factorial_self_and_le_apply_at_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let five = f.num(5);
+    let one_twenty = f.num(120);
+
+    // descFactorial_self(5) : Eq(5.descFactorial 5, 5!)
+    let self_proof = f.lemma(p.desc_factorial_self, &[five]);
+    let self_inferred =
+        f.k.infer(self_proof)
+            .expect("descFactorial_self applies at n := 5");
+    let self_at_five = f.const_app(p.desc_factorial, &[five, five]);
+    let fact_five = f.factorial(five);
+    let self_expected = f.eq(self_at_five, fact_five);
+    assert!(f.k.def_eq(self_inferred, self_expected));
+    // The conclusion is about the concrete number 120, not an opaque term.
+    assert!(f.k.def_eq(self_at_five, one_twenty));
+    assert!(f.k.def_eq(fact_five, one_twenty));
+
+    // descFactorial_le(n := 2, k := 3, m := 5) applied at a proof of 3 <= 5:
+    // 3.descFactorial 2 = 6 <= 20 = 5.descFactorial 2.
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let three_le_five = {
+        let base = f.lemma(p.le_refl, &[three]);
+        let to_four = f.lemma(p.le_step, &[three, three, base]);
+        f.lemma(p.le_step, &[three, four, to_four])
+    };
+    let le_proof = f.lemma(p.desc_factorial_le, &[two, three, five, three_le_five]);
+    let le_inferred =
+        f.k.infer(le_proof)
+            .expect("descFactorial_le applies at (n, k, m) := (2, 3, 5)");
+    let df_3_2 = f.const_app(p.desc_factorial, &[three, two]);
+    let df_5_2 = f.const_app(p.desc_factorial, &[five, two]);
+    let le_expected = f.le(df_3_2, df_5_2);
+    assert!(f.k.def_eq(le_inferred, le_expected));
+    // The conclusion is about the concrete numbers 6 and 20, not opaque terms.
+    let six = f.num(6);
+    let twenty = f.num(20);
+    assert!(f.k.def_eq(df_3_2, six));
+    assert!(f.k.def_eq(df_5_2, twenty));
+
+    // The hypothesis is load-bearing: swapping in a proof of `5 <= 5` (not
+    // `3 <= 5`) where the theorem's third explicit argument is `5` must be
+    // rejected, not silently accepted for the wrong bound.
+    let five_le_five = f.lemma(p.le_refl, &[five]);
+    let wrong_bound = {
+        let theorem = f.k.const_(p.desc_factorial_le, vec![]);
+        let at_n = f.k.app(theorem, two);
+        let at_k = f.k.app(at_n, three);
+        let at_m = f.k.app(at_k, five);
+        f.k.app(at_m, five_le_five)
+    };
+    assert!(
+        f.k.infer(wrong_bound).is_err(),
+        "accepted a proof of `5 <= 5` where `3 <= 5` was required"
+    );
+}
+
+/// `self_le_factorial` applies at a concrete instance: `5 <= 5! = 120`.
+/// NEGATIVE control: the inferred conclusion is `Le n (factorial n)`, not
+/// the reversed `Le (factorial n) n` (which would also happen to hold at
+/// `n := 1` but is a different, generally FALSE proposition for `n >= 2` —
+/// checked here concretely, since `def_eq` would not otherwise distinguish
+/// the two orderings of `Le` at `n := 1`).
+#[test]
+fn self_le_factorial_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let five = f.num(5);
+    let one_twenty = f.num(120);
+
+    let proof = f.lemma(p.self_le_factorial, &[five]);
+    let inferred =
+        f.k.infer(proof)
+            .expect("self_le_factorial applies at n := 5");
+    let fact_five = f.factorial(five);
+    let expected = f.le(five, fact_five);
+    assert!(f.k.def_eq(inferred, expected));
+    // The conclusion is about the concrete number 120, not an opaque term.
+    assert!(f.k.def_eq(fact_five, one_twenty));
+
+    // NEGATIVE control: the reversed proposition `Le (factorial n) n` is a
+    // different type; the proof term for `self_le_factorial` must not
+    // type-check against it.
+    let reversed = f.le(fact_five, five);
+    assert!(
+        !f.k.def_eq(expected, reversed),
+        "Le n (factorial n) must NOT be def-eq to the reversed Le (factorial n) n"
     );
 }
 

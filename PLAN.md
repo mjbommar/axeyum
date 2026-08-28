@@ -209,6 +209,10 @@ now. Nothing was deleted.
 | 2026-08-28 | fib-2 | `Nat.le_fib_self` (kernel-checked, axiom-free), closing `F:ml430-nat-le-fib-self-0cbccb4d`; `Nat.le_fib_add_one`/`Int.fib_add`/`Int.fib_of_odd` re-diagnosed and left open with sharper blockers |
 | 2026-08-28 | int-parity | `Int.Even`/`Int.Odd` via `natAbs`, two bridge theorems, `Int.fib_of_odd`, all axiom-free; `F:ml430-int-fib-of-odd-66560495` proved |
 | 2026-08-28 | nat-bounded-cases | `ops::cases_lt_bound`/`cases_lt_or_ge`/`cases_lt_bound_absurd` (general bounded-case infrastructure); `Nat.le_fib_add_one` and `Nat.Prime.five_le_of_ne_two_of_ne_three` (kernel-checked, axiom-free), closing `F:ml430-nat-le-fib-add-one-5284f0bf` and `F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786` |
+| 2026-08-28 | nat-descfact-lemmas | `Nat.descFactorial_self` (`n.descFactorial n = n!`, via the existing `descFactorial_eq_factorial_mul_choose` bridge at `k := n` plus `choose_self`/`mul_one`); closes `F:ml430-nat-descfactorial-self-899fc0e0` |
+| 2026-08-28 | nat-descfact-lemmas | `Nat.descFactorial_le` (monotone in the base for fixed exponent: `k <= m -> k.descFactorial n <= m.descFactorial n`, via `choose_le_choose` + `mul_le_mul_left` + two transports across the bridge equation); closes `F:ml430-nat-descfactorial-le-2b8cc09a` |
+| 2026-08-28 | nat-descfact-lemmas | `Nat.self_le_factorial` (`n <= n!`, direct induction on `n` using `one_le_factorial`, independent of the `descFactorial`/`choose` bridge); closes `F:ml430-nat-self-le-factorial-cfdffc69` |
+| 2026-08-28 | nat-descfact-lemmas | `F:ml430-nat-descfactorial-of-lt-fbcf5d26` status flip only — `Nat.descFactorial_of_lt` already existed and already matched the fact's `formal.statement` verbatim; attached evidence (kernel-term + axiom-footprint checkers) and flipped `epistemic_status` to `proved`, no new proof work |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -11041,6 +11045,30 @@ passed, 0 failed (was 114 before this lane's two theorems). `cargo fmt
 warnings` — clean. `python3 scripts/validate-facts.py` — 1909 facts, 0
 errors, `proved` 1809 -> 1811. Both facts' `checker_command`s executed
 directly (not just structurally mirrored) and confirmed exit 0.
+
+**Your lane's block (`DONE`, nat-descfact-lemmas, 2026-08-28).** All four
+target facts landed: `descFactorial_self`, `descFactorial_le`,
+`self_le_factorial` (all new proofs), and `descFactorial_of_lt` (a status
+flip — the declaration already existed and already stated the fact's
+`formal.statement` verbatim; nothing needed but evidence + the status flip).
+`descFactorial_eq_factorial_mul_choose` (landed by a prior lane) was the main
+tool for the first two; `self_le_factorial` is a direct induction,
+independent of that bridge. Skipped `F:ml430-mutation-7afa5ec620720a1501bf349d`
+per brief (a deliberately-perturbed negative control in this family).
+
+Kernel gate: `cargo test -p axeyum-lean-kernel --lib nat_prelude` — 119
+passed, 0 failed (was 116 before this lane; +3 new theorems +1 test — see
+below). `python3 scripts/validate-facts.py`: 0 errors, `open` 85 -> 84,
+`proved` 1824 -> 1825. `cargo fmt`/`clippy --all-targets` clean on the
+touched files.
+
+Nothing was kernel-rejected. Every proof term type-checked on the first
+attempt against `Kernel::add_declaration`; no misdiagnosis, no bisect
+needed. `nat_prelude` inventory count (`definition_names`/`theorem_names`
+sum, `the_build_is_deterministic`'s own pin): 85+429=514 before this lane,
+85+432=517 after (+3 theorems: `descFactorial_self`, `descFactorial_le`,
+`self_le_factorial`; 0 new definitions). Both increments were read off the
+test's own panic message, never hand-counted.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
