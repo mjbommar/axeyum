@@ -67,8 +67,10 @@
 //! literal `neg (neg one) = one` for the base of `neg_neg`).
 
 use super::IntPrelude;
-use super::ops::IntDev;
+use super::ops::{IntDev, Shape, case_split};
+use crate::BinderInfo;
 use crate::KernelError;
+use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 
@@ -563,4 +565,323 @@ fn declare_fib_cassini(d: &mut IntDev<'_>, p: &IntPrelude) -> Result<(), KernelE
 pub(super) fn declare_fib_cassini_all(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
     declare_fib_cassini(d, &p)
+}
+
+// ============================================================================
+// `Int.fib` — the sign-extended Fibonacci sequence, and its first new law.
+// ============================================================================
+//
+// `Int.fib : ℤ → ℤ` did not exist before this: `Nat.fib` (`nat_prelude`) only
+// ever takes a `Nat`, and everything above builds `ofNat (Nat.fib n)` terms
+// directly rather than a genuine `Int`-valued function (`Int.fib_cassini`
+// needs no such thing). All five open `integer-fibonacci` facts quantify over
+// `Int.fib m`/`Int.fib n` for potentially NEGATIVE `m, n : ℤ`, so they were
+// unstatable, not merely unproved, until this definition landed.
+//
+// The standard extension is `fib(-n) = (-1)^(n+1) fib(n)`. Written over the
+// `Int` constructors (`ofNat n` / `negSucc m`, `m` standing for `-(m+1)`):
+//
+// `fib (ofNat n)   := ofNat (Nat.fib n)`
+// `fib (negSucc m) := pow (neg one) m * ofNat (Nat.fib (succ m))`
+//
+// The `negSucc` branch's exponent is `m`, not `m+2`: substituting `n := m+1`
+// into the extension gives `(-1)^(m+2) fib(m+1)`, and `(-1)^(m+2) = (-1)^m`
+// (an even shift), so using `m` directly gives the same value with a smaller
+// term and no extra parity bookkeeping in the definition itself. Hand check
+// against `fib = 0,1,1,2,3,5,…`: `fib(-1) = fib(negSucc 0) = (-1)^0 · fib(1) =
+// 1`; `fib(-2) = fib(negSucc 1) = (-1)^1 · fib(2) = -1`; `fib(-3) =
+// fib(negSucc 2) = (-1)^2 · fib(3) = 2` — matches the well-known
+// `1, -1, 2, -3, 5, -8, …` sequence for `fib(-1), fib(-2), fib(-3), …`.
+//
+// This is ONE `Int.rec` case split with no new recursion device -- closer to
+// `Nat.bit` than to `Nat.log`'s fuel device, exactly as the definition needs
+// no recursion of its OWN: `Int.pow` (already total and structural on its
+// `Nat` exponent) supplies the sign, and `Nat.fib` supplies the magnitude.
+
+/// Delta height for `Int.fib`: it calls `Int.pow` (`POW_HEIGHT`, `defs.rs`)
+/// directly, so it must strictly outrank it -- the same relationship
+/// `Int.prodRange` has to `Int.pow` (`prod.rs`'s `PROD_RANGE_HEIGHT`).
+const FIB_HEIGHT: u16 = super::defs::POW_HEIGHT + 1;
+
+/// Admit `Int.fib : Int → Int`. See the module doc above for the definition
+/// and the hand check.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_fib(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+
+    let motive = d.kernel().lam(anon, int_ty, int_ty, BinderInfo::Default);
+    let minor_of = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fib_n = d.const_app(p.nat.fib, &[n]);
+        let body = d.of_nat(fib_n);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let minor_neg = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let sm = d.succ(m);
+        let fib_sm = d.const_app(p.nat.fib, &[sm]);
+        let ofnat_fib_sm = d.of_nat(fib_sm);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let neg_one = d.ineg(one_i);
+        let sign = d.ipow(neg_one, m);
+        let body = d.imul(sign, ofnat_fib_sm);
+        d.lam_fv(m_fv, nat, body)
+    };
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let rec = d.kernel().const_(p.rec, vec![one]);
+    let body = d.apply(rec, &[motive, minor_of, minor_neg, a]);
+    let value = d.lam_fv(a_fv, int_ty, body);
+    let ty = d.arrow(int_ty, int_ty);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.fib,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(FIB_HEIGHT),
+    })?;
+    Ok(())
+}
+
+/// `Eq Int (pow neg_one (mul two j)) (ofNat one)` — `(-1)` raised to an EVEN
+/// exponent is `1`, by induction on `j` (the exponent is `mul two j`, i.e.
+/// `2j`).
+///
+/// `mul two (succ j)` reduces PURELY (no lemma needed) to
+/// `succ (succ (mul two j))`: `Nat.mul` recurses on its right argument
+/// (`mul_succ : mul n (succ m) = add (mul n m) n`, one of this kernel's
+/// defining-equation theorems, `nat_prelude.rs`), giving `add (mul two j)
+/// two`; `Nat.add` then recurses on ITS right argument, which here is the
+/// LITERAL `two`, so it peels two successors off with `mul two j` held fixed
+/// on the (symbolic) left -- the safe orientation the `Nat.add` gotcha
+/// documents (`CLAUDE.md`: symbolic side left, literal side right). So the
+/// step case needs only [`pow_neg_one_succ`] (already built for
+/// `fib_cassini`, this file) applied twice, plus [`neg_neg`] to cancel the
+/// resulting double negation against the induction hypothesis -- no new
+/// arithmetic lemma at all.
+fn pow_neg_one_two_mul(d: &mut IntDev<'_>, j: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let two = d.num(2);
+        let exponent = d.mul(two, v);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let neg_one = d.ineg(one_i);
+        let lhs = d.ipow(neg_one, exponent);
+        let rhs_nat = d.num(1);
+        let rhs = d.of_nat(rhs_nat);
+        d.ieq(lhs, rhs)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        // `mul two zero` reduces to `zero` (`Nat.mul`'s own base case);
+        // `pow neg_one zero` reduces to `Int.one`; `Int.one` unfolds
+        // (`defs.rs`'s leaf table) to `ofNat 1`. All pure delta/iota, so
+        // `d.irefl` at the raw (unreduced) term reads at the target type.
+        let two = d.num(2);
+        let zero = d.zero();
+        let exponent = d.mul(two, zero);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let neg_one = d.ineg(one_i);
+        let lhs = d.ipow(neg_one, exponent);
+        d.irefl(lhs)
+    };
+
+    let step = |d: &mut IntDev<'_>, k: ExprId, ih: ExprId| -> ExprId {
+        // ih : Eq Int (pow neg_one (mul two k)) (ofNat one)
+        let two = d.num(2);
+        let mul_two_k = d.mul(two, k);
+        let sk = d.succ(k);
+        let mul_two_sk = d.mul(two, sk);
+
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let neg_one = d.ineg(one_i);
+
+        let start = d.ipow(neg_one, mul_two_sk);
+        let succ_succ = {
+            let inner = d.succ(mul_two_k);
+            d.succ(inner)
+        };
+        let reduced_start = d.ipow(neg_one, succ_succ);
+        // `mul two (succ k)` reduces PURELY to `succ (succ (mul two k))` --
+        // see the module doc above -- so `start` and `reduced_start` are the
+        // same term up to reduction.
+        let bridge = d.irefl(start);
+
+        // pow neg_one (succ (succ K)) = neg (pow neg_one (succ K))
+        let sk_of_mul = d.succ(mul_two_k);
+        let step_a = pow_neg_one_succ(d, sk_of_mul);
+        let pow_at_sk = d.ipow(neg_one, sk_of_mul);
+        let neg_pow_at_sk = d.ineg(pow_at_sk);
+
+        // pow neg_one (succ K) = neg (pow neg_one K)
+        let step_b = pow_neg_one_succ(d, mul_two_k);
+        let pow_at_k = d.ipow(neg_one, mul_two_k);
+        let neg_pow_at_k = d.ineg(pow_at_k);
+        let step_b_lifted = d.icongr(pow_at_sk, neg_pow_at_k, step_b, &|d, t| d.ineg(t));
+        let neg_neg_pow_at_k = d.ineg(neg_pow_at_k);
+
+        let (_, double_neg_chain) = d.ichain(
+            reduced_start,
+            &[(neg_pow_at_sk, step_a), (neg_neg_pow_at_k, step_b_lifted)],
+        );
+
+        // Lift `ih` through `neg . neg`, then cancel with `neg_neg`.
+        let ih_neg1 = d.icongr(pow_at_k, one_i, ih, &|d, t| d.ineg(t));
+        let neg_one_i = d.ineg(one_i);
+        let ih_neg2 = d.icongr(neg_pow_at_k, neg_one_i, ih_neg1, &|d, t| d.ineg(t));
+        let neg_neg_one_i = d.ineg(neg_one_i);
+        let cancel = neg_neg(d, one_i);
+
+        let (_, ih_chain) = d.ichain(
+            neg_neg_pow_at_k,
+            &[(neg_neg_one_i, ih_neg2), (one_i, cancel)],
+        );
+
+        let (_, whole) = d.ichain(
+            start,
+            &[
+                (reduced_start, bridge),
+                (neg_neg_pow_at_k, double_neg_chain),
+                (one_i, ih_chain),
+            ],
+        );
+        whole
+    };
+
+    d.induct(&motive, &base, &step, j)
+}
+
+/// `fib_two_mul_add_one_pos : ∀ (n : Int), Lt zero (fib (2*n+1))` — the
+/// Fibonacci sequence is strictly positive at every ODD index, in EITHER
+/// direction of `ℤ`.
+///
+/// Case split on `n`. In both branches `2*n+1` reduces PURELY (no named
+/// lemma for the arithmetic itself -- `Int.mul`/`Int.add` on `ofNat`/`ofNat`
+/// and `ofNat`/`negSucc` pairs, and `Int.subNatNat`'s own `Nat.sub`-based
+/// case split, are all structural, per `defs.rs`'s module doc) down to either
+/// `ofNat E` (`ofNat k` branch, `E := 2k+1` as a `Nat`) or `negSucc (2j)`
+/// (`negSucc j` branch):
+///
+/// - `ofNat` branch: `fib (ofNat E)` reduces ([`declare_fib`]'s own case
+///   split) to `ofNat (Nat.fib E)`, and `Lt (ofNat 0) (ofNat _)` reduces to
+///   `Nat.lt` (the `Int.le`/`Int.lt` four-case table, `defs.rs`) -- so
+///   `Nat.fib_pos_of_pos` fed `Nat.zero_lt_succ` at `E`'s predecessor closes
+///   it directly; the kernel's own defeq check accepts the `Nat`-typed term
+///   where the `Int`-typed conclusion is expected.
+/// - `negSucc` branch: `fib (negSucc (2j))` does NOT reduce further on its
+///   own -- the exponent `2j` in [`declare_fib`]'s `pow (neg one) _` factor
+///   is symbolic in `j` -- so [`pow_neg_one_two_mul`] supplies the one
+///   non-structural fact this branch needs (`(-1)^(2j) = 1`), and an
+///   `Int`-level transport moves the resulting `Nat`-side positivity fact
+///   across the `Eq Int (fib …) (ofNat …)` this gives.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_fib_two_mul_add_one_pos(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let izero = d.izero();
+
+    let statement = |d: &mut IntDev<'_>, args: &[ExprId]| -> ExprId {
+        let n = args[0];
+        let two_nat = d.num(2);
+        let two_i = d.of_nat(two_nat);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let doubled = d.imul(two_i, n);
+        let index = d.iadd(doubled, one_i);
+        let fib_index = d.const_app(p.fib, &[index]);
+        d.ilt(izero, fib_index)
+    };
+
+    d.int_theorem(p.fib_two_mul_add_one_pos, 1, &|d, v| {
+        let n = v[0];
+        let stmt = statement(d, v);
+        let proof = case_split(d, &[n], &statement, &|d, b| match b[0].0 {
+            Shape::OfNat => {
+                let k = b[0].1;
+                let two_nat = d.num(2);
+                let mul_2k = d.mul(two_nat, k);
+                let one_nat = d.num(1);
+                let e_arg = d.add(mul_2k, one_nat);
+                let pos_hyp = d.zero_lt_succ(mul_2k);
+                d.lemma(p.nat.fib_pos_of_pos, &[e_arg, pos_hyp])
+            }
+            Shape::NegSucc => {
+                let j = b[0].1;
+                let two_nat = d.num(2);
+                let x = d.mul(two_nat, j);
+                let sx = d.succ(x);
+
+                // `fib (negSucc x) = pow (neg one) x * ofNat (Nat.fib (succ
+                // x))`, this module's own `declare_fib`.
+                let neg_succ_x = d.neg_succ(x);
+                let fib_neg_succ_x = d.const_app(p.fib, &[neg_succ_x]);
+
+                let one_nat = d.num(1);
+                let one_i = d.of_nat(one_nat);
+                let neg_one = d.ineg(one_i);
+                let sign = d.ipow(neg_one, x);
+                let fib_sx = d.const_app(p.nat.fib, &[sx]);
+                let ofnat_fib_sx = d.of_nat(fib_sx);
+                let mul_form = d.imul(sign, ofnat_fib_sx);
+                // `fib (negSucc x)` reduces PURELY to `mul_form` -- one
+                // step of `declare_fib`'s own recursor.
+                let bridge_fib = d.irefl(fib_neg_succ_x);
+
+                // `(-1)^x = 1`.
+                let sign_eq_one = pow_neg_one_two_mul(d, j);
+                let one_mul_form = d.imul(one_i, ofnat_fib_sx);
+                let lifted = d.icongr(sign, one_i, sign_eq_one, &|d, t| d.imul(t, ofnat_fib_sx));
+
+                // `1 * ofNat (Nat.fib sx)` reduces to `ofNat (mul one
+                // (Nat.fib sx))`, then `Nat.one_mul` collapses it.
+                let mul_reduced = {
+                    let one_nat2 = d.num(1);
+                    let lhs = d.imul(one_i, ofnat_fib_sx);
+                    let rhs_nat = d.mul(one_nat2, fib_sx);
+                    let rhs = d.of_nat(rhs_nat);
+                    let br = d.irefl(lhs);
+                    let one_mul_pf = d.lemma(p.nat.one_mul, &[fib_sx]);
+                    let cast = d.nat_eq_to_int(rhs_nat, fib_sx, one_mul_pf, &|d, t| d.of_nat(t));
+                    d.itrans(lhs, rhs, ofnat_fib_sx, br, cast)
+                };
+
+                let (_, eq_to_ofnat) = d.ichain(
+                    fib_neg_succ_x,
+                    &[
+                        (mul_form, bridge_fib),
+                        (one_mul_form, lifted),
+                        (ofnat_fib_sx, mul_reduced),
+                    ],
+                );
+
+                let h_pos_nat = {
+                    let hyp = d.zero_lt_succ(x);
+                    d.lemma(p.nat.fib_pos_of_pos, &[sx, hyp])
+                };
+
+                let reversed = d.isymm(fib_neg_succ_x, ofnat_fib_sx, eq_to_ofnat);
+                let motive = d.ieq_motive(ofnat_fib_sx, &|d, x2| {
+                    let z = d.izero();
+                    d.ilt(z, x2)
+                });
+                d.itransport(ofnat_fib_sx, motive, h_pos_nat, fib_neg_succ_x, reversed)
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
 }
