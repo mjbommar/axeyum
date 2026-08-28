@@ -672,6 +672,27 @@ pub struct IntPrelude {
     /// `gcd_dvd_left`/`gcd_dvd_right`, the universal property that makes `gcd`
     /// *the* greatest common divisor.
     pub dvd_gcd: NameId,
+    /// `ne_zero_of_gcd : ∀ x y, Eq Nat (gcd x y) zero → False → x ≠ 0 ∨ y ≠ 0`,
+    /// i.e. `gcd x y ≠ 0 → x ≠ 0 ∨ y ≠ 0` — mirrors `Int.ne_zero_of_gcd`.
+    /// `eq_em x 0` splits on whether `x = 0`; the `x ≠ 0` branch is
+    /// immediate (`Or.inl`), and the `x = 0` branch derives `y ≠ 0` as a
+    /// direct lambda: assuming `y = 0` too, `gcd_zero_right 0` (`gcd 0 0 =
+    /// natAbs 0`, defeq `0`) transported along both equalities gives
+    /// `gcd x y = 0`, contradicting the hypothesis.
+    pub ne_zero_of_gcd: NameId,
+    /// `gcd_eq_one_of_gcd_mul_right_eq_one_left : ∀ a m n, Eq Nat (gcd a
+    /// (↑m*↑n)) one → Eq Nat (gcd a ↑m) one` — mirrors
+    /// `Int.gcd_eq_one_of_gcd_mul_right_eq_one_left`. `Int.mul (ofNat m)
+    /// (ofNat n)` reduces to `ofNat (m*n)` by ι-reduction (`define_binary_int`'s
+    /// ofNat/ofNat branch), so both sides unfold to plain `Nat.gcd` statements;
+    /// `Nat.dvd_mul` gives `m ∣ m*n`, and `Nat.coprime_of_dvd_right` closes it.
+    pub gcd_eq_one_of_gcd_mul_right_eq_one_left: NameId,
+    /// `gcd_eq_one_of_gcd_mul_right_eq_one_right : ∀ a m n, Eq Nat (gcd a
+    /// (↑m*↑n)) one → Eq Nat (gcd a ↑n) one` — the right-hand mirror of
+    /// [`gcd_eq_one_of_gcd_mul_right_eq_one_left`](Self::gcd_eq_one_of_gcd_mul_right_eq_one_left).
+    /// `Nat.dvd_mul` gives `n ∣ n*m`, transported to `n ∣ m*n` by
+    /// `Nat.mul_comm`, then `Nat.coprime_of_dvd_right` closes it.
+    pub gcd_eq_one_of_gcd_mul_right_eq_one_right: NameId,
     /// `gcd_eq_gcd_ab : ∀ a b, ∃ u v, ofNat (gcd a b) = a*u + b*v` — Bézout's
     /// identity over `ℤ` (Elements VII.2, strong form), transported from
     /// `Nat.gcd_bezout` through `natAbs`.
@@ -1153,6 +1174,15 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         gcd_one_right: child(kernel, "gcd_one_right"),
         gcd_zero_right: child(kernel, "gcd_zero_right"),
         dvd_gcd: child(kernel, "dvd_gcd"),
+        ne_zero_of_gcd: child(kernel, "ne_zero_of_gcd"),
+        gcd_eq_one_of_gcd_mul_right_eq_one_left: child(
+            kernel,
+            "gcd_eq_one_of_gcd_mul_right_eq_one_left",
+        ),
+        gcd_eq_one_of_gcd_mul_right_eq_one_right: child(
+            kernel,
+            "gcd_eq_one_of_gcd_mul_right_eq_one_right",
+        ),
         gcd_eq_gcd_ab: child(kernel, "gcd_eq_gcd_ab"),
         coprime: child(kernel, "Coprime"),
         coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
@@ -1353,6 +1383,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_nat_abs_dvd_nat_abs_of_dvd(&mut d)?;
         gcd::declare_gcd_dvd_left_right(&mut d)?;
         gcd::declare_dvd_gcd(&mut d)?;
+        gcd::declare_ne_zero_of_gcd(&mut d)?;
+        gcd::declare_gcd_eq_one_of_gcd_mul_right_eq_one(&mut d)?;
         gcd::declare_gcd_eq_gcd_ab(&mut d)?;
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;

@@ -701,6 +701,213 @@ pub(super) fn declare_dvd_gcd(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 }
 
 // ---------------------------------------------------------------------------
+// `Int.ne_zero_of_gcd` and the two `gcd_mul_right` coprimality descents.
+// ---------------------------------------------------------------------------
+
+/// `ne_zero_of_gcd : ∀ (x y : Int), Not (Eq Nat (gcd x y) zero) →
+/// Or (Not (Eq Int x zero)) (Not (Eq Int y zero))`.
+///
+/// `Int.eq_em x zero` splits on whether `x = 0`. The `x ≠ 0` branch is
+/// `Or.inl` directly. The `x = 0` branch (`hx`) builds `y ≠ 0` as a bare
+/// lambda: assume `hy : y = 0`; `gcd_zero_right zero` gives `gcd 0 0 = natAbs
+/// 0`, definitionally `gcd 0 0 = 0`, and rewriting that along `hx`/`hy` (via
+/// `int_eq_rewrite`, twice) produces `gcd x y = 0`, which contradicts the
+/// hypothesis.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_ne_zero_of_gcd(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.ne_zero_of_gcd, 2, &|d, v| {
+        let (x, y) = (v[0], v[1]);
+        let zero_nat = d.zero();
+        let zero_int = d.izero();
+        let g = igcd(d, x, y);
+        let gcd_ne_zero_ty = {
+            let eq_ty = d.eq(g, zero_nat);
+            d.not(eq_ty)
+        };
+        let x_ne_zero = {
+            let eq_ty = d.ieq(x, zero_int);
+            d.not(eq_ty)
+        };
+        let y_ne_zero = {
+            let eq_ty = d.ieq(y, zero_int);
+            d.not(eq_ty)
+        };
+        let concl = d.or(x_ne_zero, y_ne_zero);
+        let stmt = d.arrow(gcd_ne_zero_ty, concl);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let hx_ty = d.ieq(x, zero_int);
+        let hx_not_ty = d.not(hx_ty);
+        let em_x = d.lemma(p.eq_em, &[x, zero_int]);
+
+        let on_left = &|d: &mut IntDev<'_>, hx: ExprId| -> ExprId {
+            let hy_fv = d.fresh_fvar();
+            let hy = d.kernel().fvar(hy_fv);
+            let hy_ty = d.ieq(y, zero_int);
+
+            let base = d.lemma(p.gcd_zero_right, &[zero_int]);
+            let motive_y = &|d: &mut IntDev<'_>, w: ExprId| -> ExprId {
+                let gw = igcd(d, zero_int, w);
+                d.eq(gw, zero_nat)
+            };
+            let isymm_hy = d.isymm(y, zero_int, hy);
+            let step2 = d.int_eq_rewrite(zero_int, y, isymm_hy, base, motive_y);
+
+            let motive_x = &|d: &mut IntDev<'_>, w: ExprId| -> ExprId {
+                let gw = igcd(d, w, y);
+                d.eq(gw, zero_nat)
+            };
+            let isymm_hx = d.isymm(x, zero_int, hx);
+            let gcd_xy_eq_0 = d.int_eq_rewrite(zero_int, x, isymm_hx, step2, motive_x);
+
+            let false_proof = d.apply(h, &[gcd_xy_eq_0]);
+            let not_y = d.lam_fv(hy_fv, hy_ty, false_proof);
+            d.or_inr(x_ne_zero, y_ne_zero, not_y)
+        };
+        let on_right = &|d: &mut IntDev<'_>, hx_not: ExprId| -> ExprId {
+            d.or_inl(x_ne_zero, y_ne_zero, hx_not)
+        };
+        let disj = d.or_elim(hx_ty, hx_not_ty, concl, em_x, on_left, on_right);
+        let proof = d.lam_fv(h_fv, gcd_ne_zero_ty, disj);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.mul (ofNat m) (ofNat n)` reduces to `ofNat (mul m n)` by ι-reduction
+/// (`define_binary_int`'s ofNat/ofNat branch computes `Nat.mul` directly), so
+/// `Int.gcd a (↑m * ↑n)` unfolds to `Nat.gcd (natAbs a) (m*n)` purely by
+/// computation — no cast lemma is needed to bridge it.
+///
+/// Declares both `gcd_eq_one_of_gcd_mul_right_eq_one_left` and its right-hand
+/// mirror in one pass, since both share the cast-erasure argument above and
+/// differ only in which of `Nat.dvd_mul`'s two divisibility facts
+/// (`m ∣ m*n` directly, `n ∣ n*m` transported by `Nat.mul_comm` to `n ∣ m*n`)
+/// feeds `Nat.coprime_of_dvd_right`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if either constructed term does not
+/// check.
+pub(super) fn declare_gcd_eq_one_of_gcd_mul_right_eq_one(
+    d: &mut IntDev<'_>,
+) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+
+    // Shared statement shape: ∀ (a : Int) (m n : Nat),
+    //   Eq Nat (gcd a (ofNat m * ofNat n)) one → Eq Nat (gcd a target) one.
+    let build_stmt = |d: &mut IntDev<'_>, a: ExprId, m: ExprId, n: ExprId, target: ExprId| {
+        let one = d.num(1);
+        let of_m = d.of_nat(m);
+        let of_n = d.of_nat(n);
+        let mn_int = d.imul(of_m, of_n);
+        let hyp = {
+            let g = igcd(d, a, mn_int);
+            d.eq(g, one)
+        };
+        let concl = {
+            let g = igcd(d, a, target);
+            d.eq(g, one)
+        };
+        d.arrow(hyp, concl)
+    };
+
+    let int_ty = d.int_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let big_a = nat_abs(d, a);
+
+    // --- left: gcd a (m*n) = 1 → gcd a m = 1 ---
+    {
+        let of_m = d.of_nat(m);
+        let body = build_stmt(d, a, m, n, of_m);
+        let ty = {
+            let with_n = d.pi_fv(n_fv, nat, body);
+            let with_m = d.pi_fv(m_fv, nat, with_n);
+            d.pi_fv(a_fv, int_ty, with_m)
+        };
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let mn = NatOps::mul(d, m, n);
+        let dvd_m_mn = d.lemma(p.nat.dvd_mul, &[m, n]);
+        let proof_body = d.lemma(p.nat.coprime_of_dvd_right, &[big_a, m, mn, dvd_m_mn, h]);
+        let hyp_ty = {
+            let (of_m, of_n) = (d.of_nat(m), d.of_nat(n));
+            let mn_int = d.imul(of_m, of_n);
+            let g = igcd(d, a, mn_int);
+            let one = d.num(1);
+            d.eq(g, one)
+        };
+        let value = {
+            let with_h = d.lam_fv(h_fv, hyp_ty, proof_body);
+            let with_n = d.lam_fv(n_fv, nat, with_h);
+            let with_m = d.lam_fv(m_fv, nat, with_n);
+            d.lam_fv(a_fv, int_ty, with_m)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.gcd_eq_one_of_gcd_mul_right_eq_one_left,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // --- right: gcd a (m*n) = 1 → gcd a n = 1 ---
+    {
+        let of_n = d.of_nat(n);
+        let body = build_stmt(d, a, m, n, of_n);
+        let ty = {
+            let with_n = d.pi_fv(n_fv, nat, body);
+            let with_m = d.pi_fv(m_fv, nat, with_n);
+            d.pi_fv(a_fv, int_ty, with_m)
+        };
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let nm = NatOps::mul(d, n, m);
+        let mn = NatOps::mul(d, m, n);
+        let dvd_n_nm = d.lemma(p.nat.dvd_mul, &[n, m]);
+        let comm = d.lemma(p.nat.mul_comm, &[n, m]);
+        let motive = &|d: &mut IntDev<'_>, w: ExprId| -> ExprId { d.dvd(n, w) };
+        let dvd_n_mn = d.nat_rewrite(nm, mn, comm, dvd_n_nm, motive);
+        let proof_body = d.lemma(p.nat.coprime_of_dvd_right, &[big_a, n, mn, dvd_n_mn, h]);
+        let hyp_ty = {
+            let (of_m, of_n) = (d.of_nat(m), d.of_nat(n));
+            let mn_int = d.imul(of_m, of_n);
+            let g = igcd(d, a, mn_int);
+            let one = d.num(1);
+            d.eq(g, one)
+        };
+        let value = {
+            let with_h = d.lam_fv(h_fv, hyp_ty, proof_body);
+            let with_n = d.lam_fv(n_fv, nat, with_h);
+            let with_m = d.lam_fv(m_fv, nat, with_n);
+            d.lam_fv(a_fv, int_ty, with_m)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.gcd_eq_one_of_gcd_mul_right_eq_one_right,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // General `Int.neg` ring facts, built here as local proof-term helpers for
 // this module's own inline use: `neg_mul`, `mul_neg`, `neg_neg`.
 //
