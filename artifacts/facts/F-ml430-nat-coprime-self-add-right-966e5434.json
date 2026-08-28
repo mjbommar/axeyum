@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "axiom_footprint": [],
   "id": "F:ml430-nat-coprime-self-add-right-966e5434",
   "title": "Mathlib v4.30 source proposition Nat.coprime_self_add_right",
   "statement": "The proposition declared as `Nat.coprime_self_add_right` in the pinned Mathlib v4.30 source.",
@@ -8,15 +9,36 @@
     "statement": "∀ {m n : ℕ}, m.Coprime (m + n) ↔ m.Coprime n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
     "F:ml430-nat-coprime-add-self-right-c3ed0f45"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_self_add_right 2>/dev/null | grep -Ec '^Nat\\.coprime_self_add_right[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.coprime_self_add_right",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.coprime_self_add_right` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Instantiates `coprime_add_self_right`'s `Iff (gcd m (n+m) = 1) (gcd m n = 1)` and transports its left side along `add_comm m n : m+n = n+m` to reach `gcd m (m+n) = 1` instead -- the only difference from `coprime_add_self_right` is which side of the sum `m` lands on.",
+      "supports": "∀ {m n : ℕ}, m.Coprime (m + n) ↔ m.Coprime n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.coprime_self_add_right",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-cascade",
     "source": "statement-only extraction of `Nat.coprime_self_add_right` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -28,5 +50,6 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_coprime_self_add_right` (`nat_prelude/primes.rs`): `coprime_add_self_right` reordered through `add_comm`. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }
