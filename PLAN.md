@@ -163,6 +163,7 @@ now. Nothing was deleted.
 | 2026-08-27 | `a94a19480` | Open the lane; record the starting measurement. |
 | 2026-08-27 | (pending commit) | Triage the 12 red drift detectors from `docs/plan/status/154-inert-controls.md`: 1 test-mock bug fixed (`test_check_autogenesis_nat_fib_gcd_surface_plan`, mutation-verified), 11 root-caused and left excluded with precise reasons in `control-optout.tsv` (stale pins after legitimate refactors/doc changes, one over-broad Cargo.lock pin, one `git safe.directory` false negative, one genuine "target fact got proved" happy drift, one genuine shared-artifact drift). `OPTOUT_CEILING` 19 -> 18. Also repaired `scripts/check-shell-antipatterns.sh` (red on `main`): fixed the in-scope `grep -q` in `scripts/tests/test-lane-commit.sh`, baselined the out-of-scope one in `render/check.sh`. |
 | 2026-08-27 | ftc | `integral_abs_le_of_bound`, `integral_sub_linear_le`, `antiderivative`, `antiderivative_abs_le` — all first-attempt, axiom-free; rung 3 characterised as three lemmas, none an estimate |
+| 2026-08-27 | (pending commit) | Absence-claim marker coverage: 4/145 -> 18/147 checkable sites (70 `docs/`-owned BARE candidates examined by hand, 15 marked, 55 rejected as not genuine kernel-absence claims). 7 stale "does not exist" claims found and corrected to `was-absent:` with a historical-record note (`Nat.le_refl`, `CReal.sqrt`, `CReal.alternatingBracketUpper`/`alternatingLowerBound`/`alternatingUpperBound`, `CReal.uniform_converges_add`, `Nat.even_or_odd`, `Rat.abs` x3 independently across three documents, `Rat.le`, `Rat.sub`). 8 new live `absent:` markers on currently-true claims (`Complex.exp`/`arg`/`fundamentalTheoremOfAlgebra` x3 sites, `Complex.le`/`lt`, `CReal.within_of_close_within`, `CReal.sup`, `Nat.div_add_mod`). Gate green throughout; `crates/` findings reported, not edited. |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-27 | `de853af65` | Level-1 fix: `STEPS` (135 entries) + `validate_step_order` structural preflight for `creal.rs`, replacing the hand-written `declare_*` sequence in `build_creal_prelude_uncached` with `for step in STEPS { (step.run)(&mut d, prelude)?; }`. 0 violations across 2,264 edges against the existing order. `cargo check -p axeyum-lean-kernel --lib` clean, 0 warnings. |
@@ -2239,7 +2240,8 @@ recorded as a type-level argument (`rate : Nat`, not `CReal -> Nat`).
 `F:creal-alternatingeleo`, `F:creal-alternatingbracket`. **NOT registered**
 (do not exist in the merged tree): `CReal.alternatingBracketUpper`,
 `CReal.alternatingLowerBound`, `CReal.alternatingUpperBound` — see Findings
-below.
+below. *(Since landed — all three now exist in the kernel; historical record.)*
+<!-- was-absent: CReal.alternatingBracketUpper, CReal.alternatingLowerBound, CReal.alternatingUpperBound -- this status note's snapshot of the merged tree; all three since landed -->
 
 **Ch.20 (`CReal` polynomials):** `F:creal-polyeval` (+`-zero`/`-succ`),
 `F:creal-polyadd`, `F:creal-polyeval-polyadd`, `F:creal-polyscale`,
@@ -2326,6 +2328,12 @@ Checked against local `main` @ `aee64cc17` merged into this worktree
   exactly three `declare_*` functions (`neg_one_pow_double`,
   `alternating_e_le_o`, `alternating_bracket`); no dual/upper-bound variant
   anywhere in `creal/`.
+
+*(All five names above are since landed — `CReal.uniform_converges_add`,
+`Nat.even_or_odd`, and the three `CReal.alternating*` declarations all now
+exist in the kernel. This section is a historical record of the merged-tree
+snapshot checked at the time, not a live claim.)*
+<!-- was-absent: CReal.uniform_converges_add, Nat.even_or_odd, CReal.alternatingBracketUpper, CReal.alternatingLowerBound, CReal.alternatingUpperBound -- this findings section's snapshot; all five since landed -->
 
 Per this lane's scope (`crates/` read-only; "if a declaration does not
 exist, that is a finding to report, not a thing to build"), none of the
@@ -3508,7 +3516,9 @@ nothing under `crates/` touched:
    - `CReal.sqrt`/`Complex.abs`/`Complex.abs_add_le`/`Complex.polyMul`(+its
      two correctness theorems)/`Complex.factorQuotient` all confirmed
      `found`; `Complex.exp`/`arg`/`fundamentalTheoremOfAlgebra` all
-     confirmed absent. So the earlier lane's "sqrt/abs no longer gate"
+     confirmed absent.
+     <!-- absent: Complex.exp, Complex.arg, Complex.fundamentalTheoremOfAlgebra -->
+     So the earlier lane's "sqrt/abs no longer gate"
      correction holds up under independent re-check.
    - Complex root isolation genuinely does not exist: the naive keyword grep
      "matches" `extremum.rs` only via a false positive
@@ -5177,6 +5187,121 @@ theorem so they cannot drift.
 The kernel rejected nothing. The only rejection was Rust's borrow checker on a
 nested `d.lemma(..., &[..., { d.lemma(...) }, ...])`.
 
+**Done (`WIP`, absence-adopt, 2026-08-27).** ADR-0611 / `scripts/check-absence-claims.py`
+landed with adoption printed on every run: **4/145 checkable claim sites
+marked** (per `docs/plan/status/151-absence-expiry.md`). This lane worked
+through the 141 checkable-but-unmarked `docs/` sites by hand — not a sweep —
+to raise coverage honestly and find stale claims, since a partial rollout is
+exactly the defect ADR-0611 exists to prevent one level up.
+
+**Census before (this lane's first run, fresh `--release` authority):**
+
+```
+authority: 1889 distinct kernel declarations (floor 1750)
+scanned: 4000 files
+markers: 5 (1 absent, 4 was-absent), naming 9 declaration(s); 10 more QUOTED
+census: 709 absence-claim site(s); 146 name a declaration (4 carry a marker,
+  142 do NOT); 563 name no declaration and are STRUCTURALLY UNCHECKABLE
+FAIL: 142 unexpirable absence claim(s) naming a declaration, over the budget
+  of 141 (concurrent `crates/` lanes had already pushed the bare-named count
+  one over budget before this lane touched anything)
+```
+
+**Census after:**
+
+```
+markers: 20 (9 absent, 11 was-absent), naming 40 declaration(s); 10 more QUOTED
+census: 710 absence-claim site(s); 147 name a declaration (18 carry a marker,
+  129 do NOT); 563 name no declaration and are STRUCTURALLY UNCHECKABLE
+OK: 20 marker(s) checked against the kernel; every claim still holds.
+  Marker coverage of checkable claim sites: 18/147.
+```
+
+**Scope, and why coverage moved 14 points rather than 141.** This lane
+examined all **70** `docs/`-owned BARE candidate sites (the other ~72 of the
+141 the census counted at start were under `crates/`, out of scope, or root
+`CLAUDE.md`, also out of scope). Of those 70, **15 became markers and 55 were
+rejected** as not genuine, checkable absence claims about *this kernel's own*
+`kernel.environment()`. The single largest rejected class (~30 sites): prose
+about autogenesis import/production *targets* ("the target support kernel",
+"r082", "the selected closure", a specific capsule's dependency footprint) —
+these use `Root.name`-shaped identifiers but the claim is about a one-off
+import snapshot or dependency-closure measurement, never about the persistent
+kernel this gate's authority builds. Marking one of those would either fail
+the "unanswerable" check for the wrong reason or, worse, pass by coincidence
+while asserting something this gate was never designed to check. The next
+largest rejected class: candidates that are the SUBJECT of an existing
+positive statement in the same paragraph ("confirmed present", "already
+declares", "all landed") — the extractor pulls every `Root.name` in the block,
+most of which are being cited as *evidence of presence*, not claimed absent.
+
+**8 live `absent:` markers added** (all independently re-verified against the
+fresh authority before marking):
+
+- `docs/curriculum/foundational-books/spivak.md` — `Complex.exp`, `Complex.arg`
+- `docs/curriculum/graded-statement-families.md` (two separate blocks) —
+  `Complex.fundamentalTheoremOfAlgebra`, `Complex.exp`, `Complex.arg`
+- `docs/plan/status/142-fta-assess.md` — same three
+- `docs/reference/examples.md` — `Complex.le`, `Complex.lt` (permanently
+  refuted by `Complex.no_compatible_order`, not merely unbuilt)
+- `docs/research/09-decisions/adr-0611-an-absence-claim-in-prose-must-expire.md`
+  — `CReal.within_of_close_within` (the ADR's own seed-5 discussion; the
+  status doc above already carries the canonical live marker for this
+  declaration, this is a second, independent live claim in a different
+  document making the same assertion)
+- `docs/research/11-design-review/2026-08-27-locatedness-and-the-measure-theoretic-lesson.md`
+  — `CReal.sup`
+- `docs/plan/notes/99-capability-assurance.md` — `Nat.div_add_mod`
+
+**7 STALE claims found and corrected — the headline finding, not the coverage
+number.** Each was written as a live "does not exist" / "is absent" claim and
+is now false; each got a short historical-record note plus a `was-absent:`
+marker so the record survives under the gate rather than being deleted:
+
+| File | Declaration(s) | Now |
+|---|---|---|
+| `docs/formalized-math-2026-08/diary-formalized-collect.md:89` | `Nat.le_refl` | exists |
+| `docs/mathematics-2026-08/diary-flywheel-2026-08-25.md:35` | `CReal.sqrt` | exists (landed 2026-08-23) |
+| `docs/plan/status/133-ledger-uc.md:22` | `CReal.alternatingBracketUpper`, `CReal.alternatingLowerBound`, `CReal.alternatingUpperBound` | all exist |
+| `docs/plan/status/133-ledger-uc.md:96-107` | `CReal.uniform_converges_add`, `Nat.even_or_odd`, + the three `alternating*` names above | all exist |
+| `docs/plan/status/69-creal-lattice.md:17` | `Rat.abs` | exists |
+| `docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md:124` | `Rat.le`, `Rat.sub`, `Rat.abs` | all exist |
+| `docs/research/09-decisions/adr-0519-the-real-lattice-is-defined-on-the-representation-and-is-one-lipschitz.md:127` | `Rat.abs` | exists |
+
+`Rat.abs` alone was independently written as a live "still does not exist"
+claim in **three separate documents** — none aware of the other two. None of
+these were caught by any existing gate; `check-absence-claims.py` did not
+exist to catch them until today, and none had a `was-absent:` marker before
+this lane. No downstream lane is known to have been dispatched against any of
+these seven specifically (unlike the `CReal.weierstrassMTest` /
+`Rat.sumRange` incidents ADR-0611 documents), but the mechanism is identical.
+
+**Spelling:** no normalized-only hits were needed for any of the 15 new
+markers — every declaration named matched the kernel's exact spelling. Two
+candidates from the design-review docs (`CReal.congrOfUniformlyContinuous`,
+`CReal.equiv_of_le_le`) were checked as part of due diligence on ADR-0608's
+own paragraph and are both EXACT PRESENT under their stated spelling, so that
+block was correctly left BARE (not a genuine absence claim — it is an
+example of a spelling mismatch *risk*, not a claim that either declaration is
+missing).
+
+**`crates/` docs carrying a stale or live absence claim, reported and NOT
+edited (out of scope — three lanes are live in `axeyum-lean-kernel`):**
+
+- `crates/axeyum-lean-kernel/src/creal/trig_fn.rs:63` — still literally true
+  (`CReal.within_of_close_within` genuinely absent); already the subject of
+  a live marker in `docs/plan/status/151-absence-expiry.md:74` and now also
+  in `docs/research/09-decisions/adr-0611-...md`. No new finding here.
+- No other `crates/` stale claim was found among the 70 examined sites —
+  the two root-`CLAUDE.md` BARE sites (`:1519`, `:1675`) are prose *about*
+  this gate and the retrieval problem, not fresh absence claims of their
+  own; left untouched as out of scope (`CLAUDE.md` is not under `docs/`).
+
+**Gate stayed green.** `python3 scripts/check-absence-claims.py` exits 0
+after every edit in this lane (re-run after each file, not just at the end).
+No marker added here reds the gate; every stale correction was verified
+against the fresh authority BEFORE editing, never after.
+
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
 F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).
@@ -5803,6 +5928,8 @@ so it adds no sequence and no regularity obligation. **94 `CReal` declarations,
 trusted surface still 0**; `Rat.abs` still does not exist. Design, the measured
 mutation counts, and what is left undone with its cost:
 [`../notes/creal-lattice.md`](docs/plan/notes/creal-lattice.md).
+*(`Rat.abs` has since landed; this status entry is a historical record.)*
+<!-- was-absent: Rat.abs -- since landed -->
 
 **`docs/mathematics-2026-08/` said "do not start ℝ"; ℝ and ℂ are built, and the
 strand now says so without losing the argument it used to make (`WIP`,
