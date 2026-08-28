@@ -6093,6 +6093,14 @@ pub struct CRealPrelude {
     /// (add (meshLevelCount j) (meshLevelCount j)))`. See
     /// `creal/supremum.rs`.
     pub mesh_level_count_succ: NameId,
+    /// `CReal.meshLevelCount_pow : ∀ j, Eq Nat (Nat.succ (meshLevelCount j))
+    /// (Nat.pow 2 j)` — the doubling schedule's formal, subtraction-free
+    /// relation to `Nat.pow` (`meshLevelCount j = 2^j − 1`, restated as `+1`
+    /// on the left), proved by induction. Needed to route
+    /// `Nat.lt_pow_size`'s power-of-two dominance bound back into a
+    /// concrete mesh LEVEL via `Nat.size`. See `creal/supremum.rs`'s
+    /// `CReal.hclose_of_uc`.
+    pub mesh_level_count_pow: NameId,
     /// `CReal.meshMax : (CReal → CReal) → CReal → CReal → Nat → CReal :=
     /// fun F a b j => maxRange (fun i => F (meshSamplePoint a (meshDelta a b
     /// (meshLevelCount j)) i)) (meshLevelCount j)` — the level-`j` mesh
@@ -6925,6 +6933,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_level_count: kernel.name_str(creal, "meshLevelCount"),
         mesh_level_count_zero: kernel.name_str(creal, "meshLevelCount_zero"),
         mesh_level_count_succ: kernel.name_str(creal, "meshLevelCount_succ"),
+        mesh_level_count_pow: kernel.name_str(creal, "meshLevelCount_pow"),
         mesh_max: kernel.name_str(creal, "meshMax"),
         mesh_max_step_le: kernel.name_str(creal, "meshMax_step_le"),
         mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
@@ -12334,6 +12343,16 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mesh_level_count_zero,
         ],
         run: supremum::declare_mesh_level_count,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_level_count_pow",
+        requires: &[
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_level_count_zero,
+            |p: CRealPrelude| p.mesh_level_count_succ,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_level_count_pow],
+        run: supremum::declare_mesh_level_count_pow,
     },
     BuildStep {
         label: "supremum::declare_mesh_max",

@@ -10233,6 +10233,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "supremum::declare_max_range",
     "supremum::declare_max_range_transport",
     "supremum::declare_mesh_level_count",
+    "supremum::declare_mesh_level_count_pow",
     "supremum::declare_mesh_max",
     "supremum::declare_mesh_max_step_le",
     "supremum::declare_mesh_max_mono",
