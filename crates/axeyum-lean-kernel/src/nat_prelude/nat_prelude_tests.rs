@@ -8266,3 +8266,113 @@ fn cantor_no_fixed_point_applies_to_negation() {
         "cantor_no_fixed_point must rest on zero axioms"
     );
 }
+
+/// `Nat.Even`/`Nat.Odd` apply at concrete witnesses (4 = 2+2, 5 = succ(2+2)),
+/// `even_not_odd`/`odd_not_even` apply to them and rest on zero axioms, and
+/// `even_iff_odd_succ(4).mp` applied to a hand-built `Even 4` produces a term
+/// whose inferred type is defeq to an independently hand-built `Odd 5` --- a
+/// concrete cross-check that the `mp` direction is not accidentally the
+/// `mpr` direction with the same shape (they'd both type-check as `Prop`
+/// arrows, so only a value-level check like this one catches a swap).
+#[test]
+fn parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one = f.level_one();
+
+    let four = f.num(4);
+    let two = f.num(2);
+    let five = f.num(5);
+
+    // Even 4, witnessed by 2 (4 = 2+2).
+    let even4 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(four, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(four);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+    f.k.infer(even4).unwrap_or_else(|e| {
+        panic!("Even 4 (witness 2) should type-check: {}", f.explain(&e))
+    });
+
+    // Odd 5, witnessed by 2 (5 = succ(2+2)).
+    let odd5 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(five, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(five);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+    let odd5_ty = f.k.infer(odd5).unwrap_or_else(|e| {
+        panic!("Odd 5 (witness 2) should type-check: {}", f.explain(&e))
+    });
+
+    // even_not_odd(4) applied to even4 : Not (Odd 4).
+    let even_not_odd_at_4 = f.lemma(p.even_not_odd, &[four]);
+    let not_odd4 = f.apply(even_not_odd_at_4, &[even4]);
+    f.k.infer(not_odd4).unwrap_or_else(|e| {
+        panic!(
+            "even_not_odd(4) applied to Even 4 should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.axiom_footprint(p.even_not_odd).is_empty(),
+        "even_not_odd must rest on zero axioms"
+    );
+
+    // odd_not_even(5) applied to odd5 : Not (Even 5).
+    let odd_not_even_at_5 = f.lemma(p.odd_not_even, &[five]);
+    let not_even5 = f.apply(odd_not_even_at_5, &[odd5]);
+    f.k.infer(not_even5).unwrap_or_else(|e| {
+        panic!(
+            "odd_not_even(5) applied to Odd 5 should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.axiom_footprint(p.odd_not_even).is_empty(),
+        "odd_not_even must rest on zero axioms"
+    );
+
+    // even_iff_odd_succ(4).mp applied to even4 must land on the same type as
+    // the independently hand-built odd5.
+    let even4_ty = f.lemma(p.even, &[four]);
+    let odd5_ty_folded = f.lemma(p.odd, &[five]);
+    let iff_at_4 = f.lemma(p.even_iff_odd_succ, &[four]);
+    let mp_fn = f.const_app(p.logic.iff_mp, &[even4_ty, odd5_ty_folded, iff_at_4]);
+    let odd5_from_even4 = f.apply(mp_fn, &[even4]);
+    let odd5_from_even4_ty = f.k.infer(odd5_from_even4).unwrap_or_else(|e| {
+        panic!(
+            "even_iff_odd_succ(4).mp applied to Even 4 should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(odd5_from_even4_ty, odd5_ty),
+        "even_iff_odd_succ(4).mp(Even 4) must land on Odd 5, matching the \
+         independently witnessed Odd 5 -- a mismatch here would mean mp/mpr \
+         are swapped"
+    );
+    assert!(
+        f.k.axiom_footprint(p.even_iff_odd_succ).is_empty(),
+        "even_iff_odd_succ must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.even_or_odd_exists).is_empty(),
+        "even_or_odd_exists must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.add_self_ne_succ_add_self).is_empty(),
+        "add_self_ne_succ_add_self must rest on zero axioms"
+    );
+}
