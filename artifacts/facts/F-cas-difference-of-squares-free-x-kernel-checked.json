@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-difference-of-squares-free-x-kernel-checked",
+  "title": "The CAS's (x+1)(x-1) = x^2-1 is kernel-reconstructed at a FREE x, and the CAS-refuted variant is rejected by the same kernel",
+  "statement": "axeyum-cas proposes the univariate polynomial identity (x+1)(x-1) = x^2-1 -- deciding it in its own MultiPoly normal form via axeyum_cas::equal, which returns ZeroTest::Certified{equal:true} -- and refutes the variant (x+1)(x-1) = x^2+1, ZeroTest::Certified{equal:false}. Both CAS answers are then re-decided by crate::Kernel::add_declaration, over Complex.polyEval/Complex.polyMul coefficient functions translated from the CAS's own normal form: the TRUE identity is admitted as a theorem UNIVERSALLY QUANTIFIED over a genuinely free x (forall x : Complex, Complex.polyEval (polyMul c1 c2) (n1+n2) x is Equiv to Complex.polyEval ct nt x, with c1 = [1,1], c2 = [-1,1], ct = [-1,0,1]), and the SAME proof term ascribed against the CAS-refuted target ct' = [1,0,1] is REJECTED. So the kernel independently re-derives both halves of what the CAS decided, rather than trusting the CAS's normal form, and it does so for all x rather than at sampled evaluation points.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (= (* (+ x 1) (- x 1)) (- (^ x 2) 1)))\n; and, as the paired negative control, the CAS-refuted variant\n(assert (not (= (* (+ x 1) (- x 1)) (+ (^ x 2) 1))))",
+    "fragment": "univariate-polynomial-identity",
+    "free_symbols": ["x"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's evidence terminates in a Kernel::add_declaration acceptance over the Complex prelude, but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support. The Complex prelude's own trusted surface is measured separately by prelude_axiom_inventory and is not asserted here.",
+    "cas.translator-is-univariate-and-integer-coefficient-only: cas_poly_to_int_coeffs calls the CAS's own normalize/MultiPoly::to_univariate and DECLINES (None) on any non-integer coefficient or on more than one variable. So the reconstructed claim is exactly the integer-coefficient univariate slice of what the CAS can decide -- a documented restriction of this translator, not of the kernel's polynomial layer, and NOT a general Rational -> Complex embedding.",
+    "cas.ring-law-decision-procedure-is-the-untrusted-producer-and-panics-on-a-false-identity: complex.rs's ring_law_proof assert_eq!s two normal forms and panics rather than declining, so the bridge never invokes it on a pair the CAS has not already certified equal. The negative control is therefore built by RE-ASCRIBING the true proof term against the false type, never by asking the decision procedure to prove a falsehood -- which is what makes the control exercise Kernel::add_declaration's own type check rather than a hand-rolled heuristic."
+  ],
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-difference-of-squares-true",
+      "kind": "kernel-term",
+      "supports": "the CAS-certified identity (x+1)(x-1) = x^2-1, admitted by crate::Kernel::add_declaration as Check.cas_bridge_difference_of_squares_true : forall x : Complex, Complex.polyEval (Complex.polyMul c1 c2) (Nat.add 2 2) x is Equiv to Complex.polyEval ct 3 x, with the coefficient functions built from the CAS's own normalized coefficient vectors ([1,1], [-1,1], [-1,0,1]) rather than hand-transcribed",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::equal (untrusted producer: the CAS's own MultiPoly normal form must independently return ZeroTest::Certified{equal:true} before the kernel side is built at all; ZeroTest::Unknown panics the test)",
+        "complex::cas_bridge_tests::cas_poly_to_int_coeffs + n_term_polynomial + n_term_poly_eval_clean (untrusted translator/proof-assembly: CAS normal form -> dense integer coefficients -> Complex.polyEval coefficient functions, with the coefficient vectors ASSERTED equal to [1,1]/[-1,1]/[-1,0,1] in the test so a translator drift fails loudly rather than silently re-stating a different identity)",
+        "crate::Kernel::add_declaration (the sole trusted judge: re-derives the universally quantified Equiv statement from the supplied proof term, over a free fvar x rather than at any sampled point)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib complex::cas_bridge_tests::cas_verified_difference_of_squares_true_and_false -- --exact 2>/dev/null | grep -cE '^test complex::cas_bridge_tests::cas_verified_difference_of_squares_true_and_false \\.\\.\\. ok$'",
+      "checker_seconds": 124,
+      "artifact": "crates/axeyum-lean-kernel/src/complex/cas_bridge_tests.rs",
+      "notes": "This is a STRICTLY STRONGER shape of reconstruction than the IVT sign-bracket facts (F:cas-ivt-sign-bracket-cbrt2-kernel-checked, F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve), and the difference is worth stating: those admit a comparison at two CONCRETE rational evaluation points, where every term reduces to a literal and the kernel's obligation is arithmetic; this admits a Pi over a genuinely free fvar, so no numeral reduction is available and the identity has to hold structurally. CLAUDE.md's own standing warning applies in this direction -- a concrete instantiation can hide a defeq-shaped gap that a symbolic one exposes -- so the two shapes are complementary evidence, not redundant. Re-run by the 223-cas-reconstruct lane on 2026-08-28: 1 passed, 0 failed, 938 filtered out, 123.77s (the suite prints a 'has been running for over 60 seconds' warning line; the checker's grep is anchored to the final result line, which is unaffected)."
+    },
+    {
+      "id": "kernel-reconstructed-difference-of-squares-negative-control",
+      "kind": "kernel-term",
+      "supports": "the CAS-refuted variant (x+1)(x-1) = x^2+1 is REJECTED by crate::Kernel::add_declaration -- the same proof term that was admitted for the true target, re-ascribed against the false target's type, must return Err; the test asserts admitted_wrong.is_err()",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::equal (untrusted producer, on the refutation side: must independently return ZeroTest::Certified{equal:false} for the wrong target before the control is built)",
+        "crate::Kernel::add_declaration (trusted judge: the rejection is the kernel's own type check firing, not an assertion about the CAS's opinion)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib complex::cas_bridge_tests::cas_verified_difference_of_squares_true_and_false -- --exact 2>/dev/null | grep -cE '^test complex::cas_bridge_tests::cas_verified_difference_of_squares_true_and_false \\.\\.\\. ok$'",
+      "checker_seconds": 124,
+      "artifact": "crates/axeyum-lean-kernel/src/complex/cas_bridge_tests.rs",
+      "notes": "Same single #[test] fn as the positive row, hence the identical checker_command -- a separate evidence row because it supports a distinct claim (that the kernel REFUSES what the CAS refuted), not a distinct command. This is the row that makes the fact non-vacuous in the sense CLAUDE.md's checker audit cares about: without it, a kernel that admitted everything would look identical from the outside. Note the negative control is deliberately NOT built by re-running the ring-law decision procedure on the false pair -- ring_law_proof panics on a genuine mismatch (see this fact's third axiom_footprint entry), which would make the test fail for the wrong reason and would prove nothing about Kernel::add_declaration."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "complex::cas_bridge_tests::cas_verified_difference_of_squares_true_and_false (crates/axeyum-lean-kernel/src/complex/cas_bridge_tests.rs); the test -- 'CAS -> kernel polynomial-identity bridge, slice 1' -- was authored alongside complex/poly.rs and left UNREGISTERED in the fact ledger. This fact is the 223-cas-reconstruct lane registering it after re-running it end to end.",
+    "source": "the CAS's own decided identity, taken from the test rather than hand-transcribed: axeyum_cas::equal on CasExpr::var(\"x\") built products, with complex_tests.rs's poly_eval_poly_mul_x_plus_one_times_x_minus_one_is_x_squared_minus_one as the concrete-evaluation-point prior art this generalizes to a free x",
+    "prior_art": [
+      {
+        "who": "elementary algebra",
+        "what": "the difference of two squares",
+        "year": null,
+        "where": "the mathematics is trivial and is not the point; the content of this fact is the CAS-to-kernel route, measured",
+        "attribution": "no primary source consulted or needed"
+      }
+    ]
+  },
+  "notes": "Registered by the 223-cas-reconstruct lane to move ADR-0601 SS2's kernel-reconstructed count (measured 1 of 29 before this batch). HONEST ACCOUNTING: the reconstruction is not new work by the registering lane -- the test predates this fact and passed before it. What is new is that the ledger holds it, and that it was independently re-run (123.77s, 1 passed). WHY IT WAS MISSED: the fact ledger's cas-certificate rows were written per MATHEMATICAL RESULT, and this bridge slice's mathematical content ((x+1)(x-1)=x^2-1) is trivial, so nobody registered it -- but under ADR-0601 the unit of account for row 3 is the ROUTE, not the theorem, and by that measure this is the strongest kernel-reconstructed CAS row in the ledger (free variable, both directions decided, paired negative control). The general lesson for the 28 remaining cas-internal rows: look for kernel bridge tests that already exist and are unregistered before assuming a conversion needs new proof work -- two of the three kernel-reconstructed rows now in the ledger were found that way."
+}
