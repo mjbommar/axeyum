@@ -134,7 +134,9 @@ now. Nothing was deleted.
 | 2026-08-28 | pi-r2d | measured (hand-traced, not kernel-timed): the reverted attempt's own final numeric check never needs a `Nat` value above `25*1875=46,875` if combined in `sumRange`'s forced left-nested order — under the documented `60,000`-feasible line — which is evidence the 616s/5.9GB blowup was driven by NESTING DEPTH of un-reduced `Rat` towers rather than by final operand magnitude alone. Offered as a hypothesis, not a confirmed measurement; no isolated A/B was run to separate the two causes |
 | 2026-08-28 | pi-r2d | negative, precise: the brief's "rescale every term to an explicit denominator-1875 `Rat` value" is impossible as literally stated — `Rat`'s `reduced` field (`gcd(|num|,den)=1`) rules out constructing `1875/1875` or `-2400/1875` as `Rat.mk` terms at all. Implemented instead: each term collapses to its own naturally-reduced flat value, combined via ordinary `Rat.add` at bounded (~46,875) scale |
 | 2026-08-28 | pi-r2d | item 4 REVERTED twice; two independent constructions both exceed the build band, so the `Rat.ble` route does not reach `-13/1875` |
+| 2026-08-28 | choose-backlog | 5 Nat.choose theorems (one_right, eq_zero_of_lt, ne_zero, le_succ, symm_of_eq_add) + 5 facts flipped to proved; fixed a false defeq assumption in choose_le_succ's base case |
 | 2026-08-28 | coprime-backlog | 4/5 `Nat.Coprime` import-backlog facts proved axiom-free (`coprime_of_dvd_left/right`, `prime_dvd_iff_not_coprime`, `coprime_add_self_right`); `coprime_two_left` deferred, needs a fresh `Odd` construction |
+| 2026-08-28 | decidable-frontier | confirmed F:rado-r4-a5-b3 and F:rado-r4-a5-b4 already settled, no edit made; added a corroborating 2026-08-28 re-measurement to F:fp16-add-monotone-rne's notes (drat_check throughput ~95 steps/s, ~2.4h extrapolated), fact stays `open` |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -7491,6 +7493,53 @@ diagnostic step is bisecting WITHIN item 4 — comment out
 isolated "baseline + item 3" reading, then re-enable to get "+ item 4",
 which is exactly the bisection this lane did not get to complete.
 
+**Your lane's block (`DONE`, choose-backlog, 2026-08-28).** All five targeted
+facts landed as axiom-free kernel-lean proofs in
+`crates/axeyum-lean-kernel/src/nat_prelude/choose.rs`:
+`Nat.choose_one_right`, `Nat.choose_eq_zero_of_lt`, `Nat.choose_ne_zero`,
+`Nat.choose_le_succ`, `Nat.choose_symm_of_eq_add`. `nat_prelude::` --lib went
+94 -> 95 passed, 0 failed.
+
+One real bug found and fixed along the way: `choose_le_succ`'s `c = 0` base
+case assumed `choose(a, 0)` reduces to `1` by defeq for a SYMBOLIC `a` — it
+does not (the outer recursor is stuck on a non-constructor first argument;
+only `choose(succ a, 0)` reduces regardless of `a`). Caught by the full
+`nat_prelude::` sweep (a single-test run against only that one theorem's own
+test passed, then the full sweep failed with `TypeMismatch` across 95 tests
+because the shared prelude build itself fails). Fixed by routing through
+`choose_zero_right(a)` + `le_refl` instead of assuming defeq. Bisected by
+toggling each of the five `declare_choose_*` calls in `declare_choose_all`
+one at a time against the single fast test
+`choose_computes_and_symm_holds_at_a_concrete_point`.
+
+Also updated (both environment-derived, not hand-maintained lists per the
+project's "every X must derive from the authority" rule):
+`every_nat_declaration_is_checked_and_axiom_free`'s `theorem_names` list, and
+`the_build_is_deterministic`'s rendered-declaration count pin
+(`65+322` -> `65+327`, re-derived from the test's own failure message, not
+guessed).
+
+Fact ledger: all five `F:ml430-nat-choose-*` facts flipped `open` -> `proved`,
+evidence mirrors `F:nat-choose-symm`'s pattern (`nat_theorem_inventory`
+grep-count + `nat_axiom_inventory --require-axiom-free nat`), both checker
+commands verified to discriminate (positive control passes, a fabricated
+theorem name fails). `python3 scripts/validate-facts.py`: 1867 facts, 0
+errors.
+
+Nothing found already existing that the brief implied was missing — the
+`choose.rs`/`binomial.rs` family cited in the brief (`declare_choose`,
+`declare_choose_equations`, `declare_choose_self`, `declare_choose_symm`,
+`sum_choose_row`, `choose_le_two_pow`, `succ_mul_choose_eq`) was exactly as
+described, and none of the five target names existed anywhere in the tree
+before this lane (grepped both spellings).
+
+Not done: the two second-order unlocks the brief mentioned
+(`choose_le_add` -> `choose_le_choose` -> `choose_mono`; `choose_symm_add`)
+are NOT the same as `choose_le_succ`/`choose_symm_of_eq_add` just landed —
+those are separate facts/names, still open, and out of this lane's scope
+(only the five listed facts were in scope). `docs/plan/global/` and
+`PLAN.md` untouched per brief; `scripts/gen-plan.py` not run by this lane.
+
 **Your lane's block (`DONE`, coprime-backlog, 2026-08-28).** Landed four of
 the five targeted facts with real, axiom-free kernel proofs (the brief's bar
 was three). The fifth, `coprime_two_left` (`Coprime 2 n ↔ Odd n`), was not
@@ -7547,6 +7596,32 @@ theorems, plus fixed the two environment-derived coverage/determinism tests
 that failed once the new theorems went live). `cargo clippy -p
 axeyum-lean-kernel --lib -- -D warnings`: clean. `python3
 scripts/validate-facts.py`: 1867 facts, 0 errors.
+
+**Your lane's block (`DONE`, decidable-frontier, 2026-08-28).** The brief named
+three facts as the entire DECIDABLE-open frontier; only one of the three was
+actually open.
+
+- `F:rado-r4-a5-b3` and `F:rado-r4-a5-b4` were ALREADY SETTLED before this lane
+  started (commits `04f480b52`, `061f8e634`/`b8be40096`) — `epistemic_status:
+  computed`, evidence attached. `fact-frontier.py` prints "DECIDABLE --
+  dispatch it" on their rows because that annotation is a fragment-routability
+  label printed across several sections, not an open/closed signal — the rows
+  sit under "ESTABLISHED HERE, NOT IN THE LITERATURE", not under an open
+  section. Confirmed by re-running their own checkers here
+  (`validate-claims.py`, `akb2_frontier verify`, `check-claim-certificates.py`
+  — all 0 errors) and by `validate-facts.py`, which lists both under NOVEL.
+  **Neither file was edited by this lane** (`git diff` on both is empty for
+  the whole session).
+- `F:fp16-add-monotone-rne` is the one genuinely open item, and it stays
+  `open` — no evidence was added, only its `notes` gained a corroborating
+  2026-08-28 re-measurement (decide-only reconfirmed at 11.09s unsat; search
+  stage reconfirmed at 424,601 conflicts / ~24-27s / 827,048 proof steps /
+  ~193MB; and NEW — a direct measurement of the checking stage's own
+  throughput, previously known only as "doesn't finish in 3+ hours":
+  `drat_check` runs ~95 steps/sec against 827,048 total steps, extrapolating
+  to ~2.4h for that sub-stage alone before `elaborate_drat_to_lrat` even
+  starts). `validate-facts.py` still reports 0 errors, `open=171` unchanged.
+  A precisely measured obstruction, not a settlement.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
