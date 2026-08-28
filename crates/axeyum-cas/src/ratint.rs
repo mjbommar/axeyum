@@ -924,16 +924,44 @@ mod tests {
         let q = poly_from(&[2, -3, 1]);
         let p = poly_from(&[1]);
         let mut terms = log_terms(&p, &q).unwrap();
-        // Scale one v (and compensate its coefficient, so ONLY the
-        // monic-ness guard can be the reason for rejection -- doubling v
-        // doubles v'/v's numerator and denominator identically, leaving the
-        // v'/v *ratio*, and hence the identity sum, unchanged).
+        // Scale one v by 2. Measured: this does NOT isolate the monic-ness
+        // guard -- over the rational field, exact division by 2v still
+        // succeeds (guard 4 is blind to the scale), but the completeness
+        // product now picks up the extra factor of 2 and guard 3 rejects it
+        // regardless. Kept as a fixture on the monic guard's SPECIFIED
+        // behaviour (it must still reject), with the finding that it is, for
+        // this input, subsumed by completeness -- see
+        // `spurious_constant_v_with_zero_coefficient_is_rejected` below for
+        // the isolating fixture (the "degree >= 1" half of guard 1).
         terms[0].1 = terms[0]
             .1
             .iter()
             .map(|&c| c.checked_mul(Rational::integer(2)).unwrap())
             .collect();
         assert_eq!(verify_log_terms(&p, &q, &terms), Some(false));
+    }
+
+    /// Isolates the "degree >= 1" half of guard 1: append a spurious
+    /// CONSTANT `v = [1]` (monic, so it does not trip the monic check) with
+    /// coefficient `0`. Because the coefficient is zero, it contributes
+    /// nothing to guard 4's identity sum; because `v = [1]` is the
+    /// multiplicative identity, it leaves guard 3's completeness product
+    /// unchanged (`P * 1 == P`); and it is not equal to any real `vᵢ`
+    /// (degree 1), so guard 2's duplicate check is vacuous too. Only
+    /// rejecting non-constant `v` catches it -- this module's analogue of
+    /// `partial_fractions.rs`'s spurious-constant-factor fixture.
+    #[test]
+    fn spurious_constant_v_with_zero_coefficient_is_rejected() {
+        let q = poly_from(&[2, -3, 1]); // (x-1)(x-2)
+        let p = poly_from(&[1]);
+        let mut terms = log_terms(&p, &q).unwrap();
+        assert_eq!(verify_log_terms(&p, &q, &terms), Some(true));
+        terms.push((Rational::zero(), poly_from(&[1]))); // c=0, v=1
+        assert_eq!(
+            verify_log_terms(&p, &q, &terms),
+            Some(false),
+            "a spurious constant v (even with a zero coefficient) must be rejected"
+        );
     }
 
     #[test]
