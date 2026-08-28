@@ -496,6 +496,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.no_confusion_type,
         p.no_confusion,
         p.ble,
+        p.even,
+        p.odd,
     ]
 }
 
@@ -844,6 +846,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.one_le_mul,
         p.dvd_factorial_of_le,
         p.fib_mono,
+        p.even_or_odd_exists,
+        p.add_self_ne_succ_add_self,
+        p.even_not_odd,
+        p.odd_not_even,
+        p.even_iff_odd_succ,
     ]
 }
 
@@ -6126,7 +6133,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        65 + 331,
+        67 + 336,
         "every promised definition and theorem must be rendered"
     );
 }
