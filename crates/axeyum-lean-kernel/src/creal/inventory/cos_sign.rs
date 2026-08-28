@@ -24,5 +24,11 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.alternating_upper_bound_tail,
             "theorem",
         ),
+        ("CReal.cosWideTailNonneg", p.cos_wide_tail_nonneg, "theorem"),
+        (
+            "CReal.cosWideTailAntitone",
+            p.cos_wide_tail_antitone,
+            "theorem",
+        ),
     ]
 }

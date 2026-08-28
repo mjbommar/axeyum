@@ -10237,6 +10237,8 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "supremum::declare_true_exp_of_modulus_step_le",
     "supremum::declare_true_exp_of_modulus_mono",
     "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
+    "cos_sign::declare_cos_wide_tail_nonneg",
+    "cos_sign::declare_cos_wide_tail_antitone",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call
