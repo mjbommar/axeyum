@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve",
+  "title": "The sign bracket of x^4-2 on (1,2) is kernel-reconstructed -- the one-degree-higher cost-curve point",
+  "statement": "For p(x) = x^4 - 2: p(1) = -1 < 0 and 0 < 14 = p(2), reconstructed through crate::Kernel::add_declaration over Rat.polyEval rather than trusted from axeyum-cas's own normal form. This is the degree-4 companion to F:cas-ivt-sign-bracket-cbrt2-kernel-checked (degree 3) that that fact's own notes already name and cite for a cost curve, registered here so the ledger holds the result rather than only a prose reference to it. Exactly as at degree 3, this claims LESS than a full IvtCertificate: it is item 1 (the sign bracket) only -- it says nothing about the named root 2^(1/4), nothing about root containment by exact division, and nothing about the Sturm count establishing p has exactly one real root in (1,2). Those remain cas-internal.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (- (^ x 4) 2))\n(assert (< (poly-eval p 1) 0))\n(assert (> (poly-eval p 2) 0))",
+    "fragment": "real-algebraic-ivt-sign-bracket",
+    "free_symbols": ["x"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval, built from the same rat_prelude/int_prelude/nat_prelude constants F:cas-ivt-sign-bracket-cbrt2-kernel-checked enumerates (all measured axiom-free), but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "cas.ivt-certificate-root-containment-and-sturm-count-not-claimed-here: this fact states ONLY the sign bracket. Root containment (exact division of p by cert.root's minimal polynomial) and the Sturm uniqueness count are NOT reconstructed by this fact's evidence and remain cas-internal, checked only by real_algebraic::verify_ivt_certificate."
+  ],
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-ivt-sign-bracket-deg4-lower",
+      "kind": "kernel-term",
+      "supports": "p(1) < 0 for p = x^4-2, admitted by crate::Kernel::add_declaration as Check.ivt_sign_bracket_deg4_lower : Rat.lt (Rat.polyEval c 5 (Rat.ofInt 1)) Rat.zero, over a coefficient function c built by n_term_polynomial from the [-2,0,0,0,1] integer coefficients the CAS's own polynomial_ivt(x^4-2, 1, 2) certificate returns",
+      "check_status": "checked",
+      "checkers": [
+        "real_algebraic::polynomial_ivt (untrusted producer: the CAS must first find the bracket at all -- the test .expect()s a certificate, so a polynomial with no sign change on (1,2) fails here before the kernel is reached)",
+        "rat_prelude::cas_ivt_bridge_tests::sign_bracket_to_int + poly_eval_to_of_int (untrusted translator/proof-assembly: IvtCertificate -> Rat.ofInt literal chain via Rat.ofInt_add/Rat.ofInt_mul, entirely Rust-side)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated Rat.lt fact from the supplied proof term)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 6,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs",
+      "notes": "The negative half reduces to True by Int.lt's own negSucc/ofNat definitional case (lt_zero_via_true), so this row's kernel obligation is discharged definitionally once the Rat.polyEval term has been collapsed to a single Rat.ofInt literal -- the collapse, not the final comparison, is where the arithmetic content sits."
+    },
+    {
+      "id": "kernel-reconstructed-ivt-sign-bracket-deg4-upper",
+      "kind": "kernel-term",
+      "supports": "0 < p(2) for p = x^4-2, admitted by crate::Kernel::add_declaration as Check.ivt_sign_bracket_deg4_upper : Rat.lt Rat.zero (Rat.polyEval c 5 (Rat.ofInt 2)), from a Nat.le 1 14 witness -- 14 being the EXACT value the fully reduced polynomial computes to",
+      "check_status": "checked",
+      "checkers": [
+        "real_algebraic::polynomial_ivt (same untrusted producer as the lower row)",
+        "rat_prelude::cas_ivt_bridge_tests::poly_eval_to_of_int (same translator/proof-assembly)",
+        "crate::Kernel::add_declaration (trusted judge: MEASURED to reject a wrong-but-plausible bound -- see this row's notes)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 6,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs",
+      "notes": "Same single #[test] fn as the lower row (both halves are asserted in one test, so the checker_command is identical -- a separate evidence row because it supports a distinct half of the statement, not a distinct command). MUTATION-VERIFIED BY THIS LANE, not inherited from the degree-3 sibling's write-up: changing ONLY the kernel-side bound from the exact 14 to a wrong-but-true-looking 16 (Nat.le 1 16 is itself a true proposition, just not the one the reduced term inhabits) makes Kernel::add_declaration reject with TypeMismatch { expected: ExprId(1577225), got: ExprId(1577239) } and the test FAIL, restored to passing on revert. So the kernel term asserts what the CAS actually computed (p(2) = 14), not merely something well-typed: a theorem alone does not pin down a value, and this measurement is what pins it. Wall-clock measured this lane: 5.51s for the test itself (938 filtered out, 1 passed), 33.6s including a cold dependency build -- against the degree-3 sibling's ~8.4s total, so raising the degree by one is roughly free at this size and the cost curve is dominated by the one-time Rat prelude build, not by the polynomial degree."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked (crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs); the test itself was authored by the bridge-ivt lane on 2026-08-27 alongside its degree-3 sibling, and left UNREGISTERED -- this fact is the 223-cas-reconstruct lane registering it, after independently re-running it and mutation-verifying that its kernel check is load-bearing",
+    "source": "classical intermediate value theorem's sign-change hypothesis, specialized to p(x)=x^4-2 on (1,2); chosen by the original lane as the one-degree-higher cost-curve companion to the x^3-2 instance, and named in F:cas-ivt-sign-bracket-cbrt2-kernel-checked's own evidence notes before any fact existed for it",
+    "prior_art": [
+      {
+        "who": "Bolzano; Cauchy",
+        "what": "the intermediate value theorem for continuous real functions",
+        "year": 1817,
+        "where": "classical analysis; this instance is a routine polynomial application",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered by the 223-cas-reconstruct lane to move ADR-0601 SS2's kernel-reconstructed count (measured 1 of 29 before this batch). HONEST ACCOUNTING, stated so a reader does not over-read the increment: the reconstruction itself is NOT new work by the registering lane -- the test existed and passed before this fact did. What is new is (a) the ledger now holds the result rather than a prose forward-reference inside a sibling fact's notes, and (b) the kernel check was independently mutation-verified here (see the upper row's notes) rather than taken on the original lane's report. ONE WEAKNESS, stated rather than omitted: unlike its degree-3 sibling, this test carries NO swapped-statement negative control (no 'same proof term ascribed against 0 < p(1), asserted rejected' step). Its discriminating power therefore rests entirely on the exact-value requirement in zero_lt_via_nat_le, which the mutation above measures directly -- adding the swapped-statement control would be a strict improvement and is left for a lane with write access to crates/axeyum-lean-kernel/."
+}
