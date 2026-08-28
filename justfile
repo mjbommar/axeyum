@@ -452,6 +452,7 @@ gate-controls:
     scripts/tests/test-deep-stack-call-sites.sh
     scripts/tests/test-lane-commit.sh
     scripts/tests/test-recount-pinned-inventory.sh
+    scripts/tests/test-open-frontier-axiom-freeness.sh
     # The lane stamp must PARSE as a git trailer, not merely appear as text:
     # `%(trailers:key=Agent,valueonly)` is the query every attribution check
     # runs, and two commits carried the text without parsing.

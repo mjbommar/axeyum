@@ -350,6 +350,11 @@ step recount-pinned-inventory-controls ./scripts/tests/test-recount-pinned-inven
 step commit-msg-trailer-controls ./scripts/tests/test-commit-msg-trailer.sh
 step lane-merge-additive-controls python3 -m unittest scripts.tests.test_lane_merge_additive
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh
+# The open-frontier axiom-freeness census bounds ONE route (reuse of a Mathlib
+# proof term). Its guards are mutation-verified to kill exactly one case each,
+# and its coverage guard derives the population from the LEDGER, so the census
+# reds this gate when the frontier grows rather than going quietly stale.
+step open-frontier-axiom-freeness-controls ./scripts/tests/test-open-frontier-axiom-freeness.sh
 # The pre-push compile step must build examples/ and tests/. Without
 # `--all-targets` it builds neither, and on 2026-08-20 a non-compiling
 # workspace reached `main` under the hook's own "pushed SHA compiles" line.
