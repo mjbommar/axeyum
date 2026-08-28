@@ -769,6 +769,130 @@ pub fn elaborate_drat_to_lrat_backward(
     crate::drat_backward::elaborate_backward(formula, drat)
 }
 
+/// The outcome of certifying a DRAT refutation by way of LRAT (ADR-0613).
+///
+/// See [`certify_unsat_via_lrat`] for the trust argument. The two variants are
+/// deliberately asymmetric: `Certified` is a positive claim about `formula`,
+/// `Declined` is a claim about nothing at all.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LratCertifyOutcome {
+    /// `formula` is unsatisfiable. These LRAT steps were emitted by the backward
+    /// engine and **accepted by [`check_lrat`]**, which followed their hints and
+    /// reached the empty clause. The verdict rests on [`check_lrat`] alone.
+    Certified(Vec<LratStep>),
+    /// This route declined. **Nothing is claimed about `formula`, and nothing is
+    /// claimed about the input proof**: a decline is not a rejection. A caller
+    /// that needs a verdict must fall back to another checker; a caller that
+    /// reports "the proof is bad" from a decline is reporting a fact it does not
+    /// have.
+    Declined(LratDecline),
+}
+
+/// Why [`certify_unsat_via_lrat`] declined.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LratDecline {
+    /// A core lemma is a RAT addition, which [`LratStep`] cannot express
+    /// (ADR-0382). The proof may be perfectly good; this format cannot hint it.
+    RatStep {
+        /// Zero-based index of the RAT step.
+        step: usize,
+    },
+    /// The backward engine found a core lemma that is neither RUP nor RAT, so
+    /// there was nothing to elaborate.
+    DratNotVerified {
+        /// Zero-based index of the failing step.
+        step: usize,
+    },
+    /// An internal invariant on the recovered hint chains failed and no hints
+    /// were emitted. A guard on this crate, never a statement about the input.
+    HintChainFailed {
+        /// Zero-based index of the step whose chain failed.
+        step: usize,
+    },
+    /// The elaborator emitted hints and [`check_lrat`] **rejected** them. The
+    /// untrusted engine and the trusted checker disagree, so nothing is
+    /// certified — this is the case the composition exists to catch.
+    HintsRejected(LratError),
+    /// Every emitted step verified, but the empty clause was never derived, so
+    /// no refutation was established.
+    NoEmptyClause,
+}
+
+impl core::fmt::Display for LratDecline {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            LratDecline::RatStep { step } => {
+                write!(f, "DRAT step {step} is RAT; LRAT cannot express it")
+            }
+            LratDecline::DratNotVerified { step } => {
+                write!(f, "DRAT step {step} is neither RUP nor RAT")
+            }
+            LratDecline::HintChainFailed { step } => {
+                write!(f, "no hint chain could be emitted for DRAT step {step}")
+            }
+            LratDecline::HintsRejected(error) => {
+                write!(f, "the emitted LRAT was rejected by check_lrat: {error}")
+            }
+            LratDecline::NoEmptyClause => {
+                write!(f, "the elaborated proof never derives the empty clause")
+            }
+        }
+    }
+}
+
+/// Certifies `formula` unsatisfiable from a DRAT refutation, cheaply, **without
+/// putting any trust in the machinery that makes it cheap** (ADR-0613).
+///
+/// This is the composition the workspace's identity sentence describes —
+/// *untrusted fast search, trusted small checking* — applied to proof checking
+/// itself:
+///
+/// 1. [`elaborate_drat_to_lrat_backward`] runs the backward core-first engine
+///    (ADR-0382) over `drat` and emits the core as LRAT with explicit antecedent
+///    hints. That engine is thousands of lines of watched literals, clause
+///    arenas and lifetime intervals. **It is not trusted here.** It is a
+///    *producer*: its only job is to guess hints.
+/// 2. [`check_lrat`] then verifies those hints against `formula` directly. It
+///    seeds its active set from `formula`'s own clauses, follows each addition's
+///    hint chain with no search of any kind, and reports `Ok(true)` only if the
+///    empty clause is derived. It is small enough to read in one sitting, which
+///    is the whole basis of the trust story for `unsat`.
+///
+/// So a bug anywhere in step 1 produces hints that step 2 rejects, and the
+/// outcome is [`LratCertifyOutcome::Declined`] rather than a wrong `unsat`.
+/// **`Certified` is discharged by [`check_lrat`] alone**; the backward engine
+/// contributes speed and nothing else. In particular this does *not* move the
+/// trusted base from [`crate::check_drat`] to [`crate::check_drat_backward`] —
+/// the backward checker never appears in accepting position.
+///
+/// The asymmetry to respect at the call site: `Certified` means unsatisfiable;
+/// `Declined` means **this route has no opinion**. A DRAT proof that is fine but
+/// uses a RAT step declines here, and so does a proof this crate mis-elaborates.
+/// Neither is evidence that the proof is bad.
+#[must_use]
+pub fn certify_unsat_via_lrat(formula: &CnfFormula, drat: &[DratStep]) -> LratCertifyOutcome {
+    let steps = match elaborate_drat_to_lrat_backward(formula, drat) {
+        Ok(steps) => steps,
+        Err(LratError::RatNotSupported { step }) => {
+            return LratCertifyOutcome::Declined(LratDecline::RatStep { step });
+        }
+        Err(LratError::DratStepNotVerified { step }) => {
+            return LratCertifyOutcome::Declined(LratDecline::DratNotVerified { step });
+        }
+        Err(LratError::HintChainFailed { step }) => {
+            return LratCertifyOutcome::Declined(LratDecline::HintChainFailed { step });
+        }
+        Err(other) => {
+            return LratCertifyOutcome::Declined(LratDecline::HintsRejected(other));
+        }
+    };
+    match check_lrat(formula, &steps) {
+        Ok(true) => LratCertifyOutcome::Certified(steps),
+        Ok(false) => LratCertifyOutcome::Declined(LratDecline::NoEmptyClause),
+        Err(error) => LratCertifyOutcome::Declined(LratDecline::HintsRejected(error)),
+    }
+}
+
 /// Finds the active id whose clause equals `clause` as a set.
 fn find_active_id(active: &BTreeMap<u64, Vec<CnfLit>>, clause: &[CnfLit]) -> Option<u64> {
     let target = sorted(clause);
@@ -1179,5 +1303,220 @@ mod tests {
             "the ResourceOut path must still report a final snapshot"
         );
         assert_eq!(snapshots[0].steps_processed, 1);
+    }
+
+    // --- certify_unsat_via_lrat (ADR-0613) ----------------------------------
+
+    use super::{LratCertifyOutcome, LratDecline, certify_unsat_via_lrat};
+    use crate::DratStep;
+
+    /// A deterministic xorshift, so every fixture below is reproducible.
+    struct Rng(u64);
+
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+
+        fn below(&mut self, bound: u64) -> usize {
+            usize::try_from(self.next() % bound).unwrap()
+        }
+
+        /// A random CNF over `vars` variables with clauses of width 1..=3.
+        fn formula(&mut self, vars: usize, clause_count: usize) -> CnfFormula {
+            let mut f = CnfFormula::new(vars);
+            let bound = u64::try_from(vars).unwrap();
+            for _ in 0..clause_count {
+                let width = 1 + self.below(3);
+                let mut lits = Vec::new();
+                for _ in 0..width {
+                    let v = i64::try_from(self.next() % bound).unwrap() + 1;
+                    lits.push(lit(if self.next() & 1 == 0 { v } else { -v }));
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            f
+        }
+    }
+
+    fn certified(outcome: &LratCertifyOutcome) -> bool {
+        matches!(outcome, LratCertifyOutcome::Certified(_))
+    }
+
+    /// THE LOAD-BEARING ADVERSARIAL FIXTURE.
+    ///
+    /// On an unsatisfiable formula every accepted proof is sound vacuously, so a
+    /// composition that had quietly stopped checking would look perfect there. A
+    /// **satisfiable** formula is the only place it shows up: nothing may ever
+    /// certify one, whatever proof is attached.
+    ///
+    /// Three attack shapes, because they exercise different guards:
+    ///
+    /// - a **borrowed** proof, valid for a different formula — the backward walk
+    ///   finds a real empty clause but the lemmas do not follow from *this*
+    ///   formula;
+    /// - a proof **truncated** before its empty clause, and one whose empty
+    ///   clause is **unjustified** — this is the shape that kills a missing
+    ///   `check_lrat` gate, because `elaborate_drat_to_lrat_backward` answers
+    ///   `Ok(vec![])` when there is no refutation, and an empty LRAT proof is
+    ///   `Ok(false)` (not an error) to the trusted checker. Returning
+    ///   `Certified` on elaboration success alone would certify a satisfiable
+    ///   formula from an empty proof;
+    /// - a proof of **random garbage** ending in an empty clause.
+    #[test]
+    fn never_certifies_a_satisfiable_formula() {
+        let mut rng = Rng(0x51a7_1c5e_0bad_f00d);
+        // A real refutation to borrow from, over the same variable range.
+        let (donor_formula, donor_proof) = multi_step_unsat_drat();
+        assert!(
+            certified(&certify_unsat_via_lrat(&donor_formula, &donor_proof)),
+            "positive control: the donor's own proof must certify its own formula"
+        );
+
+        let mut satisfiable = 0u32;
+        for _ in 0..400 {
+            let vars = 3 + rng.below(4);
+            let clauses = 3 + rng.below(10);
+            let f = rng.formula(vars, clauses);
+            if !matches!(solve_with_drat_proof(&f), ProofSolveOutcome::Sat(_)) {
+                continue;
+            }
+            satisfiable += 1;
+
+            // 1. Borrowed refutation.
+            assert!(
+                !certified(&certify_unsat_via_lrat(&f, &donor_proof)),
+                "a borrowed refutation must never certify a satisfiable formula"
+            );
+
+            // 2a. Truncated: everything before the donor's empty clause.
+            let truncated: Vec<DratStep> = donor_proof
+                .iter()
+                .take_while(|step| !matches!(step, DratStep::Add(c) if c.is_empty()))
+                .cloned()
+                .collect();
+            assert!(
+                !certified(&certify_unsat_via_lrat(&f, &truncated)),
+                "a proof with no empty clause must never certify anything"
+            );
+
+            // 2b. An unjustified empty clause and nothing else. This is exactly
+            //     what a missing `check_lrat` gate would wave through.
+            assert!(
+                !certified(&certify_unsat_via_lrat(&f, &[DratStep::Add(Vec::new())])),
+                "a bare empty clause is not a refutation of a satisfiable formula"
+            );
+
+            // 3. Random garbage terminated by an empty clause.
+            let mut garbage: Vec<DratStep> = Vec::new();
+            for _ in 0..6 {
+                let width = 1 + rng.below(3);
+                let bound = u64::try_from(vars).unwrap();
+                let mut lits = Vec::new();
+                for _ in 0..width {
+                    let v = i64::try_from(rng.next() % bound).unwrap() + 1;
+                    lits.push(lit(if rng.next() & 1 == 0 { v } else { -v }));
+                }
+                garbage.push(DratStep::Add(lits));
+            }
+            garbage.push(DratStep::Add(Vec::new()));
+            assert!(
+                !certified(&certify_unsat_via_lrat(&f, &garbage)),
+                "a random proof must never certify a satisfiable formula"
+            );
+        }
+        assert!(
+            satisfiable >= 20,
+            "the fixture must actually have run on satisfiable formulas, got \
+             {satisfiable} — a generator that produced none would make every \
+             assertion above vacuous"
+        );
+    }
+
+    /// Differential against the forward reference checker on solver-produced
+    /// proofs: whatever [`check_drat`] verifies, this route must certify, and
+    /// the LRAT it hands back must independently satisfy [`check_lrat`].
+    ///
+    /// The counter is asserted so the sweep cannot silently degenerate into "no
+    /// unsat instances ran".
+    #[test]
+    fn certifies_exactly_what_the_reference_checker_verifies() {
+        let mut rng = Rng(0x0bad_c0de_dead_beef);
+        let mut unsat = 0u32;
+        for _ in 0..600 {
+            let vars = 3 + rng.below(4);
+            let clauses = 4 + rng.below(16);
+            let f = rng.formula(vars, clauses);
+            let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&f) else {
+                continue;
+            };
+            assert_eq!(check_drat(&f, &drat), Ok(true), "DRAT must verify");
+            unsat += 1;
+            match certify_unsat_via_lrat(&f, &drat) {
+                LratCertifyOutcome::Certified(steps) => {
+                    assert_eq!(
+                        check_lrat(&f, &steps),
+                        Ok(true),
+                        "the returned LRAT must verify on its own"
+                    );
+                    let reparsed = parse_lrat(&write_lrat(&steps)).expect("LRAT round-trips");
+                    assert_eq!(check_lrat(&f, &reparsed), Ok(true));
+                }
+                LratCertifyOutcome::Declined(reason) => panic!(
+                    "the reference checker verified this proof but the LRAT route \
+                     declined: {reason}"
+                ),
+            }
+        }
+        assert!(unsat >= 20, "expected many UNSAT cases, got {unsat}");
+    }
+
+    /// A decline is a statement about the ROUTE, not about the proof, and the
+    /// reasons must stay distinguishable — a caller that cannot tell "this
+    /// format cannot express your proof" from "your proof is broken" will report
+    /// the wrong one.
+    #[test]
+    fn a_missing_refutation_declines_with_the_no_empty_clause_reason() {
+        let f = unsat_2x2();
+        let outcome = certify_unsat_via_lrat(&f, &[]);
+        assert_eq!(
+            outcome,
+            LratCertifyOutcome::Declined(LratDecline::NoEmptyClause),
+            "an empty proof establishes nothing and must say so precisely"
+        );
+    }
+
+    /// Deleting the empty-clause addition from a real refutation leaves a proof
+    /// that derives no contradiction. Certifying it would mean the route reports
+    /// `unsat` for a proof that never says so.
+    ///
+    /// Deliberately *not* a literal-flip sweep: flipping a sign can produce
+    /// another clause that happens to be RUP, so such a sweep asserts something
+    /// that is not actually invariant. Removing the refutation is invariant.
+    #[test]
+    fn a_refutation_stripped_of_its_empty_clause_is_never_certified() {
+        let f = unsat_2x2();
+        let drat = drat_of_unsat(&f);
+        assert!(
+            certified(&certify_unsat_via_lrat(&f, &drat)),
+            "positive control: the intact proof certifies"
+        );
+        let stripped: Vec<DratStep> = drat
+            .iter()
+            .filter(|step| !matches!(step, DratStep::Add(c) if c.is_empty()))
+            .cloned()
+            .collect();
+        assert!(
+            stripped.len() < drat.len(),
+            "the fixture must actually have removed an empty clause"
+        );
+        assert_eq!(
+            certify_unsat_via_lrat(&f, &stripped),
+            LratCertifyOutcome::Declined(LratDecline::NoEmptyClause),
+            "a proof that derives no empty clause must not be certified"
+        );
     }
 }

@@ -230,6 +230,25 @@ fn checking_report_line(event: &CheckingProgress) -> String {
             ),
             snapshot.elapsed,
         ),
+        // The backward LRAT certification stage (ADR-0613) is not
+        // step-interruptible, so it reports exactly twice — once opening, once
+        // closing. `steps` is therefore 0 or `steps_total`, which is what makes
+        // the derived `steps_per_sec` meaningful on the closing line and zero on
+        // the opening one, rather than a rate over a partial scan.
+        CheckingProgress::BackwardLratCertify(snapshot) => (
+            "backward_lrat_certify",
+            if snapshot.finished {
+                snapshot.steps_total
+            } else {
+                0
+            },
+            Some(snapshot.steps_total),
+            format!(
+                "finished={} certified={}",
+                snapshot.finished, snapshot.certified
+            ),
+            snapshot.elapsed,
+        ),
     };
     let elapsed_secs = elapsed.as_secs_f64();
     let steps_per_sec = if elapsed_secs > 0.0 {
