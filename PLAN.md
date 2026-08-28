@@ -202,6 +202,9 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-modeq-gcd | land `Nat.coprime_of_dvd'` (primes.rs), fixing a build-order UnknownConst |
 | 2026-08-28 | nat-asc-multichoose | `Nat.ascFactorial`/`Nat.multichoose` definitions + 6 boundary theorems + 6 new `F:nat-*` facts |
 | 2026-08-28 | cas-reconstruct | `cas-certificate` `kernel-reconstructed` 1 → 3: registered two already-passing, unregistered CAS → kernel bridges; mutation-verified the degree-4 kernel check; measured the remaining 28 as a backlog, not a Richardson boundary |
+| 2026-08-28 | evt-endpoint | `cas-certificate` `kernel-reconstructed` 3 -> 4: EVT endpoint exclusion for x^3-6x on [-3,2] admitted through `Kernel::add_declaration`, reusing the IVT sign-bracket bridge's engine verbatim; mutation-verified; registered as `F:cas-evt-endpoint-exclusion-cubic-kernel-checked`, a sibling of `F:cas-extremum-irrational-argmax` |
+| 2026-08-28 | nat-factorial-dvd | falling/rising-factorial ↔ `choose` bridges + `factorial_dvd_descFactorial`/`factorial_dvd_ascFactorial`, closing 2 `F:ml430-nat-factorial-dvd-*` facts |
+| 2026-08-28 | nat-ldiff | `Nat.ldiff`/`Nat.ldiffAux` (fuel recursion, `land`-shaped fuel-exhaustion base case, hybrid land/lor succ-row guard, `beq`+`bool_select_nat` per-bit step) + 4 boundary theorems incl. the asymmetry pair in `nat_prelude/ldiff.rs`; wired into `nat_prelude.rs`; `nat_prelude_tests.rs` coverage + dedicated evaluation test + pinned render count `492->498`; 4 new `F:nat-ldiff-*` facts |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -10504,6 +10507,298 @@ Give it write access to `crates/axeyum-lean-kernel/`. In value order:
    `ivt_sign_bracket_degree_four_kernel_checked` (its degree-3 sibling has one).
 3. `Rat.polyEval_mul`, as the three-term identity its own module doc argues for.
    It is the shared prerequisite for the largest part of the backlog.
+
+**Your lane's block (`DONE this pass`, evt-endpoint, 2026-08-28).**
+
+The previous lane (`223-cas-reconstruct`) sized this as needing no new kernel
+machinery: `docs/plan/status/223-cas-reconstruct.md`'s "Next lane" item 1. That
+sizing HELD, verified rather than trusted:
+
+- `q = p - p(-3)` (coefficients `[9,-6,0,1]`), `r = p - p(2)`
+  (`[4,-6,0,1]`) for `p = x^3-6x`. `q(-1) = 14`, `r(-1) = 9`, exactly the
+  constants the previous lane's write-up sized.
+- Both admitted through `crate::Kernel::add_declaration` using the EXISTING
+  `zero_lt_via_nat_le` engine (`rat_prelude/cas_ivt_bridge_tests.rs`) — no new
+  `rat_prelude` lemma, kernel primitive, or proof pattern.
+
+`scripts/validate-facts.py`, `cas-certificate` split, before/after (this
+worktree):
+
+```
+before: cas-certificate: 31 total -- kernel-reconstructed 3, cas-internal 28
+after:  cas-certificate: 32 total -- kernel-reconstructed 4, cas-internal 28
+```
+
+**What was built.** `crates/axeyum-lean-kernel/src/rat_prelude/cas_evt_bridge_tests.rs`
+(new file, wired via `#[cfg(test)] mod cas_evt_bridge_tests;` in
+`rat_prelude.rs`), one test:
+`rat_prelude::cas_evt_bridge_tests::tests::evt_endpoint_exclusion_kernel_checked`.
+It:
+
+1. Calls `axeyum_cas::extremum::polynomial_extremum(x^3-6x, -3, 2)` — the SAME
+   certificate `F:cas-extremum-irrational-argmax` cites
+   (`extremum::tests::irrational_argmax`) — and translates `cert.poly`/`a`/`b`
+   to `i128` (`poly_ab_to_int`, mirroring `cas_ivt_bridge_tests::sign_bracket_to_int`).
+2. Computes `p(-3) = -9`, `p(2) = -4` in plain Rust `i128` (untrusted side;
+   if wrong, the kernel-side reduced constant will not match the asserted
+   bound and `add_declaration` rejects — not silently), builds the shifted
+   coefficient vectors `q`, `r`.
+3. Admits `0 < polyEval q 4 (ofInt -1)` and `0 < polyEval r 4 (ofInt -1)`
+   through `Kernel::add_declaration`, reusing
+   `cas_ivt_bridge_tests::{poly_eval_to_of_int, n_term_polynomial, int_lit,
+   of_int, zero_lt_via_nat_le, built, rational_to_int}` VERBATIM (made
+   `pub(crate)` for this reuse — a one-line visibility change per helper, no
+   logic touched) rather than re-deriving them beside the original.
+4. Carries a swapped-statement negative control (the lower leg's TRUE proof
+   term re-ascribed against the FALSE statement `q(-1) < 0`, confirmed
+   `Err(..)`).
+
+**Mutation-verified by this lane, not taken on the previous lane's pattern
+alone.** Changed the lower leg's kernel-side bound from the exact `14` to a
+wrong-but-plausible `16` (`Nat.le 1 16` is itself true, just not the
+proposition the reduced term inhabits):
+
+```
+Err(TypeMismatch { expected: ExprId(1579401), got: ExprId(1579415) })
+```
+
+Test FAILED as expected; reverted, it passes again (`cargo test -p
+axeyum-lean-kernel --lib --no-run` rebuilt clean, then the test binary run
+directly both before and after). `git status --porcelain` confirmed clean of
+the mutation afterward (only the intended new/modified files remain staged
+for commit).
+
+**Checker discriminates both ways**, run with `/usr/bin/grep` and `[[:space:]]`
+avoided entirely (uses `\.\.\.` literal dots, no `\t`):
+
+```
+cargo test -p axeyum-lean-kernel --lib \
+  rat_prelude::cas_evt_bridge_tests::tests::evt_endpoint_exclusion_kernel_checked \
+  -- --exact 2>/dev/null \
+  | grep -cE '^test rat_prelude::cas_evt_bridge_tests::tests::evt_endpoint_exclusion_kernel_checked \.\.\. ok$'
+```
+
+Passing test -> `1`, exit 0. Mistyped filter (0 tests run) -> `0`, exit 1.
+Wrong kernel bound -> the `ok` line disappears -> `0`, exit 1 (verified above
+via the mutation).
+
+**Nothing was relabelled and no checker was weakened.** `F:cas-extremum-irrational-argmax`
+and `F:cas-ivt-cbrt2-in-1-2` (read-only per this lane's scope) are untouched.
+The new fact `F:cas-evt-endpoint-exclusion-cubic-kernel-checked` is a SIBLING,
+not an edit — folding this evidence into
+`F:cas-extremum-irrational-argmax` would make `classify_cas_certificate_fact`
+label the WHOLE certificate (root differentiation, Sturm count included) as
+kernel-reconstructed, which `cas_ivt_bridge_tests.rs`'s own module doc warns
+against, exactly the reasoning the previous lane already established for the
+IVT sibling pair.
+
+**What this fact does NOT claim, stated plainly.** `x = -1` is NOT the true
+argmax (`-sqrt(2)` is); the fact only shows `x = -1` beats both endpoints,
+which is exactly the "the maximum is interior" content EVT's decidable-fragment
+row-3 was missing, and no more. `p'`'s differentiation, `-sqrt(2)` being a
+root of `p'`, and the Sturm completeness count all remain `cas-internal`.
+
+**Gates run**: `rustfmt --edition 2024 --check` on the three touched files
+(clean after one `rustfmt` pass — no manual formatting was needed beyond
+that), `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D
+warnings` (clean), the target test itself (passing, `--exact`, nonzero count
+confirmed), and the sibling `cas_ivt_bridge_tests::` suite re-run to confirm
+the visibility changes (private `fn` -> `pub(crate) fn` on six helpers, no
+logic changes) did not regress it (`2 passed`). The full workspace
+`--workspace --lib` sweep did NOT run this pass (out of scope for a
+single-module change and expensive under lane contention); the coordinator
+re-verifies before merge per standing practice.
+
+**Your lane's block (`DONE`, nat-factorial-dvd, 2026-08-28).** Both
+`F:ml430-nat-factorial-dvd-descfactorial-bbf6124f` and
+`F:ml430-nat-factorial-dvd-ascfactorial-44a4e641` are closed — the brief's
+"landing the choose bridge plus ONE divisibility fact" bar was cleared twice
+over.
+
+`Nat.descFactorial_eq_factorial_mul_choose : n.descFactorial k = k! * n.choose k`
+did not exist anywhere in the kernel before this session (confirmed by
+reading `choose.rs`/`binomial.rs`/`desc_factorial.rs` in full — no
+`descFactorial`-to-`choose` cross-reference existed, and both target facts'
+own `open` status recorded the bridge as the deferred prerequisite). It is
+the real deliverable: proved by induction on `n`, `k` generalized inside the
+motive (mirroring `succ_mul_choose_eq`'s own outer-induction shape), using a
+new front-peel identity `Nat.descFactorial_succ_eq_succ_mul : (succ n).descFactorial
+(succ k) = succ n * n.descFactorial k` (a separate, simpler induction on `k`
+with `n` held fixed) to bridge the outer IH — which is only ever about `n`,
+never `succ n` — into the successor step. The successor step's `k = succ j`
+case chains six identities: the front-peel lemma, the outer IH at `j`,
+`mul_left_comm` (newly promoted `pub(super)` in `binomial.rs`, was file-private
+to it), `Nat.succ_mul_choose_eq`, `mul_assoc` (reversed), `factorial_succ`
+(reversed). `factorial_dvd_descFactorial` then falls out immediately:
+`Nat.dvd_mul : a ∣ a*q` transported along the bridge equation.
+
+`Nat.ascFactorial_succ_eq_factorial_mul_choose : (succ m).ascFactorial k = k! *
+(m+k).choose k` is the rising-factorial analogue, reindexed by `n := succ m`
+specifically so no `Nat.sub` is ever needed (`ascFactorial`'s natural bridge
+would otherwise be `k! * (n+k-1).choose k`, needing an `n ≥ 1` truncation
+guard `descFactorial` does need and this reindexing sidesteps). Proved by a
+SINGLE induction on `k` (`m` fixed throughout — no `n=0` boundary to handle
+inside this lemma, since `n := succ m` is never `0`), chaining eight
+identities: `asc_factorial_succ`, the IH, `mul_left_comm`, `Nat.succ_add`
+(aligning `succ m + j` with `succ_mul_choose_eq`'s `succ n'` shape),
+`Nat.succ_mul_choose_eq`, `Nat.add_succ` (aligning back to `m + succ j`),
+`mul_assoc` (reversed), `factorial_succ` (reversed). `factorial_dvd_ascFactorial`
+case-splits `n`: `n = 0` needs a small separate lemma
+`Nat.zero_ascFactorial_succ : (0).ascFactorial (succ k) = 0` (induction on
+`k`, base is literally `ascFactorial_one` at `n:=0`) + `dvd_zero` (`k = 0` via
+`dvd_refl`); `n = succ m` uses the bridge + `dvd_mul`, identical shape to the
+descending case.
+
+**What the kernel rejected, and why:** the asc bridge's `k = succ j` step
+initially failed with `TypeMismatch` across the ENTIRE `nat_prelude::` suite
+(all 113 tests, the "one bad declaration poisons the shared build" pattern) —
+diagnosed by a temporary debug test rendering both sides of the mismatch via
+`Kernel::render_lean` (removed before the final commit), which showed step 4's
+`congr` rewrote `succ_add`'s substitution under `mul(x, choose_mj)` only,
+while the surrounding `chain` call used it as a proof of the FULLY
+`mul(fact_j, ..)`-wrapped statement — missing one layer of congruence
+context. Bisected which of the three new `asc_factorial.rs` declarations was
+at fault by disabling each `declare_*` call one at a time against a single
+fast test, per the standing rule: `declare_zero_asc_factorial_succ` and the
+three new `desc_factorial.rs` declarations were fine alone;
+`declare_asc_factorial_succ_eq_factorial_mul_choose` was the culprit. Fixed
+by wrapping the congr context in `mul(fact_j, ..)` directly, matching the
+already-correct sibling step (step 6, same function).
+
+Measured: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`
+(`nat_axiom_inventory --require-axiom-free nat`) — all six new theorems
+(`descFactorial_succ_eq_succ_mul`, `descFactorial_eq_factorial_mul_choose`,
+`factorial_dvd_descFactorial`, `zero_ascFactorial_succ`,
+`ascFactorial_succ_eq_factorial_mul_choose`, `factorial_dvd_ascFactorial`)
+add zero axioms; `nat_prelude::` suite: **113 passed, 0 failed** (was 107
+before this lane's merge base — 112 with these six theorems admitted but not
+yet in `theorem_names`/`definition_names`, since
+`every_nat_declaration_is_checked_and_axiom_free` derives its coverage from
+the ENVIRONMENT and fails naming exactly what's missing, per the standing
+rule against hand-maintained "every X" lists). `the_build_is_deterministic`'s
+`D + T` pin recounted by reading the test's own panic message (never by
+hand-incrementing): `81 + 411` → `81 + 417` = 498. `cargo fmt --check` and
+`clippy --all-targets -D warnings` both clean.
+
+No target in this lane's scope (both `F:ml430-nat-factorial-dvd-*` facts, and
+`F:ml430-nat-factorial-dvd-factorial-e9d14845`, already `proved`, out of
+scope) carried a `⛔ HELD-OUT` or `⛔ MUTATION` marker.
+
+`python3 scripts/validate-facts.py`: 0 errors. Both facts' `checker_command`s
+verified to run and exit 0 against the landed kernel.
+
+Next lane: the falling/rising-factorial ↔ `choose` bridges are now general
+building blocks (`Nat.descFactorial_eq_factorial_mul_choose`,
+`Nat.ascFactorial_succ_eq_factorial_mul_choose`) — reusable for e.g. a
+`multichoose`-to-`descFactorial` bridge or a `choose`-symmetric identity that
+needs the factorial relationship in the other direction.
+
+**Your lane's block (`DONE`, nat-ldiff, 2026-08-28).** Landed `Nat.ldiff`/
+`Nat.ldiffAux` in `nat_prelude/ldiff.rs`, following `land.rs`'s/`lor.rs`'s
+structural fuel recursion (`Nat.rec` on the fuel argument, `ldiffAux m m n`).
+
+**Worked out the absorbing-zero asymmetry on paper before writing kernel
+terms, exactly as the `lor` lane did.** `Nat.ldiff m n` (bitwise "`m` AND NOT
+`n`") has an absorbing zero on exactly ONE side: `ldiff 0 n = 0`, but
+`ldiff m 0 = m`, not `0`. That determined every shape choice:
+
+- **Fuel-exhaustion base case takes `land`'s shape, not `lor`'s.** Fuel is
+  sized `= m` (unchanged), and `land.rs`/`lor.rs` both establish that by the
+  time the outer `Nat.rec` on fuel genuinely reaches `0`, the current
+  `m`-argument at that call is always definitionally `0` (fuel decrements by
+  `1` per step while `m` at least halves per step, and halving `m` times
+  always reaches `0` in at most `m` halvings for `m >= 1`). For `land`, `m`
+  carries the absorbing zero, so the base case can ignore both leftover
+  arguments and return the constant `0`. For `ldiff`, `m` — the SAME operand
+  the fuel is sized against — is *also* the absorbing-zero operand, so the
+  identical reasoning applies for the identical reason: `ldiffAux 0 m n := 0`,
+  land's shape exactly, not lor's `n`-returning fix (which was needed there
+  only because `lor`'s fuel-sized operand carries NO absorbing zero).
+- **The inner succ-row guard is a genuine hybrid of both siblings**, because
+  its two zero-checks protect two operands with different absorbing
+  behaviour: `n = 0` returns `m` unchanged (`lor`'s shape — no absorbing zero
+  on this side), `m = 0` returns `0` (`land`'s shape — absorbing zero here).
+- **Per-bit combinator**: neither `land`'s product nor `lor`'s `max` (via
+  `Nat.ble`) — `bitLdiff a b := if b = 0 then a else 0`, built from
+  `Nat.beq`/`bool_select_nat`, already load-bearing in this same term for the
+  zero-guards. No new primitive or height dependency.
+- **Guard order unchanged**: `n = 0` OUTERMOST in `ldiffAux`'s succ case
+  (mirrors `land`/`lor`), load-bearing for the identical proof-cost reason:
+  `ldiff_zero_right`'s induction on `m` closes by `Eq.refl` at every step (no
+  induction hypothesis forced), because the outermost `bool_select_nat` on
+  `n_is_zero` selects the "return `m`" branch without forcing the untaken
+  branch where the `m = 0` test and the real recursive step live.
+
+Landed 4 boundary/sanity theorems (`ldiff_zero_left`, `ldiff_zero_right`,
+`ldiff_three_five`, `ldiff_five_three`) — one more than the "two or three is a
+complete success" floor, because `ldiff`'s non-commutativity gives it a
+negative control `land`/`lor` cannot express at all: `ldiff_three_five`
+(`ldiff 3 5 = 2`) and `ldiff_five_three` (`ldiff 5 3 = 4`) are the SAME two
+operands swapped, producing a DIFFERENT answer. The evaluation test
+(`ldiff_computes_and_its_boundary_theorems_apply`) checks this both by
+`Kernel::def_eq` over a ten-row concrete table (including `(3,5)->2` and
+`(5,3)->4` side by side) and by a dedicated negative control asserting
+`ldiff_five_three`'s statement must NOT `def_eq` `Eq (ldiff 5 3) 2` — the
+value its swapped sibling gives.
+
+**Measured `axiom_footprint`**: empty for every new declaration (`Nat.ldiff`,
+`Nat.ldiffAux`, and all four theorems), confirmed both by
+`Kernel::axiom_footprint` in the dedicated test and by
+`nat_axiom_inventory --require-axiom-free nat`, which after this lane still
+reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.
+
+**Kernel rejected nothing in the final version.** The design reasoning above
+(which sibling's base case applies, which sibling's guard-branch shape
+applies to each zero-check) was worked out on paper before construction,
+specifically because copying `land`'s base case without checking which
+operand carries the absorbing zero could have looked plausible and been
+wrong for a definition with an ASYMMETRIC absorbing zero — this was avoided
+by tracing the recursion by hand first, not by a kernel rejection. Two clippy
+`doc_markdown` findings (bare `ANDing` in the module doc, wanting backticks)
+were the only friction, caught by `cargo clippy -p axeyum-lean-kernel
+--all-targets -- -D warnings` and fixed before the final commit.
+
+**No HELD-OUT or MUTATION marker on any target.** Checked
+`scripts/fact-frontier.py` for `F:ml430-nat-ldiff-bit-6be49bb8` (the Mathlib
+mirror fact near this family, plus the `nat-testbit-ldiff` mirror fact) —
+neither carries either marker, though `nat-testbit-ldiff` is flagged as
+possibly load-bearing for `gen-autogenesis-bitwise-family-projection.py` and
+was left untouched regardless (out of scope: this lane creates new
+`F:nat-ldiff-*` facts only). Neither mirror fact was flipped: this prelude's
+`Nat.ldiff` is a fresh construction, not Mathlib's `bitwise`-derived one, and
+its premise (general `Nat.bitwise`) is not established here.
+
+**`nat_prelude` test count**: 92 passed on a targeted filtered run before this
+lane's test additions (baseline, same run as the merged-in `land`/`lor`/
+bitwise work), 114 passed after on the full `nat_prelude` filter (adds
+`ldiff_computes_and_its_boundary_theorems_apply`; the wider post-count also
+picks up `shape_index`/`string_prelude` tests matched by the same substring
+filter, so the two numbers are not directly subtracted). `definition_names` +
+`theorem_names` rendered count (`the_build_is_deterministic`'s pin, read off
+its own panic message per the standing rule, never hand-counted):
+`492 -> 498` (`81+411 -> 83+415`; +2 definitions `ldiffAux`/`ldiff`, +4
+theorems `ldiff_zero_left`/`ldiff_zero_right`/`ldiff_three_five`/
+`ldiff_five_three`).
+
+**Gates run**: `cargo check -p axeyum-lean-kernel` clean; `cargo check -p
+axeyum-lean-kernel --tests` clean; `cargo test -p axeyum-lean-kernel --lib
+nat_prelude` 114 passed, 0 failed (includes
+`every_nat_declaration_is_checked_and_axiom_free`, the environment-derived
+coverage assertion, and `the_build_is_deterministic`); `cargo fmt --all
+--check` clean; `cargo clippy -p axeyum-lean-kernel --all-targets --
+-D warnings` clean; `scripts/validate-facts.py` 1908 facts checked
+(including the 4 new ones), 0 errors; all four new facts' `checker_command`s
+(the `nat_theorem_inventory` anchored-grep for each theorem name, and
+`nat_axiom_inventory --require-axiom-free nat`) run and confirmed to pass.
+Did not run the full workspace `--features full` sweep or the aggregate
+`just check`/`check.sh` gate (out of this lane's scope per the brief; the
+crate-scoped gates above are what the brief asked for).
+
+Out of scope, deliberately: `Nat.bitwise` (general two-argument form),
+`Nat.bits`, `Nat.ldiff` correctness theorems beyond the four boundary/sanity
+ones (the `ml430-nat-ldiff-*`/`ml430-nat-testbit-ldiff-*` mirror facts) —
+`ldiff` proved simple enough that none of these were needed to land it,
+matching the brief's "complete success" bar without extending scope.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

@@ -406,7 +406,19 @@ pub(super) fn binom_sum(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId) -
 /// `mul_left_comm : x*(y*z) = y*(x*z)` — swap the first two factors of a
 /// three-factor product, third fixed. Proved the same way `add_right_comm`
 /// (`algebra.rs`) proves its additive shape: assoc, comm-on-the-pair, assoc.
-fn mul_left_comm(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, y: ExprId, z: ExprId) -> ExprId {
+///
+/// `pub(super)` (rather than the file-private `fn` every other helper in this
+/// stage is) so `desc_factorial.rs`/`asc_factorial.rs`'s falling/rising
+/// factorial ↔ `choose` bridges can reuse it instead of rebuilding a third
+/// copy — see `docs/plan/status/197` on why a private `fn` duplicated across
+/// files is a standing hazard here.
+pub(super) fn mul_left_comm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+) -> ExprId {
     let p = *p;
     let yz = d.mul(y, z);
     let start = d.mul(x, yz);

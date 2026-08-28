@@ -353,6 +353,27 @@ pub struct NatPrelude {
     /// `descFactorial_of_lt : ∀ n k, n < k → n.descFactorial k = 0` — once
     /// `k` exceeds `n`, truncated `Nat.sub` forces a zero factor.
     pub desc_factorial_of_lt: NameId,
+    /// `descFactorial_succ_eq_succ_mul : ∀ n k, (succ n).descFactorial (succ k)
+    /// = succ n * n.descFactorial k` — the "front-peel" identity: peel the
+    /// LARGEST factor (`succ n`) off the front of the product, leaving
+    /// exactly `n.descFactorial k` (the same `k` factors, one row down).
+    /// Proved by induction on `k` with `n` held fixed. The tool this bridge
+    /// needs: [`Self::desc_factorial_succ`] (`desc_factorial.rs`'s own
+    /// recursion) peels the SMALLEST factor off the BACK instead, so it
+    /// cannot supply this directly.
+    pub desc_factorial_succ_eq_succ_mul: NameId,
+    /// `descFactorial_eq_factorial_mul_choose : ∀ n k, n.descFactorial k =
+    /// k! * n.choose k` — the falling-factorial / binomial-coefficient
+    /// bridge, closing `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`'s
+    /// prerequisite. Proved by induction on `n`, `k` generalized inside the
+    /// motive, chaining [`Self::desc_factorial_succ_eq_succ_mul`], the outer
+    /// induction hypothesis, `mul_left_comm`, [`Self::succ_mul_choose_eq`],
+    /// `mul_assoc`, and [`Self::factorial_succ`].
+    pub desc_factorial_eq_factorial_mul_choose: NameId,
+    /// `factorial_dvd_descFactorial : ∀ n k, k! ∣ n.descFactorial k`.
+    /// Closes `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`. Immediate
+    /// from [`Self::desc_factorial_eq_factorial_mul_choose`] plus `dvd_mul`.
+    pub factorial_dvd_desc_factorial: NameId,
     /// `Nat.ascFactorial : Nat → Nat → Nat`, by structural recursion on its
     /// **second** argument via [`NatOps::define_binary`], mirroring
     /// [`Self::desc_factorial`] but climbing with `Nat.add` instead of
@@ -367,6 +388,26 @@ pub struct NatPrelude {
     pub asc_factorial_succ: NameId,
     /// `ascFactorial_one : ∀ n, n.ascFactorial 1 = n`.
     pub asc_factorial_one: NameId,
+    /// `zero_ascFactorial_succ : ∀ k, (0:Nat).ascFactorial (succ k) = 0` —
+    /// the ascending analogue of `descFactorial_of_lt`'s boundary: the
+    /// leading factor is `0` itself once there is at least one factor.
+    pub zero_asc_factorial_succ: NameId,
+    /// `ascFactorial_succ_eq_factorial_mul_choose : ∀ m k, (succ m).ascFactorial k
+    /// = k! * (m + k).choose k` — the subtraction-free rising-factorial /
+    /// binomial-coefficient bridge (reindexed by `n := succ m` so no
+    /// `Nat.sub` — hence no truncation guard on `n ≥ 1` — is ever needed).
+    /// Proved by induction on `k`, `m` held fixed. Same chain shape as
+    /// [`Self::desc_factorial_eq_factorial_mul_choose`] plus two extra
+    /// `succ_add`/`add_succ` index-alignment rewrites (the descending
+    /// bridge's `n`/`k` shift in lockstep already; here `m+k`'s addend must
+    /// be nudged to line up with `succ_mul_choose_eq`'s own shape).
+    pub asc_factorial_succ_eq_factorial_mul_choose: NameId,
+    /// `factorial_dvd_ascFactorial : ∀ n k, k! ∣ n.ascFactorial k`. Closes
+    /// `F:ml430-nat-factorial-dvd-ascfactorial-44a4e641`. Case-splits `n`:
+    /// `n = 0` via [`Self::zero_asc_factorial_succ`] + `dvd_zero` (`k = 0`
+    /// needs only `dvd_refl`); `n = succ m` via
+    /// [`Self::asc_factorial_succ_eq_factorial_mul_choose`] + `dvd_mul`.
+    pub factorial_dvd_asc_factorial: NameId,
     /// `Nat.multichoose n k` — the number of size-`k` multisets from an
     /// `n`-element type, defined directly as `choose (pred (add n k)) k`
     /// (i.e. `(n + k - 1).choose k`) rather than by a fresh recursion. See
@@ -2553,10 +2594,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             desc_factorial_succ: kernel.name_str(nat, "descFactorial_succ"),
             desc_factorial_one: kernel.name_str(nat, "descFactorial_one"),
             desc_factorial_of_lt: kernel.name_str(nat, "descFactorial_of_lt"),
+            desc_factorial_succ_eq_succ_mul: kernel.name_str(nat, "descFactorial_succ_eq_succ_mul"),
+            desc_factorial_eq_factorial_mul_choose: kernel
+                .name_str(nat, "descFactorial_eq_factorial_mul_choose"),
+            factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),
             asc_factorial: kernel.name_str(nat, "ascFactorial"),
             asc_factorial_zero: kernel.name_str(nat, "ascFactorial_zero"),
             asc_factorial_succ: kernel.name_str(nat, "ascFactorial_succ"),
             asc_factorial_one: kernel.name_str(nat, "ascFactorial_one"),
+            zero_asc_factorial_succ: kernel.name_str(nat, "zero_ascFactorial_succ"),
+            asc_factorial_succ_eq_factorial_mul_choose: kernel
+                .name_str(nat, "ascFactorial_succ_eq_factorial_mul_choose"),
+            factorial_dvd_asc_factorial: kernel.name_str(nat, "factorial_dvd_ascFactorial"),
             multichoose: kernel.name_str(nat, "multichoose"),
             multichoose_zero_right: kernel.name_str(nat, "multichoose_zero_right"),
             multichoose_one: kernel.name_str(nat, "multichoose_one"),
