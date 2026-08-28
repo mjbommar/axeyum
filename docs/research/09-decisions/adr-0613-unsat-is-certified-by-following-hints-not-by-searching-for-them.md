@@ -273,3 +273,19 @@ back. The inversion this ADR fixes was never about the solver.
   and negative hint blocks — not another checker.
 - `CheckingProgress` gained a variant, so any exhaustive match on it needs an
   arm. `smtcomp_cli` is updated; there was exactly one other consumer.
+- **Four accepting `check_drat` call sites remain, deliberately unconverted in
+  this slice**, and they are named here so the next lane does not have to
+  re-derive the audit: `sat_bv_backend.rs:1961` (native CDCL inline proof
+  check), `:1489` (the pure-Gauss XOR certificate), `:2049`
+  (`verify_unsat_proof`, the `prove_unsat` re-derivation gate), and
+  `bitblast_miter.rs:152` (the faithfulness miter). All four are
+  *verdict-only* — three discard the proof entirely and the fourth publishes
+  `dimacs`/`drat` with no LRAT field — so each converts to the same shape as
+  the exporter: try `certify_unsat_via_lrat`, and on a decline fall back to
+  `check_drat`, whose `Ok`/`Err` contract each already depends on. The only
+  behavioural difference to think about is the documented ADR-0382 divergence:
+  a proof carrying unjustified dead weight *outside* the core is `Ok(false)` to
+  the reference and `Certified` here. That is sound, and at three of these sites
+  it cannot arise at all because the proof was produced by our own core in the
+  same call. They were left alone to keep this diff small enough to hold in
+  one head, not because there is a reason not to convert them.

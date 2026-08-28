@@ -541,6 +541,51 @@ fn budget_admits_backward_certify(budget: &CheckBudget<'_>, steps: usize) -> boo
     budget.max_steps.is_none_or(|max| max >= steps)
 }
 
+/// Runs the backward LRAT certification stage (ADR-0613) over `proof`, reporting
+/// its opening and closing snapshots to `check_budget`'s sink.
+///
+/// `Some(certificate)` means [`axeyum_cnf::check_lrat`] followed the emitted
+/// hints against `formula` and reached the empty clause — `formula` is
+/// unsatisfiable, on the authority of that checker alone. `None` means the route
+/// **declined**, which says nothing whatever about `proof`: the caller must fall
+/// back to the forward reference route rather than treat it as a failure.
+///
+/// The caller checks [`budget_admits_backward_certify`] first; this function
+/// does not, because the stage is uninterruptible and there is nothing useful it
+/// could do with a budget half way through.
+fn backward_lrat_certificate(
+    formula: &axeyum_cnf::CnfFormula,
+    proof: &[axeyum_cnf::DratStep],
+    check_budget: &mut CheckBudget<'_>,
+) -> Option<UnsatProof> {
+    let started = Instant::now();
+    let steps_total = proof.len();
+    let mut report = |elapsed, finished, certified| {
+        if let Some(sink) = check_budget.progress.as_mut() {
+            sink(&CheckingProgress::BackwardLratCertify(
+                BackwardCertifyProgress {
+                    steps_total,
+                    elapsed,
+                    finished,
+                    certified,
+                },
+            ));
+        }
+    };
+    report(std::time::Duration::ZERO, false, false);
+    let outcome = certify_unsat_via_lrat(formula, proof);
+    let certified = matches!(outcome, LratCertifyOutcome::Certified(_));
+    report(started.elapsed(), true, certified);
+    match outcome {
+        LratCertifyOutcome::Certified(steps) => Some(UnsatProof {
+            dimacs: formula.to_dimacs(),
+            drat: write_drat(proof),
+            lrat: Some(write_lrat(&steps)),
+        }),
+        LratCertifyOutcome::Declined(_) => None,
+    }
+}
+
 #[allow(clippy::similar_names)] // drat_sink_fn/lrat_sink_fn mirror the two checking sub-stages
 fn finish_unsat_proof_outcome_with_check_budget(
     formula: &axeyum_cnf::CnfFormula,
@@ -563,38 +608,11 @@ fn finish_unsat_proof_outcome_with_check_budget(
             //
             // A `Declined` says nothing about `proof`, so it falls through to
             // the forward reference route below rather than reporting a failure.
-            if budget_admits_backward_certify(&check_budget, proof.len()) {
-                let started = Instant::now();
-                let steps_total = proof.len();
-                if let Some(sink) = check_budget.progress.as_mut() {
-                    sink(&CheckingProgress::BackwardLratCertify(
-                        BackwardCertifyProgress {
-                            steps_total,
-                            elapsed: std::time::Duration::ZERO,
-                            finished: false,
-                            certified: false,
-                        },
-                    ));
-                }
-                let certify_outcome = certify_unsat_via_lrat(formula, &proof);
-                let certified = matches!(certify_outcome, LratCertifyOutcome::Certified(_));
-                if let Some(sink) = check_budget.progress.as_mut() {
-                    sink(&CheckingProgress::BackwardLratCertify(
-                        BackwardCertifyProgress {
-                            steps_total,
-                            elapsed: started.elapsed(),
-                            finished: true,
-                            certified,
-                        },
-                    ));
-                }
-                if let LratCertifyOutcome::Certified(steps) = certify_outcome {
-                    return Ok(UnsatProofOutcome::Proved(UnsatProof {
-                        dimacs: formula.to_dimacs(),
-                        drat: write_drat(&proof),
-                        lrat: Some(write_lrat(&steps)),
-                    }));
-                }
+            if budget_admits_backward_certify(&check_budget, proof.len())
+                && let Some(certificate) =
+                    backward_lrat_certificate(formula, &proof, &mut check_budget)
+            {
+                return Ok(UnsatProofOutcome::Proved(certificate));
             }
 
             let want_progress = check_budget.progress.is_some();

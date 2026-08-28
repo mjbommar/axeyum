@@ -103,6 +103,31 @@ saying so is more useful than a number that looks tidier.
 - `CheckingProgress` gained a `BackwardLratCertify` variant reporting exactly
   twice (opening, closing). Any exhaustive match needs an arm; `smtcomp_cli` was
   the only other consumer.
+- **Four accepting `check_drat` sites are left, and the audit is done for you:**
+  `sat_bv_backend.rs:1961` (native CDCL inline check), `:1489` (pure-Gauss XOR
+  certificate), `:2049` (`verify_unsat_proof`, the `prove_unsat` gate), and
+  `bitblast_miter.rs:152` (faithfulness miter). All four are *verdict-only* —
+  three discard the proof, the fourth publishes `dimacs`/`drat` with no LRAT
+  field — so each converts to the exporter's shape: try `certify_unsat_via_lrat`,
+  fall back to `check_drat` on a decline. Left unconverted only to keep this diff
+  reviewable, not because anything blocks them. `:2049` is the one with the most
+  reach, since it is on the default `prove_unsat` path.
+
+**Pre-existing failures seen while gating, confirmed NOT mine** (each reproduced
+with my four source files reverted to `main` in the same worktree, which is the
+cheap discriminator when a suspect diff touches no code the failing test calls):
+
+- `reconstruct::arithmetic::monomial_bound::*` overflows its stack in `--release`
+  as well as debug — so by the documented discriminator this is runaway
+  recursion in that Lean-reconstruction module, not a stack-margin problem.
+  `RUST_MIN_STACK=512M` clears the whole `-p axeyum-solver --lib --features full`
+  sweep to **1438 passed, 0 failed**.
+- `axeyum-bench --test qfbv_proof_export`, both tests, failing on
+  "must be a flat assertion script without push/pop/reset/check-sat-assuming".
+  Identical on `main`, and touches no DRAT code.
+- `clippy` errors in `axeyum-cnf/src/cube.rs:1574` (`chunks_exact` -> `as_chunks`)
+  and three warnings in `reconstruct/arithmetic/axreal_call_site_guard.rs`. This
+  host's toolchain, not this diff; my own files are clippy-clean.
 
 <!-- plan-section: landed-changes -->
 
