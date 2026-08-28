@@ -8473,3 +8473,93 @@ fn coprime_two_left_applies_at_a_concrete_odd_witness_and_is_axiom_free() {
         );
     }
 }
+
+/// `Nat.log` COMPUTES, and its four boundary theorems apply at concrete
+/// arguments.
+///
+/// The definition is the point of interest, not the theorems: `Nat.log`
+/// recurses on `n / b`, which is not a constructor predecessor, so it is built
+/// by structural recursion on a **fuel** argument instantiated at `n` itself
+/// (`log.rs`). That is only correct if the fuel always suffices, and the
+/// cheapest evidence for it is that closed applications actually reduce to the
+/// right numeral rather than getting stuck on an exhausted fuel -- an exhausted
+/// fuel returns `0`, which is exactly what a *wrong* answer looks like here, so
+/// every positive case below is also a fuel-sufficiency check.
+///
+/// Both negative controls differ from the truth by ONE successor, deliberately:
+/// a control that differs wildly can be discriminated by a cheap size check and
+/// so tests less than it appears to.
+#[test]
+fn log_computes_and_its_boundary_equations_apply() {
+    let mut f = Fixture::new();
+    let log = f.p.log;
+
+    for (base, value, expected) in [
+        (2u32, 8u32, 3u32),
+        (2, 7, 2),
+        (2, 1, 0),
+        (3, 9, 2),
+        (5, 4, 0),
+        (0, 6, 0),
+        (1, 6, 0),
+        (7, 0, 0),
+    ] {
+        let b = f.num(base);
+        let n = f.num(value);
+        let lhs = f.const_app(log, &[b, n]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "log {base} {value} must reduce to {expected}"
+        );
+    }
+
+    let two = f.num(2);
+    let eight = f.num(8);
+    let log_two_eight = f.const_app(log, &[two, eight]);
+    let four = f.num(4);
+    assert!(
+        !f.k.def_eq(log_two_eight, four),
+        "negative control: log 2 8 is 3, not 4 -- def_eq must not be vacuous"
+    );
+    let three = f.num(3);
+    let nine = f.num(9);
+    let log_three_nine = f.const_app(log, &[three, nine]);
+    let one = f.num(1);
+    assert!(
+        !f.k.def_eq(log_three_nine, one),
+        "negative control: log 3 9 is 2, not 1"
+    );
+
+    // The boundary equations apply, and each lands on the statement its name
+    // promises rather than on some vacuously true instance.
+    let p = f.p;
+    let zero = f.zero();
+    let seven = f.num(7);
+    for (name, expected_lhs) in [
+        (p.log_zero_right, (7u32, 0u32)),
+        (p.log_zero_left, (0, 7)),
+        (p.log_one_left, (1, 7)),
+        (p.log_one_right, (7, 1)),
+    ] {
+        let applied = f.const_app(name, &[seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("{name:?} must apply at a concrete argument: {shown}")
+        });
+        let b = f.num(expected_lhs.0);
+        let n = f.num(expected_lhs.1);
+        let lhs = f.const_app(log, &[b, n]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "{name:?} at 7 must state Eq (log {} {}) 0",
+            expected_lhs.0,
+            expected_lhs.1
+        );
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{name:?} must rest on zero axioms"
+        );
+    }
+}
