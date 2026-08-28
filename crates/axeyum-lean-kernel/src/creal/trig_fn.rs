@@ -358,15 +358,16 @@
 //! the work — only its concluding sentence is now false.
 
 use super::convergence::{converges_predicate, div_succ_at};
+use super::derivative::{
+    abs_le_of_equiv, hd_ty, le_abs_neg_of_le_abs, mul_neg_equiv, neg_add_distrib,
+    neg_mul_equiv_left, pow_deriv_fn, pow_succ_fn,
+};
 use super::geometric::ratio_16_over_25_witnesses;
 use super::series::sum_range_cauchy_body;
 use super::trig::{
     cabs, cadd, cauchy_body_transport, cle, cmul, cneg, cpow, czero, double_neg, echain, erefl,
     esymm, exp_dominant_cauchy_body_concrete, magnitude_of, mul_ordered_half_body, neg_add_self,
     one_c, promote_ordered_half_to_full, sign_abs_le_one, two, two_normalize,
-};
-use super::derivative::{
-    hd_ty, mul_neg_equiv, neg_add_distrib, neg_mul_equiv_left, pow_deriv_fn, pow_succ_fn,
 };
 use super::uniform_convergence::close_within_of_within_at;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, embed, equiv};
@@ -3610,8 +3611,7 @@ fn pow_deriv_bounded_skolem(
     );
 
     let deriv_fn = pow_deriv_fn(d, p, carrier, n);
-    let (k_at_n, proof_at_n) =
-        bounded_via_uc(d, p, deriv_fn, zero_c, r_c, huc_prod, hab0, &free_n);
+    let (k_at_n, proof_at_n) = bounded_via_uc(d, p, deriv_fn, zero_c, r_c, huc_prod, hab0, &free_n);
     let kd = d.lam_fv(n_fv, nat, k_at_n);
     let hkd = d.lam_fv(n_fv, nat, proof_at_n);
     (kd, hkd)
@@ -3760,10 +3760,7 @@ fn declare_exp_term_succ_scale(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-fn declare_cos_fn_term_deriv_coeff(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+fn declare_cos_fn_term_deriv_coeff(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let np = d.prelude();
 
@@ -3972,16 +3969,7 @@ fn declare_cos_fn_term_has_derivative(
         d.lam_fv(pt_fv, carrier, cos_term_sj)
     };
     let huc_const = d.lemma(p.uniformly_continuous_const, &[cos_term_sj, zero_c, r_c]);
-    let (kc, hbc) = bounded_via_uc(
-        d,
-        p,
-        const_fn,
-        zero_c,
-        r_c,
-        huc_const,
-        hab0,
-        &[(j_id, nat)],
-    );
+    let (kc, hbc) = bounded_via_uc(d, p, const_fn, zero_c, r_c, huc_const, hab0, &[(j_id, nat)]);
     let hz = d.lemma(p.le_refl, &[zero_c]);
     let hbound = d.lemma(
         p.bounded_on_unfold,
@@ -4007,7 +3995,14 @@ fn declare_cos_fn_term_has_derivative(
     let hd_smul = d.lemma(
         p.has_derivative_smul,
         &[
-            cos_term_sj, pow_fn, deriv_fn, zero_c, r_c, hd_pow, kc, hbound,
+            cos_term_sj,
+            pow_fn,
+            deriv_fn,
+            zero_c,
+            r_c,
+            hd_pow,
+            kc,
+            hbound,
         ],
     );
 
@@ -4299,7 +4294,15 @@ fn declare_cos_fn_partial_has_derivative(
         d.lemma(
             p.has_derivative_congr,
             &[
-                sum_fn, sum_deriv_fn, zero_c, r_c, hsum, g_fn, gp_fn, agree_g, agree_gp,
+                sum_fn,
+                sum_deriv_fn,
+                zero_c,
+                r_c,
+                hsum,
+                g_fn,
+                gp_fn,
+                agree_g,
+                agree_gp,
             ],
         )
     };
@@ -4335,4 +4338,481 @@ pub(super) fn declare_cos_fn_derivative(
     declare_cos_fn_term_deriv_coeff(d, p)?;
     declare_cos_fn_term_has_derivative(d, p)?;
     declare_cos_fn_partial_has_derivative(d, p)
+}
+
+// ============================================================================
+// From the partial sums to `cosFnWide` itself (lane 159 step 3)
+// ============================================================================
+//
+// `CReal.hasDerivative_uniform_limit` takes `F`, `F'`, `G`, `G'` with a
+// per-index `HasDerivativeOn (F n) (F' n)` and BOTH uniform convergences.
+// [`declare_cos_fn_partial_has_derivative`] supplies the per-index fact at
+// `F n := Sₙ₊₁` and `F' n := −Tₙ`, so the two convergence witnesses this
+// file already has have to be re-indexed to match:
+//
+//   * `cosFnWideUniformConverges` is about `Sₙ`, not `Sₙ₊₁`
+//     ([`declare_uniform_converges_shift`]), and
+//   * `sinFnUniformConverges` is about `Tₙ`, not `−Tₙ`
+//     ([`declare_uniform_converges_neg`]).
+//
+// **The shift is the one that costs something, and it is NOT free from
+// `rat_prelude` as it stands.** `UniformConvergesOn`'s spec bounds the error
+// at index `n` by `natDivSucc rate n`; the shifted family's error at `n` is
+// the original's at `succ n`, bounded by the strictly TIGHTER `natDivSucc
+// rate (succ n)`, and weakening that back to `natDivSucc rate n` is one-step
+// antitonicity of `natDivSucc` in its INDEX at a SYMBOLIC numerator.
+// `Rat.natDivSucc_antitone` is stated at numerator `1` only, and
+// `Rat.natDivSucc_le_scaled` reads a `(c+1)·n + c`-shaped index back to `n` —
+// `succ n` is not of that shape for any `c` that leaves a bound shrinking in
+// `n`. [`declare_nat_div_succ_step_le`] closes it without touching
+// `rat_prelude`: `Rat.natDivSucc_mul` factors `natDivSucc k j` as
+// `natDivSucc k 0 · natDivSucc 1 j`, the numerator-`1` antitonicity applies
+// to the second factor, and `Rat.mul_le_mul_of_nonneg_left` scales it back.
+
+/// `Rat.natDivSucc k j`, local to this section (mirrors
+/// `convergence::div_succ_at`, which this file already imports).
+fn ndsucc(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+    div_succ_at(d, p, k, j)
+}
+
+/// `CReal.natDivSuccStepLe : ∀ (k n : Nat), Rat.le (Rat.natDivSucc k
+/// (Nat.succ n)) (Rat.natDivSucc k n)` — one-step antitonicity of
+/// `Rat.natDivSucc` in its INDEX, at a **symbolic numerator**.
+///
+/// `RatPrelude::nat_div_succ_antitone` is the same statement at numerator
+/// `1`, and its own doc comment records how long that one cost; this needs no
+/// new cross-multiplication at all. `RatPrelude::nat_div_succ_mul` factors
+/// `natDivSucc (k·1) j` as `natDivSucc k 0 · natDivSucc 1 j`, so the index
+/// lives entirely in the second factor, where numerator-`1` antitonicity
+/// already applies, and `Rat.mul_le_mul_of_nonneg_left` (the first factor is
+/// nonnegative by `Rat.zero_le_natDivSucc`) scales the comparison back up.
+/// `Nat.mul_one` retires the `k·1`.
+///
+/// Declared here rather than in `rat_prelude` because that module is another
+/// lane's; it belongs there, and the `CReal.` namespace is a holding pen.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_nat_div_succ_step_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+    let np = d.prelude();
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let succ_n = d.succ(n);
+
+    let one_nat = d.num(1);
+    let zero_nat = d.zero();
+    let k_times_one = NatOps::mul(d, k, one_nat);
+
+    let head = ndsucc(d, p, k, zero_nat); // natDivSucc k 0
+    let tail_succ = ndsucc(d, p, one_nat, succ_n); // natDivSucc 1 (succ n)
+    let tail_n = ndsucc(d, p, one_nat, n); // natDivSucc 1 n
+
+    let hle_nat = d.lemma(np.le_succ, &[n]);
+    let hant = d.lemma(rat.nat_div_succ_antitone, &[n, succ_n, hle_nat]);
+    // hant : Rat.le tail_succ tail_n
+
+    let hk_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[k, zero_nat]);
+    let hscaled = d.lemma(
+        rat.mul_le_mul_of_nonneg_left,
+        &[head, tail_succ, tail_n, hk_nonneg, hant],
+    );
+    // hscaled : Rat.le (head * tail_succ) (head * tail_n)
+
+    let prod_succ = crate::rat_prelude::ops::rmul(d, head, tail_succ);
+    let prod_n = crate::rat_prelude::ops::rmul(d, head, tail_n);
+    let fused_succ = ndsucc(d, p, k_times_one, succ_n);
+    let fused_n = ndsucc(d, p, k_times_one, n);
+
+    let e1 = d.lemma(rat.nat_div_succ_mul, &[k, one_nat, succ_n]);
+    let e2 = d.lemma(rat.nat_div_succ_mul, &[k, one_nat, n]);
+
+    let after_lhs = rat_eq_rewrite(d, prod_succ, fused_succ, e1, hscaled, &|d, t| {
+        crate::rat_prelude::ops::rle(d, rat, t, prod_n)
+    });
+    let after_rhs = rat_eq_rewrite(d, prod_n, fused_n, e2, after_lhs, &|d, t| {
+        crate::rat_prelude::ops::rle(d, rat, fused_succ, t)
+    });
+    // after_rhs : Rat.le (natDivSucc (k*1) (succ n)) (natDivSucc (k*1) n)
+
+    let hmul_one = d.lemma(np.mul_one, &[k]);
+    let body = d.nat_rewrite(k_times_one, k, hmul_one, after_rhs, &|d, t| {
+        let lhs = ndsucc(d, p, t, succ_n);
+        let rhs = ndsucc(d, p, t, n);
+        crate::rat_prelude::ops::rle(d, rat, lhs, rhs)
+    });
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(k_fv, nat, with_n)
+    };
+    let ty = {
+        let lhs = ndsucc(d, p, k, succ_n);
+        let rhs = ndsucc(d, p, k, n);
+        let stmt = crate::rat_prelude::ops::rle(d, rat, lhs, rhs);
+        let with_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(k_fv, nat, with_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.nat_div_succ_step_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `le (abs (add x (neg y))) (ofRat q)` -- `close_within x y q`, this file's
+/// own copy (each sibling module carries one; Rust privacy).
+fn close_within_here(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    q: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
+    let magnitude = cabs(d, p, diff);
+    let target = embed(d, p, q);
+    cle(d, p, magnitude, target)
+}
+
+/// `Nat → CReal → CReal`.
+fn seq_fn_ty_here(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let inner = d.arrow(carrier, carrier);
+    d.arrow(nat, inner)
+}
+
+/// `CReal.uniformConvergesShift : ∀ F G a b, UniformConvergesOn F G a b →
+/// UniformConvergesOn (fun n => F (Nat.succ n)) G a b`.
+///
+/// The rate is unchanged; the whole content is
+/// [`declare_nat_div_succ_step_le`] weakening the shifted family's own
+/// (tighter) bound at `succ n` back to `natDivSucc rate n`. See this
+/// section's header for why that step is not free.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_uniform_converges_shift(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let seq_ty = seq_fn_ty_here(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hu_ty = d.const_app(p.uniform_converges_on, &[f, g, a, b]);
+    let hu_fv = d.fresh_fvar();
+    let hu = d.kernel().fvar(hu_fv);
+
+    let shifted = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.succ(n);
+        let body = d.apply(f, &[sn]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let rate = d.const_app(p.uconv_rate, &[f, g, a, b, hu]);
+    let huspec = d.const_app(p.uconv_spec, &[f, g, a, b, hu]);
+
+    let spec = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+
+        let sn = d.succ(n);
+        let tight = d.apply(huspec, &[sn, x, hax, hxb]);
+        let fsnx = d.apply(f, &[sn, x]);
+        let gx = d.apply(g, &[x]);
+
+        let q_tight = ndsucc(d, p, rate, sn);
+        let q_loose = ndsucc(d, p, rate, n);
+        let hq = d.lemma(p.nat_div_succ_step_le, &[rate, n]);
+        let hembed = d.lemma(p.of_rat_le, &[q_tight, q_loose, hq]);
+
+        let ny = cneg(d, p, gx);
+        let diff = cadd(d, p, fsnx, ny);
+        let magnitude = cabs(d, p, diff);
+        let e_tight = embed(d, p, q_tight);
+        let e_loose = embed(d, p, q_loose);
+        let widened = d.lemma(p.le_trans, &[magnitude, e_tight, e_loose, tight, hembed]);
+
+        let range_xb = cle(d, p, x, b);
+        let range_ax = cle(d, p, a, x);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, widened);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_x = d.lam_fv(x_fv, carrier, with_hax);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.uconv_mk, &[shifted, g, a, b, rate, spec]);
+
+    let value = {
+        let with_hu = d.lam_fv(hu_fv, hu_ty, mk_applied);
+        let with_b = d.lam_fv(b_fv, carrier, with_hu);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(g_fv, func_ty, with_a);
+        d.lam_fv(f_fv, seq_ty, with_g)
+    };
+    let ty = {
+        let conclusion = d.const_app(p.uniform_converges_on, &[shifted, g, a, b]);
+        let after_hu = d.arrow(hu_ty, conclusion);
+        let with_b = d.pi_fv(b_fv, carrier, after_hu);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_g = d.pi_fv(g_fv, func_ty, with_a);
+        d.pi_fv(f_fv, seq_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.uniform_converges_shift,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.uniformConvergesNeg : ∀ F G a b, UniformConvergesOn F G a b →
+/// UniformConvergesOn (fun n x => neg (F n x)) (fun x => neg (G x)) a b`.
+///
+/// The rate and every bound are unchanged: `|(−u) − (−v)| = |−(u − v)|` and
+/// `le_abs_neg_of_le_abs` (`creal/derivative.rs`) bounds a negation by
+/// whatever bounds the original **without deciding a sign** — `abs` is not
+/// `Equiv`-invariant under `neg`, so this is not a congruence. The only
+/// algebra is `neg_add_distrib` moving `neg (u + (−v))` to `(−u) + (−(−v))`,
+/// the shape `close_within (neg u) (neg v)` literally is.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_uniform_converges_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let seq_ty = seq_fn_ty_here(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hu_ty = d.const_app(p.uniform_converges_on, &[f, g, a, b]);
+    let hu_fv = d.fresh_fvar();
+    let hu = d.kernel().fvar(hu_fv);
+
+    let neg_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fnx = d.apply(f, &[n, x]);
+        let body = cneg(d, p, fnx);
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+    let neg_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let gx = d.apply(g, &[x]);
+        let body = cneg(d, p, gx);
+        d.lam_fv(x_fv, carrier, body)
+    };
+
+    let rate = d.const_app(p.uconv_rate, &[f, g, a, b, hu]);
+    let huspec = d.const_app(p.uconv_spec, &[f, g, a, b, hu]);
+
+    let spec = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+
+        let base = d.apply(huspec, &[n, x, hax, hxb]);
+        let fnx = d.apply(f, &[n, x]);
+        let gx = d.apply(g, &[x]);
+        let q = ndsucc(d, p, rate, n);
+        let bound = embed(d, p, q);
+
+        let ngx = cneg(d, p, gx);
+        let t = cadd(d, p, fnx, ngx);
+        let neg_t = cneg(d, p, t);
+        let neg_bounded = le_abs_neg_of_le_abs(d, p, t, bound, base);
+        // neg_bounded : le (abs (neg t)) bound
+
+        let nfnx = cneg(d, p, fnx);
+        let nngx = cneg(d, p, ngx);
+        let target = cadd(d, p, nfnx, nngx);
+        let distrib = neg_add_distrib(d, p, fnx, ngx);
+        // distrib : Equiv (neg t) target
+        let flipped = esymm(d, p, neg_t, target, distrib);
+        // flipped : Equiv target (neg t)
+        let out = abs_le_of_equiv(d, p, target, neg_t, bound, flipped, neg_bounded);
+
+        let range_xb = cle(d, p, x, b);
+        let range_ax = cle(d, p, a, x);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, out);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_x = d.lam_fv(x_fv, carrier, with_hax);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.uconv_mk, &[neg_seq, neg_fn, a, b, rate, spec]);
+
+    let value = {
+        let with_hu = d.lam_fv(hu_fv, hu_ty, mk_applied);
+        let with_b = d.lam_fv(b_fv, carrier, with_hu);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(g_fv, func_ty, with_a);
+        d.lam_fv(f_fv, seq_ty, with_g)
+    };
+    let ty = {
+        let conclusion = d.const_app(p.uniform_converges_on, &[neg_seq, neg_fn, a, b]);
+        let after_hu = d.arrow(hu_ty, conclusion);
+        let with_b = d.pi_fv(b_fv, carrier, after_hu);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_g = d.pi_fv(g_fv, func_ty, with_a);
+        d.pi_fv(f_fv, seq_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.uniform_converges_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosFnWideHasDerivative : HasDerivativeOn cosFnWide (fun x => neg
+/// (sinFn x)) zero (ofRat (natDivSucc 8 4))` -- **the target**: cosine
+/// differentiates to minus sine on `[0, 8/5]`.
+///
+/// `CReal.hasDerivative_uniform_limit` at `F n := Sₙ₊₁`, `F' n := −Tₙ`, with
+/// the two re-indexed convergence witnesses
+/// ([`declare_uniform_converges_shift`], [`declare_uniform_converges_neg`])
+/// and [`declare_cos_fn_partial_has_derivative`] as the per-index
+/// hypothesis. Nothing new is proved here; every part was built above.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_fn_wide_has_derivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let r_c = r_domain(d, p);
+
+    let cos_seq = cos_fn_partial_sums_fn(d, p, carrier, nat);
+    let cos_g = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let hu_cos = d.kernel().const_(p.cos_fn_wide_uniform_converges, vec![]);
+    let hu_cos_shift = d.lemma(
+        p.uniform_converges_shift,
+        &[cos_seq, cos_g, zero_c, r_c, hu_cos],
+    );
+    let shifted_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.succ(n);
+        let body = d.apply(cos_seq, &[sn]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let sin_seq = sin_fn_partial_sums_fn(d, p, carrier, nat);
+    let sin_g = d.kernel().const_(p.sin_fn, vec![]);
+    let hu_sin = d.kernel().const_(p.sin_fn_uniform_converges, vec![]);
+    let hu_sin_neg = d.lemma(
+        p.uniform_converges_neg,
+        &[sin_seq, sin_g, zero_c, r_c, hu_sin],
+    );
+    let neg_sin_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fnx = d.apply(sin_seq, &[n, x]);
+        let body = cneg(d, p, fnx);
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+    let neg_sin_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let gx = d.apply(sin_g, &[x]);
+        let body = cneg(d, p, gx);
+        d.lam_fv(x_fv, carrier, body)
+    };
+
+    let hd_all = d.kernel().const_(p.cos_fn_partial_has_derivative, vec![]);
+
+    let value = d.lemma(
+        p.has_derivative_uniform_limit,
+        &[
+            shifted_seq,
+            neg_sin_seq,
+            cos_g,
+            neg_sin_fn,
+            zero_c,
+            r_c,
+            hd_all,
+            hu_cos_shift,
+            hu_sin_neg,
+        ],
+    );
+    let ty = hd_ty(d, p, cos_g, neg_sin_fn, zero_c, r_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_wide_has_derivative,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit the two `UniformConvergesOn` re-indexings and the target,
+/// `CReal.cosFnWideHasDerivative`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_wide_derivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_nat_div_succ_step_le(d, p)?;
+    declare_uniform_converges_shift(d, p)?;
+    declare_uniform_converges_neg(d, p)?;
+    declare_cos_fn_wide_has_derivative(d, p)
 }

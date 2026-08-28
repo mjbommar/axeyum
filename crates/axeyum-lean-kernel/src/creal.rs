@@ -5715,6 +5715,53 @@ pub struct CRealPrelude {
     /// `cosFnWide` itself now needs — see `creal/trig_fn.rs`'s own section
     /// header for the two `UniformConvergesOn` re-indexings still missing.
     pub cos_fn_partial_has_derivative: NameId,
+    /// `CReal.natDivSuccStepLe : ∀ (k n : Nat), Rat.le (Rat.natDivSucc k
+    /// (Nat.succ n)) (Rat.natDivSucc k n)` — one-step antitonicity of
+    /// `Rat.natDivSucc` in its INDEX, at a **symbolic numerator**.
+    ///
+    /// [`RatPrelude::nat_div_succ_antitone`] is this statement at numerator
+    /// `1`, and its own doc comment records how much that one cost;
+    /// [`RatPrelude::nat_div_succ_le_scaled`] reads a `(c+1)·n + c`-shaped
+    /// index back to `n`, and `Nat.succ n` is not of that shape for any `c`
+    /// leaving a bound that still shrinks in `n`. So neither covers a plain
+    /// one-step shift at a general numerator — which is exactly what
+    /// re-indexing a `UniformConvergesOn` witness by one needs.
+    ///
+    /// Closed with no new cross-multiplication:
+    /// [`RatPrelude::nat_div_succ_mul`] factors `natDivSucc (k·1) j` as
+    /// `natDivSucc k 0 · natDivSucc 1 j`, putting the index entirely in the
+    /// second factor where the numerator-`1` antitonicity applies, and
+    /// `Rat.mul_le_mul_of_nonneg_left` scales it back. Declared into the
+    /// `CReal` namespace from `creal/trig_fn.rs` because `rat_prelude` is
+    /// another lane's file; it belongs there.
+    pub nat_div_succ_step_le: NameId,
+    /// `CReal.uniformConvergesShift : ∀ F G a b, UniformConvergesOn F G a b →
+    /// UniformConvergesOn (fun n => F (Nat.succ n)) G a b` — re-index a
+    /// uniform-convergence witness by one. The rate is unchanged; the whole
+    /// content is [`Self::nat_div_succ_step_le`] weakening the shifted
+    /// family's own (tighter) bound at `succ n` back to `natDivSucc rate n`.
+    /// See `creal/trig_fn.rs`.
+    pub uniform_converges_shift: NameId,
+    /// `CReal.uniformConvergesNeg : ∀ F G a b, UniformConvergesOn F G a b →
+    /// UniformConvergesOn (fun n x => neg (F n x)) (fun x => neg (G x)) a b`.
+    ///
+    /// Every bound is unchanged. `creal/derivative.rs`'s
+    /// `le_abs_neg_of_le_abs` bounds a negation by whatever bounds the
+    /// original **without deciding a sign** — `abs` is not `Equiv`-invariant
+    /// under `neg`, so this is not a congruence — and `neg_add_distrib`
+    /// supplies the one algebraic step. See `creal/trig_fn.rs`.
+    pub uniform_converges_neg: NameId,
+    /// `CReal.cosFnWideHasDerivative : HasDerivativeOn cosFnWide (fun x =>
+    /// neg (sinFn x)) zero (ofRat (natDivSucc 8 4))` — **cosine
+    /// differentiates to minus sine on `[0, 8/5]`**.
+    ///
+    /// [`Self::has_derivative_uniform_limit`] at `F n := Sₙ₊₁`,
+    /// `F' n := −Tₙ`, with [`Self::cos_fn_partial_has_derivative`] as the
+    /// per-index hypothesis and the two re-indexed convergence witnesses
+    /// ([`Self::uniform_converges_shift`], [`Self::uniform_converges_neg`]).
+    /// Nothing is proved at this step that was not already built; it is the
+    /// assembly. See `creal/trig_fn.rs`.
+    pub cos_fn_wide_has_derivative: NameId,
 
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
     /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
@@ -6527,6 +6574,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_fn_term_deriv_coeff: kernel.name_str(creal, "cosFnTermDerivCoeff"),
         cos_fn_term_has_derivative: kernel.name_str(creal, "cosFnTermHasDerivative"),
         cos_fn_partial_has_derivative: kernel.name_str(creal, "cosFnPartialHasDerivative"),
+        nat_div_succ_step_le: kernel.name_str(creal, "natDivSuccStepLe"),
+        uniform_converges_shift: kernel.name_str(creal, "uniformConvergesShift"),
+        uniform_converges_neg: kernel.name_str(creal, "uniformConvergesNeg"),
+        cos_fn_wide_has_derivative: kernel.name_str(creal, "cosFnWideHasDerivative"),
         exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
         exp_fn: kernel.name_str(creal, "expFn"),
         exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
@@ -11402,6 +11453,40 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cos_fn_partial_has_derivative,
         ],
         run: trig_fn::declare_cos_fn_derivative,
+    },
+    BuildStep {
+        label: "trig_fn::declare_cos_fn_wide_derivative",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.cos_fn_partial_has_derivative,
+            |p: CRealPrelude| p.cos_fn_term,
+            |p: CRealPrelude| p.cos_fn_wide,
+            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.has_derivative_uniform_limit,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.sin_fn,
+            |p: CRealPrelude| p.sin_fn_term,
+            |p: CRealPrelude| p.sin_fn_uniform_converges,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uconv_mk,
+            |p: CRealPrelude| p.uconv_rate,
+            |p: CRealPrelude| p.uconv_spec,
+            |p: CRealPrelude| p.uniform_converges_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.nat_div_succ_step_le,
+            |p: CRealPrelude| p.uniform_converges_shift,
+            |p: CRealPrelude| p.uniform_converges_neg,
+            |p: CRealPrelude| p.cos_fn_wide_has_derivative,
+        ],
+        run: trig_fn::declare_cos_fn_wide_derivative,
     },
     BuildStep {
         label: "exp_fn::declare_exp_fn_family",
