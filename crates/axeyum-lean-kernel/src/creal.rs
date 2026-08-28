@@ -6882,8 +6882,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
             .name_str(creal, "expOfModulus_le_trueExpOfModulus"),
         mesh_point_near_coarse: kernel.name_str(creal, "meshPoint_near_coarse"),
         max_range_le_add_of_exists: kernel.name_str(creal, "maxRange_le_add_of_exists"),
-        mesh_max_le_add_of_step_close: kernel
-            .name_str(creal, "meshMax_le_add_of_step_close"),
+        mesh_max_le_add_of_step_close: kernel.name_str(creal, "meshMax_le_add_of_step_close"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),

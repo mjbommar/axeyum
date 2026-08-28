@@ -297,6 +297,75 @@
 //! `meshMax`'s value at the corresponding level, which is exactly the gap
 //! bound above.
 //!
+//! ### Rung 6 LANDED (2026-08-28) -- and the section above was right about
+//! WHAT blocks it and wrong about WHY it is expensive
+//!
+//! Three declarations, each a first-attempt kernel accept:
+//!
+//! - [`CRealPrelude::mesh_point_near_coarse`] -- the MULTI-LEVEL
+//!   nearest-mesh-point lemma. `forall a b j, le a b -> forall d i',
+//!   Nat.le i' (meshLevelCount (add j d)) -> exists i, Nat.le i
+//!   (meshLevelCount j) /\ le (P j i) (P (add j d) i') /\ le (add (P (add j
+//!   d) i') (D (add j d))) (add (P j i) (D j))`, writing `P L i` for the
+//!   level-`L` sample point and `D L` for the level-`L` width.
+//! - [`CRealPrelude::max_range_le_add_of_exists`] -- the approximate,
+//!   existential-witnessed form of [`CRealPrelude::max_range_transport`].
+//! - [`CRealPrelude::mesh_max_le_add_of_step_close`] -- the GAP BOUND:
+//!   `le (meshMax F a b (add j d)) (add (meshMax F a b j) eps)`, at arbitrary
+//!   depth `d`, from a one-sided pointwise hypothesis on `F`.
+//!
+//! **The diagnosis above is correct and the cost estimate is not.** The
+//! section is right that the blocker is the per-level gap bound, right that
+//! `trueExpOfModulus` can jump the mesh level by arbitrarily many doublings,
+//! and right that a "nearest coarse point at ANY refinement depth" fact is
+//! what that needs. Its two candidate routes are both real. But it calls each
+//! "comparable in scope to a rung of their own" because it assumes the coarse
+//! index has to be COMPUTED -- route 1 "still needs a genuine (if bounded)
+//! index computation", route 2 needs a finer accuracy schedule.
+//!
+//! **It does not. The gap bound's conclusion is `Prop`, so the coarse index
+//! can be an `Exists` witness that the induction step re-eliminates.** Kernel
+//! fact 2 (`Exists.rec` is `Prop`-only) is a constraint on rung 7's
+//! `CReal.mk`, where `K` and `f_lambda` are DATA; it says nothing about a
+//! `le`-valued estimate. Once the index is existential, "which coarse cell
+//! contains fine index `i'`" never has to be answered: induct on the depth
+//! `d` and split the fine index's parity with
+//! [`NatPrelude::even_or_odd`](crate::NatPrelude::even_or_odd), whose half is
+//! the COMPUTED `Nat.div i' 2` used only inside a `Prop`. No quotient/
+//! remainder algebra, no `bucketIndex`, no schedule refinement, and
+//! `uniform_continuity.rs`'s still-open `crossingClose` side condition is
+//! never touched -- so nothing here imports that gap. What made
+//! [`CRealPrelude::max_range_transport`] look like it forced a function
+//! `e : Nat -> Nat` is simply that it was stated with one;
+//! [`CRealPrelude::max_range_le_add_of_exists`] is the same induction
+//! restated to take a witness instead.
+//!
+//! **The one thing that genuinely does not work, and it is a statement
+//! choice, not a technique.** The obvious invariant -- "every fine point is
+//! within one coarse width of some coarse point",
+//! `le (P L i') (add (P j i) (D j))` -- does NOT close the induction. Each
+//! odd step adds a fine width, and the accumulated displacement across
+//! unboundedly many doublings is only bounded because the widths halve, which
+//! that statement cannot see. Carrying the FINE width on the left instead --
+//! `le (add (P L i') (D L)) (add (P j i) (D j))` -- makes every step EXACT:
+//! the even step is [`mesh_sample_transport`]'s coincidence plus
+//! `D (succ L) <= D L`, and the odd step's two fine widths fuse back to one
+//! coarse width by [`mesh_delta_halve`], with equality rather than an
+//! estimate. That is the whole difficulty of the lemma, and it is visible
+//! only in the statement.
+//!
+//! **What rung 6 still owes, precisely.** `mesh_max_le_add_of_step_close`
+//! takes `hclose` as a hypothesis: `forall x y, x,y in [a, b] -> le x y ->
+//! le y (add x (D j)) -> le (F y) (add (F x) eps)`. Instantiating it from
+//! [`CRealPrelude::uc_spec`] at the accuracy [`CRealPrelude::exp_of_modulus`]
+//! selects is arithmetic about the modulus with NO mesh geometry left in it:
+//! it needs `D j` (an arbitrary `CReal` interval width divided by `2^j`)
+//! compared against `1/(m k + 1)`, which is where `Nat.lt_pow_size` and an
+//! Archimedean bound on `b - a` enter. Rungs 6b and 7 (the telescope and
+//! `regular_of_scaled_cauchy`) are unchanged by any of this; the
+//! constant-multiple corollary and `cauchy_of_abs_diff_le` claims above were
+//! NOT exercised by this work and remain as that section left them.
+//!
 //! This plan was grounded against the kernel's actual API, and rungs 1–5
 //! have now all built cleanly on the first attempt by mirroring
 //! `declare_max_range`'s and `integral.rs`'s existing shapes exactly rather
@@ -2102,13 +2171,7 @@ fn czero_local(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 }
 
 /// `meshDelta a b (meshLevelCount level)` -- the level-`level` mesh width.
-fn level_delta(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    a: ExprId,
-    b: ExprId,
-    level: ExprId,
-) -> ExprId {
+fn level_delta(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, level: ExprId) -> ExprId {
     let m = d.const_app(p.mesh_level_count, &[level]);
     mesh_delta(d, p, a, b, m)
 }
@@ -2327,13 +2390,7 @@ fn mesh_delta_nonneg(
 /// `Nat.not_succ_le_self`. The one non-defeq step is `Nat.succ_add`, since
 /// `add (succ m) (succ m)` reduces to `succ (add (succ m) m)` -- `Nat.add`
 /// recurses on its RIGHT argument -- and not to `succ (succ (add m m))`.
-fn nat_double_le(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    q: ExprId,
-    m: ExprId,
-    h: ExprId,
-) -> ExprId {
+fn nat_double_le(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId, m: ExprId, h: ExprId) -> ExprId {
     let nat_p = p.rat.int.nat;
     let target = d.le(q, m);
     let lt_ty = d.lt(m, q);
@@ -2556,15 +2613,9 @@ fn near_coarse_step_case(
             let psll_qq_plus = cadd(d, p, psll_qq, dsll);
             let tr_symm = d.lemma(p.equiv_symm, &[pll, psll_qq, tr]);
             let refl_d1 = d.lemma(p.equiv_refl, &[dsll]);
-            let e2 = d.lemma(
-                p.add_congr,
-                &[psll_qq, pll, dsll, dsll, tr_symm, refl_d1],
-            );
+            let e2 = d.lemma(p.add_congr, &[psll_qq, pll, dsll, dsll, tr_symm, refl_d1]);
             let pll_plus = cadd(d, p, pll, dsll);
-            let eodd = d.lemma(
-                p.equiv_trans,
-                &[podd, psll_qq_plus, pll_plus, e1, e2],
-            );
+            let eodd = d.lemma(p.equiv_trans, &[podd, psll_qq_plus, pll_plus, e1, e2]);
 
             // (A) le pj podd.
             let grow = shift_le_of_nonneg_local(d, p, pll, dsll, dsll_nonneg);
@@ -2578,19 +2629,13 @@ fn near_coarse_step_case(
 
             // (B) le (add podd dsll) (add pj dj).
             let refl_d2 = d.lemma(p.equiv_refl, &[dsll]);
-            let c1 = d.lemma(
-                p.add_congr,
-                &[podd, pll_plus, dsll, dsll, eodd, refl_d2],
-            );
+            let c1 = d.lemma(p.add_congr, &[podd, pll_plus, dsll, dsll, eodd, refl_d2]);
             let lhs_b = cadd(d, p, podd, dsll);
             let mid_b1 = cadd(d, p, pll_plus, dsll);
             let c2 = d.lemma(p.add_assoc, &[pll, dsll, dsll]);
             let mid_b2 = cadd(d, p, pll, sum_dsll);
             let refl_pll = d.lemma(p.equiv_refl, &[pll]);
-            let c3 = d.lemma(
-                p.add_congr,
-                &[pll, pll, sum_dsll, dll, refl_pll, halve],
-            );
+            let c3 = d.lemma(p.add_congr, &[pll, pll, sum_dsll, dll, refl_pll, halve]);
             let k1 = d.lemma(p.equiv_trans, &[lhs_b, mid_b1, mid_b2, c1, c2]);
             let cfull = d.lemma(p.equiv_trans, &[lhs_b, mid_b2, sum_ll, k1, c3]);
             let cfull_symm = d.lemma(p.equiv_symm, &[lhs_b, sum_ll, cfull]);
@@ -2603,18 +2648,12 @@ fn near_coarse_step_case(
         } else {
             // (A) le pj (P sll (add q q)).
             let refl_pj = d.lemma(p.equiv_refl, &[pj]);
-            let lower_new = d.lemma(
-                p.le_congr,
-                &[pj, pj, pll, psll_qq, refl_pj, tr, h1],
-            );
+            let lower_new = d.lemma(p.le_congr, &[pj, pj, pll, psll_qq, refl_pj, tr, h1]);
 
             // (B) le (add (P sll (add q q)) dsll) (add pj dj).
             let tr_symm = d.lemma(p.equiv_symm, &[pll, psll_qq, tr]);
             let le_pq = d.lemma(p.le_of_equiv, &[psll_qq, pll, tr_symm]);
-            let step_b = d.lemma(
-                p.add_le_add,
-                &[psll_qq, pll, dsll, dll, le_pq, dsll_le_dll],
-            );
+            let step_b = d.lemma(p.add_le_add, &[psll_qq, pll, dsll, dll, le_pq, dsll_le_dll]);
             let lhs_b = cadd(d, p, psll_qq, dsll);
             let upper_new = d.lemma(p.le_trans, &[lhs_b, sum_ll, sum_j, step_b, h2]);
             (lower_new, upper_new, psll_qq)
@@ -2660,7 +2699,7 @@ fn near_coarse_step_case(
 /// all. The conclusion is `Prop`-valued, so `Exists.rec` applies (kernel fact
 /// 2 constrains only `Type`-valued conclusions), and the witness may therefore
 /// be produced by an existential that the induction step re-eliminates. The
-/// step's own parity split is [`NatPrelude::even_or_odd`]'s COMPUTED half
+/// step's own parity split is [`NatPrelude::even_or_odd`](crate::NatPrelude::even_or_odd)'s COMPUTED half
 /// `Nat.div i' 2` -- a projection, never a search.
 ///
 /// The induction is on the depth `d`, with `a`, `b`, `j` and `hab` fixed, and
