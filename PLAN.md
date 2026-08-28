@@ -123,6 +123,7 @@ now. Nothing was deleted.
 | 2026-08-28 | pi-r2b | measured NEGATIVE, read not guessed: `docs/plan/status/174-pi-rung2.md`'s item 3 ("mechanical given `htail`") understates the remaining gap. Bridging `cosFnWideUniformConverges`'s `close_within`-shaped `.spec` output down to `Converges`'s own `Within`-on-rationals-at-a-shared-index shape needs (a) `close_within` -> two one-sided `le`s, (b) `CReal.within_of_two_sided_le` (the only general "real inequality -> Within" bridge in the tree) to reach a real-indexed `Within`, and (c) a `CReal.add`-index-shift regularity bridge of the same kind `CReal.converges_add`'s own doc names as its hardest step -- confirmed absent by reading `convergence.rs`, `order_extra.rs`, and every `close_within`-mentioning file in `creal/` |
 | 2026-08-28 | pi-r2b | `le (cosFnWide R) zero` itself did NOT land; items 3 and 4 remain open for the next lane, with item 3 now sized as a `converges_add`-sized bridge rather than "mechanical" |
 | 2026-08-28 | pi-r2b | measured: the kernel rejected NOTHING -- both `add_declaration` calls succeeded first attempt, no `on_a_deep_stack` needed. `creal_prelude_builds` 94.45 s (inside the 91-117 s band, no measurable slowdown); `every_creal_declaration_is_checked_and_axiom_free` green in `--release` (15.09 s), both declarations `Theorem`-kind, empty `axiom_footprint` |
+| 2026-08-28 | `68e0a48d8` | dedup: cite `CReal.abs_add_le` instead of re-deriving it, in 4 `creal/` files; fix a stale "does not exist" doc comment |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -7020,6 +7021,49 @@ calls into separate `let`s, as CLAUDE.md's kernel-facts section warns).
   creal::creal_tests::steps_table_matches_recorded_extraction` — green
   (both new `BuildStep`s wired into `creal.rs` and `EXPECTED_STEP_ORDER`).
 - Did NOT run a full `--lib creal::` sweep (per the standing rule).
+
+**Your lane's block (`DONE`, inline-hunt, 2026-08-28).** Censused ~426
+`declare_*` functions and ranked ~333 private-fn candidates (body_len>=25)
+across every in-scope `creal/` file, using: theorem-shaped `///` doc
+comments on private (non-`declare_`) fns, "does not exist"/"not landed"
+comments, structuring comments ("self-contained", "independently useful"),
+and a body-length + call-site ranking script. Result: **every strong hit
+this session's signals surfaced (clamp_id, bucketClose,
+converges_upper_bound_shift, hasDerivative_closeOfEquiv,
+congr_of_uniformly_continuous, uniformly_continuous_mul) was already
+extracted by other lanes earlier today** — this campaign has been running
+hard enough that the obvious hiding-place-2 instances are largely cleared.
+
+What this lane actually landed instead: `CReal.abs_add_le` has been a
+public kernel declaration (`uniform_continuity::declare_abs_add_le`) for a
+while, but `series.rs`, `derivative.rs` (7 call sites) and
+`deriv_unique.rs` (1 call site) each still carried a private
+proof-term-rebuilding copy, and `uniform_continuity.rs` itself re-derived
+it twice more beyond its own declaration's proof. All 10 call sites now
+cite `d.lemma(p.abs_add_le, &[a, b])`; the 3 now-dead private copies
+(`series.rs`'s also took its now-unused `neg_add` with it) are gone.
+Also fixed a stale doc comment in `derivative.rs` (`hasDerivative_pow`)
+claiming `uniformly_continuous_mul` "does not exist" — it has, publicly,
+since `fb2c703a6`.
+
+Verification: clean `cargo check`/`clippy -D warnings`;
+`creal_prelude_builds` 94.01s (within the recent 94-123s band, no
+regression); `every_creal_declaration_is_checked_and_axiom_free` passes
+`--release` (declaration count unchanged — no new declarations, only
+duplicate private builders removed).
+
+**No new kernel declaration was extracted.** I did not find a genuinely
+general, previously-un-named inline step within budget that clearly
+warranted one — several large private fns ranked highly by the body-length
+signal (e.g. `integral.rs`'s `bnd_leg_plus_share_le`, 161 lines / 13 call
+sites) turned out to be tightly coupled to one declaration's own internal
+plumbing (named parameters like `bound_at_idx`, `idx`, `m` specific to that
+construction) rather than general facts another module would search for.
+Next lane: the census signals that worked are logged in this session's
+transcript; the remaining un-swept files are the largest ones
+(`integral.rs` 29.5k lines, `derivative.rs`, `monotone.rs`, `ivt.rs`) —
+worth another pass with fresh eyes rather than repeating my grep signals,
+which are now mostly exhausted against what remains.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
