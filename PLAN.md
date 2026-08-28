@@ -137,6 +137,7 @@ now. Nothing was deleted.
 | 2026-08-28 | choose-backlog | 5 Nat.choose theorems (one_right, eq_zero_of_lt, ne_zero, le_succ, symm_of_eq_add) + 5 facts flipped to proved; fixed a false defeq assumption in choose_le_succ's base case |
 | 2026-08-28 | coprime-backlog | 4/5 `Nat.Coprime` import-backlog facts proved axiom-free (`coprime_of_dvd_left/right`, `prime_dvd_iff_not_coprime`, `coprime_add_self_right`); `coprime_two_left` deferred, needs a fresh `Odd` construction |
 | 2026-08-28 | decidable-frontier | confirmed F:rado-r4-a5-b3 and F:rado-r4-a5-b4 already settled, no edit made; added a corroborating 2026-08-28 re-measurement to F:fp16-add-monotone-rne's notes (drat_check throughput ~95 steps/s, ~2.4h extrapolated), fact stays `open` |
+| 2026-08-28 | evt-r2-gap | Closed EVT row-2's labeled gap: promoted `abs_bound_of_self`, added `bounded_on_id_zero_one` and `evtLinear_uniformly_continuous` (all kernel-checked) |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -7622,6 +7623,44 @@ actually open.
   to ~2.4h for that sub-stage alone before `elaborate_drat_to_lrat` even
   starts). `validate-facts.py` still reports 0 errors, `open=171` unchanged.
   A precisely measured obstruction, not a settlement.
+
+**Your lane's block (`DONE`, evt-r2-gap, 2026-08-28).** The one labeled gap in
+`creal/extreme_value.rs` (`evtLinear v` uniformly continuous — asserted, not
+proved) is closed. All four pieces landed and are kernel-checked:
+
+1. `CReal.abs_bound_of_self : ∀ x, le (abs x) (mag_bound (bound x))` —
+   promoted from a private `fn` in `creal/uniform_continuity.rs` (unreachable
+   outside that file) to a `CRealPrelude` field, closed over a fresh `fvar`.
+   The sole prior call site (inside `declare_bounded_of_uniformly_continuous`)
+   now calls `d.lemma(p.abs_bound_of_self, &[f_a])` instead of rebuilding the
+   proof inline. Makes `BoundedOn` trivial for every constant function on
+   every interval — not just `evtLinear`'s.
+2. `CReal.bounded_on_id_zero_one : BoundedOn (fun r => r) zero one 0` —
+   bridges `one` to `mag_bound 0` via `rat_unit_eq_one`
+   (`Eq Rat (natDivSucc 1 0) Rat.one`, lifted across `ofRat`), then applies
+   `bounded_on_id_unit` directly rather than re-deriving its magnitude
+   argument (~35 lines, shorter than the ~60-line route the module doc had
+   sketched — see "what I found wrong" below).
+3. `CReal.evtLinear_uniformly_continuous : ∀ v, UniformlyContinuousOn
+   (evtLinear v) zero one` — `uniformly_continuous_mul` at `F := id`,
+   `G := fun _ => v`, both `BoundedOn` arguments discharged by (1) and (2).
+   Pure assembly, no new algebra.
+4. Module doc in `creal/extreme_value.rs` updated: the "LABELED GAP" section
+   is now "CLOSED", and the `evtLinear` field doc comment in `creal.rs` no
+   longer says "asserted, not proved".
+
+**What I found wrong in the module doc (now corrected):** it predicted the
+`[0,1]` `BoundedOn` case would need `max_le` on `abs`'s two branches plus
+`add_le_add` against `le_refl (neg z)`, ~60 lines, built from scratch. The
+much cheaper route — transport `hzb : le z one` to `le z (mag_bound 0)` via
+the `rat_unit_eq_one` bridge, then apply `bounded_on_id_unit` DIRECTLY at
+the transported hypothesis — was available and ~35 lines. Worth knowing for
+the next lane that estimates a route by "build from primitives" without
+checking whether an existing sibling theorem can just be reused.
+
+**Not attempted / out of scope:** no change to `evt_attained_max_decides_sign`
+itself (it never needed continuity as a hypothesis — the gap was purely the
+bridge sentence connecting `evtLinear` to classical EVT's hypothesis class).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
