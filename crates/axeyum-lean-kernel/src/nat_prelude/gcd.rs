@@ -605,6 +605,151 @@ fn declare_dvd_gcd_semantics(
     Ok(())
 }
 
+// ============================================================================
+// `Nat.ModEq.gcd_eq : ∀ m a b, modEq m a b → gcd a m = gcd b m`.
+// ============================================================================
+
+/// See [`NatPrelude::mod_eq_gcd_eq`] for the route. `modEq m a b` unfolds to
+/// balanced witnesses `∃ u v, a + m*u = b + m*v`; eliminate both, then show
+/// `gcd a m ∣ gcd b m` and its converse and close with `dvd_antisymm`.
+///
+/// Each divisibility direction is the same shape: `gcd a m` divides `a` and
+/// `m` (`gcd_dvd_left`/`gcd_dvd_right`), hence `m*u` (`dvd_mul_right_of_dvd`)
+/// and so `a + m*u` (`dvd_add`); transport along the witness equation to
+/// `b + m*w`; reorder to `m*w + b` (`add_comm`) and peel `m*w`
+/// (`dvd_add_iff_right`, reversed) to land on `gcd a m ∣ b`; finish with
+/// `dvd_gcd`. The other direction is the mirror image over the symmetric
+/// equation.
+///
+/// Requires [`declare_gcd_semantics`], [`super::modular::declare_modular_congruence`]
+/// and `dvd_antisymm` (declared by `declare_dvd_antisymm`, which needs
+/// `le_of_dvd` from `declare_primes` and so cannot run any earlier) to have
+/// already run.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_modeq_gcd_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one = d.level_one();
+
+    d.theorem(p.mod_eq_gcd_eq, 3, &|d, v| {
+        let (m, a, b) = (v[0], v[1], v[2]);
+        let source = d.mod_eq(m, a, b);
+        let ga = d.gcd(a, m);
+        let gb = d.gcd(b, m);
+        let target = d.eq(ga, gb);
+
+        let source_fv = d.fresh_fvar();
+        let source_proof = d.kernel().fvar(source_fv);
+
+        let outer_predicate = d.mod_eq_outer_predicate(m, a, b);
+        let outer_motive = d
+            .kernel()
+            .lam(anon, source, target, crate::BinderInfo::Default);
+        let outer_minor = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_source = d.mod_eq_inner_exists(m, a, b, u);
+            let inner_source_fv = d.fresh_fvar();
+            let inner_source_proof = d.kernel().fvar(inner_source_fv);
+            let inner_predicate = d.mod_eq_inner_predicate(m, a, b, u);
+            let inner_motive =
+                d.kernel()
+                    .lam(anon, inner_source, target, crate::BinderInfo::Default);
+            let inner_minor = {
+                let w_fv = d.fresh_fvar();
+                let w = d.kernel().fvar(w_fv);
+                let mu = d.mul(m, u);
+                let mw = d.mul(m, w);
+                let left_sum = d.mod_eq_sum(m, a, u); // a + m*u
+                let right_sum = d.mod_eq_sum(m, b, w); // b + m*w
+                let equation_ty = d.eq(left_sum, right_sum);
+                let equation_fv = d.fresh_fvar();
+                let equation = d.kernel().fvar(equation_fv);
+
+                // gcd a m ∣ gcd b m.
+                let ga_dvd_a = d.lemma(p.gcd_dvd_left, &[a, m]);
+                let ga_dvd_m = d.lemma(p.gcd_dvd_right, &[a, m]);
+                let ga_dvd_mu = d.lemma(p.dvd_mul_right_of_dvd, &[ga, m, u, ga_dvd_m]);
+                let ga_dvd_left_sum = d.lemma(p.dvd_add, &[ga, a, mu, ga_dvd_a, ga_dvd_mu]);
+                let ga_dvd_right_sum =
+                    transport_dvd_right(d, ga, left_sum, right_sum, equation, ga_dvd_left_sum);
+                let ga_dvd_mw = d.lemma(p.dvd_mul_right_of_dvd, &[ga, m, w, ga_dvd_m]);
+                let reorder_a = d.lemma(p.add_comm, &[b, mw]); // Eq (b+mw) (mw+b)
+                let mw_b = d.add(mw, b);
+                let ga_dvd_mw_b =
+                    transport_dvd_right(d, ga, right_sum, mw_b, reorder_a, ga_dvd_right_sum);
+                let split_a = d.lemma(p.dvd_add_iff_right, &[ga, mw, b, ga_dvd_mw]);
+                let ga_dvd_b_ty = d.dvd(ga, b);
+                let ga_dvd_mw_b_ty = d.dvd(ga, mw_b);
+                let ga_dvd_b = {
+                    let f = iff_reverse(d, ga_dvd_b_ty, ga_dvd_mw_b_ty, split_a);
+                    d.apply(f, &[ga_dvd_mw_b])
+                };
+                let ga_dvd_gb = d.lemma(p.dvd_gcd, &[ga, b, m, ga_dvd_b, ga_dvd_m]);
+
+                // gcd b m ∣ gcd a m, over the symmetric witness equation.
+                let equation_rev = d.symm(left_sum, right_sum, equation);
+                let gb_dvd_b = d.lemma(p.gcd_dvd_left, &[b, m]);
+                let gb_dvd_m = d.lemma(p.gcd_dvd_right, &[b, m]);
+                let gb_dvd_mw = d.lemma(p.dvd_mul_right_of_dvd, &[gb, m, w, gb_dvd_m]);
+                let gb_dvd_right_sum = d.lemma(p.dvd_add, &[gb, b, mw, gb_dvd_b, gb_dvd_mw]);
+                let gb_dvd_left_sum =
+                    transport_dvd_right(d, gb, right_sum, left_sum, equation_rev, gb_dvd_right_sum);
+                let gb_dvd_mu = d.lemma(p.dvd_mul_right_of_dvd, &[gb, m, u, gb_dvd_m]);
+                let reorder_b = d.lemma(p.add_comm, &[a, mu]); // Eq (a+mu) (mu+a)
+                let mu_a = d.add(mu, a);
+                let gb_dvd_mu_a =
+                    transport_dvd_right(d, gb, left_sum, mu_a, reorder_b, gb_dvd_left_sum);
+                let split_b = d.lemma(p.dvd_add_iff_right, &[gb, mu, a, gb_dvd_mu]);
+                let gb_dvd_a_ty = d.dvd(gb, a);
+                let gb_dvd_mu_a_ty = d.dvd(gb, mu_a);
+                let gb_dvd_a = {
+                    let f = iff_reverse(d, gb_dvd_a_ty, gb_dvd_mu_a_ty, split_b);
+                    d.apply(f, &[gb_dvd_mu_a])
+                };
+                let gb_dvd_ga = d.lemma(p.dvd_gcd, &[gb, a, m, gb_dvd_a, gb_dvd_m]);
+
+                let heq = d.lemma(p.dvd_antisymm, &[ga, gb, ga_dvd_gb, gb_dvd_ga]);
+
+                let with_equation = d.lam_fv(equation_fv, equation_ty, heq);
+                d.lam_fv(w_fv, nat, with_equation)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(
+                rec,
+                &[
+                    nat,
+                    inner_predicate,
+                    inner_motive,
+                    inner_minor,
+                    inner_source_proof,
+                ],
+            );
+            let with_inner = d.lam_fv(inner_source_fv, inner_source, body);
+            d.lam_fv(u_fv, nat, with_inner)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(
+            rec,
+            &[
+                nat,
+                outer_predicate,
+                outer_motive,
+                outer_minor,
+                source_proof,
+            ],
+        );
+        let stmt = d.arrow(source, target);
+        let proof = d.lam_fv(source_fv, source, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 fn gcd_fix_equation(d: &mut NatDev<'_>, p: &NatPrelude, value: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let one = d.level_one();

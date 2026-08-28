@@ -216,7 +216,7 @@ use finite::{
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
 use finite_set::declare_finite_set_all;
-use gcd::{declare_executable_gcd, declare_gcd_semantics};
+use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
@@ -810,6 +810,9 @@ pub struct NatPrelude {
     /// modEq n a b`. Multiplicative cancellation modulo `n`: the engine
     /// behind Euler's theorem (`euler.rs`).
     pub mod_eq_cancel: NameId,
+    /// `Nat.ModEq.gcd_eq : ∀ m a b, modEq m a b → gcd a m = gcd b m`. Closes
+    /// ledger fact `F:ml430-nat-modeq-gcd-eq`.
+    pub mod_eq_gcd_eq: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -2619,6 +2622,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_of_mod_eq_zero_of_pos: kernel.name_str(nat, "dvd_of_mod_eq_zero_of_pos"),
             mod_eq_zero_iff_dvd: kernel.name_str(nat, "mod_eq_zero_iff_dvd"),
             mod_eq_cancel: kernel.name_str(nat, "mod_eq_cancel"),
+            mod_eq_gcd_eq: kernel.name_str(nat, "mod_eq_gcd_eq"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_refl: kernel.name_str(nat, "dvd_refl"),
@@ -2954,6 +2958,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // cannot run inside `declare_lcm` above despite conceptually
         // belonging there — see `dvd_antisymm`'s doc comment.
         declare_dvd_antisymm(&mut d, &p)?;
+        declare_modeq_gcd_eq(&mut d, &p)?;
         declare_lcm_comm(&mut d, &p)?;
         declare_coprime_lcm_eq_mul(&mut d, &p)?;
         declare_coprime_of_lt_prime(&mut d, &p)?;
