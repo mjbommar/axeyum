@@ -439,34 +439,6 @@ pub(super) fn abs_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> E
     d.lemma(p.equiv_of_le_le, &[abs_nx, abs_x, le1, le2])
 }
 
-/// `le (abs (add a b)) (add (abs a) (abs b))` — the two-term triangle
-/// inequality. Copied verbatim from `derivative.rs`'s private `abs_add_le`
-/// (itself using this file's own `neg_add_distrib` in place of that file's
-/// `neg_add_distrib`, the identical statement).
-fn abs_add_le_local(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
-    let s = cadd(d, p, a, b);
-    let abs_a = cabs(d, p, a);
-    let abs_b = cabs(d, p, b);
-    let bound = cadd(d, p, abs_a, abs_b);
-
-    let le_a = d.lemma(p.le_abs_self, &[a]);
-    let le_b = d.lemma(p.le_abs_self, &[b]);
-    let premise1 = d.lemma(p.add_le_add, &[a, abs_a, b, abs_b, le_a, le_b]);
-
-    let na = cneg(d, p, a);
-    let nb = cneg(d, p, b);
-    let t = cadd(d, p, na, nb);
-    let ns = cneg(d, p, s);
-    let na_eq = neg_add_distrib(d, p, a, b);
-    let step1 = d.lemma(p.le_of_equiv, &[ns, t, na_eq]);
-    let nle_a = d.lemma(p.neg_le_abs, &[a]);
-    let nle_b = d.lemma(p.neg_le_abs, &[b]);
-    let step2 = d.lemma(p.add_le_add, &[na, abs_a, nb, abs_b, nle_a, nle_b]);
-    let premise2 = d.lemma(p.le_trans, &[ns, t, bound, step1, step2]);
-
-    d.lemma(p.abs_le, &[s, bound, premise1, premise2])
-}
-
 /// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b`. Also built
 /// (independently, before this one was widened to `pub(super)`) as
 /// private helpers of the same shape in `creal/monotone.rs` and
@@ -1036,7 +1008,7 @@ fn finish_common(
     // --- triangle inequality ---------------------------------------------
     let neg_error2 = cneg(d, p, error2);
     let dd_expr = cadd(d, p, error1, neg_error2);
-    let triangle = abs_add_le_local(d, p, error1, neg_error2);
+    let triangle = d.lemma(p.abs_add_le, &[error1, neg_error2]);
     let abs_neg_error2_le = le_abs_neg_of_le_abs(d, p, error2, common_bound_q, error2_bound_q);
     let abs_error1 = cabs(d, p, error1);
     let abs_neg_error2 = cabs(d, p, neg_error2);

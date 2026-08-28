@@ -553,94 +553,6 @@ pub(super) fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
 }
 
-/// `Equiv (neg (add a b)) (add (neg a) (neg b))` — additive inverse
-/// distributes over `add`. Proved inline via [`add4_comm`] and the
-/// additive-inverse laws by the usual "any right inverse of `a+b` is `−(a+b)`"
-/// argument, specialised to the witness `(−a)+(−b)` rather than proved as a
-/// general uniqueness lemma.
-fn neg_add(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
-    let zero_c = czero(d, p);
-    let s = cadd(d, p, a, b);
-    let na = cneg(d, p, a);
-    let nb = cneg(d, p, b);
-    let t = cadd(d, p, na, nb);
-    let ns = cneg(d, p, s);
-
-    // f_proof : Equiv (add s t) zero, via add4_comm + the two `add_neg`s.
-    let f_proof = {
-        let (target1, h4) = add4_comm(d, p, a, b, na, nb);
-        // target1 = add (add a na) (add b nb)
-        let a_na = cadd(d, p, a, na);
-        let b_nb = cadd(d, p, b, nb);
-        let add_zz = cadd(d, p, zero_c, zero_c);
-        let h_a = d.lemma(p.add_neg, &[a]); // a_na ~ zero
-        let h_b = d.lemma(p.add_neg, &[b]); // b_nb ~ zero
-        let h5 = d.lemma(p.add_congr, &[a_na, zero_c, b_nb, zero_c, h_a, h_b]); // target1 ~ add_zz
-        let h6 = d.lemma(p.add_zero, &[zero_c]); // add_zz ~ zero
-        let start = cadd(d, p, s, t);
-        echain(d, p, start, &[(target1, h4), (add_zz, h5), (zero_c, h6)])
-    };
-
-    // neg s ~ add(neg s)(zero) ~ add(neg s)(add s t) ~ (add(neg s)s)+t ~ add zero t ~ t
-    let step_a_target = cadd(d, p, ns, zero_c);
-    let step_a = {
-        let h = d.lemma(p.add_zero, &[ns]); // step_a_target ~ ns
-        d.lemma(p.equiv_symm, &[step_a_target, ns, h]) // ns ~ step_a_target
-    };
-
-    let st = cadd(d, p, s, t);
-    let step_b_target = cadd(d, p, ns, st);
-    let step_b = {
-        let f_symm = d.lemma(p.equiv_symm, &[st, zero_c, f_proof]); // zero ~ add s t
-        let refl_ns = d.lemma(p.equiv_refl, &[ns]);
-        d.lemma(p.add_congr, &[ns, ns, zero_c, st, refl_ns, f_symm])
-        // step_a_target ~ step_b_target
-    };
-
-    let ns_s = cadd(d, p, ns, s);
-    let step_c_target = cadd(d, p, ns_s, t);
-    let step_c = {
-        let assoc = d.lemma(p.add_assoc, &[ns, s, t]); // step_c_target ~ step_b_target
-        d.lemma(p.equiv_symm, &[step_c_target, step_b_target, assoc])
-        // step_b_target ~ step_c_target
-    };
-
-    let step_d_target = cadd(d, p, zero_c, t);
-    let step_d = {
-        let x = {
-            let comm = d.lemma(p.add_comm, &[ns, s]); // ns_s ~ add s ns
-            let s_ns = cadd(d, p, s, ns);
-            let negl = d.lemma(p.add_neg, &[s]); // add s ns ~ zero
-            d.lemma(p.equiv_trans, &[ns_s, s_ns, zero_c, comm, negl])
-        };
-        // x : ns_s ~ zero
-        let refl_t = d.lemma(p.equiv_refl, &[t]);
-        d.lemma(p.add_congr, &[ns_s, zero_c, t, t, x, refl_t])
-        // step_c_target ~ step_d_target
-    };
-
-    let t_zero = cadd(d, p, t, zero_c);
-    let step_e = {
-        let comm = d.lemma(p.add_comm, &[zero_c, t]); // step_d_target ~ t_zero
-        let collapse = d.lemma(p.add_zero, &[t]); // t_zero ~ t
-        d.lemma(p.equiv_trans, &[step_d_target, t_zero, t, comm, collapse])
-        // step_d_target ~ t
-    };
-
-    echain(
-        d,
-        p,
-        ns,
-        &[
-            (step_a_target, step_a),
-            (step_b_target, step_b),
-            (step_c_target, step_c),
-            (step_d_target, step_d),
-            (t, step_e),
-        ],
-    )
-}
-
 /// `Equiv (add (add a b) (neg a)) b` — the group cancellation `(a+b)+(−a) ~
 /// b`, via `add_comm`, `add_assoc`, `add_neg`, `add_zero`.
 fn cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
@@ -736,37 +648,6 @@ fn cancel_left(
         ],
     );
     (target, proof)
-}
-
-/// `le (abs (add a b)) (add (abs a) (abs b))` — the two-term triangle
-/// inequality, from [`CRealPrelude::abs_le`] with
-/// [`CRealPrelude::add_le_add`]/[`CRealPrelude::le_abs_self`] for the lower
-/// branch and [`neg_add`] plus [`CRealPrelude::neg_le_abs`] for the upper
-/// (negated) branch.
-fn abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
-    let s = cadd(d, p, a, b);
-    let abs_a = cabs(d, p, a);
-    let abs_b = cabs(d, p, b);
-    let bound = cadd(d, p, abs_a, abs_b);
-
-    // premise1 : le (add a b) (add (abs a) (abs b))
-    let le_a = d.lemma(p.le_abs_self, &[a]);
-    let le_b = d.lemma(p.le_abs_self, &[b]);
-    let premise1 = d.lemma(p.add_le_add, &[a, abs_a, b, abs_b, le_a, le_b]);
-
-    // premise2 : le (neg (add a b)) (add (abs a) (abs b))
-    let na = cneg(d, p, a);
-    let nb = cneg(d, p, b);
-    let t = cadd(d, p, na, nb);
-    let ns = cneg(d, p, s);
-    let na_eq = neg_add(d, p, a, b); // ns ~ t
-    let step1 = d.lemma(p.le_of_equiv, &[ns, t, na_eq]); // le ns t
-    let nle_a = d.lemma(p.neg_le_abs, &[a]); // le na abs_a
-    let nle_b = d.lemma(p.neg_le_abs, &[b]); // le nb abs_b
-    let step2 = d.lemma(p.add_le_add, &[na, abs_a, nb, abs_b, nle_a, nle_b]); // le t bound
-    let premise2 = d.lemma(p.le_trans, &[ns, t, bound, step1, step2]);
-
-    d.lemma(p.abs_le, &[s, bound, premise1, premise2])
 }
 
 // --- the declarations --------------------------------------------------------
@@ -1488,7 +1369,7 @@ fn declare_abs_sum_range_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
             let mid = cadd(d, p, abs_sf_j, abs_fj);
             let target = cadd(d, p, saf_j, abs_fj);
 
-            let part1 = abs_add_le(d, p, sf_j, fj); // le(start, mid)
+            let part1 = d.lemma(p.abs_add_le, &[sf_j, fj]); // le(start, mid)
             let refl_abs_fj = d.lemma(p.le_refl, &[abs_fj]);
             let part2 = d.lemma(
                 p.add_le_add,

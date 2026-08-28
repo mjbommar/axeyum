@@ -1090,40 +1090,6 @@ pub(super) fn neg_mul_equiv_left(
 // now `pub(super)` in `creal/ring_helpers.rs`, imported above, and this file
 // calls the shared versions directly.
 
-/// `le (abs (add a b)) (add (abs a) (abs b))` — the two-term triangle
-/// inequality, from [`CRealPrelude::abs_le`] with
-/// [`CRealPrelude::add_le_add`]/[`CRealPrelude::le_abs_self`] for the lower
-/// branch and [`neg_add_distrib`] plus [`CRealPrelude::neg_le_abs`] for the
-/// upper (negated) branch. Copied from `creal/series.rs`'s own private
-/// `abs_add_le`, using this file's own `neg_add_distrib` in place of
-/// `series.rs`'s `neg_add` (the identical statement, built earlier in this
-/// file for `sq_le_abs_sq`).
-fn abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
-    let s = cadd(d, p, a, b);
-    let abs_a = cabs(d, p, a);
-    let abs_b = cabs(d, p, b);
-    let bound = cadd(d, p, abs_a, abs_b);
-
-    // premise1 : le (add a b) (add (abs a) (abs b))
-    let le_a = d.lemma(p.le_abs_self, &[a]);
-    let le_b = d.lemma(p.le_abs_self, &[b]);
-    let premise1 = d.lemma(p.add_le_add, &[a, abs_a, b, abs_b, le_a, le_b]);
-
-    // premise2 : le (neg (add a b)) (add (abs a) (abs b))
-    let na = cneg(d, p, a);
-    let nb = cneg(d, p, b);
-    let t = cadd(d, p, na, nb);
-    let ns = cneg(d, p, s);
-    let na_eq = neg_add_distrib(d, p, a, b); // ns ~ t
-    let step1 = d.lemma(p.le_of_equiv, &[ns, t, na_eq]); // le ns t
-    let nle_a = d.lemma(p.neg_le_abs, &[a]); // le na abs_a
-    let nle_b = d.lemma(p.neg_le_abs, &[b]); // le nb abs_b
-    let step2 = d.lemma(p.add_le_add, &[na, abs_a, nb, abs_b, nle_a, nle_b]); // le t bound
-    let premise2 = d.lemma(p.le_trans, &[ns, t, bound, step1, step2]);
-
-    d.lemma(p.abs_le, &[s, bound, premise1, premise2])
-}
-
 /// From `eq_vw : Equiv v w` and `h_w : le (abs w) bound`, derive `le (abs v)
 /// bound` — [`CRealPrelude::abs_congr`] plus [`CRealPrelude::le_congr`],
 /// the general "the bound transports along an `Equiv` on the value" step
@@ -3044,7 +3010,7 @@ fn declare_has_derivative_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         let combined_error = cadd(d, p, error_f, error_g);
         let abs_error_f = cabs(d, p, error_f);
         let abs_error_g = cabs(d, p, error_g);
-        let triangle = abs_add_le(d, p, error_f, error_g); // le (abs combined_error) (add abs_error_f abs_error_g)
+        let triangle = d.lemma(p.abs_add_le, &[error_f, error_g]); // le (abs combined_error) (add abs_error_f abs_error_g)
         let sum_bounds = d.lemma(
             p.add_le_add,
             &[
@@ -4314,7 +4280,7 @@ fn declare_bounded_on_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         let abs_sum_bound = cadd(d, p, abs_fz, abs_gz);
         let mul_bb = cadd(d, p, big1, big2);
 
-        let le_abs_sum = abs_add_le(d, p, fz, gz); // le abs_fzgz abs_sum_bound
+        let le_abs_sum = d.lemma(p.abs_add_le, &[fz, gz]); // le abs_fzgz abs_sum_bound
         let combined_le = d.lemma(p.add_le_add, &[abs_fz, big1, abs_gz, big2, hbf_z, hbg_z]);
         // le abs_sum_bound mul_bb
         let prod_le = d.lemma(
@@ -5340,7 +5306,7 @@ fn declare_has_derivative_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         let term1_plus_term2 = cadd(d, p, term1, term2);
         let combined_terms = cadd(d, p, term1_plus_term2, term3);
 
-        let triangle_12 = abs_add_le(d, p, term1, term2);
+        let triangle_12 = d.lemma(p.abs_add_le, &[term1, term2]);
         // le (abs term1_plus_term2) (add abs_term1 abs_term2)
         let sum12_le = d.lemma(
             p.add_le_add,
@@ -5369,7 +5335,7 @@ fn declare_has_derivative_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         );
         // le (abs term1_plus_term2) (add out_bound1 out_bound2)
 
-        let triangle_123 = abs_add_le(d, p, term1_plus_term2, term3);
+        let triangle_123 = d.lemma(p.abs_add_le, &[term1_plus_term2, term3]);
         // le (abs combined_terms) (add abs_term1_plus_term2 abs_term3)
         let sum123_le = d.lemma(
             p.add_le_add,
@@ -6808,7 +6774,7 @@ fn declare_has_derivative_chain(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
 
         let abs_error_f = cabs(d, p, error_f);
         let abs_fpx_diff = cabs(d, p, fpx_diff);
-        let triangle_f = abs_add_le(d, p, error_f, fpx_diff);
+        let triangle_f = d.lemma(p.abs_add_le, &[error_f, fpx_diff]);
         // le (abs (add error_f fpx_diff)) (add abs_error_f abs_fpx_diff)
         let error_f_fpxdiff = cadd(d, p, error_f, fpx_diff);
         let abs_ef_plus_abs_fpd = cadd(d, p, abs_error_f, abs_fpx_diff);
@@ -7097,7 +7063,7 @@ fn declare_has_derivative_chain(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
         // === combine + fuse the two-way split ================================
         let combined_terms = cadd(d, p, term_a, term_b);
         let abs_combined = cabs(d, p, combined_terms);
-        let triangle = abs_add_le(d, p, term_a, term_b);
+        let triangle = d.lemma(p.abs_add_le, &[term_a, term_b]);
         // le (abs combined_terms) (add abs_term_a abs_term_b)
         let sum_bounds = d.lemma(
             p.add_le_add,
@@ -7780,10 +7746,23 @@ pub(super) fn pow_deriv_fn(
 /// continuity for at an arbitrary `j`. So the induction instead builds
 /// `HasDerivativeOn (fun r => mul r (pow r j)) …` via `hasDerivative_mul` with
 /// `F := id` (continuity `CReal.uniformly_continuous_id`, available at every
-/// step, never `uniformly_continuous_mul`, which does not exist) and `G :=
+/// step, never continuity of `pow (·, j)` itself, which this induction has
+/// no way to supply at an arbitrary `j`) and `G :=
 /// pow (·, j)`, then transports across `mul_comm` — the SAME commuting
 /// `hasDerivative_cube` avoids needing at all, because it composes `id` and
 /// `sq` directly instead of inducting.
+///
+/// STALE AS OF landing `CReal.uniformly_continuous_mul`
+/// (`uniform_continuity::declare_uniformly_continuous_mul`,
+/// `creal/uniform_continuity.rs`): this paragraph used to say
+/// `uniformly_continuous_mul` "does not exist". It does now — it is a public
+/// declaration, dispatched, and cited elsewhere in this prelude. It still is
+/// not what this induction needs: `hasDerivative_mul` needs continuity of the
+/// FIRST factor, and this step's first factor is the ALREADY-BUILT
+/// `pow (·, j)`, whose own continuity (not the product's) is exactly the
+/// thing not available at an arbitrary `j` — `uniformly_continuous_mul`
+/// answers a different question (continuity of a product given continuity of
+/// its factors) and would not close this gap even if consulted.
 ///
 /// ## Boundedness is a hypothesis, not a derived fact
 ///
@@ -9231,7 +9210,7 @@ pub(super) fn declare_lipschitz_of_deriv_bound(
     let py_qx = cadd(d, p, py, qx);
     let cm = cancel_middle(d, p, fy, fu, fx);
     let cm_symm = esymm(d, p, py_qx, aa, cm);
-    let tri = abs_add_le(d, p, py, qx);
+    let tri = d.lemma(p.abs_add_le, &[py, qx]);
     let abs_py = cabs(d, p, py);
     let abs_qx = cabs(d, p, qx);
     let abs_sum = cadd(d, p, abs_py, abs_qx);

@@ -17,18 +17,28 @@
 //! before (verified via `Kernel::add_declaration`, not just `cargo check` —
 //! see `creal/creal_tests.rs`).
 //!
-//! `CReal.abs_add_le` is **not** promoted here even though it also has a copy
-//! in `creal/series.rs` and `creal/derivative.rs`: the two copies are not
-//! identical. `series.rs`'s version discharges `neg(add a b) ~ add(neg
-//! a)(neg b)` via its own private `neg_add`; `derivative.rs`'s version
-//! discharges the identical *statement* via its own private
-//! `neg_add_distrib`, a different proof term built for `sq_le_abs_sq` and
-//! reused here instead of re-deriving `neg_add`. Promoting `abs_add_le`
-//! without also promoting one of `neg_add`/`neg_add_distrib` (out of scope
-//! for this slice) would mean picking a proof route for one call site over
-//! the other — exactly the "merging two subtly different helpers into one"
-//! risk this module is meant to avoid, not invite. `abs_add_le` stays as two
-//! separate private copies.
+//! `CReal.abs_add_le`'s private BUILDER was never merged here, and the
+//! reasoning still stands: `series.rs`'s old copy discharged `neg(add a b) ~
+//! add(neg a)(neg b)` via its own private `neg_add`, `derivative.rs`'s
+//! discharges the identical *statement* via its own `neg_add_distrib` (a
+//! different proof term built for `sq_le_abs_sq`), and merging the two
+//! builders into one shared route would mean picking one over the other —
+//! exactly the "merging two subtly different helpers into one" risk this
+//! module is meant to avoid, not invite.
+//!
+//! **That is a different question from whether callers re-derive the
+//! STATEMENT, and by the time `CReal.abs_add_le` became a public kernel
+//! declaration (`uniform_continuity::declare_abs_add_le`) that second
+//! question had its own cheap answer: cite the theorem.** `series.rs`,
+//! `derivative.rs` and `deriv_unique.rs` no longer carry a private
+//! `abs_add_le` copy at all — every call site now does `d.lemma(p.abs_add_le,
+//! &[a, b])`, and `series.rs`'s own `neg_add` (only ever called from its
+//! local `abs_add_le`) went with it, dead code once its one caller was gone.
+//! `derivative.rs`'s `neg_add_distrib` survives: unlike `neg_add`, it has
+//! other callers. The only surviving private `abs_add_le` PROOF-TERM BUILDER
+//! is `uniform_continuity.rs`'s own, because it is what makes the public
+//! declaration provable in the first place — nothing can cite a theorem
+//! before it exists.
 //!
 //! `cadd`/`cmul`/`echain` below are minimal private restatements of the
 //! identical helpers already private to `power.rs`/`series.rs`/

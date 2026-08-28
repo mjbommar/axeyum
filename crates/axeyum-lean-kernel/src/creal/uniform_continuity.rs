@@ -2225,18 +2225,26 @@ fn abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> Expr
 /// `CReal.abs_add_le : ∀ a b, le (abs (add a b)) (add (abs a) (abs b))` — the
 /// two-term triangle inequality, promoted to a public kernel declaration.
 ///
-/// This is the first of `CReal.abs_add_le`'s **four** file-private proofs to
-/// gain a public name (`series.rs`, `derivative.rs`, `uniform_continuity.rs`
-/// itself and `deriv_unique.rs` each still carry their own copy — see the
-/// section doc above and `ring_helpers.rs`'s doc comment for why those are
-/// not touched here). This file's dispatch (`declare_uniform_continuity`) is
-/// the earliest of the three named in the section doc to run in
+/// UPDATE (this slice): this used to be the first of `CReal.abs_add_le`'s
+/// **four** file-private proofs to gain a public name, with `series.rs`,
+/// `derivative.rs`, `uniform_continuity.rs` itself and `deriv_unique.rs` each
+/// still carrying their own copy (see the section doc above and
+/// `ring_helpers.rs`'s doc comment for why the underlying PROOF-TERM
+/// BUILDERS were never merged — the two routes are not byte-identical, only
+/// statement-identical). That reasoning is about merging private *builders*;
+/// it says nothing against a caller just CITING this already-published
+/// theorem instead of re-deriving the statement. `series.rs`, `derivative.rs`
+/// and `deriv_unique.rs` now do exactly that (`d.lemma(p.abs_add_le, &[a,
+/// b])`), and their own private copies are gone; this file's other two
+/// internal call sites (`declare_uniformly_continuous_mul`,
+/// `declare_uniform_continuity_sums`) do too. Only this declaration's own
+/// proof term, below, still calls the private [`abs_add_le`] helper — it has
+/// to, since it IS what makes `p.abs_add_le` a citable fact in the first
+/// place. This file's dispatch (`declare_uniform_continuity`) is the
+/// earliest of the four named above to run in
 /// `creal.rs::build_creal_prelude_uncached`, so this declaration lives here
 /// and is called immediately before it, ahead of every current and future
-/// consumer. The proof term below is this file's own [`abs_add_le`] helper,
-/// applied to two bound free variables instead of two already-elaborated
-/// terms; the statement it proves is byte-for-byte the one every other copy
-/// proves.
+/// consumer.
 pub(super) fn declare_abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let a_fv = d.fresh_fvar();
@@ -3531,7 +3539,7 @@ fn declare_uniformly_continuous_mul(
             p.add_le_add,
             &[abs_term1, fold1_out, abs_term2, fold2_out, final1, final2],
         );
-        let triangle = abs_add_le(d, p, term1, term2);
+        let triangle = d.lemma(p.abs_add_le, &[term1, term2]);
         let sum_term1_term2 = cadd(d, p, term1, term2);
         let abs_sum = cabs(d, p, sum_term1_term2);
         let sum_of_abs = cadd(d, p, abs_term1, abs_term2);
@@ -5049,7 +5057,7 @@ fn triangle_step(
     // ac : Equiv abs_sum abs_cur
     let ac = d.lemma(p.abs_congr, &[sum_pc, cur, cancel_id]);
     // triangle : le abs_sum target
-    let triangle = abs_add_le(d, p, prev, sub_cur_prev);
+    let triangle = d.lemma(p.abs_add_le, &[prev, sub_cur_prev]);
     let abs_prev = cabs(d, p, prev);
     let abs_sub = cabs(d, p, sub_cur_prev);
     let target = cadd(d, p, abs_prev, abs_sub);
