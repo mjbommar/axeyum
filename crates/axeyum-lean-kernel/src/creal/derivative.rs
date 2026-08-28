@@ -8534,6 +8534,44 @@ pub(super) fn declare_has_derivative_integral_const(
 // (`HasDerivativeOn (fun r => mul m r) (fun _ => m) lo hi`), reused rather than
 // rebuilt — it is deliberately NOT `hasDerivative_smul` ∘ `hasDerivative_id`,
 // which would drag in a magnitude bound on `M` this statement does not need.
+//
+// ## What is still missing above this, measured 2026-08-27
+//
+// Nothing in this development concludes `HasDerivativeOn` from
+// `UniformConvergesOn`: `shape_search --include-constructed --concl
+// CReal.HasDerivativeOn --hyp CReal.UniformConvergesOn` is ABSENT, and the
+// sixteen declarations that DO conclude `HasDerivativeOn` are all pointwise
+// combinators (const/id/sq/neg/add/sub/smul/mul/pow/cube/chain/congr/…). The
+// only theorem in the tree that transports any property through a uniform
+// limit is `uniform_limit_uniformly_continuous`.
+//
+// **A finite-partial-sum route does NOT avoid that gap**, and it is worth
+// recording exactly why, because the shape of `deriv_spec_body` is what
+// decides it. Writing `Sₙ` for a partial sum and `F` for its uniform limit,
+//
+//   |(F y − F x) − F'(x)(y−x)|
+//     ≤ |(F y − F x) − (Sₙ y − Sₙ x)|          (A)
+//     + |(Sₙ y − Sₙ x) − Sₙ'(x)(y−x)|          (B)
+//     + |Sₙ'(x) − F'(x)|·|y−x|                 (C)
+//
+// (B) is each partial sum's own `spec` and (C) is uniform convergence of the
+// DERIVATIVE series — both available. (A) is not: uniform convergence of the
+// FUNCTIONS bounds it only by the constant `2δₙ`, while the spec's budget is
+// `(1/(e+1))·|y − x|` and `y` ranges over everything within `1/(m e + 1)` of
+// `x`, including points arbitrarily close to it. No choice of `n` absorbs a
+// constant into an `ε·|y − x|` budget, so the interchange is genuinely
+// required rather than an artefact of how the limit is taken.
+//
+// The classical fix routes (A) through a mean value estimate on the TAIL —
+// `Sₖ − Sₙ` has derivative `Sₖ' − Sₙ'`, uniformly small, so
+// [`declare_abs_diff_le_of_deriv_bound`] bounds `(Sₖ − Sₙ)(y) − (Sₖ − Sₙ)(x)`
+// by `ε·|y − x|`, and `le_of_forall_le_add_small` removes the residual slack
+// as `k → ∞`. That is what this declaration exists to supply; the remaining
+// work is the accuracy bookkeeping (a three-way `1/(3e+3)` split of the same
+// shape [`declare_has_derivative_mul`] already performs) plus a per-series
+// `∀ n, HasDerivativeOn Sₙ Sₙ' a b`, which for cosine is an induction over
+// `hasDerivative_add`/`hasDerivative_pow`/`hasDerivative_smul` together with
+// the INDEX-SHIFTED coefficient identity `cosTerm (j+1) · (2j+2) ~ −sinTerm j`.
 
 /// Admit `CReal.abs_diff_le_of_deriv_bound`. See
 /// [`CRealPrelude::abs_diff_le_of_deriv_bound`] for the statement and the
