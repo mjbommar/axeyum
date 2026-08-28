@@ -4222,6 +4222,39 @@ pub struct CRealPrelude {
     /// Filed in `creal/ivt.rs` because the exact IVT root is what first
     /// needed it; nothing in the statement or the proof mentions the IVT.
     pub cauchy_of_abs_diff_le: NameId,
+    /// `CReal.converges_of_abs_diff_le : ∀ (f : Nat → CReal) (L : CReal)
+    /// (K : Nat), (∀ n, le (abs (add (f n) (neg L)))
+    ///                    (ofRat (Rat.natDivSucc K n))) →
+    /// Converges f L` (`creal/uniform_convergence.rs`) — **the REAL-valued
+    /// convergence criterion, bridged to [`Self::converges`]'s
+    /// canonical-sample form**, and the `Converges` sibling of
+    /// [`Self::cauchy_of_abs_diff_le`].
+    ///
+    /// `UniformConvergesOn.spec` — and so every `weierstrassMTest` consumer —
+    /// produces a `close_within`-shaped real inequality about
+    /// `abs (f n − L)`; [`Self::converges`] is stated on the rational SAMPLES
+    /// `seq (f n) n − seq L n`. Nothing crossed that gap in this direction:
+    /// [`Self::close_within_of_within`] and
+    /// [`Self::close_within_of_within_indexed`] run the other way, and
+    /// [`Self::converges_of_close`]/[`Self::converges_of_scaled_cauchy`] both
+    /// already start from a `Within`.
+    ///
+    /// [`Self::within_of_two_sided_le`] reaches a `Within` at an arbitrary
+    /// SHARED index; [`Self::shared_index_to_canonical`] — which already IS
+    /// the `CReal.add` index-shift regularity bridge, generically in both
+    /// reals and in the bound function — moves to the canonical one. **The
+    /// index choice `j := 3n+2` makes the whole six-term bound an EQUALITY**:
+    /// `Rat.natDivSucc_halve` collapses the two `1/(2j+2)` legs to `1/(j+1)`,
+    /// `Rat.natDivSucc_add` fuses that with the `2/(j+1)` slack to `3/(j+1)`,
+    /// and `Rat.natDivSucc_scale 2 n` makes `3/(j+1)` exactly `1/(n+1)`.
+    /// Unlike [`Self::cauchy_of_abs_diff_le`], whose two canonical indices
+    /// differ and so needs a final `Rat.natDivSucc_le_add_left` widening,
+    /// **this proof contains no inequality at all** — the witness is exactly
+    /// `Nat.add K 3`.
+    ///
+    /// There is no low-index obligation: every step is an identity in `n`, so
+    /// `n = 0` is just the instance where all four denominators are `1`.
+    pub converges_of_abs_diff_le: NameId,
     /// `CReal.ivt_bisect_cauchy : ∀ F F' a b, HasDerivativeOn F F' a b →
     /// ∀ (u : UniformlyContinuousOn F a b), le a b → le (F a) zero →
     /// le zero (F b) → ∀ k, (∀ z, le a z → le z b →
@@ -6630,6 +6663,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
         ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
         cauchy_of_abs_diff_le: kernel.name_str(creal, "cauchy_of_abs_diff_le"),
+        converges_of_abs_diff_le: kernel.name_str(creal, "converges_of_abs_diff_le"),
         ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
         ivt_exact_root: kernel.name_str(creal, "ivt_exact_root"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
@@ -10643,6 +10677,26 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.power_series_uniform_converges],
         run: uniform_convergence::declare_power_series_uniform_converges,
+    },
+    BuildStep {
+        label: "uniform_convergence::declare_converges_of_abs_diff_le",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.converges,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.seq,
+            |p: CRealPrelude| p.shared_index_to_canonical,
+            |p: CRealPrelude| p.within,
+            |p: CRealPrelude| p.within_of_two_sided_le,
+        ],
+        provides: &[|p: CRealPrelude| p.converges_of_abs_diff_le],
+        run: uniform_convergence::declare_converges_of_abs_diff_le,
     },
     BuildStep {
         label: "uniform_convergence::declare_uniform_converges_geom",

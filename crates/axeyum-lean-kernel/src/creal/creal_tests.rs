@@ -10191,6 +10191,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "geometric::declare_geometric",
     "power::declare_power_series_term_abs_le",
     "uniform_convergence::declare_power_series_uniform_converges",
+    "uniform_convergence::declare_converges_of_abs_diff_le",
     "uniform_convergence::declare_uniform_converges_geom",
     "geometric::declare_geom_cauchy_of_lt_family",
     "exponential::declare_exponential",
@@ -10740,5 +10741,174 @@ fn the_eventual_upper_bound_and_the_tail_leibniz_bound_state_what_pi_rung_2_need
     assert_ne!(
         tail_ty, shift_ty,
         "the two declarations carry the same statement"
+    );
+}
+
+/// `CReal.converges_of_abs_diff_le` composes with `UniformConvergesOn.spec`
+/// at a fixed point of the domain, with **no transport at all**.
+///
+/// The declaration itself is verified by `creal_prelude_builds` — the kernel
+/// accepted its proof term or the prelude does not build. What that does NOT
+/// establish, and what this lane's whole purpose rests on, is that the
+/// hypothesis is the shape a real consumer HAS: `UniformConvergesOn.spec`
+/// hands back `close_within (F n x) (G x) (natDivSucc rate n)` per `n`, and
+/// `converges_of_abs_diff_le` wants `le (abs (add (f n) (neg L)))
+/// (ofRat (natDivSucc K n))` at `f := fun n => F n x`, `L := G x`. Those
+/// agree only up to β on `f n`, and only if `rate` may be supplied as the
+/// `K` — neither of which is visible from the statement alone.
+///
+/// So this builds the composed term outright and READS ITS INFERRED TYPE. It
+/// is a CLOSED term (every free variable is abstracted before inference), so
+/// plain `Kernel::infer` applies — `Kernel::infer` builds a fresh, empty
+/// local context and throws `UnboundFVar` on open ones.
+///
+/// Interned-id equality throughout, never `Kernel::def_eq`: a `def_eq`
+/// refutation here would set a failing conversion loose on
+/// `UniformConvergesOn`'s recursor with no early exit. The negative control
+/// differs in a SMALL term — the single domain hypothesis `le a x` read the
+/// wrong way round — not by rebuilding an unrelated shape.
+#[test]
+fn the_close_within_bridge_turns_uniform_convergence_into_converges_at_a_point() {
+    use super::convergence::converges_applied;
+
+    /// The composition's statement, or -- with `transposed` -- the same shape
+    /// with the domain hypothesis `le a x` read the wrong way round.
+    fn want_ty(d: &mut IntDev<'_>, p: CRealPrelude, transposed: bool) -> ExprId {
+        let nat = d.nat_ty();
+        let carrier = super::creal_ty(d, p);
+        let func = d.arrow(carrier, carrier);
+        let seqfn = {
+            let inner = d.arrow(carrier, carrier);
+            d.arrow(nat, inner)
+        };
+
+        let big_f_fv = d.fresh_fvar();
+        let big_f = d.kernel().fvar(big_f_fv);
+        let big_g_fv = d.fresh_fvar();
+        let big_g = d.kernel().fvar(big_g_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let uconv_ty = d.const_app(p.uniform_converges_on, &[big_f, big_g, a, b]);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_ty = if transposed {
+            d.const_app(p.le, &[x, a])
+        } else {
+            d.const_app(p.le, &[a, x])
+        };
+        let hxb_ty = d.const_app(p.le, &[x, b]);
+
+        let f_at_x = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let body = d.apply(big_f, &[n, x]);
+            d.lam_fv(n_fv, nat, body)
+        };
+        let g_at_x = d.apply(big_g, &[x]);
+        let concl = converges_applied(d, p, f_at_x, g_at_x);
+
+        let after_hxb = d.arrow(hxb_ty, concl);
+        let after_hax = d.arrow(hax_ty, after_hxb);
+        let with_x = d.pi_fv(x_fv, carrier, after_hax);
+        let after_u = d.arrow(uconv_ty, with_x);
+        let with_b = d.pi_fv(b_fv, carrier, after_u);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_g = d.pi_fv(big_g_fv, func, with_a);
+        d.pi_fv(big_f_fv, seqfn, with_g)
+    }
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let nat = d.nat_ty();
+    let carrier = super::creal_ty(&mut d, p);
+    let func = d.arrow(carrier, carrier);
+    let seqfn = {
+        let inner = d.arrow(carrier, carrier);
+        d.arrow(nat, inner)
+    };
+
+    let big_f_fv = d.fresh_fvar();
+    let big_f = d.kernel().fvar(big_f_fv);
+    let big_g_fv = d.fresh_fvar();
+    let big_g = d.kernel().fvar(big_g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let uconv_ty = d.const_app(p.uniform_converges_on, &[big_f, big_g, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hax_ty = d.const_app(p.le, &[a, x]);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = d.const_app(p.le, &[x, b]);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+
+    // `f := fun n => F n x` and `L := G x` -- the sequence and limit a fixed
+    // point of a uniformly convergent family gives.
+    let f_at_x = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.apply(big_f, &[n, x]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let g_at_x = d.apply(big_g, &[x]);
+
+    let rate = d.const_app(p.uconv_rate, &[big_f, big_g, a, b, u]);
+    let spec = d.const_app(p.uconv_spec, &[big_f, big_g, a, b, u]);
+
+    // `fun n => spec n x hax hxb` -- the per-index `close_within` fact, at the
+    // fixed point. This is the term whose type must be `converges_of_abs_diff_le`'s
+    // hypothesis; nothing here transports it.
+    let per_n = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.apply(spec, &[n, x, hax, hxb]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let applied = d.lemma(p.converges_of_abs_diff_le, &[f_at_x, g_at_x, rate, per_n]);
+
+    let closed = {
+        let with_hxb = d.lam_fv(hxb_fv, hxb_ty, applied);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxb);
+        let with_x = d.lam_fv(x_fv, carrier, with_hax);
+        let with_u = d.lam_fv(u_fv, uconv_ty, with_x);
+        let with_b = d.lam_fv(b_fv, carrier, with_u);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(big_g_fv, func, with_a);
+        d.lam_fv(big_f_fv, seqfn, with_g)
+    };
+
+    let got = d
+        .kernel()
+        .infer(closed)
+        .expect("the composed close_within -> Converges term must infer");
+
+    let want = want_ty(&mut d, p, false);
+    let transposed = want_ty(&mut d, p, true);
+
+    assert_eq!(
+        got, want,
+        "`converges_of_abs_diff_le` applied to `UniformConvergesOn.spec` at a \
+         fixed point must yield exactly `Converges (fun n => F n x) (G x)` -- \
+         with the family's own `rate` as the numerator and no transport"
+    );
+    assert_ne!(
+        want, transposed,
+        "the negative control is vacuous: `le a x` builds the same term as \
+         `le x a`"
+    );
+    assert_ne!(
+        got, transposed,
+        "the composition reads its own domain hypothesis backwards"
     );
 }

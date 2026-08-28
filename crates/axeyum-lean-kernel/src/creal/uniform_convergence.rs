@@ -86,19 +86,21 @@ use crate::NatOps;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
-use crate::rat_prelude::group::rsub;
+use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
 use crate::rat_prelude::ops::{
-    nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, rle, rneg, rsymm, rzero,
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, rle, rneg, rsymm, rzero,
 };
 
-use super::convergence::kregular_of_cauchy_proof;
+use super::convergence::{
+    converges_applied, converges_predicate, exists_intro, kregular_of_cauchy_proof,
+};
 use super::derivative::{
     abs_le_of_equiv, cabs, cadd, cancel_middle, cmul, cneg, czero, echain, erefl, esymm, hd_ty,
     neg_mul_equiv_left, swap_middle_pair,
 };
 use super::ring_helpers::{add4_comm, right_distrib};
 use super::series::within_symm;
-use super::{CRealPrelude, creal_ty, embed, halves, sample, within};
+use super::{CRealPrelude, creal_ty, div_succ, embed, halves, modulus, sample, within};
 
 // --- shared term builders ----------------------------------------------------
 
@@ -3127,6 +3129,345 @@ pub(super) fn declare_has_derivative_uniform_limit(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.has_derivative_uniform_limit,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.converges_of_abs_diff_le` -- the REAL-valued convergence criterion,
+// bridged down to `CReal.Converges`'s own canonical-sample form.
+//
+// This is the `Converges` sibling of `creal/ivt.rs`'s
+// `CReal.cauchy_of_abs_diff_le`, and it closes the gap
+// `docs/plan/status/175-pi-r2b.md` named as the last structural piece under
+// pi rung 2: `UniformConvergesOn.spec` (and every `weierstrassMTest`
+// consumer) hands back a `close_within`-shaped fact,
+// `le (abs (add (f n) (neg L))) (ofRat (natDivSucc K n))`, while
+// `CReal.Converges f L` is stated on the RATIONAL representatives,
+// `exists K, forall n, Within (seq (f n) n - seq L n) (natDivSucc K n)`.
+// Nothing crossed that gap in this direction: `close_within_of_within` and
+// `close_within_of_within_indexed` (this file) run the OTHER way, and
+// `converges_of_close`/`converges_of_scaled_cauchy`
+// (`creal/convergence.rs`) both already start from a `Within`.
+//
+// **The `CReal.add` index shift is real but it is NOT this bridge's
+// obligation to discharge by hand**, which is what an earlier sizing of this
+// task (as "a third general bridge, comparable in size to `converges_add`'s
+// own construction") over-estimated: `CReal.sharedIndexToCanonical`
+// (`creal/integral.rs`) already IS that index-shift regularity bridge,
+// stated generically in both reals and in the bound function, and
+// `cauchy_of_abs_diff_le` already demonstrated the composition. What is new
+// here is only the arithmetic, and at a single shared index it is strictly
+// SMALLER than the Cauchy case's:
+//
+//   1. `le_abs_self`/`neg_le_abs` + `le_trans` split the hypothesis at `n`
+//      into the two one-sided reals `within_of_two_sided_le` wants.
+//   2. `within_of_two_sided_le` gives `forall i, Within (seq (f n - L) i)
+//      (q + 2/(i+1))` at an arbitrary SHARED index, `q := natDivSucc K n`.
+//   3. `sharedIndexToCanonical` at `p := q := n` and `j := 3n+2` moves to the
+//      canonical index, at the cost of two regularity legs:
+//
+//          ((1/(n+1) + 1/(sj+1)) + (q + 2/(j+1))) + (1/(sj+1) + 1/(n+1))
+//
+//      `sj := 2j+1`. `Rat.natDivSucc_halve j` collapses the two `1/(sj+1)`
+//      legs to `1/(j+1)`, `Rat.natDivSucc_add` fuses that with the `2/(j+1)`
+//      slack to `3/(j+1)`, and `Rat.natDivSucc_scale 2 n` makes `3/(j+1)`
+//      EXACTLY `1/(n+1)`.
+//   4. What is left is `q + (1/(n+1) + (1/(n+1) + 1/(n+1)))`, three
+//      `Rat.natDivSucc_add` fusions to `natDivSucc (K+3) n`.
+//
+// **The whole six-term bound is an EQUALITY.** Unlike `cauchy_of_abs_diff_le`
+// -- whose two canonical indices `m`/`n` differ, so its two numerators have to
+// be widened to a shared witness by `Rat.natDivSucc_le_add_left` -- there is
+// exactly one index here, so no widening step exists anywhere in this proof.
+//
+// **There is no low-index obligation.** `Converges` is a uniform-rate
+// condition constraining every `n` including `n = 0`, and the shifted-series
+// route an earlier slice tried was genuinely blocked there. This route is
+// not: every step above is an identity in `n`, so `n = 0` is simply the
+// instance where all four denominators are `1` and the bound reads `K + 3`.
+// Nothing is chosen "eventually" and nothing is assumed about `n`.
+//
+// The permutation that groups the six summands is `rsum_perm`, not an inline
+// `add_assoc`/`add_comm` chain: it panics on a non-permutation, so a
+// mis-derived rearrangement fails with a Rust message naming the two lists
+// rather than as an opaque `TypeMismatch` a thousand terms deep.
+// =============================================================================
+
+/// `CReal.converges_of_abs_diff_le` -- see
+/// [`super::CRealPrelude::converges_of_abs_diff_le`] for the statement and
+/// this section's header for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_converges_of_abs_diff_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let seq_ty = d.arrow(nat, carrier);
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let cap_k_fv = d.fresh_fvar();
+    let cap_k = d.kernel().fvar(cap_k_fv);
+
+    // hyp : forall n, le (abs (add (f n) (neg L))) (ofRat (natDivSucc K n)).
+    let hyp_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let f_at = d.apply(f, &[n]);
+        let q = div_succ_at(d, p, cap_k, n);
+        let claim = close_within(d, p, f_at, l, q);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.succ(two_nat);
+    let k3 = d.add(cap_k, three_nat);
+
+    // --- the body, at a concrete `n` ----------------------------------------
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let fn_n = d.apply(f, &[n]);
+    let neg_l = cneg(d, p, l);
+    let t = cadd(d, p, fn_n, neg_l);
+    let abs_t = cabs(d, p, t);
+    let q_atom = div_succ_at(d, p, cap_k, n);
+    let y = embed(d, p, q_atom);
+
+    let h_n = d.apply(hyp, &[n]);
+    let ht = {
+        let self_le = d.lemma(p.le_abs_self, &[t]);
+        d.lemma(p.le_trans, &[t, abs_t, y, self_le, h_n])
+    };
+    let hnt = {
+        let neg_t = cneg(d, p, t);
+        let neg_le = d.lemma(p.neg_le_abs, &[t]);
+        d.lemma(p.le_trans, &[neg_t, abs_t, y, neg_le, h_n])
+    };
+
+    // `bound i := seq y i + 2/(i+1)` -- exactly `within_of_two_sided_le`'s own
+    // conclusion, so `w` inhabits `forall i, Within (seq t i) (bound i)` with
+    // no transport.
+    let bound_lam = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let seq_y_i = sample(d, p, y, i);
+        let slack = div_succ(d, p, 2, i);
+        let body = radd(d, seq_y_i, slack);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let w = d.lemma(p.within_of_two_sided_le, &[t, y, ht, hnt]);
+
+    // `j := 3n+2` -- `Rat.natDivSucc_scale`'s own `(c+1)*n + c` index at
+    // `c := 2`, so `3/(j+1)` is EXACTLY `1/(n+1)`.
+    let j = {
+        let scaled = NatOps::mul(d, three_nat, n);
+        d.add(scaled, two_nat)
+    };
+    let sj = {
+        let doubled = NatOps::mul(d, two_nat, j);
+        d.succ(doubled)
+    };
+
+    let sic = d.lemma(
+        p.shared_index_to_canonical,
+        &[fn_n, l, bound_lam, w, n, n, j],
+    );
+
+    // The bound `sic` carries, with `bound_lam j` beta-reduced and
+    // `seq (ofRat q) j` iota-reduced to `q` (both hold definitionally, so
+    // `sic` inhabits this type unchanged).
+    let a_atom = div_succ(d, p, 1, n);
+    let b_atom = div_succ(d, p, 1, sj);
+    let d_atom = div_succ(d, p, 2, j);
+    let leg1 = modulus(d, p, n, sj);
+    let leg3 = modulus(d, p, sj, n);
+    let bound_j = radd(d, q_atom, d_atom);
+    let leg12 = radd(d, leg1, bound_j);
+    let total = radd(d, leg12, leg3);
+
+    // --- the rational identity ----------------------------------------------
+    // total = rsum [A, B, Q, D, B, A]
+    let flat = [a_atom, b_atom, q_atom, d_atom, b_atom, a_atom];
+    let flat_sum = rsum(d, rat, &flat);
+    let flatten = {
+        let four = rsum(d, rat, &[a_atom, b_atom, q_atom, d_atom]);
+        // (A + B) + (Q + D) = rsum [A, B, Q, D]
+        let step_inner = rsum_append(d, rat, &[a_atom, b_atom], &[q_atom, d_atom]);
+        let step_top = rcongr(d, leg12, four, step_inner, &|d, tm| radd(d, tm, leg3));
+        let top_mid = radd(d, four, leg3);
+        let step_join = rsum_append(d, rat, &[a_atom, b_atom, q_atom, d_atom], &[b_atom, a_atom]);
+        let (_, eq) = rchain(d, total, &[(top_mid, step_top), (flat_sum, step_join)]);
+        eq
+    };
+
+    // Permute so the three slack atoms sit at the TAIL, where `B + (B + D)`
+    // is a genuine subterm of the right-nested sum.
+    let sorted = [q_atom, a_atom, a_atom, b_atom, b_atom, d_atom];
+    let perm = rsum_perm(d, rat, &flat, &sorted);
+    let sorted_sum = rsum(d, rat, &sorted);
+
+    // `B + (B + D) = 1/(n+1)`, exactly.
+    let slack_sum = rsum(d, rat, &[b_atom, b_atom, d_atom]);
+    let slack_eq = {
+        // B + (B + D) = (B + B) + D
+        let bb = radd(d, b_atom, b_atom);
+        let assoc = d.lemma(rat.add_assoc, &[b_atom, b_atom, d_atom]);
+        let left_nested = radd(d, bb, d_atom);
+        let step0 = rsymm(d, left_nested, slack_sum, assoc);
+        // B + B = natDivSucc 2 sj = natDivSucc 1 j
+        let one_one = d.add(one_nat, one_nat);
+        let fused_raw = d.const_app(rat.nat_div_succ, &[one_one, sj]);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, sj]);
+        let two_sj = d.const_app(rat.nat_div_succ, &[two_nat, sj]);
+        let renumber = {
+            let refl_two = d.refl(two_nat);
+            nat_eq_to_rat(d, one_one, two_nat, refl_two, &|d, x| {
+                d.const_app(rat.nat_div_succ, &[x, sj])
+            })
+        };
+        let halve = d.lemma(rat.nat_div_succ_halve, &[j]);
+        let one_j = div_succ(d, p, 1, j);
+        let (_, bb_eq) = rchain(
+            d,
+            bb,
+            &[(fused_raw, fuse), (two_sj, renumber), (one_j, halve)],
+        );
+        let step1 = rcongr(d, bb, one_j, bb_eq, &|d, tm| radd(d, tm, d_atom));
+        let after_bb = radd(d, one_j, d_atom);
+        // 1/(j+1) + 2/(j+1) = natDivSucc 3 j = natDivSucc 1 n
+        let one_two = d.add(one_nat, two_nat);
+        let fused3_raw = d.const_app(rat.nat_div_succ, &[one_two, j]);
+        let fuse3 = d.lemma(rat.nat_div_succ_add, &[one_nat, two_nat, j]);
+        let three_j = d.const_app(rat.nat_div_succ, &[three_nat, j]);
+        let renumber3 = {
+            let refl_three = d.refl(three_nat);
+            nat_eq_to_rat(d, one_two, three_nat, refl_three, &|d, x| {
+                d.const_app(rat.nat_div_succ, &[x, j])
+            })
+        };
+        let scale = d.lemma(rat.nat_div_succ_scale, &[two_nat, n]);
+        let (_, eq) = rchain(
+            d,
+            slack_sum,
+            &[
+                (left_nested, step0),
+                (after_bb, step1),
+                (fused3_raw, fuse3),
+                (three_j, renumber3),
+                (a_atom, scale),
+            ],
+        );
+        eq
+    };
+    let collapsed = [q_atom, a_atom, a_atom, a_atom];
+    let collapse_step = rcongr(d, slack_sum, a_atom, slack_eq, &|d, tm| {
+        let i1 = radd(d, a_atom, tm);
+        let i2 = radd(d, a_atom, i1);
+        radd(d, q_atom, i2)
+    });
+    let collapsed_sum = rsum(d, rat, &collapsed);
+
+    // `Q + (A + (A + A)) = natDivSucc (K+3) n`, exactly. No widening.
+    let target = div_succ_at(d, p, k3, n);
+    let fold_eq = {
+        // A + A = natDivSucc 2 n
+        let aa = radd(d, a_atom, a_atom);
+        let one_one = d.add(one_nat, one_nat);
+        let fused_raw = d.const_app(rat.nat_div_succ, &[one_one, n]);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
+        let two_n = d.const_app(rat.nat_div_succ, &[two_nat, n]);
+        let renumber = {
+            let refl_two = d.refl(two_nat);
+            nat_eq_to_rat(d, one_one, two_nat, refl_two, &|d, x| {
+                d.const_app(rat.nat_div_succ, &[x, n])
+            })
+        };
+        let (_, aa_eq) = rchain(d, aa, &[(fused_raw, fuse), (two_n, renumber)]);
+        let step_a = rcongr(d, aa, two_n, aa_eq, &|d, tm| {
+            let inner = radd(d, a_atom, tm);
+            radd(d, q_atom, inner)
+        });
+        let mid1_inner = radd(d, a_atom, two_n);
+        let mid1 = radd(d, q_atom, mid1_inner);
+        // A + natDivSucc 2 n = natDivSucc 3 n
+        let one_two = d.add(one_nat, two_nat);
+        let fused3_raw = d.const_app(rat.nat_div_succ, &[one_two, n]);
+        let fuse3 = d.lemma(rat.nat_div_succ_add, &[one_nat, two_nat, n]);
+        let three_n = d.const_app(rat.nat_div_succ, &[three_nat, n]);
+        let renumber3 = {
+            let refl_three = d.refl(three_nat);
+            nat_eq_to_rat(d, one_two, three_nat, refl_three, &|d, x| {
+                d.const_app(rat.nat_div_succ, &[x, n])
+            })
+        };
+        let (_, inner_eq) = rchain(d, mid1_inner, &[(fused3_raw, fuse3), (three_n, renumber3)]);
+        let step_b = rcongr(d, mid1_inner, three_n, inner_eq, &|d, tm| {
+            radd(d, q_atom, tm)
+        });
+        let mid2 = radd(d, q_atom, three_n);
+        let fuse_k = d.lemma(rat.nat_div_succ_add, &[cap_k, three_nat, n]);
+        let (_, eq) = rchain(
+            d,
+            collapsed_sum,
+            &[(mid1, step_a), (mid2, step_b), (target, fuse_k)],
+        );
+        eq
+    };
+
+    let (_, total_eq) = rchain(
+        d,
+        total,
+        &[
+            (flat_sum, flatten),
+            (sorted_sum, perm),
+            (collapsed_sum, collapse_step),
+            (target, fold_eq),
+        ],
+    );
+    // total_eq : Eq total (natDivSucc (K+3) n)
+
+    let left_sample = sample(d, p, fn_n, n);
+    let right_sample = sample(d, p, l, n);
+    let difference = rsub(d, rat, left_sample, right_sample);
+    let body = rat_eq_rewrite(d, total, target, total_eq, sic, &|d, tm| {
+        within(d, p, difference, tm)
+    });
+
+    let per_n = d.lam_fv(n_fv, nat, body);
+    let pred = converges_predicate(d, p, f, l);
+    let witness = exists_intro(d, p, nat, pred, k3, per_n);
+
+    let value = {
+        let over_hyp = d.lam_fv(hyp_fv, hyp_ty, witness);
+        let over_k = d.lam_fv(cap_k_fv, nat, over_hyp);
+        let over_l = d.lam_fv(l_fv, carrier, over_k);
+        d.lam_fv(f_fv, seq_ty, over_l)
+    };
+    let ty = {
+        let concl = converges_applied(d, p, f, l);
+        let after_hyp = d.arrow(hyp_ty, concl);
+        let over_k = d.pi_fv(cap_k_fv, nat, after_hyp);
+        let over_l = d.pi_fv(l_fv, carrier, over_k);
+        d.pi_fv(f_fv, seq_ty, over_l)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_of_abs_diff_le,
         uparams: vec![],
         ty,
         value,
