@@ -357,7 +357,9 @@
 //! widened" prediction) is still the correct explanation of the shape of
 //! the work — only its concluding sentence is now false.
 
-use super::convergence::{converges_predicate, div_succ_at};
+use super::convergence::{
+    converges_predicate, div_succ_at, exists_elim as creal_exists_elim, exists_intro,
+};
 use super::derivative::{
     abs_le_of_equiv, hd_ty, le_abs_neg_of_le_abs, mul_neg_equiv, neg_add_distrib,
     neg_mul_equiv_left, pow_deriv_fn, pow_succ_fn,
@@ -5145,4 +5147,1410 @@ pub(super) fn declare_cos_fn_wide_derivative(
     declare_uniform_converges_shift(d, p)?;
     declare_uniform_converges_neg(d, p)?;
     declare_cos_fn_wide_has_derivative(d, p)
+}
+
+// ============================================================================
+// `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound on
+// `sinFn` over `[1, 8/5]`, `docs/plan/status/169-pi.md`.
+//
+// Route: sine's magnitude sequence `a k := expTerm (2k+1) * z^(2k+1)` IS
+// globally antitone on `[0, 8/5]` (`z^2 <= 64/25 <= 6 <= (2k+2)(2k+3)` for
+// EVERY k, no shift needed unlike cosine's own alternating bound at `8/5`),
+// so `CReal.alternatingLowerBound` applies directly at `m := 1`, giving
+// `sin z >= z - z^3/6 >= 1 - (8/5)^3/6 = 119/375 >= 1/4`.
+//
+// The one genuinely new piece is a pointwise `Converges` fact for the
+// partial sums of `sinFnTerm(., z)`, which `sinFnUniformConverges` implies
+// but does not itself state. Built here from EXISTING pieces only:
+// domination (`sinFnTermAbsLeWide` + `sinDominant16Over25`'s own Cauchy
+// witness) gives `Exists (L, Converges f L)`
+// (`CReal.sumRange_converges_of_dominated`); `L` is then shown `Equiv` to
+// `sinFn z` by extracting a real-valued rate bound from `Converges`'s own
+// `Within` witness (`close_within_of_within_at`), combining it against
+// `sinFnUniformConverges`'s own `.spec` bound via the triangle inequality
+// (`combine_two_legs`), and closing with the standard squeeze
+// (`equiv_zero_of_rate` + `equiv_of_sub_equiv_zero`) -- the same technique
+// [`cos_limit_at_one_equiv_cos_one`] already uses for a NAMED target
+// (`cosOne`), generalized to an EXISTENTIAL one.
+// ============================================================================
+
+/// `Le (mul a c) (mul b e)` from `Le a b` and `Le c e` -- two-sided
+/// monotonicity of `Nat.mul`, composed from `NatPrelude::mul_le_mul_left`
+/// (this kernel's `Nat` prelude has no two-sided primitive) plus one
+/// `mul_comm` bridge to align the two single-sided applications.
+fn nat_mul_le_mul(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+    h_ab: ExprId,
+    h_ce: ExprId,
+) -> ExprId {
+    let np = p.rat.int.nat;
+    let step1 = d.lemma(np.mul_le_mul_left, &[a, c, e, h_ce]); // Le (mul a c) (mul a e)
+    let step2 = d.lemma(np.mul_le_mul_left, &[e, a, b, h_ab]); // Le (mul e a) (mul e b)
+
+    let mul_a_e = d.mul(a, e);
+    let mul_e_a = d.mul(e, a);
+    let mul_e_b = d.mul(e, b);
+    let mul_b_e = d.mul(b, e);
+    let comm1 = d.lemma(np.mul_comm, &[e, a]); // Eq (mul e a) (mul a e)
+    let comm2 = d.lemma(np.mul_comm, &[e, b]); // Eq (mul e b) (mul b e)
+
+    let motive1 = d.eq_motive(mul_e_a, &|dd, t| dd.const_app(np.le, &[t, mul_e_b]));
+    let after_lhs = d.transport(mul_e_a, motive1, step2, mul_a_e, comm1);
+    let motive2 = d.eq_motive(mul_e_b, &|dd, t| dd.const_app(np.le, &[mul_a_e, t]));
+    let step2r = d.transport(mul_e_b, motive2, after_lhs, mul_b_e, comm2);
+    // step2r : Le mul_a_e mul_b_e
+
+    let mul_a_c = d.mul(a, c);
+    d.lemma(np.le_trans, &[mul_a_c, mul_a_e, mul_b_e, step1, step2r])
+}
+
+/// `(m1, m2, proof)` for `m1 := add dbl_k 2`, `m2 := add dbl_k 3` (`2k+2`,
+/// `2k+3` at a symbolic `dbl_k := k+k`) and `proof : Le 6 (mul m1 m2)` -- the
+/// fixed floor `(2·3 <= m1·m2)` [`nat_mul_le_mul`] needs, with `Le 2 m1`/
+/// `Le 3 m2` each one `add_le_add_right` step off `Nat.zero_le dbl_k`.
+fn six_le_two_three_shift(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    dbl_k: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let np = p.rat.int.nat;
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let zero_nat = d.zero();
+    let m1 = d.add(dbl_k, two_nat);
+    let m2 = d.add(dbl_k, three_nat);
+
+    let h_zero_dbl = d.lemma(np.zero_le, &[dbl_k]);
+    let h1 = d.lemma(np.add_le_add_right, &[two_nat, zero_nat, dbl_k, h_zero_dbl]);
+    // h1 : Le (add zero_nat two_nat) m1 -- `add 0 2` is ι-defeq `2`.
+    let h2 = d.lemma(
+        np.add_le_add_right,
+        &[three_nat, zero_nat, dbl_k, h_zero_dbl],
+    );
+    // h2 : Le (add zero_nat three_nat) m2 -- `add 0 3` is ι-defeq `3`.
+
+    let h_prod = nat_mul_le_mul(d, p, two_nat, m1, three_nat, m2, h1, h2);
+    // h_prod : Le (mul two_nat three_nat) (mul m1 m2) -- `mul 2 3` is ι-defeq `6`.
+    (m1, m2, h_prod)
+}
+
+/// `Equiv (mul R R) (embed (natDivSucc 64 24))`, `R := ofRat (natDivSucc 8
+/// 4) = 8/5` -- squares the domain bound, via `pow`'s own ι-reduction
+/// `pow R 2 ≡ mul (mul one R) R` (so this ALSO serves as `Equiv (pow R 2)
+/// (embed ...)` by defeq ascription), `mul_comm` + `mul_one` to collapse the
+/// leading `mul one R`, and `Rat.normalize_mul_normalize` at `(8,5)*(8,5)`
+/// -- ALREADY reduced (`gcd(64,25)=1`), so unlike
+/// [`half_r_squared_eq_16_over_25`] no prior cross-multiplication step is
+/// needed; cross-product `8*8=64`.
+fn r_squared_eq_64_over_25(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<ExprId, KernelError> {
+    let rat = p.rat;
+    let r_c = r_domain(d, p);
+    let r_rat = r_domain_rat(d, p);
+    let one_cc = one_c(d, p);
+
+    // `Equiv (mul one R) R`.
+    let one_r = cmul(d, p, one_cc, r_c);
+    let r_one = cmul(d, p, r_c, one_cc);
+    let comm = d.lemma(p.mul_comm, &[one_cc, r_c]); // Equiv one_r r_one
+    let mo = d.lemma(p.mul_one, &[r_c]); // Equiv r_one r_c
+    let one_r_eq_r = d.lemma(p.equiv_trans, &[one_r, r_one, r_c, comm, mo]);
+
+    // `Equiv (mul (mul one R) R) (mul R R)`.
+    let refl_r = erefl(d, p, r_c);
+    let rr = cmul(d, p, r_c, r_c);
+    let sq_congr = d.lemma(p.mul_congr, &[one_r, r_c, r_c, r_c, one_r_eq_r, refl_r]);
+    let one_r_r = cmul(d, p, one_r, r_c);
+
+    // `Equiv (mul R R) (embed (natDivSucc 64 24))`.
+    let n8 = d.num(8);
+    let eight_int = d.of_nat(n8);
+    let n4 = d.num(4);
+    let succ4 = d.succ(n4);
+    let n4b = d.num(4);
+    let h_b = one_le_succ(d, n4b);
+    let step_mul = d.lemma(
+        rat.normalize_mul_normalize,
+        &[eight_int, succ4, h_b, eight_int, succ4, h_b],
+    );
+    let (r_r_raw, q_raw) = req_sides(d, step_mul)?;
+
+    let of_rat_mul_step = d.lemma(p.of_rat_mul, &[r_rat, r_rat]);
+    // of_rat_mul_step : Equiv rr (embed (Rat.mul r_rat r_rat))
+    let embed_rr_raw = embed(d, p, r_r_raw);
+    let embed_q = embed(d, p, q_raw);
+    let bridge = embed_eq_to_equiv_here(d, p, r_r_raw, q_raw, step_mul);
+    let rr_eq = d.lemma(
+        p.equiv_trans,
+        &[rr, embed_rr_raw, embed_q, of_rat_mul_step, bridge],
+    );
+
+    Ok(d.lemma(p.equiv_trans, &[one_r_r, rr, embed_q, sq_congr, rr_eq]))
+}
+
+/// `le (pow z 2) (ofNat (mul m1 m2))` for `z` with `hz0 : le zero z`,
+/// `hzr : le z R`, at the specific `m1`/`m2` [`six_le_two_three_shift`]
+/// returns for a given `dbl_k` -- the antitonicity step's core inequality
+/// `z^2 <= (2k+2)(2k+3)`, chained `pow z 2 <= pow R 2 ~ 64/25 <= 150/25 ~
+/// ofNat 6 <= ofNat (m1*m2)`. Largest cross-product `64+86=150`.
+fn z_squared_le_prod(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    z: ExprId,
+    hz0: ExprId,
+    hzr: ExprId,
+    dbl_k: ExprId,
+) -> Result<ExprId, KernelError> {
+    let rat = p.rat;
+    let r_c = r_domain(d, p);
+    let two_nat = d.num(2);
+
+    // A : le (pow z 2) (pow R 2).
+    let a = d.lemma(p.pow_le_pow_of_base_le, &[z, r_c, hz0, hzr, two_nat]);
+    let pow_z_2 = cpow(d, p, z, two_nat);
+    let pow_r_2 = cpow(d, p, r_c, two_nat);
+
+    // A' : le (pow z 2) (embed (natDivSucc 64 24)).
+    let b = r_squared_eq_64_over_25(d, p)?;
+    let n64 = d.num(64);
+    let n24 = d.num(24);
+    let nat_div_succ_64_24 = d.const_app(rat.nat_div_succ, &[n64, n24]);
+    let embed_64_25 = embed(d, p, nat_div_succ_64_24);
+    let refl_pow_z_2 = erefl(d, p, pow_z_2);
+    let a_prime = d.lemma(
+        p.le_congr,
+        &[pow_z_2, pow_z_2, pow_r_2, embed_64_25, refl_pow_z_2, b, a],
+    );
+
+    // C : le (embed (natDivSucc 64 24)) (embed (natDivSucc 150 24)).
+    let n64b = d.num(64);
+    let n86 = d.num(86);
+    let n150 = d.add(n64b, n86);
+    let widened = d.lemma(rat.nat_div_succ_le_add_left, &[n64b, n86, n24]);
+    let nat_div_succ_64_24b = d.const_app(rat.nat_div_succ, &[n64, n24]);
+    let nat_div_succ_150_24 = d.const_app(rat.nat_div_succ, &[n150, n24]);
+    let c = d.lemma(
+        p.of_rat_le,
+        &[nat_div_succ_64_24b, nat_div_succ_150_24, widened],
+    );
+    let embed_150_24 = embed(d, p, nat_div_succ_150_24);
+    let a2 = d.lemma(
+        p.le_trans,
+        &[pow_z_2, embed_64_25, embed_150_24, a_prime, c],
+    );
+
+    // E : Equiv (embed (natDivSucc 150 24)) (embed (natDivSucc 6 0)) -- via
+    // `normalize_congr`, cross condition `150*1 = 6*25` (both `150`).
+    let six_nat = d.num(6);
+    let zero_nat = d.zero();
+    let of_150 = d.of_nat(n150);
+    let succ24 = d.succ(n24);
+    let h_150 = one_le_succ(d, n24);
+    let of_6 = d.of_nat(six_nat);
+    let succ0 = d.succ(zero_nat);
+    let h_6 = one_le_succ(d, zero_nat);
+    let of_succ0 = d.of_nat(succ0);
+    let cross_left = d.imul(of_150, of_succ0);
+    let cross = d.irefl(cross_left);
+    let e_eq = d.lemma(
+        rat.normalize_congr,
+        &[of_150, succ24, h_150, of_6, succ0, h_6, cross],
+    );
+    let nat_div_succ_150_24b = d.const_app(rat.nat_div_succ, &[n150, n24]);
+    let nat_div_succ_6_0 = d.const_app(rat.nat_div_succ, &[six_nat, zero_nat]);
+    let e_bridge = embed_eq_to_equiv_here(d, p, nat_div_succ_150_24b, nat_div_succ_6_0, e_eq);
+    let of_nat_6 = d.const_app(p.of_nat, &[six_nat]);
+    let refl_pow_z_2_2 = erefl(d, p, pow_z_2);
+    let a3 = d.lemma(
+        p.le_congr,
+        &[
+            pow_z_2,
+            pow_z_2,
+            embed_150_24,
+            of_nat_6,
+            refl_pow_z_2_2,
+            e_bridge,
+            a2,
+        ],
+    );
+
+    // F : le (ofNat 6) (ofNat (mul m1 m2)).
+    let (m1, m2, h_prod) = six_le_two_three_shift(d, p, dbl_k);
+    let mul_m1_m2 = d.mul(m1, m2);
+    let f = d.lemma(p.of_nat_le, &[six_nat, mul_m1_m2, h_prod]);
+    let of_nat_prod = d.const_app(p.of_nat, &[mul_m1_m2]);
+
+    Ok(d.lemma(p.le_trans, &[pow_z_2, of_nat_6, of_nat_prod, a3, f]))
+}
+
+/// `λ k, mul (expTerm (odd_index k)) (pow z (odd_index k))` -- the magnitude
+/// sequence for sine's alternating series at a symbolic point `z` (rather
+/// than the fixed `sinTerm`'s coefficient alone).
+fn sin_lb_magnitude_lam(d: &mut IntDev<'_>, p: CRealPrelude, z: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let odd_k = odd_index(d, k);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let et = d.apply(exp_term_c, &[odd_k]);
+    let pz = cpow(d, p, z, odd_k);
+    let body = cmul(d, p, et, pz);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `∀ k, le zero (sin_lb_magnitude_lam z k)`, from `exp_term_nonneg` and
+/// `pow_nonneg z hz0`.
+fn sin_lb_magnitude_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, z: ExprId, hz0: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let odd_k = odd_index(d, k);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let et = d.apply(exp_term_c, &[odd_k]);
+    let pz = cpow(d, p, z, odd_k);
+    let h_et = d.lemma(p.exp_term_nonneg, &[odd_k]);
+    let h_pz = d.lemma(p.pow_nonneg, &[z, hz0, odd_k]);
+    let body = d.lemma(p.mul_nonneg, &[et, pz, h_et, h_pz]);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `∀ k, le (sin_lb_magnitude_lam z (succ k)) (sin_lb_magnitude_lam z k)` --
+/// the antitonicity step, unconditional in `k` (unlike cosine's own
+/// magnitude at `8/5`): `expTerm (odd (succ k)) * z^(odd (succ k)) <=
+/// expTerm (odd k) * z^(odd k)` follows from `z^2 <= (2k+2)(2k+3)`
+/// ([`z_squared_le_prod`]) plus the factorial identity
+/// `expTerm (odd k) ~ (2k+2)(2k+3) * expTerm (odd (succ k))`
+/// ([`CRealPrelude::exp_term_succ_scale`], composed twice) and
+/// `z^(odd (succ k)) ~ z^(odd k) * z^2` ([`CRealPrelude::pow_add`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn sin_lb_magnitude_dec(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    z: ExprId,
+    hz0: ExprId,
+    hzr: ExprId,
+) -> Result<ExprId, KernelError> {
+    let nat = d.nat_ty();
+    let np = p.rat.int.nat;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let dbl_k = d.add(k, k);
+    let skk = d.succ(dbl_k); // odd_index(k), defeq
+    let sskk = d.succ(skk); // 2k+2
+    let ssskk = d.succ(sskk); // 2k+3, odd_index(succ k), defeq
+
+    // Index bridge, reproduced (Rust privacy) from
+    // `creal/trig.rs::sin_magnitude_dec`'s own construction: `Eq ssskk
+    // succ_succ_sk_k`, where `succ_succ_sk_k` is defeq `odd_index(succ k)`.
+    let sk = d.succ(k);
+    let sk_k = d.add(sk, k);
+    let succ_add_bridge = d.lemma(np.succ_add, &[k, k]); // Eq sk_k skk
+    let bridge_succ = d.congr(sk_k, skk, succ_add_bridge, &|dd, x| dd.succ(x));
+    // bridge_succ : Eq (succ sk_k) sskk
+    let succ_sk_k = d.succ(sk_k);
+    let bridge_succ2 = d.congr(succ_sk_k, sskk, bridge_succ, &|dd, x| dd.succ(x));
+    // bridge_succ2 : Eq (succ succ_sk_k) ssskk
+    let succ_succ_sk_k = d.succ(succ_sk_k);
+    let _bridge_rev = d.symm(succ_succ_sk_k, ssskk, bridge_succ2);
+    // (not needed further: the goal is stated directly at `skk`/`ssskk`,
+    // which are what `odd_index(k)`/`odd_index(succ k)` are defeq to.)
+
+    // Coefficient identity: `expTerm skk ~ mul (mul (ofNat sskk) (ofNat
+    // ssskk)) (expTerm ssskk)`, via `exp_term_succ_scale` at `skk` then at
+    // `sskk`.
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let et_skk = d.apply(exp_term_c, &[skk]);
+    let et_sskk = d.apply(exp_term_c, &[sskk]);
+    let et_ssskk = d.apply(exp_term_c, &[ssskk]);
+    let of_sskk = d.const_app(p.of_nat, &[sskk]);
+    let of_ssskk = d.const_app(p.of_nat, &[ssskk]);
+
+    let c1 = d.lemma(p.exp_term_succ_scale, &[skk]);
+    // c1 : Equiv (mul of_sskk et_sskk) et_skk
+    let c2 = d.lemma(p.exp_term_succ_scale, &[sskk]);
+    // c2 : Equiv (mul of_ssskk et_ssskk) et_sskk
+    let mul_ossskk_et = cmul(d, p, of_ssskk, et_ssskk);
+    let c2_symm = esymm(d, p, mul_ossskk_et, et_sskk, c2);
+    // c2_symm : Equiv et_sskk mul_ossskk_et
+
+    let refl_of_sskk = erefl(d, p, of_sskk);
+    let mul_osskk_et_sskk = cmul(d, p, of_sskk, et_sskk);
+    let a_prime = cmul(d, p, of_sskk, mul_ossskk_et);
+    let step_sub = d.lemma(
+        p.mul_congr,
+        &[
+            of_sskk,
+            of_sskk,
+            et_sskk,
+            mul_ossskk_et,
+            refl_of_sskk,
+            c2_symm,
+        ],
+    );
+    // step_sub : Equiv mul_osskk_et_sskk a_prime
+    let step_sub_symm = esymm(d, p, mul_osskk_et_sskk, a_prime, step_sub);
+    let full_coeff = d.lemma(
+        p.equiv_trans,
+        &[a_prime, mul_osskk_et_sskk, et_skk, step_sub_symm, c1],
+    );
+    // full_coeff : Equiv a_prime et_skk
+
+    let c_coef = cmul(d, p, of_sskk, of_ssskk);
+    let a_double_prime = cmul(d, p, c_coef, et_ssskk);
+    let assoc = d.lemma(p.mul_assoc, &[of_sskk, of_ssskk, et_ssskk]);
+    // assoc : Equiv a_double_prime a_prime
+    let coeff_final = d.lemma(
+        p.equiv_trans,
+        &[a_double_prime, a_prime, et_skk, assoc, full_coeff],
+    );
+    // coeff_final : Equiv a_double_prime et_skk
+    let coeff_final_symm = esymm(d, p, a_double_prime, et_skk, coeff_final);
+    // coeff_final_symm : Equiv et_skk a_double_prime
+
+    // RHS rewrite: `mul et_skk (pow z skk) ~ mul a_double_prime (pow z skk)
+    // ~ mul et_ssskk (mul c_coef (pow z skk))`.
+    let pow_z_skk = cpow(d, p, z, skk);
+    let refl_pzskk = erefl(d, p, pow_z_skk);
+    let rhs_prime = cmul(d, p, a_double_prime, pow_z_skk);
+    let rhs_step1 = d.lemma(
+        p.mul_congr,
+        &[
+            et_skk,
+            a_double_prime,
+            pow_z_skk,
+            pow_z_skk,
+            coeff_final_symm,
+            refl_pzskk,
+        ],
+    );
+    // rhs_step1 : Equiv (mul et_skk pow_z_skk) rhs_prime
+
+    let et_ssskk_c_coef = cmul(d, p, et_ssskk, c_coef);
+    let comm_ce = d.lemma(p.mul_comm, &[c_coef, et_ssskk]);
+    // comm_ce : Equiv a_double_prime et_ssskk_c_coef
+    let rhs_step2 = d.lemma(
+        p.mul_congr,
+        &[
+            a_double_prime,
+            et_ssskk_c_coef,
+            pow_z_skk,
+            pow_z_skk,
+            comm_ce,
+            refl_pzskk,
+        ],
+    );
+    // rhs_step2 : Equiv rhs_prime (mul et_ssskk_c_coef pow_z_skk)
+    let rhs_prime2 = cmul(d, p, et_ssskk_c_coef, pow_z_skk);
+
+    let c_coef_pzskk = cmul(d, p, c_coef, pow_z_skk);
+    let et_ssskk_inner = cmul(d, p, et_ssskk, c_coef_pzskk);
+    let assoc2 = d.lemma(p.mul_assoc, &[et_ssskk, c_coef, pow_z_skk]);
+    // assoc2 : Equiv rhs_prime2 et_ssskk_inner
+
+    // Assemble the RHS chain against the actual `mul et_skk pow_z_skk` term.
+    let mul_et_skk_pzskk = cmul(d, p, et_skk, pow_z_skk);
+    let rhs_chain = {
+        let step_a = d.lemma(
+            p.equiv_trans,
+            &[
+                mul_et_skk_pzskk,
+                rhs_prime,
+                rhs_prime2,
+                rhs_step1,
+                rhs_step2,
+            ],
+        );
+        d.lemma(
+            p.equiv_trans,
+            &[mul_et_skk_pzskk, rhs_prime2, et_ssskk_inner, step_a, assoc2],
+        )
+    };
+    // rhs_chain : Equiv mul_et_skk_pzskk et_ssskk_inner
+
+    // LHS rewrite: `mul et_ssskk (pow z ssskk) ~ mul et_ssskk (mul (pow z
+    // skk) (pow z 2))`, via `pow_add z skk 2` (`add skk 2` is ι-defeq
+    // `ssskk`).
+    let pow_z_ssskk = cpow(d, p, z, ssskk);
+    let two_nat = d.num(2);
+    let pow_z_2 = cpow(d, p, z, two_nat);
+    let pow_split = d.lemma(p.pow_add, &[z, skk, two_nat]);
+    // pow_split : Equiv pow_z_ssskk (mul pow_z_skk pow_z_2)
+    let mul_pzskk_pz2 = cmul(d, p, pow_z_skk, pow_z_2);
+    let refl_et_ssskk = erefl(d, p, et_ssskk);
+    let mul_et_ssskk_pzssskk = cmul(d, p, et_ssskk, pow_z_ssskk);
+    let lhs_target = cmul(d, p, et_ssskk, mul_pzskk_pz2);
+    let lhs_chain = d.lemma(
+        p.mul_congr,
+        &[
+            et_ssskk,
+            et_ssskk,
+            pow_z_ssskk,
+            mul_pzskk_pz2,
+            refl_et_ssskk,
+            pow_split,
+        ],
+    );
+    // lhs_chain : Equiv mul_et_ssskk_pzssskk lhs_target
+
+    // Core inequality: `le (mul pow_z_skk pow_z_2) (mul c_coef pow_z_skk)`.
+    let zsq = z_squared_le_prod(d, p, z, hz0, hzr, dbl_k)?;
+    // zsq : le pow_z_2 (ofNat (mul m1 m2)) for SOME m1/m2 defeq sskk/ssskk.
+    let of_nat_mul_step = d.lemma(p.of_nat_mul, &[sskk, ssskk]);
+    // of_nat_mul_step : Equiv (ofNat (mul sskk ssskk)) c_coef
+    let mul_sskk_ssskk = d.mul(sskk, ssskk);
+    let of_nat_mul_sskk_ssskk = d.const_app(p.of_nat, &[mul_sskk_ssskk]);
+    let refl_pow_z_2 = erefl(d, p, pow_z_2);
+    let h_sq_le_c = d.lemma(
+        p.le_congr,
+        &[
+            pow_z_2,
+            pow_z_2,
+            of_nat_mul_sskk_ssskk,
+            c_coef,
+            refl_pow_z_2,
+            of_nat_mul_step,
+            zsq,
+        ],
+    );
+    // h_sq_le_c : le pow_z_2 c_coef
+
+    let h_pz_skk_nn = d.lemma(p.pow_nonneg, &[z, hz0, skk]);
+    let inner_le = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[pow_z_skk, pow_z_2, c_coef, h_pz_skk_nn, h_sq_le_c],
+    );
+    // inner_le : le (mul pow_z_skk pow_z_2) (mul pow_z_skk c_coef)
+
+    let comm_target = d.lemma(p.mul_comm, &[c_coef, pow_z_skk]);
+    // comm_target : Equiv c_coef_pzskk (mul pow_z_skk c_coef)
+    let mul_pzskk_ccoef = cmul(d, p, pow_z_skk, c_coef);
+    let refl_mul_pzskk_pz2 = erefl(d, p, mul_pzskk_pz2);
+    let comm_target_symm = esymm(d, p, c_coef_pzskk, mul_pzskk_ccoef, comm_target);
+    let inner_le2 = d.lemma(
+        p.le_congr,
+        &[
+            mul_pzskk_pz2,
+            mul_pzskk_pz2,
+            mul_pzskk_ccoef,
+            c_coef_pzskk,
+            refl_mul_pzskk_pz2,
+            comm_target_symm,
+            inner_le,
+        ],
+    );
+    // inner_le2 : le mul_pzskk_pz2 c_coef_pzskk
+
+    let h_et_ssskk_nn = d.lemma(p.exp_term_nonneg, &[ssskk]);
+    let core = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[
+            et_ssskk,
+            mul_pzskk_pz2,
+            c_coef_pzskk,
+            h_et_ssskk_nn,
+            inner_le2,
+        ],
+    );
+    // core : le lhs_target et_ssskk_inner
+
+    // Assemble: `le mul_et_ssskk_pzssskk mul_et_skk_pzskk` via `le_congr`
+    // through `lhs_chain`/`rhs_chain` on each side.
+    let lhs_chain_symm = esymm(d, p, mul_et_ssskk_pzssskk, lhs_target, lhs_chain);
+    let refl_et_ssskk_inner = erefl(d, p, et_ssskk_inner);
+    let step_left = d.lemma(
+        p.le_congr,
+        &[
+            lhs_target,
+            mul_et_ssskk_pzssskk,
+            et_ssskk_inner,
+            et_ssskk_inner,
+            lhs_chain_symm,
+            refl_et_ssskk_inner,
+            core,
+        ],
+    );
+    // step_left : le mul_et_ssskk_pzssskk et_ssskk_inner
+    let refl_mul_et_ssskk_pzssskk = erefl(d, p, mul_et_ssskk_pzssskk);
+    let rhs_chain_symm = esymm(d, p, mul_et_skk_pzskk, et_ssskk_inner, rhs_chain);
+    let result = d.lemma(
+        p.le_congr,
+        &[
+            mul_et_ssskk_pzssskk,
+            mul_et_ssskk_pzssskk,
+            et_ssskk_inner,
+            mul_et_skk_pzskk,
+            refl_mul_et_ssskk_pzssskk,
+            rhs_chain_symm,
+            step_left,
+        ],
+    );
+    // result : le mul_et_ssskk_pzssskk mul_et_skk_pzskk
+    //        = le (mul et_ssskk (pow z ssskk)) (mul et_skk (pow z skk))
+    //        = le (a_fn (succ k)) (a_fn k), up to defeq.
+
+    Ok(d.lam_fv(k_fv, nat, result))
+}
+
+/// `Equiv (mul one x) x`, via `mul_comm` + `mul_one` (this development has
+/// no direct `one_mul`).
+fn one_mul_eq(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let one_cc = one_c(d, p);
+    let one_x = cmul(d, p, one_cc, x);
+    let x_one = cmul(d, p, x, one_cc);
+    let comm = d.lemma(p.mul_comm, &[one_cc, x]);
+    let mo = d.lemma(p.mul_one, &[x]);
+    d.lemma(p.equiv_trans, &[one_x, x_one, x, comm, mo])
+}
+
+/// `Equiv a b` from `h : Eq CReal a b`, via `Eq.rec` at the motive `Equiv a
+/// ·` starting from `equiv_refl a`.
+fn eq_to_equiv(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let motive = d.eq_motive(a, &|dd, x| equiv(dd, p, a, x));
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    d.transport(a, motive, refl_a, b, h)
+}
+
+/// `Equiv (pow R 3) (embed (natDivSucc 512 124))`, `R := ofRat (natDivSucc 8
+/// 4) = 8/5` -- `pow R 3` is ι-defeq `mul (pow R 2) R`, rewritten through
+/// [`r_squared_eq_64_over_25`] then collapsed with ONE more
+/// `Rat.normalize_mul_normalize` (`64/25 · 8/5`, cross-product `64*8=512`).
+fn r_cubed_eq_512_over_125(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<ExprId, KernelError> {
+    let rat = p.rat;
+    let r_c = r_domain(d, p);
+    let r_rat = r_domain_rat(d, p);
+    let three_nat = d.num(3);
+    let two_nat = d.num(2);
+    let pow_r_2 = cpow(d, p, r_c, two_nat);
+    let pow_r_3 = cpow(d, p, r_c, three_nat);
+
+    let b = r_squared_eq_64_over_25(d, p)?;
+    let n64 = d.num(64);
+    let n24 = d.num(24);
+    let nat_div_succ_64_24 = d.const_app(rat.nat_div_succ, &[n64, n24]);
+    let embed_64_25 = embed(d, p, nat_div_succ_64_24);
+
+    let refl_r = erefl(d, p, r_c);
+    let mul_pow_r_2_r = cmul(d, p, pow_r_2, r_c);
+    let mul_embed_r = cmul(d, p, embed_64_25, r_c);
+    let step_cube1 = d.lemma(p.mul_congr, &[pow_r_2, embed_64_25, r_c, r_c, b, refl_r]);
+    // step_cube1 : Equiv mul_pow_r_2_r mul_embed_r -- ascribe LHS as pow_r_3 (defeq).
+
+    let n8 = d.num(8);
+    let eight_int = d.of_nat(n8);
+    let n4 = d.num(4);
+    let succ4 = d.succ(n4);
+    let n4b = d.num(4);
+    let h_b = one_le_succ(d, n4b);
+    let n64b = d.num(64);
+    let n24b = d.num(24);
+    let succ24 = d.succ(n24b);
+    let n24c = d.num(24);
+    let h_a = one_le_succ(d, n24c);
+    let step_mul = d.lemma(
+        rat.normalize_mul_normalize,
+        &[n64b, succ24, h_a, eight_int, succ4, h_b],
+    );
+    let (embed_prod_raw, q_cube_raw) = req_sides(d, step_mul)?;
+
+    let of_rat_mul_step = d.lemma(p.of_rat_mul, &[nat_div_succ_64_24, r_rat]);
+    // of_rat_mul_step : Equiv mul_embed_r (embed (Rat.mul (natDivSucc 64 24) r_rat))
+    let embed_embed_prod_raw = embed(d, p, embed_prod_raw);
+    let embed_q_cube = embed(d, p, q_cube_raw);
+    let bridge = embed_eq_to_equiv_here(d, p, embed_prod_raw, q_cube_raw, step_mul);
+    let mul_embed_r_eq = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_embed_r,
+            embed_embed_prod_raw,
+            embed_q_cube,
+            of_rat_mul_step,
+            bridge,
+        ],
+    );
+
+    let step_cube1_full = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_pow_r_2_r,
+            mul_embed_r,
+            embed_q_cube,
+            step_cube1,
+            mul_embed_r_eq,
+        ],
+    );
+    let _ = pow_r_3;
+    Ok(step_cube1_full)
+}
+
+/// `∀ j, le (abs (sinFnTerm j z)) (sinDominant16Over25 j)` at a FIXED `z`
+/// (rather than a bound domain variable) -- [`declare_sin_fn`]'s own
+/// `hdom0` construction, reproduced (Rust privacy) with `pt := z` and
+/// `hax`/`hxr` given directly.
+fn sin_fn_term_dom_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    z: ExprId,
+    hz0: ExprId,
+    hzr: ExprId,
+) -> Result<ExprId, KernelError> {
+    let nat = d.nat_ty();
+    let r_c = r_domain(d, p);
+    let mseq0 = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let raw_bound = d.lemma(p.sin_fn_term_abs_le_wide, &[z, hz0, r_c, hzr, j]);
+    let bridge = sin_wide_bound_bridge(d, p, j)?;
+
+    let sft = d.const_app(p.sin_fn_term, &[j, z]);
+    let abs_sft = cabs(d, p, sft);
+    let refl_lhs = d.lemma(p.equiv_refl, &[abs_sft]);
+
+    let ed = d.kernel().const_(p.exp_dominant, vec![]);
+    let odd_j = odd_index(d, j);
+    let ed_odd = d.apply(ed, &[odd_j]);
+    let pow_r_odd = cpow(d, p, r_c, odd_j);
+    let bound = cmul(d, p, ed_odd, pow_r_odd);
+    let mseq0_j = d.apply(mseq0, &[j]);
+
+    let transported = d.lemma(
+        p.le_congr,
+        &[
+            abs_sft, abs_sft, bound, mseq0_j, refl_lhs, bridge, raw_bound,
+        ],
+    );
+
+    Ok(d.lam_fv(j_fv, nat, transported))
+}
+
+/// `Cauchy (sumRange sinDominant16Over25)`, wrapping
+/// [`sin_dominant_16_over_25_cauchy_body_concrete`]'s `(k_g, hcauchy0)` --
+/// [`declare_sin_fn`]'s own `hcauchy0` witness, `Exists.intro`'d at the
+/// predicate `sum_range_cauchy_body` already builds for `weierstrassMTest`'s
+/// `hcauchy` parameter (matching `Cauchy`'s own inner shape, specialised at
+/// `f := sumRange sinDominant16Over25`).
+fn sin_fn_cauchy_g(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let mseq0 = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
+    let (k_g, hcauchy0) = sin_dominant_16_over_25_cauchy_body_concrete(d, p);
+    let sum_range_mseq0 = d.const_app(p.sum_range, &[mseq0]);
+    let cauchy_pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        // `sum_range_cauchy_body`'s own `h` parameter is applied DIRECTLY to
+        // an index (`h m`), so it wants `sumRange mseq0` (already `Nat ->
+        // CReal`), not the bare term function `mseq0`.
+        let body = sum_range_cauchy_body(d, p, sum_range_mseq0, k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    exists_intro(d, p, nat, cauchy_pred, k_g, hcauchy0)
+}
+
+/// `Eq Rat (natDivSucc (succ n) n) Rat.one` -- `(n+1)/(n+1) = 1`, via
+/// `Rat.self_normalize` at `q := Rat.one` (whose `num`/`den` ι-reduce to
+/// `ofNat 1`/`1`) plus `Rat.normalize_congr` on the trivial cross-condition
+/// `(n+1)·1 = 1·(n+1)`. Generalizes
+/// [`one_le_r_domain`]'s own `five_eq_one` step (`n := 4`) to an arbitrary
+/// `n`.
+fn nat_div_succ_self_eq_one(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let rat = p.rat;
+    let succ_n = d.succ(n);
+    let num_int = d.of_nat(succ_n);
+    let h_pos = one_le_succ(d, n);
+    let lhs = normalize(d, num_int, succ_n, h_pos);
+
+    let rat_one_c = d.kernel().const_(rat.one, vec![]);
+    let num_one = crate::rat_prelude::ops::num(d, rat_one_c);
+    let den_one = crate::rat_prelude::ops::den(d, rat_one_c);
+    let pos_one = crate::rat_prelude::ops::den_pos(d, rat_one_c);
+    let renorm_one = normalize(d, num_one, den_one, pos_one);
+
+    let of_den_one = d.of_nat(den_one);
+    let cross_left = d.imul(num_int, of_den_one);
+    let cross = d.irefl(cross_left);
+    let congr = d.lemma(
+        rat.normalize_congr,
+        &[num_int, succ_n, h_pos, num_one, den_one, pos_one, cross],
+    );
+    let self_norm = d.lemma(rat.self_normalize, &[rat_one_c]);
+    rtrans(d, lhs, renorm_one, rat_one_c, congr, self_norm)
+}
+
+/// `Equiv (add (add a b) (neg b)) a` -- the additive cancellation
+/// `add_assoc` + `add_neg` + `add_zero` compose into.
+fn add_sub_cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let neg_b = cneg(d, p, b);
+    let ab = cadd(d, p, a, b);
+    let lhs = cadd(d, p, ab, neg_b);
+    let b_negb = cadd(d, p, b, neg_b);
+    let assoc = d.lemma(p.add_assoc, &[a, b, neg_b]);
+    // assoc : Equiv lhs (add a b_negb)
+    let a_b_negb = cadd(d, p, a, b_negb);
+    let bn_zero = d.lemma(p.add_neg, &[b]);
+    let zero_c = czero(d, p);
+    let refl_a = erefl(d, p, a);
+    let congr = d.lemma(p.add_congr, &[a, a, b_negb, zero_c, refl_a, bn_zero]);
+    let a_zero = cadd(d, p, a, zero_c);
+    let az = d.lemma(p.add_zero, &[a]);
+    echain(d, p, lhs, &[(a_b_negb, assoc), (a_zero, congr), (a, az)])
+}
+
+/// `(e_1, proof)` for `e_1 := add (add zero t0) t1_raw` -- the SAME reduced
+/// form `sumRange (build_t_lam a_fn) (add 1 1)` ι/beta-reduces to, at the
+/// `a_fn` [`sin_lb_magnitude_lam`] returns for `z` -- and `proof : le
+/// (embed (natDivSucc 1 3)) e_1`, i.e. `sin z >= z - z^3/6 >= 119/375 >=
+/// 1/4` for `z ∈ [1, 8/5]`.
+///
+/// `expTerm 1` collapses to `CReal.one` via the ALREADY-DECLARED
+/// `CReal.expTerm_one_eq_one`; `expTerm 3` is ι-defeq `embed (natDivSucc 1
+/// 5)` directly (`factorial 3` reduces to the same literal `6` as `succ 5`,
+/// proof-irrelevant in the third `normalize` argument) -- no new lemma
+/// needed for either. Largest cross-product: `1*750=750`/`512*4=2048`
+/// (the `1/4 + 512/750` sum) and the fixed `750/1500`-scale checks, all
+/// under 3,000 -- well under the 10^3–10^5 budget this lane priced.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn sin_fn_lb_numeric(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    z: ExprId,
+    hz0: ExprId,
+    hz1: ExprId,
+    hzr: ExprId,
+) -> Result<(ExprId, ExprId), KernelError> {
+    let rat = p.rat;
+    let r_c = r_domain(d, p);
+    let zero_c = czero(d, p);
+    let one_cc = one_c(d, p);
+    let one_nat = d.num(1);
+    let three_nat = d.num(3);
+
+    // --- t0 : Equiv t0 z, where t0 := mul one (mul expTerm1 pow_z_1). ---
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let expterm1 = d.apply(exp_term_c, &[one_nat]);
+    let pow_z_1 = cpow(d, p, z, one_nat);
+    let a_fn0 = cmul(d, p, expterm1, pow_z_1);
+    let t0 = cmul(d, p, one_cc, a_fn0);
+
+    let expterm1_eq_one_raw = d.lemma(p.exp_term_one_eq_one, &[]);
+    let equiv1 = eq_to_equiv(d, p, expterm1, one_cc, expterm1_eq_one_raw);
+    let one_z = cmul(d, p, one_cc, z);
+    let oz_eq_z = one_mul_eq(d, p, z);
+    let refl_one_z = erefl(d, p, one_z);
+    let step_a0 = d.lemma(
+        p.mul_congr,
+        &[expterm1, one_cc, one_z, one_z, equiv1, refl_one_z],
+    );
+    // step_a0 : Equiv a_fn0 (mul one_cc one_z)   [pow_z_1 defeq one_z]
+    let mul_one_onez = cmul(d, p, one_cc, one_z);
+    let mul_onez_eq_z = one_mul_eq(d, p, one_z);
+    let af0_eq_z = {
+        let step_b0 = d.lemma(
+            p.equiv_trans,
+            &[a_fn0, mul_one_onez, one_z, step_a0, mul_onez_eq_z],
+        );
+        d.lemma(p.equiv_trans, &[a_fn0, one_z, z, step_b0, oz_eq_z])
+    };
+    let t0_eq_af0 = one_mul_eq(d, p, a_fn0);
+    let t0_eq_z = d.lemma(p.equiv_trans, &[t0, a_fn0, z, t0_eq_af0, af0_eq_z]);
+
+    // --- t1_raw : Equiv t1_raw (neg a_fn1), a_fn1 := mul embed_one_sixth pow_z_3. ---
+    let n1 = d.num(1);
+    let n5 = d.num(5);
+    let nat_div_succ_1_5 = d.const_app(rat.nat_div_succ, &[n1, n5]);
+    let embed_one_sixth = embed(d, p, nat_div_succ_1_5);
+    let pow_z_3 = cpow(d, p, z, three_nat);
+    let a_fn1 = cmul(d, p, embed_one_sixth, pow_z_3);
+
+    let neg_one = cneg(d, p, one_cc);
+    let one_neg_one = cmul(d, p, one_cc, neg_one);
+    let neg_one_eq = one_mul_eq(d, p, neg_one);
+    let t1_raw = cmul(d, p, one_neg_one, a_fn1);
+    let refl_af1 = erefl(d, p, a_fn1);
+    let step1 = d.lemma(
+        p.mul_congr,
+        &[one_neg_one, neg_one, a_fn1, a_fn1, neg_one_eq, refl_af1],
+    );
+    let mul_negone_af1 = cmul(d, p, neg_one, a_fn1);
+
+    let neg_mul_step = neg_mul_equiv_left(d, p, one_cc, a_fn1);
+    let mul_one_af1 = cmul(d, p, one_cc, a_fn1);
+    let neg_mul_one_af1 = cneg(d, p, mul_one_af1);
+    let one_af1_eq = one_mul_eq(d, p, a_fn1);
+    let neg_af1 = cneg(d, p, a_fn1);
+    let neg_congr_step = d.lemma(p.neg_congr, &[mul_one_af1, a_fn1, one_af1_eq]);
+    let t1_eq_neg_af1 = echain(
+        d,
+        p,
+        t1_raw,
+        &[
+            (mul_negone_af1, step1),
+            (neg_mul_one_af1, neg_mul_step),
+            (neg_af1, neg_congr_step),
+        ],
+    );
+
+    // --- e_1 : Equiv e_1 (add z (neg a_fn1)). ---
+    let e_1 = {
+        let zt0 = cadd(d, p, zero_c, t0);
+        cadd(d, p, zt0, t1_raw)
+    };
+    let zt0 = cadd(d, p, zero_c, t0);
+    let z_form = cadd(d, p, zero_c, z);
+    let refl_t1raw = erefl(d, p, t1_raw);
+    let refl_zero_c = erefl(d, p, zero_c);
+    let step_e1a = d.lemma(p.add_congr, &[zero_c, zero_c, t0, z, refl_zero_c, t0_eq_z]);
+    // step_e1a : Equiv zt0 z_form
+    let e1_mid = cadd(d, p, z_form, t1_raw);
+    let step_e1b = d.lemma(
+        p.add_congr,
+        &[zt0, z_form, t1_raw, t1_raw, step_e1a, refl_t1raw],
+    );
+    // step_e1b : Equiv e_1 e1_mid
+    let zform_eq_z = zero_add_proof(d, p, z);
+    let e1_mid2 = cadd(d, p, z, t1_raw);
+    let step_e1c = d.lemma(
+        p.add_congr,
+        &[z_form, z, t1_raw, t1_raw, zform_eq_z, refl_t1raw],
+    );
+    // step_e1c : Equiv e1_mid e1_mid2
+    let e1_final = cadd(d, p, z, neg_af1);
+    let refl_z = erefl(d, p, z);
+    let step_e1d = d.lemma(p.add_congr, &[z, z, t1_raw, neg_af1, refl_z, t1_eq_neg_af1]);
+    // step_e1d : Equiv e1_mid2 e1_final
+    let e1_eq_final = echain(
+        d,
+        p,
+        e_1,
+        &[
+            (e1_mid, step_e1b),
+            (e1_mid2, step_e1c),
+            (e1_final, step_e1d),
+        ],
+    );
+
+    // --- af1 <= af1_bound (= 512/750), from z <= R and pow_le_pow_of_base_le. ---
+    let r_c2 = r_c;
+    let pow_r_3 = cpow(d, p, r_c2, three_nat);
+    let a_pow = d.lemma(p.pow_le_pow_of_base_le, &[z, r_c2, hz0, hzr, three_nat]);
+    // a_pow : le pow_z_3 pow_r_3
+    let cube_eq = r_cubed_eq_512_over_125(d, p)?;
+    let n512 = d.num(512);
+    let n124 = d.num(124);
+    let nat_div_succ_512_124 = d.const_app(rat.nat_div_succ, &[n512, n124]);
+    let embed_512_125 = embed(d, p, nat_div_succ_512_124);
+    let refl_pow_z_3 = erefl(d, p, pow_z_3);
+    let a_pow2 = d.lemma(
+        p.le_congr,
+        &[
+            pow_z_3,
+            pow_z_3,
+            pow_r_3,
+            embed_512_125,
+            refl_pow_z_3,
+            cube_eq,
+            a_pow,
+        ],
+    );
+    // a_pow2 : le pow_z_3 embed_512_125
+
+    let n749 = d.num(749);
+    let hnn_sixth = {
+        let zero_le_sixth_rat = d.lemma(rat.zero_le_nat_div_succ, &[n1, n5]);
+        let rat_zero_c = d.kernel().const_(rat.zero, vec![]);
+        d.lemma(
+            p.of_rat_le,
+            &[rat_zero_c, nat_div_succ_1_5, zero_le_sixth_rat],
+        )
+    };
+    let inner_le = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[embed_one_sixth, pow_z_3, embed_512_125, hnn_sixth, a_pow2],
+    );
+    // inner_le : le a_fn1 (mul embed_one_sixth embed_512_125)
+
+    let n512b = d.num(512);
+    let n124b = d.num(124);
+    let succ124 = d.succ(n124b);
+    let h_a2 = one_le_succ(d, n124b);
+    let h_b2 = one_le_succ(d, n5);
+    let succ_n5 = d.succ(n5);
+    let of_n512b = d.of_nat(n512b);
+    let step_mul2 = d.lemma(
+        rat.normalize_mul_normalize,
+        &[n1, succ_n5, h_b2, of_n512b, succ124, h_a2],
+    );
+    let (prod2_raw, q_512_750) = req_sides(d, step_mul2)?;
+    let of_rat_mul_step2 = d.lemma(p.of_rat_mul, &[nat_div_succ_1_5, nat_div_succ_512_124]);
+    let mul_16_512125 = cmul(d, p, embed_one_sixth, embed_512_125);
+    let embed_prod2_raw = embed(d, p, prod2_raw);
+    let embed_q_512_750 = embed(d, p, q_512_750);
+    let bridge2 = embed_eq_to_equiv_here(d, p, prod2_raw, q_512_750, step_mul2);
+    let mul_16_512125_eq = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_16_512125,
+            embed_prod2_raw,
+            embed_q_512_750,
+            of_rat_mul_step2,
+            bridge2,
+        ],
+    );
+    let refl_a_fn1 = erefl(d, p, a_fn1);
+    let h_af1_bound = d.lemma(
+        p.le_congr,
+        &[
+            a_fn1,
+            a_fn1,
+            mul_16_512125,
+            embed_q_512_750,
+            refl_a_fn1,
+            mul_16_512125_eq,
+            inner_le,
+        ],
+    );
+    // h_af1_bound : le a_fn1 embed_q_512_750 (= embed (natDivSucc 512 749), up to defeq)
+    let _ = n749;
+
+    // --- target_val + af1_bound <= 1. ---
+    let target_rat = d.const_app(rat.nat_div_succ, &[n1, three_nat]);
+    let target_val = embed(d, p, target_rat);
+    let af1_bound_embed = embed_q_512_750;
+
+    let n1c = d.num(1);
+    let n3c = d.num(3);
+    let succ3 = d.succ(n3c);
+    let h_tgt = one_le_succ(d, n3c);
+    let n512c = d.num(512);
+    let n749c = d.num(749);
+    let succ749 = d.succ(n749c);
+    let h_bound = one_le_succ(d, n749c);
+    let of_n1c = d.of_nat(n1c);
+    let of_n512c = d.of_nat(n512c);
+    let step_sum = d.lemma(
+        rat.normalize_add_normalize,
+        &[of_n1c, succ3, h_tgt, of_n512c, succ749, h_bound],
+    );
+    let (_sum_lhs_check, sum_prod_raw) = req_sides(d, step_sum)?;
+
+    let nat_div_succ_512_749 = d.const_app(rat.nat_div_succ, &[n512, n749]);
+    let of_rat_add_step = d.lemma(p.of_rat_add, &[target_rat, nat_div_succ_512_749]);
+    let sum_val = cadd(d, p, target_val, af1_bound_embed);
+    let sum_lhs_check = _sum_lhs_check;
+    let embed_sum_lhs = embed(d, p, sum_lhs_check);
+    let embed_sum_prod_raw = embed(d, p, sum_prod_raw);
+    let sum_eq_step2 = embed_eq_to_equiv_here(d, p, sum_lhs_check, sum_prod_raw, step_sum);
+    let sum_eq = d.lemma(
+        p.equiv_trans,
+        &[
+            sum_val,
+            embed_sum_lhs,
+            embed_sum_prod_raw,
+            of_rat_add_step,
+            sum_eq_step2,
+        ],
+    );
+    // sum_eq : Equiv sum_val embed_sum_prod_raw
+
+    let n2999 = d.num(2999);
+    let n2798 = d.num(2798);
+    let n202 = d.num(202);
+    let widened_sum = d.lemma(rat.nat_div_succ_le_add_left, &[n2798, n202, n2999]);
+    // widened_sum : Rat.le (natDivSucc 2798 2999) (natDivSucc (add 2798 202) 2999)
+    let one_eq = nat_div_succ_self_eq_one(d, p, n2999);
+    // one_eq : Eq (natDivSucc (succ 2999) 2999) Rat.one -- `succ 2999` is ι-defeq `add 2798 202`'s value 3000.
+    let rat_one_c = d.kernel().const_(rat.one, vec![]);
+    let nat_div_succ_2798_2999 = d.const_app(rat.nat_div_succ, &[n2798, n2999]);
+    let sum_2798_202 = d.add(n2798, n202);
+    let sum_le_one_rat = rat_eq_rewrite(d, sum_2798_202, n2999, one_eq, widened_sum, &|dd, t| {
+        crate::rat_prelude::ops::rle(dd, rat, nat_div_succ_2798_2999, t)
+    });
+    // sum_le_one_rat : Rat.le (natDivSucc 2798 2999) Rat.one
+
+    let h_fixed_raw = d.lemma(
+        p.of_rat_le,
+        &[nat_div_succ_2798_2999, rat_one_c, sum_le_one_rat],
+    );
+    // h_fixed_raw : le (embed (natDivSucc 2798 2999)) one_cc -- ascribed via defeq to embed_sum_prod_raw.
+    let sum_eq_symm = esymm(d, p, sum_val, embed_sum_prod_raw, sum_eq);
+    let refl_one = erefl(d, p, one_cc);
+    let h_fixed = d.lemma(
+        p.le_congr,
+        &[
+            embed_sum_prod_raw,
+            sum_val,
+            one_cc,
+            one_cc,
+            sum_eq_symm,
+            refl_one,
+            h_fixed_raw,
+        ],
+    );
+    // h_fixed : le sum_val one_cc
+
+    // --- assemble: target_val + af1 <= target_val + af1_bound <= 1 <= z,
+    // so target_val + af1 <= z, so (via additive cancellation)
+    // target_val <= z + (-af1) = e1_final ~ e_1. ---
+    let h_combined = d.lemma(p.le_trans, &[sum_val, one_cc, z, h_fixed, hz1]);
+    // h_combined : le sum_val z
+
+    let refl_target = erefl(d, p, target_val);
+    let target_af1 = cadd(d, p, target_val, a_fn1);
+    let target_val_le_refl = d.lemma(p.le_refl, &[target_val]);
+    let h_step1 = d.lemma(
+        p.add_le_add,
+        &[
+            target_val,
+            target_val,
+            a_fn1,
+            af1_bound_embed,
+            target_val_le_refl,
+            h_af1_bound,
+        ],
+    );
+    // h_step1 : le target_af1 sum_val
+    let h_step2 = d.lemma(p.le_trans, &[target_af1, sum_val, z, h_step1, h_combined]);
+    // h_step2 : le target_af1 z
+
+    let neg_af1_refl = d.lemma(p.le_refl, &[neg_af1]);
+    let target_af1_negaf1 = cadd(d, p, target_af1, neg_af1);
+    let h_step3 = d.lemma(
+        p.add_le_add,
+        &[target_af1, z, neg_af1, neg_af1, h_step2, neg_af1_refl],
+    );
+    // h_step3 : le target_af1_negaf1 e1_final
+
+    let cancel = add_sub_cancel_right(d, p, target_val, a_fn1);
+    // cancel : Equiv target_af1_negaf1 target_val
+    let refl_e1final = erefl(d, p, e1_final);
+    let h_final_le = d.lemma(
+        p.le_congr,
+        &[
+            target_af1_negaf1,
+            target_val,
+            e1_final,
+            e1_final,
+            cancel,
+            refl_e1final,
+            h_step3,
+        ],
+    );
+    // h_final_le : le target_val e1_final
+
+    let e1_eq_final_symm = esymm(d, p, e_1, e1_final, e1_eq_final);
+    let result = d.lemma(
+        p.le_congr,
+        &[
+            target_val,
+            target_val,
+            e1_final,
+            e_1,
+            refl_target,
+            e1_eq_final_symm,
+            h_final_le,
+        ],
+    );
+    // result : le target_val e_1
+
+    Ok((e_1, result))
+}
+
+/// `CReal.sinFnLowerBoundOneToR : ∀ z, le one z → le z (ofRat (natDivSucc 8
+/// 4)) → le (ofRat (natDivSucc 1 3)) (sinFn z)` -- pi rung 3. See the
+/// module documentation above and [`CRealPrelude::sin_fn_lower_bound_one_to_r`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sin_fn_lower_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let r_c = r_domain(d, p);
+    let one_cc = one_c(d, p);
+    let zero_c = czero(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let hz1_fv = d.fresh_fvar();
+    let hz1 = d.kernel().fvar(hz1_fv);
+    let hzr_fv = d.fresh_fvar();
+    let hzr = d.kernel().fvar(hzr_fv);
+
+    let h_zero_le_one = zero_le_one(d, p);
+    let hz0 = d.lemma(p.le_trans, &[zero_c, one_cc, z, h_zero_le_one, hz1]);
+
+    // Magnitude sequence.
+    eprintln!("[checkpoint] before sin_lb_magnitude_lam");
+    let a_fn = sin_lb_magnitude_lam(d, p, z);
+    eprintln!("[checkpoint] a_fn built");
+    let hnn = sin_lb_magnitude_nonneg(d, p, z, hz0);
+    eprintln!("[checkpoint] hnn built");
+    let hdec = sin_lb_magnitude_dec(d, p, z, hz0, hzr)?;
+    eprintln!("[checkpoint] hdec built");
+
+    // Domination -> Exists (L, Converges (sumRange (fun j => sinFnTerm j z)) L).
+    let inner_term = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = d.const_app(p.sin_fn_term, &[j, z]);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let sum_range_f_z = d.const_app(p.sum_range, &[inner_term]);
+    let dom_hyp = sin_fn_term_dom_at(d, p, z, hz0, hzr)?;
+    eprintln!("[checkpoint] dom_hyp built");
+    let cauchy_g = sin_fn_cauchy_g(d, p);
+    eprintln!("[checkpoint] cauchy_g built");
+    let mseq0 = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
+
+    let ex_conv = d.lemma(
+        p.sum_range_converges_of_dominated,
+        &[inner_term, mseq0, dom_hyp, cauchy_g],
+    );
+    // `ex_conv` mentions `z`/`hz1`/`hzr`, still open at this point (only
+    // abstracted at the very end via `pi_fv`/`lam_fv`) -- `Kernel::infer`'s
+    // fresh, EMPTY context rejects any such term as `UnboundFVar`, so use
+    // `infer_in` with those three registered instead (mirroring
+    // `bounded_via_uc`'s own established convention in this file).
+    let anon = d.anon_name();
+    let hz1_ty_scratch = cle(d, p, one_cc, z);
+    let hzr_ty_scratch = cle(d, p, z, r_c);
+    let ty_ex = {
+        let mut ctx = LocalContext::new();
+        ctx.push(LocalDecl {
+            fvar: z_fv,
+            name: anon,
+            ty: carrier,
+            info: BinderInfo::Default,
+        });
+        ctx.push(LocalDecl {
+            fvar: hz1_fv,
+            name: anon,
+            ty: hz1_ty_scratch,
+            info: BinderInfo::Default,
+        });
+        ctx.push(LocalDecl {
+            fvar: hzr_fv,
+            name: anon,
+            ty: hzr_ty_scratch,
+            info: BinderInfo::Default,
+        });
+        d.kernel().infer_in(ex_conv, &mut ctx)?
+    };
+    let (_inner_ex, predicate) = unapp(d, ty_ex);
+    eprintln!("[checkpoint] ty_ex extracted, predicate = {predicate:?}");
+
+    // `sinFnUniformConverges`'s own `rate`/`spec`, extracted once.
+    let u_conv = d.kernel().const_(p.sin_fn_uniform_converges, vec![]);
+    let ty_u = d.kernel().infer(u_conv)?;
+    let (inner1, b_u) = unapp(d, ty_u);
+    let (inner2, a_u) = unapp(d, inner1);
+    let (inner3, g_u) = unapp(d, inner2);
+    let (_, f_u) = unapp(d, inner3);
+    let uconv_rate_val = d.const_app(p.uconv_rate, &[f_u, g_u, a_u, b_u, u_conv]);
+    let uconv_spec_val = d.const_app(p.uconv_spec, &[f_u, g_u, a_u, b_u, u_conv]);
+
+    let sin_fn_c = d.kernel().const_(p.sin_fn, vec![]);
+    let sin_z = d.apply(sin_fn_c, &[z]);
+
+    let one_nat_tgt = d.num(1);
+    let three_nat_tgt = d.num(3);
+    let target_rat = d.const_app(p.rat.nat_div_succ, &[one_nat_tgt, three_nat_tgt]);
+    let target_val = embed(d, p, target_rat);
+    let final_goal = cle(d, p, target_val, sin_z);
+
+    // Outer minor: given `l : CReal` and `hconv : Converges sum_range_f_z l`, prove `final_goal`.
+    let minor = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let hconv_ty = d.apply(predicate, &[l]);
+        let hconv_fv = d.fresh_fvar();
+        let hconv = d.kernel().fvar(hconv_fv);
+
+        let one_nat_m = d.num(1);
+        let alb = d.lemma(
+            p.alternating_lower_bound,
+            &[a_fn, hnn, hdec, l, hconv, one_nat_m],
+        );
+        // alb : le E_1 l, E_1 := sumRange (build_t_lam a_fn) (add 1 1).
+        eprintln!("[checkpoint] alb built = {alb:?}");
+
+        // Squeeze: Equiv l sin_z, from `hconv`'s own `Within` witness combined
+        // with `sinFnUniformConverges`'s `.spec` via the triangle inequality.
+        let conv_pred = converges_predicate(d, p, sum_range_f_z, l);
+        let squeeze_target = equiv(d, p, l, sin_z);
+        let squeeze_minor = {
+            let k2_fv = d.fresh_fvar();
+            let k2 = d.kernel().fvar(k2_fv);
+            let hk2_ty = d.apply(conv_pred, &[k2]);
+            let hk2_fv = d.fresh_fvar();
+            let hk2 = d.kernel().fvar(hk2_fv);
+
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let hp = d.apply(hk2, &[n]);
+
+            let f_z_n = d.apply(sum_range_f_z, &[n]);
+            let (rate1, proof1) = close_within_of_within_at(d, p, f_z_n, l, n, k2, hp);
+            let q1_rat = div_succ_at(d, p, rate1, n);
+            let q1_embed = embed(d, p, q1_rat);
+            let proof1_symm = close_within_symm(d, p, f_z_n, l, q1_embed, proof1);
+
+            let spec_at_n = d.apply(uconv_spec_val, &[n, z, hz0, hzr]);
+            let rate2 = uconv_rate_val;
+            let q2_rat = div_succ_at(d, p, rate2, n);
+            let q2_embed = embed(d, p, q2_rat);
+
+            let combined = combine_two_legs(
+                d,
+                p,
+                l,
+                f_z_n,
+                sin_z,
+                q1_embed,
+                q2_embed,
+                proof1_symm,
+                spec_at_n,
+            );
+            // combined : le (abs (add l (neg sin_z))) (add q1_embed q2_embed)
+
+            let radd_val = radd(d, q1_rat, q2_rat);
+            let of_add_eq = d.lemma(p.of_rat_add, &[q1_rat, q2_rat]);
+            let neg_sin_z = cneg(d, p, sin_z);
+            let v_term = cadd(d, p, l, neg_sin_z);
+            let abs_v = cabs(d, p, v_term);
+            let refl_abs_v = erefl(d, p, abs_v);
+            let bound_sum = cadd(d, p, q1_embed, q2_embed);
+            let radd_embed = embed(d, p, radd_val);
+            let step_a = d.lemma(
+                p.le_congr,
+                &[
+                    abs_v, abs_v, bound_sum, radd_embed, refl_abs_v, of_add_eq, combined,
+                ],
+            );
+            // step_a : le abs_v (ofRat radd_val)
+
+            let k3 = NatOps::add(d, rate1, rate2);
+            let eq_fuse = d.lemma(p.rat.nat_div_succ_add, &[rate1, rate2, n]);
+            let final_bound_rat = div_succ_at(d, p, k3, n);
+            let final_le =
+                rat_eq_rewrite(d, radd_val, final_bound_rat, eq_fuse, step_a, &|dd, t| {
+                    let target_embed = embed(dd, p, t);
+                    cle(dd, p, abs_v, target_embed)
+                });
+            // final_le : le abs_v (ofRat (natDivSucc k3 n))
+
+            let per_idx = d.lam_fv(n_fv, nat, final_le);
+            let v_equiv_zero = d.lemma(p.equiv_zero_of_rate, &[k3, v_term, per_idx]);
+            let equiv_l_sinz = equiv_of_sub_equiv_zero(d, p, l, sin_z, v_equiv_zero);
+            // equiv_l_sinz : Equiv l sin_z
+
+            let with_hk2 = d.lam_fv(hk2_fv, hk2_ty, equiv_l_sinz);
+            d.lam_fv(k2_fv, nat, with_hk2)
+        };
+        let equiv_l_sinz_final = exists_elim(d, conv_pred, squeeze_target, hconv, squeeze_minor);
+        eprintln!("[checkpoint] squeeze done, equiv_l_sinz_final = {equiv_l_sinz_final:?}");
+
+        // Numeric: le target_val e_1, e_1 defeq-identical to `alb`'s own LHS.
+        let (e1_from_numeric, num_bound) = sin_fn_lb_numeric(d, p, z, hz0, hz1, hzr)?;
+        eprintln!("[checkpoint] numeric done, e1_from_numeric = {e1_from_numeric:?}, num_bound = {num_bound:?}");
+        let step_le_l = d.lemma(
+            p.le_trans,
+            &[target_val, e1_from_numeric, l, num_bound, alb],
+        );
+        // step_le_l : le target_val l
+
+        let refl_target = erefl(d, p, target_val);
+        let result = d.lemma(
+            p.le_congr,
+            &[
+                target_val,
+                target_val,
+                l,
+                sin_z,
+                refl_target,
+                equiv_l_sinz_final,
+                step_le_l,
+            ],
+        );
+        // result : le target_val sin_z
+
+        let with_hconv = d.lam_fv(hconv_fv, hconv_ty, result);
+        d.lam_fv(l_fv, carrier, with_hconv)
+    };
+
+    eprintln!("[checkpoint] minor fully built, about to build value_at_z");
+    let value_at_z = creal_exists_elim(d, p, carrier, predicate, final_goal, ex_conv, minor);
+    eprintln!("[checkpoint] value_at_z built = {value_at_z:?}");
+
+    let hzr_ty = cle(d, p, z, r_c);
+    let hz1_ty = cle(d, p, one_cc, z);
+    let ty = {
+        let with_hzr = d.arrow(hzr_ty, final_goal);
+        let with_hz1 = d.arrow(hz1_ty, with_hzr);
+        d.pi_fv(z_fv, carrier, with_hz1)
+    };
+    let value = {
+        let with_hzr = d.lam_fv(hzr_fv, hzr_ty, value_at_z);
+        let with_hz1 = d.lam_fv(hz1_fv, hz1_ty, with_hzr);
+        d.lam_fv(z_fv, carrier, with_hz1)
+    };
+
+    debug_scan_free_fvars(d, value, "sin_fn_lower_bound.value");
+    debug_scan_free_fvars(d, ty, "sin_fn_lower_bound.ty");
+    eprintln!("[checkpoint] about to add_declaration");
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_fn_lower_bound_one_to_r,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// TEMPORARY diagnostic: walk `e` and print any raw `FVar` node found,
+/// tagged with `label`. A closed term must have none; any hit names the
+/// leak this repository's `UnboundFVar` error otherwise gives no context
+/// for.
+fn debug_scan_free_fvars(d: &mut IntDev<'_>, e: ExprId, label: &str) {
+    fn walk(d: &mut IntDev<'_>, e: ExprId, depth: u32, label: &str, seen: &mut std::collections::HashSet<u32>) {
+        if depth > 4000 || !seen.insert(e.0) {
+            return;
+        }
+        let node = d.kernel().expr_node(e).clone();
+        match node {
+            ExprNode::FVar(id) => eprintln!("[fvar-scan] {label}: FVar({id}) at expr {e:?}"),
+            ExprNode::App(f, a) => {
+                walk(d, f, depth + 1, label, seen);
+                walk(d, a, depth + 1, label, seen);
+            }
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                walk(d, ty, depth + 1, label, seen);
+                walk(d, body, depth + 1, label, seen);
+            }
+            ExprNode::Let(_, ty, val, body) => {
+                walk(d, ty, depth + 1, label, seen);
+                walk(d, val, depth + 1, label, seen);
+                walk(d, body, depth + 1, label, seen);
+            }
+            ExprNode::Proj(_, _, inner) => walk(d, inner, depth + 1, label, seen),
+            ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(_, _) | ExprNode::Lit(_) => {}
+        }
+    }
+    let mut seen = std::collections::HashSet::new();
+    walk(d, e, 0, label, &mut seen);
 }

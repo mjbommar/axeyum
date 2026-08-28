@@ -5742,6 +5742,25 @@ pub struct CRealPrelude {
     /// `sinFnTerm`'s own odd exponent `Nat.add (Nat.add k k) 1` in place of
     /// `Nat.add k k`. See `creal/trig_fn.rs`.
     pub sin_fn_uniformly_continuous: NameId,
+    /// `CReal.sinFnLowerBoundOneToR : ∀ z, le one z → le z (ofRat (natDivSucc
+    /// 8 4)) → le (ofRat (natDivSucc 1 3)) (sinFn z)` — pi rung 3
+    /// (`docs/plan/status/169-pi.md`): a uniform lower bound `sin z >= 1/4`
+    /// on `[1, 8/5]`.
+    ///
+    /// Sine's magnitude sequence `a k := expTerm (2k+1) * z^(2k+1)` is
+    /// globally antitone on `[0, 8/5]` (`z^2 <= 64/25 <= 6 <= (2k+2)(2k+3)`
+    /// for EVERY `k` — unlike cosine's own magnitude at `8/5`, no shift is
+    /// needed), so [`Self::alternating_lower_bound`] applies directly at
+    /// `m := 1`, giving `sin z >= z - z^3/6 >= 1 - (8/5)^3/6 = 119/375 >=
+    /// 1/4`. The pointwise `Converges` fact `alternatingLowerBound` needs is
+    /// built from domination
+    /// ([`Self::sin_fn_term_abs_le_wide`]/[`Self::sum_range_converges_of_dominated`])
+    /// and squeezed onto `sinFn z` via
+    /// [`Self::close_within_of_within`]/[`Self::equiv_zero_of_rate`], the
+    /// same technique `creal/trig_fn.rs`'s own `cos_limit_at_one_equiv_cos_one`
+    /// uses for a NAMED target, generalized to an existential one. See
+    /// `creal/trig_fn.rs`.
+    pub sin_fn_lower_bound_one_to_r: NameId,
     /// `CReal.expTermSuccScale : ∀ m, Equiv (mul (ofNat (Nat.succ m))
     /// (expTerm (Nat.succ m))) (expTerm m)` — `(m+1)·(1/(m+1)!) = 1/m!`, the
     /// whole arithmetic content of the index-shifted coefficient identity
@@ -6704,6 +6723,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sin_fn: kernel.name_str(creal, "sinFn"),
         sin_fn_uniform_converges: kernel.name_str(creal, "sinFnUniformConverges"),
         sin_fn_uniformly_continuous: kernel.name_str(creal, "sinFnUniformlyContinuous"),
+        sin_fn_lower_bound_one_to_r: kernel.name_str(creal, "sinFnLowerBoundOneToR"),
         exp_term_succ_scale: kernel.name_str(creal, "expTermSuccScale"),
         cos_fn_term_deriv_coeff: kernel.name_str(creal, "cosFnTermDerivCoeff"),
         cos_fn_term_has_derivative: kernel.name_str(creal, "cosFnTermHasDerivative"),
@@ -11777,6 +11797,72 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cos_fn_wide_has_derivative,
         ],
         run: trig_fn::declare_cos_fn_wide_derivative,
+    },
+    BuildStep {
+        label: "trig_fn::declare_sin_fn_lower_bound",
+        requires: &[
+            |p: CRealPrelude| p.abs_add_le,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.alternating_lower_bound,
+            |p: CRealPrelude| p.close_within_of_within,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_rate,
+            |p: CRealPrelude| p.exp_dominant,
+            |p: CRealPrelude| p.exp_term,
+            |p: CRealPrelude| p.exp_term_nonneg,
+            |p: CRealPrelude| p.exp_term_one_eq_one,
+            |p: CRealPrelude| p.exp_term_succ_scale,
+            |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_assoc,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.mul_sum_range,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_nat_le,
+            |p: CRealPrelude| p.of_nat_mul,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.pow_add,
+            |p: CRealPrelude| p.pow_congr,
+            |p: CRealPrelude| p.pow_le_pow_of_base_le,
+            |p: CRealPrelude| p.pow_mul_distrib,
+            |p: CRealPrelude| p.pow_nonneg,
+            |p: CRealPrelude| p.sample_lower_bound,
+            |p: CRealPrelude| p.sample_upper_bound,
+            |p: CRealPrelude| p.sin_dominant_16_over_25,
+            |p: CRealPrelude| p.sin_fn,
+            |p: CRealPrelude| p.sin_fn_term,
+            |p: CRealPrelude| p.sin_fn_term_abs_le_wide,
+            |p: CRealPrelude| p.sin_fn_uniform_converges,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.sum_range_converges_of_dominated,
+            |p: CRealPrelude| p.uconv_rate,
+            |p: CRealPrelude| p.uconv_spec,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[|p: CRealPrelude| p.sin_fn_lower_bound_one_to_r],
+        run: trig_fn::declare_sin_fn_lower_bound,
     },
     BuildStep {
         label: "exp_fn::declare_exp_fn_family",
