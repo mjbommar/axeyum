@@ -26,11 +26,14 @@
 //! `div_mod_remainder_eq_zero_iff_dvd`.
 
 use super::NatPrelude;
-use super::finite::pos_implies_succ_pred;
+use super::finite::{ne_of_lt, ne_symm, pos_implies_succ_pred};
 use super::helpers::{
     and_left, and_right, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right,
 };
-use super::ops::{NatDev, NatOps, bool_true_or_false, two_divisor_dichotomy, two_mul_eq_add_self};
+use super::ops::{
+    NatDev, NatOps, bool_true_or_false, cases_lt_bound_absurd, cases_lt_or_ge,
+    two_divisor_dichotomy, two_mul_eq_add_self,
+};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -2117,6 +2120,159 @@ pub(super) fn declare_not_prime_of_dvd_of_ne(
         let proof_inner1 = d.lam_fv(ne1_fv, ne1_ty, proof_inner2);
         let proof = d.lam_fv(dvd_fv, dvd_ty, proof_inner1);
         (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.Prime.five_le_of_ne_two_of_ne_three : ∀ p, prime_condition p → Not
+// (Eq p two) → Not (Eq p three) → Le five p`.
+// ============================================================================
+
+/// The `p = 0` sub-branch: `0`'s equality contradicts the primality
+/// hypothesis's own lower bound `2 ≤ p` — the same route as
+/// [`refute_eq_one_against_prime_lower_bound`], landing on `Le (succ one)
+/// zero` (i.e. `Le 2 0`) rather than `Le one zero`.
+fn refute_eq_zero_against_prime_lower_bound(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    p_var: ExprId,
+    prime_hyp: ExprId,
+    h0: ExprId,
+    goal: ExprId,
+) -> ExprId {
+    let zero = d.zero();
+    let one = d.num(1);
+    let (lower_ty, divisors_ty) = prime_parts(d, p, p_var);
+    let two_le_p = and_left(d, lower_ty, divisors_ty, prime_hyp);
+    let motive = d.eq_motive(p_var, &|d, x| {
+        let two = d.num(2);
+        d.le(two, x)
+    });
+    let two_le_zero = d.transport(p_var, motive, two_le_p, zero, h0);
+    let false_pf = d.lemma(p.not_succ_le_zero, &[one, two_le_zero]);
+    absurd(d, p, goal, false_pf)
+}
+
+/// The `p = 4` sub-branch: `4` is composite (`4 = 2*2`), refuted via
+/// `not_prime_of_dvd_of_ne` at `(m, n) = (2, 4)` — `dvd_mul 2 2 : dvd 2 (mul
+/// 2 2)` is defeq `dvd 2 4`; `2 ≠ 1` and `2 ≠ 4` both come from
+/// `finite::ne_of_lt` off a cheap `Le`/`Lt` fact (`Le 2 2` defeq `Lt 1 2`,
+/// `le_add_right 3 1` defeq `Lt 2 4`). The resulting `Not (prime_condition
+/// 4)` is applied to `prime_hyp` transported along `h4 : Eq p_var 4`.
+fn refute_eq_four_against_prime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    p_var: ExprId,
+    prime_hyp: ExprId,
+    h4: ExprId,
+    goal: ExprId,
+) -> ExprId {
+    let two = d.num(2);
+    let four = d.num(4);
+    let one = d.num(1);
+    let three = d.num(3);
+
+    let dvd_2_4 = d.lemma(p.dvd_mul, &[two, two]); // dvd 2 (mul 2 2), defeq dvd 2 4
+
+    let lt_1_2 = d.lemma(p.le_refl, &[two]); // Le 2 2, defeq Lt 1 2
+    let ne_1_2 = ne_of_lt(d, p, one, two, lt_1_2); // Not (Eq 1 2)
+    let ne_2_1 = ne_symm(d, one, two, ne_1_2); // Not (Eq 2 1)
+
+    let lt_2_4 = d.lemma(p.le_add_right, &[three, one]); // Le 3 (add 3 1), defeq Lt 2 4
+    let ne_2_4 = ne_of_lt(d, p, two, four, lt_2_4); // Not (Eq 2 4)
+
+    let not_prime_4 = d.lemma(
+        p.not_prime_of_dvd_of_ne,
+        &[two, four, dvd_2_4, ne_2_1, ne_2_4],
+    );
+
+    let motive4 = d.eq_motive(p_var, &|d, x| prime_condition(d, p, x));
+    let prime_4 = d.transport(p_var, motive4, prime_hyp, four, h4);
+    let false_pf = d.apply(not_prime_4, &[prime_4]);
+    absurd(d, p, goal, false_pf)
+}
+
+/// `Nat.Prime.five_le_of_ne_two_of_ne_three` — see
+/// [`NatPrelude::five_le_of_ne_two_of_ne_three`] for the route: split at
+/// `Nat.lt_or_ge p 5` ([`cases_lt_or_ge`]); the `Le 5 p` side is the
+/// hypothesis itself, and the `Lt p 5` side is the 5-way case split
+/// ([`cases_lt_bound_absurd`]) to `p ∈ {0,1,2,3,4}` this fact's whole
+/// difficulty is — `p = 0, 1` contradict the primality lower bound, `p = 2,
+/// 3` contradict the two `Not` hypotheses directly, and `p = 4` is refuted
+/// as composite.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_five_le_of_ne_two_of_ne_three(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.five_le_of_ne_two_of_ne_three, 1, &|d, v| {
+        let p_var = v[0];
+        let two = d.num(2);
+        let three = d.num(3);
+        let five = d.num(5);
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let eq2_ty = d.eq(p_var, two);
+        let ne2_ty = d.const_app(p.logic.not, &[eq2_ty]);
+        let eq3_ty = d.eq(p_var, three);
+        let ne3_ty = d.const_app(p.logic.not, &[eq3_ty]);
+        let concl = d.le(five, p_var);
+
+        let stmt = {
+            let inner2 = d.arrow(ne3_ty, concl);
+            let inner1 = d.arrow(ne2_ty, inner2);
+            d.arrow(prime_ty, inner1)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let ne2_fv = d.fresh_fvar();
+        let ne2_hyp = d.kernel().fvar(ne2_fv);
+        let ne3_fv = d.fresh_fvar();
+        let ne3_hyp = d.kernel().fvar(ne3_fv);
+
+        let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+            let five = d.num(5);
+            d.le(five, x)
+        };
+
+        let small = |d: &mut NatDev<'_>, p_var: ExprId, lt_p_5: ExprId| -> ExprId {
+            let goal = motive(d, p_var);
+
+            let b0: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId =
+                &|d, h| refute_eq_zero_against_prime_lower_bound(d, &p, p_var, prime_hyp, h, goal);
+            let b1: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId =
+                &|d, h| refute_eq_one_against_prime_lower_bound(d, &p, p_var, prime_hyp, h, goal);
+            let b2: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId = &|d, h| {
+                let false_pf = d.apply(ne2_hyp, &[h]);
+                absurd(d, &p, goal, false_pf)
+            };
+            let b3: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId = &|d, h| {
+                let false_pf = d.apply(ne3_hyp, &[h]);
+                absurd(d, &p, goal, false_pf)
+            };
+            let b4: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId =
+                &|d, h| refute_eq_four_against_prime(d, &p, p_var, prime_hyp, h, goal);
+
+            let branches: [&dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId; 5] = [b0, b1, b2, b3, b4];
+            cases_lt_bound_absurd(d, &p, p_var, 5, lt_p_5, goal, &branches)
+        };
+        let big = |_d: &mut NatDev<'_>, _p_var: ExprId, le_5_p: ExprId| -> ExprId { le_5_p };
+
+        let five_thresh = d.num(5);
+        let body = cases_lt_or_ge(d, &p, p_var, five_thresh, &motive, &small, &big);
+
+        let value = {
+            let inner2 = d.lam_fv(ne3_fv, ne3_ty, body);
+            let inner1 = d.lam_fv(ne2_fv, ne2_ty, inner2);
+            d.lam_fv(prime_fv, prime_ty, inner1)
+        };
+        (stmt, value)
     })?;
     Ok(())
 }
