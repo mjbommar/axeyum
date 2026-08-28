@@ -87,3 +87,45 @@ Re-run when the ledger or the prelude moves substantially. The whole check is
 one fresh inventory plus a set intersection, and it took minutes. The failure it
 guards against — dispatching lanes at finished work — costs a lane-hour each
 time, and this session paid that twice from stale coordinator notes.
+
+## Addendum: 30 of the 128 open facts are blocked on THREE missing definitions
+
+Measured 2026-08-28 while choosing the next lanes, with `choose` (19
+`declare_` fns) and `coprime` (15) as positive controls so a zero means
+something:
+
+| family | open facts | `declare_` fns | prelude fields | carrier |
+| --- | ---: | ---: | ---: | --- |
+| `nat.log` | 12 | 0 | 0 | **absent** |
+| `nat.sqrt` | 10 | 1 | 1 | **absent** — see below |
+| `nat.clog` | 8 | 0 | 0 | **absent** |
+| `nat.factorial` | 6 | 0 | 5 | present |
+| `nat.prime` | 7 | — | — | present (`primes.rs`) |
+
+**The `nat.sqrt` row is a trap I nearly walked into.** The single `declare_`
+hit is `declare_no_rational_sqrt_two` — the *irrationality of √2*, a statement
+about squares — and the single field is `no_rational_sqrt_two`. There is no
+`Nat.sqrt` function. That field's own doc comment says so outright: "no
+`sqrt`, no rational embedding". A substring match on a family name found a
+theorem *about* the concept and read as the concept existing.
+
+So **30 of 128 open facts — 23% of the whole open frontier — sit behind three
+absent definitions**, not behind proof difficulty. None of the twelve
+`nat.log` facts can be *stated* in this kernel today, let alone proved.
+
+Two consequences:
+
+- **This is the highest-leverage work on the frontier**, and it is
+  infrastructure rather than theorem-proving. Each definition is a
+  non-structural (division-decreasing) recursion, which is a different
+  technique from everything closed today.
+- **The frontier's "open" count conflates two very different states**: a fact
+  whose statement is expressible and unproved, and a fact whose statement
+  cannot be written at all. `fact-frontier.py` reports both as `proof route
+  only — needs a kernel proof`, which is true of the first and misleading
+  about the second. Worth splitting if it is cheap.
+
+Method note, again: the check that works is `declare_` function count **plus a
+positive control from a family known to exist**. Grepping a family name across
+a module directory returned 40 files for `log` — almost all of them the word
+"log" in prose.
