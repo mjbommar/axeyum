@@ -239,14 +239,14 @@ use powsq::declare_powsq_all;
 use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
     declare_coprime_odd_of_right, declare_coprime_of_dvd, declare_coprime_of_dvd_both,
-    declare_coprime_of_lt_prime, declare_coprime_one_iff, declare_coprime_or_dvd_of_prime,
-    declare_coprime_primes, declare_coprime_self_add_left, declare_coprime_self_add_right,
-    declare_coprime_symmetric, declare_coprime_two_left, declare_coprime_two_right,
-    declare_dvd_lcm_of_dvd, declare_dvd_of_lcm_dvd, declare_euclid, declare_not_coprime_zero_zero,
-    declare_not_prime_of_dvd_of_ne, declare_prime_dvd_iff_not_coprime,
-    declare_prime_dvd_mul_of_dvd_ne, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
-    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes,
-    declare_succ_pred_prime,
+    declare_coprime_of_forall_prime_dvd, declare_coprime_of_lt_prime, declare_coprime_one_iff,
+    declare_coprime_or_dvd_of_prime, declare_coprime_primes, declare_coprime_self_add_left,
+    declare_coprime_self_add_right, declare_coprime_symmetric, declare_coprime_two_left,
+    declare_coprime_two_right, declare_dvd_lcm_of_dvd, declare_dvd_of_lcm_dvd, declare_euclid,
+    declare_not_coprime_zero_zero, declare_not_prime_of_dvd_of_ne,
+    declare_prime_dvd_iff_not_coprime, declare_prime_dvd_mul_of_dvd_ne,
+    declare_prime_dvd_of_dvd_pow, declare_prime_even_iff, declare_prime_not_dvd_mul,
+    declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
 use rectangle::declare_rectangle;
 use relation::{
@@ -1017,6 +1017,10 @@ pub struct NatPrelude {
     /// `coprime_of_dvd_right` (shrink `b2` to `b1`) then `coprime_of_dvd_left`
     /// (shrink `a2` to `a1`).
     pub coprime_of_dvd: NameId,
+    /// `Nat.coprime_of_dvd' : ∀ m n, (∀ k, prime_condition k → dvd k m →
+    /// dvd k n → dvd k one) → gcd m n = one`. Closes ledger fact
+    /// `F:ml430-nat-coprime-of-dvd`.
+    pub coprime_of_forall_prime_dvd: NameId,
     /// `Nat.coprime_self_add_right : ∀ m n, Iff (Eq (gcd m (add m n)) one)
     /// (Eq (gcd m n) one)` — [`coprime_add_self_right`](Self::coprime_add_self_right)
     /// with `m`/`n`'s sum reordered via `add_comm`: the only difference is
@@ -2669,6 +2673,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_dvd_iff_not_coprime: kernel.name_str(nat, "prime_dvd_iff_not_coprime"),
             coprime_add_self_right: kernel.name_str(nat, "coprime_add_self_right"),
             coprime_of_dvd: kernel.name_str(nat, "coprime_of_dvd"),
+            coprime_of_forall_prime_dvd: kernel.name_str(nat, "coprime_of_forall_prime_dvd"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
             not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
@@ -2998,6 +3003,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // proofs of `Lt zero n -> Eq n (succ (pred n))` on the fly today and
         // are being migrated to call this declared theorem instead.
         declare_succ_pred_of_pos(&mut d, &p)?;
+        // Needs `succ_pred_of_pos`, just declared above: `prime_two`
+        // (`two_divisor_dichotomy`) is not available before this point.
+        declare_coprime_of_forall_prime_dvd(&mut d, &p)?;
         declare_prime_pred_pos(&mut d, &p)?;
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;

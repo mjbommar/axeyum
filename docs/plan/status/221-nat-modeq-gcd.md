@@ -59,13 +59,48 @@ Wrote local `dvd_elim`/`dvd_intro` helpers into `divisibility.rs` (private,
 already duplicates this pair per-file rather than sharing one; followed the
 existing convention rather than introducing a new cross-file dependency.
 
-Remaining two (`coprime_of_dvd'`, `exists_mul_mod_eq_gcd`) are unstarted;
-`coprime_of_dvd'` needs `exists_prime_dvd` plus a 3-way case split on
-`gcd m n` (0 / 1 / >=2, the last via `lt_or_ge`) to extract a prime factor
-when the gcd isn't already 1, or handle `m=n=0` directly. `exists_mul_mod_eq_gcd`
-is the one the brief already flagged as needing genuine `Int`/`Nat`
-mod-arithmetic bridging (reducing a Bézout coefficient mod `k`) -- not
-attempted yet.
+Landed `Nat.coprime_of_dvd'` (`F:ml430-nat-coprime-of-dvd-6f652673`) in
+`nat_prelude/primes.rs` as `declare_coprime_of_forall_prime_dvd` (named that,
+not `coprime_of_dvd`, since that name is already taken by the unrelated
+`Nat.Coprime.of_dvd`). Route: trichotomy on `g := gcd m n` via `lt_or_ge`
+twice. `g<1` (so `g=0`) forces `m=n=0` (`zero_mul` on the `dvd 0 _` witness),
+and applying the hypothesis at `k=2` (`prime_two`, already existed in this
+file) self-contradicts via `refute_dvd_one_against_prime` -- **an existing
+PRIVATE helper this file already had for exactly the `dvd p one -> False`
+shape**, reused rather than rebuilt (found by reading the file, not by
+grepping a name I didn't know). `1<=g` and `g<2` gives `g=1` directly. `1<=g`
+and `2<=g`: `exists_prime_dvd` gives a prime factor of `g`, hence of `m` and
+`n` (`dvd_trans`), so the hypothesis gives a contradiction the same way.
+
+Also reused `prime_parts`/`prime_condition`/`absurd`/`or_cases`/`prime_two`
+(all private `fn`s already in `primes.rs`) rather than rebuilding any of
+them, and added two NEW private helpers this proof needed and the file
+didn't have: `eliminate_prime_dvd` (destructuring `exists_prime_dvd`'s
+result, mirroring the inline elimination `declare_euclid` already builds
+for the same shape) and `dvd_elim` (a per-file copy matching the ones in
+`lcm.rs`/`irrational.rs`/`perfect.rs`/`divisibility.rs`).
+
+**BUILD ORDER hit on the first attempt**: `UnknownConst { name: NameId(122) }`
+= `Nat.succ_pred_of_pos`, needed transitively by `prime_two` via
+`two_divisor_dichotomy`. My first dispatch placement (right after
+`declare_coprime_of_dvd_both`, alongside the other `coprime_of_*` calls) ran
+BEFORE `declare_succ_pred_of_pos` (which itself runs much later, right before
+`declare_prime_pred_pos`, per an existing comment: "Must run before
+`declare_fermat`/`declare_totient_all`"). Diagnosed by temporarily adding a
+throwaway `#[test]` that caught the `KernelError`, scanned `NameId(115..130)`
+via `k.display_name`, and printed the name directly -- faster than guessing.
+Fixed by moving the dispatch call to right after `declare_succ_pred_of_pos`.
+Kernel accepted the proof term on the FIRST attempt after that move (zero
+`TypeMismatch`/`UnboundFVar` from the proof term itself, only the build-order
+issue). `theorem_names` recounted: 402. `nat_prelude::` sweep: 110 passed,
+0 failed. clippy -D warnings clean.
+
+All six facts named in the brief are now accounted for: three landed above,
+two out of scope (below), and `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e`
+remains unstarted -- it is the one the brief already flagged as needing
+genuine `Int`/`Nat` mod-arithmetic bridging (reducing a Bézout coefficient
+mod `k` and showing the residue lands in range), confirmed still real work
+by this lane's own read of the statement; not attempted this session.
 
 Two of the six are judged genuinely out of scope for this lane (unchanged
 from above), both because they need a NEW predicate/definition the whole
@@ -83,3 +118,4 @@ kernel lacks, confirmed absent by grep across `nat_prelude.rs` and every
 
 | 2026-08-28 | nat-modeq-gcd | land `Nat.ModEq.gcd_eq` (gcd.rs); confirm minFac absent, isRelPrime absent |
 | 2026-08-28 | nat-modeq-gcd | land `Nat.div_dvd_div_left` (divisibility.rs) |
+| 2026-08-28 | nat-modeq-gcd | land `Nat.coprime_of_dvd'` (primes.rs), fixing a build-order UnknownConst |
