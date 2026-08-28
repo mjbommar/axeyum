@@ -42,6 +42,7 @@ mod cancellation;
 mod completeness;
 mod congruence;
 mod convergence;
+mod cos_sign;
 mod cotransitivity;
 mod crossing;
 mod density;
@@ -90,6 +91,7 @@ pub(crate) fn all_entries(
     all.extend(completeness::entries(p));
     all.extend(congruence::entries(p));
     all.extend(convergence::entries(p));
+    all.extend(cos_sign::entries(p));
     all.extend(cotransitivity::entries(p));
     all.extend(crossing::entries(p));
     all.extend(density::entries(p));

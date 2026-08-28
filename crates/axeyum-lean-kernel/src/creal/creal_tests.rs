@@ -10201,7 +10201,9 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "exponential::declare_e_family",
     "trig::declare_trig",
     "trig::declare_sin_trig",
+    "cos_sign::declare_converges_upper_bound_shift",
     "alternating::declare_alternating",
+    "cos_sign::declare_alternating_upper_bound_tail",
     "trig::declare_trig_alternating_bounds",
     "trig::declare_sin_trig_alternating_bounds",
     "ivt::declare_ivt",
@@ -10584,5 +10586,157 @@ fn cos_fn_wide_at_one_and_the_derivative_restriction_state_what_pi_needs() {
     assert_ne!(
         restricted_ty, hf_ty,
         "the restriction left the interval where it found it"
+    );
+}
+
+/// The two general theorems π's rung 2 needs, pinned STRUCTURALLY.
+///
+/// Interned-id equality throughout, never `Kernel::def_eq`: a `def_eq`
+/// refutation of a transposed `le` over `sumRange` sets a FAILING conversion
+/// loose on the recursor with no early exit (measured elsewhere at >300 s and
+/// 3.1 GB), and every distinction here is visible in the term.
+///
+/// Each negative control differs in a SMALL term — one transposed `le` in the
+/// hypothesis, and `sumRange t 2` for `sumRange t 3` in the conclusion — never
+/// by rebuilding an unrelated shape.
+#[test]
+fn the_eventual_upper_bound_and_the_tail_leibniz_bound_state_what_pi_rung_2_needs() {
+    use super::convergence::converges_applied;
+    use super::cos_sign::{build_t_lam, sum_at};
+    use super::trig::{cle, czero};
+
+    /// `∀ s f L b, (∀ n, le (f (add n s)) b) → Converges f L → le L b`, or, with
+    /// `transposed`, the same shape with the hypothesis' `le` the wrong way
+    /// round.
+    fn upper_shift_ty(d: &mut IntDev<'_>, p: CRealPrelude, transposed: bool) -> ExprId {
+        let nat = d.nat_ty();
+        let carrier = super::creal_ty(d, p);
+        let seq_ty = d.arrow(nat, carrier);
+        let s_fv = d.fresh_fvar();
+        let s = d.kernel().fvar(s_fv);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let hyp = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let shifted = NatOps::add(d, n, s);
+            let f_at = d.apply(f, &[shifted]);
+            let claim = if transposed {
+                cle(d, p, b, f_at)
+            } else {
+                cle(d, p, f_at, b)
+            };
+            d.pi_fv(n_fv, nat, claim)
+        };
+        let conv = converges_applied(d, p, f, l);
+        let target = cle(d, p, l, b);
+        let after_conv = d.arrow(conv, target);
+        let after_hyp = d.arrow(hyp, after_conv);
+        let with_b = d.pi_fv(b_fv, carrier, after_hyp);
+        let with_l = d.pi_fv(l_fv, carrier, with_b);
+        let with_f = d.pi_fv(f_fv, seq_ty, with_l);
+        d.pi_fv(s_fv, nat, with_f)
+    }
+
+    /// `∀ a, (∀ k, le zero (a k)) → (∀ k, le (a (succ (succ k))) (a (succ k)))
+    /// → ∀ L, Converges (sumRange t) L → le L (sumRange t width)`.
+    fn tail_bound_ty(d: &mut IntDev<'_>, p: CRealPrelude, width: u32) -> ExprId {
+        let nat = d.nat_ty();
+        let carrier = super::creal_ty(d, p);
+        let fn_ty = d.arrow(nat, carrier);
+        let a_fv = d.fresh_fvar();
+        let a_fn = d.kernel().fvar(a_fv);
+        let hnn_ty = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let zero_c = czero(d, p);
+            let a_k = d.apply(a_fn, &[k]);
+            let body = cle(d, p, zero_c, a_k);
+            d.pi_fv(k_fv, nat, body)
+        };
+        let htail_ty = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sk = d.succ(k);
+            let ssk = d.succ(sk);
+            let a_ssk = d.apply(a_fn, &[ssk]);
+            let a_sk = d.apply(a_fn, &[sk]);
+            let body = cle(d, p, a_ssk, a_sk);
+            d.pi_fv(k_fv, nat, body)
+        };
+        let t_lam = build_t_lam(d, p, a_fn);
+        let f_expr = d.const_app(p.sum_range, &[t_lam]);
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let conv = converges_applied(d, p, f_expr, l);
+        let idx = d.num(width);
+        let bound = sum_at(d, p, t_lam, idx);
+        let target = cle(d, p, l, bound);
+        let after_conv = d.arrow(conv, target);
+        let with_l = d.pi_fv(l_fv, carrier, after_conv);
+        let with_htail = d.arrow(htail_ty, with_l);
+        let with_hnn = d.arrow(hnn_ty, with_htail);
+        d.pi_fv(a_fv, fn_ty, with_hnn)
+    }
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    // --- the EVENTUAL upper bound `alternating.rs` says does not exist ------
+    let shift_c = d.kernel().const_(p.converges_upper_bound_shift, vec![]);
+    let shift_ty = d
+        .kernel()
+        .infer(shift_c)
+        .expect("CReal.converges_upper_bound_shift must infer");
+    let want_shift = upper_shift_ty(&mut d, p, false);
+    let transposed_shift = upper_shift_ty(&mut d, p, true);
+    assert_eq!(
+        shift_ty, want_shift,
+        "converges_upper_bound_shift does not state the eventual UPPER bound \
+         `(∀ n, le (f (add n s)) b) → Converges f L → le L b`"
+    );
+    assert_ne!(
+        want_shift, transposed_shift,
+        "the negative control is vacuous: the transposed hypothesis builds the \
+         same term as the real one"
+    );
+    assert_ne!(
+        shift_ty, transposed_shift,
+        "converges_upper_bound_shift's hypothesis bounds the wrong side"
+    );
+
+    // --- the Leibniz bound needing antitonicity only from index 1 ----------
+    let tail_c = d.kernel().const_(p.alternating_upper_bound_tail, vec![]);
+    let tail_ty = d
+        .kernel()
+        .infer(tail_c)
+        .expect("CReal.alternatingUpperBoundTail must infer");
+    let want_tail = tail_bound_ty(&mut d, p, 3);
+    let narrower = tail_bound_ty(&mut d, p, 2);
+    assert_eq!(
+        tail_ty, want_tail,
+        "alternatingUpperBoundTail does not state `le L (sumRange t 3)` under \
+         the index-1 antitonicity `∀ k, le (a (succ (succ k))) (a (succ k))`"
+    );
+    assert_ne!(
+        want_tail, narrower,
+        "the negative control is vacuous: `sumRange t 2` builds the same term \
+         as `sumRange t 3`"
+    );
+    assert_ne!(
+        tail_ty, narrower,
+        "alternatingUpperBoundTail bounds `L` by the wrong partial sum -- the \
+         EVEN one `E 1`, which is a lower bound, not an upper one"
+    );
+
+    // The two are not each other: the tail bound must not have silently been
+    // declared as the shift lemma's own statement.
+    assert_ne!(
+        tail_ty, shift_ty,
+        "the two declarations carry the same statement"
     );
 }

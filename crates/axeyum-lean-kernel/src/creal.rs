@@ -1040,6 +1040,37 @@ pub struct CRealPrelude {
     /// Converges f L → le L b`. The mirror of
     /// [`Self::converges_lower_bound`].
     pub converges_upper_bound: NameId,
+    /// `CReal.converges_upper_bound_shift : ∀ s f L b, (∀ n, le (f
+    /// (Nat.add n s)) b) → Converges f L → le L b`.
+    ///
+    /// The EVENTUAL form of [`Self::converges_upper_bound`], and the mirror
+    /// of [`Self::converges_lower_bound_shift`]: a bound that only holds
+    /// past some index still bounds the limit. `creal/alternating.rs`'s own
+    /// `declare_alternating_upper_bound` records in its doc comment that
+    /// "this development has no `converges_upper_bound_shift`" and then runs
+    /// the negation route INLINE on its own concrete sequence — this is that
+    /// route as a named, general theorem, so the next caller composes rather
+    /// than rebuilds. See `creal/cos_sign.rs`.
+    pub converges_upper_bound_shift: NameId,
+    /// `CReal.alternatingUpperBoundTail : ∀ a, (∀ k, le zero (a k)) →
+    /// (∀ k, le (a (succ (succ k))) (a (succ k))) → ∀ L,
+    /// Converges (sumRange t) L → le L (sumRange t 3)`, `t j := mul (pow (neg
+    /// one) j) (a j)`.
+    ///
+    /// The Leibniz upper bound requiring antitonicity only **from index 1**.
+    /// [`Self::alternating_upper_bound`]'s `hdec` premise is the GLOBAL `∀ k,
+    /// a (succ k) ≤ a k`, which cosine's magnitude sequence at `8/5`
+    /// (`a k = (8/5)^{2k}/(2k)!`) fails at `k = 0`: `a 0 = 1 < a 1 = 32/25`.
+    /// The tail from `k = 1` is antitone, and that is all this needs.
+    ///
+    /// Proved by CLAMPING rather than shifting: `â k := a (succ (pred k))` is
+    /// globally antitone, so [`Self::alternating_bracket_upper`] applies to it
+    /// unchanged, and `â`'s partial sums differ from `a`'s by the single
+    /// constant `a 1 − a 0` at every index `≥ 1` — which cancels off both
+    /// sides, leaving a statement about `a`'s own partial sums, closed by
+    /// [`Self::converges_upper_bound_shift`] at shift `2`. See
+    /// `creal/cos_sign.rs`.
+    pub alternating_upper_bound_tail: NameId,
     /// `CReal.converges_le : ∀ f g L M, Converges f L → Converges g M →
     /// (∀ n, le (f n) (g n)) → le L M`.
     ///
@@ -6318,6 +6349,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
         converges_lower_bound_shift: kernel.name_str(creal, "converges_lower_bound_shift"),
         converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
+        converges_upper_bound_shift: kernel.name_str(creal, "converges_upper_bound_shift"),
+        alternating_upper_bound_tail: kernel.name_str(creal, "alternatingUpperBoundTail"),
         converges_le: kernel.name_str(creal, "converges_le"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
@@ -11040,6 +11073,31 @@ const STEPS: &[BuildStep] = &[
         run: trig::declare_sin_trig,
     },
     BuildStep {
+        label: "cos_sign::declare_converges_upper_bound_shift",
+        requires: &[
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.converges,
+            |p: CRealPrelude| p.converges_lower_bound_shift,
+            |p: CRealPrelude| p.converges_neg,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.converges_upper_bound_shift],
+        run: cos_sign::declare_converges_upper_bound_shift,
+    },
+    BuildStep {
         label: "alternating::declare_alternating",
         requires: &[
             |p: CRealPrelude| p.add_assoc,
@@ -11074,6 +11132,39 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.neg_one_pow_double,
         ],
         run: alternating::declare_alternating,
+    },
+    BuildStep {
+        label: "cos_sign::declare_alternating_upper_bound_tail",
+        requires: &[
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.alternating_bracket_upper,
+            |p: CRealPrelude| p.converges,
+            |p: CRealPrelude| p.converges_upper_bound_shift,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.one,
+            |p: CRealPrelude| p.pow,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.alternating_upper_bound_tail],
+        run: cos_sign::declare_alternating_upper_bound_tail,
     },
     BuildStep {
         label: "trig::declare_trig_alternating_bounds",
@@ -13015,6 +13106,7 @@ mod cancellation;
 mod completeness;
 mod congruence;
 mod convergence;
+mod cos_sign;
 mod cotransitivity;
 mod crossing;
 mod density;
