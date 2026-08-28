@@ -773,6 +773,43 @@ mod tests {
         assert_eq!(verify_horowitz(&a, &d, &b, &d2, &c, &d1), Some(false));
     }
 
+    /// Isolates guard 4 (`D2 | D'` exactly): a `D2, D1` split that
+    /// reconstructs `D` (guard 3 passes) but is NOT the true `gcd(D, D')`
+    /// split, paired with a `(B, C)` chosen to satisfy the identity **that
+    /// guard 5 would compute if D2's failure to divide D' were silently
+    /// tolerated** (i.e. `H` taken as `-D1'` rather than `D'/D2 - D1'`).
+    /// `D = (x-1)(x-2)`, `D2 = x-1`, `D1 = x-2`: `D2` does not divide
+    /// `D' = 2x-3` (`D'` at `x=1` is `-1 != 0`), so the real Horowitz `H` is
+    /// undefined as a polynomial, but `B=1, C=1` solves
+    /// `A = B'D1 + B*D1' + C*D2` exactly for `A = x`. This is a genuinely
+    /// WRONG certificate -- `(B/D2)' + C/D1` at `x=3` is `-1/4 + 1 = 3/4`,
+    /// not `A/D = 3/2` -- caught only by the exact-division guard, never by
+    /// the identity guard alone (which a divisibility-blind implementation
+    /// would compute the same wrong way).
+    #[test]
+    fn non_dividing_d2_slips_past_without_the_divisibility_guard() {
+        let d = poly_from(&[2, -3, 1]); // (x-1)(x-2)
+        let d2 = poly_from(&[-1, 1]); // x - 1
+        let d1 = poly_from(&[-2, 1]); // x - 2 (D2*D1 == D, but D2 != gcd(D,D'))
+        let b = poly_from(&[1]);
+        let c = poly_from(&[1]);
+        let a = poly_from(&[0, 1]); // x
+
+        // Confirm the fixture is NOT a genuine rational-function identity.
+        let x = Rational::integer(3);
+        assert!(
+            !horowitz_identity_holds_at(&a, &d, &b, &d2, &c, &d1, x),
+            "fixture must be a genuinely wrong certificate"
+        );
+
+        assert_eq!(
+            verify_horowitz(&a, &d, &b, &d2, &c, &d1),
+            Some(false),
+            "a D2 that does not divide D' exactly must be rejected even \
+             though it solves the (wrongly H-computed) identity"
+        );
+    }
+
     #[test]
     fn zero_d2_is_rejected() {
         let a = poly_from(&[1]);
