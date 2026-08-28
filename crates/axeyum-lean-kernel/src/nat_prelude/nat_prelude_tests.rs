@@ -500,6 +500,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.odd,
         p.log_aux,
         p.log,
+        p.sqrt_aux,
+        p.sqrt,
     ]
 }
 
@@ -878,6 +880,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.log_one_right,
         p.ble_eq_false_of_lt,
         p.log_of_lt,
+        p.sqrt_zero,
+        p.sqrt_one,
     ]
 }
 
@@ -6160,7 +6164,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        69 + 361,
+        71 + 363,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8637,4 +8641,79 @@ fn log_computes_and_its_boundary_equations_apply() {
             "{name:?} must rest on zero axioms"
         );
     }
+}
+
+/// `Nat.sqrt` COMPUTES, and its two boundary theorems apply at concrete
+/// arguments.
+///
+/// The definition is the point of interest: `sqrtAux` searches upward by
+/// fuel-bounded structural recursion, and that is only correct if the fuel
+/// (`n` itself) always suffices. An exhausted fuel returns whatever
+/// accumulator it stopped at, which for a `0`-fuel case is `0` -- so, like
+/// `Nat.log`'s equivalent test, every positive case below doubles as a
+/// fuel-sufficiency check: a wrong answer here would mean fuel ran out too
+/// early.
+///
+/// Both negative controls differ from the truth by exactly one, deliberately
+/// (a control that differs wildly tests less than it appears to).
+#[test]
+fn sqrt_computes_and_its_boundary_equations_apply() {
+    let mut f = Fixture::new();
+    let sqrt = f.p.sqrt;
+
+    for (value, expected) in [(0u32, 0u32), (1, 1), (2, 1), (3, 1), (4, 2), (8, 2), (9, 3)] {
+        let n = f.num(value);
+        let lhs = f.const_app(sqrt, &[n]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "sqrt {value} must reduce to {expected}"
+        );
+    }
+
+    let eight = f.num(8);
+    let sqrt_eight = f.const_app(sqrt, &[eight]);
+    let three = f.num(3);
+    assert!(
+        !f.k.def_eq(sqrt_eight, three),
+        "negative control: sqrt 8 is 2, not 3 -- def_eq must not be vacuous"
+    );
+    let nine = f.num(9);
+    let sqrt_nine = f.const_app(sqrt, &[nine]);
+    let two = f.num(2);
+    assert!(
+        !f.k.def_eq(sqrt_nine, two),
+        "negative control: sqrt 9 is 3, not 2"
+    );
+
+    // The two boundary equations apply, and each lands on the statement its
+    // name promises rather than on some vacuously true instance.
+    let p = f.p;
+    for (name, expected_value) in [(p.sqrt_zero, 0u32), (p.sqrt_one, 1u32)] {
+        let applied = f.const_app(name, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("{name:?} must type-check: {shown}")
+        });
+        let n = f.num(expected_value);
+        let lhs = f.const_app(sqrt, &[n]);
+        let want = f.eq(lhs, n);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "{name:?} must state Eq (sqrt {expected_value}) {expected_value}"
+        );
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{name:?} must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.sqrt_aux).is_empty(),
+        "Nat.sqrtAux must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.sqrt).is_empty(),
+        "Nat.sqrt must rest on zero axioms"
+    );
 }

@@ -168,6 +168,7 @@ mod primes;
 mod rectangle;
 mod relation;
 mod restrict_pair;
+mod sqrt;
 mod subset_product;
 mod totient;
 pub(crate) mod transposition;
@@ -244,6 +245,7 @@ use relation::{
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
+use sqrt::declare_sqrt_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use totient::declare_totient_all;
 use transposition::{
@@ -2116,6 +2118,30 @@ pub struct NatPrelude {
     /// [`ble_eq_false_of_lt`](Self::ble_eq_false_of_lt) collapses the whole
     /// fuel step.
     pub log_of_lt: NameId,
+
+    // --- the floor square root (`sqrt.rs`) ----------------------------------
+    /// `Nat.sqrtAux : Nat → Nat → Nat` — `sqrtAux n f`, the floor square root
+    /// of `n` computed by **fuel-bounded linear search**: `f` many
+    /// structural-recursion steps, each incrementing an accumulator while
+    /// `(accumulator + 1)² ≤ n` holds. `sqrtAux n zero ≡ 0` and `sqrtAux n
+    /// (succ f) ≡ let c := sqrtAux n f in if (succ c) * (succ c) ≤ n then
+    /// succ c else c`, both definitionally. Unlike
+    /// [`log_aux`](Self::log_aux), `n` is a captured free variable, not
+    /// threaded through `Nat.rec`'s motive — the motive here is the plain
+    /// `fun _ => Nat` accumulator fold, because (unlike `log`'s `n / b`) the
+    /// value being searched never changes across fuel steps.
+    pub sqrt_aux: NameId,
+    /// `Nat.sqrt : Nat → Nat` — `sqrt n := sqrtAux n n`. The fuel is `n`
+    /// itself: the accumulator increments by at most `1` per step and the
+    /// greatest `m` with `m * m ≤ n` is itself `≤ n`, so `n` steps always
+    /// suffice.
+    pub sqrt: NameId,
+    /// `Nat.sqrt_zero : Eq (sqrt 0) 0` — `refl`: the fuel is `0`, so
+    /// `sqrtAux` is already at its base case (`Mathlib`: `Nat.sqrt_zero`).
+    pub sqrt_zero: NameId,
+    /// `Nat.sqrt_one : Eq (sqrt 1) 1` — `refl`: fully concrete, one fuel step
+    /// finds `1 * 1 ≤ 1` (`Mathlib`: `Nat.sqrt_one`).
+    pub sqrt_one: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2612,6 +2638,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             log_one_right: kernel.name_str(nat, "log_one_right"),
             ble_eq_false_of_lt: kernel.name_str(nat, "ble_eq_false_of_lt"),
             log_of_lt: kernel.name_str(nat, "log_of_lt"),
+            sqrt_aux: kernel.name_str(nat, "sqrtAux"),
+            sqrt: kernel.name_str(nat, "sqrt"),
+            sqrt_zero: kernel.name_str(nat, "sqrt_zero"),
+            sqrt_one: kernel.name_str(nat, "sqrt_one"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2744,6 +2774,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_boolean_le`), both far above; nothing needs `Nat.log`, so
         // it goes last.
         declare_log_all(&mut d, &p)?;
+        // Needs `Nat.mul` (`declare_arithmetic`) and `Nat.ble`
+        // (`declare_boolean_le`), both far above; nothing needs `Nat.sqrt`.
+        declare_sqrt_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

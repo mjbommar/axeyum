@@ -1,0 +1,58 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- sqrt_zero 2>/dev/null | grep -Ec '^Nat\\.sqrt_zero[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.sqrt_zero",
+      "kernel_declaration": "Nat.sqrt_zero",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `Nat.sqrt n` is `Nat.sqrtAux n n` -- the fuel is `n` itself -- so at `n = 0` the fuel is already exhausted and `sqrtAux`'s zero minor premise (the accumulator's starting value, `0`) fires directly. The proof is `Eq.refl`; the kernel closes it by iota-reduction alone. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Controls run 2026-08-28: `sqrt_zero` and `sqrt_one` each exit 0, and `sqrt_zeroXX` exits 1.",
+      "supports": "sqrt(0) = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::sqrt_computes_and_its_boundary_equations_apply",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.sqrt_zero",
+      "kernel_declaration": "Nat.sqrt",
+      "kind": "kernel-term",
+      "notes": "A fuel-based definition is only correct if the fuel always suffices, and an EXHAUSTED fuel returns whatever accumulator it stopped at -- for the `n = 0` case that is `0`, which is exactly what a wrong answer would also look like. So the computation test is the fuel-sufficiency check: `Kernel::def_eq` reduces `sqrt 0` through `sqrt 9` to `0, 1, 1, 1, 2, 2, 3`, with two negative controls differing by ONE (`sqrt 8 = 3` and `sqrt 9 = 2` must both be rejected) so that `def_eq` cannot pass vacuously.",
+      "supports": "the fuel recursion terminates with the right value at n = 0, not with an exhausted fuel"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.sqrt_zero",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. This matters more than usual here: Mathlib's `Nat.sqrt` is defined by a WELL-FOUNDED Newton's-method iteration, and the Lean equation compiler's route to that carries `Quot.sound`/`propext`. The fuel-based linear-search definition in `nat_prelude/sqrt.rs` was chosen so that this row stays empty, and this command is what makes the claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "Eq.{1} AxNat (AxNat.sqrt AxNat.zero) AxNat.zero"
+  },
+  "id": "F:nat-sqrt-zero",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis statement could not be expressed in this kernel at all before 2026-08-28: `Nat.sqrt` did not exist, and `scripts/fact-frontier.py` reported it as the largest single BLOCKED cluster on the frontier (14 open `F:ml430-nat-sqrt-*` facts naming an undeclared kernel definition). Mathlib defines `Nat.sqrt` by a well-founded Newton's-method iteration (`iter (n guess) := let next := (guess + n/guess)/2; if next < guess then iter n next else guess`), whose termination is not structural. `nat_prelude/sqrt.rs` instead computes the SAME value -- the greatest `m` with `m * m <= n` -- by linear search, recursing structurally on a FUEL argument instantiated at `n` itself (the same device this prelude already uses for `Nat.div`/`Nat.mod`/`Nat.log`), which keeps the construction axiom-free.\n\n`sqrt_zero` and its sibling `sqrt_one` (`F:nat-sqrt-one`) are simultaneously the `n in {0, 1}` instances of the still-open Mathlib family `Nat.sqrt_eq (n) : sqrt (n * n) = n` (`F:ml430-nat-sqrt-eq-79ae8eae`) -- `0 * 0` and `1 * 1` reduce to `0` and `1` definitionally -- but the GENERAL theorem is not claimed here: it needs an inductive argument that the linear search never overshoots, which this construction does not attempt. The existence of the DEFINITION `Nat.sqrt` is entailed by this row rather than separately checked: the statement mentions `AxNat.sqrt`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain. A theorem inventory lists theorems only and would return zero rows for the definition itself, so it is deliberately not used as the discriminator for the construction.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 203-nat-sqrt",
+    "source": "one of the two boundary equations `declare_sqrt_all` (`crates/axeyum-lean-kernel/src/nat_prelude/sqrt.rs`) admits alongside the `Nat.sqrtAux`/`Nat.sqrt` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The floor square root of zero is zero.",
+  "title": "sqrt(0) = 0"
+}
