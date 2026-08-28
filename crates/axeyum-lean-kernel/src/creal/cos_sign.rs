@@ -60,7 +60,9 @@
 //! limit at shift `s := 2`.
 
 use super::convergence::converges_applied;
-use super::trig::{cadd, cle, cmul, cneg, cpow, czero, double_neg, echain, erefl, esymm, one_c};
+use super::trig::{
+    cabs, cadd, cle, cmul, cneg, cpow, czero, double_neg, echain, erefl, esymm, one_c,
+};
 use super::{CRealPrelude, creal_ty};
 use crate::KernelError;
 use crate::env::Declaration;
@@ -1130,6 +1132,176 @@ pub(super) fn declare_cos_wide_tail_antitone(
     let ty = d.kernel().infer(value)?;
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.cos_wide_tail_antitone,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// pi rung 2, items 3-4 (`docs/plan/status/174-pi-rung2.md`,
+// `docs/plan/status/175-pi-r2b.md`, `docs/plan/status/176-cw-bridge.md`):
+// `CReal.cosWideSeriesConverges` (the `Converges` witness
+// `alternatingUpperBoundTail` needs) and `CReal.cosWideNonpositive` -- `le
+// (cosFnWide R) zero`, the rung's actual target.
+// ---------------------------------------------------------------------------
+
+/// `a j := mul (expTerm (add j j)) (pow R (add j j))` -- cosine's magnitude
+/// sequence at `R := 8/5`, as a standalone lambda. Built with the EXACT same
+/// calls [`declare_cos_wide_tail_nonneg`]/[`declare_cos_wide_tail_antitone`]
+/// use inline, so this file's structural-hashing convention (every builder
+/// call is interned, so identical calls give the identical `ExprId`) makes
+/// `a_wide_lam(d, p, r)` applied at a `k` beta-reduce to the SAME term those
+/// two theorems' own stated types already mention -- letting
+/// [`declare_alternating_upper_bound_tail`]'s `a` slot be instantiated at
+/// this lambda and cite both directly, with no transport.
+fn a_wide_lam(d: &mut IntDev<'_>, p: CRealPrelude, r: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let dbl = d.add(j, j);
+    let e = d.apply(exp_term_c, &[dbl]);
+    let pw = cpow(d, p, r, dbl);
+    let body = cmul(d, p, e, pw);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `λ n pt, sumRange (fun j => cosFnTerm j pt) n` -- reproduced verbatim from
+/// `trig_fn.rs`'s own private `cos_fn_partial_sums_fn` (Rust privacy: each is
+/// a sibling module). Structural hashing makes this the IDENTICAL `ExprId`
+/// to what `CReal.cosFnWideUniformConverges`'s own stored type mentions as
+/// its `F` argument.
+fn cos_fn_partial_sums_fn_local(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+) -> ExprId {
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+    let f_pt = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = d.const_app(p.cos_fn_term, &[j, pt]);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let body = d.const_app(p.sum_range, &[f_pt, n]);
+    let with_pt = d.lam_fv(pt_fv, carrier, body);
+    d.lam_fv(n_fv, nat, with_pt)
+}
+
+/// `CReal.cosWideSeriesConverges : Converges (sumRange t) (cosFnWide R)` --
+/// pi rung 2 item 3. Composes `CReal.converges_of_abs_diff_le` with
+/// `CReal.cosFnWideUniformConverges`'s own `.spec` at the fixed point `x :=
+/// R` -- `docs/plan/status/176-cw-bridge.md`'s predicted route, no transport
+/// for the `close_within` shape itself -- bridged, per index, from
+/// `cosFnTerm`'s `mul (cosTerm j) (pow R (2j))` shape to `t`'s `mul (pow
+/// (neg one) j) (mul (expTerm (2j)) (pow R (2j)))` shape by exactly ONE
+/// `mul_assoc` (both `cosTerm` and `cosFnTerm` are `Definition`s, so this
+/// unfolds by delta alone, no bridging lemma needed beyond `mul_assoc`
+/// itself), lifted across the whole partial sum by `CReal.sumRange_congr`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_wide_series_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let r = r_wide(d, p);
+    let hr0 = hab_zero_r_wide(d, p);
+    let hrr = d.lemma(p.le_refl, &[r]);
+    let zero_c = czero(d, p);
+
+    let a_wide = a_wide_lam(d, p, r);
+    let t_lam = build_t_lam(d, p, a_wide);
+
+    let big_f = cos_fn_partial_sums_fn_local(d, p, carrier, nat);
+    let cos_fn_wide_c = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let u = d.kernel().const_(p.cos_fn_wide_uniform_converges, vec![]);
+    let g_r = d.apply(cos_fn_wide_c, &[r]);
+    let neg_g_r = cneg(d, p, g_r);
+
+    let rate = d.const_app(p.uconv_rate, &[big_f, cos_fn_wide_c, zero_c, r, u]);
+    let spec = d.const_app(p.uconv_spec, &[big_f, cos_fn_wide_c, zero_c, r, u]);
+
+    let f_expr = d.const_app(p.sum_range, &[t_lam]);
+
+    let hyp_lam = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let spec_n = d.apply(spec, &[n, r, hr0, hrr]);
+
+        let cos_fn_term_at_r = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = d.const_app(p.cos_fn_term, &[j, r]);
+            d.lam_fv(j_fv, nat, body)
+        };
+
+        // `Equiv (cosFnTerm j R) (t j)` at a symbolic `j` -- exactly one
+        // `mul_assoc`, both sides reached by delta+beta alone.
+        let per_j = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let jj = d.add(j, j);
+            let one_cc = one_c(d, p);
+            let neg_one = cneg(d, p, one_cc);
+            let sign_j = cpow(d, p, neg_one, j);
+            let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+            let e_jj = d.apply(exp_term_c, &[jj]);
+            let pow_r_jj = cpow(d, p, r, jj);
+            let body = d.lemma(p.mul_assoc, &[sign_j, e_jj, pow_r_jj]);
+            d.lam_fv(j_fv, nat, body)
+        };
+
+        let heq_sum = d.lemma(p.sum_range_congr, &[cos_fn_term_at_r, t_lam, n, per_j]);
+        // heq_sum : Equiv (sumRange cos_fn_term_at_r n) (sumRange t_lam n)
+
+        let f_n_r = d.const_app(p.sum_range, &[cos_fn_term_at_r, n]);
+        let t_n = d.const_app(p.sum_range, &[t_lam, n]);
+
+        let refl_neg_g = erefl(d, p, neg_g_r);
+        let add_congr_h = d.lemma(
+            p.add_congr,
+            &[f_n_r, t_n, neg_g_r, neg_g_r, heq_sum, refl_neg_g],
+        );
+        let diff_orig = d.const_app(p.add, &[f_n_r, neg_g_r]);
+        let diff_new = d.const_app(p.add, &[t_n, neg_g_r]);
+        let abs_congr_h = d.lemma(p.abs_congr, &[diff_orig, diff_new, add_congr_h]);
+
+        let q_n = d.const_app(p.rat.nat_div_succ, &[rate, n]);
+        let target = d.const_app(p.of_rat, &[q_n]);
+        let refl_target = erefl(d, p, target);
+
+        let abs_orig = cabs(d, p, diff_orig);
+        let abs_new = cabs(d, p, diff_new);
+
+        let close_within_new = d.lemma(
+            p.le_congr,
+            &[
+                abs_orig,
+                abs_new,
+                target,
+                target,
+                abs_congr_h,
+                refl_target,
+                spec_n,
+            ],
+        );
+        d.lam_fv(n_fv, nat, close_within_new)
+    };
+
+    let value = d.lemma(p.converges_of_abs_diff_le, &[f_expr, g_r, rate, hyp_lam]);
+    let ty = d.kernel().infer(value)?;
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_wide_series_converges,
         uparams: vec![],
         ty,
         value,

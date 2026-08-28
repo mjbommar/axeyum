@@ -30,5 +30,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.cos_wide_tail_antitone,
             "theorem",
         ),
+        (
+            "CReal.cosWideSeriesConverges",
+            p.cos_wide_series_converges,
+            "theorem",
+        ),
     ]
 }
