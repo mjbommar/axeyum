@@ -376,7 +376,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{normalize, one_le_succ, radd, rat_eq_rewrite};
+use crate::rat_prelude::ops::{normalize, one_le_succ, radd, rat_eq_rewrite, rchain};
 use crate::tc::{LocalContext, LocalDecl};
 
 /// Height for `cosFnTerm`: one past `powerSeriesTerm`'s own
@@ -3711,7 +3711,11 @@ fn declare_exp_term_succ_scale(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
 
     let prod_rat = rmul_here(d, a_rat, b_rat);
     let q1 = normalize(d, n1, d1, h1);
-    let rat_eq = d.trans(prod_rat, q1, c_rat, step0, step1);
+    // `rchain`, NOT `d.trans`: the `NatOps` `trans`/`chain`/`symm`/`refl`
+    // family builds `Eq AxNat` and rejects `Rat` arguments as
+    // `TypeMismatch { expected: AxNat, got: Rat }` -- a real rejection this
+    // declaration hit on its first `add_declaration`.
+    let (_, rat_eq) = rchain(d, prod_rat, &[(q1, step0), (c_rat, step1)]);
 
     // Lift to `CReal`: `mul (ofRat A) (ofRat B) ~ ofRat (A*B) ~ ofRat C`.
     let embed_a = embed(d, p, a_rat);
