@@ -4868,6 +4868,25 @@ pub struct CRealPrelude {
     /// `integral_split_arbitrary`'s `PosBound` fails precisely here.
     /// See `creal/integral.rs`.
     pub has_derivative_antiderivative: NameId,
+    /// `CReal.integral_eq_antideriv_diff : ∀ F G a b (hab : le a b)
+    /// (u : UniformlyContinuousOn F a b) (kb : Nat), BoundedOn F a b kb →
+    /// HasDerivativeOn G F a b →
+    /// Equiv (integral F a b hab u) (add (G b) (neg (G a)))`.
+    ///
+    /// **The Fundamental Theorem of Calculus, part II — the evaluation
+    /// rule**, for ANY antiderivative `G` of `F`, not just
+    /// [`Self::antiderivative`] itself. `A := antiderivative F a b hab u` is
+    /// ALSO an antiderivative ([`Self::has_derivative_antiderivative`],
+    /// FTC-I), so `G − A` has derivative `zero`
+    /// ([`Self::has_derivative_sub`] + [`Self::add_neg`]), and
+    /// [`Self::constant_of_zero_deriv`] gives `G a − A a ~ G b − A b`.
+    /// `A a ~ zero` and `A b ~ integral F a b hab u` are both instances of
+    /// the SAME degenerate-interval fact (`[a, clamp a]` and `[clamp b, b]`
+    /// respectively, via [`Self::clamp_id`] + [`Self::integral_abs_le`]);
+    /// the final rearrangement `G a ~ G b − I ⟹ I ~ G b − G a` is pure
+    /// `add_assoc`/`add_comm`/`add_neg`/`add_zero` algebra. See
+    /// `creal/integral.rs`.
+    pub integral_eq_antideriv_diff: NameId,
     /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
     /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
     /// le (abs (integral F a b hab u))
@@ -6384,6 +6403,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_split_arbitrary: kernel.name_str(creal, "integralSplitArbitrary"),
         integral_split_anywhere: kernel.name_str(creal, "integralSplitAnywhere"),
         has_derivative_antiderivative: kernel.name_str(creal, "hasDerivative_antiderivative"),
+        integral_eq_antideriv_diff: kernel.name_str(creal, "integral_eq_antideriv_diff"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_abs_le_of_bound: kernel.name_str(creal, "integral_abs_le_of_bound"),
         integral_sub_linear_le: kernel.name_str(creal, "integral_sub_linear_le"),
@@ -9925,6 +9945,51 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.has_derivative_antiderivative,
         ],
         run: integral::declare_ftc_estimates,
+    },
+    BuildStep {
+        label: "integral::declare_integral_eq_antideriv_diff",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_nonneg,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.antiderivative,
+            |p: CRealPrelude| p.bounded_on,
+            |p: CRealPrelude| p.bounded_on_unfold,
+            |p: CRealPrelude| p.clamp_id,
+            |p: CRealPrelude| p.constant_of_zero_deriv,
+            |p: CRealPrelude| p.eq_zero_of_mul_self_zero,
+            |p: CRealPrelude| p.equiv_of_le_le,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_antiderivative,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.has_derivative_sub,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_abs_le,
+            |p: CRealPrelude| p.integral_split_anywhere,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_self_abs,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.uniformly_continuous_on_restrict,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.integral_eq_antideriv_diff],
+        run: integral::declare_integral_eq_antideriv_diff,
     },
     BuildStep {
         label: "derivative::declare_has_derivative_integral_const",

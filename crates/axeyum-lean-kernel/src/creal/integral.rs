@@ -2341,7 +2341,7 @@ use super::convergence::{
     converges_applied, converges_predicate, div_succ_at, exists_intro, exists_ty,
 };
 use super::ring_helpers::right_distrib;
-use super::series::{chain_within3, within_symm};
+use super::series::{chain_within3, neg_zero_equiv, within_symm};
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
     modulus, sample, shift, weaken, within,
@@ -28225,6 +28225,527 @@ pub(super) fn declare_ftc_estimates(
     declare_antiderivative_abs_le(d, p)?;
     declare_integral_split_anywhere(d, p)?;
     declare_has_derivative_antiderivative(d, p)
+}
+
+// =============================================================================
+// `CReal.integral_eq_antideriv_diff` — the Fundamental Theorem of Calculus,
+// part II (the evaluation rule)
+// =============================================================================
+//
+// `∫ₐᵇ F = G(b) − G(a)` for ANY antiderivative `G` of `F` on `[a, b]`, not
+// just `CReal.antiderivative` itself. Route: `A := antiderivative F a b hab
+// u` is ALSO an antiderivative (FTC-I, `has_derivative_antiderivative`), so
+// `D := fun r => G r − A r` has derivative `zero` everywhere on `[a, b]`
+// (`has_derivative_sub` + `add_neg`), and `constant_of_zero_deriv` gives
+// `D a ~ D b`, i.e. `G a − A a ~ G b − A b`. Two facts close it:
+//
+//   - `A a ~ zero`: `A a` is the integral over the DEGENERATE interval
+//     `[a, clamp a]`, and `clamp a ~ a` (`clamp_id`), so its width is
+//     `Equiv`-zero and `integral_abs_le` bounds `|A a|` by `M · 0 ~ 0`.
+//   - `A b ~ integral F a b hab u`: split `[a, b]` at `clamp b` via
+//     `integral_split_anywhere`; the trailing piece `[clamp b, b]` is
+//     ALSO degenerate (`clamp b ~ b`), so the SAME zero-width argument
+//     kills it, leaving only the leading piece, which IS `A b`.
+//
+// Both degenerate-interval facts are one call to
+// [`integral_zero_of_width_zero`]. The final rearrangement `G a ~ G b − I
+// ⟹ I ~ G b − G a` is [`eq_sub_comm`], built from nothing but
+// `add_assoc`/`add_comm`/`add_neg`/`add_zero` (via [`add_sub_cancel`],
+// already in this file).
+
+/// `Equiv (integral F lo hi hlohi u) zero`, given the width `add hi (neg
+/// lo)` is itself `Equiv zero`. Bounds `|∫| ≤ M·width ~ M·0 ~ 0` via
+/// [`CRealPrelude::integral_abs_le`], then closes `|v| ~ 0 ⟹ v ~ zero`
+/// through [`CRealPrelude::mul_self_abs`] +
+/// [`CRealPrelude::eq_zero_of_mul_self_zero`] rather than the rational
+/// `equiv_zero_of_small` route, since the bound here is EXACT (not merely
+/// arbitrarily small).
+#[allow(clippy::too_many_arguments)]
+fn integral_zero_of_width_zero(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    lo: ExprId,
+    hi: ExprId,
+    hlohi: ExprId,
+    u: ExprId,
+    kb: ExprId,
+    hbnd_lo_hi: ExprId,
+    h_width_zero: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let v = d.const_app(p.integral, &[f, lo, hi, hlohi, u]);
+    let abs_v = d.const_app(p.abs, &[v]);
+    let w = width_of(d, p, lo, hi); // add hi (neg lo)
+
+    let bound_le = d.lemma(p.integral_abs_le, &[f, lo, hi, kb, hlohi, u, hbnd_lo_hi]);
+    // bound_le : le (abs v) (mul M w), M := ofRat (natDivSucc (succ kb) 0)
+    let succ_kb = d.succ(kb);
+    let zero_nat = d.num(0);
+    let m_rat = d.const_app(p.rat.nat_div_succ, &[succ_kb, zero_nat]);
+    let mbound = embed(d, p, m_rat);
+
+    let refl_m = d.lemma(p.equiv_refl, &[mbound]);
+    let mul_mw = cmul(d, p, mbound, w);
+    let mul_m_zero = cmul(d, p, mbound, zero_c);
+    let step_a = d.lemma(
+        p.mul_congr,
+        &[mbound, mbound, w, zero_c, refl_m, h_width_zero],
+    );
+    let step_b = d.lemma(p.mul_zero, &[mbound]);
+    let h_mul_zero = echain(d, p, mul_mw, &[(mul_m_zero, step_a), (zero_c, step_b)]);
+
+    let refl_absv = d.lemma(p.equiv_refl, &[abs_v]);
+    let le_zero = d.lemma(
+        p.le_congr,
+        &[
+            abs_v, abs_v, mul_mw, zero_c, refl_absv, h_mul_zero, bound_le,
+        ],
+    );
+    // le_zero : le (abs v) zero
+    let abs_nonneg = d.lemma(p.abs_nonneg, &[v]); // le zero (abs v)
+    let h_abs_zero = d.lemma(p.equiv_of_le_le, &[abs_v, zero_c, le_zero, abs_nonneg]);
+    // h_abs_zero : Equiv (abs v) zero
+
+    let mul_absv_absv = cmul(d, p, abs_v, abs_v);
+    let mul_zero_zero = cmul(d, p, zero_c, zero_c);
+    let hvv_a = d.lemma(
+        p.mul_congr,
+        &[abs_v, zero_c, abs_v, zero_c, h_abs_zero, h_abs_zero],
+    );
+    let hvv_b = d.lemma(p.mul_zero, &[zero_c]);
+    let h_vv = echain(
+        d,
+        p,
+        mul_absv_absv,
+        &[(mul_zero_zero, hvv_a), (zero_c, hvv_b)],
+    );
+
+    let mul_v_v = cmul(d, p, v, v);
+    let h_self_abs = d.lemma(p.mul_self_abs, &[v]); // Equiv (mul absv absv) (mul v v)
+    let h_self_abs_symm = d.lemma(p.equiv_symm, &[mul_absv_absv, mul_v_v, h_self_abs]);
+    let h_vv_eq = echain(
+        d,
+        p,
+        mul_v_v,
+        &[(mul_absv_absv, h_self_abs_symm), (zero_c, h_vv)],
+    );
+
+    d.lemma(p.eq_zero_of_mul_self_zero, &[v, h_vv_eq])
+}
+
+/// `BoundedOn F a hi kb` from `BoundedOn F a b kb` and `le hi b` —
+/// restricting the UPPER endpoint, lower endpoint unchanged. Mirrors
+/// [`antiderivative_spec`]'s own `restrict_bounded` closure (`BoundedOn` is
+/// a transparent `Definition`, so this is one lambda).
+fn restrict_bounded_hi(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    kb: ExprId,
+    hbnd: ExprId,
+    hi: ExprId,
+    h_hi_b: ExprId,
+) -> ExprId {
+    let carrier = creal_ty(d, p);
+    let hp = d.lemma(p.bounded_on_unfold, &[f, a, b, kb, hbnd]);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h1_ty = cle(d, p, a, t);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h2_ty = cle(d, p, t, hi);
+    let t_le_b = d.lemma(p.le_trans, &[t, hi, b, h2, h_hi_b]);
+    let applied = d.apply(hp, &[t, h1, t_le_b]);
+    let after2 = d.lam_fv(h2_fv, h2_ty, applied);
+    let after1 = d.lam_fv(h1_fv, h1_ty, after2);
+    d.lam_fv(t_fv, carrier, after1)
+}
+
+/// `BoundedOn F lo b kb` from `BoundedOn F a b kb` and `le a lo` —
+/// restricting the LOWER endpoint, upper endpoint unchanged. Mirrors
+/// [`integral_split_anywhere_proof`]'s own `hp_cb` construction.
+fn restrict_bounded_lo(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    kb: ExprId,
+    hbnd: ExprId,
+    lo: ExprId,
+    h_a_lo: ExprId,
+) -> ExprId {
+    let carrier = creal_ty(d, p);
+    let hp = d.lemma(p.bounded_on_unfold, &[f, a, b, kb, hbnd]);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h1_ty = cle(d, p, lo, t);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h2_ty = cle(d, p, t, b);
+    let a_le_t = d.lemma(p.le_trans, &[a, lo, t, h_a_lo, h1]);
+    let applied = d.apply(hp, &[t, a_le_t, h2]);
+    let after2 = d.lam_fv(h2_fv, h2_ty, applied);
+    let after1 = d.lam_fv(h1_fv, h1_ty, after2);
+    d.lam_fv(t_fv, carrier, after1)
+}
+
+/// `Equiv (add (add z x) (neg x)) z` — `(z + x) − x ~ z`.
+fn add_cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, z: ExprId, x: ExprId) -> ExprId {
+    let nx = cneg(d, p, x);
+    let zx = cadd(d, p, z, x);
+    let start = cadd(d, p, zx, nx); // (z+x) + (-x)
+    let xnx = cadd(d, p, x, nx); // x + (-x)
+    let s1 = cadd(d, p, z, xnx); // z + (x + (-x))
+    let assoc = d.lemma(p.add_assoc, &[z, x, nx]); // Equiv start s1
+    let hn = d.lemma(p.add_neg, &[x]); // Equiv xnx zero
+    let zero_c = czero(d, p);
+    let refl_z = d.lemma(p.equiv_refl, &[z]);
+    let s2 = cadd(d, p, z, zero_c); // z + zero
+    let cg = d.lemma(p.add_congr, &[z, z, xnx, zero_c, refl_z, hn]); // Equiv s1 s2
+    let h5 = d.lemma(p.add_zero, &[z]); // Equiv s2 z
+    echain(d, p, start, &[(s1, assoc), (s2, cg), (z, h5)])
+}
+
+/// `Equiv (add (add y (neg z)) z) y` — `(y − z) + z ~ y`. Built from
+/// [`add_sub_cancel`] (already in this file) plus one `add_comm`.
+fn sub_add_cancel(d: &mut IntDev<'_>, p: CRealPrelude, y: ExprId, z: ExprId) -> ExprId {
+    let nz = cneg(d, p, z);
+    let yz = cadd(d, p, y, nz);
+    let start = cadd(d, p, yz, z); // (y + (-z)) + z
+    let s1 = cadd(d, p, z, yz); // z + (y + (-z))
+    let comm = d.lemma(p.add_comm, &[yz, z]); // Equiv start s1
+    let cancel = add_sub_cancel(d, p, z, y); // Equiv s1 y
+    echain(d, p, start, &[(s1, comm), (y, cancel)])
+}
+
+/// Given `h : Equiv x (add y (neg z))`, produce `Equiv z (add y (neg x))` —
+/// the rearrangement `x ~ y − z  ⟹  z ~ y − x`, used once to turn `G a ~ G
+/// b − I` into `I ~ G b − G a`.
+fn eq_sub_comm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    h: ExprId,
+) -> ExprId {
+    // Step 1: Equiv (add x z) y.
+    let nz = cneg(d, p, z);
+    let yz = cadd(d, p, y, nz);
+    let xz = cadd(d, p, x, z);
+    let refl_z = d.lemma(p.equiv_refl, &[z]);
+    let step1 = d.lemma(p.add_congr, &[x, yz, z, z, h, refl_z]); // Equiv xz (add yz z)
+    let yzz = cadd(d, p, yz, z);
+    let step2 = sub_add_cancel(d, p, y, z); // Equiv yzz y
+    let hxz_y = echain(d, p, xz, &[(yzz, step1), (y, step2)]); // Equiv xz y
+
+    // Step 2: Equiv (add z x) y (commute the sum).
+    let zx = cadd(d, p, z, x);
+    let comm_xz = d.lemma(p.add_comm, &[x, z]); // Equiv xz zx
+    let comm_xz_symm = d.lemma(p.equiv_symm, &[xz, zx, comm_xz]); // Equiv zx xz
+    let hzx_y = echain(d, p, zx, &[(xz, comm_xz_symm), (y, hxz_y)]); // Equiv zx y
+
+    // Step 3: add (neg x) to both sides, cancel the left.
+    let nx = cneg(d, p, x);
+    let zxnx = cadd(d, p, zx, nx); // (z+x) + (-x)
+    let ynx = cadd(d, p, y, nx); // y + (-x) -- exactly the target shape
+    let refl_nx = d.lemma(p.equiv_refl, &[nx]);
+    let step3 = d.lemma(p.add_congr, &[zx, y, nx, nx, hzx_y, refl_nx]); // Equiv zxnx ynx
+
+    let cancel_r = add_cancel_right(d, p, z, x); // Equiv zxnx z
+    let cancel_r_symm = d.lemma(p.equiv_symm, &[zxnx, z, cancel_r]); // Equiv z zxnx
+    echain(d, p, z, &[(zxnx, cancel_r_symm), (ynx, step3)]) // Equiv z (add y (neg x))
+}
+
+/// `CReal.integral_eq_antideriv_diff : ∀ F G a b (hab : le a b)
+/// (u : UniformlyContinuousOn F a b) (kb : Nat), BoundedOn F a b kb →
+/// HasDerivativeOn G F a b →
+/// Equiv (integral F a b hab u) (add (G b) (neg (G a)))`
+///
+/// **The Fundamental Theorem of Calculus, part II.** See this section's own
+/// module documentation for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_integral_eq_antideriv_diff(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let bigg = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let kb_fv = d.fresh_fvar();
+    let kb = d.kernel().fvar(kb_fv);
+    let hbnd_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+    let hg_ty = d.const_app(p.has_derivative_on, &[bigg, f, a, b]);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let refl_a = d.lemma(p.le_refl, &[a]);
+    let refl_b = d.lemma(p.le_refl, &[b]);
+
+    // --- A := antiderivative F a b hab u, and its own FTC-I derivative ------
+    let cap_a = d.const_app(p.antiderivative, &[f, a, b, hab, u]);
+    let ha = d.lemma(
+        p.has_derivative_antiderivative,
+        &[f, a, b, hab, u, kb, hbnd],
+    );
+    // ha : HasDerivativeOn cap_a f a b
+
+    // --- D := fun r => add (G r) (neg (A r)), Dp := fun x => F x − F x -----
+    let d_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let gr = d.apply(bigg, &[r]);
+        let ar = d.apply(cap_a, &[r]);
+        let nar = cneg(d, p, ar);
+        let body = cadd(d, p, gr, nar);
+        d.lam_fv(r_fv, carrier, body)
+    };
+    let dp_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fx = d.apply(f, &[x]);
+        let nfx = cneg(d, p, fx);
+        let body = cadd(d, p, fx, nfx);
+        d.lam_fv(x_fv, carrier, body)
+    };
+    let hd = d.const_app(p.has_derivative_sub, &[bigg, f, cap_a, f, a, b, hg, ha]);
+    // hd : HasDerivativeOn d_fn dp_fn a b
+
+    let hzero = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let fz = d.apply(f, &[z]);
+        let body = d.lemma(p.add_neg, &[fz]); // Equiv (add fz (neg fz)) zero
+        let z_le_b = cle(d, p, z, b);
+        let a_le_z = cle(d, p, a, z);
+        let with_hzb = d.lam_fv(hzb_fv, z_le_b, body);
+        let with_haz = d.lam_fv(haz_fv, a_le_z, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let h_dab = d.const_app(
+        p.constant_of_zero_deriv,
+        &[d_fn, dp_fn, a, b, hd, hzero, a, b, refl_a, hab, refl_b],
+    );
+    // h_dab : Equiv (apply d_fn a) (apply d_fn b) [unreduced]
+
+    let ga = d.apply(bigg, &[a]);
+    let gb = d.apply(bigg, &[b]);
+    let aa = d.apply(cap_a, &[a]);
+    let ab = d.apply(cap_a, &[b]);
+    let naa = cneg(d, p, aa);
+    let nab = cneg(d, p, ab);
+    let da_reduced = cadd(d, p, ga, naa);
+    let db_reduced = cadd(d, p, gb, nab);
+    let h_dab_reduced = echain(d, p, da_reduced, &[(db_reduced, h_dab)]);
+    // h_dab_reduced : Equiv (add ga (neg aa)) (add gb (neg ab))
+
+    // --- A a ~ zero: the leading degenerate piece [a, clamp a] --------------
+    let (clamp_a, h_a_clampa, h_clampa_b, urest_a, _int_a) =
+        antiderivative_at(d, p, f, a, b, hab, u, a);
+    let h_clampa_eq_a = d.lemma(p.clamp_id, &[a, b, a, refl_a, hab]); // Equiv clamp_a a
+    let h_width_a0 = {
+        let na = cneg(d, p, a);
+        let w = cadd(d, p, clamp_a, na); // clamp_a + (-a)
+        let w2 = cadd(d, p, a, na); // a + (-a)
+        let refl_na = d.lemma(p.equiv_refl, &[na]);
+        let cg = d.lemma(p.add_congr, &[clamp_a, a, na, na, h_clampa_eq_a, refl_na]);
+        let hn = d.lemma(p.add_neg, &[a]); // Equiv w2 zero
+        let zero_c = czero(d, p);
+        echain(d, p, w, &[(w2, cg), (zero_c, hn)])
+    };
+    let hbnd_a_clampa = restrict_bounded_hi(d, p, f, a, b, kb, hbnd, clamp_a, h_clampa_b);
+    let h_aa_zero = integral_zero_of_width_zero(
+        d,
+        p,
+        f,
+        a,
+        clamp_a,
+        h_a_clampa,
+        urest_a,
+        kb,
+        hbnd_a_clampa,
+        h_width_a0,
+    );
+    // h_aa_zero : Equiv (integral F a clamp_a h_a_clampa urest_a) zero, ~ Equiv aa zero
+
+    // --- A b ~ integral F a b hab u: the trailing degenerate piece ----------
+    let (clamp_b, h_a_clampb, h_clampb_b, urest_b, int_b_val) =
+        antiderivative_at(d, p, f, a, b, hab, u, b);
+    let h_clampb_eq_b = d.lemma(p.clamp_id, &[a, b, b, hab, refl_b]); // Equiv clamp_b b
+    let ucb = d.lemma(
+        p.uniformly_continuous_on_restrict,
+        &[f, a, b, clamp_b, b, u, h_a_clampb, h_clampb_b, refl_b],
+    );
+    let h_width_b0 = {
+        let ncb = cneg(d, p, clamp_b);
+        let w = cadd(d, p, b, ncb); // b + (-clamp_b)
+        let nb = cneg(d, p, b);
+        let w2 = cadd(d, p, b, nb); // b + (-b)
+        let refl_b_val = d.lemma(p.equiv_refl, &[b]);
+        let neg_cg = d.lemma(p.neg_congr, &[clamp_b, b, h_clampb_eq_b]); // Equiv ncb nb
+        let cg = d.lemma(p.add_congr, &[b, b, ncb, nb, refl_b_val, neg_cg]);
+        let hn = d.lemma(p.add_neg, &[b]); // Equiv w2 zero
+        let zero_c = czero(d, p);
+        echain(d, p, w, &[(w2, cg), (zero_c, hn)])
+    };
+    let hbnd_clampb_b = restrict_bounded_lo(d, p, f, a, b, kb, hbnd, clamp_b, h_a_clampb);
+    let h_tail_zero = integral_zero_of_width_zero(
+        d,
+        p,
+        f,
+        clamp_b,
+        b,
+        h_clampb_b,
+        ucb,
+        kb,
+        hbnd_clampb_b,
+        h_width_b0,
+    );
+    // h_tail_zero : Equiv (integral F clamp_b b h_clampb_b ucb) zero
+
+    let split = d.lemma(
+        p.integral_split_anywhere,
+        &[
+            f, a, b, clamp_b, hab, u, kb, hbnd, h_a_clampb, h_clampb_b, urest_b, ucb,
+        ],
+    );
+    // split : Equiv (integral F a b hab u) (add int_b_val (integral F clamp_b b h_clampb_b ucb))
+    let i_val = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let int_clampb_b = d.const_app(p.integral, &[f, clamp_b, b, h_clampb_b, ucb]);
+    let rhs = cadd(d, p, int_b_val, int_clampb_b);
+
+    let refl_int_b_val = d.lemma(p.equiv_refl, &[int_b_val]);
+    let zero_c = czero(d, p);
+    let rhs2 = cadd(d, p, int_b_val, zero_c);
+    let cg_rhs = d.lemma(
+        p.add_congr,
+        &[
+            int_b_val,
+            int_b_val,
+            int_clampb_b,
+            zero_c,
+            refl_int_b_val,
+            h_tail_zero,
+        ],
+    ); // Equiv rhs rhs2
+    let h_add_zero = d.lemma(p.add_zero, &[int_b_val]); // Equiv rhs2 int_b_val
+    let h_i_eq_ab = echain(
+        d,
+        p,
+        i_val,
+        &[(rhs, split), (rhs2, cg_rhs), (int_b_val, h_add_zero)],
+    );
+    // h_i_eq_ab : Equiv i_val int_b_val, ~ Equiv i_val ab
+
+    // --- assemble: KEY := Equiv ga (add gb (neg i_val)) ----------------------
+    let h_neg_aa_zero = {
+        let n_zero = cneg(d, p, zero_c);
+        let ncg = d.lemma(p.neg_congr, &[aa, zero_c, h_aa_zero]); // Equiv naa n_zero
+        let nz_eq = neg_zero_equiv(d, p); // Equiv n_zero zero
+        echain(d, p, naa, &[(n_zero, ncg), (zero_c, nz_eq)])
+    };
+    let h_left = {
+        // Equiv da_reduced ga
+        let refl_ga = d.lemma(p.equiv_refl, &[ga]);
+        let mid = cadd(d, p, ga, zero_c);
+        let cg = d.lemma(p.add_congr, &[ga, ga, naa, zero_c, refl_ga, h_neg_aa_zero]);
+        let hz = d.lemma(p.add_zero, &[ga]);
+        echain(d, p, da_reduced, &[(mid, cg), (ga, hz)])
+    };
+    let h_left_symm = d.lemma(p.equiv_symm, &[da_reduced, ga, h_left]); // Equiv ga da_reduced
+
+    let n_ival = cneg(d, p, i_val);
+    let h_right = {
+        // Equiv db_reduced (add gb (neg i_val))
+        let refl_gb = d.lemma(p.equiv_refl, &[gb]);
+        let h_i_ab_symm = d.lemma(p.equiv_symm, &[i_val, int_b_val, h_i_eq_ab]); // Equiv int_b_val i_val
+        let neg_cg2 = d.lemma(p.neg_congr, &[ab, i_val, h_i_ab_symm]); // Equiv nab n_ival
+        d.lemma(p.add_congr, &[gb, gb, nab, n_ival, refl_gb, neg_cg2])
+    };
+    let gb_minus_i = cadd(d, p, gb, n_ival);
+    let key = echain(
+        d,
+        p,
+        ga,
+        &[
+            (da_reduced, h_left_symm),
+            (db_reduced, h_dab_reduced),
+            (gb_minus_i, h_right),
+        ],
+    );
+    // key : Equiv ga (add gb (neg i_val))
+
+    let final_eq = eq_sub_comm(d, p, ga, gb, i_val, key);
+    // final_eq : Equiv i_val (add gb (neg ga))
+
+    let concl = {
+        let neg_ga = cneg(d, p, ga);
+        let target = cadd(d, p, gb, neg_ga);
+        equiv(d, p, i_val, target)
+    };
+
+    let ty = {
+        let t = d.arrow(hg_ty, concl);
+        let t = d.arrow(hbnd_ty, t);
+        let t = d.pi_fv(kb_fv, nat, t);
+        let t = d.pi_fv(u_fv, u_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        let t = d.pi_fv(g_fv, f_ty, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let v = d.lam_fv(hg_fv, hg_ty, final_eq);
+        let v = d.lam_fv(hbnd_fv, hbnd_ty, v);
+        let v = d.lam_fv(kb_fv, nat, v);
+        let v = d.lam_fv(u_fv, u_ty, v);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        let v = d.lam_fv(g_fv, f_ty, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_eq_antideriv_diff,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 #[cfg(test)]
