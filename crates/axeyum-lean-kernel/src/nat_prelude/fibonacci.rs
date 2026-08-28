@@ -1480,10 +1480,7 @@ fn fib_ge_shifted_gen(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
         let new_a_ty = stmt_at(d, sj);
         let ssj = d.succ(sj);
         let new_b_ty = stmt_at(d, ssj);
-        d.const_app(
-            p.logic.and_intro,
-            &[new_a_ty, new_b_ty, ih_b, new_second],
-        )
+        d.const_app(p.logic.and_intro, &[new_a_ty, new_b_ty, ih_b, new_second])
     };
 
     let n_fv = d.fresh_fvar();
