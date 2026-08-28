@@ -92,6 +92,7 @@ mod modinv;
 mod nat_abs;
 pub(crate) mod ops;
 mod order;
+mod parity;
 mod prod;
 mod rat;
 mod ring;
@@ -1088,6 +1089,27 @@ pub struct IntPrelude {
     /// sequence is strictly positive at every ODD index, in either direction
     /// of `ℤ`. See `fibonacci.rs`'s module doc for the proof.
     pub fib_two_mul_add_one_pos: NameId,
+    /// `Even : Int → Prop := fun n => Nat.Even (natAbs n)` — magnitude alone
+    /// decides parity, since negation does not change it. See `parity.rs`'s
+    /// module doc for why this form was chosen over a fresh `Int`-level
+    /// existential.
+    pub even: NameId,
+    /// `Odd : Int → Prop := fun n => Nat.Odd (natAbs n)`. See `parity.rs`.
+    pub odd: NameId,
+    /// `odd_iff_nat_abs_odd : ∀ n, Iff (Odd n) (Nat.Odd (natAbs n))` — named,
+    /// discoverable API surface for what [`Self::odd`]'s definition already
+    /// gives for free.
+    pub odd_iff_nat_abs_odd: NameId,
+    /// `even_iff_nat_abs_even : ∀ n, Iff (Even n) (Nat.Even (natAbs n))` —
+    /// [`Self::odd_iff_nat_abs_odd`] with `Even`/`Odd` swapped.
+    pub even_iff_nat_abs_even: NameId,
+    /// `fib_of_odd : ∀ n, Odd n → Eq Int (fib n) (ofNat (Nat.fib (natAbs
+    /// n)))` — at an odd index the sign-extended `fib` agrees with the plain
+    /// `Nat`-valued Fibonacci sequence at the magnitude, in EITHER direction
+    /// of `ℤ`. See `fibonacci.rs`'s module doc for the proof (cheap once
+    /// `Odd`/`Even` are stated via `natAbs`, per the earlier lane's
+    /// prediction).
+    pub fib_of_odd: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1330,6 +1352,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
         fib_two_mul_add_one_pos: child(kernel, "fib_two_mul_add_one_pos"),
+        even: child(kernel, "Even"),
+        odd: child(kernel, "Odd"),
+        odd_iff_nat_abs_odd: child(kernel, "odd_iff_nat_abs_odd"),
+        even_iff_nat_abs_even: child(kernel, "even_iff_nat_abs_even"),
+        fib_of_odd: child(kernel, "fib_of_odd"),
     }
 }
 
@@ -1468,6 +1495,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;
+        parity::declare_parity_all(&mut d)?;
         gcd::declare_gcd(&mut d)?;
         gcd::declare_gcd_comm(&mut d)?;
         gcd::declare_gcd_one_zero_right(&mut d)?;
@@ -1527,6 +1555,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         fibonacci::declare_fib_cassini_all(&mut d)?;
         fibonacci::declare_fib(&mut d)?;
         fibonacci::declare_fib_two_mul_add_one_pos(&mut d)?;
+        fibonacci::declare_fib_of_odd(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;

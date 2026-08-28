@@ -67,7 +67,7 @@
 //! literal `neg (neg one) = one` for the base of `neg_neg`).
 
 use super::IntPrelude;
-use super::ops::{IntDev, Shape, case_split};
+use super::ops::{IntDev, Shape, case_split, exists_elim};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -879,6 +879,302 @@ pub(super) fn declare_fib_two_mul_add_one_pos(d: &mut IntDev<'_>) -> Result<(), 
                     d.ilt(z, x2)
                 });
                 d.itransport(ofnat_fib_sx, motive, h_pos_nat, fib_neg_succ_x, reversed)
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Int.fib_of_odd` — at an odd index, `fib` agrees with the plain `Nat`
+// sequence at the magnitude, in either direction of `ℤ`.
+// ============================================================================
+
+/// `Int.natAbs a`. Module-private mirror of `parity.rs`'s/`gcd.rs`'s own
+/// copies (`nat_abs.rs`'s `NatAbsOps` trait is private to that module).
+fn nat_abs(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
+    let f = d.int().nat_abs;
+    d.const_app(f, &[a])
+}
+
+/// `Eq Nat (add (succ m) (succ m)) (succ (succ (add m m)))` — the same
+/// `add_succ` then `succ_add` peel `nat_prelude/parity.rs`'s private
+/// `succ_double_eq` performs, rebuilt here over `IntDev` (which implements
+/// `NatOps` in full, so every `Nat`-level term/`Eq` combinator this needs is
+/// already available) rather than reused, since that helper is private to
+/// `nat_prelude`.
+fn succ_double_eq_nat(d: &mut IntDev<'_>, m: ExprId) -> ExprId {
+    let p = d.int().nat;
+    let succ_m = d.succ(m);
+    let lhs = d.add(succ_m, succ_m);
+    let inner = d.add(succ_m, m);
+    let succ_inner = d.succ(inner);
+    let add_succ_eq = d.lemma(p.add_succ, &[succ_m, m]);
+
+    let mm = d.add(m, m);
+    let succ_mm = d.succ(mm);
+    let succ_add_eq = d.lemma(p.succ_add, &[m, m]);
+    let congr_succ = d.congr(inner, succ_mm, succ_add_eq, &|d, x| d.succ(x));
+    let succ_succ_mm = d.succ(succ_mm);
+
+    let (_, result) = d.chain(
+        lhs,
+        &[(succ_inner, add_succ_eq), (succ_succ_mm, congr_succ)],
+    );
+    result
+}
+
+/// `Eq Int (pow (neg one) (add k k)) (ofNat one)` — `(-1)` raised to an
+/// exponent of the shape `k + k` (the witness form `Nat.Even`'s own
+/// definition uses, `nat_prelude/parity.rs`) is `1`.
+///
+/// Same induction and the same four supporting facts as
+/// [`pow_neg_one_two_mul`], but over `add k k` rather than `mul two k`:
+/// `add (succ k) (succ k)` does **not** reduce purely the way `mul two (succ
+/// k)` does (`Nat.add` recurses on its right argument, which here is
+/// symbolic `succ k`, not the literal `two` the `mul`-shaped version has), so
+/// the step case bridges with an actual equation ([`succ_double_eq_nat`])
+/// lifted to `Int` via `nat_eq_to_int`, rather than `d.irefl`.
+fn pow_neg_one_add_self(d: &mut IntDev<'_>, j: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let exponent = d.add(v, v);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let neg_one = d.ineg(one_i);
+        let lhs = d.ipow(neg_one, exponent);
+        let rhs_nat = d.num(1);
+        let rhs = d.of_nat(rhs_nat);
+        d.ieq(lhs, rhs)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        // `add zero zero` reduces PURELY to `zero` (`Nat.add`'s own base
+        // case), exactly like `mul two zero` in `pow_neg_one_two_mul`.
+        let zero = d.zero();
+        let exponent = d.add(zero, zero);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let neg_one = d.ineg(one_i);
+        let lhs = d.ipow(neg_one, exponent);
+        d.irefl(lhs)
+    };
+
+    let step = |d: &mut IntDev<'_>, k: ExprId, ih: ExprId| -> ExprId {
+        // ih : Eq Int (pow neg_one (add k k)) (ofNat one)
+        let add_k_k = d.add(k, k);
+        let sk = d.succ(k);
+        let add_sk_sk = d.add(sk, sk);
+
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let neg_one = d.ineg(one_i);
+
+        let start = d.ipow(neg_one, add_sk_sk);
+
+        // Bridge: add (succ k) (succ k) = succ (succ (add k k)) -- NOT pure
+        // reduction, lift the Nat equation to Int.
+        let succ_succ = {
+            let inner = d.succ(add_k_k);
+            d.succ(inner)
+        };
+        let reduced_start = d.ipow(neg_one, succ_succ);
+        let nat_eq = succ_double_eq_nat(d, k);
+        let bridge = d.nat_eq_to_int(add_sk_sk, succ_succ, nat_eq, &|d, x| d.ipow(neg_one, x));
+
+        // pow neg_one (succ (succ K)) = neg (pow neg_one (succ K))
+        let sk_of_add = d.succ(add_k_k);
+        let step_a = pow_neg_one_succ(d, sk_of_add);
+        let pow_at_sk = d.ipow(neg_one, sk_of_add);
+        let neg_pow_at_sk = d.ineg(pow_at_sk);
+
+        // pow neg_one (succ K) = neg (pow neg_one K)
+        let step_b = pow_neg_one_succ(d, add_k_k);
+        let pow_at_k = d.ipow(neg_one, add_k_k);
+        let neg_pow_at_k = d.ineg(pow_at_k);
+        let step_b_lifted = d.icongr(pow_at_sk, neg_pow_at_k, step_b, &|d, t| d.ineg(t));
+        let neg_neg_pow_at_k = d.ineg(neg_pow_at_k);
+
+        let (_, double_neg_chain) = d.ichain(
+            reduced_start,
+            &[(neg_pow_at_sk, step_a), (neg_neg_pow_at_k, step_b_lifted)],
+        );
+
+        // Lift `ih` through `neg . neg`, then cancel with `neg_neg`.
+        let ih_neg1 = d.icongr(pow_at_k, one_i, ih, &|d, t| d.ineg(t));
+        let neg_one_i = d.ineg(one_i);
+        let ih_neg2 = d.icongr(neg_pow_at_k, neg_one_i, ih_neg1, &|d, t| d.ineg(t));
+        let neg_neg_one_i = d.ineg(neg_one_i);
+        let cancel = neg_neg(d, one_i);
+
+        let (_, ih_chain) = d.ichain(
+            neg_neg_pow_at_k,
+            &[(neg_neg_one_i, ih_neg2), (one_i, cancel)],
+        );
+
+        let (_, whole) = d.ichain(
+            start,
+            &[
+                (reduced_start, bridge),
+                (neg_neg_pow_at_k, double_neg_chain),
+                (one_i, ih_chain),
+            ],
+        );
+        whole
+    };
+
+    d.induct(&motive, &base, &step, j)
+}
+
+/// `Int.fib_of_odd : ∀ n, Odd n → Eq Int (fib n) (ofNat (Nat.fib (natAbs
+/// n)))`.
+///
+/// Case split on `n`. `Odd`/`Even` are defined via `natAbs`
+/// (`parity.rs`'s module doc), so both branches reach their goal cheaply:
+///
+/// - `ofNat` branch: `fib (ofNat a)` reduces ([`declare_fib`]'s own case
+///   split) to `ofNat (Nat.fib a)`, and `natAbs (ofNat a)` reduces to `a`, so
+///   both sides of the target equation reduce to the identical term -- the
+///   hypothesis is not even used.
+/// - `negSucc` branch: `Odd (negSucc m)` reduces to `Nat.Odd (succ m)`, and
+///   `NatPrelude::even_iff_odd_succ`'s `mpr` direction gives `Nat.Even m`
+///   directly -- no `Int`-level parity lemma needed, exactly as the earlier
+///   lane predicted. `Nat.Even m`'s witness `k` (with `m = k + k`) is
+///   eliminated (`Exists.rec`, `Prop`-only, legal here since the target is a
+///   `Prop`) to invoke [`pow_neg_one_add_self`], transported from exponent
+///   `k + k` to `m` along the witness equation, giving `(-1)^m = 1`; the rest
+///   is the same `one_mul` collapse [`declare_fib_two_mul_add_one_pos`]'s own
+///   `negSucc` branch already performs.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_fib_of_odd(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+
+    let statement = |d: &mut IntDev<'_>, args: &[ExprId]| -> ExprId {
+        let n = args[0];
+        let odd_ty = d.const_app(p.odd, &[n]);
+        let fib_n = d.const_app(p.fib, &[n]);
+        let mag = nat_abs(d, n);
+        let fib_mag = d.const_app(p.nat.fib, &[mag]);
+        let rhs = d.of_nat(fib_mag);
+        let concl = d.ieq(fib_n, rhs);
+        d.arrow(odd_ty, concl)
+    };
+
+    d.int_theorem(p.fib_of_odd, 1, &|d, v| {
+        let stmt = statement(d, v);
+        let proof = case_split(d, v, &statement, &|d, b| match b[0].0 {
+            Shape::OfNat => {
+                let a = b[0].1;
+                let ofnat_a = d.of_nat(a);
+                let odd_ofnat_a_ty = d.const_app(p.odd, &[ofnat_a]);
+                let fib_ofnat_a = d.const_app(p.fib, &[ofnat_a]);
+
+                // `fib (ofNat a)` and `ofNat (Nat.fib (natAbs (ofNat a)))`
+                // both reduce PURELY to `ofNat (Nat.fib a)` -- `d.irefl` at
+                // the raw (unreduced) `fib (ofNat a)` term reads at the
+                // target type, and the hypothesis is unused.
+                let body = d.irefl(fib_ofnat_a);
+                let h_fv = d.fresh_fvar();
+                d.lam_fv(h_fv, odd_ofnat_a_ty, body)
+            }
+            Shape::NegSucc => {
+                let m = b[0].1;
+                let neg_succ_m = d.neg_succ(m);
+                let fib_neg_succ_m = d.const_app(p.fib, &[neg_succ_m]);
+                let odd_neg_succ_m_ty = d.const_app(p.odd, &[neg_succ_m]);
+
+                let sm = d.succ(m);
+                let odd_sm_ty = d.const_app(p.nat.odd, &[sm]);
+                let even_m_ty = d.const_app(p.nat.even, &[m]);
+
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+
+                // Odd (negSucc m) reduces to Nat.Odd (succ m); even_iff_odd_succ's
+                // mpr direction gives Nat.Even m directly.
+                let iff_ty = d.lemma(p.nat.even_iff_odd_succ, &[m]);
+                let mpr = d.const_app(p.logic.iff_mpr, &[even_m_ty, odd_sm_ty, iff_ty]);
+                let even_m = d.apply(mpr, &[h]);
+
+                let target = {
+                    let mag = nat_abs(d, neg_succ_m);
+                    let fib_mag = d.const_app(p.nat.fib, &[mag]);
+                    let rhs = d.of_nat(fib_mag);
+                    d.ieq(fib_neg_succ_m, rhs)
+                };
+
+                let nat = d.nat_ty();
+                let even_pred = {
+                    let k_fv = d.fresh_fvar();
+                    let k = d.kernel().fvar(k_fv);
+                    let kk = d.add(k, k);
+                    let body = d.eq(m, kk);
+                    d.lam_fv(k_fv, nat, body)
+                };
+
+                let minor = {
+                    let k_fv = d.fresh_fvar();
+                    let k = d.kernel().fvar(k_fv);
+                    let hk_fv = d.fresh_fvar();
+                    let hk = d.kernel().fvar(hk_fv);
+                    let kk = d.add(k, k);
+                    let hk_ty = d.eq(m, kk);
+
+                    // pow (neg one) (k+k) = 1, transported to exponent m via hk.
+                    let sign_eq_one_at_kk = pow_neg_one_add_self(d, k);
+
+                    let one_nat = d.num(1);
+                    let one_i = d.of_nat(one_nat);
+                    let neg_one = d.ineg(one_i);
+                    let kk_eq_m = d.symm(m, kk, hk);
+                    let bridge = d.nat_eq_to_int(kk, m, kk_eq_m, &|d, x| d.ipow(neg_one, x));
+                    let pow_kk = d.ipow(neg_one, kk);
+                    let pow_m = d.ipow(neg_one, m);
+                    let bridge_rev = d.isymm(pow_kk, pow_m, bridge);
+                    let sign_eq_one = d.itrans(pow_m, pow_kk, one_i, bridge_rev, sign_eq_one_at_kk);
+
+                    // fib (negSucc m) reduces PURELY to pow(neg one)(m) *
+                    // ofNat(Nat.fib(succ m)) -- declare_fib's own recursor step.
+                    let sign = d.ipow(neg_one, m);
+                    let fib_sm = d.const_app(p.nat.fib, &[sm]);
+                    let ofnat_fib_sm = d.of_nat(fib_sm);
+                    let mul_form = d.imul(sign, ofnat_fib_sm);
+                    let bridge_fib = d.irefl(fib_neg_succ_m);
+
+                    let one_mul_form = d.imul(one_i, ofnat_fib_sm);
+                    let lifted =
+                        d.icongr(sign, one_i, sign_eq_one, &|d, t| d.imul(t, ofnat_fib_sm));
+
+                    let mul_reduced = {
+                        let lhs = d.imul(one_i, ofnat_fib_sm);
+                        let rhs_nat = d.mul(one_nat, fib_sm);
+                        let rhs = d.of_nat(rhs_nat);
+                        let br = d.irefl(lhs);
+                        let one_mul_pf = d.lemma(p.nat.one_mul, &[fib_sm]);
+                        let cast = d.nat_eq_to_int(rhs_nat, fib_sm, one_mul_pf, &|d, t| {
+                            d.of_nat(t)
+                        });
+                        d.itrans(lhs, rhs, ofnat_fib_sm, br, cast)
+                    };
+
+                    let (_, eq_to_ofnat) = d.ichain(
+                        fib_neg_succ_m,
+                        &[
+                            (mul_form, bridge_fib),
+                            (one_mul_form, lifted),
+                            (ofnat_fib_sm, mul_reduced),
+                        ],
+                    );
+
+                    let inner = d.lam_fv(hk_fv, hk_ty, eq_to_ofnat);
+                    d.lam_fv(k_fv, nat, inner)
+                };
+
+                let even_m_elim = exists_elim(d, even_pred, target, even_m, minor);
+                d.lam_fv(h_fv, odd_neg_succ_m_ty, even_m_elim)
             }
         });
         (stmt, proof)
