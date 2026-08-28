@@ -1558,6 +1558,47 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `target/debug/deps/` directly, which takes no lock. Use the wrapper for
   CORRECTNESS, the prebuilt binary for MEASUREMENT.
 
+- **WHEN IS FLIPPING AN `ml430` MIRROR HONEST? THE TEST IS WHETHER MATHLIB
+  *DEFINES* IT THAT WAY OR *PROVES* IT ABOUT A DIFFERENT DEFINITION.**
+
+  Ten definition lanes have created new `F:nat-*`/`F:int-*` facts rather than
+  flipping the `ml430` mirror, on the standing rule that "our construction is
+  not Mathlib's". That rule is right far more often than not, but it was being
+  applied as a blanket, and a blanket rule cannot tell you when a flip WOULD be
+  honest. The criterion, checkable per fact at the Mathlib source:
+
+  > **If Mathlib's `def` is the same function, the mirror is our statement and
+  > flipping it is honest. If our definitional BODY is Mathlib's THEOREM about
+  > a structurally different `def`, the mirror is a different proposition and
+  > must stay open.**
+
+  Both outcomes occurred in one session, which is why the distinction is worth
+  having:
+
+  - **`Nat.descFactorial_of_lt` — flip.** The landed lemma already stated
+    `F:ml430-nat-descfactorial-of-lt`'s `formal.statement` verbatim. A quarter
+    of that lane's task was evidence plus a status flip, no proof work.
+  - **`Nat.multichoose` — must stay open.** A lane fetched
+    `Mathlib/Data/Nat/Choose/Basic.lean` at the pinned commit `c5ea0035…`
+    rather than inferring from prose. Mathlib's is a **three-case double
+    recursion** (`multichoose n (k+1) + multichoose (n+1) k`), and
+    `multichoose_eq : multichoose n k = (n + k - 1).choose k` is a **proved
+    theorem** about it. Ours *defines* that formula as the body. So we define
+    what Mathlib proves, about a different function. All three mirrors stayed
+    open and the lane wrote no code.
+
+  **Compare the fact's `formal.statement` against the landed lemma's RENDERED
+  TYPE** (`nat_theorem_inventory`), never against a doc comment or a module
+  banner — and when it matters, read Mathlib's actual source at the pinned
+  commit. Prose has been wrong about this repository's own contents repeatedly.
+
+  Note the residue: showing our formula and Mathlib's recursion agree at every
+  argument needs an induction relating **two independently-built `Nat.rec`
+  instances**. The `bitwise` lane hit the same wall from the other side
+  (`bitwise and m n = land m n` is true at every concrete `{0,1}` pair and not
+  definitionally equal at symbolic operands). That is a real, recurring
+  boundary, not a gap in either lane's effort.
+
 - **THE TRUSTED GATE CANNOT TELL YOU A `Definition` IS WRONG. ONLY EVALUATION
   CAN.** `Kernel::add_declaration` type-checks a proof term against its stated
   type. A `Definition` has no proof body — it is admitted once it is
