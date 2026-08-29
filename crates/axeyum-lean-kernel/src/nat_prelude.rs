@@ -133,6 +133,7 @@ mod asc_factorial;
 mod bezout;
 mod binary;
 mod binomial;
+mod bit_decode;
 mod bits;
 mod bitwise;
 mod ble;
@@ -201,6 +202,7 @@ use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
     declare_succ_sub_of_le,
 };
+use bit_decode::declare_bit_decode_all;
 use bits::declare_bit_all;
 use bitwise::declare_bitwise_all;
 use ble::declare_boolean_le;
@@ -2894,6 +2896,18 @@ pub struct NatPrelude {
     /// at `fuel := a`, `m := a` (`land a b` and `landAux a a b` are the SAME
     /// term by definition).
     pub land_le_left: NameId,
+    /// `Nat.bit_div_two : ∀ test n, Eq (div (bit test n) 2) n` — one half of
+    /// the `Nat.bit` decode bridge (`nat_prelude::bit_decode`), via
+    /// `div_mod_unique` against the executable `div_mod_exec` projections.
+    pub bit_div_two: NameId,
+    /// `Nat.bit_mod_two : ∀ test n, Eq (mod (bit test n) 2) (bool_select_nat
+    /// test 1 0)` — the other half of the decode bridge, from the SAME
+    /// `div_mod_unique` witness as [`Self::bit_div_two`].
+    pub bit_mod_two: NameId,
+    /// `Nat.land_bit : ∀ a m b n, Eq (land (bit a m) (bit b n)) (bit (and a
+    /// b) (land m n))` — `F:ml430-nat-land-bit-b9ab7475`, closed via the
+    /// `Nat.bit` decode bridge (`nat_prelude::bit_decode`).
+    pub land_bit: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3516,6 +3530,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lor_comm: kernel.name_str(nat, "lor_comm"),
             land_aux_le_left: kernel.name_str(nat, "land_aux_le_left"),
             land_le_left: kernel.name_str(nat, "land_le_left"),
+            bit_div_two: kernel.name_str(nat, "bit_div_two"),
+            bit_mod_two: kernel.name_str(nat, "bit_mod_two"),
+            land_bit: kernel.name_str(nat, "land_bit"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3762,6 +3779,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mod_lt`, `le_of_lt_succ`, all far above); nothing needs it, so it
         // goes right after `land_comm`.
         declare_land_le_left_all(&mut d, &p)?;
+        // `Nat.bit_div_two`/`Nat.bit_mod_two`/`Nat.land_bit`: needs `Nat.bit`
+        // (`declare_bit_all`, far above), `Nat.div_mod_exec`/
+        // `Nat.div_mod_unique` (`declare_euclidean_division`/
+        // `declare_executable_division_spec`, far above), and
+        // `Nat.land_aux_eq_land_of_le` plus `Nat.land_zero_left`/
+        // `Nat.land_zero_right` (`declare_land_fuel_irrelevance_all`/
+        // `declare_land_all`, both above); nothing needs the decode bridge,
+        // so it goes last too.
+        declare_bit_decode_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

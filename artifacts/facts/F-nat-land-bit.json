@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-land-bit",
+  "title": "land decodes through a bit-appended argument",
+  "statement": "For every Bool a, Nat m, Bool b, Nat n: land(bit(a, m), bit(b, n)) = bit(a && b, land(m, n)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Bool) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.land (AxNat.bit x0 x1) (AxNat.bit x2 x3)) (AxNat.bit ((fun (x4 : Bool) => fun (x5 : Bool) => Bool.rec.{1} (fun (x6 : Bool) => Bool) Bool.false x5 x4) x0 x2) (AxNat.land x1 x3))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-land-aux-eq-land-of-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.land_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_bit",
+      "supports": "Nat.land_bit is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- land_bit 2>/dev/null | grep -Ec '^Nat\\.land_bit[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.land_bit[[:space:]]` so a future sibling (e.g. `land_bit_of_le`) cannot satisfy this row."
+    },
+    {
+      "id": "compute-Nat.land_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_bit",
+      "supports": "land(bit(true, 2), bit(false, 3)) = land(5, 6) = 4 (0b101 & 0b110 = 0b100), against bit(true && false, land(2, 3)) = bit(false, 2) = 4 (land(2,3)=2, 0b10 & 0b11 = 0b10) -- a DISCRIMINATING instance: a wrong-way `&&` or a swapped `bit` encoding does not land on 4 here.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_bit_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.land_bit` both against fully free (a, m, b, n) -- by re-declaring the statement as a fresh closed theorem over Pi/lambda-bound variables and requiring the kernel admit it -- and at the concrete, bit-differing instance (a=true, m=2, b=false, n=3), confirming both instantiations compute to the stated values."
+    },
+    {
+      "id": "footprint-Nat.land_bit",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-and",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-bit-decode",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0..x3` are `a, m, b, n`; the inline lambda at `x4, x5` is this prelude's `Bool.and` (no top-level `Bool.and` is declared -- see `nat_prelude/bitwise.rs`'s `and_fn`).\n\nThis is the `Nat.bit` decode bridge two prior lanes (`docs/plan/status/237-nat-fuel-irrelevance.md`, `docs/plan/status/239-nat-fuel-transport.md`) each independently identified as the blocker for `land_bit`/`lor_bit`/`ldiff_bit` and did not attempt (`nat_prelude/bit_decode.rs`). `land m n := landAux m m n` uses `m` as fuel, and `bit a m` is not syntactically `zero`/`succ`-shaped for symbolic `a`, `m` -- so the canonical fuel cannot be unfolded by one `Nat.rec` step the way `land_zero_left`/`land_zero_right` do. The construction swaps the fuel (via `Nat.land_aux_eq_land_of_le`) for an artificially chosen `succ`-shaped one (`base := mul 2 m`, `k1 := succ base = bit true m`, `fuel := succ k1`), unfolds ONE step, decodes the raw `div`/`mod` subterms back to `(m, n)` via two new lemmas (`Nat.bit_div_two`, `Nat.bit_mod_two`, each one `div_mod_unique` call against `Nat.div_mod_exec`), swaps the fuel back to canonical, and resolves the two remaining `beq _ 0` guards with a bounded case tree. The guard-resolution split is on the `Bool`s (`b` then `a`), NOT the `Nat`s (`n`, `m`) -- `Nat.add` recurses on its SECOND argument, and `bit test k`'s second-position term is `cond test 1 0`, so `bit true k` is `succ`-shaped for ANY `k` (even fully symbolic) while `bit false k` needs `k`'s own shape exposed. (An earlier draft of this proof had the split backwards and the kernel rejected it with a `TypeMismatch`; `Kernel::render_lean` on both mismatched sides is what found the error -- see `nat_prelude/bit_decode.rs`'s module doc.)\n\nThis is the `Nat.land` twin of Mathlib v4.30's `Nat.land_bit` (`F:ml430-nat-land-bit-b9ab7475`, flipped alongside this fact) -- our `Nat.land` is itself proved equal to Mathlib's `bitwise and` specialization by `Nat.bitwise_and_eq_land` (`nat_prelude/rec_agreement.rs`), so this closes the same proposition Mathlib states, not a lookalike about a different definition. `Nat.lor_bit`/`Nat.ldiff_bit` remain open -- the fuel-swap machinery transports unchanged, but each needs its own guard-tree leaves (`lor`'s fuel-exhaustion row returns the other operand, not `0`; its per-bit combine is `max` via `ble`, which does not resolve from a `Bool` split on `a` alone the way `and`'s does) and are left for a follow-up lane. See `docs/plan/status/251-nat-bit-decode.md`."
+}

@@ -990,6 +990,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.lor_comm,
         p.land_aux_le_left,
         p.land_le_left,
+        p.bit_div_two,
+        p.bit_mod_two,
+        p.land_bit,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6379,7 +6382,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        89 + 465,
+        89 + 468,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11717,6 +11720,110 @@ fn zero_or_succ_applies_at_a_compound_term_and_is_consumed_by_or_elim() {
 /// Negative controls differ from the truth by ONE successor, deliberately
 /// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
 #[test]
+/// `Nat.land_bit` — the `Nat.bit` decode bridge's payoff
+/// (`nat_prelude::bit_decode`), closing `F:ml430-nat-land-bit-b9ab7475`.
+/// Applies at a fully symbolic `(a, m, b, n)` (the theorem itself), and at a
+/// DISCRIMINATING concrete instance: `a = true, m = 2, b = false, n = 3`
+/// gives `bit true 2 = 5`, `bit false 3 = 6`, `land 5 6 = 4` (`101 & 110`),
+/// against `bit (true && false) (land 2 3) = bit false 2 = 4` (`land 2 3 = 2`,
+/// `10 & 11`) — a mismatched `&&`/bit encoding would not land on `4` here.
+#[test]
+fn land_bit_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables (m, n Nat;
+    // a, b Bool), proved by the prelude theorem alone.
+    {
+        let nat = f.nat_ty();
+        let bool_ty = f.bool_ty();
+        let a_fv = f.fresh_fvar();
+        let a = f.k.fvar(a_fv);
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+
+        let bit_am = f.const_app(p.bit, &[a, m]);
+        let bit_bn = f.const_app(p.bit, &[b, n]);
+        let lhs = f.const_app(p.land, &[bit_am, bit_bn]);
+        let and_fn_expr = super::bitwise::and_fn(&mut f);
+        let a_and_b = f.apply(and_fn_expr, &[a, b]);
+        let land_mn = f.const_app(p.land, &[m, n]);
+        let rhs = f.const_app(p.bit, &[a_and_b, land_mn]);
+        let stmt = f.eq(lhs, rhs);
+        let proof = f.lemma(p.land_bit, &[a, m, b, n]);
+
+        let ty = {
+            let inner = f.pi_fv(n_fv, nat, stmt);
+            let inner = f.pi_fv(b_fv, bool_ty, inner);
+            let inner = f.pi_fv(m_fv, nat, inner);
+            f.pi_fv(a_fv, bool_ty, inner)
+        };
+        let value = {
+            let inner = f.lam_fv(n_fv, nat, proof);
+            let inner = f.lam_fv(b_fv, bool_ty, inner);
+            let inner = f.lam_fv(m_fv, nat, inner);
+            f.lam_fv(a_fv, bool_ty, inner)
+        };
+        let name = f.name("land_bit_restated");
+        f.declare_theorem(name, ty, value)
+            .expect("land_bit's restated closed form must also be admitted");
+    }
+
+    // Concrete: a = true, m = 2, b = false, n = 3.
+    {
+        let t = f.bool_true();
+        let two = f.num(2);
+        let fls = f.bool_false();
+        let three = f.num(3);
+        let bit_t2 = f.const_app(p.bit, &[t, two]);
+        let bit_f3 = f.const_app(p.bit, &[fls, three]);
+        let lhs = f.const_app(p.land, &[bit_t2, bit_f3]);
+        let and_fn_expr = super::bitwise::and_fn(&mut f);
+        let t_and_f = f.apply(and_fn_expr, &[t, fls]);
+        let land_23 = f.const_app(p.land, &[two, three]);
+        let rhs = f.const_app(p.bit, &[t_and_f, land_23]);
+
+        let applied = f.lemma(p.land_bit, &[t, two, fls, three]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_bit must apply at (a=true, m=2, b=false, n=3): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_bit true 2 false 3 must state Eq (land (bit true 2) (bit false 3)) (bit (true&&false) (land 2 3))"
+        );
+
+        let five = f.num(5);
+        let six = f.num(6);
+        let four = f.num(4);
+        assert!(f.k.def_eq(bit_t2, five), "bit true 2 must compute to 5");
+        assert!(f.k.def_eq(bit_f3, six), "bit false 3 must compute to 6");
+        assert!(f.k.def_eq(lhs, four), "land 5 6 must compute to 4");
+        assert!(
+            f.k.def_eq(rhs, four),
+            "bit false (land 2 3) must compute to 4"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.bit_div_two).is_empty(),
+        "bit_div_two must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bit_mod_two).is_empty(),
+        "bit_mod_two must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_bit).is_empty(),
+        "land_bit must rest on zero axioms"
+    );
+}
+
 fn clog_computes_and_its_boundary_equations_apply() {
     let mut f = Fixture::new();
     let clog = f.p.clog;

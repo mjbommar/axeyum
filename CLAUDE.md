@@ -1455,6 +1455,18 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   and the error surfaces far from the arithmetic, check the operand order before
   anything else.
 
+  **AND IT DECIDES WHICH VARIABLE A CASE TREE MUST SPLIT ON.** Measured
+  2026-08-29 building the `Nat.bit` decode bridge. `bit test k` puts
+  `cond test 1 0` in `Nat.add`'s SECOND position, so — because `add` eats the
+  right argument — **`bit true k` is `succ`-shaped for ANY `k`, even a symbolic
+  one, while `bit false k` needs `k`'s own shape exposed.** The first draft
+  split its case tree on the `Nat` operands and the kernel rejected it with an
+  opaque `TypeMismatch`; splitting on the **Bool** is what works.
+
+  The technique that found it, and it is the one to reach for whenever both
+  sides of a `TypeMismatch` are too large to read: a throwaway probe test that
+  renders both mismatched sides with `Kernel::render_lean` and diffs them.
+
 - **A RECURSOR APPLIED TO A BARE FREE VARIABLE IS STUCK — AND FOR A
   TWO-ARGUMENT DEFINITION YOU MUST KNOW *WHICH* ARGUMENT IT RECURSES ON.**
   The `Nat.add` entry above is one instance of a general rule: a free variable
