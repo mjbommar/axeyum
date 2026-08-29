@@ -1942,6 +1942,25 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the other side are lost** — re-derive them, and recompute the pin by
   **counting** the lists.
 
+  **THREE things, and the third SILENCES A TEST WITH EVERY COUNT STILL GREEN.**
+  `--anchor` inserts the spliced items immediately before the matching text, so
+  an anchor naming an item's **`fn` line** puts them *between* that item's
+  `#[test]` attribute and the function it decorates. Measured 2026-08-29:
+  anchoring on `fn clog_computes_and_its_boundary_equations_apply(` bound
+  `clog`'s `#[test]` to `land_bit`'s function, duplicated `land_bit`'s own
+  attribute, and **one test silently never ran**.
+
+  `cargo test` reported a healthy nonzero count throughout — the count is the
+  check this repository leans on hardest, and it cannot see this. Only
+  `clippy -D warnings` surfaced it, incidentally, in a sibling lane's tree.
+
+  So: **the anchor must sit ABOVE the item's attributes and doc comment**, not
+  on its `fn` line — anchor on the first line of the preceding item's doc
+  block, or on a `#[test]` you intend to precede. And after any splice into a
+  test file, run the affected tests BY NAME and confirm `1 passed`, never
+  `0 filtered out`. A `#[test]` separated from its function is invisible to
+  every count-based check there is.
+
 - **A NEGATIVE CONTROL MUST DIFFER IN A *SMALL* TERM, or the control itself is
   the pathology.** Measured 2026-08-27. A lane's control transposed two whole
   `riemannSum`s in a conclusion and asserted `!Kernel::def_eq` for
