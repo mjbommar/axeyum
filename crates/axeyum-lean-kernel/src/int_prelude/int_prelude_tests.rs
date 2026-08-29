@@ -183,7 +183,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 152] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 153] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -195,6 +195,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 152] {
         p.even_iff_nat_abs_even,
         p.fib_of_odd,
         p.induction_on,
+        p.fib_rec,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
@@ -3155,6 +3156,82 @@ fn fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign() {
     assert!(
         d.kernel().axiom_footprint(p.fib_of_odd).is_empty(),
         "Int.fib_of_odd must rest on zero axioms"
+    );
+}
+
+/// `Int.fib_rec` read at one index in each of its three branches, and the
+/// resulting numeric identity checked by reduction.
+///
+/// The gate proves whatever statement it is handed: `fib (n+2) = fib (n+1) +
+/// fib n` with the summands transposed, or with `fib (n+2)` mis-indexed, would
+/// type-check just as happily if the proof were built to match. What rules that
+/// out is instantiating at concrete indices where both sides are closed terms
+/// and comparing against the arithmetic — `5 = 3 + 2` at `n = 3`, `1 = 1 + 0`
+/// at `n = -1` (the `subNatNat` corner), and `-1 = 2 + (-3)` at `n = -4` (the
+/// branch that does the sign algebra). Each is paired with a wrong right-hand
+/// side that must NOT be accepted.
+#[test]
+fn fib_rec_computes_the_recurrence_at_indices_of_both_signs() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    // (index, expected value of `fib (index + 2)`, a value it is NOT).
+    let cases: [(ExprId, ExprId, ExprId); 3] = {
+        let three = d.num(3);
+        let pos = d.of_nat(three);
+        let five = d.num(5);
+        let pos_true = d.of_nat(five);
+        let four = d.num(4);
+        let pos_false = d.of_nat(four);
+
+        // n = -1: fib 1 = fib 0 + fib (-1), i.e. 1 = 0 + 1.
+        let zero_nat = d.zero();
+        let minus_one = d.neg_succ(zero_nat);
+        let one_nat = d.num(1);
+        let minus_one_true = d.of_nat(one_nat);
+        let zero_i = d.izero();
+
+        // n = -4: fib (-2) = fib (-3) + fib (-4), i.e. -1 = 2 + (-3).
+        let three_nat = d.num(3);
+        let minus_four = d.neg_succ(three_nat);
+        let minus_four_true = d.neg_succ(zero_nat);
+        let minus_four_false = d.of_nat(one_nat);
+
+        [
+            (pos, pos_true, pos_false),
+            (minus_one, minus_one_true, zero_i),
+            (minus_four, minus_four_true, minus_four_false),
+        ]
+    };
+
+    for (index, truth, falsehood) in cases {
+        let instance = d.lemma(p.fib_rec, &[index]);
+        let ty = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("Int.fib_rec must instantiate: {e:?}"));
+
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let shifted = d.iadd(index, two);
+        let lhs = d.const_app(p.fib, &[shifted]);
+
+        let expected = d.ieq(lhs, truth);
+        assert!(
+            d.kernel().def_eq(ty, expected),
+            "fib_rec's instance must reduce to the true arithmetic identity"
+        );
+        let wrong = d.ieq(lhs, falsehood);
+        assert!(
+            !d.kernel().def_eq(ty, wrong),
+            "the check above must be capable of failing"
+        );
+    }
+
+    assert!(
+        d.kernel().axiom_footprint(p.fib_rec).is_empty(),
+        "Int.fib_rec must rest on zero axioms"
     );
 }
 

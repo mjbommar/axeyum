@@ -1180,3 +1180,342 @@ pub(super) fn declare_fib_of_odd(d: &mut IntDev<'_>) -> Result<(), KernelError> 
     })?;
     Ok(())
 }
+
+// ============================================================================
+// `Int.fib_rec` — the Fibonacci recurrence at EVERY integer index.
+// ============================================================================
+
+/// `Eq Int (mul (neg a) b) (neg (mul a b))`.
+///
+/// `sub.rs` proves the mirrored `Int.mul_neg` (`a * (-b) = -(a*b)`) and
+/// exposes it; the left-hand form is three `mul_comm` steps away and is not a
+/// prelude name, so it is local here.
+fn neg_mul(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let p = d.int();
+    let neg_a = d.ineg(a);
+    let start = d.imul(neg_a, b);
+
+    let flipped = d.imul(b, neg_a);
+    let step1 = d.lemma(p.mul_comm, &[neg_a, b]);
+
+    let mul_ba = d.imul(b, a);
+    let neg_ba = d.ineg(mul_ba);
+    let step2 = d.lemma(p.mul_neg, &[b, a]);
+
+    let mul_ab = d.imul(a, b);
+    let neg_ab = d.ineg(mul_ab);
+    let step3 = {
+        let comm = d.lemma(p.mul_comm, &[b, a]);
+        d.icongr(mul_ba, mul_ab, comm, &|d, t| d.ineg(t))
+    };
+
+    let (_, proof) = d.ichain(
+        start,
+        &[(flipped, step1), (neg_ba, step2), (neg_ab, step3)],
+    );
+    proof
+}
+
+/// `Eq Int (add (neg w) w) zero` — the left-handed additive cancellation.
+///
+/// The prelude carries `add_neg` (`a + (-a) = 0`) only; instantiating it at
+/// `neg w` and collapsing `neg (neg w)` with this module's [`neg_neg`] gives
+/// the other side without an `add_comm` step.
+fn neg_add_cancel(d: &mut IntDev<'_>, w: ExprId) -> ExprId {
+    let p = d.int();
+    let neg_w = d.ineg(w);
+    let neg_neg_w = d.ineg(neg_w);
+    let start = d.iadd(neg_w, w);
+    let via = d.iadd(neg_w, neg_neg_w);
+    let zero = d.izero();
+
+    let collapse = neg_neg(d, w);
+    let lifted = d.icongr(neg_neg_w, w, collapse, &|d, t| d.iadd(neg_w, t));
+    let back = d.isymm(via, start, lifted);
+    let cancel = d.lemma(p.add_neg, &[neg_w]);
+    d.itrans(start, via, zero, back, cancel)
+}
+
+/// `Eq Int (add zero x) x`. The prelude has `add_zero`, not `zero_add`.
+fn zero_add(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
+    let p = d.int();
+    let zero = d.izero();
+    let start = d.iadd(zero, x);
+    let flipped = d.iadd(x, zero);
+    let comm = d.lemma(p.add_comm, &[zero, x]);
+    let collapse = d.lemma(p.add_zero, &[x]);
+    d.itrans(start, flipped, x, comm, collapse)
+}
+
+/// `Int.fib_rec : ∀ n, Eq Int (fib (add n (ofNat 2))) (add (fib (add n one))
+/// (fib n))` — the Fibonacci recurrence, at **every** integer index, negative
+/// ones included.
+///
+/// `Nat.fib_add_two` is the `ℕ` recurrence and says nothing below `0`;
+/// [`declare_fib`]'s `negSucc` branch is a *definition*, not a recurrence, so
+/// nothing in the development previously related `fib(-k-1)` to its
+/// neighbours. This is the fact the two-sided induction combinator
+/// (`two_sided_induction.rs`) needs as its step ingredient, and the one
+/// `Int.fib_add` is blocked on.
+///
+/// # Three cases, and only one of them does algebra
+///
+/// `Int.rec` on `n`, then two further `Nat` splits inside the `negSucc`
+/// branch — the recurrence straddles zero, so `n = -1` and `n = -2` are
+/// genuinely different from `n <= -3`:
+///
+/// - `n = ofNat a`: every index reduces (`add (ofNat a) (ofNat 2) ≡ ofNat
+///   (succ (succ a))`, `Nat.add` recursing on the literal right argument),
+///   so the whole goal is `Nat.fib_add_two a` pushed through
+///   [`IntDev::nat_eq_to_int`]. One line.
+/// - `n = -1` (`negSucc 0`) and `n = -2` (`negSucc (succ 0))`: `1 = 0 + 1`
+///   and `0 = 1 + (-1)`. Both sides are closed terms — `subNatNat` decides,
+///   `Nat.fib` computes at the literal, `pow (neg one)` computes at the
+///   literal exponent — so `d.irefl` reads at the goal and no lemma is used.
+///   Their magnitudes are `fib 1` and `fib 2`, which is why walking them is
+///   cheap.
+/// - `n = -(j+3)` (`negSucc (succ (succ j))`): the only real work. Writing
+///   `s := (-1)^j` and `F1,F2,F3 := fib(j+1), fib(j+2), fib(j+3)` over `ℕ`,
+///   `declare_fib`'s own `negSucc` clause makes the goal
+///   `s*F1 = (-s)*F2 + s*F3` (the two sign flips come from
+///   [`pow_neg_one_succ`] applied twice, the second collapsed by [`neg_neg`]),
+///   and `Nat.fib_add_two (succ j)` supplies `F3 = F2 + F1`. Then
+///   `left_distrib`, one `add_assoc` reversal, [`neg_mul`], [`neg_add_cancel`]
+///   and [`zero_add`] close it: the `(-s)*F2` and `s*F2` terms annihilate.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_fib_rec(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+
+    let statement = |d: &mut IntDev<'_>, args: &[ExprId]| -> ExprId {
+        let n = args[0];
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let one = d.ione();
+        let n_plus_two = d.iadd(n, two);
+        let n_plus_one = d.iadd(n, one);
+        let lhs = d.const_app(p.fib, &[n_plus_two]);
+        let f_next = d.const_app(p.fib, &[n_plus_one]);
+        let f_here = d.const_app(p.fib, &[n]);
+        let rhs = d.iadd(f_next, f_here);
+        d.ieq(lhs, rhs)
+    };
+
+    d.int_theorem(p.fib_rec, 1, &|d, v| {
+        let stmt = statement(d, v);
+        let proof = case_split(d, v, &statement, &|d, b| match b[0].0 {
+            Shape::OfNat => {
+                // Every index reduces; the goal IS `Nat.fib_add_two a` cast.
+                let a = b[0].1;
+                let nat_pf = d.lemma(p.nat.fib_add_two, &[a]);
+                let sa = d.succ(a);
+                let ssa = d.succ(sa);
+                let fib_ssa = d.const_app(p.nat.fib, &[ssa]);
+                let fib_sa = d.const_app(p.nat.fib, &[sa]);
+                let fib_a = d.const_app(p.nat.fib, &[a]);
+                let sum = d.add(fib_sa, fib_a);
+                d.nat_eq_to_int(fib_ssa, sum, nat_pf, &|d, t| d.of_nat(t))
+            }
+            Shape::NegSucc => {
+                let m = b[0].1;
+                // Split `m` twice with `Nat.rec` (the induction hypotheses are
+                // unused -- this is a case analysis, not an induction).
+                let at_neg_succ = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+                    let term = d.neg_succ(k);
+                    statement(d, &[term])
+                };
+                let at_neg_succ_succ = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+                    let sk = d.succ(k);
+                    let term = d.neg_succ(sk);
+                    statement(d, &[term])
+                };
+
+                d.induct(
+                    &at_neg_succ,
+                    // n = -1: `fib 1 = fib 0 + fib (-1)`, i.e. `1 = 0 + 1`.
+                    // Closed on both sides.
+                    &|d| {
+                        let zero_nat = d.zero();
+                        let n = d.neg_succ(zero_nat);
+                        let two_nat = d.num(2);
+                        let two = d.of_nat(two_nat);
+                        let shifted = d.iadd(n, two);
+                        let lhs = d.const_app(p.fib, &[shifted]);
+                        d.irefl(lhs)
+                    },
+                    &|d, m1, _ih| {
+                        d.induct(
+                            &at_neg_succ_succ,
+                            // n = -2: `fib 0 = fib (-1) + fib (-2)`, i.e.
+                            // `0 = 1 + (-1)`. Closed on both sides.
+                            &|d| {
+                                let zero_nat = d.zero();
+                                let one_nat = d.succ(zero_nat);
+                                let n = d.neg_succ(one_nat);
+                                let two_nat = d.num(2);
+                                let two = d.of_nat(two_nat);
+                                let shifted = d.iadd(n, two);
+                                let lhs = d.const_app(p.fib, &[shifted]);
+                                d.irefl(lhs)
+                            },
+                            &|d, j, _ih| fib_rec_deep_negative(d, j),
+                            m1,
+                        )
+                    },
+                    m,
+                )
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// The `n = -(j+3)` branch of [`declare_fib_rec`].
+///
+/// Proves `s*F1 = (-s)*F2 + s*F3` for `s = (-1)^j` and `F1,F2,F3` the `ℕ`
+/// Fibonacci values at `j+1, j+2, j+3` — which is what the goal
+/// `fib (negSucc j) = fib (negSucc (succ j)) + fib (negSucc (succ (succ j)))`
+/// reduces to under [`declare_fib`]'s own `negSucc` clause. The chain runs
+/// right-to-left and is flipped at the end.
+fn fib_rec_deep_negative(d: &mut IntDev<'_>, j: ExprId) -> ExprId {
+    let p = d.int();
+
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+
+    let sign = d.ipow(neg_one, j); // s = (-1)^j
+    let sj = d.succ(j);
+    let ssj = d.succ(sj);
+    let sssj = d.succ(ssj);
+    let sign_succ = d.ipow(neg_one, sj); // (-1)^(j+1)
+    let sign_succ_succ = d.ipow(neg_one, ssj); // (-1)^(j+2)
+
+    let fib1_nat = d.const_app(p.nat.fib, &[sj]);
+    let fib2_nat = d.const_app(p.nat.fib, &[ssj]);
+    let fib3_nat = d.const_app(p.nat.fib, &[sssj]);
+    let f1 = d.of_nat(fib1_nat);
+    let f2 = d.of_nat(fib2_nat);
+    let f3 = d.of_nat(fib3_nat);
+
+    let neg_sign = d.ineg(sign);
+
+    // Start from the right-hand side of the goal.
+    let term_a = d.imul(sign_succ, f2);
+    let term_b = d.imul(sign_succ_succ, f3);
+    let start = d.iadd(term_a, term_b);
+
+    // (-1)^(j+1) = -(-1)^j
+    let sign_succ_eq = pow_neg_one_succ(d, j);
+    let after_first = {
+        let left = d.imul(neg_sign, f2);
+        d.iadd(left, term_b)
+    };
+    let step1 = d.icongr(sign_succ, neg_sign, sign_succ_eq, &|d, t| {
+        let left = d.imul(t, f2);
+        d.iadd(left, term_b)
+    });
+
+    // (-1)^(j+2) = -(-1)^(j+1) = -(-(-1)^j) = (-1)^j
+    let sign_succ_succ_eq = {
+        let outer = pow_neg_one_succ(d, sj); // = neg sign_succ
+        let neg_sign_succ = d.ineg(sign_succ);
+        let neg_neg_sign = d.ineg(neg_sign);
+        let lifted = d.icongr(sign_succ, neg_sign, sign_succ_eq, &|d, t| d.ineg(t));
+        let collapse = neg_neg(d, sign);
+        let (_, chained) = d.ichain(
+            sign_succ_succ,
+            &[
+                (neg_sign_succ, outer),
+                (neg_neg_sign, lifted),
+                (sign, collapse),
+            ],
+        );
+        chained
+    };
+    let neg_sign_f2 = d.imul(neg_sign, f2);
+    let after_second = {
+        let right = d.imul(sign, f3);
+        d.iadd(neg_sign_f2, right)
+    };
+    let step2 = d.icongr(sign_succ_succ, sign, sign_succ_succ_eq, &|d, t| {
+        let right = d.imul(t, f3);
+        d.iadd(neg_sign_f2, right)
+    });
+
+    // F3 = F2 + F1  (Nat.fib_add_two at `succ j`, lifted to Int).
+    let f2_plus_f1 = d.iadd(f2, f1);
+    let step3 = {
+        let nat_pf = d.lemma(p.nat.fib_add_two, &[sj]);
+        let sum_nat = d.add(fib2_nat, fib1_nat);
+        let lifted = d.nat_eq_to_int(fib3_nat, sum_nat, nat_pf, &|d, t| d.of_nat(t));
+        d.icongr(f3, f2_plus_f1, lifted, &|d, t| {
+            let right = d.imul(sign, t);
+            d.iadd(neg_sign_f2, right)
+        })
+    };
+    let after_third = {
+        let right = d.imul(sign, f2_plus_f1);
+        d.iadd(neg_sign_f2, right)
+    };
+
+    // s*(F2+F1) = s*F2 + s*F1
+    let sign_f2 = d.imul(sign, f2);
+    let sign_f1 = d.imul(sign, f1);
+    let distributed = d.iadd(sign_f2, sign_f1);
+    let step4 = {
+        let distrib = d.lemma(p.left_distrib, &[sign, f2, f1]);
+        let mul_form = d.imul(sign, f2_plus_f1);
+        d.icongr(mul_form, distributed, distrib, &|d, t| {
+            d.iadd(neg_sign_f2, t)
+        })
+    };
+    let after_fourth = d.iadd(neg_sign_f2, distributed);
+
+    // Re-associate to expose the annihilating pair.
+    let paired = d.iadd(neg_sign_f2, sign_f2);
+    let after_fifth = d.iadd(paired, sign_f1);
+    let step5 = {
+        let assoc = d.lemma(p.add_assoc, &[neg_sign_f2, sign_f2, sign_f1]);
+        d.isymm(after_fifth, after_fourth, assoc)
+    };
+
+    // (-s)*F2 = -(s*F2), then (-(s*F2)) + (s*F2) = 0.
+    let neg_of_sign_f2 = d.ineg(sign_f2);
+    let cancelled_pair = d.iadd(neg_of_sign_f2, sign_f2);
+    let after_sixth = d.iadd(cancelled_pair, sign_f1);
+    let step6 = {
+        let pull = neg_mul(d, sign, f2);
+        d.icongr(neg_sign_f2, neg_of_sign_f2, pull, &|d, t| {
+            let left = d.iadd(t, sign_f2);
+            d.iadd(left, sign_f1)
+        })
+    };
+
+    let zero = d.izero();
+    let after_seventh = d.iadd(zero, sign_f1);
+    let step7 = {
+        let cancel = neg_add_cancel(d, sign_f2);
+        d.icongr(cancelled_pair, zero, cancel, &|d, t| d.iadd(t, sign_f1))
+    };
+
+    let step8 = zero_add(d, sign_f1);
+
+    let (_, forward) = d.ichain(
+        start,
+        &[
+            (after_first, step1),
+            (after_second, step2),
+            (after_third, step3),
+            (after_fourth, step4),
+            (after_fifth, step5),
+            (after_sixth, step6),
+            (after_seventh, step7),
+            (sign_f1, step8),
+        ],
+    );
+    // `forward : RHS = LHS`; the goal is stated the other way round.
+    d.isymm(start, sign_f1, forward)
+}
