@@ -193,6 +193,7 @@ mod xor;
 mod xor_algebra;
 mod xor_order;
 mod xor_parity;
+mod xor_trichotomy;
 
 pub use ops::{NatDev, NatOps, NatState};
 
@@ -308,6 +309,7 @@ use xor::declare_xor_all;
 use xor_algebra::declare_xor_algebra_all;
 use xor_order::declare_xor_order_all;
 use xor_parity::declare_xor_parity_all;
+use xor_trichotomy::declare_xor_trichotomy_all;
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -2892,6 +2894,18 @@ pub struct NatPrelude {
     /// `xor_eq_zero_iff`, since `mt` already produces both `Not`-`Not`
     /// directions directly. See `nat_prelude::xor_algebra`.
     pub xor_ne_zero_iff: NameId,
+    /// `Nat.xor_trichotomy : ∀ a b c, Not (Eq (xor (xor a b) c) 0) → Or (Lt
+    /// (xor b c) a) (Or (Lt (xor c a) b) (Lt (xor a b) c))` — Mathlib's own
+    /// route to `Nat.lt_xor_cases`, composing `Nat.exists_most_significant_bit`
+    /// with `Nat.lt_of_testBit` and the `xor_assoc`/`xor_xor_cancel_left`/
+    /// `xor_comm` family for the three rotation identities. See
+    /// `nat_prelude::xor_trichotomy`.
+    pub xor_trichotomy: NameId,
+    /// `Nat.lt_xor_cases : ∀ a b c, Lt a (xor b c) → Or (Lt (xor a c) b) (Lt
+    /// (xor a b) c)` — `F:ml430-nat-lt-xor-cases-c43a1e85`, fully `Nat`-valued
+    /// (no `testBit`/`Bool` in the statement), so an honest mirror flip once
+    /// proved. See `nat_prelude::xor_trichotomy`.
+    pub lt_xor_cases: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3892,6 +3906,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             xor_xor_cancel_left: kernel.name_str(nat, "xor_xor_cancel_left"),
             xor_xor_cancel_right: kernel.name_str(nat, "xor_xor_cancel_right"),
             xor_ne_zero_iff: kernel.name_str(nat, "xor_ne_zero_iff"),
+            xor_trichotomy: kernel.name_str(nat, "xor_trichotomy"),
+            lt_xor_cases: kernel.name_str(nat, "lt_xor_cases"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
@@ -4346,6 +4362,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `xor_algebra.rs`'s module doc. Nothing needs any of this, so it
         // goes last.
         declare_xor_algebra_all(&mut d, &p)?;
+        // `Nat.xor_trichotomy`/`Nat.lt_xor_cases`: the composition step for
+        // `F:ml430-nat-lt-xor-cases-c43a1e85`, needing `Nat.testBit_xor`
+        // (`declare_testbit_bitwise_all`, far above),
+        // `Nat.exists_most_significant_bit`/`Nat.lt_of_testBit`
+        // (`declare_bit_order_all`, far above), and `Nat.xor_assoc`/
+        // `Nat.xor_xor_cancel_left`/`Nat.xor_ne_zero_iff`/`Nat.xor_comm`
+        // (`declare_xor_algebra_all` just above / `declare_xor_order_all`,
+        // far above). Nothing needs it, so it goes last.
+        declare_xor_trichotomy_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
