@@ -4022,11 +4022,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_boolean_le(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
-        // Needs `div_mod_exec` (declared inside `declare_divisibility`, which
-        // calls `declare_executable_division_spec`) plus `div_mod_unique`/
-        // `div_mod_add_multiple` (both from `declare_euclidean_division`,
-        // just above) -- must run after both.
-        declare_add_div_mod_shift_family(&mut d, &p)?;
         declare_div_dvd_div_left(&mut d, &p)?;
         declare_executable_gcd(&mut d, &p)?;
         declare_gcd_semantics(&mut d, &p)?;
@@ -4078,6 +4073,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // proofs of `Lt zero n -> Eq n (succ (pred n))` on the fly today and
         // are being migrated to call this declared theorem instead.
         declare_succ_pred_of_pos(&mut d, &p)?;
+        // Needs `succ_pred_of_pos` (just declared above, via
+        // `div_mod_reconstructed`'s local copy of `group.rs`'s helper), plus
+        // `div_mod_exec` (`declare_divisibility`, far above) and
+        // `div_mod_unique`/`div_mod_add_multiple` (`declare_euclidean_division`,
+        // further above still).
+        declare_add_div_mod_shift_family(&mut d, &p)?;
         // Needs `succ_pred_of_pos`, just declared above: `prime_two`
         // (`two_divisor_dichotomy`) is not available before this point.
         declare_coprime_of_forall_prime_dvd(&mut d, &p)?;

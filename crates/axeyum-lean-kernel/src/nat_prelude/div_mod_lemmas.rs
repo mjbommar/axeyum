@@ -106,8 +106,14 @@ fn div_mod_shift(
     let q_eq = and_left(d, q_eq_ty, r_eq_ty, both); // shift_q = fq
     let r_eq = and_right(d, q_eq_ty, r_eq_ty, both); // nr = fr
 
-    let div_eq = d.symm(fq, shift_q, q_eq); // fq = shift_q, i.e. full/dd = n/dd+k
-    let mod_eq = d.symm(fr, nr, r_eq); // fr = nr, i.e. full%dd = n%dd
+    // `q_eq : Eq shift_q fq`, `r_eq : Eq nr fr` (that is what `and_left`/
+    // `and_right` project from `both`, matching `q_eq_ty`/`r_eq_ty` above) --
+    // `symm(a, b, h)` needs `h : Eq a b`, so the anchor order below is
+    // `(shift_q, fq)`/`(nr, fr)`, NOT the reversed `(fq, shift_q)`/`(fr, nr)`
+    // that a first draft of this file had, which built a `symm` whose motive
+    // anchored at the wrong side and so was silently a no-op.
+    let div_eq = d.symm(shift_q, fq, q_eq); // Eq fq shift_q, i.e. full/dd = n/dd+k
+    let mod_eq = d.symm(nr, fr, r_eq); // Eq fr nr, i.e. full%dd = n%dd
     (div_eq, mod_eq)
 }
 

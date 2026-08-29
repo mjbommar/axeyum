@@ -614,6 +614,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_mul_le_iff,
         p.div_mod_lt_mul_iff,
         p.div_mod_add_multiple,
+        p.add_mul_div_left,
+        p.add_mul_div_right,
+        p.add_mul_mod_self_left,
+        p.add_mul_mod_self_right,
+        p.add_mod_left,
+        p.add_mod_right,
+        p.add_div_left,
+        p.add_div_right,
         p.div_mod_remainder_eq_zero_iff_dvd,
         p.div_mod_exact_exists,
         p.mod_self,
@@ -6509,7 +6517,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 516,
+        93 + 524,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -14283,4 +14291,144 @@ fn lor_assoc_applies_at_a_nonzero_concrete_instance() {
         f.k.axiom_footprint(p.lor_assoc).is_empty(),
         "lor_assoc must rest on zero axioms"
     );
+}
+
+/// The `ml430` `Nat` add/div/mod shift family applies at concrete,
+/// discriminating numerals (`x=7, y=2, z=3` for the `mul`-shaped four;
+/// `x=7, z=4` for the plain four -- `11/4=2`, `11%4=3`, distinct from every
+/// other operand so a swapped argument or a wrong `symm` direction would
+/// show up as a `def_eq` failure, not merely a type-check pass).
+#[test]
+fn add_div_mod_shift_family_applies_at_concrete_discriminating_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let seven = f.num(7);
+    let eleven = f.num(11);
+    let pos_two = f.lemma(p.zero_lt_succ, &[one]); // Lt zero 2
+    let pos_three = f.lemma(p.zero_lt_succ, &[two]); // Lt zero 3
+    let pos_four = f.lemma(p.zero_lt_succ, &[three]); // Lt zero 4
+
+    // add_mul_div_left : (7 + 2*3)/2 = 7/2 + 3 = 6.
+    let applied = f.lemma(p.add_mul_div_left, &[seven, three, two, pos_two]);
+    let inferred = f
+        .k
+        .infer(applied)
+        .unwrap_or_else(|e| panic!("add_mul_div_left must apply at (7,3,2): {}", f.explain(&e)));
+    let want = f.eq(six, six);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_mul_div_left(7,3,2) must state (7+2*3)/2 = 7/2+3, both sides 6"
+    );
+
+    // add_mul_div_right : (7 + 2*3)/3 = 7/3 + 2 = 4.
+    let applied = f.lemma(p.add_mul_div_right, &[seven, two, three, pos_three]);
+    let inferred = f
+        .k
+        .infer(applied)
+        .unwrap_or_else(|e| panic!("add_mul_div_right must apply at (7,2,3): {}", f.explain(&e)));
+    let want = f.eq(four, four);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_mul_div_right(7,2,3) must state (7+2*3)/3 = 7/3+2, both sides 4"
+    );
+
+    // add_mul_mod_self_left : (7 + 2*3)%2 = 7%2 = 1.
+    let applied = f.lemma(p.add_mul_mod_self_left, &[seven, two, three]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "add_mul_mod_self_left must apply at (7,2,3): {}",
+            f.explain(&e)
+        )
+    });
+    let want = f.eq(one, one);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_mul_mod_self_left(7,2,3) must state (7+2*3)%2 = 7%2, both sides 1"
+    );
+
+    // add_mul_mod_self_right : (7 + 2*3)%3 = 7%3 = 1.
+    let applied = f.lemma(p.add_mul_mod_self_right, &[seven, two, three]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "add_mul_mod_self_right must apply at (7,2,3): {}",
+            f.explain(&e)
+        )
+    });
+    let want = f.eq(one, one);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_mul_mod_self_right(7,2,3) must state (7+2*3)%3 = 7%3, both sides 1"
+    );
+
+    // add_mod_left : (4+7)%4 = 7%4 = 3.
+    let applied = f.lemma(p.add_mod_left, &[four, seven]);
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("add_mod_left must apply at (4,7): {}", f.explain(&e)));
+    let three_r = f.modulo(seven, four);
+    let want = f.eq(three_r, three_r);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_mod_left(4,7) must state (4+7)%4 = 7%4"
+    );
+    assert!(f.k.def_eq(three_r, three), "7%4 must compute to 3");
+
+    // add_mod_right : (7+4)%4 = 7%4 = 3.
+    let applied = f.lemma(p.add_mod_right, &[seven, four]);
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("add_mod_right must apply at (7,4): {}", f.explain(&e)));
+    let want = f.eq(three_r, three_r);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_mod_right(7,4) must state (7+4)%4 = 7%4"
+    );
+
+    // add_div_left : (4+7)/4 = 7/4+1 = 2.
+    let applied = f.lemma(p.add_div_left, &[seven, four, pos_four]);
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("add_div_left must apply at (7,4): {}", f.explain(&e)));
+    let two_q = f.div(seven, four);
+    let eleven_div_four = f.div(eleven, four);
+    let two_q_plus_one = f.add(two_q, one);
+    let want = f.eq(eleven_div_four, two_q_plus_one);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_div_left(7,4) must state (4+7)/4 = 7/4+1"
+    );
+    assert!(f.k.def_eq(eleven_div_four, two), "11/4 must compute to 2");
+
+    // add_div_right : (7+4)/4 = 7/4+1 = 2.
+    let applied = f.lemma(p.add_div_right, &[seven, four, pos_four]);
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("add_div_right must apply at (7,4): {}", f.explain(&e)));
+    let want = f.eq(eleven_div_four, two_q_plus_one);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_div_right(7,4) must state (7+4)/4 = 7/4+1"
+    );
+
+    for name in [
+        p.add_mul_div_left,
+        p.add_mul_div_right,
+        p.add_mul_mod_self_left,
+        p.add_mul_mod_self_right,
+        p.add_mod_left,
+        p.add_mod_right,
+        p.add_div_left,
+        p.add_div_right,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
