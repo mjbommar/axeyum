@@ -1,0 +1,92 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- induction_on 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\.induction_on[[:space:]]+\\(\\(x0 : \\(\\(x0 : Int\\) -> Prop\\)\\) -> \\(\\(x1 : x0 Int\\.zero\\) -> \\(\\(x2 : \\(\\(x2 : Int\\) -> \\(\\(x3 : x0 x2\\) -> x0 \\(Int\\.add x2 Int\\.one\\)\\)\\)\\) -> \\(\\(x3 : \\(\\(x3 : Int\\) -> \\(\\(x4 : x0 x3\\) -> x0 \\(Int\\.sub x3 Int\\.one\\)\\)\\)\\) -> \\(\\(x4 : Int\\) -> x0 x4\\)\\)\\)\\)\\)$'",
+      "checker_seconds": 12,
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "int_theorem_inventory re-list, WHOLE-TYPE anchored"
+      ],
+      "id": "kernel-Int.induction_on",
+      "kind": "kernel-term",
+      "notes": "The pattern pins the entire rendered type, so a combinator that quietly lost the downward step (or stepped the same direction twice) would not match. Verified discriminating on this tree: 1 against the real row, 0 against a row with Int.sub rewritten to Int.add. Tab separators are matched with [[:space:]] and never with a backslash-t escape -- see this repository's documented GNU-grep/ugrep divergence, which silently made 68 checker commands match nothing. --release is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack, and a debug run's empty output would read as ABSENT.",
+      "supports": "Int.induction_on is admitted by the trusted kernel gate with the type recorded in formal.statement."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "checker_seconds": 12,
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Int.induction_on",
+      "kind": "exhaustive-enumeration",
+      "notes": "Re-measured on this tree: integer trusted surface = 0. --require-axiom-free exits nonzero when the count is not zero, so the exit status depends on the finding. --release is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack, and a debug run's empty output would read as ABSENT.",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.induction_on"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -q -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::induction_on_proves_a_two_sided_law_and_reaches_both_signs 2>/dev/null | grep -cE '^test result: ok\\. 1 passed')\" -eq 1",
+      "checker_seconds": 20,
+      "checkers": [
+        "cargo test (Kernel::infer + Kernel::def_eq at an index of each sign)"
+      ],
+      "id": "instantiation-Int.induction_on-both-signs",
+      "kind": "witness-replay",
+      "notes": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs. Asserts EXACTLY ONE test passed, so a filter matching nothing fails rather than exiting 0.",
+      "supports": "Int.induction_on applied to the motive zero + n = n -- which the prelude does not carry, it has add_zero and not zero_add, so both steps genuinely consume the induction hypothesis -- and the conclusion read back at ofNat 3 AND at negSucc 4 (-5). The negative index is the half an ofNat-only combinator could not produce. A wrong right-hand side is asserted NOT def_eq, so the reads are capable of failing."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -q -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::induction_on_needs_each_of_its_three_hypotheses 2>/dev/null | grep -cE '^test result: ok\\. 1 passed')\" -eq 1",
+      "checker_seconds": 20,
+      "checkers": [
+        "Kernel::add_declaration (three rejections required)",
+        "unmutated positive control through the same builder"
+      ],
+      "id": "mutation-Int.induction_on-three-hypotheses",
+      "kind": "exhaustive-enumeration",
+      "notes": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs; the mutations are int_prelude/two_sided_induction.rs's Mutation enum, which perturbs the STATEMENT only and leaves the proof term untouched -- a control that rebuilt the proof by hand would prove nothing about the shipped one.",
+      "supports": "Each of the three hypotheses is load-bearing. The trusted gate proves whatever statement it is handed, so the shipped proof VALUE is re-declared byte-identically against three perturbed statements -- base anchored at one, up-step replaced by a second down-step, down-step replaced by a second up-step -- and the kernel must reject all three. An unmutated positive control goes through the same route, so the loop cannot pass because the builder is broken outright."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Int.induction_on",
+    "language": "lean4",
+    "statement": "theorem Int.induction_on : ((x0 : ((x0 : Int) -> Prop)) -> ((x1 : x0 Int.zero) -> ((x2 : ((x2 : Int) -> ((x3 : x0 x2) -> x0 (Int.add x2 Int.one)))) -> ((x3 : ((x3 : Int) -> ((x4 : x0 x3) -> x0 (Int.sub x3 Int.one)))) -> ((x4 : Int) -> x0 x4)))))"
+  },
+  "id": "F:int-two-sided-induction",
+  "notes": "The interesting measurement is that this was CHEAP, against a lane's prior sizing of 'genuinely comparable-or-more effort than the theorem it blocks'. The integers' operations are nested Int.rec over the naturals, so at a CONSTRUCTOR argument every bridging step below computes and no equation lemma is needed anywhere:\n  add (ofNat k) one   reduces to  ofNat (succ k)      -- Nat.add recurses on its right argument and that argument is the literal 1\n  sub zero one        reduces to  negSucc 0           -- Int.sub is a plain Definition; subNatNat scrutinises the closed Nat.sub 1 0\n  sub (negSucc k) one reduces to  negSucc (succ k)    -- again the literal is on the right\nSo the proof is two Nat.rec inductions whose terms have DEFINITIONALLY the types the kernel expects, and add_declaration's own defeq check closes each one. It was accepted on the first attempt. This is also why the downward step is stated with Int.sub rather than in the P (n+1) -> P n form: sub costs nothing here and is what a caller wants to write.\n\nFirst consumer: Int.fib_add (F:ml430-int-fib-add-181b6a2c), whose two-step recurrence needs the paired motive P k and P (k+1) on top of this.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/two_sided_induction.rs, declare_induction_on)",
+    "prior_art": [
+      {
+        "attribution": "Mathlib's Int.induction_on indexes both steps by a NATURAL (forall i : N, p i -> p (i+1) and forall i : N, p (-i) -> p (-i-1)), which is strictly stronger as a theorem and less convenient at a use site. The form here quantifies both steps over the INTEGERS. Neither Mathlib's statement nor its proof was consulted; the construction is this kernel's own.",
+        "what": "Int.induction_on, an induction principle of the same shape",
+        "where": "mathlib4 v4.30.0",
+        "who": "the Mathlib contributors",
+        "year": 2026
+      }
+    ],
+    "source": "constructed in this kernel; the canonical type was read from int_theorem_inventory's own output."
+  },
+  "schema_version": 1,
+  "statement": "Int.rec splits an integer into ofNat n and negSucc m and hands back a NATURAL in each branch: it is a case split, not an induction principle for the integers. Int.induction_on is the induction principle -- prove a motive at 0, step upward by add n one and downward by sub n one, conclude it at every integer. Nothing in the integer development inducted over the integers before it; statements whose index arithmetic crosses zero (Int.fib_add) had no route, and the magnitude-decided workaround (push to natAbs, as Int.fib_of_odd does) does not apply to them.",
+  "title": "Int.induction_on -- two-sided induction over the constructed integers"
+}

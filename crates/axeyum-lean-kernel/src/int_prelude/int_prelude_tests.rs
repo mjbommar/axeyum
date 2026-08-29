@@ -183,7 +183,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 151] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 154] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -194,6 +194,9 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 151] {
         p.odd_iff_nat_abs_odd,
         p.even_iff_nat_abs_even,
         p.fib_of_odd,
+        p.induction_on,
+        p.fib_rec,
+        p.fib_add,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
@@ -3155,4 +3158,330 @@ fn fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign() {
         d.kernel().axiom_footprint(p.fib_of_odd).is_empty(),
         "Int.fib_of_odd must rest on zero axioms"
     );
+}
+
+/// `Int.fib_add` read at one `(m, n)` pair in every sign combination, with the
+/// arithmetic checked by reduction.
+///
+/// This is the only check that the *statement* is Mathlib's. The gate proves
+/// whatever it is handed, and this statement has four places a transposition
+/// would go unnoticed — `fib (m-1) * fib n` against `fib m * fib (n+1)`, and
+/// either factor's index. Every case below is a closed numeric identity:
+///
+/// | `m` | `n` | `fib(m+n)` | `fib(m-1)·fib n + fib m·fib(n+1)` |
+/// | --- | --- | --- | --- |
+/// | `3` | `4` | `13` | `1·3 + 2·5` |
+/// | `0` | `3` | `2` | `1·2 + 0·3` — `fib(-1)` already, at `m = 0` |
+/// | `-2` | `3` | `1` | `2·2 + (-1)·3` |
+/// | `3` | `-2` | `1` | `1·(-1) + 2·1` |
+/// | `-1` | `-2` | `2` | `(-1)·(-1) + 1·1` |
+///
+/// Only the first row is within reach of `Nat.fib_add`; the second already
+/// reads `fib` at a negative index, which is why the ℕ theorem cannot be
+/// bridged into this one by sign bookkeeping.
+#[test]
+fn fib_add_computes_in_every_sign_combination() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    let of = |d: &mut super::ops::IntDev<'_>, v: u32| {
+        let n = d.num(v);
+        d.of_nat(n)
+    };
+    let neg = |d: &mut super::ops::IntDev<'_>, v: u32| {
+        let n = d.num(v);
+        d.neg_succ(n)
+    };
+
+    // (m, n, fib(m+n), a value fib(m+n) is NOT)
+    let cases: [(ExprId, ExprId, ExprId, ExprId); 5] = {
+        let three = of(&mut d, 3);
+        let four = of(&mut d, 4);
+        let thirteen = of(&mut d, 13);
+        let twelve = of(&mut d, 12);
+        let zero_i = d.izero();
+        let two = of(&mut d, 2);
+        let one = d.ione();
+        let minus_two = neg(&mut d, 1);
+        let minus_one = neg(&mut d, 0);
+        [
+            (three, four, thirteen, twelve),
+            (zero_i, three, two, three),
+            (minus_two, three, one, zero_i),
+            (three, minus_two, one, zero_i),
+            (minus_one, minus_two, two, three),
+        ]
+    };
+
+    for (m, n, truth, falsehood) in cases {
+        let instance = d.lemma(p.fib_add, &[m, n]);
+        let ty = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("Int.fib_add must instantiate: {e:?}"));
+        let sum = d.iadd(m, n);
+        let lhs = d.const_app(p.fib, &[sum]);
+        let expected = d.ieq(lhs, truth);
+        assert!(
+            d.kernel().def_eq(ty, expected),
+            "fib_add's instance must reduce to the true arithmetic identity"
+        );
+        let wrong = d.ieq(lhs, falsehood);
+        assert!(
+            !d.kernel().def_eq(ty, wrong),
+            "the check above must be capable of failing"
+        );
+    }
+
+    assert!(
+        d.kernel().axiom_footprint(p.fib_add).is_empty(),
+        "Int.fib_add must rest on zero axioms"
+    );
+}
+
+/// `Int.fib_rec` read at one index in each of its three branches, and the
+/// resulting numeric identity checked by reduction.
+///
+/// The gate proves whatever statement it is handed: `fib (n+2) = fib (n+1) +
+/// fib n` with the summands transposed, or with `fib (n+2)` mis-indexed, would
+/// type-check just as happily if the proof were built to match. What rules that
+/// out is instantiating at concrete indices where both sides are closed terms
+/// and comparing against the arithmetic — `5 = 3 + 2` at `n = 3`, `1 = 1 + 0`
+/// at `n = -1` (the `subNatNat` corner), and `-1 = 2 + (-3)` at `n = -4` (the
+/// branch that does the sign algebra). Each is paired with a wrong right-hand
+/// side that must NOT be accepted.
+#[test]
+fn fib_rec_computes_the_recurrence_at_indices_of_both_signs() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    // (index, expected value of `fib (index + 2)`, a value it is NOT).
+    let cases: [(ExprId, ExprId, ExprId); 3] = {
+        let three = d.num(3);
+        let pos = d.of_nat(three);
+        let five = d.num(5);
+        let pos_true = d.of_nat(five);
+        let four = d.num(4);
+        let pos_false = d.of_nat(four);
+
+        // n = -1: fib 1 = fib 0 + fib (-1), i.e. 1 = 0 + 1.
+        let zero_nat = d.zero();
+        let minus_one = d.neg_succ(zero_nat);
+        let one_nat = d.num(1);
+        let minus_one_true = d.of_nat(one_nat);
+        let zero_i = d.izero();
+
+        // n = -4: fib (-2) = fib (-3) + fib (-4), i.e. -1 = 2 + (-3).
+        let three_nat = d.num(3);
+        let minus_four = d.neg_succ(three_nat);
+        let minus_four_true = d.neg_succ(zero_nat);
+        let minus_four_false = d.of_nat(one_nat);
+
+        [
+            (pos, pos_true, pos_false),
+            (minus_one, minus_one_true, zero_i),
+            (minus_four, minus_four_true, minus_four_false),
+        ]
+    };
+
+    for (index, truth, falsehood) in cases {
+        let instance = d.lemma(p.fib_rec, &[index]);
+        let ty = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("Int.fib_rec must instantiate: {e:?}"));
+
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let shifted = d.iadd(index, two);
+        let lhs = d.const_app(p.fib, &[shifted]);
+
+        let expected = d.ieq(lhs, truth);
+        assert!(
+            d.kernel().def_eq(ty, expected),
+            "fib_rec's instance must reduce to the true arithmetic identity"
+        );
+        let wrong = d.ieq(lhs, falsehood);
+        assert!(
+            !d.kernel().def_eq(ty, wrong),
+            "the check above must be capable of failing"
+        );
+    }
+
+    assert!(
+        d.kernel().axiom_footprint(p.fib_rec).is_empty(),
+        "Int.fib_rec must rest on zero axioms"
+    );
+}
+
+/// `Int.induction_on` applied to a real motive, and the result read at an
+/// index of **each sign**.
+///
+/// The motive is `zero + n = n`, which the prelude does not carry (it has
+/// `add_zero`, not `zero_add`), so both steps genuinely consume the induction
+/// hypothesis rather than re-deriving the goal from an existing lemma.
+/// Reading the conclusion at `negSucc 4` (`-5`) is the half that an
+/// `ofNat`-only combinator could not produce.
+#[test]
+fn induction_on_proves_a_two_sided_law_and_reaches_both_signs() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    let int_ty = d.int_ty();
+    let izero = d.izero();
+    let ione = d.ione();
+
+    // P n := Eq Int (add zero n) n
+    let motive = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let lhs = d.iadd(izero, n);
+        let body = d.ieq(lhs, n);
+        d.lam_fv(n_fv, int_ty, body)
+    };
+
+    // `add zero zero` reduces PURELY to `zero`, so `irefl` reads at `P zero`.
+    let base = {
+        let lhs = d.iadd(izero, izero);
+        d.irefl(lhs)
+    };
+
+    // One step, shared by both directions: `zero + (n + off) = (zero + n) + off
+    // = n + off`, the first by `add_assoc` reversed and the second by the
+    // induction hypothesis. For `off = neg one` the conclusion is built as
+    // `add n (neg one)` and read as `sub n one` -- `Int.sub` is a plain
+    // `Definition`, exactly the state-folded/prove-unfolded idiom `sub.rs` uses.
+    let stepper = |d: &mut super::ops::IntDev<'_>, offset: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let zn = d.iadd(izero, n);
+        let ih_ty = d.ieq(zn, n);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+
+        let n_off = d.iadd(n, offset);
+        let start = d.iadd(izero, n_off);
+        let assoc = d.lemma(p.add_assoc, &[izero, n, offset]);
+        let left = d.iadd(zn, offset);
+        let assoc_rev = d.isymm(left, start, assoc);
+        let by_ih = d.icongr(zn, n, ih, &|d, t| d.iadd(t, offset));
+        let (_, chained) = d.ichain(start, &[(left, assoc_rev), (n_off, by_ih)]);
+        let inner = d.lam_fv(ih_fv, ih_ty, chained);
+        d.lam_fv(n_fv, int_ty, inner)
+    };
+
+    let up = stepper(&mut d, ione);
+    let neg_one = d.ineg(ione);
+    let down = stepper(&mut d, neg_one);
+
+    let thm = d.const_app(p.induction_on, &[motive, base, up, down]);
+    d.kernel()
+        .infer(thm)
+        .unwrap_or_else(|e| panic!("Int.induction_on must apply at this motive: {e:?}"));
+
+    let three = d.num(3);
+    let pos = d.of_nat(three);
+    let at_pos = d.apply(thm, &[pos]);
+    let ty_pos = d
+        .kernel()
+        .infer(at_pos)
+        .unwrap_or_else(|e| panic!("the conclusion must read at ofNat 3: {e:?}"));
+    let expected_pos = {
+        let lhs = d.iadd(izero, pos);
+        d.ieq(lhs, pos)
+    };
+    assert!(
+        d.kernel().def_eq(ty_pos, expected_pos),
+        "induction_on's conclusion at ofNat 3 must be Eq Int (add zero 3) 3"
+    );
+
+    let four = d.num(4);
+    let neg_five = d.neg_succ(four);
+    let at_neg = d.apply(thm, &[neg_five]);
+    let ty_neg = d
+        .kernel()
+        .infer(at_neg)
+        .unwrap_or_else(|e| panic!("the conclusion must read at negSucc 4: {e:?}"));
+    let expected_neg = {
+        let lhs = d.iadd(izero, neg_five);
+        d.ieq(lhs, neg_five)
+    };
+    assert!(
+        d.kernel().def_eq(ty_neg, expected_neg),
+        "induction_on's conclusion at negSucc 4 must be Eq Int (add zero (-5)) (-5)"
+    );
+
+    // The two `def_eq` assertions above are capable of failing: the same
+    // left-hand side against the wrong right-hand side is rejected.
+    let wrong = {
+        let lhs = d.iadd(izero, neg_five);
+        d.ieq(lhs, pos)
+    };
+    assert!(
+        !d.kernel().def_eq(ty_neg, wrong),
+        "Eq Int (add zero (-5)) (-5) must NOT be def_eq to Eq Int (add zero (-5)) 3"
+    );
+}
+
+/// Each of `Int.induction_on`'s three hypotheses is load-bearing.
+///
+/// The trusted gate proves whatever statement it is handed, so a combinator
+/// that *reads* correctly is not thereby correct. Each mutation below keeps the
+/// shipped proof value byte-identical and perturbs only the statement; the
+/// kernel must reject all three, and must accept the unmutated pair by the same
+/// route (without that positive control the loop could be passing because
+/// `build` is broken outright).
+#[test]
+fn induction_on_needs_each_of_its_three_hypotheses() {
+    use super::two_sided_induction::{Mutation, build};
+
+    for (mutation, why) in [
+        (
+            Mutation::BaseAtOne,
+            "a base at `one` cannot start either Nat.rec branch",
+        ),
+        (
+            Mutation::UpIsAlsoDown,
+            "a second down-step cannot climb the ofNat branch",
+        ),
+        (
+            Mutation::DownIsAlsoUp,
+            "a second up-step cannot reach negSucc 0 from zero",
+        ),
+    ] {
+        let mut k = Kernel::new();
+        let p = build_int_prelude(&mut k).expect("Int prelude must build");
+        let anon = k.anon();
+        let scratch = k.name_str(anon, "scratchInductionOn");
+        let mut d = super::ops::IntDev::new(&mut k, p);
+        let (ty, value) = build(&mut d, mutation);
+        let outcome = d.kernel().add_declaration(Declaration::Theorem {
+            name: scratch,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            outcome.is_err(),
+            "the kernel must reject {mutation:?}: {why}"
+        );
+    }
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let scratch = k.name_str(anon, "scratchInductionOn");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+    let (ty, value) = build(&mut d, Mutation::None);
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: scratch,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .expect("the unmutated statement must be accepted by the same route");
 }

@@ -1,0 +1,75 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- fib_rec 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\.fib_rec[[:space:]]+\\(\\(x0 : Int\\) -> Eq\\.\\{1\\} Int \\(Int\\.fib \\(Int\\.add x0 \\(Int\\.ofNat \\(AxNat\\.succ \\(AxNat\\.succ AxNat\\.zero\\)\\)\\)\\)\\) \\(Int\\.add \\(Int\\.fib \\(Int\\.add x0 Int\\.one\\)\\) \\(Int\\.fib x0\\)\\)\\)$'",
+      "checker_seconds": 12,
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "int_theorem_inventory re-list, WHOLE-TYPE anchored"
+      ],
+      "id": "kernel-Int.fib_rec",
+      "kind": "kernel-term",
+      "notes": "The pattern pins the entire rendered type; verified discriminating on this tree -- 1 against the real row, 0 against a row with the two summands transposed. Tab separators are matched with [[:space:]] and never with a backslash-t escape -- see this repository's documented GNU-grep/ugrep divergence, which silently made 68 checker commands match nothing. --release is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack, and a debug run's empty output would read as ABSENT.",
+      "supports": "Int.fib_rec is admitted by the trusted kernel gate with the type recorded in formal.statement."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "checker_seconds": 12,
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Int.fib_rec",
+      "kind": "exhaustive-enumeration",
+      "notes": "Re-measured on this tree: integer trusted surface = 0. --require-axiom-free exits nonzero when the count is not zero, so the exit status depends on the finding. --release is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack, and a debug run's empty output would read as ABSENT.",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.fib_rec"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -q -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::fib_rec_computes_the_recurrence_at_indices_of_both_signs 2>/dev/null | grep -cE '^test result: ok\\. 1 passed')\" -eq 1",
+      "checker_seconds": 20,
+      "checkers": [
+        "cargo test (Kernel::infer + Kernel::def_eq, one negative control per case)"
+      ],
+      "id": "evaluation-Int.fib_rec-one-index-per-branch",
+      "kind": "witness-replay",
+      "notes": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs. Asserts EXACTLY ONE test passed, so a filter matching nothing fails rather than exiting 0.",
+      "supports": "The proof has three cases because the recurrence straddles zero, and the test reads one index from each and checks the closed arithmetic: n = 3 gives 5 = 3 + 2; n = -1 gives 1 = 0 + 1 (the subNatNat corner); n = -4 gives -1 = 2 + (-3) (the branch that does the sign algebra). Each is paired with a wrong right-hand side that must NOT be def_eq."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Int.fib_rec",
+    "language": "lean4",
+    "statement": "theorem Int.fib_rec : ((x0 : Int) -> Eq.{1} Int (Int.fib (Int.add x0 (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))))) (Int.add (Int.fib (Int.add x0 Int.one)) (Int.fib x0)))"
+  },
+  "id": "F:int-fib-rec",
+  "notes": "Three cases, and only one of them does algebra.\n  n >= 0 (ofNat a): every index reduces -- add (ofNat a) (ofNat 2) is definitionally ofNat (succ (succ a)) -- so the whole goal is Nat.fib_add_two pushed through IntDev::nat_eq_to_int. One line.\n  n = -1 and n = -2: 1 = 0 + 1 and 0 = 1 + (-1). Both sides are closed terms, so d.irefl reads at the goal and no lemma is used at all. The magnitudes are fib 1 and fib 2, which is why walking them is cheap.\n  n <= -3 (negSucc (succ (succ j))): with s := (-1)^j and F1,F2,F3 the natural Fibonacci values at j+1, j+2, j+3, Int.fib's own negSucc clause makes the goal s*F1 = (-s)*F2 + s*F3. The two sign flips come from pow_neg_one_succ applied twice (the second collapsed by neg_neg), Nat.fib_add_two at succ j supplies F3 = F2 + F1, and left_distrib plus one add_assoc reversal annihilate the (-s)*F2 and s*F2 terms.\n\nThree small helpers the integer prelude lacked and this needed: neg_mul (it carries mul_neg), neg_add_cancel (it carries add_neg) and zero_add (it carries add_zero).\n\nAccepted by the kernel on the first attempt.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs, declare_fib_rec)",
+    "prior_art": [
+      {
+        "attribution": "statement-only; the Mathlib proof was not consulted. NOTE the overlap, deliberately recorded rather than hidden: the same proposition is already epistemic_status proved in this ledger as F:ml430-int-fib-add-two-739358dd, closed by a SEALED EXTERNAL Lean capsule under the autogenesis import route. That capsule lives outside this kernel's environment, so no int_prelude declaration can cite it; this row records the in-tree constructive declaration that Int.fib_add actually consumes. It is NOT an independent new mathematical result.",
+        "what": "Int.fib_add_two, the same proposition with the summands transposed",
+        "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+        "who": "the Mathlib contributors",
+        "year": 2026
+      }
+    ],
+    "source": "constructed in this kernel; canonical type read from int_theorem_inventory."
+  },
+  "schema_version": 1,
+  "statement": "fib (n + 2) = fib (n + 1) + fib n for every INTEGER n, negative ones included. Nat.fib_add_two is the natural-number half and says nothing below 0, and Int.fib's negSucc clause is a definition rather than a recurrence, so before this nothing in the development related fib(-k-1) to its neighbours.",
+  "title": "Int.fib_rec -- the Fibonacci recurrence at EVERY integer index"
+}

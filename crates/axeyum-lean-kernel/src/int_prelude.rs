@@ -100,6 +100,7 @@ mod sign;
 mod statements;
 mod sub;
 mod sub_nat_nat;
+mod two_sided_induction;
 mod wilson;
 
 use ops::IntDev;
@@ -1125,6 +1126,29 @@ pub struct IntPrelude {
     /// `Odd`/`Even` are stated via `natAbs`, per the earlier lane's
     /// prediction).
     pub fib_of_odd: NameId,
+    /// `induction_on : ∀ (P : Int → Prop), P zero → (∀ n, P n → P (add n
+    /// one)) → (∀ n, P n → P (sub n one)) → ∀ n, P n` — two-sided induction
+    /// over `ℤ`: prove the motive at `0` and step in both directions.
+    ///
+    /// `Int.rec` is a *case split* into `ofNat`/`negSucc`, not an induction
+    /// principle; this is the first combinator in the development that
+    /// actually inducts over `ℤ`. See `two_sided_induction.rs`'s module doc
+    /// for why every bridging step is pure reduction.
+    pub induction_on: NameId,
+    /// `fib_rec : ∀ n, Eq Int (fib (add n (ofNat 2))) (add (fib (add n one))
+    /// (fib n))` — the Fibonacci recurrence at **every** integer index, the
+    /// negative ones included. `Nat.fib_add_two` is the `ℕ` half and says
+    /// nothing below `0`; `Int.fib`'s `negSucc` clause is a definition, not a
+    /// recurrence. Three cases (`n ≥ 0`, `n ∈ {-1,-2}`, `n ≤ -3`) — see
+    /// `fibonacci.rs`'s `declare_fib_rec` doc.
+    pub fib_rec: NameId,
+    /// `fib_add : ∀ m n, Eq Int (fib (add m n)) (add (mul (fib (sub m one))
+    /// (fib n)) (mul (fib m) (fib (add n one))))` — Mathlib's `Int.fib_add`,
+    /// over the constructed `ℤ`. Proved by `Int.induction_on` on `n` with the
+    /// paired motive `P k ∧ P (k+1)`; it does **not** reduce to `Nat.fib_add`,
+    /// since even the `m = 0` corner reads a value at a negative index. See
+    /// `fibonacci.rs`'s `declare_fib_add` doc.
+    pub fib_add: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1374,6 +1398,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         odd_iff_nat_abs_odd: child(kernel, "odd_iff_nat_abs_odd"),
         even_iff_nat_abs_even: child(kernel, "even_iff_nat_abs_even"),
         fib_of_odd: child(kernel, "fib_of_odd"),
+        induction_on: child(kernel, "induction_on"),
+        fib_rec: child(kernel, "fib_rec"),
+        fib_add: child(kernel, "fib_add"),
     }
 }
 
@@ -1571,10 +1598,13 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_totient::declare_euler_unit_injective(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
+        two_sided_induction::declare_induction_on(&mut d)?;
         fibonacci::declare_fib_cassini_all(&mut d)?;
         fibonacci::declare_fib(&mut d)?;
         fibonacci::declare_fib_two_mul_add_one_pos(&mut d)?;
         fibonacci::declare_fib_of_odd(&mut d)?;
+        fibonacci::declare_fib_rec(&mut d)?;
+        fibonacci::declare_fib_add(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;
