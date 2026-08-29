@@ -331,6 +331,11 @@ def main() -> int:
 
     # G4 -- the alarm this script exists for. There is no floor to lower: the
     # only way through is to add population that can actually be worked.
+    # `--json` must emit JSON and nothing else on stdout: a caller that pipes
+    # it into a parser is the whole point of the mode, and a trailing WARNING
+    # line broke exactly that on the first draft.
+    chatter = sys.stderr if args.json else sys.stdout
+
     if not dispatchable:
         print(
             "\nFAIL: G4 empty-dispatchable-set: every open ml430 mirror is "
@@ -343,12 +348,13 @@ def main() -> int:
         fails.append("G4 empty-dispatchable-set")
     elif len(dispatchable) <= NARROW:
         print(f"\nWARNING: only {len(dispatchable)} dispatchable mirror(s) "
-              f"remain. The queue is about to empty; refill it before it does.")
+              f"remain. The queue is about to empty; refill it before it does.",
+              file=chatter)
 
     if fails:
         return 1
     print("\nOK -- the dispatchable set is non-empty and the divergence "
-          "registry is witnessed against the pinned statements.")
+          "registry is witnessed against the pinned statements.", file=chatter)
     return 0
 
 
