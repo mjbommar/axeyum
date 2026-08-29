@@ -225,6 +225,31 @@ fn congr_at(
     transport_at(d, ty, a, motive, refl_case, b, h)
 }
 
+/// Congruence ACROSS carriers: `h : Eq Nat a b` gives `Eq ty (g a) (g b)` for
+/// a `g : Nat -> ty`.
+///
+/// [`NatOps::congr`] cannot do this — it states its conclusion at `Nat`, so
+/// feeding it a `g` landing in `Nat.Pair` produces `Eq Nat (mk …) (mk …)` and
+/// the kernel rejects with `expected : AxNat, got : AxNat.Pair`. The
+/// hypothesis stays at `Nat` (so [`NatOps::transport`] applies unchanged);
+/// only the motive's body moves to `ty`.
+fn congr_nat_to(
+    d: &mut NatDev<'_>,
+    ty: ExprId,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    g: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let ga = g(d, a);
+    let motive = d.eq_motive(a, &|d, x| {
+        let gx = g(d, x);
+        eq_at(d, ty, ga, gx)
+    });
+    let refl_case = refl_at(d, ty, ga);
+    d.transport(a, motive, refl_case, b, h)
+}
+
 // --- Nat.Pair ---------------------------------------------------------------
 
 /// `Nat.Pair`, the carrier constant.
@@ -392,8 +417,8 @@ pub(super) fn declare_pair_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
         let start = mk_pair(d, fq, sq);
         let middle = mk_pair(d, fr, sq);
         let finish = mk_pair(d, fr, sr);
-        let step1 = d.congr(fq, fr, hf, &|d, x| mk_pair(d, x, sq));
-        let step2 = d.congr(sq, sr, hs, &|d, x| mk_pair(d, fr, x));
+        let step1 = congr_nat_to(d, pair, fq, fr, hf, &|d, x| mk_pair(d, x, sq));
+        let step2 = congr_nat_to(d, pair, sq, sr, hs, &|d, x| mk_pair(d, fr, x));
         let rebuilt_eq = trans_at(d, pair, start, middle, finish, step1, step2);
 
         // Replace each rebuilt side by the pair itself, via `eta`.
@@ -773,13 +798,9 @@ pub(super) fn declare_binary_rec_defs(
                 let lhs = aux(d, alpha, z, f, x, zero);
                 eq_at(d, alpha, lhs, z)
             };
-            let proof = cases_zero_succ(
-                d,
-                fuel,
-                &claim,
-                &|d| refl_at(d, alpha, z),
-                &|d, _k| refl_at(d, alpha, z),
-            );
+            let proof = cases_zero_succ(d, fuel, &claim, &|d| refl_at(d, alpha, z), &|d, _k| {
+                refl_at(d, alpha, z)
+            });
             let stmt = claim(d, fuel);
             let ty = d.pi_fv(fuel_fv, nat, stmt);
             let value = d.lam_fv(fuel_fv, nat, proof);
@@ -912,94 +933,91 @@ pub(super) fn declare_binary_rec_aux_agree_of_fuel(
         };
 
         // At `fuel1 = succ k`.
-        let step = |d: &mut NatDev<'_>,
-                    k: ExprId,
-                    ih: ExprId,
-                    n: ExprId,
-                    fuel2: ExprId|
-         -> ExprId {
-            let sk = d.succ(k);
-            // Fold both hypotheses into the motive so each branch of the
-            // `n = 0` / `n = succ m` split re-introduces them at its OWN shape
-            // (`cases_zero_succ`'s doc: an outer hypothesis does not
-            // specialize).
-            let claim = |d: &mut NatDev<'_>, x: ExprId| statement(d, sk, x, fuel2);
-            cases_zero_succ(
-                d,
-                n,
-                &claim,
-                &|d| {
-                    // n = 0: both sides are `z` by `binaryRecAux_zero`.
-                    let zero = d.zero();
-                    let h1_ty = d.le(zero, sk);
-                    let h1_fv = d.fresh_fvar();
-                    let h2_ty = d.le(zero, fuel2);
-                    let h2_fv = d.fresh_fvar();
-                    let lhs = aux(d, alpha, z, f, sk, zero);
-                    let rhs = aux(d, alpha, z, f, fuel2, zero);
-                    let lhs_z = d.const_app(p.binary_rec_aux_zero, &[alpha, z, f, sk]);
-                    let rhs_z = d.const_app(p.binary_rec_aux_zero, &[alpha, z, f, fuel2]);
-                    let z_rhs = symm_at(d, alpha, rhs, z, rhs_z);
-                    let body = trans_at(d, alpha, lhs, z, rhs, lhs_z, z_rhs);
-                    let with_h2 = d.lam_fv(h2_fv, h2_ty, body);
-                    d.lam_fv(h1_fv, h1_ty, with_h2)
-                },
-                &|d, m| {
-                    let sm = d.succ(m);
-                    let h1_ty = d.le(sm, sk);
-                    let h1_fv = d.fresh_fvar();
-                    let h1 = d.kernel().fvar(h1_fv);
-                    let h2_ty = d.le(sm, fuel2);
-                    let h2_fv = d.fresh_fvar();
-                    let h2 = d.kernel().fvar(h2_fv);
+        let step =
+            |d: &mut NatDev<'_>, k: ExprId, ih: ExprId, n: ExprId, fuel2: ExprId| -> ExprId {
+                let sk = d.succ(k);
+                // Fold both hypotheses into the motive so each branch of the
+                // `n = 0` / `n = succ m` split re-introduces them at its OWN shape
+                // (`cases_zero_succ`'s doc: an outer hypothesis does not
+                // specialize).
+                let claim = |d: &mut NatDev<'_>, x: ExprId| statement(d, sk, x, fuel2);
+                cases_zero_succ(
+                    d,
+                    n,
+                    &claim,
+                    &|d| {
+                        // n = 0: both sides are `z` by `binaryRecAux_zero`.
+                        let zero = d.zero();
+                        let h1_ty = d.le(zero, sk);
+                        let h1_fv = d.fresh_fvar();
+                        let h2_ty = d.le(zero, fuel2);
+                        let h2_fv = d.fresh_fvar();
+                        let lhs = aux(d, alpha, z, f, sk, zero);
+                        let rhs = aux(d, alpha, z, f, fuel2, zero);
+                        let lhs_z = d.const_app(p.binary_rec_aux_zero, &[alpha, z, f, sk]);
+                        let rhs_z = d.const_app(p.binary_rec_aux_zero, &[alpha, z, f, fuel2]);
+                        let z_rhs = symm_at(d, alpha, rhs, z, rhs_z);
+                        let body = trans_at(d, alpha, lhs, z, rhs, lhs_z, z_rhs);
+                        let with_h2 = d.lam_fv(h2_fv, h2_ty, body);
+                        d.lam_fv(h1_fv, h1_ty, with_h2)
+                    },
+                    &|d, m| {
+                        let sm = d.succ(m);
+                        let h1_ty = d.le(sm, sk);
+                        let h1_fv = d.fresh_fvar();
+                        let h1 = d.kernel().fvar(h1_fv);
+                        let h2_ty = d.le(sm, fuel2);
+                        let h2_fv = d.fresh_fvar();
+                        let h2 = d.kernel().fvar(h2_fv);
 
-                    // `fuel2` is positive (it bounds `succ m`), so it is
-                    // `succ (pred fuel2)`; work there and transport back.
-                    let one = d.num(1);
-                    let zero = d.zero();
-                    let zero_le_m = d.lemma(p.zero_le, &[m]);
-                    let one_le_sm = d.lemma(p.succ_le_succ, &[zero, m, zero_le_m]);
-                    let pos_fuel2 = d.lemma(p.le_trans, &[one, sm, fuel2, one_le_sm, h2]);
-                    let f2p = d.pred(fuel2);
-                    let sf2p = d.succ(f2p);
-                    let fuel2_eq = d.lemma(p.succ_pred_of_pos, &[fuel2, pos_fuel2]);
+                        // `fuel2` is positive (it bounds `succ m`), so it is
+                        // `succ (pred fuel2)`; work there and transport back.
+                        let one = d.num(1);
+                        let zero = d.zero();
+                        let zero_le_m = d.lemma(p.zero_le, &[m]);
+                        let one_le_sm = d.lemma(p.succ_le_succ, &[zero, m, zero_le_m]);
+                        let pos_fuel2 = d.lemma(p.le_trans, &[one, sm, fuel2, one_le_sm, h2]);
+                        let f2p = d.pred(fuel2);
+                        let sf2p = d.succ(f2p);
+                        let fuel2_eq = d.lemma(p.succ_pred_of_pos, &[fuel2, pos_fuel2]);
 
-                    // Move `h2` to the `succ (pred fuel2)` shape.
-                    let h2_at_s = {
-                        let motive = d.eq_motive(fuel2, &|d, x| d.le(sm, x));
-                        d.transport(fuel2, motive, h2, sf2p, fuel2_eq)
-                    };
+                        // Move `h2` to the `succ (pred fuel2)` shape.
+                        let h2_at_s = {
+                            let motive = d.eq_motive(fuel2, &|d, x| d.le(sm, x));
+                            d.transport(fuel2, motive, h2, sf2p, fuel2_eq)
+                        };
 
-                    let hh = halve(d, sm);
-                    let half_le_k = d.lemma(p.half_le_of_succ_le_succ, &[m, k, h1]);
-                    let half_le_f2p = d.lemma(p.half_le_of_succ_le_succ, &[m, f2p, h2_at_s]);
-                    let ih_at = d.apply(ih, &[hh, f2p]);
-                    let recursive = d.apply(ih_at, &[half_le_k, half_le_f2p]);
+                        let hh = halve(d, sm);
+                        let half_le_k = d.lemma(p.half_le_of_succ_le_succ, &[m, k, h1]);
+                        let half_le_f2p = d.lemma(p.half_le_of_succ_le_succ, &[m, f2p, h2_at_s]);
+                        let ih_at = d.apply(ih, &[hh, f2p]);
+                        let recursive = d.apply(ih_at, &[half_le_k, half_le_f2p]);
 
-                    // Both sides iota-reduce to `f b hh (aux _ hh)`; congr in
-                    // the third argument alone.
-                    let b = low_bit(d, sm);
-                    let left_inner = aux(d, alpha, z, f, k, hh);
-                    let right_inner = aux(d, alpha, z, f, f2p, hh);
-                    let at_succ = congr_at(d, alpha, left_inner, right_inner, recursive, &|d, x| {
-                        d.apply(f, &[b, hh, x])
-                    });
+                        // Both sides iota-reduce to `f b hh (aux _ hh)`; congr in
+                        // the third argument alone.
+                        let b = low_bit(d, sm);
+                        let left_inner = aux(d, alpha, z, f, k, hh);
+                        let right_inner = aux(d, alpha, z, f, f2p, hh);
+                        let at_succ =
+                            congr_at(d, alpha, left_inner, right_inner, recursive, &|d, x| {
+                                d.apply(f, &[b, hh, x])
+                            });
 
-                    // Transport the RIGHT-hand fuel back from `succ (pred
-                    // fuel2)` to `fuel2`.
-                    let rev = d.symm(fuel2, sf2p, fuel2_eq);
-                    let lhs = aux(d, alpha, z, f, sk, sm);
-                    let motive = d.eq_motive(sf2p, &|d, x| {
-                        let rhs = aux(d, alpha, z, f, x, sm);
-                        eq_at(d, alpha, lhs, rhs)
-                    });
-                    let body = d.transport(sf2p, motive, at_succ, fuel2, rev);
+                        // Transport the RIGHT-hand fuel back from `succ (pred
+                        // fuel2)` to `fuel2`.
+                        let rev = d.symm(fuel2, sf2p, fuel2_eq);
+                        let lhs = aux(d, alpha, z, f, sk, sm);
+                        let motive = d.eq_motive(sf2p, &|d, x| {
+                            let rhs = aux(d, alpha, z, f, x, sm);
+                            eq_at(d, alpha, lhs, rhs)
+                        });
+                        let body = d.transport(sf2p, motive, at_succ, fuel2, rev);
 
-                    let with_h2 = d.lam_fv(h2_fv, h2_ty, body);
-                    d.lam_fv(h1_fv, h1_ty, with_h2)
-                },
-            )
-        };
+                        let with_h2 = d.lam_fv(h2_fv, h2_ty, body);
+                        d.lam_fv(h1_fv, h1_ty, with_h2)
+                    },
+                )
+            };
 
         let fuel1_fv = d.fresh_fvar();
         let fuel1 = d.kernel().fvar(fuel1_fv);

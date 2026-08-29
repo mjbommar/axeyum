@@ -520,6 +520,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.is_rel_prime,
         p.min_fac_aux,
         p.min_fac,
+        p.pair_fst,
+        p.pair_snd,
+        p.binary_rec_aux,
+        p.binary_rec,
     ]
 }
 
@@ -1000,6 +1004,20 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.min_fac_aux_minimal,
         p.min_fac_minimal_of_two_le,
         p.coprime_of_lt_min_fac,
+        p.pair_fst_mk,
+        p.pair_snd_mk,
+        p.pair_eta,
+        p.pair_ext,
+        p.lt_two_mul_of_pos,
+        p.half_le_of_succ_le_succ,
+        p.binary_rec_aux_zero_fuel,
+        p.binary_rec_aux_zero,
+        p.binary_rec_aux_succ,
+        p.binary_rec_zero,
+        p.binary_rec_aux_agree_of_fuel,
+        p.binary_rec_succ,
+        p.binary_rec_rebuilds_thirteen,
+        p.binary_rec_rebuilds_six,
     ]
 }
 
@@ -1135,7 +1153,7 @@ fn every_promised_name_is_admitted_with_the_expected_kind() {
     // The inductive machinery the definitions and proofs ride on.
     for name in [
         p.nat, p.zero, p.succ, p.rec, p.le, p.le_refl, p.le_step, p.le_rec, p.fin, p.fin_mk,
-        p.fin_rec,
+        p.fin_rec, p.pair, p.pair_mk, p.pair_rec,
     ] {
         let display = f.k.display_name(name).to_string();
         assert!(
@@ -1145,6 +1163,81 @@ fn every_promised_name_is_admitted_with_the_expected_kind() {
     }
     let le_rec_ty = f.k.environment().get(p.le_rec).expect("Nat.le.rec").ty();
     println!("Nat.le.rec : {}", f.k.render_lean(le_rec_ty));
+}
+
+/// `Nat.Pair` and `Nat.binaryRec` **compute**, each with a negative control.
+///
+/// The trusted gate admits a `Definition` on its TYPE, so neither
+/// `Nat.Pair.fst`/`snd` nor `Nat.binaryRecAux` is constrained by admission to
+/// return anything in particular. `Nat.Pair.mk 3 5` is deliberately
+/// ASYMMETRIC, so a `fst`/`snd` transposition changes the value instead of
+/// coincidentally agreeing — the failure `land 3 5`/`lor 3 5` cannot expose
+/// on its own.
+///
+/// For `binaryRec` the workload is the bit round trip
+/// `binaryRec 0 (fun b _ acc => bit b acc) n = n`, which the prelude also
+/// carries as the theorems `binaryRec_rebuilds_thirteen`/`_six`. What is added
+/// here is (a) a THIRD value whose bit pattern is a palindrome-free
+/// alternation, and (b) the negative control that `13` does not reduce to `11`
+/// — `0b1101` reversed — so a traversal that consumed the bits in the wrong
+/// order would be caught rather than passing by symmetry. Every magnitude is
+/// tiny on purpose: these numerals are unary `succ` towers.
+#[test]
+fn pair_and_binary_rec_compute_with_transposed_negative_controls() {
+    let mut f = Fixture::new();
+
+    // --- Nat.Pair ----------------------------------------------------------
+    let three = f.num(3);
+    let five = f.num(5);
+    let mk = f.p.pair_mk;
+    let q = f.const_app(mk, &[three, five]);
+    let fst = f.const_app(f.p.pair_fst, &[q]);
+    let snd = f.const_app(f.p.pair_snd, &[q]);
+    assert!(f.k.def_eq(fst, three), "fst (mk 3 5) must reduce to 3");
+    assert!(f.k.def_eq(snd, five), "snd (mk 3 5) must reduce to 5");
+    assert!(
+        !f.k.def_eq(fst, five),
+        "fst (mk 3 5) must NOT reduce to 5 -- a transposed projection"
+    );
+    assert!(
+        !f.k.def_eq(snd, three),
+        "snd (mk 3 5) must NOT reduce to 3 -- a transposed projection"
+    );
+
+    // --- Nat.binaryRec: the bit round trip ---------------------------------
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+    let rebuild = {
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let ignored_fv = f.fresh_fvar();
+        let acc_fv = f.fresh_fvar();
+        let acc = f.k.fvar(acc_fv);
+        let bit = f.p.bit;
+        let body = f.const_app(bit, &[b, acc]);
+        let with_acc = f.lam_fv(acc_fv, nat, body);
+        let with_ignored = f.lam_fv(ignored_fv, nat, with_acc);
+        f.lam_fv(b_fv, bool_ty, with_ignored)
+    };
+    let zero = f.zero();
+    let binary_rec = f.p.binary_rec;
+    for value in [0u32, 1, 6, 10, 13] {
+        let numeral = f.num(value);
+        let lhs = f.const_app(binary_rec, &[nat, zero, rebuild, numeral]);
+        assert!(
+            f.k.def_eq(lhs, numeral),
+            "binaryRec must rebuild {value} from its own bits"
+        );
+    }
+    // Negative control: `13 = 0b1101` reversed is `0b1011 = 11`. A traversal
+    // that combined the bits in the wrong order would land here.
+    let thirteen = f.num(13);
+    let eleven = f.num(11);
+    let at_thirteen = f.const_app(binary_rec, &[nat, zero, rebuild, thirteen]);
+    assert!(
+        !f.k.def_eq(at_thirteen, eleven),
+        "binaryRec 13 must NOT reduce to 11 (13's bits, reversed)"
+    );
 }
 
 /// The definitions **compute**: the kernel's own `def_eq` (δ/β/ι) reduces closed
@@ -6377,7 +6470,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        89 + 463,
+        93 + 477,
         "every promised definition and theorem must be rendered"
     );
 }
