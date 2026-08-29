@@ -188,6 +188,7 @@ mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
 mod xor;
+mod xor_order;
 mod xor_parity;
 
 pub use ops::{NatDev, NatOps, NatState};
@@ -295,6 +296,7 @@ use transposition::{
 };
 use vandermonde::declare_vandermonde_all;
 use xor::declare_xor_all;
+use xor_order::declare_xor_order_all;
 use xor_parity::declare_xor_parity_all;
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
@@ -2784,6 +2786,15 @@ pub struct NatPrelude {
     /// per-bit combine, related to `mod _ 2` via `mod_two_mul_add_of_lt`
     /// and a four-leaf `cases_mod_two` case split. See `xor_parity.rs`.
     pub even_xor: NameId,
+    /// `Nat.xor_comm : ∀ m n, Eq (xor m n) (xor n m)` — a corollary of
+    /// `Nat.bitwise_comm` at `f := xor_fn`, with the `hf` commutativity
+    /// witness built the same way
+    /// `nat_prelude_tests.rs::bool_fn_comm` already builds and tests it
+    /// (nested `Bool.rec`, four `refl` leaves). See `nat_prelude::xor_order`.
+    /// One of the pieces Mathlib's own `Nat.lt_xor_cases` proof composes
+    /// (`F:ml430-nat-lt-xor-cases-c43a1e85`, which stays open — see that
+    /// file's module doc for what else is missing).
+    pub xor_comm: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3645,6 +3656,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             xor: kernel.name_str(nat, "xor"),
             xor_three_five: kernel.name_str(nat, "xor_three_five"),
             even_xor: kernel.name_str(nat, "even_xor"),
+            xor_comm: kernel.name_str(nat, "xor_comm"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
@@ -4000,6 +4012,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // declaration before a dependency exists gives `UnknownConst`, which
         // `cargo check` cannot see.
         declare_binary_rec_all(&mut d, &p)?;
+        // `Nat.xor_comm`: needs `Nat.bitwise_comm` (`declare_bitwise_comm`,
+        // far above) and `Nat.xor`/`xor_fn` (`declare_xor_all`, far above,
+        // and `bitwise::xor_fn`). Nothing needs it, so it goes last.
+        declare_xor_order_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

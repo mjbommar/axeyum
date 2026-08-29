@@ -976,6 +976,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_xor_three_five,
         p.xor_three_five,
         p.even_xor,
+        p.xor_comm,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -11138,6 +11139,73 @@ fn xor_computes_and_is_bitwise_xor_fn() {
     );
 }
 
+/// `Nat.xor_comm` — a corollary of `Nat.bitwise_comm` at `f := xor_fn`
+/// (`xor_order.rs`) — applies at the SAME `(3, 5)` discriminating pair
+/// every sibling `_comm` theorem uses (`xor 3 5 = 6 = xor 5 3`, both sides
+/// distinct from `land`'s `1` and `lor`'s `7` at the same operands), AND
+/// symbolically against a genuinely FREE `m`, `n` pair, per the standing
+/// rule that a concrete instantiation alone can hide a defect a symbolic
+/// build exposes.
+#[test]
+fn xor_comm_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: xor 3 5 = 6 = xor 5 3.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let applied = f.lemma(p.xor_comm, &[three, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("xor_comm must apply at (m=3, n=5): {shown}")
+        });
+        let lhs = f.const_app(p.xor, &[three, five]);
+        let rhs = f.const_app(p.xor, &[five, three]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "xor_comm 3 5 must state Eq (xor 3 5) (xor 5 3)"
+        );
+        let six = f.num(6);
+        assert!(f.k.def_eq(lhs, six), "xor 3 5 must compute to 6");
+        assert!(f.k.def_eq(rhs, six), "xor 5 3 must compute to 6");
+        // Negative control: xor_comm must not ALSO be usable to claim
+        // xor 3 5 = 1 (land's value at this pair).
+        let bad_one = f.num(1);
+        let bad_want = f.eq(lhs, bad_one);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: xor_comm 3 5 must not state Eq (xor 3 5) 1"
+        );
+    }
+
+    // Symbolic: xor_comm applies at a genuinely FREE m, n pair. Wrapped in
+    // a fresh theorem (like `bitwise_comm_applies_at_a_concrete_
+    // discriminating_instance`'s own "Symbolic:" block does) so the bound
+    // variables are properly registered via `pi_fv`/`lam_fv` rather than
+    // raw test-created fvars, which `Kernel::infer` cannot type without a
+    // local-context entry.
+    {
+        let name = f.name("xor_comm_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(p.xor, &[m, n]);
+            let rhs = d.const_app(p.xor, &[n, m]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.xor_comm, &[m, n]);
+            (stmt, proof)
+        })
+        .expect("xor_comm must apply at symbolic m, n");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.xor_comm).is_empty(),
+        "xor_comm must rest on zero axioms"
+    );
+}
+
 /// The `Nat.mod _ 2 ∈ {0, 1}` split `bitwise.rs` named as absent, in both its
 /// forms: `Nat.lt_two_cases` (from a `Lt r 2` hypothesis) and
 /// `Nat.mod_two_eq_zero_or_one` (the `Nat.mod` instance of it).
@@ -12282,15 +12350,6 @@ fn zero_or_succ_applies_at_a_compound_term_and_is_consumed_by_or_elim() {
     );
 }
 
-/// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
-/// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
-/// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
-/// recursion's guard, exercising `(n + b - 1) / b` at each). The boundary
-/// equations then apply at a concrete argument and are axiom-free.
-///
-/// Negative controls differ from the truth by ONE successor, deliberately
-/// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
-#[test]
 /// `Nat.land_bit` — the `Nat.bit` decode bridge's payoff
 /// (`nat_prelude::bit_decode`), closing `F:ml430-nat-land-bit-b9ab7475`.
 /// Applies at a fully symbolic `(a, m, b, n)` (the theorem itself), and at a
@@ -12395,6 +12454,15 @@ fn land_bit_applies_at_a_concrete_discriminating_instance() {
     );
 }
 
+/// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
+/// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
+/// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
+/// recursion's guard, exercising `(n + b - 1) / b` at each). The boundary
+/// equations then apply at a concrete argument and are axiom-free.
+///
+/// Negative controls differ from the truth by ONE successor, deliberately
+/// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
+#[test]
 fn clog_computes_and_its_boundary_equations_apply() {
     let mut f = Fixture::new();
     let clog = f.p.clog;
