@@ -234,7 +234,13 @@ fn dvd_elim(
 }
 
 /// Build a proof of `dvd a n` from a witness `q` and `eq_proof : Eq n (mul a q)`.
-fn dvd_intro(d: &mut NatDev<'_>, a: ExprId, n: ExprId, witness: ExprId, eq_proof: ExprId) -> ExprId {
+fn dvd_intro(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    n: ExprId,
+    witness: ExprId,
+    eq_proof: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let one = d.level_one();
     let predicate = d.dvd_predicate(a, n);
@@ -300,7 +306,14 @@ fn dvd_cancel_left_of_pos(
 /// scaling a divisibility statement by a common left factor. The converse of
 /// [`dvd_cancel_left_of_pos`] (unconditional: scaling up never needs `k` to
 /// be positive).
-fn scale_dvd(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId, a: ExprId, b: ExprId, dvd_ab: ExprId) -> ExprId {
+fn scale_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    k: ExprId,
+    a: ExprId,
+    b: ExprId,
+    dvd_ab: ExprId,
+) -> ExprId {
     let p = *p;
     let ka = d.mul(k, a);
     let kb = d.mul(k, b);
@@ -375,7 +388,10 @@ fn declare_lcm_div(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError
 
             let div_lcm0_eq_zero = d.lemma(p.div_zero, &[lcm_mn]); // Eq div_lcm0 zero
             let zero_eq_div_lcm0 = d.symm(div_lcm0, zero, div_lcm0_eq_zero); // Eq zero div_lcm0
-            let (_, concl_proof) = d.chain(lcm_div0, &[(zero, lcm_div0_eq_zero), (div_lcm0, zero_eq_div_lcm0)]);
+            let (_, concl_proof) = d.chain(
+                lcm_div0,
+                &[(zero, lcm_div0_eq_zero), (div_lcm0, zero_eq_div_lcm0)],
+            );
 
             let with_h2 = d.lam_fv(h2_fv, hyp2_ty, concl_proof);
             d.lam_fv(h1_fv, hyp1_ty, with_h2)
@@ -500,7 +516,9 @@ fn lcm_div_body(
         let dn = d.div(n, k);
         d.const_app(p.lcm, &[x, dn])
     });
-    let step2 = d.congr(div_n_k, n1, div_n_k_eq_n1, &|d, x| d.const_app(p.lcm, &[m1, x]));
+    let step2 = d.congr(div_n_k, n1, div_n_k_eq_n1, &|d, x| {
+        d.const_app(p.lcm, &[m1, x])
+    });
 
     let lcm_div_mk_nk = d.const_app(p.lcm, &[div_m_k, div_n_k]);
     let lcm_m1_divnk = d.const_app(p.lcm, &[m1, div_n_k]);
