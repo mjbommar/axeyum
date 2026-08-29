@@ -997,7 +997,7 @@ fn emod_zero_implies_even(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
                         let mag = nat_abs(d, x);
                         d.eq(r, mag)
                     };
-                    let proof_at_p = d.irefl(r);
+                    let proof_at_p = d.refl(r);
                     let nat_eq0 = d.int_eq_rewrite(p_expr, izero, h[0], proof_at_p, &motive);
                     let even_m_ty = d.const_app(p.nat.even, &[m]);
                     let eq0_ty = d.eq(r, zero_nat);
@@ -1080,7 +1080,7 @@ fn emod_one_implies_odd(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
                         let mag = nat_abs(d, x);
                         d.eq(r, mag)
                     };
-                    let proof_at_p = d.irefl(r);
+                    let proof_at_p = d.refl(r);
                     let nat_eq1 = d.int_eq_rewrite(p_expr, ione, h[0], proof_at_p, &motive);
                     let odd_m_ty = d.const_app(p.nat.odd, &[m]);
                     let eq1_ty = d.eq(r, one_nat);
@@ -1198,8 +1198,8 @@ enum TruthFact {
 /// analysis has already established the fact must be `Holds`, and a
 /// mismatch would be a bug in that analysis (in which case the kernel's own
 /// type check at `add_declaration`, not this function, is what catches it).
-fn expect_holds(fact: TruthFact) -> ExprId {
-    match fact {
+fn expect_holds(fact: &TruthFact) -> ExprId {
+    match *fact {
         TruthFact::Holds(x) | TruthFact::Refuted(x) => x,
     }
 }
@@ -1324,7 +1324,13 @@ fn refute_iff_from_mpr(
 /// [`declare_even_add_one`] bottoms out in: both hold (constant functions),
 /// both refuted (vacuous both ways), or exactly one of each (the whole `Iff`
 /// is refuted, via [`refute_iff_from_mp`]/[`refute_iff_from_mpr`]).
-fn iff_fact(d: &mut IntDev<'_>, pa: ExprId, pb: ExprId, fa: &TruthFact, fb: &TruthFact) -> TruthFact {
+fn iff_fact(
+    d: &mut IntDev<'_>,
+    pa: ExprId,
+    pb: ExprId,
+    fa: &TruthFact,
+    fb: &TruthFact,
+) -> TruthFact {
     match (fa, fb) {
         (TruthFact::Holds(a), TruthFact::Holds(b)) => {
             TruthFact::Holds(mk_iff_both_true(d, pa, pb, *a, *b))
@@ -1338,8 +1344,9 @@ fn iff_fact(d: &mut IntDev<'_>, pa: ExprId, pb: ExprId, fa: &TruthFact, fb: &Tru
                 let p = d.int();
                 d.const_app(p.logic.iff, &[pa, pb])
             };
-            let refute =
-                with_hyps(d, &[iff_ty], &|d, h| refute_iff_from_mp(d, pa, pb, h[0], a, b));
+            let refute = with_hyps(d, &[iff_ty], &|d, h| {
+                refute_iff_from_mp(d, pa, pb, h[0], a, b)
+            });
             TruthFact::Refuted(refute)
         }
         (TruthFact::Refuted(a), TruthFact::Holds(b)) => {
@@ -1348,8 +1355,9 @@ fn iff_fact(d: &mut IntDev<'_>, pa: ExprId, pb: ExprId, fa: &TruthFact, fb: &Tru
                 let p = d.int();
                 d.const_app(p.logic.iff, &[pa, pb])
             };
-            let refute =
-                with_hyps(d, &[iff_ty], &|d, h| refute_iff_from_mpr(d, pa, pb, h[0], b, a));
+            let refute = with_hyps(d, &[iff_ty], &|d, h| {
+                refute_iff_from_mpr(d, pa, pb, h[0], b, a)
+            });
             TruthFact::Refuted(refute)
         }
     }
@@ -1373,13 +1381,25 @@ fn sum_parity_hyp(
 ) -> ExprId {
     let two = two_int(d);
     let sum = d.iadd(m, n);
-    let hr_m = if m_even { emod_zero_two(d) } else { emod_one_two(d) };
-    let hr_n = if n_even { emod_zero_two(d) } else { emod_one_two(d) };
+    let hr_m = if m_even {
+        emod_zero_two(d)
+    } else {
+        emod_one_two(d)
+    };
+    let hr_n = if n_even {
+        emod_zero_two(d)
+    } else {
+        emod_one_two(d)
+    };
     let modeq_m = to_modeq(d, two, m, rm, hm, hr_m);
     let modeq_n = to_modeq(d, two, n, rn, hn, hr_n);
     let modeq_sum = modeq_add(d, two, m, rm, n, rn, modeq_m, modeq_n);
     let rsum = d.iadd(rm, rn);
-    let target = if m_even == n_even { d.izero() } else { d.ione() };
+    let target = if m_even == n_even {
+        d.izero()
+    } else {
+        d.ione()
+    };
     let collapse = d.irefl(target);
     let emod_sum = d.iemod(sum, two);
     let emod_rsum = d.iemod(rsum, two);
@@ -1418,7 +1438,7 @@ fn add_case(
 
     let inner = iff_fact(d, pa, pb, &fm, &fnn);
     let outer = iff_fact(d, even_sum_ty, inner_ty, &fsum, &inner);
-    expect_holds(outer)
+    expect_holds(&outer)
 }
 
 /// The shared `stmt`/`proof` builder for [`declare_even_add`]/
@@ -1459,10 +1479,14 @@ fn even_add_family_stmt_and_proof(
                 stmt,
                 par_n,
                 &|d, hn0| {
-                    add_case(d, m, n, izero, izero, hm0, hn0, true, true, inner_fact, inner_pred)
+                    add_case(
+                        d, m, n, izero, izero, hm0, hn0, true, true, inner_fact, inner_pred,
+                    )
                 },
                 &|d, hn1| {
-                    add_case(d, m, n, izero, ione, hm0, hn1, true, false, inner_fact, inner_pred)
+                    add_case(
+                        d, m, n, izero, ione, hm0, hn1, true, false, inner_fact, inner_pred,
+                    )
                 },
             )
         },
@@ -1473,10 +1497,14 @@ fn even_add_family_stmt_and_proof(
                 stmt,
                 par_n,
                 &|d, hn0| {
-                    add_case(d, m, n, ione, izero, hm1, hn0, false, true, inner_fact, inner_pred)
+                    add_case(
+                        d, m, n, ione, izero, hm1, hn0, false, true, inner_fact, inner_pred,
+                    )
                 },
                 &|d, hn1| {
-                    add_case(d, m, n, ione, ione, hm1, hn1, false, false, inner_fact, inner_pred)
+                    add_case(
+                        d, m, n, ione, ione, hm1, hn1, false, false, inner_fact, inner_pred,
+                    )
                 },
             )
         },
@@ -1523,12 +1551,22 @@ pub(super) fn declare_even_add_prime(d: &mut IntDev<'_>) -> Result<(), KernelErr
 /// `Eq (emod (add n 1) 2) target`, where `target` is `1` if `n` is even and
 /// `0` otherwise — [`sum_parity_hyp`] specialised to the second addend being
 /// the literal `1` (`ModEq 2 one one` is just `Int.mod_eq_refl`).
-fn add_one_parity_hyp(d: &mut IntDev<'_>, n: ExprId, rn: ExprId, hn: ExprId, n_even: bool) -> ExprId {
+fn add_one_parity_hyp(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    rn: ExprId,
+    hn: ExprId,
+    n_even: bool,
+) -> ExprId {
     let p = d.int();
     let two = two_int(d);
     let one = d.ione();
     let sum = d.iadd(n, one);
-    let hr_n = if n_even { emod_zero_two(d) } else { emod_one_two(d) };
+    let hr_n = if n_even {
+        emod_zero_two(d)
+    } else {
+        emod_one_two(d)
+    };
     let modeq_n = to_modeq(d, two, n, rn, hn, hr_n);
     let modeq_one = d.const_app(p.mod_eq_refl, &[two, one]);
     let modeq_sum = modeq_add(d, two, n, rn, one, one, modeq_n, modeq_one);
@@ -1549,23 +1587,29 @@ fn even_add_one_case(d: &mut IntDev<'_>, n: ExprId, hn: ExprId, n_even: bool) ->
     let not_even_n_ty = d.not(even_n_ty);
     let even_sum_ty = d.const_app(p.even, &[sum]);
 
-    let (rn, sum_even) = if n_even { (d.izero(), false) } else { (d.ione(), true) };
+    let (rn, sum_even) = if n_even {
+        (d.izero(), false)
+    } else {
+        (d.ione(), true)
+    };
     let h_sum = add_one_parity_hyp(d, n, rn, hn, n_even);
     let fsum = even_fact(d, sum, sum_even, h_sum);
 
     let not_even_fact: TruthFact = if n_even {
-        let en = d.apply(emod_zero_implies_even(d, n), &[hn]);
+        let f = emod_zero_implies_even(d, n);
+        let en = d.apply(f, &[hn]);
         let refute = with_hyps(d, &[not_even_n_ty], &|d, h| d.apply(h[0], &[en]));
         TruthFact::Refuted(refute)
     } else {
-        let on = d.apply(emod_one_implies_odd(d, n), &[hn]);
+        let f = emod_one_implies_odd(d, n);
+        let on = d.apply(f, &[hn]);
         let mag = nat_abs(d, n);
         let bridge = d.const_app(p.nat.odd_not_even, &[mag]);
         TruthFact::Holds(d.apply(bridge, &[on]))
     };
 
     let outer = iff_fact(d, even_sum_ty, not_even_n_ty, &fsum, &not_even_fact);
-    expect_holds(outer)
+    expect_holds(&outer)
 }
 
 /// `Int.even_add_one : ∀ n, Iff (Even (add n 1)) (Not (Even n))` —
