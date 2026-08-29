@@ -183,7 +183,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 153] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 154] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -196,6 +196,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 153] {
         p.fib_of_odd,
         p.induction_on,
         p.fib_rec,
+        p.fib_add,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
@@ -3159,6 +3160,86 @@ fn fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign() {
     );
 }
 
+/// `Int.fib_add` read at one `(m, n)` pair in every sign combination, with the
+/// arithmetic checked by reduction.
+///
+/// This is the only check that the *statement* is Mathlib's. The gate proves
+/// whatever it is handed, and this statement has four places a transposition
+/// would go unnoticed — `fib (m-1) * fib n` against `fib m * fib (n+1)`, and
+/// either factor's index. Every case below is a closed numeric identity:
+///
+/// | `m` | `n` | `fib(m+n)` | `fib(m-1)·fib n + fib m·fib(n+1)` |
+/// | --- | --- | --- | --- |
+/// | `3` | `4` | `13` | `1·3 + 2·5` |
+/// | `0` | `3` | `2` | `1·2 + 0·3` — `fib(-1)` already, at `m = 0` |
+/// | `-2` | `3` | `1` | `2·2 + (-1)·3` |
+/// | `3` | `-2` | `1` | `1·(-1) + 2·1` |
+/// | `-1` | `-2` | `2` | `(-1)·(-1) + 1·1` |
+///
+/// Only the first row is within reach of `Nat.fib_add`; the second already
+/// reads `fib` at a negative index, which is why the ℕ theorem cannot be
+/// bridged into this one by sign bookkeeping.
+#[test]
+fn fib_add_computes_in_every_sign_combination() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    let of = |d: &mut super::ops::IntDev<'_>, v: u32| {
+        let n = d.num(v);
+        d.of_nat(n)
+    };
+    let neg = |d: &mut super::ops::IntDev<'_>, v: u32| {
+        let n = d.num(v);
+        d.neg_succ(n)
+    };
+
+    // (m, n, fib(m+n), a value fib(m+n) is NOT)
+    let cases: [(ExprId, ExprId, ExprId, ExprId); 5] = {
+        let three = of(&mut d, 3);
+        let four = of(&mut d, 4);
+        let thirteen = of(&mut d, 13);
+        let twelve = of(&mut d, 12);
+        let zero_i = d.izero();
+        let two = of(&mut d, 2);
+        let one = d.ione();
+        let minus_two = neg(&mut d, 1);
+        let minus_one = neg(&mut d, 0);
+        [
+            (three, four, thirteen, twelve),
+            (zero_i, three, two, three),
+            (minus_two, three, one, zero_i),
+            (three, minus_two, one, zero_i),
+            (minus_one, minus_two, two, three),
+        ]
+    };
+
+    for (m, n, truth, falsehood) in cases {
+        let instance = d.lemma(p.fib_add, &[m, n]);
+        let ty = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("Int.fib_add must instantiate: {e:?}"));
+        let sum = d.iadd(m, n);
+        let lhs = d.const_app(p.fib, &[sum]);
+        let expected = d.ieq(lhs, truth);
+        assert!(
+            d.kernel().def_eq(ty, expected),
+            "fib_add's instance must reduce to the true arithmetic identity"
+        );
+        let wrong = d.ieq(lhs, falsehood);
+        assert!(
+            !d.kernel().def_eq(ty, wrong),
+            "the check above must be capable of failing"
+        );
+    }
+
+    assert!(
+        d.kernel().axiom_footprint(p.fib_add).is_empty(),
+        "Int.fib_add must rest on zero axioms"
+    );
+}
+
 /// `Int.fib_rec` read at one index in each of its three branches, and the
 /// resulting numeric identity checked by reduction.
 ///
@@ -3383,7 +3464,10 @@ fn induction_on_needs_each_of_its_three_hypotheses() {
             ty,
             value,
         });
-        assert!(outcome.is_err(), "the kernel must reject {mutation:?}: {why}");
+        assert!(
+            outcome.is_err(),
+            "the kernel must reject {mutation:?}: {why}"
+        );
     }
 
     let mut k = Kernel::new();

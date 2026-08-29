@@ -1142,6 +1142,13 @@ pub struct IntPrelude {
     /// recurrence. Three cases (`n ≥ 0`, `n ∈ {-1,-2}`, `n ≤ -3`) — see
     /// `fibonacci.rs`'s `declare_fib_rec` doc.
     pub fib_rec: NameId,
+    /// `fib_add : ∀ m n, Eq Int (fib (add m n)) (add (mul (fib (sub m one))
+    /// (fib n)) (mul (fib m) (fib (add n one))))` — Mathlib's `Int.fib_add`,
+    /// over the constructed `ℤ`. Proved by `Int.induction_on` on `n` with the
+    /// paired motive `P k ∧ P (k+1)`; it does **not** reduce to `Nat.fib_add`,
+    /// since even the `m = 0` corner reads a value at a negative index. See
+    /// `fibonacci.rs`'s `declare_fib_add` doc.
+    pub fib_add: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1393,6 +1400,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         fib_of_odd: child(kernel, "fib_of_odd"),
         induction_on: child(kernel, "induction_on"),
         fib_rec: child(kernel, "fib_rec"),
+        fib_add: child(kernel, "fib_add"),
     }
 }
 
@@ -1596,6 +1604,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         fibonacci::declare_fib_two_mul_add_one_pos(&mut d)?;
         fibonacci::declare_fib_of_odd(&mut d)?;
         fibonacci::declare_fib_rec(&mut d)?;
+        fibonacci::declare_fib_add(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;
