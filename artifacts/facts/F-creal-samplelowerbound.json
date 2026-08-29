@@ -16,6 +16,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-rat-approx-lower",
     "F:creal-regular",
     "F:rat-add-assoc",
     "F:rat-add-comm",

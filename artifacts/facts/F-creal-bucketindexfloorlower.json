@@ -18,6 +18,7 @@
   "depends_on": [
     "F:int-mul-assoc",
     "F:int-mul-comm",
+    "F:int-of-nat-nat-abs-of-nonneg",
     "F:nat-div-mod-bounds",
     "F:nat-div-mod-exec",
     "F:nat-le-succ-succ",
@@ -26,6 +27,8 @@
     "F:rat-den-pos",
     "F:rat-int-le-of-mul-le-mul-right",
     "F:rat-int-mul-le-mul-right",
+    "F:rat-int-nonneg-of-nonneg",
+    "F:rat-le-max-right",
     "F:rat-normalize-cross"
   ],
   "axiom_footprint": [],

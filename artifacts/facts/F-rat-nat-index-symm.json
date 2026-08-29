@@ -15,6 +15,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-add-right-comm",
     "F:nat-mul-comm",
     "F:nat-succ-mul"
   ],

@@ -11,7 +11,8 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+    "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+    "F:nat-monotone-of-le-succ"
   ],
   "evidence": [
     {

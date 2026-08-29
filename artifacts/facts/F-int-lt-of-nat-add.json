@@ -19,7 +19,8 @@
     "F:nat-add-comm",
     "F:nat-le-add-right",
     "F:nat-le-succ-succ",
-    "F:nat-succ-add"
+    "F:nat-succ-add",
+    "F:nat-succ-injective"
   ],
   "axiom_footprint": [],
   "evidence": [

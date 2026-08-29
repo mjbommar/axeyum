@@ -18,6 +18,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-div-mod-exec",
+    "F:nat-dvd-add-iff-right",
     "F:nat-dvd-mul-right-of-dvd"
   ],
   "axiom_footprint": [],

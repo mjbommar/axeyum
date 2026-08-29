@@ -18,6 +18,7 @@
   "depends_on": [
     "F:int-sub-nat-nat-add-right",
     "F:int-sub-nat-nat-elim",
+    "F:int-subnatnat-add-add-left",
     "F:nat-add-assoc",
     "F:nat-succ-add"
   ],

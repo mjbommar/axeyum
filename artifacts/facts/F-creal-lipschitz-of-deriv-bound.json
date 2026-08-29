@@ -28,6 +28,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-abs-add-le",
     "F:creal-abs-congr",
     "F:creal-abs-diff-le-of-deriv-bound",
     "F:creal-abs-le",

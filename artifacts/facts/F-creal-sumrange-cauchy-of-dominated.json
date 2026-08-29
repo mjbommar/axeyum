@@ -18,6 +18,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-sumrange-cauchy-dominated-ordered-normalized",
     "F:nat-le-total",
     "F:rat-add-comm",
     "F:rat-bounds-neg",

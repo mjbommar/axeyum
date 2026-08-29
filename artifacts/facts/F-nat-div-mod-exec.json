@@ -15,6 +15,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-beq-eq-true-of-eq",
+    "F:nat-eq-of-beq-eq-true",
     "F:nat-le-of-succ-le-succ",
     "F:nat-le-succ-succ",
     "F:nat-lt-or-eq-of-le",

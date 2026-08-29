@@ -11,7 +11,12 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-fib-strictmonoon-905810a9"
+    "F:ml430-nat-fib-mono-cc6afe09",
+    "F:ml430-nat-fib-strictmonoon-905810a9",
+    "F:nat-le-trans",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-ge"
   ],
   "evidence": [
     {

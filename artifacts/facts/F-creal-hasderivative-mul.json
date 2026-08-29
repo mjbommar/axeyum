@@ -30,6 +30,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-abs-add-le",
     "F:creal-abs-congr",
     "F:creal-abs-le",
     "F:creal-abs-mul-le-of-bounds",
@@ -65,6 +66,7 @@
     "F:nat-mul-one",
     "F:rat-mul-comm",
     "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-antitone",
     "F:rat-natdivsucc-mul",
     "F:rat-natdivsucc-scale"
   ],

@@ -22,6 +22,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-abs-le-of-two-sided",
     "F:creal-add-assoc",
     "F:creal-add-comm",
     "F:creal-add-congr",
@@ -33,6 +34,8 @@
     "F:creal-le-trans",
     "F:creal-ofrat-add",
     "F:creal-ofrat-le",
+    "F:creal-two-sided-of-abs-sub-le",
+    "F:creal-uniformconvergeson-spec",
     "F:logic-and-left",
     "F:logic-and-right",
     "F:rat-le-refl",

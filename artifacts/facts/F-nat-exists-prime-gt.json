@@ -16,6 +16,7 @@
   "proof_route": "kernel-lean",
   "axiom_footprint": [],
   "depends_on": [
+    "F:nat-add-le-add-right",
     "F:nat-dvd-add",
     "F:nat-dvd-add-right-cancel-of-pos",
     "F:nat-dvd-factorial-of-le",

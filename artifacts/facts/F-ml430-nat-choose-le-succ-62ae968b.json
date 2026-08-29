@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": [],
+  "depends_on": ["F:nat-add-comm", "F:nat-choose-zero-right", "F:nat-le-add-right"],
   "epistemic_status": "proved",
   "evidence": [
     {

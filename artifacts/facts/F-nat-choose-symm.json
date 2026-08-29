@@ -25,6 +25,7 @@
     "F:nat-le-of-succ-le-succ",
     "F:nat-lt-or-eq-of-le",
     "F:nat-sub-self",
+    "F:nat-sub-zero",
     "F:nat-succ-add",
     "F:nat-succ-sub-succ",
     "F:nat-zero-le"

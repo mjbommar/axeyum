@@ -16,6 +16,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-mod-eq-refl",
+    "F:nat-mod-eq-symm",
     "F:nat-mod-eq-trans"
   ],
   "axiom_footprint": [],

@@ -14,7 +14,13 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:creal-bound-within",
+    "F:creal-costermabsledominant",
+    "F:creal-geomcauchyorderedhalf",
+    "F:creal-mul-sumrange",
     "F:creal-regular",
+    "F:creal-regular-of-scaled-cauchy",
+    "F:creal-speedup-close",
+    "F:creal-sumrange-cauchy-dominated-ordered-normalized",
     "F:nat-le-total",
     "F:rat-add-assoc",
     "F:rat-add-comm",

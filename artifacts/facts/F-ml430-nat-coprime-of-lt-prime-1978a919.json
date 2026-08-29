@@ -12,7 +12,12 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-coprime-or-dvd-of-prime-65f47114"
+    "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+    "F:nat-gcd-dvd-left",
+    "F:nat-gcd-dvd-right",
+    "F:nat-le-of-dvd",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-le-of-lt"
   ],
   "evidence": [
     {

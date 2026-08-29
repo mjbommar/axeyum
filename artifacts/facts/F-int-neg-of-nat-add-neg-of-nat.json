@@ -16,6 +16,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:int-of-nat-add-neg-of-nat",
+    "F:int-zero-subnatnat",
     "F:nat-succ-add",
     "F:nat-zero-add"
   ],

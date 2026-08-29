@@ -19,7 +19,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:rat-indicator-le", "F:rat-markov-inequality"],
   "axiom_footprint": [],
   "evidence": [
     {

@@ -20,6 +20,7 @@
     "F:creal-add-comm",
     "F:creal-add-neg",
     "F:creal-add-zero",
+    "F:creal-equiv-of-le-le",
     "F:creal-equiv-refl",
     "F:creal-equiv-symm",
     "F:creal-equiv-trans",

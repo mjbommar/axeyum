@@ -19,6 +19,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-le-of-lt",
+    "F:int-lt-irrefl",
+    "F:int-lt-of-le-of-ne",
     "F:rat-int-mul-le-mul-right",
     "F:rat-int-mul-right-cancel"
   ],

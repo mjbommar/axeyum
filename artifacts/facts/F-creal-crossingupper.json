@@ -24,6 +24,8 @@
     "F:creal-add-le-add",
     "F:creal-add-neg",
     "F:creal-add-zero",
+    "F:creal-bucketclampupper",
+    "F:creal-bucketindexfloorupper",
     "F:creal-equiv-refl",
     "F:creal-equiv-symm",
     "F:creal-equiv-trans",

@@ -11,7 +11,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-add-assoc", "F:int-add-comm", "F:int-add-neg", "F:int-add-neg-cancel-right", "F:int-add-zero", "F:int-dvd-trans", "F:int-ediv-add-emod", "F:int-left-distrib", "F:int-modeq-add-mul-left", "F:int-modeq-symm"],
   "axiom_footprint": [],
   "evidence": [
     {

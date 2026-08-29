@@ -38,6 +38,7 @@
     "F:rat-add-zero",
     "F:rat-le-refl",
     "F:rat-le-trans",
+    "F:rat-natdivsucc-antitone",
     "F:rat-natdivsucc-mul",
     "F:rat-natdivsucc-scale",
     "F:rat-sub-le-of-le",

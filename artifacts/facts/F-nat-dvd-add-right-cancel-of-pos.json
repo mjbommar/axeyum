@@ -22,6 +22,8 @@
     "F:nat-add-comm",
     "F:nat-add-right-cancel",
     "F:nat-le-add-right",
+    "F:nat-le-of-mul-le-mul-left",
+    "F:nat-mul-sub-left-distrib",
     "F:nat-sub-add-cancel"
   ],
   "axiom_footprint": [],

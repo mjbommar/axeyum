@@ -1,7 +1,9 @@
 {
   "axiom_footprint": [],
   "depends_on": [
-    "F:nat-bit-true"
+    "F:nat-bit-true",
+    "F:nat-le-succ-succ",
+    "F:nat-zero-le"
   ],
   "epistemic_status": "proved",
   "evidence": [

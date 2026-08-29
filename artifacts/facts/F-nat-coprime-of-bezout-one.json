@@ -17,6 +17,7 @@
   "depends_on": [
     "F:nat-add-assoc",
     "F:nat-add-comm",
+    "F:nat-add-succ",
     "F:nat-add-zero",
     "F:nat-dvd-add",
     "F:nat-dvd-add-right-cancel-of-pos",

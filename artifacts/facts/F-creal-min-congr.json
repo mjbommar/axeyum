@@ -22,7 +22,8 @@
   "depends_on": [
     "F:rat-neg-le-neg",
     "F:rat-neg-neg",
-    "F:rat-neg-sub"
+    "F:rat-neg-sub",
+    "F:rat-sub-min-le"
   ],
   "axiom_footprint": [],
   "evidence": [

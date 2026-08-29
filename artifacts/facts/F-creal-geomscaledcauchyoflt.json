@@ -20,7 +20,13 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:creal-cauchyofpointwiseequiv"
+    "F:creal-cauchyofpointwiseequiv",
+    "F:creal-converges-cauchy",
+    "F:creal-converges-mul",
+    "F:creal-converges-of-cauchy",
+    "F:creal-converges-of-const",
+    "F:creal-geomcauchyoflt",
+    "F:creal-mul-sumrange"
   ],
   "axiom_footprint": [],
   "evidence": [

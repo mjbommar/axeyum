@@ -20,7 +20,9 @@
     "F:nat-le-dest",
     "F:nat-le-of-dvd",
     "F:nat-lt-irrefl",
+    "F:nat-lt-of-le-of-lt",
     "F:nat-succ-add",
+    "F:nat-succ-mul-choose-eq",
     "F:nat-zero-add",
     "F:nat-zero-le"
   ],

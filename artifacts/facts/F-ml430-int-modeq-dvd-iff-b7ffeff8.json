@@ -12,6 +12,15 @@
   "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-neg",
+    "F:int-add-neg-cancel-right",
+    "F:int-add-zero",
+    "F:int-dvd-add",
+    "F:int-ediv-add-emod",
+    "F:int-left-distrib",
+    "F:int-modeq-symm",
     "F:ml430-int-modeq-symm-984a6e67",
     "F:ml430-int-modeq-trans-6d7863e0"
   ],

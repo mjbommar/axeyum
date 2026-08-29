@@ -16,6 +16,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-le-succ-succ",
+    "F:nat-mul-succ",
     "F:nat-one-mul",
     "F:nat-zero-le",
     "F:rat-normalize-congr"

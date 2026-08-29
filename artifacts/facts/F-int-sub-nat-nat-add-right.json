@@ -14,7 +14,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:int-subnatnat-add-add-left", "F:int-zero-subnatnat"],
   "axiom_footprint": [],
   "evidence": [
     {

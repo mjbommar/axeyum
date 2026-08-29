@@ -30,7 +30,8 @@
     "F:int-one-mul",
     "F:int-pow-succ",
     "F:int-pow-zero",
-    "F:ml430-nat-fib-add-two-b86e0c82"
+    "F:ml430-nat-fib-add-two-b86e0c82",
+    "F:nat-fib-add-two"
   ],
   "axiom_footprint": [],
   "evidence": [

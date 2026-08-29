@@ -21,7 +21,9 @@
     "F:creal-equiv-refl",
     "F:creal-equiv-symm",
     "F:creal-equiv-trans",
-    "F:creal-mul-assoc"
+    "F:creal-mul-assoc",
+    "F:creal-mul-sumrange",
+    "F:creal-sumrange-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

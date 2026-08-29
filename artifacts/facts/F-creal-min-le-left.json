@@ -18,6 +18,7 @@
   "depends_on": [
     "F:rat-add-zero",
     "F:rat-le-trans",
+    "F:rat-min-le-left",
     "F:rat-sub-le-of-le",
     "F:rat-zero-le-natdivsucc"
   ],

@@ -12,7 +12,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-add-comm", "F:nat-le-add-right"],
   "axiom_footprint": [],
   "evidence": [
     {

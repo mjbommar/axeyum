@@ -18,6 +18,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:int-mul-one",
+    "F:int-nat-abs-mul",
     "F:nat-mul-eq-zero",
     "F:nat-succ-ne-zero",
     "F:rat-cross-of-eq",

@@ -22,16 +22,19 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:creal-equiv-refl",
-    "F:creal-equiv-symm",
-    "F:creal-equiv-trans",
     "F:creal-abs-le",
     "F:creal-abs-mul-le-of-bounds",
     "F:creal-add-comm",
     "F:creal-add-neg",
     "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
     "F:creal-le-congr",
-    "F:creal-le-trans"
+    "F:creal-le-trans",
+    "F:creal-neg-le-neg",
+    "F:creal-pow-le-pow-of-base-le",
+    "F:creal-pow-nonneg"
   ],
   "axiom_footprint": [],
   "evidence": [

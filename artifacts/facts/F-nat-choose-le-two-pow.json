@@ -14,7 +14,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-le-sumrange-of-lt", "F:nat-lt-succ-of-le", "F:nat-sum-choose-row"],
   "axiom_footprint": [],
   "evidence": [
     {

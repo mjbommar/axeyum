@@ -11,13 +11,16 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:nat-testbit-xor",
     "F:nat-exists-most-significant-bit",
+    "F:nat-le-trans",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-lt-of-le",
     "F:nat-lt-of-testbit",
+    "F:nat-testbit-xor",
     "F:nat-xor-assoc",
+    "F:nat-xor-ne-zero-iff",
     "F:nat-xor-xor-cancel-left",
-    "F:nat-xor-xor-cancel-right",
-    "F:nat-xor-ne-zero-iff"
+    "F:nat-xor-xor-cancel-right"
   ],
   "evidence": [
     {

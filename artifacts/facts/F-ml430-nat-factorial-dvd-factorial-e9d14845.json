@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-dvd-mul-right-of-dvd", "F:nat-dvd-refl", "F:nat-le-of-succ-le-succ", "F:nat-lt-or-eq-of-le", "F:nat-not-succ-le-zero"],
   "evidence": [
     {
       "check_status": "checked",

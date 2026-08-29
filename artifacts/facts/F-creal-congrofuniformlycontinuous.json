@@ -25,15 +25,17 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:creal-equiv-refl",
-    "F:creal-equiv-symm",
-    "F:creal-equiv-trans",
-    "F:creal-uniformlycontinuouson-spec",
     "F:creal-add-assoc",
     "F:creal-add-comm",
     "F:creal-add-congr",
     "F:creal-add-neg",
-    "F:creal-add-zero"
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-equiv-zero-of-small",
+    "F:creal-equivabsdiffle",
+    "F:creal-uniformlycontinuouson-spec"
   ],
   "axiom_footprint": [],
   "evidence": [

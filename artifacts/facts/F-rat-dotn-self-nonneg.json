@@ -15,7 +15,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:rat-sq-nonneg"
+    "F:rat-sq-nonneg",
+    "F:rat-sumrange-nonneg"
   ],
   "axiom_footprint": [],
   "evidence": [

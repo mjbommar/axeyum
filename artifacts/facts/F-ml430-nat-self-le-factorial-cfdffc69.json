@@ -11,7 +11,13 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-factorial-pos-f1dd2405"
+    "F:ml430-nat-factorial-pos-f1dd2405",
+    "F:nat-factorial-succ",
+    "F:nat-mul-comm",
+    "F:nat-mul-le-mul-left",
+    "F:nat-mul-one",
+    "F:nat-one-le-factorial",
+    "F:nat-zero-le"
   ],
   "evidence": [
     {

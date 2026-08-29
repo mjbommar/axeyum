@@ -16,13 +16,18 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-lt-of-lt-of-le",
     "F:int-mul-assoc",
     "F:int-mul-comm",
     "F:nat-le-succ-succ",
     "F:nat-one-mul",
     "F:nat-zero-le",
     "F:rat-den-pos",
+    "F:rat-int-lt-of-mul-lt-mul-right",
     "F:rat-int-mul-le-mul-right",
+    "F:rat-int-mul-lt-mul-right",
+    "F:rat-int-one-le-of-pos",
+    "F:rat-int-pos-of-pos",
     "F:rat-normalize-cross"
   ],
   "axiom_footprint": [],

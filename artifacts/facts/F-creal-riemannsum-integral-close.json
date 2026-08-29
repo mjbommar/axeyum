@@ -12,7 +12,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": ["F:creal-integral-converges", "F:rat-bounds-add", "F:rat-sub-add-sub"],
+  "depends_on": ["F:creal-integral-converges", "F:creal-riemannsum-sharedaccuracyclose", "F:rat-bounds-add", "F:rat-sub-add-sub"],
   "axiom_footprint": [],
   "evidence": [
     {

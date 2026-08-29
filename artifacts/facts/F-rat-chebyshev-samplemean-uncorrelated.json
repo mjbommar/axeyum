@@ -23,7 +23,9 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:rat-chebyshev-inequality"
+    "F:rat-chebyshev-inequality",
+    "F:rat-variance-scaled-mean",
+    "F:rat-variance-sumvars"
   ],
   "axiom_footprint": [],
   "evidence": [

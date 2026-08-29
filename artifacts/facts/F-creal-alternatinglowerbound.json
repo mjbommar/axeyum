@@ -21,8 +21,10 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:creal-alternatingbracket",
+    "F:creal-converges-lower-bound-shift",
     "F:nat-add-assoc",
     "F:nat-add-comm",
+    "F:nat-add-right-comm",
     "F:nat-even-or-odd",
     "F:nat-succ-add"
   ],

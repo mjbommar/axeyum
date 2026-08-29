@@ -23,9 +23,13 @@
     "F:int-add-assoc",
     "F:int-add-comm",
     "F:int-add-neg",
+    "F:int-add-neg-cancel-right",
     "F:int-add-zero",
+    "F:int-ediv-add-emod",
     "F:int-left-distrib",
+    "F:int-modeq-add-mul-left",
     "F:int-modeq-iff-dvd",
+    "F:int-modeq-symm",
     "F:int-neg-one-mul",
     "F:logic-iff-mp",
     "F:logic-iff-mpr"

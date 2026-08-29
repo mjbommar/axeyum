@@ -17,6 +17,7 @@
   "depends_on": [
     "F:nat-dvd-mod-iff",
     "F:nat-dvd-refl",
+    "F:nat-dvd-zero",
     "F:nat-gcd-succ",
     "F:nat-gcd-zero-left",
     "F:nat-le-succ-succ",

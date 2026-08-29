@@ -12,7 +12,15 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-modeq-dvd-iff-8f130450"
+    "F:ml430-nat-modeq-dvd-iff-8f130450",
+    "F:nat-add-comm",
+    "F:nat-dvd-add",
+    "F:nat-dvd-add-iff-right",
+    "F:nat-dvd-antisymm",
+    "F:nat-dvd-gcd",
+    "F:nat-dvd-mul-right-of-dvd",
+    "F:nat-gcd-dvd-left",
+    "F:nat-gcd-dvd-right"
   ],
   "evidence": [
     {

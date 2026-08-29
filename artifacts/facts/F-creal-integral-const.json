@@ -12,7 +12,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": ["F:creal-equiv-symm", "F:creal-converges-unique", "F:creal-integral-converges"],
+  "depends_on": ["F:creal-converges-of-equiv", "F:creal-converges-unique", "F:creal-equiv-symm", "F:creal-integral-converges", "F:creal-riemannsum-const"],
   "axiom_footprint": [],
   "evidence": [
     {

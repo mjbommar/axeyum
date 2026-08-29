@@ -20,6 +20,7 @@
   "depends_on": [
     "F:creal-add-assoc",
     "F:creal-add-congr",
+    "F:creal-crossingupper",
     "F:creal-equiv-refl",
     "F:creal-equiv-symm",
     "F:creal-equiv-trans",
@@ -29,6 +30,7 @@
     "F:creal-mul-congr",
     "F:creal-mul-one",
     "F:creal-ofrat-add",
+    "F:creal-ratuniteqone",
     "F:rat-natdivsucc-add"
   ],
   "axiom_footprint": [],

@@ -11,7 +11,14 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-le-fib-self-0cbccb4d"
+    "F:ml430-nat-le-fib-self-0cbccb4d",
+    "F:nat-le-add-right",
+    "F:nat-le-antisymm",
+    "F:nat-le-of-lt-succ",
+    "F:nat-le-trans",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-lt-or-ge",
+    "F:nat-zero-le"
   ],
   "evidence": [
     {

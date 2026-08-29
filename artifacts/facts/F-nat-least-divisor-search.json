@@ -21,11 +21,15 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-beq-eq-true-of-eq",
     "F:nat-div-mod-exec",
+    "F:nat-div-mod-remainder-eq-zero-iff-dvd",
+    "F:nat-eq-of-beq-eq-true",
     "F:nat-le-of-succ-le-succ",
     "F:nat-le-trans",
     "F:nat-lt-or-eq-of-le",
-    "F:nat-not-succ-le-zero"
+    "F:nat-not-succ-le-zero",
+    "F:nat-two-le-succ-or-eq-one"
   ],
   "axiom_footprint": [],
   "evidence": [

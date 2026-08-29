@@ -16,7 +16,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-one-le-left-of-mul"],
   "axiom_footprint": [],
   "evidence": [
     {

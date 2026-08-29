@@ -24,6 +24,7 @@
     "F:rat-eq-of-cross",
     "F:rat-eq-zero-of-num-zero",
     "F:rat-int-mul-right-cancel",
+    "F:rat-int-pos-of-pos",
     "F:rat-lt-irrefl",
     "F:rat-mul-cross",
     "F:rat-normalize-cross"

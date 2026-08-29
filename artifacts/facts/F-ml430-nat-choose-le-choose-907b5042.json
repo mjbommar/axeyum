@@ -12,7 +12,9 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-choose-le-add-9c463139"
+    "F:ml430-nat-choose-le-add-9c463139",
+    "F:nat-add-comm",
+    "F:nat-sub-add-cancel"
   ],
   "evidence": [
     {

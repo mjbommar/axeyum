@@ -14,7 +14,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:rat-int-le-or-lt"],
   "axiom_footprint": [],
   "evidence": [
     {

@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-add-comm", "F:int-add-zero", "F:int-ediv-add-emod", "F:int-ediv-emod-unique", "F:int-emod-lt-of-pos", "F:int-emod-nonneg", "F:int-lt-irrefl", "F:int-mod-modeq", "F:int-modeq-add-mul-left", "F:int-modeq-mul-left", "F:int-modeq-symm", "F:int-mul-zero", "F:int-of-nat-nat-abs-of-nonneg", "F:nat-lt-of-le-of-lt", "F:nat-zero-le"],
   "evidence": [
     {
       "id": "kernel-Nat.exists_mul_mod_eq_gcd",

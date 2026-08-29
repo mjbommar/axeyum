@@ -39,6 +39,7 @@
     "F:creal-neg-le-neg",
     "F:creal-pow-nonneg",
     "F:creal-sumrange-split",
+    "F:rat-le-of-sub-le",
     "F:rat-neg-le-neg",
     "F:rat-neg-neg"
   ],

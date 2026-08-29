@@ -17,7 +17,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:complex-equiv-refl"
+    "F:complex-equiv-refl",
+    "F:nat-sub-eq-zero-of-le"
   ],
   "axiom_footprint": [],
   "evidence": [

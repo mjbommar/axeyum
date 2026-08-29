@@ -12,7 +12,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": ["F:creal-converges-unique", "F:creal-integral-converges"],
+  "depends_on": ["F:creal-converges-add", "F:creal-converges-of-close", "F:creal-converges-unique", "F:creal-integral-converges", "F:creal-riemannsumaddcauchycross"],
   "axiom_footprint": [],
   "evidence": [
     {

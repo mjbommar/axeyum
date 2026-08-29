@@ -20,6 +20,7 @@
     "F:nat-add-comm",
     "F:nat-le-add-right",
     "F:nat-le-trans",
+    "F:nat-mul-succ",
     "F:nat-not-succ-le-zero"
   ],
   "axiom_footprint": [],

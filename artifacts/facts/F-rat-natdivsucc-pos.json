@@ -21,6 +21,8 @@
     "F:nat-one-le-mul",
     "F:nat-zero-le",
     "F:rat-den-pos",
+    "F:rat-int-lt-of-mul-lt-mul-right",
+    "F:rat-int-of-nat-pos",
     "F:rat-int-zero-mul",
     "F:rat-normalize-cross"
   ],

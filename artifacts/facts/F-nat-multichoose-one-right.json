@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-choose-one-right-7eda8e39"],
   "epistemic_status": "proved",
   "evidence": [
     {

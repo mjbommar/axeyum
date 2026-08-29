@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-equality-is-decidable", "F:int-gcd-zero-right"],
   "evidence": [
     {
       "id": "kernel-Int.ne_zero_of_gcd",

@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-coprime-or-dvd-of-prime-65f47114", "F:ml430-nat-prime-dvd-iff-not-coprime-77854741", "F:nat-dvd-refl", "F:nat-le-of-succ-le-succ", "F:nat-not-succ-le-zero"],
   "evidence": [
     {
       "check_status": "checked",

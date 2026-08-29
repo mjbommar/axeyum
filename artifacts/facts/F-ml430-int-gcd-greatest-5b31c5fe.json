@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-dvd-gcd", "F:int-gcd-dvd-left", "F:int-gcd-dvd-right", "F:int-nat-abs-dvd-nat-abs-of-dvd", "F:int-of-nat-nat-abs-of-nonneg", "F:nat-le-antisymm", "F:nat-le-of-dvd", "F:nat-one-le-of-dvd-pos", "F:nat-zero-lt-succ", "F:nat-zero-mul"],
   "evidence": [
     {
       "id": "kernel-Int.gcd_greatest",

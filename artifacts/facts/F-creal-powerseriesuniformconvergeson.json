@@ -34,6 +34,11 @@
   "depends_on": [
     "F:creal-le-max-left",
     "F:creal-max-le",
+    "F:creal-min-le-right",
+    "F:creal-powerseriesterm-abs-le",
+    "F:creal-powerseriesterm-congr",
+    "F:creal-regular-of-kregular",
+    "F:creal-sumrange-cauchy-dominated-ordered-normalized",
     "F:creal-weierstrassmtest",
     "F:nat-le-total",
     "F:rat-add-comm",

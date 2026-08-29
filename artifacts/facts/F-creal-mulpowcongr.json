@@ -20,7 +20,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:creal-equiv-refl",
-    "F:creal-mul-congr"
+    "F:creal-mul-congr",
+    "F:creal-pow-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

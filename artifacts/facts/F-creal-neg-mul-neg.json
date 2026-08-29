@@ -15,6 +15,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:creal-equiv-of-pointwise",
+    "F:int-nat-abs-neg",
     "F:rat-mul-neg",
     "F:rat-neg-mul",
     "F:rat-neg-neg"

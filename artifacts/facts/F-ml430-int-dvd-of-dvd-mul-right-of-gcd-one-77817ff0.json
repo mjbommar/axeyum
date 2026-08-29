@@ -11,6 +11,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
+    "F:int-gauss-lemma",
     "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b"
   ],
   "evidence": [

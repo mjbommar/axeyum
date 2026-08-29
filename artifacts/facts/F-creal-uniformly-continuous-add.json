@@ -40,6 +40,7 @@
     "F:nat-add-comm",
     "F:nat-le-add-right",
     "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-antitone",
     "F:rat-natdivsucc-halve"
   ],
   "axiom_footprint": [],

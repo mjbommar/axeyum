@@ -19,7 +19,8 @@
   "depends_on": [
     "F:nat-mul-assoc",
     "F:nat-mul-comm",
-    "F:nat-mul-one"
+    "F:nat-mul-one",
+    "F:nat-pow-succ"
   ],
   "evidence": [
     {

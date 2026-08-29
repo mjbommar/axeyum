@@ -17,6 +17,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-le-antisymm",
     "F:rat-eq-of-cross"
   ],
   "axiom_footprint": [],

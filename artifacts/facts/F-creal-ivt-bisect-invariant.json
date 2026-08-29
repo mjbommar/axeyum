@@ -49,6 +49,8 @@
     "F:creal-ratuniteqone",
     "F:rat-add-le-add",
     "F:rat-add-neg",
+    "F:rat-ble-eq-true-of-le",
+    "F:rat-le-of-ble-eq-true",
     "F:rat-le-of-lt",
     "F:rat-le-or-lt",
     "F:rat-le-refl",

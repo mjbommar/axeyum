@@ -12,7 +12,8 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-coprime-primes-5769049f"
+    "F:ml430-nat-coprime-primes-5769049f",
+    "F:nat-coprime-mul-dvd"
   ],
   "evidence": [
     {

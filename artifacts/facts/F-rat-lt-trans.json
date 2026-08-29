@@ -19,6 +19,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-lt-trans",
     "F:int-mul-assoc",
     "F:int-mul-comm",
     "F:rat-den-pos",

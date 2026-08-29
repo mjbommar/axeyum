@@ -18,10 +18,14 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:int-nat-abs-neg-of-nat",
     "F:nat-le-succ-succ",
     "F:nat-one-le-mul",
     "F:nat-zero-le",
-    "F:rat-int-zero-le-of-nat"
+    "F:rat-int-zero-le-of-nat",
+    "F:rat-nat-mul-right-cancel",
+    "F:rat-not-zero-le-neg-of-nat",
+    "F:rat-of-nat-inj"
   ],
   "axiom_footprint": [],
   "evidence": [
