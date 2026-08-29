@@ -2151,7 +2151,26 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the one question where a wrong negative is expensive. **Before trusting an
   ABSENT verdict, check the `declarations=` count in the coverage line against a
   fresh build, or rebuild.** A FOUND verdict needs no such care -- a stale index
-  cannot invent a declaration. `--include-constructed` inventories are useless
+  cannot invent a declaration.
+
+  **AND A STALE BINARY CAN PRODUCE A CONFIDENT *POSITIVE* THAT IS ALSO WRONG,
+  WHICH THE "FOUND NEEDS NO CARE" RULE ABOVE DOES NOT COVER.** Measured
+  2026-08-29: a stale prebuilt dumper emitted a **96 MB** Lean module for a
+  trivial `14x + 21y = 5` refutation. That binary predated
+  `reconstruct::MAX_LEAN_MODULE_BYTES`, so it produced the giant string where
+  the current code *declines* and exits 1 with zero bytes. The 96 MB number was
+  real output from real code -- just not the code in the tree.
+
+  It then survived two hops: a lane reported it, I wrote it into a brief as
+  "over the checker's 64 MB safety cap", and the cap is not the checker's at
+  all. The lane that finally measured it had to correct both the size story and
+  whose cap it was.
+
+  So the rule generalises past ABSENT verdicts: **a stale binary's output
+  describes an older tree in every direction -- absent, present, and how big.**
+  When a measurement will be quoted, rebuild or check freshness first, and when
+  a number seems implausible for the input, suspect the binary before the
+  algorithm. `--include-constructed` inventories are useless
   here for case 2 by construction: an inline step has no name to list.
 
   And note the asymmetry when you find one: extracting an inline step into its
