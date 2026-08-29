@@ -1,7 +1,11 @@
-# 275 — autogenesis refill: the selection mechanism, not just the queue
+# Lane: autogenesis-refill -- the flywheel's input queue has emptied
 
-Lane: `autogenesis-refill`. Status: **(1) and (2) landed; (3) and (4) are
-written proposals, deliberately not executed — see "What this lane did NOT do".**
+<!-- plan-section: lane-status -->
+
+**Your lane's block (`DONE (the empty-queue gate and the divergence screen landed; refill and drift are written proposals)`, autogenesis-refill, 2026-08-29).**
+
+Status: **(1) and (2) landed; (3) and (4) are written proposals, deliberately
+not executed — see "What this lane did NOT do".**
 
 Everything below was re-measured in this worktree after `git merge main`, not
 read from the design-review note. Where the note and the measurement differ, the
