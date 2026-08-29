@@ -184,6 +184,7 @@ mod relation;
 mod restrict_pair;
 mod sqrt;
 mod subset_product;
+mod testbit_bitwise;
 mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
@@ -289,6 +290,7 @@ use restrict_pair::{
 };
 use sqrt::declare_sqrt_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
+use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
@@ -2796,6 +2798,15 @@ pub struct NatPrelude {
     /// (`F:ml430-nat-lt-xor-cases-c43a1e85`, which stays open — see that
     /// file's module doc for what else is missing).
     pub xor_comm: NameId,
+    /// `Nat.testBit_xor : ∀ m n i, Eq (testBit (xor m n) i) (xor_bit
+    /// (testBit m i) (testBit n i))` — bridges `testBitAux`'s INDEX
+    /// recursion with `bitwiseAux`'s VALUE recursion (piece 1 of 4 toward
+    /// `F:ml430-nat-lt-xor-cases-c43a1e85`; `xor_bit` is the same per-bit
+    /// combine `bitwiseAux`'s own `succ_minor` row builds at bit 0,
+    /// generalized to an arbitrary bit position). Nat-valued (Mathlib's
+    /// `testBit` returns `Bool`), so this is a local fact, not an `ml430`
+    /// mirror. See `nat_prelude::testbit_bitwise`.
+    pub test_bit_xor: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3707,6 +3718,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             xor_three_five: kernel.name_str(nat, "xor_three_five"),
             even_xor: kernel.name_str(nat, "even_xor"),
             xor_comm: kernel.name_str(nat, "xor_comm"),
+            test_bit_xor: kernel.name_str(nat, "testBit_xor"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
@@ -4091,6 +4103,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // far above) and `Nat.xor`/`xor_fn` (`declare_xor_all`, far above,
         // and `bitwise::xor_fn`). Nothing needs it, so it goes last.
         declare_xor_order_all(&mut d, &p)?;
+        // `Nat.testBit_xor`: needs `Nat.testBit`/`test_bit_succ`/
+        // `test_bit_zero` (`declare_binary_all`, far above),
+        // `Nat.xor`/`xor_fn`/`bitwiseAux` (`declare_xor_all`/
+        // `declare_bitwise_all`, far above), `Nat.bitwise_aux_agree_of_fuel`/
+        // `Nat.bitwise_zero_right` (`declare_bitwise_all`, far above),
+        // `half_le_predecessor_of_succ` (`rec_agreement.rs`, a Rust fn, no
+        // ordering constraint of its own beyond the kernel names IT calls,
+        // all declared far above), and `Nat.div_mod_exec`/`div_mod_unique`/
+        // `mod_lt`/`cases_mod_two`'s own dependencies (all far above).
+        // Nothing needs it, so it goes last.
+        declare_testbit_bitwise_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

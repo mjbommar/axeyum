@@ -160,6 +160,7 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-bitwise-bit-swap | Land `Nat.bitwise_swap` (`nat_prelude/bitwise.rs`): a fuel-induction cross lemma (`bitwise_aux_swap_of_fuel`) needing NO commutativity hypothesis, since `swap f` beta-reduces to `f` with arguments exchanged; close `F:ml430-nat-bitwise-swap-7175e90e`. Also fixed a pre-existing merge artifact in `nat_prelude_tests.rs` that had silenced `clog_computes_and_its_boundary_equations_apply` as dead code. `bitwise_bit'` remains open. |
 | 2026-08-29 | nat-lt-xor-cases | Read the pinned Mathlib v4.30 source for `Nat.lt_xor_cases` directly (no codomain block — fully `Nat`-valued); landed `Nat.xor_comm` (new `nat_prelude/xor_order.rs`, a corollary of `Nat.bitwise_comm` at `f := xor_fn`, one of the pieces Mathlib's own proof route composes) with a discriminating evaluation test; repaired an unrelated pre-existing merge-splice `#[test]`-attribute bug in `nat_prelude_tests.rs` that `cargo clippy -D warnings` exposed; `F:ml430-nat-lt-xor-cases-c43a1e85` stays `open` — precise diagnosis of the 4 remaining substantial pieces (`testBit_xor`, an `exists_most_significant_bit` equivalent, `lt_of_testBit`, `xor_assoc`/`xor_xor_cancel`/`xor_ne_zero_iff`) recorded in `xor_order.rs`'s module doc and this file |
 | 2026-08-29 | nat-land-assoc-finish | `Nat.land_aux_assoc_of_fuel`/`Nat.land_assoc` built and kernel-verified, executing `docs/plan/status/257-nat-land-assoc-impl.md`'s traced derivation exactly (leaf split c,b,a confirmed against `guarded`'s guard order; hard leaf's double `div_mod_unique` reconstruction closes via `ih`+`mul_assoc`, no new lemmas); `F:ml430-nat-land-assoc-ad4775b8` closed proved/axiom-free via the standard bitwise reconciliation pattern; a pre-existing merge-splice bug in `nat_prelude_tests.rs` (silently disabling the `clog` test) fixed along the way; `Nat.lor_assoc` characterized but not attempted -- `lorAux`'s pass-through fuel row makes the direct propagation lemma analogue FALSE, not merely harder |
+| 2026-08-29 | nat-testbit-xor | Landed `Nat.testBit_xor` (new `nat_prelude/testbit_bitwise.rs`), bridging `testBitAux`'s index recursion with `bitwiseAux`'s value recursion via an induction on the bit index generalized over both operands, reduced to two new per-step lemmas (`xor_low_bit`, `xor_div_two`) that reuse `xor_parity.rs`'s one-step-unfold technique and `bitwise.rs`'s fuel-irrelevance machinery; admitted by the trusted kernel gate on the first attempt, axiom-free; registered as a new local fact `F:nat-testbit-xor` (codomain mismatch with Mathlib's `Bool`-valued `testBit` rules out an `ml430` mirror flip); piece (1) of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`, which stays `open` — pieces 2-4 unchanged from `docs/plan/status/260-nat-lt-xor-cases.md` |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -15947,6 +15948,159 @@ remains `open`, characterized above.
   merge splice blocking `clippy -D warnings`
 - `6136bc9e0` — close: `F:ml430-nat-land-assoc-ad4775b8` — proved,
   axiom-free
+
+**Your lane's block (`DONE (Nat.testBit_xor landed, axiom-free; F:ml430-nat-lt-xor-cases-c43a1e85 stays open, 3 pieces remain)`, nat-testbit-xor, 2026-08-29).**
+
+## What landed
+
+New file `crates/axeyum-lean-kernel/src/nat_prelude/testbit_bitwise.rs`:
+
+```
+Nat.testBit_xor : ∀ m n i,
+  Eq (testBit (xor m n) i) (xor_bit (testBit m i) (testBit n i))
+```
+
+where `xor_bit(x, y) := bool_select_nat (xor_fn (beq x 1) (beq y 1)) 1 0` —
+the same per-bit combine `bitwiseAux`'s own `succ_minor` row builds at bit
+0 (`bitwise.rs`), generalized here to an arbitrary bit position.
+
+This is piece (1) of the 4 pieces `docs/plan/status/260-nat-lt-xor-cases.md`
+named as blocking `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`).
+Admitted by the trusted kernel gate on the first attempt — no failed
+`add_declaration` calls, no bisecting.
+
+## Codomain check: local fact, not an `ml430` mirror
+
+Mathlib's `testBit` returns `Bool`; this kernel's returns `Nat` in `{0,1}`
+(`nat_prelude/binary.rs`'s module doc) — the same codomain mismatch that
+made six sibling `testBit`-family mirrors unflippable (per the
+`260-nat-lt-xor-cases.md` handoff and `F:nat-zero-of-testbit-eq-zero`'s own
+note). No `ml430` fact for this exact statement was found in the ledger.
+Landed as a new local fact, `F:nat-testbit-xor`
+(`artifacts/facts/F-nat-testbit-xor.json`), `epistemic_status: proved`,
+`axiom_footprint: []`, three independently-checked evidence rows (kernel
+presence, concrete+symbolic compute, whole-prelude axiom-freedom).
+
+## Keeping the two recursions in step
+
+`testBitAux` recurses on the bit INDEX `i` (`testBit_succ`, `refl`:
+`testBit n (succ i) ≡ testBit (n/2) i`); `xor` recurses on FUEL derived
+from the VALUE (`bitwiseAux`, fuel = the first operand's magnitude). The
+bridge is an induction on `i`, generalizing over BOTH `m` and `n` in the
+motive — the same "generalize the OTHER variable" device
+`testBit_le_one`/`sum_testBit_lt` use for one variable, widened to two
+since `xor` genuinely mixes them (`d.induct` with a motive
+`fun i => ∀ m n, Eq (testBit (xor m n) i) (xor_bit (testBit m i) (testBit
+n i))`) — reduced at each level to two per-step lemmas that do NOT mention
+`i` at all:
+
+- **`xor_low_bit`** (private helper): `Eq (mod (xor m n) 2) (xor_bit (mod
+  m 2) (mod n 2))`. Closes the induction's BASE case, since `testBit _ 0`
+  is `refl`-defeq to `mod _ 2`. This generalizes `xor_parity.rs`'s
+  `even_xor_hard_case` step (which stopped at `Iff Even`) to a plain `Eq`,
+  and additionally covers the `m = 0`/`n = 0` boundary cases via
+  `cases_mod_two` (`even_xor` handled those with a different "one side of
+  an `Iff` is always true" device that has no `Eq`-shaped analogue).
+- **`xor_div_two`** (private helper): `Eq (div (xor m n) 2) (xor (div m 2)
+  (div n 2))`. Closes the STEP case, since `testBit _ (succ j)` is
+  `refl`-defeq to `testBit (_/2) j`; `d.congr` along this equation
+  transports the IH from `(m/2, n/2)` back to `(m, n)`. This is new
+  content — nothing in the prelude related `xor`'s recursive tail to `xor`
+  of the halved operands before this file. The both-nonzero case needs
+  `Nat.bitwise_aux_agree_of_fuel` (fuel-irrelevance, `bitwise.rs`) to
+  bridge the exposed fuel `pm` (one less than `m`) to the CANONICAL fuel
+  `m/2` that `xor (m/2) (n/2)`'s own definition uses, via
+  `half_le_predecessor_of_succ` (`rec_agreement.rs`) for the sufficiency
+  bound `Le (m/2) pm`.
+
+Both lemmas share the same "one step of `bitwiseAux`'s recursor" case
+analysis (`m = 0`; `n = 0` with `m` exposed `succ`-shaped; both `succ`),
+bundled in a private `XorStep` struct/`xor_step` function so the recursive
+term, the per-bit combine, and its `< 2` bound are computed once and
+reused by both — mirroring `xor_parity.rs::even_xor_hard_case`'s own
+construction throughout.
+
+Two small local helpers were duplicated rather than exposed from sibling
+files mid-work by other lanes (`xor_parity.rs`'s private `xor_bit`;
+`parity.rs`'s `mod_two_mul_add_of_lt` needed a DIV-sibling,
+`div_two_mul_add_of_lt`, built by swapping `and_right` for `and_left` on
+the identical `divMod`-uniqueness witness) — both are `pub(super)` in the
+new file in case a later lane wants them.
+
+## Evidence
+
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — **145 passed, 0
+  failed** (144 before this lane, +1 new evaluation test).
+- New test
+  `test_bit_xor_applies_at_a_concrete_discriminating_instance_and_symbolically`
+  (`nat_prelude_tests.rs`): checks all THREE meaningfully differing bits of
+  `xor 5 3 = 6` (`101 ^ 011 = 110`: bit 0 both-`1`→`0`, bit 1 `0`/`1`→`1`,
+  bit 2 `1`/`0`→`1`) against independently hand-computed values, each with
+  a negative control asserting the OTHER bit value does not also `def_eq`
+  — one bit position alone could not discriminate a swapped combine — AND
+  symbolically against a genuinely free `(m, n, i)` triple wrapped in a
+  fresh `d.theorem(...)` (the same pattern `xor_comm_restated` uses, since
+  raw test-created fvars fail `Kernel::infer` with `UnboundFVar`).
+- `cargo fmt --all --check` clean (read-only; no destructive workspace
+  format was run — files formatted individually with
+  `rustfmt --edition 2024 <file>` per the multi-agent hygiene rule).
+- `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` clean.
+- `python3 scripts/validate-facts.py` — 1938 facts, 0 errors.
+- `the_build_is_deterministic` pin: `93 + 495` → `93 + 496` (one new
+  theorem name added to `theorem_names`), taken from the panic's own
+  mismatch after adding `p.test_bit_xor` to the list — the panic on
+  `every_nat_declaration_is_checked_and_axiom_free` (which is
+  environment-derived, not list-derived) caught the missing registration
+  first, exactly as that assertion is designed to.
+
+Workspace gate NOT run (coordinator re-verifies before merging, per the
+lane brief). Not pushed.
+
+## What `F:ml430-nat-lt-xor-cases-c43a1e85` still needs
+
+Stays `open`. Piece (1) is done. Pieces 2-4, unchanged from
+`docs/plan/status/260-nat-lt-xor-cases.md` (each independently substantial,
+its own lane):
+
+1. ~~`testBit_xor`~~ — **DONE, this lane.**
+2. **`exists_most_significant_bit`-equivalent**: `∀ n, n ≠ 0 → ∃ i,
+   testBit n i = 1 ∧ ∀ j, i < j → testBit n j = 0`. Needs induction
+   connecting `sizeAux`'s recursion to `testBitAux`'s (natural witness
+   `pred (size n)`, via `Nat.size`/`Nat.lt_pow_size`, `binary.rs`).
+3. **`lt_of_testBit`-equivalent**: bit-`i` disagreement plus agreement
+   above `i` forces the order. Needs relating "agreement above `i`" to a
+   quotient equality (`n / 2^(i+1) = m / 2^(i+1)`) — the SAME
+   `xor_div_two`-style "halved-operand" bridge this lane built could be a
+   useful template (relating a value's shifted form to a claim about its
+   halves), but the statement itself is genuinely new, not a corollary.
+4. **`xor_assoc`, `xor_xor_cancel_{left,right}`, `xor_ne_zero_iff`**. No
+   `_assoc`-shaped machinery exists in this prelude for ANY bitwise
+   operator yet (only `_comm` forms do); `testBit_xor` (this lane) could
+   plausibly be the route in for `xor_ne_zero_iff` specifically (a natural
+   at bit `i` witnesses `Nat` nonzero, and `zero_of_testBit_eq_zero`
+   already gives the contrapositive), but that composition was not
+   attempted here.
+
+`testBit_xor`'s statement itself (piece 1) is a load-bearing ingredient for
+piece 3 in particular — Mathlib's own `lt_of_testBit` doesn't need it, but
+any route through THIS prelude's low-level `mod`/`div` machinery for the
+"agreement above `i`" step is likely to want `testBit_xor` or its
+`xor_low_bit`/`xor_div_two` internals.
+
+## Commits (this lane)
+
+1. `wip(nat): testbit_bitwise.rs scaffold -- Nat.testBit_xor draft, NOT wired in`
+   — the new file, landed early (before wiring/testing) per the ten-tool-call
+   rule.
+2. `wip(nat): wire testbit_bitwise into nat_prelude.rs -- compiles, untested`
+   — `mod testbit_bitwise;`, the `test_bit_xor` NameId + registration,
+   dispatch call.
+3. (pending at write time) — the coverage-list fix
+   (`theorem_names` + `the_build_is_deterministic` pin), the evaluation
+   test, the `xor_bit` visibility widening (`fn` → `pub(super) fn<D:
+   NatOps>`, needed so the test crate could build the expected RHS the same
+   way production code does), and the new fact
+   `artifacts/facts/F-nat-testbit-xor.json`.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
