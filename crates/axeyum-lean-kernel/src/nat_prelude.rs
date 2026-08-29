@@ -132,10 +132,10 @@ mod algebra;
 mod asc_factorial;
 mod bezout;
 mod binary;
-mod bit_order;
 mod binary_rec;
 mod binomial;
 mod bit_decode;
+mod bit_order;
 mod bits;
 mod bitwise;
 mod ble;
@@ -203,13 +203,13 @@ use algebra::{
 use asc_factorial::declare_asc_factorial_all;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
-use bit_order::declare_bit_order_all;
 use binary_rec::declare_binary_rec_all;
 use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
     declare_succ_sub_of_le,
 };
 use bit_decode::declare_bit_decode_all;
+use bit_order::declare_bit_order_all;
 use bits::declare_bit_all;
 use bitwise::{declare_bitwise_all, declare_bitwise_comm, declare_bitwise_swap};
 use ble::declare_boolean_le;
