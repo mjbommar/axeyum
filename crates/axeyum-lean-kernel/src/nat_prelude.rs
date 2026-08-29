@@ -130,6 +130,7 @@ use crate::name::NameId;
 
 mod algebra;
 mod asc_factorial;
+mod base_induction;
 mod bezout;
 mod binary;
 mod binary_rec;
@@ -206,6 +207,7 @@ use algebra::{
     declare_zero_or_succ,
 };
 use asc_factorial::declare_asc_factorial_all;
+use base_induction::declare_base_induction;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
 use binary_rec::declare_binary_rec_all;
@@ -816,6 +818,10 @@ pub struct NatPrelude {
     /// `Nat.add_div_of_dvd_add_add_one :
     ///   ∀ {c a b}, c ∣ (a+b+1) → (a+b)/c = a/c + b/c`.
     pub add_div_of_dvd_add_add_one: NameId,
+    /// `Nat.base_induction : {P : Nat -> Prop} {n : Nat} (b : Nat),
+    ///   1 < b -> (∀ m, m < b -> P m) ->
+    ///   (∀ m k, k < b -> 0 < m -> P m -> P (b*m+k)) -> P n`.
+    pub base_induction: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -3588,6 +3594,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             add_mul_mod_self_left: kernel.name_str(nat, "add_mul_mod_self_left"),
             add_mul_mod_self_right: kernel.name_str(nat, "add_mul_mod_self_right"),
             add_div_of_dvd_add_add_one: kernel.name_str(nat, "add_div_of_dvd_add_add_one"),
+            base_induction: kernel.name_str(nat, "base_induction"),
             dvd: kernel.name_str(nat, "dvd"),
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
@@ -4161,6 +4168,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // after the shift family since it is the ninth mirror in the same
         // dispatched batch and needs no dependency declared later than these.
         declare_add_div_of_dvd_add_add_one(&mut d, &p)?;
+        // Needs `lt_well_founded`/`WellFounded.fix` (`declare_gcd_semantics`,
+        // far above -- the same primitive `declare_gcd_bezout`/
+        // `declare_exists_prime_factorization`/`declare_irrational` already
+        // use), `lt_or_ge`/`le_add_right`/`le_succ_succ`/`le_trans`/
+        // `lt_of_lt_of_le`/`lt_of_le_of_lt`/`lt_irrefl` (`declare_order`/
+        // `declare_order_more`, above), `div_mod_exec`
+        // (`declare_divisibility`) and `succ_pred_of_pos` (just declared
+        // above), and `mul_comm`/`mul_le_mul_left`/`zero_add`/`zero_lt_succ`
+        // (`declare_additive_theorems`/`declare_multiplicative_theorems`/
+        // `declare_order`, all far above).
+        declare_base_induction(&mut d, &p)?;
         // Needs `succ_pred_of_pos`, just declared above: `prime_two`
         // (`two_divisor_dichotomy`) is not available before this point.
         declare_coprime_of_forall_prime_dvd(&mut d, &p)?;
