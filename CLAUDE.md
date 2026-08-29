@@ -1817,6 +1817,42 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   definition only as far as the theorem's own content reaches, which for an
   existence statement is often not at all.
 
+- **NO FUEL ENCODING CAN BE A DEPENDENT RECURSOR, AND THAT PERMANENTLY DECIDES
+  A WHOLE CLASS OF `ml430` MIRRORS.** Measured 2026-08-29 building
+  `Nat.binaryRec`. Mathlib's (`Mathlib/Data/Nat/BinaryRec.lean:88` at the pinned
+  commit `c5ea0035…`) is well-founded recursion on a `log2` measure with a
+  **dependent** `{motive : Nat → Sort u}`. Ours is structural recursion on a
+  fuel counter with a motive **constant in `n`**, plus an extra fuel argument
+  whose recursive equation must be *proved* rather than obtained definitionally.
+
+  **The non-dependence is FORCED, not a shortcut.** A fuel-exhaustion row has to
+  return a value for an arbitrary `n`, and the only thing in hand at that point
+  is `motive 0`. So no amount of care makes a fuel encoding into Mathlib's
+  construction.
+
+  The consequence is worth stating once, because it saves re-litigating it per
+  fact: **any `ml430` mirror whose Mathlib definition is `WellFounded.fix` with
+  a dependent motive stays open on this route, however much infrastructure gets
+  built.** `F:ml430-nat-fastfib-eq-cde11774` is the measured instance — the
+  keystone was built, and the mirror still cannot be honestly flipped, so the
+  content landed as local facts. This is the `multichoose`/`minFac` side of the
+  mirror-flip criterion, arriving from the recursion principle rather than from
+  the algorithm.
+
+  Also measured there, and general: **`Prod` does not exist in this kernel.**
+  The complete inductive list is `True/False/And/Or/Iff/Eq/Exists/Acc/Bool/Nat/
+  Decidable` + `Nat.le` + `Nat.Fin` + `Char` (plus `Nat.Pair`, added by that
+  lane). Every other `Prod` hit is a test fixture or a doc comment recording its
+  absence. The prelude's standing workaround for a pair is a **`Bool`-selected
+  function** (`Nat.xgcdAux (sel : Bool)`, `Nat.divModState`, `creal/ivt.rs`'s
+  `Bool → CReal`) — deliberate, and documented at those sites.
+
+  One defect that class of work reliably produces, invisible to `cargo check`:
+  `NatOps::congr` states its conclusion at `Nat`, so rewriting a component of a
+  value in ANOTHER type gives `expected: AxNat, got: AxNat.Pair`. The fix is a
+  `congr_nat_to` keeping the hypothesis at `Nat` and moving only the motive's
+  body. Anyone building over `Nat.Pair`, `Nat.Fin` or `CReal` will hit it.
+
 - **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
   TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
   2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and

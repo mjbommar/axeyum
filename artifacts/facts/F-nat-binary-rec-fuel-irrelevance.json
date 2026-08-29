@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-binary-rec-fuel-irrelevance",
+  "title": "bit-halving recursion is independent of the fuel, given two sufficient fuels",
+  "statement": "For any carrier alpha, base value z, step function f, and naturals fuel1, n, fuel2: if n <= fuel1 and n <= fuel2, then binaryRecAux alpha z f fuel1 n = binaryRecAux alpha z f fuel2 n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Sort (1)) -> ((x1 : x0) -> ((x2 : ((x2 : Bool) -> ((x3 : AxNat) -> ((x4 : x0) -> x0)))) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.le x4 x3) -> ((x7 : AxNat.le x4 x5) -> Eq.{1} x0 (AxNat.binaryRecAux x0 x1 x2 x3 x4) (AxNat.binaryRecAux x0 x1 x2 x5 x4)))))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "unknown",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.binaryRecAux_agree_of_fuel",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.binaryRecAux_agree_of_fuel",
+      "supports": "Nat.binaryRecAux_agree_of_fuel is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- binaryRecAux_agree_of_fuel 2>/dev/null | grep -Ec '^Nat\\.binaryRecAux_agree_of_fuel[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` prints nothing for a name that does not exist, and `grep -Ec` consumes the pipe so the tested COUNT decides the exit status. The pattern is anchored `^Nat\\.<name>[[:space:]]` and was verified with `/usr/bin/grep` (GNU grep), not the interactive `ugrep` shell function: 1 for the real name, 0 for a fabricated sibling. Run `--release`; the debug build SIGABRTs building the full constructed environment.",
+      "checkers": [
+        "Kernel::add_declaration"
+      ]
+    },
+    {
+      "id": "suite-nat-prelude",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.binaryRecAux_agree_of_fuel",
+      "supports": "The whole nat_prelude suite, including the environment-derived coverage assertion, is green with this declaration present.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::",
+      "notes": "133 passed, 0 failed. `every_nat_declaration_is_checked_and_axiom_free` enumerates `kernel.environment()` and fails naming any `Nat.`-prefixed Definition or Theorem absent from the inventory lists, so this declaration cannot be present-but-unchecked. The suite is not feature-gated, so it cannot compile to zero tests.",
+      "checkers": [
+        "Kernel::add_declaration"
+      ]
+    },
+    {
+      "id": "footprint-nat-environment",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-binaryrec",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\n`Nat.binaryRecAux` (`nat_prelude/binary_rec.rs`) is bit-halving recursion carried on an explicit fuel counter: `binaryRecAux alpha z f 0 n = z`, `binaryRecAux alpha z f (succ k) 0 = z`, and `binaryRecAux alpha z f (succ k) (succ m) = f (beq ((succ m) % 2) 1) ((succ m) / 2) (binaryRecAux alpha z f k ((succ m) / 2))` -- all three definitional. `Nat.binaryRec alpha z f n := binaryRecAux alpha z f n n` supplies the canonical fuel.\n\nThe DOUBLE-fuel form is forced, not stylistic: the canonical instance puts `n` itself in the fuel slot, so a 'fuel versus the canonical instance' statement refers to itself and its induction cannot unfold. Two independently-chosen sufficient fuels have no such self-reference. Proved by `agree_by_fuel_induction` (`nat_prelude/ops.rs`) on `fuel1` with `n` and `fuel2` both generalized in the motive; at `fuel1 = 0` the hypothesis `Le n 0` forces `n = 0` (`le_antisymm`/`zero_le`) and both sides collapse via `binaryRecAux_zero`; at `fuel1 = succ k` a `cases_zero_succ` on `n` handles `n = 0` the same way and, at `n = succ m`, derives `fuel2 = succ (pred fuel2)` from positivity (`succ_pred_of_pos`), bounds both halves by `Nat.half_le_of_succ_le_succ`, applies the induction hypothesis at `(div (succ m) 2, pred fuel2)`, and closes with one congruence in the step function's third argument.\n\nThe `n = 0` guard in the definition is what makes this TRUE. Without it, fuel `succ k` at `n = 0` would apply `f` at `bit false 0 = 0` and the value would depend on how much fuel remained.\n\nThe hypotheses are not decoration: `binaryRecAux 0 n = z` for any `n`, while `binaryRec n` need not be, so the unconditional statement is false.\n\nNOT a candidate to close `F:ml430-nat-fastfib-eq-cde11774` or any `binaryRec` mirror. Mathlib's `Nat.binaryRec` (`Mathlib/Data/Nat/BinaryRec.lean:88` at the pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`) is WELL-FOUNDED recursion on a `log2`-based measure with a DEPENDENT motive in an arbitrary `Sort u`; this is structural recursion on a fuel counter, non-dependent, with an extra fuel argument. Same values, different `def` -- the `Nat.multichoose`/`Nat.minFac` case of the mirror-flip criterion, not the `Nat.descFactorial_of_lt` case. A fuel encoding CANNOT be dependent: the fuel-exhaustion row must return a value for an arbitrary `n` and only `motive 0` is in hand."
+}
