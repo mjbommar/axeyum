@@ -72,6 +72,26 @@
 //! Monomial × monomial is needed only when a cofactor is not constant, and is
 //! NOT built here — see "What this does not establish".
 //!
+//! # Mutation-verified, both halves separately
+//!
+//! Two mutations were run against the committed tree (in this lane's own
+//! worktree, never the shared checkout), each killing EXACTLY ONE test and
+//! leaving the other two green:
+//!
+//! - **The statement check.** `scaled_head`'s coefficient `k * head.1` ->
+//!   `k * head.1 + 1`: `geometry_orthocentre_cofactor_identity_kernel_checked`
+//!   dies at the `merged == concl` assertion inside the builder, printing the
+//!   12-term wrong normal form against the 8-term conclusion. So the statement
+//!   the kernel is asked to admit is pinned to the CERTIFICATE's conclusion,
+//!   not to whatever the emitter happened to produce.
+//! - **The kernel gate.** One lemma swapped in the zero-drop path,
+//!   `p.zero_add` -> `p.add_zero` (same arity, same argument, wrong direction):
+//!   the same test dies with `TypeMismatch` out of
+//!   [`crate::Kernel::add_declaration`], in 6.93 s. So the PROOF is genuinely
+//!   re-derived by the trust anchor rather than accepted on the emitter's word,
+//!   and a wrong rewrite is refused in bounded time (a failing defeq here has
+//!   no early exit, so that bound is worth stating).
+//!
 //! # What this does NOT establish
 //!
 //! Stated up front because it is the load-bearing part, and the design review
@@ -466,9 +486,7 @@ fn prove_merge(
             let (merged_rest, tail) = prove_merge(d, p, vars, a_rest, b);
             let merged_rest_e = poly_expr(d, p, vars, &merged_rest);
             let end = radd(d, a_head_e, merged_rest_e);
-            let step2 = rcongr(d, inner, merged_rest_e, tail, &|d, t| {
-                radd(d, a_head_e, t)
-            });
+            let step2 = rcongr(d, inner, merged_rest_e, tail, &|d, t| radd(d, a_head_e, t));
 
             let (_, proof) = super::ops::rchain(d, start, &[(mid, step1), (end, step2)]);
             let mut merged = vec![a_head.clone()];
@@ -483,9 +501,7 @@ fn prove_merge(
             let (merged_rest, tail) = prove_merge(d, p, vars, a, b_rest);
             let merged_rest_e = poly_expr(d, p, vars, &merged_rest);
             let end = radd(d, b_head_e, merged_rest_e);
-            let step2 = rcongr(d, inner, merged_rest_e, tail, &|d, t| {
-                radd(d, b_head_e, t)
-            });
+            let step2 = rcongr(d, inner, merged_rest_e, tail, &|d, t| radd(d, b_head_e, t));
 
             let (_, proof) = super::ops::rchain(d, start, &[(mid, step1), (end, step2)]);
             let mut merged = vec![b_head.clone()];
@@ -550,11 +566,8 @@ fn prove_merge(
                 let flipped = rmul(d, mono, sum_rat);
                 let comm = d.lemma(p.mul_comm, &[sum_rat, mono]);
                 let mul_zero = d.lemma(p.mul_zero, &[mono]);
-                let (_, kill) = super::ops::rchain(
-                    d,
-                    folded,
-                    &[(flipped, comm), (zero_c, mul_zero)],
-                );
+                let (_, kill) =
+                    super::ops::rchain(d, folded, &[(flipped, comm), (zero_c, mul_zero)]);
                 let mid6 = radd(d, zero_c, rests);
                 let step6 = rcongr(d, folded, zero_c, kill, &|d, t| radd(d, t, rests));
                 let step7 = d.lemma(p.zero_add, &[rests]);
@@ -852,18 +865,13 @@ mod tests {
             .kernel()
             .name_str(anon, "Check.geometry_orthocentre_cofactor_identity");
 
-        let parts: Vec<(i128, IntPoly)> = vec![
-            (cofactors[0], g0.clone()),
-            (cofactors[1], g1.clone()),
-        ];
+        let parts: Vec<(i128, IntPoly)> =
+            vec![(cofactors[0], g0.clone()), (cofactors[1], g1.clone())];
         let concl_for_build = concl.clone();
 
         let result = rat_theorem(&mut d, name, names.len(), &|d, fvars| {
-            let vars: BTreeMap<String, ExprId> = names
-                .iter()
-                .cloned()
-                .zip(fvars.iter().copied())
-                .collect();
+            let vars: BTreeMap<String, ExprId> =
+                names.iter().cloned().zip(fvars.iter().copied()).collect();
             let (rhs, merged, proof) = prove_const_combination(d, p, &vars, &parts);
             assert_eq!(
                 merged, concl_for_build,
