@@ -8,13 +8,40 @@
     "statement": "∀ {k n : ℕ}, n.gcd k < k → ∃ m < k, n * m % k = n.gcd k",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.exists_mul_mod_eq_gcd",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Nat.exists_mul_mod_eq_gcd` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint",
+        "int_prelude_tests::nat_namespace_declarations_made_by_the_int_prelude_are_axiom_free"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`Nat.exists_mul_mod_eq_gcd` in `crates/axeyum-lean-kernel/src/int_prelude/gcd.rs` (`declare_exists_mul_mod_eq_gcd`). Genuine work, not a corollary of the Bezout-witness landing: the Bezout identity `ofNat (gcd n k) = ofNat n * gcdA n k + ofNat k * gcdB n k` gives an INTEGER coefficient `gcdA n k` (possibly negative, possibly out of range), not the bounded NATURAL witness the statement demands. The bridge is reducing `gcdA n k` modulo `k` (`Int.ModEq.mul_left` to replace the coefficient by its residue, `Int.mod_modEq`/`Int.ModEq.symm` to name that residue, `Int.modEq_add_mul_left` to discard the `ofNat k * gcdB n k` summand as an exact multiple of the modulus, and `emod_eq_self_of_in_range` -- already `pub(super)` in `wilson.rs` -- to identify `emod (ofNat (gcd n k)) (ofNat k)` with `ofNat (gcd n k)` under the `gcd n k < k` hypothesis) then descending the resulting `Int` equation `ofNat (gcd n k) = ofNat (n * m % k)` to the stated `Nat` equation by `natAbs`, which is the identity on `ofNat` by computation. No new axiom, no new public lemma outside `gcd.rs`; every intermediate lemma used (`Int.modEq_add_mul_left`, `Int.ModEq.mul_left`, `Int.mod_modEq`, `Int.ModEq.symm`, `Int.emod_nonneg`, `Int.emod_lt_of_pos`, `Int.of_nat_nat_abs_of_nonneg`) already existed."
+    },
+    {
+      "id": "footprint-Nat.exists_mul_mod_eq_gcd",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Nat.exists_mul_mod_eq_gcd 2>/dev/null | grep -xFc $'integer\\tNat.exists_mul_mod_eq_gcd\\t0\\t')\" -ge 1",
+      "notes": "The matched row is `integer<TAB>Nat.exists_mul_mod_eq_gcd<TAB>0<TAB>` with an EMPTY trailing footprint column, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Filed under the `integer` prelude key because the declaration is made by `int_prelude::gcd`, even though the interned name lives in the `Nat` namespace (mirrors `Int.gcd_eq_gcd_ab_witnesses`'s own `nat_gcd_a`/`nat_gcd_b` siblings). Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-29",
+    "established_by": "the `int-gcd-div` lane, by reducing the Bezout coefficient `Nat.gcdA n k` modulo `k` through the already-proved `Int.ModEq` congruence lemmas",
     "source": "statement-only extraction of `Nat.exists_mul_mod_eq_gcd` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED via the `int-gcd-div` lane, 2026-08-29, as `Nat.exists_mul_mod_eq_gcd` -- axiom-free, statement identical to Mathlib's.\n\nA prior brief called this fact 'cheap given the new Bezout witnesses'; a second review refuted that and called it real work requiring genuine Int/Nat mod-arithmetic bridging. This lane's own construction confirms the second reading: the Bezout identity alone hands you an unbounded, possibly-negative Int coefficient, and every step from there to a bounded Nat witness is a separate modular-arithmetic argument (residue reduction, discarding an exact multiple of the modulus, and the natAbs descent back to Nat) built from `modeq.rs`/`modeq_family.rs` primitives that already existed but had never been assembled this way.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
