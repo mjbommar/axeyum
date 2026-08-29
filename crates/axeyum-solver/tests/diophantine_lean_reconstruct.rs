@@ -65,7 +65,26 @@ fn two_x_eq_one_reconstructs_to_false() {
     // past Lean 4.30.0's default of 512. Again exactly the header text; no proof
     // bytes changed, and real Lean accepted this module on the same run
     // (`[lean ok] diophantine`, footprint = the four query axioms).
-    lean_golden::assert_golden_module("diophantine", &source, (1_142_012, 0xc3d7_4e54_f071_0274));
+    // Moved 2026-08-29 by -909,862 bytes (1,142,012 -> 232,150, -79.7%): the
+    // renderer switched from `render_lean_module` to `render_lean_module_compact`.
+    // These are documented as semantically equivalent -- compact hoists repeated
+    // CLOSED nodes and never touches anything with loose de Bruijn or free
+    // variables -- so this is the SAME proof term, printed with sharing instead
+    // of expanded as a tree. Nothing about the argument changed, and
+    // `diophantine_module_checks_in_real_lean` (below) re-checks the compact
+    // module with the pinned Lean binary and asserts the same axiom footprint.
+    //
+    // The pin's own reason for existing is why it moved so far. The renderer was
+    // printing a hash-consed DAG as a tree with no sharing at all, so its output
+    // tracked the tree expansion rather than the argument. Measured the same day
+    // on `artifacts/examples/math/number-theory-v0/smt2/`
+    // `diophantine-gcd-obstruction-conflict.smt2` (`14x + 21y = 5`, refuted
+    // because `gcd(14,21) = 7` does not divide 5): 18,018 distinct DAG nodes,
+    // one subterm repeated 169,184 times, and 96,297,506 printed bytes -- over
+    // the 64 MB safety cap in `scripts/check-lra-hypothesis-binding.py`, which
+    // that gate was crashing on deterministically. Compact renders it at
+    // 2,268,010 bytes.
+    lean_golden::assert_golden_module("diophantine", &source, (232_150, 0x96fe_a630_1de2_c779));
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
         ProofFragment::Diophantine
