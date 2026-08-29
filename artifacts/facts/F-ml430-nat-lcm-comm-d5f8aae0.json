@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-dvd-lcm-left-c83bcebc", "F:ml430-nat-dvd-lcm-right-18ab8e2f", "F:ml430-nat-lcm-dvd-07899eea", "F:nat-dvd-antisymm"],
   "evidence": [
     {
       "check_status": "checked",

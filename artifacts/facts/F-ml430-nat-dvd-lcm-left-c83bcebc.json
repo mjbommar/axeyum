@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-div-mul-cancel-of-dvd", "F:nat-dvd-mul", "F:nat-dvd-zero", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-lcm-zero-left", "F:nat-le-succ-succ", "F:nat-mul-assoc", "F:nat-mul-comm", "F:nat-mul-left-cancel-of-pos", "F:nat-one-le-of-dvd-pos", "F:nat-zero-le"],
   "evidence": [
     {
       "check_status": "checked",

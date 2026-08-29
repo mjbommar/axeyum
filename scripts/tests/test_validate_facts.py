@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -478,6 +479,110 @@ class CasCertificateClassificationTests(unittest.TestCase):
         bogus = copy.deepcopy(cas_only)
         bogus["evidence"][0]["checker_command"] = "echo nothing"
         self.assertEqual(MODULE.classify_cas_certificate_fact(bogus), "unrecognized")
+
+
+class DependsDerivedGateIsWiredIntoTheValidator(unittest.TestCase):
+    """`validate-facts.py` is the command a lane is told to run when it
+    touches a fact (CLAUDE.md's Commands section lists it standalone), so
+    that is where `check-fact-depends-derived.py`'s finding is enforced --
+    this pins the wiring itself, not the derivation logic (which has its own
+    controls in `test_check_fact_depends_derived.py`)."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        tmp = Path(self._tmp.name)
+        self.ok_script = tmp / "ok.py"
+        self.ok_script.write_text(
+            "print('DEPENDS_DERIVED|kernel_facts=0|named=0|graph=0|missing_edges=0')\n",
+            encoding="utf-8",
+        )
+        self.fail_script = tmp / "fail.py"
+        self.fail_script.write_text(
+            "import sys\n"
+            "print('DEPENDS_DERIVED_ERROR|fixture failure', file=sys.stderr)\n"
+            "sys.exit(1)\n",
+            encoding="utf-8",
+        )
+        self._original_script = MODULE.DEPENDS_DERIVED_SCRIPT
+
+    def tearDown(self) -> None:
+        MODULE.DEPENDS_DERIVED_SCRIPT = self._original_script
+        self._tmp.cleanup()
+
+    def test_skip_flag_short_circuits_without_running_anything(self) -> None:
+        MODULE.DEPENDS_DERIVED_SCRIPT = self.fail_script  # would fail if run
+        self.assertEqual(MODULE.run_depends_derived_gate(skip=True), 0)
+
+    def test_a_passing_checker_propagates_zero(self) -> None:
+        MODULE.DEPENDS_DERIVED_SCRIPT = self.ok_script
+        self.assertEqual(MODULE.run_depends_derived_gate(skip=False), 0)
+
+    def test_a_failing_checker_propagates_nonzero(self) -> None:
+        MODULE.DEPENDS_DERIVED_SCRIPT = self.fail_script
+        self.assertEqual(MODULE.run_depends_derived_gate(skip=False), 1)
+
+    def test_a_missing_checker_script_fails_rather_than_silently_passing(self) -> None:
+        """If the sibling script has been moved or deleted, this must not
+        read as depends_on being fine -- it fails closed."""
+        MODULE.DEPENDS_DERIVED_SCRIPT = Path(self._tmp.name) / "does-not-exist.py"
+        self.assertEqual(MODULE.run_depends_derived_gate(skip=False), 1)
+
+
+class MainFailsWhenDependsOnDrifts(unittest.TestCase):
+    """End-to-end through `main`: a structurally valid ledger (copied real
+    fact files, so `validate_one` has nothing to object to) must still fail
+    the whole validator when the depends-derived gate fails, and must not
+    write anything either way -- `main` only reads."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        tmp = Path(self._tmp.name)
+        # Two small, already-valid committed facts -- structural content is
+        # irrelevant here since the depends-derived subprocess is stubbed.
+        for name in (
+            "F-affirming-the-consequent.json",
+            "F-cas-evt-endpoint-exclusion-cubic-kernel-checked.json",
+        ):
+            (tmp / name).write_text(
+                (ROOT / "artifacts" / "facts" / name).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+        self.ok_script = tmp / "ok.py"
+        self.ok_script.write_text(
+            "print('DEPENDS_DERIVED|kernel_facts=0|named=0|graph=0|missing_edges=0')\n",
+            encoding="utf-8",
+        )
+        self.fail_script = tmp / "fail.py"
+        self.fail_script.write_text(
+            "import sys\n"
+            "print('DEPENDS_DERIVED_ERROR|fixture failure', file=sys.stderr)\n"
+            "sys.exit(1)\n",
+            encoding="utf-8",
+        )
+        self._originals = (MODULE.FACTS, MODULE.DEPENDS_DERIVED_SCRIPT, list(sys.argv))
+        MODULE.FACTS = tmp
+
+    def tearDown(self) -> None:
+        MODULE.FACTS, MODULE.DEPENDS_DERIVED_SCRIPT, sys.argv[:] = self._originals
+        self._tmp.cleanup()
+
+    def test_main_fails_when_the_depends_derived_gate_fails(self) -> None:
+        MODULE.DEPENDS_DERIVED_SCRIPT = self.fail_script
+        sys.argv = ["validate-facts.py"]
+        self.assertEqual(MODULE.main(), 1)
+
+    def test_main_passes_when_the_depends_derived_gate_passes(self) -> None:
+        MODULE.DEPENDS_DERIVED_SCRIPT = self.ok_script
+        sys.argv = ["validate-facts.py"]
+        self.assertEqual(MODULE.main(), 0)
+
+    def test_skip_flag_lets_main_pass_despite_a_failing_gate(self) -> None:
+        """The escape hatch actually reaches `main`, not only the helper
+        function -- this is the case that would break if the flag were
+        threaded through incorrectly (e.g. checked against the wrong argv)."""
+        MODULE.DEPENDS_DERIVED_SCRIPT = self.fail_script
+        sys.argv = ["validate-facts.py", "--skip-depends-derived"]
+        self.assertEqual(MODULE.main(), 0)
 
 
 if __name__ == "__main__":

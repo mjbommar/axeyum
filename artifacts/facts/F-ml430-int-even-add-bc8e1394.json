@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-lt-irrefl", "F:int-modeq-add-left", "F:int-modeq-add-right", "F:int-modeq-trans", "F:int-zero-lt-one", "F:nat-mod-two-eq-zero-or-one"],
   "evidence": [
     {
       "id": "kernel-Int.even_add_prime",

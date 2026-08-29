@@ -18,7 +18,8 @@
   "external_status": "proved",
   "depends_on": [
     "F:nat-dvd-lcm-right",
-    "F:nat-dvd-trans"
+    "F:nat-dvd-trans",
+    "F:ml430-nat-dvd-lcm-right-18ab8e2f"
   ],
   "evidence": [
     {

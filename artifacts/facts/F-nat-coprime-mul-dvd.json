@@ -21,7 +21,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-coprime-lcm-eq-mul",
-    "F:nat-lcm-dvd"
+    "F:nat-lcm-dvd",
+    "F:ml430-nat-lcm-dvd-07899eea"
   ],
   "axiom_footprint": [],
   "evidence": [

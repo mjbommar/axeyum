@@ -49,12 +49,14 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FACTS = ROOT / "artifacts" / "facts"
 SCHEMA = ROOT / "artifacts" / "ontology" / "fact.schema.json"
+DEPENDS_DERIVED_SCRIPT = ROOT / "scripts" / "check-fact-depends-derived.py"
 
 ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # Same namespace class `theorem_of` (scripts/check-fact-depends-derived.py) reads
@@ -609,6 +611,42 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     return errors
 
 
+def run_depends_derived_gate(skip: bool) -> int:
+    """Fail the ledger validator when `depends_on` drifts from the proof term.
+
+    `check-fact-depends-derived.py` already derives this from the kernel and
+    already runs in both `scripts/check.sh` and `just check` -- but both are
+    periodic aggregate sweeps, and drift compounded between them: 1054 missing
+    edges across 306 facts over 182 fact-touching commits, then 109 more
+    within the hour (docs/research/11-design-review/2026-08-29-two-gaps-the-
+    gate-sweep-exposed.md). Every one of those repairs was mechanical.
+
+    This validator is the command a lane is actually told to run when it
+    touches a fact (CLAUDE.md's Commands section lists it standalone, not only
+    as part of the aggregate gate), so wiring the enforcement here catches the
+    drift at the point a fact is landed rather than after it has piled up.
+
+    `--skip-depends-derived` exists only for a fast schema-only iteration loop
+    while drafting a fact's JSON; it is not a substitute for running this
+    (without the flag) before landing one, and CI/the aggregate gates never
+    pass it.
+    """
+    if skip:
+        print(
+            "validate-facts: SKIPPING depends-derived gate (--skip-depends-derived); "
+            "run without this flag before landing a fact"
+        )
+        return 0
+    if not DEPENDS_DERIVED_SCRIPT.is_file():
+        print(f"validate-facts: missing {DEPENDS_DERIVED_SCRIPT}", file=sys.stderr)
+        return 1
+    proc = subprocess.run(
+        [sys.executable, str(DEPENDS_DERIVED_SCRIPT), "--quiet"],
+        cwd=ROOT,
+    )
+    return proc.returncode
+
+
 def main() -> int:
     if not SCHEMA.is_file():
         print(f"validate-facts: missing {SCHEMA}", file=sys.stderr)
@@ -646,6 +684,17 @@ def main() -> int:
         print(f"\nvalidate-facts: {len(facts)} facts, {len(errors)} errors", file=sys.stderr)
         for e in errors:
             print(f"  ERROR {e}", file=sys.stderr)
+        return 1
+
+    depends_rc = run_depends_derived_gate("--skip-depends-derived" in sys.argv[1:])
+    if depends_rc != 0:
+        print(
+            "\nvalidate-facts: depends_on drift detected -- see "
+            "scripts/check-fact-depends-derived.py output above. Run "
+            "`python3 scripts/check-fact-depends-derived.py --fix` to add the "
+            "missing edges, review the diff, then re-run this validator.",
+            file=sys.stderr,
+        )
         return 1
 
     # Established here, not settled in the literature -- i.e. new. Reported, never

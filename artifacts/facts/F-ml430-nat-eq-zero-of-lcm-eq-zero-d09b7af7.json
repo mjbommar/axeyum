@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-gcd-mul-lcm-b7217ace", "F:nat-mul-eq-zero", "F:nat-mul-zero"],
   "evidence": [
     {
       "check_status": "checked",
