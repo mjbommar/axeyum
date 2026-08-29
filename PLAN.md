@@ -117,7 +117,9 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
+| 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -11135,6 +11137,81 @@ only the three zero-right/one/one-right mirrors exist), so there was no
 concrete target to hang new proof work on without manufacturing a fact that
 was not asked for.
 
+**Your lane's block (`DONE`, nat-rec-agreement, 2026-08-29).** The boundary two
+lanes stopped at is crossed. Six declarations landed, kernel-admitted on the
+FIRST attempt, `nat` still `axiom=0 opaque=0 quotient=0`.
+
+Machinery, in `nat_prelude/ops.rs` beside the other eliminators:
+
+- `cases_mod_two` — the `Nat.mod _ 2 ∈ {0,1}` split `bitwise.rs` named as
+  absent, as an eliminator over a motive that VARIES with the remainder. It is
+  `cases_lt_bound` at `bound = 2` fed `mod_lt`'s witness. **It genuinely did
+  not exist**: `powsq.rs`'s *private* `mod_two_eq_one_of_ne_zero` gives only
+  the `= 1` half and needs `r ≠ 0` already in hand, and `Nat.even_or_odd` is
+  `div`-shaped and never mentions `Nat.mod`.
+- `agree_by_fuel_induction` — induction on a shared fuel counter with **both**
+  value arguments generalized in the motive. The brief predicted this
+  generalization would be the entire difficulty. It was.
+
+Declarations, in a new `nat_prelude/rec_agreement.rs` (the theorems mention
+`Nat.bitwise` *and* a sibling, so neither module owns them):
+
+| name | statement |
+| --- | --- |
+| `Nat.lt_two_cases` | `∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` |
+| `Nat.mod_two_eq_zero_or_one` | `∀ n, Or (Eq (mod n 2) 0) (Eq (mod n 2) 1)` |
+| `Nat.bitwise_aux_eq_land_aux` | `∀ fuel m n, Eq (bitwiseAux and_fn fuel m n) (landAux fuel m n)` |
+| `Nat.bitwise_aux_eq_lor_aux` | `∀ fuel m n, Eq (bitwiseAux or_fn fuel m n) (lorAux fuel m n)` |
+| `Nat.bitwise_and_eq_land` | `∀ m n, Eq (bitwise and_fn m n) (land m n)` |
+| `Nat.bitwise_or_eq_lor` | `∀ m n, Eq (bitwise or_fn m n) (lor m n)` |
+
+Facts: `F:nat-mod-two-eq-zero-or-one`, `F:nat-bitwise-and-eq-land`,
+`F:nat-bitwise-or-eq-lor`. The two `_three_five` predecessors are kept (they
+are *reduction*-based, independent of the induction) with their now-stale
+"was NOT attempted" notes corrected in place rather than deleted, and
+`bitwise.rs`'s module doc likewise.
+
+**THE BASE-CASE MISMATCH WAS NOT THE DIFFICULTY, and the brief expected it to
+be.** `land`/`lor`/`ldiff` differ from *each other* in their fuel-exhaustion
+rows — that is the absorbing-zero rule those three files establish — but none
+of them differs from `bitwise`'s, because `bitwiseAux`'s general row is
+`if f false true then n else 0` and evaluating a *concrete* `f` at the boundary
+`Bool` literals reproduces each sibling's hand-chosen row by δβι alone:
+`and false true = false → 0` matches `land`'s constant `0`;
+`or false true = true → n` matches `lor`'s `n`. **Every base case in the proof
+is `refl`, with no lemma.** The absorbing-zero rule decided what each sibling's
+row had to be; `bitwise` re-derives the same answer from `f`. The one place
+real proof content is needed is the per-bit combine, where
+`bool_select_nat (f (beq (m%2) 1) (beq (n%2) 1)) 1 0` and `mul (m%2) (n%2)` are
+both stuck at symbolic operands.
+
+**FUEL-IRRELEVANCE IS NOT NEEDED HERE, and this is a negative result for the
+seven blocked `natural-bitwise` facts.** `Nat.bitwise f m n := bitwiseAux f m m n`
+and `Nat.land m n := landAux m m n` put the SAME expression in the fuel slot,
+so the two recursions are indexed by **one** counter decrementing in lockstep,
+never two that must be reconciled. The step does apply the IH at a
+*non-canonical* fuel (fuel `k` against operand `m/2`), and that is harmless
+precisely because agreement is proved fuel-parametrically. So the 7 facts need
+fuel-irrelevance dispatched separately — **but** `bitwise_aux_eq_land_aux` /
+`_lor_aux` are exposed for exactly that consumer, and they make
+fuel-irrelevance for `bitwiseAux` and for `landAux`/`lorAux` interderivable:
+prove it once, transport it.
+
+Sketch for whoever takes it, in this machinery's own terms:
+`agree_by_fuel_induction`'s `statement` closure may return **any** `Prop`, so
+`fun fuel => ∀ m n, Le m fuel → Eq (landAux fuel m n) (land m n)` is directly
+expressible — the helper does not assume an equation.
+
+Gates: `cargo test -p axeyum-lean-kernel --lib nat_prelude` → **121 passed,
+0 failed**, 2.92 s under `env -u RUST_MIN_STACK`; `cargo fmt --all --check`,
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` and
+`python3 scripts/validate-facts.py` (1921 facts, 0 errors) all clean. Two
+mutations verified, each killing what it should: swapping `p.lor` for `p.land`
+in the negative control kills exactly one test (120/1); replacing `lor`'s
+`n = 0` guard with `land`'s constant `0` makes the kernel refuse the
+declaration and the whole prelude build fails (0/121). NOT run: the aggregate
+`just check` / `./scripts/check.sh`.
+
 **Your lane's block (`DONE for this pass`, int-gcd-div, 2026-08-29).** One of
 three facts landed, fully kernel-checked; the other two are re-scoped open
 with a concrete, verified reason each — not "hard", a named missing lemma.
@@ -11210,6 +11287,114 @@ lemma's exact signature, before writing any Rust).
 **Timing:** `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 40
 passed, 0 failed, finished in 3.79s before the rustfmt fixup and 3.97s after
 (unchanged test count both times).
+
+**Your lane's block (`DONE`, nat-bitwise-facts, 2026-08-29).** Full triage of
+all 19 `natural-bitwise` facts (per `nursery-v1.json`'s `family` field, which
+is the authoritative 19 — `check-development-partition.py` and the
+2026-08-27 curriculum doc both cite 19 for this family). **Zero facts closed**
+— every one of the 18 real targets needs either a file outside this lane's
+scope (`bitwise.rs`, owned by a sibling Opus lane right now; `binary.rs`,
+never granted) or the fuel-irrelevance/bit-peeling machinery the CLAUDE.md
+brief explicitly says not to duplicate. The 19th is a flagged MUTATION,
+skipped per instructions. No `nat_prelude` source file was touched;
+`nat_prelude` D+T count is unchanged at 85+432 (pinned in
+`nat_prelude_tests.rs::the_build_is_deterministic`) before and after.
+
+**Triage table (all 19):**
+
+| fact | Mathlib name | class | reason |
+| --- | --- | --- | --- |
+| `F:ml430-nat-bitwise-bit-4c4b28a8` | `Nat.bitwise_bit'` | (3) blocked | general `Nat.bitwise f (bit a m) (bit b n) = bit (f a b) (bitwise f m n)` — lives in `bitwise.rs`, owned by the sibling Opus lane right now, not mine to touch |
+| `F:ml430-nat-bitwise-comm-1a273bae` | `Nat.bitwise_comm` | (3) blocked | general `bitwise`; depends_on `bitwise-swap`; `bitwise.rs` territory |
+| `F:ml430-nat-bitwise-swap-7175e90e` | `Nat.bitwise_swap` | (3) blocked | general `bitwise`; depends_on `bitwise-bit`; `bitwise.rs` territory |
+| `F:ml430-nat-even-xor-78a39432` | `Nat.even_xor` | (3) blocked | needs a public `Nat.xor`/`^^^`. We have no standalone `Nat.xor` — only one ad hoc `bitwise xor_fn 3 5` numeral check inline in `bitwise.rs`. `xor := bitwise xor` in Mathlib too (confirmed at the pinned commit), so this is squarely `bitwise.rs`'s domain |
+| `F:ml430-nat-land-assoc-ad4775b8` | `Nat.land_assoc` | (3) blocked | depends_on `land-bit`; same missing machinery |
+| `F:ml430-nat-land-bit-b9ab7475` | `Nat.land_bit` | (3) blocked | see analysis below — needs fuel-irrelevance for `landAux` at differing fuel amounts |
+| `F:ml430-nat-land-comm-7e6ad72e` | `Nat.land_comm` | (3) blocked | Mathlib's route is via `bitwise_comm`; a *direct* proof over our own `landAux` needs a "landAux is independent of which sufficient fuel you pick" lemma — same missing machinery as `land-bit` |
+| `F:ml430-nat-ldiff-bit-6be49bb8` | `Nat.ldiff_bit` | (3) blocked | same shape as `land-bit`, for `ldiff` |
+| `F:ml430-nat-lor-assoc-82c4d0fd` | `Nat.lor_assoc` | (3) blocked | depends_on `lor-bit`; same missing machinery |
+| `F:ml430-nat-lor-bit-a2f98c7c` | `Nat.lor_bit` | (3) blocked | same shape as `land-bit`, for `lor` |
+| `F:ml430-nat-lor-comm-2666d7ef` | `Nat.lor_comm` | (3) blocked | same as `land-comm`, for `lor` |
+| `F:ml430-nat-lt-of-testbit-72f64ab8` | `Nat.lt_of_testBit` | (2) mirror mismatch | needs `Bool`-valued `testBit`; ours (`binary.rs`) is `Nat -> Nat -> Nat` (0/1), a different codomain, not merely a different construction of the same type |
+| `F:ml430-nat-lt-xor-cases-c43a1e85` | `Nat.lt_xor_cases` | (3) blocked | needs `Nat.xor` (`bitwise.rs`) *and* `testBit`/`xor_trichotomy` reasoning |
+| `F:ml430-nat-testbit-eq-inth-ffa07392` | `Nat.testBit_eq_inth` | (3) blocked | needs `n.bits : List Bool` + `List.getI` — this kernel has **no `List` type at all**, and `Bool`-valued `testBit` — the deepest-blocked fact in the family |
+| `F:ml430-nat-testbit-land-dfef7ca4` | `Nat.testBit_land` | (2) mirror mismatch + **DO NOT CLOSE** | Bool-vs-Nat mismatch, *and* named as a load-bearing dependency of `scripts/gen-autogenesis-bitwise-family-projection.py --check` (a live `just` target), which `raise`s if this fact's `epistemic_status != "open"`. Closing it breaks that gate regardless of provability |
+| `F:ml430-nat-testbit-ldiff-16f94162` | `Nat.testBit_ldiff` | (2) mirror mismatch + **DO NOT CLOSE** | same as above, same script |
+| `F:ml430-nat-testbit-lor-7644e067` | `Nat.testBit_lor` | (2) mirror mismatch + **DO NOT CLOSE** | same as above, same script |
+| `F:ml430-nat-zero-of-testbit-eq-false-e244c9a1` | `Nat.zero_of_testBit_eq_false` | (2) mirror mismatch | Bool-vs-Nat mismatch; provable as an ANALOGOUS Nat-valued statement via existing `sum_test_bit_eq`, but restating it would be "manufacturing a flip" against a pinned Bool-typed `formal.statement` — must stay open |
+| `F:ml430-mutation-a6dd1759bce60d820292e107` | (mutation of `Nat.lor_comm`) | **⛔ MUTATION (operator-substitution), skipped** | `fact-frontier.py` flags it; `formal.statement` is `n \|\|\| m = n &&& m`, false in general (e.g. `n=1,m=2`: `3 != 0`) |
+
+**Why the "boundary" bites 7 facts, not just the one example in the brief.**
+The brief's worked example (`bitwise and_fn m n = land m n`) is about
+relating `bitwise.rs`'s `Nat.rec` to `land.rs`'s. `land_bit`/`lor_bit`/
+`ldiff_bit` don't touch `bitwise` at all, but they hit an **equally hard,
+independently-necessary** instance of the same class: our `land m n :=
+landAux m m n` uses `m` as BOTH the fuel and the first data argument. To prove
+`land (bit a m) (bit b n) = bit (a&&b) (land m n)`, unfolding `landAux` at
+fuel = `bit a m` (a stuck `add`/`mul` term for symbolic `m`, not literally a
+`succ`) requires: (a) exposing `bit a m`'s constructor shape via a real case
+split (is `a=false ∧ m=0`, i.e. is `bit a m` itself `0`?), and (b) relating
+the resulting recursive call `landAux (pred (bit a m)) m n` — fuel now
+`pred(bit a m) ≈ 2m-1`, NOT `m` — back to `landAux m m n = land m n`. Step
+(b) is exactly "landAux is independent of fuel choice once fuel ≥ the data",
+a lemma the prelude does not have (verified: `land.rs`/`lor.rs`/`ldiff.rs`
+declare only `_zero_left`, `_zero_right`, and one or two concrete-numeral
+checks — no `_bit`, `_comm`, or `_assoc` exist today). Since the brief says
+"a sibling Opus lane is building exactly that machinery right now... if a
+fact needs it, classify as (3) and name it rather than attempting it," all
+seven of `land-bit`/`land-comm`/`land-assoc`/`lor-bit`/`lor-comm`/
+`lor-assoc`/`ldiff-bit` are classified (3) rather than attempted, to avoid
+duplicating that work.
+
+**Mathlib comparison performed at the pinned commit** (per the brief's
+instruction and the CLAUDE.md "flip" criterion) — read directly from
+`/data0/axeyum/lean-import-toolchain/mathlib4` at
+`c5ea00351c28e24afc9f0f84379aa41082b1188f` (`Mathlib/Data/Nat/Bitwise.lean`),
+not inferred from prose:
+
+- `Nat.land/lor/ldiff := Nat.bitwise <and/or/diff>`, and `Nat.bitwise` is a
+  well-founded recursion on `div2`/`bodd` needing `Quot.sound`/`propext`
+  through the equation compiler (confirmed by the module's own `-- for
+  unfolding bitwise` core import). Our `land`/`lor`/`ldiff` are each an
+  independent, axiom-free `Nat.rec`-fuel construction. Same conclusion as the
+  brief's stated boundary.
+- `Nat.testBit (n i : ℕ) : Bool` — confirmed Bool-valued from its use sites
+  (`testBit_land : testBit (m &&& n) k = (testBit m k && testBit n k)`, using
+  `Bool.&&`). Our `Nat.testBit : Nat -> Nat -> Nat` (`binary.rs`,
+  `testBitAux`) returns `{0,1}` as a `Nat` — already used that way by our own
+  proved `Nat.testBit_zero`/`testBit_succ`/`testBit_le_one`/`sum_testBit_lt`/
+  `sum_testBit_eq` (all `AxNat`-typed per `nat_theorem_inventory`). This is a
+  genuine codomain mismatch, not an alternate encoding of the same type.
+  `Nat.xor := bitwise xor` (confirmed at `lt_xor_cases`/`even_xor`'s own
+  module) — no standalone public `Nat.xor` exists in our prelude.
+
+**No code changed.** No `nat_prelude/{bits,land,lor,ldiff}.rs` edits, no
+`nat_prelude.rs`/`nat_prelude_tests.rs` edits, no fact ledger edits (in
+particular the three `testbit-{land,lor,ldiff}` facts were left untouched,
+per their gate dependency). `python3 scripts/validate-facts.py` not needed
+since nothing in `artifacts/facts/` changed.
+
+**Gate status:** `timeout 600 scripts/cargo-serialized.sh test -p
+axeyum-lean-kernel --lib nat_prelude` — see report; ran to completion,
+confirmed nonzero test count, all green (expected: no source changed).
+`cargo fmt --all --check` / `clippy --all-targets` not run against changed
+Rust (none). See the coordinator's report for exact numbers if run.
+
+**For the next lane:** do not re-attempt `land-bit`/`lor-bit`/`ldiff-bit`/
+`*-comm`/`*-assoc` until the sibling Opus lane's fuel-irrelevance +
+`Nat.mod _ 2 ∈ {0,1}` case-split machinery lands (check whether it landed in
+`ops.rs`/`bitwise.rs` first — `grep` for a new public lemma name there, then
+reread this file's boundary paragraph before touching `land.rs`/`lor.rs`/
+`ldiff.rs`). The `bitwise-*`/`even-xor`/`lt-xor-cases` group needs
+`bitwise.rs`'s general `Nat.bitwise` and a public `Nat.xor` — check with the
+owning lane before touching. The `testbit-*`/`lt-of-testbit`/
+`zero-of-testbit-eq-false`/`testbit-eq-inth` group needs a **new**
+Bool-valued `Nat.testBit` (a parallel construction to the existing Nat-valued
+one in `binary.rs`) plus, for `testbit-eq-inth` specifically, a `List` type
+this kernel does not have at all — size that as new infrastructure, not a
+proof task, and do **not** close `testbit-land`/`testbit-lor`/`testbit-ldiff`
+even if a Bool `testBit` lands, without first re-checking
+`gen-autogenesis-bitwise-family-projection.py`'s `--check` gate.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
