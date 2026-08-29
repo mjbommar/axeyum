@@ -186,6 +186,7 @@ mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
 mod xor;
+mod xor_parity;
 
 pub use ops::{NatDev, NatOps, NatState};
 
@@ -289,6 +290,7 @@ use transposition::{
 };
 use vandermonde::declare_vandermonde_all;
 use xor::declare_xor_all;
+use xor_parity::declare_xor_parity_all;
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -2711,6 +2713,15 @@ pub struct NatPrelude {
     /// same reduction `bitwise_xor_three_five` already checks, now against
     /// the public `Nat.xor` name.
     pub xor_three_five: NameId,
+    /// `Nat.even_xor : ∀ m n, Iff (Even (xor m n)) (Iff (Even m) (Even n))`
+    /// (`F:ml430-nat-even-xor-78a39432`) — proved via
+    /// `even_iff_mod_two_eq_zero` at `xor m n`/`m`/`n`, a boundary case
+    /// split (`xor 0 n`/`xor m 0` reduce by `refl` to `n`/`m`, closing the
+    /// goal to a trivial "always-true side" iff), and — in the genuinely
+    /// bitwise case — one step of `bitwiseAux`'s own recursor exposing the
+    /// per-bit combine, related to `mod _ 2` via `mod_two_mul_add_of_lt`
+    /// and a four-leaf `cases_mod_two` case split. See `xor_parity.rs`.
+    pub even_xor: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3442,6 +3453,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_xor_three_five: kernel.name_str(nat, "bitwise_xor_three_five"),
             xor: kernel.name_str(nat, "xor"),
             xor_three_five: kernel.name_str(nat, "xor_three_five"),
+            even_xor: kernel.name_str(nat, "even_xor"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
@@ -3670,6 +3682,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // partial application, not a new recursion. Nothing needs
         // `Nat.xor`, so it goes right after `Nat.bitwise`.
         declare_xor_all(&mut d, &p)?;
+        // Needs `Nat.xor` (just above) and `Nat.even_iff_mod_two_eq_zero`
+        // (`declare_parity_all`, far above) -- the parity <-> low-bit bridge.
+        declare_xor_parity_all(&mut d, &p)?;
         // Needs `Nat.bitwise` and `Nat.land`/`Nat.lor` (all just above),
         // `Nat.mod_lt` (`declare_gcd_all`, far above) and the bounded-cases
         // eliminator's own lemmas (`le_of_lt_succ`, `lt_or_eq_of_le`,

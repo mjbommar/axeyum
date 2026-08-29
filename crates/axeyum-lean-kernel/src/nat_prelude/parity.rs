@@ -59,7 +59,7 @@ use crate::expr::ExprId;
 
 /// `fun k : Nat => Eq n (add k k)` — the witness predicate defining
 /// [`NatPrelude::even`].
-fn even_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn even_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
     let kk = d.add(k, k);
@@ -70,7 +70,7 @@ fn even_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
 
 /// `fun k : Nat => Eq n (succ (add k k))` — the witness predicate defining
 /// [`NatPrelude::odd`].
-fn odd_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn odd_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
     let kk = d.add(k, k);
@@ -582,7 +582,7 @@ fn succ_eq_add_one(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
 /// verbatim — no reconstruction algebra needed, unlike that theorem's own
 /// witness) compared against the executable `div_mod_exec` instance via
 /// `div_mod_unique`.
-fn mod_two_mul_add_of_lt(
+pub(super) fn mod_two_mul_add_of_lt(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     x: ExprId,
@@ -691,7 +691,8 @@ fn declare_even_iff_mod_two_eq_zero(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
 
             let motive = {
                 let anon = d.anon_name();
-                d.kernel().lam(anon, even_ty, mod_zero_ty, BinderInfo::Default)
+                d.kernel()
+                    .lam(anon, even_ty, mod_zero_ty, BinderInfo::Default)
             };
             let minor_fn = {
                 let inner = d.lam_fv(hk_fv, hk_ty, minor);
@@ -813,7 +814,8 @@ fn declare_odd_iff_mod_two_eq_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
 
             let motive = {
                 let anon = d.anon_name();
-                d.kernel().lam(anon, odd_ty, mod_one_ty, BinderInfo::Default)
+                d.kernel()
+                    .lam(anon, odd_ty, mod_one_ty, BinderInfo::Default)
             };
             let minor_fn = {
                 let inner = d.lam_fv(hj_fv, hj_ty, minor);
