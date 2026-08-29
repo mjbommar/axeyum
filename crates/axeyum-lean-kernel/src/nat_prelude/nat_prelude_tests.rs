@@ -1013,6 +1013,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.ldiff_bit,
         p.land_aux_assoc_of_fuel,
         p.land_assoc,
+        p.lor_aux_ne_zero_of_right_ne_zero,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6491,7 +6492,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 498,
+        93 + 499,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -13178,5 +13179,94 @@ fn land_assoc_applies_at_a_nonzero_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.land_assoc).is_empty(),
         "land_assoc must rest on zero axioms"
+    );
+}
+
+/// `Nat.lor_aux_ne_zero_of_right_ne_zero` -- the invariant that plays
+/// `land_aux_eq_zero_of_left_eq_zero`'s role for `lor_assoc`'s hard leaf,
+/// and is NOT its transport: `lor`'s zero is NOT absorbing (`lor a b = 0`
+/// forces `a = 0 ∧ b = 0`), so this lemma is about POSITIVITY of the
+/// RIGHT operand alone forcing a positive result, unconditional in `fuel`.
+#[test]
+fn lor_aux_ne_zero_of_right_ne_zero_applies_symbolically_and_at_a_positive_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: re-derived at genuinely free fuel/m/n, forcing the kernel
+    // to re-check the fully generic statement.
+    {
+        let name = f.name("lor_aux_ne_zero_of_right_ne_zero_at_free_vars");
+        f.theorem(name, 3, &|d, values| {
+            let fuel = values[0];
+            let m = values[1];
+            let n = values[2];
+            let zero = d.zero();
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+            let hyp_ty = {
+                let eq = d.eq(n, zero);
+                d.arrow(eq, false_ty)
+            };
+            let lor_val = d.const_app(p.lor_aux, &[fuel, m, n]);
+            let concl_ty = {
+                let eq0 = d.eq(lor_val, zero);
+                d.arrow(eq0, false_ty)
+            };
+            let stmt = d.arrow(hyp_ty, concl_ty);
+
+            let applied = d.lemma(p.lor_aux_ne_zero_of_right_ne_zero, &[fuel, m, n, hyp]);
+            let value = d.lam_fv(hyp_fv, hyp_ty, applied);
+            (stmt, value)
+        })
+        .expect("lor_aux_ne_zero_of_right_ne_zero must apply at free fuel/m/n");
+    }
+
+    // Concrete: fuel=1, m=3, n=5 -- BOTH positive, and fuel=1 is exactly
+    // enough to force the hard leaf's actual per-bit recursive step, not
+    // the trivial fuel=0 identity. `lorAux 1 3 5` computes to
+    // `2 * lorAux 0 1 2 + max(1, 1) = 2*2 + 1 = 5`, nonzero -- a
+    // discriminating instance, not the vacuous `n=0` corner.
+    {
+        let one_fuel = f.num(1);
+        let three = f.num(3);
+        let five = f.num(5);
+        let four = f.num(4);
+        let zero = f.zero();
+        let false_ty = f.kernel().const_(p.logic.false_, vec![]);
+
+        let lor_val = f.const_app(p.lor_aux, &[one_fuel, three, five]);
+        assert!(f.k.def_eq(lor_val, five), "lorAux 1 3 5 must compute to 5");
+        assert!(
+            !f.k.def_eq(lor_val, zero),
+            "lorAux 1 3 5 must be nonzero -- else this instance is vacuous"
+        );
+
+        // Not (Eq 5 0), via succ_ne_zero (5 = succ 4).
+        let n_ne_zero = f.lemma(p.succ_ne_zero, &[four]);
+
+        let applied = f.lemma(
+            p.lor_aux_ne_zero_of_right_ne_zero,
+            &[one_fuel, three, five, n_ne_zero],
+        );
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_aux_ne_zero_of_right_ne_zero must apply at (fuel=1, m=3, n=5): {shown}")
+        });
+        let want = {
+            let eq0 = f.eq(lor_val, zero);
+            f.arrow(eq0, false_ty)
+        };
+        assert!(
+            f.k.def_eq(inferred, want),
+            "must state Not (Eq (lorAux 1 3 5) 0)"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.lor_aux_ne_zero_of_right_ne_zero)
+            .is_empty(),
+        "lor_aux_ne_zero_of_right_ne_zero must rest on zero axioms"
     );
 }

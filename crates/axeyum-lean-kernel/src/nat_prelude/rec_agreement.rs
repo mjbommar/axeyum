@@ -3429,7 +3429,14 @@ fn double_ne_zero(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, x_ne_zero: Expr
         d.lam_fv(r_fv, x_zero_ty, contra)
     };
     let false_proof = or_elim(
-        d, &p, two_zero_ty, x_zero_ty, false_ty, left_case, right_case, disj,
+        d,
+        &p,
+        two_zero_ty,
+        x_zero_ty,
+        false_ty,
+        left_case,
+        right_case,
+        disj,
     );
     d.lam_fv(h_fv, doubled_eq_zero_ty, false_proof)
 }
@@ -3650,36 +3657,59 @@ fn declare_lor_aux_ne_zero_of_right_ne_zero(
         d.lam_fv(hn_fv, hn_ty, hn)
     };
 
+    // `step`'s hypothesis about `n` (`Not (Eq n 0)`) must be folded into
+    // `cases_zero_succ`'s own ARROW-typed motive, not built separately
+    // before the split and wrapped afterward: `Nat.rec`'s branches only
+    // substitute the case-split variable through the MOTIVE, never through
+    // an independently-built term referencing the original (still-generic)
+    // `n` -- a hypothesis built outside the split stays a hypothesis about
+    // the ORIGINAL `n` inside every branch, never specializing to the
+    // branch's own literal. Matches
+    // `declare_land_aux_eq_zero_of_left_eq_zero`'s exact convention.
     let step = |d: &mut NatDev<'_>, k: ExprId, ih: ExprId, m: ExprId, n: ExprId| -> ExprId {
         let zero = d.zero();
         let false_ty = d.kernel().const_(p.logic.false_, vec![]);
         let sk = d.succ(k);
 
-        let hn_fv = d.fresh_fvar();
-        let hn = d.kernel().fvar(hn_fv);
-        let hn_ty = {
-            let eq = d.eq(n, zero);
-            d.arrow(eq, false_ty)
-        };
-
         let goal_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let n_eq_zero = d.eq(candidate, zero);
+            let hyp = d.arrow(n_eq_zero, false_ty);
             let lor_val = d.const_app(p.lor_aux, &[sk, m, candidate]);
             let eq0 = d.eq(lor_val, zero);
-            d.arrow(eq0, false_ty)
+            let concl = d.arrow(eq0, false_ty);
+            d.arrow(hyp, concl)
         };
 
-        let body = cases_zero_succ(
+        cases_zero_succ(
             d,
             n,
             &goal_at,
             &|d| {
+                let hn_fv = d.fresh_fvar();
+                let hn = d.kernel().fvar(hn_fv);
+                let hn_ty = {
+                    let eq = d.eq(zero, zero);
+                    d.arrow(eq, false_ty)
+                };
                 let refl0 = d.refl(zero);
                 let contradiction = d.apply(hn, &[refl0]);
-                let goal = goal_at(d, zero);
-                absurd(d, &p, goal, contradiction)
+                let goal = {
+                    let lor_val = d.const_app(p.lor_aux, &[sk, m, zero]);
+                    let eq0 = d.eq(lor_val, zero);
+                    d.arrow(eq0, false_ty)
+                };
+                let body = absurd(d, &p, goal, contradiction);
+                d.lam_fv(hn_fv, hn_ty, body)
             },
             &|d, n_pred| {
                 let succ_n = d.succ(n_pred);
+                // `hn` is unused here: `succ_n` is already known nonzero via
+                // `succ_ne_zero`, without needing this hypothesis.
+                let hn_fv = d.fresh_fvar();
+                let hn_ty = {
+                    let eq = d.eq(succ_n, zero);
+                    d.arrow(eq, false_ty)
+                };
 
                 let goal_m_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
                     let lor_val = d.const_app(p.lor_aux, &[sk, candidate, succ_n]);
@@ -3687,7 +3717,7 @@ fn declare_lor_aux_ne_zero_of_right_ne_zero(
                     d.arrow(eq0, false_ty)
                 };
 
-                cases_zero_succ(
+                let inner = cases_zero_succ(
                     d,
                     m,
                     &goal_m_at,
@@ -3703,11 +3733,10 @@ fn declare_lor_aux_ne_zero_of_right_ne_zero(
                             d.apply(applied, &[half_ne_zero])
                         })
                     },
-                )
+                );
+                d.lam_fv(hn_fv, hn_ty, inner)
             },
-        );
-
-        d.lam_fv(hn_fv, hn_ty, body)
+        )
     };
 
     let fuel_fv = d.fresh_fvar();
@@ -3728,7 +3757,8 @@ fn declare_lor_aux_ne_zero_of_right_ne_zero(
     };
     let value = {
         let with_n = d.lam_fv(n_fv, nat, applied);
-        d.lam_fv(m_fv, nat, with_n)
+        let with_m = d.lam_fv(m_fv, nat, with_n);
+        d.lam_fv(fuel_fv, nat, with_m)
     };
     d.declare_theorem(p.lor_aux_ne_zero_of_right_ne_zero, ty, value)
 }
