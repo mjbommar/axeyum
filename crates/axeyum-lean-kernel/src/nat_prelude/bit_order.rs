@@ -560,8 +560,9 @@ fn declare_lt_of_test_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
 /// Route: [`value_eq_sum_range`] at `bound := j` (directly from the
 /// hypothesis) gives `sumRange f_n j = n`; the same helper at
 /// `bound := succ j` needs `n < pow 2 (succ j)`, obtained from the
-/// hypothesis via `pow_j <= pow_j + pow_j = mul pow_j 2 (= pow 2 (succ j)
-/// by `pow_succ`/`refl`)` (`le_add_right` + [`double_eq`], the same bridge
+/// hypothesis via `pow_j <= pow_j + pow_j = mul pow_j 2`, which is
+/// `pow 2 (succ j)` by `pow_succ`/`refl` (`le_add_right` +
+/// [`double_eq`], the same bridge
 /// [`declare_self_lt_two_pow_add`]'s step uses) composed with
 /// `lt_of_lt_of_le`. `sum_range_succ` then forces
 /// `n = add (sumRange f_n j) (f_n j) = add n (f_n j)` (substituting the
@@ -626,8 +627,10 @@ fn declare_test_bit_eq_zero_of_lt(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
 
         let add_n_fnj = d.add(n, f_n_j);
         let congr_sumj = d.congr(sum_j, n, sum_j_eq_n, &|d, x| d.add(x, f_n_j));
-        let (_e2, n_eq_add_n_fnj) =
-            d.chain(n, &[(add_sumj_fnj, n_eq_add_sumj_fnj), (add_n_fnj, congr_sumj)]);
+        let (_e2, n_eq_add_n_fnj) = d.chain(
+            n,
+            &[(add_sumj_fnj, n_eq_add_sumj_fnj), (add_n_fnj, congr_sumj)],
+        );
 
         // add_n_zero_eq_add_n_fnj : Eq (add n zero) (add n (f_n j)).
         let add_n_zero = d.add(n, zero);

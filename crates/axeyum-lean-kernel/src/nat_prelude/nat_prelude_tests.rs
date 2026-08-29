@@ -981,6 +981,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.self_lt_two_pow,
         p.self_lt_two_pow_add,
         p.lt_of_test_bit,
+        p.test_bit_eq_zero_of_lt,
         p.eq_of_test_bit_eq,
         p.xor_assoc,
         p.lt_two_cases,
@@ -6498,7 +6499,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 505,
+        93 + 506,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11446,6 +11447,71 @@ fn lt_of_test_bit_applies_at_a_genuinely_symbolic_hypothesis_set() {
     assert!(
         f.k.axiom_footprint(p.lt_of_test_bit).is_empty(),
         "lt_of_test_bit must rest on zero axioms"
+    );
+}
+
+/// `Nat.testBit_eq_zero_of_lt` -- piece 2's "cheap half": checked at a
+/// CONCRETE discriminating instance (`n := 5` = `101₂`, `j := size 5 = 3`,
+/// hypothesis supplied by the already-checked `lt_pow_size`) AND
+/// symbolically at a genuinely FREE `(n, j)` pair with a free hypothesis
+/// fvar, confirming the declared shape (`Eq (testBit n j) zero`, not a
+/// swapped `Eq (testBit j n) zero` or the wrong `one`).
+#[test]
+fn test_bit_eq_zero_of_lt_applies_at_a_concrete_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: n := 5, j := size(5) = 3; `lt_pow_size(5)` supplies
+    // `Lt 5 (pow 2 (size 5))` == `Lt 5 8`.
+    {
+        let five = f.num(5);
+        let size_five = f.const_app(p.size, &[five]);
+        let hyp = f.lemma(p.lt_pow_size, &[five]);
+        let result = f.lemma(p.test_bit_eq_zero_of_lt, &[five, size_five, hyp]);
+        let inferred = f.k.infer(result).unwrap_or_else(|e| {
+            panic!(
+                "test_bit_eq_zero_of_lt(5, size 5) should infer: {}",
+                f.explain(&e)
+            )
+        });
+        let tb = f.const_app(p.test_bit, &[five, size_five]);
+        let zero = f.zero();
+        let expected_ty = f.eq(tb, zero);
+        assert!(
+            f.k.def_eq(inferred, expected_ty),
+            "test_bit_eq_zero_of_lt(5, size 5) should state Eq (testBit 5 (size 5)) zero"
+        );
+        assert!(f.k.def_eq(tb, zero), "testBit 5 (size 5) must reduce to 0");
+
+        // NEGATIVE control: testBit 5 (size 5) must NOT reduce to 1 -- a
+        // checker that can't fail is worse than none.
+        let one = f.num(1);
+        assert!(!f.k.def_eq(tb, one), "testBit 5 (size 5) must NOT be 1");
+    }
+
+    // Symbolic: applies at a genuinely FREE (n, j) pair.
+    let name = f.name("test_bit_eq_zero_of_lt_restated");
+    f.theorem(name, 2, &|d, values| {
+        let n = values[0];
+        let j = values[1];
+        let two = d.num(2);
+        let pow_j = d.pow(two, j);
+        let hyp_ty = d.lt(n, pow_j);
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let zero = d.zero();
+        let tb = d.const_app(p.test_bit, &[n, j]);
+        let concl = d.eq(tb, zero);
+        let stmt = d.arrow(hyp_ty, concl);
+        let proof_body = d.lemma(p.test_bit_eq_zero_of_lt, &[n, j, hyp]);
+        let proof = d.lam_fv(hyp_fv, hyp_ty, proof_body);
+        (stmt, proof)
+    })
+    .expect("test_bit_eq_zero_of_lt must apply at a symbolic (n, j) pair");
+
+    assert!(
+        f.k.axiom_footprint(p.test_bit_eq_zero_of_lt).is_empty(),
+        "test_bit_eq_zero_of_lt must rest on zero axioms"
     );
 }
 

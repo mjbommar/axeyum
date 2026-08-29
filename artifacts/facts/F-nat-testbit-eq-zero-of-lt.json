@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-testbit-eq-zero-of-lt",
+  "title": "every bit at or above a value's own magnitude bound is zero",
+  "statement": "For every natural n, j: if n < 2^j then testBit(n, j) = 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x0 (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x1)) -> Eq.{1} AxNat (AxNat.testBit x0 x1) AxNat.zero)))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.testBit_eq_zero_of_lt",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.testBit_eq_zero_of_lt",
+      "supports": "Nat.testBit_eq_zero_of_lt is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- testBit_eq_zero_of_lt 2>/dev/null | grep -Ec '^Nat\\.testBit_eq_zero_of_lt[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "instance-Nat.testBit_eq_zero_of_lt",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.testBit_eq_zero_of_lt",
+      "supports": "Applies at a CONCRETE discriminating instance (n := 5 = 101_2, j := size 5 = 3, hypothesis supplied by the already-checked lt_pow_size) confirming the conclusion reduces to Eq (testBit 5 3) zero and NOT Eq (testBit 5 3) one, AND at a genuinely FREE (n, j) pair with a free hypothesis fvar, confirming the declared shape (Eq (testBit n j) zero, not a swapped Eq (testBit j n) zero).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::test_bit_eq_zero_of_lt_applies_at_a_concrete_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq",
+        "Kernel::add_declaration"
+      ],
+      "notes": "A `Definition`'s admission alone never proves it computes the right value (this repository's own standing lesson), so this test is the discriminating evidence for what the STATEMENT actually pins down, not merely that some proof term checks."
+    },
+    {
+      "id": "footprint-Nat.testBit_eq_zero_of_lt",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-msb-exists",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the Nat-valued analogue of the pinned Mathlib v4.30 proposition `Nat.testBit_eq_false_of_lt` (`theorem testBit_eq_false_of_lt {n i} (h : n < 2 ^ i) : n.testBit i = false`, `Mathlib/Data/Nat/Bitwise.lean`): Mathlib's `Nat.testBit` returns `Bool`, this kernel's returns `Nat` in `{0,1}` (see `nat_prelude/binary.rs`'s module doc), so a Nat-valued proof here cannot honestly flip that Bool-typed mirror. Registered as its own local fact instead, matching the `F:nat-lt-of-testbit`/`F:nat-testbit-xor` pattern. No `ml430` fact for this specific Mathlib statement was found in the ledger at the time this was landed.\n\nThis is piece (2) of the 4 pieces `docs/plan/status/260-nat-lt-xor-cases.md` named as blocking `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`), which stays `open`. It is the \"cheap half\" of `Nat.exists_most_significant_bit` (`docs/plan/status/265-nat-msb-order.md`'s diagnosis) -- the \"upper tail is zero\" property, stated directly against the hypothesis `n < pow 2 j` rather than through `Nat.size`, since no general `size`-recursion lemma is needed for this half. The \"highest bit really is set\" half (a lower bound `2^(size n - 1) <= n`) is NOT built by this fact and remains open; see `docs/plan/status/269-nat-msb-exists.md`.\n\nProof route: [`value_eq_sum_range`] (`nat_prelude/bit_order.rs`) at `bound := j` gives `sumRange f_n j = n` directly from the hypothesis (via `mod_eq_self_of_lt`); the same helper at `bound := succ j` needs `n < pow 2 (succ j)`, obtained from the hypothesis via `pow_j <= pow_j + pow_j = mul pow_j 2` (`= pow 2 (succ j)` by `pow_succ`/`refl`), bridged via `le_add_right` + the module's own `double_eq` helper (the same bridge `Nat.self_lt_two_pow_add`'s induction step uses) composed with `lt_of_lt_of_le`. `sum_range_succ` then forces `n = add (sumRange f_n j) (f_n j) = add n (f_n j)` (substituting the first equation), so `add_left_cancel` (against `n = add n 0`) collapses `f_n j` to `0`; since `f_n j` is literally `mul (testBit n j) (pow 2 j)` up to beta, `mul_eq_zero` splits into `testBit n j = 0` or `pow 2 j = 0`, and `pow_pos` + `lt_irrefl` + `Or.resolve_right` rule out the second disjunct."
+}
