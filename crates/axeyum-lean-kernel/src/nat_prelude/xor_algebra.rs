@@ -4,10 +4,12 @@
 //! `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.xor_assoc`,
 //! `Nat.xor_xor_cancel_left`/`_right`, `Nat.xor_ne_zero_iff`). See
 //! `docs/plan/status/263-nat-testbit-xor.md` for piece 1 (`Nat.testBit_xor`,
-//! landed) and `docs/plan/status/264-nat-xor-algebra.md` for this lane's
-//! handoff, including why the three `xor` algebra targets themselves are
-//! NOT landed in this file (time-boxed out; the remaining shape is
-//! documented there, not sketched here as unverified code).
+//! landed), `docs/plan/status/264-nat-xor-algebra.md` for the lane that
+//! landed `Nat.eq_of_testBit_eq`/`Nat.xor_assoc` and diagnosed the `y <= 1`
+//! restriction below, and `docs/plan/status/268-nat-xor-cancel.md` for the
+//! lane that closed `Nat.xor_xor_cancel_left`/`_right` using it. Only
+//! `Nat.xor_ne_zero_iff` (piece 4's fourth sub-target) is NOT declared in
+//! this file — see "What this file does NOT reach" below.
 //!
 //! # The intended route: `testBit_xor` + extensionality, not fuel induction
 //!
@@ -68,15 +70,14 @@
 //!
 //! # What this file does NOT reach (documented, not sketched)
 //!
-//! None of `Nat.xor_assoc`, `Nat.xor_xor_cancel_left`/`_right`,
-//! `Nat.xor_ne_zero_iff` are declared in this file — see
-//! `docs/plan/status/264-nat-xor-algebra.md` for the exact remaining shape
-//! of each, including the `xor_bit` Boolean-algebra lemmas
-//! (`xor_bit`'s value depends on its arguments ONLY through whether each
-//! equals `1`, so associativity/self-cancellation hold for ALL `x, y, z :
-//! Nat`, not merely bits in `{0, 1}`, via a `Bool.rec` case split at most
-//! 2-3 levels deep) that would combine with [`declare_eq_of_test_bit_eq`]
-//! and `Nat.testBit_xor` to close them.
+//! `Nat.xor_ne_zero_iff` is the one sub-target NOT declared in this file —
+//! see `docs/plan/status/268-nat-xor-cancel.md` for the exact remaining
+//! shape. `Nat.xor_assoc`'s `xor_bit` associativity holds for ALL `x, y, z :
+//! Nat` (not merely bits in `{0, 1}`), but `Nat.xor_xor_cancel_left`/
+//! `_right`'s per-bit cancel identity `xor_bit x (xor_bit x y) = y` is FALSE
+//! for a general `Nat` `y` (only `y in {0, 1}`), which is why closing those
+//! two needed an extra `y <= 1` round-trip lemma ([`round_trip_le_one`]) that
+//! `xor_assoc` never needed.
 //!
 //! # Codomain / mirror check
 //!
@@ -865,7 +866,9 @@ fn xor_bit_cancel_left(
         d.apply(xor_, &[bx, cond_xy])
     };
     let dg_by = digitize(d, by);
-    let step2 = congr_bool_to_nat(d, xor_bx_cond_xy, by, self_cancel_bool, &|d, w| digitize(d, w));
+    let step2 = congr_bool_to_nat(d, xor_bx_cond_xy, by, self_cancel_bool, &|d, w| {
+        digitize(d, w)
+    });
 
     let (_, chain_proof) = d.chain(start, &[(mid1, step1), (dg_by, step2)]);
 
@@ -900,20 +903,26 @@ fn declare_xor_xor_cancel_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
             let outer = d.lemma(p.test_bit_xor, &[a, xab, i]); // Eq (testBit lhs i) (xor_bit tb_a tb_xab)
             let inner = d.lemma(p.test_bit_xor, &[a, b, i]); // Eq tb_xab (xor_bit tb_a tb_b)
 
+            // xab_bit := xor_bit tb_a tb_b -- the VALUE testBit(xab, i)
+            // equals (`inner`'s RHS), substituted below into the outer
+            // combine `xor_bit tb_a _`, landing on `xor_bit tb_a (xor_bit
+            // tb_a tb_b)` -- NOT `xab_bit` alone, which is only the inner
+            // substituted operand, not the cascaded outer expression.
             let xor_bit_a_tbxab = super::testbit_bitwise::xor_bit(d, tb_a, tb_xab);
             let xab_bit = super::testbit_bitwise::xor_bit(d, tb_a, tb_b);
+            let cascaded = super::testbit_bitwise::xor_bit(d, tb_a, xab_bit); // xor_bit tb_a (xor_bit tb_a tb_b)
             let congr_step = d.congr(tb_xab, xab_bit, inner, &|d, w| {
                 let tb_a2 = tb_a;
                 super::testbit_bitwise::xor_bit(d, tb_a2, w)
-            });
+            }); // Eq xor_bit_a_tbxab cascaded
 
-            let (_, to_xab_bit) =
-                d.chain(tb_lhs, &[(xor_bit_a_tbxab, outer), (xab_bit, congr_step)]);
+            let (_, to_cascaded) =
+                d.chain(tb_lhs, &[(xor_bit_a_tbxab, outer), (cascaded, congr_step)]);
 
             let h_le_tbb = d.lemma(p.test_bit_le_one, &[b, i]); // Le tb_b 1
-            let cancel = xor_bit_cancel_left(d, &p, tb_a, tb_b, h_le_tbb); // Eq xab_bit tb_b
+            let cancel = xor_bit_cancel_left(d, &p, tb_a, tb_b, h_le_tbb); // Eq cascaded tb_b
 
-            let final_bit_eq = d.trans(tb_lhs, xab_bit, tb_b, to_xab_bit, cancel);
+            let final_bit_eq = d.trans(tb_lhs, cascaded, tb_b, to_cascaded, cancel);
             d.lam_fv(i_fv, nat, final_bit_eq)
         };
 

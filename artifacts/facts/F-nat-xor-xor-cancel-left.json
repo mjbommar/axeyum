@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-xor-xor-cancel-left",
+  "title": "xor a (xor a b) = b",
+  "statement": "For every natural a, b: xor(a, xor(a, b)) equals b.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.xor x0 (AxNat.xor x0 x1)) x1))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-testbit-xor",
+    "F:nat-eq-of-testbit-eq"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.xor_xor_cancel_left",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.xor_xor_cancel_left",
+      "supports": "Nat.xor_xor_cancel_left is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- xor_xor_cancel_left 2>/dev/null | grep -Ec '^Nat\\.xor_xor_cancel_left[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab, per this ledger's own grep-dialect gotcha. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "compute-Nat.xor_xor_cancel_left",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.xor_xor_cancel_left",
+      "supports": "At the discriminating concrete pair (a, b) = (3, 5), xor(3, xor(3, 5)) def-eq's to 5 (xor(3,5)=6, xor(3,6)=5), and the theorem's conclusion does NOT def-eq to the negative control 4; and the theorem re-derives against a genuinely free (a, b) pair, not merely a concrete instance.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::xor_xor_cancel_applies_at_a_concrete_discriminating_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "A concrete instantiation alone can hide a defect a symbolic build exposes (and vice versa), so both are checked. (3, 5) is chosen because xor(3,5)=6 is neither operand, giving the negative control (4) something to discriminate against. This single test also covers F:nat-xor-xor-cancel-right's compute evidence (same fixture, same discriminating pair)."
+    },
+    {
+      "id": "footprint-Nat.xor_xor_cancel_left",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-xor-cancel",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nNo `ml430` fact for this exact statement was found in the ledger. Read directly at the pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`, `Mathlib/Data/Nat/Bitwise.lean` cites `Nat.xor_assoc`/`Nat.xor_xor_cancel_left`/`Nat.xor_xor_cancel_right`/`Nat.xor_ne_zero_iff` in `xor_trichotomy`'s proof but does not define them there -- they are Lean4 core lemmas about `Nat.xor`/`^^^`, not Mathlib-authored, so no `ml430` mirror fact exists to flip; this lands as a new local fact instead (see F:nat-xor-assoc's notes, which record the same check in more detail).\n\nThird of the four sub-targets Mathlib's own `xor_trichotomy` proof composes toward `F:ml430-nat-lt-xor-cases-c43a1e85` (`xor_assoc`, `xor_xor_cancel_left`, `xor_xor_cancel_right`, `xor_ne_zero_iff`); `xor_ne_zero_iff` is NOT built by this fact.\n\nA GENUINE COMPLICATION this fact's route hits that `F:nat-xor-assoc` did not: the natural per-bit cancel identity `xor_bit x (xor_bit x y) = y` is FALSE for a general `y : Nat` -- only for `y in {0, 1}` (confirmed by a Python truth-table simulation before any Rust was written: `xor_bit(3, xor_bit(3, 5)) = 0 != 5`). `xor_assoc`'s per-bit identity stayed at the `digitize`/`Bool` level throughout and never needed this restriction; this one's conclusion is a bare `y`, forcing a match back to the raw operand. The fix is a new `y <= 1` round-trip lemma (`round_trip_le_one` in `xor_algebra.rs`): given `Le y 1`, `Nat.le_succ_succ` lifts it to `Lt y 2` (`succ (num 1)` is `refl`-defeq to `num 2`, so no separate lemma is needed for the bound), then `Nat.lt_two_cases` splits into `y = 0`/`y = 1` via `Or.elim` (the kernel's `Or.elim : (a b c : Prop) -> Or a b -> (a -> c) -> (b -> c) -> c`, not a new combinator), each branch closed by transporting the hypothesis along the equality and a `refl` at the computed literal -- the same \"build refl of one side, let defeq do the rest\" device `beq_digitize_one` uses. `Nat.testBit` is always in `{0, 1}` (`Nat.testBit_le_one`), which is exactly what makes the per-bit application of this lemma legal inside `declare_xor_xor_cancel_left`.\n\nThe full per-bit route: `xor_bit_cancel_left(x, y, h_le_y) : Eq (xor_bit x (xor_bit x y)) y` lifts a NEW `Bool`-level self-cancel lemma (`bool_xor_self_cancel_left : Eq (xor_fn a (xor_fn a b)) b`, proved by a 2-level `Bool.rec` split -- `a = false` closes by `refl` for any `b`; `a = true` needs one more split on `b`, both leaves closing by `refl` directly, no third level unlike `xor_assoc`'s `bool_xor_assoc`) through the same digitize/round-trip machinery `xor_bit_assoc` uses, landing on `y` itself via `round_trip_le_one`. `Nat.xor_xor_cancel_left` then applies `Nat.testBit_xor` to reduce `testBit (xor a (xor a b)) i` to `xor_bit (testBit a i) (xor_bit (testBit a i) (testBit b i))`, applies `xor_bit_cancel_left` at `(testBit a i, testBit b i)` with `Nat.testBit_le_one` supplying the bound, and closes with `Nat.eq_of_testBit_eq`.\n\nA genuine bug found and fixed via a throwaway `#[cfg(test)]` bisecting probe (calling `round_trip_le_one`/`bool_xor_self_cancel_left`/`xor_bit_cancel_left`/`declare_xor_xor_cancel_left` directly against a prelude built with the two new `declare_*` calls temporarily disabled, per the standing rule that reading a poisoned whole-suite `TypeMismatch` is slower than isolating the defect): the per-bit chain in `declare_xor_xor_cancel_left` mislabeled an intermediate, substituting `testBit(xor a b, i)`'s value directly as the chain's target rather than substituting it INTO the outer `xor_bit(testBit a i, _)` combine first -- i.e. confusing `xor_bit(tb_a, tb_b)` (the substituted value) with `xor_bit(tb_a, xor_bit(tb_a, tb_b))` (the actually-needed cascaded expression matching `xor_bit_cancel_left`'s own LHS shape). All three helper functions type-checked correctly in isolation via the probe; the defect was purely in the theorem-level wiring, found in one probe-and-fix cycle rather than by reading the ~150-test poisoned failure list. The probe module was removed before this fact was recorded."
+}
