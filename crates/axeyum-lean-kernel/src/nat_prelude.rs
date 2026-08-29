@@ -2831,6 +2831,13 @@ pub struct NatPrelude {
     /// mirror. Piece 3 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`. See
     /// `nat_prelude::bit_order`.
     pub lt_of_test_bit: NameId,
+    /// `Nat.testBit_eq_zero_of_lt : ∀ n j, Lt n (pow 2 j) → Eq (testBit n
+    /// j) zero` — the "cheap half" of `Nat.exists_most_significant_bit`
+    /// (piece 2 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`): every bit
+    /// at or above a value's own magnitude bound is zero. Nat-valued
+    /// (Mathlib's `Nat.testBit_eq_false_of_lt` returns `Bool`), so this is
+    /// a local fact, not an `ml430` mirror. See `nat_prelude::bit_order`.
+    pub test_bit_eq_zero_of_lt: NameId,
     /// `Nat.eq_of_testBit_eq : ∀ m n, (∀ i, Eq (testBit m i) (testBit n i))
     /// → Eq m n` — "same bits imply the same number", the general
     /// extensionality lemma `Nat.zero_of_testBit_eq_zero`'s ONE-SIDED case
@@ -3792,6 +3799,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             self_lt_two_pow: kernel.name_str(nat, "self_lt_two_pow"),
             self_lt_two_pow_add: kernel.name_str(nat, "self_lt_two_pow_add"),
             lt_of_test_bit: kernel.name_str(nat, "lt_of_testBit"),
+            test_bit_eq_zero_of_lt: kernel.name_str(nat, "testBit_eq_zero_of_lt"),
             eq_of_test_bit_eq: kernel.name_str(nat, "eq_of_testBit_eq"),
             xor_assoc: kernel.name_str(nat, "xor_assoc"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),

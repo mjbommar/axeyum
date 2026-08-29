@@ -551,10 +551,142 @@ fn declare_lt_of_test_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
     Ok(())
 }
 
+/// `Nat.testBit_eq_zero_of_lt : ∀ n j, Lt n (pow 2 j) → Eq (testBit n j)
+/// zero` — piece 2 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`
+/// (`exists_most_significant_bit`'s "cheap half": above a value's own
+/// magnitude bound every bit reads zero). See
+/// `docs/plan/status/265-nat-msb-order.md` / `269-nat-msb-exists.md`.
+///
+/// Route: [`value_eq_sum_range`] at `bound := j` (directly from the
+/// hypothesis) gives `sumRange f_n j = n`; the same helper at
+/// `bound := succ j` needs `n < pow 2 (succ j)`, obtained from the
+/// hypothesis via `pow_j <= pow_j + pow_j = mul pow_j 2 (= pow 2 (succ j)
+/// by `pow_succ`/`refl`)` (`le_add_right` + [`double_eq`], the same bridge
+/// [`declare_self_lt_two_pow_add`]'s step uses) composed with
+/// `lt_of_lt_of_le`. `sum_range_succ` then forces
+/// `n = add (sumRange f_n j) (f_n j) = add n (f_n j)` (substituting the
+/// first equation), so `add_left_cancel` (against `n = add n 0`) collapses
+/// `f_n j` to `0`; since `f_n j` is *literally* `mul (testBit n j) (pow 2
+/// j)` (up to beta), `mul_eq_zero` splits into `testBit n j = 0` or
+/// `pow 2 j = 0`, and the second is excluded by `pow_pos` +
+/// `lt_irrefl`/`or_resolve_right`.
+fn declare_test_bit_eq_zero_of_lt(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.test_bit_eq_zero_of_lt, 2, &|d, v| {
+        let (n, j) = (v[0], v[1]);
+        let zero = d.zero();
+        let one = d.num(1);
+        let two = d.num(2);
+        let succ_j = d.succ(j);
+        let pow_j = d.pow(two, j);
+        let pow_sj = d.pow(two, succ_j);
+
+        let hyp_ty = d.lt(n, pow_j);
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        // sum_j_eq_n : Eq (sumRange f_n j) n, directly from `hyp`.
+        let f_n = bit_term_fn(d, &p, n);
+        let sum_j = d.sum_range(f_n, j);
+        let sum_j_eq_n = value_eq_sum_range(d, &p, n, j, hyp);
+
+        // pow_j_le_pow_sj : Le pow_j (add pow_j pow_j), bridged up to
+        // `mul pow_j 2` (== `pow 2 (succ j)` by refl) exactly as
+        // `declare_self_lt_two_pow_add`'s step does.
+        let le_add = d.lemma(p.le_add_right, &[pow_j, pow_j]);
+        let double_pj = double_eq(d, &p, pow_j);
+        let add_zero_pj = {
+            let zero = d.zero();
+            d.add(zero, pow_j)
+        };
+        let mul_pj_two = d.add(add_zero_pj, pow_j);
+        let add_pj_pj = d.add(pow_j, pow_j);
+        let rev = d.symm(mul_pj_two, add_pj_pj, double_pj);
+        let motive_b = d.eq_motive(add_pj_pj, &|d, x| d.le(pow_j, x));
+        let pow_j_le_mul = d.transport(add_pj_pj, motive_b, le_add, mul_pj_two, rev);
+
+        // n_lt_sj : Lt n pow_sj, via lt_of_lt_of_le(n, pow_j, pow_sj, hyp,
+        // pow_j_le_mul) -- `pow_j_le_mul`'s actual type ends in `mul_pj_two`,
+        // def_eq to `pow_sj` by unfolding `pow`/`mul` twice, exactly as
+        // `declare_self_lt_two_pow_add`'s own step relies on.
+        let n_lt_sj = d.lemma(p.lt_of_lt_of_le, &[n, pow_j, pow_sj, hyp, pow_j_le_mul]);
+
+        // sum_sj_eq_n : Eq (sumRange f_n succ_j) n.
+        let sum_sj = d.sum_range(f_n, succ_j);
+        let sum_sj_eq_n = value_eq_sum_range(d, &p, n, succ_j, n_lt_sj);
+
+        // n = add sum_j (f_n j), via sum_range_succ then substituting
+        // sum_j = n.
+        let sr_succ_eq = d.lemma(p.sum_range_succ, &[f_n, j]); // Eq sum_sj (add sum_j (f_n j))
+        let f_n_j = d.apply(f_n, &[j]);
+        let add_sumj_fnj = d.add(sum_j, f_n_j);
+        let n_eq_sum_sj = d.symm(sum_sj, n, sum_sj_eq_n);
+        let (_e1, n_eq_add_sumj_fnj) =
+            d.chain(n, &[(sum_sj, n_eq_sum_sj), (add_sumj_fnj, sr_succ_eq)]);
+
+        let add_n_fnj = d.add(n, f_n_j);
+        let congr_sumj = d.congr(sum_j, n, sum_j_eq_n, &|d, x| d.add(x, f_n_j));
+        let (_e2, n_eq_add_n_fnj) =
+            d.chain(n, &[(add_sumj_fnj, n_eq_add_sumj_fnj), (add_n_fnj, congr_sumj)]);
+
+        // add_n_zero_eq_add_n_fnj : Eq (add n zero) (add n (f_n j)).
+        let add_n_zero = d.add(n, zero);
+        let add_zero_eq = d.lemma(p.add_zero, &[n]); // Eq add_n_zero n
+        let (_e3, add_n_zero_eq_add_n_fnj) =
+            d.chain(add_n_zero, &[(n, add_zero_eq), (add_n_fnj, n_eq_add_n_fnj)]);
+
+        // zero_eq_fnj : Eq zero (f_n j), via add_left_cancel.
+        let zero_eq_fnj = d.lemma(
+            p.add_left_cancel,
+            &[n, zero, f_n_j, add_n_zero_eq_add_n_fnj],
+        );
+        let fnj_eq_zero = d.symm(zero, f_n_j, zero_eq_fnj);
+
+        // mul_eq_zero_h : Or (Eq (testBit n j) zero) (Eq pow_j zero) --
+        // `fnj_eq_zero`'s actual type is `Eq (f_n j) zero`, def_eq to
+        // `Eq (mul (testBit n j) pow_j) zero` by beta (`f_n j` unfolds to
+        // exactly that `mul` application).
+        let tb_n_j = d.const_app(p.test_bit, &[n, j]);
+        let mul_eq_zero_h = d.lemma(p.mul_eq_zero, &[tb_n_j, pow_j, fnj_eq_zero]);
+
+        // not_pow_j_zero : arrow (Eq pow_j zero) False, from `pow_pos` and
+        // `lt_irrefl` (transport `Lt zero pow_j` along an assumed
+        // `Eq pow_j zero` to `Lt zero zero`, then apply `lt_irrefl zero`).
+        let zero_lt_two = d.zero_lt_succ(one); // Lt 0 (succ 1) ~ Lt 0 two
+        let pow_j_pos = d.lemma(p.pow_pos, &[two, j, zero_lt_two]); // Lt zero pow_j
+        let not_pow_j_zero = {
+            let heq_ty = d.eq(pow_j, zero);
+            let heq_fv = d.fresh_fvar();
+            let heq = d.kernel().fvar(heq_fv);
+            let motive_z = d.eq_motive(pow_j, &|d, x| {
+                let zero = d.zero();
+                d.lt(zero, x)
+            });
+            let lt_zero_zero = d.transport(pow_j, motive_z, pow_j_pos, zero, heq);
+            let no_loop = d.lemma(p.lt_irrefl, &[zero]);
+            let absurd = d.apply(no_loop, &[lt_zero_zero]);
+            d.lam_fv(heq_fv, heq_ty, absurd)
+        };
+
+        let eq_tb_zero = d.eq(tb_n_j, zero);
+        let eq_pow_j_zero = d.eq(pow_j, zero);
+        let result = d.const_app(
+            p.logic.or_resolve_right,
+            &[eq_tb_zero, eq_pow_j_zero, mul_eq_zero_h, not_pow_j_zero],
+        );
+
+        let stmt = d.arrow(hyp_ty, eq_tb_zero);
+        let proof = d.lam_fv(hyp_fv, hyp_ty, result);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order.
 pub(super) fn declare_bit_order_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_self_lt_two_pow(d, p)?;
     declare_self_lt_two_pow_add(d, p)?;
     declare_lt_of_test_bit(d, p)?;
+    declare_test_bit_eq_zero_of_lt(d, p)?;
     Ok(())
 }
