@@ -96,6 +96,7 @@ use super::NatPrelude;
 use super::helpers::and_left;
 use super::ops::{NatDev, NatOps, cases_zero_succ};
 use super::rec_agreement::half_le_predecessor_of_succ;
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -352,12 +353,362 @@ fn declare_eq_of_test_bit_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
     d.declare_theorem(p.eq_of_test_bit_eq, ty, value)
 }
 
+// ============================================================================
+// `xor_bit` algebra: `xor_bit`'s value depends on its arguments only through
+// whether each equals `1`, so its algebraic laws hold for ALL `x, y, z :
+// Nat`, verified by a Python truth-table simulation before any Rust was
+// written (`xor` associates, confirmed over all 8 Boolean triples).
+// ============================================================================
+
+/// `bool_select_nat cond 1 0` --- the decode `xor_bit` builds its result
+/// with, factored out so [`xor_bit_assoc`] can reason about it directly.
+fn digitize(d: &mut NatDev<'_>, cond: ExprId) -> ExprId {
+    let one = d.num(1);
+    let zero = d.zero();
+    d.bool_select_nat(cond, one, zero)
+}
+
+/// `Bool.rec` deciding `b`, generic over an arrow-shaped motive (the same
+/// device `combined_lt_two`/`bool_select_nat_same` use inline in
+/// `testbit_bitwise.rs`, promoted here since this file needs it repeatedly).
+fn cases_bool(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    b: ExprId,
+    motive: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    at_false: &dyn Fn(&mut NatDev<'_>) -> ExprId,
+    at_true: &dyn Fn(&mut NatDev<'_>) -> ExprId,
+) -> ExprId {
+    let p = *p;
+    let bool_ty = d.bool_ty();
+    let motive_lam = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = motive(d, c);
+        d.lam_fv(c_fv, bool_ty, body)
+    };
+    let case_false = at_false(d);
+    let case_true = at_true(d);
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive_lam, case_false, case_true, b])
+}
+
+/// `Eq (beq (digitize cond) 1) cond`, for any `Bool` `cond` --- the
+/// round-trip recovering the decision from the `Nat`-decoded value. Two
+/// cases, both `refl` (`digitize` at a literal `cond` iota-reduces, then
+/// `beq` of two literals iota-reduces).
+fn beq_digitize_one(d: &mut NatDev<'_>, p: &NatPrelude, cond: ExprId) -> ExprId {
+    let p = *p;
+    let motive = |d: &mut NatDev<'_>, c: ExprId| -> ExprId {
+        let one = d.num(1);
+        let sel = digitize(d, c);
+        let lhs = d.beq(sel, one);
+        d.bool_eq(lhs, c)
+    };
+    let at_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        let one = d.num(1);
+        let sel = digitize(d, false_);
+        let lhs = d.beq(sel, one);
+        // `lhs` (a `Bool` value, `beq (digitize false) 1`) reduces to
+        // `false_` by iota+iota; the reflexivity witness needed is of
+        // `lhs`, NOT of `sel` (`sel` is `Nat`-typed -- `Eq.refl Bool sel`
+        // would be ill-typed).
+        d.bool_refl(lhs)
+    };
+    let at_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        let one = d.num(1);
+        let sel = digitize(d, true_);
+        let lhs = d.beq(sel, one);
+        d.bool_refl(lhs)
+    };
+    cases_bool(d, &p, cond, &motive, &at_false, &at_true)
+}
+
+/// `Eq (xor_fn (xor_fn a b) c) (xor_fn a (xor_fn b c))`, for all `Bool` `a,
+/// b, c`. Splitting on `a` alone closes `a = false` for ANY `b, c` by
+/// `refl` (`xor_fn false w` reduces to `w` for any `w`, since the outer
+/// `Bool.rec` scrutinee is the LITERAL `false`); `a = true` needs one more
+/// split on `b`, and `(a, b) = (true, true)` needs a final split on `c`.
+fn bool_xor_assoc(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    let p = *p;
+
+    let motive_a = |d: &mut NatDev<'_>, aa: ExprId| -> ExprId {
+        let xor_ = super::bitwise::xor_fn(d);
+        let xab = d.apply(xor_, &[aa, b]);
+        let lhs = d.apply(xor_, &[xab, c]);
+        let xor_2 = super::bitwise::xor_fn(d);
+        let xbc = d.apply(xor_2, &[b, c]);
+        let rhs = d.apply(xor_2, &[aa, xbc]);
+        d.bool_eq(lhs, rhs)
+    };
+
+    let at_a_false = |d: &mut NatDev<'_>| -> ExprId {
+        let xor_ = super::bitwise::xor_fn(d);
+        let xbc = d.apply(xor_, &[b, c]);
+        d.bool_refl(xbc)
+    };
+
+    let at_a_true = |d: &mut NatDev<'_>| -> ExprId {
+        let motive_b = |d: &mut NatDev<'_>, bb: ExprId| -> ExprId {
+            let true_ = d.bool_true();
+            let xor_ = super::bitwise::xor_fn(d);
+            let xab = d.apply(xor_, &[true_, bb]);
+            let lhs = d.apply(xor_, &[xab, c]);
+            let true_2 = d.bool_true();
+            let xor_2 = super::bitwise::xor_fn(d);
+            let xbc = d.apply(xor_2, &[bb, c]);
+            let rhs = d.apply(xor_2, &[true_2, xbc]);
+            d.bool_eq(lhs, rhs)
+        };
+        let at_b_false = |d: &mut NatDev<'_>| -> ExprId {
+            // xor_fn true false = true (refl); both sides reduce to
+            // xor_fn true c.
+            let true_ = d.bool_true();
+            let xor_ = super::bitwise::xor_fn(d);
+            let xtc = d.apply(xor_, &[true_, c]);
+            d.bool_refl(xtc)
+        };
+        let at_b_true = |d: &mut NatDev<'_>| -> ExprId {
+            let motive_c = |d: &mut NatDev<'_>, cc: ExprId| -> ExprId {
+                let true_ = d.bool_true();
+                let false_ = d.bool_false();
+                let xor_ = super::bitwise::xor_fn(d);
+                let xab = d.apply(xor_, &[true_, true_]); // reduces to false
+                let _ = false_;
+                let lhs = d.apply(xor_, &[xab, cc]);
+                let true_2 = d.bool_true();
+                let xor_2 = super::bitwise::xor_fn(d);
+                let xbc = d.apply(xor_2, &[true_2, cc]);
+                let true_3 = d.bool_true();
+                let rhs = d.apply(xor_2, &[true_3, xbc]);
+                d.bool_eq(lhs, rhs)
+            };
+            let at_c_false = |d: &mut NatDev<'_>| -> ExprId {
+                // LHS = xor_fn false false = false.
+                // RHS = xor_fn true (xor_fn true false) = xor_fn true true = false.
+                let false_ = d.bool_false();
+                d.bool_refl(false_)
+            };
+            let at_c_true = |d: &mut NatDev<'_>| -> ExprId {
+                // LHS = xor_fn false true = true.
+                // RHS = xor_fn true (xor_fn true true) = xor_fn true false = true.
+                let true_ = d.bool_true();
+                d.bool_refl(true_)
+            };
+            cases_bool(d, &p, c, &motive_c, &at_c_false, &at_c_true)
+        };
+        cases_bool(d, &p, b, &motive_b, &at_b_false, &at_b_true)
+    };
+
+    cases_bool(d, &p, a, &motive_a, &at_a_false, &at_a_true)
+}
+
+/// `h : Eq Bool a b, f : Bool -> Nat  ⊢  Eq Nat (f a) (f b)` --- the
+/// cross-type congruence [`NatOps::congr`] cannot provide: that helper's
+/// `eq_motive`/`transport` hardcode `Eq Nat` for the HYPOTHESIS slot too, so
+/// a `Bool`-typed `h` (as every intermediate in [`xor_bit_assoc`] is, before
+/// `digitize` brings it back to `Nat`) needs `bool_eq_motive`/
+/// `bool_transport` instead, with the conclusion built at `Nat`.
+fn congr_bool_to_nat(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fx = f(d, x);
+        let concl = d.eq(fa, fx);
+        let hyp = d.bool_eq(a, x);
+        let anon = d.anon_name();
+        let inner = d.kernel().lam(anon, hyp, concl, BinderInfo::Default);
+        let bool_ty = d.bool_ty();
+        d.lam_fv(x_fv, bool_ty, inner)
+    };
+    let refl_case = d.refl(fa);
+    d.bool_transport(a, motive, refl_case, b, h)
+}
+
+/// `Eq (xor_bit (xor_bit x y) z) (xor_bit x (xor_bit y z))`, for all `Nat`
+/// `x, y, z` --- lifts [`bool_xor_assoc`] through the round-trip
+/// [`beq_digitize_one`]. `xor_bit x y := digitize (xor_fn (beq x 1) (beq y
+/// 1))` (`testbit_bitwise.rs`), so `xor_bit (xor_bit x y) z` is, by
+/// DEFINITION (`refl`), `digitize (xor_fn (beq (xor_bit x y) 1) (beq z 1))`;
+/// the round-trip identifies `beq (xor_bit x y) 1` with `xor_fn bx by`,
+/// [`bool_xor_assoc`] identifies the two associated `Bool` combines, and a
+/// final `symm` + `refl` lands on `xor_bit x (xor_bit y z)`'s own
+/// definitional unfold.
+fn xor_bit_assoc(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, y: ExprId, z: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let bx = d.beq(x, one);
+    let by = d.beq(y, one);
+    let bz = d.beq(z, one);
+
+    let xy = super::testbit_bitwise::xor_bit(d, x, y);
+    let yz = super::testbit_bitwise::xor_bit(d, y, z);
+    let beq_xy_one = d.beq(xy, one);
+    let beq_yz_one = d.beq(yz, one);
+
+    let xor_ = super::bitwise::xor_fn(d);
+    let cond_xy = d.apply(xor_, &[bx, by]);
+    let xor_2 = super::bitwise::xor_fn(d);
+    let cond_yz = d.apply(xor_2, &[by, bz]);
+
+    let rt_xy = beq_digitize_one(d, &p, cond_xy); // Eq (beq (digitize cond_xy) 1) cond_xy
+    let rt_yz = beq_digitize_one(d, &p, cond_yz);
+    let assoc_bool = bool_xor_assoc(d, &p, bx, by, bz); // Eq (xor_fn cond_xy bz) (xor_fn bx cond_yz)
+
+    // Left leg: digitize(xor_fn beq_xy_one bz) [start, refl-defeq to
+    // xor_bit(xy, z)] -> digitize(xor_fn cond_xy bz) [via rt_xy] ->
+    // digitize(xor_fn bx cond_yz) [via assoc_bool].
+    let start_l = {
+        let xor_ = super::bitwise::xor_fn(d);
+        let inner = d.apply(xor_, &[beq_xy_one, bz]);
+        digitize(d, inner)
+    };
+    let mid_l1 = {
+        let xor_ = super::bitwise::xor_fn(d);
+        let inner = d.apply(xor_, &[cond_xy, bz]);
+        digitize(d, inner)
+    };
+    let mid_l2 = {
+        let xor_ = super::bitwise::xor_fn(d);
+        let inner = d.apply(xor_, &[bx, cond_yz]);
+        digitize(d, inner)
+    };
+    let step_l1 = congr_bool_to_nat(d, beq_xy_one, cond_xy, rt_xy, &|d, w| {
+        let xor_ = super::bitwise::xor_fn(d);
+        let bzv = bz;
+        let inner = d.apply(xor_, &[w, bzv]);
+        digitize(d, inner)
+    });
+    let xor_cond_xy_bz = {
+        let xor_ = super::bitwise::xor_fn(d);
+        d.apply(xor_, &[cond_xy, bz])
+    };
+    let xor_bx_cond_yz = {
+        let xor_ = super::bitwise::xor_fn(d);
+        d.apply(xor_, &[bx, cond_yz])
+    };
+    let step_l2 = congr_bool_to_nat(d, xor_cond_xy_bz, xor_bx_cond_yz, assoc_bool, &|d, w| {
+        digitize(d, w)
+    });
+
+    // Right leg: digitize(xor_fn bx beq_yz_one) [end, refl-defeq to
+    // xor_bit(x, yz)] -> digitize(xor_fn bx cond_yz) [via rt_yz].
+    let start_r = {
+        let xor_ = super::bitwise::xor_fn(d);
+        let inner = d.apply(xor_, &[bx, beq_yz_one]);
+        digitize(d, inner)
+    };
+    let step_r1 = congr_bool_to_nat(d, beq_yz_one, cond_yz, rt_yz, &|d, w| {
+        let xor_ = super::bitwise::xor_fn(d);
+        let bxv = bx;
+        let inner = d.apply(xor_, &[bxv, w]);
+        digitize(d, inner)
+    });
+
+    let (last_l, chain_l) = d.chain(start_l, &[(mid_l1, step_l1), (mid_l2, step_l2)]);
+    let step_r1_symm = d.symm(start_r, mid_l2, step_r1);
+    d.trans(start_l, last_l, start_r, chain_l, step_r1_symm)
+}
+
+/// `Nat.xor_assoc : ∀ a b c, Eq (xor (xor a b) c) (xor a (xor b c))` ---
+/// applies [`declare_eq_of_test_bit_eq`]'s extensionality lemma to a
+/// per-bit proof built from `Nat.testBit_xor` (applied twice on each side)
+/// and [`xor_bit_assoc`].
+fn declare_xor_assoc(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    d.theorem(p.xor_assoc, 3, &|d, values| {
+        let (a, b, c) = (values[0], values[1], values[2]);
+        let xab = d.const_app(p.xor, &[a, b]);
+        let lhs = d.const_app(p.xor, &[xab, c]);
+        let xbc = d.const_app(p.xor, &[b, c]);
+        let rhs = d.const_app(p.xor, &[a, xbc]);
+        let stmt = d.eq(lhs, rhs);
+
+        // bits_hyp : ∀ i, Eq (testBit lhs i) (testBit rhs i)
+        let bits_hyp = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+
+            // testBit lhs i = xor_bit (testBit xab i) (testBit c i)
+            //               = xor_bit (xor_bit (testBit a i) (testBit b i)) (testBit c i)
+            let tb_a = d.const_app(p.test_bit, &[a, i]);
+            let tb_b = d.const_app(p.test_bit, &[b, i]);
+            let tb_c = d.const_app(p.test_bit, &[c, i]);
+
+            let tb_lhs_outer = d.lemma(p.test_bit_xor, &[xab, c, i]); // Eq (testBit lhs i) (xor_bit (testBit xab i) (testBit c i))
+            let tb_xab = d.const_app(p.test_bit, &[xab, i]);
+            let tb_lhs_inner = d.lemma(p.test_bit_xor, &[a, b, i]); // Eq (testBit xab i) (xor_bit tb_a tb_b)
+            let xor_tb_xab_tb_c = super::testbit_bitwise::xor_bit(d, tb_xab, tb_c);
+            let xab_bit = super::testbit_bitwise::xor_bit(d, tb_a, tb_b);
+            let xor_xor_ab_c = super::testbit_bitwise::xor_bit(d, xab_bit, tb_c);
+            let congr_lhs_inner = d.congr(tb_xab, xab_bit, tb_lhs_inner, &|d, w| {
+                let tb_c2 = tb_c;
+                super::testbit_bitwise::xor_bit(d, w, tb_c2)
+            });
+            let tb_lhs = d.const_app(p.test_bit, &[lhs, i]);
+            let (_, lhs_eq) = d.chain(
+                tb_lhs,
+                &[
+                    (xor_tb_xab_tb_c, tb_lhs_outer),
+                    (xor_xor_ab_c, congr_lhs_inner),
+                ],
+            );
+
+            // testBit rhs i = xor_bit (testBit a i) (testBit xbc i)
+            //               = xor_bit (testBit a i) (xor_bit (testBit b i) (testBit c i))
+            let tb_rhs_outer = d.lemma(p.test_bit_xor, &[a, xbc, i]); // Eq (testBit rhs i) (xor_bit tb_a (testBit xbc i))
+            let tb_xbc = d.const_app(p.test_bit, &[xbc, i]);
+            let tb_rhs_inner = d.lemma(p.test_bit_xor, &[b, c, i]); // Eq (testBit xbc i) (xor_bit tb_b tb_c)
+            let xor_tb_a_tb_xbc = super::testbit_bitwise::xor_bit(d, tb_a, tb_xbc);
+            let xbc_bit = super::testbit_bitwise::xor_bit(d, tb_b, tb_c);
+            let xor_a_xor_bc = super::testbit_bitwise::xor_bit(d, tb_a, xbc_bit);
+            let congr_rhs_inner = d.congr(tb_xbc, xbc_bit, tb_rhs_inner, &|d, w| {
+                let tb_a2 = tb_a;
+                super::testbit_bitwise::xor_bit(d, tb_a2, w)
+            });
+            let tb_rhs = d.const_app(p.test_bit, &[rhs, i]);
+            let (_, rhs_eq) = d.chain(
+                tb_rhs,
+                &[
+                    (xor_tb_a_tb_xbc, tb_rhs_outer),
+                    (xor_a_xor_bc, congr_rhs_inner),
+                ],
+            );
+
+            // xor_bit assoc: xor_xor_ab_c = xor_a_xor_bc
+            let bit_assoc = xor_bit_assoc(d, &p, tb_a, tb_b, tb_c);
+
+            let (_, bit_eq) = d.chain(tb_lhs, &[(xor_xor_ab_c, lhs_eq), (xor_a_xor_bc, bit_assoc)]);
+            let rhs_eq_symm = d.symm(tb_rhs, xor_a_xor_bc, rhs_eq);
+            let final_bit_eq = d.trans(tb_lhs, xor_a_xor_bc, tb_rhs, bit_eq, rhs_eq_symm);
+            d.lam_fv(i_fv, nat, final_bit_eq)
+        };
+
+        let proof = d.lemma(p.eq_of_test_bit_eq, &[lhs, rhs, bits_hyp]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares. See the module doc for what's NOT
-/// declared here (`Nat.xor_assoc` and siblings).
+/// declared here (`Nat.xor_xor_cancel_left`/`_right`, `Nat.xor_ne_zero_iff`).
 pub(super) fn declare_xor_algebra_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
 ) -> Result<(), KernelError> {
     declare_eq_of_test_bit_eq(d, p)?;
+    declare_xor_assoc(d, p)?;
     Ok(())
 }

@@ -979,6 +979,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.xor_comm,
         p.test_bit_xor,
         p.eq_of_test_bit_eq,
+        p.xor_assoc,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6492,7 +6493,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 499,
+        93 + 500,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11371,6 +11372,71 @@ fn eq_of_test_bit_eq_applies_at_a_concrete_reflexive_instance_and_symbolically()
     assert!(
         f.k.axiom_footprint(p.eq_of_test_bit_eq).is_empty(),
         "eq_of_testBit_eq must rest on zero axioms"
+    );
+}
+
+/// `Nat.xor_assoc` (`xor_algebra.rs`) -- piece 4 (partial) toward
+/// `F:ml430-nat-lt-xor-cases-c43a1e85`, via `Nat.testBit_xor` twice per side
+/// plus `Nat.eq_of_testBit_eq`. Checked at the discriminating concrete
+/// triple `(a, b, c) = (1, 2, 4)` (three non-overlapping bits: `xor 1 2 = 3`,
+/// `xor 3 4 = 7`; `xor 2 4 = 6`, `xor 1 6 = 7` -- both sides `7`, with a
+/// negative control against `6`) AND symbolically against a genuinely FREE
+/// `(a, b, c)` triple, per the standing mandatory-instantiation rule.
+#[test]
+fn xor_assoc_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: (1, 2, 4), both sides compute to 7.
+    {
+        let one = f.num(1);
+        let two = f.num(2);
+        let four = f.num(4);
+        let applied = f.lemma(p.xor_assoc, &[one, two, four]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("xor_assoc must apply at (a=1, b=2, c=4): {shown}")
+        });
+        let xab = f.const_app(p.xor, &[one, two]);
+        let lhs = f.const_app(p.xor, &[xab, four]);
+        let xbc = f.const_app(p.xor, &[two, four]);
+        let rhs = f.const_app(p.xor, &[one, xbc]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "xor_assoc 1 2 4 must state Eq (xor (xor 1 2) 4) (xor 1 (xor 2 4))"
+        );
+        let seven = f.num(7);
+        assert!(f.k.def_eq(lhs, seven), "xor (xor 1 2) 4 must compute to 7");
+        assert!(f.k.def_eq(rhs, seven), "xor 1 (xor 2 4) must compute to 7");
+        // Negative control: must not ALSO state Eq lhs 6.
+        let six = f.num(6);
+        let bad_want = f.eq(lhs, six);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: xor_assoc 1 2 4 must not state Eq (xor (xor 1 2) 4) 6"
+        );
+    }
+
+    // Symbolic: applies at a genuinely FREE (a, b, c) triple.
+    {
+        let name = f.name("xor_assoc_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (a, b, c) = (values[0], values[1], values[2]);
+            let xab = d.const_app(p.xor, &[a, b]);
+            let lhs = d.const_app(p.xor, &[xab, c]);
+            let xbc = d.const_app(p.xor, &[b, c]);
+            let rhs = d.const_app(p.xor, &[a, xbc]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.xor_assoc, &[a, b, c]);
+            (stmt, proof)
+        })
+        .expect("xor_assoc must apply at symbolic a, b, c");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.xor_assoc).is_empty(),
+        "xor_assoc must rest on zero axioms"
     );
 }
 

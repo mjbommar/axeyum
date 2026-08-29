@@ -2816,6 +2816,11 @@ pub struct NatPrelude {
     /// `xor_ne_zero_iff` (piece 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`,
     /// not itself declared this lane). See `nat_prelude::xor_algebra`.
     pub eq_of_test_bit_eq: NameId,
+    /// `Nat.xor_assoc : ∀ a b c, Eq (xor (xor a b) c) (xor a (xor b c))` ---
+    /// piece 4 (partial) toward `F:ml430-nat-lt-xor-cases-c43a1e85`, via
+    /// `Nat.testBit_xor` twice per side plus `Nat.eq_of_testBit_eq`. See
+    /// `nat_prelude::xor_algebra`.
+    pub xor_assoc: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3729,6 +3734,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             xor_comm: kernel.name_str(nat, "xor_comm"),
             test_bit_xor: kernel.name_str(nat, "testBit_xor"),
             eq_of_test_bit_eq: kernel.name_str(nat, "eq_of_testBit_eq"),
+            xor_assoc: kernel.name_str(nat, "xor_assoc"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
