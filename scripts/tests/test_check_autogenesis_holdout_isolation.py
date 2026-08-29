@@ -58,11 +58,14 @@ SPEC.loader.exec_module(guard)
 
 HELD = "F:ml430-held-example-0000dead"
 TRAIN = "F:ml430-train-example-0000beef"
+HELD_V2 = "F:ml430-extension-held-out-example-0000cafe"
+TRAIN_V2 = "F:ml430-extension-train-example-0000f00d"
 
 
 class HoldoutIsolationTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._saved = (guard.NURSERY, guard.FACTS, guard.ARTIFACTS)
+        self._saved = (guard.NURSERY, guard.EXTENSION, guard.FACTS,
+                       guard.ARTIFACTS)
         self._tmp = tempfile.TemporaryDirectory()
         root = pathlib.Path(self._tmp.name)
         self.artifacts = root / "autogenesis"
@@ -80,14 +83,30 @@ class HoldoutIsolationTests(unittest.TestCase):
                 }
             )
         )
-        guard.NURSERY, guard.FACTS, guard.ARTIFACTS = (
+        # The 2026-08-29 refill preregisters 30 held-out rows in a SECOND
+        # manifest. A gate reading only v1 reports PASS while leaving every one
+        # of them unprotected, so the fixture carries both.
+        self.extension = root / "nursery-v2-extension.json"
+        self.extension.write_text(
+            json.dumps(
+                {
+                    "entries": [
+                        {"fact_id": HELD_V2, "partition": "held-out"},
+                        {"fact_id": TRAIN_V2, "partition": "train"},
+                    ]
+                }
+            )
+        )
+        guard.NURSERY, guard.EXTENSION, guard.FACTS, guard.ARTIFACTS = (
             self.nursery,
+            self.extension,
             self.facts,
             self.artifacts,
         )
 
     def tearDown(self) -> None:
-        guard.NURSERY, guard.FACTS, guard.ARTIFACTS = self._saved
+        (guard.NURSERY, guard.EXTENSION, guard.FACTS,
+         guard.ARTIFACTS) = self._saved
         self._tmp.cleanup()
 
     def run_guard(self) -> tuple[int, str, str]:
@@ -105,10 +124,11 @@ class HoldoutIsolationTests(unittest.TestCase):
         code, out, _ = self.run_guard()
         self.assertEqual(code, 0)
         self.assertIn("verdict=PASS", out)
-        self.assertIn("held_out=1", out)
+        self.assertIn("held_out=2", out)
 
     def test_the_committed_repository_passes(self) -> None:
-        guard.NURSERY, guard.FACTS, guard.ARTIFACTS = self._saved
+        (guard.NURSERY, guard.EXTENSION, guard.FACTS,
+         guard.ARTIFACTS) = self._saved
         code, out, err = self.run_guard()
         self.assertEqual(code, 0, err)
         self.assertIn("verdict=PASS", out)
@@ -116,8 +136,11 @@ class HoldoutIsolationTests(unittest.TestCase):
         # would mean the amendment was reverted. 57 -> 37 on 2026-08-25 when
         # `natural-binomial` moved to development (see docs/autogenesis/
         # 263-holdout-contamination-by-ordinary-development.md and the second
-        # amendment in mathlib-nursery-split-policy-v1.json).
-        self.assertIn("held_out=37", out)
+        # amendment in mathlib-nursery-split-policy-v1.json); 37 -> 67 on
+        # 2026-08-29 when nursery-v2-extension.json preregistered 30 more in
+        # three NEW families. v1's 37 are unchanged -- the refill is additive
+        # and moved no existing entry's partition.
+        self.assertIn("held_out=67", out)
 
     # --- guard 1: a held-out fact must not be settled ---------------------
     def test_a_settled_held_out_fact_is_a_violation(self) -> None:
@@ -249,6 +272,45 @@ class HoldoutIsolationTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertNotIn("verdict=PASS", out)
         self.assertIn("pass vacuously", err)
+
+    def test_an_extension_only_held_out_fact_is_protected(self) -> None:
+        """The refill's 30 held-out rows live only in the extension manifest.
+
+        Reading v1 alone reports PASS over a population it never looked at,
+        which is the same shape as the 2026-08-21 incident this gate exists to
+        prevent -- a blind population nothing was watching.
+        """
+        (self.artifacts / "some-plan-v1.json").write_text(
+            json.dumps({"target": {"fact_id": HELD_V2}})
+        )
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("verdict=FAIL", out)
+        self.assertIn(HELD_V2, err)
+
+    def test_an_extension_train_fact_reference_is_not_a_violation(self) -> None:
+        (self.artifacts / "some-plan-v1.json").write_text(
+            json.dumps({"target": {"fact_id": TRAIN_V2}})
+        )
+        code, out, _ = self.run_guard()
+        self.assertEqual(code, 0)
+        self.assertIn("verdict=PASS", out)
+
+    def test_an_extension_with_no_held_out_rows_is_an_error(self) -> None:
+        self.extension.write_text(
+            json.dumps({"entries": [{"fact_id": TRAIN_V2, "partition": "train"}]})
+        )
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertNotIn("verdict=PASS", out)
+        self.assertIn("pass vacuously", err)
+
+    def test_a_missing_extension_is_an_error_not_a_pass(self) -> None:
+        self.extension.unlink()
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertNotIn("verdict=PASS", out)
+        self.assertIn("missing", err)
 
     def test_a_missing_manifest_is_an_error_not_a_pass(self) -> None:
         self.nursery.unlink()

@@ -107,8 +107,8 @@ def held_out_facts() -> set[str]:
         }
         if not found:
             raise IsolationError(
-                f"{path.name} contributes no held-out rows; a manifest whose "
-                f"blind population has vanished passes this gate vacuously")
+                f"{path.name} contributes no held-out rows; without them this "
+                f"gate would pass vacuously for that manifest's population")
         held |= found
     if not held:
         raise IsolationError(

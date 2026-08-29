@@ -284,8 +284,9 @@ def guard_vocabulary(snapshot: dict[str, Any], vocabulary: dict[str, Any],
     if absent:
         fails.append(
             f"S4 vocabulary-status-drift: {len(absent)} settled mirror(s) are "
-            f"missing from the vocabulary ({', '.join(absent[:3])}), so S3 "
-            f"would run against a narrower population than the ledger has.")
+            f"missing from the vocabulary ({', '.join(absent[:3])}), so the "
+            f"false-positive control would run against a narrower population "
+            f"than the ledger has.")
 
     # S2 -- a bridge entry nothing witnesses is an assertion; a bridge entry the
     # kernel already declares is a rename hiding as an elaboration.
@@ -568,7 +569,16 @@ def main() -> int:
               f"{len(registry)} diverging construction(s) and "
               f"{len(env)} kernel declaration(s) + {len(bridge)} bridge "
               f"constant(s)")
-        return statable_screen(args.statable, registry, env, bridge)
+        # S1 runs HERE too. The rest of the vocabulary guards need the fact
+        # ledger, which screening does not load; but a snapshot that lists
+        # everything would make this mode admit everything, and that is the
+        # failure direction nobody notices.
+        snapshot_fails = [f for f in guard_vocabulary(snapshot, vocabulary, {}, {})
+                          if f.startswith("S1 ")]
+        for line in snapshot_fails:
+            print(f"FAIL: {line}", file=sys.stderr)
+        status = statable_screen(args.statable, registry, env, bridge)
+        return 1 if snapshot_fails else status
 
     facts = load_facts(args.facts_dir)
     held, mutation = load_partitions(args.nursery, args.extension)

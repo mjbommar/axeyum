@@ -143,6 +143,13 @@ step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-iso
 # construction-level divergences before they are preregistered.
 step dispatchable-frontier-tests bash scripts/tests/test-dispatchable-frontier.sh
 step dispatchable-frontier python3 scripts/check-dispatchable-frontier.py
+# ...and the POSITIVE screen, re-run over the preregistered refill on every
+# invocation rather than only at the moment it was written. `screened-ok`
+# against the divergence registry is necessary and NOT sufficient: it says
+# nothing about whether a proposition can be stated over declarations this
+# kernel actually has.
+step dispatchable-frontier-statable python3 scripts/check-dispatchable-frontier.py \
+    --statable artifacts/autogenesis/nursery-v2-extension.json
 step autogenesis-holdout-contamination-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_contamination
 step autogenesis-holdout-contamination python3 scripts/check-autogenesis-holdout-contamination.py
 step development-partition-tests python3 -m unittest scripts.tests.test_development_partition
