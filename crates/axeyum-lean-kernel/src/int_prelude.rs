@@ -1210,6 +1210,18 @@ pub struct IntPrelude {
     pub odd_of_mul_left: NameId,
     /// `odd_of_mul_right : ∀ m n, Odd (mul m n) → Odd n`.
     pub odd_of_mul_right: NameId,
+    /// `even_add : ∀ m n, Iff (Even (add m n)) (Iff (Even m) (Even n))` —
+    /// `F:ml430-int-even-add-3c4536e3`. See `parity.rs`'s `emod` additive
+    /// law (`modeq_add`).
+    pub even_add: NameId,
+    /// `even_add' : ∀ m n, Iff (Even (add m n)) (Iff (Odd m) (Odd n))` —
+    /// `F:ml430-int-even-add-bc8e1394`, a DIFFERENT proposition from
+    /// [`Self::even_add`] despite sharing the Mathlib base name (confirmed
+    /// against Mathlib's `Int.even_add`/`Int.even_add'` directly).
+    pub even_add_prime: NameId,
+    /// `even_add_one : ∀ n, Iff (Even (add n 1)) (Not (Even n))` —
+    /// `F:ml430-int-even-add-one-af33da18`.
+    pub even_add_one: NameId,
     /// `fib_of_odd : ∀ n, Odd n → Eq Int (fib n) (ofNat (Nat.fib (natAbs
     /// n)))` — at an odd index the sign-extended `fib` agrees with the plain
     /// `Nat`-valued Fibonacci sequence at the magnitude, in EITHER direction
@@ -1520,6 +1532,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         add_one_ediv_two_mul_two_of_odd: child(kernel, "add_one_ediv_two_mul_two_of_odd"),
         odd_of_mul_left: child(kernel, "odd_of_mul_left"),
         odd_of_mul_right: child(kernel, "odd_of_mul_right"),
+        even_add: child(kernel, "even_add"),
+        even_add_prime: child(kernel, "even_add'"),
+        even_add_one: child(kernel, "even_add_one"),
         fib_of_odd: child(kernel, "fib_of_odd"),
         induction_on: child(kernel, "induction_on"),
         fib_rec: child(kernel, "fib_rec"),
@@ -1695,6 +1710,13 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_nat_abs_mul(&mut d)?;
         parity::declare_odd_of_mul_left(&mut d)?;
         parity::declare_odd_of_mul_right(&mut d)?;
+        // The `emod` additive law and the three `ml430-int-even-add-*`
+        // mirrors (int-emod-additive lane, 2026-08-29). Needs `Int.ModEq`'s
+        // `mod_eq_add_right`/`mod_eq_add_left`/`mod_eq_trans` (`modeq.rs`,
+        // declared much earlier) -- already satisfied by this point.
+        parity::declare_even_add(&mut d)?;
+        parity::declare_even_add_prime(&mut d)?;
+        parity::declare_even_add_one(&mut d)?;
         nat_abs::declare_nat_abs_pow(&mut d)?;
         gcd::declare_dvd_of_nat_abs_dvd(&mut d)?;
         gcd::declare_nat_abs_dvd_nat_abs_of_dvd(&mut d)?;
