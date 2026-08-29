@@ -3443,3 +3443,153 @@ pub(super) fn declare_coprime_of_forall_prime_dvd(
     })?;
     Ok(())
 }
+
+/// `Nat.dvd_of_forall_prime_mul_dvd : ∀ a b, (∀ k, prime_condition k → dvd k a
+/// → dvd (mul k a) b) → dvd a b`. Closes ledger fact
+/// `F:ml430-nat-dvd-of-forall-prime-mul-dvd`.
+///
+/// The hypothesis only needs to fire at ONE prime dividing `a` (any one), not
+/// all of them, so no induction over `a`'s factorization is needed —
+/// `a`'s only role is to be either `0`, `1`, or `≥ 2`:
+///
+/// - `a = 0`: apply the hypothesis at `k = 2` (`prime_two`, and `2 ∣ 0` via
+///   `dvd_zero`) to get `dvd (2*0) b`; `2*0` computes to `0` (`mul_zero`), so
+///   this is `dvd 0 b` — already the goal after substituting `a = 0`.
+/// - `a = 1`: `dvd_mul` at `(one, b)` gives `dvd 1 (1*b)`, and `1*b = b`
+///   (`one_mul`) — the hypothesis is not even needed.
+/// - `a ≥ 2`: `exists_prime_dvd` supplies a prime `pw ∣ a`; the hypothesis at
+///   `k = pw` gives `dvd (pw*a) b`. `dvd_mul` gives `dvd a (a*pw)`, and
+///   `mul_comm` turns `pw*a` into `a*pw`, so `dvd_trans` chains
+///   `a ∣ (a*pw) ∣ b`.
+///
+/// The same nested `lt_or_ge`-on-`a` trichotomy as
+/// [`declare_coprime_of_forall_prime_dvd`] (`a < 1`, `1 ≤ a < 2`, `2 ≤ a`).
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_dvd_of_forall_prime_mul_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    d.theorem(p.dvd_of_forall_prime_mul_dvd, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let one = d.num(1);
+        let two = d.num(2);
+        let zero = d.zero();
+
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let prime_k_ty = prime_condition(d, &p, k);
+        let dvd_k_a_ty = d.dvd(k, a);
+        let ka = d.mul(k, a);
+        let dvd_ka_b_ty = d.dvd(ka, b);
+        let inner1 = d.arrow(dvd_k_a_ty, dvd_ka_b_ty);
+        let body0 = d.arrow(prime_k_ty, inner1);
+        let hyp_ty = d.pi_fv(k_fv, nat, body0);
+
+        let target = d.dvd(a, b);
+        let stmt = d.arrow(hyp_ty, target);
+
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        let dich1 = d.lemma(p.lt_or_ge, &[a, one]); // Or (Lt a one) (Le one a)
+        let lt_a1_ty = d.lt(a, one);
+        let le_1a_ty = d.le(one, a);
+
+        // Branch A: a < 1, i.e. a = 0.
+        let branch_a = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let le_a_zero = d.lemma(p.le_of_succ_le_succ, &[a, zero, h]);
+            let zero_le_a = d.lemma(p.zero_le, &[a]);
+            let a_eq_zero = d.lemma(p.le_antisymm, &[a, zero, le_a_zero, zero_le_a]);
+            let eq_zero_a = d.symm(a, zero, a_eq_zero); // Eq zero a
+
+            let prime_2 = prime_two(d, &p);
+            let dvd_2_zero = d.lemma(p.dvd_zero, &[two]); // dvd 2 zero
+            let dvd_2_a = transport_dvd_right(d, two, zero, a, eq_zero_a, dvd_2_zero); // dvd 2 a
+
+            let hyp_at_2 = d.apply(hyp, &[two]);
+            let step1 = d.apply(hyp_at_2, &[prime_2]);
+            let dvd_2a_b = d.apply(step1, &[dvd_2_a]); // dvd (2*a) b
+
+            let two_a = d.mul(two, a);
+            let two_zero = d.mul(two, zero);
+            let step_congr = d.congr(a, zero, a_eq_zero, &|d, t| d.mul(two, t)); // Eq (2*a) (2*zero)
+            let mul_zero_2 = d.lemma(p.mul_zero, &[two]); // Eq (2*zero) zero
+            let (_, two_a_eq_zero) = d.chain(two_a, &[(two_zero, step_congr), (zero, mul_zero_2)]);
+
+            let dvd_zero_b = transport_dvd_left(d, two_a, zero, two_a_eq_zero, b, dvd_2a_b); // dvd zero b
+            let branch_proof = transport_dvd_left(d, zero, a, eq_zero_a, b, dvd_zero_b); // dvd a b
+            d.lam_fv(h_fv, lt_a1_ty, branch_proof)
+        };
+
+        // Branch B: 1 ≤ a. Split again on a < 2 vs 2 ≤ a.
+        let branch_b = {
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+
+            let dich2 = d.lemma(p.lt_or_ge, &[a, two]); // Or (Lt a two) (Le two a)
+            let lt_a2_ty = d.lt(a, two);
+            let le_2a_ty = d.le(two, a);
+
+            // Branch B1: a < 2 and 1 ≤ a, i.e. a = 1. The hypothesis is not
+            // needed: `dvd_mul` alone gives `dvd 1 (1*b)`, and `1*b = b`.
+            let branch_b1 = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let le_a_1 = d.lemma(p.le_of_succ_le_succ, &[a, one, h2]);
+                let a_eq_1 = d.lemma(p.le_antisymm, &[a, one, le_a_1, h1]); // Eq a one
+                let eq_1_a = d.symm(a, one, a_eq_1); // Eq one a
+
+                let one_b = d.mul(one, b);
+                let dvd_1_oneb = d.lemma(p.dvd_mul, &[one, b]); // dvd one (one*b)
+                let one_mul_b = d.lemma(p.one_mul, &[b]); // Eq (one*b) b
+                let dvd_1_b = transport_dvd_right(d, one, one_b, b, one_mul_b, dvd_1_oneb); // dvd one b
+                let branch_proof = transport_dvd_left(d, one, a, eq_1_a, b, dvd_1_b); // dvd a b
+                d.lam_fv(h2_fv, lt_a2_ty, branch_proof)
+            };
+
+            // Branch B2: 2 ≤ a. `exists_prime_dvd` supplies a prime `pw ∣ a`.
+            let branch_b2 = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let ex_proof = d.lemma(p.exists_prime_dvd, &[a, h2]);
+                let branch_proof = eliminate_prime_dvd(
+                    d,
+                    &p,
+                    a,
+                    target,
+                    ex_proof,
+                    &|d, pw, prime_pw, dvd_pw_a| {
+                        let hyp_at_pw = d.apply(hyp, &[pw]);
+                        let step1 = d.apply(hyp_at_pw, &[prime_pw]);
+                        let dvd_pwa_b = d.apply(step1, &[dvd_pw_a]); // dvd (pw*a) b
+
+                        let pw_a = d.mul(pw, a);
+                        let a_pw = d.mul(a, pw);
+                        let comm = d.lemma(p.mul_comm, &[pw, a]); // Eq (pw*a) (a*pw)
+                        let dvd_apw_b = transport_dvd_left(d, pw_a, a_pw, comm, b, dvd_pwa_b); // dvd (a*pw) b
+                        let dvd_a_apw = d.lemma(p.dvd_mul, &[a, pw]); // dvd a (a*pw)
+                        d.lemma(p.dvd_trans, &[a, a_pw, b, dvd_a_apw, dvd_apw_b]) // dvd a b
+                    },
+                );
+                d.lam_fv(h2_fv, le_2a_ty, branch_proof)
+            };
+
+            let body = or_cases(
+                d, &p, lt_a2_ty, le_2a_ty, target, branch_b1, branch_b2, dich2,
+            );
+            d.lam_fv(h1_fv, le_1a_ty, body)
+        };
+
+        let body = or_cases(d, &p, lt_a1_ty, le_1a_ty, target, branch_a, branch_b, dich1);
+        let proof = d.lam_fv(hyp_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}

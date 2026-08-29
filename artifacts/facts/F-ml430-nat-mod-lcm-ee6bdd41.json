@@ -4,27 +4,87 @@
   "title": "Mathlib v4.30 source proposition Nat.mod_lcm",
   "statement": "The proposition declared as `Nat.mod_lcm` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {m n a b : ℕ}, a ≡ b [MOD n] → a ≡ b [MOD m] → a ≡ b [MOD n.lcm m]",
-    "fragment": "Nat"
+    "language": "lean4",
+    "statement": "theorem Nat.mod_lcm : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x2 x3) -> ((x5 : AxNat.modEq x1 x2 x3) -> AxNat.modEq (AxNat.lcm x0 x1) x2 x3))))))",
+    "fragment": "Nat",
+    "free_symbols": ["x0", "x1", "x2", "x3", "x4", "x5"],
+    "kernel_theorem": "Nat.mod_lcm"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-add-left-cancel",
+    "F:nat-add-zero",
+    "F:nat-lcm-dvd",
+    "F:nat-le-total",
+    "F:nat-mod-eq-symm",
+    "F:nat-mod-eq-zero-iff-dvd",
+    "F:nat-mul-zero",
+    "F:nat-sub-add-cancel",
+    "F:nat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mod_lcm",
+      "kind": "kernel-term",
+      "supports": "a ≡ b [MOD n] and a ≡ b [MOD m] together imply a ≡ b [MOD lcm n m], unconditionally in n and m",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_lcm 2>/dev/null | grep -Ec '^Nat\\.mod_lcm[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. Unlike `Nat.crt_unique` (this prelude's other congruence-combination theorem), no `gcd n m = 1` hypothesis is needed: the divisibility combination step is `Nat.lcm_dvd : dvd n c -> dvd m c -> dvd (lcm n m) c`, which is already unconditional (unlike `coprime_mul_dvd`, which needs coprimality to rewrite `lcm n m` down to `n*m`). Route: `le_total x y` splits into the two orders; each order extracts `dvd n (sub y x)` and `dvd m (sub y x)` from the two congruences (the same `gap_dvd` step `crt_unique` uses), combines them with `lcm_dvd`, and repackages the result as `modEq (lcm n m) x y` (`crt_unique`'s `modeq_of_dvd_gap`); the `y <= x` branch flips both hypotheses and the conclusion through `mod_eq_symm`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed."
+    },
+    {
+      "id": "footprint-Nat.mod_lcm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    },
+    {
+      "id": "compute-Nat.mod_lcm",
+      "kind": "kernel-term",
+      "checkers": ["Kernel::infer", "Kernel::def_eq"],
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::mod_lcm_holds_at_a_concrete_instance_without_coprimality",
+      "notes": "Applies the theorem at n=4, m=6 (gcd 4 6 = 2, so `crt_unique` could not prove this instance) with x=1, y=13: 1 congruent to 13 mod 4 and mod 6, and lcm 4 6 computes to 12, so the theorem must admit modEq 12 1 13. NEGATIVE CONTROL: the identical proof term reused against modulus 5 (not lcm 4 6) is rejected by the kernel with a TypeMismatch/DeclarationValueMismatch.",
+      "supports": "the theorem genuinely combines two non-coprime moduli via their lcm, not merely their product"
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:least-common-multiple",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:modular-arithmetic",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.mod_lcm` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-singles",
+    "source": "statement-only extraction of `Nat.mod_lcm` from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.mod_lcm` (`crates/axeyum-lean-kernel/src/nat_prelude/lcm.rs`) and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
         "what": "the theorem declaration `Nat.mod_lcm`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
         "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted, and this project's proof is independently constructed"
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "formal.statement is the actual kernel-core `render_lean` output for `Nat.mod_lcm`, not transcribed by hand. `depends_on` is `theorem_dependency_inventory`'s reported direct theorem dependencies, restricted to the ones that already carry a fact ledger entry (all eleven do here). The proof reuses `crt.rs`'s private `gap_dvd`/`modeq_of_dvd_gap` helpers (widened to `pub(super)` for this purpose, since the gap-extraction/repackaging steps do not depend on how the two divisibility facts were combined) rather than duplicating that construction."
 }

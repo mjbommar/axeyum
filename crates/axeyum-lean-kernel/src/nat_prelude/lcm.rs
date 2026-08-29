@@ -65,6 +65,7 @@
 
 use super::NatPrelude;
 use super::bezout::bezout_elim;
+use super::crt::{gap_dvd, modeq_of_dvd_gap};
 use super::helpers::{transport_dvd_left, transport_dvd_right};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
@@ -1119,4 +1120,104 @@ fn dvd_intro(
     let intro_name = d.prelude().logic.exists_intro;
     let intro = d.kernel().const_(intro_name, vec![one]);
     d.apply(intro, &[nat, predicate, witness, eq_proof])
+}
+
+/// Given `hle : Le x y`, `hn : modEq n x y`, `hm : modEq m x y`, build a proof
+/// of `modEq (lcm n m) x y`.
+///
+/// Closes ledger fact `F:ml430-nat-mod-lcm`: `modEq n a b ∧ modEq m a b →
+/// modEq (lcm n m) a b`, **unconditionally** in `n`/`m` — unlike
+/// `crt.rs`'s `crt_unique`, no `gcd n m = 1` hypothesis is needed, because
+/// the divisibility combination step here is [`super::lcm::declare_lcm_dvd`]'s
+/// `lcm_dvd : dvd n c → dvd m c → dvd (lcm n m) c`, which is already
+/// unconditional (unlike `coprime_mul_dvd`, which needs coprimality to
+/// rewrite `lcm n m` down to `n*m`). Route: extract `dvd n (sub y x)` and
+/// `dvd m (sub y x)` from the two congruences via `crt.rs`'s `gap_dvd`,
+/// combine with `lcm_dvd`, and repackage via `crt.rs`'s `modeq_of_dvd_gap`
+/// — the same two helpers `crt_le` uses, reused here because the
+/// gap-extraction/repackaging steps do not depend on how the two
+/// divisibility facts were combined.
+#[allow(clippy::too_many_arguments)]
+fn mod_lcm_le(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n: ExprId,
+    m: ExprId,
+    x: ExprId,
+    y: ExprId,
+    hle: ExprId,
+    hn: ExprId,
+    hm: ExprId,
+) -> ExprId {
+    let p = *p;
+    let dvd_n_gap = gap_dvd(d, &p, n, x, y, hle, hn);
+    let dvd_m_gap = gap_dvd(d, &p, m, x, y, hle, hm);
+    let gap = d.sub(y, x);
+    let dvd_lcm_gap = d.lemma(p.lcm_dvd, &[n, m, gap, dvd_n_gap, dvd_m_gap]); // dvd (lcm n m) gap
+    let lcm_nm = d.const_app(p.lcm, &[n, m]);
+    modeq_of_dvd_gap(d, &p, lcm_nm, x, y, hle, dvd_lcm_gap)
+}
+
+/// `Nat.mod_lcm : ∀ n m x y, modEq n x y → modEq m x y → modEq (lcm n m) x y`
+/// — combining two congruences into their lcm's, unconditionally. `le_total x
+/// y` splits into the two orders, mirroring `crt_unique`'s own case split
+/// exactly; the `y ≤ x` branch flips both hypotheses and the conclusion
+/// through `mod_eq_symm`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_mod_lcm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let anon = d.anon_name();
+    d.theorem(p.mod_lcm, 4, &|d, values| {
+        let (n, m, x, y) = (values[0], values[1], values[2], values[3]);
+
+        let hn_ty = d.mod_eq(n, x, y);
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+
+        let hm_ty = d.mod_eq(m, x, y);
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+
+        let lcm_nm = d.const_app(p.lcm, &[n, m]);
+        let target = d.mod_eq(lcm_nm, x, y);
+
+        let le_xy = d.le(x, y);
+        let le_yx = d.le(y, x);
+        let total = d.lemma(p.le_total, &[x, y]); // Or (Le x y) (Le y x)
+        let total_ty = d.const_app(p.logic.or, &[le_xy, le_yx]);
+        let motive = d.kernel().lam(anon, total_ty, target, BinderInfo::Default);
+
+        let left_minor = {
+            let hle_fv = d.fresh_fvar();
+            let hle = d.kernel().fvar(hle_fv);
+            let body = mod_lcm_le(d, &p, n, m, x, y, hle, hn, hm);
+            d.lam_fv(hle_fv, le_xy, body)
+        };
+        let right_minor = {
+            let hle_fv = d.fresh_fvar();
+            let hle = d.kernel().fvar(hle_fv); // Le y x
+            let hn_yx = d.lemma(p.mod_eq_symm, &[n, x, y, hn]); // modEq n y x
+            let hm_yx = d.lemma(p.mod_eq_symm, &[m, x, y, hm]); // modEq m y x
+            let proof_yx = mod_lcm_le(d, &p, n, m, y, x, hle, hn_yx, hm_yx); // modEq lcm_nm y x
+            let body = d.lemma(p.mod_eq_symm, &[lcm_nm, y, x, proof_yx]); // modEq lcm_nm x y
+            d.lam_fv(hle_fv, le_yx, body)
+        };
+
+        let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+        let case_proof = d.apply(
+            or_rec,
+            &[le_xy, le_yx, motive, left_minor, right_minor, total],
+        );
+
+        let with_hm = d.lam_fv(hm_fv, hm_ty, case_proof);
+        let proof = d.lam_fv(hn_fv, hn_ty, with_hm);
+
+        let hm_to_target = d.arrow(hm_ty, target);
+        let stmt = d.arrow(hn_ty, hm_to_target);
+        (stmt, proof)
+    })?;
+    Ok(())
 }

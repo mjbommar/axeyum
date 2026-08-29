@@ -676,6 +676,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_of_dvd_right,
         p.coprime_of_dvd,
         p.coprime_of_forall_prime_dvd,
+        p.dvd_of_forall_prime_mul_dvd,
         p.prime_dvd_iff_not_coprime,
         p.coprime_add_self_right,
         p.coprime_self_add_right,
@@ -810,6 +811,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.exists_prime_factorization,
         p.coprime_mul_dvd,
         p.crt_unique,
+        p.mod_lcm,
         p.pow_half_split,
         p.even_or_odd,
         p.pow_sq_aux_eq_pow,
@@ -6256,7 +6258,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 441,
+        85 + 443,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8533,6 +8535,149 @@ fn crt_unique_holds_at_a_concrete_instance() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `Nat.mod_lcm` (`lcm.rs`) at a concrete instance with `gcd n m != 1` --
+/// the case `crt_unique` cannot handle, since it needs coprimality to
+/// rewrite `lcm n m` down to `n*m`: `n=4, m=6` (`gcd 4 6 = 2`), `x=1, y=13`.
+/// `13 - 1 = 12`, `12 = 4*3` and `12 = 6*2`, so both congruences hold and
+/// `lcm 4 6 = 12` should give `modEq 12 1 13`. NEGATIVE CONTROL: the same
+/// proof term reused against a WRONG modulus (`5`, not `lcm 4 6`) must be
+/// rejected.
+#[test]
+fn mod_lcm_holds_at_a_concrete_instance_without_coprimality() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let zero = f.zero();
+    let thirteen = f.num(13);
+    let twelve = f.num(12);
+
+    let lcm_46 = f.const_app(p.lcm, &[four, six]);
+    assert!(f.k.def_eq(lcm_46, twelve), "lcm 4 6 must compute to 12");
+
+    // x=1 ≡ y=13 (mod 4): 1 + 4*3 = 13 + 4*0.
+    let hn = f.concrete_mod_eq(four, one, thirteen, three, zero);
+    // x=1 ≡ y=13 (mod 6): 1 + 6*2 = 13 + 6*0.
+    let hm = f.concrete_mod_eq(six, one, thirteen, two, zero);
+
+    let proof = f.lemma(p.mod_lcm, &[four, six, one, thirteen, hn, hm]);
+    let target = f.mod_eq(lcm_46, one, thirteen);
+    let name = f.name("one_mod_thirteen_via_mod_lcm");
+    f.declare_theorem(name, target, proof).unwrap_or_else(|e| {
+        panic!(
+            "mod_lcm at n=4,m=6,x=1,y=13 should admit modEq (lcm 4 6) 1 13: {}",
+            f.explain(&e)
+        )
+    });
+
+    // NEGATIVE CONTROL: the very same proof term against a WRONG modulus
+    // (5, not lcm 4 6 = 12) must be rejected.
+    let five = f.num(5);
+    let wrong_ty = f.mod_eq(five, one, thirteen);
+    let wrong_name = f.name("one_mod_thirteen_five_via_mod_lcm_forgery");
+    let error = f
+        .declare_theorem(wrong_name, wrong_ty, proof)
+        .expect_err("mod_lcm's witness for modulus 12 must not satisfy modulus 5");
+    assert!(matches!(
+        error,
+        KernelError::TypeMismatch { .. } | KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    assert!(
+        f.k.axiom_footprint(p.mod_lcm).is_empty(),
+        "Nat.mod_lcm must rest on zero axioms"
+    );
+}
+
+/// Mirrors `primes.rs`'s private `prime_condition` inline predicate
+/// (`2 ≤ x ∧ ∀ c, c ∣ x → c = 1 ∨ c = x`), rebuilt here because that helper
+/// is `fn`-private to its own file.
+fn prime_condition_for_test(f: &mut Fixture, x: ExprId) -> ExprId {
+    let nat = f.nat_ty();
+    let two = f.num(2);
+    let unit = f.num(1);
+    let lower = f.le(two, x);
+    let c_fv = f.fresh_fvar();
+    let c = f.kernel().fvar(c_fv);
+    let hypothesis = f.dvd(c, x);
+    let trivial = f.eq(c, unit);
+    let whole = f.eq(c, x);
+    let disjunction = f.const_app(f.p.logic.or, &[trivial, whole]);
+    let body = f.arrow(hypothesis, disjunction);
+    let divisors = f.pi_fv(c_fv, nat, body);
+    f.const_app(f.p.logic.and, &[lower, divisors])
+}
+
+/// `Nat.dvd_of_forall_prime_mul_dvd` (`primes.rs`) at the concrete vacuous
+/// instance `a=0, b=0`: the hypothesis `∀ k, prime_condition k → dvd k 0 →
+/// dvd (mul k 0) 0` is dischargeable regardless of `k` (`mul k 0` always
+/// computes to `0`, and `dvd 0 0` holds via reflexivity), and this exercises
+/// the theorem's real `a = 0` branch -- the hypothesis IS applied at `k = 2`
+/// internally, not skipped. NEGATIVE CONTROL: the very same proof term
+/// reused against `dvd 0 1` (false: `0` does not divide `1`) must be
+/// rejected.
+#[test]
+fn dvd_of_forall_prime_mul_dvd_holds_at_a_concrete_vacuous_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let zero = f.zero();
+
+    let k_fv = f.fresh_fvar();
+    let k = f.kernel().fvar(k_fv);
+    let prime_k_ty = prime_condition_for_test(&mut f, k);
+    let dvd_k_zero_ty = f.dvd(k, zero);
+    let k_zero = f.mul(k, zero);
+
+    let mul_zero_k = f.lemma(p.mul_zero, &[k]); // Eq (mul k zero) zero
+    let eq_zero_kzero = f.symm(k_zero, zero, mul_zero_k); // Eq zero (mul k zero)
+    let dvd_zero_zero = f.lemma(p.dvd_refl, &[zero]); // dvd zero zero
+    // `transport_dvd_left`'s body, inlined: it is `fn`-private to `NatDev`
+    // and `Fixture` (a downstream consumer, deliberately not a `NatDev`)
+    // cannot call it, so the `Eq.rec` motive is rebuilt here directly.
+    let motive = f.eq_motive(zero, &|f, candidate| f.dvd(candidate, zero));
+    let body_inner = f.transport(zero, motive, dvd_zero_zero, k_zero, eq_zero_kzero); // dvd (mul k zero) zero
+
+    let dvd_fv = f.fresh_fvar();
+    let with_dvd = f.lam_fv(dvd_fv, dvd_k_zero_ty, body_inner);
+    let prime_fv = f.fresh_fvar();
+    let with_prime = f.lam_fv(prime_fv, prime_k_ty, with_dvd);
+    let hyp = f.lam_fv(k_fv, nat, with_prime);
+
+    let proof = f.lemma(p.dvd_of_forall_prime_mul_dvd, &[zero, zero, hyp]);
+    let target = f.dvd(zero, zero);
+    let name = f.name("zero_dvd_zero_via_dvd_of_forall_prime_mul_dvd");
+    f.declare_theorem(name, target, proof).unwrap_or_else(|e| {
+        panic!(
+            "dvd_of_forall_prime_mul_dvd at a=0,b=0 should admit dvd 0 0: {}",
+            f.explain(&e)
+        )
+    });
+
+    // NEGATIVE CONTROL: the very same proof term against `dvd 0 1` (false)
+    // must be rejected.
+    let one = f.num(1);
+    let wrong_ty = f.dvd(zero, one);
+    let wrong_name = f.name("zero_dvd_one_via_dvd_of_forall_prime_mul_dvd_forgery");
+    let error = f
+        .declare_theorem(wrong_name, wrong_ty, proof)
+        .expect_err("dvd_of_forall_prime_mul_dvd's witness for dvd 0 0 must not satisfy dvd 0 1");
+    assert!(matches!(
+        error,
+        KernelError::TypeMismatch { .. } | KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    assert!(
+        f.k.axiom_footprint(p.dvd_of_forall_prime_mul_dvd)
+            .is_empty(),
+        "Nat.dvd_of_forall_prime_mul_dvd must rest on zero axioms"
+    );
 }
 
 /// `Nat.cantor_diagonal` applies at a concrete `f := Nat.beq`, and — the part

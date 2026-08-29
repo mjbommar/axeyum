@@ -230,7 +230,7 @@ use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
-    declare_lcm_comm, declare_lcm_dvd,
+    declare_lcm_comm, declare_lcm_dvd, declare_mod_lcm,
 };
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
@@ -253,12 +253,12 @@ use primes::{
     declare_coprime_of_forall_prime_dvd, declare_coprime_of_lt_prime, declare_coprime_one_iff,
     declare_coprime_or_dvd_of_prime, declare_coprime_primes, declare_coprime_self_add_left,
     declare_coprime_self_add_right, declare_coprime_symmetric, declare_coprime_two_left,
-    declare_coprime_two_right, declare_dvd_lcm_of_dvd, declare_dvd_of_lcm_dvd, declare_euclid,
-    declare_five_le_of_ne_two_of_ne_three, declare_not_coprime_zero_zero,
-    declare_not_prime_of_dvd_of_ne, declare_prime_dvd_iff_not_coprime,
-    declare_prime_dvd_mul_of_dvd_ne, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
-    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes,
-    declare_succ_pred_prime,
+    declare_coprime_two_right, declare_dvd_lcm_of_dvd, declare_dvd_of_forall_prime_mul_dvd,
+    declare_dvd_of_lcm_dvd, declare_euclid, declare_five_le_of_ne_two_of_ne_three,
+    declare_not_coprime_zero_zero, declare_not_prime_of_dvd_of_ne,
+    declare_prime_dvd_iff_not_coprime, declare_prime_dvd_mul_of_dvd_ne,
+    declare_prime_dvd_of_dvd_pow, declare_prime_even_iff, declare_prime_not_dvd_mul,
+    declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
 use rec_agreement::{declare_land_fuel_irrelevance_all, declare_rec_agreement_all};
 use rectangle::declare_rectangle;
@@ -1117,6 +1117,10 @@ pub struct NatPrelude {
     /// dvd k n → dvd k one) → gcd m n = one`. Closes ledger fact
     /// `F:ml430-nat-coprime-of-dvd`.
     pub coprime_of_forall_prime_dvd: NameId,
+    /// `Nat.dvd_of_forall_prime_mul_dvd : ∀ a b, (∀ k, prime_condition k →
+    /// dvd k a → dvd (mul k a) b) → dvd a b`. Closes ledger fact
+    /// `F:ml430-nat-dvd-of-forall-prime-mul-dvd`.
+    pub dvd_of_forall_prime_mul_dvd: NameId,
     /// `Nat.coprime_self_add_right : ∀ m n, Iff (Eq (gcd m (add m n)) one)
     /// (Eq (gcd m n) one)` — [`coprime_add_self_right`](Self::coprime_add_self_right)
     /// with `m`/`n`'s sum reordered via `add_comm`: the only difference is
@@ -2084,6 +2088,13 @@ pub struct NatPrelude {
     /// `Int.crt_exists` (`int_prelude/crt.rs`) already proves it over ℤ,
     /// axiom-free.
     pub crt_unique: NameId,
+    /// `Nat.mod_lcm : ∀ n m x y, modEq n x y → modEq m x y →
+    ///   modEq (lcm n m) x y` — combining two congruences into their lcm's,
+    /// **unconditionally** (no coprimality hypothesis, unlike
+    /// [`crt_unique`](Self::crt_unique)): the divisibility combination step
+    /// is [`lcm_dvd`](Self::lcm_dvd), which is already unconditional.
+    /// Closes ledger fact `F:ml430-nat-mod-lcm`.
+    pub mod_lcm: NameId,
     // --- exponentiation by squaring (`powsq.rs`) -----------------------------
     /// `Nat.powSqAux : Nat → Nat → Nat → Nat`, `powSqAux fuel b e`: structural
     /// `Nat.rec` on `fuel` (the only structural parameter — the true
@@ -2990,6 +3001,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_add_self_right: kernel.name_str(nat, "coprime_add_self_right"),
             coprime_of_dvd: kernel.name_str(nat, "coprime_of_dvd"),
             coprime_of_forall_prime_dvd: kernel.name_str(nat, "coprime_of_forall_prime_dvd"),
+            dvd_of_forall_prime_mul_dvd: kernel.name_str(nat, "dvd_of_forall_prime_mul_dvd"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
             not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
@@ -3174,6 +3186,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             exists_prime_factorization: kernel.name_str(nat, "exists_prime_factorization"),
             coprime_mul_dvd: kernel.name_str(nat, "coprime_mul_dvd"),
             crt_unique: kernel.name_str(nat, "crt_unique"),
+            mod_lcm: kernel.name_str(nat, "mod_lcm"),
             pow_sq_aux: kernel.name_str(nat, "powSqAux"),
             pow_sq: kernel.name_str(nat, "powSq"),
             pow_half_split: kernel.name_str(nat, "pow_half_split"),
@@ -3353,6 +3366,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Needs `succ_pred_of_pos`, just declared above: `prime_two`
         // (`two_divisor_dichotomy`) is not available before this point.
         declare_coprime_of_forall_prime_dvd(&mut d, &p)?;
+        declare_dvd_of_forall_prime_mul_dvd(&mut d, &p)?;
         declare_prime_pred_pos(&mut d, &p)?;
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
@@ -3401,6 +3415,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_pigeonhole_p_all(&mut d, &p)?;
         declare_exists_prime_factorization(&mut d, &p)?;
         declare_crt(&mut d, &p)?;
+        // Needs `lcm_dvd` (declared much earlier by `declare_lcm_dvd`) and
+        // `gap_dvd`/`modeq_of_dvd_gap` (`crt.rs`, just declared above via
+        // `declare_crt`'s `mod_eq`/`sub_add_cancel` dependencies).
+        declare_mod_lcm(&mut d, &p)?;
         declare_prime_dvd_mul_of_dvd_ne(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;
         // Needs `Nat.even_or_odd`, just declared by `declare_powsq_all` above.

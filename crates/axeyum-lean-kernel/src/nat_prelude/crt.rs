@@ -116,7 +116,10 @@ pub(super) fn declare_coprime_mul_dvd(
 /// modulus*v`, and repackages that as `modEq modulus (sub y x) zero`'s own
 /// balanced witnesses `(v, u)` — closed by `mod_eq_zero_iff_dvd`'s forward
 /// direction, unconditional in `modulus`.
-fn gap_dvd(
+///
+/// `pub(super)`: also used by [`super::lcm::declare_mod_lcm`], which needs
+/// the identical modulus-agnostic gap-extraction step.
+pub(super) fn gap_dvd(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     modulus: ExprId,
@@ -224,7 +227,10 @@ fn gap_dvd(
 /// `modEq modulus x y` — the converse construction to [`gap_dvd`], read
 /// forward: `sub y x = modulus*q` rewrites `y = x + modulus*q`, which is
 /// exactly `modEq modulus x y`'s balanced form at witnesses `(q, zero)`.
-fn modeq_of_dvd_gap(
+///
+/// `pub(super)`: also used by [`super::lcm::declare_mod_lcm`] to repackage
+/// the `lcm`-combined divisibility back into a `modEq`.
+pub(super) fn modeq_of_dvd_gap(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     modulus: ExprId,
