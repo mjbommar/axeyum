@@ -8,10 +8,36 @@
     "statement": "∀ {m n : ℤ}, Even (m + n) ↔ (Odd m ↔ Odd n)",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.even_add_prime",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.even_add'` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`Int.even_add'` in `crates/axeyum-lean-kernel/src/int_prelude/parity.rs` (`declare_even_add_prime`, kernel name `even_add'` via the same apostrophe-suffix convention as `Nat.bitwise_bit'`). Confirmed a DIFFERENT proposition from `F:ml430-int-even-add-3c4536e3` (`Int.even_add`) by reading both Mathlib source files directly (`Mathlib/Algebra/Group/Int/Even.lean` for `even_add`, `Mathlib/Algebra/Ring/Int/Parity.lean` for `even_add'`), per the prior lane's finding. Shares `declare_even_add`'s outer case-split and additive-`emod` machinery (`even_add_family_stmt_and_proof`, `modeq_add`); the only difference is the inner predicate (`Odd` via `odd_fact`/`odd_pred` instead of `Even` via `even_fact`/`even_pred`)."
+    },
+    {
+      "id": "footprint-Int.even_add_prime",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.even_add 2>/dev/null | /usr/bin/grep -xFc $'integer\\tInt.even_add\\'\\t0\\t')\" -ge 1",
+      "notes": "The matched row is `integer<TAB>Int.even_add'<TAB>0<TAB>` with an EMPTY trailing footprint column, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Uses `/usr/bin/grep` explicitly (not the interactive `ugrep` alias) and ANSI-C-quoted literal tabs; the `-xF` exact-line grep matters here because the CLI's own name-argument filter is a prefix match (`Int.even_add` alone also returns this row and `Int.even_add_one`'s). Verified to pass for real (count 1) and to fail on a mutated footprint (`...\\t1\\t`, count 0) and a nonexistent name (count 0). Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED via the `int-emod-additive` lane, 2026-08-29, as `Int.even_add'` -- axiom-free, statement identical to Mathlib's (confirmed a genuinely different proposition from `Int.even_add` by reading Mathlib source directly). Left `open` by the `int-parity-two` lane pending an additive compatibility law for `emod`.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
