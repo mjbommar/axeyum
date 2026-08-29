@@ -11,7 +11,9 @@ things more expensive without making the ledger truer.
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -252,6 +254,310 @@ class TheConstructedCarriersAreEnforcedToo(unittest.TestCase):
         `_NS`."""
         found = DD.THEOREM_RE.search("nat_theorem_inventory -- AxReal.add_comm")
         self.assertEqual(found.group(1), "AxReal.add_comm")
+
+
+def write_fact_file(
+    path: pathlib.Path,
+    ident: str,
+    theorem: str,
+    depends_on_literal: str,
+    extra_before: str = "",
+) -> None:
+    """Write a fact file with `depends_on` written EXACTLY as
+    `depends_on_literal` (any valid JSON array text -- single-line, `[]`, or a
+    multi-line indented block), so tests can pin the surrounding formatting
+    and check it survives a patch untouched."""
+    path.write_text(
+        "{\n"
+        f'  "schema_version": 1,\n'
+        f'  "id": {json.dumps(ident)},\n'
+        f'  "title": "test fixture",\n'
+        + extra_before
+        + f'  "epistemic_status": "proved",\n'
+        f'  "external_status": "proved",\n'
+        f'  "depends_on": {depends_on_literal},\n'
+        f'  "proof_route": "kernel-lean",\n'
+        f'  "evidence": [\n'
+        f'    {{\n'
+        f'      "id": {json.dumps(f"kernel-{theorem}")},\n'
+        f'      "kind": "kernel-term",\n'
+        f'      "checker_command": {json.dumps(f"nat_theorem_inventory -- {theorem}")}\n'
+        f'    }}\n'
+        f'  ]\n'
+        "}\n",
+        encoding="utf-8",
+    )
+
+
+class MissingEdgesByFactMatchesEvaluate(unittest.TestCase):
+    """`--fix` must add exactly what `evaluate` would otherwise report as a
+    failure -- never more, never less. The two traversals share `_kernel_index`
+    but recombine its output differently (per-message vs. per-fact-set), so
+    this pins them to agree on the total edge count."""
+
+    def test_edge_totals_agree_between_the_two_traversals(self) -> None:
+        facts = {
+            "F:a": fact("F:a", r"Nat\.mul_one"),
+            "F:b": fact("F:b", r"Nat\.zero_add"),
+            "F:c": fact("F:c", r"Nat\.add_comm"),
+        }
+        graph = {
+            "Nat.mul_one": ["Nat.zero_add", "Nat.add_comm"],
+            "Nat.zero_add": [],
+            "Nat.add_comm": [],
+        }
+        failures, stats = DD.evaluate(facts, graph)
+        missing = DD.missing_edges_by_fact(facts, graph)
+        self.assertEqual(stats["missing_edges"], sum(len(v) for v in missing.values()))
+        self.assertEqual(len(failures), sum(len(v) for v in missing.values()))
+
+    def test_a_fact_does_not_need_itself_even_if_the_graph_says_so(self) -> None:
+        """A theorem cannot be its own dependency in this ledger's accounting
+        -- `needed == ident` is explicitly excluded in both traversals."""
+        facts = {"F:a": fact("F:a", r"Nat\.mul_one")}
+        graph = {"Nat.mul_one": ["Nat.mul_one"]}
+        missing = DD.missing_edges_by_fact(facts, graph)
+        self.assertEqual(missing, {})
+
+    def test_nothing_missing_yields_an_empty_mapping(self) -> None:
+        facts = {
+            "F:a": fact("F:a", r"Nat\.mul_one", ["F:b"]),
+            "F:b": fact("F:b", r"Nat\.zero_add"),
+        }
+        graph = {"Nat.mul_one": ["Nat.zero_add"], "Nat.zero_add": []}
+        self.assertEqual(DD.missing_edges_by_fact(facts, graph), {})
+
+
+class PatchDependsOnPreservesEverythingElse(unittest.TestCase):
+    """Surgical text substitution, never a JSON re-dump: a lane tried the
+    re-dump on 2026-08-29, watched it reformat unrelated compact arrays
+    across the file, and reverted before committing. Every guard here is
+    about NOT touching anything but the `depends_on` array's own bytes."""
+
+    def test_the_regex_stops_at_the_first_closing_bracket_never_the_last(
+        self,
+    ) -> None:
+        """The `[^\\[\\]]*` non-nesting class is what makes the array span
+        exact rather than approximate. A greedy `.*` would still match on
+        every committed multi-line file (`.` does not cross the newline
+        `depends_on` always has before its own closing `]`), so only a
+        same-line adversarial case exercises the difference."""
+        text = '{"depends_on": ["F:a"], "other": [1,2,3]}'
+        found = DD._DEPENDS_ON_RE.search(text)
+        self.assertEqual(found.group(1), '["F:a"]')
+
+    def test_single_line_empty_array_gets_new_entries(self) -> None:
+        text = '{\n  "depends_on": [],\n  "other": "x"\n}\n'
+        patched = DD._patch_depends_on(text, ["F:b", "F:a"])
+        self.assertEqual(json.loads(patched)["depends_on"], ["F:a", "F:b"])
+        self.assertNotIn("\n", DD._DEPENDS_ON_RE.search(patched).group(1))
+
+    def test_single_line_nonempty_array_appends_in_sorted_order(self) -> None:
+        text = '{\n  "depends_on": ["F:a", "F:c"],\n  "other": "x"\n}\n'
+        patched = DD._patch_depends_on(text, ["F:b"])
+        self.assertEqual(json.loads(patched)["depends_on"], ["F:a", "F:c", "F:b"])
+
+    def test_multiline_array_keeps_its_own_entry_and_closing_indent(self) -> None:
+        text = (
+            '{\n'
+            '  "depends_on": [\n'
+            '        "F:int-add-assoc",\n'
+            '        "F:int-add-comm"\n'
+            '    ],\n'
+            '  "other": "unchanged"\n'
+            "}\n"
+        )
+        patched = DD._patch_depends_on(text, ["F:int-le-dest"])
+        self.assertEqual(
+            json.loads(patched)["depends_on"],
+            ["F:int-add-assoc", "F:int-add-comm", "F:int-le-dest"],
+        )
+        self.assertIn('\n        "F:int-le-dest"\n    ]', patched)
+
+    def test_a_field_already_satisfying_the_request_is_untouched_byte_for_byte(
+        self,
+    ) -> None:
+        """The false-positive control: asking to add something already
+        present must not rewrite the array at all -- not even to the same
+        semantic content in different bytes. The array deliberately has NO
+        space after its commas, which a reformat-via-`json.dumps` would add
+        back (`", "` is the module's own join separator) -- so this fails if
+        the no-op short-circuit is ever deleted, even though the reformatted
+        array would still parse to the same list."""
+        text = '{\n  "depends_on": ["F:a","F:b"],\n  "other": "x"\n}\n'
+        patched = DD._patch_depends_on(text, ["F:a"])
+        self.assertEqual(patched, text)
+
+    def test_raises_when_the_file_has_no_depends_on_array(self) -> None:
+        with self.assertRaises(ValueError):
+            DD._patch_depends_on('{\n  "other": "x"\n}\n', ["F:a"])
+
+    def test_only_the_depends_on_span_changes_everything_else_is_byte_identical(
+        self,
+    ) -> None:
+        """Mask the `depends_on` array out of both texts and require the rest
+        to match exactly -- the direct test of the constraint this whole
+        function exists to satisfy."""
+        text = (
+            '{\n'
+            '  "schema_version": 1,\n'
+            '  "id": "F:x",\n'
+            '  "depends_on": [\n'
+            '        "F:a"\n'
+            '    ],\n'
+            '  "evidence": [{"checker_command": "x [1, 2, 3] y"}]\n'
+            "}\n"
+        )
+        patched = DD._patch_depends_on(text, ["F:z"])
+
+        def masked(t: str) -> str:
+            return DD._DEPENDS_ON_RE.sub('"depends_on": MASK', t)
+
+        self.assertEqual(masked(text), masked(patched))
+        self.assertNotEqual(text, patched)
+
+
+class MainDispatchesTheFixFlag(unittest.TestCase):
+    """`--fix` is a branch in `main`, not a separate entry point -- so a
+    deleted dispatch line falls through to the read-only check, which never
+    writes and would leave this test's regressed file un-repaired."""
+
+    def test_main_with_fix_writes_the_missing_edge_and_returns_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_str:
+            tmp = pathlib.Path(tmp_str)
+            write_fact_file(tmp / "F-a.json", "F:a", r"Nat\.mul_one", "[]")
+            write_fact_file(tmp / "F-b.json", "F:b", r"Nat\.zero_add", "[]")
+
+            original_facts_dir = DD.FACTS
+            original_inventory = DD.inventory
+            try:
+                DD.FACTS = tmp
+                DD.inventory = lambda: {
+                    "Nat.mul_one": ["Nat.zero_add"],
+                    "Nat.zero_add": [],
+                    **{f"Nat.pad{i}": [] for i in range(140)},  # clear the floor
+                }
+                rc = DD.main(["--fix"])
+            finally:
+                DD.FACTS = original_facts_dir
+                DD.inventory = original_inventory
+
+            self.assertEqual(rc, 0)
+            a_data = json.loads((tmp / "F-a.json").read_text(encoding="utf-8"))
+            self.assertEqual(a_data["depends_on"], ["F:b"])
+
+    def test_main_without_fix_on_the_same_regression_reports_failure_only(
+        self,
+    ) -> None:
+        """The control: the identical regressed ledger, through the DEFAULT
+        (non-`--fix`) path, must fail without writing anything."""
+        with tempfile.TemporaryDirectory() as tmp_str:
+            tmp = pathlib.Path(tmp_str)
+            write_fact_file(tmp / "F-a.json", "F:a", r"Nat\.mul_one", "[]")
+            write_fact_file(tmp / "F-b.json", "F:b", r"Nat\.zero_add", "[]")
+            before = (tmp / "F-a.json").read_bytes()
+
+            original_facts_dir = DD.FACTS
+            original_inventory = DD.inventory
+            try:
+                DD.FACTS = tmp
+                DD.inventory = lambda: {
+                    "Nat.mul_one": ["Nat.zero_add"],
+                    "Nat.zero_add": [],
+                    **{f"Nat.pad{i}": [] for i in range(140)},
+                }
+                rc = DD.main(["--quiet"])
+            finally:
+                DD.FACTS = original_facts_dir
+                DD.inventory = original_inventory
+
+            self.assertEqual(rc, 1)
+            self.assertEqual((tmp / "F-a.json").read_bytes(), before)
+
+
+class FixWritesOnlyWhatIsMissing(unittest.TestCase):
+    """End-to-end `--fix`, over a scratch fact ledger (never the committed
+    one) so a broken mutant cannot touch what any other lane is compiling
+    against."""
+
+    def _facts_by_path(self, tmp: pathlib.Path):
+        return {
+            ident: (path, json.loads(path.read_text(encoding="utf-8")))
+            for ident, path in {
+                "F:a": tmp / "F-a.json",
+                "F:b": tmp / "F-b.json",
+            }.items()
+        }
+
+    def test_the_drifting_fact_is_patched_and_the_healthy_one_is_untouched(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp_str:
+            tmp = pathlib.Path(tmp_str)
+            write_fact_file(tmp / "F-a.json", "F:a", r"Nat\.mul_one", "[]")
+            write_fact_file(tmp / "F-b.json", "F:b", r"Nat\.zero_add", "[]")
+            healthy_bytes_before = (tmp / "F-b.json").read_bytes()
+
+            graph = {"Nat.mul_one": ["Nat.zero_add"], "Nat.zero_add": []}
+            original_facts_dir = DD.FACTS
+            try:
+                DD.FACTS = tmp
+                rc = DD.fix(self._facts_by_path(tmp), graph)
+            finally:
+                DD.FACTS = original_facts_dir
+
+            self.assertEqual(rc, 0)
+            a_data = json.loads((tmp / "F-a.json").read_text(encoding="utf-8"))
+            self.assertEqual(a_data["depends_on"], ["F:b"])
+            # The false-positive control: F:b needed nothing, so its file must
+            # be byte-for-byte untouched, not merely semantically equivalent.
+            self.assertEqual((tmp / "F-b.json").read_bytes(), healthy_bytes_before)
+
+    def test_a_fully_healthy_ledger_reports_nothing_to_fix_and_writes_nothing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp_str:
+            tmp = pathlib.Path(tmp_str)
+            write_fact_file(tmp / "F-a.json", "F:a", r"Nat\.mul_one", '["F:b"]')
+            write_fact_file(tmp / "F-b.json", "F:b", r"Nat\.zero_add", "[]")
+            before = {p.name: p.read_bytes() for p in tmp.glob("*.json")}
+
+            graph = {"Nat.mul_one": ["Nat.zero_add"], "Nat.zero_add": []}
+            original_facts_dir = DD.FACTS
+            try:
+                DD.FACTS = tmp
+                rc = DD.fix(self._facts_by_path(tmp), graph)
+            finally:
+                DD.FACTS = original_facts_dir
+
+            self.assertEqual(rc, 0)
+            after = {p.name: p.read_bytes() for p in tmp.glob("*.json")}
+            self.assertEqual(before, after)
+
+    def test_the_reload_self_check_fails_the_fix_if_a_patch_did_not_take(
+        self,
+    ) -> None:
+        """If `_patch_depends_on` is broken and silently fails to add the
+        edge it claims to, `fix` must not report success -- it re-reads its
+        own writes from disk and re-evaluates rather than trusting the
+        in-memory patch."""
+        with tempfile.TemporaryDirectory() as tmp_str:
+            tmp = pathlib.Path(tmp_str)
+            write_fact_file(tmp / "F-a.json", "F:a", r"Nat\.mul_one", "[]")
+            write_fact_file(tmp / "F-b.json", "F:b", r"Nat\.zero_add", "[]")
+
+            graph = {"Nat.mul_one": ["Nat.zero_add"], "Nat.zero_add": []}
+            original_facts_dir = DD.FACTS
+            original_patch = DD._patch_depends_on
+            try:
+                DD.FACTS = tmp
+                DD._patch_depends_on = lambda text, additional: text  # no-op mutant
+                rc = DD.fix(self._facts_by_path(tmp), graph)
+            finally:
+                DD.FACTS = original_facts_dir
+                DD._patch_depends_on = original_patch
+
+            self.assertEqual(rc, 1)
 
 
 if __name__ == "__main__":

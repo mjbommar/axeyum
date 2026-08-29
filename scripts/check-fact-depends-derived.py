@@ -182,9 +182,25 @@ def load() -> dict[str, dict[str, Any]]:
     }
 
 
-def evaluate(
-    facts: dict[str, dict[str, Any]], graph: dict[str, list[str]]
-) -> tuple[list[str], dict[str, Any]]:
+def load_with_paths() -> dict[str, tuple[pathlib.Path, dict[str, Any]]]:
+    """Like `load`, but keeps each fact's own file path -- `--fix` needs it to
+    patch the right file, and `load` alone throws that away."""
+    result: dict[str, tuple[pathlib.Path, dict[str, Any]]] = {}
+    for p in sorted(FACTS.glob("*.json")):
+        data = json.loads(p.read_text(encoding="utf-8"))
+        result[data["id"]] = (p, data)
+    return result
+
+
+def _kernel_index(
+    facts: dict[str, dict[str, Any]],
+) -> tuple[dict[str, dict[str, Any]], dict[str, str], list[str]]:
+    """`(kernel_facts, theorem -> owning fact, facts naming no theorem)`.
+
+    Shared by `evaluate` and `missing_edges_by_fact` so `--fix` adds exactly
+    what the check would otherwise report as a failure -- never more, never
+    less -- by construction rather than by keeping two traversals in sync.
+    """
     kernel_facts = {
         i: d
         for i, d in facts.items()
@@ -199,6 +215,13 @@ def evaluate(
             unnamed.append(ident)
         else:
             theorem_to_fact.setdefault(name, ident)
+    return kernel_facts, theorem_to_fact, unnamed
+
+
+def evaluate(
+    facts: dict[str, dict[str, Any]], graph: dict[str, list[str]]
+) -> tuple[list[str], dict[str, Any]]:
+    kernel_facts, theorem_to_fact, unnamed = _kernel_index(facts)
 
     failures: list[str] = []
     missing_edges = 0
@@ -229,6 +252,114 @@ def evaluate(
     return failures, stats
 
 
+def missing_edges_by_fact(
+    facts: dict[str, dict[str, Any]], graph: dict[str, list[str]]
+) -> dict[str, list[str]]:
+    """`fact id -> sorted fact ids its depends_on is missing`.
+
+    Same traversal as `evaluate`, collapsed from a message-per-edge to a
+    fact-id-set-per-fact, which is the shape `--fix` needs to patch a file
+    once instead of once per missing edge.
+    """
+    kernel_facts, theorem_to_fact, _unnamed = _kernel_index(facts)
+    result: dict[str, list[str]] = {}
+    for ident, data in kernel_facts.items():
+        name = theorem_of(data)
+        if name is None or name not in graph:
+            continue
+        declared = set(data.get("depends_on") or [])
+        needed_set: set[str] = set()
+        for used in graph[name]:
+            needed = theorem_to_fact.get(used)
+            if needed is None or needed == ident:
+                continue
+            if needed not in declared:
+                needed_set.add(needed)
+        if needed_set:
+            result[ident] = sorted(needed_set)
+    return result
+
+
+# Matches a fact file's single top-level `depends_on` array verbatim, brackets
+# included. Safe as a non-nesting `[^\[\]]*`: every `depends_on` entry is a
+# plain `F:...` string (checked over the whole committed ledger before this
+# regex was written -- no entry contains `[` or `]`), so the array never
+# nests and this is the exact span, not an approximation of it.
+_DEPENDS_ON_RE = re.compile(r'"depends_on":\s*(\[[^\[\]]*\])')
+
+
+def _patch_depends_on(text: str, additional: list[str]) -> str:
+    """Add `additional` fact ids to the file's OWN `depends_on` array via text
+    substitution -- never a JSON re-dump, which reformats unrelated compact
+    arrays elsewhere in the document (measured the day this was written; see
+    docs/research/11-design-review/2026-08-29-two-gaps-the-gate-sweep-exposed.md).
+
+    Preserves whatever style the array already uses: a single-line array
+    (including `[]`) stays single-line; a multi-line array keeps its own
+    entry indent and closing-bracket indent, read from the array itself
+    rather than assumed, since the committed ledger has dozens of distinct
+    indent widths across files written by different lanes' tools.
+    """
+    match = _DEPENDS_ON_RE.search(text)
+    if not match:
+        raise ValueError("no depends_on array found")
+    array_text = match.group(1)
+    current = json.loads(array_text)
+    new_items = [x for x in additional if x not in current]
+    if not new_items:
+        return text
+    merged = list(current) + sorted(new_items)
+    if "\n" not in array_text:
+        replacement = "[" + ", ".join(json.dumps(x) for x in merged) + "]"
+    else:
+        entry_indent_match = re.search(r"\[\s*\n([ \t]*)", array_text)
+        closing_indent_match = re.search(r"\n([ \t]*)\]\s*$", array_text)
+        entry_indent = entry_indent_match.group(1) if entry_indent_match else "    "
+        closing_indent = closing_indent_match.group(1) if closing_indent_match else ""
+        body = ",\n".join(f"{entry_indent}{json.dumps(x)}" for x in merged)
+        replacement = f"[\n{body}\n{closing_indent}]"
+    start, end = match.span(1)
+    return text[:start] + replacement + text[end:]
+
+
+def fix(facts_by_path: dict[str, tuple[pathlib.Path, dict[str, Any]]],
+        graph: dict[str, list[str]]) -> int:
+    """Patch every fact whose `depends_on` is missing an edge `evaluate` would
+    otherwise report, writing only the `depends_on` array of the files that
+    need it. Reloads from disk afterwards and re-runs `evaluate` as a
+    self-check: a malformed substitution is caught here, not by whoever next
+    reads these files.
+    """
+    facts = {ident: data for ident, (_p, data) in facts_by_path.items()}
+    missing = missing_edges_by_fact(facts, graph)
+    if not missing:
+        print("DEPENDS_DERIVED_FIX|nothing to fix")
+        return 0
+    total_edges = 0
+    for ident in sorted(missing):
+        path, _data = facts_by_path[ident]
+        text = path.read_text(encoding="utf-8")
+        new_text = _patch_depends_on(text, missing[ident])
+        if new_text == text:
+            continue
+        path.write_text(new_text, encoding="utf-8")
+        total_edges += len(missing[ident])
+        print(f"DEPENDS_DERIVED_FIX|{ident}|added={','.join(missing[ident])}")
+    print(f"DEPENDS_DERIVED_FIX|facts={len(missing)}|edges={total_edges}")
+
+    reloaded = {ident: data for ident, (_p, data) in load_with_paths().items()}
+    failures, _stats = evaluate(reloaded, graph)
+    if failures:
+        for failure in failures:
+            print(f"DEPENDS_DERIVED_ERROR|{failure}", file=sys.stderr)
+        print(
+            "DEPENDS_DERIVED_FIX_ERROR|fix did not close every edge -- see errors above",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def main(argv: list[str]) -> int:
     graph = inventory()
     if len(graph) < 100:
@@ -239,6 +370,8 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return 1
+    if "--fix" in argv:
+        return fix(load_with_paths(), graph)
     failures, stats = evaluate(load(), graph)
     if "--quiet" not in argv and stats["unnamed"]:
         print(
