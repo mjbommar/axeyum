@@ -62,6 +62,7 @@ mod env;
 mod expr;
 mod inductive;
 mod int_prelude;
+mod ipc_heyting;
 mod lean_export;
 mod lean_pp;
 mod level;
@@ -96,6 +97,9 @@ pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
+pub use ipc_heyting::{
+    IpcHeytingPrelude, NatPreludeHandle, build_ipc_heyting_prelude, pem_instance,
+};
 pub use lean_export::{
     AutoParamTypeNormalizationReport, EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata,
 };

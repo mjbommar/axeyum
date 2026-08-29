@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "id": "F:heyting-3-chain-refutes-excluded-middle",
+  "title": "The 3-element Gödel/Łukasiewicz Heyting chain refutes excluded middle",
+  "statement": "Represent the 3-element linearly ordered Heyting algebra {0, 1, 2} directly as Nat values, with join3 = max, and himp3 a b = 2 (top) if a <= b else b (the Gödel/relative-pseudocomplement implication), and not3 a := himp3 a 0. At the valuation p := 1, join3(1, not3(1)) = 1, which is NOT the algebra's top element 2. So 'p or not p', evaluated in this Heyting algebra at p := 1, is not valid.",
+  "formal": {
+    "language": "lean4",
+    "statement": "Not (Eq.{1} AxNat (join3 (AxNat.succ AxNat.zero) (not3 (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-ipc_heyting_join_not_ne_top",
+      "kind": "kernel-term",
+      "kernel_declaration": "ipc_heyting_join_not_ne_top",
+      "supports": "ipc_heyting_join_not_ne_top is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_heyting::tests::excluded_middle_countermodel_theorem_admits",
+      "notes": "Declared in crates/axeyum-lean-kernel/src/ipc_heyting.rs via declare_excluded_middle_countermodel, proved from Nat.ne_of_beq_eq_false applied to Eq.refl at Eq Bool (Nat.beq 1 2) Bool.false -- the kernel's own ι-reduction discharges the proof, and the SAME proof term is accepted at the stronger stated type only because join3(1, not3(1)) is independently definitionally 1. formal.statement is Kernel::render_lean of the admitted type, captured verbatim from a temporary eprintln! in this test (not transcribed by hand)."
+    },
+    {
+      "id": "compute-chain-operations",
+      "kind": "kernel-term",
+      "kernel_declaration": "meet3, join3, himp3, not3",
+      "supports": "The evaluation table for meet3/join3/himp3/not3 at small, discriminating concrete arguments (never a single symmetric pair) matches the module docs' definitions of the 3-element chain exactly.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_heyting::tests::chain_operations_compute_the_intended_values",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "meet3=min, join3=max, himp3=Gödel implication (top when a<=b, else b), not3(a)=himp3(a,0), all checked at every pairing of {0,1,2} that discriminates the three operations from each other."
+    },
+    {
+      "id": "non-vacuity-non-contradiction",
+      "kind": "kernel-term",
+      "kernel_declaration": "meet3, not3",
+      "supports": "The SAME-KIND positive control: at the SAME valuation p := 1 that refutes excluded middle, 'not (p and not p)' (the law of non-contradiction) DOES evaluate to top (2). The algebra rejects exactly the classically-but-not-intuitionistically-valid instance and accepts a genuinely IPC-valid one, which is what a real countermodel is supposed to do rather than reject everything.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_heyting::tests::non_contradiction_holds_at_the_same_valuation_that_refutes_excluded_middle",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "not3(meet3(1, not3(1))) = not3(0) = 2, computed and checked in-kernel."
+    },
+    {
+      "id": "footprint-ipc_heyting_join_not_ne_top",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- Kernel::axiom_footprint for this declaration is empty",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_heyting::tests::excluded_middle_countermodel_theorem_is_axiom_free",
+      "notes": "Reads Kernel::axiom_footprint(join_not_ne_top) directly (this kernel's #print axioms) and asserts it is empty, rather than inferring axiom-freedom from the absence of an Axiom variant in the source."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:intuitionism",
+      "relation": "about",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:excluded-middle",
+      "relation": "about",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:non-constructive-proof",
+      "relation": "related-to",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_ipc_heyting_prelude, lane logic-excluded-middle",
+    "source": "Standard result: the 3-element linearly ordered Gödel/Łukasiewicz Heyting algebra is a model of IPC in which excluded middle fails (see e.g. Rasiowa & Sikorski, or any Heyting-algebra-semantics treatment of IPC). Formalized here directly against Nat rather than as a Lean import.",
+    "prior_art": [
+      {
+        "citation": "Standard Heyting-algebra semantics for IPC; the 3-element Gödel chain as the smallest algebra separating IPC from classical propositional logic.",
+        "establishes": "That a finite linearly ordered Heyting algebra with more than 2 elements refutes excluded middle -- long settled."
+      }
+    ]
+  },
+  "notes": "This is a SCOPING SLICE toward F:excluded-middle-not-intuitionistic, not a proof of it, and does not close that fact. It is a purely SEMANTIC countermodel (a Heyting algebra + valuation at which p-or-not-p fails to reach top), built with no inductive derivation relation and no soundness theorem connecting derivability to this semantics. F:excluded-middle-not-intuitionistic is a SYNTACTIC claim (no natural-deduction derivation exists) and needs, in addition to this: (1) an inductive derivation relation Provable : Formula -> Prop encoding IPC's natural-deduction rules, and (2) a soundness theorem (Provable f -> forall valuations, eval f = top) proved by induction on the derivation. Neither exists in this kernel as of this lane. See crates/axeyum-lean-kernel/src/ipc_heyting.rs module docs for the full decomposition and docs/plan/status/273-logic-excluded-middle.md for the handoff.\n\nThis file also declares a Formula AST (crates/axeyum-lean-kernel/src/ipc_heyting.rs, via Kernel::add_recursive_datatype_family -- the same combinator string_prelude's Str uses) with constructors var/bot/and_/or_/imp over a Nat carrier, and pem_instance builds the closed term for 'p or not p' as Or (Var 0) (Imp (Var 0) Bot); this fact's evidence does not depend on the Formula type (the countermodel computation works directly in Nat), but the AST is landed infrastructure for the next slice (the derivation relation) and is checked separately by crates/axeyum-lean-kernel/src/ipc_heyting.rs's own test suite (ipc_heyting_prelude_builds, pem_instance_type_checks_as_formula).\n\nThe classical/Boolean 2-element algebra {0,1} would NOT separate the two logics -- p-or-not-p is trivially valid there -- which is why a 3-valued (or Kripke) structure is required rather than the simpler 2-valued one, and why this cannot be phrased as an SMT-route (Bool-sort) result the way F:excluded-middle is."
+}
