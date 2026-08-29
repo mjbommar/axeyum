@@ -283,7 +283,9 @@ fn min_fac_aux_minimal_stmt(d: &mut NatDev<'_>, p: &NatPrelude, fuel: ExprId) ->
     let mc_ty = min_condition(d, &p, n, candidate);
     let searched = min_fac_aux(d, &p, fuel, n, candidate);
     let concl = min_condition(d, &p, n, searched);
-    let body = d.arrow(ge2_ty, d.arrow(eqn_ty, d.arrow(mc_ty, concl)));
+    let inner = d.arrow(mc_ty, concl);
+    let inner2 = d.arrow(eqn_ty, inner);
+    let body = d.arrow(ge2_ty, inner2);
     let with_candidate = d.pi_fv(candidate_fv, nat, body);
     d.pi_fv(n_fv, nat, with_candidate)
 }
@@ -395,7 +397,8 @@ fn min_fac_aux_minimal_step(d: &mut NatDev<'_>, p: &NatPrelude, j: ExprId, ih: E
     let ge2_ty = d.le(two, candidate);
     let ge2_fv = d.fresh_fvar();
     let ge2 = d.kernel().fvar(ge2_fv);
-    let eqn_ty = d.eq(d.add(candidate, sj), n);
+    let candidate_plus_sj = d.add(candidate, sj);
+    let eqn_ty = d.eq(candidate_plus_sj, n);
     let eqn_fv = d.fresh_fvar();
     let eqn = d.kernel().fvar(eqn_fv);
     let mc_ty = min_condition(d, &p, n, candidate);
@@ -416,7 +419,10 @@ fn min_fac_aux_minimal_step(d: &mut NatDev<'_>, p: &NatPrelude, j: ExprId, ih: E
         d.transport(candidate, motive, ge2, spc, eq_candidate_spc)
     };
     let eqn_spc = {
-        let motive = d.eq_motive(candidate, &|d, x| d.eq(d.add(x, sj), n));
+        let motive = d.eq_motive(candidate, &|d, x| {
+            let x_plus_sj = d.add(x, sj);
+            d.eq(x_plus_sj, n)
+        });
         d.transport(candidate, motive, eqn, spc, eq_candidate_spc)
     };
     let mc_spc = {
@@ -452,7 +458,8 @@ fn min_fac_aux_minimal_step(d: &mut NatDev<'_>, p: &NatPrelude, j: ExprId, ih: E
         let succ_add_spc_j = d.lemma(p.succ_add, &[spc, j]);
         let combined = {
             let a = d.add(ssp, j);
-            let b = d.succ(d.add(spc, j));
+            let spc_plus_j = d.add(spc, j);
+            let b = d.succ(spc_plus_j);
             d.trans(a, b, n, succ_add_spc_j, eqn_spc)
         };
         let mc_ssp = min_condition_of_succ(d, &p, n, spc, mc_spc, not_divides_spc);
@@ -561,12 +568,14 @@ pub(super) fn declare_min_fac_minimal_of_two_le(
         let is_one = d.beq(n, one);
         let else_branch = d.bool_select_nat(is_one, one, searched);
         let full_body = d.bool_select_nat(is_zero, two, else_branch);
-        let outer = bool_select_congr(d, is_zero, d.bool_false(), is_zero_false, two, else_branch);
-        let inner = bool_select_congr(d, is_one, d.bool_false(), is_one_false, one, searched);
+        let false_value = d.bool_false();
+        let outer = bool_select_congr(d, is_zero, false_value, is_zero_false, two, else_branch);
+        let inner = bool_select_congr(d, is_one, false_value, is_one_false, one, searched);
         let unfold_eq = d.trans(full_body, else_branch, searched, outer, inner);
 
         // `min_condition(n, 2)`: vacuous, nothing is both `≥ 2` and `< 2`.
         let vacuous = {
+            let nat = d.nat_ty();
             let e_fv = d.fresh_fvar();
             let e = d.kernel().fvar(e_fv);
             let ge_ty = d.le(two, e);
@@ -585,7 +594,7 @@ pub(super) fn declare_min_fac_minimal_of_two_le(
             let body = absurd(d, &p, goal, contradiction);
             let with_lt = d.lam_fv(lt_fv, lt_ty, body);
             let with_ge = d.lam_fv(ge_fv, ge_ty, with_lt);
-            d.lam_fv(e_fv, d.nat_ty(), with_ge)
+            d.lam_fv(e_fv, nat, with_ge)
         };
 
         let ge2_2 = d.lemma(p.le_refl, &[two]);
@@ -597,7 +606,8 @@ pub(super) fn declare_min_fac_minimal_of_two_le(
         let motive = d.eq_motive(searched, &|d, x| min_condition(d, &p, n, x));
         let transported = d.transport(searched, motive, minimal_at_fuel, min_fac_n, rev);
 
-        let stmt = d.arrow(h2n_ty, transported_ty_placeholder(d, &p, n));
+        let concl_ty = transported_ty_placeholder(d, &p, n);
+        let stmt = d.arrow(h2n_ty, concl_ty);
         let proof = d.lam_fv(h2n_fv, h2n_ty, transported);
         (stmt, proof)
     })?;
@@ -630,7 +640,6 @@ pub(super) fn declare_coprime_of_lt_min_fac(
     let p = *p;
     d.theorem(p.coprime_of_lt_min_fac, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
-        let zero = d.zero();
         let one = d.num(1);
         let two = d.num(2);
 
@@ -643,7 +652,8 @@ pub(super) fn declare_coprime_of_lt_min_fac(
             let g = d.gcd(x, m);
             let one = d.num(1);
             let concl = d.eq(g, one);
-            d.arrow(ne_ty, d.arrow(lt_ty, concl))
+            let inner = d.arrow(lt_ty, concl);
+            d.arrow(ne_ty, inner)
         };
         let stmt = motive(d, n);
 
