@@ -758,6 +758,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient_prime,
         p.coprime_succ_self,
         p.totient_eq_zero,
+        p.count_range_succ_of_true,
+        p.count_range_le_of_le,
+        p.count_range_ge_two_of_two_witnesses,
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
@@ -1544,6 +1547,273 @@ fn totient_eq_zero_applies_at_zero_a_concrete_successor_and_symbolically() {
         f.k.infer_in(iff_n, &mut ctx)
             .expect("totient_eq_zero must apply at a free variable");
     assert!(f.k.def_eq(inferred_n, expected_n));
+}
+
+/// `Nat.countRange_succ_of_true` — the general "promote one witness" step
+/// extracted from `totient_eq_zero`'s own technique — at a concrete predicate
+/// (`fun k => beq k 0`, true only at `0`) applied at its own witness, AND at
+/// a genuinely free `f`/`k`/hypothesis pushed into an explicit
+/// `LocalContext` (the fully symbolic instantiation the general lemma was
+/// actually proved over).
+#[test]
+fn count_range_succ_of_true_applies_at_a_concrete_witness_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+    let pred_ty = f.arrow(nat, bool_ty);
+    let anon = f.anon_name();
+
+    // Concrete: `f := fun k => beq k 0`, witness `k = 0`.
+    let zero = f.zero();
+    let true_v = f.bool_true();
+    let f_concrete = {
+        let x_fv = f.fresh_fvar();
+        let x = f.k.fvar(x_fv);
+        let body = f.beq(x, zero);
+        f.lam_fv(x_fv, nat, body)
+    };
+    let f0 = f.apply(f_concrete, &[zero]);
+    assert!(f.k.def_eq(f0, true_v), "f 0 = beq 0 0 must reduce to true");
+    let hyp = f.bool_refl(true_v);
+
+    let one = f.num(1);
+    let cr_f_0 = f.const_app(p.count_range, &[f_concrete, zero]);
+    assert!(
+        f.k.def_eq(cr_f_0, zero),
+        "countRange f 0 must be 0 (no room)"
+    );
+    let succ_zero = f.succ(zero);
+    let cr_f_1 = f.const_app(p.count_range, &[f_concrete, succ_zero]);
+    assert!(
+        f.k.def_eq(cr_f_1, one),
+        "countRange f 1 must be 1 (the k=0 witness counts)"
+    );
+    // Negative control: the conclusion is NOT vacuous -- countRange f 1 is
+    // NOT 0.
+    assert!(!f.k.def_eq(cr_f_1, zero), "countRange f 1 must NOT be 0");
+
+    let proof = f.const_app(p.count_range_succ_of_true, &[f_concrete, zero, hyp]);
+    let succ_cr_f_0 = f.succ(cr_f_0);
+    let expected = f.eq(cr_f_1, succ_cr_f_0);
+    let inferred =
+        f.k.infer(proof)
+            .expect("count_range_succ_of_true must type-check at a concrete witness");
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "count_range_succ_of_true must prove countRange f 1 = succ (countRange f 0)"
+    );
+
+    // Symbolic: a genuinely free `f`, `k`, and hypothesis `h : f k = true`.
+    let f_fv = f.fresh_fvar();
+    let f_sym = f.k.fvar(f_fv);
+    let k_fv = f.fresh_fvar();
+    let k = f.k.fvar(k_fv);
+    let fk = f.apply(f_sym, &[k]);
+    let h_ty = f.bool_eq(fk, true_v);
+    let h_fv = f.fresh_fvar();
+    let h = f.k.fvar(h_fv);
+
+    let sk = f.succ(k);
+    let cr_f_sk = f.const_app(p.count_range, &[f_sym, sk]);
+    let cr_f_k = f.const_app(p.count_range, &[f_sym, k]);
+    let succ_cr_f_k = f.succ(cr_f_k);
+    let expected_sym = f.eq(cr_f_sk, succ_cr_f_k);
+    let proof_sym = f.const_app(p.count_range_succ_of_true, &[f_sym, k, h]);
+
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: f_fv,
+        name: anon,
+        ty: pred_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: k_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: h_fv,
+        name: anon,
+        ty: h_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(proof_sym, &mut ctx)
+            .expect("count_range_succ_of_true must apply at genuinely free f/k/h");
+    assert!(
+        f.k.def_eq(inferred_sym, expected_sym),
+        "count_range_succ_of_true must hold symbolically"
+    );
+}
+
+/// `Nat.countRange_le_of_le` — cardinality monotonicity in the range bound —
+/// at a concrete gap (`fun k => beq k 3`, `m = 2`, `n = 5`: no witness below
+/// `2`, one witness (`k = 3`) below `5`, so the conclusion is the genuinely
+/// non-trivial `Le 0 1`) and at a genuinely free `f`/`m`/`n`/hypothesis.
+#[test]
+fn count_range_le_of_le_applies_at_a_concrete_gap_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+    let pred_ty = f.arrow(nat, bool_ty);
+    let anon = f.anon_name();
+
+    let three = f.num(3);
+    let f_concrete = {
+        let x_fv = f.fresh_fvar();
+        let x = f.k.fvar(x_fv);
+        let body = f.beq(x, three);
+        f.lam_fv(x_fv, nat, body)
+    };
+    let two = f.num(2);
+    let five = f.num(5);
+    let zero = f.zero();
+    let one = f.num(1);
+    let cr_f_2 = f.const_app(p.count_range, &[f_concrete, two]);
+    assert!(f.k.def_eq(cr_f_2, zero), "countRange f 2 must be 0");
+    let cr_f_5 = f.const_app(p.count_range, &[f_concrete, five]);
+    assert!(
+        f.k.def_eq(cr_f_5, one),
+        "countRange f 5 must be 1 (the k=3 witness)"
+    );
+    // Negative control: NOT vacuous -- the two counts genuinely differ.
+    assert!(
+        !f.k.def_eq(cr_f_2, cr_f_5),
+        "countRange f 2 and countRange f 5 must NOT be def-eq"
+    );
+
+    let h = f.lemma(p.le_add_right, &[two, three]); // Le 2 (add 2 3), and `add 2 3` reduces to `5`
+    let proof = f.const_app(p.count_range_le_of_le, &[f_concrete, two, five, h]);
+    let expected = f.le(cr_f_2, cr_f_5);
+    let inferred =
+        f.k.infer(proof)
+            .expect("count_range_le_of_le must type-check at a concrete gap");
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "count_range_le_of_le must prove Le (countRange f 2) (countRange f 5)"
+    );
+
+    // Symbolic.
+    let f_fv = f.fresh_fvar();
+    let f_sym = f.k.fvar(f_fv);
+    let m_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let hyp_ty = f.le(m, n);
+    let hyp_fv = f.fresh_fvar();
+    let hyp = f.k.fvar(hyp_fv);
+
+    let cr_f_m = f.const_app(p.count_range, &[f_sym, m]);
+    let cr_f_n = f.const_app(p.count_range, &[f_sym, n]);
+    let expected_sym = f.le(cr_f_m, cr_f_n);
+    let proof_sym = f.const_app(p.count_range_le_of_le, &[f_sym, m, n, hyp]);
+
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: f_fv,
+        name: anon,
+        ty: pred_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: hyp_fv,
+        name: anon,
+        ty: hyp_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(proof_sym, &mut ctx)
+            .expect("count_range_le_of_le must apply at genuinely free f/m/n/hyp");
+    assert!(
+        f.k.def_eq(inferred_sym, expected_sym),
+        "count_range_le_of_le must hold symbolically"
+    );
+}
+
+/// `Nat.countRange_ge_two_of_two_witnesses` — the general "two distinct
+/// witnesses give count >= 2" lemma this family's mirrors bottleneck on — at
+/// the canonical case named in `totient_lemmas.rs`'s module doc: `n = 4`,
+/// witnesses `i = 1` (always coprime to anything) and `j = 3` (the top
+/// index), for `f := fun k => beq (gcd k 4) 1`. `countRange f 4` is EXACTLY
+/// `2` (`{1,3}` are coprime to `4`, `{0,2}` are not), so the theorem's `Le 2`
+/// conclusion is tight, not vacuously satisfied by a larger true count.
+#[test]
+fn count_range_ge_two_of_two_witnesses_applies_at_the_totient_four_case() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let four = f.num(4);
+    let f_concrete = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let g = f.gcd(k, four);
+        let one_inner = f.num(1);
+        let body = f.beq(g, one_inner);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let one = f.num(1);
+    let three = f.num(3);
+    let two = f.num(2);
+    let true_v = f.bool_true();
+
+    let f1 = f.apply(f_concrete, &[one]);
+    assert!(f.k.def_eq(f1, true_v), "gcd 1 4 = 1, so f 1 must be true");
+    let f3 = f.apply(f_concrete, &[three]);
+    assert!(f.k.def_eq(f3, true_v), "gcd 3 4 = 1, so f 3 must be true");
+    let zero = f.zero();
+    let f0 = f.apply(f_concrete, &[zero]);
+    assert!(
+        !f.k.def_eq(f0, true_v),
+        "gcd 0 4 = 4, so f 0 must NOT be true"
+    );
+    let f2 = f.apply(f_concrete, &[two]);
+    assert!(
+        !f.k.def_eq(f2, true_v),
+        "gcd 2 4 = 2, so f 2 must NOT be true"
+    );
+
+    let cr_f_4 = f.const_app(p.count_range, &[f_concrete, four]);
+    assert!(
+        f.k.def_eq(cr_f_4, two),
+        "countRange f 4 must be EXACTLY 2 -- {{1,3}} coprime to 4, {{0,2}} not"
+    );
+
+    let hij = f.lemma(p.le_add_right, &[two, one]); // Le 2 (add 2 1) = Lt 1 3
+    let hjn = f.lemma(p.le_refl, &[four]); // Le 4 4 = Lt 3 4
+    let hfi = f.bool_refl(true_v);
+    let hfj = f.bool_refl(true_v);
+
+    let proof = f.const_app(
+        p.count_range_ge_two_of_two_witnesses,
+        &[f_concrete, four, one, three, hij, hjn, hfi, hfj],
+    );
+    let expected = f.le(two, cr_f_4);
+    let inferred =
+        f.k.infer(proof)
+            .expect("count_range_ge_two_of_two_witnesses must type-check at n=4, i=1, j=3");
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "count_range_ge_two_of_two_witnesses must prove Le 2 (countRange f 4)"
+    );
 }
 
 /// `Nat.prodRangeIf` computes on small numerals by REDUCTION, not merely
@@ -6822,7 +7092,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 531,
+        93 + 534,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -1643,6 +1643,27 @@ pub struct NatPrelude {
     /// unlike `totient_eq_one_iff`/`totient_even`/the rest of this family
     /// (see `totient_lemmas.rs`'s module doc for what those still need).
     pub totient_eq_zero: NameId,
+    /// `Nat.countRange_succ_of_true : ∀ f k, Eq Bool (f k) true →
+    /// Eq Nat (countRange f (succ k)) (succ (countRange f k))` — promoting a
+    /// single witness through `countRange`'s defining equation (itself
+    /// proved by `Eq.refl`, so this is one `bool_congr_nat` step plus the
+    /// same `add x 1 ≡ succ x` reduction `totient_eq_zero` already leans on).
+    pub count_range_succ_of_true: NameId,
+    /// `Nat.countRange_le_of_le : ∀ f m n, Le m n → Le (countRange f m)
+    /// (countRange f n)` — cardinality monotonicity in the RANGE BOUND
+    /// (distinct from `countRange_le_of_subset`'s monotonicity in the
+    /// PREDICATE). Via `le_dest` (`m + k = n` for some `k`) plus
+    /// `countRange_split` and `le_add_right`.
+    pub count_range_le_of_le: NameId,
+    /// `Nat.countRange_ge_two_of_two_witnesses : ∀ f n i j, Lt i j → Lt j n →
+    /// Eq Bool (f i) true → Eq Bool (f j) true → Le 2 (countRange f n)` — the
+    /// general "two distinct witnesses ⇒ count ≥ 2" lemma
+    /// `totient_lemmas.rs`'s module doc names as the missing piece for
+    /// `totient_eq_one_iff`'s forward direction and
+    /// `dvd_two_of_totient_le_one`. Built from `count_range_succ_of_true` at
+    /// each witness plus `count_range_le_of_le` to carry the resulting `≥ 1`
+    /// bound up to the next witness and the `≥ 2` bound up to `n`.
+    pub count_range_ge_two_of_two_witnesses: NameId,
 
     // --- `Fin`, and the pigeonhole notions (`finite.rs`) --------------------
     /// `Nat.Fin : Nat → Type 0` — the canonical finite index type
@@ -3761,6 +3782,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             totient_prime: kernel.name_str(nat, "totient_prime"),
             coprime_succ_self: kernel.name_str(nat, "coprime_succ_self"),
             totient_eq_zero: kernel.name_str(nat, "totient_eq_zero"),
+            count_range_succ_of_true: kernel.name_str(nat, "countRange_succ_of_true"),
+            count_range_le_of_le: kernel.name_str(nat, "countRange_le_of_le"),
+            count_range_ge_two_of_two_witnesses: kernel
+                .name_str(nat, "countRange_ge_two_of_two_witnesses"),
             fin,
             fin_mk: kernel.name_str(fin, "mk"),
             fin_rec: kernel.name_str(fin, "rec"),

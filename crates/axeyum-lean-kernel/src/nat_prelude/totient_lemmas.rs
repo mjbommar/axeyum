@@ -377,13 +377,336 @@ pub(super) fn declare_totient_eq_zero(
     d.declare_theorem(p.totient_eq_zero, ty, value)
 }
 
-/// Declare `Nat.coprime_succ_self` and `Nat.totient_eq_zero`, in dependency
-/// order.
+// ============================================================================
+// `Nat.countRange_succ_of_true` — piece 1 of the triage: a single witness,
+// as a reusable one-step promotion (extracted from `totient_eq_zero`'s own
+// technique, not re-derived).
+// ============================================================================
+
+/// `Nat.countRange_succ_of_true : ∀ f k, Eq Bool (f k) true →
+///   Eq Nat (countRange f (succ k)) (succ (countRange f k))`.
+///
+/// The same technique `totient_eq_zero`'s succ case already uses, extracted
+/// as a general reusable step: `countRange`'s defining equation (proved by
+/// `Eq.refl`) makes `countRange f (succ k)` defeq to `add (countRange f k)
+/// (bool_select_nat (f k) 1 0)`; a single `bool_congr_nat` promotes that to
+/// `add (countRange f k) (bool_select_nat true 1 0)`, which is itself defeq
+/// `succ (countRange f k)` (`add x 1 ≡ succ x`, since `add` recurses on its
+/// second argument). One `d.congr` on top of the `bool_congr_nat` step is
+/// the whole proof; no `d.chain` is needed since both endpoints are already
+/// in reduced form.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_count_range_succ_of_true(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let fk = d.apply(f, &[k]);
+    let true_v = d.bool_true();
+    let hyp_ty = d.bool_eq(fk, true_v);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let one = d.num(1);
+    let zero = d.zero();
+    let cr_f_k = count_range(d, &p, f, k);
+
+    let sel_congr = bool_congr_nat(d, fk, true_v, h, &|d, x| {
+        let one_inner = d.num(1);
+        let zero_inner = d.zero();
+        d.bool_select_nat(x, one_inner, zero_inner)
+    });
+    let sel_fk = d.bool_select_nat(fk, one, zero);
+    let sel_true = d.bool_select_nat(true_v, one, zero);
+    let add_congr = d.congr(sel_fk, sel_true, sel_congr, &|d, x| d.add(cr_f_k, x));
+
+    let sk = d.succ(k);
+    let cr_sk = count_range(d, &p, f, sk);
+    let succ_cr_fk = d.succ(cr_f_k);
+    let stmt = d.eq(cr_sk, succ_cr_fk);
+    let full_stmt = d.arrow(hyp_ty, stmt);
+
+    let with_h = d.lam_fv(h_fv, hyp_ty, add_congr);
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, full_stmt);
+        d.pi_fv(f_fv, pred_ty, with_k)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(f_fv, pred_ty, with_k)
+    };
+    d.declare_theorem(p.count_range_succ_of_true, ty, value)
+}
+
+// ============================================================================
+// `Nat.countRange_le_of_le` — cardinality monotonicity in the RANGE BOUND.
+// ============================================================================
+
+/// `fun k => f (add m k)` — local copy of `totient.rs`'s private
+/// `shifted_pred` (this file's own stated convention: local copies per
+/// file).
+fn shifted_pred(d: &mut NatDev<'_>, f: ExprId, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = d.add(m, k);
+    let fmk = d.apply(f, &[mk]);
+    d.lam_fv(k_fv, nat, fmk)
+}
+
+/// `Nat.countRange_le_of_le : ∀ f m n, Le m n → Le (countRange f m)
+/// (countRange f n)`.
+///
+/// Via `le_dest(m, n, h) : Exists (fun k => Eq (add m k) n)`, eliminated
+/// (`exists_rec`) into: `countRange_split(f, m, k)` gives `countRange f (add
+/// m k) = add (countRange f m) (countRange (shifted f m) k)`; congr the LHS
+/// along `e : add m k = n` to reindex to `countRange f n`; and
+/// `le_add_right(countRange f m, countRange (shifted f m) k)` gives `Le
+/// (countRange f m) (add (countRange f m) (countRange (shifted f m) k))`,
+/// which transports along the same equation to the goal. No new induction —
+/// this is exactly `le_of_add_le_add_left`'s `le_dest`/`exists_rec` shape
+/// (`order.rs`), instantiated at `countRange` in place of a bare `Nat` sum.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_count_range_le_of_le(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+    let anon = d.anon_name();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hyp_ty = d.le(m, n);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let cr_f_m = count_range(d, &p, f, m);
+    let cr_f_n = count_range(d, &p, f, n);
+    let conclusion = d.le(cr_f_m, cr_f_n);
+
+    let one_lvl = d.level_one();
+    let pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let mk = d.add(m, k);
+        let body = d.eq(mk, n);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let represented_ty = {
+        let exists_ = d.kernel().const_(p.logic.exists_, vec![one_lvl]);
+        d.apply(exists_, &[nat, pred])
+    };
+    let represented = d.lemma(p.le_dest, &[m, n, h]);
+
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let mk = d.add(m, k);
+        let e_ty = d.eq(mk, n);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        let g = shifted_pred(d, f, m);
+        let cr_g_k = count_range(d, &p, g, k);
+        let split_eq = d.lemma(p.count_range_split, &[f, m, k]);
+        let cr_f_mk = count_range(d, &p, f, mk);
+        let add_form = d.add(cr_f_m, cr_g_k);
+
+        let congr_e = d.congr(mk, n, e, &|d, x| count_range(d, &p, f, x));
+        let congr_e_rev = d.symm(cr_f_mk, cr_f_n, congr_e);
+        let combined = d.trans(cr_f_n, cr_f_mk, add_form, congr_e_rev, split_eq);
+
+        let le_add = d.lemma(p.le_add_right, &[cr_f_m, cr_g_k]);
+        let combined_rev = d.symm(cr_f_n, add_form, combined);
+        let motive2 = d.eq_motive(add_form, &|d, x| d.le(cr_f_m, x));
+        let final_le = d.transport(add_form, motive2, le_add, cr_f_n, combined_rev);
+
+        let with_e = d.lam_fv(e_fv, e_ty, final_le);
+        d.lam_fv(k_fv, nat, with_e)
+    };
+
+    let motive = d
+        .kernel()
+        .lam(anon, represented_ty, conclusion, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+    let body = d.apply(rec, &[nat, pred, motive, minor, represented]);
+
+    let full_stmt = d.arrow(hyp_ty, conclusion);
+    let with_h = d.lam_fv(h_fv, hyp_ty, body);
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, full_stmt);
+        let with_m = d.pi_fv(m_fv, nat, with_n);
+        d.pi_fv(f_fv, pred_ty, with_m)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, with_h);
+        let with_m = d.lam_fv(m_fv, nat, with_n);
+        d.lam_fv(f_fv, pred_ty, with_m)
+    };
+    d.declare_theorem(p.count_range_le_of_le, ty, value)
+}
+
+// ============================================================================
+// `Nat.countRange_ge_two_of_two_witnesses` — the general "two distinct
+// witnesses ⇒ count ≥ 2" lemma the module doc names as the blocker for
+// `totient_eq_one_iff`'s forward direction and `dvd_two_of_totient_le_one`.
+// ============================================================================
+
+/// `Nat.countRange_ge_two_of_two_witnesses : ∀ f n i j, Lt i j → Lt j n →
+///   Eq Bool (f i) true → Eq Bool (f j) true → Le 2 (countRange f n)`.
+///
+/// Composition of `countRange_succ_of_true` and `countRange_le_of_le`, no new
+/// induction: promote each witness's own successor to a `≥ 1`/`≥ 2` bound via
+/// `succ_le_succ` (`Le (succ 0) (succ x)` from `Le 0 x`, i.e. `Le 1 (succ
+/// x)`), transport that bound back through the witness's own succ equation,
+/// then carry it up to `n` by monotonicity (`Lt i j` is definitionally `Le
+/// (succ i) j`, so it feeds `countRange_le_of_le` directly with no
+/// conversion). `i`'s bound reaches `Le 1 (countRange f j)`; `succ_le_succ`
+/// again gives `Le 2 (succ (countRange f j))`, which the SAME two steps
+/// (witness-succ, then monotonicity to `n`) carry to `Le 2 (countRange f n)`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_count_range_ge_two_of_two_witnesses(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let hij_ty = d.lt(i, j);
+    let hij_fv = d.fresh_fvar();
+    let hij = d.kernel().fvar(hij_fv);
+    let hjn_ty = d.lt(j, n);
+    let hjn_fv = d.fresh_fvar();
+    let hjn = d.kernel().fvar(hjn_fv);
+
+    let true_v = d.bool_true();
+    let fi = d.apply(f, &[i]);
+    let hfi_ty = d.bool_eq(fi, true_v);
+    let hfi_fv = d.fresh_fvar();
+    let hfi = d.kernel().fvar(hfi_fv);
+    let fj = d.apply(f, &[j]);
+    let hfj_ty = d.bool_eq(fj, true_v);
+    let hfj_fv = d.fresh_fvar();
+    let hfj = d.kernel().fvar(hfj_fv);
+
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+
+    // Witness `i`: `countRange f (succ i) = succ (countRange f i)`, promoted
+    // to `Le 1 (countRange f (succ i))`.
+    let eq_i = d.lemma(p.count_range_succ_of_true, &[f, i, hfi]);
+    let cr_f_i = count_range(d, &p, f, i);
+    let si = d.succ(i);
+    let cr_f_si = count_range(d, &p, f, si);
+    let succ_cr_f_i = d.succ(cr_f_i);
+    let zero_le_cri = d.lemma(p.zero_le, &[cr_f_i]);
+    let le_1_succ_i = d.lemma(p.succ_le_succ, &[zero, cr_f_i, zero_le_cri]);
+    let eq_i_rev = d.symm(cr_f_si, succ_cr_f_i, eq_i);
+    let motive_i = d.eq_motive(succ_cr_f_i, &|d, x| d.le(one, x));
+    let le_1_cr_f_si = d.transport(succ_cr_f_i, motive_i, le_1_succ_i, cr_f_si, eq_i_rev);
+
+    // Carry `Le 1 (countRange f (succ i))` up to `Le 1 (countRange f j)` by
+    // monotonicity (`Lt i j` is `Le (succ i) j` by definition).
+    let mono_ij = d.lemma(p.count_range_le_of_le, &[f, si, j, hij]);
+    let cr_f_j = count_range(d, &p, f, j);
+    let le_1_cr_f_j = d.lemma(p.le_trans, &[one, cr_f_si, cr_f_j, le_1_cr_f_si, mono_ij]);
+
+    // Witness `j`: `countRange f (succ j) = succ (countRange f j)`, promoted
+    // to `Le 2 (countRange f (succ j))` using the `Le 1 (countRange f j)` just
+    // established.
+    let eq_j = d.lemma(p.count_range_succ_of_true, &[f, j, hfj]);
+    let sj = d.succ(j);
+    let cr_f_sj = count_range(d, &p, f, sj);
+    let succ_cr_f_j = d.succ(cr_f_j);
+    let le_2_succ_j = d.lemma(p.succ_le_succ, &[one, cr_f_j, le_1_cr_f_j]);
+    let eq_j_rev = d.symm(cr_f_sj, succ_cr_f_j, eq_j);
+    let motive_j = d.eq_motive(succ_cr_f_j, &|d, x| d.le(two, x));
+    let le_2_cr_f_sj = d.transport(succ_cr_f_j, motive_j, le_2_succ_j, cr_f_sj, eq_j_rev);
+
+    // Carry `Le 2 (countRange f (succ j))` up to `Le 2 (countRange f n)`.
+    let mono_jn = d.lemma(p.count_range_le_of_le, &[f, sj, n, hjn]);
+    let cr_f_n = count_range(d, &p, f, n);
+    let final_le = d.lemma(p.le_trans, &[two, cr_f_sj, cr_f_n, le_2_cr_f_sj, mono_jn]);
+
+    let stmt_inner = d.le(two, cr_f_n);
+    let with_hfj = d.lam_fv(hfj_fv, hfj_ty, final_le);
+    let with_hfi = d.lam_fv(hfi_fv, hfi_ty, with_hfj);
+    let with_hjn = d.lam_fv(hjn_fv, hjn_ty, with_hfi);
+    let with_hij = d.lam_fv(hij_fv, hij_ty, with_hjn);
+
+    let full_stmt = {
+        let s1 = d.arrow(hfj_ty, stmt_inner);
+        let s2 = d.arrow(hfi_ty, s1);
+        let s3 = d.arrow(hjn_ty, s2);
+        d.arrow(hij_ty, s3)
+    };
+
+    let ty = {
+        let with_j = d.pi_fv(j_fv, nat, full_stmt);
+        let with_i = d.pi_fv(i_fv, nat, with_j);
+        let with_n = d.pi_fv(n_fv, nat, with_i);
+        d.pi_fv(f_fv, pred_ty, with_n)
+    };
+    let value = {
+        let with_j = d.lam_fv(j_fv, nat, with_hij);
+        let with_i = d.lam_fv(i_fv, nat, with_j);
+        let with_n = d.lam_fv(n_fv, nat, with_i);
+        d.lam_fv(f_fv, pred_ty, with_n)
+    };
+    d.declare_theorem(p.count_range_ge_two_of_two_witnesses, ty, value)
+}
+
+/// Declare `Nat.coprime_succ_self`, `Nat.totient_eq_zero`, and the general
+/// `countRange` counting machinery (`countRange_succ_of_true`,
+/// `countRange_le_of_le`, `countRange_ge_two_of_two_witnesses`), in
+/// dependency order.
 pub(super) fn declare_totient_lemmas_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
 ) -> Result<(), KernelError> {
     declare_coprime_succ_self(d, p)?;
     declare_totient_eq_zero(d, p)?;
+    declare_count_range_succ_of_true(d, p)?;
+    declare_count_range_le_of_le(d, p)?;
+    declare_count_range_ge_two_of_two_witnesses(d, p)?;
     Ok(())
 }
