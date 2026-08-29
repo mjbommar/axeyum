@@ -698,9 +698,11 @@ fn declare_land_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
 /// `Bool.rec` at a `Bool`-valued motive (`if condition then on_true else
 /// on_false`, both minor premises themselves `Bool`s). Reproduced rather
 /// than exported (avoiding a cross-lane edit to `bitwise.rs`), same
-/// rationale as [`guarded`]'s local copy.
-fn bool_select_bool_local(
-    d: &mut NatDev<'_>,
+/// rationale as [`guarded`]'s local copy. Generic over `D: NatOps` (not the
+/// concrete [`NatDev`]) so [`ldiff_fn`] can build the same term against the
+/// test suite's own `Fixture`, matching `and_fn`/`or_fn`'s own genericity.
+fn bool_select_bool_local<D: NatOps>(
+    d: &mut D,
     p: &NatPrelude,
     condition: ExprId,
     on_true: ExprId,
@@ -719,8 +721,9 @@ fn bool_select_bool_local(
 /// `Nat.ldiff`'s per-bit boolean combinator, `a && !b`. Mathlib v4.30
 /// defines `Nat.ldiff` via `bitwise (fun a b => a && !b)`; reproduced here
 /// (not imported — `bitwise.rs`/`ldiff.rs` are both off-limits for this
-/// lane) purely to state `Nat.ldiff_bit`'s target.
-fn ldiff_fn(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+/// lane) purely to state `Nat.ldiff_bit`'s target. Generic over `D: NatOps`
+/// for the same reason as [`bool_select_bool_local`].
+pub(super) fn ldiff_fn<D: NatOps>(d: &mut D, p: &NatPrelude) -> ExprId {
     let p = *p;
     let bool_ty = d.bool_ty();
     let a_fv = d.fresh_fvar();
@@ -754,8 +757,7 @@ fn or_cond_max_leaf(d: &mut NatDev<'_>, a_lit: ExprId, b_lit: ExprId) -> ExprId 
 
 /// The goal statement of [`or_cond_max_leaf`]/[`or_cond_max_eq_cond`], at
 /// arbitrary (possibly symbolic) `a`, `b`.
-fn or_cond_max_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
-    let p = *p;
+fn or_cond_max_goal(d: &mut NatDev<'_>, _p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
     let one = d.num(1);
     let zero = d.zero();
     let cond_a = d.bool_select_nat(a, one, zero);
@@ -818,7 +820,14 @@ fn or_cond_max_eq_cond(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId)
 /// of `lor`'s bridge. `lor`'s fuel-exhaustion rows PASS THROUGH the full
 /// operand (`on_n_zero = bit a m`, `on_m_zero = bit b n`), not `land`'s
 /// constant `0` — see the module doc and `lor.rs`'s own doc for why.
-fn lor_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn lor_guard_goal(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let one = d.num(1);
@@ -839,7 +848,14 @@ fn lor_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: E
 /// The "both operands positive" leaf: both zero-guards are false by
 /// construction at the call site, so `guarded` reduces to `stepped` by pure
 /// defeq — closed via [`or_cond_max_eq_cond`]'s combine agreement.
-fn lor_guard_step_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn lor_guard_step_leaf(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let one = d.num(1);
@@ -878,7 +894,12 @@ fn lor_guard_on_m_zero_leaf(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId, n: Ex
 /// One `a`-leaf of [`lor_guard_on_n_zero_leaf`]: rewrite `lor m 0` to `m` via
 /// `lor_zero_right`, then close by defeq (`or_fn(a_lit, false)` ι-reduces to
 /// `a_lit` once `a_lit` is literal).
-fn lor_guard_on_n_zero_branch(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, a_lit: ExprId) -> ExprId {
+fn lor_guard_on_n_zero_branch(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    a_lit: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let false_ = d.bool_false();
@@ -930,7 +951,14 @@ fn lor_guard_on_n_zero_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: Ex
 /// Resolve the `m`-guard, given the `n`-guard already known false by
 /// construction — same `a`-then-`m` split shape as [`land_guard_inner`],
 /// swapping in `lor`'s pass-through `on_m_zero` leaf and combine.
-fn lor_guard_inner(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn lor_guard_inner(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     case_bool(
         d,
@@ -963,7 +991,14 @@ fn lor_guard_inner(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: 
 /// The full guard-resolution case tree for `lor_bit`: split `b` (the
 /// `n`-guard), then (when `b = false`) split `n`, then resolve the `m`-guard
 /// via [`lor_guard_inner`].
-fn resolve_lor_guard(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn resolve_lor_guard(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     case_bool(
         d,
@@ -1244,7 +1279,14 @@ fn ldiff_cond_eq_cond(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) 
 /// `land.rs`/`ldiff.rs` document: `on_n_zero = bit a m` (a `lor`-flavoured
 /// pass-through — `ldiff m 0 = m`), `on_m_zero = 0` (a `land`-flavoured
 /// absorbing constant — `ldiff 0 n = 0`).
-fn ldiff_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn ldiff_guard_goal(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let one = d.num(1);
@@ -1263,7 +1305,14 @@ fn ldiff_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b:
 }
 
 /// The "both operands positive" leaf, closed via [`ldiff_cond_eq_cond`].
-fn ldiff_guard_step_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn ldiff_guard_step_leaf(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let one = d.num(1);
@@ -1287,7 +1336,12 @@ fn ldiff_guard_step_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprI
 /// via `ldiff_zero_right`, then close by defeq — same shape as
 /// [`lor_guard_on_n_zero_branch`], swapping `or_fn`/`lor_zero_right` for
 /// `ldiff_fn`/`ldiff_zero_right`.
-fn ldiff_guard_on_n_zero_branch(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, a_lit: ExprId) -> ExprId {
+fn ldiff_guard_on_n_zero_branch(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    a_lit: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let false_ = d.bool_false();
@@ -1337,7 +1391,14 @@ fn ldiff_guard_on_n_zero_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: 
 /// `m = 0` leaf reuses [`land_guard_on_m_zero_leaf`] VERBATIM (`ldiff`'s
 /// `on_m_zero` row is `land`-flavoured: constant `0`, closing by `refl`
 /// with no further split, exactly as for `land`).
-fn ldiff_guard_inner(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn ldiff_guard_inner(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     case_bool(
         d,
@@ -1368,7 +1429,14 @@ fn ldiff_guard_inner(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b
 }
 
 /// The full guard-resolution case tree for `ldiff_bit`.
-fn resolve_ldiff_guard(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn resolve_ldiff_guard(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     case_bool(
         d,
@@ -1452,7 +1520,10 @@ fn declare_ldiff_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErr
     let m_le_k1_bound = d.lemma(p.le_trans, &[m, base, k1, m_le_base, base_le_k1]);
 
     // --- ldiff(bit a m)(bit b n) = ldiffAux fuel (bit a m)(bit b n) ---------
-    let fuel_eq = d.lemma(p.ldiff_aux_eq_ldiff_of_le, &[fuel, bit_am, bit_bn, m_le_fuel]);
+    let fuel_eq = d.lemma(
+        p.ldiff_aux_eq_ldiff_of_le,
+        &[fuel, bit_am, bit_bn, m_le_fuel],
+    );
     let ldiffaux_fuel = d.const_app(p.ldiff_aux, &[fuel, bit_am, bit_bn]);
     let ldiff_ab = d.const_app(p.ldiff, &[bit_am, bit_bn]);
     let step0 = d.symm(ldiffaux_fuel, ldiff_ab, fuel_eq);
