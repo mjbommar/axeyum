@@ -132,6 +132,7 @@ mod algebra;
 mod asc_factorial;
 mod bezout;
 mod binary;
+mod bit_order;
 mod binary_rec;
 mod binomial;
 mod bit_decode;
@@ -202,6 +203,7 @@ use algebra::{
 use asc_factorial::declare_asc_factorial_all;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
+use bit_order::declare_bit_order_all;
 use binary_rec::declare_binary_rec_all;
 use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
@@ -2807,6 +2809,24 @@ pub struct NatPrelude {
     /// `testBit` returns `Bool`), so this is a local fact, not an `ml430`
     /// mirror. See `nat_prelude::testbit_bitwise`.
     pub test_bit_xor: NameId,
+    /// `Nat.self_lt_two_pow : ∀ n, Lt n (pow 2 n)` — induction on `n`. See
+    /// `nat_prelude::bit_order`.
+    pub self_lt_two_pow: NameId,
+    /// `Nat.self_lt_two_pow_add : ∀ a b, Lt a (pow 2 (add a b))` — the
+    /// generalization of [`Self::self_lt_two_pow`] used to bound TWO
+    /// independent values (`n`, `m`) by a SINGLE common power of two without
+    /// any general `pow` monotonicity lemma: apply this directly at
+    /// `a := n`/`a := m` with the OTHER value (plus a margin) folded into
+    /// `b`. See `nat_prelude::bit_order`.
+    pub self_lt_two_pow_add: NameId,
+    /// `Nat.lt_of_testBit : ∀ n m i, Eq (testBit n i) zero → Eq (testBit m
+    /// i) one → (∀ j, Lt i j → Eq (testBit n j) (testBit m j)) → Lt n m` —
+    /// Nat-valued (Mathlib's `testBit` returns `Bool`; the pinned
+    /// `Nat.lt_of_testBit`, `F:ml430-nat-lt-of-testbit-72f64ab8`, stays
+    /// `open` for that reason), so this is a local fact, not an `ml430`
+    /// mirror. Piece 3 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`. See
+    /// `nat_prelude::bit_order`.
+    pub lt_of_test_bit: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3719,6 +3739,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_xor: kernel.name_str(nat, "even_xor"),
             xor_comm: kernel.name_str(nat, "xor_comm"),
             test_bit_xor: kernel.name_str(nat, "testBit_xor"),
+            self_lt_two_pow: kernel.name_str(nat, "self_lt_two_pow"),
+            self_lt_two_pow_add: kernel.name_str(nat, "self_lt_two_pow_add"),
+            lt_of_test_bit: kernel.name_str(nat, "lt_of_testBit"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
@@ -4114,6 +4137,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mod_lt`/`cases_mod_two`'s own dependencies (all far above).
         // Nothing needs it, so it goes last.
         declare_testbit_bitwise_all(&mut d, &p)?;
+        // `Nat.self_lt_two_pow`/`Nat.self_lt_two_pow_add`/`Nat.lt_of_testBit`:
+        // needs `Nat.testBit`/`sum_test_bit_lt`/`mod_eq_self_of_lt`
+        // (`declare_binary_all`/`declare_size_all`, far above),
+        // `sum_range_split` (`rectangle.rs`, far above), `sum_range_succ`/
+        // `sum_range_congr` (`declare_finite_sum_theorems`, far above), and
+        // general order/arithmetic (`add_assoc`/`add_comm`/`add_right_comm`/
+        // `le_add_right`/`le_trans`/`mod_lt`/`pow_pos`, all far above).
+        // Nothing needs it, so it goes last.
+        declare_bit_order_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
