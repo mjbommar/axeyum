@@ -40,7 +40,33 @@ grep -qiE '^Agent:[[:space:]]*\S' "$msg_file" && exit 0
 
 # Per-process first, repo-local second. See the note above: the reverse order
 # stamped a coordinator commit with another lane's name within 5 minutes.
-agent="${AXEYUM_AGENT:-$(git config --get axeyum.agent 2>/dev/null || true)}"
+agent="${AXEYUM_AGENT:-}"
+if [[ -z "$agent" ]]; then
+    # Repo-local fallback. WARN LOUDLY: measured 2026-08-29, a `fta-existence`
+    # lane set this on 08-25 and it silently stamped **38 commits over four
+    # days**, 15 of them on one day from at least FOUR different lanes
+    # (nat-lor-assoc, nat-lor-ldiff-bit, nat-parity-lowbit,
+    # nat-assoc-dichotomy). Nothing in the commit output hinted at it.
+    #
+    # And note WHY this reaches other lanes at all: git WORKTREES SHARE
+    # `.git/config` unless `extensions.worktreeConfig` is enabled, and it is
+    # not here. So a lane setting this in its own worktree sets it for every
+    # lane in the repository.
+    agent="$(git config --get axeyum.agent 2>/dev/null || true)"
+    if [[ -n "$agent" ]]; then
+        cat >&2 <<EOF
+commit-msg: WARNING -- stamping this commit \`Agent: $agent\` from the REPO-LOCAL
+\`git config axeyum.agent\`, because AXEYUM_AGENT is unset in this shell.
+
+Worktrees SHARE .git/config, so this value may belong to a different lane
+entirely. If "$agent" is not you, this commit is now misattributed:
+
+    export AXEYUM_AGENT=<your-lane-id>     # per-process, cannot leak
+    git config --unset axeyum.agent        # if nobody needs the fallback
+
+EOF
+    fi
+fi
 
 if [[ -z "$agent" ]]; then
     cat >&2 <<'EOF'
