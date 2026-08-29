@@ -918,6 +918,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_not_odd,
         p.odd_not_even,
         p.even_iff_odd_succ,
+        p.even_iff_mod_two_eq_zero,
+        p.odd_iff_mod_two_eq_one,
         p.coprime_two_left,
         p.coprime_two_right,
         p.coprime_odd_of_left,

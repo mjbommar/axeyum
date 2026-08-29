@@ -2430,6 +2430,14 @@ pub struct NatPrelude {
     /// directions are direct `congrArg succ`/`succ_injective` on the
     /// existential witness — `parity_ne` is not needed here.
     pub even_iff_odd_succ: NameId,
+    /// `Nat.even_iff_mod_two_eq_zero : ∀ n, Iff (Even n) (Eq (mod n 2) 0)` —
+    /// the parity <-> low-bit bridge: `mp` eliminates the existential and
+    /// rewrites through `mul_two_eq_add_self`/`div_mod_exec`/`div_mod_unique`;
+    /// `mpr` reconstructs the witness from `div n 2`.
+    pub even_iff_mod_two_eq_zero: NameId,
+    /// `Nat.odd_iff_mod_two_eq_one : ∀ n, Iff (Odd n) (Eq (mod n 2) 1)` —
+    /// [`Self::even_iff_mod_two_eq_zero`]'s `succ` twin.
+    pub odd_iff_mod_two_eq_one: NameId,
 
     // --- the floor logarithm (`log.rs`) -------------------------------------
     /// `Nat.logAux : Nat → Nat → Nat → Nat` — `logAux b f n`, the floor base-`b`
@@ -3381,6 +3389,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_not_odd: kernel.name_str(nat, "even_not_odd"),
             odd_not_even: kernel.name_str(nat, "odd_not_even"),
             even_iff_odd_succ: kernel.name_str(nat, "even_iff_odd_succ"),
+            even_iff_mod_two_eq_zero: kernel.name_str(nat, "even_iff_mod_two_eq_zero"),
+            odd_iff_mod_two_eq_one: kernel.name_str(nat, "odd_iff_mod_two_eq_one"),
             log_aux: kernel.name_str(nat, "logAux"),
             log: kernel.name_str(nat, "log"),
             log_zero_right: kernel.name_str(nat, "log_zero_right"),
