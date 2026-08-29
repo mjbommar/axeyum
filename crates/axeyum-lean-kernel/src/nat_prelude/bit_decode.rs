@@ -51,17 +51,39 @@
 //! && b) (land m n)`. This still has two `beq _ 0` guards evaluated on
 //! `bit a m`/`bit b n`, which are not defeq-resolved for fully symbolic
 //! `a`, `m`, `b`, `n` — but resolving them needs no induction, only a
-//! bounded case tree (`cases_zero_succ` on `n`, then `m`, plus a `Bool`
-//! split on `a`/`b` exactly where a guard's zero-ness genuinely depends on
-//! it), because `bit test k` is `succ`-shaped for ANY `test` once `k` is
-//! `succ`-shaped, and `beq (succ _) 0` reduces to `false` by δι alone
-//! regardless of what is under the `succ`. Land's absorbing-zero guard
-//! rows (`land_zero_left`/`land_zero_right`, both already proved) close
-//! the two degenerate leaves; the "both guards false" leaf needs one more
-//! small fact, [`and_cond_mul_eq_cond`] (`mul (cond a 1 0) (cond b 1 0) =
-//! cond (a && b) 1 0`, itself a two-leaf `Bool` split on `a` alone using
-//! `one_mul`/`zero_mul`, since `Nat.mul` recurses on its SECOND argument
-//! and `cond b 1 0` stays stuck at symbolic `b`).
+//! bounded case tree, and **the split is on the `Bool`s (`b`, then `a`),
+//! NOT on the `Nat`s (`n`, `m`) an earlier (wrong) draft of this file
+//! tried.** `bit test k := add (mul 2 k) (cond test 1 0)`, and `Nat.add`
+//! recurses on its SECOND argument — `cond test 1 0` here — which is stuck
+//! for symbolic `test` regardless of `k`'s shape. So `bit true k` is
+//! `succ`-shaped for ANY `k`, even fully symbolic, and `beq (succ _) 0`
+//! reduces to `false` by δι alone; only `test = false` needs the OTHER
+//! operand's shape exposed (`bit false k = mul 2 k`, which recurses on `k`
+//! and is genuinely stuck at symbolic `k`). Concretely: split `b` first
+//! (the `n`-guard checks `bit b n`); at `b = true` the guard is false for
+//! ANY `n`, no further split needed; at `b = false`, split `n` (`n = 0`
+//! gives the guard true; `n = succ _` gives it false, unconditionally in
+//! `a`/`m`). Then resolve the `m`-guard the same way via `a`, `m`. Land's
+//! absorbing-zero guard rows (`land_zero_left`/`land_zero_right`, both
+//! already proved) close the two degenerate leaves; the "both guards
+//! false" leaf needs one more small fact, [`and_cond_mul_eq_cond`] (`mul
+//! (cond a 1 0) (cond b 1 0) = cond (a && b) 1 0`, itself a two-leaf
+//! `Bool` split on `a` alone using `one_mul`/`zero_mul`, since `Nat.mul`
+//! recurses on its SECOND argument and `cond b 1 0` stays stuck at
+//! symbolic `b`).
+//!
+//! **This flip cost a full debugging cycle and is worth stating plainly as
+//! its own lesson.** The first draft assumed `bit test k` is `succ`-shaped
+//! once `k` is `succ`-shaped (mirroring the `Nat.add`-recurses-on-its-
+//! right-argument trap from a DIFFERENT angle), built the whole guard tree
+//! around splitting `n`/`m`, and the kernel rejected `land_bit` with a
+//! `TypeMismatch` naming two large opaque `ExprId`s. `Kernel::render_lean`
+//! on both sides (via a throwaway `#[test]` catching the `Err` and
+//! printing `k.render_lean(expected)`/`k.render_lean(got)`) showed the
+//! `expected` side's guard was `beq (bit a (succ m_pred)) 0` — still stuck,
+//! because `a` was the thing left symbolic, not `m`. The fix was cheap
+//! once seen; finding it needed the rendered terms, not more staring at
+//! the Rust.
 //!
 //! # What transports to `lor`/`ldiff`, and what does not (not attempted here)
 //!
@@ -148,7 +170,6 @@ fn case_bool(
 /// `div_mod_unique` against the executable projections (`div_mod_exec`)
 /// gives both decoded components in one shot.
 struct BitDivMod {
-    divisor: ExprId,
     div_bit: ExprId,
     mod_bit: ExprId,
     cond_test: ExprId,
@@ -205,7 +226,6 @@ fn bit_div_mod_witness(d: &mut NatDev<'_>, p: &NatPrelude, test: ExprId, n: Expr
     );
 
     BitDivMod {
-        divisor,
         div_bit,
         mod_bit,
         cond_test,
@@ -304,7 +324,14 @@ fn and_cond_mul_eq_cond(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId
 /// 1 0))) (bit (and a b) (land m n))` — the guard-resolution half of the
 /// bridge, once the fuel machinery has already rewritten the recursive
 /// occurrence down to the canonical `land m n`. See the module doc.
-fn land_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn land_guard_goal(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let one = d.num(1);
@@ -326,7 +353,14 @@ fn land_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: 
 /// (so `guarded` reduces to `stepped` by pure defeq — the kernel checks
 /// this automatically when the returned proof's type is compared against
 /// the caller's unreduced statement).
-fn land_guard_step_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+fn land_guard_step_leaf(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
     let one = d.num(1);
     let zero = d.zero();
@@ -354,33 +388,51 @@ fn land_guard_on_m_zero_leaf(d: &mut NatDev<'_>) -> ExprId {
     d.refl(zero)
 }
 
-/// Resolve the `m`-guard, given that the `n`-guard is already known false
-/// (by construction at the call site: either `n` is literally `succ`-shaped,
-/// or `n = 0` with `b = true`).
-fn land_guard_inner(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+/// Resolve the `m`-guard (`beq (bit a m) 0`), given that the `n`-guard is
+/// already known false by construction at the call site.
+///
+/// **The split is on `a`, not `m`.** `bit a m := add (mul 2 m) (cond a 1
+/// 0)`, and `Nat.add` recurses on its SECOND argument — here `cond a 1 0`,
+/// which is stuck for symbolic `a` regardless of `m`'s shape. So `bit true m`
+/// is `succ`-shaped (hence positive) for ANY `m`, even fully symbolic,
+/// because `add x (succ zero)` reduces via the succ-row REGARDLESS of `x`'s
+/// shape — the mirror image of the `n`-shape reasoning an earlier (wrong)
+/// version of this tree used. Only `a = false` needs `m`'s shape exposed
+/// (`bit false m = mul 2 m`, which recurses on `m` and is stuck at symbolic
+/// `m`).
+fn land_guard_inner(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
-    cases_zero_succ(
+    case_bool(
         d,
-        m,
-        &|d, cand_m| land_guard_goal(d, &p, a, cand_m, b, n),
+        &p,
+        a,
+        &|d, cand_a| land_guard_goal(d, &p, cand_a, m, b, n),
         &|d| {
-            let zero = d.zero();
-            case_bool(
+            let t = d.bool_true();
+            land_guard_step_leaf(d, &p, t, m, b, n)
+        },
+        &|d| {
+            cases_zero_succ(
                 d,
-                &p,
-                a,
-                &|d, cand_a| land_guard_goal(d, &p, cand_a, zero, b, n),
-                &|d| {
-                    let t = d.bool_true();
-                    let zero = d.zero();
-                    land_guard_step_leaf(d, &p, t, zero, b, n)
+                m,
+                &|d, cand_m| {
+                    let false_ = d.bool_false();
+                    land_guard_goal(d, &p, false_, cand_m, b, n)
                 },
                 &|d| land_guard_on_m_zero_leaf(d),
+                &|d, m_pred| {
+                    let succ_m = d.succ(m_pred);
+                    let false_ = d.bool_false();
+                    land_guard_step_leaf(d, &p, false_, succ_m, b, n)
+                },
             )
-        },
-        &|d, m_pred| {
-            let succ_m = d.succ(m_pred);
-            land_guard_step_leaf(d, &p, a, succ_m, b, n)
         },
     )
 }
@@ -417,7 +469,12 @@ fn land_guard_on_n_zero_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: E
 /// via `land_zero_right`, then close by defeq (`bit (and a_lit false) 0`
 /// reduces to `0` once `a_lit` is literal, since `and _ false`'s outer
 /// scrutinee is now concrete).
-fn land_guard_on_n_zero_branch(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, a_lit: ExprId) -> ExprId {
+fn land_guard_on_n_zero_branch(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    a_lit: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let false_ = d.bool_false();
@@ -431,37 +488,51 @@ fn land_guard_on_n_zero_branch(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, a_
         d.const_app(p.bit, &[a_and_false, x])
     });
     let refl_after = d.refl(target_after);
-    let (_final, chain_proof) = d.chain(target_before, &[(target_after, congr_step), (zero, refl_after)]);
+    let (_final, chain_proof) = d.chain(
+        target_before,
+        &[(target_after, congr_step), (zero, refl_after)],
+    );
     d.symm(target_before, zero, chain_proof)
 }
 
-/// The full guard-resolution case tree: split `n`, then (when `n = 0`)
-/// `b`, then (once positive) `m`, then (when `m = 0`) `a` — matching
-/// exactly the guards `guarded` itself checks, `n` outermost.
-fn resolve_land_guard(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+/// The full guard-resolution case tree: split `b` (the `n`-guard checks
+/// `beq (bit b n) 0`, which is `succ`-shaped-hence-false for ANY `n` once
+/// `b = true` — see [`land_guard_inner`]'s doc for why the split is on the
+/// `Bool`, not the `Nat`), then (when `b = false`) split `n`, then resolve
+/// the `m`-guard the same way via [`land_guard_inner`].
+fn resolve_land_guard(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+) -> ExprId {
     let p = *p;
-    cases_zero_succ(
+    case_bool(
         d,
-        n,
-        &|d, cand_n| land_guard_goal(d, &p, a, m, b, cand_n),
+        &p,
+        b,
+        &|d, cand_b| land_guard_goal(d, &p, a, m, cand_b, n),
         &|d| {
-            let zero = d.zero();
-            case_bool(
+            let t = d.bool_true();
+            land_guard_inner(d, &p, a, m, t, n)
+        },
+        &|d| {
+            cases_zero_succ(
                 d,
-                &p,
-                b,
-                &|d, cand_b| land_guard_goal(d, &p, a, m, cand_b, zero),
-                &|d| {
-                    let t = d.bool_true();
-                    let zero = d.zero();
-                    land_guard_inner(d, &p, a, m, t, zero)
+                n,
+                &|d, cand_n| {
+                    let false_ = d.bool_false();
+                    land_guard_goal(d, &p, a, m, false_, cand_n)
                 },
                 &|d| land_guard_on_n_zero_leaf(d, &p, a, m),
+                &|d, n_pred| {
+                    let succ_n = d.succ(n_pred);
+                    let false_ = d.bool_false();
+                    land_guard_inner(d, &p, a, m, false_, succ_n)
+                },
             )
-        },
-        &|d, n_pred| {
-            let succ_n = d.succ(n_pred);
-            land_guard_inner(d, &p, a, m, b, succ_n)
         },
     )
 }
@@ -540,11 +611,22 @@ fn declare_land_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
     let land_mn = d.const_app(p.land, &[m, n]);
 
     let rec1 = d.const_app(p.land_aux, &[k1, m, half_bn]);
-    let rec0_to_rec1 = d.congr(half_am, m, div_a, &|d, x| d.const_app(p.land_aux, &[k1, x, half_bn]));
+    let rec0_to_rec1 = d.congr(half_am, m, div_a, &|d, x| {
+        d.const_app(p.land_aux, &[k1, x, half_bn])
+    });
     let rec2 = d.const_app(p.land_aux, &[k1, m, n]);
-    let rec1_to_rec2 = d.congr(half_bn, n, div_b, &|d, x| d.const_app(p.land_aux, &[k1, m, x]));
+    let rec1_to_rec2 = d.congr(half_bn, n, div_b, &|d, x| {
+        d.const_app(p.land_aux, &[k1, m, x])
+    });
     let rec2_eq_land_mn = d.lemma(p.land_aux_eq_land_of_le, &[k1, m, n, m_le_k1_bound]);
-    let (_rec_final, rec_chain) = d.chain(rec0, &[(rec1, rec0_to_rec1), (rec2, rec1_to_rec2), (land_mn, rec2_eq_land_mn)]);
+    let (_rec_final, rec_chain) = d.chain(
+        rec0,
+        &[
+            (rec1, rec0_to_rec1),
+            (rec2, rec1_to_rec2),
+            (land_mn, rec2_eq_land_mn),
+        ],
+    );
 
     // --- rewrite mod_am -> cond a, mod_bn -> cond b -------------------------
     let mod_a = d.lemma(p.bit_mod_two, &[a, m]);
@@ -556,7 +638,8 @@ fn declare_land_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
     let bitval0_to_1 = d.congr(mod_am, cond_a, mod_a, &|d, x| d.mul(x, mod_bn));
     let bitval2 = d.mul(cond_a, cond_b);
     let bitval1_to_2 = d.congr(mod_bn, cond_b, mod_b, &|d, x| d.mul(cond_a, x));
-    let (_bitval_final, bitval_chain) = d.chain(bitval0, &[(bitval1, bitval0_to_1), (bitval2, bitval1_to_2)]);
+    let (_bitval_final, bitval_chain) =
+        d.chain(bitval0, &[(bitval1, bitval0_to_1), (bitval2, bitval1_to_2)]);
 
     let guarded_mid = guarded(d, bit_am, bit_bn, zero, zero, land_mn, bitval0);
     let guarded_final = guarded(d, bit_am, bit_bn, zero, zero, land_mn, bitval2);
@@ -608,7 +691,10 @@ fn declare_land_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
 /// # Errors
 ///
 /// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_bit_decode_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_bit_decode_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     declare_bit_div_two(d, p)?;
     declare_bit_mod_two(d, p)?;
     declare_land_bit(d, p)?;
