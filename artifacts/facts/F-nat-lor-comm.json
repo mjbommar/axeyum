@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lor-comm",
+  "title": "lor is commutative",
+  "statement": "For every natural m, n: lor(m, n) = lor(n, m).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.lor x0 x1) (AxNat.lor x1 x0)))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lor_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lor_comm",
+      "supports": "Nat.lor_comm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- lor_comm 2>/dev/null | grep -Ec '^Nat\\.lor_comm[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type -- producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the tested count is what decides the exit status. Anchored with `^Nat\\.lor_comm[[:space:]]` so a future sibling (e.g. `lor_aux_comm_of_fuel`) cannot satisfy this row."
+    },
+    {
+      "id": "compute-Nat.lor_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lor_comm",
+      "supports": "lor(3, 6) = lor(6, 3) = 7 (0b011 | 0b110 = 0b111), a DISCRIMINATING instance -- a symmetric pair like (5, 5) cannot catch a transposed argument, since both orderings agree regardless of whether the proof is right.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::lor_comm_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.lor_comm` symbolically (against free `m`, `n`) and at the concrete, bit-differing instance `(m, n) = (3, 6)`, confirming both that the admitted type matches `Eq (lor 3 6) (lor 6 3)` and that both sides compute to `7`. Also applies `Nat.lor_aux_comm_of_fuel` at the shared fuel `m + n = 9` and checks an insufficient-fuel negative control (`lorAux 0 0 1 = 1` against `lorAux 0 1 0 = 0`) confirming the `Le` hypotheses this theorem carries -- unlike `Nat.land_aux_comm_of_fuel`, which needs none -- are load-bearing."
+    },
+    {
+      "id": "footprint-Nat.lor_comm",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-or",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-lor-comm",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0`/`x1` are `m`/`n`.\n\nThis is the `lor` twin of `F:nat-land-comm`, one of the seven `natural-bitwise` facts fuel-irrelevance was blocking (`docs/plan/status/237-nat-fuel-irrelevance.md`, `docs/plan/status/239-nat-fuel-transport.md`). NOT a mechanical transport of `land_comm`'s proof: `lorAux`'s fuel-exhaustion row returns `n` (pass-through) rather than `land`'s absorbing constant `0`, so the unconditional analogue of `Nat.land_aux_comm_of_fuel` is FALSE for `lorAux` at insufficient fuel and unequal operands -- `lorAux 0 0 1 = 1` while `lorAux 0 1 0 = 0` (simulated in Python before committing to this control). So `Nat.lor_aux_comm_of_fuel : forall fuel m n, Le m fuel -> Le n fuel -> Eq (lorAux fuel m n) (lorAux fuel n m)` carries TWO `Le` hypotheses `land`'s analogue needs none of: the base case (`fuel = 0`) needs both to force `m = n = 0`, and the both-nonzero step needs `half_le_predecessor_of_succ` bounds for BOTH halves to apply the induction hypothesis, since the IH itself carries the same two hypotheses. `Nat.lor_comm` chains `lor m n = lorAux m m n = lorAux (m+n) m n = lorAux (m+n) n m = lorAux n n m = lor n m` exactly as `land_comm` does, routing through `Nat.lor_aux_agree_of_fuel` (already built by `nat-fuel-transport`) for the outer two steps and `Nat.lor_aux_comm_of_fuel` for the middle one, applying both bounds (`Le m (m+n)`/`Le n (m+n)`, the second via `Nat.add_comm`) that were already in hand from the outer steps. The per-bit combine is `max` via `Nat.ble` + `bool_select_nat`, not `land`'s `Nat.mul`; its commutativity (`lor_bit_comm`, `nat_prelude/rec_agreement.rs`) is closed the same way `bit_agreement` closes the `bitwise` cross-check -- `cases_mod_two` on each operand, four leaves at concrete numerals, `d.refl`.\n\nThis is the `Nat.lor` twin of Mathlib v4.30's `Nat.lor_comm` (`F:ml430-nat-lor-comm-2666d7ef`, flipped alongside this fact) -- our `Nat.lor` is itself proved equal to Mathlib's `bitwise or` specialization by `Nat.bitwise_or_eq_lor` (`nat_prelude/rec_agreement.rs`), so this closes the same proposition Mathlib states, not a lookalike about a different definition.\n\nEvery declaration in this lane (`lor_aux_comm_of_fuel`, `lor_comm`) was admitted by the kernel on its FIRST attempt -- no rejection to diagnose.",
+  "schema_version": 1
+}
