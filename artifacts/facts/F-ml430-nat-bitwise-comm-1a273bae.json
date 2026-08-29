@@ -8,12 +8,28 @@
     "statement": "∀ {f : Bool → Bool → Bool}, (∀ (b b' : Bool), f b b' = f b' b) → ∀ (n m : ℕ), Nat.bitwise f n m = Nat.bitwise f m n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-nat-bitwise-swap-7175e90e"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "reconciliation-Nat.bitwise_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_comm",
+      "supports": "∀ {f : Bool → Bool → Bool}, (∀ (b b' : Bool), f b b' = f b' b) → ∀ (n m : ℕ), Nat.bitwise f n m = Nat.bitwise f m n",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel",
+        "axeyum-lean-import/checked-proposition-compatibility"
+      ],
+      "artifact": "F:nat-bitwise-comm",
+      "notes": "Registers an independently constructed native theorem (`F:nat-bitwise-comm`, `Nat.bitwise_comm` in `nat_prelude/bitwise.rs`) whose proposition definitionally matches this proof-free imported goal, modulo the cosmetic `n m` / `m n` argument-name order in the two universally quantified naturals -- both sides state the SAME proposition (`bitwise` commutative for a commutative `f`), and `Eq` is symmetric regardless. Unlike `Nat.land_comm`/`Nat.lor_comm` (which needed a DIFFERENT route than Mathlib's own `bitwise_comm`, since our `land`/`lor` are hand-rolled fuel recursions rather than `bitwise` specializations at proof-construction time), this fact's native proof genuinely IS Mathlib's own general `Nat.bitwise` combinator, so the flip is honest in the strongest sense this repository's mirror-flip criterion recognizes: Mathlib's `def Nat.bitwise` and ours are the same function, and this closes the same theorem about it."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -28,5 +44,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Proved in Axeyum by reconciliation with the independently constructed native theorem `F:nat-bitwise-comm` (`Nat.bitwise_comm`) -- see that fact's `notes` for the full construction (a Python simulation first confirmed the `Le m fuel -> Le n fuel -> ...` shape was needed, generalized over a symbolic `f` with an explicit commutativity hypothesis `hf`). The external theorem declaration remains prior art, not the source of this proof; formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module, not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review; that edge is curriculum and leakage metadata and grants no dispatch, proof, or admission authority."
 }

@@ -615,25 +615,16 @@ pub(super) fn declare_bitwise_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
 // content beyond `lor_aux_comm_of_fuel`'s transport.
 // ============================================================================
 
-/// `Eq.{1} Bool x y` — the `Bool`-sorted twin of [`NatOps::eq`] (hardcoded to
-/// `Nat`). Needed because `hf`'s conclusion, and the intermediate swap steps
-/// built from it, are `Bool` equalities, not `Nat` ones.
-fn bool_eq(d: &mut NatDev<'_>, x: ExprId, y: ExprId) -> ExprId {
-    let one = d.level_one();
-    let eq_name = d.prelude().logic.eq;
-    let eq = d.kernel().const_(eq_name, vec![one]);
-    let bool_ty = d.bool_ty();
-    d.apply(eq, &[bool_ty, x, y])
-}
-
-/// `h : Eq Bool a b ⊢ Eq Nat (f a) (f b)` — the `Bool`-scrutinee twin of
-/// [`NatOps::congr`] (whose `eq_motive` is hardcoded to bind its `Eq.rec`
-/// motive variable at `Nat`, so it cannot express a hypothesis about a
-/// `Bool` equality). Built manually rather than widening `ops.rs`'s generic
-/// `congr`, since this is the only site in the whole prelude needing a
-/// congruence *hypothesis* over `Bool` — every other `Bool`-valued
-/// congruence in this file (`bit_agreement`, `lor_bit_comm`) closes by case
-/// split on a concrete `f`, never by transporting an abstract equality.
+/// `h : Eq Bool a b ⊢ Eq Nat (f a) (f b)` — the `Bool`-scrutinee, `Nat`-
+/// conclusion twin of [`NatOps::congr`] (whose `eq_motive`/`transport` are
+/// hardcoded to `Nat` throughout, so `congr` itself cannot express a
+/// hypothesis about a `Bool` equality). Built from `ops.rs`'s ALREADY
+/// GENERIC [`NatOps::bool_eq_motive`]/[`NatOps::bool_transport`] — a first
+/// pass at this file duplicated `Eq.{1} Bool` and the raw `Eq.rec`
+/// application by hand before noticing `ops.rs` already carries the whole
+/// `bool_eq`/`bool_refl`/`bool_transport`/`bool_eq_motive` family (built for
+/// `false_true_elim`), exactly the "search for the STEP, not the NAME" trap
+/// this project's own notes warn about.
 fn congr_bool_to_nat(
     d: &mut NatDev<'_>,
     a: ExprId,
@@ -641,22 +632,13 @@ fn congr_bool_to_nat(
     h: ExprId,
     f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
 ) -> ExprId {
-    let bool_ty = d.bool_ty();
     let fa = f(d, a);
-    let x_fv = d.fresh_fvar();
-    let x = d.kernel().fvar(x_fv);
-    let fx = f(d, x);
-    let concl = d.eq(fa, fx);
-    let eq_bool_ax = bool_eq(d, a, x);
-    let anon = d.anon_name();
-    let inner_lam = d.kernel().lam(anon, eq_bool_ax, concl, BinderInfo::Default);
-    let motive = d.lam_fv(x_fv, bool_ty, inner_lam);
+    let motive = d.bool_eq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        d.eq(fa, fx)
+    });
     let refl_case = d.refl(fa);
-    let z = d.kernel().level_zero();
-    let one = d.level_one();
-    let eq_rec_name = d.prelude().logic.eq_rec;
-    let eq_rec = d.kernel().const_(eq_rec_name, vec![z, one]);
-    d.apply(eq_rec, &[bool_ty, a, motive, refl_case, b, h])
+    d.bool_transport(a, motive, refl_case, b, h)
 }
 
 /// `guarded`'s shape from `rec_agreement.rs` (private there): the common
@@ -691,7 +673,13 @@ fn guarded(
 /// concrete-shaped-but-symbolic-valued `Bool` terms), then lifts that
 /// `Bool` equality through `bool_select_nat`'s condition slot via
 /// [`congr_bool_to_nat`].
-fn bitwise_bit_comm(d: &mut NatDev<'_>, f_expr: ExprId, hf_expr: ExprId, m: ExprId, n: ExprId) -> ExprId {
+fn bitwise_bit_comm(
+    d: &mut NatDev<'_>,
+    f_expr: ExprId,
+    hf_expr: ExprId,
+    m: ExprId,
+    n: ExprId,
+) -> ExprId {
     let two = d.num(2);
     let one = d.num(1);
     let bit_m = d.modulo(m, two);
@@ -723,61 +711,66 @@ fn declare_bitwise_aux_zero_left_any_fuel(
     p: &NatPrelude,
 ) -> Result<(), KernelError> {
     let p = *p;
-    theorem_with_f(d, p.bitwise_aux_zero_left_any_fuel, 2, &|d, f_expr, values| {
-        let fuel = values[0];
-        let n = values[1];
-        let zero = d.zero();
-        let false_ = d.bool_false();
-        let true_ = d.bool_true();
-        let f_false_true = d.apply(f_expr, &[false_, true_]);
+    theorem_with_f(
+        d,
+        p.bitwise_aux_zero_left_any_fuel,
+        2,
+        &|d, f_expr, values| {
+            let fuel = values[0];
+            let n = values[1];
+            let zero = d.zero();
+            let false_ = d.bool_false();
+            let true_ = d.bool_true();
+            let f_false_true = d.apply(f_expr, &[false_, true_]);
 
-        let statement_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
-            let lhs = bitwise_aux(d, &p, f_expr, candidate, zero, n);
-            let rhs = d.bool_select_nat(f_false_true, n, zero);
-            d.eq(lhs, rhs)
-        };
+            let statement_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+                let lhs = bitwise_aux(d, &p, f_expr, candidate, zero, n);
+                let rhs = d.bool_select_nat(f_false_true, n, zero);
+                d.eq(lhs, rhs)
+            };
 
-        let proof = cases_zero_succ(
-            d,
-            fuel,
-            &statement_at,
-            &|d| {
-                let lhs = bitwise_aux(d, &p, f_expr, zero, zero, n);
-                d.refl(lhs)
-            },
-            &|d, predecessor| {
-                let succ_pred = d.succ(predecessor);
-                let n_goal = |d: &mut NatDev<'_>, candidate_n: ExprId| -> ExprId {
-                    let lhs = bitwise_aux(d, &p, f_expr, succ_pred, zero, candidate_n);
-                    let rhs = d.bool_select_nat(f_false_true, candidate_n, zero);
-                    d.eq(lhs, rhs)
-                };
-                cases_zero_succ(
-                    d,
-                    n,
-                    &n_goal,
-                    &|d| {
-                        let true_ = d.bool_true();
-                        let false_ = d.bool_false();
-                        let f_true_false = d.apply(f_expr, &[true_, false_]);
-                        let lhs = bitwise_aux(d, &p, f_expr, succ_pred, zero, zero);
-                        let target = d.bool_select_nat(f_false_true, zero, zero);
-                        let lhs_is_zero = bool_select_same(d, zero, f_true_false);
-                        let target_is_zero = bool_select_same(d, zero, f_false_true);
-                        let target_is_zero_rev = d.symm(target, zero, target_is_zero);
-                        d.trans(lhs, zero, target, lhs_is_zero, target_is_zero_rev)
-                    },
-                    &|d, n_pred| {
-                        let succ_n_pred = d.succ(n_pred);
-                        let lhs = bitwise_aux(d, &p, f_expr, succ_pred, zero, succ_n_pred);
-                        d.refl(lhs)
-                    },
-                )
-            },
-        );
-        let stmt = statement_at(d, fuel);
-        (stmt, proof)
-    })?;
+            let proof = cases_zero_succ(
+                d,
+                fuel,
+                &statement_at,
+                &|d| {
+                    let lhs = bitwise_aux(d, &p, f_expr, zero, zero, n);
+                    d.refl(lhs)
+                },
+                &|d, predecessor| {
+                    let succ_pred = d.succ(predecessor);
+                    let n_goal = |d: &mut NatDev<'_>, candidate_n: ExprId| -> ExprId {
+                        let lhs = bitwise_aux(d, &p, f_expr, succ_pred, zero, candidate_n);
+                        let rhs = d.bool_select_nat(f_false_true, candidate_n, zero);
+                        d.eq(lhs, rhs)
+                    };
+                    cases_zero_succ(
+                        d,
+                        n,
+                        &n_goal,
+                        &|d| {
+                            let true_ = d.bool_true();
+                            let false_ = d.bool_false();
+                            let f_true_false = d.apply(f_expr, &[true_, false_]);
+                            let lhs = bitwise_aux(d, &p, f_expr, succ_pred, zero, zero);
+                            let target = d.bool_select_nat(f_false_true, zero, zero);
+                            let lhs_is_zero = bool_select_same(d, zero, f_true_false);
+                            let target_is_zero = bool_select_same(d, zero, f_false_true);
+                            let target_is_zero_rev = d.symm(target, zero, target_is_zero);
+                            d.trans(lhs, zero, target, lhs_is_zero, target_is_zero_rev)
+                        },
+                        &|d, n_pred| {
+                            let succ_n_pred = d.succ(n_pred);
+                            let lhs = bitwise_aux(d, &p, f_expr, succ_pred, zero, succ_n_pred);
+                            d.refl(lhs)
+                        },
+                    )
+                },
+            );
+            let stmt = statement_at(d, fuel);
+            (stmt, proof)
+        },
+    )?;
     Ok(())
 }
 
@@ -794,7 +787,10 @@ fn declare_bitwise_aux_zero_left_any_fuel(
 /// stays symbolic, so the guard never reduces and the placeholder trick
 /// (any well-typed value discarded by a REDUCED `false` condition) does not
 /// apply.
-fn declare_bitwise_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+fn declare_bitwise_aux_agree_of_fuel(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
     let bool_ty = d.bool_ty();
@@ -841,11 +837,19 @@ fn declare_bitwise_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
             bitwise_aux(d, &p, f_expr, fuel2, x, n)
         });
         let any_fuel = d.lemma(p.bitwise_aux_zero_left_any_fuel, &[f_expr, fuel2, n]);
-        let (_, right_is_target) =
-            d.chain(right_term, &[(right_at_zero, right_congr), (target, any_fuel)]);
+        let (_, right_is_target) = d.chain(
+            right_term,
+            &[(right_at_zero, right_congr), (target, any_fuel)],
+        );
         let right_is_target_rev = d.symm(right_term, target, right_is_target);
 
-        let body = d.trans(left_term, target, right_term, left_is_target, right_is_target_rev);
+        let body = d.trans(
+            left_term,
+            target,
+            right_term,
+            left_is_target,
+            right_is_target_rev,
+        );
         let with_h2 = d.lam_fv(h2_fv, bound2_ty, body);
         d.lam_fv(h1_fv, bound1_ty, with_h2)
     };
@@ -886,8 +890,13 @@ fn declare_bitwise_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
                 let right_is_target =
                     d.lemma(p.bitwise_aux_zero_left_any_fuel, &[f_expr, fuel2, n]);
                 let right_is_target_rev = d.symm(right_term, target, right_is_target);
-                let body =
-                    d.trans(left_term, target, right_term, left_is_target, right_is_target_rev);
+                let body = d.trans(
+                    left_term,
+                    target,
+                    right_term,
+                    left_is_target,
+                    right_is_target_rev,
+                );
 
                 let with_h2 = d.lam_fv(h2_fv, bound2_ty, body);
                 d.lam_fv(h1_fv, bound1_ty, with_h2)
@@ -934,11 +943,30 @@ fn declare_bitwise_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
                 let recursive_general = bitwise_aux(d, &p, f_expr, k, half, half_n);
                 let recursive_at_f2p = bitwise_aux(d, &p, f_expr, f2p, half, half_n);
 
-                let start = guarded(d, succ_pred, n, on_n_zero, on_m_zero, recursive_general, bit_general);
-                let mid = guarded(d, succ_pred, n, on_n_zero, on_m_zero, recursive_at_f2p, bit_general);
-                let inner_step = d.congr(recursive_general, recursive_at_f2p, ih_at_half, &|d, hole| {
-                    guarded(d, succ_pred, n, on_n_zero, on_m_zero, hole, bit_general)
-                });
+                let start = guarded(
+                    d,
+                    succ_pred,
+                    n,
+                    on_n_zero,
+                    on_m_zero,
+                    recursive_general,
+                    bit_general,
+                );
+                let mid = guarded(
+                    d,
+                    succ_pred,
+                    n,
+                    on_n_zero,
+                    on_m_zero,
+                    recursive_at_f2p,
+                    bit_general,
+                );
+                let inner_step = d.congr(
+                    recursive_general,
+                    recursive_at_f2p,
+                    ih_at_half,
+                    &|d, hole| guarded(d, succ_pred, n, on_n_zero, on_m_zero, hole, bit_general),
+                );
 
                 let outer_step = d.congr(fuel2, succ_f2p, succ_pred_fuel2, &|d, x| {
                     bitwise_aux(d, &p, f_expr, x, succ_pred, n)
@@ -1014,7 +1042,7 @@ fn declare_bitwise_aux_comm_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
         let b_local = d.kernel().fvar(b_fv);
         let fab = d.apply(f_expr, &[a_local, b_local]);
         let fba = d.apply(f_expr, &[b_local, a_local]);
-        let concl = bool_eq(d, fab, fba);
+        let concl = d.bool_eq(fab, fba);
         let inner = d.pi_fv(b_fv, bool_ty, concl);
         d.pi_fv(a_fv, bool_ty, inner)
     };
@@ -1056,10 +1084,12 @@ fn declare_bitwise_aux_comm_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
         let rhs = bitwise_aux(d, &p, f_expr, zero, b, a);
         let target = d.bool_select_nat(f_false_true, zero, zero);
 
-        let lhs_congr =
-            d.congr(b, zero, b_eq_zero, &|d, x| d.bool_select_nat(f_false_true, x, zero));
-        let rhs_congr =
-            d.congr(a, zero, a_eq_zero, &|d, x| d.bool_select_nat(f_false_true, x, zero));
+        let lhs_congr = d.congr(b, zero, b_eq_zero, &|d, x| {
+            d.bool_select_nat(f_false_true, x, zero)
+        });
+        let rhs_congr = d.congr(a, zero, a_eq_zero, &|d, x| {
+            d.bool_select_nat(f_false_true, x, zero)
+        });
         let rhs_congr_rev = d.symm(rhs, target, rhs_congr);
         let body = d.trans(lhs, target, rhs, lhs_congr, rhs_congr_rev);
 
@@ -1264,7 +1294,7 @@ pub(super) fn declare_bitwise_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         let b_local = d.kernel().fvar(b_fv);
         let fab = d.apply(f_expr, &[a_local, b_local]);
         let fba = d.apply(f_expr, &[b_local, a_local]);
-        let concl = bool_eq(d, fab, fba);
+        let concl = d.bool_eq(fab, fba);
         let inner = d.pi_fv(b_fv, bool_ty, concl);
         d.pi_fv(a_fv, bool_ty, inner)
     };

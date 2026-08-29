@@ -3508,8 +3508,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lor_comm: kernel.name_str(nat, "lor_comm"),
             land_aux_le_left: kernel.name_str(nat, "land_aux_le_left"),
             land_le_left: kernel.name_str(nat, "land_le_left"),
-            bitwise_aux_zero_left_any_fuel: kernel
-                .name_str(nat, "bitwise_aux_zero_left_any_fuel"),
+            bitwise_aux_zero_left_any_fuel: kernel.name_str(nat, "bitwise_aux_zero_left_any_fuel"),
             bitwise_aux_agree_of_fuel: kernel.name_str(nat, "bitwise_aux_agree_of_fuel"),
             bitwise_aux_comm_of_fuel: kernel.name_str(nat, "bitwise_aux_comm_of_fuel"),
             bitwise_comm: kernel.name_str(nat, "bitwise_comm"),
