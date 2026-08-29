@@ -2838,6 +2838,23 @@ pub struct NatPrelude {
     /// (Mathlib's `Nat.testBit_eq_false_of_lt` returns `Bool`), so this is
     /// a local fact, not an `ml430` mirror. See `nat_prelude::bit_order`.
     pub test_bit_eq_zero_of_lt: NameId,
+    /// `Nat.msb_exists_of_le_fuel : ∀ fuel n, Le n fuel → Not (Eq n zero) →
+    /// ∃ i, And (Eq (testBit n i) one) (∀ j, Lt i j → Eq (testBit n j)
+    /// zero)` — the fuel-generalized "hard half" of
+    /// `Nat.exists_most_significant_bit` (piece 2 of 4 toward
+    /// `F:ml430-nat-lt-xor-cases-c43a1e85`): the highest bit really IS set,
+    /// not just that no higher bit is needed. `Nat.size` does not shortcut
+    /// this (it only ever proves an upper bound). See
+    /// `nat_prelude::bit_order`.
+    pub msb_exists_of_le_fuel: NameId,
+    /// `Nat.exists_most_significant_bit : ∀ n, Not (Eq n zero) →
+    /// ∃ i, And (Eq (testBit n i) one) (∀ j, Lt i j → Eq (testBit n j)
+    /// zero)` — the `fuel := n` instance of
+    /// [`Self::msb_exists_of_le_fuel`], via `le_refl`. Nat-valued
+    /// (Mathlib's `testBit` returns `Bool`), so this is a local fact
+    /// (`F:nat-exists-most-significant-bit`), not an `ml430` mirror. See
+    /// `nat_prelude::bit_order`.
+    pub exists_most_significant_bit: NameId,
     /// `Nat.eq_of_testBit_eq : ∀ m n, (∀ i, Eq (testBit m i) (testBit n i))
     /// → Eq m n` — "same bits imply the same number", the general
     /// extensionality lemma `Nat.zero_of_testBit_eq_zero`'s ONE-SIDED case
@@ -3810,6 +3827,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             self_lt_two_pow_add: kernel.name_str(nat, "self_lt_two_pow_add"),
             lt_of_test_bit: kernel.name_str(nat, "lt_of_testBit"),
             test_bit_eq_zero_of_lt: kernel.name_str(nat, "testBit_eq_zero_of_lt"),
+            msb_exists_of_le_fuel: kernel.name_str(nat, "msb_exists_of_le_fuel"),
+            exists_most_significant_bit: kernel.name_str(nat, "exists_most_significant_bit"),
             eq_of_test_bit_eq: kernel.name_str(nat, "eq_of_testBit_eq"),
             xor_assoc: kernel.name_str(nat, "xor_assoc"),
             xor_xor_cancel_left: kernel.name_str(nat, "xor_xor_cancel_left"),

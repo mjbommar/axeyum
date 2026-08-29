@@ -9,7 +9,9 @@
 //! landed below.
 
 use super::NatPrelude;
+use super::helpers::{and_left, and_right, iff_forward};
 use super::ops::{NatDev, NatOps};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -685,11 +687,551 @@ fn declare_test_bit_eq_zero_of_lt(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     Ok(())
 }
 
+/// `False.rec (fun _ => target) false_proof : target` -- duplicated from
+/// `order_more.rs`'s private `ex_falso` (off-limits to edit; five lines,
+/// identical).
+fn ex_falso(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+    let level_zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+    d.apply(rec, &[motive, false_proof])
+}
+
+/// `Eq (mul x (num 2)) (add x x)` bridge, but for the OPPOSITE direction the
+/// `size` proof needs at half's positivity: `Lt zero n -> Lt n (mul two n)`
+/// -- duplicated from `binary.rs`'s private `n_lt_mul_two` (off-limits to
+/// edit; the third private copy of this helper in this prelude, matching
+/// `powsq.rs`/`rec_agreement.rs`'s own duplicates rather than promoting it,
+/// consistent with this codebase's existing convention for a ~20-line
+/// helper reused by three unrelated proofs).
+fn n_lt_mul_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, pos: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let add_n_zero = d.add(n, zero);
+    let add_n_n = d.add(n, n);
+    let step1 = d.lemma(p.add_lt_add_left, &[n, zero, n, pos]);
+    let eq1 = d.lemma(p.add_zero, &[n]);
+    let motive1 = d.eq_motive(add_n_zero, &|d, x| {
+        let add_n_n_inner = d.add(n, n);
+        d.lt(x, add_n_n_inner)
+    });
+    let n_lt_add_n_n = d.transport(add_n_zero, motive1, step1, n, eq1);
+
+    let one = d.num(1);
+    let succ_one = d.succ(one);
+    let mul_succ_one_n = d.mul(succ_one, n);
+    let mul_one_n = d.mul(one, n);
+    let add_mul_one_n_n = d.add(mul_one_n, n);
+    let succ_mul_eq = d.lemma(p.succ_mul, &[one, n]);
+    let one_mul_eq = d.lemma(p.one_mul, &[n]);
+    let congr_step = d.congr(mul_one_n, n, one_mul_eq, &|d, x| d.add(x, n));
+    let (_, mul_two_n_eq_add_n_n) = d.chain(
+        mul_succ_one_n,
+        &[(add_mul_one_n_n, succ_mul_eq), (add_n_n, congr_step)],
+    );
+    let rev_eq = d.symm(mul_succ_one_n, add_n_n, mul_two_n_eq_add_n_n);
+    let motive2 = d.eq_motive(add_n_n, &|d, x| d.lt(n, x));
+    d.transport(add_n_n, motive2, n_lt_add_n_n, mul_succ_one_n, rev_eq)
+}
+
+/// `fun i => And (Eq (testBit n i) one) (∀ j, Lt i j → Eq (testBit n j)
+/// zero)` -- the `exists_most_significant_bit` predicate at a fixed `n`.
+fn msb_predicate(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let one = d.num(1);
+    let zero = d.zero();
+    let tb_i = d.const_app(p.test_bit, &[n, i]);
+    let a = d.eq(tb_i, one);
+    let b = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let lt_i_j = d.lt(i, j);
+        let tb_j = d.const_app(p.test_bit, &[n, j]);
+        let eq_j = d.eq(tb_j, zero);
+        let body = d.arrow(lt_i_j, eq_j);
+        d.pi_fv(j_fv, nat, body)
+    };
+    let and_ty = d.const_app(p.logic.and, &[a, b]);
+    d.lam_fv(i_fv, nat, and_ty)
+}
+
+/// `Exists (msb_predicate n)`.
+fn msb_exists_ty(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let predicate = msb_predicate(d, &p, n);
+    let one_lvl = d.level_one();
+    let exists_c = d.kernel().const_(p.logic.exists_, vec![one_lvl]);
+    d.apply(exists_c, &[nat, predicate])
+}
+
+/// `exists_intro (msb_predicate n) witness (and_intro proof_one proof_upper)
+/// : Exists (msb_predicate n)`.
+fn msb_intro(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n: ExprId,
+    witness: ExprId,
+    proof_one: ExprId,
+    proof_upper: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let one = d.num(1);
+    let zero = d.zero();
+    let tb_w = d.const_app(p.test_bit, &[n, witness]);
+    let a_ty = d.eq(tb_w, one);
+    let b_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let lt_w_j = d.lt(witness, j);
+        let tb_j = d.const_app(p.test_bit, &[n, j]);
+        let eq_j = d.eq(tb_j, zero);
+        let body = d.arrow(lt_w_j, eq_j);
+        d.pi_fv(j_fv, nat, body)
+    };
+    let and_proof = d.const_app(p.logic.and_intro, &[a_ty, b_ty, proof_one, proof_upper]);
+    let predicate = msb_predicate(d, &p, n);
+    let one_lvl = d.level_one();
+    let intro = d.kernel().const_(p.logic.exists_intro, vec![one_lvl]);
+    d.apply(intro, &[nat, predicate, witness, and_proof])
+}
+
+/// `Nat.msb_exists_of_le_fuel : ∀ fuel n, Le n fuel → Not (Eq n zero) →
+/// Exists (msb_predicate n)` -- the hard half of
+/// `Nat.exists_most_significant_bit` (piece 2 of 4 toward
+/// `F:ml430-nat-lt-xor-cases-c43a1e85`; see
+/// `docs/plan/status/269-nat-msb-exists.md` for the "every bit above is
+/// zero" cheap half already landed as `Nat.testBit_eq_zero_of_lt`, and
+/// `docs/plan/status/265-nat-msb-order.md`/`docs/plan/status/271-nat-msb-hard.md`
+/// for why `Nat.size` does NOT shortcut this: `size`'s own development
+/// ([`NatPrelude::size_aux_lt_pow`], `binary.rs`) only ever proves an UPPER
+/// bound (`n < 2^(size n)`), never the LOWER bound this needs, and has no
+/// existing lemma relating `size n` to `size (n/2)`.
+///
+/// SAME fuel/half-recursion shape as `binary.rs`'s
+/// `declare_size_aux_lt_pow` (off-limits to edit but read for the pattern):
+/// induction on `fuel` generalized over `n`, splitting the step on
+/// `beq half zero` (NOT `beq n zero` -- the recursion bottoms out when
+/// `n`'s upper half vanishes, mirroring Mathlib's own `Nat.binaryRec` case
+/// split read at the pinned v4.30 source
+/// `Mathlib/Data/Nat/Bitwise.lean:176`, `by_cases h' : n = 0` on the
+/// binary-recursion "rest").
+///
+/// The move that makes this tractable: `testBit n (succ i) ≡ testBit
+/// (div n 2) i` is `refl` ([`NatPrelude::test_bit_succ`]'s own proof is
+/// `d.refl`), so a proof about bit `i'` of `half := div n 2` is ALREADY,
+/// with zero rewriting, a proof about bit `succ i'` of `n` -- the kernel's
+/// `def_eq` check sees straight through it, for ANY value of `half`
+/// (whether or not `half = 0` holds). Only the UNIVERSALLY QUANTIFIED
+/// "every higher bit is zero" half needs an explicit rewrite, because
+/// there the bit index `j` is an arbitrary bound variable, not
+/// syntactically `succ`-shaped: `succ_pred_of_pos` turns `Lt zero j` into
+/// `j = succ (pred j)`, and transporting along that equation is the one
+/// genuinely new piece of machinery (inlined in both branches below rather
+/// than factored out, since the two branches supply the "zero at half"
+/// premise differently).
+///
+/// - **Base (`fuel=0`)**: `Le n 0` and `Not (Eq n 0)` are jointly
+///   contradictory (`succ_pred_of_pos` turns the positivity into
+///   `n = succ (pred n)`, transported into the bound gives
+///   `Le (succ (pred n)) 0`, refuted by `not_succ_le_zero`).
+/// - **Step (`fuel=succ f`)**, split on `beq half zero`:
+///   - **`half = 0`** (so `n < 2`, `n != 0` forces `n = 1`, via the
+///     `div_mod_exec` reconstruction `n = 2*half + (n mod 2)` collapsing to
+///     `n = n mod 2 < 2`, then `le_antisymm` against `n`'s own positivity):
+///     witness `0`; bit `0` is `1` via `test_bit_zero`/`mod_eq_self_of_lt`;
+///     every `j > 0` bit is `0` via `test_bit_of_zero` transported along
+///     `half = 0` then along `j = succ (pred j)`.
+///   - **`half != 0`**: `half <= f` from `half < n <= succ f`
+///     (`div_mod_lt_mul_iff` + [`n_lt_mul_two`], the SAME bound
+///     `declare_size_aux_lt_pow`'s own step uses); the IH at `half`
+///     supplies `i'`, and the witness is `succ i'` -- bit `succ i'` is `1`
+///     by the `refl` bridge above (no rewriting at all), and every
+///     `j > succ i'` bit is `0` via the IH's upper half applied at
+///     `pred j` (justified by `Lt i' (pred j)`, obtained by transporting
+///     the outer hypothesis along `j = succ (pred j)` and peeling one
+///     `succ` with `le_of_succ_le_succ`) then transported along
+///     `j = succ (pred j)` the same way.
+fn declare_msb_exists_of_le_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+
+    let ne_ty_at = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+        let zero = d.zero();
+        let eq_ty = d.eq(n, zero);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        d.arrow(eq_ty, false_ty)
+    };
+
+    let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let bound_ty = d.le(n, x);
+        let ne_ty = ne_ty_at(d, n);
+        let concl = msb_exists_ty(d, &p, n);
+        let body = d.arrow(ne_ty, concl);
+        let with_bound = d.arrow(bound_ty, body);
+        d.pi_fv(n_fv, nat, with_bound)
+    };
+
+    let base = |d: &mut NatDev<'_>| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let zero = d.zero();
+        let bound_ty = d.le(n, zero);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let ne_ty = ne_ty_at(d, n);
+        let ne_fv = d.fresh_fvar();
+        let hne = d.kernel().fvar(ne_fv);
+
+        // n = succ (pred n), from positivity via hne; transported into
+        // `bound` this contradicts `not_succ_le_zero`.
+        let pos = d.lemma(p.zero_lt_of_ne_zero, &[n, hne]);
+        let eq_n_succ_pred = d.lemma(p.succ_pred_of_pos, &[n, pos]);
+        let pred_n = d.pred(n);
+        let succ_pred_n = d.succ(pred_n);
+        let motive_b = d.eq_motive(n, &|d, x| {
+            let zero = d.zero();
+            d.le(x, zero)
+        });
+        let bound_transported = d.transport(n, motive_b, bound, succ_pred_n, eq_n_succ_pred);
+        let contra = d.lemma(p.not_succ_le_zero, &[pred_n, bound_transported]);
+
+        let target = msb_exists_ty(d, &p, n);
+        let absurd = ex_falso(d, &p, target, contra);
+
+        let with_ne = d.lam_fv(ne_fv, ne_ty, absurd);
+        let with_bound = d.lam_fv(bound_fv, bound_ty, with_ne);
+        d.lam_fv(n_fv, nat, with_bound)
+    };
+
+    let step = |d: &mut NatDev<'_>, f: ExprId, ih: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sf = d.succ(f);
+        let bound_ty = d.le(n, sf);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let ne_ty = ne_ty_at(d, n);
+        let ne_fv = d.fresh_fvar();
+        let hne = d.kernel().fvar(ne_fv);
+
+        let zero = d.zero();
+        let one = d.num(1);
+        let two = d.num(2);
+        let half = d.div(n, two);
+        let condition = d.beq(half, zero);
+        let false_value = d.bool_false();
+        let true_value = d.bool_true();
+        let target_ty = msb_exists_ty(d, &p, n);
+
+        let branch_for = |d: &mut NatDev<'_>, selector: ExprId| {
+            let equality = d.bool_eq(condition, selector);
+            d.arrow(equality, target_ty)
+        };
+
+        // beq half 0 = false -> half != 0 -> half <= f (same bound
+        // `declare_size_aux_lt_pow`'s own step uses) -> IH at half,
+        // eliminated to build the target at `n` via witness `succ i'`.
+        let false_minor = {
+            let false_equality_ty = d.bool_eq(condition, false_value);
+            let false_equality_fv = d.fresh_fvar();
+            let false_equality = d.kernel().fvar(false_equality_fv);
+
+            let ne_half_zero = d.lemma(p.ne_of_beq_eq_false, &[half, zero, false_equality]);
+
+            let pos = d.lemma(p.zero_lt_of_ne_zero, &[n, hne]);
+            let h_exec = d.lemma(p.div_mod_exec, &[one, n]);
+            let r1 = d.modulo(n, two);
+            let iff_fn = d.lemma(p.div_mod_lt_mul_iff, &[two, n, half, r1, n]);
+            let the_iff = d.apply(iff_fn, &[h_exec]);
+            let mul_two_n = d.mul(two, n);
+            let lt_n_2n_ty = d.lt(n, mul_two_n);
+            let lt_half_n_ty = d.lt(half, n);
+            let forward = iff_forward(d, lt_n_2n_ty, lt_half_n_ty, the_iff);
+            let n_lt_2n = n_lt_mul_two(d, &p, n, pos);
+            let half_lt_n = d.apply(forward, &[n_lt_2n]);
+
+            let half_lt_sf = d.lemma(p.lt_of_lt_of_le, &[half, n, sf, half_lt_n, bound]);
+            let half_le_f = d.lemma(p.le_of_succ_le_succ, &[half, f, half_lt_sf]);
+
+            let ih_half = d.apply(ih, &[half]);
+            let ih_half2 = d.apply(ih_half, &[half_le_f]);
+            let ih_result = d.apply(ih_half2, &[ne_half_zero]);
+            // ih_result : Exists (msb_predicate half)
+
+            let source_ty = msb_exists_ty(d, &p, half);
+            let anon = d.anon_name();
+            let elim_motive = d.kernel().lam(anon, source_ty, target_ty, BinderInfo::Default);
+
+            let minor = {
+                let i_fv = d.fresh_fvar();
+                let i_p = d.kernel().fvar(i_fv);
+                let hand_fv = d.fresh_fvar();
+                let hand = d.kernel().fvar(hand_fv);
+                let a_ty = {
+                    let one2 = d.num(1);
+                    let tb = d.const_app(p.test_bit, &[half, i_p]);
+                    d.eq(tb, one2)
+                };
+                let b_ty = {
+                    let jp_fv = d.fresh_fvar();
+                    let jp = d.kernel().fvar(jp_fv);
+                    let lt_i_jp = d.lt(i_p, jp);
+                    let tb = d.const_app(p.test_bit, &[half, jp]);
+                    let zero2 = d.zero();
+                    let eq_j = d.eq(tb, zero2);
+                    let body = d.arrow(lt_i_jp, eq_j);
+                    d.pi_fv(jp_fv, nat, body)
+                };
+                let hand_ty = d.const_app(p.logic.and, &[a_ty, b_ty]);
+                let hi = and_left(d, a_ty, b_ty, hand);
+                let hi_upper = and_right(d, a_ty, b_ty, hand);
+
+                let succ_i = d.succ(i_p);
+                // proof_one : Eq (testBit half i_p) one -- defeq
+                // Eq (testBit n succ_i) one, no wrapping needed.
+                let proof_one = hi;
+
+                let proof_upper = {
+                    let j_fv = d.fresh_fvar();
+                    let j = d.kernel().fvar(j_fv);
+                    let hj_fv = d.fresh_fvar();
+                    let hj = d.kernel().fvar(hj_fv);
+                    let hj_ty = d.lt(succ_i, j);
+
+                    let zero_le_succ_i = d.lemma(p.zero_le, &[succ_i]);
+                    let lt_zero_j =
+                        d.lemma(p.lt_of_le_of_lt, &[zero, succ_i, j, zero_le_succ_i, hj]);
+
+                    let eq_j_succ_jp = d.lemma(p.succ_pred_of_pos, &[j, lt_zero_j]);
+                    let jp = d.pred(j);
+                    let succ_jp = d.succ(jp);
+
+                    let motive_shift = d.eq_motive(j, &|d, x| d.lt(succ_i, x));
+                    let h_shifted = d.transport(j, motive_shift, hj, succ_jp, eq_j_succ_jp);
+                    // h_shifted : Lt succ_i succ_jp = Le (succ succ_i) succ_jp
+                    let lt_i_jp = d.lemma(p.le_of_succ_le_succ, &[succ_i, jp, h_shifted]);
+                    // lt_i_jp : Le succ_i jp == Lt i_p jp [def_eq]
+
+                    let zero_at_half = d.apply(hi_upper, &[jp, lt_i_jp]);
+                    // zero_at_half : Eq (testBit half jp) zero -- defeq
+                    // Eq (testBit n succ_jp) zero, no wrapping needed.
+
+                    let eq_succ_jp_j = d.symm(j, succ_jp, eq_j_succ_jp);
+                    let motive_final = d.eq_motive(succ_jp, &|d, x| {
+                        let tb = d.const_app(p.test_bit, &[n, x]);
+                        let zero3 = d.zero();
+                        d.eq(tb, zero3)
+                    });
+                    let result = d.transport(succ_jp, motive_final, zero_at_half, j, eq_succ_jp_j);
+                    let with_hj = d.lam_fv(hj_fv, hj_ty, result);
+                    d.lam_fv(j_fv, nat, with_hj)
+                };
+
+                let and_proof_n = msb_intro(d, &p, n, succ_i, proof_one, proof_upper);
+                let with_hand = d.lam_fv(hand_fv, hand_ty, and_proof_n);
+                d.lam_fv(i_fv, nat, with_hand)
+            };
+
+            let level_one = d.level_one();
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![level_one]);
+            let half_predicate = msb_predicate(d, &p, half);
+            let step_result = d.apply(
+                exists_rec,
+                &[nat, half_predicate, elim_motive, minor, ih_result],
+            );
+
+            d.lam_fv(false_equality_fv, false_equality_ty, step_result)
+        };
+
+        // beq half 0 = true -> half = 0 -> n < 2 -> (with n != 0) n = 1 ->
+        // witness 0.
+        let true_minor = {
+            let true_equality_ty = d.bool_eq(condition, true_value);
+            let true_equality_fv = d.fresh_fvar();
+            let true_equality = d.kernel().fvar(true_equality_fv);
+
+            let eq_half_zero = d.lemma(p.eq_of_beq_eq_true, &[half, zero, true_equality]);
+
+            let h_exec = d.lemma(p.div_mod_exec, &[one, n]);
+            let r1 = d.modulo(n, two);
+            let mul_two_half = d.mul(two, half);
+            let recon = d.add(mul_two_half, r1);
+            let eq_ty = d.eq(n, recon);
+            let bound_r_ty = d.lt(r1, two);
+            let eq_n_recon = and_left(d, eq_ty, bound_r_ty, h_exec);
+            let r1_lt_two = and_right(d, eq_ty, bound_r_ty, h_exec);
+
+            let mul_two_zero = d.mul(two, zero);
+            let congr_half = d.congr(half, zero, eq_half_zero, &|d, x| d.mul(two, x));
+            let mul_zero_eq = d.lemma(p.mul_zero, &[two]);
+            let mul_half_eq_zero = d
+                .chain(mul_two_half, &[(mul_two_zero, congr_half), (zero, mul_zero_eq)])
+                .1;
+
+            let congr_recon = d.congr(mul_two_half, zero, mul_half_eq_zero, &|d, x| d.add(x, r1));
+            let add_zero_r1 = d.add(zero, r1);
+            let zero_add_r1 = d.lemma(p.zero_add, &[r1]);
+            let eq_n_r1 = d
+                .chain(
+                    n,
+                    &[
+                        (recon, eq_n_recon),
+                        (add_zero_r1, congr_recon),
+                        (r1, zero_add_r1),
+                    ],
+                )
+                .1;
+
+            let eq_r1_n = d.symm(n, r1, eq_n_r1);
+            let motive_nt = d.eq_motive(r1, &|d, x| {
+                let two = d.num(2);
+                d.lt(x, two)
+            });
+            let n_lt_two = d.transport(r1, motive_nt, r1_lt_two, n, eq_r1_n);
+
+            let tb0 = d.const_app(p.test_bit, &[n, zero]);
+            let mod_n_two = d.modulo(n, two);
+            let tb0_eq_mod = d.lemma(p.test_bit_zero, &[n]);
+            let mod_eq_n = d.lemma(p.mod_eq_self_of_lt, &[n, two, n_lt_two]);
+            let tb0_eq_n = d.chain(tb0, &[(mod_n_two, tb0_eq_mod), (n, mod_eq_n)]).1;
+
+            let le_n_one = d.lemma(p.le_of_succ_le_succ, &[n, one, n_lt_two]);
+            let lt_zero_n = d.lemma(p.zero_lt_of_ne_zero, &[n, hne]);
+            let n_eq_one = d.lemma(p.le_antisymm, &[n, one, le_n_one, lt_zero_n]);
+            let tb0_eq_one = d.chain(tb0, &[(n, tb0_eq_n), (one, n_eq_one)]).1;
+
+            let proof_upper = {
+                let j_fv = d.fresh_fvar();
+                let j = d.kernel().fvar(j_fv);
+                let hj_fv = d.fresh_fvar();
+                let hj = d.kernel().fvar(hj_fv);
+                let hj_ty = d.lt(zero, j);
+
+                let eq_j_succ_jp = d.lemma(p.succ_pred_of_pos, &[j, hj]);
+                let jp = d.pred(j);
+                let succ_jp = d.succ(jp);
+
+                let tb_half_jp = d.const_app(p.test_bit, &[half, jp]);
+                let tb_zero_jp = d.const_app(p.test_bit, &[zero, jp]);
+                let congr_tb = d.congr(half, zero, eq_half_zero, &|d, x| {
+                    d.const_app(p.test_bit, &[x, jp])
+                });
+                let test_bit_of_zero_jp = d.lemma(p.test_bit_of_zero, &[jp]);
+                let zero_at_half = d
+                    .chain(
+                        tb_half_jp,
+                        &[(tb_zero_jp, congr_tb), (zero, test_bit_of_zero_jp)],
+                    )
+                    .1;
+                // zero_at_half : Eq (testBit half jp) zero -- defeq
+                // Eq (testBit n succ_jp) zero, no wrapping needed.
+
+                let eq_succ_jp_j = d.symm(j, succ_jp, eq_j_succ_jp);
+                let motive_final = d.eq_motive(succ_jp, &|d, x| {
+                    let tb = d.const_app(p.test_bit, &[n, x]);
+                    let zero2 = d.zero();
+                    d.eq(tb, zero2)
+                });
+                let result = d.transport(succ_jp, motive_final, zero_at_half, j, eq_succ_jp_j);
+                let with_hj = d.lam_fv(hj_fv, hj_ty, result);
+                d.lam_fv(j_fv, nat, with_hj)
+            };
+
+            let and_proof_n = msb_intro(d, &p, n, zero, tb0_eq_one, proof_upper);
+            d.lam_fv(true_equality_fv, true_equality_ty, and_proof_n)
+        };
+
+        let motive_bool = {
+            let selector_fv = d.fresh_fvar();
+            let selector = d.kernel().fvar(selector_fv);
+            let body = branch_for(d, selector);
+            d.lam_fv(selector_fv, bool_ty, body)
+        };
+        let level_zero = d.kernel().level_zero();
+        let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+        let selected = d.apply(bool_rec, &[motive_bool, false_minor, true_minor, condition]);
+        let condition_refl = d.bool_refl(condition);
+        let step_result_final = d.apply(selected, &[condition_refl]);
+
+        let with_ne = d.lam_fv(ne_fv, ne_ty, step_result_final);
+        let with_bound = d.lam_fv(bound_fv, bound_ty, with_ne);
+        d.lam_fv(n_fv, nat, with_bound)
+    };
+
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+    let proof_fn = d.induct(&motive, &base, &step, fuel);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let proof = d.apply(proof_fn, &[n]);
+    let stmt = {
+        let bound_ty = d.le(n, fuel);
+        let ne_ty = ne_ty_at(d, n);
+        let concl = msb_exists_ty(d, &p, n);
+        let with_ne = d.arrow(ne_ty, concl);
+        d.arrow(bound_ty, with_ne)
+    };
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(fuel_fv, nat, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(fuel_fv, nat, over_n)
+    };
+    d.declare_theorem(p.msb_exists_of_le_fuel, ty, value)
+}
+
+/// `Nat.exists_most_significant_bit : ∀ n, Not (Eq n zero) →
+/// Exists (msb_predicate n)` -- the `fuel := n` instance of
+/// [`declare_msb_exists_of_le_fuel`], via `le_refl`. Nat-valued (Mathlib's
+/// `testBit` is `Bool`-valued, read at the pinned v4.30 source
+/// `Mathlib/Data/Nat/Bitwise.lean:176`), so this is a local fact
+/// (`F:nat-exists-most-significant-bit`), matching the
+/// `F:nat-testbit-eq-zero-of-lt`/`F:nat-lt-of-testbit` precedent.
+fn declare_exists_most_significant_bit(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.exists_most_significant_bit, 1, &|d, v| {
+        let n = v[0];
+        let zero = d.zero();
+        let eq_ty = d.eq(n, zero);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let ne_ty = d.arrow(eq_ty, false_ty);
+        let ne_fv = d.fresh_fvar();
+        let hne = d.kernel().fvar(ne_fv);
+
+        let le_refl_n = d.lemma(p.le_refl, &[n]);
+        let result = d.lemma(p.msb_exists_of_le_fuel, &[n, n, le_refl_n, hne]);
+
+        let concl = msb_exists_ty(d, &p, n);
+        let stmt = d.arrow(ne_ty, concl);
+        let proof = d.lam_fv(ne_fv, ne_ty, result);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order.
 pub(super) fn declare_bit_order_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_self_lt_two_pow(d, p)?;
     declare_self_lt_two_pow_add(d, p)?;
     declare_lt_of_test_bit(d, p)?;
     declare_test_bit_eq_zero_of_lt(d, p)?;
+    declare_msb_exists_of_le_fuel(d, p)?;
+    declare_exists_most_significant_bit(d, p)?;
     Ok(())
 }
