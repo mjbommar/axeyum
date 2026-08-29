@@ -264,8 +264,13 @@ use primes::{
     declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
 use rec_agreement::{
-    declare_land_comm, declare_land_fuel_irrelevance_all, declare_ldiff_fuel_irrelevance_all,
-    declare_lor_comm, declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
+    declare_land_comm,
+    declare_land_fuel_irrelevance_all,
+    declare_land_le_left_all,
+    declare_ldiff_fuel_irrelevance_all,
+    declare_lor_comm,
+    declare_lor_fuel_irrelevance_all,
+    declare_rec_agreement_all,
 };
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
@@ -2784,6 +2789,18 @@ pub struct NatPrelude {
     /// [`Self::lor_aux_comm_of_fuel`] and [`Self::lor_aux_agree_of_fuel`]
     /// through the shared fuel `m + n`, exactly as `land_comm` does.
     pub lor_comm: NameId,
+    /// `Nat.land_aux_le_left : ∀ fuel m n, Le (landAux fuel m n) m` —
+    /// `landAux` never exceeds its LEFT operand, at ANY fuel (sufficient or
+    /// not). Needed to re-fuel a NESTED `landAux` occupying an argument
+    /// position (e.g. `landAux fuel (landAux fuel a b) c`, `land_assoc`'s
+    /// shape): [`Self::land_le_left`] gives `land a b ≤ a` for free, which
+    /// [`Self::land_aux_agree_of_fuel`] then uses to move the outer
+    /// application's fuel down to `land a b`'s own canonical fuel. See
+    pub land_aux_le_left: NameId,
+    /// `Nat.land_le_left : ∀ a b, Le (land a b) a` — [`Self::land_aux_le_left`]
+    /// at `fuel := a`, `m := a` (`land a b` and `landAux a a b` are the SAME
+    /// term by definition).
+    pub land_le_left: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3394,6 +3411,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             land_comm: kernel.name_str(nat, "land_comm"),
             lor_aux_comm_of_fuel: kernel.name_str(nat, "lor_aux_comm_of_fuel"),
             lor_comm: kernel.name_str(nat, "lor_comm"),
+            land_aux_le_left: kernel.name_str(nat, "land_aux_le_left"),
+            land_le_left: kernel.name_str(nat, "land_le_left"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3626,6 +3645,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // and the `ble`-based per-bit max-commutativity split; nothing
         // needs it, so it goes right after its `land` sibling.
         declare_lor_comm(&mut d, &p)?;
+        // `Nat.land_aux_le_left`/`Nat.land_le_left`: needs `Nat.landAux`
+        // (`declare_land_all`, far above) and division lemmas
+        // (`div_mod_exec`, `mul_le_mul_left`, `add_le_add_left/right`,
+        // `mod_lt`, `le_of_lt_succ`, all far above); nothing needs it, so it
+        // goes right after `land_comm`.
+        declare_land_le_left_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

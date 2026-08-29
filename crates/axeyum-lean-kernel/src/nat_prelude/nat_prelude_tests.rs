@@ -981,6 +981,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.land_comm,
         p.lor_aux_comm_of_fuel,
         p.lor_comm,
+        p.land_aux_le_left,
+        p.land_le_left,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6272,7 +6274,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        88 + 454,
+        88 + 456,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11205,6 +11207,60 @@ fn lor_comm_applies_at_a_concrete_discriminating_instance() {
     assert!(
         f.k.axiom_footprint(p.lor_comm).is_empty(),
         "lor_comm must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_aux_le_left`/`Nat.land_le_left` apply at symbolic arguments and
+/// at a concrete instance where `land a b < a` STRICTLY (`land 5 6 = 4 < 5`,
+/// `101 & 110 = 100`) -- a pair where `land a b = a` (e.g. `a` a submask of
+/// `b`) would not discriminate a bound that is actually an EQUALITY in
+/// disguise from the real `Le`.
+#[test]
+fn land_le_left_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: `land_aux_le_left` at fully free fuel/m/n.
+    {
+        let name = f.name("land_aux_le_left_restated");
+        f.theorem(name, 3, &|d, values| {
+            let fuel = values[0];
+            let m = values[1];
+            let n = values[2];
+            let lhs = d.const_app(p.land_aux, &[fuel, m, n]);
+            let stmt = d.le(lhs, m);
+            let proof = d.lemma(p.land_aux_le_left, &[fuel, m, n]);
+            (stmt, proof)
+        })
+        .expect("land_aux_le_left must apply at symbolic fuel/m/n");
+    }
+
+    // Concrete: `land 5 6 = 4`, strictly less than `5`.
+    {
+        let five = f.num(5);
+        let six = f.num(6);
+        let four = f.num(4);
+        let lhs = f.const_app(p.land, &[five, six]);
+        let applied = f.lemma(p.land_le_left, &[five, six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_le_left must apply at (a=5, b=6): {shown}")
+        });
+        let want = f.le(lhs, five);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_le_left 5 6 must state Le (land 5 6) 5"
+        );
+        assert!(f.k.def_eq(lhs, four), "land 5 6 must compute to 4");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_aux_le_left).is_empty(),
+        "land_aux_le_left must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_le_left).is_empty(),
+        "land_le_left must rest on zero axioms"
     );
 }
 
