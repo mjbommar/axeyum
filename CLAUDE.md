@@ -1705,6 +1705,33 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `landAux 1 7 7 = 1` against `land 7 7 = 7` — or the statement could be
   quietly false and the kernel would prove it anyway.
 
+  **A NEGATIVE CONTROL COPIED FROM A SIBLING OPERATOR CAN BE VACUOUS, AND I
+  KEPT TELLING LANES TO COPY ONE.** `land`'s insufficient-fuel witness
+  `(fuel, m, n) = (1, 7, 7)` — where `landAux 1 7 7 = 1` against
+  `land 7 7 = 7` — **does not discriminate `lor` at all**: both sides give 7,
+  so the "control" passes while checking nothing. The transporting lane found
+  this, and picked `(1, 3, 4)` for `lor` (`lorAux = 5` vs `lor = 7`) and
+  `(0, 7, 0)` for `ldiff` (`0` vs `7`) instead — **simulating each recursion in
+  Python first**, before committing to a Rust proof.
+
+  So: **derive the witness from the operator you are testing, and check it
+  actually separates the two sides before you build anything around it.** A
+  control inherited from a neighbouring proof is exactly the shape that looks
+  rigorous and measures nothing — the failure this file warns about everywhere
+  else, arriving through the door marked "reuse".
+
+  **Two more corrections from that transport, both about `lor`:**
+
+  - The sizing "~20 lines each" held **exactly** for `ldiffAux` (its
+    `zero_left_any_fuel` is byte-for-byte `land`'s) and **not** for `lorAux`,
+    which needed a nested `cases_zero_succ` on `n`: `bool_select_nat_same` does
+    not apply because `lor`'s two guard branches are `m` and the reduced `n` —
+    *different terms*, not one repeated.
+  - **What broke `lor` was its fuel-exhaustion ROW (returns `n`, not `0`), not
+    its guard order.** The absorbing-zero rule predicts the row correctly; what
+    it does not predict is that the row's shape then propagates into the
+    *proof* of every lemma above it.
+
   **And fuel-irrelevance is NECESSARY BUT NOT SUFFICIENT for the 7 facts a
   triage attributed to it.** `land_comm`/`land_assoc`/`land_bit` and their
   `lor`/`ldiff` siblings each need something further — a `Nat.bit` decode
