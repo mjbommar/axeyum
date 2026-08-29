@@ -70,6 +70,43 @@ def pinned_nursery(commit: str) -> dict:
         ) from error
 
 
+def pinned_fact(commit: str, fact_path: pathlib.Path) -> dict:
+    """A fact ledger file as of `commit`, read from git rather than from disk.
+
+    The nursery membership was already pinned to the census commit
+    (`pinned_nursery`) so a legitimate population change afterwards cannot
+    turn a valid census red. Reading a fact's CONTENT from the live
+    filesystem defeated that for the content half of the same problem: once
+    a train/development fact is later proved, `formal.language` and
+    `formal.statement` are replaced with the kernel's own `render_lean`
+    output (ADR-0601, "evidence_checked means re-derives, not portable") --
+    no longer the Lean surface syntax this generator embeds into a real Lean
+    module. `formal.statement`/`language`/`external_status` are exactly the
+    fields the census needs and this catalog is authoritative over BEFORE a
+    fact leaves `open`; reading them at the pinned commit, alongside the
+    already-pinned nursery membership, is what makes the whole rebuild
+    describe the population as it stood at census time rather than as it
+    stands today. Fails closed, matching `pinned_nursery`: no silent
+    fallback to the live file.
+    """
+    relative = fact_path.relative_to(ROOT).as_posix()
+    completed = subprocess.run(
+        ["git", "show", f"{commit}:{relative}"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    if completed.returncode != 0:
+        raise CoverageResultError(
+            f"pinned fact {relative} at {commit[:12]} is unreachable: "
+            f"{completed.stderr.strip()[:160]}"
+        )
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise CoverageResultError(
+            f"pinned fact {relative} at {commit[:12]} is unreadable: {error}"
+        ) from error
+
+
 def load_module(name: str, path: pathlib.Path):
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -227,7 +264,7 @@ def validate() -> dict[str, Any]:
     nursery = pinned_nursery(pinned)
     expected_source, expected_mapping = generator.build(
         nursery,
-        lambda fact_id: generator.load(generator.fact_path(fact_id)),
+        lambda fact_id: pinned_fact(pinned, generator.fact_path(fact_id)),
         modules,
         expected=expected_rows,
     )
