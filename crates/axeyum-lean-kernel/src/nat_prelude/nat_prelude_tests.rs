@@ -517,6 +517,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.asc_factorial,
         p.multichoose,
         p.is_rel_prime,
+        p.min_fac_aux,
+        p.min_fac,
     ]
 }
 
@@ -6260,7 +6262,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        86 + 444,
+        88 + 444,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8794,6 +8796,77 @@ fn is_rel_prime_is_refuted_at_a_concrete_non_coprime_pair() {
     assert!(
         f.k.axiom_footprint(name).is_empty(),
         "the Not (IsRelPrime 4 6) proof must rest on zero axioms"
+    );
+}
+
+/// `Nat.minFac` (`min_fac.rs`) computes by pure reduction: `minFac 0 = 2`,
+/// `minFac 1 = 1` (the two boundary conventions, checked BEFORE the fuel
+/// search ever runs), `minFac 2 = 2` (the degenerate one-step search),
+/// `minFac 9 = 3` (a composite whose least divisor is not its first
+/// candidate), and the discriminating pair the brief names: `minFac 12 = 2`
+/// against `minFac 15 = 3` — these share no digit, so a "first divisor"
+/// search and a "smallest PRIME divisor" search cannot silently agree on
+/// both by accident (they agree here because the two notions coincide for a
+/// search that scans upward from 2, as the module doc argues, but a search
+/// that scanned in the wrong direction or off-by-one would fail at least one
+/// of these). NEGATIVE reduction controls, matching `test_bit`'s pattern —
+/// a fuel-recursive definition that type-checks but computes the wrong value
+/// has an empty axiom footprint and would pass every other sweep here.
+#[test]
+fn min_fac_computes_the_least_prime_factor_with_negative_controls() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let nine = f.num(9);
+    let twelve = f.num(12);
+    let fifteen = f.num(15);
+
+    let min_fac_of_0 = f.const_app(p.min_fac, &[zero]);
+    let min_fac_of_1 = f.const_app(p.min_fac, &[one]);
+    let min_fac_of_2 = f.const_app(p.min_fac, &[two]);
+    let min_fac_of_9 = f.const_app(p.min_fac, &[nine]);
+    let min_fac_of_12 = f.const_app(p.min_fac, &[twelve]);
+    let min_fac_of_15 = f.const_app(p.min_fac, &[fifteen]);
+
+    assert!(f.k.def_eq(min_fac_of_0, two), "minFac 0 must reduce to 2");
+    assert!(f.k.def_eq(min_fac_of_1, one), "minFac 1 must reduce to 1");
+    assert!(f.k.def_eq(min_fac_of_2, two), "minFac 2 must reduce to 2");
+    assert!(f.k.def_eq(min_fac_of_9, three), "minFac 9 must reduce to 3");
+    assert!(f.k.def_eq(min_fac_of_12, two), "minFac 12 must reduce to 2");
+    assert!(
+        f.k.def_eq(min_fac_of_15, three),
+        "minFac 15 must reduce to 3"
+    );
+
+    // NEGATIVE reduction controls -- a checker that can't fail is worse than
+    // none.
+    assert!(
+        !f.k.def_eq(min_fac_of_0, one),
+        "minFac 0 must NOT be 1 (that is minFac's OTHER boundary value)"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_1, two),
+        "minFac 1 must NOT be 2 (that is minFac's OTHER boundary value)"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_9, two),
+        "minFac 9 must NOT be 2 (9 is odd)"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_12, three),
+        "minFac 12 must NOT be 3 -- its least divisor is 2, found first"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_15, two),
+        "minFac 15 must NOT be 2 -- 15 is odd, so the smallest divisor is 3"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_12, min_fac_of_15),
+        "minFac 12 and minFac 15 must not collapse to the same value"
     );
 }
 

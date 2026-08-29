@@ -162,6 +162,7 @@ mod lcm;
 mod ldiff;
 mod log;
 mod lor;
+mod min_fac;
 mod modular;
 mod multichoose;
 mod no_confusion;
@@ -236,6 +237,7 @@ use lcm::{
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
 use lor::declare_lor_all;
+use min_fac::declare_min_fac_all;
 use modular::declare_modular_congruence;
 use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
@@ -1132,6 +1134,14 @@ pub struct NatPrelude {
     /// (IsRelPrime m n)`. Closes ledger fact
     /// `F:ml430-nat-coprime-iff-isrelprime-0c08eb25`.
     pub coprime_iff_is_rel_prime: NameId,
+    /// `Nat.minFacAux fuel n candidate : Nat` — fuel-recursive linear divisor
+    /// search, see `min_fac.rs`'s module doc for why this is NOT Mathlib's
+    /// `minFacAux` (theirs is well-founded, skips even candidates, and exits
+    /// early at `sqrt n`) even though the two agree pointwise.
+    pub min_fac_aux: NameId,
+    /// `Nat.minFac n : Nat` — the least prime factor of `n`, with `minFac 0 =
+    /// 2` and `minFac 1 = 1` as boundary conventions (matching Mathlib's).
+    pub min_fac: NameId,
     /// `Nat.coprime_self_add_right : ∀ m n, Iff (Eq (gcd m (add m n)) one)
     /// (Eq (gcd m n) one)` — [`coprime_add_self_right`](Self::coprime_add_self_right)
     /// with `m`/`n`'s sum reordered via `add_comm`: the only difference is
@@ -3015,6 +3025,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_of_forall_prime_mul_dvd: kernel.name_str(nat, "dvd_of_forall_prime_mul_dvd"),
             is_rel_prime: kernel.name_str(nat, "IsRelPrime"),
             coprime_iff_is_rel_prime: kernel.name_str(nat, "coprime_iff_isRelPrime"),
+            min_fac_aux: kernel.name_str(nat, "minFacAux"),
+            min_fac: kernel.name_str(nat, "minFac"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
             not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
@@ -3385,6 +3397,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // here to sit next to the other `Coprime` characterisation theorems.
         declare_is_rel_prime(&mut d, &p)?;
         declare_coprime_iff_is_rel_prime(&mut d, &p)?;
+        // `Nat.minFacAux`/`Nat.minFac` need only `Nat.modulo`/`Nat.beq`/
+        // `Nat.sub` (all declared long before this point); placed here to
+        // sit next to the other prime/coprimality declarations.
+        declare_min_fac_all(&mut d, &p)?;
         declare_prime_pred_pos(&mut d, &p)?;
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
