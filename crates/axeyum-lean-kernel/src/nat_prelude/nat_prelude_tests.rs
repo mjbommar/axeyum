@@ -8883,6 +8883,57 @@ fn min_fac_computes_the_least_prime_factor_with_negative_controls() {
     );
 }
 
+/// `Nat.coprime_of_lt_min_fac` applies at `n = 25` (`minFac 25 = 5`), `m =
+/// 4`: `4 ≠ 0` and `4 < 5`, so `gcd 25 4 = 1` must be admitted. `4` is a
+/// DISCRIMINATING witness -- it shares a factor of `2` with neither `25` nor
+/// `5` (unlike, say, `m = 2`, which would pass even under a broken bound
+/// that let `m` reach `minFac 25` itself, since `gcd 25 2` is ALSO `1`).
+#[test]
+fn coprime_of_lt_min_fac_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let twenty_five = f.num(25);
+    let four = f.num(4);
+    let five = f.num(5);
+
+    let min_fac_25 = f.const_app(p.min_fac, &[twenty_five]);
+    assert!(f.k.def_eq(min_fac_25, five), "minFac 25 must reduce to 5");
+
+    // `Not (Eq 4 0)`, via `succ_ne_zero` at `n = 3` (`succ 3 = 4`).
+    let three = f.num(3);
+    let ne_four_zero = f.lemma(p.succ_ne_zero, &[three]);
+    // `Lt 4 5`, via `lt_succ_self` at `n = 4` (`succ 4 = 5`).
+    let lt_four_min_fac = f.lemma(p.lt_succ_self, &[four]);
+
+    let applied = f.lemma(
+        p.coprime_of_lt_min_fac,
+        &[twenty_five, four, ne_four_zero, lt_four_min_fac],
+    );
+    let applied_ty = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "coprime_of_lt_min_fac(25, 4, ..) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    let gcd_25_4 = f.gcd(twenty_five, four);
+    let one = f.num(1);
+    let expected_ty = f.eq(gcd_25_4, one);
+    assert!(
+        f.k.def_eq(applied_ty, expected_ty),
+        "coprime_of_lt_min_fac(25, 4, ..) must land on Eq (gcd 25 4) 1"
+    );
+
+    // NEGATIVE control: `m = 5` is NOT `< minFac 25`, so `4`'s bound is not
+    // vacuous -- and `gcd 25 5 = 5 != 1` confirms `m := minFac n` itself is
+    // genuinely excluded, not merely untested.
+    let gcd_25_5 = f.gcd(twenty_five, five);
+    assert!(
+        !f.k.def_eq(gcd_25_5, one),
+        "gcd 25 5 must NOT be 1 -- 5 is minFac 25 itself, excluded by the strict bound"
+    );
+}
+
 /// `Nat.cantor_diagonal` applies at a concrete `f := Nat.beq`, and — the part
 /// that matters, since a wrong argument order (`f k n` instead of `f n n`)
 /// would type-check identically — the diagonal it produces actually
