@@ -183,6 +183,7 @@ now. Nothing was deleted.
 | 2026-08-29 | `166e789d1` | Repair the premise-selection proved-prefix control's stale fixture (the chain it mutated is now genuinely all-`proved`); guard itself confirmed sound by delete-and-recount. |
 | 2026-08-29 | `2bd5d391c` | Fix `check-control-tests-reachable.py`'s false-credit bug: `control-optout.tsv`'s bare (non-`#`) exclusion rows were vouching for modules they name as unrun. `ORPHAN_BASELINE` 14 -> 16 (corrected measurement, not new rot). |
 | 2026-08-29 | `0348564ab` | Break the `auto<->nat_induction` and `qinst_egraph<->quant_instance_set_cert` cycle-closing edges from 2026-08-17; `modules_in_cycles` now matches the pre-regression baseline exactly. Residual mass/fan-out growth on the same gate is pre-existing, tracked by D1/D3, left untouched. |
+| 2026-08-29 | int-parity-two | 7 of 10 `ml430` division-by-two mirrors closed (`Int.emod_two_ne_zero`/`_ne_one`, `Int.ediv_two_mul_two_of_even`, `Int.ediv_two_mul_two_add_one_of_odd`, `Int.add_one_ediv_two_mul_two_of_odd`, `Int.odd_of_mul_left`/`_right`), all axiom-free; `even_add`/`even_add'`/`even_add_one` left open |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -19603,6 +19604,100 @@ None dispatched. If more `Int` order/add corollaries surface later,
 `add_cancel_neg_left` (new, `order_add.rs`) and the existing
 `cancel_neg_add`/`cancel_neg_add_left` (`modeq.rs`, now `pub(super)`) are
 the reusable pieces — check for them before re-deriving.
+
+**Your lane's block (DONE, int-parity-two, 2026-08-29).** Ten freshly-dispatched
+`ml430` mirrors; **7 closed, 3 left open**. None of the ten already existed
+under a different name (checked `int_prelude/parity.rs`, the only prior
+`Int.Even`/`Int.Odd` content, before starting — it had only the two
+definitions and the two `natAbs` bridge theorems from the `int-parity` lane).
+The `Nat` parity bridge (`Nat.even_iff_mod_two_eq_zero`,
+`Nat.odd_iff_mod_two_eq_one`, `Nat.mod_two_eq_zero_or_one`) did transport, but
+not by direct reuse of a `Nat`-side theorem name — each Int fact needed its
+own `Int.rec` case split with the `Nat` lemma applied to the bound `Nat` field
+of whichever branch, because `Int.Even`/`Int.Odd` are defined via `natAbs`,
+not via a fresh `Int`-level existential (the `int-parity` lane's design
+choice, module doc in `parity.rs`).
+
+**Closed (all axiom-free, `derived_laws` 160 -> 168):**
+
+- `Int.emod_two_ne_zero` (`F:ml430-int-emod-two-ne-zero-d07d008f`),
+  `Int.emod_two_ne_one` (`F:ml430-int-emod-two-ne-one-5b930333`) — pure `n % 2`
+  facts, no `Even`/`Odd` at all. Built from a new internal (non-mirror) helper
+  `Int.emod_two_eq_zero_or_one` — `Int.rec` on `n`, `Nat.mod_two_eq_zero_or_one`
+  on the bound `Nat` field of each branch, `nat_eq_to_int` lifting each `Nat`
+  disjunct across (the `ofNat` branch is a straight lift; the `negSucc` branch
+  lifts through `fun x => subNatNat 2 (succ x)`, which is where the sign flip
+  between `m`'s parity and `negSucc m`'s parity shows up) — then `Or.elim` plus
+  a small `0 ≠ 1 : Int` refutation (`zero_lt_one` rewritten to `Lt one one` via
+  `Eq.rec`, refuted by `lt_irrefl`).
+- `Int.ediv_two_mul_two_of_even` (`F:...-0095e2a6`),
+  `Int.ediv_two_mul_two_add_one_of_odd` (`F:...-a7ec30d7`),
+  `Int.add_one_ediv_two_mul_two_of_odd` (`F:...-3c9ef32f`) — from
+  `Int.ediv_add_emod` at `b := 2`, rewriting `emod n 2` via two new
+  case-split helpers (`even_implies_emod_zero`/`odd_implies_emod_one`, same
+  shape as `emod_two_eq_zero_or_one` but hypothesis-carrying — the `negSucc`
+  branch of the EVEN one needs a contrapositive through
+  `Nat.even_iff_odd_succ`, since that lemma relates `Even m` to `Odd (succ m)`,
+  not `Even (succ m)` to `Odd m`; the ODD one's `negSucc` branch reads the same
+  lemma directly, no contrapositive needed), then `add_zero`/`mul_comm`/
+  `add_comm` to reshape. The `add_one_...` fact shares its derivation with
+  `ediv_two_mul_two_add_one_of_odd` via a private helper rather than
+  re-deriving it.
+- `Int.odd_of_mul_left` (`F:...-b580971e`), `Int.odd_of_mul_right`
+  (`F:...-d6d1fc1d`) — route entirely through `Int.natAbs` being
+  multiplicative (`nat_abs_mul`, `gcd.rs`), so **no `Int.rec` at all**: sign
+  cancels out of the argument completely. Contrapositive on the `Nat` side:
+  `Even a -> Even (a*b)` (two new helpers, `nat_even_mul_of_even_left`/
+  `_right`, via `Nat.right_distrib`/`left_distrib` — existentially witnessed,
+  `Exists.rec`-eliminating the `Even` hypothesis) plus `Nat.even_not_odd`
+  refutes the negation; a new helper `nat_not_even_implies_odd`
+  (contrapositive of `Nat.even_or_odd_exists`) closes it.
+
+**Left open (not attempted — a genuinely separate-sized task):**
+
+- `F:ml430-int-even-add-3c4536e3` — `Even (m+n) <-> (Even m <-> Even n)`.
+- `F:ml430-int-even-add-bc8e1394` — `Even (m+n) <-> (Odd m <-> Odd n)` (this
+  is Mathlib's `Int.even_add'`, a DIFFERENT proposition from the one above
+  despite the brief's warning that both facts share the Mathlib base name
+  `even_add` — confirmed by reading `Mathlib/Algebra/Group/Int/Even.lean`
+  (`even_add`) and `Mathlib/Algebra/Ring/Int/Parity.lean` (`even_add'`)
+  directly).
+- `F:ml430-int-even-add-one-af33da18` — `Even (n+1) <-> Not (Even n)`.
+
+All three need an additive compatibility law for `emod` — `(m+n) % 2` in
+terms of `m % 2`/`n % 2`, or equivalently the `negSucc` branch of `Int.add`
+interacting with parity — that does not exist yet in any branch-free form.
+This is NOT the same machinery as the division-by-two family above (that
+needed only `Int.rec` + a fixed `Nat` lemma per branch; addition's branch
+table over TWO `Int.rec` splits, each contributing sign information, is a
+different and larger shape). Estimate: comparable in size to everything
+landed in this lane combined, not a quick follow-on.
+
+Every Nat-level helper built for this lane
+(`nat_even_predicate`/`nat_even_mul_of_even_left`/`_right`/
+`nat_not_even_implies_odd`/`nat_even_succ_implies_odd`) is module-private to
+`int_prelude/parity.rs`, NOT added to `nat_prelude` (out of this lane's scope
+per the brief) — a future lane building `Nat.Even.mul_left`/`Nat.odd_mul`
+style theorems in `nat_prelude/parity.rs` could supersede these with real
+public `Nat` lemmas and simplify this file's `odd_of_mul_*` proofs, but
+nothing here depends on that happening.
+
+Checks run: `cargo test -p axeyum-lean-kernel --lib int_prelude::` (49
+passed), `cargo fmt --all --check` clean, `cargo clippy -p axeyum-lean-kernel
+--all-targets -- -D warnings` clean, `python3
+scripts/check-test-attribute-integrity.py` (0 findings — touched
+`int_prelude_tests.rs`'s `derived_laws` pin, recounted via
+`scripts/recount-pinned-inventory.py`, not incremented), `python3
+scripts/validate-facts.py` (0 errors, 2034 facts). Each closed fact's two
+evidence rows (`cargo test … int_prelude::` and a per-theorem
+`theorem_axiom_footprint` grep) were run and separately confirmed to FAIL on
+a mutated/nonexistent theorem name before being written into the ledger.
+
+Commits: `c75478ad7` (the eight kernel theorems), `05cc46135` (the seven
+fact-ledger flips). Not pushed.
+
+Next lane: the three `even_add*` facts above, or continue the division-by-two
+family's pattern into other `ml430-int-*` mirrors not yet dispatched.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

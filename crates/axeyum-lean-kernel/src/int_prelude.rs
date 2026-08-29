@@ -1185,6 +1185,31 @@ pub struct IntPrelude {
     /// `even_iff_nat_abs_even : ∀ n, Iff (Even n) (Nat.Even (natAbs n))` —
     /// [`Self::odd_iff_nat_abs_odd`] with `Even`/`Odd` swapped.
     pub even_iff_nat_abs_even: NameId,
+    /// `emod_two_eq_zero_or_one : ∀ n, Or (Eq (emod n 2) 0) (Eq (emod n 2)
+    /// 1)` — the sign-general low-bit split, proved by `Int.rec` on `n` plus
+    /// `Nat.mod_two_eq_zero_or_one` on the bound `Nat` field of each branch
+    /// (not a public `ml430` mirror itself; the load-bearing step under
+    /// [`Self::emod_two_ne_zero`]/[`Self::emod_two_ne_one`]). See
+    /// `parity.rs`'s module doc.
+    pub emod_two_eq_zero_or_one: NameId,
+    /// `emod_two_ne_zero : ∀ n, Iff (Not (Eq (emod n 2) 0)) (Eq (emod n 2)
+    /// 1)`.
+    pub emod_two_ne_zero: NameId,
+    /// `emod_two_ne_one : ∀ n, Iff (Not (Eq (emod n 2) 1)) (Eq (emod n 2)
+    /// 0)`.
+    pub emod_two_ne_one: NameId,
+    /// `ediv_two_mul_two_of_even : ∀ n, Even n → Eq (mul (ediv n 2) 2) n`.
+    pub ediv_two_mul_two_of_even: NameId,
+    /// `ediv_two_mul_two_add_one_of_odd : ∀ n, Odd n → Eq (add (mul (ediv n
+    /// 2) 2) one) n`.
+    pub ediv_two_mul_two_add_one_of_odd: NameId,
+    /// `add_one_ediv_two_mul_two_of_odd : ∀ n, Odd n → Eq (add one (mul
+    /// (ediv n 2) 2)) n`.
+    pub add_one_ediv_two_mul_two_of_odd: NameId,
+    /// `odd_of_mul_left : ∀ m n, Odd (mul m n) → Odd m`.
+    pub odd_of_mul_left: NameId,
+    /// `odd_of_mul_right : ∀ m n, Odd (mul m n) → Odd n`.
+    pub odd_of_mul_right: NameId,
     /// `fib_of_odd : ∀ n, Odd n → Eq Int (fib n) (ofNat (Nat.fib (natAbs
     /// n)))` — at an odd index the sign-extended `fib` agrees with the plain
     /// `Nat`-valued Fibonacci sequence at the magnitude, in EITHER direction
@@ -1487,6 +1512,14 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         odd: child(kernel, "Odd"),
         odd_iff_nat_abs_odd: child(kernel, "odd_iff_nat_abs_odd"),
         even_iff_nat_abs_even: child(kernel, "even_iff_nat_abs_even"),
+        emod_two_eq_zero_or_one: child(kernel, "emod_two_eq_zero_or_one"),
+        emod_two_ne_zero: child(kernel, "emod_two_ne_zero"),
+        emod_two_ne_one: child(kernel, "emod_two_ne_one"),
+        ediv_two_mul_two_of_even: child(kernel, "ediv_two_mul_two_of_even"),
+        ediv_two_mul_two_add_one_of_odd: child(kernel, "ediv_two_mul_two_add_one_of_odd"),
+        add_one_ediv_two_mul_two_of_odd: child(kernel, "add_one_ediv_two_mul_two_of_odd"),
+        odd_of_mul_left: child(kernel, "odd_of_mul_left"),
+        odd_of_mul_right: child(kernel, "odd_of_mul_right"),
         fib_of_odd: child(kernel, "fib_of_odd"),
         induction_on: child(kernel, "induction_on"),
         fib_rec: child(kernel, "fib_rec"),
@@ -1650,10 +1683,18 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;
         parity::declare_parity_all(&mut d)?;
+        parity::declare_emod_two_eq_zero_or_one(&mut d)?;
+        parity::declare_emod_two_ne_zero(&mut d)?;
+        parity::declare_emod_two_ne_one(&mut d)?;
+        parity::declare_ediv_two_mul_two_of_even(&mut d)?;
+        parity::declare_ediv_two_mul_two_add_one_of_odd(&mut d)?;
+        parity::declare_add_one_ediv_two_mul_two_of_odd(&mut d)?;
         gcd::declare_gcd(&mut d)?;
         gcd::declare_gcd_comm(&mut d)?;
         gcd::declare_gcd_one_zero_right(&mut d)?;
         gcd::declare_nat_abs_mul(&mut d)?;
+        parity::declare_odd_of_mul_left(&mut d)?;
+        parity::declare_odd_of_mul_right(&mut d)?;
         nat_abs::declare_nat_abs_pow(&mut d)?;
         gcd::declare_dvd_of_nat_abs_dvd(&mut d)?;
         gcd::declare_nat_abs_dvd_nat_abs_of_dvd(&mut d)?;
