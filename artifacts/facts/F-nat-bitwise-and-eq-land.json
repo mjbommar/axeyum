@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-mod-two-eq-zero-or-one",
+    "F:nat-bitwise-and-eq-land-three-five"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_and_eq_land 2>/dev/null | grep -Ec '^Nat\\.bitwise_and_eq_land[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bitwise_and_eq_land",
+      "kernel_declaration": "Nat.bitwise_and_eq_land",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The anchor `^Nat\\.bitwise_and_eq_land[[:space:]]` matters: the same filter also prints `Nat.bitwise_and_eq_land_three_five` (the single-point predecessor this theorem supersedes), and the trailing `[[:space:]]` excludes it -- verified exactly 1 row. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "for all m n, bitwise and_fn m n = land m n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_bitwise_specialization_equivalences_hold_universally",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.bitwise_and_eq_land",
+      "kernel_declaration": "Nat.bitwise_and_eq_land",
+      "kind": "kernel-term",
+      "notes": "Checked BOTH symbolically and concretely, because the two catch disjoint defects. SYMBOLIC: the statement is re-declared in a consumer namespace over genuinely bound variables with this theorem as the entire proof, so it must apply at operands that are not numerals -- if it held only where everything reduces, that declaration would not be admitted. CONCRETE: seven operand pairs including `(3,5)`, `(5,3)` and `(6,3)`, where AND and OR values differ, so a copy-paste between the `land` and `lor` blocks fails loudly. NEGATIVE CONTROL: this theorem's own proof term, instantiated at `(3,5)`, is offered against the `lor` statement at the same operands (where the two sides reduce to 1 and 7) and the kernel must reject it with `DeclarationValueMismatch`; mutation-verified by swapping `p.lor` for `p.land` there, which kills exactly this one test (120 passed, 1 failed) and no other.",
+      "supports": "the equivalence holds at symbolic operands, at seven concrete pairs, and does not prove the lor statement"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bitwise_and_eq_land",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x2 : Bool) => fun (x3 : Bool) => Bool.rec.{1} (fun (x4 : Bool) => Bool) Bool.false x3 x2) x0 x1) (AxNat.land x0 x1)))"
+  },
+  "id": "F:nat-bitwise-and-eq-land",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nSUPERSEDES the single-point `F:nat-bitwise-and-eq-land-three-five`, whose notes recorded this universal form as not attempted and named the two missing pieces. Both now exist in `nat_prelude/ops.rs`: `cases_mod_two` (the `mod 2 in {0,1}` split, `F:nat-mod-two-eq-zero-or-one`) and `agree_by_fuel_induction` (induction on the shared fuel counter with BOTH value arguments generalized in the motive). That generalization is the whole difficulty -- the successor row recurses at `(m/2, n/2)`, so an induction hypothesis pinned at the theorem's own `m`, `n` is about arguments the step never mentions.\n\nWhat was NOT the difficulty, contrary to the prior expectation: the base cases. `land`/`lor`/`ldiff` differ from EACH OTHER in their fuel-exhaustion rows (whether the fuel operand carries the operator's absorbing zero), but none of them differs from `bitwise`'s, because evaluating a concrete `f` at the boundary Bool literals reproduces each sibling's hand-chosen row by delta-beta-iota alone. Every base case in the proof is `refl`. The one place real proof content is needed is the per-bit combine, where `bool_select_nat (f (beq (m%2) 1) (beq (n%2) 1)) 1 0` and `mul (m%2) (n%2)` are both stuck at symbolic operands and agree only once each bit is known to be 0 or 1.\n\nNo fuel-irrelevance lemma is needed and none is used: `Nat.bitwise f m n := bitwiseAux f m m n` and `Nat.land m n := landAux m m n` put the SAME expression in the fuel slot, so the two recursions are indexed by one counter decrementing in lockstep rather than by two that must be reconciled. The fuel-generalized inner lemma `Nat.bitwise_aux_eq_land_aux` is exposed separately for callers that do reason about a non-canonical fuel.\n\nDoes not flip any `F:ml430-nat-*` fact -- those are a separate, held-out mirror population and untouched by this lane.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-rec-agreement",
+    "source": "`declare_rec_agreement_all` (`crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs`)"
+  },
+  "schema_version": 1,
+  "statement": "The general bitwise combinator instantiated at Bool.and agrees with the specialized bitwise-AND at every pair of natural numbers.",
+  "title": "bitwise and_fn m n = land m n, for all m and n"
+}

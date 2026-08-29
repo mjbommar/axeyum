@@ -1368,3 +1368,103 @@ pub(super) fn cases_lt_bound_absurd(
         ],
     )
 }
+
+/// Eliminate on `Nat.mod x 2 ∈ {0, 1}`: given a `motive` that VARIES with the
+/// remainder's value, plus proofs of `motive 0` and `motive 1` at the concrete
+/// numerals, produce a proof of `motive (Nat.mod x 2)`.
+///
+/// This is the "`Nat.mod _ 2 ∈ {0, 1}` case-split lemma this prelude does not
+/// yet carry" that `bitwise.rs`'s module doc names as one of the two missing
+/// pieces behind a universal `∀ m n, bitwise f m n = <sibling> m n`. It is what
+/// turns two per-bit formulas that agree only *at* `{0, 1}` into terms the
+/// kernel can compare: at a symbolic `Nat.mod m 2` neither
+/// `Nat.mul (m % 2) (n % 2)` nor `bool_select_nat (f (beq (m % 2) 1) …) 1 0`
+/// reduces at all.
+///
+/// Nothing here is specific to `2` — it is [`cases_lt_bound`] at `bound = 2`,
+/// fed the `Lt (mod x 2) 2` witness `Nat.mod_lt` already provides. It is a
+/// named helper only because every caller would otherwise rebuild the same
+/// `zero_lt_succ`/`mod_lt` prologue, and because "does this prelude have the
+/// `mod 2` split" should have one answer a reader can find.
+///
+/// The prelude's nearest existing relatives are strictly weaker for this
+/// purpose, which is why two lanes reported it absent: `powsq.rs`'s *private*
+/// `mod_two_eq_one_of_ne_zero` needs the caller to already hold `r ≠ 0` (it
+/// produces the `= 1` half only), and `Nat.even_or_odd` states a `div`-shaped
+/// disjunction (`n = n/2 + n/2` or `n = succ (n/2 + n/2)`) that never mentions
+/// `Nat.mod` at all.
+pub(super) fn cases_mod_two(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    motive: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    at_zero: ExprId,
+    at_one: ExprId,
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let two = d.num(2);
+    let remainder = d.modulo(x, two);
+    let positive = d.zero_lt_succ(one);
+    let bounded = d.lemma(p.mod_lt, &[x, two, positive]);
+    cases_lt_bound(d, &p, remainder, 2, bounded, motive, &[at_zero, at_one])
+}
+
+/// Prove `∀ fuel a b, P fuel a b` by induction on `fuel` with **both** value
+/// arguments generalized in the motive — i.e. against
+/// `fun fuel => ∀ a b, P fuel a b`, not against `P fuel a b` at some fixed
+/// outer `a`, `b`.
+///
+/// This is the machinery for relating two independently-built `Nat.rec`
+/// instances, and the generalization is the whole of it. Every fuel-recursive
+/// binary definition in this prelude (`landAux`, `lorAux`, `ldiffAux`,
+/// `bitwiseAux`, `logAux`, `powSqAux`) steps from `(m, n)` to `(m / 2, n / 2)`
+/// or similar, so an induction hypothesis pinned at the *original* `a`, `b` is
+/// useless — it holds at arguments the successor row never mentions. Quantify,
+/// and the step can `d.apply(ih, &[half_a, half_b])`.
+///
+/// `statement(d, fuel, a, b)` builds the `Prop`; `base(d, a, b)` proves it at
+/// `fuel = 0`; `step(d, k, ih, a, b)` proves it at `succ k` given
+/// `ih : ∀ a b, P k a b`.
+pub(super) fn agree_by_fuel_induction(
+    d: &mut NatDev<'_>,
+    statement: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId) -> ExprId,
+    base: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+    step: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId, ExprId) -> ExprId,
+    fuel: ExprId,
+) -> ExprId {
+    let quantified = |d: &mut NatDev<'_>, at_fuel: ExprId| {
+        let nat = d.nat_ty();
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let body = statement(d, at_fuel, a, b);
+        let inner = d.pi_fv(b_fv, nat, body);
+        d.pi_fv(a_fv, nat, inner)
+    };
+    d.induct(
+        &quantified,
+        &|d| {
+            let nat = d.nat_ty();
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let body = base(d, a, b);
+            let inner = d.lam_fv(b_fv, nat, body);
+            d.lam_fv(a_fv, nat, inner)
+        },
+        &|d, predecessor, ih| {
+            let nat = d.nat_ty();
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let body = step(d, predecessor, ih, a, b);
+            let inner = d.lam_fv(b_fv, nat, body);
+            d.lam_fv(a_fv, nat, inner)
+        },
+        fuel,
+    )
+}

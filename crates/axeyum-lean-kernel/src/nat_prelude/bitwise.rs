@@ -92,29 +92,46 @@
 //!
 //! Neither boundary lemma needs `f false false = false` — the hypothesis
 //! Mathlib's own *correctness* lemmas (`testBit_bitwise`, etc.) carry, and
-//! which this file does not attempt to reconstruct (see the module-level
-//! doc in `nat_prelude.rs`'s bitwise section for why a full
-//! `∀ m n, bitwise f m n = <sibling> m n` equivalence proof was scoped out).
+//! which this file does not attempt to reconstruct. (The universal
+//! `∀ m n, bitwise f m n = <sibling> m n` equivalences, which this file
+//! originally scoped out, are proved in
+//! [`rec_agreement`](super::rec_agreement) — see the next section.)
 //!
-//! # What was NOT attempted, and why
+//! # The universal equivalence: DONE, in [`rec_agreement`](super::rec_agreement)
 //!
-//! A full universal equivalence `∀ m n, bitwise and m n = land m n` was
-//! **not** proved. `bitwiseAux`'s per-bit step and `landAux`'s per-bit step
-//! are different formulas (`bool_select_nat (and (beq a 1) (beq b 1)) 1 0`
-//! vs. `mul a b`) that agree at every *concrete* `a, b ∈ {0, 1}` but are not
-//! definitionally equal at *symbolic* `a, b` (`Nat.mul` does not reduce
-//! against an unresolved `Nat.mod` term). Closing that gap needs an
-//! induction relating two independently-built `Nat.rec` instances plus a
-//! `Nat.mod _ 2 ∈ {0, 1}` case-split lemma this prelude does not yet carry —
-//! real proof engineering, sized past this lane's scope. What this file
-//! proves instead, as the strongest available check without that induction,
-//! is **concrete-instance equality against the actual sibling
-//! declarations**: [`bitwise_and_eq_land_three_five`] and
-//! [`bitwise_or_eq_lor_three_five`] state `Eq (bitwise and_fn 3 5) (land 3
-//! 5)` / `… (lor 3 5)` and close by `refl` — both sides fully compute to the
-//! same literal numeral, so this is a genuine (if non-universal) admission
-//! that the general definition specializes correctly at a witness where
-//! `land`/`lor`'s own sanity checks already discriminate a wrong-way step.
+//! **This section used to say a full `∀ m n, bitwise and m n = land m n` was
+//! not attempted and was "sized past this lane's scope". That is no longer
+//! true, and the text is corrected rather than deleted because the two
+//! obstacles it named were the right ones.** They were:
+//!
+//! 1. an induction relating two independently-built `Nat.rec` instances, and
+//! 2. a `Nat.mod _ 2 ∈ {0, 1}` case-split lemma the prelude did not carry.
+//!
+//! Both now exist in [`ops`](super::ops) — `agree_by_fuel_induction` and
+//! `cases_mod_two` — and [`NatPrelude::bitwise_and_eq_land`] /
+//! [`NatPrelude::bitwise_or_eq_lor`] are admitted universally, superseding
+//! the concrete witnesses below.
+//!
+//! The diagnosis above was accurate about *where* the difficulty lives:
+//! `bitwiseAux`'s per-bit step and `landAux`'s are different formulas
+//! (`bool_select_nat (and (beq a 1) (beq b 1)) 1 0` vs. `mul a b`) that agree
+//! at every concrete `a, b ∈ {0, 1}` and are not definitionally equal at
+//! symbolic `a, b`. What it did not anticipate is that the **base cases cost
+//! nothing** — evaluating a concrete `f` at the boundary `Bool` literals
+//! reproduces each sibling's hand-chosen fuel-exhaustion row by δβι alone, so
+//! all of `land`/`lor`/`ldiff`'s carefully-distinguished rows line up with
+//! `bitwise`'s automatically. See `rec_agreement.rs`'s module doc.
+//!
+//! [`bitwise_and_eq_land_three_five`](NatPrelude::bitwise_and_eq_land_three_five)
+//! and [`bitwise_or_eq_lor_three_five`](NatPrelude::bitwise_or_eq_lor_three_five)
+//! are kept: they state `Eq (bitwise and_fn 3 5) (land 3 5)` / `… (lor 3 5)`
+//! and close by `refl` at operands where `land`/`lor`'s own sanity checks
+//! already discriminate a wrong-way step, so they remain a *reduction*-based
+//! check that is independent of the induction above.
+//! [`bitwise_xor_three_five`](NatPrelude::bitwise_xor_three_five) has no
+//! universal counterpart, because this prelude declares no `Nat.xor` sibling
+//! to agree with — Mathlib defines `Nat.xor := bitwise xor` at the pinned
+//! commit, so the general form is the only definition on offer either way.
 
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
