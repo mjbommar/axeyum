@@ -576,7 +576,10 @@ fn add_add_add_comm(
     let h5 = d.lemma(p.add_assoc, &[a, c, bd]); // (a+c)+(b+d) = a+(c+(b+d))
     let h5_rev = d.symm(target, s4, h5);
 
-    let (_end, proof) = d.chain(start, &[(s1, h1), (s2, h2), (s3, h3), (s4, h4c), (target, h5_rev)]);
+    let (_end, proof) = d.chain(
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4c), (target, h5_rev)],
+    );
     (target, proof)
 }
 
@@ -714,8 +717,10 @@ pub(super) fn declare_add_div_of_dvd_add_add_one(
                 let mul_c_q_zero = d.add(mul_c_q, zero);
                 let padded_ty = d.eq(ab1, mul_c_q_zero);
                 let zero_lt_c_ty = d.lt(zero, c);
-                let divmod_from_dvd =
-                    d.const_app(p.logic.and_intro, &[padded_ty, zero_lt_c_ty, eq_q, zero_lt_c]);
+                let divmod_from_dvd = d.const_app(
+                    p.logic.and_intro,
+                    &[padded_ty, zero_lt_c_ty, eq_q, zero_lt_c],
+                );
 
                 let lt_ty = d.lt(rr1, c);
                 let ge_ty = d.le(c, rr1);
@@ -759,7 +764,8 @@ pub(super) fn declare_add_div_of_dvd_add_add_one(
                     let step_b = d.lemma(p.add_le_add_left, &[cpred, rb, cpred, rb_le_cpred]);
                     let cpred_cpred = d.add(cpred, cpred);
                     let cpred_rb = d.add(cpred, rb);
-                    let combined = d.lemma(p.le_trans, &[ra_rb, cpred_rb, cpred_cpred, step_a, step_b]);
+                    let combined =
+                        d.lemma(p.le_trans, &[ra_rb, cpred_rb, cpred_cpred, step_a, step_b]);
 
                     // sac_eq, up to defeq (add r' c ≡ succ(add r' cpred);
                     // rr1 ≡ succ ra_rb), types as Eq(succ(add r' cpred))(succ ra_rb).
@@ -768,10 +774,17 @@ pub(super) fn declare_add_div_of_dvd_add_add_one(
                         d.lemma(p.succ_injective, &[r_prime_cpred, ra_rb, sac_eq]);
                     let symm_r_cpred = d.symm(r_prime_cpred, ra_rb, r_cpred_eq_rarb);
                     let combined_motive = d.eq_motive(ra_rb, &|d, x| d.le(x, cpred_cpred));
-                    let combined2 =
-                        d.transport(ra_rb, combined_motive, combined, r_prime_cpred, symm_r_cpred);
-                    let final_le =
-                        d.lemma(p.le_of_add_le_add_right, &[cpred, r_prime, cpred, combined2]);
+                    let combined2 = d.transport(
+                        ra_rb,
+                        combined_motive,
+                        combined,
+                        r_prime_cpred,
+                        symm_r_cpred,
+                    );
+                    let final_le = d.lemma(
+                        p.le_of_add_le_add_right,
+                        &[cpred, r_prime, cpred, combined2],
+                    );
                     let r_prime_lt_c = d.lemma(p.le_succ_succ, &[r_prime, cpred, final_le]); // Lt r' c
 
                     // eqfinal : Eq ab1 (add (add x_term c) r')
@@ -803,22 +816,34 @@ pub(super) fn declare_add_div_of_dvd_add_add_one(
                     let eq_ty2_rhs = d.add(mul_c_succ_qsum, r_prime);
                     let eq_ty2 = d.eq(ab1, eq_ty2_rhs);
                     let r_lt_c_ty = d.lt(r_prime, c);
-                    let manufactured2 =
-                        d.const_app(p.logic.and_intro, &[eq_ty2, r_lt_c_ty, eqfinal, r_prime_lt_c]);
+                    let manufactured2 = d.const_app(
+                        p.logic.and_intro,
+                        &[eq_ty2, r_lt_c_ty, eqfinal, r_prime_lt_c],
+                    );
                     let both2 = d.lemma(
                         p.div_mod_unique,
-                        &[c, ab1, succ_qsum, r_prime, q, zero, manufactured2, divmod_from_dvd],
+                        &[
+                            c,
+                            ab1,
+                            succ_qsum,
+                            r_prime,
+                            q,
+                            zero,
+                            manufactured2,
+                            divmod_from_dvd,
+                        ],
                     );
                     let bq2_ty = d.eq(succ_qsum, q);
                     let br2_ty = d.eq(r_prime, zero);
                     let r_prime_eq_zero = and_right(d, bq2_ty, br2_ty, both2);
 
                     // c = rr1, via r' + c = rr1 and r' = 0.
-                    let congr_rprime =
-                        d.congr(r_prime, zero, r_prime_eq_zero, &|d, v| d.add(v, c));
+                    let congr_rprime = d.congr(r_prime, zero, r_prime_eq_zero, &|d, v| d.add(v, c));
                     let zero_c = d.add(zero, c);
-                    let symm_congr = d.symm(zero_c, r_prime_c, congr_rprime);
-                    let (_, zero_c_eq_rr1) = d.chain(zero_c, &[(r_prime_c, symm_congr), (rr1, sac_eq)]);
+                    // congr_rprime : Eq (add r_prime c) (add zero c) = Eq r_prime_c zero_c
+                    let symm_congr = d.symm(r_prime_c, zero_c, congr_rprime);
+                    let (_, zero_c_eq_rr1) =
+                        d.chain(zero_c, &[(r_prime_c, symm_congr), (rr1, sac_eq)]);
                     let zero_add_c = d.lemma(p.zero_add, &[c]); // Eq (add zero c) c
                     let symm_zero_add_c = d.symm(zero_c, c, zero_add_c);
                     let c_eq_rr1 = d.trans(c, zero_c, rr1, symm_zero_add_c, zero_c_eq_rr1);
@@ -845,7 +870,16 @@ pub(super) fn declare_add_div_of_dvd_add_add_one(
                     let ab_mod_c = d.modulo(ab, c);
                     let both3 = d.lemma(
                         p.div_mod_unique,
-                        &[c, ab, qsum, ra_rb, ab_div_c, ab_mod_c, manufactured3, exec_ab],
+                        &[
+                            c,
+                            ab,
+                            qsum,
+                            ra_rb,
+                            ab_div_c,
+                            ab_mod_c,
+                            manufactured3,
+                            exec_ab,
+                        ],
                     );
                     let q3_ty = d.eq(qsum, ab_div_c);
                     let r3_ty = d.eq(ra_rb, ab_mod_c);
@@ -858,7 +892,10 @@ pub(super) fn declare_add_div_of_dvd_add_add_one(
                 let or_ty = d.const_app(p.logic.or, &[lt_ty, ge_ty]);
                 let goal_motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
                 let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
-                d.apply(or_rec, &[lt_ty, ge_ty, goal_motive, minor_lt, minor_ge, dichotomy])
+                d.apply(
+                    or_rec,
+                    &[lt_ty, ge_ty, goal_motive, minor_lt, minor_ge, dichotomy],
+                )
             });
             d.lam_fv(hyp_fv, dvd_ty, body)
         };

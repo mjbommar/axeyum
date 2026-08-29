@@ -622,6 +622,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.add_mod_right,
         p.add_div_left,
         p.add_div_right,
+        p.add_div_of_dvd_add_add_one,
         p.div_mod_remainder_eq_zero_iff_dvd,
         p.div_mod_exact_exists,
         p.mod_self,
@@ -6822,7 +6823,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 531,
+        93 + 532,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -14736,4 +14737,73 @@ fn add_div_mod_shift_family_applies_at_concrete_discriminating_instances() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `Nat.add_div_of_dvd_add_add_one`, the ninth `ml430` add/div/mod mirror
+/// (`F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0`), applies at two
+/// discriminating instances: `(c,a,b) = (5,7,7)` (`a`,`b` equal, both
+/// quotients and both remainders nonzero and summing exactly to `c-1`) and
+/// `(c,a,b) = (5,3,11)` (`a < c <= b`, asymmetric, chosen to catch an `a`/`b`
+/// swap). Both need a concrete `dvd c (a+b+1)` witness (`concrete_dvd`).
+#[test]
+fn add_div_of_dvd_add_add_one_applies_at_concrete_discriminating_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let seven = f.num(7);
+    let eleven = f.num(11);
+    let fifteen = f.num(15);
+    let zero = f.zero();
+
+    // (5,7,7): 7+7+1 = 15 = 5*3. (7+7)/5 = 14/5 = 2. 7/5+7/5 = 1+1 = 2.
+    let dvd_15 = concrete_dvd(&mut f, five, fifteen, three);
+    let applied = f.lemma(p.add_div_of_dvd_add_add_one, &[five, seven, seven]);
+    let applied = f.apply(applied, &[dvd_15]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "add_div_of_dvd_add_add_one must apply at (5,7,7): {}",
+            f.explain(&e)
+        )
+    });
+    let seven_seven = f.add(seven, seven);
+    let ab_div_c = f.div(seven_seven, five);
+    let a_div_c = f.div(seven, five);
+    let rhs = f.add(a_div_c, a_div_c);
+    let want = f.eq(ab_div_c, rhs);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_div_of_dvd_add_add_one(5,7,7) must state (7+7)/5 = 7/5+7/5"
+    );
+    assert!(f.k.def_eq(ab_div_c, two), "14/5 must compute to 2");
+
+    // (5,3,11): 3+11+1 = 15 = 5*3. (3+11)/5 = 14/5 = 2. 3/5+11/5 = 0+2 = 2.
+    let dvd_15b = concrete_dvd(&mut f, five, fifteen, three);
+    let applied = f.lemma(p.add_div_of_dvd_add_add_one, &[five, three, eleven]);
+    let applied = f.apply(applied, &[dvd_15b]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "add_div_of_dvd_add_add_one must apply at (5,3,11): {}",
+            f.explain(&e)
+        )
+    });
+    let three_eleven = f.add(three, eleven);
+    let ab_div_c2 = f.div(three_eleven, five);
+    let a_div_c2 = f.div(three, five);
+    let b_div_c2 = f.div(eleven, five);
+    let rhs2 = f.add(a_div_c2, b_div_c2);
+    let want2 = f.eq(ab_div_c2, rhs2);
+    assert!(
+        f.k.def_eq(inferred, want2),
+        "add_div_of_dvd_add_add_one(5,3,11) must state (3+11)/5 = 3/5+11/5"
+    );
+    assert!(f.k.def_eq(ab_div_c2, two), "14/5 must compute to 2");
+    assert!(f.k.def_eq(a_div_c2, zero), "3/5 must compute to 0");
+    assert!(f.k.def_eq(b_div_c2, two), "11/5 must compute to 2");
+
+    assert!(
+        f.k.axiom_footprint(p.add_div_of_dvd_add_add_one).is_empty(),
+        "add_div_of_dvd_add_add_one must rest on zero axioms"
+    );
 }
