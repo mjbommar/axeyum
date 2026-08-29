@@ -191,6 +191,7 @@ definitions, i.e. proof *length*, roughly quadratic-to-cubic in the coefficient.
 | --- | --- |
 | pinned Lean 4.30.0 on the fixed 2.27 MB module | **exit 0, 11 s.** `#print axioms` = exactly `dio.hyp._2`, `dio.x._0`, `dio.x._1` — the three query-derived axioms, nothing else |
 | `check-lra-hypothesis-binding.py --instance <the query> --expect bound` | `failures=0`, the instance BINDS (the corpus-floor errors are expected for a one-instance run) |
+| **the FULL `check-lra-hypothesis-binding.py --no-build`** | ran to completion in **36 min**, `rc=1`, `instances=135 … failures=133`. **Not green — see below.** |
 | `cargo check -p axeyum-solver --all-targets --features full` | ok |
 | `cargo test -p axeyum-solver --features full --lib` | **1438 passed, 0 failed** |
 | `cargo test -p axeyum-solver --features full --test corpus_regression` | 1 passed, 0 failed |
@@ -199,6 +200,40 @@ definitions, i.e. proof *length*, roughly quadratic-to-cubic in the coefficient.
 
 Lean toolchain resolved with `scripts/check-lean-gate.sh --print-toolchain`:
 `~/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lean`, commit `d024af09`.
+
+### The gate does not go green, and the reason is documented in its own source
+
+Full run after the fix:
+
+    LRA_HYP_BINDING|instances=135|hypotheses=38|mutants_caught=133|…|failures=133
+
+**The diophantine instance appears nowhere in the failure list** (`grep -c
+diophantine` over the log = 0), which is the whole of this lane's claim on the
+gate. The 133 are the `Real` → `CReal` carrier migration, and
+`scripts/check-lra-hypothesis-binding.py:316-323` already states the number:
+
+> THAT RUN IS FROM BEFORE `a6ee37c6a`. On HEAD `570b5c738` the same sweep
+> reports **133 FAILURES** and it is not this checker's doing: 107 instances now
+> render `axeyum.reconstruct.lra.x._N : CReal` where the carrier table expects
+> `Real`, 10 render `Int` under the same prefix, and 19 structural modules
+> changed shape. … Migrating it is the reals lane's call, not a loosening this
+> lane may make.
+
+So the state change this lane produced is exactly:
+
+| | before | after |
+| --- | --- | --- |
+| gate outcome | `SystemExit`: the dumper exits 1 on the diophantine instance, **the run aborts and reaches no verdict at all** | runs to completion, reports its documented 133 |
+| diophantine instance | crashes the run | binds, `failures=0` in isolation |
+
+**The crash was hiding the whole verdict, not one row.** Nobody had seen this
+sweep's summary line since the carrier migration, because the run died before
+producing it.
+
+Fixing the 133 is a carrier-vocabulary migration in the checker, explicitly
+reserved to the reals lane by the comment above, and is **not** this lane's to
+make. It is the honest reason the gate is red, and it is red at the same number
+it was documented at.
 
 ## Method notes
 
