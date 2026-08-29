@@ -148,6 +148,7 @@ mod crt;
 mod defs;
 mod desc_factorial;
 mod diagonal;
+mod div_mod_lemmas;
 mod divisibility;
 mod division;
 mod euler;
@@ -229,6 +230,7 @@ use defs::{
 };
 use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
+use div_mod_lemmas::declare_add_div_mod_shift_family;
 use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
@@ -789,6 +791,24 @@ pub struct NatPrelude {
     /// `Nat.div_mod_add_multiple :
     ///   divMod d n q r → divMod d (n+d*k) (q+k) r`.
     pub div_mod_add_multiple: NameId,
+
+    // --- ml430 add/div/mod shift family (`div_mod_lemmas.rs`) ---------------
+    /// `Nat.add_div_left : ∀ x {z}, 0 < z → (z+x)/z = x/z+1`.
+    pub add_div_left: NameId,
+    /// `Nat.add_div_right : ∀ x {z}, 0 < z → (x+z)/z = x/z+1`.
+    pub add_div_right: NameId,
+    /// `Nat.add_mod_left : ∀ x z, (x+z)%x = z%x`.
+    pub add_mod_left: NameId,
+    /// `Nat.add_mod_right : ∀ x z, (x+z)%z = x%z`.
+    pub add_mod_right: NameId,
+    /// `Nat.add_mul_div_left : ∀ x z {y}, 0 < y → (x+y*z)/y = x/y+z`.
+    pub add_mul_div_left: NameId,
+    /// `Nat.add_mul_div_right : ∀ x y {z}, 0 < z → (x+y*z)/z = x/z+y`.
+    pub add_mul_div_right: NameId,
+    /// `Nat.add_mul_mod_self_left : ∀ x y z, (x+y*z)%y = x%y`.
+    pub add_mul_mod_self_left: NameId,
+    /// `Nat.add_mul_mod_self_right : ∀ x y z, (x+y*z)%z = x%z`.
+    pub add_mul_mod_self_right: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -3500,6 +3520,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_mod_mul_le_iff: kernel.name_str(nat, "div_mod_mul_le_iff"),
             div_mod_lt_mul_iff: kernel.name_str(nat, "div_mod_lt_mul_iff"),
             div_mod_add_multiple: kernel.name_str(nat, "div_mod_add_multiple"),
+            add_div_left: kernel.name_str(nat, "add_div_left"),
+            add_div_right: kernel.name_str(nat, "add_div_right"),
+            add_mod_left: kernel.name_str(nat, "add_mod_left"),
+            add_mod_right: kernel.name_str(nat, "add_mod_right"),
+            add_mul_div_left: kernel.name_str(nat, "add_mul_div_left"),
+            add_mul_div_right: kernel.name_str(nat, "add_mul_div_right"),
+            add_mul_mod_self_left: kernel.name_str(nat, "add_mul_mod_self_left"),
+            add_mul_mod_self_right: kernel.name_str(nat, "add_mul_mod_self_right"),
             dvd: kernel.name_str(nat, "dvd"),
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
@@ -4045,6 +4073,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // proofs of `Lt zero n -> Eq n (succ (pred n))` on the fly today and
         // are being migrated to call this declared theorem instead.
         declare_succ_pred_of_pos(&mut d, &p)?;
+        // Needs `succ_pred_of_pos` (just declared above, via
+        // `div_mod_reconstructed`'s local copy of `group.rs`'s helper), plus
+        // `div_mod_exec` (`declare_divisibility`, far above) and
+        // `div_mod_unique`/`div_mod_add_multiple` (`declare_euclidean_division`,
+        // further above still).
+        declare_add_div_mod_shift_family(&mut d, &p)?;
         // Needs `succ_pred_of_pos`, just declared above: `prime_two`
         // (`two_divisor_dichotomy`) is not available before this point.
         declare_coprime_of_forall_prime_dvd(&mut d, &p)?;

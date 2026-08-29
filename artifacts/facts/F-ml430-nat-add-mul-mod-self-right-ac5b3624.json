@@ -8,10 +8,31 @@
     "statement": "∀ (x y z : ℕ), (x + y * z) % z = x % z",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_mul_mod_self_right 2>/dev/null | grep -Ec '^Nat\\.add_mul_mod_self_right[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.add_mul_mod_self_right",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.add_mul_mod_self_right` through the trusted `Kernel::add_declaration` gate (declared in `nat_prelude/div_mod_lemmas.rs`'s `declare_add_div_mod_shift_family`). Route: no positivity hypothesis is given, so the divisor `z` is case-split via `cases_zero_succ`; at `z=0` the goal collapses via `mul_zero` plus `add_zero`, at `z=succ zpred` a `mul_comm` bridge (product is `y*z`, `div_mod_shift` wants `dd*k` with `dd:=z`) reaches `div_mod_shift`'s reusable `(n+dd*k)%dd = n%dd` fact at `dd:=z`, `n:=x`, `k:=y`. `nat_theorem_inventory`'s rendered type for `Nat.add_mul_mod_self_right` is `(x0:AxNat)->(x1:AxNat)->(x2:AxNat)->Eq (mod (add x0 (mul x1 x2)) x2) (mod x0 x2)`, matching this fact's `formal.statement` verbatim (`x0`=x, `x1`=y, `x2`=z). `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ (x y z : ℕ), (x + y * z) % z = x % z"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.add_mul_mod_self_right",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it), and `add_div_mod_shift_family_applies_at_concrete_discriminating_instances` re-checks it plus a concrete instantiation (x=7, y=2, z=3, so `13%3=1=7%3`) chosen to discriminate a swapped argument or a missing `mul_comm` bridge via `def_eq`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-29 in this ledger: a fresh local construction, not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `depends_on` is empty because the route builds directly on prelude machinery (`division.rs`), not on another `ml430` fact.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
