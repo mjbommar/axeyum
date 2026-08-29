@@ -971,6 +971,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.ldiff_aux_zero_left_any_fuel,
         p.ldiff_aux_agree_of_fuel,
         p.ldiff_aux_eq_ldiff_of_le,
+        p.land_aux_comm_of_fuel,
+        p.land_comm,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6262,7 +6264,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 447,
+        85 + 449,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -10699,6 +10701,63 @@ fn ldiff_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_n
     assert!(
         f.k.axiom_footprint(p.ldiff_aux_agree_of_fuel).is_empty(),
         "ldiff_aux_agree_of_fuel must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_comm` applies at symbolic `m`/`n` and at a concrete,
+/// DISCRIMINATING instance where `m` and `n` have DIFFERENT bit patterns
+/// (`land 3 6 = 2`, `011 & 110 = 010`) -- a symmetric pair like `(5, 5)`
+/// cannot catch a transposed argument, since both orderings would agree
+/// regardless of whether the proof is right.
+#[test]
+fn land_comm_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables, proved by
+    // the prelude theorem alone.
+    {
+        let name = f.name("land_comm_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(p.land, &[m, n]);
+            let rhs = d.const_app(p.land, &[n, m]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.land_comm, &[m, n]);
+            (stmt, proof)
+        })
+        .expect("land_comm must apply at symbolic m/n");
+    }
+
+    // Concrete: `land 3 6 = 2` and `land 6 3 = 2` (`011 & 110 = 010`).
+    {
+        let three = f.num(3);
+        let six = f.num(6);
+        let two = f.num(2);
+        let lhs = f.const_app(p.land, &[three, six]);
+        let rhs = f.const_app(p.land, &[six, three]);
+        let applied = f.lemma(p.land_comm, &[three, six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_comm must apply at (m=3, n=6): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_comm 3 6 must state Eq (land 3 6) (land 6 3)"
+        );
+        assert!(f.k.def_eq(lhs, two), "land 3 6 must compute to 2");
+        assert!(f.k.def_eq(rhs, two), "land 6 3 must compute to 2");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_aux_comm_of_fuel).is_empty(),
+        "land_aux_comm_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_comm).is_empty(),
+        "land_comm must rest on zero axioms"
     );
 }
 
