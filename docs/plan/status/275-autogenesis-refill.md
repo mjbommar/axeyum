@@ -335,11 +335,22 @@ invisible to it.
 ### Why prose-mining is not the fix
 
 The scan above needed a regex over `notes`, and a naive `F:ml430-[a-z0-9-]+`
-pattern **matches truncated ids inside prose** — `F:ml430-nat-` appears in six
-facts where the text writes a wildcard. The measurement had to filter hits
-against the actual fact ids to be trustworthy. A metric derived that way would
-be wrong in a way nobody would notice, which is the failure this repository
-cares most about.
+pattern **matches strings that are not fact ids**. Measured: **18** non-mirror
+facts yield at least one such string, **10** distinct:
+
+```
+F:ml430-nat                    F:ml430-nat-land          F:ml430-nat-lor
+F:ml430-nat-bitwise            F:ml430-nat-descfactorial  F:ml430-nat-sqrt
+F:ml430-nat-ascfactorial-one   F:ml430-nat-land-bit
+F:ml430-nat-ldiff-bit          F:ml430-nat-lor-bit
+```
+
+The first six are prose wildcards, and those are the harmless half. The other
+four — `ascfactorial-one`, `land-bit`, `ldiff-bit`, `lor-bit` — read as
+*complete* ids that merely omit the hash suffix, so nothing about them looks
+truncated. The measurement had to filter every hit against the real fact ids to
+be trustworthy. A metric derived from prose would be wrong in a way nobody would
+notice, which is the failure this repository cares most about.
 
 ### Proposal: a structural link, and two numbers that never merge
 
