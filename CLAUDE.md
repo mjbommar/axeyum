@@ -1732,6 +1732,29 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
     it does not predict is that the row's shape then propagates into the
     *proof* of every lemma above it.
 
+  **AND IT PROPAGATES INTO THE *STATEMENT*, NOT ONLY THE PROOF — THE
+  UNCONDITIONAL FORM CAN BE FALSE.** Measured 2026-08-29 transporting
+  `land_comm`'s same-fuel commutativity to `lorAux`.
+  `Nat.land_aux_comm_of_fuel : ∀ fuel m n, landAux fuel m n = landAux fuel n m`
+  needs **no hypotheses at all**, because `landAux`'s fuel-exhaustion row is the
+  absorbing constant `0` and is therefore symmetric for free. The obvious `lor`
+  analogue is not merely harder to prove — it is **false**:
+
+      lorAux 0 0 1 = 1     against     lorAux 0 1 0 = 0
+
+  because the pass-through row returns `n`, which is not symmetric in `m`/`n`.
+  So `Nat.lor_aux_comm_of_fuel` must carry `Le m fuel → Le n fuel`, and both
+  places need them: the base case (the hypotheses force `m = n = 0`, restoring
+  symmetry) and the both-nonzero step (bounding each half for the IH).
+
+  The rule to carry: **when transporting a lemma between these operators, ask
+  first whether the fuel-exhaustion row is symmetric in the two operands.** If
+  it is not, the transported statement needs sufficiency hypotheses that the
+  original did not, and writing the unconditional version wastes the attempt on
+  a false goal. Simulate both recursions in Python at small arguments before
+  writing any Rust — that is what caught this one, and it is the same step that
+  catches a vacuous negative control.
+
   **And fuel-irrelevance is NECESSARY BUT NOT SUFFICIENT for the 7 facts a
   triage attributed to it.** `land_comm`/`land_assoc`/`land_bit` and their
   `lor`/`ldiff` siblings each need something further — a `Nat.bit` decode
