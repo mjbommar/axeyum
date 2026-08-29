@@ -573,6 +573,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.one_mul,
         p.mul_one,
         p.mul_eq_zero,
+        p.add_eq_zero,
+        p.zero_or_succ,
         p.zero_le,
         p.le_succ_succ,
         p.le_of_succ_le_succ,
@@ -6377,7 +6379,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        89 + 463,
+        89 + 465,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11514,6 +11516,195 @@ fn land_le_left_applies_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.land_le_left).is_empty(),
         "land_le_left must rest on zero axioms"
+    );
+}
+
+/// `Nat.add_eq_zero` -- the additive twin of `Nat.mul_eq_zero`, built as the
+/// missing arithmetic piece `docs/plan/status/247-nat-bitwise-assoc.md`
+/// named for `land_aux_assoc_of_fuel` (`nat-assoc-dichotomy`,
+/// `docs/plan/status/252-nat-assoc-dichotomy.md`). Applies at fully free
+/// `a`/`b` and at the concrete pair `(0, 0)` -- `Nat` addition has no OTHER
+/// solution to `a + b = 0`, so the discriminating check here is that
+/// `add 3 5` computes to `8` and is NOT `def_eq` to `0`, confirming the
+/// lemma's hypothesis position is a genuine, non-vacuous arithmetic
+/// statement rather than one the kernel could accept for any pair.
+#[test]
+fn add_eq_zero_applies_at_free_and_concrete_arguments() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: restated at fully free a, b.
+    {
+        let name = f.name("add_eq_zero_restated");
+        f.theorem(name, 2, &|d, values| {
+            let a = values[0];
+            let b = values[1];
+            let sum = d.add(a, b);
+            let zero = d.zero();
+            let hyp = d.eq(sum, zero);
+            let left = d.eq(a, zero);
+            let zero2 = d.zero();
+            let right = d.eq(b, zero2);
+            let goal = d.const_app(p.logic.and, &[left, right]);
+            let stmt = d.arrow(hyp, goal);
+            let proof = d.lemma(p.add_eq_zero, &[a, b]);
+            (stmt, proof)
+        })
+        .expect("add_eq_zero must apply at fully free a, b");
+    }
+
+    // Concrete, genuine proof: the only pair with a real hypothesis witness
+    // is (0, 0).
+    {
+        let zero = f.num(0);
+        let hyp = f.refl(zero);
+        let applied = f.lemma(p.add_eq_zero, &[zero, zero]);
+        let applied = f.apply(applied, &[hyp]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("add_eq_zero must apply at (a=0, b=0): {shown}")
+        });
+        let want_side = f.eq(zero, zero);
+        let want = f.const_app(p.logic.and, &[want_side, want_side]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "add_eq_zero 0 0 must state And (Eq 0 0) (Eq 0 0)"
+        );
+    }
+
+    // Discriminating computation check.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let eight = f.num(8);
+        let sum = f.add(three, five);
+        assert!(f.k.def_eq(sum, eight), "add 3 5 must compute to 8");
+        let zero = f.num(0);
+        assert!(
+            !f.k.def_eq(sum, zero),
+            "add 3 5 must NOT be defeq to 0 -- (3, 5) is not a valid \
+             hypothesis witness, which is exactly why (0, 0) is the only \
+             concrete pair usable above"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.add_eq_zero).is_empty(),
+        "add_eq_zero must rest on zero axioms"
+    );
+}
+
+/// `Nat.zero_or_succ` -- the equational dichotomy built for
+/// `nat-assoc-dichotomy`'s `land_aux_assoc_of_fuel` attempt
+/// (`docs/plan/status/252-nat-assoc-dichotomy.md`). Applies at a COMPOUND,
+/// non-atomic term (`mul 2 k` for a free `k`) -- exactly the shape the wall
+/// this was built for needs (`X := landAux fuel a b`, not a bound variable)
+/// -- and is genuinely CONSUMED by an `Or.rec` elimination at a concrete
+/// positive numeral, refuting the left disjunct via `succ_ne_zero` and
+/// surviving with the right.
+#[test]
+fn zero_or_succ_applies_at_a_compound_term_and_is_consumed_by_or_elim() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    // Applies at a compound term built from a BOUND (not raw-fvar) variable
+    // -- wrapped in its own theorem so the kernel's trusted gate re-checks
+    // the fully closed result, exactly the shape `X := landAux fuel a b`
+    // has as an argument built from the outer induction's own bound `a`/`b`.
+    {
+        let name = f.name("zero_or_succ_at_compound_restated");
+        f.theorem(name, 1, &|d, values| {
+            let k = values[0];
+            let two = d.num(2);
+            let target = d.mul(two, k);
+            let zero = d.zero();
+            let left = d.eq(target, zero);
+            let level_one = d.level_one();
+            let nat = d.nat_ty();
+            let exists_const = d.kernel().const_(p.logic.exists_, vec![level_one]);
+            let pred_fv = d.fresh_fvar();
+            let pred = d.kernel().fvar(pred_fv);
+            let succ_pred = d.succ(pred);
+            let body = d.eq(target, succ_pred);
+            let predicate = d.lam_fv(pred_fv, nat, body);
+            let right = d.apply(exists_const, &[nat, predicate]);
+            let stmt = d.const_app(p.logic.or, &[left, right]);
+            let proof = d.lemma(p.zero_or_succ, &[target]);
+            (stmt, proof)
+        })
+        .expect("zero_or_succ must apply at a compound term (mul 2 k) for bound k");
+    }
+
+    // Consumed by Or.rec at a concrete positive numeral: the left disjunct
+    // (`Eq 5 0`) is refuted via `succ_ne_zero` (`5` is built as `succ 4`, so
+    // the hypothesis is directly usable with no rewriting), leaving the
+    // right disjunct (`Exists p, Eq 5 (succ p)`) as the surviving witness.
+    {
+        let five = f.num(5);
+        let four = f.num(4);
+        let dichotomy = f.lemma(p.zero_or_succ, &[five]);
+
+        let zero = f.zero();
+        let left_ty = f.eq(five, zero);
+        let level_one = f.level_one();
+        let exists_const = f.kernel().const_(p.logic.exists_, vec![level_one]);
+        let pred_fv = f.fresh_fvar();
+        let pred = f.kernel().fvar(pred_fv);
+        let succ_pred = f.succ(pred);
+        let body = f.eq(five, succ_pred);
+        let predicate = f.lam_fv(pred_fv, nat, body);
+        let right_ty = f.apply(exists_const, &[nat, predicate]);
+
+        let left_branch = {
+            let h_fv = f.fresh_fvar();
+            let h = f.kernel().fvar(h_fv);
+            // h : Eq 5 0, i.e. Eq (succ 4) 0 -- refuted directly.
+            let contradiction = f.lemma(p.succ_ne_zero, &[four, h]);
+            let false_ty = f.kernel().const_(p.logic.false_, vec![]);
+            let level_zero = f.kernel().level_zero();
+            let false_rec = f.kernel().const_(p.logic.false_rec, vec![level_zero]);
+            let anon = f.anon_name();
+            let motive = f
+                .kernel()
+                .lam(anon, false_ty, right_ty, BinderInfo::Default);
+            let body = f.apply(false_rec, &[motive, contradiction]);
+            f.lam_fv(h_fv, left_ty, body)
+        };
+        let right_branch = {
+            let h_fv = f.fresh_fvar();
+            let h = f.kernel().fvar(h_fv);
+            f.lam_fv(h_fv, right_ty, h)
+        };
+
+        let anon = f.anon_name();
+        let or_ty = f.const_app(p.logic.or, &[left_ty, right_ty]);
+        let or_motive = f.kernel().lam(anon, or_ty, right_ty, BinderInfo::Default);
+        let or_rec = f.kernel().const_(p.logic.or_rec, vec![]);
+        let surviving = f.apply(
+            or_rec,
+            &[
+                left_ty,
+                right_ty,
+                or_motive,
+                left_branch,
+                right_branch,
+                dichotomy,
+            ],
+        );
+        let inferred = f.k.infer(surviving).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("Or.rec must consume zero_or_succ at 5: {shown}")
+        });
+        assert!(
+            f.k.def_eq(inferred, right_ty),
+            "the surviving proof must have the Exists type"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.zero_or_succ).is_empty(),
+        "zero_or_succ must rest on zero axioms"
     );
 }
 
