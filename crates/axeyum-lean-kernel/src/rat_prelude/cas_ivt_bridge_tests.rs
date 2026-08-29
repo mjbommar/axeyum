@@ -444,7 +444,7 @@ fn rat_eq_rewrite_back(
 /// of `Int.lt`'s definition) to `True` regardless of magnitude — so
 /// `d.true_intro()` closes it, and the kernel's own defeq check is what does
 /// (or refuses) the sign verification, not this Rust code.
-fn lt_zero_via_true(
+pub(crate) fn lt_zero_via_true(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     eval_expr: ExprId,

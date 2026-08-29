@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-extremum-deriv-sign-bracket-kernel-checked",
+  "title": "For p(x)=x^3-6x, the derivative p'=3x^2-6 changes sign on (-2,-1) -- kernel-reconstructed, not just CAS-asserted",
+  "statement": "For p(x) = x^3 - 6x on [-3, 2] (the same instance F:cas-extremum-irrational-argmax's certificate names, with irrational argmax -sqrt(2) and value 4*sqrt(2)), the derivative p' = 3x^2 - 6 -- axeyum-cas's own cert.deriv field, not a hand-differentiated polynomial -- satisfies p'(-2) = 6 > 0 and p'(-1) = -3 < 0, reconstructed through crate::Kernel::add_declaration over Rat.polyEval, not merely asserted by axeyum-cas's own normal form. This is deliberately WEAKER than the full ExtremumCertificate: it does not claim IVT itself (that a sign change of p' on (-2,-1) implies a root there is not reconstructed through this kernel, only the two inequalities that implication would need), it does not claim the root is -sqrt(2) or even irrational, and it says nothing about the OTHER critical point (sqrt(2), a local minimum on this interval). Differentiation as a general operation, the completeness of critical_points as the FULL interior root set of p', and the Sturm count establishing that completeness all remain cas-internal, exactly as F:cas-extremum-irrational-argmax's own evidence notes already state.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (- (^ x 3) (* 6 x)))\n(define-poly dp (- (* 3 (^ x 2)) 6))\n(assert (> (poly-eval dp -2) 0))\n(assert (< (poly-eval dp -1) 0))",
+    "fragment": "real-algebraic-evt-derivative-sign-bracket",
+    "free_symbols": ["x"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval, built from the same rat_prelude/int_prelude/nat_prelude constants the IVT sign-bracket bridge (F:cas-ivt-sign-bracket-cbrt2-kernel-checked) and the EVT endpoint-exclusion bridge (F:cas-evt-endpoint-exclusion-cubic-kernel-checked) both enumerate (all measured axiom-free), but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "cas.extremum-certificate-differentiation-completeness-and-sturm-count-not-claimed-here: this fact states ONLY that p'(-2) > 0 and p'(-1) < 0 for the CAS's OWN cert.deriv value. It does not reconstruct differentiation as a general kernel operation (a hand-differentiated polynomial is never built; cert.deriv is taken as given and merely translated), does not reconstruct that critical_points is the COMPLETE interior root set of p' (only that a sign change exists in ONE named bracket), does not claim the resulting root equals -sqrt(2) or is irrational, and does not touch the OTHER root of p' (sqrt(2)). All remain cas-internal, checked only by extremum::verify_extremum_certificate (see F:cas-extremum-irrational-argmax's own evidence notes).",
+    "cas.ivt-implication-itself-not-reconstructed: a sign change of p' on (-2,-1) implies, by the intermediate value theorem, that p' has a root (hence p has a critical point) there -- but that IMPLICATION step is not admitted through this kernel, only the two inequalities it would need, mirroring cas_ivt_bridge_tests.rs's own discipline for the analogous IVT sign bracket."
+  ],
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-extremum-deriv-sign-bracket-left",
+      "kind": "kernel-term",
+      "supports": "0 < p'(-2) for p' = 3x^2-6, admitted by crate::Kernel::add_declaration as Check.extremum_deriv_sign_bracket_left : Rat.lt Rat.zero (Rat.polyEval c 3 (Rat.ofInt -2)), where c is built from the same [-6,0,3] integer coefficients axeyum-cas's own extremum::polynomial_extremum(x^3-6x, -3, 2) certificate's cert.deriv field actually returns (asserted equal in the test, not hand-differentiated), from a Nat.le 1 6 witness -- 6 being the EXACT value the fully reduced polynomial computes to.",
+      "check_status": "checked",
+      "checkers": [
+        "extremum::polynomial_extremum (untrusted producer: differentiates p exactly via poly::rat_derivative and returns cert.deriv = [-6,0,3])",
+        "rat_prelude::cas_extremum_deriv_bridge_tests::deriv_to_int + eval_i128 (untrusted translator: ExtremumCertificate.deriv -> integer coefficients, then plain i128 Horner evaluation at each bracket point -- if either value is wrong the reduced kernel-side constant will not match the asserted bound and add_declaration rejects, not silently)",
+        "rat_prelude::cas_ivt_bridge_tests::poly_eval_to_of_int (shared proof-assembly engine, reused verbatim from the IVT sign-bracket bridge: Rat.ofInt literal chain via Rat.ofInt_add/Rat.ofInt_mul, entirely Rust-side)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated Rat.lt fact from the supplied proof term)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 7,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_extremum_deriv_bridge_tests.rs",
+      "notes": "The named test builds BOTH sign-bracket halves in one #[test] fn (Check.extremum_deriv_sign_bracket_left and Check.extremum_deriv_sign_bracket_right) plus a swapped-statement negative control, so this evidence row and the next one share one checker_command -- separate rows because they support distinct halves of the statement, not distinct commands. cert.deriv is asserted equal to [-6,0,3] BEFORE any kernel-side term is built (assert_eq! in the test), so a wrong CAS derivative would fail at that assertion rather than silently propagate into a vacuously-true kernel claim. p'(-2) = 3*4-6 = 6 and p'(-1) = 3*1-6 = -3 were computed by hand twice before being encoded, per docs/plan/status/223-cas-reconstruct.md's warning that Kernel::add_declaration type-checks a proof term but cannot by itself tell a constant is wrong. Measured wall-clock (this machine, cold cargo-serialized.sh test, single invocation): 6.34s including the one-time Rat prelude build -- comparable to the sibling IVT/EVT bridges (~6-9s each), consistent with this being the same degree-2 evaluation shape at two concrete points."
+    },
+    {
+      "id": "kernel-reconstructed-extremum-deriv-sign-bracket-right",
+      "kind": "kernel-term",
+      "supports": "p'(-1) < 0 for p' = 3x^2-6, admitted by crate::Kernel::add_declaration as Check.extremum_deriv_sign_bracket_right : Rat.lt (Rat.polyEval c 3 (Rat.ofInt -1)) Rat.zero. Also carries the swapped-statement negative control: the SAME proof term for the left leg (0 < p'(-2)), re-ascribed against the FALSE statement p'(-2) < 0, is confirmed REJECTED by Kernel::add_declaration -- exercising the kernel's own type check rather than asking any decision procedure to accept a falsehood.",
+      "check_status": "checked",
+      "checkers": [
+        "extremum::polynomial_extremum (same untrusted producer as the left leg)",
+        "rat_prelude::cas_extremum_deriv_bridge_tests::deriv_to_int + eval_i128 (same untrusted translator, applied at x=-1)",
+        "rat_prelude::cas_ivt_bridge_tests::lt_zero_via_true (shared proof-assembly engine for the negative-sign case, made pub(crate) by this fact's own lane for exactly this reuse -- it was private before this fact, used only inside cas_ivt_bridge_tests itself)",
+        "crate::Kernel::add_declaration (trusted judge: this leg additionally confirms REJECTION of the left leg's proof term ascribed against its own negation -- admitted_wrong.is_err() is asserted)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 7,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_extremum_deriv_bridge_tests.rs",
+      "notes": "Same single #[test] fn as the left-leg row (both legs plus the negative control are asserted together, so the checker_command is identical). Rat.lt (ofInt m) Rat.zero and Rat.lt Rat.zero (ofInt n) are NOT symmetric to reconstruct -- the negative half reduces (Int.lt's own negSucc/ofNat definitional case) to True unconditionally via lt_zero_via_true, while the positive half needs zero_lt_via_nat_le's Nat.le witness -- see cas_ivt_bridge_tests.rs's own module doc for why these need two different closing lemmas rather than one shared one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked (crates/axeyum-lean-kernel/src/rat_prelude/cas_extremum_deriv_bridge_tests.rs), sized by docs/research/11-design-review/2026-08-28-ivt-evt-pareto-position-measured.md's 'Row 3, followed up' section, which named 28-of-32 cas-certificate facts as the number to move and flagged the real-algebraic/EVT cluster as reachable without new kernel machinery",
+    "source": "classical Extreme Value Theorem combined with Fermat's interior-extremum condition (a maximum not at an endpoint occurs where the derivative changes sign), specialized to the concrete cubic p=x^3-6x on [-3,2] -- the same instance F:cas-extremum-irrational-argmax's and F:cas-evt-endpoint-exclusion-cubic-kernel-checked's certificates name (extremum::tests::irrational_argmax)",
+    "prior_art": [
+      {
+        "who": "Weierstrass (extreme value theorem); Fermat (interior-extremum condition); Bolzano/Cauchy (intermediate value theorem, the implication this fact deliberately does NOT reconstruct)",
+        "what": "the extreme value theorem for continuous real functions on a compact interval, combined with the vanishing-derivative necessary condition at an interior extremum",
+        "year": 1860,
+        "where": "classical analysis; this instance is a routine cubic-polynomial application",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:cas-extremum-irrational-argmax and to F:cas-evt-endpoint-exclusion-cubic-kernel-checked, not an edit to either: folding this evidence into the Sturm-backed fact would make scripts/validate-facts.py's classify_cas_certificate_fact label the WHOLE certificate -- differentiation, Sturm isolation, and completeness included -- as kernel-reconstructed, which would overclaim. This fact reconstructs a DIFFERENT part of the same certificate than the endpoint-exclusion sibling: that one shows the interior point x=-1 beats both endpoints (the LAST step of the argument); this one shows the derivative genuinely changes sign over the bracket (-2,-1) containing the true argmax -sqrt(2) (an EARLIER step). The two facts are independent kernel-reconstructions of independent parts of one certificate, not a chain that composes into a kernel proof of the full ExtremumCertificate -- that composition (which would additionally need the IVT implication itself, differentiation as a general operation, and Sturm completeness reconstructed) remains unaddressed future work. Reused rat_prelude::cas_ivt_bridge_tests's shared poly_eval_to_of_int/n_term_polynomial/int_lit/of_int/rational_to_int/zero_lt_via_nat_le verbatim rather than re-deriving them (per CLAUDE.md's note on the cost of two proofs of one fact); lt_zero_via_true was made pub(crate) by this lane for the same reuse (it existed already, built for the IVT sign-bracket bridge, but had never been exposed outside its own file). Constants (p'(-2)=6, p'(-1)=-3) were computed by hand twice before being encoded and cross-checked against the untrusted i128 Horner evaluator, per docs/plan/status/223-cas-reconstruct.md's warning that Kernel::add_declaration type-checks a proof term but cannot by itself tell a constant is wrong. Moves the ledger's cas-certificate split from kernel-reconstructed 4 (of 32) to kernel-reconstructed 5 (of 33) -- see docs/plan/status/274-cas-row-three.md for the verified cluster breakdown this fact was chosen from."
+}
