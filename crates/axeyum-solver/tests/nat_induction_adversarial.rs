@@ -24,7 +24,7 @@ use std::thread;
 use std::time::Duration;
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, prove_by_nat_induction, solve_smtlib};
+use axeyum_solver::{CheckResult, SolverConfig, check_auto, prove_by_nat_induction, solve_smtlib};
 
 /// Per-probe wall-clock cap. Every probe is tiny; this only stops one hanging
 /// obligation from taking the suite with it.
@@ -51,6 +51,7 @@ fn induction_verdict(text: &'static str) -> String {
                     &mut parsed.arena,
                     &assertions,
                     &SolverConfig::default(),
+                    check_auto,
                 ) {
                     Ok(Some(CheckResult::Unsat)) => "unsat".to_owned(),
                     Ok(Some(CheckResult::Sat(_))) => "sat".to_owned(),
@@ -540,11 +541,11 @@ fn nat_induction_is_stable_across_repeated_calls_on_one_arena() {
     let assertions = parsed.assertions.clone();
     let config = SolverConfig::default();
 
-    let first = prove_by_nat_induction(&mut parsed.arena, &assertions, &config)
+    let first = prove_by_nat_induction(&mut parsed.arena, &assertions, &config, check_auto)
         .expect("first call succeeds");
-    let second = prove_by_nat_induction(&mut parsed.arena, &assertions, &config)
+    let second = prove_by_nat_induction(&mut parsed.arena, &assertions, &config, check_auto)
         .expect("second call succeeds");
-    let third = prove_by_nat_induction(&mut parsed.arena, &assertions, &config)
+    let third = prove_by_nat_induction(&mut parsed.arena, &assertions, &config, check_auto)
         .expect("third call succeeds");
 
     assert!(
@@ -576,8 +577,8 @@ fn nat_induction_declines_satisfiable_set_repeatedly() {
     let assertions = parsed.assertions.clone();
     let config = SolverConfig::default();
     for round in 0..3 {
-        let verdict =
-            prove_by_nat_induction(&mut parsed.arena, &assertions, &config).expect("call succeeds");
+        let verdict = prove_by_nat_induction(&mut parsed.arena, &assertions, &config, check_auto)
+            .expect("call succeeds");
         assert!(
             verdict.is_none(),
             "round {round}: satisfiable set was decided {verdict:?}"

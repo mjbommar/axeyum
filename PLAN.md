@@ -179,6 +179,7 @@ now. Nothing was deleted.
 | 2026-08-29 | `94292a1fb` | arity survey of the 10 geometry certificates; fixed-arity alternative refuted for geometry (arities 6–19); varignon and thales identified as carrying vacuous identities |
 | 2026-08-29 | `1cd4aa0ab` | `rat_prelude/cas_geometry_bridge_tests.rs` — the multivariate bridge: representation choice, `prove_scale`/`prove_merge`, translator tests green |
 | 2026-08-29 | (this commit) | `F:geometry-orthocentre-cofactor-identity-kernel-checked` — the first multivariate CAS→kernel reconstruction, symbolic in 8 variables, axiom-free, mutation-verified both halves; cas-certificate kernel-reconstructed 7 → 8 |
+| 2026-08-29 | `0348564ab` | Break the `auto<->nat_induction` and `qinst_egraph<->quant_instance_set_cert` cycle-closing edges from 2026-08-17; `modules_in_cycles` now matches the pre-regression baseline exactly. Residual mass/fan-out growth on the same gate is pre-existing, tracked by D1/D3, left untouched. |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -19224,6 +19225,125 @@ The queue holds 50 dispatchable rows across five families
 `natural-division` sit directly on constructions the kernel already has
 (`Nat.lcm`, `Nat.div`, `Nat.mod` are all in the environment), so they are the
 cheapest first draw.
+
+**Fixed and committed** (`WIP`, solver-cycle-regression, 2026-08-29).
+
+## What the gate actually said (correcting the task text)
+
+The exact FAIL text this task was handed — `NEW CYCLE MEMBERS: grp, x`,
+`LARGEST CYCLE GREW: 0 -> 3 lines (from nothing)`, `LARGEST CYCLE GREW:
+2 -> 802 lines (401.00x)` — is **not from `scripts/analyze_solver_module_graph.py
+--check`**, the gate `check.sh` actually runs (`scripts/check.sh:711`). It is
+stdout from `scripts/tests/test_analyze_solver_group_collapse.py`'s own
+mutation-control fixtures: `grp`/`x` are literal synthetic module names that
+test file constructs on purpose to prove the guard fires on a deliberately-bad
+grouping. Confirmed by running that suite directly: **14/14 tests pass**, and
+the "401x" figure is also independently a *documented historical example* in
+`analyze_solver_module_graph.py`'s own source comments (a 2026-08-17 measurement
+on a proposed `arith/` directory, never landed). Neither is a live regression.
+
+The real gate, run directly (`python3 scripts/analyze_solver_module_graph.py
+--check`), reported different names and different numbers throughout this
+investigation — see below.
+
+## When and why (the real regression)
+
+`docs/refactor-2026-08/solver-module-graph-baseline.json` was last written by
+commit `90ef09a80` on **2026-08-17 09:32:14 -0400**. The gate has been red
+since **~11:27 that same day** — 12 days as of this writing, unrelated to any
+lean-kernel work from today. Two commits landed in the intervening two hours,
+each independently closing a previously-acyclic module into the 26-module
+theory-core cycle:
+
+1. `8f8c12dce` "feat(solver): wire N-induction into `solve`" (10:58) added
+   `auto.rs -> nat_induction::prove_by_nat_induction` (the dispatch rung).
+   `nat_induction.rs` already had `use crate::auto::check_auto;` (to discharge
+   its base/step obligations), present since the file's creation
+   (`7d1c7ceed`, before the baseline). The new edge closed `auto <-> nat_induction`.
+2. `287556743` "feat(solver): the e-matching driver can now hand out the
+   instances it used" (11:27) **created** `quant_instance_set_cert.rs`,
+   importing `qinst_egraph::{QuantifierGroundDerivation,
+   check_quantifier_ground_derivation}`, while wiring `qinst_egraph.rs` to
+   call `quant_instance_set_cert::collect_ground_derivations` (named
+   `build_instance_set_certificate` at the time) at 5 call sites. A
+   self-contained mutual dependency closed within one commit.
+
+Verified nothing else in the 26-module cycle referenced either new module —
+`grep -rl` across all cycle members turned up only `auto.rs`↔`nat_induction.rs`
+and `qinst_egraph.rs`↔`quant_instance_set_cert.rs`, so these two edges were the
+whole story.
+
+## The fix (landed, commit `0348564ab`)
+
+Both broken by dependency inversion / relocation, no behavior change:
+
+- **`nat_induction`/`auto`**: `prove_by_nat_induction` and its private
+  `refuted` helper now take a `Discharge` function-pointer parameter
+  (`fn(&mut TermArena, &[TermId], &SolverConfig) -> Result<CheckResult,
+  SolverError>`) instead of importing `crate::auto::check_auto` directly.
+  `auto.rs`'s one call site passes `check_auto`. The 4 test files under
+  `tests/nat_induction*.rs` (6 call sites) updated to pass `check_auto` too.
+- **`quant_instance_set_cert`/`qinst_egraph`**: `collect_ground_derivations`
+  moved from `quant_instance_set_cert.rs` into `qinst_egraph.rs`. It was
+  `qinst_egraph`'s only caller and operates purely on `qinst_egraph`'s own
+  `QuantifierGroundDerivation` type and `check_quantifier_ground_derivation`
+  function, so it belonged there. `qinst_egraph.rs`'s 5 call sites dropped the
+  `crate::quant_instance_set_cert::` prefix. The reverse edge
+  (`quant_instance_set_cert -> qinst_egraph`, for `portable_certificate`'s
+  `&[QuantifierGroundDerivation]` parameter) is the only one left, so the pair
+  is no longer mutual.
+
+### Measured before/after
+
+```
+                          before fix    after fix     baseline (pre-regression)
+NEW CYCLE MEMBERS         nat_induction, quant_instance_set_cert   (none)
+largest cycle             26 modules, 60,298 lines  24 modules, 59,175 lines  24 modules, 58,215 lines
+modules_in_cycles (total) 43            41           41
+```
+
+`modules_in_cycles` (the full set, all cycles) is now **byte-for-byte
+identical** to the baseline — verified programmatically (set difference both
+directions is empty). `NEW CYCLE MEMBERS` no longer fires.
+
+Ran the affected suites directly (not the aggregate gate):
+`cargo test -p axeyum-solver --features full --test nat_induction --test
+nat_induction_adversarial` → **15/15 pass**. `cargo check -p axeyum-solver
+--all-targets --features full` clean.
+
+## What's left on this gate, and why it's out of scope here
+
+Two failures remain, from the same `analyze_solver_module_graph.py --check`
+run, and neither is from a newly-closed cut point (membership is unchanged
+from baseline):
+
+- `LARGEST CYCLE GREW: 58,215 -> 59,175` lines (+1.6%, down from the
+  regression's 60,298).
+- `EVIDENCE LAYER FAN-OUT WIDENED: evidence 67 -> 77, reconstruct 55 -> 60`.
+
+Both are organic line-count / fan-out growth in modules that were *already*
+in the cycle / evidence layer at baseline time, accumulated over 12 days of
+ordinary feature work (NRA/NIA certificate modules, string routes, etc. all
+needed wiring into `evidence.rs`). This is exactly the mass problem
+`docs/refactor-2026-08/03-solver-decomposition.md` D1/D3 already scopes — not
+a new phenomenon this task introduced or found, and not fixable by a small
+edge change. Left for that track; **did not touch `evidence.rs` or
+`reconstruct.rs`**, and did not raise the baseline.
+
+## Files changed
+
+- `crates/axeyum-solver/src/nat_induction.rs` — `Discharge` type, threaded
+  through `prove_by_nat_induction`/`refuted`.
+- `crates/axeyum-solver/src/auto.rs` — one call site updated to pass
+  `check_auto`.
+- `crates/axeyum-solver/src/qinst_egraph.rs` — `collect_ground_derivations`
+  moved in; 5 call sites updated.
+- `crates/axeyum-solver/src/quant_instance_set_cert.rs` —
+  `collect_ground_derivations` moved out, replaced with a comment pointing to
+  its new home.
+- `crates/axeyum-solver/tests/nat_induction.rs`,
+  `tests/nat_induction_adversarial.rs`, `tests/nat_induction_corpus.rs` — 6
+  call sites updated to pass `check_auto`.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

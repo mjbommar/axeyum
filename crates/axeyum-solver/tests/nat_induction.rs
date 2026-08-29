@@ -19,7 +19,7 @@
 #![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, prove_by_nat_induction, solve_smtlib};
+use axeyum_solver::{CheckResult, SolverConfig, check_auto, prove_by_nat_induction, solve_smtlib};
 
 /// `f` fixed at 0 and stepping by 2, with `goal` as the negated conclusion.
 fn recurrence(goal: &str) -> String {
@@ -37,7 +37,7 @@ fn induction_verdict(script: &str) -> Option<String> {
     let mut parsed = parse_script(script).expect("script parses");
     let assertions = parsed.assertions.clone();
     let config = SolverConfig::default();
-    prove_by_nat_induction(&mut parsed.arena, &assertions, &config)
+    prove_by_nat_induction(&mut parsed.arena, &assertions, &config, check_auto)
         .expect("no hard backend error")
         .map(|result| match result {
             CheckResult::Unsat => "unsat".to_owned(),
