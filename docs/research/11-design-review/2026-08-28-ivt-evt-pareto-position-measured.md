@@ -15,7 +15,7 @@ from `scripts/validate-facts.py`, not from source text or prose.
 
 | family | declarations |
 | --- | --- |
-| IVT | `ivt_approx`, `ivt_exact_root`, `ivt_exact_root_at`, `ivt_iter`, `ivt_step`, `ivt_bisect_approx`, `ivt_bisect_cauchy`, `ivt_bisect_cauchy_bound`, `ivt_bisect_invariant` |
+| IVT | `ivt_approx`, `ivt_exact_root`, `ivt_exact_root_at`, `ivt_iter`, `ivt_step`, `ivt_bisect_approx`, `ivt_bisect_cauchy`, `ivt_bisect_cauchy_bound`, `ivt_bisect_invariant`; and from 2026-08-29 `ivtPlateau`, `ivtPlateau_nonpos_at_zero`, `ivtPlateau_nonneg_at_one`, `ivtPlateau_uniformly_continuous`, `ivt_exact_root_decides_sign`, plus the general `uniformly_continuous_max`/`_min` that row needed |
 | EVT | `bounded_of_uniformly_continuous`, `evt_attained_max_decides_sign`, `evtLinear_uniformly_continuous` |
 
 **Row 1 is a computed object, not an existential.**
@@ -26,13 +26,38 @@ le a b → BoundedOn F a b K` for a **COMPUTED** `K` — never `∃ K`.
 per accuracy — produced by a named five-step chain (`ivt_bisect_hi` as data,
 then `_approx`, `_cauchy`, `converges_of_cauchy`, `converges_comp_eventually`).
 
-**Row 2 exists and is non-vacuous, and the non-vacuity was checked.**
-`evt_attained_max_decides_sign` shows an attained maximum of `t ↦ t·v` on
-`[0,1]` yields `∀ v, v ≤ 0 ∨ 0 ≤ v`. That is only a boundary if the disjunction
-is unavailable — and **`lt_total` is absent from the environment**, confirmed by
-the same inventory. IVT's is a kernel-*computed* reduction test
-(`ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two`), exhibiting a
-concrete bracket converging to the wrong value.
+**Row 2 exists and is non-vacuous for BOTH families, and the non-vacuity was
+checked.** `evt_attained_max_decides_sign` shows an attained maximum of
+`t ↦ t·v` on `[0,1]` yields `∀ v, v ≤ 0 ∨ 0 ≤ v`. That is only a boundary if
+the disjunction is unavailable — and **`lt_total` is absent from the
+environment**, confirmed by the same inventory.
+
+**CORRECTED 2026-08-29: IVT now has a row-2 THEOREM too, and this paragraph
+used to describe something else.** What it called a "kernel-*computed*
+reduction test" (`ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two`)
+is a Rust test exhibiting a concrete bracket converging to the wrong value —
+correct, and a claim about two bisection **algorithms**, not about the
+statement. That distinction was flattened here, and the gap was measured in
+[`2026-08-29-ivt-has-no-row-2-theorem-evt-does.md`](2026-08-29-ivt-has-no-row-2-theorem-evt-does.md).
+It is closed. `CReal.ivt_exact_root_decides_sign` (`creal/ivt_boundary.rs`,
+`F:creal-ivt-exact-root-decides-sign`) is a kernel declaration with axiom
+footprint 0:
+
+```text
+∀ v c, le zero c → le c one →
+  Equiv (min c (max (add c (neg one)) v)) zero →
+  Or (le v zero) (le zero v)
+```
+
+— an exact root of the plateau family `x ↦ min x (max (x−1) v)` on `[0,1]`
+decides the sign of an arbitrary real, the same analytic LLPO EVT's row
+derives. All three of classical IVT's hypotheses are proved rather than
+asserted (`ivtPlateau_uniformly_continuous`, `ivtPlateau_nonpos_at_zero`,
+`ivtPlateau_nonneg_at_one`), which needed two new *general* lemmas —
+`CReal.uniformly_continuous_max`/`_min`, the lattice's first entries in the
+closure table the ring operations already filled. **`ivt.rs`'s two
+counterexamples are untouched and are not superseded**: they answer whether
+those algorithms converge, which neither implies nor is implied by this.
 
 **Row 2's own last assertion was closed 2026-08-28.**
 `evtLinear_uniformly_continuous` is now proved, so the counterexample family is
@@ -49,7 +74,10 @@ resting on the reader knowing an affine map is Lipschitz.
   `K`. Mathlib's `intermediate_value_Icc` asserts a classical existential.
 - **Row 2 has no counterpart at all.** Mathlib does not carry a machine-checked
   statement of *where* the classical form fails, because it has no reason to.
-  That is a capability class, not a better version of an existing row.
+  That is a capability class, not a better version of an existing row. As of
+  2026-08-29 **both** families carry it as a declaration a referee reads off
+  the kernel, not as a test having been run — which is the difference this
+  repository insists on everywhere else.
 - **Checkability.** `validate-facts.py` prints the route split, so second-class
   evidence cannot read as first-class.
 
@@ -61,11 +89,18 @@ resting on the reader knowing an affine map is Lipschitz.
   what turns approximate roots into a Cauchy sequence. So the honest comparison
   is: *stronger in trust and in computational content, weaker in hypothesis-
   freedom.* Anyone claiming plain per-statement dominance here is overclaiming.
-- **Row 2 is an UNPROVABILITY witness, not a refutation.** The file says so
-  itself: it shows the classical conclusion is at least as strong as a decision
-  principle this kernel lacks, **not that the principle is false** — it is
-  consistent, hence unprovable here rather than refutable. ADR-0603 calls the
+- **Row 2 is an UNPROVABILITY witness, not a refutation.** Both files say so
+  themselves: each shows the classical conclusion is at least as strong as a
+  decision principle this kernel lacks, **not that the principle is false** — it
+  is consistent, hence unprovable here rather than refutable. ADR-0603 calls the
   row "boundary refutation"; that name is looser than what is proved.
+- **IVT's row 2 is not a boundary on `ivt_exact_root`.** That theorem does
+  produce an exact root and does not contradict this one: it carries a
+  uniformly positive derivative hypothesis, and `ivtPlateau` has a plateau —
+  derivative `0` on an interval of positive length whenever the plateau lies
+  inside `[0,1]` — so it is precisely the shape that hypothesis excludes. The
+  two bound the constructive fragment from opposite sides, and neither is
+  evidence about the other's slack.
 - **Row 3 is mostly CAS-internal.** Of 29 `cas-certificate` facts, **1 is
   kernel-reconstructed and 28 are cas-internal**. `F:cas-ivt-sign-bracket-
   cbrt2-kernel-checked` carries `kernel-term` evidence; `F:cas-ivt-cbrt2-in-1-2`
@@ -95,6 +130,15 @@ constructive version gives up, and without the route split in the validator
 there is no way to stop CAS evidence reading as kernel evidence. Both existed
 before today; what changed today is that EVT's row 2 stopped resting on an
 assertion.
+
+**Update 2026-08-29.** IVT's row 2 is now a kernel theorem as well, so the
+strongest axis of this comparison is carried by declarations for both families
+rather than by one declaration and one passing test. The row-2 declaration
+count went 1 → 2 and the IVT family grew by seven declarations (five for the
+row itself, two general lattice closure lemmas). Nothing else in this
+document's measurements moved: the two "where it does NOT dominate" entries
+about `ivt_exact_root`'s extra hypothesis and about row 4 are unchanged and
+still hold, and row 3's split is untouched by this work.
 
 ## Row 3, followed up: 1 → 3 reconstructed, and 28 is a BACKLOG not a boundary
 

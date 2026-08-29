@@ -1,5 +1,21 @@
 # IVT has no row-2 theorem; EVT does (2026-08-29)
 
+> **CLOSED the same day.** `CReal.ivt_exact_root_decides_sign` is a kernel
+> declaration with axiom footprint 0 (`crates/axeyum-lean-kernel/src/creal/
+> ivt_boundary.rs`, `F:creal-ivt-exact-root-decides-sign`): an exact root of the
+> plateau family `x ↦ min x (max (x−1) v)` on `[0,1]` yields
+> `Or (le v zero) (le zero v)`, the same analytic LLPO EVT's row derives. All
+> three of classical IVT's hypotheses are proved beside it
+> (`ivtPlateau_uniformly_continuous`, `ivtPlateau_nonpos_at_zero`,
+> `ivtPlateau_nonneg_at_one`), which required two new general lemmas,
+> `CReal.uniformly_continuous_max`/`_min`. The table below is therefore **stale
+> in the row that matters** — IVT's row 2 is a `declaration`, not a Rust test —
+> and this note is kept for the distinction it draws between a claim about
+> ALGORITHMS and a claim about the STATEMENT, which is still exactly right and
+> is why `ivt.rs`'s two counterexamples were left untouched rather than
+> superseded. Everything below is the diagnosis as it stood before the fix.
+> Lane handoff: `docs/plan/status/249-ivt-row-two.md`.
+
 **Measured, with a positive control, at `fedc6c70b`.**
 
 ADR-0603 says a classical theorem lands as a **graded statement family**: row 1
