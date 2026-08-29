@@ -191,6 +191,7 @@ pub use ops::{NatDev, NatOps, NatState};
 use algebra::{
     declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
     declare_mul_no_zero_divisors, declare_multiplicative_theorems, declare_subtraction_theorems,
+    declare_zero_or_succ,
 };
 use asc_factorial::declare_asc_factorial_all;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
@@ -1008,6 +1009,22 @@ pub struct NatPrelude {
     /// `rec = 0` from the existing `mul_eq_zero` (eliminating the `2 = 0`
     /// disjunct via `succ_ne_zero`, no new `mul`-side lemma needed).
     pub add_eq_zero: NameId,
+    /// `Nat.zero_or_succ : ∀ n, n = 0 ∨ ∃ p, n = succ p` — every `Nat` is
+    /// either `0` or a successor, stated as an equational dichotomy (rather
+    /// than [`super::ops::cases_zero_succ`]'s raw elimination) so it can be
+    /// applied via `d.lemma` at an ARBITRARY compound term (not just a bound
+    /// variable in the caller's own goal): the caller gets back a genuine
+    /// `Or`-typed FACT naming that term, usable with `or_elim` without the
+    /// caller's motive ever needing to fold the term's internal structure
+    /// into a `Nat.rec` motive. Built for `nat-assoc-dichotomy`'s
+    /// `land_aux_assoc_of_fuel` attempt (`docs/plan/status/247-nat-bitwise-assoc.md`
+    /// item 2): the successor row's nested value `X := landAux fuel a b` is a
+    /// compound arithmetic expression appearing in an ARGUMENT position, and
+    /// deciding whether it is zero needs exactly this — a proof that `X = 0`
+    /// or `X = succ p` for SOME `p` — without disturbing `X`'s own formula
+    /// (`2 * rec + bit`), which a direct `Nat.rec` elimination on `X` inside
+    /// the goal's own motive would discard.
+    pub zero_or_succ: NameId,
     /// `Nat.dvd_factorial_of_le : ∀ d n, Le 1 d → Le d n → dvd d (factorial n)`.
     ///
     /// Every positive number at most `n` divides `n!`. This is the first of the
@@ -3126,6 +3143,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             one_le_mul: kernel.name_str(nat, "one_le_mul"),
             mul_eq_zero: kernel.name_str(nat, "mul_eq_zero"),
             add_eq_zero: kernel.name_str(nat, "add_eq_zero"),
+            zero_or_succ: kernel.name_str(nat, "zero_or_succ"),
             dvd_factorial_of_le: kernel.name_str(nat, "dvd_factorial_of_le"),
             factorial_dvd_factorial: kernel.name_str(nat, "factorial_dvd_factorial"),
             factorial_le: kernel.name_str(nat, "factorial_le"),
@@ -3470,6 +3488,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_no_confusion(&mut d, &p)?;
         declare_mul_no_zero_divisors(&mut d, &p)?;
         declare_add_no_zero_summands(&mut d, &p)?;
+        declare_zero_or_succ(&mut d, &p)?;
         declare_order_extra(&mut d, &p)?;
         declare_order_more(&mut d, &p)?;
         declare_boolean_le(&mut d, &p)?;

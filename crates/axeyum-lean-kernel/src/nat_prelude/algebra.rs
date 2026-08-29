@@ -843,6 +843,77 @@ pub(super) fn declare_add_no_zero_summands(
     Ok(())
 }
 
+/// `Nat.zero_or_succ` — see [`NatPrelude::zero_or_succ`]'s doc for why this
+/// is stated as an equational `Or`-fact rather than left as bare
+/// [`cases_zero_succ`] elimination: `d.lemma(p.zero_or_succ, &[x])` gives a
+/// disjunction fact naming `x` (any term, not just a bound variable), which
+/// `or_elim` then consumes without disturbing `x`'s own formula.
+///
+/// Proved by [`cases_zero_succ`] on a FRESH bound `n`: at `n = 0`, `Or_inl`
+/// with `Eq.refl 0`; at `n = succ pred`, `Or_inr` with
+/// `exists_intro pred (Eq.refl (succ pred))` — the witness `pred` IS the
+/// predecessor `cases_zero_succ` exposes, and `succ pred` is trivially
+/// `Eq.refl`-equal to the candidate the outer motive substituted.
+pub(super) fn declare_zero_or_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let level_one = d.level_one();
+
+    // exists_pred(target) : Nat -> Prop := fun pred => Eq target (succ pred)
+    let exists_pred = |d: &mut NatDev<'_>, nat: ExprId, target: ExprId| -> ExprId {
+        let pred_fv = d.fresh_fvar();
+        let pred = d.kernel().fvar(pred_fv);
+        let succ_pred = d.succ(pred);
+        let body = d.eq(target, succ_pred);
+        d.lam_fv(pred_fv, nat, body)
+    };
+
+    // conclusion(target) : Or (Eq target 0) (Exists Nat (exists_pred target))
+    let conclusion =
+        |d: &mut NatDev<'_>, nat: ExprId, level_one: crate::LevelId, target: ExprId| -> ExprId {
+            let zero = d.zero();
+            let left = d.eq(target, zero);
+            let exists_const = d.kernel().const_(p.logic.exists_, vec![level_one]);
+            let predicate = exists_pred(d, nat, target);
+            let right = d.apply(exists_const, &[nat, predicate]);
+            d.const_app(p.logic.or, &[left, right])
+        };
+
+    d.theorem(p.zero_or_succ, 1, &|d, v| {
+        let n = v[0];
+
+        let motive = |d: &mut NatDev<'_>, target: ExprId| conclusion(d, nat, level_one, target);
+        let stmt = motive(d, n);
+
+        let at_zero = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let left = d.eq(zero, zero);
+            let exists_const = d.kernel().const_(p.logic.exists_, vec![level_one]);
+            let predicate = exists_pred(d, nat, zero);
+            let right = d.apply(exists_const, &[nat, predicate]);
+            let refl = d.refl(zero);
+            d.const_app(p.logic.or_inl, &[left, right, refl])
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, pred: ExprId| -> ExprId {
+            let succ_pred = d.succ(pred);
+            let zero = d.zero();
+            let left = d.eq(succ_pred, zero);
+            let predicate = exists_pred(d, nat, succ_pred);
+            let exists_const = d.kernel().const_(p.logic.exists_, vec![level_one]);
+            let right = d.apply(exists_const, &[nat, predicate]);
+            let refl = d.refl(succ_pred);
+            let intro = d.kernel().const_(p.logic.exists_intro, vec![level_one]);
+            let witness_proof = d.apply(intro, &[nat, predicate, pred, refl]);
+            d.const_app(p.logic.or_inr, &[left, right, witness_proof])
+        };
+
+        let proof = cases_zero_succ(d, n, &motive, &at_zero, &at_succ);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// The first reusable finite-sum algebra needed by the Rado sharpness proof.
 /// This is a checked theorem over [`NatPrelude::sum_range`], not a specialized
 /// test-only recurrence.
