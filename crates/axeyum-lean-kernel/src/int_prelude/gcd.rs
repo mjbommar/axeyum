@@ -2583,7 +2583,10 @@ pub(super) fn declare_exists_mul_mod_eq_gcd(d: &mut IntDev<'_>) -> Result<(), Ke
         // as `Int.lt Int.zero (ofNat k)` -------------------------------------
         let zero_nat = d.zero();
         let zero_le_g = d.lemma(p.nat.zero_le, &[g_nat]);
-        let k_pos_nat = d.lemma(p.nat.lt_of_le_of_lt, &[zero_nat, g_nat, k_var, zero_le_g, h]);
+        let k_pos_nat = d.lemma(
+            p.nat.lt_of_le_of_lt,
+            &[zero_nat, g_nat, k_var, zero_le_g, h],
+        );
 
         let big_k = d.of_nat(k_var);
         let big_g = d.of_nat(g_nat);
