@@ -208,7 +208,9 @@ use binomial::{
 };
 use bit_decode::declare_bit_decode_all;
 use bits::declare_bit_all;
-use bitwise::{declare_bitwise_all, declare_bitwise_bit, declare_bitwise_comm, declare_bitwise_swap};
+use bitwise::{
+    declare_bitwise_all, declare_bitwise_bit, declare_bitwise_comm, declare_bitwise_swap,
+};
 use ble::declare_boolean_le;
 use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;

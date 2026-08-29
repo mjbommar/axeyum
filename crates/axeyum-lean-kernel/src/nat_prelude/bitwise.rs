@@ -1842,6 +1842,7 @@ fn bitwise_bit_stepped(
 /// n` and the bit value down to `f a b`. `bitwise_mn` is carried through
 /// unopened — this proof never needs its value, only that it is the SAME
 /// term on both sides.
+#[allow(clippy::too_many_arguments)]
 fn bitwise_bit_goal(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -1927,6 +1928,7 @@ fn cases_zero_succ_with_eq(
 /// `a = false`, using [`cases_zero_succ_with_eq`] on `m` to recover `Eq m 0`
 /// for `hm`'s domain. Combining the two gives `Eq Bool false true`, and
 /// [`NatOps::false_true_elim`] closes the rest.
+#[allow(clippy::too_many_arguments)]
 fn bitwise_guard_inner(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -1955,7 +1957,8 @@ fn bitwise_guard_inner(
             let true_ = d.bool_true();
             let zero = d.zero();
             let eqm0 = d.eq(m, zero);
-            let hm_ty = d.arrow(eqm0, d.bool_eq(true_, true_));
+            let true_eq_true = d.bool_eq(true_, true_);
+            let hm_ty = d.arrow(eqm0, true_eq_true);
             let h_fv = d.fresh_fvar();
             let stepped = bitwise_bit_stepped(d, f_expr, true_, b, bitwise_mn);
             let body = d.refl(stepped);
@@ -1966,7 +1969,8 @@ fn bitwise_guard_inner(
             let zero = d.zero();
             let eqm0 = d.eq(m, zero);
             let true_ = d.bool_true();
-            let hm_ty_false = d.arrow(eqm0, d.bool_eq(false_, true_));
+            let false_eq_true = d.bool_eq(false_, true_);
+            let hm_ty_false = d.arrow(eqm0, false_eq_true);
             let h_fv = d.fresh_fvar();
             let h = d.kernel().fvar(h_fv);
             let body = cases_zero_succ_with_eq(
@@ -2002,6 +2006,7 @@ fn bitwise_guard_inner(
 /// closes its own `m = 0` leaf via `hm`. Returns `GOAL(a, m, b, n)`
 /// directly (both hypothesis arrows are applied here, at the point each is
 /// consumed).
+#[allow(clippy::too_many_arguments)]
 fn resolve_bitwise_bit_guard(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -2032,7 +2037,8 @@ fn resolve_bitwise_bit_guard(
             let true_ = d.bool_true();
             let zero = d.zero();
             let eqn0 = d.eq(n, zero);
-            let hn_ty = d.arrow(eqn0, d.bool_eq(true_, true_));
+            let true_eq_true = d.bool_eq(true_, true_);
+            let hn_ty = d.arrow(eqn0, true_eq_true);
             let h_fv = d.fresh_fvar();
             let inner = bitwise_guard_inner(d, &p, f_expr, a, m, true_, n, bitwise_mn);
             let applied = d.apply(inner, &[hm]);
@@ -2043,7 +2049,8 @@ fn resolve_bitwise_bit_guard(
             let zero = d.zero();
             let eqn0 = d.eq(n, zero);
             let true_ = d.bool_true();
-            let hn_ty_false = d.arrow(eqn0, d.bool_eq(false_, true_));
+            let false_eq_true = d.bool_eq(false_, true_);
+            let hn_ty_false = d.arrow(eqn0, false_eq_true);
             let h_fv = d.fresh_fvar();
             let h = d.kernel().fvar(h_fv);
             let body = cases_zero_succ_with_eq(
@@ -2191,7 +2198,9 @@ pub(super) fn declare_bitwise_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
         bitwise_aux(d, &p, f_expr, k1, x, half_bn)
     });
     let rec2 = bitwise_aux(d, &p, f_expr, k1, m, n);
-    let rec1_to_rec2 = d.congr(half_bn, n, div_b, &|d, x| bitwise_aux(d, &p, f_expr, k1, m, x));
+    let rec1_to_rec2 = d.congr(half_bn, n, div_b, &|d, x| {
+        bitwise_aux(d, &p, f_expr, k1, m, x)
+    });
     let le_refl_m = d.lemma(p.le_refl, &[m]);
     let rec2_eq_bitwise_mn = d.lemma(p.bitwise_aux_agree_of_fuel, &[f_expr, k1, m, n, m]);
     let rec2_eq_bitwise_mn = d.apply(rec2_eq_bitwise_mn, &[m_le_k1_bound, le_refl_m]);
@@ -2269,8 +2278,12 @@ pub(super) fn declare_bitwise_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
         ],
     );
 
-    let guarded_mid = guarded(d, bit_am, bit_bn, on_n_zero0, on_m_zero0, bitwise_mn, bitval0);
-    let guarded_final = guarded(d, bit_am, bit_bn, on_n_zero0, on_m_zero0, bitwise_mn, bitval4);
+    let guarded_mid = guarded(
+        d, bit_am, bit_bn, on_n_zero0, on_m_zero0, bitwise_mn, bitval0,
+    );
+    let guarded_final = guarded(
+        d, bit_am, bit_bn, on_n_zero0, on_m_zero0, bitwise_mn, bitval4,
+    );
     let step_rec = d.congr(rec0, bitwise_mn, rec_chain, &|d, hole| {
         guarded(d, bit_am, bit_bn, on_n_zero0, on_m_zero0, hole, bitval0)
     });

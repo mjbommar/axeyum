@@ -1002,6 +1002,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_comm,
         p.bitwise_aux_swap_of_fuel,
         p.bitwise_swap,
+        p.bitwise_bit,
         p.land_aux_le_left,
         p.land_le_left,
         p.bit_div_two,
@@ -6488,7 +6489,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 495,
+        93 + 496,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -12196,6 +12197,120 @@ fn bitwise_swap_applies_at_a_concrete_discriminating_instance() {
     assert!(
         f.k.axiom_footprint(p.bitwise_swap).is_empty(),
         "bitwise_swap must rest on zero axioms"
+    );
+}
+
+/// `Nat.bitwise_bit'` applies at a CONCRETE, DISCRIMINATING instance --
+/// `F:ml430-nat-bitwise-bit-4c4b28a8`. `f := fst` (`fun a b => a`, the same
+/// deliberately non-commutative fixture `bitwise_swap`'s own test uses,
+/// whose section already established `bitwise fst m n` computes to `m`
+/// unconditionally) at `a = false, m = 2, b = true, n = 3` -- `a != b`, so
+/// an accidental argument swap in the per-bit combine (`f a b` vs `f b a`)
+/// would be caught. `a = false` with `m = 2` (nonzero) exercises the leaf
+/// that needs the side hypothesis `hm : m = 0 -> a = true` DISCHARGED even
+/// though its premise never fires (via `Nat.succ_ne_zero`, since `m` is
+/// concretely positive here); `b = true` keeps `hn` trivial regardless of
+/// `n`.
+#[test]
+fn bitwise_bit_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let fst_fn_term = super::bitwise::fst_fn(&mut f);
+
+    let false_ = f.bool_false();
+    let true_ = f.bool_true();
+    let one = f.num(1);
+    let two = f.succ(one);
+    let three = f.num(3);
+
+    // hm : Eq 2 0 -> Eq false true, discharged from the impossible premise
+    // via `Nat.succ_ne_zero` (`2` is built as `succ 1`, so the hypothesis
+    // is directly usable with no rewriting) -- same shape as
+    // `zero_or_succ_applies_at_a_compound_term_and_is_consumed_by_or_elim`'s
+    // `left_branch`.
+    let hm = {
+        let zero = f.zero();
+        let hm_ty = f.eq(two, zero);
+        let h_fv = f.fresh_fvar();
+        let h = f.kernel().fvar(h_fv);
+        let contradiction = f.lemma(p.succ_ne_zero, &[one, h]);
+        let false_ty = f.kernel().const_(p.logic.false_, vec![]);
+        let level_zero = f.kernel().level_zero();
+        let false_rec = f.kernel().const_(p.logic.false_rec, vec![level_zero]);
+        let target = f.bool_eq(false_, true_);
+        let anon = f.anon_name();
+        let motive = f.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+        let body = f.apply(false_rec, &[motive, contradiction]);
+        f.lam_fv(h_fv, hm_ty, body)
+    };
+
+    // hn : Eq 3 0 -> Eq true true, trivial (`b = true`) regardless of `n`.
+    let hn = {
+        let zero = f.zero();
+        let hn_ty = f.eq(three, zero);
+        let h_fv = f.fresh_fvar();
+        let body = f.bool_refl(true_);
+        f.lam_fv(h_fv, hn_ty, body)
+    };
+
+    let bit_am = f.const_app(p.bit, &[false_, two]);
+    let bit_bn = f.const_app(p.bit, &[true_, three]);
+    let lhs = f.const_app(p.bitwise, &[fst_fn_term, bit_am, bit_bn]);
+
+    let applied = f.lemma(
+        p.bitwise_bit,
+        &[fst_fn_term, false_, two, true_, three, hm, hn],
+    );
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        let shown = f.explain(&e);
+        panic!("bitwise_bit' must apply at (f=fst, a=false, m=2, b=true, n=3): {shown}")
+    });
+
+    let fab = f.apply(fst_fn_term, &[false_, true_]);
+    let bitwise_mn = f.const_app(p.bitwise, &[fst_fn_term, two, three]);
+    let rhs = f.const_app(p.bit, &[fab, bitwise_mn]);
+    let want = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "bitwise_bit' must state Eq (bitwise fst (bit false 2) (bit true 3)) \
+         (bit (fst false true) (bitwise fst 2 3))"
+    );
+
+    // `bitwise fst m n` computes to `m` unconditionally (established by
+    // `bitwise_swap`'s own test): `bit false 2 = 4`, `bit true 3 = 7`, so
+    // `lhs` computes to 4.
+    let four = f.num(4);
+    assert!(
+        f.k.def_eq(lhs, four),
+        "bitwise fst (bit false 2) (bit true 3) = bitwise fst 4 7 must compute to 4"
+    );
+    // `rhs = bit (fst false true) (bitwise fst 2 3) = bit false 2 = 4`.
+    assert!(
+        f.k.def_eq(rhs, four),
+        "bit (fst false true) (bitwise fst 2 3) = bit false 2 must compute to 4"
+    );
+
+    // Non-vacuity: swapping `f`'s arguments at the combine (`fst true
+    // false = true` instead of `false`) would have produced `bit true 2 =
+    // 5 != 4` -- confirm the chosen instance actually discriminates that.
+    let swapped_fab = f.apply(fst_fn_term, &[true_, false_]);
+    let swapped_rhs = f.const_app(p.bit, &[swapped_fab, bitwise_mn]);
+    let five = f.num(5);
+    assert!(
+        f.k.def_eq(swapped_rhs, five),
+        "bit (fst true false) (bitwise fst 2 3) must compute to 5"
+    );
+    assert!(
+        !f.k.def_eq(swapped_rhs, rhs),
+        "the chosen (a, b) must be DISCRIMINATING: bit (fst false true) ... \
+         and bit (fst true false) ... must differ, or this instance proves \
+         nothing about argument order in the per-bit combine"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.bitwise_bit).is_empty(),
+        "bitwise_bit' must rest on zero axioms"
     );
 }
 
