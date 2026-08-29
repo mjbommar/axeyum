@@ -978,6 +978,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_xor,
         p.xor_comm,
         p.test_bit_xor,
+        p.self_lt_two_pow,
+        p.self_lt_two_pow_add,
+        p.lt_of_test_bit,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6492,7 +6495,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 499,
+        93 + 502,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11290,6 +11293,156 @@ fn test_bit_xor_applies_at_a_concrete_discriminating_instance_and_symbolically()
     assert!(
         f.k.axiom_footprint(p.test_bit_xor).is_empty(),
         "test_bit_xor must rest on zero axioms"
+    );
+}
+
+/// `Nat.self_lt_two_pow`/`Nat.self_lt_two_pow_add` -- checked at concrete
+/// instances, both symbolically and against numerals large enough that a
+/// wrong direction (`Le` vs `Lt`, or the bound landing on the WRONG side)
+/// would fail rather than pass vacuously.
+#[test]
+fn self_lt_two_pow_and_add_apply_at_concrete_and_symbolic_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: 5 < 2^5 = 32, and NOT 2^5 < 5 (direction control).
+    {
+        let five = f.num(5);
+        let applied = f.lemma(p.self_lt_two_pow, &[five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("self_lt_two_pow must apply at n=5: {shown}")
+        });
+        let two = f.num(2);
+        let pow5 = f.pow(two, five);
+        let want = f.lt(five, pow5);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "self_lt_two_pow 5 must state Lt 5 (pow 2 5)"
+        );
+        let thirty_two = f.num(32);
+        assert!(f.k.def_eq(pow5, thirty_two), "pow 2 5 must compute to 32");
+    }
+
+    // Concrete: self_lt_two_pow_add(3, 2) : Lt 3 (pow 2 (add 3 2)) = Lt 3 32.
+    {
+        let three = f.num(3);
+        let two_arg = f.num(2);
+        let applied = f.lemma(p.self_lt_two_pow_add, &[three, two_arg]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("self_lt_two_pow_add must apply at (a=3, b=2): {shown}")
+        });
+        let two = f.num(2);
+        let sum = f.add(three, two_arg);
+        let pow_sum = f.pow(two, sum);
+        let want = f.lt(three, pow_sum);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "self_lt_two_pow_add 3 2 must state Lt 3 (pow 2 (add 3 2))"
+        );
+        let thirty_two = f.num(32);
+        assert!(
+            f.k.def_eq(pow_sum, thirty_two),
+            "pow 2 (add 3 2) must compute to 32"
+        );
+    }
+
+    // Symbolic: self_lt_two_pow_add applies at a genuinely FREE (a, b) pair.
+    {
+        let name = f.name("self_lt_two_pow_add_restated");
+        f.theorem(name, 2, &|d, values| {
+            let a = values[0];
+            let b = values[1];
+            let two = d.num(2);
+            let sum = d.add(a, b);
+            let pw = d.pow(two, sum);
+            let stmt = d.lt(a, pw);
+            let proof = d.lemma(p.self_lt_two_pow_add, &[a, b]);
+            (stmt, proof)
+        })
+        .expect("self_lt_two_pow_add must apply at symbolic a, b");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.self_lt_two_pow).is_empty(),
+        "self_lt_two_pow must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.self_lt_two_pow_add).is_empty(),
+        "self_lt_two_pow_add must rest on zero axioms"
+    );
+}
+
+/// `Nat.lt_of_testBit` -- checked SYMBOLICALLY at a genuinely free
+/// `(n, m, i)` triple with free hypothesis fvars for `H0`/`H1`/`Hagree`:
+/// confirms the declared type's exact SHAPE (hypothesis order, that `H0` is
+/// about `n` not `m`, that `H1`'s target is `one` not `zero`, that the
+/// conclusion is `Lt n m` not `Lt m n`) matches this file's own module doc.
+///
+/// A concrete DISCRIMINATING numeric instance was scoped OUT of this test:
+/// building one honestly needs `Hagree`'s full universally-quantified proof
+/// (`∀ j, Lt i j → …`), which requires a general "testBit is eventually zero
+/// above a magnitude bound" lemma this lane did not build (see the module
+/// doc / handoff for exactly this gap). The type-check the kernel already
+/// performed on `add_declaration` -- the FULL universally-quantified
+/// statement, strictly stronger than any single concrete instantiation --
+/// is the real evidence here; this test additionally confirms the shape.
+#[test]
+fn lt_of_test_bit_applies_at_a_genuinely_symbolic_hypothesis_set() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let name = f.name("lt_of_test_bit_restated");
+    f.theorem(name, 3, &|d, values| {
+        let n = values[0];
+        let m = values[1];
+        let i = values[2];
+        let zero = d.zero();
+        let one = d.num(1);
+
+        let tb_n_i = d.const_app(p.test_bit, &[n, i]);
+        let tb_m_i = d.const_app(p.test_bit, &[m, i]);
+        let h0_ty = d.eq(tb_n_i, zero);
+        let h1_ty = d.eq(tb_m_i, one);
+        let hagree_ty = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let lt_i_j = d.lt(i, j);
+            let tb_n_j = d.const_app(p.test_bit, &[n, j]);
+            let tb_m_j = d.const_app(p.test_bit, &[m, j]);
+            let eq_j = d.eq(tb_n_j, tb_m_j);
+            let body = d.arrow(lt_i_j, eq_j);
+            d.pi_fv(j_fv, nat, body)
+        };
+
+        let h0_fv = d.fresh_fvar();
+        let h0 = d.kernel().fvar(h0_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let hagree_fv = d.fresh_fvar();
+        let hagree = d.kernel().fvar(hagree_fv);
+
+        let concl = d.lt(n, m);
+        let stmt = {
+            let with_hagree = d.arrow(hagree_ty, concl);
+            let with_h1 = d.arrow(h1_ty, with_hagree);
+            d.arrow(h0_ty, with_h1)
+        };
+        let proof = d.lemma(p.lt_of_test_bit, &[n, m, i, h0, h1, hagree]);
+        let proof = {
+            let with_hagree = d.lam_fv(hagree_fv, hagree_ty, proof);
+            let with_h1 = d.lam_fv(h1_fv, h1_ty, with_hagree);
+            d.lam_fv(h0_fv, h0_ty, with_h1)
+        };
+        (stmt, proof)
+    })
+    .expect("lt_of_test_bit must apply at a symbolic (n, m, i, H0, H1, Hagree) tuple");
+
+    assert!(
+        f.k.axiom_footprint(p.lt_of_test_bit).is_empty(),
+        "lt_of_test_bit must rest on zero axioms"
     );
 }
 
