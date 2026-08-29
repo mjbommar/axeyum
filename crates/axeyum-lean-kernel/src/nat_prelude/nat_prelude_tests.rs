@@ -1004,6 +1004,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bit_div_two,
         p.bit_mod_two,
         p.land_bit,
+        p.land_aux_eq_zero_of_left_eq_zero,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6482,7 +6483,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 489,
+        93 + 490,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -12578,5 +12579,88 @@ fn five_le_of_ne_two_of_ne_three_applies_at_a_concrete_instance() {
     assert!(
         !f.k.def_eq(inferred, inferred_at_two),
         "negative control: the residue type must depend on the instantiated argument"
+    );
+}
+
+/// `Nat.land_aux_eq_zero_of_left_eq_zero` -- "zero propagates through the
+/// other operand", the one theorem `docs/plan/status/252-nat-assoc-dichotomy.md`
+/// traced by hand and cross-checked in Python but did not build. Applies at
+/// symbolic `fuel`/`a`/`b`/`c` and at a concrete, non-vacuous, MIXED
+/// instance from that plan's own cross-check: `fuel=2, a=1, b=2, c=2`.
+/// `land 1 2 = 0` (hyp true, not vacuous) while `land 2 2 = 2` is genuinely
+/// NONZERO -- so this is the case the plan measured at 108/343 triples, not
+/// a corner where the whole statement degenerates to `0 = 0`.
+#[test]
+fn land_aux_eq_zero_of_left_eq_zero_applies_at_a_mixed_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: fully free fuel/a/b/c. The lemma's own statement is an
+    // arrow (`Eq (landAux fuel a b) 0 -> Eq (landAux fuel a (landAux fuel b
+    // c)) 0`), so a 4-ary restatement plus the lemma applied at the four
+    // universals reproduces it exactly -- no separate hypothesis fvar is
+    // needed at this level since `d.lemma` just re-applies the declared
+    // Pi-quantified constant.
+    {
+        let name = f.name("land_aux_eq_zero_of_left_eq_zero_restated");
+        f.theorem(name, 4, &|d, values| {
+            let fuel = values[0];
+            let a = values[1];
+            let b = values[2];
+            let c = values[3];
+            let zero = d.zero();
+            let ab = d.const_app(p.land_aux, &[fuel, a, b]);
+            let hyp = d.eq(ab, zero);
+            let bc = d.const_app(p.land_aux, &[fuel, b, c]);
+            let a_bc = d.const_app(p.land_aux, &[fuel, a, bc]);
+            let concl = d.eq(a_bc, zero);
+            let stmt = d.arrow(hyp, concl);
+            let proof = d.lemma(p.land_aux_eq_zero_of_left_eq_zero, &[fuel, a, b, c]);
+            (stmt, proof)
+        })
+        .expect("land_aux_eq_zero_of_left_eq_zero must apply at symbolic fuel/a/b/c");
+    }
+
+    // Concrete, discriminating, non-vacuous instance.
+    {
+        let fuel = f.num(2);
+        let a = f.num(1);
+        let b = f.num(2);
+        let c = f.num(2);
+        let zero = f.zero();
+
+        let ab = f.const_app(p.land_aux, &[fuel, a, b]);
+        assert!(f.k.def_eq(ab, zero), "landAux 2 1 2 must compute to 0");
+        let bc = f.const_app(p.land_aux, &[fuel, b, c]);
+        assert!(
+            !f.k.def_eq(bc, zero),
+            "landAux 2 2 2 must compute to 2, not 0 -- else this instance is vacuous"
+        );
+
+        let hyp_proof = f.refl(zero); // retypes as `Eq ab zero` (ab is defeq zero)
+        let applied = f.lemma(
+            p.land_aux_eq_zero_of_left_eq_zero,
+            &[fuel, a, b, c, hyp_proof],
+        );
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_aux_eq_zero_of_left_eq_zero must apply at (fuel=2,a=1,b=2,c=2): {shown}")
+        });
+        let a_bc = f.const_app(p.land_aux, &[fuel, a, bc]);
+        let want = f.eq(a_bc, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "conclusion must state Eq (landAux 2 1 (landAux 2 2 2)) 0"
+        );
+        assert!(
+            f.k.def_eq(a_bc, zero),
+            "landAux 2 1 (landAux 2 2 2) must itself compute to 0"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_aux_eq_zero_of_left_eq_zero)
+            .is_empty(),
+        "land_aux_eq_zero_of_left_eq_zero must rest on zero axioms"
     );
 }
