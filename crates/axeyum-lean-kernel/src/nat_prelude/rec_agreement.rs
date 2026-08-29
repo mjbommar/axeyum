@@ -542,7 +542,11 @@ pub(super) fn declare_rec_agreement_all(
 /// this is the fourth site with this exact arithmetic (`log.rs`, `binary.rs`,
 /// `powsq.rs`), always duplicated because each fuel family's `…Aux` type
 /// differs and there is nothing generic to promote it to.
-fn half_le_predecessor_of_succ(
+///
+/// `pub(super)` (not private) because it mentions no `land`/`lor`-specific
+/// name or type — `bitwise.rs`'s generalized-`f` fuel machinery reuses it
+/// directly rather than duplicating a fifth copy.
+pub(super) fn half_le_predecessor_of_succ(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     predecessor: ExprId,

@@ -207,7 +207,7 @@ use binomial::{
 };
 use bit_decode::declare_bit_decode_all;
 use bits::declare_bit_all;
-use bitwise::declare_bitwise_all;
+use bitwise::{declare_bitwise_all, declare_bitwise_comm};
 use ble::declare_boolean_le;
 use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
@@ -2999,6 +2999,30 @@ pub struct NatPrelude {
     /// (fun b _ acc => bit b acc) 6) 6` — the same round trip at a value with
     /// a trailing zero bit.
     pub binary_rec_rebuilds_six: NameId,
+    /// `Nat.bitwise_aux_zero_left_any_fuel : ∀ f fuel n, Eq (bitwiseAux f
+    /// fuel 0 n) (bool_select_nat (f false true) n 0)` — unconditional in
+    /// `f`, the `bitwise` twin of [`Self::land_aux_zero_left_any_fuel`].
+    /// See `nat_prelude::bitwise`.
+    pub bitwise_aux_zero_left_any_fuel: NameId,
+    /// `Nat.bitwise_aux_agree_of_fuel : ∀ f fuel1 m n fuel2, Le m fuel1 → Le
+    /// m fuel2 → Eq (bitwiseAux f fuel1 m n) (bitwiseAux f fuel2 m n)` —
+    /// the `bitwise` twin of [`Self::land_aux_agree_of_fuel`], generalized
+    /// over `f` (no commutativity hypothesis needed: fuel-irrelevance never
+    /// swaps the value arguments). See `nat_prelude::bitwise`.
+    pub bitwise_aux_agree_of_fuel: NameId,
+    /// `Nat.bitwise_aux_comm_of_fuel : ∀ f, (∀ a b, Eq (f a b) (f b a)) → ∀
+    /// fuel m n, Le m fuel → Le n fuel → Eq (bitwiseAux f fuel m n)
+    /// (bitwiseAux f fuel n m)` — `lor`'s shape (both `Le` hypotheses), not
+    /// `land`'s unconditional one: a Python simulation showed the
+    /// unconditional form is false whenever `f false true = true` (`or`,
+    /// `xor`). See `nat_prelude::bitwise`.
+    pub bitwise_aux_comm_of_fuel: NameId,
+    /// `Nat.bitwise_comm : ∀ f, (∀ a b, Eq (f a b) (f b a)) → ∀ m n, Eq
+    /// (bitwise f m n) (bitwise f n m)` — `F:ml430-nat-bitwise-comm-1a273bae`.
+    /// Routes [`Self::bitwise_aux_comm_of_fuel`] and
+    /// [`Self::bitwise_aux_agree_of_fuel`] through the shared fuel `m + n`,
+    /// exactly as `land_comm`/`lor_comm`. See `nat_prelude::bitwise`.
+    pub bitwise_comm: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3649,6 +3673,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             binary_rec_succ: kernel.name_str(nat, "binaryRec_succ"),
             binary_rec_rebuilds_thirteen: kernel.name_str(nat, "binaryRec_rebuilds_thirteen"),
             binary_rec_rebuilds_six: kernel.name_str(nat, "binaryRec_rebuilds_six"),
+            bitwise_aux_zero_left_any_fuel: kernel.name_str(nat, "bitwise_aux_zero_left_any_fuel"),
+            bitwise_aux_agree_of_fuel: kernel.name_str(nat, "bitwise_aux_agree_of_fuel"),
+            bitwise_aux_comm_of_fuel: kernel.name_str(nat, "bitwise_aux_comm_of_fuel"),
+            bitwise_comm: kernel.name_str(nat, "bitwise_comm"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3892,6 +3920,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // and the `ble`-based per-bit max-commutativity split; nothing
         // needs it, so it goes right after its `land` sibling.
         declare_lor_comm(&mut d, &p)?;
+        // `Nat.bitwise_comm`: needs `Nat.bitwise`/`Nat.bitwiseAux`
+        // (`declare_bitwise_all`, far above) and
+        // `half_le_predecessor_of_succ`'s composed order/division lemmas
+        // (same as `land_comm`/`lor_comm`, all far above) -- self-contained
+        // otherwise (its own fuel-irrelevance and same-fuel commutativity
+        // are declared inside `declare_bitwise_comm` itself, generalized
+        // over a symbolic `f`, unlike `land`/`lor`'s fixed-`f` versions);
+        // nothing needs it, so it goes right after its `land`/`lor` siblings.
+        declare_bitwise_comm(&mut d, &p)?;
         // `Nat.land_aux_le_left`/`Nat.land_le_left`: needs `Nat.landAux`
         // (`declare_land_all`, far above) and division lemmas
         // (`div_mod_exec`, `mul_le_mul_left`, `add_le_add_left/right`,

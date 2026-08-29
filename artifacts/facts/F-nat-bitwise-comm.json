@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-bitwise-comm",
+  "title": "bitwise is commutative for a commutative combinator",
+  "statement": "For every Bool -> Bool -> Bool function f such that f is commutative, and every natural m, n: bitwise(f, m, n) = bitwise(f, n, m).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : ((x1 : Bool) -> ((x2 : Bool) -> Eq.{1} Bool (x0 x1 x2) (x0 x2 x1)))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise x0 x2 x3) (AxNat.bitwise x0 x3 x2)))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.bitwise_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_comm",
+      "supports": "Nat.bitwise_comm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_comm 2>/dev/null | grep -Ec '^Nat\\.bitwise_comm[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.bitwise_comm[[:space:]]` so a sibling name cannot satisfy this row. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.bitwise_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_comm",
+      "supports": "bitwise(xor, 3, 5) = bitwise(xor, 5, 3) = 6 (0b011 xor 0b101 = 0b110), a DISCRIMINATING instance -- a symmetric pair like (5, 5) cannot catch a transposed argument.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bitwise_comm_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.bitwise_comm` symbolically (against free `m`, `n` at a fixed concrete `f = xor_fn`) and at the concrete, bit-differing instance `(m, n) = (3, 5)`, confirming both that the admitted type matches `Eq (bitwise xor 3 5) (bitwise xor 5 3)` and that both sides compute to `6`. The `hf` commutativity witness for `xor_fn` is itself built and kernel-checked in the same test (`bool_fn_comm`, a four-leaf `Bool.rec` case split). A companion negative control shows `bitwise_aux_comm_of_fuel`'s UNCONDITIONAL analogue is false for `f = or_fn` at insufficient fuel (`bitwiseAux or 0 0 1 = 1` against `bitwiseAux or 0 1 0 = 0`), confirmed by a Python simulation before any Rust was written (`docs/plan/status/256-nat-bitwise-comm.md`)."
+    },
+    {
+      "id": "footprint-Nat.bitwise_comm",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-operations",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-bitwise-comm",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0` is `f`, `x1` is `hf`, `x2`/`x3` are `m`/`n`.\n\nUnlike `Nat.land_comm`/`Nat.lor_comm` (which needed `bitwise_comm`'s general machinery but proved a SPECIALIZED, fixed-`f` statement by a different route), this proves `Nat.bitwise` itself commutative for a SYMBOLIC, universally-quantified commutative `f`. A Python simulation (recorded in `docs/plan/status/256-nat-bitwise-comm.md`) confirmed the shape needed BEFORE any Rust was written: the unconditional form `bitwiseAux f fuel m n = bitwiseAux f fuel n m` (fuel not necessarily sufficient) is FALSE whenever `f false true = true` (`f = or`, `f = xor`) and true only when `f false true = false` (`f = and`, `land`'s absorbing-zero shape) -- so this needed `lor`'s `Le m fuel -> Le n fuel -> ...` shape, generalized over `f`, PLUS an explicit `hf : forall a b, f a b = f b a` hypothesis `land`/`lor` never needed (their `f` is fixed and concrete).\n\n`hf` earns its keep in TWO places: the per-bit combine (expected), and ALSO the `m = 0`/`n = 0` boundary -- for a concrete `f`, `land`/`lor`'s boundary rows evaluate to the same literal on both sides trivially, but for a symbolic `f` the two boundary rows are `f false true`- and `f true false`-conditioned, two different partial applications of `f` equal only via `hf true false`/`hf false true`. Four new lemmas land in `nat_prelude/bitwise.rs` (uncontended at landing time): `bitwise_aux_zero_left_any_fuel` (unconditional in `f`, no `hf` needed), `bitwise_aux_agree_of_fuel` (double-fuel induction, no `hf` needed -- fuel-irrelevance never swaps the value arguments), `bitwise_aux_comm_of_fuel` (single shared fuel, both `Le` hypotheses plus `hf`), and `bitwise_comm` (assembled through the shared fuel `m + n`, exactly as `land_comm`/`lor_comm`).\n\nThis is the `Nat.bitwise` twin of Mathlib v4.30's `Nat.bitwise_comm` (`F:ml430-nat-bitwise-comm-1a273bae`, flipped alongside this fact) -- our `Nat.bitwise` is Mathlib's OWN general combinator (not a specialization), so this closes the same proposition Mathlib states, not a lookalike about a different definition. `half_le_predecessor_of_succ` (a fully generic Nat-arithmetic helper in `nat_prelude/rec_agreement.rs`, previously private) was widened to `pub(super)` rather than duplicated a fifth time."
+}

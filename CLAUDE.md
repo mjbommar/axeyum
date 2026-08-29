@@ -1775,6 +1775,17 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   places need them: the base case (the hypotheses force `m = n = 0`, restoring
   symmetry) and the both-nonzero step (bounding each half for the IH).
 
+  **FOR A SYMBOLIC COMBINATOR THE BOUNDARY ROWS NEED IT TOO, WHICH IS NOT
+  OBVIOUS.** Measured 2026-08-29 proving `Nat.bitwise_comm` over a symbolic
+  `f`. The unconditional form is false whenever `f false true = true` (so for
+  `or` and `xor`, and true only for `and`) — confirmed by Python simulation
+  before any Rust — so the proof takes `lor`'s shape plus an explicit
+  `hf : ∀ a b, f a b = f b a` that neither `land` nor `lor` ever needed. `hf`
+  is required in **two** places: the per-bit combine, which is expected, and
+  the `m = 0` / `n = 0` **boundary**, which is not — for symbolic `f` the two
+  boundary rows are *different partial applications of `f`*, where for a
+  concrete operator they reduce to comparable constants.
+
   The rule to carry: **when transporting a lemma between these operators, ask
   first whether the fuel-exhaustion row is symmetric in the two operands.** If
   it is not, the transported statement needs sufficiency hypotheses that the

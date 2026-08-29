@@ -995,6 +995,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.land_comm,
         p.lor_aux_comm_of_fuel,
         p.lor_comm,
+        p.bitwise_aux_zero_left_any_fuel,
+        p.bitwise_aux_agree_of_fuel,
+        p.bitwise_aux_comm_of_fuel,
+        p.bitwise_comm,
         p.land_aux_le_left,
         p.land_le_left,
         p.bit_div_two,
@@ -6478,7 +6482,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 485,
+        93 + 489,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11875,6 +11879,162 @@ fn lor_comm_applies_at_a_concrete_discriminating_instance() {
     assert!(
         f.k.axiom_footprint(p.lor_comm).is_empty(),
         "lor_comm must rest on zero axioms"
+    );
+}
+
+/// `∀ a b : Bool, Eq (f a b) (f b a)` for a CONCRETE commutative `f`
+/// (`xor_fn`/`or_fn` in this file's tests), proved by nested `Bool.rec` on
+/// `a` then `b` -- four leaves, each closing by computation since `f`
+/// applied to two LITERAL `Bool`s reduces on both sides. The `hf`
+/// [`NatPrelude::bitwise_comm`] itself needs, built from `ops.rs`'s
+/// `NatOps::bool_eq`/`NatOps::bool_refl` (a first pass used `d.refl`, which
+/// is HARDCODED to `Nat` and produced a `TypeMismatch` wearing a sort
+/// error's clothes -- `bitwise.rs`'s `congr_bool_to_nat` hit the same trap).
+fn bool_fn_comm<D: NatOps>(d: &mut D, f_term: ExprId) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let false_ = d.bool_false();
+    let true_ = d.bool_true();
+    let z = d.kernel().level_zero();
+    let bool_rec_name = d.prelude().logic.bool_rec;
+
+    let inner_for_literal = |d: &mut D, lit: ExprId| -> ExprId {
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let lhs = d.apply(f_term, &[lit, b]);
+        let rhs = d.apply(f_term, &[b, lit]);
+        let motive_body = d.bool_eq(lhs, rhs);
+        let motive = d.lam_fv(b_fv, bool_ty, motive_body);
+        let false_leaf = {
+            let lhs = d.apply(f_term, &[lit, false_]);
+            d.bool_refl(lhs)
+        };
+        let true_leaf = {
+            let lhs = d.apply(f_term, &[lit, true_]);
+            d.bool_refl(lhs)
+        };
+        let bool_rec = d.kernel().const_(bool_rec_name, vec![z]);
+        let elim = d.apply(bool_rec, &[motive, false_leaf, true_leaf, b]);
+        d.lam_fv(b_fv, bool_ty, elim)
+    };
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let lhs_ab = d.apply(f_term, &[a, b]);
+    let rhs_ab = d.apply(f_term, &[b, a]);
+    let inner_eq = d.bool_eq(lhs_ab, rhs_ab);
+    let inner_pi = d.pi_fv(b_fv, bool_ty, inner_eq);
+    let outer_motive = d.lam_fv(a_fv, bool_ty, inner_pi);
+
+    let at_false = inner_for_literal(d, false_);
+    let at_true = inner_for_literal(d, true_);
+    let bool_rec = d.kernel().const_(bool_rec_name, vec![z]);
+    let elim = d.apply(bool_rec, &[outer_motive, at_false, at_true, a]);
+    d.lam_fv(a_fv, bool_ty, elim)
+}
+
+/// `Nat.bitwise_comm` applies at a CONCRETE, DISCRIMINATING instance
+/// (`f = xor_fn`, `bitwise xor 3 5 = 6 = bitwise xor 5 3`) once a concrete
+/// `hf` proof ([`bool_fn_comm`]) and the shared-fuel `Le` bounds are
+/// supplied -- `F:ml430-nat-bitwise-comm-1a273bae`. Unlike
+/// `land_aux_comm_of_fuel` (unconditional), and matching
+/// `lor_aux_comm_of_fuel`, the insufficient-fuel negative control below uses
+/// `or_fn` (`f false true = true`, the same reason `lor`'s own row is not
+/// the absorbing constant), NOT `xor_fn` mechanically copied from `lor`'s
+/// witness -- confirmed discriminating by the same Python simulation
+/// recorded in `docs/plan/status/256-nat-bitwise-comm.md`.
+#[test]
+fn bitwise_comm_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let xor_fn_term = super::bitwise::xor_fn(&mut f);
+    let hf = bool_fn_comm(&mut f, xor_fn_term);
+
+    // Symbolic: the statement re-declared over bound variables, proved by
+    // the prelude theorem alone (at this fixed concrete `f`/`hf`).
+    {
+        let name = f.name("bitwise_comm_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(p.bitwise, &[xor_fn_term, m, n]);
+            let rhs = d.const_app(p.bitwise, &[xor_fn_term, n, m]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.bitwise_comm, &[xor_fn_term, hf, m, n]);
+            (stmt, proof)
+        })
+        .expect("bitwise_comm must apply at symbolic m/n for a fixed f/hf");
+    }
+
+    // Concrete: `bitwise xor 3 5 = 6` and `bitwise xor 5 3 = 6`
+    // (`011 xor 101 = 110`).
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let six = f.num(6);
+        let lhs = f.const_app(p.bitwise, &[xor_fn_term, three, five]);
+        let rhs = f.const_app(p.bitwise, &[xor_fn_term, five, three]);
+        let applied = f.lemma(p.bitwise_comm, &[xor_fn_term, hf, three, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_comm must apply at (f=xor, m=3, n=5): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_comm xor 3 5 must state Eq (bitwise xor 3 5) (bitwise xor 5 3)"
+        );
+        assert!(f.k.def_eq(lhs, six), "bitwise xor 3 5 must compute to 6");
+        assert!(f.k.def_eq(rhs, six), "bitwise xor 5 3 must compute to 6");
+    }
+
+    // Negative control: WITHOUT the `Le` hypotheses, `bitwise_aux_comm_of_fuel`'s
+    // unconditional analogue is FALSE for `f = or_fn` (`f false true = true`),
+    // exactly as for `lorAux` -- `bitwiseAux or 0 0 1 = 1` while
+    // `bitwiseAux or 0 1 0 = 0` (Python-simulated before this was written).
+    {
+        let or_fn_term = super::bitwise::or_fn(&mut f);
+        let fuel = f.num(0);
+        let a = f.num(0);
+        let b = f.num(1);
+        let one = f.num(1);
+        let zero = f.num(0);
+        let lhs = f.const_app(p.bitwise_aux, &[or_fn_term, fuel, a, b]);
+        let rhs = f.const_app(p.bitwise_aux, &[or_fn_term, fuel, b, a]);
+        assert!(
+            f.k.def_eq(lhs, one),
+            "bitwiseAux or 0 0 1 must compute to 1"
+        );
+        assert!(
+            f.k.def_eq(rhs, zero),
+            "bitwiseAux or 0 1 0 must compute to 0"
+        );
+        assert!(
+            !f.k.def_eq(lhs, rhs),
+            "the chosen (fuel, a, b) must be INSUFFICIENT and DISCRIMINATING, \
+             or this control proves nothing about why bitwise_aux_comm_of_fuel \
+             needs the Le hypotheses"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.bitwise_aux_zero_left_any_fuel)
+            .is_empty(),
+        "bitwise_aux_zero_left_any_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bitwise_aux_agree_of_fuel).is_empty(),
+        "bitwise_aux_agree_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bitwise_aux_comm_of_fuel).is_empty(),
+        "bitwise_aux_comm_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bitwise_comm).is_empty(),
+        "bitwise_comm must rest on zero axioms"
     );
 }
 
