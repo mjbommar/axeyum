@@ -490,6 +490,15 @@ pub struct IntPrelude {
     /// bridge between `Int.ediv_emod_unique` and `Int.dvd`, for a positive
     /// divisor.
     pub emod_eq_zero_iff_dvd: NameId,
+    /// `emod_eq_zero_iff_dvd_general : ∀ a b, b ≠ 0 → (a % b = 0 ↔ b ∣ a)` —
+    /// the sign-general analogue of [`Self::emod_eq_zero_iff_dvd`], built the
+    /// same way (`mp` from `Int.ediv_add_emod`, `mpr` from a uniqueness
+    /// argument) but against [`Self::emod_natabs_bound`] and
+    /// [`Self::ediv_emod_unique_general`] instead of their positive-only
+    /// siblings, so it holds for a divisor of either sign. The keystone
+    /// `F:ml430-int-gcd-div-5e01872f` (`Int.gcd_div`) needed and the prior
+    /// `int-emod-negative` lane's handoff named but did not build.
+    pub emod_eq_zero_iff_dvd_general: NameId,
 
     // --- congruence modulo `n`: `Int.ModEq n a b := emod a n = emod b n` ----
     /// `Int.ModEq : Int → Int → Int → Prop`.
@@ -778,6 +787,23 @@ pub struct IntPrelude {
     /// of `Int.gcd_div` (not proved here for a general, possibly negative,
     /// divisor).
     pub gcd_div_gcd_div_gcd: NameId,
+    /// `gcd_div : ∀ a b c, c ∣ a → c ∣ b →
+    /// Eq Nat (gcd (a.ediv c) (b.ediv c)) (Nat.div (gcd a b) (natAbs c))` —
+    /// Mathlib v4.30's `Int.gcd_div` (alias of Lean 4 core's `Int.gcd_ediv`,
+    /// `Init.Data.Int.Gcd`), for a divisor `c` of **either sign, or zero**.
+    /// Closes `F:ml430-int-gcd-div-5e01872f`. Proved by mutual divisibility,
+    /// NOT by transporting `Nat.gcd_mul_left` (that lemma does not exist in
+    /// this development and would need a fresh Euclidean-recursion induction
+    /// to build): with `qa := a.ediv c`, `qb := b.ediv c`, `C := natAbs c`,
+    /// `G := gcd a b`, `H := gcd qa qb`, `c ≠ 0` reduces to showing
+    /// `C*H = G`. `H ∣ G/C` follows from Bézout on `a,b` (`G`'s witnesses,
+    /// scaled by `c`, show `ofNat(G/C) = ±(qa*u+qb*v)` up to sign, and `H`
+    /// divides that sum termwise). `G/C ∣ H` follows from Bézout on `qa,qb`
+    /// (`H`'s witnesses give `c*H = a*u'+b*v'`, which `G` divides, so
+    /// `G ∣ C*H`, cancel the shared positive factor `C`). `Nat.dvd_antisymm`
+    /// closes it. `c = 0` is separate and degenerate (`c∣a → a=0`, `c∣b →
+    /// b=0`, both sides collapse to `0` via `gcd_zero_right`/`Nat.div_zero`).
+    pub gcd_div: NameId,
     /// `Int.Coprime a b := Eq Nat (gcd a b) 1` — the converse of Bézout
     /// (Elements VII, Def. 12), stated over the `Nat`-valued `gcd`.
     pub coprime: NameId,
@@ -1287,6 +1313,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_mul_right: child(kernel, "dvd_mul_right"),
         dvd_mul_left: child(kernel, "dvd_mul_left"),
         emod_eq_zero_iff_dvd: child(kernel, "emod_eq_zero_iff_dvd"),
+        emod_eq_zero_iff_dvd_general: child(kernel, "emod_eq_zero_iff_dvd_general"),
         mod_eq: child(kernel, "ModEq"),
         mod_eq_refl: child(kernel, "modEq_refl"),
         mod_eq_symm: child(kernel, "modEq_symm"),
@@ -1356,6 +1383,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         gcd_b: child(kernel, "gcdB"),
         gcd_eq_gcd_ab_witnesses: child(kernel, "gcd_eq_gcd_ab_witnesses"),
         gcd_div_gcd_div_gcd: child(kernel, "gcd_div_gcd_div_gcd"),
+        gcd_div: child(kernel, "gcd_div"),
         coprime: child(kernel, "Coprime"),
         coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
         gauss_lemma: child(kernel, "gauss_lemma"),
@@ -1566,6 +1594,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // higher up, before `natAbs` existed) -- same reason this cannot sit
         // beside its own sibling either.
         division::declare_ediv_emod_unique_general(&mut d)?;
+        // Needs both `emod_natabs_bound` and `ediv_emod_unique_general`,
+        // just declared above -- same build-order constraint as they carry
+        // relative to `Int.natAbs`.
+        dvd::declare_emod_eq_zero_iff_dvd_general(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;
@@ -1589,6 +1621,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_exists_mul_mod_eq_gcd(&mut d)?;
         bezout_witnesses::declare_gcd_eq_gcd_ab_witnesses(&mut d)?;
         gcd::declare_gcd_div_gcd_div_gcd(&mut d)?;
+        gcd::declare_gcd_div(&mut d)?;
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
