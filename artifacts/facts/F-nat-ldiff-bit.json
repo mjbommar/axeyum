@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-ldiff-bit",
+  "title": "ldiff decodes through a bit-appended argument",
+  "statement": "For every Bool a, Nat m, Bool b, Nat n: ldiff(bit(a, m), bit(b, n)) = bit(a && !b, ldiff(m, n)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Bool) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.ldiff (AxNat.bit x0 x1) (AxNat.bit x2 x3)) (AxNat.bit ((fun (x4 : Bool) => fun (x5 : Bool) => Bool.rec.{1} (fun (x6 : Bool) => Bool) Bool.false (Bool.rec.{1} (fun (x6 : Bool) => Bool) Bool.true Bool.false x5) x4) x0 x2) (AxNat.ldiff x1 x3))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.ldiff_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.ldiff_bit",
+      "supports": "Nat.ldiff_bit is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- ldiff_bit 2>/dev/null | grep -Ec '^Nat\\.ldiff_bit[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.ldiff_bit[[:space:]]` so a future sibling cannot satisfy this row."
+    },
+    {
+      "id": "compute-Nat.ldiff_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.ldiff_bit",
+      "supports": "ldiff(bit(true, 2), bit(false, 3)) = ldiff(5, 6) = 1 (0b101 AND NOT 0b110 = 0b101 AND 0b001 = 0b001), against bit(true && !false, ldiff(2, 3)) = bit(true, 0) = 1 (ldiff(2,3) = 0b10 AND NOT 0b11 = 0b10 AND 0b100 = 0) -- the SAME shared instance as F:nat-land-bit/F:nat-lor-bit (a=true, m=2, b=false, n=3): land gives 4, lor gives 7, ldiff gives 1 at identical operands, so a wrong-way combine does not land on 1 here.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::ldiff_bit_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.ldiff_bit` both against fully free (a, m, b, n) -- by re-declaring the statement as a fresh closed theorem over Pi/lambda-bound variables and requiring the kernel admit it -- and at the concrete, bit-differing instance (a=true, m=2, b=false, n=3), confirming both instantiations compute to the stated values."
+    },
+    {
+      "id": "footprint-Nat.ldiff_bit",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-and",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-lor-ldiff-bit",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0..x3` are `a, m, b, n`; the inline lambda at `x4, x5` (built from two nested `Bool.rec`s) is `a && !b`, reproduced locally in `nat_prelude/bit_decode.rs`'s `ldiff_fn` (generic over `NatOps` so the test suite's `Fixture` can rebuild the identical term) since `bitwise.rs`'s private `bool_select_bool` and `ldiff.rs` were both off-limits for this lane.\n\nThis is the `Nat.ldiff` twin of `F:nat-land-bit`/`F:nat-lor-bit`, closed by transporting lane `nat-bit-decode`'s `Nat.bit` decode bridge (`nat_prelude/bit_decode.rs`) to `ldiff`. The fuel-swap machinery transports unchanged. `ldiff`'s guard rows are the documented HYBRID: the `n=0` leaf is `lor`-flavoured (pass-through `bit a m`, needing the same `a`-split + `Nat.ldiff_zero_right` as `lor_bit`'s `n=0` leaf), the `m=0` leaf is `land`-flavoured (constant `0`, and reuses `land_guard_on_m_zero_leaf` verbatim -- no split needed, exactly as for `land`). The per-bit combine agreement (`beq`-gated: `if n%2=0 then m%2 else 0`) needs a FULL `a`-then-`b` split (4 leaves) -- unlike `land`'s single-split shortcut, `ldiff_fn(a, true)` still has `a` as a live `Bool.rec` scrutinee (`bool_select_bool(a, not_true, false) = bool_select_bool(a, false, false)`, and both branches being the literal `false` does NOT let the recursor fire without `a` itself being literal -- there is no general `Bool`-valued \"both branches equal regardless of scrutinee\" reduction rule, only the `Nat`-valued `bool_select_nat_same`).\n\nThis is the `Nat.ldiff` twin of Mathlib v4.30's `Nat.ldiff_bit` (`F:ml430-nat-ldiff-bit-6be49bb8`, flipped alongside this fact) -- Mathlib defines `Nat.ldiff` via `bitwise (fun a b => a && !b)`, the same construction our `ldiff_fn` reproduces, so this closes the same proposition Mathlib states. See `docs/plan/status/258-nat-lor-ldiff-bit.md`."
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lor-bit",
+  "title": "lor decodes through a bit-appended argument",
+  "statement": "For every Bool a, Nat m, Bool b, Nat n: lor(bit(a, m), bit(b, n)) = bit(a || b, lor(m, n)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Bool) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.lor (AxNat.bit x0 x1) (AxNat.bit x2 x3)) (AxNat.bit ((fun (x4 : Bool) => fun (x5 : Bool) => Bool.rec.{1} (fun (x6 : Bool) => Bool) x5 Bool.true x4) x0 x2) (AxNat.lor x1 x3))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lor_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lor_bit",
+      "supports": "Nat.lor_bit is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- lor_bit 2>/dev/null | grep -Ec '^Nat\\.lor_bit[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.lor_bit[[:space:]]` so a future sibling cannot satisfy this row."
+    },
+    {
+      "id": "compute-Nat.lor_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lor_bit",
+      "supports": "lor(bit(true, 2), bit(false, 3)) = lor(5, 6) = 7 (0b101 | 0b110 = 0b111), against bit(true || false, lor(2, 3)) = bit(true, 3) = 7 (lor(2,3)=3, 0b10 | 0b11 = 0b11) -- a DISCRIMINATING instance shared with F:nat-land-bit's (a=true, m=2, b=false, n=3): land gives 4, lor gives 7 at the same operands, so a wrong-way `||`/`&&` swap or a swapped `bit` encoding does not land on 7 here.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::lor_bit_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.lor_bit` both against fully free (a, m, b, n) -- by re-declaring the statement as a fresh closed theorem over Pi/lambda-bound variables and requiring the kernel admit it -- and at the concrete, bit-differing instance (a=true, m=2, b=false, n=3), confirming both instantiations compute to the stated values."
+    },
+    {
+      "id": "footprint-Nat.lor_bit",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-or",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-lor-ldiff-bit",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0..x3` are `a, m, b, n`; the inline lambda at `x4, x5` is this prelude's `Bool.or` (no top-level `Bool.or` is declared -- see `nat_prelude/bitwise.rs`'s `or_fn`).\n\nThis is the `Nat.lor` twin of `F:nat-land-bit`, closed by transporting lane `nat-bit-decode`'s `Nat.bit` decode bridge (`nat_prelude/bit_decode.rs`) to `lor`. The fuel-swap machinery (artificially-chosen succ-shaped fuel via `Nat.lor_aux_eq_lor_of_le`, the `Nat.bit_div_two`/`Nat.bit_mod_two` decode) transports unchanged from `land_bit`. What is new: `lor`'s fuel-exhaustion guard rows PASS THROUGH the full bit-encoded operand (`bit a m` / `bit b n`) rather than land's constant `0` (matching `lor.rs`'s own absorbing-zero analysis -- OR has no absorbing zero on either side); the `n=0` guard leaf needs a case split on `a` (`or_fn(a, false)` needs `a` literal to iota-reduce, unlike `and_fn(a, false)` which collapses to a constant regardless of `a`'s shape), while the `m=0` leaf needs no split at all (`or_fn(false, b)` reduces to `b` directly and `lor(0, n)` is defeq `n` unconditionally, so both sides land on the identical raw `bit b n` expression by pure defeq). The per-bit `max`-via-`ble` combine agreement needs a split on `a` then, only in the `a=true` branch, a further split on `b` (`Nat.ble 0 y` reduces to the literal `true` regardless of `y`'s shape, so the `a=false` branch closes with no further split).\n\nThis is the `Nat.lor` twin of Mathlib v4.30's `Nat.lor_bit` (`F:ml430-nat-lor-bit-a2f98c7c`, flipped alongside this fact) -- our `Nat.lor` is itself proved equal to Mathlib's `bitwise or` specialization by `Nat.bitwise_or_eq_lor` (`nat_prelude/rec_agreement.rs`), so this closes the same proposition Mathlib states, not a lookalike about a different definition. See `docs/plan/status/258-nat-lor-ldiff-bit.md`."
+}
