@@ -10,9 +10,60 @@
 # every run so a green result is never vacuous.
 #
 # Measured 2026-08-26 on s4 (rustc via the repo's default toolchain);
-# the two `creal` rows re-measured 2026-08-28, same host.
+# the two `creal` rows re-measured 2026-08-28, same host. `integer`, `cpoint`
+# and `complex` re-measured 2026-08-29, same host, after `just check`'s
+# stack-envelope step went red on all three.
 #
 # ## What these numbers say
+#
+# * 2026-08-29: `integer`, `cpoint`, `complex` all outgrew their pinned
+#   RELEASE budget; all three re-measured by `--measure` to a passing power
+#   of two (no divergent term found for any of them). Growth was NOT
+#   uniform, which refutes the standing hypothesis that `nat`'s same-day
+#   bitwise-family growth (`Nat.Pair`, `Nat.binaryRec`, `land`/`lor`/`ldiff`
+#   plus their comm/assoc/`*_bit` lemmas) drove all three as downstream
+#   consumers -- `nat`'s own release row is UNCHANGED at 65536, and the
+#   three consumers grew at wildly different rates:
+#
+#     release integer   65536 ->    131072   ( 2x)
+#     release cpoint   1048576 ->  8388608   ( 8x)
+#     release complex   262144 ->  8388608   (32x)
+#
+#   Each prelude's own recent history explains its own rate far better than
+#   a shared upstream cause: `int_prelude.rs`/`int_prelude/` picked up
+#   incremental, modest lemmas (`Int.gcd_div`, `Int.fib_two_mul`,
+#   `Int.emod_natAbs_bound`) -- consistent with the smallest, 2x, growth.
+#   `creal_point.rs` (the `cpoint` prelude) picked up a run of Euclidean
+#   geometry identities carried "squared throughout" to avoid a square root
+#   (Heron's formula, Menelaus, Ceva, the Euler line, Cauchy-Schwarz,
+#   circumcentre/radical-axis constructions) -- large algebraic terms, 8x.
+#   `complex.rs` picked up the polynomial/factor-theorem family
+#   (`Complex.polyMul`, `hornerFromTop`/`factorQuotient`, the FTA-approx
+#   groundwork) plus the modulus triangle inequality -- the heaviest
+#   additions of the three, and the 32x row to match. So: attribute growth
+#   to each prelude's OWN recent commits, not to a shared upstream driver.
+#
+#   DEBUG was checked too, since the pin file carries debug rows for all
+#   three, and it did NOT move in lockstep with release:
+#
+#     debug   integer   262144    -> unchanged (confirmed by --measure)
+#     debug   cpoint  33554432    -> unchanged (confirmed by direct probe:
+#                                    passes at 33554432, fails at 16777216 --
+#                                    same bisection result as before)
+#     debug   complex   4194304   ->  16777216  (4x; the old pin now FAILS)
+#
+#   `cpoint`'s debug/release ratio therefore fell from the previously-quoted
+#   32x to 4x (33,554,432 / 8,388,608) -- a further illustration, on top of
+#   the existing entry below, that the debug/release ratio is per-term and
+#   was never a constant to calibrate once.
+#
+#   Judgment call, stated explicitly: `nat`, `rat` and `creal`'s release
+#   rows all currently print "margin < 2x below pin" (build at the pin,
+#   abort at half). None of the three FAILED at their pin, so none are
+#   raised here -- raising a passing row is a separate, discretionary
+#   change, and `nat_prelude/` and `creal/` are explicitly other lanes'
+#   files this session. If one of those rows goes red, re-derive it the
+#   same way: `--measure --profile release --prelude <name>`.
 #
 # * `creal` DEBUG 2,097,152 -> 16,777,216 and RELEASE 131,072 -> 8,388,608,
 #   RAISED 2026-08-28 (8x and 64x). Re-measured twice, independently, by
@@ -53,10 +104,18 @@
 #   is 8x this row.
 #
 # * Debug costs up to 32x release for the same term (cpoint: 33,554,432 vs
-#   1,048,576). That ratio is why `prelude_theorem_inventory` must be run
-#   `--release`, and it is the measured reason a single recursion-DEPTH limit
-#   cannot be calibrated once: the same term fits in one profile and not the
-#   other while its depth is identical.
+#   1,048,576, as measured 2026-08-26). That ratio is why
+#   `prelude_theorem_inventory` must be run `--release`, and it is the
+#   measured reason a single recursion-DEPTH limit cannot be calibrated
+#   once: the same term fits in one profile and not the other while its
+#   depth is identical.
+#
+#   STALE AS OF 2026-08-29: `cpoint`'s release row moved to 8,388,608 (see
+#   above), so the CURRENT ratio for `cpoint` is 4x (33,554,432 /
+#   8,388,608), not 32x. The 32x FIGURE is kept as the historical
+#   measurement that motivated the `--release` rule; it is not this row's
+#   ratio anymore. The rule itself (debug/release ratio is per-term, not a
+#   constant) is reinforced, not weakened, by the ratio itself having moved.
 #
 # ## When a row goes red
 #
@@ -75,11 +134,11 @@ debug	axreal	131072
 debug	rat	1048576
 debug	creal	16777216
 debug	cpoint	33554432
-debug	complex	4194304
+debug	complex	16777216
 debug	string	131072
 release	nat	65536
-release	integer	65536
+release	integer	131072
 release	rat	131072
 release	creal	8388608
-release	cpoint	1048576
-release	complex	262144
+release	cpoint	8388608
+release	complex	8388608
