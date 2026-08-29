@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-taylor-remainder-lhs-kernel-checked",
+  "title": "For p(x)=x^4 at a=0,n=1,b=2, the Taylor remainder's left-hand side p(2)-T_1(2)=16 is kernel-reconstructed, not just CAS-asserted",
+  "statement": "For p(x) = x^4, center a = 0, degree n = 1, evaluation point b = 2 (the same instance F:cas-taylor-quartic-lagrange-witness's certificate names, irrational Lagrange-remainder witness xi = sqrt(2/3)), the two evaluations p(2) = 16 and T_1(2) = 0 -- where T_1 is axeyum-cas's own degree-1 Taylor polynomial of p about 0, which for this instance is identically the ZERO polynomial since p'(0) = 0 -- are reconstructed through crate::Kernel::add_declaration over Rat.polyEval, not merely asserted by axeyum-cas's own normal form. This is deliberately WEAKER than the full TaylorCertificate: it does not compute the remainder 16 - 0 = 16 itself (no Rat subtraction is separately reconstructed), it says nothing about the generalized-Rolle argument, p'' = 12x^2, the Lagrange identity itself, or the witness xi = sqrt(2/3) and its Sturm-isolated bracket. All of that remains cas-internal, exactly as F:cas-taylor-quartic-lagrange-witness's own evidence notes already state. It is also unrelated to rat_prelude::taylor's Rat.taylor_deg1, which that fact's own notes already flag as materially weaker (degree <= 1 only, no remainder, no witness) and not a reconstruction of this certificate.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (^ x 4))\n(define-poly t1 0)\n(assert (= (poly-eval p 2) 16))\n(assert (= (poly-eval t1 2) 0))",
+    "fragment": "real-algebraic-taylor-remainder-lhs",
+    "free_symbols": ["x"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval, built from the same rat_prelude/int_prelude/nat_prelude constants the IVT/EVT/MVT bridges enumerate (all measured axiom-free), but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "cas.taylor-certificate-generalized-rolle-lagrange-identity-and-witness-not-claimed-here: this fact states ONLY the two evaluations p(2)=16 and T_1(2)=0. It does not reconstruct the remainder subtraction 16-0=16, does not reconstruct the generalized-Rolle argument or p''=12x^2, and does not reconstruct the witness xi=sqrt(2/3) or its Sturm-isolated bracket -- all remain cas-internal, checked only by taylor::verify_taylor_certificate (see F:cas-taylor-quartic-lagrange-witness's own evidence notes).",
+    "cas.t1-evaluation-is-trivial-by-construction: T_1(2)=0 holds because T_1 is the zero polynomial for this instance (p'(0)=0, so taylor::build_taylor_and_deriv's own if-!c_k.is_zero() guard adds no coefficients) -- this sub-claim needed no independent verification and is reconstructed through the same machinery as p(2)=16 purely for uniformity with this batch's other bridges, not because it was in doubt."
+  ],
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-taylor-remainder-p-at-b",
+      "kind": "kernel-term",
+      "supports": "p(2) = 16 for p = x^4, admitted by crate::Kernel::add_declaration as Check.taylor_remainder_p_at_b : Eq Rat (Rat.polyEval c 5 (Rat.ofInt 2)) (Rat.ofInt <the arithmetic chain the CAS-derived coefficients reduce to at x=2>), where c is built from the same [0,0,0,0,1] integer coefficients axeyum-cas's own taylor::polynomial_taylor(x^4, 0, 1, 2) certificate's cert.poly field actually returns (asserted equal in the test, not hand-picked). Same recipe as F:cas-mvt-secant-endpoints-kernel-checked: an Eq conclusion falls straight out of poly_eval_to_of_int with no Lt-specific closing lemma needed.",
+      "check_status": "checked",
+      "checkers": [
+        "taylor::polynomial_taylor (untrusted producer: builds T_n and the (n+1)-th derivative exactly, and returns the certificate this test's poly/a/b/taylor_poly are translated from)",
+        "rat_prelude::cas_ivt_bridge_tests::poly_eval_to_of_int (shared proof-assembly engine, reused verbatim from the IVT sign-bracket bridge)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated Eq Rat fact from the supplied proof term)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_taylor_remainder_bridge_tests::tests::taylor_remainder_lhs_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_taylor_remainder_bridge_tests::tests::taylor_remainder_lhs_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 7,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_taylor_remainder_bridge_tests.rs",
+      "notes": "The named test builds both evaluations (Check.taylor_remainder_p_at_b and Check.taylor_remainder_t1_at_b) plus a swapped-value negative control in one #[test] fn, so this evidence row and the next one share one checker_command. cert.poly/a/b/taylor_poly are asserted equal to [0,0,0,0,1]/0/2/[] (the last padded to [0] for the shared engine, see module doc) BEFORE any kernel-side term is built. Measured wall-clock (this machine, cold cargo-serialized.sh test, single invocation): 6.75s including the one-time Rat prelude build, comparable to the sibling IVT/EVT/extremum/MVT bridges."
+    },
+    {
+      "id": "kernel-reconstructed-taylor-remainder-t1-at-b",
+      "kind": "kernel-term",
+      "supports": "T_1(2) = 0 for T_1 the CAS's own (empty, i.e. identically zero) Taylor polynomial, admitted by crate::Kernel::add_declaration as Check.taylor_remainder_t1_at_b : Eq Rat (Rat.polyEval t1 1 (Rat.ofInt 2)) (Rat.ofInt <chain reducing to 0>). Also carries the swapped-value negative control: the SAME proof term for p(2)=16, re-ascribed against the FALSE statement p(2)=17, is confirmed REJECTED by Kernel::add_declaration -- exercising the kernel's own type check rather than asking any decision procedure to accept a falsehood.",
+      "check_status": "checked",
+      "checkers": [
+        "taylor::polynomial_taylor (same untrusted producer as the p(2) row)",
+        "rat_prelude::cas_ivt_bridge_tests::poly_eval_to_of_int (same shared proof-assembly engine, applied to the padded taylor_poly)",
+        "crate::Kernel::add_declaration (trusted judge: this row additionally confirms REJECTION of the p(2)=16 proof term ascribed against p(2)=17 -- admitted_wrong.is_err() is asserted)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_taylor_remainder_bridge_tests::tests::taylor_remainder_lhs_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_taylor_remainder_bridge_tests::tests::taylor_remainder_lhs_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 7,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_taylor_remainder_bridge_tests.rs",
+      "notes": "Same single #[test] fn as the p(2) row (both evaluations plus the negative control are asserted together, so the checker_command is identical). This sub-claim is trivial by construction (see axiom_footprint's cas.t1-evaluation-is-trivial-by-construction entry) -- it is included for uniformity with the p(2)=16 row, not because T_1(2)=0 was ever in doubt for the zero polynomial."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "rat_prelude::cas_taylor_remainder_bridge_tests::tests::taylor_remainder_lhs_kernel_checked (crates/axeyum-lean-kernel/src/rat_prelude/cas_taylor_remainder_bridge_tests.rs), sized by docs/research/11-design-review/2026-08-28-ivt-evt-pareto-position-measured.md's 'Row 3, followed up' section, which named 28-of-32 cas-certificate facts as the number to move and identified the real-algebraic cluster (which this Taylor fact belongs to) as reachable without new kernel machinery for its rational sub-claims",
+    "source": "classical Taylor's theorem with Lagrange remainder, proved by repeated (generalized) Rolle, specialized to the concrete quartic p=x^4 at a=0,n=1,b=2 -- the same instance F:cas-taylor-quartic-lagrange-witness's certificate names (taylor::tests::quartic_irrational_witness)",
+    "prior_art": [
+      {
+        "who": "Brook Taylor; Joseph-Louis Lagrange",
+        "what": "Taylor's theorem and its Lagrange (mean-value) form of the remainder",
+        "year": 1797,
+        "where": "classical analysis; this instance is a routine quartic-polynomial application at n=1",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:cas-taylor-quartic-lagrange-witness, not an edit to it: folding this evidence into that fact would make scripts/validate-facts.py's classify_cas_certificate_fact label the WHOLE certificate -- the generalized-Rolle argument and Sturm-isolated witness included -- as kernel-reconstructed, which would overclaim. This is the third real-algebraic-cluster sibling this lane registered (after F:cas-extremum-deriv-sign-bracket-kernel-checked for EVT/extremum and F:cas-mvt-secant-endpoints-kernel-checked for MVT); together they touch three of the four facts in that cluster (cas-extremum-irrational-argmax, cas-mvt-cubic-witness-sqrt3, cas-taylor-quartic-lagrange-witness), leaving only F:cas-ivt-cbrt2-in-1-2's own root-containment/Sturm-count untouched (its sign bracket already has a sibling, F:cas-ivt-sign-bracket-cbrt2-kernel-checked, predating this lane). Reused rat_prelude::cas_ivt_bridge_tests's shared poly_eval_to_of_int/n_term_polynomial/int_lit/of_int/rational_to_int verbatim rather than re-deriving them (per CLAUDE.md's note on the cost of two proofs of one fact); needed no new pub(crate) exposure. Constants (p(2)=16, T_1(2)=0) were computed by hand and cross-checked against the CAS's own cert.taylor_poly trimming to empty before being encoded. Moves the ledger's cas-certificate split from kernel-reconstructed 6 (of 34) to kernel-reconstructed 7 (of 35) -- see docs/plan/status/274-cas-row-three.md for the verified cluster breakdown this fact was chosen from."
+}

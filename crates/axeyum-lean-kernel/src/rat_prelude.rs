@@ -2110,3 +2110,12 @@ mod cas_ivt_bridge_tests;
 
 #[cfg(test)]
 mod cas_evt_bridge_tests;
+
+#[cfg(test)]
+mod cas_extremum_deriv_bridge_tests;
+
+#[cfg(test)]
+mod cas_mvt_secant_bridge_tests;
+
+#[cfg(test)]
+mod cas_taylor_remainder_bridge_tests;
