@@ -1,0 +1,58 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- land_aux_eq_land_of_le 2>/dev/null | grep -Ec '^Nat\\.land_aux_eq_land_of_le[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.land_aux_eq_land_of_le",
+      "kernel_declaration": "Nat.land_aux_eq_land_of_le",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the tested count is what decides the exit status. Anchored with `^Nat\\.land_aux_eq_land_of_le[[:space:]]` so a future `_of_le_` sibling cannot satisfy this row.",
+      "supports": "for every fuel, m, n with m <= fuel, landAux fuel m n = land m n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.land_aux_eq_land_of_le",
+      "kernel_declaration": "Nat.land_aux_eq_land_of_le",
+      "kind": "kernel-term",
+      "notes": "Applies the theorem symbolically (against a free `Le m fuel` hypothesis) and at the concrete instance `(fuel, m, n) = (7, 1, 7)`, where `fuel` STRICTLY EXCEEDS the canonical `m`; both `landAux 7 1 7` and `land 1 7` reduce to `1`. The mandatory negative control checks, BY EVALUATION alone (not through this theorem, since `Le 7 1` has no proof), that at INSUFFICIENT fuel the two sides genuinely disagree: `landAux 1 7 7 = 1` while `land 7 7 = 7` -- the same `(1, 7, 7)` witness the `rec_agreement` lane pinned for `bitwise_aux_eq_land_aux`. Without this the theorem's `Le m fuel` hypothesis could be vacuously true of a stronger, unconditional (and false) statement.",
+      "supports": "the hypothesis Le m fuel is load-bearing, and the theorem is exactly this, not a weaker or vacuous restatement"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.land_aux_eq_land_of_le",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x0) -> Eq.{1} AxNat (AxNat.landAux x0 x1 x2) (AxNat.land x1 x2)))))"
+  },
+  "id": "F:nat-land-aux-eq-land-of-le",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0`/`x1`/`x2` are `fuel`/`m`/`n`.\n\nThis is fuel-irrelevance for `landAux`, the named blocker on the seven open `natural-bitwise` facts `land_comm`/`land_assoc`/`land_bit`/`lor_comm`/`lor_assoc`/`lor_bit`/`ldiff_bit` (`docs/plan/status/233-nat-rec-agreement.md`): unfolding `landAux` at a non-canonical fuel (e.g. `fuel = bit a m`, `land_bit`'s shape) needs to know that ANY sufficient fuel gives the same answer as the canonical `fuel = m`, not just the fuel `Nat.land` itself supplies.\n\nProved via `Nat.land_aux_agree_of_fuel : forall fuel1 m n fuel2, Le m fuel1 -> Le m fuel2 -> landAux fuel1 m n = landAux fuel2 m n` (TWO independently-chosen sufficient fuels agree, `ops::agree_by_double_fuel_induction`), specialized at `fuel2 := m` via `le_refl` -- `land m n` and `landAux m m n` are the SAME term by definition, so the specialization needs no extra proof step. The two-fuel form is what avoids ever having to unfold `landAux`'s OWN canonical instance (`landAux m m n`) via `m`'s shape, which is the self-reference a fuel-vs-canonical induction runs into (see `rec_agreement.rs`'s module doc). This theorem does NOT itself close any of the seven blocked facts; `docs/plan/status/237-nat-fuel-irrelevance.md` records what transports to `lorAux`/`ldiffAux` unchanged and what does not.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-fuel-irrelevance",
+    "source": "`declare_land_fuel_irrelevance_all` (`crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs`)"
+  },
+  "schema_version": 1,
+  "statement": "For every fuel, m, n with m <= fuel, unfolding Nat.landAux at that fuel gives the same result as Nat.land m n.",
+  "title": "landAux fuel-irrelevance: any sufficient fuel agrees with the canonical one"
+}

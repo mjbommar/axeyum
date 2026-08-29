@@ -80,7 +80,10 @@
 
 use super::NatPrelude;
 use super::bitwise::{and_fn, or_fn};
-use super::ops::{NatDev, NatOps, agree_by_fuel_induction, cases_lt_bound, cases_mod_two};
+use super::ops::{
+    NatDev, NatOps, agree_by_double_fuel_induction, agree_by_fuel_induction, bool_select_nat_same,
+    cases_lt_bound, cases_mod_two, cases_zero_succ,
+};
 use crate::KernelError;
 use crate::expr::ExprId;
 use crate::name::NameId;
@@ -435,5 +438,453 @@ pub(super) fn declare_rec_agreement_all(
         },
     )?;
 
+    Ok(())
+}
+
+// ============================================================================
+// Fuel-irrelevance for `landAux`: the blocker named by `land_comm`,
+// `land_assoc`, `land_bit`, `lor_comm`, `lor_assoc`, `lor_bit`, `ldiff_bit`.
+//
+// # The statement, and why THIS hypothesis
+//
+// "Sufficient fuel" is `Le m fuel`: the canonical call `landAux m m n` puts
+// `m` in the fuel slot, the recursion HALVES the value argument every step,
+// and a caller unfolding `landAux` at a bigger fuel (e.g. `fuel = bit a m`,
+// `land_bit`'s shape) always arrives with MORE fuel than canonical, never
+// less. `landAux 0 m n` for `m > 0` is genuinely `0` while `land m n` need
+// not be, so the statement must require `fuel` at least sufficient, not hold
+// at arbitrary fuel — this is exactly why `Le m fuel`, not no hypothesis at
+// all, has to appear.
+//
+// # Why the core lemma compares two fuels, not fuel-vs-canonical
+//
+// The brief's suggested shape,
+// `fun fuel => ∀ m n, Le m fuel → Eq (landAux fuel m n) (land m n)`, is
+// directly expressible in [`agree_by_fuel_induction`] — but PROVING it by
+// induction on `fuel` alone runs into the same self-reference the
+// `declare_bitwise_agreement` route above deliberately avoids: `land m n`
+// unfolds to `landAux m m n`, which puts the SAME value `m` in the fuel
+// slot, so relating it to `landAux (succ k) m n` (`k` from the induction)
+// requires `landAux m m n` to unfold via `m`'s own shape — and once `m` is
+// exposed as `succ predecessor`, the recursive call on THAT side is at fuel
+// `predecessor`, a value the outer induction's hypothesis (fixed at fuel
+// `k`) says nothing about.
+//
+// The fix is to generalize over BOTH fuels at once
+// ([`agree_by_double_fuel_induction`]):
+// `∀ fuel1 m n fuel2, Le m fuel1 → Le m fuel2 →
+//   Eq (landAux fuel1 m n) (landAux fuel2 m n)`.
+// This is symmetric in which fuel is "the" canonical one, so it NEVER needs
+// `landAux`'s own canonical instance to unfold — both sides are compared as
+// independently-chosen sufficient fuels, and `land_aux_eq_land_of_le`
+// becomes a one-line corollary at `fuel2 := m` (`land m n` and
+// `landAux m m n` are the SAME term by definition, so the kernel accepts the
+// double-fuel proof directly against the `land`-headed statement via
+// defeq).
+//
+// # The two case splits this needs, and why each is unavoidable
+//
+// Induction is on `fuel1`. The base case (`fuel1 = 0`) needs no case split
+// at all: `landAux 0 m n` is the constant-`0` row for ANY `m`, `n`
+// ([`declare_land_aux_zero_left_any_fuel`] gives the same for the OTHER
+// side, `landAux fuel2 0 n`, once `m = 0` is derived from `Le m 0`).
+//
+// The step (`fuel1 = succ k`) needs a case split on `m` — NOT on `n` — to
+// expose whether `landAux(succ k) m n`'s inner `m = 0` guard is decidable by
+// reduction. At `m = 0` BOTH sides are `0`
+// ([`declare_land_aux_zero_left_any_fuel`] again, no hypotheses needed). At
+// `m = succ predecessor`, `beq (succ predecessor) zero` reduces to `false`
+// on BOTH sides (the guard only mentions `m`, not the fuel), so the guard
+// scaffolding is IDENTICAL on both sides and [`d.congr`](NatOps::congr)
+// reduces the goal to the recursive sub-terms alone: `landAux k half half'`
+// vs `landAux f2' half half'`, where `f2' := pred fuel2` (fuel2 is positive
+// since it's `≥ succ predecessor ≥ 1`, so [`NatPrelude::succ_pred_of_pos`]
+// applies). The IH — `∀ a b c, Le a k → Le a c → Eq (landAux k a b)
+// (landAux c a b)` — closes this at `a := half`, `b := half'`, `c := f2'`,
+// given `Le half k` and `Le half f2'`, both from
+// [`half_le_predecessor_of_succ`] (the same "half of a positive value is
+// below the fuel that bounds its successor" arithmetic `pow_sq_aux_eq_pow`
+// and `size_aux_lt_pow` each derive for their own fuel families).
+//
+// This case split does NOT need `bool_select_nat_same`: unlike the `m = 0`
+// branch (where the OUTER `n = 0` guard stays symbolic and both its
+// branches literally are `0`), at `m = succ predecessor` the guard itself
+// reduces (`beq (succ _) zero ≡ false`), so no "both branches agree
+// regardless of the guard" argument is needed here.
+//
+// # Transport to `lorAux`/`ldiffAux` — what is generic and what is not
+//
+// [`agree_by_double_fuel_induction`], [`half_le_predecessor_of_succ`], and
+// `n_lt_mul_two` are ENTIRELY generic — none of them mention `land`'s
+// absorbing zero, and they transport to `lorAux`/`ldiffAux` UNCHANGED. What
+// does NOT transport unchanged is `declare_land_aux_zero_left_any_fuel`:
+// `lorAux`'s fuel-exhaustion row returns `n`, not `0`
+// ([`super::lor`]'s module doc), so its "any fuel" analogue is
+// `Eq (lorAux fuel 0 n) n`, proved the same way (a `bool_select_nat_same`
+// call in the `succ` branch) but with a different closing value. The `m =
+// succ predecessor` step's proof body is otherwise a direct transcription —
+// same case split, same IH application, same congr — with `lor`'s own
+// `on_n_zero`/`on_m_zero`/`combine` closures from [`declare_rec_agreement_all`]
+// dropped in. `ldiffAux` shares `land`'s absorbing-zero base case exactly
+// (see `super::ldiff`'s module doc), so its `any_fuel` lemma is a byte-for-byte
+// copy of `land`'s with the name and `p.ldiff_aux` swapped in.
+
+/// `bound : Le (succ predecessor) (succ k) ⊢ Le (div (succ predecessor) two) k`.
+///
+/// The fuel-sufficiency step every `…Aux` fuel-bound proof in this prelude
+/// needs (`Nat.log_aux_le_fuel`, `Nat.size_aux_lt_pow`,
+/// `Nat.pow_sq_aux_eq_pow`): from positivity of `e := succ predecessor`,
+/// `e < 2*e` ([`n_lt_mul_two`]), hence (via `div_mod_lt_mul_iff`) `e/2 < e`,
+/// hence (combined with `bound`) `e/2 < succ k`, hence `e/2 ≤ k`. A direct
+/// copy of the derivation inline in `powsq.rs`'s `declare_powsq_eq_pow`
+/// (that copy is not exposed, and `powsq.rs` is out of this lane's scope) —
+/// this is the fourth site with this exact arithmetic (`log.rs`, `binary.rs`,
+/// `powsq.rs`), always duplicated because each fuel family's `…Aux` type
+/// differs and there is nothing generic to promote it to.
+fn half_le_predecessor_of_succ(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    predecessor: ExprId,
+    k: ExprId,
+    bound: ExprId,
+) -> ExprId {
+    let p = *p;
+    let e = d.succ(predecessor);
+    let two = d.num(2);
+    let one = d.num(1);
+    let half = d.div(e, two);
+    let r = d.modulo(e, two);
+    let pos = d.zero_lt_succ(predecessor);
+    let e_lt_2e = n_lt_mul_two(d, &p, e, pos);
+
+    let h_exec = d.lemma(p.div_mod_exec, &[one, e]);
+    let iff_fn = d.lemma(p.div_mod_lt_mul_iff, &[two, e, half, r, e]);
+    let the_iff = d.apply(iff_fn, &[h_exec]);
+    let mul_two_e = d.mul(two, e);
+    let lt_e_2e_ty = d.lt(e, mul_two_e);
+    let lt_half_e_ty = d.lt(half, e);
+    let forward = super::helpers::iff_forward(d, lt_e_2e_ty, lt_half_e_ty, the_iff);
+    let half_lt_e = d.apply(forward, &[e_lt_2e]);
+
+    let sk = d.succ(k);
+    let half_lt_sk = d.lemma(p.lt_of_lt_of_le, &[half, e, sk, half_lt_e, bound]);
+    d.lemma(p.le_of_succ_le_succ, &[half, k, half_lt_sk])
+}
+
+/// `h : Lt zero n ⊢ Lt n (mul two n)`. A direct copy of `powsq.rs`'s private
+/// `n_lt_mul_two` (itself a copy of `binary.rs`'s — `powsq.rs`'s module doc
+/// notes this is already the third instance; this is the fourth, unavoidable
+/// because both source modules are outside this lane's scope): `n < n+n`
+/// from `0 < n` via `add_lt_add_left` (at `add n zero`, restored to `n` by
+/// `add_zero`), then `n+n = mul (succ one) n` via `succ_mul`/`one_mul`.
+fn n_lt_mul_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, pos: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let add_n_zero = d.add(n, zero);
+    let add_n_n = d.add(n, n);
+    let step1 = d.lemma(p.add_lt_add_left, &[n, zero, n, pos]);
+    let eq1 = d.lemma(p.add_zero, &[n]);
+    let motive1 = d.eq_motive(add_n_zero, &|d, x| {
+        let add_n_n_inner = d.add(n, n);
+        d.lt(x, add_n_n_inner)
+    });
+    let n_lt_add_n_n = d.transport(add_n_zero, motive1, step1, n, eq1);
+
+    let one = d.num(1);
+    let succ_one = d.succ(one);
+    let mul_succ_one_n = d.mul(succ_one, n);
+    let mul_one_n = d.mul(one, n);
+    let add_mul_one_n_n = d.add(mul_one_n, n);
+    let succ_mul_eq = d.lemma(p.succ_mul, &[one, n]);
+    let one_mul_eq = d.lemma(p.one_mul, &[n]);
+    let congr_step = d.congr(mul_one_n, n, one_mul_eq, &|d, x| d.add(x, n));
+    let (_, mul_two_n_eq_add_n_n) = d.chain(
+        mul_succ_one_n,
+        &[(add_mul_one_n_n, succ_mul_eq), (add_n_n, congr_step)],
+    );
+    let rev_eq = d.symm(mul_succ_one_n, add_n_n, mul_two_n_eq_add_n_n);
+    let motive2 = d.eq_motive(add_n_n, &|d, x| d.lt(n, x));
+    d.transport(add_n_n, motive2, n_lt_add_n_n, mul_succ_one_n, rev_eq)
+}
+
+/// `land_aux_zero_left_any_fuel : ∀ fuel n, Eq (landAux fuel 0 n) 0` — holds
+/// at ANY fuel, sufficient or not, unlike [`NatPrelude::land_zero_left`]
+/// (which needs no lemma because `Nat.land` supplies fuel `= m = 0`
+/// automatically). Case-split on `fuel` alone ([`cases_zero_succ`]), no
+/// induction hypothesis: at `fuel = 0` the base row is the constant `0`
+/// regardless of `m`, `n` (`refl`); at `fuel = succ f` the `m = 0` guard is
+/// LITERAL (`m` is the numeral `0`), so it fires by δι alone, short-circuiting
+/// the recursive call entirely — only the outer, still-symbolic `n = 0` guard
+/// needs [`bool_select_nat_same`] to collapse its two IDENTICAL `0` branches.
+fn declare_land_aux_zero_left_any_fuel(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.land_aux_zero_left_any_fuel, 2, &|d, values| {
+        let fuel = values[0];
+        let n = values[1];
+        let zero = d.zero();
+        let statement_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let lhs = d.const_app(p.land_aux, &[candidate, zero, n]);
+            d.eq(lhs, zero)
+        };
+        let proof = cases_zero_succ(
+            d,
+            fuel,
+            &statement_at,
+            &|d| {
+                let lhs = d.const_app(p.land_aux, &[zero, zero, n]);
+                d.refl(lhs)
+            },
+            &|d, _predecessor| {
+                let n_is_zero = d.beq(n, zero);
+                bool_select_nat_same(d, &p, n_is_zero, zero)
+            },
+        );
+        let stmt = statement_at(d, fuel);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `land_aux_agree_of_fuel : ∀ fuel1 m n fuel2, Le m fuel1 → Le m fuel2 →
+///   Eq (landAux fuel1 m n) (landAux fuel2 m n)`. See the section doc above
+/// this block for the full derivation; this is
+/// [`agree_by_double_fuel_induction`]'s instantiation.
+fn declare_land_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let statement = |d: &mut NatDev<'_>, fuel1: ExprId, m: ExprId, n: ExprId, fuel2: ExprId| {
+        let bound1 = d.le(m, fuel1);
+        let bound2 = d.le(m, fuel2);
+        let lhs = d.const_app(p.land_aux, &[fuel1, m, n]);
+        let rhs = d.const_app(p.land_aux, &[fuel2, m, n]);
+        let concl = d.eq(lhs, rhs);
+        let inner = d.arrow(bound2, concl);
+        d.arrow(bound1, inner)
+    };
+
+    let base = |d: &mut NatDev<'_>, m: ExprId, n: ExprId, fuel2: ExprId| -> ExprId {
+        let zero = d.zero();
+        let bound1_ty = d.le(m, zero);
+        let bound2_ty = d.le(m, fuel2);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+
+        // `Le m 0` + `zero_le m` ⊢ `Eq m 0` (only hypothesis actually used;
+        // `h2` is bound only to give the arrow its declared type).
+        let zero_le_m = d.lemma(p.zero_le, &[m]);
+        let m_eq_zero = d.lemma(p.le_antisymm, &[m, zero, h1, zero_le_m]);
+
+        let left_term = d.const_app(p.land_aux, &[zero, m, n]);
+        let right_term = d.const_app(p.land_aux, &[fuel2, m, n]);
+        let left_is_zero = d.refl(zero);
+
+        let right_at_zero = d.const_app(p.land_aux, &[fuel2, zero, n]);
+        let right_congr = d.congr(m, zero, m_eq_zero, &|d, x| {
+            d.const_app(p.land_aux, &[fuel2, x, n])
+        });
+        let any_fuel = d.lemma(p.land_aux_zero_left_any_fuel, &[fuel2, n]);
+        let (_, right_is_zero) = d.chain(
+            right_term,
+            &[(right_at_zero, right_congr), (zero, any_fuel)],
+        );
+        let right_is_zero_rev = d.symm(right_term, zero, right_is_zero);
+
+        let body = d.trans(left_term, zero, right_term, left_is_zero, right_is_zero_rev);
+        let with_h2 = d.lam_fv(h2_fv, bound2_ty, body);
+        d.lam_fv(h1_fv, bound1_ty, with_h2)
+    };
+
+    let step = |d: &mut NatDev<'_>,
+                k: ExprId,
+                ih: ExprId,
+                m: ExprId,
+                n: ExprId,
+                fuel2: ExprId|
+     -> ExprId {
+        let sk = d.succ(k);
+        let goal_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let bound1 = d.le(candidate, sk);
+            let bound2 = d.le(candidate, fuel2);
+            let lhs = d.const_app(p.land_aux, &[sk, candidate, n]);
+            let rhs = d.const_app(p.land_aux, &[fuel2, candidate, n]);
+            let concl = d.eq(lhs, rhs);
+            let inner = d.arrow(bound2, concl);
+            d.arrow(bound1, inner)
+        };
+
+        cases_zero_succ(
+            d,
+            m,
+            &goal_at,
+            &|d| {
+                let zero = d.zero();
+                let bound1_ty = d.le(zero, sk);
+                let bound2_ty = d.le(zero, fuel2);
+                let h1_fv = d.fresh_fvar();
+                let h2_fv = d.fresh_fvar();
+
+                let left_term = d.const_app(p.land_aux, &[sk, zero, n]);
+                let right_term = d.const_app(p.land_aux, &[fuel2, zero, n]);
+                let left_is_zero = d.lemma(p.land_aux_zero_left_any_fuel, &[sk, n]);
+                let right_is_zero = d.lemma(p.land_aux_zero_left_any_fuel, &[fuel2, n]);
+                let right_is_zero_rev = d.symm(right_term, zero, right_is_zero);
+                let body = d.trans(left_term, zero, right_term, left_is_zero, right_is_zero_rev);
+
+                let with_h2 = d.lam_fv(h2_fv, bound2_ty, body);
+                d.lam_fv(h1_fv, bound1_ty, with_h2)
+            },
+            &|d, predecessor| {
+                let succ_pred = d.succ(predecessor);
+                let bound1_ty = d.le(succ_pred, sk);
+                let bound2_ty = d.le(succ_pred, fuel2);
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+
+                let two = d.num(2);
+                let half = d.div(succ_pred, two);
+                let half_n = d.div(n, two);
+                let bit_m = d.modulo(succ_pred, two);
+                let bit_n = d.modulo(n, two);
+                let bit_and = d.mul(bit_m, bit_n);
+
+                // Both sides' inner `m = 0` guard reduces to `false` (`m`
+                // is the literal `succ predecessor`), leaving the
+                // recursive sub-term as the only difference.
+                let half_le_k = half_le_predecessor_of_succ(d, &p, predecessor, k, h1);
+
+                // `fuel2` is positive (`≥ succ predecessor ≥ 1`), so it is
+                // `succ (pred fuel2)`; rewrite `h2` along that to get the
+                // shape `half_le_predecessor_of_succ` needs.
+                let one = d.num(1);
+                let one_le_succ_pred = d.zero_lt_succ(predecessor);
+                let one_le_fuel2 =
+                    d.lemma(p.le_trans, &[one, succ_pred, fuel2, one_le_succ_pred, h2]);
+                // `succ_pred_of_pos(c, h) : Eq c (succ (pred c))` -- note the
+                // direction, `c` on the LEFT (see `two_divisor_dichotomy`'s
+                // own `Eq.rec` usage, which transports FROM `c` TO
+                // `succ (pred c)` directly with no `symm`).
+                let succ_pred_fuel2 = d.lemma(p.succ_pred_of_pos, &[fuel2, one_le_fuel2]);
+                let f2p = d.pred(fuel2);
+                let succ_f2p = d.succ(f2p);
+                let h2_motive = d.eq_motive(fuel2, &|d, x| d.le(succ_pred, x));
+                let h2_at_succ_f2p = d.transport(fuel2, h2_motive, h2, succ_f2p, succ_pred_fuel2);
+                let half_le_f2p =
+                    half_le_predecessor_of_succ(d, &p, predecessor, f2p, h2_at_succ_f2p);
+
+                let ih_at_half = d.apply(ih, &[half, half_n, f2p]);
+                let ih_at_half = d.apply(ih_at_half, &[half_le_k, half_le_f2p]);
+                // ih_at_half : Eq (landAux k half half_n) (landAux f2p half half_n)
+
+                let recursive_general = d.const_app(p.land_aux, &[k, half, half_n]);
+                let recursive_at_f2p = d.const_app(p.land_aux, &[f2p, half, half_n]);
+
+                let zero = d.zero();
+                let start = guarded(d, succ_pred, n, zero, zero, recursive_general, bit_and);
+                let mid = guarded(d, succ_pred, n, zero, zero, recursive_at_f2p, bit_and);
+                let inner_step = d.congr(
+                    recursive_general,
+                    recursive_at_f2p,
+                    ih_at_half,
+                    &|d, hole| {
+                        let zero = d.zero();
+                        guarded(d, succ_pred, n, zero, zero, hole, bit_and)
+                    },
+                );
+
+                // `outer_step : Eq (landAux fuel2 succ_pred n) (landAux
+                // succ_f2p succ_pred n)` -- `succ_pred_fuel2`'s direction
+                // puts `fuel2` on the left, so `congr`'s `a` is `fuel2` here
+                // too; `symm` flips it to match `d.trans`'s `mid -> final`
+                // slot.
+                let outer_step = d.congr(fuel2, succ_f2p, succ_pred_fuel2, &|d, x| {
+                    d.const_app(p.land_aux, &[x, succ_pred, n])
+                });
+                let final_target = d.const_app(p.land_aux, &[fuel2, succ_pred, n]);
+                let mid2 = d.const_app(p.land_aux, &[succ_f2p, succ_pred, n]);
+                let outer_step_rev = d.symm(final_target, mid2, outer_step);
+
+                let body = d.trans(start, mid, final_target, inner_step, outer_step_rev);
+
+                let with_h2 = d.lam_fv(h2_fv, bound2_ty, body);
+                d.lam_fv(h1_fv, bound1_ty, with_h2)
+            },
+        )
+    };
+
+    let fuel1_fv = d.fresh_fvar();
+    let fuel1 = d.kernel().fvar(fuel1_fv);
+    let proof_fn = agree_by_double_fuel_induction(d, &statement, &base, &step, fuel1);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let fuel2_fv = d.fresh_fvar();
+    let fuel2 = d.kernel().fvar(fuel2_fv);
+    let applied = d.apply(proof_fn, &[m, n, fuel2]);
+    let ty = {
+        let body = statement(d, fuel1, m, n, fuel2);
+        let with_fuel2 = d.pi_fv(fuel2_fv, nat, body);
+        let with_n = d.pi_fv(n_fv, nat, with_fuel2);
+        let with_m = d.pi_fv(m_fv, nat, with_n);
+        d.pi_fv(fuel1_fv, nat, with_m)
+    };
+    let value = {
+        let with_fuel2 = d.lam_fv(fuel2_fv, nat, applied);
+        let with_n = d.lam_fv(n_fv, nat, with_fuel2);
+        let with_m = d.lam_fv(m_fv, nat, with_n);
+        d.lam_fv(fuel1_fv, nat, with_m)
+    };
+    d.declare_theorem(p.land_aux_agree_of_fuel, ty, value)
+}
+
+/// `land_aux_eq_land_of_le : ∀ fuel m n, Le m fuel → Eq (landAux fuel m n)
+/// (land m n)` — the brief's requested statement, a one-line corollary of
+/// [`declare_land_aux_agree_of_fuel`] at `fuel2 := m` via `le_refl`: `land m
+/// n` and `landAux m m n` are the SAME term by definition, so the kernel
+/// accepts the double-fuel proof directly against this `land`-headed
+/// statement via defeq, with no extra proof step.
+fn declare_land_aux_eq_land_of_le(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.land_aux_eq_land_of_le, 3, &|d, values| {
+        let fuel = values[0];
+        let m = values[1];
+        let n = values[2];
+        let bound_ty = d.le(m, fuel);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let le_refl_m = d.lemma(p.le_refl, &[m]);
+        let agree = d.lemma(p.land_aux_agree_of_fuel, &[fuel, m, n, m]);
+        let agree = d.apply(agree, &[bound, le_refl_m]);
+        let lhs = d.const_app(p.land_aux, &[fuel, m, n]);
+        let rhs = d.const_app(p.land, &[m, n]);
+        let stmt = d.eq(lhs, rhs);
+        let inner_ty = d.arrow(bound_ty, stmt);
+        let value = d.lam_fv(bound_fv, bound_ty, agree);
+        (inner_ty, value)
+    })?;
+    Ok(())
+}
+
+/// Declare fuel-irrelevance for `landAux` (see the section doc above). The
+/// `lorAux`/`ldiffAux` transport is sized, not landed — see the section doc.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_land_fuel_irrelevance_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_land_aux_zero_left_any_fuel(d, p)?;
+    declare_land_aux_agree_of_fuel(d, p)?;
+    declare_land_aux_eq_land_of_le(d, p)?;
     Ok(())
 }
