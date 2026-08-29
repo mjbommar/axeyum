@@ -927,6 +927,166 @@ pub(super) fn declare_emod_lt_of_pos(d: &mut IntDev<'_>) -> Result<(), KernelErr
 }
 
 // ---------------------------------------------------------------------------
+// `Int.emod_natAbs_bound` — the sign-general remainder bound.
+// ---------------------------------------------------------------------------
+//
+// `emod_lt_of_pos` bounds the remainder against `b` itself, which is only an
+// upper bound when `b > 0`: for `b < 0` (a `negSucc`), `Int.lt (emod a b) b`
+// would require the (nonnegative-by-construction, in three of four `Int.rec`
+// rows) remainder to be less than a NEGATIVE number, which is false. The
+// sign-general statement bounds against `ofNat (natAbs b)` instead —
+// `natAbs` is an unconditional `Int.rec` (`ofNat n ↦ n`, `negSucc n ↦ succ n`,
+// both ι, `nat_abs.rs`), so `ofNat (natAbs (ofNat n))` is defeq to `ofNat n`
+// and `ofNat (natAbs (negSucc n))` is defeq to `ofNat (succ n)` — meaning
+// EVERY branch below is literally one of the two existing `emod_lt_of_pos`
+// row builders, or the existing `sub_nat_nat_lt_ofnat` combinator, applied to
+// whichever `Nat` `natAbs` ι-reduces the divisor to. `b`'s hypothesis
+// (`b ≠ 0`) is needed in exactly one of the four branches — `ofNat m, ofNat
+// n` — because that is the only row where the bound `m % n < n` can fail
+// (at `n = 0`, `Nat.mod_zero` gives `emod = ofNat m` unconditionally, and
+// `m < 0` is false). The other three rows never depend on the hypothesis: a
+// `negSucc` divisor is never zero, and `sub_nat_nat_lt_ofnat`'s own bound
+// holds for the divisor's magnitude at ANY value including `0`.
+
+/// `ofNat m, ofNat n` branch, general `n` (possibly `0`): derive `Nat.lt zero
+/// n` from the hypothesis `Not (Eq Int (ofNat n) zero)` via the contrapositive
+/// of [`super::ops::IntDev::nat_eq_to_int`] (`n = 0 → ofNat n = ofNat 0 ≡
+/// Int.zero`), then close with the general `Nat.mod_lt : 0 < n → m % n < n`
+/// (no `succ`-shape pinning needed, unlike [`row_emod_lt_of_pos_of`], which
+/// this row cannot reuse because its divisor is unconditionally positive).
+fn row_natabs_bound_of_of(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let ofnat_n = d.of_nat(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(ofnat_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero_nat = d.zero();
+    let ne_nat = {
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+        let eq_int_from_nat = d.nat_eq_to_int(n, zero_nat, hn, &|d, x| d.of_nat(x));
+        let contra = d.apply(h, &[eq_int_from_nat]);
+        let eq_nat_ty = d.eq(n, zero_nat);
+        d.lam_fv(hn_fv, eq_nat_ty, contra)
+    };
+    let positive = {
+        let name = d.int().nat.zero_lt_of_ne_zero;
+        d.const_app(name, &[n, ne_nat])
+    };
+    let bound = {
+        let name = d.int().nat.mod_lt;
+        d.const_app(name, &[m, n, positive])
+    };
+    d.lam_fv(h_fv, hyp_ty, bound)
+}
+
+/// `ofNat m, negSucc n` branch: `natAbs (negSucc n) ≡ succ n`, and `emod (ofNat
+/// m) (negSucc n) ≡ ofNat (m % succ n)` — exactly [`row_emod_lt_of_pos_of`]'s
+/// shape (divisor `succ n`, unconditionally positive), so the hypothesis is
+/// bound and discarded.
+fn row_natabs_bound_of_neg(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let negsucc_n = d.neg_succ(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(negsucc_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let body = row_emod_lt_of_pos_of(d, m, n);
+    d.lam_fv(h_fv, hyp_ty, body)
+}
+
+/// `negSucc m, ofNat n` branch, general `n` (possibly `0`): `emod (negSucc m)
+/// (ofNat n) ≡ subNatNat n (succ (m % n))`, and [`sub_nat_nat_lt_ofnat`]'s
+/// bound `Int.lt (subNatNat a (succ r)) (ofNat a)` holds for ANY `Nat` `a`
+/// (at `a = 0` the borrow always fires, landing on the unconditionally-true
+/// `negSucc _ < ofNat _` row), so the hypothesis is bound and discarded here
+/// too.
+fn row_natabs_bound_neg_of(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let ofnat_n = d.of_nat(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(ofnat_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let body = {
+        let r = NatOps::modulo(d, m, n);
+        sub_nat_nat_lt_ofnat(d, n, r)
+    };
+    d.lam_fv(h_fv, hyp_ty, body)
+}
+
+/// `negSucc m, negSucc n` branch: `natAbs (negSucc n) ≡ succ n`, and `emod
+/// (negSucc m) (negSucc n) ≡ subNatNat (succ n) (succ (m % succ n))` —
+/// exactly [`row_emod_lt_of_pos_neg`]'s shape, so the hypothesis is bound and
+/// discarded.
+fn row_natabs_bound_neg_neg(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let negsucc_n = d.neg_succ(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(negsucc_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let body = row_emod_lt_of_pos_neg(d, m, n);
+    d.lam_fv(h_fv, hyp_ty, body)
+}
+
+/// `Int.emod_natAbs_bound : ∀ a b, Not (Eq Int b Int.zero) → Int.lt (Int.emod
+/// a b) (Int.ofNat (Int.natAbs b))` — the sign-general remainder bound
+/// [`declare_emod_lt_of_pos`] cannot state, because bounding against `b`
+/// itself is false for a negative divisor.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_emod_natabs_bound(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.emod_natabs_bound, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let full_stmt_at = |d: &mut IntDev<'_>, aa: ExprId, bb: ExprId| -> ExprId {
+            let zero = d.izero();
+            let hyp = {
+                let eq_ty = d.ieq(bb, zero);
+                d.not(eq_ty)
+            };
+            let emod_ab = d.iemod(aa, bb);
+            let nat_abs_bb = {
+                let f = d.int().nat_abs;
+                d.const_app(f, &[bb])
+            };
+            let bound = d.of_nat(nat_abs_bb);
+            let goal = d.ilt(emod_ab, bound);
+            d.arrow(hyp, goal)
+        };
+        let stmt = full_stmt_at(d, a, b);
+        let proof = case_split(
+            d,
+            &[a, b],
+            &|d, args| full_stmt_at(d, args[0], args[1]),
+            &|d, branches| {
+                let (a_shape, m) = branches[0];
+                let (b_shape, n) = branches[1];
+                match (a_shape, b_shape) {
+                    (Shape::OfNat, Shape::OfNat) => row_natabs_bound_of_of(d, m, n),
+                    (Shape::OfNat, Shape::NegSucc) => row_natabs_bound_of_neg(d, m, n),
+                    (Shape::NegSucc, Shape::OfNat) => row_natabs_bound_neg_of(d, m, n),
+                    (Shape::NegSucc, Shape::NegSucc) => row_natabs_bound_neg_neg(d, m, n),
+                }
+            },
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // `Int.ediv_emod_unique` — the division algorithm's uniqueness, for a
 // positive divisor.
 // ---------------------------------------------------------------------------

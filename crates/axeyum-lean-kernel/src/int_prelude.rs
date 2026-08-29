@@ -445,6 +445,14 @@ pub struct IntPrelude {
     /// `emod_lt_of_pos : ∀ a b, 0 < b → a % b < b` — the other bound that
     /// makes the remainder canonical.
     pub emod_lt_of_pos: NameId,
+    /// `emod_natAbs_bound : ∀ a b, b ≠ 0 → a % b < ofNat (natAbs b)` — the
+    /// sign-general analogue of [`Self::emod_lt_of_pos`]: `emod_lt_of_pos`
+    /// bounds the remainder against `b` itself, which is only correct for
+    /// `b > 0` (it is literally false for `b < 0`, since a `negSucc` is never
+    /// an upper bound for a nonnegative remainder); the correct bound for
+    /// EITHER sign is `natAbs b`. Keystone for any negative-divisor argument
+    /// in this development (`F:ml430-int-gcd-div-5e01872f`'s missing piece).
+    pub emod_natabs_bound: NameId,
     /// `ediv_emod_unique : ∀ a b q1 r1 q2 r2,
     /// 0 < b → a = b*q1+r1 → 0 ≤ r1 → r1 < b →
     /// a = b*q2+r2 → 0 ≤ r2 → r2 < b → q1 = q2 ∧ r1 = r2` — the division
@@ -1234,6 +1242,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         ediv_add_emod: child(kernel, "ediv_add_emod"),
         emod_nonneg: child(kernel, "emod_nonneg"),
         emod_lt_of_pos: child(kernel, "emod_lt_of_pos"),
+        emod_natabs_bound: child(kernel, "emod_natAbs_bound"),
         ediv_emod_unique: child(kernel, "ediv_emod_unique"),
         dvd: child(kernel, "dvd"),
         dvd_refl: child(kernel, "dvd_refl"),
@@ -1509,6 +1518,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
+        // Needs `Int.natAbs`, just declared above -- `declare_emod_lt_of_pos`
+        // (built well before `natAbs` exists) is why this sign-general bound
+        // could not sit beside its sibling `emod_nonneg`/`emod_lt_of_pos`
+        // theorems higher up this list.
+        division::declare_emod_natabs_bound(&mut d)?;
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;

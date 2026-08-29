@@ -183,7 +183,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 151] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 152] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -276,6 +276,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 151] {
         p.ediv_add_emod,
         p.emod_nonneg,
         p.emod_lt_of_pos,
+        p.emod_natabs_bound,
         p.ediv_emod_unique,
         p.dvd_refl,
         p.dvd_trans,
@@ -1099,6 +1100,186 @@ fn ediv_add_emod_computes_at_concrete_values() {
             k.def_eq(sum, want),
             "ediv_add_emod {left} {right}: b*(a/b)+a%b should reduce to {left}"
         );
+    }
+}
+
+/// `Int.emod_natAbs_bound` — the sign-general remainder bound
+/// `Int.emod_lt_of_pos` cannot state (bounding against `b` itself is FALSE
+/// for a negative `b`). Instantiated at a POSITIVE divisor (`b = 1`, where
+/// `natAbs b = b` and the bound coincides with what `emod_lt_of_pos` already
+/// gives), a NEGATIVE divisor (`b = -1`, where `emod_lt_of_pos`'s own
+/// hypothesis `Int.lt Int.zero b` is structurally FALSE — checked below —
+/// so that theorem cannot even be invoked here), and a NEGATIVE CONTROL at
+/// the excluded `b = 0` corner, checked independently of the theorem (whose
+/// hypothesis is correctly unsatisfiable there): `emod a 0 = a` (the
+/// totality convention) and `natAbs 0 = 0`, so the excluded conclusion would
+/// demand `5 < 0`, refuted by `Nat.not_succ_le_zero` — confirming the `b ≠
+/// 0` hypothesis is genuinely load-bearing, not merely unused decoration.
+#[test]
+fn emod_natabs_bound_instantiates_at_positive_negative_and_zero_divisors() {
+    use crate::BinderInfo;
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.emod_natabs_bound).is_empty(),
+        "Int.emod_natAbs_bound must rest on no axiom"
+    );
+
+    let zero_c = k.const_(p.zero, vec![]);
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+
+    // From `order_at_b : Int.lt zero_c b` (`zero_on_left`) or `Int.lt b
+    // zero_c` (otherwise), build `Not (Eq Int b zero_c)`: assume `h : Eq Int
+    // b zero_c`, transport `order_at_b` along `h` (`Eq.rec`) to `Int.lt
+    // zero_c zero_c` / `Int.lt zero_c zero_c`, and refute with `lt_irrefl`.
+    let ne_zero_from_order = |k: &mut Kernel,
+                              b: crate::ExprId,
+                              order_at_b: crate::ExprId,
+                              zero_on_left: bool|
+     -> crate::ExprId {
+        let int_ty = k.const_(p.z, vec![]);
+        let h_fv = 900_100;
+        let h = k.fvar(h_fv);
+        let eq_ty = {
+            let eq = k.const_(p.logic.eq, vec![one_level]);
+            let e = k.app(eq, int_ty);
+            let e = k.app(e, b);
+            k.app(e, zero_c)
+        };
+        let x_fv = 900_101;
+        let x = k.fvar(x_fv);
+        let motive_body = {
+            let lt = k.const_(p.lt, vec![]);
+            if zero_on_left {
+                let e = k.app(lt, zero_c);
+                k.app(e, x)
+            } else {
+                let e = k.app(lt, x);
+                k.app(e, zero_c)
+            }
+        };
+        let eq_b_x = {
+            let eq = k.const_(p.logic.eq, vec![one_level]);
+            let e = k.app(eq, int_ty);
+            let e = k.app(e, b);
+            k.app(e, x)
+        };
+        let anon = k.anon();
+        let inner = k.lam(anon, eq_b_x, motive_body, BinderInfo::Default);
+        let motive = {
+            let body = k.abstract_fvars(inner, &[x_fv]);
+            k.lam(anon, int_ty, body, BinderInfo::Default)
+        };
+        let rec_name = p.logic.eq_rec;
+        let rec = k.const_(rec_name, vec![zero_level, one_level]);
+        let e = k.app(rec, int_ty);
+        let e = k.app(e, b);
+        let e = k.app(e, motive);
+        let e = k.app(e, order_at_b);
+        let e = k.app(e, zero_c);
+        let rewritten = k.app(e, h);
+        let irrefl = k.const_(p.lt_irrefl, vec![]);
+        let irrefl_zero = k.app(irrefl, zero_c);
+        let false_proof = k.app(irrefl_zero, rewritten);
+        let body = k.abstract_fvars(false_proof, &[h_fv]);
+        k.lam(anon, eq_ty, body, BinderInfo::Default)
+    };
+
+    // --- positive divisor: b = Int.one, a = 5.  emod(5,1)=0 < natAbs(1)=1. ---
+    {
+        let a = numeral(&mut k, &p, 5);
+        let b = k.const_(p.one, vec![]);
+        // `Int.zero_lt_one : Int.lt Int.zero Int.one` -- exactly `Int.lt
+        // zero_c b`, already proved, no fresh `Nat` order proof needed.
+        let order_at_b = k.const_(p.zero_lt_one, vec![]);
+        let ne_proof = ne_zero_from_order(&mut k, b, order_at_b, true);
+
+        let theorem = k.const_(p.emod_natabs_bound, vec![]);
+        let applied = k.app(theorem, a);
+        let applied = k.app(applied, b);
+        let applied = k.app(applied, ne_proof);
+        k.infer(applied).unwrap_or_else(|e| {
+            panic!("emod_natAbs_bound at a=5,b=1 (positive divisor) should type-check: {e:?}")
+        });
+
+        let emod = k.const_(p.emod, vec![]);
+        let e = k.app(emod, a);
+        let emod_ab = k.app(e, b);
+        let want = numeral(&mut k, &p, 0);
+        assert!(k.def_eq(emod_ab, want), "emod 5 1 should be 0");
+    }
+
+    // --- negative divisor: b = negSucc 0 = -1, a = 5.  emod(5,-1)=0 <
+    //     natAbs(-1)=1.  `Int.lt Int.zero b` is FALSE here (`Int.lt`'s
+    //     `ofNat _, negSucc _` branch is unconditionally `False`,
+    //     `defs.rs::declare_order_definitions`), so `emod_lt_of_pos` could
+    //     not be invoked at this `b` at all -- this theorem is the only one
+    //     that can state a bound here. ---
+    {
+        let a = numeral(&mut k, &p, 5);
+        let b = numeral(&mut k, &p, -1);
+        // `Int.lt (negSucc 0) zero_c` reduces to `True` unconditionally
+        // (the mixed-sign branch), so `True.intro` suffices.
+        let order_at_b = k.const_(p.logic.true_intro, vec![]);
+        let ne_proof = ne_zero_from_order(&mut k, b, order_at_b, false);
+
+        let theorem = k.const_(p.emod_natabs_bound, vec![]);
+        let applied = k.app(theorem, a);
+        let applied = k.app(applied, b);
+        let applied = k.app(applied, ne_proof);
+        k.infer(applied).unwrap_or_else(|e| {
+            panic!("emod_natAbs_bound at a=5,b=-1 (negative divisor) should type-check: {e:?}")
+        });
+
+        let emod = k.const_(p.emod, vec![]);
+        let e = k.app(emod, a);
+        let emod_ab = k.app(e, b);
+        let want = numeral(&mut k, &p, 0);
+        assert!(k.def_eq(emod_ab, want), "emod 5 (-1) should be 0");
+    }
+
+    // --- negative control: b = 0 is excluded, and for good reason. The
+    //     theorem's hypothesis is correctly unsatisfiable there (no proof of
+    //     `Not (Eq Int b zero)` exists for `b = zero`), so the theorem
+    //     cannot be applied -- checked instead directly against `emod`'s
+    //     own totality convention and `natAbs`. ---
+    {
+        let a = numeral(&mut k, &p, 5);
+        let b = numeral(&mut k, &p, 0);
+        let emod = k.const_(p.emod, vec![]);
+        let e = k.app(emod, a);
+        let emod_ab = k.app(e, b);
+        assert!(
+            k.def_eq(emod_ab, a),
+            "Int.emod a 0 must be the totality convention `a` itself"
+        );
+        let nat_abs_b = {
+            let f = k.const_(p.nat_abs, vec![]);
+            k.app(f, b)
+        };
+        let bound = {
+            let of_nat = k.const_(p.of_nat, vec![]);
+            k.app(of_nat, nat_abs_b)
+        };
+        let zero_bound = numeral(&mut k, &p, 0);
+        assert!(k.def_eq(bound, zero_bound), "ofNat (natAbs 0) must be 0");
+
+        // The excluded conclusion `Int.lt (emod 5 0) (ofNat (natAbs 0))`
+        // is `Int.lt (ofNat 5) (ofNat 0)`, which reduces to `Nat.le 6 0` --
+        // refuted by `Nat.not_succ_le_zero`, confirming the `b ≠ 0`
+        // hypothesis is load-bearing rather than unused.
+        let five_nat = numeral_nat(&mut k, &p, 5);
+        let refutation = {
+            let lemma = k.const_(p.nat.not_succ_le_zero, vec![]);
+            k.app(lemma, five_nat)
+        };
+        k.infer(refutation).unwrap_or_else(|e| {
+            panic!(
+                "Nat.not_succ_le_zero should type-check at 5, refuting the excluded bound: {e:?}"
+            )
+        });
     }
 }
 
