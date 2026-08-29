@@ -52,3 +52,34 @@ dependency.
 - ADR-0601 (three producers, one trust anchor).
 - `docs/research/11-design-review/2026-08-28-ivt-evt-pareto-position-measured.md`
 - `docs/plan/status/274-cas-row-three.md` — per-fact sizing.
+
+
+## CORRECTION (same day): "one dependency unblocks 19 of 28" is WRONG
+
+The lane dispatched against this document measured the arities and refuted its
+central claim. **Geometry and WZ need differently-shaped infrastructure.**
+
+| cluster | arities | shape |
+| --- | --- | --- |
+| NRA geometry | **6–19 variables** | only **2 of 10** have constant cofactors; the other eight need polynomial × polynomial, up to a **324-term** cofactor in `simson-line` |
+| WZ | **2–4 variables**, six of eight bivariate in `(n,k)` | the polynomial identity is only the certificate equation — Gamma-to-factorial modelling, boundary-term vanishing, and the induction on `n` are all separate |
+
+**The fixed-arity alternative I suggested is refuted**: no small fixed arity
+covers even two of the ten geometry certificates.
+
+**And two of the ten carry a VACUOUS identity.** `varignon`'s conclusions are
+both the zero polynomial with no generators; `thales`' single cofactor is `1`
+against a conclusion byte-identical to its generator. They are the two cheapest
+by term count *because there is nothing there* — exactly the shape that would
+have been picked first as an easy win and scored as progress.
+
+The real next piece is `prove_mul` (monomial × monomial): 8 more geometry
+certificates, and a prerequisite for WZ. Second is the fractional-literal
+`Rat.ofRat` cast, which unblocks `medians-concurrent` and the partial-fractions
+row in one build.
+
+**A correction to the inductive inventory quoted in briefs**, measured from
+`kernel.environment()` rather than inherited: the list is **16**, and the
+version circulating in briefs omits `Int` and `Rat` — both themselves
+inductives, `Rat` being a two-field structure. So `Nat.Pair` is the only
+*generic* product, not the only product-shaped declaration.
