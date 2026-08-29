@@ -167,6 +167,7 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-lor-assoc | `Nat.lor_aux_ne_zero_of_right_ne_zero` — the invariant that replaces "zero propagates" for `lor_assoc`'s hard leaf, kernel-verified and tested (land's direct analogue is FALSE for `lor`, confirmed numerically before any Rust: `lor a b = 0` forces `a=b=0`, so `lor a (lor b c)` collapses to `c`, not `0`); a complete, numerically-cross-checked derivation for the rest of `lor_assoc` (the full `lor_aux_assoc_of_fuel` case tree — SIMPLER than `land`'s hard leaf once this invariant exists, since `X`/`Y` are unconditionally positive rather than needing a real zero/nonzero dichotomy — plus the one remaining new lemma `lor_bit_assoc` and the refuel bound `lor_aux_le_add`, both fully specified); `F:ml430-nat-lor-assoc-82c4d0fd` remains open |
 | 2026-08-29 | nat-xor-cancel | Landed `Nat.xor_xor_cancel_left` (via `Nat.testBit_xor` + a new per-bit cancel lemma needing a new `y <= 1` round-trip lemma the natural identity does not hold without, since it is FALSE for general `y : Nat`) and `Nat.xor_xor_cancel_right` (transported from `_left` via `Nat.xor_comm` twice, no new per-bit argument); both axiom-free with concrete+symbolic evidence, both new local facts (no `ml430` mirrors, same reasoning as `F:nat-xor-assoc`); a mislabeled chain intermediate in the theorem-level wiring found via a throwaway bisecting probe rather than by reading a 152-test poisoned failure list; `F:ml430-nat-lt-xor-cases-c43a1e85` stays `open` — only `Nat.xor_ne_zero_iff` remains of piece 4's four sub-targets, and its forward direction does NOT need the cancel lemmas (a direct corollary of `Nat.eq_of_testBit_eq` + `Nat.testBit_xor` + the same `{0,1}` case-split shape), while its reverse direction and `Iff` packaging were not attempted |
 | 2026-08-29 | nat-msb-exists | Landed `Nat.testBit_eq_zero_of_lt` (the "cheap half" of `exists_most_significant_bit`, piece 2 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`) as the new local fact `F:nat-testbit-eq-zero-of-lt` (Mathlib's `Nat.testBit_eq_false_of_lt` is Bool-valued; ours stays Nat-valued), admitted axiom-free on the first real kernel-check attempt via `value_eq_sum_range` at `bound := j` and `bound := succ j` plus `sum_range_succ`/`add_left_cancel`/`mul_eq_zero`; the "highest bit is set" hard half remains open and is re-confirmed (not newly discovered) to need either a new `size`-recursion lemma relating `size n` to `size (n/2)` or an independent ~150-line bottom-up `msbAux`-fuel construction |
+| 2026-08-29 | nat-xor-ne-zero | Landed `Nat.xor_ne_zero_iff` (piece 4's fourth and last sub-target toward `F:ml430-nat-lt-xor-cases-c43a1e85`), read directly from the pinned Batteries checkout (`Batteries/Data/Nat/Bitwise/Lemmas.lean:68`, confirming the "Lean core, not Mathlib" reading two prior lanes established for its siblings); built via `mt` (modus tollens, previously declared but unused in this prelude) applied twice rather than an `Iff`-of-`Eq` intermediate; the `mpr` direction confirmed NOT needing the cancel lemmas per the prior lane's own handoff, via a new per-bit lemma reusing `round_trip_le_one`; the `mp` direction via a new `Nat.xor_self`-shaped argument; every route confirmed by Python truth-table simulation before writing Rust, and no `false_true_elim` needed anywhere; new fact `F:nat-xor-ne-zero-iff`, axiom-free; all four of piece 4's sub-targets now landed, leaving 2 of the original 4 larger pieces (`lt_of_testBit`, `xor_trichotomy` composition) plus `lt_xor_cases` itself |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -17258,6 +17259,160 @@ of the new fact's `checker_command`s run and confirmed passing before
 committing (kernel admission by name, the instantiation test by name,
 axiom-free footprint). Workspace gate NOT run (coordinator re-verifies
 before merging, per the lane brief). Not pushed.
+
+**Your lane's block (`DONE (Nat.xor_ne_zero_iff landed, axiom-free; F:ml430-nat-lt-xor-cases-c43a1e85 stays open -- all four piece-4 sub-targets now landed, three larger pieces remain)`, nat-xor-ne-zero, 2026-08-29).**
+
+## The exact statement
+
+Read directly from the pinned Batteries checkout
+(`/data0/axeyum/lean-import-toolchain/mathlib4/.lake/packages/batteries`,
+commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`),
+`Batteries/Data/Nat/Bitwise/Lemmas.lean:68`:
+
+```lean
+theorem xor_ne_zero_iff {x y : Nat} : x ^^^ y ≠ 0 ↔ x ≠ y := by simp
+```
+
+Confirms the "Lean core, not Mathlib-authored" reading `docs/plan/status/264-nat-xor-algebra.md`
+and `docs/plan/status/268-nat-xor-cancel.md` already established for its three
+siblings (`xor_assoc`, `xor_xor_cancel_left`, `xor_xor_cancel_right`, all also
+in the same Batteries file, lines 51-60). No `ml430` fact exists to flip, so
+this lands as a new local fact, `F:nat-xor-ne-zero-iff`.
+
+## What landed
+
+`Nat.xor_ne_zero_iff : ∀ a b, Iff (Not (Eq (xor a b) 0)) (Not (Eq a b))`,
+admitted axiom-free on the first successful attempt (after fixing a compile
+error, no `TypeMismatch` from the kernel at all — this route never poisoned
+the shared prelude build), in `crates/axeyum-lean-kernel/src/nat_prelude/xor_algebra.rs`.
+
+Built via `mt` (modus tollens, `Π a b, (a → b) → (b → False) → (a → False)`)
+applied twice, **not** via an `Iff (Eq _ 0) (Eq _ _)` intermediate that would
+then need an extra `Iff`-not-congruence combinator this prelude does not have.
+`mt` was already declared in the logic prelude (`prelude.rs`) and had never
+been used anywhere in `nat_prelude` until this fact — partially applying it
+with just the two propositions and a direction lemma gives a complete
+`Not`-to-`Not` implication directly, with no further wrapping.
+
+Two new directional corollaries feed it:
+
+1. **`Eq (xor a b) 0 → Eq a b`** (the `mpr` side) — does **NOT** need
+   `Nat.xor_xor_cancel_left`/`_right` at all, confirming
+   `docs/plan/status/268-…`'s own handoff note exactly. Per bit,
+   `Nat.testBit_xor` plus the hypothesis gives `Eq (xor_bit (testBit a i)
+   (testBit b i)) 0`; a new per-bit lemma (`xor_bit_eq_zero_implies_eq`)
+   closes that to `Eq (testBit a i) (testBit b i)` given both are `<= 1`
+   (`Nat.testBit_le_one`), reusing `round_trip_le_one` (built for
+   `xor_xor_cancel_left`) rather than re-deriving a bound lemma. Two more new
+   helpers feed it: `digitize_eq_zero_implies_false` (`Eq (digitize cond) 0 →
+   Eq cond false`, needing one genuine ex-falso via `Nat.succ_ne_zero` in its
+   `cond = true` branch) and `bool_eq_of_xor_eq_false` (`Eq (xor_fn a b) false
+   → Eq a b`, confirmed unconditionally true over all 4 `Bool` pairs by a
+   Python simulation before any Rust was written).
+2. **`Eq a b → Eq (xor a b) 0`** (the `mp` side) — a new `Nat.xor_self`-shaped
+   argument (`xor_self`): `congrArg (xor a ·)` on the hypothesis gives `Eq
+   (xor a a) (xor a b)`, and a new per-bit self-cancellation-to-zero fact
+   (`xor_bit_self_zero`, built from a new `Bool`-level `xor_fn x x = false`
+   fact, `bool_xor_self`, a 2-leaf `Bool.rec` split both closing by `refl`)
+   plus `Nat.eq_of_testBit_eq` gives `Eq (xor a a) 0`.
+
+**No `false_true_elim` combinator is needed anywhere in this fact's route.**
+The one genuinely impossible hypothesis encountered
+(`digitize_eq_zero_implies_false`'s `cond = true` branch, where the
+hypothesis reduces to the impossible `Eq (succ zero) zero`) is refuted
+directly via `Nat.succ_ne_zero` + `False.rec`, the same device
+`gcd.rs`/`log.rs`/`fibonacci.rs` already use elsewhere in this prelude.
+`bool_eq_of_xor_eq_false`'s own `a = true, b = false` leaf looked at first
+like it would need an ex-falso too (the hypothesis is `Eq true false`) but
+does not: at that leaf the hypothesis IS the goal (`Eq true false`), so the
+branch is the identity function.
+
+## New test and fact
+
+`xor_ne_zero_iff_applies_at_a_concrete_discriminating_instance_and_symbolically`
+(`nat_prelude_tests.rs`): at the discriminating pair `(a, b) = (3, 5)`
+(`xor 3 5 = 6`), builds a genuine proof of `Not (Eq (xor 3 5) 0)` via
+`Nat.succ_ne_zero` at `5` (`succ 5` is `refl`-defeq to `6`, hence to
+`xor 3 5`), pushes it through `Iff.mp` to land on `Not (Eq 3 5)` (checked
+NOT defeq to the negative control `Not (Eq 3 3)`), then pushes that back
+through `Iff.mpr` to land back on `Not (Eq (xor 3 5) 0)`. Plus a symbolic
+instantiation at a genuinely free `(a, b)` pair. Confirmed running by name
+(`1 passed`, not `0 filtered out`).
+
+New local fact `F:nat-xor-ne-zero-iff` (no `ml430` mirror, same reasoning as
+its three siblings `F:nat-xor-assoc`, `F:nat-xor-xor-cancel-left`,
+`F:nat-xor-xor-cancel-right`).
+
+`theorem_names` + `the_build_is_deterministic` pin: `93 + 508` -> `93 + 509`
+(one new theorem), taken from the panic's own mismatch after adding the name
+to `theorem_names`.
+
+## Commits (this lane)
+
+1. `wip(nat): Nat.xor_ne_zero_iff -- NameId field only, not yet declared` —
+   the `p.xor_ne_zero_iff` NameId field, landed within the first ten tool
+   calls, before the theorem itself compiled.
+2. `feat(nat): Nat.xor_ne_zero_iff -- last of the four xor_trichotomy sub-targets`
+   — the full declaration, the new test, the coverage-list + pin update, and
+   the new fact.
+
+## A lane-hygiene note: this worktree's `git config axeyum.agent` was stale
+
+`AXEYUM_AGENT=nat-xor-ne-zero` was exported in this lane's first Bash
+invocation, but per this harness's own documented behaviour ("the working
+directory persists between commands, but shell state does not"), that export
+did **not** survive into later, separate tool invocations. `hooks/commit-msg`
+falls back to `git config --get axeyum.agent` when the env var is unset, and
+this worktree's repo-local config still held `fta-existence` — a PRIOR
+lane's identity, left over from whatever last worked in this exact worktree
+directory before this session. Both of this lane's commits above were
+therefore stamped `Agent: fta-existence`, not `nat-xor-ne-zero`.
+
+Per this repository's own hard rule ("NEVER amend unless explicitly
+requested"), the two commits were left as-is rather than amended. The
+repo-local config was corrected to `nat-xor-ne-zero` afterward so it does
+not mislead whatever runs in this worktree next, but a coordinator relying
+on `Agent:` trailers to attribute this lane's work should look for
+`fta-existence` on these two SHAs, not `nat-xor-ne-zero`. The general lesson
+for future lanes: `export AXEYUM_AGENT=...` alone is not durable across tool
+calls in this harness — either bundle it into the SAME invocation as every
+git command, or check `git config --get axeyum.agent` before your first
+commit and correct it if stale.
+
+## What `Nat.lt_xor_cases` (`F:ml430-nat-lt-xor-cases-c43a1e85`) still needs
+
+All four sub-targets Mathlib's own `xor_trichotomy` proof composes
+(`xor_assoc`, `xor_xor_cancel_left`, `xor_xor_cancel_right`,
+`xor_ne_zero_iff`) are now landed. That was piece 4 of the 4 pieces
+`docs/plan/status/260-nat-lt-xor-cases.md` named as blocking the fact. Three
+larger pieces remain, per that file's own numbering:
+
+1. **`exists_most_significant_bit`-equivalent** — `∀ n, n ≠ 0 → ∃ i, testBit
+   n i = 1 ∧ ∀ j, i < j → testBit n j = 0`. Per
+   `docs/plan/status/269-nat-msb-exists.md` (merged into this branch before
+   this lane started): the "cheap half" (`Nat.testBit_eq_zero_of_lt`, above a
+   value's own magnitude bound every bit reads zero) is landed as
+   `F:nat-testbit-eq-zero-of-lt`; the "hard half" (the highest bit really IS
+   set) is NOT yet kernel-checked — a scaffold exists
+   (`msb_exists_of_le_fuel`) but that lane's own status is `PARTIAL`. Do not
+   duplicate that work; once it lands, `lt_xor_cases` needs the natural
+   witness `pred (size n)` shown to be the actual highest set bit.
+2. **`lt_of_testBit`-equivalent** — bit-`i` disagreement plus agreement above
+   `i` forces the order between two values. Genuinely new, not a corollary of
+   anything landed so far; needs relating "agreement above `i`" to a quotient
+   equality (`n / 2^(i+1) = m / 2^(i+1)`) plus a `sum_testBit_eq`-style
+   decomposition bounding the tail below `2^i`.
+3. **`xor_trichotomy` itself** — composes 1 and 2 above with the now-complete
+   piece 4 (`Nat.xor_assoc _ _ _ ▸ Nat.xor_ne_zero_iff.2 h.ne`, per the
+   Mathlib source at `Mathlib/Data/Nat/Bitwise.lean:266-297`) to get
+   `a^^^b^^^c ≠ 0 → b^^^c<a ∨ c^^^a<b ∨ a^^^b<c`, and then `lt_xor_cases`
+   itself is the cheapest remaining step once `xor_trichotomy` exists.
+
+So piece 4 being complete removes exactly one of the four originally-named
+blockers; pieces 1-3 above (2 and 3 in this file's numbering, since piece 1
+`testBit_xor` was already landed before piece 4 started) are unaffected by
+this lane's work and are comparable in scope to `binary.rs`'s `size`
+addendum on their own.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
