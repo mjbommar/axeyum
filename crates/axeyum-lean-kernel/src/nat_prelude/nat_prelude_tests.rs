@@ -984,6 +984,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.test_bit_eq_zero_of_lt,
         p.eq_of_test_bit_eq,
         p.xor_assoc,
+        p.xor_xor_cancel_left,
+        p.xor_xor_cancel_right,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6499,7 +6501,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 506,
+        93 + 508,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11658,6 +11660,107 @@ fn xor_assoc_applies_at_a_concrete_discriminating_instance_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.xor_assoc).is_empty(),
         "xor_assoc must rest on zero axioms"
+    );
+}
+
+/// `Nat.xor_xor_cancel_left`/`_right` (`xor_algebra.rs`) -- the remaining two
+/// of the four sub-targets toward `F:ml430-nat-lt-xor-cases-c43a1e85`'s piece
+/// 4. Checked at the discriminating concrete pair `(a, b) = (3, 5)`
+/// (`xor 3 5 = 6`, `xor 3 6 = 5 = b`; `xor 6 5 = 3 = a`) AND symbolically
+/// against a genuinely FREE `(a, b)` pair. The per-bit cancel identity these
+/// rest on (`xor_bit x (xor_bit x y) = y`) is FALSE for a general `Nat` `y`
+/// (only for `y in {0, 1}`), unlike `xor_assoc`'s identity, which is why this
+/// needed a separate `y <= 1` round-trip lemma (`round_trip_le_one`) rather
+/// than transporting `xor_assoc`'s route directly.
+#[test]
+fn xor_xor_cancel_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete, cancel_left: xor 3 (xor 3 5) = xor 3 6 = 5 = b.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let applied = f.lemma(p.xor_xor_cancel_left, &[three, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("xor_xor_cancel_left must apply at (a=3, b=5): {shown}")
+        });
+        let xab = f.const_app(p.xor, &[three, five]);
+        let lhs = f.const_app(p.xor, &[three, xab]);
+        let want = f.eq(lhs, five);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "xor_xor_cancel_left 3 5 must state Eq (xor 3 (xor 3 5)) 5"
+        );
+        assert!(f.k.def_eq(lhs, five), "xor 3 (xor 3 5) must compute to 5");
+        // Negative control: must not ALSO state Eq lhs 4.
+        let four = f.num(4);
+        let bad_want = f.eq(lhs, four);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: xor_xor_cancel_left 3 5 must not state Eq (xor 3 (xor 3 5)) 4"
+        );
+    }
+
+    // Concrete, cancel_right: xor (xor 3 5) 5 = xor 6 5 = 3 = a.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let applied = f.lemma(p.xor_xor_cancel_right, &[three, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("xor_xor_cancel_right must apply at (a=3, b=5): {shown}")
+        });
+        let xab = f.const_app(p.xor, &[three, five]);
+        let lhs = f.const_app(p.xor, &[xab, five]);
+        let want = f.eq(lhs, three);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "xor_xor_cancel_right 3 5 must state Eq (xor (xor 3 5) 5) 3"
+        );
+        assert!(f.k.def_eq(lhs, three), "xor (xor 3 5) 5 must compute to 3");
+        // Negative control: must not ALSO state Eq lhs 4.
+        let four = f.num(4);
+        let bad_want = f.eq(lhs, four);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: xor_xor_cancel_right 3 5 must not state Eq (xor (xor 3 5) 5) 4"
+        );
+    }
+
+    // Symbolic: both apply at a genuinely FREE (a, b) pair.
+    {
+        let name = f.name("xor_xor_cancel_left_restated");
+        f.theorem(name, 2, &|d, values| {
+            let (a, b) = (values[0], values[1]);
+            let xab = d.const_app(p.xor, &[a, b]);
+            let lhs = d.const_app(p.xor, &[a, xab]);
+            let stmt = d.eq(lhs, b);
+            let proof = d.lemma(p.xor_xor_cancel_left, &[a, b]);
+            (stmt, proof)
+        })
+        .expect("xor_xor_cancel_left must apply at symbolic a, b");
+
+        let name = f.name("xor_xor_cancel_right_restated");
+        f.theorem(name, 2, &|d, values| {
+            let (a, b) = (values[0], values[1]);
+            let xab = d.const_app(p.xor, &[a, b]);
+            let lhs = d.const_app(p.xor, &[xab, b]);
+            let stmt = d.eq(lhs, a);
+            let proof = d.lemma(p.xor_xor_cancel_right, &[a, b]);
+            (stmt, proof)
+        })
+        .expect("xor_xor_cancel_right must apply at symbolic a, b");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.xor_xor_cancel_left).is_empty(),
+        "xor_xor_cancel_left must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.xor_xor_cancel_right).is_empty(),
+        "xor_xor_cancel_right must rest on zero axioms"
     );
 }
 

@@ -2850,6 +2850,16 @@ pub struct NatPrelude {
     /// `Nat.testBit_xor` twice per side plus `Nat.eq_of_testBit_eq`. See
     /// `nat_prelude::xor_algebra`.
     pub xor_assoc: NameId,
+    /// `Nat.xor_xor_cancel_left : ∀ a b, Eq (xor a (xor a b)) b` --- via
+    /// `Nat.testBit_xor` plus a `y <= 1` round-trip lemma (`Nat.testBit` is
+    /// always in `{0, 1}`, via `Nat.testBit_le_one`): the natural per-bit
+    /// cancel identity is FALSE for a general `Nat`, only for a bit. See
+    /// `nat_prelude::xor_algebra`.
+    pub xor_xor_cancel_left: NameId,
+    /// `Nat.xor_xor_cancel_right : ∀ a b, Eq (xor (xor a b) b) a` ---
+    /// transported from [`Self::xor_xor_cancel_left`] via `Nat.xor_comm`
+    /// twice. See `nat_prelude::xor_algebra`.
+    pub xor_xor_cancel_right: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3802,6 +3812,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             test_bit_eq_zero_of_lt: kernel.name_str(nat, "testBit_eq_zero_of_lt"),
             eq_of_test_bit_eq: kernel.name_str(nat, "eq_of_testBit_eq"),
             xor_assoc: kernel.name_str(nat, "xor_assoc"),
+            xor_xor_cancel_left: kernel.name_str(nat, "xor_xor_cancel_left"),
+            xor_xor_cancel_right: kernel.name_str(nat, "xor_xor_cancel_right"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
@@ -4231,9 +4243,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `half_le_predecessor_of_succ` (`rec_agreement.rs`, a Rust fn,
         // needs `Nat.div_mod_exec`/`div_mod_lt_mul_iff`/etc, all far above),
         // and `Nat.div_mod_exec` directly for the reconstruction identity.
-        // Nothing needs it yet (the `xor` algebra targets it was built
-        // toward are NOT declared this lane — see `xor_algebra.rs`'s module
-        // doc), so it goes last.
+        // `Nat.xor_assoc`/`xor_xor_cancel_left`/`_right` additionally need
+        // `Nat.testBit_xor` (`declare_testbit_bitwise_all`, far above),
+        // `Nat.testBit_le_one` (`declare_binary_all`, far above),
+        // `Nat.le_succ_succ`/`Nat.lt_two_cases` (far above/`rec_agreement.rs`),
+        // and `Nat.xor_comm` (`declare_xor_order_all`, far above; `_right`
+        // only). `Nat.xor_ne_zero_iff` is NOT declared this lane — see
+        // `xor_algebra.rs`'s module doc. Nothing needs any of this, so it
+        // goes last.
         declare_xor_algebra_all(&mut d, &p)?;
         Ok(p)
     })();

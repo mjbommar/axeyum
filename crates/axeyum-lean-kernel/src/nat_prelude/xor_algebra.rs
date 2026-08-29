@@ -4,10 +4,12 @@
 //! `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.xor_assoc`,
 //! `Nat.xor_xor_cancel_left`/`_right`, `Nat.xor_ne_zero_iff`). See
 //! `docs/plan/status/263-nat-testbit-xor.md` for piece 1 (`Nat.testBit_xor`,
-//! landed) and `docs/plan/status/264-nat-xor-algebra.md` for this lane's
-//! handoff, including why the three `xor` algebra targets themselves are
-//! NOT landed in this file (time-boxed out; the remaining shape is
-//! documented there, not sketched here as unverified code).
+//! landed), `docs/plan/status/264-nat-xor-algebra.md` for the lane that
+//! landed `Nat.eq_of_testBit_eq`/`Nat.xor_assoc` and diagnosed the `y <= 1`
+//! restriction below, and `docs/plan/status/268-nat-xor-cancel.md` for the
+//! lane that closed `Nat.xor_xor_cancel_left`/`_right` using it. Only
+//! `Nat.xor_ne_zero_iff` (piece 4's fourth sub-target) is NOT declared in
+//! this file — see "What this file does NOT reach" below.
 //!
 //! # The intended route: `testBit_xor` + extensionality, not fuel induction
 //!
@@ -68,15 +70,14 @@
 //!
 //! # What this file does NOT reach (documented, not sketched)
 //!
-//! None of `Nat.xor_assoc`, `Nat.xor_xor_cancel_left`/`_right`,
-//! `Nat.xor_ne_zero_iff` are declared in this file — see
-//! `docs/plan/status/264-nat-xor-algebra.md` for the exact remaining shape
-//! of each, including the `xor_bit` Boolean-algebra lemmas
-//! (`xor_bit`'s value depends on its arguments ONLY through whether each
-//! equals `1`, so associativity/self-cancellation hold for ALL `x, y, z :
-//! Nat`, not merely bits in `{0, 1}`, via a `Bool.rec` case split at most
-//! 2-3 levels deep) that would combine with [`declare_eq_of_test_bit_eq`]
-//! and `Nat.testBit_xor` to close them.
+//! `Nat.xor_ne_zero_iff` is the one sub-target NOT declared in this file —
+//! see `docs/plan/status/268-nat-xor-cancel.md` for the exact remaining
+//! shape. `Nat.xor_assoc`'s `xor_bit` associativity holds for ALL `x, y, z :
+//! Nat` (not merely bits in `{0, 1}`), but `Nat.xor_xor_cancel_left`/
+//! `_right`'s per-bit cancel identity `xor_bit x (xor_bit x y) = y` is FALSE
+//! for a general `Nat` `y` (only `y in {0, 1}`), which is why closing those
+//! two needed an extra `y <= 1` round-trip lemma ([`round_trip_le_one`]) that
+//! `xor_assoc` never needed.
 //!
 //! # Codomain / mirror check
 //!
@@ -702,13 +703,278 @@ fn declare_xor_assoc(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErr
     Ok(())
 }
 
+// ============================================================================
+// `Nat.xor_xor_cancel_left` / `_right` -- the `y <= 1` round-trip lemma this
+// needs is genuinely new work: the natural per-bit cancel identity
+// `xor_bit x (xor_bit x y) = y` is FALSE for general `y : Nat` (only for
+// `y ∈ {0, 1}`), unlike `xor_bit_assoc`'s identity above, which never needed
+// that restriction. Confirmed by a Python truth-table simulation before any
+// Rust was written: `xor_bit(3, xor_bit(3, 5)) = 0 != 5`.
+// ============================================================================
+
+/// `Eq (digitize (beq y 1)) y`, given `Le y 1` --- the round-trip that
+/// recovers `y` ITSELF (not merely the `Bool` decision `beq y 1`) once `y`
+/// is known to be a bit. Needed because [`xor_bit_cancel_left`]'s identity
+/// is false for general `y`: `digitize (beq y 1)` collapses any `y >= 2` to
+/// `0` or `1` (`y := 5` gives `digitize false = 0 != 5`). `Le y 1` gives
+/// `Lt y 2` (`le_succ_succ(y, 1, h) : Le (succ y) (succ 1)`, and `succ (num
+/// 1)` is `refl`-defeq to `num 2`, so no separate lemma is needed for the
+/// bound itself), then `Nat.lt_two_cases` splits into `y = 0`/`y = 1`, each
+/// closed by transporting the hypothesis along the equality and a `refl` at
+/// the computed literal (the same "build refl of one side, let defeq do the
+/// rest" device [`beq_digitize_one`] uses).
+fn round_trip_le_one(d: &mut NatDev<'_>, p: &NatPrelude, y: ExprId, h_le: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+
+    let dg_of = |d: &mut NatDev<'_>, v: ExprId| -> ExprId {
+        let one = d.num(1);
+        let bv = d.beq(v, one);
+        digitize(d, bv)
+    };
+    let dg_y = dg_of(d, y);
+    let target = d.eq(dg_y, y);
+
+    let succ_y_le_succ_one = d.lemma(p.le_succ_succ, &[y, one, h_le]); // Le (succ y) (succ 1) =defeq= Lt y 2
+    let dichotomy = d.lemma(p.lt_two_cases, &[y, succ_y_le_succ_one]); // Or (Eq y 0) (Eq y 1)
+
+    let zero = d.zero();
+    let eq_y0_ty = d.eq(y, zero);
+    let eq_y1_ty = d.eq(y, one);
+
+    let minor_zero = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dg0 = dg_of(d, zero);
+        let step1 = d.congr(y, zero, h, &|d, x| dg_of(d, x));
+        let step2 = d.refl(dg0); // Eq dg0 dg0 =defeq= Eq dg0 zero (dg0 computes to 0)
+        let to_zero = d.trans(dg_y, dg0, zero, step1, step2);
+        let symm_h = d.symm(y, zero, h);
+        let body = d.trans(dg_y, zero, y, to_zero, symm_h);
+        d.lam_fv(h_fv, eq_y0_ty, body)
+    };
+    let minor_one = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dg1 = dg_of(d, one);
+        let step1 = d.congr(y, one, h, &|d, x| dg_of(d, x));
+        let step2 = d.refl(dg1); // Eq dg1 dg1 =defeq= Eq dg1 one (dg1 computes to 1)
+        let to_one = d.trans(dg_y, dg1, one, step1, step2);
+        let symm_h = d.symm(y, one, h);
+        let body = d.trans(dg_y, one, y, to_one, symm_h);
+        d.lam_fv(h_fv, eq_y1_ty, body)
+    };
+
+    let logic = d.prelude().logic;
+    d.const_app(
+        logic.or_elim,
+        &[eq_y0_ty, eq_y1_ty, target, dichotomy, minor_zero, minor_one],
+    )
+}
+
+/// `Eq (xor_fn a (xor_fn a b)) b`, for all `Bool` `a, b` --- the self-cancel
+/// identity [`xor_bit_cancel_left`] lifts through the round-trip. Splitting
+/// on `a` alone closes `a = false` for ANY `b` by `refl` (`xor_fn false w`
+/// reduces to `w`, applied twice); `a = true` needs one more split on `b`,
+/// and BOTH leaves close by `refl` directly with no further split (unlike
+/// [`bool_xor_assoc`]'s `a = b = true` leaf, which needed a third level on
+/// `c`).
+fn bool_xor_self_cancel_left(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p = *p;
+
+    let motive_a = |d: &mut NatDev<'_>, aa: ExprId| -> ExprId {
+        let xor_ = super::bitwise::xor_fn(d);
+        let inner = d.apply(xor_, &[aa, b]);
+        let xor_2 = super::bitwise::xor_fn(d);
+        let lhs = d.apply(xor_2, &[aa, inner]);
+        d.bool_eq(lhs, b)
+    };
+
+    let at_a_false = |d: &mut NatDev<'_>| -> ExprId { d.bool_refl(b) };
+
+    let at_a_true = |d: &mut NatDev<'_>| -> ExprId {
+        let motive_b = |d: &mut NatDev<'_>, bb: ExprId| -> ExprId {
+            let true_ = d.bool_true();
+            let xor_ = super::bitwise::xor_fn(d);
+            let inner = d.apply(xor_, &[true_, bb]);
+            let true_2 = d.bool_true();
+            let xor_2 = super::bitwise::xor_fn(d);
+            let lhs = d.apply(xor_2, &[true_2, inner]);
+            d.bool_eq(lhs, bb)
+        };
+        // xor_fn true false = true; xor_fn true true = false -- so LHS at
+        // b = false reduces to `false`, which IS `b` at this leaf.
+        let at_b_false = |d: &mut NatDev<'_>| -> ExprId {
+            let false_ = d.bool_false();
+            d.bool_refl(false_)
+        };
+        // xor_fn true true = false; xor_fn true false = true -- LHS at
+        // b = true reduces to `true`, which IS `b` at this leaf.
+        let at_b_true = |d: &mut NatDev<'_>| -> ExprId {
+            let true_ = d.bool_true();
+            d.bool_refl(true_)
+        };
+        cases_bool(d, &p, b, &motive_b, &at_b_false, &at_b_true)
+    };
+
+    cases_bool(d, &p, a, &motive_a, &at_a_false, &at_a_true)
+}
+
+/// `Eq (xor_bit x (xor_bit x y)) y`, given `Le y 1` --- FALSE for general
+/// `y`, see the module doc above and [`round_trip_le_one`]. Lifts
+/// [`bool_xor_self_cancel_left`] through the same digitize/round-trip route
+/// [`xor_bit_assoc`] uses, landing on `y` itself (not merely `digitize (beq
+/// y 1)`) via [`round_trip_le_one`].
+fn xor_bit_cancel_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    y: ExprId,
+    h_le_y: ExprId,
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let bx = d.beq(x, one);
+    let by = d.beq(y, one);
+
+    let cond_xy = {
+        let xor_ = super::bitwise::xor_fn(d);
+        d.apply(xor_, &[bx, by])
+    };
+    let inner = super::testbit_bitwise::xor_bit(d, x, y); // refl-defeq to digitize(cond_xy)
+    let b_inner = d.beq(inner, one);
+
+    let start = super::testbit_bitwise::xor_bit(d, x, inner); // xor_bit(x, xor_bit(x, y))
+
+    let rt_inner = beq_digitize_one(d, &p, cond_xy); // Eq b_inner cond_xy
+
+    let mid1 = {
+        let xor_ = super::bitwise::xor_fn(d);
+        let inner2 = d.apply(xor_, &[bx, cond_xy]);
+        digitize(d, inner2)
+    };
+    let step1 = congr_bool_to_nat(d, b_inner, cond_xy, rt_inner, &|d, w| {
+        let xor_ = super::bitwise::xor_fn(d);
+        let bxv = bx;
+        let inner3 = d.apply(xor_, &[bxv, w]);
+        digitize(d, inner3)
+    });
+
+    let self_cancel_bool = bool_xor_self_cancel_left(d, &p, bx, by); // Eq (xor_fn bx cond_xy) by
+    let xor_bx_cond_xy = {
+        let xor_ = super::bitwise::xor_fn(d);
+        d.apply(xor_, &[bx, cond_xy])
+    };
+    let dg_by = digitize(d, by);
+    let step2 = congr_bool_to_nat(d, xor_bx_cond_xy, by, self_cancel_bool, &|d, w| {
+        digitize(d, w)
+    });
+
+    let (_, chain_proof) = d.chain(start, &[(mid1, step1), (dg_by, step2)]);
+
+    let rt_y = round_trip_le_one(d, &p, y, h_le_y); // Eq dg_by y
+    d.trans(start, dg_by, y, chain_proof, rt_y)
+}
+
+/// `Nat.xor_xor_cancel_left : ∀ a b, Eq (xor a (xor a b)) b` --- applies
+/// [`declare_eq_of_test_bit_eq`]'s extensionality lemma to a per-bit proof
+/// built from `Nat.testBit_xor` (twice) and [`xor_bit_cancel_left`], the
+/// latter needing `Nat.testBit_le_one` to supply the `y <= 1` hypothesis at
+/// each bit (`Nat.testBit` is always in `{0, 1}`).
+fn declare_xor_xor_cancel_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    d.theorem(p.xor_xor_cancel_left, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let xab = d.const_app(p.xor, &[a, b]); // X := xor a b
+        let lhs = d.const_app(p.xor, &[a, xab]); // xor a (xor a b)
+        let stmt = d.eq(lhs, b);
+
+        let bits_hyp = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+
+            let tb_a = d.const_app(p.test_bit, &[a, i]);
+            let tb_b = d.const_app(p.test_bit, &[b, i]);
+            let tb_xab = d.const_app(p.test_bit, &[xab, i]);
+            let tb_lhs = d.const_app(p.test_bit, &[lhs, i]);
+
+            let outer = d.lemma(p.test_bit_xor, &[a, xab, i]); // Eq (testBit lhs i) (xor_bit tb_a tb_xab)
+            let inner = d.lemma(p.test_bit_xor, &[a, b, i]); // Eq tb_xab (xor_bit tb_a tb_b)
+
+            // xab_bit := xor_bit tb_a tb_b -- the VALUE testBit(xab, i)
+            // equals (`inner`'s RHS), substituted below into the outer
+            // combine `xor_bit tb_a _`, landing on `xor_bit tb_a (xor_bit
+            // tb_a tb_b)` -- NOT `xab_bit` alone, which is only the inner
+            // substituted operand, not the cascaded outer expression.
+            let xor_bit_a_tbxab = super::testbit_bitwise::xor_bit(d, tb_a, tb_xab);
+            let xab_bit = super::testbit_bitwise::xor_bit(d, tb_a, tb_b);
+            let cascaded = super::testbit_bitwise::xor_bit(d, tb_a, xab_bit); // xor_bit tb_a (xor_bit tb_a tb_b)
+            let congr_step = d.congr(tb_xab, xab_bit, inner, &|d, w| {
+                let tb_a2 = tb_a;
+                super::testbit_bitwise::xor_bit(d, tb_a2, w)
+            }); // Eq xor_bit_a_tbxab cascaded
+
+            let (_, to_cascaded) =
+                d.chain(tb_lhs, &[(xor_bit_a_tbxab, outer), (cascaded, congr_step)]);
+
+            let h_le_tbb = d.lemma(p.test_bit_le_one, &[b, i]); // Le tb_b 1
+            let cancel = xor_bit_cancel_left(d, &p, tb_a, tb_b, h_le_tbb); // Eq cascaded tb_b
+
+            let final_bit_eq = d.trans(tb_lhs, cascaded, tb_b, to_cascaded, cancel);
+            d.lam_fv(i_fv, nat, final_bit_eq)
+        };
+
+        let proof = d.lemma(p.eq_of_test_bit_eq, &[lhs, b, bits_hyp]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.xor_xor_cancel_right : ∀ a b, Eq (xor (xor a b) b) a` --- the
+/// symmetric partner of [`declare_xor_xor_cancel_left`], transported via
+/// `Nat.xor_comm` twice rather than redoing the per-bit argument:
+/// `xor (xor a b) b = xor (xor b a) b` (congr on `xor_comm a b`)
+/// `= xor b (xor b a)` (`xor_comm (xor b a) b`)
+/// `= a` (`xor_xor_cancel_left b a`).
+fn declare_xor_xor_cancel_right(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.xor_xor_cancel_right, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let xab = d.const_app(p.xor, &[a, b]);
+        let lhs = d.const_app(p.xor, &[xab, b]);
+        let stmt = d.eq(lhs, a);
+
+        let xba = d.const_app(p.xor, &[b, a]);
+        let comm_ab = d.lemma(p.xor_comm, &[a, b]); // Eq xab xba
+        let step0 = d.congr(xab, xba, comm_ab, &|d, w| {
+            let bb = b;
+            d.const_app(p.xor, &[w, bb])
+        }); // Eq lhs (xor xba b)
+
+        let xor_xba_b = d.const_app(p.xor, &[xba, b]);
+        let comm2 = d.lemma(p.xor_comm, &[xba, b]); // Eq (xor xba b) (xor b xba)
+        let xor_b_xba = d.const_app(p.xor, &[b, xba]);
+
+        let cancel = d.lemma(p.xor_xor_cancel_left, &[b, a]); // Eq (xor b (xor b a)) a
+
+        let (_, proof) = d.chain(lhs, &[(xor_xba_b, step0), (xor_b_xba, comm2), (a, cancel)]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares. See the module doc for what's NOT
-/// declared here (`Nat.xor_xor_cancel_left`/`_right`, `Nat.xor_ne_zero_iff`).
+/// declared here (`Nat.xor_ne_zero_iff`).
 pub(super) fn declare_xor_algebra_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
 ) -> Result<(), KernelError> {
     declare_eq_of_test_bit_eq(d, p)?;
     declare_xor_assoc(d, p)?;
+    declare_xor_xor_cancel_left(d, p)?;
+    declare_xor_xor_cancel_right(d, p)?;
     Ok(())
 }
