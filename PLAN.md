@@ -121,6 +121,14 @@ now. Nothing was deleted.
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
 | 2026-08-29 | int-gcd-div-2 | closed `F:ml430-int-gcd-div-gcd-div-gcd-2db608dc` via `declare_gcd_div_gcd_div_gcd`, an `Int.mul_one`-based finish of the predecessor's Bézout route; confirmed `Int.gcd_div` genuinely absent (no positive-divisor version exists either) and left `F:ml430-int-gcd-div-5e01872f` open with the three missing lemma statements named |
+| 2026-08-29 | nat-fuel-irrelevance | Fuel-irrelevance for `landAux` (`Nat.land_aux_eq_land_of_le`), via a new generic two-fuel agreement induction (`agree_by_double_fuel_induction`); transport to `lorAux`/`ldiffAux` sized but not landed; none of the 7 blocked facts closed |
+| 2026-08-29 | int-two-sided-induction | `Int.induction_on`: two-sided induction over ℤ, the first combinator in `int_prelude/` that inducts rather than case-splits |
+| 2026-08-29 | int-two-sided-induction | `Int.fib_rec`: the Fibonacci recurrence at every integer index, negative ones included |
+| 2026-08-29 | int-two-sided-induction | `Int.fib_add` closed (`F:ml430-int-fib-add-181b6a2c` open → proved); it does NOT reduce to `Nat.fib_add` |
+| 2026-08-29 | nat-fuel-transport | Transport fuel-irrelevance to `lorAux`/`ldiffAux` (6 new theorems); close `F:ml430-nat-land-comm-7e6ad72e` via a new same-fuel commutativity lemma (`land_aux_comm_of_fuel`) plus the shared-fuel routing (`land_comm`); 6 of 7 blocked facts remain open |
+| 2026-08-29 | nat-singles | `Nat.mod_lcm`: unconditional lcm-combination of two congruences, closes `F:ml430-nat-mod-lcm-ee6bdd41` |
+| 2026-08-29 | nat-singles | `Nat.dvd_of_forall_prime_mul_dvd`: needs only one prime witness, closes `F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b` |
+| 2026-08-29 | nat-singles | `gap_dvd`/`modeq_of_dvd_gap` (`crt.rs`) widened `fn` -> `pub(super) fn` so `lcm.rs` can reuse them |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -11535,6 +11543,466 @@ written for the latter) went through without a single rejected term.
 **Timing**: `cargo test -p axeyum-lean-kernel --lib int_prelude::` —
 3.81s before, 3.83s after (test count 40 → 40, one panic on the coverage
 list fixed by adding the new name, no other regression).
+
+**Your lane's block (`DONE (one auxiliary; transport sized)`, nat-fuel-irrelevance, 2026-08-29).**
+Fuel-irrelevance landed for `landAux`, kernel-admitted on the corrected
+attempt (one direction bug, see below). None of the 7 blocked facts
+(`land_comm`, `land_assoc`, `land_bit`, `lor_comm`, `lor_assoc`, `lor_bit`,
+`ldiff_bit`) closed this session — see "What is still needed" for why that is
+a separate, larger piece of work than fuel-irrelevance itself, and why the
+brief's second acceptance criterion ("fuel-irrelevance for one auxiliary,
+with transport to the others sized") is what this lane delivers.
+
+**The statement, and why this hypothesis.** In `nat_prelude/rec_agreement.rs`:
+
+```
+Nat.land_aux_eq_land_of_le :
+  ∀ fuel m n, Le m fuel → Eq (landAux fuel m n) (land m n)
+```
+
+`Le m fuel`, not an unconditional statement: the canonical call
+`landAux m m n` puts `m` in the fuel slot and the recursion halves the value
+argument every step, so a caller unfolding at a NON-canonical fuel (e.g.
+`fuel = bit a m`, `land_bit`'s shape) always has MORE fuel than canonical,
+never less — but `landAux 0 m n` for `m > 0` is genuinely `0` while
+`land m n` need not be, so the statement is false without some sufficiency
+hypothesis. Weaker alternatives were considered and rejected:
+
+- No hypothesis at all: false (the `m > 0`, `fuel = 0` counterexample above).
+- `Eq m fuel` (only the canonical fuel): true but useless — it says nothing
+  about the very case the 7 facts need, fuel strictly above canonical.
+
+**Which side proved, and why the transport is NOT free (correcting the
+brief's framing).** The brief's suggested route was `agree_by_fuel_induction`
+inducting on `fuel` alone, generalizing `m`/`n`. That route hits a
+self-reference: `land m n` unfolds to `landAux m m n`, which puts the SAME
+value `m` in the fuel slot, so relating it to `landAux (succ k) m n` (`k`
+from the induction) needs `landAux m m n` to unfold via `m`'s own shape —
+and once `m = succ predecessor` is exposed, the recursive call on THAT side
+is at fuel `predecessor`, a value the induction's own hypothesis (fixed at
+fuel `k`) says nothing about.
+
+The fix, landed here: generalize over BOTH fuels at once
+(`ops::agree_by_double_fuel_induction`, a new 3-value-generalized sibling of
+`agree_by_fuel_induction`):
+
+```
+Nat.land_aux_agree_of_fuel :
+  ∀ fuel1 m n fuel2, Le m fuel1 → Le m fuel2 →
+    Eq (landAux fuel1 m n) (landAux fuel2 m n)
+```
+
+This is symmetric in which fuel is "the" canonical one, so it NEVER needs
+`landAux`'s own canonical instance to unfold. `land_aux_eq_land_of_le` is a
+one-line corollary at `fuel2 := m` via `le_refl` — `land m n` and
+`landAux m m n` are the SAME term by definition, so the kernel accepts the
+double-fuel proof directly against the `land`-headed statement via defeq,
+with no extra proof step.
+
+**New reusable machinery, in `ops.rs`:**
+
+- `agree_by_double_fuel_induction` — `agree_by_fuel_induction`'s three-value
+  sibling; entirely generic, no `land`-specific content.
+- `cases_zero_succ` — a motive-general zero/succ case split via `Nat.rec`,
+  discarding the induction hypothesis (the reusable form of what
+  `land_zero_right`/`lor_zero_right` each inline by hand for one fixed goal).
+  Needed because the step case of the double-fuel induction must case-split
+  `m` (not just `fuel1`) to expose whether `landAux`'s inner `m = 0` guard
+  reduces.
+- `bool_select_nat_same` — `Eq (bool_select_nat b x x) x` for ANY `b`. The
+  kernel's defeq checker does not special-case "both recursor branches equal
+  regardless of the scrutinee", so this is needed wherever a guard stays
+  symbolic but both branches happen to coincide (the `m = 0` base case, where
+  BOTH of `landAux`'s absorbing-zero rows are the constant `0`).
+
+**Two case splits, and why each is unavoidable.** Induction is on `fuel1`.
+The base case (`fuel1 = 0`) needs no split: `landAux 0 m n` is the constant
+`0` row for ANY `m`, `n` (`Nat.land_aux_zero_left_any_fuel`, a NEW "any fuel"
+lemma — `landAux`'s fuel-exhaustion row is `0` regardless of `m`/`n`, unlike
+`Nat.land_zero_left`, which needs no lemma because `Nat.land` supplies fuel
+`= m = 0` automatically). The step (`fuel1 = succ k`) case-splits `m`: at
+`m = 0` both sides are `0` (same "any fuel" lemma, no hypotheses needed); at
+`m = succ predecessor`, `beq (succ predecessor) zero` reduces to `false` on
+BOTH sides (the guard only mentions `m`), so `d.congr` reduces the goal to
+the recursive sub-terms `landAux k half half'` vs `landAux f2' half half'`
+(`f2' := pred fuel2`), closed by the IH at `a := half`, given `Le half k` and
+`Le half f2'` from a per-fuel arithmetic helper
+(`half_le_predecessor_of_succ`, a direct copy of the derivation inline in
+`powsq.rs`'s `declare_powsq_eq_pow` — that copy is not exposed and
+`powsq.rs` is out of scope, so this is the FOURTH site with this exact
+`e < 2e ⇒ e/2 < e ⇒ e/2 ≤ f` arithmetic in this prelude, after `log.rs`,
+`binary.rs`, `powsq.rs`).
+
+**What the kernel REJECTED, and why.** First attempt failed with
+`TypeMismatch` on an `Eq` whose two sides were `succ (pred fuel2)`/`fuel2` in
+opposite orders from what I'd assumed. Cause: `Nat.succ_pred_of_pos(c, h)`
+proves `Eq c (succ (pred c))` — `c` on the LEFT — not
+`Eq (succ (pred c)) c` as I misread from a neighbouring doc comment
+(`two_divisor_dichotomy`'s OWN `Eq.rec` usage, re-read carefully, confirms
+the direction: it transports FROM `c` TO `succ (pred c)` with no `symm`). I
+had inserted an extra `d.symm` to "fix" the direction I assumed was needed,
+which flipped it the WRONG way. Removed the spurious `symm`, and swapped
+which side of the later `d.congr` call plays `a`/`b` to match — kernel
+accepted on the second attempt with no other changes needed.
+
+**Negative control at insufficient fuel.** Same pinned witness the
+`rec_agreement` lane used for `bitwise_aux_eq_land_aux`:
+`(fuel, m, n) = (1, 7, 7)`. `landAux 1 7 7 = 1` (one fuel step) while
+`land 7 7 = 7` (the canonical answer) — checked by evaluation alone (`Le 7 1`
+has no proof, so the theorem cannot be applied there; the control exists to
+confirm the hypothesis is load-bearing, not to exercise the theorem itself).
+`nat_prelude_tests.rs`'s
+`land_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control`
+also applies the theorem symbolically and at `(fuel, m, n) = (7, 1, 7)`
+(fuel STRICTLY above canonical), where both sides compute to `1`.
+
+**What is still needed to close any of the 7 facts, and why it is NOT free.**
+`land_bit`/`lor_bit`/`ldiff_bit` need relating `land`/`lor`/`ldiff` at a
+`Nat.bit`-constructed argument to the recursive step — fuel-irrelevance is
+the piece that lets the non-canonical fuel `landAux` reaches there be
+discharged, but the `Nat.bit` decode/encode bridge itself is separate work
+this lane did not attempt. `land_comm`/`lor_comm`/`land_assoc`/`lor_assoc`
+need, IN ADDITION to fuel-irrelevance, a SAME-FUEL commutativity lemma
+(`∀ fuel m n, Eq (landAux fuel m n) (landAux fuel n m)`) to relate
+`land m n = landAux m m n` and `land n m = landAux n n m` through a common
+larger fuel (e.g. `m + n`) — this is genuinely separate proof content
+(needs `Nat.mul_comm` for the bit term and a guard-reordering argument,
+`lor`'s and `land`'s guards check `n` before `m`), not a corollary of what
+landed here.
+
+**Transport to `lorAux`/`ldiffAux` — sized, not landed.**
+`agree_by_double_fuel_induction`, `half_le_predecessor_of_succ`, and the
+private `n_lt_mul_two` copy are ENTIRELY generic and transport UNCHANGED.
+What does NOT transport unchanged is `land_aux_zero_left_any_fuel`:
+`lorAux`'s fuel-exhaustion row returns `n`, not `0` (`lor.rs`'s module doc),
+so its "any fuel" analogue is `Eq (lorAux fuel 0 n) n`, proved the same way
+(a `bool_select_nat_same` call in the `succ` branch) but closing to a
+different value. The `m = succ predecessor` step's proof body is otherwise a
+direct transcription — same case split, same IH application, same congr —
+with `lor`'s own `on_n_zero`/`on_m_zero`/`combine` closures dropped in.
+`ldiffAux` shares `land`'s absorbing-zero base case exactly (`ldiff.rs`'s
+module doc), so its `any_fuel` lemma is a byte-for-byte copy of `land`'s with
+the name and `p.ldiff_aux` swapped in. Estimate: each of `lorAux`/`ldiffAux`
+costs one new "any fuel" lemma (~20 lines) plus one new `declare_*_aux_agree_of_fuel`
+function that is `declare_land_aux_agree_of_fuel` with the absorbing-zero
+constants and combine formula swapped (~150 lines, no new proof technique).
+
+**Counts.** `nat_prelude` before: 121 passed. After: 122 passed (added one
+instantiation test with the mandated negative control), plus 3 new
+declarations (all theorems, `land_aux_zero_left_any_fuel`,
+`land_aux_agree_of_fuel`, `land_aux_eq_land_of_le`) — `the_build_is_deterministic`'s
+pin moved `85 + 438` → `85 + 441` (counted from the panic message's own
+mismatch, not hand-incremented). `nat` trusted surface still
+`axiom=0 opaque=0 quotient=0` (`nat_axiom_inventory --require-axiom-free nat`).
+New fact `F:nat-land-aux-eq-land-of-le`; `python3 scripts/validate-facts.py`
+clean (1922 facts, 0 errors). `cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both clean
+on the touched files. NOT run: the aggregate `just check` / `./scripts/check.sh`.
+
+Three `testbit` facts remain pinned OPEN by the live
+`gen-autogenesis-bitwise-family-projection.py` gate and were not touched.
+
+**Your lane's block (`DONE`, int-two-sided-induction, 2026-08-29).** The stated
+deficiency — "no two-sided (`ofNat`/`negSucc`-covering) induction combinator
+exists anywhere in `int_prelude/`" — is closed, and so is the keystone it
+blocked. Three declarations landed, all axiom-free, **all three accepted by the
+kernel on the first attempt; nothing was rejected in this lane.**
+
+- `Int.induction_on` (`int_prelude/two_sided_induction.rs`) —
+  `∀ P, P 0 → (∀ n, P n → P (n+1)) → (∀ n, P n → P (n-1)) → ∀ n, P n`.
+- `Int.fib_rec` (`int_prelude/fibonacci.rs`) — `fib (n+2) = fib (n+1) + fib n`
+  at **every** integer index.
+- `Int.fib_add` (`int_prelude/fibonacci.rs`) — Mathlib's statement verbatim,
+  `fib (m+n) = fib (m-1) * fib n + fib m * fib (n+1)`.
+
+`int_prelude::` went **40 → 44 passing**, `derived_laws` 151 → 154, integer
+trusted surface still 0.
+
+**The question the brief asked: `Int.fib_add` did NOT reduce to `Nat.fib_add`
+plus sign bookkeeping.** `Nat.fib_add` (`fib (succ (m+n)) = fib m * fib n +
+fib (succ m) * fib (succ n)`) is exactly this statement restricted to
+`m ≥ 1, n ≥ 0` — one of four constructor pairs, and not even all of the
+non-negative case: at `m = 0` the leading coefficient is `fib(-1)`, a value at a
+negative index. The proof uses `Nat.fib_add` nowhere.
+
+**But the combinator was CHEAP, against the prior sizing of "genuinely
+comparable-or-more effort than the theorem it blocks".** ℤ's operations are
+nested `Int.rec` over ℕ, so at a *constructor* argument every bridging step
+computes, and no equation lemma is needed anywhere:
+
+| step | reduces to | why |
+| --- | --- | --- |
+| `add (ofNat k) one` | `ofNat (succ k)` | `Nat.add` recurses right and the right argument is the literal `1` |
+| `sub zero one` | `negSucc 0` | `Int.sub` is a plain `Definition`; `subNatNat` scrutinises the closed `Nat.sub 1 0` |
+| `sub (negSucc k) one` | `negSucc (succ k)` | again the literal is on the right |
+
+So the proof is two `Nat.rec` inductions whose terms have *definitionally* the
+types the kernel expects. No `Nat.sub` truncation, no `natAbs` detour. That is
+also why the down-step is stated with `Int.sub` rather than in the
+`P (n+1) → P n` form: `sub` costs nothing here and is what a caller wants.
+
+**`Int.fib_add`'s shape, for whoever takes the two downstream facts.**
+Fibonacci is a two-step recurrence, so no single-index motive can step; the
+motive is `Q k := P k ∧ P (k+1)`, the pairing device
+`nat_prelude/fibonacci.rs` already uses for `Nat.fib_add`. Two things about the
+downward step are worth carrying:
+
+- It is stated as an **addition** and closed by an `add_right_cancel` helper
+  rather than by subtracting — both `target + fib(m+n)` and
+  `fib(m+n-1) + fib(m+n)` are shown equal to `fib(m+n+1)`, so no difference is
+  ever formed and `Int.sub` never enters the algebra.
+- `Q (n-1)`'s second component is `P ((n-1)+1)`, and `(n-1)+1` is **not**
+  definitionally `n` for symbolic `n`; it needs an `int_eq_rewrite` transport
+  along `sub_add_cancel`, which is `add_neg_cancel_right k (neg one)` read at a
+  defeq type (`neg (neg one)` reduces to `one`).
+
+**Three helpers the integer prelude lacked** and this lane built locally:
+`neg_mul` (it carries `mul_neg`), `neg_add_cancel` (it carries `add_neg`),
+`zero_add` (it carries `add_zero`), plus `add_regroup_four` — there is no
+`add_add_add_comm`, and the ℕ side built its own private one for the same
+reason.
+
+**Negative controls.** `Int.induction_on`'s statement is mutation-tested:
+`two_sided_induction.rs::build` takes a `Mutation` so the shipped **proof value**
+is re-declared byte-identically against three perturbed statements (base at
+`one`, up-step replaced by a second down-step, down-step replaced by a second
+up-step); the kernel must reject all three, with an unmutated positive control
+through the same route. `Int.fib_rec` and `Int.fib_add` are instantiated at
+closed indices in every branch / sign combination and reduced against the
+arithmetic, each with a wrong right-hand side that must not be `def_eq`.
+
+**Ledger.** `F:ml430-int-fib-add-181b6a2c` flipped `open → proved`
+(`kernel-lean`, axiom-free); new `F:int-two-sided-induction` and
+`F:int-fib-rec`. Every `kernel-term` checker pins the **whole rendered type**,
+not just the name, because these statements' factors can be transposed into
+different-but-well-typed propositions the gate would prove just as happily —
+verified discriminating (1 on the real row, 0 on a mutated one), with
+`[[:space:]]` rather than `\t`. `validate-facts.py`: 1,924 facts, 0 errors.
+
+**Overlap recorded rather than hidden.** `Int.fib_rec` proves the same
+proposition as `F:ml430-int-fib-add-two-739358dd`, which was **already** `proved`
+via a sealed *external* Lean capsule on the autogenesis import route. That
+capsule lives outside this kernel's environment, so no `int_prelude` declaration
+can cite it; `F:int-fib-rec` records the in-tree constructive declaration that
+`Int.fib_add` actually consumes, and its `prior_art` says so explicitly. It is
+not an independent new result.
+
+**Still open, and now unblocked** — `F:ml430-int-fib-two-mul-0e70f3dd`
+(`fib (2n) = fib n * (2 fib(n+1) - fib n)`) and, through it,
+`F:ml430-int-fib-two-mul-add-two-0ba4a948`. Sizing, having built the machinery:
+each is **~200–250 lines of `sub`-flavoured ring algebra and no new device**.
+The route for the first is `Int.fib_add n n`, plus `fib(n-1) = fib(n+1) - fib n`
+(a rearrangement of `Int.fib_rec` at `n-1`, whose index bookkeeping already
+exists in `declare_fib_add`), plus `mul two n = add n n` — which this prelude
+does not carry and which comes from `mul_comm` + `left_distrib` + `mul_one`,
+since there is no `right_distrib`. The genuine friction is that both target
+statements are written with `Int.sub`, so unlike `Int.fib_add` the algebra
+cannot stay inside `add`/`mul`; expect an `eq_sub_of_add_eq`-shaped bridge to be
+the first thing needed.
+
+**Gates run (foreground, this worktree):**
+`cargo test -p axeyum-lean-kernel --lib int_prelude::` → 44 passed, 0 failed;
+`cargo fmt --all --check` clean; `cargo clippy -p axeyum-lean-kernel
+--all-targets -- -D warnings` clean; `nat_axiom_inventory --require-axiom-free
+integer` → `ok: integer trusted surface = 0`; `validate-facts.py` → 0 errors.
+The workspace-wide `--lib` sweep and `just check` **did not run** in this lane.
+
+**Your lane's block (`DONE`, nat-fuel-transport, 2026-08-29).** Both
+transports landed (`lorAux`, `ldiffAux`), and `F:ml430-nat-land-comm-7e6ad72e`
+(one of the 7 `natural-bitwise` facts fuel-irrelevance was blocking) is
+closed. The other 6 (`land_assoc`, `land_bit`, `lor_comm`, `lor_assoc`,
+`lor_bit`, `ldiff_bit`) remain open — see "What is still needed" below for
+what each still needs beyond this lane's work.
+
+**Whether the ~20-lines-each sizing held.** No — it undercounted both, and
+in different ways.
+
+- **`lorAux`'s transport needed a piece the handoff did not name.**
+  `Nat.lor_aux_zero_left_any_fuel`'s `succ`-branch proof cannot use
+  `bool_select_nat_same` the way `land`'s analogue does: at `m = 0` fixed,
+  `fuel = succ f`, the outer `n = 0` guard's two branches are `m` (`= 0`,
+  literal) and the reduced inner term (`= n`) — two DIFFERENT terms, not one
+  term repeated. The fix is a nested `cases_zero_succ` on `n` itself inside
+  the `fuel = succ f` branch; once `n`'s shape is exposed, both leaves close
+  by `refl`. This is `lorAux`'s fuel-exhaustion row (returns `n`, not `0`)
+  biting, not its guard order. `declare_lor_aux_agree_of_fuel` itself,
+  once `lor_aux_zero_left_any_fuel` existed, WAS close to the sizing — a
+  guard/bit-combine swap, no new proof technique.
+- **`ldiffAux`'s transport matched the sizing exactly.** Its
+  `zero_left_any_fuel` is byte-for-byte `land`'s proof (same absorbing-zero
+  base case, confirmed by tracing the reduction: at `m = 0` fixed, both the
+  outer and inner guards ultimately collapse to the constant `0` via
+  `bool_select_nat_same`, exactly as `land`'s does). Its `agree_of_fuel`
+  step needed only the hybrid guard swap (`on_n_zero = m` pass-through like
+  `lor`, `on_m_zero = 0` absorbing like `land`) and the `beq`-based per-bit
+  combine — no new case split.
+
+**Negative control per transport** (mandatory, insufficient-fuel, checked by
+evaluation alone since no `Le m fuel` proof exists at the chosen witness):
+
+- `lor`: `(fuel, m, n) = (1, 3, 4)` — `lorAux 1 3 4 = 5` against
+  `lor 3 4 = 7` (`011 | 100 = 111`). **`land`'s own witness `(1, 7, 7)` does
+  NOT discriminate `lor`**: `lorAux 1 7 7 = 7 = lor 7 7`, no disagreement at
+  all, because `lorAux`'s base row returns `n` rather than `0`. Each
+  transport needed its own witness, verified by simulating both recursions
+  in Python before committing to the Rust proof.
+- `ldiff`: `(fuel, m, n) = (0, 7, 0)` — `ldiffAux 0 7 0 = 0` (the outer
+  `Nat.rec` never runs at all) against `ldiff 7 0 = 7` (`ldiff m 0 = m`, and
+  canonical fuel `m = 7` IS `succ`-shaped, so the `n = 0` guard is reached).
+
+**Which of the 7 facts closed, and what the second piece turned out to be.**
+`F:ml430-nat-land-comm-7e6ad72e` (`Nat.land_comm`) — the second piece was
+**same-fuel commutativity**, not the `Nat.bit` decode bridge. Fuel-irrelevance
+alone is not enough: `land m n = landAux m m n` and `land n m = landAux n n m`
+put DIFFERENT values (`m` vs `n`) in the fuel slot, so a genuinely separate
+theorem was needed — `Nat.land_aux_comm_of_fuel : ∀ fuel m n, landAux fuel m n
+= landAux fuel n m` (a new `agree_by_fuel_induction` instance, 4-way
+`(m = 0?, n = 0?)` case split via nested `cases_zero_succ`). Three of the four
+cases close via `land_aux_zero_left_any_fuel` or `refl` alone (a guard
+checking a LITERAL `0` never needs the other argument's shape); the fourth
+(both nonzero) needs only the induction hypothesis plus `Nat.mul_comm` for the
+per-bit product — `land`'s guard is symmetric (`on_n_zero = on_m_zero = 0`),
+so `guarded(succ_a, succ_b, 0, 0, _, _)` is defeq to BOTH sides' own reduced
+row regardless of argument order, and no guard-reordering lemma was needed.
+`Nat.land_comm` itself chains `land m n = landAux m m n = landAux (m+n) m n =
+landAux (m+n) n m = landAux n n m = land n m`, the outer two steps via
+`land_aux_agree_of_fuel` at the shared fuel `m + n` (`Nat.le_add_right` for
+`Le m (m+n)`; `Le n (m+n)` needs an extra `Nat.add_comm` transport since only
+`le_add_right`, not a `le_add_left`, exists), the middle step via
+`land_aux_comm_of_fuel`. Kernel-admitted on the FIRST attempt — no rejection
+to diagnose.
+
+**What the kernel rejected, and why: nothing, on both new transports and the
+comm lemma.** Every declaration in this lane (`lor_aux_zero_left_any_fuel`,
+`lor_aux_agree_of_fuel`, `lor_aux_eq_lor_of_le`, `ldiff_aux_zero_left_any_fuel`,
+`ldiff_aux_agree_of_fuel`, `ldiff_aux_eq_ldiff_of_le`,
+`land_aux_comm_of_fuel`, `land_comm`) was admitted on its first `cargo test`
+run. The only compile-time friction was one clippy `used_underscore_binding`
+(an unused-looking closure parameter that was in fact used two lines later);
+fixed by renaming, not by silencing the lint.
+
+**What is still needed to close the other 6** (unchanged from
+`docs/plan/status/237-nat-fuel-irrelevance.md`'s diagnosis, now confirmed by
+actually building the `land_comm` route): `lor_comm` needs the SAME
+same-fuel-commutativity treatment as `land_comm`, transported to `lorAux`
+(its guard is symmetric too — both `on_n_zero`/`on_m_zero` are pass-through,
+`m`/`n` respectively — so the 4-way case split should carry over with the
+`max`-via-`ble` per-bit combine in place of `mul`). `land_assoc`/`lor_assoc`
+need an analogous same-fuel ASSOCIATIVITY lemma (not built here — a 3-operand
+case split is a different, larger piece, not a corollary of commutativity).
+`land_bit`/`lor_bit`/`ldiff_bit` still need the `Nat.bit` decode bridge this
+lane did not attempt — relating `landAux`/`lorAux`/`ldiffAux` at a
+`Nat.bit`-constructed argument (`fuel = bit a m`, non-canonical) to the
+recursive step; fuel-irrelevance and the comm lemmas built here do not touch
+`Nat.bit` at all.
+
+**Counts.** `nat_prelude` before this lane: 122 passed (post
+`nat-fuel-irrelevance`). After: 125 passed (3 new instantiation tests: `lor`'s
+and `ldiff`'s fuel-irrelevance negative controls, `land_comm`'s concrete
+application). 8 new declarations, all theorems
+(`lor_aux_zero_left_any_fuel`, `lor_aux_agree_of_fuel`, `lor_aux_eq_lor_of_le`,
+`ldiff_aux_zero_left_any_fuel`, `ldiff_aux_agree_of_fuel`,
+`ldiff_aux_eq_ldiff_of_le`, `land_aux_comm_of_fuel`, `land_comm`) —
+`the_build_is_deterministic`'s pin moved `85 + 441` → `85 + 449` (counted
+from the panic message's own mismatch both times, not hand-incremented).
+`nat` trusted surface still `axiom=0 opaque=0 quotient=0`
+(`nat_axiom_inventory --require-axiom-free nat`). New fact `F:nat-land-comm`;
+`F:ml430-nat-land-comm-7e6ad72e` flipped open → proved via a reconciliation
+evidence row (Mathlib's `Nat.land` is `Nat.bitwise and`, and ours is proved
+equal to that specialization by `Nat.bitwise_and_eq_land`, so this closes the
+SAME function's commutativity — the honest-flip criterion in CLAUDE.md's
+gotchas). `python3 scripts/validate-facts.py`: 1923 facts, 0 errors.
+`cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both clean
+on the touched files. NOT run: the aggregate `just check` / `./scripts/check.sh`.
+
+Three `testbit` facts remain pinned OPEN by the live
+`gen-autogenesis-bitwise-family-projection.py` gate and were not touched.
+
+**Your lane's block (`DONE`, nat-singles, 2026-08-29).** Landed both
+unassessed facts: `Nat.mod_lcm` and `Nat.dvd_of_forall_prime_mul_dvd`.
+Neither needed the stated blockers to be investigated first -- nobody had
+looked, and both turned out to have short proofs from infrastructure already
+in the prelude (`Nat.lcm_dvd`, `crt.rs`'s `gap_dvd`/`modeq_of_dvd_gap`,
+`Nat.exists_prime_dvd`).
+
+`Nat.mod_lcm : modEq n x y -> modEq m x y -> modEq (lcm n m) x y`,
+**unconditional** in `n`/`m` (unlike `Nat.crt_unique`, which needs
+`gcd n m = 1`). The combination step is `Nat.lcm_dvd : dvd n c -> dvd m c ->
+dvd (lcm n m) c`, already unconditional, so the whole proof is `crt_unique`'s
+own `crt_le`/`gap_dvd`/`modeq_of_dvd_gap` shape with `lcm_dvd` swapped in for
+`coprime_mul_dvd`. `gap_dvd`/`modeq_of_dvd_gap` (`crt.rs`, private) were
+widened to `pub(super)` and reused from `lcm.rs` rather than duplicated.
+
+`Nat.dvd_of_forall_prime_mul_dvd : (forall p, Prime p -> p|a -> p*a|b) ->
+a|b`. Turned out to need only ONE prime dividing `a` (any one), not
+induction over `a`'s factorization: `a=0` uses the hypothesis at `k=2`;
+`a=1` needs `dvd_mul`+`one_mul` and never touches the hypothesis; `a>=2`
+uses `exists_prime_dvd` for a witness `pw`, the hypothesis at `k=pw` gives
+`pw*a | b`, and `a | (a*pw)` (`dvd_mul` + `mul_comm`) chains via `dvd_trans`.
+Same nested `lt_or_ge`-on-`a` trichotomy as the neighbouring
+`coprime_of_forall_prime_dvd`.
+
+The other two facts (`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`,
+`F:ml430-nat-coprime-iff-isrelprime-0c08eb25`) are left `open`, confirmed
+still blocked (re-grepped the whole `crates/axeyum-lean-kernel/src/` for
+`minFac`/`min_fac` and `IsRelPrime`/`is_rel_prime`/`isRelPrime`: zero hits
+outside this status doc and the fact files themselves) -- see "What's still
+needed" below for the precise construction each one is missing.
+
+`nat_prelude` count: **85 + 441 -> 85 + 443** (2 new theorems, 0 new
+definitions; confirmed by `the_build_is_deterministic`'s own panic message,
+not hand-counted).
+
+## What's still needed for the other two facts
+
+- **`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`** (`m != 0 -> m < n.minFac ->
+  n.Coprime m`) needs `Nat.minFac` as a COMPUTABLE definition with defining
+  equations, which does not exist. `Nat.exists_prime_dvd`/
+  `Nat.least_divisor_search` only give an EXISTENCE proof of a prime
+  divisor, not a value-returning function. Building `Nat.minFac` as a
+  fuel-recursive `Nat -> Nat` (mirroring `nat_prelude/log.rs`'s pattern,
+  deciding `dvd d n` via `beq (mod n d) 0` the way
+  `least_divisor_search` already does) is a legitimate definition task per
+  this lane's brief, but Mathlib's own `Nat.minFac` uses well-founded
+  recursion bounded by `sqrt n`, not a simple fuel bound, and getting the
+  defining equations AND an evaluation test (with a negative control
+  discriminating "first divisor" from "smallest prime divisor", e.g.
+  `minFac 12 = 2` vs `minFac 15 = 3`, plus the `minFac 1 = 1` boundary) right
+  is a sized task on its own -- not attempted this lane, to avoid
+  half-landing it.
+- **`F:ml430-nat-coprime-iff-isrelprime-0c08eb25`** (`m.Coprime n <->
+  IsRelPrime m n`) needs an `IsRelPrime` predicate, confirmed absent from
+  the whole kernel (this lane's own grep, zero hits). Mathlib's
+  `IsRelPrime m n := forall d, d ∣ m -> d ∣ n -> IsUnit d`, specialized to
+  `Nat` where the only unit is `1`, so `IsRelPrime m n := forall d, dvd d m
+  -> dvd d n -> Eq d 1`. This is a NEW predicate declaration (not merely a
+  theorem), and the iff with `gcd m n = 1` needs both directions: forward
+  (`gcd m n = 1 -> IsRelPrime m n`) via `dvd_gcd` + `eq_one_of_dvd_one` (a
+  direct consequence, cheap); backward (`IsRelPrime m n -> gcd m n = 1`) via
+  `gcd_dvd_left`/`gcd_dvd_right` fed into the hypothesis at `d := gcd m n`
+  (also cheap, symmetric to `coprime_of_forall_prime_dvd`'s existing shape).
+  Neither direction looked hard once the predicate exists; the predicate
+  itself is the only missing piece.
+
+## Verification run
+
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude` (targeted `nat_prelude::`
+  filter): **120 passed, 0 failed** (was 118 before this lane's two new
+  theorems + two new tests).
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings`:
+  clean (needed one `#[allow(clippy::too_many_arguments)]` on the new
+  `mod_lcm_le`, matching `crt.rs`'s `crt_le`).
+- `rustfmt --edition 2024` on every touched file.
+- `python3 scripts/validate-facts.py`: 0 errors.
+- Both new `checker_command`s (from each fact's evidence) run and confirmed
+  to actually discriminate: `nat_theorem_inventory` prints the exact
+  `formal.statement` for each name, `nat_axiom_inventory --require-axiom-free
+  nat` exits 0, and both concrete-instance tests (with negative controls)
+  pass individually by name.
+- Did NOT run the full aggregate `just check`/`./scripts/check.sh` (out of
+  scope for a single-lane targeted change; the coordinator re-runs the full
+  gate before merge per standing project convention).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
