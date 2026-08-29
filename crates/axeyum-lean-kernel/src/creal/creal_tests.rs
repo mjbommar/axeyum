@@ -10921,3 +10921,189 @@ fn the_close_within_bridge_turns_uniform_convergence_into_converges_at_a_point()
         "the composition reads its own domain hypothesis backwards"
     );
 }
+
+/// **`CReal.ivtPlateau` evaluated at both endpoints, for both signs of `v`,
+/// and the root ENDPOINT flips.** The evaluation test `CLAUDE.md` requires of
+/// every new `Definition`: `add_declaration` type-checks a definition's body
+/// but has nothing to compare it against, so a family that computes something
+/// other than the intended clamp would be admitted, would carry an empty axiom
+/// footprint, and would make
+/// [`CRealPrelude::ivt_exact_root_decides_sign`] a theorem about the wrong
+/// function.
+///
+/// `ivtPlateau v := fun x => min x (max (x + (−1)) v)`, and `min`/`max`/`neg`
+/// take no index shift, so index `0` of a constant-sequence argument is the
+/// value itself. The four expected rationals are computed by hand:
+///
+/// | `v` | `F 0` | `F 1` |
+/// | --- | --- | --- |
+/// | `3` | `min 0 (max (−1) 3) = 0` | `min 1 (max 0 3) = 1` |
+/// | `−3` | `min 0 (max (−1) (−3)) = −1` | `min 1 (max 0 (−3)) = 0` |
+///
+/// The **root is at the left endpoint when `v > 0` and at the right endpoint
+/// when `v < 0`**, which is the entire content of the counterexample. The
+/// numerals deliberately differ from
+/// `evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`'s (`0`/`3`
+/// and `0`/`−3`) so a copy-paste between the two tests fails loudly.
+#[test]
+fn ivt_plateau_endpoint_values_reduce_and_the_root_endpoint_flips_with_the_sign_of_v() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let idx0 = d.zero();
+
+    let three_nat = d.num(3);
+    let three = d.const_app(p.of_nat, &[three_nat]);
+    let neg_three = d.const_app(p.neg, &[three]);
+
+    let sample_at = |d: &mut IntDev<'_>, v: ExprId, x: ExprId| -> ExprId {
+        let at = d.const_app(p.ivt_plateau, &[v, x]);
+        d.const_app(p.seq, &[at, idx0])
+    };
+
+    // v = 3: the root is the LEFT endpoint.
+    let pos_lo = sample_at(&mut d, three, zero_c);
+    let pos_hi = sample_at(&mut d, three, one_c);
+    let neg_lo = sample_at(&mut d, neg_three, zero_c);
+    let neg_hi = sample_at(&mut d, neg_three, one_c);
+
+    let zero_q = ivt_bisect_rat_lit(&mut d, p, 0, 0, false);
+    let one_q = ivt_bisect_rat_lit(&mut d, p, 1, 0, false);
+    let neg_one_q = ivt_bisect_rat_lit(&mut d, p, 1, 0, true);
+    assert!(
+        ivt_bisect_rat_eq(&mut d, p, pos_lo, zero_q),
+        "at v = 3, ivtPlateau v zero must reduce to 0 -- the root IS the left endpoint"
+    );
+    assert!(
+        ivt_bisect_rat_eq(&mut d, p, pos_hi, one_q),
+        "at v = 3, ivtPlateau v one must reduce to 1"
+    );
+    assert!(
+        ivt_bisect_rat_lt(&mut d, p, pos_lo, pos_hi),
+        "at v = 3 the right endpoint must be strictly positive, so the root is \
+         the left endpoint ALONE"
+    );
+
+    // v = -3: the root is the RIGHT endpoint. Same two arguments, mirrored
+    // values -- so a transposed branch in the definition fails here even
+    // though the v = 3 case above would still pass.
+    assert!(
+        ivt_bisect_rat_eq(&mut d, p, neg_lo, neg_one_q),
+        "at v = -3, ivtPlateau v zero must reduce to -1"
+    );
+    assert!(
+        ivt_bisect_rat_eq(&mut d, p, neg_hi, zero_q),
+        "at v = -3, ivtPlateau v one must reduce to 0 -- the root IS the right endpoint"
+    );
+    assert!(
+        ivt_bisect_rat_lt(&mut d, p, neg_lo, neg_hi),
+        "at v = -3 the left endpoint must be strictly negative, so the root is \
+         the right endpoint ALONE"
+    );
+
+    // And the flip itself, stated as the discrimination it is: the left
+    // endpoint's value is 0 at v = 3 and NOT 0 at v = -3.
+    assert!(
+        !ivt_bisect_rat_eq(&mut d, p, neg_lo, zero_q),
+        "the endpoint test is vacuous: ivtPlateau's value at zero does not \
+         depend on the sign of v"
+    );
+}
+
+/// **`CReal.ivtPlateau v c` IS the term `ivt_exact_root_decides_sign` states
+/// its root hypothesis over.** The theorem is written out as
+/// `Equiv (min c (max (add c (neg one)) v)) zero` rather than folded through
+/// the definition, so that it is legible without unfolding anything — the same
+/// choice `evt_attained_max_decides_sign` makes in writing `mul t v` rather
+/// than `evtLinear v t`. This pins the bridge, at closed arguments.
+#[test]
+fn ivt_plateau_is_the_clamp_the_row_two_theorem_uses() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let three_nat = d.num(3);
+    let three = d.const_app(p.of_nat, &[three_nat]);
+
+    let folded = d.const_app(p.ivt_plateau, &[three, one_c]);
+    let raw = {
+        let neg_one = d.const_app(p.neg, &[one_c]);
+        let floor = d.const_app(p.add, &[one_c, neg_one]);
+        let lifted = d.const_app(p.max, &[floor, three]);
+        d.const_app(p.min, &[one_c, lifted])
+    };
+    assert!(
+        d.kernel().def_eq(folded, raw),
+        "`ivtPlateau v x` must be definitionally the clamp \
+         `min x (max (add x (neg one)) v)` the row-2 theorem states"
+    );
+}
+
+/// **The decision principle `ivt_exact_root_decides_sign` derives is ABSENT
+/// from the environment**, which is what makes it a boundary rather than a
+/// detour.
+///
+/// A reduction to something the kernel already proves is worth nothing, so
+/// this is part of the row-2 claim and not a preliminary to it — the same
+/// check `evt_attained_max_decides_sign`'s non-vacuity rests on. The
+/// conclusion `∀ v, Or (le v zero) (le zero v)` is analytic LLPO, equivalently
+/// the total order `le_total` over `CReal`, and `creal/cotransitivity.rs`'s
+/// module documentation states verbatim that no `lt_total` is assumed or
+/// provable here.
+///
+/// The negative is read from `kernel.environment()` and paired with a POSITIVE
+/// control of the same declaration kind (`CReal.lt_cotrans`, a `Theorem`,
+/// found by the identical lookup) — an empty answer from a query that finds
+/// nothing is indistinguishable from a strong negative result. Note the
+/// namespace filter is exact: `Rat.le_total` and `Nat.le_total` both exist and
+/// a substring match would wrongly report the principle as present.
+#[test]
+fn ivt_row_two_derives_a_principle_absent_from_the_environment() {
+    let (kernel, p) = built();
+
+    let declared: Vec<String> = kernel
+        .environment()
+        .iter()
+        .map(|(name, _)| kernel.display_name(*name).to_string())
+        .collect();
+    let present = |wanted: &str| declared.iter().any(|shown| shown == wanted);
+
+    // POSITIVE CONTROL, same kind and same lookup: cotransitivity exists, and
+    // it exists precisely because the total comparison does not.
+    assert!(
+        present("CReal.lt_cotrans"),
+        "the absence check below is meaningless: this lookup cannot even find \
+         a declaration that certainly exists"
+    );
+
+    for absent in [
+        "CReal.le_total",
+        "CReal.lt_total",
+        "CReal.leTotal",
+        "CReal.ltTotal",
+    ] {
+        assert!(
+            !present(absent),
+            "`{absent}` is now in the environment, so \
+             `ivt_exact_root_decides_sign` reduces the classical conclusion to \
+             something this kernel already proves and is no longer a boundary \
+             witness. Do not delete this assertion -- rewrite the row-2 claim."
+        );
+    }
+
+    // And the theorem itself is a checked `Theorem` resting on nothing.
+    let declaration = kernel
+        .environment()
+        .get(p.ivt_exact_root_decides_sign)
+        .expect("CReal.ivt_exact_root_decides_sign must be declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "row 2 must be a checked Theorem, not an assertion"
+    );
+    assert!(
+        kernel
+            .axiom_footprint(p.ivt_exact_root_decides_sign)
+            .is_empty(),
+        "row 2 must be axiom-free"
+    );
+}
