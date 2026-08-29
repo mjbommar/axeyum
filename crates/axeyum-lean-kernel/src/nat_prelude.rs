@@ -265,7 +265,7 @@ use primes::{
 };
 use rec_agreement::{
     declare_land_comm, declare_land_fuel_irrelevance_all, declare_ldiff_fuel_irrelevance_all,
-    declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
+    declare_lor_comm, declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
 };
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
@@ -2765,6 +2765,25 @@ pub struct NatPrelude {
     /// [`Self::land_aux_comm_of_fuel`] and [`Self::land_aux_agree_of_fuel`]
     /// through the shared fuel `m + n`.
     pub land_comm: NameId,
+    /// `Nat.lor_aux_comm_of_fuel : ∀ fuel m n, Le m fuel → Le n fuel →
+    /// Eq (lorAux fuel m n) (lorAux fuel n m)` — the `lor` twin of
+    /// [`Self::land_aux_comm_of_fuel`], and NOT unconditional the way
+    /// `land`'s version is: `lorAux`'s fuel-exhaustion row returns `n`
+    /// (pass-through, not the absorbing `0`), so at `fuel = 0` the
+    /// statement `lorAux 0 m n = lorAux 0 n m` reduces to `n = m`, false
+    /// for arbitrary `m ≠ n`. Both `Le m fuel` and `Le n fuel` are needed —
+    /// they force `m = n = 0` at the base case and supply
+    /// `half_le_predecessor_of_succ` for BOTH operands in the step (unlike
+    /// `land_aux_comm_of_fuel`, which needs neither). See
+    /// `nat_prelude::rec_agreement`.
+    pub lor_aux_comm_of_fuel: NameId,
+    /// `Nat.lor_comm : ∀ m n, Eq (lor m n) (lor n m)` — the `lor` twin of
+    /// [`Self::land_comm`], one of the seven `natural-bitwise` facts
+    /// fuel-irrelevance was blocking
+    /// (`F:ml430-nat-lor-comm-2666d7ef`). Routes
+    /// [`Self::lor_aux_comm_of_fuel`] and [`Self::lor_aux_agree_of_fuel`]
+    /// through the shared fuel `m + n`, exactly as `land_comm` does.
+    pub lor_comm: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3373,6 +3392,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ldiff_aux_eq_ldiff_of_le: kernel.name_str(nat, "ldiff_aux_eq_ldiff_of_le"),
             land_aux_comm_of_fuel: kernel.name_str(nat, "land_aux_comm_of_fuel"),
             land_comm: kernel.name_str(nat, "land_comm"),
+            lor_aux_comm_of_fuel: kernel.name_str(nat, "lor_aux_comm_of_fuel"),
+            lor_comm: kernel.name_str(nat, "lor_comm"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3599,6 +3620,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // plus `Nat.le_add_right`/`Nat.add_comm`/`Nat.le_refl`, all far
         // above; nothing needs it, so it goes right after fuel-irrelevance.
         declare_land_comm(&mut d, &p)?;
+        // `Nat.lor_comm`: needs `Nat.lor_aux_agree_of_fuel`
+        // (`declare_lor_fuel_irrelevance_all`, just above),
+        // `half_le_predecessor_of_succ`'s composed order/division lemmas,
+        // and the `ble`-based per-bit max-commutativity split; nothing
+        // needs it, so it goes right after its `land` sibling.
+        declare_lor_comm(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.
