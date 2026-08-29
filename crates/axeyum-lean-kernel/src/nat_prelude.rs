@@ -267,8 +267,8 @@ use primes::{
 };
 use rec_agreement::{
     declare_land_comm, declare_land_fuel_irrelevance_all, declare_land_le_left_all,
-    declare_ldiff_fuel_irrelevance_all, declare_lor_comm, declare_lor_fuel_irrelevance_all,
-    declare_rec_agreement_all,
+    declare_land_zero_propagation_all, declare_ldiff_fuel_irrelevance_all, declare_lor_comm,
+    declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
 };
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
@@ -2894,6 +2894,23 @@ pub struct NatPrelude {
     /// at `fuel := a`, `m := a` (`land a b` and `landAux a a b` are the SAME
     /// term by definition).
     pub land_le_left: NameId,
+    /// `Nat.land_aux_eq_zero_of_left_eq_zero : ∀ fuel a b c,
+    /// Eq (landAux fuel a b) 0 → Eq (landAux fuel a (landAux fuel b c)) 0`
+    /// — "zero propagates through the other operand": built for
+    /// `nat-land-assoc-impl`'s `land_aux_assoc_of_fuel`, the one theorem
+    /// `docs/plan/status/252-nat-assoc-dichotomy.md` traced by hand and
+    /// numerically cross-checked but did not build (both belonged in this
+    /// file, under active concurrent edit at the time). Proved by a triple
+    /// fuel induction ([`agree_by_double_fuel_induction`](rec_agreement)):
+    /// 3 of 4 base leaves (`a=0`; `a=succ,b=0`; `a=succ,b=succ,c=0`) close
+    /// by [`Self::land_aux_zero_left_any_fuel`] or pure defeq, and the
+    /// fourth (`a,b,c` all positive) needs `Nat.add_eq_zero`/
+    /// `Nat.mul_eq_zero`/`Nat.succ_ne_zero` to extract `rec=0 ∧ bit=0` from
+    /// the hypothesis, then `Nat.zero_or_succ` to dichotomize the inner
+    /// `landAux fuel b c`, then (in the nonzero sub-case)
+    /// `Nat.div_mod_unique`+`Nat.div_mod_exec` to reconstruct that value's
+    /// own halves and feed them back through the induction's own `ih`.
+    pub land_aux_eq_zero_of_left_eq_zero: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3516,6 +3533,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lor_comm: kernel.name_str(nat, "lor_comm"),
             land_aux_le_left: kernel.name_str(nat, "land_aux_le_left"),
             land_le_left: kernel.name_str(nat, "land_le_left"),
+            land_aux_eq_zero_of_left_eq_zero: kernel
+                .name_str(nat, "land_aux_eq_zero_of_left_eq_zero"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3762,6 +3781,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mod_lt`, `le_of_lt_succ`, all far above); nothing needs it, so it
         // goes right after `land_comm`.
         declare_land_le_left_all(&mut d, &p)?;
+        // `Nat.land_aux_eq_zero_of_left_eq_zero`: needs `Nat.landAux`
+        // (`declare_land_all`), `Nat.land_aux_zero_left_any_fuel`
+        // (`declare_land_fuel_irrelevance_all`, both far above),
+        // `Nat.add_eq_zero`/`Nat.zero_or_succ` (`declare_add_no_zero_summands`/
+        // `declare_zero_or_succ`, both far above), `Nat.mul_eq_zero`
+        // (`declare_mul_no_zero_divisors`, far above), and
+        // `Nat.div_mod_unique`/`Nat.div_mod_exec`/`Nat.mod_lt`/`Nat.mul_assoc`/
+        // `Nat.zero_mul`/`Nat.mul_zero`/`Nat.succ_ne_zero` (all far above);
+        // nothing needs it yet, so it goes right after `land_le_left`.
+        declare_land_zero_propagation_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

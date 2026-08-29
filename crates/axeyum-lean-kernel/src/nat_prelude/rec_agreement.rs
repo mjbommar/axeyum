@@ -80,7 +80,7 @@
 
 use super::NatPrelude;
 use super::bitwise::{and_fn, or_fn};
-use super::helpers::and_left;
+use super::helpers::{and_left, and_right};
 use super::ops::{
     NatDev, NatOps, agree_by_double_fuel_induction, agree_by_fuel_induction, bool_select_nat_same,
     cases_lt_bound, cases_mod_two, cases_zero_succ,
@@ -2213,5 +2213,530 @@ pub(super) fn declare_lor_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
         let rhs = d.const_app(p.lor, &[n, m]);
         (d.eq(lhs, rhs), proof)
     })?;
+    Ok(())
+}
+
+// ============================================================================
+// `land_aux_eq_zero_of_left_eq_zero` -- "zero propagates through the other
+// operand" -- the one theorem `docs/plan/status/252-nat-assoc-dichotomy.md`
+// traced by hand (and cross-checked numerically in Python) but did not
+// build, because it and `land_aux_assoc_of_fuel` both belong here, under
+// active concurrent edit at the time that plan was written. See that file
+// for the full case-tree derivation this function follows exactly.
+// ============================================================================
+
+/// Non-dependent `Or.rec` (private copy; every other file that needs one
+/// carries its own, per the existing convention -- see `fibonacci.rs`'s
+/// own `or_elim`).
+#[allow(clippy::too_many_arguments)]
+fn or_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_case: ExprId,
+    right_case: ExprId,
+    or_proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[left_ty, right_ty, motive, left_case, right_case, or_proof],
+    )
+}
+
+/// `False.rec` into `goal` from a proof of `False` (private copy, see
+/// [`or_elim`]'s doc comment for why).
+fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, contradiction])
+}
+
+/// Non-dependent `Exists.rec` over `Nat` (private copy, same convention):
+/// given `predicate : Nat -> Prop`, `minor : forall w, predicate w -> goal`,
+/// and `proof : Exists Nat predicate`, produce a term of type `goal`.
+fn exists_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    predicate: ExprId,
+    goal: ExprId,
+    minor: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let level_one = d.level_one();
+    let exists_const = d.kernel().const_(p.logic.exists_, vec![level_one]);
+    let exists_ty = d.apply(exists_const, &[nat, predicate]);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, exists_ty, goal, BinderInfo::Default);
+    let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![level_one]);
+    d.apply(exists_rec, &[nat, predicate, motive, minor, proof])
+}
+
+/// `fun pred => Eq target (succ pred)` -- the exact predicate
+/// [`NatPrelude::zero_or_succ`]'s right disjunct is stated with, rebuilt
+/// here so [`exists_elim`] can be handed a predicate that matches it
+/// syntactically.
+fn succ_pred_predicate(d: &mut NatDev<'_>, target: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let pred_fv = d.fresh_fvar();
+    let pred = d.kernel().fvar(pred_fv);
+    let succ_pred = d.succ(pred);
+    let body = d.eq(target, succ_pred);
+    d.lam_fv(pred_fv, nat, body)
+}
+
+/// `Exists Nat (fun pred => Eq target (succ pred))` -- the type of
+/// `zero_or_succ`'s right disjunct at `target`, needed to type a lambda
+/// binder that consumes it.
+fn succ_pred_exists_ty(d: &mut NatDev<'_>, p: &NatPrelude, predicate: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let level_one = d.level_one();
+    let exists_const = d.kernel().const_(p.logic.exists_, vec![level_one]);
+    d.apply(exists_const, &[nat, predicate])
+}
+
+/// Given `rec_zero : Eq rec 0` and `bit_zero : Eq bit 0`, produce
+/// `Eq (add (mul 2 rec) bit) 0` -- the reverse direction of `add_eq_zero`,
+/// used to close a `landAux` successor row once both halves of its
+/// `2 * rec + bit` value are known to vanish.
+fn stepped_zero_of_parts(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    rec: ExprId,
+    bit: ExprId,
+    rec_zero: ExprId,
+    bit_zero: ExprId,
+) -> ExprId {
+    let p = *p;
+    let two = d.num(2);
+    let zero = d.zero();
+    let doubled = d.mul(two, rec);
+    let stepped = d.add(doubled, bit);
+
+    let step1 = d.congr(rec, zero, rec_zero, &|d, x| {
+        let dd = d.mul(two, x);
+        d.add(dd, bit)
+    });
+    let mul_two_zero = d.mul(two, zero);
+    let mid1 = d.add(mul_two_zero, bit);
+
+    let step2 = d.congr(bit, zero, bit_zero, &|d, x| d.add(mul_two_zero, x));
+    let mid2 = d.add(mul_two_zero, zero);
+
+    // `mid2 = add mul_two_zero 0` is defeq `mul_two_zero` (add's base row is
+    // the constant identity), so `d.refl(mul_two_zero)` retypes directly as
+    // `Eq mid2 mul_two_zero`.
+    let mul_zero_pf = d.lemma(p.mul_zero, &[two]); // Eq mul_two_zero 0
+    let mid2_defeq = d.refl(mul_two_zero);
+    let step3 = d.trans(mid2, mul_two_zero, zero, mid2_defeq, mul_zero_pf);
+
+    let (_, proof) = d.chain(stepped, &[(mid1, step1), (mid2, step2), (zero, step3)]);
+    proof
+}
+
+/// The one genuinely hard leaf of [`declare_land_aux_eq_zero_of_left_eq_zero`]:
+/// `a = succ a'`, `b = succ b'`, `c = succ c'`, at fuel `sk = succ k`. Builds
+/// a term of type
+/// `Arrow(Eq (landAux sk succ_a succ_b) 0, Eq (landAux sk succ_a (landAux sk succ_b succ_c)) 0)`.
+///
+/// `ih : forall a b c, Eq (landAux k a b) 0 -> Eq (landAux k a (landAux k b c)) 0`
+/// is the outer induction's own hypothesis, applied at the halves.
+#[allow(clippy::too_many_arguments)]
+fn declare_land_aux_eq_zero_hard_leaf(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    k: ExprId,
+    ih: ExprId,
+    succ_a: ExprId,
+    succ_b: ExprId,
+    succ_c: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sk = d.succ(k);
+    let zero = d.zero();
+    let two = d.num(2);
+    let one = d.num(1);
+
+    let half_a = d.div(succ_a, two);
+    let half_b = d.div(succ_b, two);
+    let half_c = d.div(succ_c, two);
+    let bit_a = d.modulo(succ_a, two);
+    let bit_b = d.modulo(succ_b, two);
+    let bit_c = d.modulo(succ_c, two);
+
+    let rec_ab = d.const_app(p.land_aux, &[k, half_a, half_b]);
+    let bit_ab = d.mul(bit_a, bit_b);
+    let doubled_ab = d.mul(two, rec_ab);
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let ab = d.const_app(p.land_aux, &[sk, succ_a, succ_b]);
+    let hyp_ty = d.eq(ab, zero);
+
+    // `h : Eq (landAux sk succ_a succ_b) 0` is defeq
+    // `Eq (add (mul 2 rec_ab) bit_ab) 0` (both guards resolve `false`,
+    // succ_a/succ_b literal), so `h` is accepted directly where
+    // `add_eq_zero` expects its hypothesis.
+    let d_ab = d.lemma(p.add_eq_zero, &[doubled_ab, bit_ab, h]);
+    let doubled_ab_zero_ty = d.eq(doubled_ab, zero);
+    let bit_ab_zero_ty = d.eq(bit_ab, zero);
+    let doubled_ab_zero = and_left(d, doubled_ab_zero_ty, bit_ab_zero_ty, d_ab);
+    let bit_ab_zero = and_right(d, doubled_ab_zero_ty, bit_ab_zero_ty, d_ab);
+
+    // `Eq (mul 2 rec_ab) 0 -> Or (Eq 2 0) (Eq rec_ab 0)`, eliminate the
+    // left disjunct via `succ_ne_zero` (2 is `succ 1`).
+    let mul_disj = d.lemma(p.mul_eq_zero, &[two, rec_ab, doubled_ab_zero]);
+    let rec_ab_zero_ty = d.eq(rec_ab, zero);
+    let two_zero_ty = d.eq(two, zero);
+    let rec_ab_zero = {
+        let left_fv = d.fresh_fvar();
+        let left_h = d.kernel().fvar(left_fv);
+        let contradiction = d.lemma(p.succ_ne_zero, &[one, left_h]);
+        let left_body = absurd(d, &p, rec_ab_zero_ty, contradiction);
+        let left_case = d.lam_fv(left_fv, two_zero_ty, left_body);
+        let right_fv = d.fresh_fvar();
+        let right_h = d.kernel().fvar(right_fv);
+        let right_case = d.lam_fv(right_fv, rec_ab_zero_ty, right_h);
+        or_elim(
+            d,
+            &p,
+            two_zero_ty,
+            rec_ab_zero_ty,
+            rec_ab_zero_ty,
+            left_case,
+            right_case,
+            mul_disj,
+        )
+    };
+
+    // Dichotomize the inner value `Y := landAux sk succ_b succ_c`.
+    let y = d.const_app(p.land_aux, &[sk, succ_b, succ_c]);
+    let dichotomy_y = d.lemma(p.zero_or_succ, &[y]);
+    let y_zero_ty = d.eq(y, zero);
+    let y_succ_predicate = succ_pred_predicate(d, y);
+    let y_succ_exists_ty = succ_pred_exists_ty(d, &p, y_succ_predicate);
+
+    let a_bc = d.const_app(p.land_aux, &[sk, succ_a, y]);
+    let goal_ty = d.eq(a_bc, zero);
+
+    let left_case = {
+        // Y = 0: RHS transports to landAux sk succ_a 0, defeq 0.
+        let hy_fv = d.fresh_fvar();
+        let hy = d.kernel().fvar(hy_fv);
+        let cong = d.congr(y, zero, hy, &|d, x| {
+            d.const_app(p.land_aux, &[sk, succ_a, x])
+        });
+        let goal0 = d.const_app(p.land_aux, &[sk, succ_a, zero]);
+        let refl0 = d.refl(zero); // retypes: Eq goal0 zero
+        let body = d.trans(a_bc, goal0, zero, cong, refl0);
+        d.lam_fv(hy_fv, y_zero_ty, body)
+    };
+
+    let right_case = {
+        let hy_fv = d.fresh_fvar();
+        let hy = d.kernel().fvar(hy_fv); // Exists Nat (fun w => Eq y (succ w))
+
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let succ_q = d.succ(q);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv); // Eq y (succ q)
+        let heq_ty = d.eq(y, succ_q);
+
+        let half_q = d.div(succ_q, two);
+        let bit_q = d.modulo(succ_q, two);
+        let rec_bc = d.const_app(p.land_aux, &[k, half_b, half_c]);
+        let bit_bc = d.mul(bit_b, bit_c);
+
+        // `Lt bit_bc 2`, via `bit_bc <= bit_b` (bit_c <= 1) and `bit_b < 2`.
+        let positive2 = d.zero_lt_succ(one);
+        let bit_c_lt_2 = d.lemma(p.mod_lt, &[succ_c, two, positive2]);
+        let bit_c_le_1 = d.lemma(p.le_of_lt_succ, &[bit_c, one, bit_c_lt_2]);
+        let bit_bc_le_bit_b = bit_product_le_left(d, &p, bit_b, bit_c, bit_c_le_1);
+        let positive2b = d.zero_lt_succ(one);
+        let bit_b_lt_2 = d.lemma(p.mod_lt, &[succ_b, two, positive2b]);
+        let bit_bc_lt_2 = d.lemma(
+            p.lt_of_le_of_lt,
+            &[bit_bc, bit_b, two, bit_bc_le_bit_b, bit_b_lt_2],
+        );
+
+        // candidate_divmod : divMod 2 succ_q rec_bc bit_bc
+        let add_term = d.add(d.mul(two, rec_bc), bit_bc);
+        let candidate_eq_ty = d.eq(succ_q, add_term);
+        let candidate_bound_ty = d.lt(bit_bc, two);
+        // `heq : Eq y (succ q)` is defeq `Eq add_term succ_q` (y unfolds to
+        // add_term, both guards resolve false, succ_b/succ_c literal).
+        let candidate_eq = d.symm(add_term, succ_q, heq);
+        let candidate_divmod = d.const_app(
+            p.logic.and_intro,
+            &[
+                candidate_eq_ty,
+                candidate_bound_ty,
+                candidate_eq,
+                bit_bc_lt_2,
+            ],
+        );
+
+        // exec_divmod : divMod 2 succ_q half_q bit_q
+        let exec_divmod = d.lemma(p.div_mod_exec, &[one, succ_q]);
+
+        let unique = d.lemma(
+            p.div_mod_unique,
+            &[
+                two,
+                succ_q,
+                half_q,
+                bit_q,
+                rec_bc,
+                bit_bc,
+                exec_divmod,
+                candidate_divmod,
+            ],
+        );
+        let half_eq_ty = d.eq(half_q, rec_bc);
+        let bit_eq_ty = d.eq(bit_q, bit_bc);
+        let half_eq = and_left(d, half_eq_ty, bit_eq_ty, unique);
+        let bit_eq = and_right(d, half_eq_ty, bit_eq_ty, unique);
+
+        // rec_aY := landAux k half_a half_q; show it is 0.
+        let rec_ay = d.const_app(p.land_aux, &[k, half_a, half_q]);
+        let cong_rec = d.congr(half_q, rec_bc, half_eq, &|d, x| {
+            d.const_app(p.land_aux, &[k, half_a, x])
+        });
+        let rec_a_bc = d.const_app(p.land_aux, &[k, half_a, rec_bc]);
+        let ih_at = d.apply(ih, &[half_a, half_b, half_c]);
+        let ih_applied = d.apply(ih_at, &[rec_ab_zero]);
+        let rec_ay_zero = d.trans(rec_ay, rec_a_bc, zero, cong_rec, ih_applied);
+
+        // bit_aY := mul bit_a bit_q; show it is 0.
+        let bit_ay = d.mul(bit_a, bit_q);
+        let cong_bit1 = d.congr(bit_q, bit_bc, bit_eq, &|d, x| d.mul(bit_a, x));
+        let mul_a_bc = d.mul(bit_a, bit_bc);
+        let assoc = d.lemma(p.mul_assoc, &[bit_a, bit_b, bit_c]);
+        // assoc : Eq (mul (mul bit_a bit_b) bit_c) (mul bit_a (mul bit_b bit_c))
+        //       = Eq (mul bit_ab bit_c) mul_a_bc
+        let mul_ab_c = d.mul(bit_ab, bit_c);
+        let assoc_rev = d.symm(mul_ab_c, mul_a_bc, assoc);
+        let cong_bit2 = d.congr(bit_ab, zero, bit_ab_zero, &|d, x| d.mul(x, bit_c));
+        let mul_zero_c = d.mul(zero, bit_c);
+        let zm = d.lemma(p.zero_mul, &[bit_c]);
+        let (_, bit_ay_zero) = d.chain(
+            bit_ay,
+            &[
+                (mul_a_bc, cong_bit1),
+                (mul_ab_c, assoc_rev),
+                (mul_zero_c, cong_bit2),
+                (zero, zm),
+            ],
+        );
+
+        let stepped_zero = stepped_zero_of_parts(d, &p, rec_ay, bit_ay, rec_ay_zero, bit_ay_zero);
+        // stepped_zero : Eq (add (mul 2 rec_aY) bit_aY) 0, and
+        // `landAux sk succ_a succ_q` is defeq to that sum (both guards
+        // resolve false, succ_a/succ_q literal).
+        let goal_at_succ_q = d.const_app(p.land_aux, &[sk, succ_a, succ_q]);
+
+        let cong_outer = d.congr(y, succ_q, heq, &|d, x| {
+            d.const_app(p.land_aux, &[sk, succ_a, x])
+        });
+        let minor_body = d.trans(a_bc, goal_at_succ_q, zero, cong_outer, stepped_zero);
+        let minor_inner = d.lam_fv(heq_fv, heq_ty, minor_body);
+        let nat = d.nat_ty();
+        let minor = d.lam_fv(q_fv, nat, minor_inner);
+
+        let body = exists_elim(d, &p, y_succ_predicate, goal_ty, minor, hy);
+        d.lam_fv(hy_fv, y_succ_exists_ty, body)
+    };
+
+    let dichotomy_proof = or_elim(
+        d,
+        &p,
+        y_zero_ty,
+        y_succ_exists_ty,
+        goal_ty,
+        left_case,
+        right_case,
+        dichotomy_y,
+    );
+    d.lam_fv(h_fv, hyp_ty, dichotomy_proof)
+}
+
+fn declare_land_aux_eq_zero_of_left_eq_zero(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    let statement = |d: &mut NatDev<'_>, fuel: ExprId, a: ExprId, b: ExprId, c: ExprId| {
+        let zero = d.zero();
+        let ab = d.const_app(p.land_aux, &[fuel, a, b]);
+        let hyp = d.eq(ab, zero);
+        let bc = d.const_app(p.land_aux, &[fuel, b, c]);
+        let a_bc = d.const_app(p.land_aux, &[fuel, a, bc]);
+        let concl = d.eq(a_bc, zero);
+        d.arrow(hyp, concl)
+    };
+
+    let base = |d: &mut NatDev<'_>, a: ExprId, b: ExprId, _c: ExprId| -> ExprId {
+        // fuel = 0: the RHS is `landAux 0 a (landAux 0 b c)`, defeq `0`
+        // regardless of the second argument's shape -- the zero-fuel row
+        // ignores both of its arguments. Hyp unused.
+        let zero = d.zero();
+        let h_fv = d.fresh_fvar();
+        let ab = d.const_app(p.land_aux, &[zero, a, b]);
+        let hyp_ty = d.eq(ab, zero);
+        let body = d.refl(zero);
+        d.lam_fv(h_fv, hyp_ty, body)
+    };
+
+    let step =
+        |d: &mut NatDev<'_>, k: ExprId, ih: ExprId, a: ExprId, b: ExprId, c: ExprId| -> ExprId {
+            let sk = d.succ(k);
+            let zero = d.zero();
+
+            cases_zero_succ(
+                d,
+                a,
+                &|d, candidate| {
+                    let ab = d.const_app(p.land_aux, &[sk, candidate, b]);
+                    let hyp_ty = d.eq(ab, zero);
+                    let bc = d.const_app(p.land_aux, &[sk, b, c]);
+                    let a_bc = d.const_app(p.land_aux, &[sk, candidate, bc]);
+                    let concl = d.eq(a_bc, zero);
+                    d.arrow(hyp_ty, concl)
+                },
+                &|d| {
+                    // a = 0: RHS = landAux sk 0 Y = 0 via
+                    // `land_aux_zero_left_any_fuel`, for ANY Y. Hyp unused.
+                    let h_fv = d.fresh_fvar();
+                    let ab = d.const_app(p.land_aux, &[sk, zero, b]);
+                    let hyp_ty = d.eq(ab, zero);
+                    let y = d.const_app(p.land_aux, &[sk, b, c]);
+                    let body = d.lemma(p.land_aux_zero_left_any_fuel, &[sk, y]);
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                &|d, a_pred| {
+                    let succ_a = d.succ(a_pred);
+                    cases_zero_succ(
+                        d,
+                        b,
+                        &|d, candidate| {
+                            let ab = d.const_app(p.land_aux, &[sk, succ_a, candidate]);
+                            let hyp_ty = d.eq(ab, zero);
+                            let bc = d.const_app(p.land_aux, &[sk, candidate, c]);
+                            let a_bc = d.const_app(p.land_aux, &[sk, succ_a, bc]);
+                            let concl = d.eq(a_bc, zero);
+                            d.arrow(hyp_ty, concl)
+                        },
+                        &|d| {
+                            // a = succ a', b = 0: Y0 := landAux sk 0 c = 0
+                            // via the "any fuel" lemma (n := c is symbolic,
+                            // so this is genuinely NOT defeq without it).
+                            // Then landAux sk succ_a Y0, transported to
+                            // landAux sk succ_a 0, is defeq 0 (literal n
+                            // after transport). Hyp unused.
+                            let h_fv = d.fresh_fvar();
+                            let ab = d.const_app(p.land_aux, &[sk, succ_a, zero]);
+                            let hyp_ty = d.eq(ab, zero);
+                            let y0 = d.const_app(p.land_aux, &[sk, zero, c]);
+                            let y0_zero = d.lemma(p.land_aux_zero_left_any_fuel, &[sk, c]);
+                            let target = d.const_app(p.land_aux, &[sk, succ_a, y0]);
+                            let goal0 = d.const_app(p.land_aux, &[sk, succ_a, zero]);
+                            let cong = d.congr(y0, zero, y0_zero, &|d, x| {
+                                d.const_app(p.land_aux, &[sk, succ_a, x])
+                            });
+                            let refl0 = d.refl(zero); // retypes: Eq goal0 zero (defeq)
+                            let body = d.trans(target, goal0, zero, cong, refl0);
+                            d.lam_fv(h_fv, hyp_ty, body)
+                        },
+                        &|d, b_pred| {
+                            let succ_b = d.succ(b_pred);
+                            cases_zero_succ(
+                                d,
+                                c,
+                                &|d, candidate| {
+                                    let ab = d.const_app(p.land_aux, &[sk, succ_a, succ_b]);
+                                    let hyp_ty = d.eq(ab, zero);
+                                    let bc = d.const_app(p.land_aux, &[sk, succ_b, candidate]);
+                                    let a_bc = d.const_app(p.land_aux, &[sk, succ_a, bc]);
+                                    let concl = d.eq(a_bc, zero);
+                                    d.arrow(hyp_ty, concl)
+                                },
+                                &|d| {
+                                    // c = 0: Y0 := landAux sk succ_b 0 is
+                                    // defeq 0 DIRECTLY (n := c = 0 is a
+                                    // LITERAL from this case split, so the
+                                    // outer guard resolves regardless of
+                                    // succ_b's shape) -- so the whole
+                                    // target is defeq 0 by pure reduction,
+                                    // no lemma at all. Hyp unused.
+                                    let h_fv = d.fresh_fvar();
+                                    let ab = d.const_app(p.land_aux, &[sk, succ_a, succ_b]);
+                                    let hyp_ty = d.eq(ab, zero);
+                                    let body = d.refl(zero);
+                                    d.lam_fv(h_fv, hyp_ty, body)
+                                },
+                                &|d, c_pred| {
+                                    let succ_c = d.succ(c_pred);
+                                    declare_land_aux_eq_zero_hard_leaf(
+                                        d, &p, k, ih, succ_a, succ_b, succ_c,
+                                    )
+                                },
+                            )
+                        },
+                    )
+                },
+            )
+        };
+
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+    let proof_fn = agree_by_double_fuel_induction(d, &statement, &base, &step, fuel);
+
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let applied = d.apply(proof_fn, &[a, b, c]);
+    let ty = {
+        let body = statement(d, fuel, a, b, c);
+        let with_c = d.pi_fv(c_fv, nat, body);
+        let with_b = d.pi_fv(b_fv, nat, with_c);
+        let with_a = d.pi_fv(a_fv, nat, with_b);
+        d.pi_fv(fuel_fv, nat, with_a)
+    };
+    let value = {
+        let with_c = d.lam_fv(c_fv, nat, applied);
+        let with_b = d.lam_fv(b_fv, nat, with_c);
+        let with_a = d.lam_fv(a_fv, nat, with_b);
+        d.lam_fv(fuel_fv, nat, with_a)
+    };
+    d.declare_theorem(p.land_aux_eq_zero_of_left_eq_zero, ty, value)
+}
+
+/// Declare [`declare_land_aux_eq_zero_of_left_eq_zero`].
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_land_zero_propagation_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_land_aux_eq_zero_of_left_eq_zero(d, p)?;
     Ok(())
 }
