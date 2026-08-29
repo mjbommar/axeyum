@@ -155,6 +155,7 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-binaryrec | `Nat.binaryRecAux`/`Nat.binaryRec` + 4 refl equations + `binaryRecAux_agree_of_fuel` (double-fuel) + `binaryRec_succ`; new facts `F:nat-binary-rec-fuel-irrelevance`, `F:nat-binary-rec-succ` |
 | 2026-08-29 | nat-binaryrec | `Nat.lt_two_mul_of_pos`/`Nat.half_le_of_succ_le_succ` — the halving arithmetic promoted out of four unnamed private copies (`log.rs`, `binary.rs`, `powsq.rs`, `rec_agreement.rs`); the copies are NOT yet deleted |
 | 2026-08-29 | nat-binaryrec | `F:ml430-nat-fastfib-eq-cde11774` confirmed staying `open`: Mathlib's `binaryRec` is well-founded recursion with a dependent `Sort u` motive, ours is a non-dependent fuel encoding — a different `def`, so any `fastFib` built here lands as a new local fact. `Nat.fastFib` NOT built. |
+| 2026-08-29 | nat-lor-ldiff-bit | `Nat.lor_bit` + `Nat.ldiff_bit` (`nat_prelude/bit_decode.rs`): transport the `Nat.bit` decode bridge's fuel-swap machinery unchanged from `land_bit`; new per-operator guard-tree leaves (`lor`'s pass-through rows, `ldiff`'s hybrid) and per-bit combine agreements (`or_cond_max_eq_cond`, `ldiff_cond_eq_cond`). Closes `F:ml430-nat-lor-bit-a2f98c7c` + `F:ml430-nat-ldiff-bit-6be49bb8`, proved axiom-free. Also fixed a pre-existing misplaced `#[test]` attribute in the same test file (unrelated to this lane's subject, needed for a clean clippy gate). |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -14832,6 +14833,288 @@ a live `!def_eq` control and adds `Nat.Pair`'s. `mk 3 5` is deliberately
 ASYMMETRIC, so `fst`/`snd` transposition changes the value — the failure a
 commutative operator's numerals cannot expose on their own. Magnitudes are
 tiny throughout: these numerals are unary `succ` towers.
+
+<!-- Marker added by lane nat-lor-ldiff-bit, 2026-08-29: this file had no
+     `plan-section` marker at all, which blocks `scripts/gen-plan.py` for
+     EVERY lane, not just this one's. Content below is untouched -- this
+     line is the only addition. -->
+
+Status: `bitwise_comm` LANDED and closed. `lt_xor_cases` NOT attempted --
+sized only (see below), per the brief's "landing bitwise_comm alone is a
+good outcome."
+
+## Task
+- `F:ml430-nat-bitwise-comm-1a273bae` (`Nat.bitwise_comm`) -- primary
+  target. **DONE**, flipped to `proved`.
+- `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`) -- secondary.
+  **NOT attempted.** Still `open`.
+
+## `bitwise_comm`: what was built and why
+
+### Did the unconditional form hold, or did it need `Le` hypotheses?
+
+Needed `Le` hypotheses -- `lor`'s shape, not `land`'s. A Python simulation
+(`bitwiseAux` re-implemented directly, not committed -- pure scratchpad)
+run BEFORE any Rust was written:
+
+```python
+def bitwiseAux(f, fuel, m, n):
+    if fuel == 0:
+        return n if f(False, True) else 0
+    if n == 0:
+        return m if f(True, False) else 0
+    if m == 0:
+        return n if f(False, True) else 0
+    return 2 * bitwiseAux(f, fuel - 1, m // 2, n // 2) + \
+        (1 if f(m % 2 == 1, n % 2 == 1) else 0)
+```
+
+Result: `bitwiseAux(or, 0, 0, 1) = 1` but `bitwiseAux(or, 0, 1, 0) = 0` --
+the unconditional (fuel not necessarily sufficient) form is FALSE whenever
+`f false true = true` (`f = or`, `f = xor`), and true only when
+`f false true = false` (`f = and`, matching `land`'s absorbing-zero row --
+see CLAUDE.md's own "AND IT PROPAGATES INTO THE STATEMENT" entry, added
+independently the same day and describing exactly this). With `Le m fuel`
+AND `Le n fuel` (sufficient fuel for both operands), the statement held for
+`and`/`or`/`xor` over 2000 random trials each, and `bitwise f m n =
+bitwise f n m` (canonical fuel) held for all three over the full `0..60`
+grid. So `bitwise_aux_comm_of_fuel` needed `lor`'s shape
+(`Le m fuel -> Le n fuel -> ...`), generalized over `f`, plus an explicit
+`hf : forall a b, f a b = f b a` hypothesis `land`/`lor` never needed
+(their `f` is fixed and concrete, so commutativity is a closed fact, not a
+hypothesis to thread).
+
+### How `f`'s commutativity threads through the per-bit step (and where else it's needed)
+
+Two sites need `hf`, not one:
+
+1. **The per-bit combine** (expected). `bitwiseAux`'s successor row combines
+   `f (beq (m%2) 1) (beq (n%2) 1)` into a `Nat` via `bool_select_nat`. Since
+   `hf (beq (m%2) 1) (beq (n%2) 1) : Eq Bool (f a b) (f b a)` directly IS the
+   swapped equality at those two concrete-shaped-but-symbolic-valued `Bool`
+   terms, no case split is needed (unlike `bit_agreement`/`lor_bit_comm`,
+   which case-split on `m % 2`/`n % 2` because their `f` is concrete). That
+   `Bool` equality is lifted into a `Nat` equality (the two
+   `bool_select_nat` applications) via a small `congr_bool_to_nat` helper
+   (`bitwise.rs`) built from `ops.rs`'s ALREADY-GENERIC
+   `NatOps::bool_eq_motive`/`NatOps::bool_transport` -- a first pass
+   reinvented `Eq.{1} Bool` and the raw `Eq.rec` application by hand before
+   noticing `ops.rs` already carries the whole
+   `bool_eq`/`bool_refl`/`bool_transport`/`bool_eq_motive`/`bool_symm`/
+   `bool_trans` family (built originally for `false_true_elim`). Exactly
+   the "search for the STEP, not the NAME" trap CLAUDE.md's Gotchas
+   describes -- caught only because the duplicate `d.refl` (hardcoded to
+   `Nat`) produced a `TypeMismatch` on a `Bool`-typed term
+   (`expected: AxNat, got: (fun x0:Bool => Bool) Bool.false`), which is the
+   "sort error wearing a TypeMismatch's clothes" pattern from the same file.
+2. **The `m = 0`/`n = 0` boundary** (NOT anticipated going in). For `land`/
+   `lor` (concrete `f`), the two boundary rows (`f false true`-conditioned
+   and `f true false`-conditioned) evaluate to the SAME literal on both
+   sides trivially. For a SYMBOLIC `f` they are two genuinely different
+   partial applications, equal only via `hf true false`/`hf false true`.
+   `declare_bitwise_aux_comm_of_fuel`'s two single-zero branches (`a = 0`,
+   `b = 0`) each need one `congr_bool_to_nat` call over `hf` at the
+   boundary literals -- this is the "genuinely new proof content beyond
+   `lor_aux_comm_of_fuel`'s transport" CLAUDE.md's own fact-registration
+   guidance anticipated.
+
+### The four lemmas landed (`nat_prelude/bitwise.rs`, uncontended)
+
+1. `bitwise_aux_zero_left_any_fuel : forall f fuel n, Eq (bitwiseAux f fuel
+   0 n) (bool_select_nat (f false true) n 0)` -- unconditional in `f`, no
+   `hf` needed (structural, mirrors `land`/`lor`'s `_zero_left_any_fuel`,
+   with `lor`'s extra nested `cases_zero_succ` on `n` since the fuel-exhaustion
+   value is not the constant `0`).
+2. `bitwise_aux_agree_of_fuel` (double-fuel induction via
+   `agree_by_double_fuel_induction`) -- no `hf` needed: fuel-irrelevance
+   never swaps the value arguments. The succ-step's guard values
+   (`on_n_zero`/`on_m_zero`) are the REAL `bitwiseAux` formulas
+   (`bool_select_nat (f true false) ...`/`bool_select_nat (f false true)
+   ...`), not placeholders -- `n` stays symbolic in this lemma, so the
+   guard never reduces and a placeholder would fail to be defeq to the
+   actual unfolding.
+3. `bitwise_aux_comm_of_fuel : forall f, (forall a b, f a b = f b a) ->
+   forall fuel m n, Le m fuel -> Le n fuel -> Eq (bitwiseAux f fuel m n)
+   (bitwiseAux f fuel n m)` -- the both-nonzero step's guard values ARE
+   placeholders (`succ_a`, `succ_b` themselves), because BOTH
+   `beq(succ_a, 0)` and `beq(succ_b, 0)` reduce to the literal `false`
+   regardless of what sits in the discarded branch -- `lor_aux_comm_of_fuel`'s
+   own precedent, and the opposite of (2)'s situation.
+4. `bitwise_comm` -- assembled through the shared fuel `m + n`, exactly as
+   `land_comm`/`lor_comm`.
+
+`half_le_predecessor_of_succ` (`rec_agreement.rs`, fully generic Nat
+arithmetic, previously private) was widened to `pub(super)` -- a two-line,
+visibility-only diff -- rather than duplicating ~40 lines of arithmetic a
+fifth time.
+
+### Verification
+
+- Kernel accepted all four proof terms on the FIRST attempt (no
+  `TypeMismatch`/`UnboundFVar` iteration on the core construction --
+  the borrow-checker errors and the test-helper `d.refl`/duplicate-`bool_eq`
+  bugs described above were the only issues, both outside the kernel
+  proof terms themselves).
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude::` -- 133 passed, 0
+  failed (was 132 before this lane; +1 from the new concrete test).
+- New test `bitwise_comm_applies_at_a_concrete_discriminating_instance`:
+  symbolic restatement at a fixed concrete `f = xor_fn` (with a
+  from-scratch `hf` proof for `xor` built by a four-leaf `Bool.rec` case
+  split, `bool_fn_comm`), concrete discriminating instance
+  `bitwise(xor, 3, 5) = bitwise(xor, 5, 3) = 6`, and a negative control at
+  `f = or_fn`, insufficient fuel `(0, 0, 1)` confirming
+  `bitwiseAux(or, 0, 0, 1) = 1 != 0 = bitwiseAux(or, 0, 1, 0)` -- the same
+  witness the Python simulation used, NOT copied from `lor`'s own control
+  (which is `(1, 3, 4)`/`(1, 7, 7)`-shaped, for a different lemma).
+- `every_nat_declaration_is_checked_and_axiom_free` -- required adding the
+  four new names to `theorem_names` (the environment-derived coverage
+  assertion caught the omission immediately, exactly as designed).
+- `the_build_is_deterministic` -- pin moved `89 + 463` -> `89 + 467` (4 new
+  theorems, 0 new definitions), taken from the panic's own mismatch
+  (`left: 556`), not hand-incremented.
+- `cargo fmt --edition 2024` (per-file) and
+  `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both
+  clean.
+- `python3 scripts/validate-facts.py` -- 0 errors (1930 facts checked).
+- Both fact `checker_command`s run and confirmed exit 0: the
+  `nat_theorem_inventory`/`grep -Ec` anchor (count 1) and
+  `nat_axiom_inventory --require-axiom-free nat` (prints
+  `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`).
+
+### Facts closed
+
+- `F:nat-bitwise-comm` -- NEW native fact, `proved`, `kernel-lean` route,
+  `axiom_footprint: []`. `formal.statement` is `nat_theorem_inventory`'s
+  `render_lean` output verbatim (paste, not transcription).
+- `F:ml430-nat-bitwise-comm-1a273bae` -- flipped `open -> proved` via
+  reconciliation with `F:nat-bitwise-comm`. Checked the mirror-flip
+  criterion first: unlike `land_comm`/`lor_comm` (which needed a DIFFERENT
+  route than Mathlib's own `bitwise_comm`, since `land`/`lor` are hand-rolled
+  fuel recursions, not `bitwise` specializations, at proof-construction
+  time), this fact's native proof genuinely IS Mathlib's own general
+  `Nat.bitwise` combinator -- an honest flip in the strongest sense: same
+  `def`, same theorem, modulo the cosmetic `n m`/`m n` argument-name order.
+
+## `lt_xor_cases`: what it still needs (not attempted)
+
+The lane that built `Nat.xor` (`docs/plan/status/253-nat-xor-parity.md`)
+sized this as needing a **highest-differing-bit induction** -- unrelated in
+size to defining `xor` itself. I did not open that file or investigate
+further; per the brief, `bitwise_comm` was the priority and "landing
+`bitwise_comm` alone is a good outcome." Whoever picks this up next should
+re-read `docs/plan/status/253-nat-xor-parity.md` directly rather than
+trusting this paragraph (per CLAUDE.md's own repeated warning that a
+second-hand sizing claim can be stale) and verify `Nat.xor`/its bit-decode
+lemmas (`xor.rs`, `bit_decode.rs`) are still exactly as described before
+budgeting the induction.
+
+## Commits (this lane, `nat-bitwise-comm`)
+
+1. `wip(nat): bitwise_comm -- Python simulation confirms Le-hypothesis shape`
+   -- plan only, no code.
+2. `wip(nat): bitwise_comm -- compiles, kernel acceptance not yet verified`
+   -- the four lemmas + `nat_prelude.rs` wiring + `half_le_predecessor_of_succ`
+   visibility change.
+3. (this commit) -- test-inventory registration, pin fix, concrete
+   discriminating test, `congr_bool_to_nat`/`bool_eq` deduplication against
+   `ops.rs`'s existing `Bool`-`Eq` family, fact ledger updates, this status
+   file.
+
+Run `git log --oneline` on this branch for exact SHAs.
+
+**Your lane's block (`DONE`, nat-lor-ldiff-bit, 2026-08-29).** `Nat.lor_bit`
+(`F:ml430-nat-lor-bit-a2f98c7c`) and `Nat.ldiff_bit`
+(`F:ml430-nat-ldiff-bit-6be49bb8`) are both landed, closing the trio
+`docs/plan/status/251-nat-bit-decode.md` opened with `Nat.land_bit` and left
+open for a follow-up lane. All three `Nat.bit`-decode facts are now `proved`.
+
+**What transported unchanged from `nat-bit-decode`'s construction**
+(`nat_prelude/bit_decode.rs`, new functions appended, `land.rs`/`lor.rs`/
+`ldiff.rs`/`rec_agreement.rs`/`bitwise.rs` untouched): the fuel-swap machinery
+(`base := mul 2 m`, `k1 := succ base`, `fuel := succ k1`, both `Le` bounds,
+the `Nat.bit_div_two`/`Nat.bit_mod_two` decode via `div_mod_unique`) is
+byte-for-byte the same shape for all three operators — it never inspects an
+operator's absorbing-zero behaviour, only `Nat.bit`'s own encoding.
+
+**What was new per operator (the actual task):**
+
+- **`lor`'s guard-tree leaves** follow `lor.rs`'s own absorbing-zero analysis:
+  the fuel-exhaustion rows PASS THROUGH the full bit-encoded operand
+  (`on_n_zero = bit a m`, `on_m_zero = bit b n`), not `land`'s constant `0`.
+  The `n=0` leaf needs a case split on `a` (`or_fn(a, false)`'s scrutinee is
+  `a`, needing it literal to ι-reduce — unlike `and_fn(a, false)`, which
+  collapses to a constant regardless of `a`'s shape). The `m=0` leaf needs
+  **no** split at all: `or_fn(false, b)` ι-reduces straight to `b` (literal
+  scrutinee, `b` itself unexamined) and `lor(0, n)` is defeq `n`
+  unconditionally (`lor_zero_left` is `refl`), so both sides land on the
+  identical raw `bit b n` expression by pure defeq — `d.refl(bit_bn)` closes
+  it directly.
+- **`lor`'s per-bit combine** (`max` via `ble`, `or_cond_max_eq_cond`) needs a
+  split on `a`, then — only in the `a = true` branch — a further split on
+  `b`, because `ble 1 (cond b 1 0)` needs `cond b 1 0`'s VALUE, not just its
+  shape. The `a = false` branch needs **no** further split: `Nat.ble 0 y`
+  reduces to the literal `true` regardless of `y`'s shape (`ble`'s own
+  zero-row), so `bool_select_nat true cond_b cond_a` reduces straight to
+  `cond_b`, matching `cond (or false b)` (`or_fn(false, b)` reduces to `b`
+  too) without ever inspecting `b`.
+- **`ldiff` is the documented hybrid.** Its `n = 0` guard leaf is
+  `lor`-flavoured (pass-through `bit a m`, needing the identical `a`-split +
+  `Nat.ldiff_zero_right` as `lor_bit`'s `n=0` leaf). Its `m = 0` leaf is
+  `land`-flavoured (constant `0`) and **reuses `land_guard_on_m_zero_leaf`
+  verbatim** — no split needed, exactly as for `land`.
+- **`ldiff`'s per-bit combine** (`beq`-gated: `if n%2=0 then m%2 else 0`,
+  `ldiff_cond_eq_cond`) needs a FULL `a`-then-`b` split (4 leaves), unlike
+  `land`'s single-split shortcut: `ldiff_fn(a, true) = bool_select_bool(a,
+  not_true, false) = bool_select_bool(a, false, false)`, and both branches
+  being the literal `false` does **not** let `Bool.rec` fire without `a`
+  itself being literal — there is no general `Bool`-valued "both branches
+  equal regardless of scrutinee" reduction, only the `Nat`-valued
+  `bool_select_nat_same`. Simulated the full truth table in Python before
+  writing any Rust, per the standing rule (the `land`-style shortcut would
+  have been vacuous here).
+- A local, generic-over-`NatOps` `bool_select_bool_local` + `ldiff_fn`
+  (`a && !b`) back `ldiff_bit`'s target, since `bitwise.rs`'s private
+  `bool_select_bool` and `ldiff.rs` were both off-limits; `or_fn` is imported
+  from `bitwise.rs` (already `pub(super)`, no edit needed there).
+
+**Mirror-flip honesty.** Both flips are honest by the same criterion
+`land_bit`'s did: Mathlib v4.30 defines `Nat.lor`/`Nat.ldiff` via the same
+`bitwise` recursion `Nat.land` uses, and `Nat.bitwise_or_eq_lor` (already
+landed by an earlier lane) proves our `Nat.lor` equal to that specialization
+— so this closes the SAME function Mathlib states, not a lookalike.
+`scripts/gen-autogenesis-bitwise-family-projection.py`'s `MAPPINGS` names
+three unrelated `testBit` facts (`F:ml430-nat-testbit-{land,lor,ldiff}`), not
+these two — confirmed no pin conflict before flipping.
+
+**Counts.** `nat_prelude`: 139 tests before this lane → **141** (two new
+concrete-discriminating-instance tests, sharing one instance across all
+three siblings: `a=true, m=2, b=false, n=3` gives `land=4`, `lor=7`,
+`ldiff=1` — mutually discriminating). 2 new declarations, both theorems
+(`lor_bit`, `ldiff_bit`) — `the_build_is_deterministic`'s pin moved
+`93 + 489` → `93 + 491`, taken from the panic's own mismatch. `nat` trusted
+surface still `axiom=0 opaque=0 quotient=0`
+(`nat_axiom_inventory --require-axiom-free nat`). Two new facts
+(`F:nat-lor-bit`, `F:nat-ldiff-bit`); both `F:ml430-nat-lor-bit-a2f98c7c` and
+`F:ml430-nat-ldiff-bit-6be49bb8` flipped open → proved.
+`python3 scripts/validate-facts.py`: 1936 facts, 0 errors.
+`cargo fmt --edition 2024 --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both clean.
+NOT run: the aggregate `just check` / `./scripts/check.sh`.
+
+**Fixed in passing, same file, unrelated to this lane's subject:** a
+misplaced `#[test]` attribute from lane `nat-bit-decode` had left
+`clog_computes_and_its_boundary_equations_apply` as dead code and produced a
+duplicate-attribute warning on `land_bit`'s own test — both flagged by
+`cargo clippy --all-targets`, which is this lane's own required gate.
+Restored the correct `#[test]` placement and doc-comment ownership.
+
+**What is left in the `natural-bitwise` family.** The 7 facts CLAUDE.md's
+Gotchas name as needing fuel-irrelevance (`land_comm`, `land_assoc`,
+`lor_comm`, `lor_assoc`, `land_bit`, `lor_bit`, `ldiff_bit`) are now ALL
+closed except `land_assoc`/`lor_assoc` — those two are the remaining
+frontier for a follow-up lane, and per the same Gotchas entry they need
+"something further" beyond fuel-irrelevance (unspecified here; not
+attempted this lane).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

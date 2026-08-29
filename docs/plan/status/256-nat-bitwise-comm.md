@@ -1,5 +1,12 @@
 # 256 -- nat-bitwise-comm (lane `nat-bitwise-comm`)
 
+<!-- plan-section: lane-status -->
+
+<!-- Marker added by lane nat-lor-ldiff-bit, 2026-08-29: this file had no
+     `plan-section` marker at all, which blocks `scripts/gen-plan.py` for
+     EVERY lane, not just this one's. Content below is untouched -- this
+     line is the only addition. -->
+
 Status: `bitwise_comm` LANDED and closed. `lt_xor_cases` NOT attempted --
 sized only (see below), per the brief's "landing bitwise_comm alone is a
 good outcome."
