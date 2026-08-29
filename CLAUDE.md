@@ -1660,6 +1660,43 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   **One-sided absorption gives a mixed definition**, and copying either
   template wholesale produces a wrong one that type-checks.
 
+  **AND THE GENERAL FORM DOES NOT HAVE TO RECONCILE THOSE FOUR BASE CASES — IT
+  DERIVES THEM.** I briefed a lane that "any agreement proof must line up the
+  base cases first, and they are not the same shape across the four." That was
+  wrong, and the lane refuted it while landing
+  `Nat.bitwise_and_eq_land` / `Nat.bitwise_or_eq_lor`.
+
+  `bitwiseAux`'s general fuel row is `if f false true then n else 0`. For a
+  **concrete** `f`, that reproduces each sibling's hand-chosen row **by δβι
+  alone**: `and false true = false → 0`, matching `land`'s constant `0`;
+  `or false true = true → n`, matching `lor`'s `n`. Same for the succ row via
+  `f true false`. **Every base case is `refl`, no lemma.** The absorbing-zero
+  rule decided what each *sibling's* row had to be; `bitwise` re-derives the
+  same answer from `f` itself.
+
+  The real difficulty is the **per-bit combine** —
+  `bool_select_nat (f (beq (m%2) 1) (beq (n%2) 1)) 1 0` against `mul (m%2) (n%2)`
+  — both stuck at symbolic operands and equal only once each bit is known to be
+  `0` or `1`. Four leaves under a doubled `cases_mod_two`, each `refl`.
+
+  **`Nat.mod_two_eq_zero_or_one` had to be built**, and the search for it is
+  instructive: the *ingredients* existed inline in `powsq.rs`'s
+  `declare_even_or_odd` (a `Bool.rec` on `beq r 0`, plus a private
+  `mod_two_eq_one_of_ne_zero` giving only the `= 1` half), immediately consumed
+  into a `div`-shaped conclusion that never mentions `Nat.mod`. Hiding place 2
+  exactly. `binary.rs`'s seven `mod _ 2` sites use `Lt r 2` as a bound and never
+  split it. Grep proof BODIES, not names.
+
+  **Fuel-irrelevance is a SEPARATE piece and is not needed for agreement.**
+  `bitwise f m n := bitwiseAux f m m n` and `land m n := landAux m m n` put the
+  *same expression* in the fuel slot, so one counter decrements in lockstep and
+  there are never two fuels to reconcile. But **7 open `natural-bitwise` facts
+  (`land_comm`, `land_assoc`, `lor_comm`, `lor_assoc`, `land_bit`, `lor_bit`,
+  `ldiff_bit`) DO need it** — unfolding `landAux` at `fuel = bit a m` arrives at
+  a non-canonical fuel. `agree_by_fuel_induction`'s `statement` closure returns
+  an arbitrary `Prop`, so `fun fuel => ∀ m n, Le m fuel → …` is directly
+  expressible in it.
+
   Per-bit combination is a separate choice with its own reasoning: `land` uses
   the `Nat` **product** of two values in `{0,1}`, `lor` uses `max` via
   `ble` + `bool_select_nat` (a product is wrong for OR), `ldiff` uses
