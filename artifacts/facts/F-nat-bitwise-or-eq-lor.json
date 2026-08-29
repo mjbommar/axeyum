@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-mod-two-eq-zero-or-one",
+    "F:nat-bitwise-or-eq-lor-three-five"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_or_eq_lor 2>/dev/null | grep -Ec '^Nat\\.bitwise_or_eq_lor[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bitwise_or_eq_lor",
+      "kernel_declaration": "Nat.bitwise_or_eq_lor",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The anchor `^Nat\\.bitwise_or_eq_lor[[:space:]]` matters: the same filter also prints `Nat.bitwise_or_eq_lor_three_five` (the single-point predecessor this theorem supersedes), and the trailing `[[:space:]]` excludes it -- verified exactly 1 row. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "for all m n, bitwise or_fn m n = lor m n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_bitwise_specialization_equivalences_hold_universally",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.bitwise_or_eq_lor",
+      "kernel_declaration": "Nat.bitwise_or_eq_lor",
+      "kind": "kernel-term",
+      "notes": "Same two-way check as the `land` twin: the statement is re-declared over genuinely bound variables with this theorem as the entire proof (so it must apply at non-numeral operands), and instantiated at seven concrete pairs including `(3,5)`, `(5,3)` and `(6,3)` where AND and OR values differ. The same test also mutation-verifies that `lorAux`'s guard values are load-bearing rather than incidental: replacing `lor`'s `n = 0` branch -- which returns `m`, since OR has no absorbing zero on the fuel operand -- with the constant `0` that `land` uses makes the kernel refuse the declaration and the whole prelude build fails (0 passed, 121 failed).",
+      "supports": "the equivalence holds at symbolic operands and at seven concrete pairs, and depends on lor's own guard values"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bitwise_or_eq_lor",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x2 : Bool) => fun (x3 : Bool) => Bool.rec.{1} (fun (x4 : Bool) => Bool) x3 Bool.true x2) x0 x1) (AxNat.lor x0 x1)))"
+  },
+  "id": "F:nat-bitwise-or-eq-lor",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nSUPERSEDES the single-point `F:nat-bitwise-or-eq-lor-three-five`. Proved by the same builder as `F:nat-bitwise-and-eq-land`, parameterized by the specialization's two zero-guard values and its per-bit formula -- for `lor` those are `m` / `n` (no absorbing zero on either guard) and `max` built from `Nat.ble` + `bool_select_nat`, against `land`'s constant `0` / `0` and `Nat.mul`. That both operators go through one builder with only those three closures differing is the evidence that the route is not specific to an operator with an absorbing zero on the fuel operand, which is what `land.rs`/`lor.rs`/`ldiff.rs` spend their module docs distinguishing.\n\nThe fuel-generalized inner lemma is `Nat.bitwise_aux_eq_lor_aux`.\n\nDoes not flip any `F:ml430-nat-*` fact -- those are a separate, held-out mirror population and untouched by this lane.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-rec-agreement",
+    "source": "`declare_rec_agreement_all` (`crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs`)"
+  },
+  "schema_version": 1,
+  "statement": "The general bitwise combinator instantiated at Bool.or agrees with the specialized bitwise-OR at every pair of natural numbers.",
+  "title": "bitwise or_fn m n = lor m n, for all m and n"
+}

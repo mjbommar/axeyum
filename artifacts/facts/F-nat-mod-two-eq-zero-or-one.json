@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_two_eq_zero_or_one 2>/dev/null | grep -Ec '^Nat\\.mod_two_eq_zero_or_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.mod_two_eq_zero_or_one",
+      "kernel_declaration": "Nat.mod_two_eq_zero_or_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. Derived from `Nat.mod_lt` (giving `Lt (mod n 2) 2` from `zero_lt_succ 1`) and `Nat.lt_two_cases`, which is `ops::cases_lt_bound` at `bound = 2` -- no new primitive. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.mod_two_eq_zero_or_one[[:space:]]` (verified exactly 1 row; the anchor also excludes `Nat.lt_two_cases`, which is a different declaration).",
+      "supports": "for every n, n mod 2 = 0 or n mod 2 = 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::the_mod_two_split_is_available_in_both_its_forms",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.mod_two_eq_zero_or_one",
+      "kernel_declaration": "Nat.mod_two_eq_zero_or_one",
+      "kind": "kernel-term",
+      "notes": "Applies the theorem at `n = 7` and confirms its INFERRED type is exactly `Or (Eq (mod 7 2) 0) (Eq (mod 7 2) 1)`, with a negative control that it does not also state `Or (Eq (mod 7 2) 0) (Eq (mod 7 2) 2)` -- a control that differs in ONE literal, deliberately, since a control transposing whole subterms would make the kernel run a failing defeq with no early exit. Also asserts the two disjuncts are NOT def_eq to each other, so the split is not vacuous. `Nat.lt_two_cases` is checked in the same test at `r = 0` against a `zero_lt_succ 1` witness.",
+      "supports": "the disjunction is the stated one, its two sides are different propositions, and lt_two_cases applies"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.mod_two_eq_zero_or_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> Or (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) AxNat.zero) (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero)))"
+  },
+  "id": "F:nat-mod-two-eq-zero-or-one",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the lemma `crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`'s module doc named as absent -- \"a `Nat.mod _ 2 in {0,1}` case-split lemma this prelude does not yet carry\" -- and which two lanes independently sized as blocking work. The prelude's nearest pre-existing relatives were both strictly weaker: `powsq.rs`'s PRIVATE `mod_two_eq_one_of_ne_zero` produces only the `= 1` half and requires the caller to already hold `r != 0`, and `Nat.even_or_odd` states a `div`-shaped disjunction (`n = n/2 + n/2` or `n = succ (n/2 + n/2)`) that never mentions `Nat.mod` at all.\n\nThe eliminator form callers actually use is `ops::cases_mod_two`, which takes a motive that VARIES with the remainder's value; this theorem is the propositional statement of the same fact.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-rec-agreement",
+    "source": "`declare_rec_agreement_all` (`crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs`)"
+  },
+  "schema_version": 1,
+  "statement": "Every natural number's remainder on division by two is either zero or one.",
+  "title": "n mod 2 = 0 or n mod 2 = 1"
+}
