@@ -134,9 +134,10 @@
 //! commit, so the general form is the only definition on offer either way.
 
 use super::NatPrelude;
+use super::bit_decode::case_bool;
 use super::ops::{
     NatDev, NatOps, agree_by_double_fuel_induction, agree_by_fuel_induction, bool_select_nat_same,
-    cases_zero_succ,
+    cases_zero_succ, two_mul_eq_add_self,
 };
 use super::rec_agreement::half_le_predecessor_of_succ;
 use crate::BinderInfo;
@@ -1737,4 +1738,595 @@ pub(super) fn declare_bitwise_swap(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
     let ty = d.pi_fv(f_fv, f_ty, ty_mn);
     let value = d.lam_fv(f_fv, f_ty, value_mn);
     d.declare_theorem(p.bitwise_swap, ty, value)
+}
+
+// ============================================================================
+// `Nat.bitwise_bit'` — the generic-`f` counterpart of `bit_decode.rs`'s
+// `land_bit`/`lor_bit`/`ldiff_bit`: `bitwise f (bit a m) (bit b n) = bit (f a
+// b) (bitwise f m n)`, given `(m = 0 -> a = true)` and `(n = 0 -> b =
+// true)`. `F:ml430-nat-bitwise-bit-4c4b28a8`.
+//
+// The fuel-swap machinery (`base`/`k1`/`fuel`, both `Le` bounds, the
+// `Nat.bit_div_two`/`Nat.bit_mod_two` decode) is IDENTICAL to `land_bit`'s —
+// it never inspects an operator's absorbing zero, only `Nat.bit`'s own
+// encoding, so it transports unchanged (see `bit_decode.rs`'s module doc).
+// Two things are new, both specific to a SYMBOLIC `f`:
+//
+// 1. The per-bit combine converts each raw `Nat.mod _ 2` bit to `Bool` via
+//    `beq _ 1` (`bitwiseAux`'s own ad hoc `bodd`) before applying `f`, while
+//    `Nat.bit_mod_two` decodes the SAME raw `mod` term to `bool_select_nat
+//    test 1 0`. These two encodings must be shown to cancel —
+//    [`cond_beq_one_eq_self`] below — before the combine matches `f a b`.
+//    `land`/`lor`/`ldiff`'s OWN combines never round-trip through `Bool`
+//    (they stay in `{0,1} : Nat` throughout), so this step has no analogue
+//    in `bit_decode.rs`.
+// 2. The two side hypotheses close a genuine ambiguity the FIXED-`f`
+//    specializations never have. `bitwiseAux`'s `n = 0` boundary row
+//    returns the WHOLE bit-encoded operand `bit a m`, not a per-operator
+//    absorbing constant, so at `a = false, m = 0` a misbehaved `f` (e.g.
+//    the constant-`true` function) can make the claim false; the
+//    hypothesis rules out exactly that leading-zero encoding.
+// ============================================================================
+
+/// `Eq Bool (beq (bool_select_nat x 1 0) 1) x` — round-tripping a `Bool`
+/// through [`NatOps::bool_select_nat`]'s `{0,1}` encoding and back through
+/// `Nat.beq _ 1` recovers the original value. Two-leaf `Bool` split; both
+/// branches close by `refl` (`beq 1 1`/`beq 0 1` both compute against small
+/// literals). See the section doc for why this is needed here and nowhere
+/// else in this file.
+fn cond_beq_one_eq_self(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        x,
+        &|d, cand| {
+            let one = d.num(1);
+            let zero = d.zero();
+            let cond = d.bool_select_nat(cand, one, zero);
+            let lhs = d.beq(cond, one);
+            d.bool_eq(lhs, cand)
+        },
+        &|d| {
+            let true_ = d.bool_true();
+            let one = d.num(1);
+            let zero = d.zero();
+            let cond = d.bool_select_nat(true_, one, zero);
+            let lhs = d.beq(cond, one);
+            d.bool_refl(lhs)
+        },
+        &|d| {
+            let false_ = d.bool_false();
+            let one = d.num(1);
+            let zero = d.zero();
+            let cond = d.bool_select_nat(false_, one, zero);
+            let lhs = d.beq(cond, one);
+            d.bool_refl(lhs)
+        },
+    )
+}
+
+/// `bool_select_nat (f a b) 1 0` — the target per-bit value the general
+/// combine collapses to once both raw `Nat.mod _ 2` bits are decoded
+/// through `Nat.bit_mod_two` and [`cond_beq_one_eq_self`] undoes the
+/// `beq _ 1` conversion.
+fn bitwise_bit_combine(d: &mut NatDev<'_>, f_expr: ExprId, a: ExprId, b: ExprId) -> ExprId {
+    let one = d.num(1);
+    let zero = d.zero();
+    let fab = d.apply(f_expr, &[a, b]);
+    d.bool_select_nat(fab, one, zero)
+}
+
+/// `add (mul 2 bitwise_mn) (bitwise_bit_combine f a b)` — defeq to `bit (f a
+/// b) bitwise_mn`, the theorem's literal RHS (`Nat.bit`'s own definition,
+/// `bits.rs`). Kept as its own function since it recurs at every leaf of
+/// the guard-resolution tree below.
+fn bitwise_bit_stepped(
+    d: &mut NatDev<'_>,
+    f_expr: ExprId,
+    a: ExprId,
+    b: ExprId,
+    bitwise_mn: ExprId,
+) -> ExprId {
+    let two = d.num(2);
+    let doubled = d.mul(two, bitwise_mn);
+    let bitval = bitwise_bit_combine(d, f_expr, a, b);
+    d.add(doubled, bitval)
+}
+
+/// `Eq (guarded (bit a m) (bit b n) on_n_zero on_m_zero bitwise_mn bitgen)
+/// (bitwise_bit_stepped f a b bitwise_mn)` — the guard-resolution half of
+/// the bridge (the `bitwise` twin of `bit_decode.rs`'s `land_guard_goal`),
+/// once the fuel machinery and the per-bit combine have already rewritten
+/// the recursive occurrence down to the opaque `bitwise_mn := bitwise f m
+/// n` and the bit value down to `f a b`. `bitwise_mn` is carried through
+/// unopened — this proof never needs its value, only that it is the SAME
+/// term on both sides.
+#[allow(clippy::too_many_arguments)]
+fn bitwise_bit_goal(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    f_expr: ExprId,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+    bitwise_mn: ExprId,
+) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let bit_am = d.const_app(p.bit, &[a, m]);
+    let bit_bn = d.const_app(p.bit, &[b, n]);
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let f_true_false = d.apply(f_expr, &[true_, false_]);
+    let f_false_true = d.apply(f_expr, &[false_, true_]);
+    let on_n_zero = d.bool_select_nat(f_true_false, bit_am, zero);
+    let on_m_zero = d.bool_select_nat(f_false_true, bit_bn, zero);
+    let bitval = bitwise_bit_combine(d, f_expr, a, b);
+    let lhs = guarded(d, bit_am, bit_bn, on_n_zero, on_m_zero, bitwise_mn, bitval);
+    let rhs = bitwise_bit_stepped(d, f_expr, a, b, bitwise_mn);
+    d.eq(lhs, rhs)
+}
+
+/// [`cases_zero_succ`], but additionally threads an equation `Eq x
+/// <candidate>` into each branch — the "generalize with equality" trick
+/// needed wherever a hypothesis about the ORIGINAL scrutinee `x` (not the
+/// branch's substituted literal) must be applied inside that branch.
+/// `cases_zero_succ`'s own doc names this explicitly: "a caller wanting a
+/// hypothesis usable inside a branch must fold it into `motive` and
+/// re-introduce it per branch." [`bitwise_guard_inner`] and
+/// [`resolve_bitwise_bit_guard`] are exactly such callers — each applies
+/// `hm`/`hn` at the leaf this produces the equation for.
+fn cases_zero_succ_with_eq(
+    d: &mut NatDev<'_>,
+    x: ExprId,
+    goal: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    at_zero: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    at_succ: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let full = cases_zero_succ(
+        d,
+        x,
+        &|d, cand| {
+            let heq_ty = d.eq(x, cand);
+            let g = goal(d, cand);
+            d.arrow(heq_ty, g)
+        },
+        &|d| {
+            let zero = d.zero();
+            let heq_ty = d.eq(x, zero);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = at_zero(d, h);
+            d.lam_fv(h_fv, heq_ty, body)
+        },
+        &|d, pred| {
+            let succ_pred = d.succ(pred);
+            let heq_ty = d.eq(x, succ_pred);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = at_succ(d, pred, h);
+            d.lam_fv(h_fv, heq_ty, body)
+        },
+    );
+    let refl_x = d.refl(x);
+    d.apply(full, &[refl_x])
+}
+
+/// Resolves the `m`-guard given the `n`-guard already known to reduce false
+/// at the caller's chosen `(b, n)` — returns a proof of `(Eq m 0 -> Eq a
+/// true) -> [bitwise_bit_goal]`.
+///
+/// Mirrors `bit_decode.rs`'s `land_guard_inner` (split on `a` first, since
+/// `bit a m`'s SECOND slot is `Nat.add`'s recursion argument — `a = true`
+/// makes `bit a m` succ-shaped for ANY `m`), but for a symbolic `f` the `a =
+/// false, m = 0` leaf is not `land`'s absorbing-zero row: it is the genuine
+/// ambiguity the section doc's counterexample exploits, closed instead by
+/// folding `hm`'s conclusion through the `a`-split (using the branch's own
+/// candidate, so no separate "remember" is needed for `a`) and, once inside
+/// `a = false`, using [`cases_zero_succ_with_eq`] on `m` to recover `Eq m 0`
+/// for `hm`'s domain. Combining the two gives `Eq Bool false true`, and
+/// [`NatOps::false_true_elim`] closes the rest.
+#[allow(clippy::too_many_arguments)]
+fn bitwise_guard_inner(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    f_expr: ExprId,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+    bitwise_mn: ExprId,
+) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        a,
+        &|d, cand_a| {
+            let zero = d.zero();
+            let eqm0 = d.eq(m, zero);
+            let true_ = d.bool_true();
+            let concl = d.bool_eq(cand_a, true_);
+            let hm_arrow = d.arrow(eqm0, concl);
+            let goal = bitwise_bit_goal(d, &p, f_expr, cand_a, m, b, n, bitwise_mn);
+            d.arrow(hm_arrow, goal)
+        },
+        &|d| {
+            let true_ = d.bool_true();
+            let zero = d.zero();
+            let eqm0 = d.eq(m, zero);
+            let true_eq_true = d.bool_eq(true_, true_);
+            let hm_ty = d.arrow(eqm0, true_eq_true);
+            let h_fv = d.fresh_fvar();
+            let stepped = bitwise_bit_stepped(d, f_expr, true_, b, bitwise_mn);
+            let body = d.refl(stepped);
+            d.lam_fv(h_fv, hm_ty, body)
+        },
+        &|d| {
+            let false_ = d.bool_false();
+            let zero = d.zero();
+            let eqm0 = d.eq(m, zero);
+            let true_ = d.bool_true();
+            let false_eq_true = d.bool_eq(false_, true_);
+            let hm_ty_false = d.arrow(eqm0, false_eq_true);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = cases_zero_succ_with_eq(
+                d,
+                m,
+                &|d, cand_m| bitwise_bit_goal(d, &p, f_expr, false_, cand_m, b, n, bitwise_mn),
+                &|d, heq_m| {
+                    let contra = d.apply(h, &[heq_m]);
+                    let target = {
+                        let zero = d.zero();
+                        bitwise_bit_goal(d, &p, f_expr, false_, zero, b, n, bitwise_mn)
+                    };
+                    d.false_true_elim(target, contra)
+                },
+                &|d, m_pred, _heq_m| {
+                    let succ_m = d.succ(m_pred);
+                    let _ = succ_m;
+                    let stepped = bitwise_bit_stepped(d, f_expr, false_, b, bitwise_mn);
+                    d.refl(stepped)
+                },
+            );
+            d.lam_fv(h_fv, hm_ty_false, body)
+        },
+    )
+}
+
+/// Resolves BOTH guards of `bitwiseAux f (succ k1) (bit a m) (bit b n)`'s
+/// step row against the theorem's target, given the side hypotheses
+/// `hm`/`hn`. Splits `b` first (`bit b n`'s SECOND slot is `Nat.add`'s
+/// recursion argument, so `b = true` resolves the `n`-guard false for ANY
+/// `n`), then (at `b = false`) `n` itself via [`cases_zero_succ_with_eq`],
+/// closing the `n = 0` leaf via `hn` exactly as [`bitwise_guard_inner`]
+/// closes its own `m = 0` leaf via `hm`. Returns `GOAL(a, m, b, n)`
+/// directly (both hypothesis arrows are applied here, at the point each is
+/// consumed).
+#[allow(clippy::too_many_arguments)]
+fn resolve_bitwise_bit_guard(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    f_expr: ExprId,
+    hm: ExprId,
+    hn: ExprId,
+    a: ExprId,
+    m: ExprId,
+    b: ExprId,
+    n: ExprId,
+    bitwise_mn: ExprId,
+) -> ExprId {
+    let p = *p;
+    let full = case_bool(
+        d,
+        &p,
+        b,
+        &|d, cand_b| {
+            let zero = d.zero();
+            let eqn0 = d.eq(n, zero);
+            let true_ = d.bool_true();
+            let concl = d.bool_eq(cand_b, true_);
+            let hn_arrow = d.arrow(eqn0, concl);
+            let goal = bitwise_bit_goal(d, &p, f_expr, a, m, cand_b, n, bitwise_mn);
+            d.arrow(hn_arrow, goal)
+        },
+        &|d| {
+            let true_ = d.bool_true();
+            let zero = d.zero();
+            let eqn0 = d.eq(n, zero);
+            let true_eq_true = d.bool_eq(true_, true_);
+            let hn_ty = d.arrow(eqn0, true_eq_true);
+            let h_fv = d.fresh_fvar();
+            let inner = bitwise_guard_inner(d, &p, f_expr, a, m, true_, n, bitwise_mn);
+            let applied = d.apply(inner, &[hm]);
+            d.lam_fv(h_fv, hn_ty, applied)
+        },
+        &|d| {
+            let false_ = d.bool_false();
+            let zero = d.zero();
+            let eqn0 = d.eq(n, zero);
+            let true_ = d.bool_true();
+            let false_eq_true = d.bool_eq(false_, true_);
+            let hn_ty_false = d.arrow(eqn0, false_eq_true);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = cases_zero_succ_with_eq(
+                d,
+                n,
+                &|d, cand_n| bitwise_bit_goal(d, &p, f_expr, a, m, false_, cand_n, bitwise_mn),
+                &|d, heq_n| {
+                    let contra = d.apply(h, &[heq_n]);
+                    let target = {
+                        let zero = d.zero();
+                        bitwise_bit_goal(d, &p, f_expr, a, m, false_, zero, bitwise_mn)
+                    };
+                    d.false_true_elim(target, contra)
+                },
+                &|d, n_pred, _heq_n| {
+                    let succ_n = d.succ(n_pred);
+                    let inner =
+                        bitwise_guard_inner(d, &p, f_expr, a, m, false_, succ_n, bitwise_mn);
+                    d.apply(inner, &[hm])
+                },
+            );
+            d.lam_fv(h_fv, hn_ty_false, body)
+        },
+    );
+    d.apply(full, &[hn])
+}
+
+/// `Nat.bitwise_bit' : ∀ f (a : Bool) (m : Nat) (b : Bool) (n : Nat), (Eq m
+/// 0 -> Eq a true) -> (Eq n 0 -> Eq b true) -> Eq (bitwise f (bit a m) (bit
+/// b n)) (bit (f a b) (bitwise f m n))` — `F:ml430-nat-bitwise-bit-4c4b28a8`.
+/// See the section doc above for the construction.
+pub(super) fn declare_bitwise_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let f_ty = {
+        let inner = d.arrow(bool_ty, bool_ty);
+        d.arrow(bool_ty, inner)
+    };
+
+    let f_fv = d.fresh_fvar();
+    let f_expr = d.kernel().fvar(f_fv);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hm_ty = {
+        let zero = d.zero();
+        let eqm0 = d.eq(m, zero);
+        let true_ = d.bool_true();
+        let concl = d.bool_eq(a, true_);
+        d.arrow(eqm0, concl)
+    };
+    let hm_fv = d.fresh_fvar();
+    let hm = d.kernel().fvar(hm_fv);
+
+    let hn_ty = {
+        let zero = d.zero();
+        let eqn0 = d.eq(n, zero);
+        let true_ = d.bool_true();
+        let concl = d.bool_eq(b, true_);
+        d.arrow(eqn0, concl)
+    };
+    let hn_fv = d.fresh_fvar();
+    let hn = d.kernel().fvar(hn_fv);
+
+    let two = d.num(2);
+
+    let base = d.mul(two, m);
+    let k1 = d.succ(base);
+    let fuel = d.succ(k1);
+
+    let bit_am = d.const_app(p.bit, &[a, m]);
+    let bit_bn = d.const_app(p.bit, &[b, n]);
+
+    // --- Le (bit a m) fuel, via case split on a (identical to land_bit) ----
+    let m_le_k1 = case_bool(
+        d,
+        &p,
+        a,
+        &|d, x| {
+            let bam = d.const_app(p.bit, &[x, m]);
+            d.le(bam, k1)
+        },
+        &|d| d.lemma(p.le_refl, &[k1]),
+        &|d| d.lemma(p.le_succ, &[base]),
+    );
+    let k1_le_fuel = d.lemma(p.le_succ, &[k1]);
+    let m_le_fuel = d.lemma(p.le_trans, &[bit_am, k1, fuel, m_le_k1, k1_le_fuel]);
+
+    // --- Le m k1 (identical to land_bit) ------------------------------------
+    let mm = d.add(m, m);
+    let m_le_mm = d.lemma(p.le_add_right, &[m, m]);
+    let two_mul_eq = two_mul_eq_add_self(d, &p, m); // Eq base mm
+    let mm_eq_base = d.symm(base, mm, two_mul_eq);
+    let motive_le = d.eq_motive(mm, &|d, x| d.le(m, x));
+    let m_le_base = d.transport(mm, motive_le, m_le_mm, base, mm_eq_base);
+    let base_le_k1 = d.lemma(p.le_succ, &[base]);
+    let m_le_k1_bound = d.lemma(p.le_trans, &[m, base, k1, m_le_base, base_le_k1]);
+
+    // --- bitwise f (bit a m)(bit b n) = bitwiseAux f fuel (bit a m)(bit b n)
+    let le_refl_bit_am = d.lemma(p.le_refl, &[bit_am]);
+    let step0 = d.lemma(
+        p.bitwise_aux_agree_of_fuel,
+        &[f_expr, bit_am, bit_am, bit_bn, fuel],
+    );
+    let step0 = d.apply(step0, &[le_refl_bit_am, m_le_fuel]);
+    let bitwise_ab = bitwise(d, &p, f_expr, bit_am, bit_bn);
+    let aux_fuel = bitwise_aux(d, &p, f_expr, fuel, bit_am, bit_bn);
+
+    // --- refl-unfold to guarded(...) at the raw div/mod subterms -----------
+    let half_am = d.div(bit_am, two);
+    let half_bn = d.div(bit_bn, two);
+    let mod_am = d.modulo(bit_am, two);
+    let mod_bn = d.modulo(bit_bn, two);
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let f_true_false = d.apply(f_expr, &[true_, false_]);
+    let f_false_true = d.apply(f_expr, &[false_, true_]);
+    let zero = d.zero();
+    let on_n_zero0 = d.bool_select_nat(f_true_false, bit_am, zero);
+    let on_m_zero0 = d.bool_select_nat(f_false_true, bit_bn, zero);
+    let rec0 = bitwise_aux(d, &p, f_expr, k1, half_am, half_bn);
+    let one = d.num(1);
+    let mod_am_bool = d.beq(mod_am, one);
+    let mod_bn_bool = d.beq(mod_bn, one);
+    let combined0 = d.apply(f_expr, &[mod_am_bool, mod_bn_bool]);
+    let bitval0 = d.bool_select_nat(combined0, one, zero);
+    let guarded0 = guarded(d, bit_am, bit_bn, on_n_zero0, on_m_zero0, rec0, bitval0);
+    let step1 = d.refl(aux_fuel);
+
+    // --- rewrite half_am -> m, half_bn -> n, then aux k1 m n -> bitwise m n
+    let div_a = d.lemma(p.bit_div_two, &[a, m]);
+    let div_b = d.lemma(p.bit_div_two, &[b, n]);
+    let bitwise_mn = bitwise(d, &p, f_expr, m, n);
+
+    let rec1 = bitwise_aux(d, &p, f_expr, k1, m, half_bn);
+    let rec0_to_rec1 = d.congr(half_am, m, div_a, &|d, x| {
+        bitwise_aux(d, &p, f_expr, k1, x, half_bn)
+    });
+    let rec2 = bitwise_aux(d, &p, f_expr, k1, m, n);
+    let rec1_to_rec2 = d.congr(half_bn, n, div_b, &|d, x| {
+        bitwise_aux(d, &p, f_expr, k1, m, x)
+    });
+    let le_refl_m = d.lemma(p.le_refl, &[m]);
+    let rec2_eq_bitwise_mn = d.lemma(p.bitwise_aux_agree_of_fuel, &[f_expr, k1, m, n, m]);
+    let rec2_eq_bitwise_mn = d.apply(rec2_eq_bitwise_mn, &[m_le_k1_bound, le_refl_m]);
+    let (_rec_final, rec_chain) = d.chain(
+        rec0,
+        &[
+            (rec1, rec0_to_rec1),
+            (rec2, rec1_to_rec2),
+            (bitwise_mn, rec2_eq_bitwise_mn),
+        ],
+    );
+
+    // --- rewrite mod_am -> cond a, mod_bn -> cond b, then undo the beq/1 ---
+    // conversion to recover `f a b` (needed here and nowhere else in this
+    // file — see the section doc).
+    let mod_a = d.lemma(p.bit_mod_two, &[a, m]);
+    let mod_b = d.lemma(p.bit_mod_two, &[b, n]);
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+
+    let bitval1_bool = d.beq(cond_a, one);
+    let bitval1 = {
+        let combined = d.apply(f_expr, &[bitval1_bool, mod_bn_bool]);
+        d.bool_select_nat(combined, one, zero)
+    };
+    let bitval0_to_1 = d.congr(mod_am, cond_a, mod_a, &|d, x| {
+        let one = d.num(1);
+        let zero = d.zero();
+        let x_bool = d.beq(x, one);
+        let combined = d.apply(f_expr, &[x_bool, mod_bn_bool]);
+        d.bool_select_nat(combined, one, zero)
+    });
+
+    let bitval2_bool = d.beq(cond_b, one);
+    let bitval2 = {
+        let combined = d.apply(f_expr, &[bitval1_bool, bitval2_bool]);
+        d.bool_select_nat(combined, one, zero)
+    };
+    let bitval1_to_2 = d.congr(mod_bn, cond_b, mod_b, &|d, x| {
+        let one = d.num(1);
+        let zero = d.zero();
+        let x_bool = d.beq(x, one);
+        let combined = d.apply(f_expr, &[bitval1_bool, x_bool]);
+        d.bool_select_nat(combined, one, zero)
+    });
+
+    let h_a = cond_beq_one_eq_self(d, &p, a);
+    let bitval3 = {
+        let combined = d.apply(f_expr, &[a, bitval2_bool]);
+        d.bool_select_nat(combined, one, zero)
+    };
+    let bitval2_to_3 = congr_bool_to_nat(d, bitval1_bool, a, h_a, &|d, hole| {
+        let one = d.num(1);
+        let zero = d.zero();
+        let combined = d.apply(f_expr, &[hole, bitval2_bool]);
+        d.bool_select_nat(combined, one, zero)
+    });
+
+    let h_b = cond_beq_one_eq_self(d, &p, b);
+    let bitval4 = bitwise_bit_combine(d, f_expr, a, b);
+    let bitval3_to_4 = congr_bool_to_nat(d, bitval2_bool, b, h_b, &|d, hole| {
+        let one = d.num(1);
+        let zero = d.zero();
+        let combined = d.apply(f_expr, &[a, hole]);
+        d.bool_select_nat(combined, one, zero)
+    });
+
+    let (_bitval_final, bitval_chain) = d.chain(
+        bitval0,
+        &[
+            (bitval1, bitval0_to_1),
+            (bitval2, bitval1_to_2),
+            (bitval3, bitval2_to_3),
+            (bitval4, bitval3_to_4),
+        ],
+    );
+
+    let guarded_mid = guarded(
+        d, bit_am, bit_bn, on_n_zero0, on_m_zero0, bitwise_mn, bitval0,
+    );
+    let guarded_final = guarded(
+        d, bit_am, bit_bn, on_n_zero0, on_m_zero0, bitwise_mn, bitval4,
+    );
+    let step_rec = d.congr(rec0, bitwise_mn, rec_chain, &|d, hole| {
+        guarded(d, bit_am, bit_bn, on_n_zero0, on_m_zero0, hole, bitval0)
+    });
+    let step_bit = d.congr(bitval0, bitval4, bitval_chain, &|d, hole| {
+        guarded(d, bit_am, bit_bn, on_n_zero0, on_m_zero0, bitwise_mn, hole)
+    });
+
+    // --- resolve the two guards ---------------------------------------------
+    let step_guard = resolve_bitwise_bit_guard(d, &p, f_expr, hm, hn, a, m, b, n, bitwise_mn);
+
+    let fab = d.apply(f_expr, &[a, b]);
+    let target = d.const_app(p.bit, &[fab, bitwise_mn]);
+
+    let (_final, proof) = d.chain(
+        bitwise_ab,
+        &[
+            (aux_fuel, step0),
+            (guarded0, step1),
+            (guarded_mid, step_rec),
+            (guarded_final, step_bit),
+            (target, step_guard),
+        ],
+    );
+
+    let stmt = d.eq(bitwise_ab, target);
+
+    let ty = {
+        let with_hn = d.arrow(hn_ty, stmt);
+        let with_hm = d.arrow(hm_ty, with_hn);
+        let with_n = d.pi_fv(n_fv, nat, with_hm);
+        let with_b = d.pi_fv(b_fv, bool_ty, with_n);
+        let with_m = d.pi_fv(m_fv, nat, with_b);
+        let with_a = d.pi_fv(a_fv, bool_ty, with_m);
+        d.pi_fv(f_fv, f_ty, with_a)
+    };
+    let value = {
+        let with_hn = d.lam_fv(hn_fv, hn_ty, proof);
+        let with_hm = d.lam_fv(hm_fv, hm_ty, with_hn);
+        let with_n = d.lam_fv(n_fv, nat, with_hm);
+        let with_b = d.lam_fv(b_fv, bool_ty, with_n);
+        let with_m = d.lam_fv(m_fv, nat, with_b);
+        let with_a = d.lam_fv(a_fv, bool_ty, with_m);
+        d.lam_fv(f_fv, f_ty, with_a)
+    };
+    d.declare_theorem(p.bitwise_bit, ty, value)
 }

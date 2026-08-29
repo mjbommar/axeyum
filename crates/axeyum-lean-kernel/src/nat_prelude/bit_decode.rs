@@ -141,7 +141,7 @@ fn guarded(
 /// reused from `bitwise.rs`'s private `bool_select_bool` (`Nat`/`Bool`
 /// codomain, not `Prop`) or `ops.rs`'s `cases_mod_two`/`cases_lt_bound`
 /// (`Nat` scrutinee, not `Bool`).
-fn case_bool(
+pub(super) fn case_bool(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     b: ExprId,

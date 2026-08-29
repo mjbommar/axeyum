@@ -209,7 +209,9 @@ use binomial::{
 };
 use bit_decode::declare_bit_decode_all;
 use bits::declare_bit_all;
-use bitwise::{declare_bitwise_all, declare_bitwise_comm, declare_bitwise_swap};
+use bitwise::{
+    declare_bitwise_all, declare_bitwise_bit, declare_bitwise_comm, declare_bitwise_swap,
+};
 use ble::declare_boolean_le;
 use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
@@ -3112,6 +3114,16 @@ pub struct NatPrelude {
     /// `land_aux_agree_of_fuel`'s hypotheses constrain only the `m`
     /// position). See `nat_prelude::rec_agreement`.
     pub land_assoc: NameId,
+    /// `Nat.bitwise_bit' : ∀ f (a : Bool) (m : Nat) (b : Bool) (n : Nat), (Eq
+    /// m 0 -> Eq a true) -> (Eq n 0 -> Eq b true) -> Eq (bitwise f (bit a m)
+    /// (bit b n)) (bit (f a b) (bitwise f m n))` —
+    /// `F:ml430-nat-bitwise-bit-4c4b28a8`, the generic-`f` counterpart of
+    /// [`Self::land_bit`]/[`Self::lor_bit`]/[`Self::ldiff_bit`]. Same
+    /// fuel-swap bridge, but the per-bit combine must undo `bitwiseAux`'s
+    /// `beq _ 1` bit-to-`Bool` conversion, and the two side hypotheses close
+    /// a leading-zero ambiguity the fixed-`f` specializations never have.
+    /// See `nat_prelude::bitwise`.
+    pub bitwise_bit: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3776,6 +3788,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_swap: kernel.name_str(nat, "bitwise_swap"),
             land_aux_assoc_of_fuel: kernel.name_str(nat, "land_aux_assoc_of_fuel"),
             land_assoc: kernel.name_str(nat, "land_assoc"),
+            bitwise_bit: kernel.name_str(nat, "bitwise_bit'"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -4049,6 +4062,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `declare_land_all`, both above); nothing needs the decode bridge,
         // so it goes last too.
         declare_bit_decode_all(&mut d, &p)?;
+        // `Nat.bitwise_bit'`: needs `Nat.bit_div_two`/`Nat.bit_mod_two`
+        // (`declare_bit_decode_all`, just above) and the ALREADY-DECLARED
+        // `Nat.bitwise_aux_agree_of_fuel` (declared inside
+        // `declare_bitwise_comm`, far above) -- so it must come after both.
+        declare_bitwise_bit(&mut d, &p)?;
         // `Nat.land_aux_eq_zero_of_left_eq_zero`: needs `Nat.landAux`
         // (`declare_land_all`), `Nat.land_aux_zero_left_any_fuel`
         // (`declare_land_fuel_irrelevance_all`, both far above),

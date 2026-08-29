@@ -8,10 +8,26 @@
     "statement": "∀ {f : Bool → Bool → Bool} (a : Bool) (m : ℕ) (b : Bool) (n : ℕ),\n  (m = 0 → a = true) →\n    (n = 0 → b = true) → Nat.bitwise f (Nat.bit a m) (Nat.bit b n) = Nat.bit (f a b) (Nat.bitwise f m n)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "reconciliation-Nat.bitwise_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_bit'",
+      "supports": "∀ {f : Bool → Bool → Bool} (a : Bool) (m : ℕ) (b : Bool) (n : ℕ), (m = 0 → a = true) → (n = 0 → b = true) → Nat.bitwise f (Nat.bit a m) (Nat.bit b n) = Nat.bit (f a b) (Nat.bitwise f m n)",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel",
+        "axeyum-lean-import/checked-proposition-compatibility"
+      ],
+      "artifact": "F:nat-bitwise-bit",
+      "notes": "Registers an independently constructed native theorem (`F:nat-bitwise-bit`, `Nat.bitwise_bit'` in `nat_prelude/bitwise.rs`) whose proposition matches this proof-free imported goal verbatim -- same binder order, same two side hypotheses, same conclusion. Our `Nat.bitwise` genuinely IS Mathlib's own general combinator (established for `bitwise_comm`/`bitwise_swap` already, unchanged here), and unlike the `testBit`-shaped siblings this mirror-flip criterion rules unflippable (Mathlib's `testBit` returns `Bool` against our `Nat`), this theorem's codomain is `Nat` throughout on both sides -- so the flip is honest in the strongest sense: Mathlib's `def Nat.bitwise`/`Nat.bit` and ours are the same functions, and this closes the same theorem about them."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +42,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Proved in Axeyum by reconciliation with the independently constructed native theorem `F:nat-bitwise-bit` (`Nat.bitwise_bit'`) -- see that fact's `notes` for the full construction (the generic-`f` counterpart of `bit_decode.rs`'s `land_bit`/`lor_bit`/`ldiff_bit`, closing the `Nat.bit`-decode `*_bit` family; a new round-trip lemma undoes `bitwiseAux`'s `beq _ 1` bit-to-`Bool` conversion, and the two side hypotheses close a leading-zero ambiguity the fixed-`f` specializations never have). The external theorem declaration remains prior art, not the source of this proof; formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module, not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review; those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }
