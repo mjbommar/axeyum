@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-bitwise-bit",
+  "title": "bitwise combines two bit-appended naturals bit-by-bit, given no leading-zero ambiguity",
+  "statement": "For every Bool -> Bool -> Bool function f, every Bool a, b and natural m, n: if m = 0 implies a = true, and n = 0 implies b = true, then bitwise(f, bit(a, m), bit(b, n)) = bit(f(a, b), bitwise(f, m, n)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : Bool) -> ((x2 : AxNat) -> ((x3 : Bool) -> ((x4 : AxNat) -> ((x5 : ((x5 : Eq.{1} AxNat x2 AxNat.zero) -> Eq.{1} Bool x1 Bool.true)) -> ((x6 : ((x6 : Eq.{1} AxNat x4 AxNat.zero) -> Eq.{1} Bool x3 Bool.true)) -> Eq.{1} AxNat (AxNat.bitwise x0 (AxNat.bit x1 x2) (AxNat.bit x3 x4)) (AxNat.bit (x0 x1 x3) (AxNat.bitwise x0 x2 x4)))))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.bitwise_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_bit'",
+      "supports": "Nat.bitwise_bit' is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_bit 2>/dev/null | /usr/bin/grep -Ec '^Nat\\.bitwise_bit'\\''[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with a literal trailing apostrophe plus `[[:space:]]` (the field separator in the inventory's tab-separated output) so no sibling name can satisfy this row -- verified with `/usr/bin/grep` explicitly, per this repository's own standing warning that `grep` is `ugrep` interactively and the two disagree on escapes. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.bitwise_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_bit'",
+      "supports": "With f = fst (fun a b => a, deliberately non-commutative) at a = false, m = 2, b = true, n = 3 (a != b, so an argument-order bug in the per-bit combine would be caught; m = 2 is nonzero, so the side hypothesis hm : m = 0 -> a = true is genuinely discharged -- via Nat.succ_ne_zero, since its premise is impossible here, not merely assumed): bitwise(fst, bit(false, 2), bit(true, 3)) = bitwise(fst, 4, 7) = 4, and bit(fst(false, true), bitwise(fst, 2, 3)) = bit(false, 2) = 4. A non-vacuity check confirms the swapped combine bit(fst(true, false), bitwise(fst, 2, 3)) = bit(true, 2) = 5 != 4, so the chosen instance genuinely discriminates argument order.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bitwise_bit_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.bitwise_bit'` at the concrete instance above, confirming both that the admitted type matches `Eq (bitwise fst (bit false 2) (bit true 3)) (bit (fst false true) (bitwise fst 2 3))` and that the value (4) and the swapped-combine control (5) genuinely differ."
+    },
+    {
+      "id": "footprint-Nat.bitwise_bit",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-operations",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-bitwise-bit-prime",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0` is `f`, `x1`/`x2` are `a`/`m`, `x3`/`x4` are `b`/`n`, `x5`/`x6` are the two side hypotheses.\n\nThe last open member of the `Nat.bit`-decode `*_bit` family (`bit_decode.rs`'s `land_bit`/`lor_bit`/`ldiff_bit` closed the fixed-`f` specializations; this is their symbolic-`f` counterpart). Same fuel-swap machinery (an artificially `succ`-shaped fuel via `bitwise_aux_agree_of_fuel`, then `Nat.bit_div_two`/`Nat.bit_mod_two` to decode the raw `div`/`mod` subterms), but two things are new: the per-bit combine converts each bit to `Bool` via `beq _ 1` before applying `f` (this file's ad hoc `bodd`), so a new round-trip lemma (`cond_beq_one_eq_self`, `Eq Bool (beq (bool_select_nat x 1 0) 1) x`) is needed to recover `f a b`; and the two side hypotheses close a genuine ambiguity `land`/`lor`/`ldiff`'s fixed-`f` specializations never have -- `bitwiseAux`'s `n = 0` boundary row returns the WHOLE bit-encoded operand (not a per-operator absorbing constant), so a misbehaved `f` (e.g. the constant-`true` function) can make the unconditional claim false at `a = false, m = 0`. Discharging the hypothesis at exactly that leaf uses the \"generalize with equality\" trick (a new local `cases_zero_succ_with_eq`, following `cases_zero_succ`'s own documented convention: fold the needed equation into the case-split motive and re-introduce it per branch) to recover `Eq m 0` for `hm`'s domain, then `NatOps::false_true_elim`.\n\nKernel accepted the proof term on the FIRST attempt -- no `TypeMismatch`/`UnboundFVar` iteration. This is the `Nat.bitwise` twin of Mathlib v4.30's `Nat.bitwise_bit'` (`F:ml430-nat-bitwise-bit-4c4b28a8`, flipped alongside this fact) -- our `Nat.bitwise` is Mathlib's OWN general combinator (established for `bitwise_comm`/`bitwise_swap` already, unchanged here), and the codomain is `Nat` throughout (unlike the `testBit`-shaped facts `scripts/gen-autogenesis-bitwise-family-projection.py` pins open, which are unflippable because Mathlib's `testBit` returns `Bool` against our `Nat` -- checked, no conflict: that script's `MAPPINGS` names three unrelated `testBit` facts, not this one)."
+}
