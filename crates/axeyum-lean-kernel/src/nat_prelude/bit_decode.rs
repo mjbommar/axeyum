@@ -105,9 +105,10 @@
 //! `lor_bit`/`ldiff_bit` are left open for a follow-up lane.
 
 use super::NatPrelude;
-use super::bitwise::and_fn;
+use super::bitwise::{and_fn, or_fn};
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps, cases_zero_succ, two_mul_eq_add_self};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -685,8 +686,885 @@ fn declare_land_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
     d.declare_theorem(p.land_bit, ty, value)
 }
 
-/// Declare the `Nat.bit` decode bridge helpers and `Nat.land_bit`. See the
-/// module doc for what does and does not transport to `lor`/`ldiff`.
+// ============================================================================
+// `Nat.lor_bit` / `Nat.ldiff_bit`: the same fuel-swap bridge, each with its
+// own guard-tree leaves and its own per-bit combine agreement. See the
+// module doc's final section for what transports unchanged (the fuel-swap
+// machinery: `base`/`k1`/`fuel`, both `Le` bounds, the `div`/`mod` decode)
+// and what does not (the degenerate-guard values, and the combine lemma).
+// ============================================================================
+
+/// Local reproduction of `bitwise.rs`'s private `bool_select_bool` —
+/// `Bool.rec` at a `Bool`-valued motive (`if condition then on_true else
+/// on_false`, both minor premises themselves `Bool`s). Reproduced rather
+/// than exported (avoiding a cross-lane edit to `bitwise.rs`), same
+/// rationale as [`guarded`]'s local copy.
+fn bool_select_bool_local(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    condition: ExprId,
+    on_true: ExprId,
+    on_false: ExprId,
+) -> ExprId {
+    let p = *p;
+    let bool_ty = d.bool_ty();
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, bool_ty, bool_ty, BinderInfo::Default);
+    let one = d.level_one();
+    let rec = d.kernel().const_(p.logic.bool_rec, vec![one]);
+    d.apply(rec, &[motive, on_false, on_true, condition])
+}
+
+/// `fun a b => bool_select_bool a (bool_select_bool b false true) false` —
+/// `Nat.ldiff`'s per-bit boolean combinator, `a && !b`. Mathlib v4.30
+/// defines `Nat.ldiff` via `bitwise (fun a b => a && !b)`; reproduced here
+/// (not imported — `bitwise.rs`/`ldiff.rs` are both off-limits for this
+/// lane) purely to state `Nat.ldiff_bit`'s target.
+fn ldiff_fn(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+    let p = *p;
+    let bool_ty = d.bool_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let not_b = bool_select_bool_local(d, &p, b, false_, true_);
+    let body = bool_select_bool_local(d, &p, a, not_b, false_);
+    let with_b = d.lam_fv(b_fv, bool_ty, body);
+    d.lam_fv(a_fv, bool_ty, with_b)
+}
+
+// --- `lor`'s per-bit combine: `max` via `ble`, agrees with `cond (a || b)` -
+
+/// `Eq (bool_select_nat (ble (cond a 1 0) (cond b 1 0)) (cond b 1 0) (cond a
+/// 1 0)) (cond (or a b) 1 0)` at LITERAL `a`, `b` — every subterm on both
+/// sides is then fully closed and reduces to a matching numeral, so `refl`
+/// closes it directly (no case split needed at this point; the caller
+/// supplies the literals).
+fn or_cond_max_leaf(d: &mut NatDev<'_>, a_lit: ExprId, b_lit: ExprId) -> ExprId {
+    let one = d.num(1);
+    let zero = d.zero();
+    let cond_a = d.bool_select_nat(a_lit, one, zero);
+    let cond_b = d.bool_select_nat(b_lit, one, zero);
+    let a_le_b = d.ble(cond_a, cond_b);
+    let lhs = d.bool_select_nat(a_le_b, cond_b, cond_a);
+    d.refl(lhs)
+}
+
+/// The goal statement of [`or_cond_max_leaf`]/[`or_cond_max_eq_cond`], at
+/// arbitrary (possibly symbolic) `a`, `b`.
+fn or_cond_max_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let zero = d.zero();
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+    let a_le_b = d.ble(cond_a, cond_b);
+    let lhs = d.bool_select_nat(a_le_b, cond_b, cond_a);
+    let or_fn_expr = or_fn(d);
+    let ab = d.apply(or_fn_expr, &[a, b]);
+    let rhs = d.bool_select_nat(ab, one, zero);
+    d.eq(lhs, rhs)
+}
+
+/// `Eq (bool_select_nat (ble (cond a 1 0) (cond b 1 0)) (cond b 1 0) (cond a
+/// 1 0)) (cond (or a b) 1 0)` for ARBITRARY `a`, `b` — `lor`'s per-bit `max`
+/// combine agrees with `cond` of the boolean OR. Unlike
+/// [`and_cond_mul_eq_cond`]'s single split on `a` alone, `ble`'s recursion
+/// needs BOTH operands' VALUE, not just `a`'s shape, in the `a = true`
+/// branch (`ble 1 (cond b 1 0)` does not resolve until `cond b 1 0` is a
+/// literal `0`/`1`) — so a further split on `b` is needed there. The `a =
+/// false` branch needs no further split at all: `ble 0 y` reduces to the
+/// literal `true` regardless of `y`'s shape (`Nat.ble`'s own zero-row), so
+/// `bool_select_nat true cond_b cond_a` reduces straight to `cond_b`, which
+/// is exactly `cond (or false b)` too (`or_fn(false, b)` ι-reduces to `b`
+/// itself, literal scrutinee, regardless of `b`'s shape).
+fn or_cond_max_eq_cond(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        a,
+        &|d, cand_a| or_cond_max_goal(d, &p, cand_a, b),
+        &|d| {
+            let t = d.bool_true();
+            case_bool(
+                d,
+                &p,
+                b,
+                &|d, cand_b| or_cond_max_goal(d, &p, t, cand_b),
+                &|d| {
+                    let bt = d.bool_true();
+                    or_cond_max_leaf(d, t, bt)
+                },
+                &|d| {
+                    let bf = d.bool_false();
+                    or_cond_max_leaf(d, t, bf)
+                },
+            )
+        },
+        &|d| {
+            let one = d.num(1);
+            let zero = d.zero();
+            let cond_b = d.bool_select_nat(b, one, zero);
+            d.refl(cond_b)
+        },
+    )
+}
+
+/// `Eq(guarded (bit a m) (bit b n) (bit a m) (bit b n) (lor m n) (max (cond a
+/// 1 0) (cond b 1 0))) (bit (or a b) (lor m n))` — the guard-resolution half
+/// of `lor`'s bridge. `lor`'s fuel-exhaustion rows PASS THROUGH the full
+/// operand (`on_n_zero = bit a m`, `on_m_zero = bit b n`), not `land`'s
+/// constant `0` — see the module doc and `lor.rs`'s own doc for why.
+fn lor_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let one = d.num(1);
+    let bit_am = d.const_app(p.bit, &[a, m]);
+    let bit_bn = d.const_app(p.bit, &[b, n]);
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+    let lor_mn = d.const_app(p.lor, &[m, n]);
+    let a_le_b = d.ble(cond_a, cond_b);
+    let bitval = d.bool_select_nat(a_le_b, cond_b, cond_a);
+    let lhs = guarded(d, bit_am, bit_bn, bit_am, bit_bn, lor_mn, bitval);
+    let or_fn_expr = or_fn(d);
+    let a_or_b = d.apply(or_fn_expr, &[a, b]);
+    let rhs = d.const_app(p.bit, &[a_or_b, lor_mn]);
+    d.eq(lhs, rhs)
+}
+
+/// The "both operands positive" leaf: both zero-guards are false by
+/// construction at the call site, so `guarded` reduces to `stepped` by pure
+/// defeq — closed via [`or_cond_max_eq_cond`]'s combine agreement.
+fn lor_guard_step_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let one = d.num(1);
+    let lor_mn = d.const_app(p.lor, &[m, n]);
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+    let a_le_b = d.ble(cond_a, cond_b);
+    let bitval = d.bool_select_nat(a_le_b, cond_b, cond_a);
+    let combine_eq = or_cond_max_eq_cond(d, &p, a, b);
+    let or_fn_expr = or_fn(d);
+    let a_or_b = d.apply(or_fn_expr, &[a, b]);
+    let cond_ab = d.bool_select_nat(a_or_b, one, zero);
+    d.congr(bitval, cond_ab, combine_eq, &|d, x| {
+        let two = d.num(2);
+        let doubled = d.mul(two, lor_mn);
+        d.add(doubled, x)
+    })
+}
+
+/// The `m = 0` leaf (with the `n`-guard already known false by construction):
+/// `guarded` selects `on_m_zero = bit b n` (`lor`'s pass-through, not `0`),
+/// and the target reduces to the SAME expression — `or_fn(false, b)`
+/// ι-reduces straight to `b` (literal scrutinee, regardless of `b`'s shape)
+/// and `lor(0, n)` is defeq `n` unconditionally (`lor_zero_left` is `refl`
+/// for exactly this reason — see `lor.rs`'s module doc). So both sides are
+/// syntactically `bit b n` once fully reduced: `d.refl` on the raw `bit_bn`
+/// expression closes it, no further split needed (unlike `land`'s analogous
+/// leaf, which needed none either, and unlike the `n = 0` leaf below, which
+/// does).
+fn lor_guard_on_m_zero_leaf(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    let bit_bn = d.const_app(p.bit, &[b, n]);
+    d.refl(bit_bn)
+}
+
+/// One `a`-leaf of [`lor_guard_on_n_zero_leaf`]: rewrite `lor m 0` to `m` via
+/// `lor_zero_right`, then close by defeq (`or_fn(a_lit, false)` ι-reduces to
+/// `a_lit` once `a_lit` is literal).
+fn lor_guard_on_n_zero_branch(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, a_lit: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let false_ = d.bool_false();
+    let lor_m0 = d.const_app(p.lor, &[m, zero]);
+    let lor_zero_right_m = d.lemma(p.lor_zero_right, &[m]);
+    let or_fn_expr = or_fn(d);
+    let a_or_false = d.apply(or_fn_expr, &[a_lit, false_]);
+    let target_before = d.const_app(p.bit, &[a_or_false, lor_m0]);
+    let target_after = d.const_app(p.bit, &[a_or_false, m]);
+    let congr_step = d.congr(lor_m0, m, lor_zero_right_m, &|d, x| {
+        d.const_app(p.bit, &[a_or_false, x])
+    });
+    let bit_am_lit = d.const_app(p.bit, &[a_lit, m]);
+    let refl_after = d.refl(target_after);
+    let (_final, chain_proof) = d.chain(
+        target_before,
+        &[(target_after, congr_step), (bit_am_lit, refl_after)],
+    );
+    d.symm(target_before, bit_am_lit, chain_proof)
+}
+
+/// The `n = 0` leaf (with `b = false` already known from the outer split):
+/// `guarded` selects `on_n_zero = bit a m` regardless of `a`/`m`, but the
+/// target's `or_fn(a, false)` needs `a` LITERAL to ι-reduce — a further
+/// split, unlike `land`'s analogous leaf (whose `and_fn(a, false)` collapses
+/// to a constant regardless of `a`'s shape).
+fn lor_guard_on_n_zero_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        a,
+        &|d, cand_a| {
+            let zero = d.zero();
+            let false_ = d.bool_false();
+            lor_guard_goal(d, &p, cand_a, m, false_, zero)
+        },
+        &|d| {
+            let t = d.bool_true();
+            lor_guard_on_n_zero_branch(d, &p, m, t)
+        },
+        &|d| {
+            let f = d.bool_false();
+            lor_guard_on_n_zero_branch(d, &p, m, f)
+        },
+    )
+}
+
+/// Resolve the `m`-guard, given the `n`-guard already known false by
+/// construction — same `a`-then-`m` split shape as [`land_guard_inner`],
+/// swapping in `lor`'s pass-through `on_m_zero` leaf and combine.
+fn lor_guard_inner(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        a,
+        &|d, cand_a| lor_guard_goal(d, &p, cand_a, m, b, n),
+        &|d| {
+            let t = d.bool_true();
+            lor_guard_step_leaf(d, &p, t, m, b, n)
+        },
+        &|d| {
+            cases_zero_succ(
+                d,
+                m,
+                &|d, cand_m| {
+                    let false_ = d.bool_false();
+                    lor_guard_goal(d, &p, false_, cand_m, b, n)
+                },
+                &|d| lor_guard_on_m_zero_leaf(d, &p, b, n),
+                &|d, m_pred| {
+                    let succ_m = d.succ(m_pred);
+                    let false_ = d.bool_false();
+                    lor_guard_step_leaf(d, &p, false_, succ_m, b, n)
+                },
+            )
+        },
+    )
+}
+
+/// The full guard-resolution case tree for `lor_bit`: split `b` (the
+/// `n`-guard), then (when `b = false`) split `n`, then resolve the `m`-guard
+/// via [`lor_guard_inner`].
+fn resolve_lor_guard(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        b,
+        &|d, cand_b| lor_guard_goal(d, &p, a, m, cand_b, n),
+        &|d| {
+            let t = d.bool_true();
+            lor_guard_inner(d, &p, a, m, t, n)
+        },
+        &|d| {
+            cases_zero_succ(
+                d,
+                n,
+                &|d, cand_n| {
+                    let false_ = d.bool_false();
+                    lor_guard_goal(d, &p, a, m, false_, cand_n)
+                },
+                &|d| lor_guard_on_n_zero_leaf(d, &p, a, m),
+                &|d, n_pred| {
+                    let succ_n = d.succ(n_pred);
+                    let false_ = d.bool_false();
+                    lor_guard_inner(d, &p, a, m, false_, succ_n)
+                },
+            )
+        },
+    )
+}
+
+/// `Nat.lor_bit : ∀ a m b n, Eq (lor (bit a m) (bit b n)) (bit (or a b) (lor
+/// m n))` — `F:ml430-nat-lor-bit-a2f98c7c`. Same fuel-swap shape as
+/// [`declare_land_bit`]; see that function and the module doc for the
+/// shared machinery, and this section's leaves for what is new.
+fn declare_lor_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let two = d.num(2);
+    let zero = d.zero();
+
+    let base = d.mul(two, m);
+    let k1 = d.succ(base);
+    let fuel = d.succ(k1);
+
+    let bit_am = d.const_app(p.bit, &[a, m]);
+    let bit_bn = d.const_app(p.bit, &[b, n]);
+
+    // --- Le (bit a m) k1, via case split on a -------------------------------
+    let m_le_k1 = case_bool(
+        d,
+        &p,
+        a,
+        &|d, x| {
+            let bam = d.const_app(p.bit, &[x, m]);
+            d.le(bam, k1)
+        },
+        &|d| d.lemma(p.le_refl, &[k1]),
+        &|d| d.lemma(p.le_succ, &[base]),
+    );
+    let k1_le_fuel = d.lemma(p.le_succ, &[k1]);
+    let m_le_fuel = d.lemma(p.le_trans, &[bit_am, k1, fuel, m_le_k1, k1_le_fuel]);
+
+    // --- Le m k1 -------------------------------------------------------------
+    let mm = d.add(m, m);
+    let m_le_mm = d.lemma(p.le_add_right, &[m, m]);
+    let two_mul_eq = two_mul_eq_add_self(d, &p, m); // Eq base mm
+    let mm_eq_base = d.symm(base, mm, two_mul_eq);
+    let motive_le = d.eq_motive(mm, &|d, x| d.le(m, x));
+    let m_le_base = d.transport(mm, motive_le, m_le_mm, base, mm_eq_base);
+    let base_le_k1 = d.lemma(p.le_succ, &[base]);
+    let m_le_k1_bound = d.lemma(p.le_trans, &[m, base, k1, m_le_base, base_le_k1]);
+
+    // --- lor(bit a m)(bit b n) = lorAux fuel (bit a m)(bit b n) -------------
+    let fuel_eq = d.lemma(p.lor_aux_eq_lor_of_le, &[fuel, bit_am, bit_bn, m_le_fuel]);
+    let loraux_fuel = d.const_app(p.lor_aux, &[fuel, bit_am, bit_bn]);
+    let lor_ab = d.const_app(p.lor, &[bit_am, bit_bn]);
+    let step0 = d.symm(loraux_fuel, lor_ab, fuel_eq);
+
+    // --- refl-unfold to guarded(...) at the raw div/mod subterms ------------
+    let half_am = d.div(bit_am, two);
+    let half_bn = d.div(bit_bn, two);
+    let mod_am = d.modulo(bit_am, two);
+    let mod_bn = d.modulo(bit_bn, two);
+    let rec0 = d.const_app(p.lor_aux, &[k1, half_am, half_bn]);
+    let mod_le0 = d.ble(mod_am, mod_bn);
+    let bitval0 = d.bool_select_nat(mod_le0, mod_bn, mod_am);
+    let guarded0 = guarded(d, bit_am, bit_bn, bit_am, bit_bn, rec0, bitval0);
+    let step1 = d.refl(loraux_fuel);
+
+    // --- rewrite half_am -> m, half_bn -> n, then lor_aux k1 m n -> lor m n
+    let div_a = d.lemma(p.bit_div_two, &[a, m]);
+    let div_b = d.lemma(p.bit_div_two, &[b, n]);
+    let lor_mn = d.const_app(p.lor, &[m, n]);
+
+    let rec1 = d.const_app(p.lor_aux, &[k1, m, half_bn]);
+    let rec0_to_rec1 = d.congr(half_am, m, div_a, &|d, x| {
+        d.const_app(p.lor_aux, &[k1, x, half_bn])
+    });
+    let rec2 = d.const_app(p.lor_aux, &[k1, m, n]);
+    let rec1_to_rec2 = d.congr(half_bn, n, div_b, &|d, x| {
+        d.const_app(p.lor_aux, &[k1, m, x])
+    });
+    let rec2_eq_lor_mn = d.lemma(p.lor_aux_eq_lor_of_le, &[k1, m, n, m_le_k1_bound]);
+    let (_rec_final, rec_chain) = d.chain(
+        rec0,
+        &[
+            (rec1, rec0_to_rec1),
+            (rec2, rec1_to_rec2),
+            (lor_mn, rec2_eq_lor_mn),
+        ],
+    );
+
+    // --- rewrite mod_am -> cond a, mod_bn -> cond b (BOTH occurrences of
+    // each, since they appear in `ble`'s condition AND as a branch value) --
+    let mod_a = d.lemma(p.bit_mod_two, &[a, m]);
+    let mod_b = d.lemma(p.bit_mod_two, &[b, n]);
+    let one = d.num(1);
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+
+    let bitval1 = {
+        let c = d.ble(cond_a, mod_bn);
+        d.bool_select_nat(c, mod_bn, cond_a)
+    };
+    let bitval0_to_1 = d.congr(mod_am, cond_a, mod_a, &|d, x| {
+        let c = d.ble(x, mod_bn);
+        d.bool_select_nat(c, mod_bn, x)
+    });
+    let bitval2 = {
+        let c = d.ble(cond_a, cond_b);
+        d.bool_select_nat(c, cond_b, cond_a)
+    };
+    let bitval1_to_2 = d.congr(mod_bn, cond_b, mod_b, &|d, x| {
+        let c = d.ble(cond_a, x);
+        d.bool_select_nat(c, x, cond_a)
+    });
+    let (_bitval_final, bitval_chain) =
+        d.chain(bitval0, &[(bitval1, bitval0_to_1), (bitval2, bitval1_to_2)]);
+
+    let guarded_mid = guarded(d, bit_am, bit_bn, bit_am, bit_bn, lor_mn, bitval0);
+    let guarded_final = guarded(d, bit_am, bit_bn, bit_am, bit_bn, lor_mn, bitval2);
+    let step_rec = d.congr(rec0, lor_mn, rec_chain, &|d, hole| {
+        guarded(d, bit_am, bit_bn, bit_am, bit_bn, hole, bitval0)
+    });
+    let step_bitv = d.congr(bitval0, bitval2, bitval_chain, &|d, hole| {
+        guarded(d, bit_am, bit_bn, bit_am, bit_bn, lor_mn, hole)
+    });
+
+    // --- resolve the two guards ----------------------------------------------
+    let step_guard = resolve_lor_guard(d, &p, a, m, b, n);
+
+    let or_fn_expr = or_fn(d);
+    let a_or_b = d.apply(or_fn_expr, &[a, b]);
+    let target = d.const_app(p.bit, &[a_or_b, lor_mn]);
+
+    let (_final, proof) = d.chain(
+        lor_ab,
+        &[
+            (loraux_fuel, step0),
+            (guarded0, step1),
+            (guarded_mid, step_rec),
+            (guarded_final, step_bitv),
+            (target, step_guard),
+        ],
+    );
+
+    let stmt = d.eq(lor_ab, target);
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let inner = d.pi_fv(b_fv, bool_ty, inner);
+        let inner = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(a_fv, bool_ty, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let inner = d.lam_fv(b_fv, bool_ty, inner);
+        let inner = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(a_fv, bool_ty, inner)
+    };
+    d.declare_theorem(p.lor_bit, ty, value)
+}
+
+// --- `ldiff`'s per-bit combine: `if n%2=0 then m%2 else 0`, agrees with
+// `cond (a && !b)` ----------------------------------------------------------
+
+/// `Eq (bool_select_nat (beq (cond b 1 0) 0) (cond a 1 0) 0) (cond (ldiff_fn
+/// a b) 1 0)` at LITERAL `a`, `b` — fully closed once both are literal,
+/// `refl` closes it.
+fn ldiff_cond_leaf(d: &mut NatDev<'_>, a_lit: ExprId, b_lit: ExprId) -> ExprId {
+    let one = d.num(1);
+    let zero = d.zero();
+    let cond_a = d.bool_select_nat(a_lit, one, zero);
+    let cond_b = d.bool_select_nat(b_lit, one, zero);
+    let b_is_zero = d.beq(cond_b, zero);
+    let lhs = d.bool_select_nat(b_is_zero, cond_a, zero);
+    d.refl(lhs)
+}
+
+/// The goal statement of [`ldiff_cond_leaf`]/[`ldiff_cond_eq_cond`].
+fn ldiff_cond_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let zero = d.zero();
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+    let b_is_zero = d.beq(cond_b, zero);
+    let lhs = d.bool_select_nat(b_is_zero, cond_a, zero);
+    let ldiff_fn_expr = ldiff_fn(d, &p);
+    let a_ldiff_b = d.apply(ldiff_fn_expr, &[a, b]);
+    let rhs = d.bool_select_nat(a_ldiff_b, one, zero);
+    d.eq(lhs, rhs)
+}
+
+/// `Eq (bool_select_nat (beq (cond b 1 0) 0) (cond a 1 0) 0) (cond (ldiff_fn
+/// a b) 1 0)` for ARBITRARY `a`, `b`. `beq (cond b 1 0) 0` needs `b` literal
+/// to ι-reduce (mirroring `land`/`lor`'s zero-guards), and — unlike `land`'s
+/// single-split shortcut — the `b = true` branch's result (`0`) does not
+/// come for free either: `ldiff_fn(a, true) = bool_select_bool(a, not_true,
+/// false)` still has `a` as a symbolic Bool.rec scrutinee, so `a` needs its
+/// own split too (both leaves reduce to `false`, matching the LHS's `0`).
+fn ldiff_cond_eq_cond(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        a,
+        &|d, cand_a| ldiff_cond_goal(d, &p, cand_a, b),
+        &|d| {
+            let t = d.bool_true();
+            case_bool(
+                d,
+                &p,
+                b,
+                &|d, cand_b| ldiff_cond_goal(d, &p, t, cand_b),
+                &|d| {
+                    let bt = d.bool_true();
+                    ldiff_cond_leaf(d, t, bt)
+                },
+                &|d| {
+                    let bf = d.bool_false();
+                    ldiff_cond_leaf(d, t, bf)
+                },
+            )
+        },
+        &|d| {
+            let f = d.bool_false();
+            case_bool(
+                d,
+                &p,
+                b,
+                &|d, cand_b| ldiff_cond_goal(d, &p, f, cand_b),
+                &|d| {
+                    let bt = d.bool_true();
+                    ldiff_cond_leaf(d, f, bt)
+                },
+                &|d| {
+                    let bf = d.bool_false();
+                    ldiff_cond_leaf(d, f, bf)
+                },
+            )
+        },
+    )
+}
+
+/// `Eq(guarded (bit a m) (bit b n) (bit a m) 0 (ldiff m n) (bitval)) (bit
+/// (ldiff_fn a b) (ldiff m n))` — `ldiff`'s guard rows are the HYBRID
+/// `land.rs`/`ldiff.rs` document: `on_n_zero = bit a m` (a `lor`-flavoured
+/// pass-through — `ldiff m 0 = m`), `on_m_zero = 0` (a `land`-flavoured
+/// absorbing constant — `ldiff 0 n = 0`).
+fn ldiff_guard_goal(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let one = d.num(1);
+    let bit_am = d.const_app(p.bit, &[a, m]);
+    let bit_bn = d.const_app(p.bit, &[b, n]);
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+    let ldiff_mn = d.const_app(p.ldiff, &[m, n]);
+    let b_is_zero = d.beq(cond_b, zero);
+    let bitval = d.bool_select_nat(b_is_zero, cond_a, zero);
+    let lhs = guarded(d, bit_am, bit_bn, bit_am, zero, ldiff_mn, bitval);
+    let ldiff_fn_expr = ldiff_fn(d, &p);
+    let a_ldiff_b = d.apply(ldiff_fn_expr, &[a, b]);
+    let rhs = d.const_app(p.bit, &[a_ldiff_b, ldiff_mn]);
+    d.eq(lhs, rhs)
+}
+
+/// The "both operands positive" leaf, closed via [`ldiff_cond_eq_cond`].
+fn ldiff_guard_step_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let one = d.num(1);
+    let ldiff_mn = d.const_app(p.ldiff, &[m, n]);
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+    let b_is_zero = d.beq(cond_b, zero);
+    let bitval = d.bool_select_nat(b_is_zero, cond_a, zero);
+    let combine_eq = ldiff_cond_eq_cond(d, &p, a, b);
+    let ldiff_fn_expr = ldiff_fn(d, &p);
+    let a_ldiff_b = d.apply(ldiff_fn_expr, &[a, b]);
+    let cond_ab = d.bool_select_nat(a_ldiff_b, one, zero);
+    d.congr(bitval, cond_ab, combine_eq, &|d, x| {
+        let two = d.num(2);
+        let doubled = d.mul(two, ldiff_mn);
+        d.add(doubled, x)
+    })
+}
+
+/// One `a`-leaf of [`ldiff_guard_on_n_zero_leaf`]: rewrite `ldiff m 0` to `m`
+/// via `ldiff_zero_right`, then close by defeq — same shape as
+/// [`lor_guard_on_n_zero_branch`], swapping `or_fn`/`lor_zero_right` for
+/// `ldiff_fn`/`ldiff_zero_right`.
+fn ldiff_guard_on_n_zero_branch(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, a_lit: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let false_ = d.bool_false();
+    let ldiff_m0 = d.const_app(p.ldiff, &[m, zero]);
+    let ldiff_zero_right_m = d.lemma(p.ldiff_zero_right, &[m]);
+    let ldiff_fn_expr = ldiff_fn(d, &p);
+    let a_ldiff_false = d.apply(ldiff_fn_expr, &[a_lit, false_]);
+    let target_before = d.const_app(p.bit, &[a_ldiff_false, ldiff_m0]);
+    let target_after = d.const_app(p.bit, &[a_ldiff_false, m]);
+    let congr_step = d.congr(ldiff_m0, m, ldiff_zero_right_m, &|d, x| {
+        d.const_app(p.bit, &[a_ldiff_false, x])
+    });
+    let bit_am_lit = d.const_app(p.bit, &[a_lit, m]);
+    let refl_after = d.refl(target_after);
+    let (_final, chain_proof) = d.chain(
+        target_before,
+        &[(target_after, congr_step), (bit_am_lit, refl_after)],
+    );
+    d.symm(target_before, bit_am_lit, chain_proof)
+}
+
+/// The `n = 0` leaf — same `a`-split shape as [`lor_guard_on_n_zero_leaf`]
+/// (`ldiff`'s `on_n_zero` row is `lor`-flavoured pass-through too).
+fn ldiff_guard_on_n_zero_leaf(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        a,
+        &|d, cand_a| {
+            let zero = d.zero();
+            let false_ = d.bool_false();
+            ldiff_guard_goal(d, &p, cand_a, m, false_, zero)
+        },
+        &|d| {
+            let t = d.bool_true();
+            ldiff_guard_on_n_zero_branch(d, &p, m, t)
+        },
+        &|d| {
+            let f = d.bool_false();
+            ldiff_guard_on_n_zero_branch(d, &p, m, f)
+        },
+    )
+}
+
+/// Resolve the `m`-guard, given the `n`-guard already known false — the
+/// `m = 0` leaf reuses [`land_guard_on_m_zero_leaf`] VERBATIM (`ldiff`'s
+/// `on_m_zero` row is `land`-flavoured: constant `0`, closing by `refl`
+/// with no further split, exactly as for `land`).
+fn ldiff_guard_inner(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        a,
+        &|d, cand_a| ldiff_guard_goal(d, &p, cand_a, m, b, n),
+        &|d| {
+            let t = d.bool_true();
+            ldiff_guard_step_leaf(d, &p, t, m, b, n)
+        },
+        &|d| {
+            cases_zero_succ(
+                d,
+                m,
+                &|d, cand_m| {
+                    let false_ = d.bool_false();
+                    ldiff_guard_goal(d, &p, false_, cand_m, b, n)
+                },
+                &|d| land_guard_on_m_zero_leaf(d),
+                &|d, m_pred| {
+                    let succ_m = d.succ(m_pred);
+                    let false_ = d.bool_false();
+                    ldiff_guard_step_leaf(d, &p, false_, succ_m, b, n)
+                },
+            )
+        },
+    )
+}
+
+/// The full guard-resolution case tree for `ldiff_bit`.
+fn resolve_ldiff_guard(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, m: ExprId, b: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    case_bool(
+        d,
+        &p,
+        b,
+        &|d, cand_b| ldiff_guard_goal(d, &p, a, m, cand_b, n),
+        &|d| {
+            let t = d.bool_true();
+            ldiff_guard_inner(d, &p, a, m, t, n)
+        },
+        &|d| {
+            cases_zero_succ(
+                d,
+                n,
+                &|d, cand_n| {
+                    let false_ = d.bool_false();
+                    ldiff_guard_goal(d, &p, a, m, false_, cand_n)
+                },
+                &|d| ldiff_guard_on_n_zero_leaf(d, &p, a, m),
+                &|d, n_pred| {
+                    let succ_n = d.succ(n_pred);
+                    let false_ = d.bool_false();
+                    ldiff_guard_inner(d, &p, a, m, false_, succ_n)
+                },
+            )
+        },
+    )
+}
+
+/// `Nat.ldiff_bit : ∀ a m b n, Eq (ldiff (bit a m) (bit b n)) (bit (a && !b)
+/// (ldiff m n))` — `F:ml430-nat-ldiff-bit-6be49bb8`. Same fuel-swap shape as
+/// [`declare_land_bit`]/[`declare_lor_bit`]; the guard tree is the hybrid
+/// this section's docs describe.
+fn declare_ldiff_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let two = d.num(2);
+    let zero = d.zero();
+
+    let base = d.mul(two, m);
+    let k1 = d.succ(base);
+    let fuel = d.succ(k1);
+
+    let bit_am = d.const_app(p.bit, &[a, m]);
+    let bit_bn = d.const_app(p.bit, &[b, n]);
+
+    // --- Le (bit a m) k1, via case split on a -------------------------------
+    let m_le_k1 = case_bool(
+        d,
+        &p,
+        a,
+        &|d, x| {
+            let bam = d.const_app(p.bit, &[x, m]);
+            d.le(bam, k1)
+        },
+        &|d| d.lemma(p.le_refl, &[k1]),
+        &|d| d.lemma(p.le_succ, &[base]),
+    );
+    let k1_le_fuel = d.lemma(p.le_succ, &[k1]);
+    let m_le_fuel = d.lemma(p.le_trans, &[bit_am, k1, fuel, m_le_k1, k1_le_fuel]);
+
+    // --- Le m k1 -------------------------------------------------------------
+    let mm = d.add(m, m);
+    let m_le_mm = d.lemma(p.le_add_right, &[m, m]);
+    let two_mul_eq = two_mul_eq_add_self(d, &p, m); // Eq base mm
+    let mm_eq_base = d.symm(base, mm, two_mul_eq);
+    let motive_le = d.eq_motive(mm, &|d, x| d.le(m, x));
+    let m_le_base = d.transport(mm, motive_le, m_le_mm, base, mm_eq_base);
+    let base_le_k1 = d.lemma(p.le_succ, &[base]);
+    let m_le_k1_bound = d.lemma(p.le_trans, &[m, base, k1, m_le_base, base_le_k1]);
+
+    // --- ldiff(bit a m)(bit b n) = ldiffAux fuel (bit a m)(bit b n) ---------
+    let fuel_eq = d.lemma(p.ldiff_aux_eq_ldiff_of_le, &[fuel, bit_am, bit_bn, m_le_fuel]);
+    let ldiffaux_fuel = d.const_app(p.ldiff_aux, &[fuel, bit_am, bit_bn]);
+    let ldiff_ab = d.const_app(p.ldiff, &[bit_am, bit_bn]);
+    let step0 = d.symm(ldiffaux_fuel, ldiff_ab, fuel_eq);
+
+    // --- refl-unfold to guarded(...) at the raw div/mod subterms ------------
+    let half_am = d.div(bit_am, two);
+    let half_bn = d.div(bit_bn, two);
+    let mod_am = d.modulo(bit_am, two);
+    let mod_bn = d.modulo(bit_bn, two);
+    let rec0 = d.const_app(p.ldiff_aux, &[k1, half_am, half_bn]);
+    let mod_bn_is_zero0 = d.beq(mod_bn, zero);
+    let bitval0 = d.bool_select_nat(mod_bn_is_zero0, mod_am, zero);
+    let guarded0 = guarded(d, bit_am, bit_bn, bit_am, zero, rec0, bitval0);
+    let step1 = d.refl(ldiffaux_fuel);
+
+    // --- rewrite half_am -> m, half_bn -> n, then ldiff_aux k1 m n -> ldiff m n
+    let div_a = d.lemma(p.bit_div_two, &[a, m]);
+    let div_b = d.lemma(p.bit_div_two, &[b, n]);
+    let ldiff_mn = d.const_app(p.ldiff, &[m, n]);
+
+    let rec1 = d.const_app(p.ldiff_aux, &[k1, m, half_bn]);
+    let rec0_to_rec1 = d.congr(half_am, m, div_a, &|d, x| {
+        d.const_app(p.ldiff_aux, &[k1, x, half_bn])
+    });
+    let rec2 = d.const_app(p.ldiff_aux, &[k1, m, n]);
+    let rec1_to_rec2 = d.congr(half_bn, n, div_b, &|d, x| {
+        d.const_app(p.ldiff_aux, &[k1, m, x])
+    });
+    let rec2_eq_ldiff_mn = d.lemma(p.ldiff_aux_eq_ldiff_of_le, &[k1, m, n, m_le_k1_bound]);
+    let (_rec_final, rec_chain) = d.chain(
+        rec0,
+        &[
+            (rec1, rec0_to_rec1),
+            (rec2, rec1_to_rec2),
+            (ldiff_mn, rec2_eq_ldiff_mn),
+        ],
+    );
+
+    // --- rewrite mod_am -> cond a, mod_bn -> cond b -------------------------
+    let mod_a = d.lemma(p.bit_mod_two, &[a, m]);
+    let mod_b = d.lemma(p.bit_mod_two, &[b, n]);
+    let one = d.num(1);
+    let cond_a = d.bool_select_nat(a, one, zero);
+    let cond_b = d.bool_select_nat(b, one, zero);
+
+    let bitval1 = {
+        let c = d.beq(mod_bn, zero);
+        d.bool_select_nat(c, cond_a, zero)
+    };
+    let bitval0_to_1 = d.congr(mod_am, cond_a, mod_a, &|d, x| {
+        let c = d.beq(mod_bn, zero);
+        d.bool_select_nat(c, x, zero)
+    });
+    let bitval2 = {
+        let c = d.beq(cond_b, zero);
+        d.bool_select_nat(c, cond_a, zero)
+    };
+    let bitval1_to_2 = d.congr(mod_bn, cond_b, mod_b, &|d, x| {
+        let c = d.beq(x, zero);
+        d.bool_select_nat(c, cond_a, zero)
+    });
+    let (_bitval_final, bitval_chain) =
+        d.chain(bitval0, &[(bitval1, bitval0_to_1), (bitval2, bitval1_to_2)]);
+
+    let guarded_mid = guarded(d, bit_am, bit_bn, bit_am, zero, ldiff_mn, bitval0);
+    let guarded_final = guarded(d, bit_am, bit_bn, bit_am, zero, ldiff_mn, bitval2);
+    let step_rec = d.congr(rec0, ldiff_mn, rec_chain, &|d, hole| {
+        guarded(d, bit_am, bit_bn, bit_am, zero, hole, bitval0)
+    });
+    let step_bitv = d.congr(bitval0, bitval2, bitval_chain, &|d, hole| {
+        guarded(d, bit_am, bit_bn, bit_am, zero, ldiff_mn, hole)
+    });
+
+    // --- resolve the two guards ----------------------------------------------
+    let step_guard = resolve_ldiff_guard(d, &p, a, m, b, n);
+
+    let ldiff_fn_expr = ldiff_fn(d, &p);
+    let a_ldiff_b = d.apply(ldiff_fn_expr, &[a, b]);
+    let target = d.const_app(p.bit, &[a_ldiff_b, ldiff_mn]);
+
+    let (_final, proof) = d.chain(
+        ldiff_ab,
+        &[
+            (ldiffaux_fuel, step0),
+            (guarded0, step1),
+            (guarded_mid, step_rec),
+            (guarded_final, step_bitv),
+            (target, step_guard),
+        ],
+    );
+
+    let stmt = d.eq(ldiff_ab, target);
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        let inner = d.pi_fv(b_fv, bool_ty, inner);
+        let inner = d.pi_fv(m_fv, nat, inner);
+        d.pi_fv(a_fv, bool_ty, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        let inner = d.lam_fv(b_fv, bool_ty, inner);
+        let inner = d.lam_fv(m_fv, nat, inner);
+        d.lam_fv(a_fv, bool_ty, inner)
+    };
+    d.declare_theorem(p.ldiff_bit, ty, value)
+}
+
+/// Declare the `Nat.bit` decode bridge helpers and `Nat.land_bit`/
+/// `Nat.lor_bit`/`Nat.ldiff_bit`. See the module doc for the shared
+/// fuel-swap machinery and each `declare_*_bit`'s own doc for what is new
+/// per operator.
 ///
 /// # Errors
 ///
@@ -698,5 +1576,7 @@ pub(super) fn declare_bit_decode_all(
     declare_bit_div_two(d, p)?;
     declare_bit_mod_two(d, p)?;
     declare_land_bit(d, p)?;
+    declare_lor_bit(d, p)?;
+    declare_ldiff_bit(d, p)?;
     Ok(())
 }
