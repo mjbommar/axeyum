@@ -80,6 +80,7 @@
 
 use super::NatPrelude;
 use super::bitwise::{and_fn, or_fn};
+use super::helpers::and_left;
 use super::ops::{
     NatDev, NatOps, agree_by_double_fuel_induction, agree_by_fuel_induction, bool_select_nat_same,
     cases_lt_bound, cases_mod_two, cases_zero_succ,
@@ -1824,10 +1825,8 @@ fn declare_land_aux_le_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
                         let step_a =
                             d.lemma(p.add_le_add_right, &[bit, two_rec, two_half_m, two_rec_le]);
                         // step_a : Le (2*rec + bit) (2*half_m + bit)
-                        let step_b = d.lemma(
-                            p.add_le_add_left,
-                            &[two_half_m, bit, bit_m, bit_le_bit_m],
-                        );
+                        let step_b =
+                            d.lemma(p.add_le_add_left, &[two_half_m, bit, bit_m, bit_le_bit_m]);
                         // step_b : Le (2*half_m + bit) (2*half_m + bit_m)
 
                         let value = d.add(two_rec, bit);
