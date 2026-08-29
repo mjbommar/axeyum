@@ -1687,6 +1687,33 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   exactly. `binary.rs`'s seven `mod _ 2` sites use `Lt r 2` as a bound and never
   split it. Grep proof BODIES, not names.
 
+  **FUEL-IRRELEVANCE NEEDS A *DOUBLE*-FUEL INDUCTION, BECAUSE THE SINGLE-FUEL
+  ONE IS SELF-REFERENTIAL.** `Nat.land_aux_eq_land_of_le :
+  ∀ fuel m n, Le m fuel → Eq (landAux fuel m n) (land m n)` landed, and the
+  obvious route does not work: `land m n` unfolds to `landAux m m n`, putting
+  the same value back in the fuel slot, so an induction on one fuel needs the
+  canonical instance to unfold and refers to itself. The fix is to generalize
+  over **two independently-chosen sufficient fuels**
+  (`agree_by_double_fuel_induction`, `ops.rs`); the single-fuel statement is
+  then a one-line corollary at `fuel2 := m` via `le_refl`, since defeq handles
+  `land m n ≡ landAux m m n`.
+
+  The hypothesis must be `Le m fuel`, **not** unconditional: `landAux 0 m n = 0`
+  for any `m > 0` while `land m n` need not be. Callers always arrive with
+  MORE than canonical fuel (`land_bit` unfolds at `fuel = bit a m`), never
+  less. Pin the negative control at insufficient fuel — `(1, 7, 7)` gives
+  `landAux 1 7 7 = 1` against `land 7 7 = 7` — or the statement could be
+  quietly false and the kernel would prove it anyway.
+
+  **And fuel-irrelevance is NECESSARY BUT NOT SUFFICIENT for the 7 facts a
+  triage attributed to it.** `land_comm`/`land_assoc`/`land_bit` and their
+  `lor`/`ldiff` siblings each need something further — a `Nat.bit` decode
+  bridge, or a same-fuel commutativity lemma. The triage's "these 7 reduce to
+  fuel-irrelevance" was the right diagnosis of a *blocker* and an optimistic
+  reading of a *cost*; I relayed it as the latter. Transport to `lorAux`/
+  `ldiffAux` is ~20 lines each (the induction machinery and arithmetic helper
+  carry over; only a per-auxiliary any-fuel base case is new).
+
   **Fuel-irrelevance is a SEPARATE piece and is not needed for agreement.**
   `bitwise f m n := bitwiseAux f m m n` and `land m n := landAux m m n` put the
   *same expression* in the fuel slot, so one counter decrements in lockstep and
