@@ -6972,8 +6972,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_plateau: kernel.name_str(creal, "ivtPlateau"),
         ivt_plateau_nonpos_at_zero: kernel.name_str(creal, "ivtPlateau_nonpos_at_zero"),
         ivt_plateau_nonneg_at_one: kernel.name_str(creal, "ivtPlateau_nonneg_at_one"),
-        ivt_plateau_uniformly_continuous: kernel
-            .name_str(creal, "ivtPlateau_uniformly_continuous"),
+        ivt_plateau_uniformly_continuous: kernel.name_str(creal, "ivtPlateau_uniformly_continuous"),
         ivt_exact_root_decides_sign: kernel.name_str(creal, "ivt_exact_root_decides_sign"),
         cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
         cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),

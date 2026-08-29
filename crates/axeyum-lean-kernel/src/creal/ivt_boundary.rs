@@ -222,10 +222,7 @@ use crate::rat_prelude::ops::nat_rewrite_prop;
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-pub(super) fn declare_ivt_boundary(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_ivt_boundary(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_uniformly_continuous_lattice(d, p, true)?;
     declare_uniformly_continuous_lattice(d, p, false)?;
     declare_ivt_plateau(d, p)?;
@@ -704,7 +701,15 @@ fn declare_ivt_plateau_nonneg_at_one(
     let refl_lifted = d.lemma(p.equiv_refl, &[lifted]);
     let zero_le_lifted = d.lemma(
         p.le_congr,
-        &[floor, zero, lifted, lifted, floor_zero, refl_lifted, floor_le],
+        &[
+            floor,
+            zero,
+            lifted,
+            lifted,
+            floor_zero,
+            refl_lifted,
+            floor_le,
+        ],
     );
 
     let body = d.lemma(p.le_min, &[one, lifted, zero, zero_le_one, zero_le_lifted]);
@@ -892,10 +897,8 @@ fn declare_ivt_exact_root_decides_sign(
                         d.lemma(p.equiv_trans, &[lifted, plateau, zero, w_eq_min, hroot]);
                     let v_le_w = d.lemma(p.le_max_right, &[floor, v]);
                     let refl_v = d.lemma(p.equiv_refl, &[v]);
-                    let le_v_zero = d.lemma(
-                        p.le_congr,
-                        &[v, v, lifted, zero, refl_v, w_eq_zero, v_le_w],
-                    );
+                    let le_v_zero =
+                        d.lemma(p.le_congr, &[v, v, lifted, zero, refl_v, w_eq_zero, v_le_w]);
                     d.or_inl(left_disj, right_disj, le_v_zero)
                 },
             )
@@ -916,11 +919,11 @@ fn declare_ivt_exact_root_decides_sign(
                 let one_no = cadd(d, p, one, neg_one);
                 let rhs_comm = d.lemma(p.add_comm, &[neg_one, one]);
                 let rhs_cancel = d.lemma(p.add_neg, &[one]);
-                let rhs_eq = d.lemma(
-                    p.equiv_trans,
-                    &[no_one, one_no, zero, rhs_comm, rhs_cancel],
-                );
-                d.lemma(p.lt_congr, &[no_c, floor, no_one, zero, lhs_eq, rhs_eq, raw])
+                let rhs_eq = d.lemma(p.equiv_trans, &[no_one, one_no, zero, rhs_comm, rhs_cancel]);
+                d.lemma(
+                    p.lt_congr,
+                    &[no_c, floor, no_one, zero, lhs_eq, rhs_eq, raw],
+                )
             };
             let lt_floor_v = clt(d, p, floor, v);
             let lt_v_zero = clt(d, p, v, zero);
