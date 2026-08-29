@@ -1354,12 +1354,8 @@ fn prove_quantified_unsat_via_egraph_impl(
                 )?,
                 CheckResult::Unsat
             ) {
-                *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
-                    arena,
-                    anchor,
-                    &ground,
-                    &ground_derivations,
-                );
+                *certificate =
+                    collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
                 return Ok(CheckResult::Unsat);
             }
             return Ok(egraph_ground_limit());
@@ -1393,12 +1389,8 @@ fn prove_quantified_unsat_via_egraph_impl(
                     &format!("qf-check round={round} ground={}", ground.len()),
                 );
                 if matches!(check, CheckResult::Unsat) {
-                    *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
-                        arena,
-                        anchor,
-                        &ground,
-                        &ground_derivations,
-                    );
+                    *certificate =
+                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
                     return Ok(CheckResult::Unsat);
                 }
             }
@@ -1606,12 +1598,8 @@ fn prove_quantified_unsat_via_egraph_impl(
                     // `replay_online_refutation` re-established it against
                     // `ground` -- so this is a ground refutation by the same
                     // instances as every other exit, and is certifiable.
-                    *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
-                        arena,
-                        anchor,
-                        &ground,
-                        &ground_derivations,
-                    );
+                    *certificate =
+                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
                     return Ok(CheckResult::Unsat);
                 }
                 online_clauses = None;
@@ -1646,12 +1634,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 CheckResult::Unsat
             )
         {
-            *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
-                arena,
-                anchor,
-                &ground,
-                &ground_derivations,
-            );
+            *certificate = collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
             return Ok(CheckResult::Unsat);
         }
     }
@@ -1686,12 +1669,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         &generations,
     )?;
     if matches!(finished, CheckResult::Unsat) {
-        *certificate = crate::quant_instance_set_cert::collect_ground_derivations(
-            arena,
-            anchor,
-            &ground,
-            &ground_derivations,
-        );
+        *certificate = collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
     }
     Ok(finished)
 }
@@ -2990,6 +2968,58 @@ pub fn check_quantifier_ground_derivation(
         remaining_nodes: MAX_QUANTIFIER_PROVENANCE_NODES,
     };
     checker.check_derivation(arena, derivation, 0)
+}
+
+/// Collect the checked derivations behind a ground refutation, or `None` to
+/// decline.
+///
+/// `anchor` is the assertion list the driver was handed. Every derivation is
+/// replayed against it here, at build time, by the same public checker the
+/// evidence layer will later use.
+///
+/// Replaying rather than comparing lists is what makes the scope rules in
+/// [`crate::quant_instance_set_cert`]'s module note enforced instead of merely
+/// stated. An earlier version tried to detect rewriting by testing the
+/// driver's working list against the caller's for equality; that is both too
+/// strict (an identical list can be rebuilt) and too weak (it says nothing
+/// about what the derivations actually cite). If a split, extraction or
+/// promotion moved the anchor, the derivations cite terms the anchor does not
+/// contain, [`check_quantifier_ground_derivation`] fails, and nothing is
+/// collected — which is the intended outcome, reached by checking rather than
+/// by guessing.
+///
+/// These derivations are **not yet a certificate**: they carry the producing
+/// arena's ids. `crate::quant_instance_set_cert::portable_certificate` turns
+/// them into one, or declines.
+///
+/// Lives here rather than in `quant_instance_set_cert` because it operates
+/// purely on this module's own [`QuantifierGroundDerivation`] and
+/// [`check_quantifier_ground_derivation`]; `quant_instance_set_cert` was this
+/// function's only caller, so hosting it there made the two modules depend on
+/// each other and closed a cycle across the crate's two largest files
+/// (`docs/refactor-2026-08/03-solver-decomposition.md`, 2026-08-29).
+#[must_use]
+pub fn collect_ground_derivations(
+    arena: &mut TermArena,
+    anchor: &[TermId],
+    ground: &[TermId],
+    derivations: &HashMap<TermId, QuantifierGroundDerivation>,
+) -> Option<Vec<QuantifierGroundDerivation>> {
+    let asserted: HashSet<TermId> = anchor.iter().copied().collect();
+    let mut used = Vec::new();
+    for &term in ground {
+        if asserted.contains(&term) {
+            continue;
+        }
+        // A ground term that is neither asserted nor derived would make the
+        // certificate unreplayable. Decline rather than emit a partial one.
+        let derivation = derivations.get(&term)?;
+        if !check_quantifier_ground_derivation(arena, anchor, derivation) {
+            return None;
+        }
+        used.push(derivation.clone());
+    }
+    Some(used)
 }
 
 const MAX_QUANTIFIER_PROVENANCE_DEPTH: usize = 16;

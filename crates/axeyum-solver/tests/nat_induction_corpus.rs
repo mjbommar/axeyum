@@ -44,7 +44,7 @@ use std::thread;
 use std::time::Duration;
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, prove_by_nat_induction, solve_smtlib};
+use axeyum_solver::{CheckResult, SolverConfig, check_auto, prove_by_nat_induction, solve_smtlib};
 
 /// Per-route wall-clock cap. The instances are tiny; this only stops a
 /// nonlinear step obligation from hanging the suite.
@@ -102,10 +102,15 @@ fn induction_verdict(text: &str) -> String {
     let run = move || {
         let mut parsed = parse_script(&owned).ok()?;
         let assertions = parsed.assertions.clone();
-        prove_by_nat_induction(&mut parsed.arena, &assertions, &SolverConfig::default())
-            .ok()
-            .flatten()
-            .map(|r| label(&r).to_owned())
+        prove_by_nat_induction(
+            &mut parsed.arena,
+            &assertions,
+            &SolverConfig::default(),
+            check_auto,
+        )
+        .ok()
+        .flatten()
+        .map(|r| label(&r).to_owned())
     };
     match capped(run) {
         Some(Some(v)) => v,

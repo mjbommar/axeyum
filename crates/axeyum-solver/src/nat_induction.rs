@@ -56,8 +56,18 @@ use std::collections::HashMap;
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
 
-use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError};
+
+/// The quantifier-free dispatch used to discharge the base/step obligations.
+///
+/// Passed in by the caller (`crate::auto::check_auto`, in practice) rather
+/// than imported directly: `auto` dispatches to
+/// [`prove_by_nat_induction`], so a direct `use crate::auto::check_auto` here
+/// would make this module and `auto` depend on each other and close a cycle
+/// (`docs/refactor-2026-08/03-solver-decomposition.md`,
+/// `scripts/analyze_solver_module_graph.py --check`, 2026-08-29).
+pub type Discharge =
+    fn(&mut TermArena, &[TermId], &SolverConfig) -> Result<CheckResult, SolverError>;
 
 /// The recognised shape: which assertion is the goal, and the goal's parts.
 struct Goal {
@@ -253,8 +263,9 @@ fn refuted(
     arena: &mut TermArena,
     query: &[TermId],
     config: &SolverConfig,
+    discharge: Discharge,
 ) -> Result<bool, SolverError> {
-    match check_auto(arena, query, config) {
+    match discharge(arena, query, config) {
         Ok(CheckResult::Unsat) => Ok(true),
         // Sat, unknown, and an unsupported sub-query are all "this route does
         // not apply" — never evidence of satisfiability, only of not proving.
@@ -278,6 +289,7 @@ pub fn prove_by_nat_induction(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    discharge: Discharge,
 ) -> Result<Option<CheckResult>, SolverError> {
     let Some(goal) = recognise(arena, assertions) else {
         return Ok(None);
@@ -291,7 +303,7 @@ pub fn prove_by_nat_induction(
         .map_err(|e| SolverError::Backend(e.to_string()))?;
     let mut base_query = hypotheses(arena, assertions, &goal, &[zero])?;
     base_query.push(negated_base);
-    if !refuted(arena, &base_query, config)? {
+    if !refuted(arena, &base_query, config, discharge)? {
         return Ok(None);
     }
 
@@ -311,7 +323,7 @@ pub fn prove_by_nat_induction(
     step_query.push(k_nonneg);
     step_query.push(at_k);
     step_query.push(negated_step);
-    if !refuted(arena, &step_query, config)? {
+    if !refuted(arena, &step_query, config, discharge)? {
         return Ok(None);
     }
 

@@ -187,48 +187,16 @@ pub struct QuantifierInstanceSetCertificate {
     pub instances: Vec<PortableInstance>,
 }
 
-/// Collect the checked derivations behind a ground refutation, or `None` to
-/// decline.
-///
-/// `anchor` is the assertion list the driver was handed. Every derivation is
-/// replayed against it here, at build time, by the same public checker the
-/// evidence layer will later use.
-///
-/// Replaying rather than comparing lists is what makes the scope rules in the
-/// module note enforced instead of merely stated. An earlier version tried to
-/// detect rewriting by testing the driver's working list against the caller's
-/// for equality; that is both too strict (an identical list can be rebuilt) and
-/// too weak (it says nothing about what the derivations actually cite). If a
-/// split, extraction or promotion moved the anchor, the derivations cite terms
-/// the anchor does not contain, `check_quantifier_ground_derivation` fails, and
-/// nothing is collected — which is the intended outcome, reached by checking
-/// rather than by guessing.
-///
-/// These derivations are **not yet a certificate**: they carry the producing
-/// arena's ids. [`portable_certificate`] turns them into one, or declines.
-#[must_use]
-pub fn collect_ground_derivations(
-    arena: &mut TermArena,
-    anchor: &[TermId],
-    ground: &[TermId],
-    derivations: &HashMap<TermId, QuantifierGroundDerivation>,
-) -> Option<Vec<QuantifierGroundDerivation>> {
-    let asserted: HashSet<TermId> = anchor.iter().copied().collect();
-    let mut used = Vec::new();
-    for &term in ground {
-        if asserted.contains(&term) {
-            continue;
-        }
-        // A ground term that is neither asserted nor derived would make the
-        // certificate unreplayable. Decline rather than emit a partial one.
-        let derivation = derivations.get(&term)?;
-        if !check_quantifier_ground_derivation(arena, anchor, derivation) {
-            return None;
-        }
-        used.push(derivation.clone());
-    }
-    Some(used)
-}
+// `collect_ground_derivations` used to live here, but its only caller was
+// `qinst_egraph` and it operates purely on `qinst_egraph`'s own
+// `QuantifierGroundDerivation`/`check_quantifier_ground_derivation` — so
+// keeping it in this module made `qinst_egraph` depend on this module while
+// this module already depends on `qinst_egraph` (for exactly those two
+// items), closing a cycle across two of the crate's largest files. Moved to
+// `qinst_egraph` (docs/refactor-2026-08/03-solver-decomposition.md,
+// `scripts/analyze_solver_module_graph.py --check`, 2026-08-29). This module
+// still calls into `qinst_egraph`, one-way, via `portable_certificate`'s
+// `derivations: &[QuantifierGroundDerivation]` parameter.
 
 /// Rewrite collected derivations into a certificate that names no term of the
 /// producing run, or `None` if some binding cannot be named portably.

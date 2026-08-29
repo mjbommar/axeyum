@@ -760,9 +760,12 @@ fn finish_quantified_solve_or_induct(
     // The route's only verdict is `unsat`, and it is spelled out here rather
     // than passed through, so a future widening of its return type cannot start
     // emitting `sat` from this rung without this line changing too.
-    if let Ok(Some(CheckResult::Unsat)) =
-        crate::nat_induction::prove_by_nat_induction(arena, original_assertions, &induction_config)
-    {
+    if let Ok(Some(CheckResult::Unsat)) = crate::nat_induction::prove_by_nat_induction(
+        arena,
+        original_assertions,
+        &induction_config,
+        check_auto,
+    ) {
         qtrace("nat-induction", t0, "unsat");
         return Ok(CheckResult::Unsat);
     }
