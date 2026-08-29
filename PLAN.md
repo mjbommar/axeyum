@@ -134,6 +134,8 @@ now. Nothing was deleted.
 | 2026-08-29 | int-emod-negative | landed `Int.emod_natAbs_bound` (`declare_emod_natabs_bound`, `int_prelude/division.rs`) — the sign-general remainder bound `emod_lt_of_pos` cannot state; `int_prelude::` 40 -> 41 |
 | 2026-08-29 | int-emod-negative | landed `Int.ediv_emod_unique_general` (`declare_ediv_emod_unique_general`, same file) — sign-general division-algorithm uniqueness via a negate-and-reduce-to-the-positive-case argument; `int_prelude::` 41 -> 42; `F:ml430-int-gcd-div-5e01872f` (`Int.gcd_div`) left open, precisely scoped to a fourth not-yet-built bridge lemma plus its own mutual-divisibility argument |
 | 2026-08-29 | nat-lor-comm | `Nat.lor_aux_comm_of_fuel` (carries `Le m fuel`/`Le n fuel`, unlike `land`'s unconditional analogue) + `Nat.lor_comm`; closes `F:ml430-nat-lor-comm-2666d7ef` via reconciliation with new fact `F:nat-lor-comm`; `bitwise_comm`/`bitwise_swap` sized and left open (need generic-`f` commutativity + the `Nat.bit` decode bridge respectively) |
+| 2026-08-29 | nat-testbit-bitwise | Verified all four assigned facts are blocked from an `ml430` flip (codomain mismatch; 3 of 4 additionally by a live gate script); landed `F:nat-zero-of-testbit-eq-zero` as a new local fact (`Nat.testBit_of_zero`, `Nat.sumRange_const_zero`, `Nat.zero_of_testBit_eq_zero`); sized the `testBit_land`/`_lor`/`_ldiff` fuel/index bridge in full detail for the next lane |
+| 2026-08-29 | nat-bitwise-assoc | `Nat.land_aux_le_left`/`Nat.land_le_left` (the nested-value bound the assoc brief named); `land_assoc`/`lor_assoc` remain open — precise diagnosis + concrete next-steps recorded above for the next lane |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -12346,6 +12348,402 @@ The 6 remaining `natural-bitwise` facts fuel-irrelevance was blocking:
 case split, not a corollary of commutativity), `land_bit`, `lor_bit`,
 `ldiff_bit` (need the `Nat.bit` decode bridge, not attempted by this or the
 prior lane).
+
+**Your lane's block (`DONE (1 of 4 landed as a new local fact; 3 blocked from
+an ml430 flip by verified reasons independent of proof difficulty)`,
+nat-testbit-bitwise, 2026-08-29).**
+
+Before writing any kernel code, verified (Step 0 of the brief) whether the
+four assigned facts are actually closeable, and found a same-day blocker the
+brief was not aware of: `docs/plan/status/235-nat-bitwise-facts.md` (a full
+triage of all 19 `natural-bitwise` facts, landed earlier in this session)
+already establishes that **none of the four facts this lane was assigned can
+be honestly closed as pinned `ml430` mirrors**, for two independent reasons,
+both re-verified directly against the current tree rather than trusted from
+the doc:
+
+1. **Genuine codomain mismatch.** Mathlib's `Nat.testBit (n i : Nat) : Bool`
+   (confirmed at use sites — `testBit_land` states
+   `testBit (m &&& n) k = (testBit m k && testBit n k)` using `Bool.&&`).
+   Our `Nat.testBit` (`nat_prelude/binary.rs`, `testBitAux`) is
+   `Nat -> Nat -> Nat`, returning `{0,1}` as a `Nat` (confirmed by reading
+   `declare_test_bit_defs` and `test_bit_le_one` directly). This is not an
+   alternate construction of the same type — closing a Bool-typed pinned
+   `formal.statement` with a Nat-valued proof would be "manufacturing a
+   flip" against CLAUDE.md's own honest-flip criterion.
+2. **A live gate would break regardless of provability.**
+   `scripts/gen-autogenesis-bitwise-family-projection.py` (invoked by
+   `just autogenesis-bitwise-semantic-law-demand`, confirmed present in
+   `justfile:667`, NOT part of `just check`'s dependency chain) hard-`raise`s
+   if `F:ml430-nat-testbit-land-dfef7ca4` / `-lor-` / `-ldiff-`
+   `epistemic_status != "open"`. This applies independently of (1) — even a
+   fully honest Bool-valued proof would still break this named recipe.
+
+`F:ml430-nat-zero-of-testbit-eq-false-e244c9a1` is not in that gate script's
+mapping, but still has problem (1): its statement is
+`(∀ i, n.testBit i = false) → n = 0`, Bool-valued.
+
+**Decision:** do not flip any of the four `ml430` facts. Instead, build the
+genuine Nat-valued analogues as NEW local facts (the same pattern
+`F:nat-land-comm` used alongside `F:ml430-nat-land-comm-...` in
+`docs/plan/status/239-nat-fuel-transport.md`), which adds real, checked
+kernel content without contradicting the pinned mismatched-type statements
+or the live gate.
+
+**What landed: `F:nat-zero-of-testbit-eq-zero`.** The cheapest of the four,
+as the brief predicted, and it did NOT need the fuel/index bridge at all —
+`Nat.sum_testBit_eq` already existed (`n = sumRange (fun i => testBit n i *
+2^i) (size n)`). Two new pieces, both in `nat_prelude/binary.rs`:
+
+- `Nat.testBit_of_zero : ∀ i, testBit 0 i = 0` — induction on `i`; the step
+  uses `zero_div` (`div 0 2 = 0`) to keep the recursive call at the SAME `0`
+  the induction hypothesis covers.
+- `Nat.sumRange_const_zero : ∀ k, sumRange (fun _ => zero) k = zero` — a
+  general arithmetic fact (not testBit-specific): the step peels one term via
+  `sumRange_succ`, the IH rewrites the first summand to `zero`, and
+  `add zero (g j)` is `refl` (`g j` beta-reduces to the literal `zero`, and
+  `Nat.add` recurses on its SECOND argument, so `add_zero`'s pattern fires
+  directly with no rewrite needed).
+
+`Nat.zero_of_testBit_eq_zero` chains them with `sum_range_congr` (every
+summand collapses to `0` via `zero_mul`, given the hypothesis) and
+`sum_test_bit_eq`. Kernel-admitted on the FIRST attempt for all three
+declarations — the only rework needed was in the TEST file, not the proof:
+`k.infer` on a raw un-abstracted `fvar` fails `UnboundFVar` (the kernel's
+local context has no entry for an fvar that was never run through
+`lam_fv`/`pi_fv`), so the "symbolic" instantiation test had to re-derive the
+statement as its own tiny `f.theorem(...)` (mirroring
+`land_fuel_irrelevance_holds_...`'s pattern in
+`nat_prelude_tests.rs:10830`) rather than applying the theorem directly at a
+bare fresh fvar.
+
+**The mandatory concrete-instantiation test for `zero_of_testBit_eq_zero` is
+necessarily degenerate, and that is a real property of the statement, not a
+gap in the test.** Its hypothesis (`∀ i, testBit n i = 0`) is FALSE for every
+`n != 0` in this consistent kernel, so `n := 0` (supplied by
+`Nat.testBit_of_zero`) is the ONLY value this fact's own evidence can
+concretely instantiate. The negative control instead varies the CONCLUSION
+side (checking the residue is not def-eq to `Eq 0 1`), which is the
+discriminating check actually available here.
+
+**Counts.** `nat_prelude`: 126 → 128 tests (2 new instantiation tests,
+`test_bit_of_zero_holds_symbolically_and_at_concrete_indices`,
+`zero_of_test_bit_eq_zero_applies_at_the_only_provable_instance`), all
+green. 3 new declarations, all theorems (`test_bit_of_zero`,
+`sum_range_const_zero`, `zero_of_test_bit_eq_zero`) —
+`the_build_is_deterministic`'s pin moved `88 + 452` → `88 + 455` (counted
+from `theorem_names`'s own list length, not hand-incremented).
+`every_nat_declaration_is_checked_and_axiom_free` and
+`nat_axiom_inventory --require-axiom-free nat` both still report `nat`
+axiom-free. `python3 scripts/validate-facts.py`: 1926 facts, 0 errors.
+`cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both clean
+on the touched files. NOT run: the aggregate `just check` / `./scripts/check.sh`.
+
+**What is still needed for `testBit_land`/`_lor`/`_ldiff` — sized in full,
+not attempted, and this IS the hard part the brief warned about.** All three
+need a genuine bridge between two structurally different recursions:
+`testBit`/`testBitAux` recurses on the bit INDEX `i`; `land`/`lor`/`ldiff`
+(via `landAux`/`lorAux`/`ldiffAux`) recurse on a FUEL bound. The worked-out
+route, checked against the actual machinery in
+`nat_prelude/rec_agreement.rs` (fuel-irrelevance, landed by
+`nat-fuel-irrelevance`/`nat-fuel-transport`, `docs/plan/status/237`/`239`)
+rather than assumed:
+
+1. **A `land_succ_of_pos`-shaped equation is the missing middle piece.**
+   Statement: for `m = succ pm`, `n = succ pn`,
+   `land m n = add (mul 2 (land (div m 2) (div n 2))) (mul (mod m 2) (mod n
+   2))`. This is NOT already available as a theorem about `land` itself
+   (only about `landAux` at a fixed fuel) and has to be derived:
+   - `land m n := landAux m m n` (defn) unfolds by ONE fuel step via `iota`
+     (`m` is a literal `succ pm`, so `Nat.rec`'s succ branch fires,
+     regardless of `pm` being symbolic) to
+     `guarded(m, n, 0, 0, landAux pm (div m 2) (div n 2), bit_and)` — reuse
+     `rec_agreement.rs`'s private `guarded` helper (`rec_agreement.rs:99`)
+     verbatim; this step needs NO lemma, only that the theorem's stated LHS
+     and this unfolded form are DEFEQ (the same technique
+     `declare_land_aux_agree_of_fuel`'s step case already relies on, per its
+     own `start`/`final_target` variables never being explicitly related by
+     a `refl` call — the kernel's own defeq check bridges it when the whole
+     proof term is submitted).
+   - The recursive occurrence `landAux pm (div m 2) (div n 2)` is at
+     NON-canonical fuel `pm` (canonical for `land (div m 2) (div n 2)` would
+     be `div m 2` itself). Bridge it with the EXISTING
+     `Nat.land_aux_agree_of_fuel : ∀ fuel1 a b fuel2, Le a fuel1 → Le a fuel2
+     → landAux fuel1 a b = landAux fuel2 a b`, instantiated at
+     `a := div m 2`, `fuel1 := pm`, `fuel2 := div m 2` (canonical, so
+     `landAux fuel2 a b` is DEFEQ to `land (div m 2) (div n 2)` by
+     definition). The needed `Le (div m 2) pm` comes DIRECTLY from the
+     EXISTING `half_le_predecessor_of_succ(d, &p, pm, pm, le_refl(m))` in
+     `rec_agreement.rs:544` (its signature is
+     `(predecessor, k, bound: Le (succ predecessor) (succ k)) -> Le (div
+     (succ predecessor) 2) k`; instantiate `predecessor := pm`, `k := pm`,
+     `bound := le_refl(m)` since `m = succ pm`). **No new arithmetic lemma is
+     needed for this step** — it is a direct application of two already-built
+     pieces.
+2. **The `testBit_land` induction itself**, on `i`, generalizing `m, n`,
+   with motive `fun i => ∀ m n, testBit (land m n) i = mul (testBit m i)
+   (testBit n i)`:
+   - Base (`i = 0`): 3-way case split on `m`/`n` via `cases_zero_succ`
+     (`ops.rs:1551`) — `m = 0` (`land_zero_left`, refl), `n = 0`
+     (`land_zero_right`, an existing theorem), and `m, n` both `succ` (the
+     `land_succ_of_pos` equation above, then `mod (2a+r) 2 = r` for `r < 2` —
+     see point 3).
+   - Step (`i = succ j`): same 3-way split; the "both succ" case needs
+     `div (2a+r) 2 = a` for `r < 2` (point 3) to reduce
+     `div (land m n) 2` to `land (div m 2) (div n 2)`, then the INDUCTION
+     HYPOTHESIS applied at `(div m 2, div n 2)`, then `testBit_succ`
+     (already a theorem, `testBit n (succ i) = testBit (div n 2) i`) run
+     BACKWARDS to fold `testBit (div m 2) j` back into `testBit m (succ j)`.
+     The `m = 0` / `n = 0` cases need a small helper (`testBit 0 i = 0`,
+     **already landed by this lane** as `Nat.testBit_of_zero` — reuse it
+     directly, do not re-derive).
+3. **A general "div/mod of `2a+r` for `r < 2`" lemma does not exist yet and
+   is needed for BOTH the base and step cases above.** Build it the same way
+   `binary.rs`'s `declare_mod_two_mul_split` builds its own div/mod identity:
+   construct `divMod 2 (add (mul 2 a) r) a r` BY HAND (the equation side is
+   `refl`; the bound side is the `r < 2` hypothesis, itself obtained by
+   4-way `cases_mod_two` on `mod m 2` and `mod n 2` — `bit_and = mul (mod m
+   2) (mod n 2)` is one of `{0, 0, 0, 1}` at those four corners, always
+   `< 2`), then force it equal to the EXECUTABLE witness `divMod 2 (2a+r)
+   (div (2a+r) 2) (mod (2a+r) 2)` (`p.div_mod_exec`) via `div_mod_unique`.
+   This is a GENERAL arithmetic fact, not specific to `land` — worth
+   promoting to a shared helper (`ops.rs` or `binary.rs`) rather than
+   inlining it three times for `land`/`lor`/`ldiff`.
+
+**Per-operator differences the transport has to account for** (same shape
+as the `nat-fuel-transport` lane's own findings, `docs/plan/status/239.md`):
+`lor`'s per-bit combine is `max` (via `ble` + `bool_select_nat`, not `mul`),
+and its fuel-exhaustion row returns `n` rather than `0`, so its
+`lor_succ_of_pos` analogue and its `m = 0`/`n = 0` base/step cases will NOT
+match `land`'s shape byte-for-byte (`lor 0 n = n`, not `0` — the base case at
+`m = 0` needs `testBit n i` on the RHS, not `0`, so the whole 3-way split's
+`m = 0` branch differs in KIND from `land`'s, not just in which lemma
+closes it). `ldiff`'s per-bit combine is `beq`-based
+(`if mod n 2 = 0 then mod m 2 else 0`) and its base cases are the HYBRID
+already documented in `ldiff.rs`'s module doc (`ldiff 0 n = 0` like `land`,
+`ldiff m 0 = m` like `lor`). Budget each of `lor`/`ldiff` as a real,
+separate proof, not a copy-paste of `land`'s — this project's own bitwise
+history (CLAUDE.md's Gotchas) has been wrong about that sizing before.
+
+**Negative controls to build alongside each, per CLAUDE.md's rule that a
+control copied from a sibling can be vacuous:** for `land`, use two
+bit-differing numerals (e.g. `testBit (land 3 5) 1` vs `testBit 3 1 * testBit
+5 1` — `3 = 011`, `5 = 101`, bit 1 differs) — do NOT reuse `land_three_five`'s
+own numerals uncritically without checking they discriminate at the
+SPECIFIC index chosen. For `lor`/`ldiff`, derive a fresh witness per operator
+and verify by hand simulation before committing to a Rust proof (exactly
+the discipline `nat-fuel-transport` used for its own fuel-irrelevance
+witnesses).
+
+**On the live gate script, for the coordinator:** even after this bridge
+lands (for one, two, or all three of `land`/`lor`/`ldiff`),
+`testBit_land`/`_lor`/`_ldiff` STILL cannot be closed as `ml430` mirrors
+without either (a) building a genuine Bool-valued `Nat.testBit` (this
+kernel already has a real two-constructor `Bool` with `Bool.rec`, `Nat.beq`/
+`Nat.ble` already return it, so `testBitBool n i := beq (testBit n i) 1`
+is a ONE-LINE wrapper — the "new infrastructure" `docs/plan/status/235.md`
+sized as substantial may be smaller than it looked, though the AND/OR/NOT
+combinators and their equations over that Bool type are still real proof
+work), AND (b) updating or retiring
+`scripts/gen-autogenesis-bitwise-family-projection.py`'s hard assumption
+that these three facts stay `open` forever. Neither is this lane's call to
+make unilaterally — flag it for the next session's planning pass.
+
+**Your lane's block (`OPEN`, nat-bitwise-assoc, 2026-08-29).** Neither
+`F:ml430-nat-land-assoc-ad4775b8` (`Nat.land_assoc`) nor
+`F:ml430-nat-lor-assoc-82c4d0fd` (`Nat.lor_assoc`) closed this session. What
+landed instead is a real, tested, reusable piece of the infrastructure the
+brief named as needed — `Nat.land_aux_le_left`/`Nat.land_le_left` — plus a
+precise diagnosis of why the natural next step (a fuel-parametrized
+`land_aux_assoc_of_fuel`, mirrored on `land_aux_comm_of_fuel`) does not go
+through the way commutativity did, and what it would actually take.
+
+**What landed and is kernel-checked.**
+
+- `Nat.land_aux_le_left : ∀ fuel m n, Le (landAux fuel m n) m` — `landAux`
+  never exceeds its LEFT operand, at ANY fuel, sufficient or not. This is
+  exactly the bound the brief flagged: *"a nested `landAux fuel a b` in the
+  fuel-recursion's ARGUMENT position is not obviously bounded by fuel, so
+  the re-fuelling step may need a lemma saying `landAux fuel a b ≤ a`
+  ... before the outer application's fuel is known sufficient."* No such
+  lemma existed; this is it.
+- `Nat.land_le_left : ∀ a b, Le (land a b) a` — the one-line `land`-headed
+  corollary at `fuel := m := a` (defeq to `land a b`, no extra proof step,
+  same shape as `land_aux_eq_land_of_le`'s corollary).
+
+Both proved by ordinary induction on `fuel` alone
+(`agree_by_fuel_induction`, no sufficient-fuel hypothesis needed at all,
+unlike fuel-irrelevance): the `m = 0` and `n = 0` leaves close via
+`land_aux_zero_left_any_fuel` and the literal-`n = 0` guard trick already
+used throughout `rec_agreement.rs`; the "both positive" leaf bounds
+`2*rec + bit` by `2*(m/2) + (m%2) = m` via `mul_le_mul_left`,
+`add_le_add_left`/`add_le_add_right`, `le_trans`, and the executable
+div/mod identity (`div_mod_exec`, extracted with `helpers::and_left`
+following `division.rs`/`group.rs`'s `div_mod_unique` pattern — a NEW
+private helper `bit_product_le_left` bounds `(m%2)*(n%2) ≤ m%2` via
+`n%2 ≤ 1` monotonicity, since `mod_lt` + `le_of_lt_succ` give `n%2 ≤ 1`
+directly and this route needed no `cases_mod_two` case split at all).
+
+Registered in `theorem_names` (`every_nat_declaration_is_checked_and_
+axiom_free` now covers both — this test derives its checklist from
+`kernel.environment()`, so an unregistered live declaration fails it
+loudly, which is how the omission was caught on the first run). Both carry
+zero axiom footprint. Instantiated at a concrete, STRICTLY discriminating
+pair (`land 5 6 = 4`, `101 & 110 = 100`, strictly `< 5` — a pair where
+`land a b = a`, e.g. `a` a submask of `b`, would not discriminate a bound
+that is actually an equality in disguise) plus a fully symbolic
+restatement over free `fuel`/`m`/`n`, per the concrete-and-free-variable
+rule. `the_build_is_deterministic`'s pin moved `88+452 → 88+454`, taken
+from the panic message's own mismatch, not hand-incremented.
+
+**Why the natural next step does NOT go through, in detail — read this
+before attempting `land_aux_assoc_of_fuel`.**
+
+The obvious mirror of `land_aux_comm_of_fuel` is:
+
+```
+land_aux_assoc_of_fuel : ∀ fuel a b c,
+  Eq (landAux fuel (landAux fuel a b) c) (landAux fuel a (landAux fuel b c))
+```
+
+proved by induction on `fuel` with `a`, `b`, `c` generalized (this part is
+free: `agree_by_double_fuel_induction` already has exactly this
+4-argument-with-fuel-first shape — its "two fuels" reading and a "three
+values" reading are the SAME combinator, since it never inspects what its
+generalized slots mean. No new induction combinator is needed).
+
+The BASE case (`fuel = 0`) is trivial: `landAux 0 X c` is defeq to `0`
+regardless of what `X` is, even a fully symbolic/stuck term (the base row
+is the constant function `fun m n => 0`, so the recursor's zero-case
+doesn't need to inspect `m` at all). Both sides collapse to `0` by `refl`.
+
+The STEP case (`fuel = succ k`) is where it breaks. Write `X := landAux
+(succ k) a b` (the LHS's nested value). The outer application
+`landAux (succ k) X c` unfolds ONE step via `guarded` regardless of `X`'s
+shape (the recursion is on the FUEL, which is literally `succ k` here —
+this much is easy, and NOT the problem some earlier framing of this task
+worried about). But `guarded`'s OUTER guard checks `c` (n = 0 outermost;
+`c` is known positive from an outer 3-way case split on `a`/`b`/`c`, so
+that check resolves), and its INNER guard checks `beq(X, 0)` — and `X` is
+a compound arithmetic expression (`2*recAB + bitAB`, not a bare
+`Nat.succ`/`Nat.zero` application), so this guard does **not** resolve by
+mere unfolding. `X` genuinely CAN be `0` even when `a`, `b` are both
+positive (e.g. `land 2 1 = 0`), so this is not a vacuous branch to paper
+over — the guard's outcome really is undetermined without further work.
+
+Deciding "is `X` zero or positive" while PRESERVING the connection back to
+`recAB`/`bitAB` needs a PROP-LEVEL dichotomy folded into the goal's motive
+(`cases_zero_succ`'s raw `Nat.rec` elimination does NOT work here — it
+would hand back a fresh, structurally UNRELATED opaque predecessor, since
+`X` is not the theorem's own bound variable; the doc on `cases_zero_succ`
+says this explicitly: "a caller wanting a hypothesis usable inside a
+branch must fold it into `motive`"). The dichotomy itself
+(`Or (Eq X 0) (Exists p, Eq X (succ p))`) is buildable — it is exactly
+`cases_zero_succ` applied to a FRESH universally-quantified `n`, proved
+once and then instantiated at any concrete term including `X`, the same
+trick that lets `land_aux_agree_of_fuel` be REUSED at an opaque `X` in
+`land_le_left`'s proof without redoing its induction.
+
+The actual wall is what happens INSIDE the `X = 0` branch. There, you know
+`Eq X 0`, i.e. `Eq (2*recAB + bitAB) 0`. The goal at this point still needs
+`landAux (succ k) A (landAux (succ k) B c) = 0` (the RHS), and there is NO
+shortcut to this — you cannot derive "RHS is 0" from "X is 0" as an
+external fact (associativity is exactly the thing not yet available), so
+you need `recAB = 0 ∧ bitAB = 0` (from `2*recAB + bitAB = 0` via an
+`add_eq_zero`-style lemma, then `2*recAB = 0 → recAB = 0` via an
+`eq_zero_of_mul_eq_zero`-style lemma given `2 ≠ 0`, and `bitAB = 0` i.e.
+`(a%2)*(b%2) = 0` gives `a%2 = 0 ∨ b%2 = 0` via a `mul_eq_zero_iff`-style
+disjunction) — NONE of which currently exist in this prelude, and even
+once built, using them to show the RHS is ALSO forced to `0` needs its own
+sub-argument (does `recAB = 0` propagate to show `landAux(k, a/2,
+landAux(k, b/2, c)) = 0`? Only via essentially the SAME induction, one
+level down — this is why it is a genuine wall, not a missing one-liner).
+
+**Empirically the unconstrained statement (any fuel, not just sufficient)
+appears TRUE** — hand-traced at `(fuel=1, a=b=c=2)`, `(fuel=1, a=b=c=3)`,
+and other insufficient-fuel triples, both sides always agreed. So this is
+not a case of chasing a false lemma; it is a real, provable fact that
+needs more supporting lemmas than commutativity did.
+
+**What it would actually take to close `land_assoc`, concretely, next:**
+
+1. Build `Nat.add_eq_zero_iff : ∀ a b, Eq (add a b) 0 ↔ Eq a 0 ∧ Eq b 0` (or
+   the two directions separately; only `→` is needed here) and
+   `Nat.mul_eq_zero_of_left`/`_right`-style facts (or a full
+   `mul_eq_zero_iff` disjunction) — standard, but not yet in this prelude.
+2. Fold `Or (Eq X 0) (Exists p, Eq X (succ p))` into the goal's motive (an
+   arrow-typed motive per `cases_zero_succ`'s documented pattern) so both
+   branches retain the connection to `recAB`, `bitAB`.
+3. In the `X = 0` branch, use (1) to get `recAB = 0 ∧ bitAB = 0`, then
+   show the RHS also reduces to `0` — this likely needs its OWN nested
+   zero-dichotomy on `Y := landAux (succ k) b c` (is `Y` zero or positive?)
+   plus the same style of argument, i.e. the "both nested values are zero"
+   case may need to be handled as a genuinely separate leaf from "both
+   positive", not derived by symmetry.
+4. In the `X = succ p` branch (`p` opaque but now `X`'s successor-shape is
+   established via the EQUATION `Eq X (succ p)`, not by generic recursor
+   substitution): use `Eq X X_reduced` (`X_reduced := 2*recAB + bitAB`,
+   provable by pure `refl`/defeq once `a`, `b` are known positive — this
+   part is easy and already validated in the analysis above) together with
+   the RECOMPOSE identity — `div(2*rec+bit, 2) = rec` and
+   `mod(2*rec+bit, 2) = bit` given `bit < 2`, via `div_mod_unique` against
+   `div_mod_exec` and a hand-built `divMod` witness (same pattern as
+   `land_aux_le_left`'s div/mod extraction, just with a general `rec`/`bit`
+   pair instead of `half_m`/`bit_m`) — to relate `div(X,2)`/`mod(X,2)` back
+   to `recAB`/`bitAB`, and finally apply the induction hypothesis at
+   `(a/2, b/2, c/2)` to close the recursive sub-goal. Once this reconstruct
+   lemma exists, THIS branch's algebra is the easy part (mirrors
+   `land_aux_comm_of_fuel`'s per-bit `mul_comm` step, but with `mul_assoc`
+   instead — the two `bit` expressions `((a%2)*(b%2))*(c%2)` and
+   `(a%2)*((b%2)*(c%2))` are literally `Nat.mul_assoc`, no new bit-level
+   lemma needed there).
+5. Once `land_aux_assoc_of_fuel` is proved, `land_assoc` itself is routine:
+   re-fuel `land (land a b) c` and `land a (land b c)` to the shared fuel
+   `a + b + c` using `land_le_left` (for the nested-value bound,
+   `Le (land a b) (a+b+c)` via `Le (land a b) a` + `Le a (a+b+c)` +
+   `le_trans`) and `land_aux_agree_of_fuel`/`land_aux_eq_land_of_le`
+   exactly as `land_comm` does — this part is NOT a wall, it is the same
+   re-fueling machinery already built and tested, just needing the `a+b+c`
+   ordering worked out for THREE terms instead of two (some `Le` sides need
+   an `add_assoc`/`add_comm` transport, analogous to `land_comm`'s
+   `Le n (add n m)` → `Le n (add m n)` step).
+
+**`lor` diverges from `land` at exactly the bound lemma, not the dichotomy
+difficulty.** `lor` GROWS rather than shrinks: `lor a b` can exceed both
+`a` and `b` (e.g. `lor 1 2 = 3`), so `land_aux_le_left`'s statement is
+FALSE for `lorAux`. The analogous, TRUE bound is
+`lor_aux_le_sum : ∀ fuel m n, Le (lorAux fuel m n) (add m n)` (standard:
+`a OR b ≤ a + b`, since OR never exceeds the sum of the operands — the
+`m = 0`/`n = 0` leaves are `Le 0 n`/`Le m (add m n)` via `zero_le`/
+`le_add_right` directly, no `land`-style absorbing-zero shortcut applies
+since `lorAux`'s exhaustion row returns the OTHER operand, not `0`; the
+"both positive" leaf needs the same `2*rec+bit ≤ 2*(sum/2ish)+...` shape
+but the bound target is `add m n`, not `m` alone, so the arithmetic is
+messier — budget it as at least as large as `land_aux_le_left`, likely
+larger). The zero-check-on-a-compound-value wall in `lor_aux_assoc_of_fuel`
+is THE SAME wall as `land`'s (same dichotomy-folding requirement, same
+need for `add_eq_zero`/`mul`-style facts on the `max`-via-`ble` per-bit
+combine instead of `mul`), so build `land_assoc` first — `lor_assoc`
+transports the TECHNIQUE, not the bound lemma.
+
+**Counts.** `nat_prelude` before this lane: 125 passed (post
+`nat-fuel-transport`/`land_comm`). After: 127 passed (2 new declarations,
+both theorems, `land_aux_le_left` and `land_le_left`; 1 new instantiation
+test). `the_build_is_deterministic`'s pin: `88+452 → 88+454` (counted from
+the panic message, not hand-incremented). `nat` trusted surface still
+`axiom=0 opaque=0 quotient=0` (both new theorems carry empty
+`axiom_footprint`, asserted in the new test).
+`cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both
+clean. `python3 scripts/validate-facts.py`: 1925 facts, 0 errors
+(unaffected — no fact file touched, since neither target fact closed).
+NOT run: the aggregate `just check` / `./scripts/check.sh` (coordinator
+re-verifies before merging, per this repo's standing rule).
+
+Neither `F:ml430-nat-land-assoc-ad4775b8` nor
+`F:ml430-nat-lor-assoc-82c4d0fd` was touched (both remain `open`, exactly
+as found).
 
 **Your lane's block (`DONE for this pass`, pin-recount-shapes, 2026-08-29).**
 `scripts/recount-pinned-inventory.py` recognized exactly one array shape and

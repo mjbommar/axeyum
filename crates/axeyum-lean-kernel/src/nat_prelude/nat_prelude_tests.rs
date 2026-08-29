@@ -757,6 +757,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.test_bit_zero,
         p.test_bit_succ,
         p.test_bit_le_one,
+        p.test_bit_of_zero,
         p.mod_two_mul_split,
         p.sum_test_bit_lt,
         p.size_zero,
@@ -764,6 +765,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.lt_pow_size,
         p.mod_eq_self_of_lt,
         p.sum_test_bit_eq,
+        p.sum_range_const_zero,
+        p.zero_of_test_bit_eq_zero,
         p.fib_add_two,
         p.fib_le_succ,
         p.fib_pos_of_pos,
@@ -2508,6 +2511,101 @@ fn sum_test_bit_eq_holds_at_concrete_points() {
     assert!(
         f.k.axiom_footprint(p.sum_test_bit_eq).is_empty(),
         "sum_testBit_eq must rest on zero axioms"
+    );
+}
+
+/// `Nat.test_bit_of_zero` reduces to `Eq (testBit 0 i) 0` at a genuinely
+/// symbolic `i` (its own statement quantifies over `i`, so this instantiates
+/// at a free variable rather than a numeral) and also checks out at several
+/// concrete indices.
+#[test]
+fn test_bit_of_zero_holds_symbolically_and_at_concrete_indices() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: re-derive the same statement over a bound variable, proved
+    // by the prelude theorem alone (raw un-abstracted fvars cannot be
+    // `k.infer`'d directly -- the kernel's local context has no entry for
+    // them until `lam_fv`/`pi_fv` abstracts them into a closed term, which
+    // `f.theorem` does).
+    {
+        let name = f.name("test_bit_of_zero_restated");
+        f.theorem(name, 1, &|d, values| {
+            let i = values[0];
+            let zero = d.zero();
+            let tb = d.const_app(p.test_bit, &[zero, i]);
+            let stmt = d.eq(tb, zero);
+            let fn_term = d.const_app(p.test_bit_of_zero, &[]);
+            let proof = d.apply(fn_term, &[i]);
+            (stmt, proof)
+        })
+        .expect("test_bit_of_zero must apply at a genuinely symbolic i");
+    }
+
+    let zero = f.zero();
+    for i_val in [0u32, 1, 5, 20] {
+        let iv = f.num(i_val);
+        let test_bit_of_zero_fn = f.const_app(p.test_bit_of_zero, &[]);
+        let proof = f.apply(test_bit_of_zero_fn, &[iv]);
+        let inferred = f.k.infer(proof).unwrap();
+        let tb = f.const_app(p.test_bit, &[zero, iv]);
+        let expected = f.eq(tb, zero);
+        assert!(
+            f.k.def_eq(inferred, expected),
+            "test_bit_of_zero({i_val}) should state testBit 0 {i_val} = 0"
+        );
+        assert!(
+            f.k.def_eq(tb, zero),
+            "testBit 0 {i_val} must actually reduce to 0"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.test_bit_of_zero).is_empty(),
+        "test_bit_of_zero must rest on zero axioms"
+    );
+}
+
+/// `Nat.zero_of_testBit_eq_zero` — the Nat-valued analogue of Mathlib's
+/// `Nat.zero_of_testBit_eq_false` (see
+/// `docs/plan/status/244-nat-testbit-bitwise.md` for why this is a NEW local
+/// fact, not a flip of that pinned Bool-typed mirror). The only concrete
+/// instantiation of its hypothesis (`∀ i, testBit n i = 0`) that is
+/// ACTUALLY PROVABLE is `n := 0` (`test_bit_of_zero` supplies it exactly);
+/// any other numeral would need a false hypothesis. Checked by application,
+/// not merely admission: applying at `n := 0` with that hypothesis reduces
+/// to `Eq 0 0`, and the residue is NOT def-eq to a differently-valued
+/// statement (the negative control).
+#[test]
+fn zero_of_test_bit_eq_zero_applies_at_the_only_provable_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let hyp = f.const_app(p.test_bit_of_zero, &[]);
+    let proof = f.lemma(p.zero_of_test_bit_eq_zero, &[zero, hyp]);
+    let inferred = f
+        .k
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("zero_of_testBit_eq_zero(0) should infer: {}", f.explain(&e)));
+    let expected = f.eq(zero, zero);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "zero_of_testBit_eq_zero(0, test_bit_of_zero) should state Eq 0 0"
+    );
+
+    // NEGATIVE control: the residue must not be def-eq to a statement about
+    // a different value.
+    let one = f.num(1);
+    let wrong_expected = f.eq(zero, one);
+    assert!(
+        !f.k.def_eq(inferred, wrong_expected),
+        "zero_of_testBit_eq_zero(0, ...) must NOT be def-eq to a statement about 1"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.zero_of_test_bit_eq_zero).is_empty(),
+        "zero_of_testBit_eq_zero must rest on zero axioms"
     );
 }
 
@@ -6274,7 +6372,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        88 + 456,
+        88 + 459,
         "every promised definition and theorem must be rendered"
     );
 }

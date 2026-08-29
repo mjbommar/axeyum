@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-zero-of-testbit-eq-zero",
+  "title": "a natural number with every bit zero is zero",
+  "statement": "For every natural n: if testBit(n, i) = 0 for every i, then n = 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 x1) AxNat.zero)) -> Eq.{1} AxNat x0 AxNat.zero))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.zero_of_testBit_eq_zero",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.zero_of_testBit_eq_zero",
+      "supports": "Nat.zero_of_testBit_eq_zero is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- testBit_eq_zero 2>/dev/null | grep -Ec '^Nat\\.zero_of_testBit_eq_zero[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.zero_of_testBit_eq_zero[[:space:]]` so a differently-named sibling cannot satisfy this row."
+    },
+    {
+      "id": "compute-Nat.zero_of_testBit_eq_zero",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.zero_of_testBit_eq_zero",
+      "supports": "Applied at n := 0 with the hypothesis supplied by Nat.testBit_of_zero (the only value for which the universally-quantified hypothesis is actually provable), the residue is Eq 0 0, and is NOT def-eq to a statement about a different value -- the negative control.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::zero_of_test_bit_eq_zero_applies_at_the_only_provable_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "The hypothesis `forall i, testBit n i = 0` is false for every n != 0 in this consistent kernel, so n := 0 (via the companion theorem Nat.testBit_of_zero) is the only instance this test can honestly instantiate. Nat.testBit_of_zero itself is checked symbolically (at a genuinely free i, via a re-derived theorem) and at concrete indices 0/1/5/20 in nat_prelude::nat_prelude_tests::test_bit_of_zero_holds_symbolically_and_at_concrete_indices."
+    },
+    {
+      "id": "footprint-Nat.zero_of_testBit_eq_zero",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-testbit-bitwise",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the Nat-valued analogue of Mathlib v4.30's `Nat.zero_of_testBit_eq_false` (`F:ml430-nat-zero-of-testbit-eq-false-e244c9a1`), registered as its OWN local fact rather than a flip of that pinned mirror, because the two propositions have genuinely different codomains: Mathlib's `Nat.testBit (n i : Nat) : Bool` returns `Bool` and the statement uses `Bool.&&`/`= false`, while this kernel's `Nat.testBit : Nat -> Nat -> Nat` returns `{0,1}` as a `Nat` (see `nat_prelude/binary.rs`'s module doc and `docs/plan/status/244-nat-testbit-bitwise.md`, `docs/plan/status/235-nat-bitwise-facts.md`). Restating the Bool-typed pinned statement over a Nat-valued predicate would be manufacturing a flip against a mismatched-codomain mirror, which the honest-flip criterion in this project's CLAUDE.md explicitly rules out. `F:ml430-nat-zero-of-testbit-eq-false-e244c9a1` stays open.\n\nProved via `Nat.sum_testBit_eq` (`n = sumRange (fun i => testBit n i * 2^i) (size n)`): the hypothesis collapses every summand to `0` (via `Nat.zero_mul`, after a `sumRange_congr` rewrite), and the resulting `sumRange (fun _ => 0) (size n)` is `0` by the new general helper `Nat.sumRange_const_zero` (induction on the range bound; the step collapses via `add_zero` since the summand is literally `0`). A small companion theorem, `Nat.testBit_of_zero : forall i, testBit 0 i = 0`, supplies the only concrete hypothesis instance this fact's evidence can actually construct, and is independently useful groundwork for the still-open `Nat.testBit_land`/`_lor`/`_ldiff` bridge (see the status doc)."
+}

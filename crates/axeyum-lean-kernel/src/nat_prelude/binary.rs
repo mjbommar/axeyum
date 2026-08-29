@@ -239,6 +239,58 @@ fn declare_test_bit_le_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ker
     d.declare_theorem(p.test_bit_le_one, ty, value)
 }
 
+/// `test_bit_of_zero : ∀ i, Eq (testBit 0 i) zero`. Induction on `i`: base
+/// is `testBit 0 0 = mod 0 2 = 0` (`testBit_zero` then `zero_mod`); step
+/// uses `testBit 0 (succ j) = testBit (div 0 2) j` (`testBit_succ`), and
+/// `div 0 2 = 0` (`zero_div`) puts the recursive occurrence at the SAME `0`
+/// the induction hypothesis already covers.
+fn declare_test_bit_of_zero(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.test_bit_of_zero, 1, &|d, values| {
+        let i = values[0];
+        let zero = d.zero();
+        let statement_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let tb = d.const_app(p.test_bit, &[zero, candidate]);
+            let zero = d.zero();
+            d.eq(tb, zero)
+        };
+        let proof = d.induct(
+            &statement_at,
+            &|d| {
+                let zero = d.zero();
+                let tb0 = d.const_app(p.test_bit, &[zero, zero]);
+                let tbz = d.lemma(p.test_bit_zero, &[zero]);
+                let two = d.num(2);
+                let mod02 = d.modulo(zero, two);
+                let zmod = d.lemma(p.zero_mod, &[two]);
+                let (_, combined) = d.chain(tb0, &[(mod02, tbz), (zero, zmod)]);
+                combined
+            },
+            &|d, j, ih| {
+                let sj = d.succ(j);
+                let zero = d.zero();
+                let tb_succ = d.const_app(p.test_bit, &[zero, sj]);
+                let tbs = d.lemma(p.test_bit_succ, &[zero, j]);
+                let two = d.num(2);
+                let half = d.div(zero, two);
+                let tb_half_j = d.const_app(p.test_bit, &[half, j]);
+                let zdiv = d.lemma(p.zero_div, &[two]);
+                let congr_half =
+                    d.congr(half, zero, zdiv, &|d, x| d.const_app(p.test_bit, &[x, j]));
+                let tb_zero_j = d.const_app(p.test_bit, &[zero, j]);
+                let (_, combined) = d.chain(
+                    tb_succ,
+                    &[(tb_half_j, tbs), (tb_zero_j, congr_half), (zero, ih)],
+                );
+                combined
+            },
+            i,
+        );
+        (statement_at(d, i), proof)
+    })?;
+    Ok(())
+}
+
 /// `mod_two_mul_split : ∀ n m, Lt 0 m →
 /// add (mul 2 (mod (div n 2) m)) (mod n 2) = mod n (mul m 2)`.
 ///
@@ -632,6 +684,7 @@ fn declare_sum_test_bit_lt(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ker
 pub(super) fn declare_binary_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_test_bit_defs(d, p)?;
     declare_test_bit_le_one(d, p)?;
+    declare_test_bit_of_zero(d, p)?;
     declare_mod_two_mul_split(d, p)?;
     declare_sum_test_bit_lt(d, p)?;
     Ok(())
@@ -1115,5 +1168,147 @@ pub(super) fn declare_size_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
     declare_lt_pow_size(d, p)?;
     declare_mod_eq_self_of_lt(d, p)?;
     declare_sum_test_bit_eq(d, p)?;
+    Ok(())
+}
+
+/// `fun _ => zero : Nat -> Nat` — the constant-zero function, used both by
+/// [`declare_sum_range_const_zero`]'s own statement and by
+/// [`declare_zero_of_test_bit`]'s call site, so both mention the SAME raw
+/// term rather than two independently-built lambdas that merely happen to
+/// coincide.
+fn zero_fn(d: &mut NatDev<'_>) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let zero = d.zero();
+    d.lam_fv(i_fv, nat, zero)
+}
+
+/// `sumRange_const_zero : ∀ k, Eq (sumRange (fun _ => zero) k) zero` — a
+/// general arithmetic fact (not specific to `testBit`), by induction on `k`:
+/// the base case is `sum_range_zero`; the step peels one term via
+/// `sum_range_succ` (`sumRange g (succ j) = add (sumRange g j) (g j)`), the
+/// induction hypothesis rewrites the first summand to `zero`, and
+/// `add zero (g j)` is `refl` to `zero` (`g j` beta-reduces to the literal
+/// `zero`, and `add` recurses on its SECOND argument, so `add_zero`'s
+/// pattern fires directly). Needed by [`declare_zero_of_test_bit`].
+fn declare_sum_range_const_zero(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let g = zero_fn(d);
+    d.theorem(p.sum_range_const_zero, 1, &|d, values| {
+        let k = values[0];
+        let statement_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let lhs = d.sum_range(g, candidate);
+            let zero = d.zero();
+            d.eq(lhs, zero)
+        };
+        let proof = d.induct(
+            &statement_at,
+            &|d| d.lemma(p.sum_range_zero, &[g]),
+            &|d, j, ih| {
+                let sj = d.succ(j);
+                let start = d.sum_range(g, sj);
+                let sum_j = d.sum_range(g, j);
+                let g_j = d.apply(g, &[j]);
+                let step_eq = d.lemma(p.sum_range_succ, &[g, j]);
+                let mid = d.add(sum_j, g_j);
+                let zero = d.zero();
+                let final_term = d.add(zero, g_j);
+                let congr_ih = d.congr(sum_j, zero, ih, &|d, x| {
+                    let g_j2 = d.apply(g, &[j]);
+                    d.add(x, g_j2)
+                });
+                let refl_final = d.refl(final_term);
+                let (_, combined) = d.chain(
+                    start,
+                    &[(mid, step_eq), (final_term, congr_ih), (zero, refl_final)],
+                );
+                combined
+            },
+            k,
+        );
+        (statement_at(d, k), proof)
+    })?;
+    Ok(())
+}
+
+/// `zero_of_testBit_eq_zero : ∀ n, (∀ i, Eq (testBit n i) zero) → Eq n
+/// zero`. See [`NatPrelude::zero_of_test_bit_eq_zero`]'s doc for why this is
+/// registered as a NEW local fact rather than used to flip the pinned
+/// Bool-typed `ml430` mirror `Nat.zero_of_testBit_eq_false`.
+///
+/// Proof: the hypothesis makes every summand of `sum_testBit_eq`'s sum
+/// (`fun i => mul (testBit n i) (pow 2 i)`) collapse to `zero` (via
+/// `zero_mul`), so `sum_range_congr` identifies that sum with
+/// `sumRange (fun _ => zero) (size n)`, which `sum_range_const_zero` gives
+/// as `zero`; `sum_testBit_eq` itself identifies the original sum with `n`.
+fn declare_zero_of_test_bit_inner(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let g = zero_fn(d);
+    d.theorem(p.zero_of_test_bit_eq_zero, 1, &|d, values| {
+        let n = values[0];
+        let zero = d.zero();
+
+        let hyp_ty = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let tb = d.const_app(p.test_bit, &[n, i]);
+            let zero = d.zero();
+            let body = d.eq(tb, zero);
+            d.pi_fv(i_fv, nat, body)
+        };
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        let sz = d.const_app(p.size, &[n]);
+        let f = term_fn(d, &p, n);
+
+        // pointwise : ∀ i, Eq (f i) (g i)  --  g i beta-reduces to `zero`,
+        // so the statement built here is defeq to `Eq (f i) zero`.
+        let pointwise = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let tb = d.const_app(p.test_bit, &[n, i]);
+            let two = d.num(2);
+            let p2i = d.pow(two, i);
+            let f_i = d.mul(tb, p2i);
+            let tb_eq_zero = d.apply(hyp, &[i]);
+            let mul_zero_p2i = d.mul(zero, p2i);
+            let congr1 = d.congr(tb, zero, tb_eq_zero, &|d, x| {
+                let two = d.num(2);
+                let p2i_inner = d.pow(two, i);
+                d.mul(x, p2i_inner)
+            });
+            let zero_mul_eq = d.lemma(p.zero_mul, &[p2i]);
+            let (_, point_i) = d.chain(f_i, &[(mul_zero_p2i, congr1), (zero, zero_mul_eq)]);
+            d.lam_fv(i_fv, nat, point_i)
+        };
+
+        let congr_sum = d.lemma(p.sum_range_congr, &[f, g, sz, pointwise]);
+        let sum_f = d.sum_range(f, sz);
+        let sum_g = d.sum_range(g, sz);
+        let const_zero_eq = d.lemma(p.sum_range_const_zero, &[sz]);
+        let (_, sum_f_eq_zero) = d.chain(sum_f, &[(sum_g, congr_sum), (zero, const_zero_eq)]);
+
+        let sum_test_bit_eq_pf = d.lemma(p.sum_test_bit_eq, &[n]);
+        let n_eq_sum_f = d.symm(sum_f, n, sum_test_bit_eq_pf);
+        let n_eq_zero = d.trans(n, sum_f, zero, n_eq_sum_f, sum_f_eq_zero);
+
+        let concl = d.eq(n, zero);
+        let stmt = d.arrow(hyp_ty, concl);
+        let proof = d.lam_fv(hyp_fv, hyp_ty, n_eq_zero);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// [`declare_sum_range_const_zero`] then [`declare_zero_of_test_bit`], in
+/// dependency order.
+pub(super) fn declare_zero_of_test_bit(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_sum_range_const_zero(d, p)?;
+    declare_zero_of_test_bit_inner(d, p)?;
     Ok(())
 }
