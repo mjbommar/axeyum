@@ -730,6 +730,13 @@ pub struct IntPrelude {
     /// [`Self::xgcd_aux_sound`] at `f := m`, i.e. Bézout at the named
     /// coefficients over `ℕ`.
     pub nat_gcd_eq_gcd_ab: NameId,
+    /// `Nat.exists_mul_mod_eq_gcd : ∀ n k, Nat.lt (Nat.gcd n k) k →
+    /// ∃ m, Nat.lt m k ∧ Eq Nat (Nat.mod (Nat.mul n m) k) (Nat.gcd n k)` —
+    /// Mathlib v4.30's `Nat.exists_mul_mod_eq_gcd`. Reduces the Bézout
+    /// coefficient [`Self::nat_gcd_a`] modulo `k` to land a genuine `Nat`
+    /// witness in `[0, k)`; see `gcd.rs`'s
+    /// `declare_exists_mul_mod_eq_gcd` for the derivation.
+    pub exists_mul_mod_eq_gcd: NameId,
     /// `Int.gcdA : Int → Int → Int` — Mathlib's signed coefficient of the
     /// first argument, a computable `Int.rec` on that argument that negates
     /// the `Nat` coefficient under `negSucc`.
@@ -1291,6 +1298,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_gcd_b: kernel.name_str(nat_root, "gcdB"),
         xgcd_aux_sound: kernel.name_str(nat_root, "xgcdAux_sound"),
         nat_gcd_eq_gcd_ab: kernel.name_str(nat_root, "gcd_eq_gcd_ab"),
+        exists_mul_mod_eq_gcd: kernel.name_str(nat_root, "exists_mul_mod_eq_gcd"),
         gcd_a: child(kernel, "gcdA"),
         gcd_b: child(kernel, "gcdB"),
         gcd_eq_gcd_ab_witnesses: child(kernel, "gcd_eq_gcd_ab_witnesses"),
@@ -1512,6 +1520,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         bezout_witnesses::declare_int_gcd_ab(&mut d)?;
         bezout_witnesses::declare_xgcd_aux_sound(&mut d)?;
         bezout_witnesses::declare_nat_gcd_eq_gcd_ab(&mut d)?;
+        gcd::declare_exists_mul_mod_eq_gcd(&mut d)?;
         bezout_witnesses::declare_gcd_eq_gcd_ab_witnesses(&mut d)?;
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;

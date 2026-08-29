@@ -2521,3 +2521,160 @@ pub(super) fn declare_euclid_infinitude(d: &mut IntDev<'_>) -> Result<(), Kernel
     })?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// `Nat.exists_mul_mod_eq_gcd`.
+// ---------------------------------------------------------------------------
+
+/// `exists_mul_mod_eq_gcd : ∀ n k, Nat.gcd n k < k →
+/// ∃ m, m < k ∧ n*m % k = Nat.gcd n k` — Mathlib v4.30's
+/// `Nat.exists_mul_mod_eq_gcd`.
+///
+/// The Bézout coefficient `Nat.gcdA n k` (an `Int`, possibly negative)
+/// already satisfies `ofNat (gcd n k) = ofNat n * gcdA n k + ofNat k *
+/// gcdB n k` (`bezout_witnesses::declare_nat_gcd_eq_gcd_ab`). Reducing that
+/// coefficient modulo `k` throws away the `ofNat k * gcdB n k` summand — an
+/// exact multiple of the modulus, via `Int.modEq_add_mul_left` — and lands a
+/// genuine `Nat` witness `m := natAbs (gcdA n k % k)` in `[0, k)`. Every step
+/// past the Bézout identity is modular-arithmetic bookkeeping already proved
+/// in `modeq.rs`/`modeq_family.rs` (`Int.ModEq.mul_left`, `Int.mod_modEq`,
+/// `Int.ModEq.symm`), plus one use of
+/// [`super::wilson::emod_eq_self_of_in_range`] to identify
+/// `emod (ofNat (gcd n k)) (ofNat k)` with `ofNat (gcd n k)` itself under the
+/// hypothesis. The final `Int` equation `ofNat (gcd n k) = ofNat (n*m % k)`
+/// descends to the stated `Nat` equation by `natAbs`, which is the identity
+/// on `ofNat` by computation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_exists_mul_mod_eq_gcd(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.theorem(p.exists_mul_mod_eq_gcd, 2, &|d, v| {
+        let (n_var, k_var) = (v[0], v[1]);
+        let g_nat = NatOps::gcd(d, n_var, k_var);
+        let hyp_ty = d.lt(g_nat, k_var);
+
+        let nat = d.nat_ty();
+        let pred = {
+            let m_fv = d.fresh_fvar();
+            let m = d.kernel().fvar(m_fv);
+            let bound = d.lt(m, k_var);
+            let nm = NatOps::mul(d, n_var, m);
+            let modv = d.modulo(nm, k_var);
+            let eqn = d.eq(modv, g_nat);
+            let body = d.and(bound, eqn);
+            d.lam_fv(m_fv, nat, body)
+        };
+        let one = d.level_one();
+        let exists_ty = {
+            let exists_name = d.int().logic.exists_;
+            let e = d.kernel().const_(exists_name, vec![one]);
+            d.apply(e, &[nat, pred])
+        };
+        let stmt = d.arrow(hyp_ty, exists_ty);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        // --- 0 < k, both as Nat and (by defeq, since `Int.lt`/`Int.zero`
+        // ι-reduce to `Nat.lt`/`ofNat Nat.zero` on `ofNat`-shaped arguments)
+        // as `Int.lt Int.zero (ofNat k)` -------------------------------------
+        let zero_nat = d.zero();
+        let zero_le_g = d.lemma(p.nat.zero_le, &[g_nat]);
+        let k_pos_nat = d.lemma(
+            p.nat.lt_of_le_of_lt,
+            &[zero_nat, g_nat, k_var, zero_le_g, h],
+        );
+
+        let big_k = d.of_nat(k_var);
+        let big_g = d.of_nat(g_nat);
+
+        // --- emod (ofNat g) (ofNat k) = ofNat g, from `0 <= g < k` ----------
+        let emod_g_eq_g =
+            super::wilson::emod_eq_self_of_in_range(d, big_g, big_k, k_pos_nat, zero_le_g, h);
+
+        // --- Bezout: ofNat g = ofNat n * u + ofNat k * v --------------------
+        let u = d.const_app(p.nat_gcd_a, &[n_var, k_var]);
+        let vv = d.const_app(p.nat_gcd_b, &[n_var, k_var]);
+        let big_n = d.of_nat(n_var);
+        let nu = d.imul(big_n, u);
+        let kv = d.imul(big_k, vv);
+        let eq1 = d.lemma(p.nat_gcd_eq_gcd_ab, &[n_var, k_var]); // ofNat g = nu + kv
+
+        let commuted = d.const_app(p.add_comm, &[nu, kv]); // nu+kv = kv+nu
+        let nu_plus_kv = d.iadd(nu, kv);
+        let kv_plus_nu = d.iadd(kv, nu);
+        let g_eq_kvnu = d.itrans(big_g, nu_plus_kv, kv_plus_nu, eq1, commuted);
+
+        // --- ModEq k (kv+nu) nu, transported to ModEq k g nu ----------------
+        let shift = d.const_app(p.mod_eq_add_mul_left, &[big_k, nu, vv]); // ModEq k (k*v+nu) nu
+        let kvnu_eq_g = d.isymm(big_g, kv_plus_nu, g_eq_kvnu);
+        let g_modeq_nu = d.int_eq_rewrite(kv_plus_nu, big_g, kvnu_eq_g, shift, &|d, t| {
+            super::modeq::imodeq(d, big_k, t, nu)
+        });
+
+        // --- g = emod(g,k) = emod(nu,k) --------------------------------------
+        let emod_g_k = d.iemod(big_g, big_k);
+        let emod_nu_k = d.iemod(nu, big_k);
+        let g_eq_emod_g = d.isymm(emod_g_k, big_g, emod_g_eq_g);
+        let g_eq_emod_nu = d.itrans(big_g, emod_g_k, emod_nu_k, g_eq_emod_g, g_modeq_nu);
+
+        // --- reduce u modulo k to a bounded Nat witness ---------------------
+        let ne_k = super::dvd::ne_zero_of_pos(d, big_k, k_pos_nat);
+        let r = d.iemod(u, big_k);
+        let r_nonneg = d.const_app(p.emod_nonneg, &[u, big_k, ne_k]);
+        let r_lt = d.const_app(p.emod_lt_of_pos, &[u, big_k, k_pos_nat]);
+
+        let m_nat = nat_abs(d, r);
+        let r_eq_ofm = d.const_app(p.of_nat_nat_abs_of_nonneg, &[r, r_nonneg]); // ofNat m = r
+        let big_m = d.of_nat(m_nat);
+        let r_eq_ofm_rev = d.isymm(big_m, r, r_eq_ofm); // r = ofNat m
+
+        let m_lt_k = d.int_eq_rewrite(r, big_m, r_eq_ofm_rev, r_lt, &|d, t| d.ilt(t, big_k));
+
+        // --- u = m (mod k), hence n*u = n*m (mod k) --------------------------
+        let r_modeq_u = d.const_app(p.mod_mod_eq, &[u, big_k]); // ModEq k r u
+        let u_modeq_r = d.const_app(p.mod_eq_symm, &[big_k, r, u, r_modeq_u]); // ModEq k u r
+        let mul_left_step = d.const_app(p.mod_eq_mul_left, &[big_k, u, r, big_n]);
+        let nu_modeq_nr = d.apply(mul_left_step, &[k_pos_nat, u_modeq_r]); // ModEq k nu (n*r)
+
+        let nr = d.imul(big_n, r);
+        let emod_nr_k = d.iemod(nr, big_k);
+        let g_eq_emod_nr = d.itrans(big_g, emod_nu_k, emod_nr_k, g_eq_emod_nu, nu_modeq_nr);
+
+        // --- replace r by ofNat m, exposing n*m % k by computation ----------
+        let g_eq_emod_nm = d.int_eq_rewrite(r, big_m, r_eq_ofm_rev, g_eq_emod_nr, &|d, t| {
+            let nt = d.imul(big_n, t);
+            let em = d.iemod(nt, big_k);
+            d.ieq(big_g, em)
+        });
+
+        // `emod (ofNat n * ofNat m) (ofNat k)` reduces (ι) to
+        // `ofNat (Nat.mod (Nat.mul n m) k)`, so `g_eq_emod_nm` is *also* a
+        // term of type `Eq Int (ofNat g) (ofNat (n*m % k))` by defeq.
+        let modk_expr = {
+            let nm = NatOps::mul(d, n_var, m_nat);
+            d.modulo(nm, k_var)
+        };
+        let of_modk = d.of_nat(modk_expr);
+        let raw_nat_eq = icongr_nat(d, big_g, of_modk, g_eq_emod_nm, &|d, x| nat_abs(d, x));
+        let final_eq = d.symm(g_nat, modk_expr, raw_nat_eq); // Eq Nat (n*m%k) g
+
+        let bound_ty = d.lt(m_nat, k_var);
+        let eq_ty = d.eq(modk_expr, g_nat);
+        let and_proof = {
+            let name = d.int().logic.and_intro;
+            d.const_app(name, &[bound_ty, eq_ty, m_lt_k, final_eq])
+        };
+
+        let intro_name = d.int().logic.exists_intro;
+        let intro = d.kernel().const_(intro_name, vec![one]);
+        let exists_proof = d.apply(intro, &[nat, pred, m_nat, and_proof]);
+
+        let proof = d.lam_fv(h_fv, hyp_ty, exists_proof);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
