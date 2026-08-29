@@ -1468,3 +1468,132 @@ pub(super) fn agree_by_fuel_induction(
         fuel,
     )
 }
+
+/// Prove `∀ fuel1 a b c, P fuel1 a b c` by induction on `fuel1`, with **three**
+/// value arguments generalized in the motive — the same device as
+/// [`agree_by_fuel_induction`], one slot wider.
+///
+/// Built for comparing a fuel-recursive `…Aux` at TWO independently chosen
+/// fuels (`fuel1`, generalized `c`) rather than at one arbitrary fuel against
+/// a fixed canonical instance: `statement(d, fuel1, a, b, c)` is free to be
+/// `Le a fuel1 → Le a c → Eq (…Aux fuel1 a b) (…Aux c a b)`, symmetric in
+/// which fuel is "the" canonical one. See `nat_prelude::rec_agreement`'s
+/// module doc for why the two-fuel form, not the fuel-vs-canonical form, is
+/// what avoids needing to unfold the canonical instance's OWN `Nat.rec` (it
+/// carries the value in the fuel slot, so unfolding it needs the value's
+/// shape exposed, which is exactly the self-reference the two-fuel form
+/// sidesteps).
+pub(super) fn agree_by_double_fuel_induction(
+    d: &mut NatDev<'_>,
+    statement: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId, ExprId) -> ExprId,
+    base: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId) -> ExprId,
+    step: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId, ExprId, ExprId) -> ExprId,
+    fuel1: ExprId,
+) -> ExprId {
+    let quantified = |d: &mut NatDev<'_>, at_fuel: ExprId| {
+        let nat = d.nat_ty();
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = statement(d, at_fuel, a, b, c);
+        let inner2 = d.pi_fv(c_fv, nat, body);
+        let inner = d.pi_fv(b_fv, nat, inner2);
+        d.pi_fv(a_fv, nat, inner)
+    };
+    d.induct(
+        &quantified,
+        &|d| {
+            let nat = d.nat_ty();
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let body = base(d, a, b, c);
+            let inner2 = d.lam_fv(c_fv, nat, body);
+            let inner = d.lam_fv(b_fv, nat, inner2);
+            d.lam_fv(a_fv, nat, inner)
+        },
+        &|d, predecessor, ih| {
+            let nat = d.nat_ty();
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let body = step(d, predecessor, ih, a, b, c);
+            let inner2 = d.lam_fv(c_fv, nat, body);
+            let inner = d.lam_fv(b_fv, nat, inner2);
+            d.lam_fv(a_fv, nat, inner)
+        },
+        fuel1,
+    )
+}
+
+/// Case-split `x : Nat` into `x = 0` (direct) and `x = succ p` for an EXPOSED
+/// predecessor `p`, discarding the induction hypothesis entirely.
+///
+/// Not induction — the recursor is used only to expose `x`'s SHAPE onto the
+/// goal, exactly what `land_zero_right`/`lor_zero_right`/`ldiff_zero_right`
+/// each inline by hand for one fixed goal. This is the reusable,
+/// motive-general form: `motive` may itself be an arrow type (e.g. carrying a
+/// side hypothesis about `x`), in which case each branch closure builds its
+/// OWN fresh hypothesis specialized to that branch's concrete shape (`0` or
+/// `succ p`) — the recursor's dependent typing gives this for free, but nothing
+/// forces an outer hypothesis built before the split to specialize
+/// automatically, so a caller wanting a hypothesis usable inside a branch
+/// must fold it into `motive` and re-introduce it per branch.
+pub(super) fn cases_zero_succ(
+    d: &mut NatDev<'_>,
+    x: ExprId,
+    motive: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    at_zero: &dyn Fn(&mut NatDev<'_>) -> ExprId,
+    at_succ: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    d.induct(
+        motive,
+        at_zero,
+        &|d, predecessor, _ih| at_succ(d, predecessor),
+        x,
+    )
+}
+
+/// `Eq (bool_select_nat b x x) x`, for ANY boolean `b` — decides `b` via
+/// `Bool.rec`; both branches are `refl`, since `bool_select_nat` is picking
+/// between two occurrences of the literally SAME term regardless of which
+/// branch is taken. Needed because the kernel's defeq checker does NOT
+/// special-case "both recursor branches are the same term" — a `Bool.rec`
+/// applied to a symbolic (non-literal) scrutinee is simply stuck, so
+/// `bool_select_nat (beq n zero) x x` does not reduce to `x` for symbolic
+/// `n` without this.
+pub(super) fn bool_select_nat_same(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    b: ExprId,
+    x: ExprId,
+) -> ExprId {
+    let p = *p;
+    let bool_ty = d.bool_ty();
+    let motive = |d: &mut NatDev<'_>, cond: ExprId| -> ExprId {
+        let lhs = d.bool_select_nat(cond, x, x);
+        d.eq(lhs, x)
+    };
+    // Both branches reduce (`bool_select_nat` at a LITERAL `true`/`false`
+    // iota-reduces immediately) to `x`, so `refl(x)` closes each by defeq.
+    let at_true = d.refl(x);
+    let at_false = d.refl(x);
+    let motive_lam = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = motive(d, c);
+        d.lam_fv(c_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive_lam, at_false, at_true, b])
+}

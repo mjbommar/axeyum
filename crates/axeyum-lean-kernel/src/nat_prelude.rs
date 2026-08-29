@@ -260,7 +260,7 @@ use primes::{
     declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes,
     declare_succ_pred_prime,
 };
-use rec_agreement::declare_rec_agreement_all;
+use rec_agreement::{declare_land_fuel_irrelevance_all, declare_rec_agreement_all};
 use rectangle::declare_rectangle;
 use relation::{
     declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
@@ -2660,6 +2660,30 @@ pub struct NatPrelude {
     /// the agreement route is not specific to an operator with an absorbing
     /// zero on the fuel operand (`lor` has none; see `lor.rs`).
     pub bitwise_or_eq_lor: NameId,
+    /// `Nat.land_aux_zero_left_any_fuel : ∀ fuel n, Eq (landAux fuel 0 n) 0`
+    /// — unlike [`Self::land_zero_left`] (which needs no lemma because
+    /// `Nat.land` supplies fuel `= m = 0` automatically), this holds at
+    /// *any* fuel, sufficient or not: the base row is the constant `0`
+    /// regardless of `m`, `n`, and at `fuel = succ f` the `m = 0` guard
+    /// fires immediately (`m` is the LITERAL `0`), short-circuiting the
+    /// recursive call. See `nat_prelude::rec_agreement`.
+    pub land_aux_zero_left_any_fuel: NameId,
+    /// `Nat.land_aux_agree_of_fuel : ∀ fuel1 m n fuel2, Le m fuel1 → Le m
+    /// fuel2 → Eq (landAux fuel1 m n) (landAux fuel2 m n)` — TWO
+    /// independently-chosen sufficient fuels agree, proved by induction on
+    /// `fuel1` alone with `m`, `n`, `fuel2` all generalized
+    /// ([`ops::agree_by_double_fuel_induction`]). The two-fuel form, not a
+    /// fuel-vs-canonical form, is what avoids ever needing `landAux`'s OWN
+    /// canonical instance (`landAux m m n`) to unfold via `m`'s shape — see
+    /// `nat_prelude::rec_agreement`'s module doc.
+    pub land_aux_agree_of_fuel: NameId,
+    /// `Nat.land_aux_eq_land_of_le : ∀ fuel m n, Le m fuel → Eq (landAux
+    /// fuel m n) (land m n)` — fuel-irrelevance for `landAux`, the blocker
+    /// named by `land_comm`/`land_assoc`/`land_bit`/`lor_comm`/`lor_assoc`/
+    /// `lor_bit`/`ldiff_bit`. A one-line corollary of
+    /// [`Self::land_aux_agree_of_fuel`] at `fuel2 := m` (`le_refl`), since
+    /// `landAux m m n` and `land m n` are the SAME term by definition.
+    pub land_aux_eq_land_of_le: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3251,6 +3275,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_aux_eq_lor_aux: kernel.name_str(nat, "bitwise_aux_eq_lor_aux"),
             bitwise_and_eq_land: kernel.name_str(nat, "bitwise_and_eq_land"),
             bitwise_or_eq_lor: kernel.name_str(nat, "bitwise_or_eq_lor"),
+            land_aux_zero_left_any_fuel: kernel.name_str(nat, "land_aux_zero_left_any_fuel"),
+            land_aux_agree_of_fuel: kernel.name_str(nat, "land_aux_agree_of_fuel"),
+            land_aux_eq_land_of_le: kernel.name_str(nat, "land_aux_eq_land_of_le"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3444,6 +3471,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `zero_le`, `le_antisymm`). Nothing needs these agreement theorems,
         // so they go after everything they relate.
         declare_rec_agreement_all(&mut d, &p)?;
+        // Needs `Nat.landAux`/`Nat.land` (`declare_land_all`, far above) and
+        // the order/division lemmas `half_le_predecessor_of_succ` composes
+        // (`le_of_succ_le_succ`, `lt_of_lt_of_le`, `div_mod_lt_mul_iff`,
+        // `div_mod_exec`, `succ_pred_of_pos`, `le_trans`, `zero_lt_succ`);
+        // nothing needs fuel-irrelevance, so it goes last too.
+        declare_land_fuel_irrelevance_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

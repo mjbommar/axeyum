@@ -962,6 +962,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_aux_eq_lor_aux,
         p.bitwise_and_eq_land,
         p.bitwise_or_eq_lor,
+        p.land_aux_zero_left_any_fuel,
+        p.land_aux_agree_of_fuel,
+        p.land_aux_eq_land_of_le,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6253,7 +6256,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 438,
+        85 + 441,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -10369,6 +10372,115 @@ fn the_bitwise_specialization_equivalences_hold_universally() {
     assert!(
         f.k.axiom_footprint(p.bitwise_or_eq_lor).is_empty(),
         "bitwise_or_eq_lor must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_aux_eq_land_of_le : ∀ fuel m n, Le m fuel → Eq (landAux fuel m
+/// n) (land m n)` — fuel-irrelevance for `landAux`, applies at symbolic
+/// `fuel`/`m`/`n` given the hypothesis, and at a concrete fuel STRICTLY
+/// ABOVE canonical (`fuel = 7`, `m = 1`), where both sides compute to `1`.
+///
+/// **The mandatory negative control**: at INSUFFICIENT fuel (`fuel = 1`,
+/// `m = 7`), the auxiliary and the canonical answer genuinely differ
+/// (`landAux 1 7 7 = 1`, `land 7 7 = 7`) — the same pinned witness the
+/// `rec_agreement` lane used for `bitwise_aux_eq_land_aux`. This is checked
+/// directly by evaluation, NOT through `land_aux_eq_land_of_le` itself
+/// (`Le 7 1` is false and has no proof to apply the theorem with); its job
+/// is to confirm the theorem's `Le m fuel` hypothesis is doing real work —
+/// if the two sides agreed even here, the statement would be too weak to
+/// need a hypothesis at all.
+#[test]
+fn land_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables plus the
+    // `Le m fuel` hypothesis, proved by the prelude theorem alone.
+    {
+        let name = f.name("land_aux_eq_land_of_le_restated");
+        f.theorem(name, 3, &|d, values| {
+            let fuel = values[0];
+            let m = values[1];
+            let n = values[2];
+            let bound_ty = d.le(m, fuel);
+            let bound_fv = d.fresh_fvar();
+            let bound = d.kernel().fvar(bound_fv);
+            let lhs = d.const_app(p.land_aux, &[fuel, m, n]);
+            let rhs = d.const_app(p.land, &[m, n]);
+            let concl = d.eq(lhs, rhs);
+            let stmt = d.arrow(bound_ty, concl);
+            let lemma_fn = d.lemma(p.land_aux_eq_land_of_le, &[fuel, m, n]);
+            let proof = d.apply(lemma_fn, &[bound]);
+            let value = d.lam_fv(bound_fv, bound_ty, proof);
+            (stmt, value)
+        })
+        .expect("land_aux_eq_land_of_le must apply at symbolic fuel/m/n given Le m fuel");
+    }
+
+    // Concrete, ABOVE canonical fuel: `fuel = 7`, `m = 1`, `n = 7` — `Le 1 7`
+    // holds (`ble 1 7 = true`), and both `landAux 7 1 7` and `land 1 7`
+    // compute to `1`.
+    {
+        let fuel = f.num(7);
+        let m = f.num(1);
+        let n = f.num(7);
+        let true_ = f.bool_true();
+        let ble_refl = f.bool_refl(true_);
+        let bound = f.lemma(p.le_of_ble_eq_true, &[m, fuel, ble_refl]);
+        let applied = f.const_app(p.land_aux_eq_land_of_le, &[fuel, m, n]);
+        let applied = f.apply(applied, &[bound]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_aux_eq_land_of_le must apply at (fuel=7, m=1, n=7): {shown}")
+        });
+        let lhs = f.const_app(p.land_aux, &[fuel, m, n]);
+        let rhs = f.const_app(p.land, &[m, n]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_aux_eq_land_of_le 7 1 7 must state Eq (landAux 7 1 7) (land 1 7)"
+        );
+        let one = f.num(1);
+        assert!(f.k.def_eq(lhs, one), "landAux 7 1 7 must compute to 1");
+        assert!(f.k.def_eq(rhs, one), "land 1 7 must compute to 1");
+        assert!(
+            f.k.axiom_footprint(p.land_aux_eq_land_of_le).is_empty(),
+            "land_aux_eq_land_of_le must rest on zero axioms"
+        );
+    }
+
+    // Negative control: at INSUFFICIENT fuel, the auxiliary genuinely
+    // disagrees with the canonical answer -- `landAux 1 7 7 = 1` against
+    // `land 7 7 = 7`. Checked by evaluation alone (no `Le 7 1` proof
+    // exists), confirming the hypothesis is load-bearing.
+    {
+        let one = f.num(1);
+        let seven = f.num(7);
+        let insufficient = f.const_app(p.land_aux, &[one, seven, seven]);
+        let canonical = f.const_app(p.land, &[seven, seven]);
+        assert!(
+            f.k.def_eq(insufficient, one),
+            "landAux 1 7 7 must be 1 (a single fuel step)"
+        );
+        assert!(
+            f.k.def_eq(canonical, seven),
+            "land 7 7 must be 7 (the canonical answer)"
+        );
+        assert!(
+            !f.k.def_eq(insufficient, canonical),
+            "the chosen fuel must be INSUFFICIENT, or this control proves nothing \
+             about why `Le m fuel` is needed"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_aux_zero_left_any_fuel)
+            .is_empty(),
+        "land_aux_zero_left_any_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_aux_agree_of_fuel).is_empty(),
+        "land_aux_agree_of_fuel must rest on zero axioms"
     );
 }
 
