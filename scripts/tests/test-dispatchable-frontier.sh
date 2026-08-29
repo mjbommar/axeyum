@@ -22,7 +22,7 @@ trap 'rm -rf "$WORK"' EXIT
 FAILURES=0
 CASES=0
 
-ALL_GUARDS=(G1 G2 G3 G4 G5 G6)
+ALL_GUARDS=(G1 G2 G3 G4 G5 G6 S1 S2 S3 S4 S5)
 
 # run <label> <expected-exit> <expected-guard-or-NONE> -- <args...>
 run() {
@@ -121,6 +121,46 @@ registry = {"schema_version": 1,
      "why": "fixture"},
 ]}
 (d / "registry.json").write_text(json.dumps(registry, indent=1))
+
+# --- the statable-here inputs ------------------------------------------------
+# `Test.plain` is a kernel declaration; `Test.bridgeThing` is a Lean surface
+# constant with no kernel counterpart, witnessed by the SETTLED mirror. `Eq` and
+# `Nat` are S1's presence probes and every real environment has them.
+env = {"schema_version": 1, "kind": "axeyum-kernel-environment-snapshot",
+       "read_from": "fixture", "command": "fixture", "coverage": "fixture",
+       "control": "fixture", "notes": "fixture",
+       "declaration_count": 3,
+       "declarations": ["Eq", "Nat", "Test.plain"]}
+(d / "env.json").write_text(json.dumps(env, indent=1))
+
+vocab = {"schema_version": 1,
+         "kind": "axeyum-autogenesis-statable-vocabulary",
+         "derivation": "fixture", "keyed_by": "source_name",
+         "bridge": ["Test.bridgeThing"],
+         "settled": [{"source_name": "Test.settled",
+                      "constants": ["Test.bridgeThing", "Test.plain"]}]}
+(d / "vocab.json").write_text(json.dumps(vocab, indent=1))
+
+# The catalog is where source_name joins to fact_id -- the vocabulary never
+# names a fact id, so that held-out ids cannot leak into a non-population file.
+catalog = {"facts": [
+    {"kind": "external-source", "source_name": "Test.blocked",
+     "fact_id": "F:ml430-fix-blocked"},
+    {"kind": "external-source", "source_name": "Test.codomain",
+     "fact_id": "F:ml430-fix-codomain"},
+    {"kind": "external-source", "source_name": "Test.settled",
+     "fact_id": "F:ml430-fix-settled"},
+    {"kind": "external-source", "source_name": "Test.dispatchable",
+     "fact_id": "F:ml430-fix-dispatchable"},
+]}
+(d / "catalog.json").write_text(json.dumps(catalog, indent=1))
+
+# An extension manifest with no held-out rows of its own: the fixture's split
+# lives entirely in `nursery.json`, and this exercises the dual-manifest read.
+extension = {"schema_version": 1,
+             "kind": "axeyum-autogenesis-nursery-extension",
+             "entries": []}
+(d / "extension.json").write_text(json.dumps(extension, indent=1))
 PY
 }
 
@@ -129,10 +169,19 @@ edit() {
   python3 - "$1"
 }
 
+fixargs() {
+  # Every input is REQUIRED by the script, so the fixtures must supply all of
+  # them; a default that silently fell back to the real tree would make a case
+  # pass for the wrong reason.
+  printf '%s\n' --facts-dir "$1/facts" --nursery "$1/nursery.json" \
+    --registry "$1/registry.json" --extension "$1/extension.json" \
+    --env-snapshot "$1/env.json" --vocabulary "$1/vocab.json" \
+    --catalog "$1/catalog.json"
+}
+
 BASE="$WORK/base"
 mkfixture "$BASE"
-ARGS_BASE=(--facts-dir "$BASE/facts" --nursery "$BASE/nursery.json"
-           --registry "$BASE/registry.json")
+mapfile -t ARGS_BASE < <(fixargs "$BASE")
 
 # ---- case 0: FALSE-POSITIVE controls -- healthy input must be silent -------
 run "healthy-fixture-passes" 0 NONE -- "${ARGS_BASE[@]}"
@@ -150,8 +199,8 @@ d["constructions"].append({
     "recorded_in": "artifacts/autogenesis/mirror-divergence-registry.json"})
 p.write_text(json.dumps(d, indent=1))
 PY
-run "G1-stale-registry-entry" 1 G1 -- --facts-dir "$G1/facts" \
-    --nursery "$G1/nursery.json" --registry "$G1/registry.json"
+mapfile -t A < <(fixargs "$G1")
+run "G1-stale-registry-entry" 1 G1 -- "${A[@]}"
 
 # ---- case G2: a codomain claim nothing in the pinned source witnesses -------
 G2="$WORK/g2"; cp -r "$BASE" "$G2"
@@ -165,8 +214,8 @@ f = json.loads(p.read_text())
 f["formal"]["statement"] = "forall n i, n.boolishHere i = n.other i"
 p.write_text(json.dumps(f, indent=1))
 PY
-run "G2-unwitnessed-codomain-claim" 1 G2 -- --facts-dir "$G2/facts" \
-    --nursery "$G2/nursery.json" --registry "$G2/registry.json"
+mapfile -t A < <(fixargs "$G2")
+run "G2-unwitnessed-codomain-claim" 1 G2 -- "${A[@]}"
 
 # ---- case G2b: a codomain entry that carries no witness regex at all --------
 # Found by mutation testing: without this case the "no regex" branch of G2 was
@@ -182,21 +231,28 @@ for e in d["constructions"]:
         e.pop("codomain_witness_regex", None)
 p.write_text(json.dumps(d, indent=1))
 PY
-run "G2-codomain-entry-without-witness-regex" 1 G2 -- --facts-dir "$G2B/facts" \
-    --nursery "$G2B/nursery.json" --registry "$G2B/registry.json"
+mapfile -t A < <(fixargs "$G2B")
+run "G2-codomain-entry-without-witness-regex" 1 G2 -- "${A[@]}"
 
 # ---- case G3: the registry blocks a mirror we already closed ----------------
 G3="$WORK/g3"; cp -r "$BASE" "$G3"
-python3 - "$G3/facts" <<'PY'
+python3 - "$G3" <<'PY'
 import json, sys, pathlib
 d = pathlib.Path(sys.argv[1])
-p = d / "F-ml430-fix-blocked.json"
+p = d / "facts" / "F-ml430-fix-blocked.json"
 f = json.loads(p.read_text())
 f["epistemic_status"] = "proved"
 p.write_text(json.dumps(f, indent=1))
+# Closing a mirror puts it in the vocabulary's settled list too; without this
+# the mutant would fire S4 as well and the case would stop isolating G3.
+v = d / "vocab.json"
+voc = json.loads(v.read_text())
+voc["settled"].append({"source_name": "Test.blocked",
+                       "constants": ["Test.plain"]})
+v.write_text(json.dumps(voc, indent=1))
 PY
-run "G3-blocks-a-settled-mirror" 1 G3 -- --facts-dir "$G3/facts" \
-    --nursery "$G3/nursery.json" --registry "$G3/registry.json"
+mapfile -t A < <(fixargs "$G3")
+run "G3-blocks-a-settled-mirror" 1 G3 -- "${A[@]}"
 
 # ---- case G4: the dispatchable set is empty ---------------------------------
 G4="$WORK/g4"; cp -r "$BASE" "$G4"
@@ -208,8 +264,8 @@ for e in d["entries"]:
         e["partition"] = "held-out"
 p.write_text(json.dumps(d, indent=1))
 PY
-run "G4-empty-dispatchable-set" 1 G4 -- --facts-dir "$G4/facts" \
-    --nursery "$G4/nursery.json" --registry "$G4/registry.json"
+mapfile -t A < <(fixargs "$G4")
+run "G4-empty-dispatchable-set" 1 G4 -- "${A[@]}"
 
 # ---- case G5: a non-re-derivable class with no recorded reading -------------
 G5="$WORK/g5"; cp -r "$BASE" "$G5"
@@ -221,8 +277,8 @@ for e in d["constructions"]:
         e.pop("recorded_in", None)
 p.write_text(json.dumps(d, indent=1))
 PY
-run "G5-unbacked-divergence-claim" 1 G5 -- --facts-dir "$G5/facts" \
-    --nursery "$G5/nursery.json" --registry "$G5/registry.json"
+mapfile -t A < <(fixargs "$G5")
+run "G5-unbacked-divergence-claim" 1 G5 -- "${A[@]}"
 
 # ---- case G5b: a non-re-derivable class naming no Mathlib source ------------
 # Also found by mutation testing: the `mathlib_source.path` branch of G5 had no
@@ -237,9 +293,8 @@ for e in d["constructions"]:
         e.pop("mathlib_source", None)
 p.write_text(json.dumps(d, indent=1))
 PY
-run "G5-non-codomain-entry-without-mathlib-source" 1 G5 -- \
-    --facts-dir "$G5B/facts" --nursery "$G5B/nursery.json" \
-    --registry "$G5B/registry.json"
+mapfile -t A < <(fixargs "$G5B")
+run "G5-non-codomain-entry-without-mathlib-source" 1 G5 -- "${A[@]}"
 
 # ---- case G6: the pre-preregistration screen rejects a diverging candidate --
 cat > "$WORK/candidates-bad.json" <<'JSON'
@@ -261,8 +316,173 @@ JSON
 run "screen-passes-clean-candidates" 0 NONE -- \
     --registry "$BASE/registry.json" --screen "$WORK/candidates-ok.json"
 
+# ============================================================================
+# The statable-here vocabulary. S1-S4 run on every default invocation; S5 is
+# the screen.
+# ============================================================================
+
+# ---- case S1a: the snapshot's own count disagrees with its list -------------
+S1A="$WORK/s1a"; cp -r "$BASE" "$S1A"
+python3 - "$S1A/env.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["declaration_count"] = 999
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S1A")
+run "S1-snapshot-count-disagrees" 1 S1 -- "${A[@]}"
+
+# ---- case S1b: a snapshot no kernel environment could produce ---------------
+# Dropping `Nat` also drops nothing else the fixture needs, so this isolates the
+# PRESENCE probe. Without it, an empty or truncated snapshot -- which rejects
+# everything, so the screen looks strict -- reads as a working screen.
+S1B="$WORK/s1b"; cp -r "$BASE" "$S1B"
+python3 - "$S1B/env.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["declarations"] = [n for n in d["declarations"] if n != "Nat"]
+d["declaration_count"] = len(d["declarations"])
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S1B")
+run "S1-snapshot-missing-a-universal-declaration" 1 S1 -- "${A[@]}"
+
+# ---- case S1c: a snapshot that contains a name no kernel can declare --------
+# The OTHER way a screen goes vacuous, and the dangerous one: it ADMITS
+# everything rather than rejecting everything, so nothing downstream complains.
+S1C="$WORK/s1c"; cp -r "$BASE" "$S1C"
+python3 - "$S1C/env.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["declarations"].append("axeyum probe no declaration can carry")
+d["declaration_count"] = len(d["declarations"])
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S1C")
+run "S1-snapshot-admits-everything" 1 S1 -- "${A[@]}"
+
+# ---- case S2a: a bridge constant no settled mirror witnesses ----------------
+S2A="$WORK/s2a"; cp -r "$BASE" "$S2A"
+python3 - "$S2A/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["bridge"].append("Test.neverWitnessed")
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S2A")
+run "S2-unwitnessed-bridge-constant" 1 S2 -- "${A[@]}"
+
+# ---- case S2b: a bridge entry for something the kernel already declares -----
+# Not merely redundant: a bridge for a declared name hides a rename, so the
+# screen keeps admitting a constant after the kernel stopped providing it.
+S2B="$WORK/s2b"; cp -r "$BASE" "$S2B"
+python3 - "$S2B/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["bridge"].append("Test.plain")
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S2B")
+run "S2-bridge-shadows-the-environment" 1 S2 -- "${A[@]}"
+
+# ---- case S3: the screen rejects a mirror we already closed ----------------
+# THE FALSE-POSITIVE CONTROL for the positive screen. Dropping the bridge entry
+# leaves the settled mirror unstatable, which -- since we demonstrably closed it
+# -- means the vocabulary is wrong, not the mirror.
+S3="$WORK/s3"; cp -r "$BASE" "$S3"
+python3 - "$S3/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["bridge"] = []
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S3")
+run "S3-screen-rejects-a-settled-mirror" 1 S3 -- "${A[@]}"
+
+# ---- case S4a: a row listed as settled that the ledger says is open --------
+# This is the attack S2 alone cannot see: adding a row promotes its constants
+# into the bridge, so without S4 any constant can be made "witnessed" by
+# listing an open proposition.
+S4A="$WORK/s4a"; cp -r "$BASE" "$S4A"
+python3 - "$S4A/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["settled"].append({"source_name": "Test.dispatchable",
+                     "constants": ["Test.plain"]})
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S4A")
+run "S4-row-listed-settled-but-ledger-says-open" 1 S4 -- "${A[@]}"
+
+# ---- case S4b: a settled mirror DROPPED from the vocabulary -----------------
+# The other direction, and the one that defeats S3: narrow the population and
+# the false-positive control passes over whatever is left. The bridge is emptied
+# alongside so that this mutant fires S4 and nothing else -- which is exactly
+# the shape a lane would produce while "tidying" a vocabulary it could not make
+# pass.
+S4B="$WORK/s4b"; cp -r "$BASE" "$S4B"
+python3 - "$S4B/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["settled"] = []
+d["bridge"] = []
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S4B")
+run "S4-settled-mirror-missing-from-vocabulary" 1 S4 -- "${A[@]}"
+
+# ---- case S5: the positive screen rejects an unstatable candidate ----------
+# `screened-ok` against the divergence registry is NOT sufficient: this
+# candidate passes the registry cleanly and still cannot be stated here.
+cat > "$WORK/candidates-unstatable.json" <<'JSON'
+{"candidates": [
+  {"name": "Test.over_a_missing_structure", "statement": "forall s, s.ok = s",
+   "constants": ["Test.plain", "Std.PRange.Rco"]},
+  {"name": "Test.fine", "statement": "forall n, n.plain = n",
+   "constants": ["Test.plain", "Test.bridgeThing"]}
+]}
+JSON
+run "S5-screen-rejects-unstatable-candidate" 1 S5 -- \
+    --registry "$BASE/registry.json" --env-snapshot "$BASE/env.json" \
+    --vocabulary "$BASE/vocab.json" \
+    --statable "$WORK/candidates-unstatable.json"
+
+# ---- case 0c: the positive screen's false-positive control -----------------
+cat > "$WORK/candidates-statable.json" <<'JSON'
+{"candidates": [
+  {"name": "Test.fine", "statement": "forall n, n.plain = n",
+   "constants": ["Test.plain", "Test.bridgeThing"]},
+  {"name": "Test.also_fine", "statement": "forall n, n.plain n = n",
+   "constants": ["Eq", "Nat"]}
+]}
+JSON
+run "statable-screen-passes-clean-candidates" 0 NONE -- \
+    --registry "$BASE/registry.json" --env-snapshot "$BASE/env.json" \
+    --vocabulary "$BASE/vocab.json" \
+    --statable "$WORK/candidates-statable.json"
+
+# ---- case 0d: and it re-screens the REAL preregistered population -----------
+# Not a fixture: `nursery-v2-extension.json` carries every entry's constants, so
+# the preregistered rows are re-screened on every run rather than only at the
+# moment they were written.
+run "statable-screen-passes-the-real-extension" 0 NONE -- \
+    --statable "$ROOT/artifacts/autogenesis/nursery-v2-extension.json"
+
+# ---- a candidate with no constants cannot be decided, and must not pass -----
+cat > "$WORK/candidates-no-constants.json" <<'JSON'
+{"candidates": [{"name": "Test.undecidable", "statement": "forall n, n = n"}]}
+JSON
+run "statable-candidate-without-constants-is-exit-2" 2 NONE -- \
+    --registry "$BASE/registry.json" --env-snapshot "$BASE/env.json" \
+    --vocabulary "$BASE/vocab.json" \
+    --statable "$WORK/candidates-no-constants.json"
+
 # ---- input errors are exit 2, deliberately distinct from a guard failure ----
 run "missing-registry-is-exit-2" 2 NONE -- --registry "$WORK/nope.json"
+run "missing-extension-is-exit-2" 2 NONE -- --facts-dir "$BASE/facts" \
+    --nursery "$BASE/nursery.json" --registry "$BASE/registry.json" \
+    --extension "$WORK/nope.json" --env-snapshot "$BASE/env.json" \
+    --vocabulary "$BASE/vocab.json" --catalog "$BASE/catalog.json"
 
 echo
 if [ "$FAILURES" -ne 0 ]; then

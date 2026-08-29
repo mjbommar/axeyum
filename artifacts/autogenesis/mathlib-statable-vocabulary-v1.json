@@ -1,0 +1,1837 @@
+{
+  "bridge": [
+    "Bool.and",
+    "Bool.not",
+    "Bool.or",
+    "Dvd.dvd",
+    "Even",
+    "Function.swap",
+    "HAdd.hAdd",
+    "HAnd.hAnd",
+    "HDiv.hDiv",
+    "HMod.hMod",
+    "HMul.hMul",
+    "HOr.hOr",
+    "HPow.hPow",
+    "HSub.hSub",
+    "HXor.hXor",
+    "Int.instAdd",
+    "Int.instDecidablePredEven",
+    "Int.instDiv",
+    "Int.instDvd",
+    "Int.instLEInt",
+    "Int.instLTInt",
+    "Int.instMod",
+    "Int.instMul",
+    "Int.instNegInt",
+    "Int.instSemiring",
+    "Int.instSub",
+    "Int.toNat",
+    "IsRelPrime",
+    "LE.le",
+    "LT.lt",
+    "Monoid.toPow",
+    "Monotone",
+    "Nat.Coprime",
+    "Nat.ModEq",
+    "Nat.Prime",
+    "Nat.cast",
+    "Nat.instAndOp",
+    "Nat.instDiv",
+    "Nat.instDvd",
+    "Nat.instMod",
+    "Nat.instMonoid",
+    "Nat.instOrOp",
+    "Nat.instPreorder",
+    "Nat.instSemiring",
+    "Nat.instXorOp",
+    "Ne",
+    "Neg.neg",
+    "Odd",
+    "OfNat.ofNat",
+    "Set.Ici",
+    "StrictMono",
+    "StrictMonoOn",
+    "Symmetric",
+    "instAddNat",
+    "instHAdd",
+    "instHAndOfAndOp",
+    "instHDiv",
+    "instHMod",
+    "instHMul",
+    "instHOrOfOrOp",
+    "instHPow",
+    "instHSub",
+    "instHXorOfXorOp",
+    "instLENat",
+    "instLTNat",
+    "instMulNat",
+    "instNatCastInt",
+    "instOfNat",
+    "instOfNatNat",
+    "ite"
+  ],
+  "coverage": {
+    "bridge_constants": 70,
+    "catalogued_propositions": 202,
+    "distinct_constants": 99,
+    "open_propositions": 46,
+    "settled_propositions": 156
+  },
+  "derivation": "bridge = {Lean constants in the pinned type_repr of every SETTLED ml430 mirror} \\ kernel-environment-snapshot-v1.declarations. Derived, never asserted: an entry exists only because a mirror stated with that constant has already been closed here.",
+  "environment_snapshot": "artifacts/autogenesis/kernel-environment-snapshot-v1.json",
+  "keyed_by": "Mathlib source_name, NOT fact_id. Naming a fact id here would put held-out ids in a non-population artifact -- check-autogenesis-holdout-isolation.py caught exactly that on the first draft of this file, 35 references. The checker resolves source_name to a fact through the catalog, which IS a population file and may name them.",
+  "kind": "axeyum-autogenesis-statable-vocabulary",
+  "schema_version": 1,
+  "settled": [
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Int",
+        "Int.ModEq",
+        "Int.instAdd",
+        "instHAdd"
+      ],
+      "source_name": "Int.ModEq.add_left"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Int",
+        "Int.ModEq",
+        "Int.instAdd",
+        "instHAdd"
+      ],
+      "source_name": "Int.ModEq.add_left_cancel'"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Iff",
+        "Int",
+        "Int.ModEq",
+        "Int.instDvd"
+      ],
+      "source_name": "Int.ModEq.dvd_iff"
+    },
+    {
+      "constants": [
+        "Int",
+        "Int.ModEq",
+        "Int.instNegInt",
+        "Neg.neg"
+      ],
+      "source_name": "Int.ModEq.neg"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Int",
+        "Int.ModEq",
+        "Int.instDvd"
+      ],
+      "source_name": "Int.ModEq.of_dvd"
+    },
+    {
+      "constants": [
+        "HMul.hMul",
+        "Int",
+        "Int.ModEq",
+        "Int.instMul",
+        "instHMul"
+      ],
+      "source_name": "Int.ModEq.of_mul_left"
+    },
+    {
+      "constants": [
+        "HMul.hMul",
+        "Int",
+        "Int.ModEq",
+        "Int.instMul",
+        "instHMul"
+      ],
+      "source_name": "Int.ModEq.of_mul_right"
+    },
+    {
+      "constants": [
+        "Int",
+        "Int.ModEq"
+      ],
+      "source_name": "Int.ModEq.refl"
+    },
+    {
+      "constants": [
+        "Int",
+        "Int.ModEq"
+      ],
+      "source_name": "Int.ModEq.symm"
+    },
+    {
+      "constants": [
+        "Int",
+        "Int.ModEq"
+      ],
+      "source_name": "Int.ModEq.trans"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Int",
+        "Int.ModEq",
+        "Int.instAdd",
+        "instHAdd"
+      ],
+      "source_name": "Int.add_modEq_left"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Int",
+        "Int.ModEq",
+        "Int.instAdd",
+        "instHAdd"
+      ],
+      "source_name": "Int.add_modEq_right"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "HMul.hMul",
+        "Int",
+        "Int.gcd",
+        "Int.instDvd",
+        "Int.instMul",
+        "Nat",
+        "OfNat.ofNat",
+        "instHMul",
+        "instOfNatNat"
+      ],
+      "source_name": "Int.dvd_of_dvd_mul_left_of_gcd_one"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "HMul.hMul",
+        "Int",
+        "Int.gcd",
+        "Int.instDvd",
+        "Int.instMul",
+        "Nat",
+        "OfNat.ofNat",
+        "instHMul",
+        "instOfNatNat"
+      ],
+      "source_name": "Int.dvd_of_dvd_mul_right_of_gcd_one"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "HSub.hSub",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instMul",
+        "Int.instSub",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instHMul",
+        "instHSub",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_add"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HSub.hSub",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instSub",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instHSub",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_add_one"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_add_two"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Int",
+        "Int.fib",
+        "Int.instDvd"
+      ],
+      "source_name": "Int.fib_dvd"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HSub.hSub",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instSub",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instHSub",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_eq_fib_add_two_sub_fib_add_one"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Iff",
+        "Int",
+        "Int.fib",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_eq_zero"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "Int.gcd",
+        "Nat.cast",
+        "instNatCastInt"
+      ],
+      "source_name": "Int.fib_gcd"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "Nat",
+        "Nat.cast",
+        "Nat.fib",
+        "instNatCastInt"
+      ],
+      "source_name": "Int.fib_natCast"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Even",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instDecidablePredEven",
+        "Int.instNegInt",
+        "Neg.neg",
+        "ite"
+      ],
+      "source_name": "Int.fib_neg"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "Int.instLEInt",
+        "Int.toNat",
+        "LE.le",
+        "Nat.cast",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instNatCastInt",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_of_nonneg"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "Int.instSemiring",
+        "Int.natAbs",
+        "Nat.cast",
+        "Nat.fib",
+        "Odd",
+        "instNatCastInt"
+      ],
+      "source_name": "Int.fib_of_odd"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "HSub.hSub",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instMul",
+        "Int.instSub",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instHMul",
+        "instHSub",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_two_mul"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instLTInt",
+        "Int.instMul",
+        "LT.lt",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instHMul",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_two_mul_add_one_pos"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instMul",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instHMul",
+        "instOfNat"
+      ],
+      "source_name": "Int.fib_two_mul_add_two"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "HDiv.hDiv",
+        "Int",
+        "Int.gcd",
+        "Int.instDiv",
+        "Int.instDvd",
+        "Int.natAbs",
+        "Nat",
+        "Nat.instDiv",
+        "instHDiv"
+      ],
+      "source_name": "Int.gcd_div"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HDiv.hDiv",
+        "Int",
+        "Int.gcd",
+        "Int.instDiv",
+        "LT.lt",
+        "Nat",
+        "Nat.cast",
+        "OfNat.ofNat",
+        "instHDiv",
+        "instLTNat",
+        "instNatCastInt",
+        "instOfNatNat"
+      ],
+      "source_name": "Int.gcd_div_gcd_div_gcd"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "Int",
+        "Int.gcd",
+        "Int.gcdA",
+        "Int.gcdB",
+        "Int.instAdd",
+        "Int.instMul",
+        "Nat.cast",
+        "instHAdd",
+        "instHMul",
+        "instNatCastInt"
+      ],
+      "source_name": "Int.gcd_eq_gcd_ab"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HMul.hMul",
+        "Int",
+        "Int.gcd",
+        "Int.instMul",
+        "Nat",
+        "Nat.cast",
+        "OfNat.ofNat",
+        "instHMul",
+        "instNatCastInt",
+        "instOfNatNat"
+      ],
+      "source_name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HMul.hMul",
+        "Int",
+        "Int.gcd",
+        "Int.instMul",
+        "Nat",
+        "Nat.cast",
+        "OfNat.ofNat",
+        "instHMul",
+        "instNatCastInt",
+        "instOfNatNat"
+      ],
+      "source_name": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_right"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "Int.gcd",
+        "Nat",
+        "Nat.fib"
+      ],
+      "source_name": "Int.gcd_fib"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "Int",
+        "Int.gcd",
+        "Int.instDvd",
+        "Int.instLEInt",
+        "LE.le",
+        "Nat.cast",
+        "OfNat.ofNat",
+        "instNatCastInt",
+        "instOfNat"
+      ],
+      "source_name": "Int.gcd_greatest"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Int",
+        "Int.ModEq"
+      ],
+      "source_name": "Int.modEq_comm"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Int",
+        "Int.ModEq",
+        "Int.instNegInt",
+        "Neg.neg"
+      ],
+      "source_name": "Int.modEq_neg"
+    },
+    {
+      "constants": [
+        "Int",
+        "Int.ModEq",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "source_name": "Int.modEq_one"
+    },
+    {
+      "constants": [
+        "HSub.hSub",
+        "Int",
+        "Int.ModEq",
+        "Int.instSub",
+        "instHSub"
+      ],
+      "source_name": "Int.modEq_sub"
+    },
+    {
+      "constants": [
+        "HMod.hMod",
+        "Int",
+        "Int.ModEq",
+        "Int.instMod",
+        "instHMod"
+      ],
+      "source_name": "Int.mod_modEq"
+    },
+    {
+      "constants": [
+        "Int",
+        "Int.ModEq",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "source_name": "Int.modulus_modEq_zero"
+    },
+    {
+      "constants": [
+        "Int",
+        "Int.gcd",
+        "Nat",
+        "Ne",
+        "OfNat.ofNat",
+        "Or",
+        "instOfNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Int.ne_zero_of_gcd"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Int",
+        "Int.ModEq",
+        "Int.instNegInt",
+        "Neg.neg"
+      ],
+      "source_name": "Int.neg_modEq_neg"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instSemiring",
+        "Odd",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.Coprime.odd_of_left"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instSemiring",
+        "Odd",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.Coprime.odd_of_right"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.Coprime.of_dvd"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.Coprime.of_dvd_left"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.Coprime.of_dvd_right"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.Coprime",
+        "Symmetric"
+      ],
+      "source_name": "Nat.Coprime.symmetric"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.ModEq",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.ModEq.add_left"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.ModEq",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.ModEq.add_left_cancel'"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.ModEq",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.ModEq.add_right"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.ModEq",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.ModEq.add_right_cancel'"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Nat",
+        "Nat.ModEq"
+      ],
+      "source_name": "Nat.ModEq.comm"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Iff",
+        "Nat",
+        "Nat.ModEq",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.ModEq.dvd_iff"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ModEq",
+        "Nat.gcd"
+      ],
+      "source_name": "Nat.ModEq.gcd_eq"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.ModEq",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.ModEq.of_dvd"
+    },
+    {
+      "constants": [
+        "HMul.hMul",
+        "Nat",
+        "Nat.ModEq",
+        "instHMul",
+        "instMulNat"
+      ],
+      "source_name": "Nat.ModEq.of_mul_left"
+    },
+    {
+      "constants": [
+        "HMul.hMul",
+        "Nat",
+        "Nat.ModEq",
+        "instHMul",
+        "instMulNat"
+      ],
+      "source_name": "Nat.ModEq.of_mul_right"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.ModEq"
+      ],
+      "source_name": "Nat.ModEq.refl"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.ModEq"
+      ],
+      "source_name": "Nat.ModEq.symm"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.ModEq"
+      ],
+      "source_name": "Nat.ModEq.trans"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Not"
+      ],
+      "source_name": "Nat.Prime.dvd_iff_not_coprime"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Ne",
+        "instHMul",
+        "instMulNat"
+      ],
+      "source_name": "Nat.Prime.dvd_mul_of_dvd_ne"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "HPow.hPow",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Nat.instMonoid",
+        "instHPow"
+      ],
+      "source_name": "Nat.Prime.dvd_of_dvd_pow"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Even",
+        "Iff",
+        "Nat",
+        "Nat.Prime",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.Prime.even_iff"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.Prime",
+        "Ne",
+        "OfNat.ofNat",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.Prime.five_le_of_ne_two_of_ne_three"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Not",
+        "instHMul",
+        "instMulNat"
+      ],
+      "source_name": "Nat.Prime.not_dvd_mul"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.Prime",
+        "Nat.instSemiring",
+        "Ne",
+        "Odd",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.Prime.odd_of_ne_two"
+    },
+    {
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.Prime",
+        "Nat.pred",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.Prime.pred_pos"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.ModEq",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.add_modEq_left"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.ModEq",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.add_modEq_right"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ascFactorial",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.ascFactorial_zero"
+    },
+    {
+      "constants": [
+        "Bool",
+        "Bool.true",
+        "Eq",
+        "Nat",
+        "Nat.bit",
+        "Nat.bitwise",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.bitwise_bit'"
+    },
+    {
+      "constants": [
+        "Bool",
+        "Eq",
+        "Nat",
+        "Nat.bitwise"
+      ],
+      "source_name": "Nat.bitwise_comm"
+    },
+    {
+      "constants": [
+        "Bool",
+        "Eq",
+        "Function.swap",
+        "Nat",
+        "Nat.bitwise"
+      ],
+      "source_name": "Nat.bitwise_swap"
+    },
+    {
+      "constants": [
+        "Eq",
+        "LT.lt",
+        "Nat",
+        "Nat.choose",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.choose_eq_zero_of_lt"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "Nat.choose",
+        "instAddNat",
+        "instHAdd",
+        "instLENat"
+      ],
+      "source_name": "Nat.choose_le_add"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.choose",
+        "instLENat"
+      ],
+      "source_name": "Nat.choose_le_choose"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.choose",
+        "Nat.succ",
+        "instLENat"
+      ],
+      "source_name": "Nat.choose_le_succ"
+    },
+    {
+      "constants": [
+        "Monotone",
+        "Nat",
+        "Nat.choose",
+        "Nat.instPreorder"
+      ],
+      "source_name": "Nat.choose_mono"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.choose",
+        "Ne",
+        "OfNat.ofNat",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.choose_ne_zero"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.choose_one_right"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.choose_self"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "Nat.succ",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.choose_succ_self"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.choose",
+        "Nat.succ",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.choose_succ_succ"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.choose",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.choose_symm_add"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.choose",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.choose_symm_of_eq_add"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.choose_zero_right"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "Nat.succ",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.choose_zero_succ"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.coprime_add_self_left"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.coprime_add_self_right"
+    },
+    {
+      "constants": [
+        "Iff",
+        "IsRelPrime",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instMonoid"
+      ],
+      "source_name": "Nat.coprime_iff_isRelPrime"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.coprime_of_dvd'"
+    },
+    {
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Ne",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.coprime_of_lt_prime"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "OfNat.ofNat",
+        "True",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.coprime_one_left_iff"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "OfNat.ofNat",
+        "True",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.coprime_one_right_iff"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Or"
+      ],
+      "source_name": "Nat.coprime_or_dvd_of_prime"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Ne"
+      ],
+      "source_name": "Nat.coprime_primes"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.coprime_self_add_left"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.coprime_self_add_right"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instSemiring",
+        "Odd",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.coprime_two_left"
+    },
+    {
+      "constants": [
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instSemiring",
+        "Odd",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.coprime_two_right"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.descFactorial",
+        "instLENat"
+      ],
+      "source_name": "Nat.descFactorial_le"
+    },
+    {
+      "constants": [
+        "Eq",
+        "LT.lt",
+        "Nat",
+        "Nat.descFactorial",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.descFactorial_of_lt"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.descFactorial",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.descFactorial_one"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.descFactorial",
+        "Nat.factorial"
+      ],
+      "source_name": "Nat.descFactorial_self"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.descFactorial",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.descFactorial_zero"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "HDiv.hDiv",
+        "Nat",
+        "Nat.instDiv",
+        "Nat.instDvd",
+        "instHDiv"
+      ],
+      "source_name": "Nat.div_dvd_div_left"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.instDvd",
+        "Nat.lcm"
+      ],
+      "source_name": "Nat.dvd_lcm_of_dvd_left"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.instDvd",
+        "Nat.lcm"
+      ],
+      "source_name": "Nat.dvd_lcm_of_dvd_right"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "instHMul",
+        "instMulNat"
+      ],
+      "source_name": "Nat.dvd_of_forall_prime_mul_dvd"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.instDvd",
+        "Nat.lcm"
+      ],
+      "source_name": "Nat.dvd_of_lcm_left_dvd"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.instDvd",
+        "Nat.lcm"
+      ],
+      "source_name": "Nat.dvd_of_lcm_right_dvd"
+    },
+    {
+      "constants": [
+        "Even",
+        "HXor.hXor",
+        "Iff",
+        "Nat",
+        "Nat.instXorOp",
+        "instAddNat",
+        "instHXorOfXorOp"
+      ],
+      "source_name": "Nat.even_xor"
+    },
+    {
+      "constants": [
+        "And",
+        "Eq",
+        "Exists",
+        "HMod.hMod",
+        "HMul.hMul",
+        "LT.lt",
+        "Nat",
+        "Nat.gcd",
+        "Nat.instMod",
+        "instHMod",
+        "instHMul",
+        "instLTNat",
+        "instMulNat"
+      ],
+      "source_name": "Nat.exists_mul_mod_eq_gcd"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.ascFactorial",
+        "Nat.factorial",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.factorial_dvd_ascFactorial"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.descFactorial",
+        "Nat.factorial",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.factorial_dvd_descFactorial"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "LE.le",
+        "Nat",
+        "Nat.factorial",
+        "Nat.instDvd",
+        "instLENat"
+      ],
+      "source_name": "Nat.factorial_dvd_factorial"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.factorial",
+        "instLENat"
+      ],
+      "source_name": "Nat.factorial_le"
+    },
+    {
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.factorial",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.factorial_lt_of_lt"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.factorial",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.factorial_ne_zero"
+    },
+    {
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.factorial",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.factorial_pos"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_add_two"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.fib",
+        "Nat.instPreorder",
+        "OfNat.ofNat",
+        "StrictMono",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_add_two_strictMono"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_coprime_fib_succ"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.fib",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.fib_dvd"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Iff",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_eq_zero"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.fib",
+        "Nat.gcd"
+      ],
+      "source_name": "Nat.fib_gcd"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_le_fib_succ"
+    },
+    {
+      "constants": [
+        "Iff",
+        "LE.le",
+        "LT.lt",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instLENat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_lt_fib"
+    },
+    {
+      "constants": [
+        "Monotone",
+        "Nat",
+        "Nat.fib",
+        "Nat.instPreorder"
+      ],
+      "source_name": "Nat.fib_mono"
+    },
+    {
+      "constants": [
+        "Iff",
+        "LT.lt",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_pos"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.fib",
+        "Nat.instPreorder",
+        "OfNat.ofNat",
+        "Set.Ici",
+        "StrictMonoOn",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.fib_strictMonoOn"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.fib",
+        "Nat.gcd",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "source_name": "Nat.gcd_fib_add_self"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "Nat",
+        "Nat.gcd",
+        "Nat.instDvd"
+      ],
+      "source_name": "Nat.gcd_greatest"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAnd.hAnd",
+        "Nat",
+        "Nat.instAndOp",
+        "instHAndOfAndOp"
+      ],
+      "source_name": "Nat.land_assoc"
+    },
+    {
+      "constants": [
+        "Bool",
+        "Bool.and",
+        "Eq",
+        "HAnd.hAnd",
+        "Nat",
+        "Nat.bit",
+        "Nat.instAndOp",
+        "instHAndOfAndOp"
+      ],
+      "source_name": "Nat.land_bit"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HAnd.hAnd",
+        "Nat",
+        "Nat.instAndOp",
+        "instHAndOfAndOp"
+      ],
+      "source_name": "Nat.land_comm"
+    },
+    {
+      "constants": [
+        "Bool",
+        "Bool.and",
+        "Bool.not",
+        "Eq",
+        "Nat",
+        "Nat.bit",
+        "Nat.ldiff"
+      ],
+      "source_name": "Nat.ldiff_bit"
+    },
+    {
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.le_fib_add_one"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.le_fib_self"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HOr.hOr",
+        "Nat",
+        "Nat.instOrOp",
+        "instHOrOfOrOp"
+      ],
+      "source_name": "Nat.lor_assoc"
+    },
+    {
+      "constants": [
+        "Bool",
+        "Bool.or",
+        "Eq",
+        "HOr.hOr",
+        "Nat",
+        "Nat.bit",
+        "Nat.instOrOp",
+        "instHOrOfOrOp"
+      ],
+      "source_name": "Nat.lor_bit"
+    },
+    {
+      "constants": [
+        "Eq",
+        "HOr.hOr",
+        "Nat",
+        "Nat.instOrOp",
+        "instHOrOfOrOp"
+      ],
+      "source_name": "Nat.lor_comm"
+    },
+    {
+      "constants": [
+        "HXor.hXor",
+        "LT.lt",
+        "Nat",
+        "Nat.instXorOp",
+        "Or",
+        "instHXorOfXorOp",
+        "instLTNat"
+      ],
+      "source_name": "Nat.lt_xor_cases"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.ModEq",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.modEq_one"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.ModEq",
+        "Nat.lcm"
+      ],
+      "source_name": "Nat.mod_lcm"
+    },
+    {
+      "constants": [
+        "HMod.hMod",
+        "Nat",
+        "Nat.ModEq",
+        "Nat.instMod",
+        "instHMod"
+      ],
+      "source_name": "Nat.mod_modEq"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.ModEq",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.modulus_modEq_zero"
+    },
+    {
+      "constants": [
+        "Nat",
+        "Nat.Coprime",
+        "Not",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.not_coprime_zero_zero"
+    },
+    {
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Ne",
+        "Not",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.not_prime_of_dvd_of_ne"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ascFactorial",
+        "Nat.factorial",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.one_ascFactorial"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.factorial",
+        "instLENat"
+      ],
+      "source_name": "Nat.self_le_factorial"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.Prime",
+        "Nat.pred",
+        "Nat.succ"
+      ],
+      "source_name": "Nat.succ_pred_prime"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ascFactorial",
+        "Nat.succ",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.zero_ascFactorial"
+    }
+  ],
+  "source": {
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "mathlib_tag": "v4.30.0",
+    "statement_inventory_sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc"
+  }
+}

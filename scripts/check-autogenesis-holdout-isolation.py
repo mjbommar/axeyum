@@ -45,6 +45,7 @@ from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
+EXTENSION = ROOT / "artifacts/autogenesis/nursery-v2-extension.json"
 FACTS = ROOT / "artifacts/facts"
 ARTIFACTS = ROOT / "artifacts/autogenesis"
 EPISODES = ROOT / "artifacts/episodes"
@@ -62,8 +63,15 @@ EPISODES = ROOT / "artifacts/episodes"
 # `artifacts/episodes/` that is: an episode document, a transcript, a proposal
 # or a transaction proposal naming a held-out id is a breach, and the whole
 # reason for scanning that tree.
+#
+# `nursery-v2-extension.json` joined them on 2026-08-29: it is the split
+# manifest for the refill and necessarily names its own held-out members, for
+# the same reason `nursery-v1.json` does. `mathlib-statable-vocabulary-v1.json`
+# is NOT exempt and must not become so -- it enumerates only the 214 catalogued
+# v1 propositions, none of which the extension holds out.
 POPULATION_FILES = {
     "nursery-v1.json",
+    "nursery-v2-extension.json",
     "mathlib-nat-int-fact-catalog-v1.json",
     "frontier.json.snapshot",
 }
@@ -75,20 +83,33 @@ class IsolationError(Exception):
 
 
 def held_out_facts() -> set[str]:
-    if not NURSERY.is_file():
-        raise IsolationError(f"nursery manifest is missing: {NURSERY}")
-    try:
-        manifest = json.loads(NURSERY.read_text())
-    except json.JSONDecodeError as error:
-        raise IsolationError(f"nursery manifest is unreadable: {error}") from error
-    entries = manifest.get("entries")
-    if not isinstance(entries, list):
-        raise IsolationError("nursery manifest has no entries")
-    held = {
-        entry["fact_id"]
-        for entry in entries
-        if isinstance(entry, dict) and entry.get("partition") == "held-out"
-    }
+    # BOTH manifests, and each is REQUIRED. The 2026-08-29 refill preregisters
+    # 30 held-out rows in `nursery-v2-extension.json`; a gate reading only v1
+    # would report PASS while leaving every one of them unprotected, which is
+    # the same shape as the incident this file exists to prevent -- a blind
+    # population that nothing was watching.
+    held: set[str] = set()
+    for path in (NURSERY, EXTENSION):
+        if not path.is_file():
+            raise IsolationError(f"nursery manifest is missing: {path}")
+        try:
+            manifest = json.loads(path.read_text())
+        except json.JSONDecodeError as error:
+            raise IsolationError(
+                f"nursery manifest is unreadable: {path.name}: {error}") from error
+        entries = manifest.get("entries")
+        if not isinstance(entries, list):
+            raise IsolationError(f"{path.name} has no entries")
+        found = {
+            entry["fact_id"]
+            for entry in entries
+            if isinstance(entry, dict) and entry.get("partition") == "held-out"
+        }
+        if not found:
+            raise IsolationError(
+                f"{path.name} contributes no held-out rows; without them this "
+                f"gate would pass vacuously for that manifest's population")
+        held |= found
     if not held:
         raise IsolationError(
             "the held-out population is empty; this gate would pass vacuously"
