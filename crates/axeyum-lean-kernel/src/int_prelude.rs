@@ -750,6 +750,14 @@ pub struct IntPrelude {
     /// [`Self::gcd_eq_gcd_ab`] keeps the older existential name because
     /// `crt.rs` and `modinv.rs` consume that form.
     pub gcd_eq_gcd_ab_witnesses: NameId,
+    /// `gcd_div_gcd_div_gcd : ∀ i j, Nat.lt zero (gcd i j) →
+    /// Eq Nat (gcd (i.ediv (ofNat (gcd i j))) (j.ediv (ofNat (gcd i j)))) one`
+    /// — Mathlib v4.30's `Int.gcd_div_gcd_div_gcd`: dividing both operands by
+    /// their own gcd leaves a coprime pair. An independent Bézout route (see
+    /// `int_prelude/gcd.rs`'s `declare_gcd_div_gcd_div_gcd`), not a corollary
+    /// of `Int.gcd_div` (not proved here for a general, possibly negative,
+    /// divisor).
+    pub gcd_div_gcd_div_gcd: NameId,
     /// `Int.Coprime a b := Eq Nat (gcd a b) 1` — the converse of Bézout
     /// (Elements VII, Def. 12), stated over the `Nat`-valued `gcd`.
     pub coprime: NameId,
@@ -1302,6 +1310,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         gcd_a: child(kernel, "gcdA"),
         gcd_b: child(kernel, "gcdB"),
         gcd_eq_gcd_ab_witnesses: child(kernel, "gcd_eq_gcd_ab_witnesses"),
+        gcd_div_gcd_div_gcd: child(kernel, "gcd_div_gcd_div_gcd"),
         coprime: child(kernel, "Coprime"),
         coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
         gauss_lemma: child(kernel, "gauss_lemma"),
@@ -1522,6 +1531,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         bezout_witnesses::declare_nat_gcd_eq_gcd_ab(&mut d)?;
         gcd::declare_exists_mul_mod_eq_gcd(&mut d)?;
         bezout_witnesses::declare_gcd_eq_gcd_ab_witnesses(&mut d)?;
+        gcd::declare_gcd_div_gcd_div_gcd(&mut d)?;
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;

@@ -8,13 +8,39 @@
     "statement": "∀ {i j : ℤ}, 0 < i.gcd j → (i / ↑(i.gcd j)).gcd (j / ↑(i.gcd j)) = 1",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.gcd_div_gcd_div_gcd",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.gcd_div_gcd_div_gcd` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`Int.gcd_div_gcd_div_gcd` in `crates/axeyum-lean-kernel/src/int_prelude/gcd.rs` (`declare_gcd_div_gcd_div_gcd`). An INDEPENDENT Bezout route, not a corollary of `Int.gcd_div` (not proved here for a general, possibly negative, divisor -- see `docs/plan/status/234-int-gcd-div.md`); the divisor here, `ofNat (gcd i j)`, is always nonnegative, so that gap never comes up. With `g := gcd i j`, `c := ofNat g`, `qi := i.ediv c`, `qj := j.ediv c`, `u := gcdA i j`, `v := gcdB i j`, `X := qi*u + qj*v`: `c` divides `i`/`j` exactly (`gcd_dvd_left`/`_right` + `emod_eq_zero_iff_dvd` + `ediv_add_emod`), giving `i = c*qi`, `j = c*qj`; Bezout (`gcd_eq_gcd_ab_witnesses`) plus substitution and factoring (`mul_assoc`/`left_distrib`) gives `c = c*X`, hence `c*1 = c*X`; taking `natAbs` (`nat_abs_mul`) and cancelling the shared positive factor `g` (`Nat.mul_left_cancel_of_pos`, fed the hypothesis `h : Nat.lt zero g` directly for the `Le one g` premise -- `Nat.lt` unfolds to exactly that shape) gives `natAbs X = 1`; `gcd qi qj` divides `qi*u` and `qj*v` (`gcd_dvd_left`/`_right` + `dvd_mul_right` + `dvd_trans`), hence divides their sum `X` (`dvd_add`), hence divides `natAbs X = 1` (`nat_abs_dvd_nat_abs_of_dvd`), hence equals `1` (`Nat.eq_one_of_dvd_one`). No new axiom, no new public lemma outside `gcd.rs`; every intermediate lemma used already existed."
+    },
+    {
+      "id": "footprint-Int.gcd_div_gcd_div_gcd",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.gcd_div_gcd_div_gcd 2>/dev/null | /usr/bin/grep -xFc $'integer\\tInt.gcd_div_gcd_div_gcd\\t0\\t')\" -ge 1",
+      "notes": "The matched row is `integer<TAB>Int.gcd_div_gcd_div_gcd<TAB>0<TAB>` with an EMPTY trailing footprint column, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Uses `/usr/bin/grep` explicitly (not the interactive `ugrep` alias) and `[[:space:]]`-free literal tabs are avoided entirely by matching the exact byte string via ANSI-C quoting, per this repository's own grep-dialect gotcha. Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-29",
+    "established_by": "the `int-gcd-div-2` lane, completing the independent Bezout-based route the prior `int-gcd-div` lane worked out but left one step short (a symbolic `Nat.mul_one` application it had not verified against the kernel)",
     "source": "statement-only extraction of `Int.gcd_div_gcd_div_gcd` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED via the `int-gcd-div-2` lane, 2026-08-29, as `Int.gcd_div_gcd_div_gcd` -- axiom-free, statement identical to Mathlib's.\n\nThe prior `int-gcd-div` lane's handoff (`docs/plan/status/234-int-gcd-div.md`) worked out the full route and stopped one step short at a `Nat.mul_one`/`Nat.zero_add`-style reduction it had not verified. That reduction was never actually needed as a standalone step: `Nat.mul_one`/`Int.mul_one` (an existing lemma taking the multiplicand symbolically, `∀ a, Eq Int (mul a one) a`) closes `c*1 = c` directly without hitting the `Nat.add zero g` stuck-reduction the handoff worried about, and the subsequent `natAbs`/`mul_left_cancel_of_pos` cancellation goes through unchanged. The construction type-checked on the FIRST attempt against the kernel (no rejected term, no retry).\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
