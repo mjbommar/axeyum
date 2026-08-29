@@ -271,9 +271,10 @@ use primes::{
     declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
 use rec_agreement::{
-    declare_land_comm, declare_land_fuel_irrelevance_all, declare_land_le_left_all,
-    declare_land_zero_propagation_all, declare_ldiff_fuel_irrelevance_all, declare_lor_comm,
-    declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
+    declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
+    declare_land_le_left_all, declare_land_zero_propagation_all,
+    declare_ldiff_fuel_irrelevance_all, declare_lor_comm, declare_lor_fuel_irrelevance_all,
+    declare_rec_agreement_all,
 };
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
@@ -3040,6 +3041,33 @@ pub struct NatPrelude {
     /// `Nat.div_mod_unique`+`Nat.div_mod_exec` to reconstruct that value's
     /// own halves and feed them back through the induction's own `ih`.
     pub land_aux_eq_zero_of_left_eq_zero: NameId,
+    /// `Nat.land_aux_assoc_of_fuel : ∀ fuel a b c,
+    /// Eq (landAux fuel (landAux fuel a b) c) (landAux fuel a (landAux fuel b c))`
+    /// — unconditional (no `Le` hypothesis; `land`'s fuel-exhaustion row is
+    /// the absorbing constant `0`, so any fuel works). Proved by
+    /// [`agree_by_double_fuel_induction`](rec_agreement::ops), with the
+    /// step case split `c`, then `b`, then `a` (verified against
+    /// `guarded`'s actual n-outermost guard order, per
+    /// `docs/plan/status/257-nat-land-assoc-impl.md`): 3 of 4 base leaves
+    /// close by pure computation or [`Self::land_aux_zero_left_any_fuel`],
+    /// and the hard leaf (`a,b,c` all positive) dichotomizes the two
+    /// nested values via [`Self::zero_or_succ`], using
+    /// [`Self::land_aux_eq_zero_of_left_eq_zero`] directly for one
+    /// sub-case, its mirror via [`Self::land_aux_comm_of_fuel`] for
+    /// another, and a double `Nat.div_mod_unique` reconstruction (one per
+    /// nested value) closing via the outer induction's own `ih` plus
+    /// `Nat.mul_assoc` for the fully generic sub-case. See
+    /// `nat_prelude::rec_agreement`.
+    pub land_aux_assoc_of_fuel: NameId,
+    /// `Nat.land_assoc : ∀ a b c, Eq (land (land a b) c) (land a (land b c))`
+    /// — `F:ml430-nat-land-assoc-ad4775b8`. Routes
+    /// [`Self::land_aux_assoc_of_fuel`] and
+    /// [`Self::land_aux_agree_of_fuel`] through the shared fuel
+    /// `add a b`, exactly as [`Self::land_comm`] (one argument wider; `c`
+    /// itself never needs its own `Le` bound, since
+    /// `land_aux_agree_of_fuel`'s hypotheses constrain only the `m`
+    /// position). See `nat_prelude::rec_agreement`.
+    pub land_assoc: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3696,6 +3724,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_comm: kernel.name_str(nat, "bitwise_comm"),
             land_aux_eq_zero_of_left_eq_zero: kernel
                 .name_str(nat, "land_aux_eq_zero_of_left_eq_zero"),
+            land_aux_assoc_of_fuel: kernel.name_str(nat, "land_aux_assoc_of_fuel"),
+            land_assoc: kernel.name_str(nat, "land_assoc"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3973,6 +4003,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.zero_mul`/`Nat.mul_zero`/`Nat.succ_ne_zero` (all far above);
         // nothing needs it yet, so it goes right after `land_le_left`.
         declare_land_zero_propagation_all(&mut d, &p)?;
+        // `Nat.land_aux_assoc_of_fuel`/`Nat.land_assoc`: needs
+        // `Nat.landAux`/`Nat.land` (`declare_land_all`, far above),
+        // `Nat.land_aux_zero_left_any_fuel`/`Nat.land_aux_agree_of_fuel`
+        // (`declare_land_fuel_irrelevance_all`, far above),
+        // `Nat.land_aux_comm_of_fuel` (`declare_land_comm`, above),
+        // `Nat.land_le_left` (`declare_land_le_left_all`, above),
+        // `Nat.land_aux_eq_zero_of_left_eq_zero` (`declare_land_zero_
+        // propagation_all`, just above), `Nat.zero_or_succ` (far above),
+        // and `Nat.div_mod_unique`/`Nat.div_mod_exec`/`Nat.mod_lt`/
+        // `Nat.mul_assoc`/`Nat.le_add_right`/`Nat.add_comm`/`Nat.le_trans`
+        // (all far above); nothing needs it, so it goes last of the
+        // `land` family.
+        declare_land_assoc_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

@@ -2746,3 +2746,630 @@ pub(super) fn declare_land_zero_propagation_all(
     declare_land_aux_eq_zero_of_left_eq_zero(d, p)?;
     Ok(())
 }
+
+// ============================================================================
+// `land_aux_assoc_of_fuel` / `land_assoc` -- see
+// `docs/plan/status/257-nat-land-assoc-impl.md` for the fully hand-traced
+// derivation this transcribes. The step case is split `c`, then `b`, then
+// `a` (corrected from an earlier `a,b,c` plan -- `guarded`'s guard checks
+// its SECOND value argument, i.e. the outer application's own `n`-slot,
+// OUTERMOST, and splitting `c` first is what makes the outer applications on
+// both sides resolve directly in leaves 1-3).
+// ============================================================================
+
+/// The hard leaf of [`declare_land_aux_assoc_of_fuel`]: `a = succ_a`,
+/// `b = succ_b`, `c = succ_c` (all literal successors), at fuel
+/// `sk = succ k`. Builds a term of type
+/// `Eq (landAux sk (landAux sk succ_a succ_b) succ_c)
+///     (landAux sk succ_a (landAux sk succ_b succ_c))`.
+///
+/// `ih : forall a b c, Eq (landAux k (landAux k a b) c) (landAux k a (landAux k b c))`
+/// is the outer induction's own hypothesis, applied at the halves.
+#[allow(clippy::too_many_arguments)]
+fn declare_land_aux_assoc_hard_leaf(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    k: ExprId,
+    ih: ExprId,
+    succ_a: ExprId,
+    succ_b: ExprId,
+    succ_c: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sk = d.succ(k);
+    let zero = d.zero();
+    let two = d.num(2);
+    let one = d.num(1);
+
+    let half_a = d.div(succ_a, two);
+    let half_b = d.div(succ_b, two);
+    let half_c = d.div(succ_c, two);
+    let bit_a = d.modulo(succ_a, two);
+    let bit_b = d.modulo(succ_b, two);
+    let bit_c = d.modulo(succ_c, two);
+
+    let rec_ab = d.const_app(p.land_aux, &[k, half_a, half_b]);
+    let bit_ab = d.mul(bit_a, bit_b);
+    let rec_bc = d.const_app(p.land_aux, &[k, half_b, half_c]);
+    let bit_bc = d.mul(bit_b, bit_c);
+
+    // X, Y: both stuck compounds (both guards resolve `false`, operands
+    // literal `succ`, but the recursive/bit values are opaque).
+    let x = d.const_app(p.land_aux, &[sk, succ_a, succ_b]);
+    let y = d.const_app(p.land_aux, &[sk, succ_b, succ_c]);
+
+    let lhs = d.const_app(p.land_aux, &[sk, x, succ_c]);
+    let rhs = d.const_app(p.land_aux, &[sk, succ_a, y]);
+    let goal_ty = d.eq(lhs, rhs);
+
+    // Dichotomize Y first.
+    let dichotomy_y = d.lemma(p.zero_or_succ, &[y]);
+    let y_zero_ty = d.eq(y, zero);
+    let y_succ_predicate = succ_pred_predicate(d, y);
+    let y_succ_exists_ty = succ_pred_exists_ty(d, &p, y_succ_predicate);
+
+    let y_zero_case = {
+        // Y = 0: mirror the direct propagation lemma via
+        // `land_aux_comm_of_fuel`, permuting to (c, b, a).
+        let hy_fv = d.fresh_fvar();
+        let hy = d.kernel().fvar(hy_fv); // Eq y zero
+
+        let comm_bc = d.lemma(p.land_aux_comm_of_fuel, &[sk, succ_b, succ_c]);
+        // comm_bc : Eq y (landAux sk succ_c succ_b)
+        let cb = d.const_app(p.land_aux, &[sk, succ_c, succ_b]);
+        let comm_bc_rev = d.symm(y, cb, comm_bc); // Eq cb y
+        let hyp_cb = d.trans(cb, y, zero, comm_bc_rev, hy); // Eq cb zero
+
+        let prop_cba = d.lemma(
+            p.land_aux_eq_zero_of_left_eq_zero,
+            &[sk, succ_c, succ_b, succ_a, hyp_cb],
+        );
+        let cb_a = d.const_app(p.land_aux, &[sk, succ_b, succ_a]);
+        let c_cba = d.const_app(p.land_aux, &[sk, succ_c, cb_a]);
+        // prop_cba : Eq c_cba zero
+
+        let comm_ab = d.lemma(p.land_aux_comm_of_fuel, &[sk, succ_a, succ_b]);
+        // comm_ab : Eq x cb_a
+        let comm_xc = d.lemma(p.land_aux_comm_of_fuel, &[sk, x, succ_c]);
+        let c_x = d.const_app(p.land_aux, &[sk, succ_c, x]);
+        // comm_xc : Eq lhs c_x
+
+        let cong_x = d.congr(x, cb_a, comm_ab, &|d, hole| {
+            d.const_app(p.land_aux, &[sk, succ_c, hole])
+        });
+        // cong_x : Eq c_x c_cba
+
+        let (_, lhs_is_zero) =
+            d.chain(lhs, &[(c_x, comm_xc), (c_cba, cong_x), (zero, prop_cba)]);
+
+        let cong_rhs = d.congr(y, zero, hy, &|d, hole| {
+            d.const_app(p.land_aux, &[sk, succ_a, hole])
+        });
+        let rhs_at_zero = d.const_app(p.land_aux, &[sk, succ_a, zero]);
+        let rhs_zero_tail = d.refl(zero); // Eq rhs_at_zero zero (defeq: literal n = 0)
+        let rhs_is_zero = d.trans(rhs, rhs_at_zero, zero, cong_rhs, rhs_zero_tail);
+        let rhs_is_zero_rev = d.symm(rhs, zero, rhs_is_zero);
+
+        let body = d.trans(lhs, zero, rhs, lhs_is_zero, rhs_is_zero_rev);
+        d.lam_fv(hy_fv, y_zero_ty, body)
+    };
+
+    let y_succ_case = {
+        let hy_fv = d.fresh_fvar();
+        let hy = d.kernel().fvar(hy_fv); // Exists Nat (fun w => Eq y (succ w))
+
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let succ_q = d.succ(q);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv); // Eq y (succ q)
+        let heq_ty = d.eq(y, succ_q);
+
+        let half_q = d.div(succ_q, two);
+        let bit_q = d.modulo(succ_q, two);
+
+        // Reconstruct div/mod of succ_q from Y's own decomposition
+        // (rec_bc, bit_bc) -- identical to the propagation lemma's
+        // `Y = succ q` branch.
+        let positive2 = d.zero_lt_succ(one);
+        let bit_c_lt_2 = d.lemma(p.mod_lt, &[succ_c, two, positive2]);
+        let bit_c_le_1 = d.lemma(p.le_of_lt_succ, &[bit_c, one, bit_c_lt_2]);
+        let bit_bc_le_bit_b = bit_product_le_left(d, &p, bit_b, bit_c, bit_c_le_1);
+        let positive2b = d.zero_lt_succ(one);
+        let bit_b_lt_2 = d.lemma(p.mod_lt, &[succ_b, two, positive2b]);
+        let bit_bc_lt_2 = d.lemma(
+            p.lt_of_le_of_lt,
+            &[bit_bc, bit_b, two, bit_bc_le_bit_b, bit_b_lt_2],
+        );
+
+        let doubled_bc = d.mul(two, rec_bc);
+        let add_term_bc = d.add(doubled_bc, bit_bc);
+        let candidate_eq_ty_bc = d.eq(succ_q, add_term_bc);
+        let candidate_bound_ty_bc = d.lt(bit_bc, two);
+        let candidate_eq_bc = d.symm(add_term_bc, succ_q, heq);
+        let candidate_divmod_bc = d.const_app(
+            p.logic.and_intro,
+            &[
+                candidate_eq_ty_bc,
+                candidate_bound_ty_bc,
+                candidate_eq_bc,
+                bit_bc_lt_2,
+            ],
+        );
+        let exec_divmod_bc = d.lemma(p.div_mod_exec, &[one, succ_q]);
+        let unique_bc = d.lemma(
+            p.div_mod_unique,
+            &[
+                two,
+                succ_q,
+                half_q,
+                bit_q,
+                rec_bc,
+                bit_bc,
+                exec_divmod_bc,
+                candidate_divmod_bc,
+            ],
+        );
+        let half_eq_ty_bc = d.eq(half_q, rec_bc);
+        let bit_eq_ty_bc = d.eq(bit_q, bit_bc);
+        let half_q_eq = and_left(d, half_eq_ty_bc, bit_eq_ty_bc, unique_bc);
+        let bit_q_eq = and_right(d, half_eq_ty_bc, bit_eq_ty_bc, unique_bc);
+
+        // Dichotomize X.
+        let dichotomy_x = d.lemma(p.zero_or_succ, &[x]);
+        let x_zero_ty = d.eq(x, zero);
+        let x_succ_predicate = succ_pred_predicate(d, x);
+        let x_succ_exists_ty = succ_pred_exists_ty(d, &p, x_succ_predicate);
+
+        let x_zero_case = {
+            let hx_fv = d.fresh_fvar();
+            let hx = d.kernel().fvar(hx_fv); // Eq x zero
+
+            let cong_lhs = d.congr(x, zero, hx, &|d, hole| {
+                d.const_app(p.land_aux, &[sk, hole, succ_c])
+            });
+            let lhs_at_zero = d.const_app(p.land_aux, &[sk, zero, succ_c]);
+            let lhs_zero_tail = d.refl(zero); // Eq lhs_at_zero zero (both literal 0/succ_c)
+            let lhs_is_zero = d.trans(lhs, lhs_at_zero, zero, cong_lhs, lhs_zero_tail);
+
+            // RHS: hyp X=0 is exactly land_aux_eq_zero_of_left_eq_zero's
+            // own hypothesis at (sk, succ_a, succ_b, succ_c).
+            let rhs_is_zero = d.lemma(
+                p.land_aux_eq_zero_of_left_eq_zero,
+                &[sk, succ_a, succ_b, succ_c, hx],
+            );
+            let rhs_is_zero_rev = d.symm(rhs, zero, rhs_is_zero);
+            let body = d.trans(lhs, zero, rhs, lhs_is_zero, rhs_is_zero_rev);
+            d.lam_fv(hx_fv, x_zero_ty, body)
+        };
+
+        let x_succ_case = {
+            let hx_fv = d.fresh_fvar();
+            let hx = d.kernel().fvar(hx_fv); // Exists Nat (fun w => Eq x (succ w))
+
+            let p_fv = d.fresh_fvar();
+            let pvar = d.kernel().fvar(p_fv);
+            let succ_p = d.succ(pvar);
+            let hxp_fv = d.fresh_fvar();
+            let hxp = d.kernel().fvar(hxp_fv); // Eq x (succ p)
+            let hxp_ty = d.eq(x, succ_p);
+
+            let half_p = d.div(succ_p, two);
+            let bit_p = d.modulo(succ_p, two);
+
+            // Reconstruct div/mod of succ_p from X's own decomposition
+            // (rec_ab, bit_ab) -- the same technique, mirrored onto the
+            // OTHER pair.
+            let positive2c = d.zero_lt_succ(one);
+            let bit_b_lt_2c = d.lemma(p.mod_lt, &[succ_b, two, positive2c]);
+            let bit_b_le_1 = d.lemma(p.le_of_lt_succ, &[bit_b, one, bit_b_lt_2c]);
+            let bit_ab_le_bit_a = bit_product_le_left(d, &p, bit_a, bit_b, bit_b_le_1);
+            let positive2d = d.zero_lt_succ(one);
+            let bit_a_lt_2 = d.lemma(p.mod_lt, &[succ_a, two, positive2d]);
+            let bit_ab_lt_2 = d.lemma(
+                p.lt_of_le_of_lt,
+                &[bit_ab, bit_a, two, bit_ab_le_bit_a, bit_a_lt_2],
+            );
+
+            let doubled_ab = d.mul(two, rec_ab);
+            let add_term_ab = d.add(doubled_ab, bit_ab);
+            let candidate_eq_ty_ab = d.eq(succ_p, add_term_ab);
+            let candidate_bound_ty_ab = d.lt(bit_ab, two);
+            let candidate_eq_ab = d.symm(add_term_ab, succ_p, hxp);
+            let candidate_divmod_ab = d.const_app(
+                p.logic.and_intro,
+                &[
+                    candidate_eq_ty_ab,
+                    candidate_bound_ty_ab,
+                    candidate_eq_ab,
+                    bit_ab_lt_2,
+                ],
+            );
+            let exec_divmod_ab = d.lemma(p.div_mod_exec, &[one, succ_p]);
+            let unique_ab = d.lemma(
+                p.div_mod_unique,
+                &[
+                    two,
+                    succ_p,
+                    half_p,
+                    bit_p,
+                    rec_ab,
+                    bit_ab,
+                    exec_divmod_ab,
+                    candidate_divmod_ab,
+                ],
+            );
+            let half_eq_ty_ab = d.eq(half_p, rec_ab);
+            let bit_eq_ty_ab = d.eq(bit_p, bit_ab);
+            let half_p_eq = and_left(d, half_eq_ty_ab, bit_eq_ty_ab, unique_ab);
+            let bit_p_eq = and_right(d, half_eq_ty_ab, bit_eq_ty_ab, unique_ab);
+
+            let cong_l = d.congr(x, succ_p, hxp, &|d, hole| {
+                d.const_app(p.land_aux, &[sk, hole, succ_c])
+            });
+            let lhs_at_p = d.const_app(p.land_aux, &[sk, succ_p, succ_c]);
+
+            let cong_r = d.congr(y, succ_q, heq, &|d, hole| {
+                d.const_app(p.land_aux, &[sk, succ_a, hole])
+            });
+            let rhs_at_q = d.const_app(p.land_aux, &[sk, succ_a, succ_q]);
+
+            // landAux sk succ_p succ_c reduces to 2*rec_Xc + bit_Xc;
+            // landAux sk succ_a succ_q reduces to 2*rec_aY + bit_aY.
+            let rec_xc = d.const_app(p.land_aux, &[k, half_p, half_c]);
+            let bit_xc = d.mul(bit_p, bit_c);
+            let rec_ay = d.const_app(p.land_aux, &[k, half_a, half_q]);
+            let bit_ay = d.mul(bit_a, bit_q);
+
+            // rec_Xc -[congr half_p_eq]-> landAux k rec_ab half_c
+            //        -[ih at (half_a,half_b,half_c)]-> landAux k half_a rec_bc
+            //        -[congr symm(half_q_eq)]-> rec_aY
+            let cong_rec1 = d.congr(half_p, rec_ab, half_p_eq, &|d, hole| {
+                d.const_app(p.land_aux, &[k, hole, half_c])
+            });
+            let rec_ab_c = d.const_app(p.land_aux, &[k, rec_ab, half_c]);
+            let ih_at = d.apply(ih, &[half_a, half_b, half_c]);
+            // ih_at : Eq (landAux k rec_ab half_c) (landAux k half_a rec_bc)
+            let half_a_rec_bc = d.const_app(p.land_aux, &[k, half_a, rec_bc]);
+            let rec_bc_eq_half_q = d.symm(half_q, rec_bc, half_q_eq);
+            let cong_rec2 = d.congr(rec_bc, half_q, rec_bc_eq_half_q, &|d, hole| {
+                d.const_app(p.land_aux, &[k, half_a, hole])
+            });
+            let (_, rec_xc_eq_rec_ay) = d.chain(
+                rec_xc,
+                &[(rec_ab_c, cong_rec1), (half_a_rec_bc, ih_at), (rec_ay, cong_rec2)],
+            );
+
+            // bit_Xc -[congr bit_p_eq]-> mul bit_ab bit_c
+            //        -[mul_assoc]-> mul bit_a bit_bc
+            //        -[congr symm(bit_q_eq)]-> bit_aY
+            let cong_bit1 = d.congr(bit_p, bit_ab, bit_p_eq, &|d, hole| d.mul(hole, bit_c));
+            let mul_ab_c = d.mul(bit_ab, bit_c);
+            let assoc = d.lemma(p.mul_assoc, &[bit_a, bit_b, bit_c]);
+            // assoc : Eq mul_ab_c (mul bit_a bit_bc)
+            let mul_a_bc = d.mul(bit_a, bit_bc);
+            let bit_bc_eq_bit_q = d.symm(bit_q, bit_bc, bit_q_eq);
+            let cong_bit2 = d.congr(bit_bc, bit_q, bit_bc_eq_bit_q, &|d, hole| {
+                d.mul(bit_a, hole)
+            });
+            let (_, bit_xc_eq_bit_ay) = d.chain(
+                bit_xc,
+                &[(mul_ab_c, cong_bit1), (mul_a_bc, assoc), (bit_ay, cong_bit2)],
+            );
+
+            // Lift both equalities through the shared `2 * rec + bit` shape.
+            let doubled_xc = d.mul(two, rec_xc);
+            let stepped_xc = d.add(doubled_xc, bit_xc);
+            let cong_final1 = d.congr(rec_xc, rec_ay, rec_xc_eq_rec_ay, &|d, hole| {
+                let doubled = d.mul(two, hole);
+                d.add(doubled, bit_xc)
+            });
+            let doubled_ay = d.mul(two, rec_ay);
+            let mid_stepped = d.add(doubled_ay, bit_xc);
+            let cong_final2 = d.congr(bit_xc, bit_ay, bit_xc_eq_bit_ay, &|d, hole| {
+                let doubled = d.mul(two, rec_ay);
+                d.add(doubled, hole)
+            });
+            let stepped_ay = d.add(doubled_ay, bit_ay);
+            let (_, stepped_eq) = d.chain(
+                stepped_xc,
+                &[(mid_stepped, cong_final1), (stepped_ay, cong_final2)],
+            );
+            // stepped_eq : Eq stepped_xc stepped_ay, defeq
+            // Eq lhs_at_p rhs_at_q (both are `guarded` reductions of the
+            // identical shape).
+
+            let cong_r_rev = d.symm(rhs, rhs_at_q, cong_r);
+            let (_, body) = d.chain(
+                lhs,
+                &[(lhs_at_p, cong_l), (rhs_at_q, stepped_eq), (rhs, cong_r_rev)],
+            );
+
+            let minor_inner = d.lam_fv(hxp_fv, hxp_ty, body);
+            let nat = d.nat_ty();
+            let minor = d.lam_fv(p_fv, nat, minor_inner);
+            let x_body = exists_elim(d, &p, x_succ_predicate, goal_ty, minor, hx);
+            d.lam_fv(hx_fv, x_succ_exists_ty, x_body)
+        };
+
+        let dichotomy_x_proof = or_elim(
+            d,
+            &p,
+            x_zero_ty,
+            x_succ_exists_ty,
+            goal_ty,
+            x_zero_case,
+            x_succ_case,
+            dichotomy_x,
+        );
+
+        let minor_inner = d.lam_fv(heq_fv, heq_ty, dichotomy_x_proof);
+        let nat = d.nat_ty();
+        let minor = d.lam_fv(q_fv, nat, minor_inner);
+        let body = exists_elim(d, &p, y_succ_predicate, goal_ty, minor, hy);
+        d.lam_fv(hy_fv, y_succ_exists_ty, body)
+    };
+
+    or_elim(
+        d,
+        &p,
+        y_zero_ty,
+        y_succ_exists_ty,
+        goal_ty,
+        y_zero_case,
+        y_succ_case,
+        dichotomy_y,
+    )
+}
+
+/// `land_aux_assoc_of_fuel : ∀ fuel a b c,
+/// Eq (landAux fuel (landAux fuel a b) c) (landAux fuel a (landAux fuel b c))`
+/// — see the section doc above.
+fn declare_land_aux_assoc_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    let statement = |d: &mut NatDev<'_>, fuel: ExprId, a: ExprId, b: ExprId, c: ExprId| {
+        let x = d.const_app(p.land_aux, &[fuel, a, b]);
+        let lhs = d.const_app(p.land_aux, &[fuel, x, c]);
+        let y = d.const_app(p.land_aux, &[fuel, b, c]);
+        let rhs = d.const_app(p.land_aux, &[fuel, a, y]);
+        d.eq(lhs, rhs)
+    };
+
+    let base = |d: &mut NatDev<'_>, a: ExprId, b: ExprId, c: ExprId| -> ExprId {
+        // fuel = 0: both sides defeq `0` regardless of `a`, `b`, `c`.
+        let zero = d.zero();
+        let x = d.const_app(p.land_aux, &[zero, a, b]);
+        let lhs = d.const_app(p.land_aux, &[zero, x, c]);
+        d.refl(lhs)
+    };
+
+    let step =
+        |d: &mut NatDev<'_>, k: ExprId, ih: ExprId, a: ExprId, b: ExprId, c: ExprId| -> ExprId {
+            let sk = d.succ(k);
+            let zero = d.zero();
+
+            cases_zero_succ(
+                d,
+                c,
+                &|d, candidate| {
+                    let x = d.const_app(p.land_aux, &[sk, a, b]);
+                    let lhs = d.const_app(p.land_aux, &[sk, x, candidate]);
+                    let y = d.const_app(p.land_aux, &[sk, b, candidate]);
+                    let rhs = d.const_app(p.land_aux, &[sk, a, y]);
+                    d.eq(lhs, rhs)
+                },
+                &|d| {
+                    // Leaf 1: c = 0. Both sides defeq 0 -- the outer `n`
+                    // slot on each side is the literal `c = 0`.
+                    let x = d.const_app(p.land_aux, &[sk, a, b]);
+                    let lhs = d.const_app(p.land_aux, &[sk, x, zero]);
+                    d.refl(lhs)
+                },
+                &|d, c_pred| {
+                    let succ_c = d.succ(c_pred);
+                    cases_zero_succ(
+                        d,
+                        b,
+                        &|d, candidate| {
+                            let x = d.const_app(p.land_aux, &[sk, a, candidate]);
+                            let lhs = d.const_app(p.land_aux, &[sk, x, succ_c]);
+                            let y = d.const_app(p.land_aux, &[sk, candidate, succ_c]);
+                            let rhs = d.const_app(p.land_aux, &[sk, a, y]);
+                            d.eq(lhs, rhs)
+                        },
+                        &|d| {
+                            // Leaf 2: c = succ_c, b = 0. X = landAux sk a 0
+                            // and Y = landAux sk 0 succ_c both reduce to 0
+                            // by pure computation, so both outer
+                            // applications reduce to 0 regardless of `a`.
+                            let x = d.const_app(p.land_aux, &[sk, a, zero]);
+                            let lhs = d.const_app(p.land_aux, &[sk, x, succ_c]);
+                            d.refl(lhs)
+                        },
+                        &|d, b_pred| {
+                            let succ_b = d.succ(b_pred);
+                            cases_zero_succ(
+                                d,
+                                a,
+                                &|d, candidate| {
+                                    let x = d.const_app(p.land_aux, &[sk, candidate, succ_b]);
+                                    let lhs = d.const_app(p.land_aux, &[sk, x, succ_c]);
+                                    let y = d.const_app(p.land_aux, &[sk, succ_b, succ_c]);
+                                    let rhs = d.const_app(p.land_aux, &[sk, candidate, y]);
+                                    d.eq(lhs, rhs)
+                                },
+                                &|d| {
+                                    // Leaf 3: c = succ_c, b = succ_b, a = 0.
+                                    // X = landAux sk 0 succ_b reduces to 0
+                                    // by pure computation (chased through
+                                    // LHS), so LHS is a pure `refl`. Y is a
+                                    // genuine stuck compound, so RHS needs
+                                    // `land_aux_zero_left_any_fuel`.
+                                    let x = d.const_app(p.land_aux, &[sk, zero, succ_b]);
+                                    let lhs = d.const_app(p.land_aux, &[sk, x, succ_c]);
+                                    let lhs_is_zero = d.refl(zero);
+                                    let y = d.const_app(p.land_aux, &[sk, succ_b, succ_c]);
+                                    let rhs = d.const_app(p.land_aux, &[sk, zero, y]);
+                                    let rhs_is_zero =
+                                        d.lemma(p.land_aux_zero_left_any_fuel, &[sk, y]);
+                                    let rhs_is_zero_rev = d.symm(rhs, zero, rhs_is_zero);
+                                    d.trans(lhs, zero, rhs, lhs_is_zero, rhs_is_zero_rev)
+                                },
+                                &|d, a_pred| {
+                                    let succ_a = d.succ(a_pred);
+                                    declare_land_aux_assoc_hard_leaf(
+                                        d, &p, k, ih, succ_a, succ_b, succ_c,
+                                    )
+                                },
+                            )
+                        },
+                    )
+                },
+            )
+        };
+
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+    let proof_fn = agree_by_double_fuel_induction(d, &statement, &base, &step, fuel);
+
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let applied = d.apply(proof_fn, &[a, b, c]);
+    let ty = {
+        let body = statement(d, fuel, a, b, c);
+        let with_c = d.pi_fv(c_fv, nat, body);
+        let with_b = d.pi_fv(b_fv, nat, with_c);
+        let with_a = d.pi_fv(a_fv, nat, with_b);
+        d.pi_fv(fuel_fv, nat, with_a)
+    };
+    let value = {
+        let with_c = d.lam_fv(c_fv, nat, applied);
+        let with_b = d.lam_fv(b_fv, nat, with_c);
+        let with_a = d.lam_fv(a_fv, nat, with_b);
+        d.lam_fv(fuel_fv, nat, with_a)
+    };
+    d.declare_theorem(p.land_aux_assoc_of_fuel, ty, value)
+}
+
+/// `land_assoc : ∀ a b c, Eq (land (land a b) c) (land a (land b c))` — see
+/// the section doc above. Chain, `land_comm`'s pattern one argument wider:
+/// pick the shared fuel `F := add a b` (sufficient for `a`, `b`, and
+/// `land a b` via `land_le_left` + `le_trans`; `c` never needs its own
+/// bound, since `land_aux_agree_of_fuel`'s hypotheses constrain only the
+/// `m` position, never `n`), relate `landAux F a b`/`landAux F b c` back to
+/// `land a b`/`land b c` via `land_aux_agree_of_fuel`, invoke
+/// `land_aux_assoc_of_fuel` at `F`, then relate the two outer `landAux F …`
+/// terms back to `land … …` via `land_aux_agree_of_fuel` again.
+pub(super) fn declare_land_assoc(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    declare_land_aux_assoc_of_fuel(d, p)?;
+    let p = *p;
+    d.theorem(p.land_assoc, 3, &|d, values| {
+        let a = values[0];
+        let b = values[1];
+        let c = values[2];
+
+        let fuel = d.add(a, b);
+
+        let le_a_fuel = d.lemma(p.le_add_right, &[a, b]); // Le a fuel
+        let le_refl_a = d.lemma(p.le_refl, &[a]);
+
+        let le_b_b_a = d.lemma(p.le_add_right, &[b, a]); // Le b (add b a)
+        let b_a = d.add(b, a);
+        let add_comm_ba = d.lemma(p.add_comm, &[b, a]); // Eq (add b a) (add a b)
+        let le_b_motive = d.eq_motive(b_a, &|d, x| d.le(b, x));
+        let le_b_fuel = d.transport(b_a, le_b_motive, le_b_b_a, fuel, add_comm_ba);
+        let le_refl_b = d.lemma(p.le_refl, &[b]);
+
+        // Le x1 fuel, where x1 := landAux a a b (defeq `land a b`), via
+        // `land_le_left` (Le x1 a, by defeq) + `le_trans`.
+        let x1 = d.const_app(p.land_aux, &[a, a, b]);
+        let le_x1_a = d.lemma(p.land_le_left, &[a, b]); // Le (land a b) a
+        let le_x1_fuel = d.lemma(p.le_trans, &[x1, a, fuel, le_x1_a, le_a_fuel]);
+        let le_refl_x1 = d.lemma(p.le_refl, &[x1]);
+
+        // step1 : Eq (landAux fuel a b) (landAux a a b) = Eq x0 x1
+        let x0 = d.const_app(p.land_aux, &[fuel, a, b]);
+        let step1 = d.lemma(
+            p.land_aux_agree_of_fuel,
+            &[fuel, a, b, a, le_a_fuel, le_refl_a],
+        );
+        // step2 : Eq (landAux fuel b c) (landAux b b c) = Eq y0 y1
+        let y0 = d.const_app(p.land_aux, &[fuel, b, c]);
+        let y1 = d.const_app(p.land_aux, &[b, b, c]);
+        let step2 = d.lemma(
+            p.land_aux_agree_of_fuel,
+            &[fuel, b, c, b, le_b_fuel, le_refl_b],
+        );
+
+        // step3 : Eq (landAux fuel x0 c) (landAux fuel a y0)
+        let step3 = d.lemma(p.land_aux_assoc_of_fuel, &[fuel, a, b, c]);
+        let lhs0 = d.const_app(p.land_aux, &[fuel, x0, c]);
+        let rhs0 = d.const_app(p.land_aux, &[fuel, a, y0]);
+
+        let cong_left = d.congr(x0, x1, step1, &|d, hole| {
+            d.const_app(p.land_aux, &[fuel, hole, c])
+        });
+        let mid1 = d.const_app(p.land_aux, &[fuel, x1, c]);
+        let cong_right = d.congr(y0, y1, step2, &|d, hole| {
+            d.const_app(p.land_aux, &[fuel, a, hole])
+        });
+        let mid2 = d.const_app(p.land_aux, &[fuel, a, y1]);
+
+        let cong_left_rev = d.symm(lhs0, mid1, cong_left);
+        let ab_step = d.trans(mid1, lhs0, rhs0, cong_left_rev, step3);
+        let ab_final = d.trans(mid1, rhs0, mid2, ab_step, cong_right);
+        // ab_final : Eq mid1 mid2
+        //   = Eq (landAux fuel x1 c) (landAux fuel a y1)
+
+        // step5 : Eq (landAux fuel x1 c) (landAux x1 x1 c) = Eq mid1 z1
+        let step5 = d.lemma(
+            p.land_aux_agree_of_fuel,
+            &[fuel, x1, c, x1, le_x1_fuel, le_refl_x1],
+        );
+        let z1 = d.const_app(p.land_aux, &[x1, x1, c]);
+
+        // step6 : Eq (landAux fuel a y1) (landAux a a y1) = Eq mid2 z2
+        let step6 = d.lemma(
+            p.land_aux_agree_of_fuel,
+            &[fuel, a, y1, a, le_a_fuel, le_refl_a],
+        );
+        let z2 = d.const_app(p.land_aux, &[a, a, y1]);
+
+        let step5_rev = d.symm(mid1, z1, step5);
+        let z1_step = d.trans(z1, mid1, mid2, step5_rev, ab_final);
+        let proof = d.trans(z1, mid2, z2, z1_step, step6);
+        // proof : Eq z1 z2
+        //   = Eq (landAux x1 x1 c) (landAux a a y1)
+        //  defeq Eq (land (land a b) c) (land a (land b c))
+
+        let lhs = {
+            let land_ab = d.const_app(p.land, &[a, b]);
+            d.const_app(p.land, &[land_ab, c])
+        };
+        let rhs = {
+            let land_bc = d.const_app(p.land, &[b, c]);
+            d.const_app(p.land, &[a, land_bc])
+        };
+        (d.eq(lhs, rhs), proof)
+    })?;
+    Ok(())
+}
+
+/// Declare [`declare_land_assoc`].
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_land_assoc_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_land_assoc(d, p)?;
+    Ok(())
+}
