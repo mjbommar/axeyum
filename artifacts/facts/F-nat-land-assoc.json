@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-land-assoc",
+  "title": "land is associative",
+  "statement": "For every natural a, b, c: land(land(a, b), c) = land(a, land(b, c)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.land (AxNat.land x0 x1) x2) (AxNat.land x0 (AxNat.land x1 x2)))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-land-comm"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.land_assoc",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_assoc",
+      "supports": "Nat.land_assoc is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- land_assoc 2>/dev/null | grep -Ec '^Nat\\.land_assoc[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type -- producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.land_assoc[[:space:]]` so a sibling name cannot satisfy this row. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.land_assoc",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_assoc",
+      "supports": "land(land(3, 7), 5) = land(3, land(7, 5)) = 1, with BOTH intermediate values (land(3,7)=3, land(7,5)=5) genuinely NONZERO -- the fully-generic sub-case of the hard leaf (both nested landAux applications stuck, neither settling for the easy zero-corner), not a degenerate instance a wrong proof of the easy leaves alone could pass.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_assoc_applies_at_a_nonzero_concrete_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.land_assoc` symbolically (against free `a`, `b`, `c`) and at the concrete instance `(a, b, c) = (3, 7, 5)`, confirming the admitted type matches `Eq (land (land 3 7) 5) (land 3 (land 7 5))`, that `land 3 7` and `land 7 5` are each nonzero (non-vacuity of the hard-leaf exercise), and that both sides compute to `1`."
+    },
+    {
+      "id": "footprint-Nat.land_assoc",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-and",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-land-assoc-finish",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0`/`x1`/`x2` are `a`/`b`/`c`.\n\nBuilt on `Nat.land_aux_assoc_of_fuel : forall fuel a b c, landAux fuel (landAux fuel a b) c = landAux fuel a (landAux fuel b c)`, itself proved by `agree_by_double_fuel_induction`, unconditional in `fuel` (landAux's fuel-exhaustion row is the absorbing constant 0). Four prior lanes traced this derivation without building it (`docs/plan/status/247-nat-bitwise-assoc.md`, `252-nat-assoc-dichotomy.md`, `257-nat-land-assoc-impl.md`); this lane executed the fully-worked plan in `257`, verifying every traced step against the actual `guarded`/`land_aux_agree_of_fuel`/`land_aux_eq_zero_of_left_eq_zero` signatures rather than trusting the prose. The step case splits `c`, then `b`, then `a` (per `257`'s own correction of an earlier `a,b,c` order, cross-checked here again against `guarded`'s n-outermost guard). The hard leaf (`a,b,c` all positive) dichotomizes the two nested `landAux` values (`Y` first, then `X` within `Y != 0`) via `Nat.zero_or_succ`: the `Y = 0` case mirrors `Nat.land_aux_eq_zero_of_left_eq_zero` via `Nat.land_aux_comm_of_fuel`; the `Y != 0, X = 0` case applies that same propagation lemma directly; the fully generic `Y != 0, X != 0` case reconstructs BOTH nested values' own div/mod decomposition via `Nat.div_mod_unique`/`Nat.div_mod_exec` and closes via the outer induction's own `ih` (for the recursive halves) plus `Nat.mul_assoc` (for the per-bit product) -- no new arithmetic lemma beyond what the propagation lemma already used.\n\n`Nat.land_assoc` itself re-fuels through the shared fuel `F := add(a, b)` (NOT `a+b+c` -- `c` never needs its own `Le` bound, since `Nat.land_aux_agree_of_fuel`'s hypotheses constrain only the `m` position, never `n`), following `Nat.land_comm`'s exact bookkeeping pattern one argument wider.\n\nThis is the `Nat.land` twin of Mathlib v4.30's `Nat.land_assoc` (`F:ml430-nat-land-assoc-ad4775b8`, flipped alongside this fact) -- our `Nat.land` is itself proved equal to Mathlib's `bitwise and` specialization by `Nat.bitwise_and_eq_land` (`nat_prelude/rec_agreement.rs`), so this closes the same proposition Mathlib states, not a lookalike about a different definition."
+}

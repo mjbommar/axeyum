@@ -159,6 +159,7 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-lor-ldiff-bit | `Nat.lor_bit` + `Nat.ldiff_bit` (`nat_prelude/bit_decode.rs`): transport the `Nat.bit` decode bridge's fuel-swap machinery unchanged from `land_bit`; new per-operator guard-tree leaves (`lor`'s pass-through rows, `ldiff`'s hybrid) and per-bit combine agreements (`or_cond_max_eq_cond`, `ldiff_cond_eq_cond`). Closes `F:ml430-nat-lor-bit-a2f98c7c` + `F:ml430-nat-ldiff-bit-6be49bb8`, proved axiom-free. Also fixed a pre-existing misplaced `#[test]` attribute in the same test file (unrelated to this lane's subject, needed for a clean clippy gate). |
 | 2026-08-29 | nat-bitwise-bit-swap | Land `Nat.bitwise_swap` (`nat_prelude/bitwise.rs`): a fuel-induction cross lemma (`bitwise_aux_swap_of_fuel`) needing NO commutativity hypothesis, since `swap f` beta-reduces to `f` with arguments exchanged; close `F:ml430-nat-bitwise-swap-7175e90e`. Also fixed a pre-existing merge artifact in `nat_prelude_tests.rs` that had silenced `clog_computes_and_its_boundary_equations_apply` as dead code. `bitwise_bit'` remains open. |
 | 2026-08-29 | nat-lt-xor-cases | Read the pinned Mathlib v4.30 source for `Nat.lt_xor_cases` directly (no codomain block — fully `Nat`-valued); landed `Nat.xor_comm` (new `nat_prelude/xor_order.rs`, a corollary of `Nat.bitwise_comm` at `f := xor_fn`, one of the pieces Mathlib's own proof route composes) with a discriminating evaluation test; repaired an unrelated pre-existing merge-splice `#[test]`-attribute bug in `nat_prelude_tests.rs` that `cargo clippy -D warnings` exposed; `F:ml430-nat-lt-xor-cases-c43a1e85` stays `open` — precise diagnosis of the 4 remaining substantial pieces (`testBit_xor`, an `exists_most_significant_bit` equivalent, `lt_of_testBit`, `xor_assoc`/`xor_xor_cancel`/`xor_ne_zero_iff`) recorded in `xor_order.rs`'s module doc and this file |
+| 2026-08-29 | nat-land-assoc-finish | `Nat.land_aux_assoc_of_fuel`/`Nat.land_assoc` built and kernel-verified, executing `docs/plan/status/257-nat-land-assoc-impl.md`'s traced derivation exactly (leaf split c,b,a confirmed against `guarded`'s guard order; hard leaf's double `div_mod_unique` reconstruction closes via `ih`+`mul_assoc`, no new lemmas); `F:ml430-nat-land-assoc-ad4775b8` closed proved/axiom-free via the standard bitwise reconciliation pattern; a pre-existing merge-splice bug in `nat_prelude_tests.rs` (silently disabling the `clog` test) fixed along the way; `Nat.lor_assoc` characterized but not attempted -- `lorAux`'s pass-through fuel row makes the direct propagation lemma analogue FALSE, not merely harder |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -15770,6 +15771,182 @@ gate exposed). `python3 scripts/validate-facts.py` — 1934 facts, 0 errors
 (no fact files touched; `F:ml430-nat-lt-xor-cases-c43a1e85` correctly
 remains `open`). Workspace gate NOT run (coordinator re-verifies before
 merging, per the lane brief). Not pushed.
+
+**Your lane's block (`DONE`, nat-land-assoc-finish, 2026-08-29).** Closed
+`F:ml430-nat-land-assoc-ad4775b8` (`Nat.land_assoc`) by executing the
+fully-traced derivation in `docs/plan/status/257-nat-land-assoc-impl.md` —
+the fifth lane to work this target and the first to finish it. Every
+traced step held as written; the one thing verified rather than trusted
+was `257`'s own corrected leaf-split order (`c`, then `b`, then `a`),
+re-confirmed against `guarded`'s actual `n`-outermost guard before
+transcribing a single line.
+
+## What landed and is kernel-checked
+
+**`Nat.land_aux_assoc_of_fuel : ∀ fuel a b c, Eq (landAux fuel (landAux
+fuel a b) c) (landAux fuel a (landAux fuel b c))`** (`rec_agreement.rs`),
+unconditional (no `Le` hypothesis — `landAux`'s fuel-exhaustion row is
+the absorbing constant `0`). Built via `agree_by_double_fuel_induction`,
+step case split `c`, then `b`, then `a`:
+
+- **Leaves 1–3 (at least one of `a,b,c` is `0`): all close by pure
+  `d.refl`**, exactly as `257` traced — no lemma except leaf 3's use of
+  the already-existing `land_aux_zero_left_any_fuel` for the one branch
+  where the outer guard's checked slot is a genuinely stuck compound
+  (`landAux sk 0 Y` with `Y` stuck), rather than a literal.
+- **Leaf 4 (`a,b,c` all positive) — the hard leaf.** Dichotomizes the
+  inner value `Y := landAux sk succ_b succ_c` via `Nat.zero_or_succ`
+  first:
+  - `Y = 0`: mirrors `Nat.land_aux_eq_zero_of_left_eq_zero` via
+    `Nat.land_aux_comm_of_fuel`, permuting the argument order to
+    `(sk, succ_c, succ_b, succ_a)` and chaining four `comm`/`congr`
+    steps back to the goal's own shape.
+  - `Y = succ q`: dichotomizes `X := landAux sk succ_a succ_b` via
+    `zero_or_succ` again.
+    - `X = 0`: the goal's RHS is *exactly*
+      `Nat.land_aux_eq_zero_of_left_eq_zero(sk, succ_a, succ_b, succ_c,
+      hx)`'s conclusion, verbatim, no massaging.
+    - `X = succ p`: the fully generic case. Reconstructs `div(succ_p,2)`/
+      `mod(succ_p,2)` from `X`'s own `2*rec_ab+bit_ab` decomposition
+      **and independently** `div(succ_q,2)`/`mod(succ_q,2)` from `Y`'s
+      own `2*rec_bc+bit_bc` decomposition, each via
+      `Nat.div_mod_unique`+`Nat.div_mod_exec` (the same reconstruction
+      pattern the propagation lemma already used once, now done twice).
+      The recursive halves close via the **outer induction's own `ih`**
+      applied at `(half_a, half_b, half_c)` — `landAux k rec_ab half_c`
+      IS `landAux k (landAux k half_a half_b) half_c` syntactically,
+      matching `ih`'s LHS exactly. The bit halves close via
+      `Nat.mul_assoc(bit_a, bit_b, bit_c)` directly (no `symm` needed
+      here, unlike the propagation lemma's analogous step — the
+      associativity direction already matches). **No new arithmetic
+      lemma anywhere in this leaf.**
+
+**`Nat.land_assoc : ∀ a b c, Eq (land (land a b) c) (land a (land b c))`**
+— re-fuels through the shared fuel `F := add(a, b)`, **not** `a+b+c`.
+Verified directly (not assumed from `257`'s prose) that `c` never needs
+its own `Le` bound: `Nat.land_aux_agree_of_fuel`'s two hypotheses
+(`Le m fuel1`, `Le m fuel2`) constrain only the **`m`** position, never
+`n`, so the `land_aux_assoc_of_fuel(F,a,b,c)` step and both
+`land_aux_agree_of_fuel` calls involving `c` in the `n`-slot need
+nothing about `c` at all. `Le a F` is direct (`le_add_right`); `Le b F`
+needs one `add_comm` transport (`le_add_right(b,a)` gives `Le b (add b
+a)`, not `Le b (add a b)`); `Le (land a b) F` chains `land_le_left` +
+`le_trans`. This is `land_comm`'s exact bookkeeping shape, one argument
+wider, matching `257`'s prediction.
+
+**Registered in `theorem_names`** (coverage is environment-derived).
+`the_build_is_deterministic`'s pin moved `93+490 → 93+492` (from the
+panic's own mismatch, `left: 585`).
+
+**Test**: `land_assoc_applies_at_a_nonzero_concrete_instance` — symbolic
+restatement at fully free `a`/`b`/`c`, plus a concrete instance
+`(a,b,c) = (3,7,5)` chosen so **both** `land(a,b)=3` and `land(b,c)=5`
+are nonzero (exercising the hard leaf's fully-generic `X≠0,Y≠0`
+sub-case, not one of its easy corners or the `X=0`/`Y=0` mirrors), with
+the final answer `1` checked on both sides.
+
+**141/141 `nat_prelude::` tests pass** (was 140 before this lane's edits,
++1 land_assoc test). `cargo fmt --edition 2024 --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings`: both
+clean.
+
+## A pre-existing bug fixed along the way (not this lane's proof work)
+
+`cargo clippy -D warnings` failed on entry with a "duplicated attribute"
+error and a "function never used" error in `nat_prelude_tests.rs`,
+**already present at the merge commit `6cac60005`, before any of this
+lane's edits** (confirmed via `git show`). It was exactly the "TWO LANES
+ADDING FUNCTIONS TO ONE RUST FILE" splice shape CLAUDE.md documents: an
+earlier concurrent-lane merge had inserted `land_bit`'s doc comment +
+`#[test]` between `clog_computes_and_its_boundary_equations_apply`'s own
+doc comment and its `#[test]`, leaving `land_bit`'s function with a
+duplicated attribute and `clog`'s function with none — so `clog` had
+been silently NOT RUNNING as a test (compiling as dead code) since that
+merge. Fixed by moving `clog`'s doc+`#[test]` back to its own function;
+`land_bit` keeps its own doc + single `#[test]`. No test body changed.
+`clog` now runs and passes.
+
+## Closing the fact
+
+`F:ml430-nat-land-assoc-ad4775b8` flipped to `proved` via the standard
+bitwise-family reconciliation pattern `F:ml430-nat-land-comm-7e6ad72e`
+already uses: Mathlib's `Nat.land` is `Nat.bitwise and`, and our
+`Nat.land` is proved equal to that specialization by
+`Nat.bitwise_and_eq_land`, so `Nat.land_assoc` closes the SAME
+proposition Mathlib states. Registered the native theorem as
+`F:nat-land-assoc`. Checked
+`scripts/gen-autogenesis-bitwise-family-projection.py` does not mention
+either fact id — not pinned open independent of provability.
+
+Both `checker_command`s were run for real, not just written:
+`nat_theorem_inventory land_assoc` piped through an anchored
+`grep -Ec '^Nat\.land_assoc[[:space:]]'` (count 1, `--release`, since the
+debug build SIGABRTs on stack depth) and `nat_axiom_inventory
+--require-axiom-free nat` (exit 0, `nat` trusted surface is 0).
+`python3 scripts/validate-facts.py`: 1935 facts, 0 errors.
+
+## `Nat.lor_assoc`: still not attempted, and here is precisely why
+
+Not touched this lane, per the brief. Restating `docs/plan/status/252-nat-assoc-dichotomy.md`'s
+characterization plainly, since it is still the accurate one and nothing
+in this lane's work weakens it:
+
+`lorAux`'s fuel-exhaustion row is **pass-through** (`n`, not `0`) —
+`land`'s whole leaf-4 strategy (dichotomize on zero-ness, reconstruct via
+`div_mod_unique`) does not transport, because:
+
+- `lor a b = 0` forces `a = 0 ∧ b = 0` (OR's only zero is the all-zero
+  pair) — a much STRONGER hypothesis than `land`'s zero case, not a
+  parallel one.
+- If `lor a b = 0` (so `a = b = 0`), then `lor a (lor b c) = lor 0 (lor 0
+  c) = lor 0 c = c`, which is **NOT `0`** in general. So the direct
+  analogue of `land_aux_eq_zero_of_left_eq_zero` — the one theorem that
+  made `land`'s hard leaf tractable — is straightforwardly **false** for
+  `lor`, not merely harder to prove.
+- `lor_aux_comm_of_fuel` already needed `Le` hypotheses `land`'s never
+  did (an existing, already-landed asymmetry, independently confirming
+  this).
+
+So a `lor_assoc` proof needs its own case analysis of `lorAux`'s truth
+table from scratch, not a copy of `land`'s. The correct first step,
+per this repository's own standing rule, is to **simulate `lorAux`'s
+recursion in Python at small arguments before writing any Rust** — find
+what actually propagates through OR (something like "if `lor a b`'s bits
+are a superset of what's needed" rather than a zero/nonzero dichotomy)
+before attempting a kernel proof. This lane did not do that simulation;
+it is the concrete next step for whoever picks up `lor_assoc`.
+
+## Counts
+
+`nat_prelude`: 140 passed before this lane (at merge commit `6cac60005`,
+already at that count post `nat-land-assoc-impl`'s propagation lemma),
+**141 passed after** (1 new declaration set: `land_aux_assoc_of_fuel` +
+`land_assoc`, both theorems; 1 new test; `clog`'s test also now runs,
+which nets against the pre-existing splice bug rather than being new
+lane content). `the_build_is_deterministic`'s pin: `93+490 → 93+492`
+(taken from the panic's own mismatch). `nat` trusted surface still
+`axiom=0 opaque=0 quotient=0`. `cargo fmt --edition 2024 --check`:
+clean. `cargo clippy -p axeyum-lean-kernel --all-targets -- -D
+warnings`: clean (after the splice fix above). `python3
+scripts/validate-facts.py`: 1935 facts, 0 errors. NOT run: the aggregate
+`just check` / `./scripts/check.sh` (coordinator re-verifies before
+merging, per this repo's standing rule).
+
+`F:ml430-nat-land-assoc-ad4775b8` is now `proved`. `F:ml430-nat-lor-assoc-82c4d0fd`
+remains `open`, characterized above.
+
+## Commits
+
+- `566ff7cce` — wip: nat-land-assoc-finish checkpoint (first-ten-tool-calls
+  commit, no source changes)
+- `cb4d87593` — wip: `land_aux_assoc_of_fuel` + `land_assoc`, builds but
+  not yet kernel-verified
+- `ad4bb9b20` — feat: kernel-verified, registered, tested; 141/141
+  `nat_prelude::` tests pass
+- `5e7096acd` — fix: rustfmt `rec_agreement.rs`; repair the pre-existing
+  merge splice blocking `clippy -D warnings`
+- `6136bc9e0` — close: `F:ml430-nat-land-assoc-ad4775b8` — proved,
+  axiom-free
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

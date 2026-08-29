@@ -1010,6 +1010,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.land_aux_eq_zero_of_left_eq_zero,
         p.lor_bit,
         p.ldiff_bit,
+        p.land_aux_assoc_of_fuel,
+        p.land_assoc,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6488,7 +6490,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 495,
+        93 + 497,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -13017,5 +13019,84 @@ fn land_aux_eq_zero_of_left_eq_zero_applies_at_a_mixed_concrete_instance() {
         f.k.axiom_footprint(p.land_aux_eq_zero_of_left_eq_zero)
             .is_empty(),
         "land_aux_eq_zero_of_left_eq_zero must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_assoc` -- `F:ml430-nat-land-assoc-ad4775b8`. Applies at
+/// symbolic `a`/`b`/`c` and at a concrete instance where BOTH intermediate
+/// values are NONZERO (`land 3 7 = 3`, `land 7 5 = 5`), exercising the
+/// `land_aux_assoc_of_fuel` hard leaf's fully-generic (`X != 0`, `Y != 0`)
+/// sub-case -- the double `div_mod_unique` reconstruction feeding the
+/// outer induction's own `ih` -- rather than settling for one of the easy
+/// leaves or the hard leaf's `X = 0`/`Y = 0` corners.
+#[test]
+fn land_assoc_applies_at_a_nonzero_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables, proved by
+    // the prelude theorem alone.
+    {
+        let name = f.name("land_assoc_restated");
+        f.theorem(name, 3, &|d, values| {
+            let a = values[0];
+            let b = values[1];
+            let c = values[2];
+            let ab = d.const_app(p.land, &[a, b]);
+            let lhs = d.const_app(p.land, &[ab, c]);
+            let bc = d.const_app(p.land, &[b, c]);
+            let rhs = d.const_app(p.land, &[a, bc]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.land_assoc, &[a, b, c]);
+            (stmt, proof)
+        })
+        .expect("land_assoc must apply at symbolic a/b/c");
+    }
+
+    // Concrete: a=3 (011), b=7 (111), c=5 (101) -- land(a,b)=3 and
+    // land(b,c)=5, BOTH nonzero (a's bits and c's bits are each a subset
+    // of b's), so neither side collapses to the easy `landAux _ _ 0` leaf.
+    {
+        let three = f.num(3);
+        let seven = f.num(7);
+        let five = f.num(5);
+        let one = f.num(1);
+        let ab = f.const_app(p.land, &[three, seven]);
+        let lhs = f.const_app(p.land, &[ab, five]);
+        let bc = f.const_app(p.land, &[seven, five]);
+        let rhs = f.const_app(p.land, &[three, bc]);
+        let zero = f.zero();
+        assert!(f.k.def_eq(ab, three), "land 3 7 must compute to 3");
+        assert!(
+            !f.k.def_eq(ab, zero),
+            "land 3 7 must be nonzero -- else this instance is vacuous"
+        );
+        assert!(f.k.def_eq(bc, five), "land 7 5 must compute to 5");
+        assert!(
+            !f.k.def_eq(bc, zero),
+            "land 7 5 must be nonzero -- else this instance is vacuous"
+        );
+
+        let applied = f.lemma(p.land_assoc, &[three, seven, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_assoc must apply at (a=3, b=7, c=5): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_assoc 3 7 5 must state Eq (land (land 3 7) 5) (land 3 (land 7 5))"
+        );
+        assert!(f.k.def_eq(lhs, one), "land (land 3 7) 5 must compute to 1");
+        assert!(f.k.def_eq(rhs, one), "land 3 (land 7 5) must compute to 1");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_aux_assoc_of_fuel).is_empty(),
+        "land_aux_assoc_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_assoc).is_empty(),
+        "land_assoc must rest on zero axioms"
     );
 }
