@@ -3384,3 +3384,364 @@ pub(super) fn declare_land_assoc_all(
     declare_land_assoc(d, p)?;
     Ok(())
 }
+
+// ============================================================================
+// `lor_aux_ne_zero_of_right_ne_zero` -- the invariant that plays
+// `land_aux_eq_zero_of_left_eq_zero`'s role for `lor`, and NOT its direct
+// transport. See `docs/plan/status/266-nat-lor-assoc.md` for the full
+// derivation (numerically cross-checked in Python before any Rust) and for
+// why the direct analogue ("`lor` propagates zero") is FALSE, not merely
+// harder: `lor a b = 0` forces `a = 0 ∧ b = 0`, so `lor a (lor b c)`
+// collapses to `c`, not `0`. What DOES hold: at any fuel `succ _`, a
+// POSITIVE RIGHT operand alone forces a positive result, regardless of the
+// left operand's shape -- confirmed exhaustively over fuel 0..7, m,n 0..13.
+// ============================================================================
+
+/// `Not (Eq (mul 2 x) 0)`, given `x_ne_zero : Not (Eq x 0)`. The
+/// `mul_eq_zero`/`succ_ne_zero` contrapositive `land`'s zero-propagation
+/// lemma already uses in its hard leaf (`declare_land_aux_eq_zero_hard_leaf`,
+/// far above), extracted here as a standalone step.
+fn double_ne_zero(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, x_ne_zero: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let two = d.num(2);
+    let doubled = d.mul(two, x);
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let doubled_eq_zero_ty = d.eq(doubled, zero);
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv); // Eq (mul 2 x) 0
+    let disj = d.lemma(p.mul_eq_zero, &[two, x, h]); // Or (Eq 2 0) (Eq x 0)
+    let two_zero_ty = d.eq(two, zero);
+    let x_zero_ty = d.eq(x, zero);
+    let one = d.num(1);
+
+    let left_case = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv); // Eq 2 0
+        let contra = d.lemma(p.succ_ne_zero, &[one, l]); // False (2 = succ 1)
+        d.lam_fv(l_fv, two_zero_ty, contra)
+    };
+    let right_case = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv); // Eq x 0
+        let contra = d.apply(x_ne_zero, &[r]); // False
+        d.lam_fv(r_fv, x_zero_ty, contra)
+    };
+    let false_proof = or_elim(
+        d, &p, two_zero_ty, x_zero_ty, false_ty, left_case, right_case, disj,
+    );
+    d.lam_fv(h_fv, doubled_eq_zero_ty, false_proof)
+}
+
+/// `Not (Eq half_n 0)`, given `heq : Eq succ_n (add (mul 2 half_n) 0)`
+/// where `succ_n` is literally `succ n_pred`. If `half_n` WERE `0`, `heq`
+/// would transport (via `mul`'s/`add`'s own base-case defeq) to
+/// `Eq (succ n_pred) 0`, refuted directly by `Nat.succ_ne_zero`.
+fn half_ne_zero_from_heq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n_pred: ExprId,
+    half_n: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let p = *p;
+    let succ_n = d.succ(n_pred);
+    let zero = d.zero();
+    let two = d.num(2);
+    let half_zero_ty = d.eq(half_n, zero);
+
+    let sum0 = {
+        let doubled = d.mul(two, half_n);
+        d.add(doubled, zero)
+    };
+    let hz_fv = d.fresh_fvar();
+    let hz = d.kernel().fvar(hz_fv); // Eq half_n zero
+    let cong = d.congr(half_n, zero, hz, &|d, hole| {
+        let doubled = d.mul(two, hole);
+        d.add(doubled, zero)
+    });
+    let sum0p = {
+        let doubled = d.mul(two, zero);
+        d.add(doubled, zero)
+    };
+    // transported : Eq succ_n sum0p, defeq Eq (succ n_pred) 0.
+    let transported = d.trans(succ_n, sum0, sum0p, heq, cong);
+    let contra = d.lemma(p.succ_ne_zero, &[n_pred, transported]);
+    d.lam_fv(hz_fv, half_zero_ty, contra)
+}
+
+/// The "both positive" branch shared by every step case of
+/// [`declare_lor_aux_ne_zero_of_right_ne_zero`]'s induction: given the
+/// literal successors `succ_m` (so both zero-guards on `lorAux`'s successor
+/// row resolve `false` once paired with the caller's own literal `succ_n`),
+/// `rec` (the recursive call's value, `lorAux k half_m half_n` at the
+/// caller's own predecessor fuel `k`), and a proof that `rec` is nonzero
+/// whenever `half_n` is (`rec_ne_zero_of_half_n_ne_zero` -- `ih` applied at
+/// the halves), produces
+/// `Not (Eq (add (mul 2 rec) (bool_select_nat (ble bit_m bit_n) bit_n
+/// bit_m)) 0)` -- i.e. `Not (Eq (lorAux sk succ_m succ_n) 0)` up to the
+/// guard-resolution defeq the caller is responsible for (`sk` never
+/// appears here; the caller's `rec` already carries it via its OWN fuel
+/// argument).
+///
+/// Case-splits `Nat.mod succ_n 2` (`cases_mod_two`, folding
+/// `Nat.div_mod_exec`'s reconstruction equation into an ARROW-typed motive,
+/// since the split does not otherwise expose it as a usable hypothesis):
+/// bit 1 closes at either bit of `succ_m` via `Nat.succ_ne_zero` alone
+/// (`add x 1` is defeq `succ x`, regardless of which branch `bool_select_nat`
+/// picks); bit 0 needs `Nat.div_mod_exec` to show `half_n` itself must be
+/// nonzero (else `succ_n` would be `0`), then `rec_ne_zero_of_half_n_ne_zero`
+/// plus [`double_ne_zero`].
+fn lor_aux_pos_both_positive(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n_pred: ExprId,
+    succ_m: ExprId,
+    rec: ExprId,
+    rec_ne_zero_of_half_n_ne_zero: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let p = *p;
+    let succ_n = d.succ(n_pred);
+    let zero = d.zero();
+    let two = d.num(2);
+    let one = d.num(1);
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+    let half_n = d.div(succ_n, two);
+    let bit_m = d.modulo(succ_m, two);
+    let bit_n = d.modulo(succ_n, two);
+
+    // div_mod_exec(one, succ_n) : divMod 2 succ_n half_n bit_n
+    //   = And (Eq succ_n (add (mul 2 half_n) bit_n)) (Lt bit_n 2)
+    let divmod_n = d.lemma(p.div_mod_exec, &[one, succ_n]);
+    let eq_ty = {
+        let doubled = d.mul(two, half_n);
+        let sum = d.add(doubled, bit_n);
+        d.eq(succ_n, sum)
+    };
+    let lt_ty = d.lt(bit_n, two);
+    let eq_n_decomp = and_left(d, eq_ty, lt_ty, divmod_n);
+
+    // Outer split on `mod succ_n 2`, folding `eq_n_decomp`'s type
+    // (parameterized by the remainder) into an arrow motive -- the only way
+    // to carry an equation out of a `cases_mod_two` branch into other terms.
+    let outer_motive = |d: &mut NatDev<'_>, r: ExprId| -> ExprId {
+        let heq_ty = {
+            let doubled = d.mul(two, half_n);
+            let sum = d.add(doubled, r);
+            d.eq(succ_n, sum)
+        };
+        let ble_mr = d.ble(bit_m, r);
+        let bit_or_r = d.bool_select_nat(ble_mr, r, bit_m);
+        let stepped_r = {
+            let doubled = d.mul(two, rec);
+            d.add(doubled, bit_or_r)
+        };
+        let concl = {
+            let eq0 = d.eq(stepped_r, zero);
+            d.arrow(eq0, false_ty)
+        };
+        d.arrow(heq_ty, concl)
+    };
+
+    // r = 1: `bool_select_nat (ble bit_m 1) 1 bit_m` reduces to the literal
+    // `1` at EITHER concrete `bit_m` (`ble(0,1)`/`ble(1,1)` both reduce to
+    // `true`), so `add (mul 2 rec) 1` is defeq `succ (mul 2 rec)` and
+    // `succ_ne_zero` closes it without ever touching `heq` or `rec`'s value.
+    let at_one = {
+        let heq_fv = d.fresh_fvar();
+        let heq_ty = {
+            let doubled = d.mul(two, half_n);
+            let sum = d.add(doubled, one);
+            d.eq(succ_n, sum)
+        };
+        let succ_ne = {
+            let doubled = d.mul(two, rec);
+            d.lemma(p.succ_ne_zero, &[doubled])
+        };
+        let bit_m_motive = |d: &mut NatDev<'_>, s: ExprId| -> ExprId {
+            let ble_s1 = d.ble(s, one);
+            let bit_or_s = d.bool_select_nat(ble_s1, one, s);
+            let stepped_s = {
+                let doubled = d.mul(two, rec);
+                d.add(doubled, bit_or_s)
+            };
+            let eq0 = d.eq(stepped_s, zero);
+            d.arrow(eq0, false_ty)
+        };
+        let body = cases_mod_two(d, &p, succ_m, &bit_m_motive, succ_ne, succ_ne);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+
+    // r = 0: `bool_select_nat (ble bit_m 0) 0 bit_m` reduces to `bit_m`
+    // itself (`max(bit_m, 0) = bit_m`), split further:
+    //   bit_m = 1: same `add x 1` trick as above, `heq` unused.
+    //   bit_m = 0: `stepped` is defeq `mul 2 rec`; need `Not (Eq rec 0)`,
+    //     from `half_n`'s OWN nonzero-ness (via `heq` + `succ_ne_zero`) and
+    //     the caller's `rec_ne_zero_of_half_n_ne_zero`.
+    let at_zero = {
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let heq_ty = {
+            let doubled = d.mul(two, half_n);
+            let sum = d.add(doubled, zero);
+            d.eq(succ_n, sum)
+        };
+        let at_one_bm = {
+            let doubled = d.mul(two, rec);
+            d.lemma(p.succ_ne_zero, &[doubled])
+        };
+        let at_zero_bm = {
+            let half_ne_zero = half_ne_zero_from_heq(d, &p, n_pred, half_n, heq);
+            let rec_ne_zero = rec_ne_zero_of_half_n_ne_zero(d, half_ne_zero);
+            double_ne_zero(d, &p, rec, rec_ne_zero)
+        };
+        let bit_m_motive = |d: &mut NatDev<'_>, s: ExprId| -> ExprId {
+            let ble_s0 = d.ble(s, zero);
+            let bit_or_s = d.bool_select_nat(ble_s0, zero, s);
+            let stepped_s = {
+                let doubled = d.mul(two, rec);
+                d.add(doubled, bit_or_s)
+            };
+            let eq0 = d.eq(stepped_s, zero);
+            d.arrow(eq0, false_ty)
+        };
+        let body = cases_mod_two(d, &p, succ_m, &bit_m_motive, at_zero_bm, at_one_bm);
+        d.lam_fv(heq_fv, heq_ty, body)
+    };
+
+    let folded = cases_mod_two(d, &p, succ_n, &outer_motive, at_zero, at_one);
+    d.apply(folded, &[eq_n_decomp])
+}
+
+/// `Nat.lor_aux_ne_zero_of_right_ne_zero : ∀ fuel m n, Not (Eq n 0) →
+/// Not (Eq (lorAux fuel m n) 0)`. Unconditional in `fuel` -- at `fuel = 0`,
+/// `lorAux 0 m n` is defeq `n` regardless of `m`, so the goal IS the
+/// hypothesis. See the section doc above for the both-positive branch.
+fn declare_lor_aux_ne_zero_of_right_ne_zero(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    let statement = |d: &mut NatDev<'_>, fuel: ExprId, m: ExprId, n: ExprId| -> ExprId {
+        let zero = d.zero();
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let n_eq_zero = d.eq(n, zero);
+        let hyp = d.arrow(n_eq_zero, false_ty);
+        let lor_val = d.const_app(p.lor_aux, &[fuel, m, n]);
+        let val_eq_zero = d.eq(lor_val, zero);
+        let concl = d.arrow(val_eq_zero, false_ty);
+        d.arrow(hyp, concl)
+    };
+
+    let base = |d: &mut NatDev<'_>, m: ExprId, n: ExprId| -> ExprId {
+        let zero = d.zero();
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+        let hn_ty = {
+            let eq = d.eq(n, zero);
+            d.arrow(eq, false_ty)
+        };
+        let _ = m; // `lorAux 0 m n` ignores `m` entirely.
+        // `lorAux 0 m n` is defeq `n`, so the goal IS the hypothesis.
+        d.lam_fv(hn_fv, hn_ty, hn)
+    };
+
+    let step = |d: &mut NatDev<'_>, k: ExprId, ih: ExprId, m: ExprId, n: ExprId| -> ExprId {
+        let zero = d.zero();
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let sk = d.succ(k);
+
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+        let hn_ty = {
+            let eq = d.eq(n, zero);
+            d.arrow(eq, false_ty)
+        };
+
+        let goal_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let lor_val = d.const_app(p.lor_aux, &[sk, m, candidate]);
+            let eq0 = d.eq(lor_val, zero);
+            d.arrow(eq0, false_ty)
+        };
+
+        let body = cases_zero_succ(
+            d,
+            n,
+            &goal_at,
+            &|d| {
+                let refl0 = d.refl(zero);
+                let contradiction = d.apply(hn, &[refl0]);
+                let goal = goal_at(d, zero);
+                absurd(d, &p, goal, contradiction)
+            },
+            &|d, n_pred| {
+                let succ_n = d.succ(n_pred);
+
+                let goal_m_at = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+                    let lor_val = d.const_app(p.lor_aux, &[sk, candidate, succ_n]);
+                    let eq0 = d.eq(lor_val, zero);
+                    d.arrow(eq0, false_ty)
+                };
+
+                cases_zero_succ(
+                    d,
+                    m,
+                    &goal_m_at,
+                    &|d| d.lemma(p.succ_ne_zero, &[n_pred]),
+                    &|d, m_pred| {
+                        let succ_m = d.succ(m_pred);
+                        let two = d.num(2);
+                        let half_m = d.div(succ_m, two);
+                        let half_n = d.div(succ_n, two);
+                        let rec = d.const_app(p.lor_aux, &[k, half_m, half_n]);
+                        lor_aux_pos_both_positive(d, &p, n_pred, succ_m, rec, &|d, half_ne_zero| {
+                            let applied = d.apply(ih, &[half_m, half_n]);
+                            d.apply(applied, &[half_ne_zero])
+                        })
+                    },
+                )
+            },
+        );
+
+        d.lam_fv(hn_fv, hn_ty, body)
+    };
+
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+    let proof_fn = agree_by_fuel_induction(d, &statement, &base, &step, fuel);
+
+    let nat = d.nat_ty();
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let applied = d.apply(proof_fn, &[m, n]);
+    let ty = {
+        let body = statement(d, fuel, m, n);
+        let with_n = d.pi_fv(n_fv, nat, body);
+        let with_m = d.pi_fv(m_fv, nat, with_n);
+        d.pi_fv(fuel_fv, nat, with_m)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, applied);
+        d.lam_fv(m_fv, nat, with_n)
+    };
+    d.declare_theorem(p.lor_aux_ne_zero_of_right_ne_zero, ty, value)
+}
+
+/// Declare [`declare_lor_aux_ne_zero_of_right_ne_zero`].
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_lor_aux_ne_zero_of_right_ne_zero_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_lor_aux_ne_zero_of_right_ne_zero(d, p)?;
+    Ok(())
+}
