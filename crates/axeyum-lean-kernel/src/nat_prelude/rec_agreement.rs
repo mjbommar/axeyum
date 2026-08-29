@@ -1702,3 +1702,346 @@ pub(super) fn declare_land_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<()
     })?;
     Ok(())
 }
+
+// ============================================================================
+// `lor_comm`, the `lor` twin of `land_comm`. NOT a mechanical transport:
+// `lorAux`'s fuel-exhaustion row returns `n` (pass-through), so unlike
+// `landAux`'s constant-`0` row, `lorAux fuel a b = lorAux fuel b a` is FALSE
+// at insufficient fuel for `a ≠ b` — `lorAux 0 3 4 = 4` while
+// `lorAux 0 4 3 = 3`. So [`declare_lor_aux_comm_of_fuel`]'s statement carries
+// TWO hypotheses (`Le a fuel`, `Le b fuel`), where
+// [`declare_land_aux_comm_of_fuel`] carries none, and both the base case and
+// the both-nonzero step need them (the base case to force `a = b = 0`; the
+// step to supply `half_le_predecessor_of_succ` for BOTH halves, not one).
+// ============================================================================
+
+/// `Eq (bool_select_nat (ble (mod m 2) (mod n 2)) (mod n 2) (mod m 2))
+///     (bool_select_nat (ble (mod n 2) (mod m 2)) (mod m 2) (mod n 2))` —
+/// `lorAux`'s per-bit `max`-via-`ble` combine is commutative, the `lor` twin
+/// of `Nat.mul_comm`'s role in [`declare_land_aux_comm_of_fuel`]'s
+/// both-nonzero case. Both sides are stuck at symbolic `m`, `n` and agree
+/// only *given* each `Nat.mod _ 2` is `0` or `1` —
+/// [`cases_mod_two`] on each operand in turn, four leaves at concrete
+/// numerals, `d.refl` closes every one. Structurally identical to
+/// [`bit_agreement`], comparing the combine against itself swapped rather
+/// than against `Nat.bitwiseAux`'s general form.
+fn lor_bit_comm(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    let two = d.num(2);
+    let bit_n = d.modulo(n, two);
+
+    let combine = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| {
+        let le = d.ble(x, y);
+        d.bool_select_nat(le, y, x)
+    };
+    let claim = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| {
+        let lhs = combine(d, x, y);
+        let rhs = combine(d, y, x);
+        d.eq(lhs, rhs)
+    };
+    // At concrete `x`, `y` both orderings evaluate to the same literal, so
+    // `refl` on the un-swapped side is accepted against the swapped one.
+    let leaf = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| {
+        let lhs = combine(d, x, y);
+        d.refl(lhs)
+    };
+    let inner = |d: &mut NatDev<'_>, x: ExprId| {
+        let zero = d.zero();
+        let one = d.num(1);
+        let at_zero = leaf(d, x, zero);
+        let at_one = leaf(d, x, one);
+        cases_mod_two(d, &p, n, &|d, y| claim(d, x, y), at_zero, at_one)
+    };
+
+    let zero = d.zero();
+    let one = d.num(1);
+    let outer_zero = inner(d, zero);
+    let outer_one = inner(d, one);
+    cases_mod_two(d, &p, m, &|d, x| claim(d, x, bit_n), outer_zero, outer_one)
+}
+
+/// `lor_aux_comm_of_fuel : ∀ fuel m n, Le m fuel → Le n fuel → Eq (lorAux
+/// fuel m n) (lorAux fuel n m)` — see the section doc above for why BOTH
+/// hypotheses are required here, unlike [`declare_land_aux_comm_of_fuel`].
+///
+/// Case split on `m` then (in the nonzero branch) on `n` ([`cases_zero_succ`],
+/// nested, exactly [`declare_land_aux_comm_of_fuel`]'s shape). The two
+/// single-zero cases close by combining [`declare_lor_aux_zero_left_any_fuel`]
+/// (for the side whose FIRST value argument is the literal `0`) with a plain
+/// `refl` (for the side whose SECOND value argument is the literal `0` —
+/// `lorAux`'s outer `n = 0` guard fires immediately on a literal, exactly as
+/// `land`'s analogous case does for its absorbing zero). The both-nonzero
+/// case needs `half_le_predecessor_of_succ` for BOTH halves (`land`'s
+/// analogue needs neither bound at all) to apply the IH, plus
+/// [`lor_bit_comm`] in place of `Nat.mul_comm`.
+fn declare_lor_aux_comm_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let statement = |d: &mut NatDev<'_>, fuel: ExprId, a: ExprId, b: ExprId| {
+        let bound_a = d.le(a, fuel);
+        let bound_b = d.le(b, fuel);
+        let lhs = d.const_app(p.lor_aux, &[fuel, a, b]);
+        let rhs = d.const_app(p.lor_aux, &[fuel, b, a]);
+        let concl = d.eq(lhs, rhs);
+        let inner = d.arrow(bound_b, concl);
+        d.arrow(bound_a, inner)
+    };
+
+    let base = |d: &mut NatDev<'_>, a: ExprId, b: ExprId| -> ExprId {
+        let zero = d.zero();
+        let bound_a_ty = d.le(a, zero);
+        let bound_b_ty = d.le(b, zero);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let zero_le_a = d.lemma(p.zero_le, &[a]);
+        let a_eq_zero = d.lemma(p.le_antisymm, &[a, zero, h1, zero_le_a]);
+        let zero_le_b = d.lemma(p.zero_le, &[b]);
+        let b_eq_zero = d.lemma(p.le_antisymm, &[b, zero, h2, zero_le_b]);
+
+        // `lorAux 0 a b` reduces to `b` and `lorAux 0 b a` to `a` for ANY
+        // `a`, `b` (the base row ignores the first argument entirely), so
+        // the goal is defeq to `Eq b a` -- derive that directly from
+        // `a = 0` and `b = 0` rather than reducing the aux terms by hand.
+        let a_eq_zero_rev = d.symm(a, zero, a_eq_zero);
+        let body = d.trans(b, zero, a, b_eq_zero, a_eq_zero_rev);
+
+        let with_h2 = d.lam_fv(h2_fv, bound_b_ty, body);
+        d.lam_fv(h1_fv, bound_a_ty, with_h2)
+    };
+
+    let step = |d: &mut NatDev<'_>, k: ExprId, ih: ExprId, a: ExprId, b: ExprId| -> ExprId {
+        let sk = d.succ(k);
+
+        let goal_a = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let bound_a = d.le(candidate, sk);
+            let bound_b = d.le(b, sk);
+            let lhs = d.const_app(p.lor_aux, &[sk, candidate, b]);
+            let rhs = d.const_app(p.lor_aux, &[sk, b, candidate]);
+            let concl = d.eq(lhs, rhs);
+            let inner = d.arrow(bound_b, concl);
+            d.arrow(bound_a, inner)
+        };
+
+        cases_zero_succ(
+            d,
+            a,
+            &goal_a,
+            &|d| {
+                let zero = d.zero();
+                let bound_a_ty = d.le(zero, sk);
+                let bound_b_ty = d.le(b, sk);
+                let h1_fv = d.fresh_fvar();
+                let h2_fv = d.fresh_fvar();
+
+                let lhs = d.const_app(p.lor_aux, &[sk, zero, b]);
+                let rhs = d.const_app(p.lor_aux, &[sk, b, zero]);
+                let lhs_is_b = d.lemma(p.lor_aux_zero_left_any_fuel, &[sk, b]);
+                let rhs_is_b = d.refl(b);
+                let rhs_is_b_rev = d.symm(rhs, b, rhs_is_b);
+                let body = d.trans(lhs, b, rhs, lhs_is_b, rhs_is_b_rev);
+
+                let with_h2 = d.lam_fv(h2_fv, bound_b_ty, body);
+                d.lam_fv(h1_fv, bound_a_ty, with_h2)
+            },
+            &|d, a_pred| {
+                let succ_a = d.succ(a_pred);
+
+                let goal_b = |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+                    let bound_a = d.le(succ_a, sk);
+                    let bound_b = d.le(candidate, sk);
+                    let lhs = d.const_app(p.lor_aux, &[sk, succ_a, candidate]);
+                    let rhs = d.const_app(p.lor_aux, &[sk, candidate, succ_a]);
+                    let concl = d.eq(lhs, rhs);
+                    let inner = d.arrow(bound_b, concl);
+                    d.arrow(bound_a, inner)
+                };
+
+                cases_zero_succ(
+                    d,
+                    b,
+                    &goal_b,
+                    &|d| {
+                        let zero = d.zero();
+                        let bound_a_ty = d.le(succ_a, sk);
+                        let bound_b_ty = d.le(zero, sk);
+                        let h1_fv = d.fresh_fvar();
+                        let h2_fv = d.fresh_fvar();
+
+                        let lhs = d.const_app(p.lor_aux, &[sk, succ_a, zero]);
+                        let rhs = d.const_app(p.lor_aux, &[sk, zero, succ_a]);
+                        let lhs_is_succ_a = d.refl(succ_a);
+                        let rhs_is_succ_a = d.lemma(p.lor_aux_zero_left_any_fuel, &[sk, succ_a]);
+                        let rhs_is_succ_a_rev = d.symm(rhs, succ_a, rhs_is_succ_a);
+                        let body =
+                            d.trans(lhs, succ_a, rhs, lhs_is_succ_a, rhs_is_succ_a_rev);
+
+                        let with_h2 = d.lam_fv(h2_fv, bound_b_ty, body);
+                        d.lam_fv(h1_fv, bound_a_ty, with_h2)
+                    },
+                    &|d, b_pred| {
+                        let succ_b = d.succ(b_pred);
+                        let bound_a_ty = d.le(succ_a, sk);
+                        let bound_b_ty = d.le(succ_b, sk);
+                        let h1_fv = d.fresh_fvar();
+                        let h1 = d.kernel().fvar(h1_fv);
+                        let h2_fv = d.fresh_fvar();
+                        let h2 = d.kernel().fvar(h2_fv);
+
+                        let two = d.num(2);
+                        let half_a = d.div(succ_a, two);
+                        let half_b = d.div(succ_b, two);
+                        let bit_a = d.modulo(succ_a, two);
+                        let bit_b = d.modulo(succ_b, two);
+
+                        // Unlike `land_aux_comm_of_fuel`'s both-nonzero
+                        // case, BOTH halves need a fuel bound here -- the
+                        // IH itself carries `Le _ k` hypotheses.
+                        let half_a_le_k = half_le_predecessor_of_succ(d, &p, a_pred, k, h1);
+                        let half_b_le_k = half_le_predecessor_of_succ(d, &p, b_pred, k, h2);
+
+                        let ih_at_halves = d.apply(ih, &[half_a, half_b]);
+                        let ih_at_halves = d.apply(ih_at_halves, &[half_a_le_k, half_b_le_k]);
+                        // ih_at_halves : Eq (lorAux k half_a half_b) (lorAux k half_b half_a)
+
+                        let rec = d.const_app(p.lor_aux, &[k, half_a, half_b]);
+                        let rec_swapped = d.const_app(p.lor_aux, &[k, half_b, half_a]);
+
+                        let bit_a_le_bit_b = d.ble(bit_a, bit_b);
+                        let bit_or = d.bool_select_nat(bit_a_le_bit_b, bit_b, bit_a);
+                        let bit_b_le_bit_a = d.ble(bit_b, bit_a);
+                        let bit_or_swapped = d.bool_select_nat(bit_b_le_bit_a, bit_a, bit_b);
+                        let bit_comm = lor_bit_comm(d, &p, succ_a, succ_b);
+
+                        // Both guards resolve to `false` regardless of
+                        // argument ORDER (each check is decided by a
+                        // LITERAL `succ`), so `guarded(succ_a, succ_b,
+                        // succ_a, succ_b, _, _)` is defeq to BOTH sides'
+                        // own reduced row -- exactly
+                        // `declare_land_aux_comm_of_fuel`'s both-nonzero
+                        // argument, unaffected by `lorAux`'s guard values
+                        // being pass-through rather than constant (neither
+                        // guard ever SELECTS `on_n_zero`/`on_m_zero` here).
+                        let start = guarded(d, succ_a, succ_b, succ_a, succ_b, rec, bit_or);
+                        let mid = guarded(d, succ_a, succ_b, succ_a, succ_b, rec_swapped, bit_or);
+                        let finish = guarded(
+                            d,
+                            succ_a,
+                            succ_b,
+                            succ_a,
+                            succ_b,
+                            rec_swapped,
+                            bit_or_swapped,
+                        );
+
+                        let step1 = d.congr(rec, rec_swapped, ih_at_halves, &|d, hole| {
+                            guarded(d, succ_a, succ_b, succ_a, succ_b, hole, bit_or)
+                        });
+                        let step2 = d.congr(bit_or, bit_or_swapped, bit_comm, &|d, hole| {
+                            guarded(d, succ_a, succ_b, succ_a, succ_b, rec_swapped, hole)
+                        });
+                        let body = d.trans(start, mid, finish, step1, step2);
+
+                        let with_h2 = d.lam_fv(h2_fv, bound_b_ty, body);
+                        d.lam_fv(h1_fv, bound_a_ty, with_h2)
+                    },
+                )
+            },
+        )
+    };
+
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+    let proof_fn = agree_by_fuel_induction(d, &statement, &base, &step, fuel);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let applied = d.apply(proof_fn, &[a, b]);
+    let ty = {
+        let body = statement(d, fuel, a, b);
+        let with_b = d.pi_fv(b_fv, nat, body);
+        let with_a = d.pi_fv(a_fv, nat, with_b);
+        d.pi_fv(fuel_fv, nat, with_a)
+    };
+    let value = {
+        let with_b = d.lam_fv(b_fv, nat, applied);
+        let with_a = d.lam_fv(a_fv, nat, with_b);
+        d.lam_fv(fuel_fv, nat, with_a)
+    };
+    d.declare_theorem(p.lor_aux_comm_of_fuel, ty, value)
+}
+
+/// `lor_comm : ∀ m n, Eq (lor m n) (lor n m)` — see [`NatPrelude::lor_comm`].
+/// Chain: `lor m n = lorAux m m n = lorAux (m+n) m n = lorAux (m+n) n m =
+/// lorAux n n m = lor n m`, the outer two steps via
+/// [`declare_lor_aux_agree_of_fuel`] (`Le m (m+n)`/`Le n (m+n)` via
+/// `Nat.le_add_right`, transporting the second along `Nat.add_comm`, exactly
+/// as [`declare_land_comm`]) and the middle step via
+/// [`declare_lor_aux_comm_of_fuel`] at the shared fuel `m + n` -- which here
+/// (unlike [`declare_land_aux_comm_of_fuel`]) needs `Le m (m+n)` and
+/// `Le n (m+n)` too, already in hand from the outer steps' own derivation.
+pub(super) fn declare_lor_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    declare_lor_aux_comm_of_fuel(d, p)?;
+    let p = *p;
+    d.theorem(p.lor_comm, 2, &|d, values| {
+        let m = values[0];
+        let n = values[1];
+        let sum = d.add(m, n);
+
+        let le_refl_m = d.lemma(p.le_refl, &[m]);
+        let m_le_sum = d.lemma(p.le_add_right, &[m, n]);
+        let step_a = d.lemma(p.lor_aux_agree_of_fuel, &[m, m, n, sum]);
+        let step_a = d.apply(step_a, &[le_refl_m, m_le_sum]);
+        // step_a : Eq (lorAux m m n) (lorAux sum m n)
+
+        let le_refl_n = d.lemma(p.le_refl, &[n]);
+        let n_le_n_sum = d.lemma(p.le_add_right, &[n, m]);
+        // n_le_n_sum : Le n (add n m); transport along `add_comm n m` to
+        // get `Le n (add m n)` = `Le n sum`.
+        let n_sum = d.add(n, m);
+        let add_comm_nm = d.lemma(p.add_comm, &[n, m]);
+        let n_le_motive = d.eq_motive(n_sum, &|d, x| d.le(n, x));
+        let n_le_sum = d.transport(n_sum, n_le_motive, n_le_n_sum, sum, add_comm_nm);
+
+        // `lor_aux_comm_of_fuel` (unlike `land_aux_comm_of_fuel`) carries
+        // hypotheses -- both bounds are already in hand above.
+        let step_b = d.lemma(p.lor_aux_comm_of_fuel, &[sum, m, n]);
+        let step_b = d.apply(step_b, &[m_le_sum, n_le_sum]);
+        // step_b : Eq (lorAux sum m n) (lorAux sum n m)
+
+        let step_c = d.lemma(p.lor_aux_agree_of_fuel, &[n, n, m, sum]);
+        let step_c = d.apply(step_c, &[le_refl_n, n_le_sum]);
+        // step_c : Eq (lorAux n n m) (lorAux sum n m)
+
+        let loraux_m_m_n = d.const_app(p.lor_aux, &[m, m, n]);
+        let loraux_sum_m_n = d.const_app(p.lor_aux, &[sum, m, n]);
+        let loraux_sum_n_m = d.const_app(p.lor_aux, &[sum, n, m]);
+        let loraux_n_n_m = d.const_app(p.lor_aux, &[n, n, m]);
+        let step_c_rev = d.symm(loraux_n_n_m, loraux_sum_n_m, step_c);
+
+        let step_ab = d.trans(
+            loraux_m_m_n,
+            loraux_sum_m_n,
+            loraux_sum_n_m,
+            step_a,
+            step_b,
+        );
+        let proof = d.trans(
+            loraux_m_m_n,
+            loraux_sum_n_m,
+            loraux_n_n_m,
+            step_ab,
+            step_c_rev,
+        );
+
+        let lhs = d.const_app(p.lor, &[m, n]);
+        let rhs = d.const_app(p.lor, &[n, m]);
+        (d.eq(lhs, rhs), proof)
+    })?;
+    Ok(())
+}
