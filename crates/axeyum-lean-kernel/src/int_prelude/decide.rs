@@ -70,7 +70,7 @@ fn sign_predicate(d: &mut IntDev<'_>, x: ExprId, on_of_nat: ExprId, on_neg_succ:
 ///
 /// `positive_is_left` says whether `p` is the `Int.ofNat` one; the predicate is
 /// chosen so that it is `True` at `p` and `False` at `q`.
-fn discriminate(
+pub(super) fn discriminate(
     d: &mut IntDev<'_>,
     p: ExprId,
     q: ExprId,
