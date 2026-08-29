@@ -68,14 +68,30 @@ check "repairing the breach restores SAFE" "verdict=SAFE" "$out"
 # is the same tree, so the failure must come back PRE-EXISTING rather than NEW.
 # A generated ledger the LANE staled is the lane's problem, and must read NEW --
 # the complement of case 1, where the same class of failure is not the lane's.
+#
+# This case only discriminates anything when the target gate is CLEAN before
+# the corruption: `docs/plan/generated/theorem-production-ledger.md` tracks
+# real theorem production, and production is expected to move it out of date
+# on an ordinary day (measured 2026-08-29: distinct theorems 1448 -> 1770,
+# unrelated to this worktree -- byte-identical file and `crates/` tree at
+# HEAD and at merge-base with origin/main). Asserting "FAIL (NEW)" against an
+# already-red gate is not a stronger check, it is a WRONG one: the tool is
+# correctly reporting PRE-EXISTING because the failure genuinely is, at both
+# ends of the comparison, for a reason that has nothing to do with the
+# corruption appended below. So confirm the baseline is green first, exactly
+# like case 1 does for the whole turn, and skip rather than assert a false
+# expectation when it is not -- a SKIP here is honest; a FAIL would not be.
 LED="$W/docs/plan/generated/theorem-production-ledger.md"
-if [ -f "$LED" ]; then
+if [ -f "$LED" ] \
+  && ( cd "$W" && python3 scripts/gen-theorem-production-ledger.py --check >/dev/null 2>&1 ); then
   cp "$LED" "$LED.bak"
   printf 'corrupted\n' >> "$LED"
   out=$( cd "$W" && timeout 2400 scripts/check-lane-turn.sh 2>&1 )
   check "a ledger the lane staled is attributed to the lane" "FAIL (NEW)" "$out"
   check "and makes the turn UNSAFE"                          "verdict=UNSAFE" "$out"
   mv "$LED.bak" "$LED"
+elif [ -f "$LED" ]; then
+  printf '  SKIP  theorem-production-ledger is already stale at this base (real production growth, not this worktree) -- case 4 cannot discriminate today\n'
 fi
 
 printf 'LANE_TURN_CONTROLS|pass=%d|fail=%d\n' "$pass" "$fail"
