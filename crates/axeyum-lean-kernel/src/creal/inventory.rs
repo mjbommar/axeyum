@@ -58,6 +58,7 @@ mod integral;
 mod inverse;
 mod inverse_fn;
 mod ivt;
+mod ivt_boundary;
 mod lattice;
 mod monotone;
 mod mul_self_zero;
@@ -107,6 +108,7 @@ pub(crate) fn all_entries(
     all.extend(inverse::entries(p));
     all.extend(inverse_fn::entries(p));
     all.extend(ivt::entries(p));
+    all.extend(ivt_boundary::entries(p));
     all.extend(lattice::entries(p));
     all.extend(monotone::entries(p));
     all.extend(mul_self_zero::entries(p));
