@@ -19,10 +19,37 @@ DISPATCHABLE set -- and makes the exit status depend on it.
       - structurally blocked by `artifacts/autogenesis/mirror-divergence-registry.json`
       = DISPATCHABLE
 
-It also runs the registry as a SCREEN over candidate propositions before they
-are preregistered (`--screen`), because a generator that emits more mirrors over
-a diverging construction adds unclosable population and inflates the open count
-without adding work.
+It also runs two SCREENS over candidate propositions before they are
+preregistered, because a generator that emits population nobody can close
+inflates the open count without adding work -- which is exactly how the
+population came to be 72% closed with an empty dispatchable set.
+
+  `--screen`    the NEGATIVE screen: the divergence registry. Blocks a mirror
+                over a construction whose axeyum counterpart diverges.
+  `--statable`  the POSITIVE screen, added 2026-08-29. `screened-ok` is
+                NECESSARY AND NOT SUFFICIENT: the registry says nothing about
+                whether a proposition can be EXPRESSED here, which is why
+                hundreds of `Std.PRange`, `Finset` and `LinearOrder` rows sail
+                through it. A candidate is STATABLE HERE iff every Lean
+                constant in its type is admissible, where
+
+                    admissible = env      names read from kernel.environment()
+                               | bridge   {constants of SETTLED ml430 mirrors}
+                                          minus env
+
+                The bridge is DERIVED, never asserted: an entry exists only
+                because the ledger already closed a mirror stated with that
+                constant. It covers typeclass/notation elaboration
+                (`HAdd.hAdd`, `OfNat.ofNat`), Mathlib abbreviations that unfold
+                into kernel vocabulary (`Nat.Coprime`, `Nat.ModEq`, `Even`), and
+                order abbreviations that unfold the same way (`Monotone`,
+                `Set.Ici`) -- `Nat.fib_mono` is `proved` with the kernel type
+                `a <= b -> fib a <= fib b`, so `Monotone` never needed to exist
+                here. Measured 2026-08-29: 2,773 of 8,932 unused pinned
+                propositions pass, so the screen rejects 69% and is not vacuous;
+                and all 156 settled mirrors pass, so it is not a false-positive
+                machine. `--statable` ALSO applies the registry, so one
+                invocation is the whole pre-preregistration gate.
 
 The registry is not taken on trust. Three of its guards exist to stop it being
 used to shrink the open count by fiat:
@@ -36,9 +63,31 @@ used to shrink the open count by fiat:
       false-positive control, and it runs against every closed row on every
       invocation rather than against a fixture.
 
+The statable-here vocabulary is not taken on trust either:
+
+  S1  the environment snapshot must be internally consistent, must contain
+      declarations any real kernel environment has, and must NOT contain a name
+      no kernel could declare. An empty snapshot and an everything snapshot
+      both read as a working screen otherwise.
+  S2  a bridge constant must be WITNESSED by a settled mirror that mentions it,
+      and must be absent from the environment -- a bridge for something the
+      kernel declares hides a rename instead of recording an elaboration.
+  S3  the screen may never reject a mirror we have already CLOSED. The
+      false-positive control, run against the real population.
+  S4  the vocabulary's per-row `settled` flag must agree with the fact ledger.
+      Without this, flipping one flag smuggles any constant into the bridge and
+      S2 becomes satisfiable by assertion.
+  S5  `--statable` rejects an unstatable candidate before preregistration.
+
+Partitions are read from the v1 nursery AND from `nursery-v2-extension.json`
+(the 2026-08-29 refill). A held-out row that only the extension knows about
+would otherwise be counted as dispatchable, which is the precise mistake the
+extension exists to avoid.
+
 Usage:
     python3 scripts/check-dispatchable-frontier.py
     python3 scripts/check-dispatchable-frontier.py --screen candidates.json
+    python3 scripts/check-dispatchable-frontier.py --statable candidates.json
     python3 scripts/check-dispatchable-frontier.py --json
 
 Exit status:
@@ -60,6 +109,20 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_FACTS = ROOT / "artifacts" / "facts"
 DEFAULT_NURSERY = ROOT / "artifacts" / "autogenesis" / "nursery-v1.json"
 DEFAULT_REGISTRY = ROOT / "artifacts" / "autogenesis" / "mirror-divergence-registry.json"
+DEFAULT_EXTENSION = ROOT / "artifacts" / "autogenesis" / "nursery-v2-extension.json"
+DEFAULT_ENV = ROOT / "artifacts" / "autogenesis" / "kernel-environment-snapshot-v1.json"
+DEFAULT_VOCAB = ROOT / "artifacts" / "autogenesis" / "mathlib-statable-vocabulary-v1.json"
+DEFAULT_CATALOG = (ROOT / "artifacts" / "autogenesis"
+                   / "mathlib-nat-int-fact-catalog-v1.json")
+
+# S1's vacuity probes. `Eq` is Lean's own equality and every prelude this kernel
+# builds needs it; `Nat` is the carrier the whole ml430 population is stated
+# over. A snapshot missing either is not a kernel environment. The absent probe
+# is a name no declaration can carry (a space is not a valid Lean name
+# component), so a snapshot that "contains everything" -- the other way a screen
+# goes vacuous, and the one that ADMITS rather than rejects -- fails too.
+ENV_PROBES_PRESENT = ("Eq", "Nat")
+ENV_PROBE_ABSENT = "axeyum probe no declaration can carry"
 
 MIRROR_PREFIX = "F:ml430-"
 SETTLED = {"proved", "refuted", "computed"}
@@ -96,24 +159,161 @@ def load_facts(facts_dir: pathlib.Path) -> dict[str, dict[str, Any]]:
     return out
 
 
-def load_partitions(nursery: pathlib.Path) -> tuple[set[str], set[str]]:
-    """(held-out fact ids, mutation fact ids) from the preregistered split."""
-    if not nursery.is_file():
-        die(f"no nursery manifest at {nursery}")
-    manifest = json.loads(nursery.read_text())
-    entries = manifest.get("entries")
-    if not isinstance(entries, list):
-        die(f"{nursery}: no `entries` list")
+def load_partitions(*manifests: pathlib.Path) -> tuple[set[str], set[str]]:
+    """(held-out fact ids, mutation fact ids) from the preregistered splits.
+
+    Every manifest is REQUIRED. Skipping an unreadable one would silently
+    reclassify its held-out rows as dispatchable -- a gate that hands a lane a
+    blind-evaluation proposition, which is worse than no gate.
+    """
     held, mutation = set(), set()
-    for entry in entries:
-        ident = entry.get("fact_id")
-        if not isinstance(ident, str):
-            continue
-        if entry.get("partition") == "held-out":
-            held.add(ident)
-        if entry.get("mutation_of"):
-            mutation.add(ident)
+    for path in manifests:
+        if not path.is_file():
+            die(f"no nursery manifest at {path}")
+        manifest = json.loads(path.read_text())
+        entries = manifest.get("entries")
+        if not isinstance(entries, list):
+            die(f"{path}: no `entries` list")
+        for entry in entries:
+            ident = entry.get("fact_id")
+            if not isinstance(ident, str):
+                continue
+            if entry.get("partition") == "held-out":
+                held.add(ident)
+            if entry.get("mutation_of"):
+                mutation.add(ident)
     return held, mutation
+
+
+def load_vocabulary(env_path: pathlib.Path,
+                    vocab_path: pathlib.Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    for path in (env_path, vocab_path):
+        if not path.is_file():
+            die(f"no statable-here input at {path}")
+    snapshot = json.loads(env_path.read_text())
+    vocabulary = json.loads(vocab_path.read_text())
+    for doc, key, label in ((snapshot, "declarations", env_path),
+                            (vocabulary, "bridge", vocab_path),
+                            (vocabulary, "settled", vocab_path)):
+        if not isinstance(doc.get(key), list):
+            die(f"{label}: `{key}` must be a list")
+    return snapshot, vocabulary
+
+
+def load_catalog(path: pathlib.Path) -> dict[str, str]:
+    """source_name -> fact_id for the catalogued external-source rows.
+
+    The vocabulary artifact is keyed by Mathlib source name and NEVER by fact
+    id: naming an id there would put held-out ids in a non-population file, and
+    `check-autogenesis-holdout-isolation.py` caught precisely that on the first
+    draft (35 references). The catalog IS a population file and may name them,
+    so the join happens here.
+    """
+    if not path.is_file():
+        die(f"no fact catalog at {path}")
+    doc = json.loads(path.read_text())
+    rows = doc.get("facts")
+    if not isinstance(rows, list):
+        die(f"{path}: no `facts` list")
+    return {r["source_name"]: r["fact_id"] for r in rows
+            if isinstance(r, dict) and r.get("kind") == "external-source"}
+
+
+def guard_vocabulary(snapshot: dict[str, Any], vocabulary: dict[str, Any],
+                     facts: dict[str, dict[str, Any]],
+                     catalog: dict[str, str]) -> list[str]:
+    """S1-S4. Returns FAIL lines."""
+    fails: list[str] = []
+    declarations = snapshot["declarations"]
+    env = set(declarations)
+
+    # S1 -- the snapshot is the authority for the whole positive screen, and
+    # both ways it can go vacuous look identical from the exit status.
+    if len(env) != len(declarations):
+        fails.append("S1 stale-environment-snapshot: the declaration list "
+                     "repeats a name")
+    claimed = snapshot.get("declaration_count")
+    if claimed != len(env):
+        fails.append(f"S1 stale-environment-snapshot: declaration_count "
+                     f"{claimed!r} disagrees with {len(env)} distinct names")
+    absent_probes = [p for p in ENV_PROBES_PRESENT if p not in env]
+    if absent_probes:
+        fails.append(
+            f"S1 stale-environment-snapshot: {absent_probes} missing. No "
+            f"kernel environment lacks these, so this snapshot is empty, "
+            f"truncated, or not a kernel environment at all.")
+    if ENV_PROBE_ABSENT in env:
+        fails.append(
+            "S1 stale-environment-snapshot: the snapshot contains a name no "
+            "declaration can carry, so it does not distinguish present from "
+            "absent and the screen would admit everything.")
+
+    bridge = set(vocabulary["bridge"])
+    rows = vocabulary["settled"]
+    witnessed: set[str] = set()
+    listed: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("constants"), list):
+            fails.append("S4 vocabulary-status-drift: a settled row has no "
+                         "`constants` list")
+            continue
+        # S4 -- membership of this list is what promotes a row's constants into
+        # the bridge, so it must be re-derived from the ledger, not believed.
+        name = row.get("source_name")
+        ident = catalog.get(name) if isinstance(name, str) else None
+        if ident is None:
+            fails.append(f"S4 vocabulary-status-drift: {name!r} is not a "
+                         f"catalogued external-source proposition")
+            continue
+        listed.add(name)
+        fact = facts.get(ident)
+        if fact is None or fact.get("epistemic_status") not in SETTLED:
+            status = None if fact is None else fact.get("epistemic_status")
+            fails.append(
+                f"S4 vocabulary-status-drift: {name} is listed as settled but "
+                f"the ledger says {status!r}. Listing a row here promotes its "
+                f"constants into the bridge, so the list is re-derived, never "
+                f"believed.")
+            continue
+        witnessed |= set(row["constants"])
+    # ...and the other direction, so a row cannot be DROPPED to make a
+    # false-positive control (S3) pass over a narrower population.
+    actually_settled = {name for name, ident in catalog.items()
+                        if facts.get(ident, {}).get("epistemic_status") in SETTLED}
+    absent = sorted(actually_settled - listed)
+    if absent:
+        fails.append(
+            f"S4 vocabulary-status-drift: {len(absent)} settled mirror(s) are "
+            f"missing from the vocabulary ({', '.join(absent[:3])}), so S3 "
+            f"would run against a narrower population than the ledger has.")
+
+    # S2 -- a bridge entry nothing witnesses is an assertion; a bridge entry the
+    # kernel already declares is a rename hiding as an elaboration.
+    unwitnessed = sorted(bridge - witnessed)
+    if unwitnessed:
+        fails.append(
+            f"S2 unwitnessed-bridge-constant: {len(unwitnessed)} bridge "
+            f"constant(s) appear in no settled mirror: {unwitnessed[:5]}. The "
+            f"bridge is derived from closures, never asserted.")
+    shadowing = sorted(bridge & env)
+    if shadowing:
+        fails.append(
+            f"S2 unwitnessed-bridge-constant: {shadowing[:5]} are IN the kernel "
+            f"environment, so they need no bridge; a bridge entry here hides a "
+            f"rename.")
+
+    # S3 -- the false-positive control, against the real closed population.
+    admissible = env | bridge
+    rejected = [row["source_name"] for row in rows
+                if isinstance(row, dict)
+                and isinstance(row.get("constants"), list)
+                and set(row["constants"]) - admissible]
+    if rejected:
+        fails.append(
+            f"S3 screen-rejects-a-settled-mirror: the statable-here screen "
+            f"rejects {len(rejected)} mirror(s) we have already closed "
+            f"({', '.join(rejected[:3])}), so its vocabulary is incomplete.")
+    return fails
 
 
 def load_registry(path: pathlib.Path) -> list[dict[str, Any]]:
@@ -242,14 +442,76 @@ def guard_registry(facts: dict[str, dict[str, Any]],
     return fails
 
 
-def screen(path: pathlib.Path, registry: list[dict[str, Any]]) -> int:
-    """G6 -- reject candidate propositions before preregistration."""
+def read_candidates(path: pathlib.Path) -> list[dict[str, Any]]:
     if not path.is_file():
         die(f"no candidate file at {path}")
     doc = json.loads(path.read_text())
-    candidates = doc.get("candidates") if isinstance(doc, dict) else doc
+    if isinstance(doc, list):
+        candidates = doc
+    else:
+        # `entries` lets the preregistered extension manifest be re-screened by
+        # the gate on every run, rather than only at the moment it was written.
+        candidates = doc.get("candidates")
+        if candidates is None:
+            candidates = doc.get("entries")
     if not isinstance(candidates, list):
-        die(f"{path}: expected a list of candidates or {{'candidates': [...]}}")
+        die(f"{path}: expected a list, {{'candidates': [...]}} "
+            f"or {{'entries': [...]}}")
+    return candidates
+
+
+def statable_screen(path: pathlib.Path, registry: list[dict[str, Any]],
+                    env: set[str], bridge: set[str]) -> int:
+    """S5 (+ G6) -- both screens over candidates before preregistration."""
+    candidates = read_candidates(path)
+    admissible = env | bridge
+    blocked = unstatable = 0
+    for cand in candidates:
+        if not isinstance(cand, dict):
+            die(f"{path}: a candidate is not an object")
+        name = cand.get("name") or cand.get("source_name", "<unnamed>")
+        statement = cand.get("statement")
+        constants = cand.get("constants")
+        if not isinstance(statement, str):
+            die(f"{path}: candidate {name} has no string `statement`")
+        # Fail-closed: a candidate that does not carry its constant set cannot
+        # be screened, and "no constants recorded" must not read as "clean".
+        if not isinstance(constants, list) or not all(
+                isinstance(c, str) for c in constants):
+            die(f"{path}: candidate {name} has no `constants` list, so the "
+                f"statable-here screen cannot decide it")
+        hits = blockers_for(statement, registry)
+        missing = sorted(set(constants) - admissible)
+        if hits:
+            blocked += 1
+            classes = ", ".join(f"{h['mathlib_constant']} ({h['class']})"
+                                for h in hits)
+            print(f"  BLOCKED     {name}  -- {classes}")
+        elif missing:
+            unstatable += 1
+            print(f"  UNSTATABLE  {name}  -- {', '.join(missing[:4])}")
+        else:
+            print(f"  statable-ok {name}")
+    print(f"\n{len(candidates)} candidate(s), {blocked} blocked by the "
+          f"divergence registry, {unstatable} not statable here "
+          f"(env {len(env)} + bridge {len(bridge)}).")
+    status = 0
+    if blocked:
+        print("\nG6 blocked-candidate: preregistering these adds population "
+              "that can never be closed.", file=sys.stderr)
+        status = 1
+    if unstatable:
+        print("\nS5 unstatable-candidate: these mention constructions this "
+              "kernel cannot name and cannot bridge to, so no proof effort "
+              "reaches them. `screened-ok` against the divergence registry is "
+              "necessary and NOT sufficient.", file=sys.stderr)
+        status = 1
+    return status
+
+
+def screen(path: pathlib.Path, registry: list[dict[str, Any]]) -> int:
+    """G6 -- reject candidate propositions before preregistration."""
+    candidates = read_candidates(path)
     blocked = 0
     for cand in candidates:
         if not isinstance(cand, dict):
@@ -280,8 +542,16 @@ def main() -> int:
     ap.add_argument("--facts-dir", type=pathlib.Path, default=DEFAULT_FACTS)
     ap.add_argument("--nursery", type=pathlib.Path, default=DEFAULT_NURSERY)
     ap.add_argument("--registry", type=pathlib.Path, default=DEFAULT_REGISTRY)
+    ap.add_argument("--extension", type=pathlib.Path, default=DEFAULT_EXTENSION,
+                    help="the additive nursery extension carrying its own split")
+    ap.add_argument("--env-snapshot", type=pathlib.Path, default=DEFAULT_ENV)
+    ap.add_argument("--vocabulary", type=pathlib.Path, default=DEFAULT_VOCAB)
+    ap.add_argument("--catalog", type=pathlib.Path, default=DEFAULT_CATALOG)
     ap.add_argument("--screen", type=pathlib.Path,
-                    help="screen candidate propositions before preregistration")
+                    help="screen candidates against the divergence registry")
+    ap.add_argument("--statable", type=pathlib.Path,
+                    help="screen candidates against BOTH the divergence "
+                         "registry and the statable-here vocabulary")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()
 
@@ -290,11 +560,23 @@ def main() -> int:
         print(f"SCREEN {args.screen} against "
               f"{len(registry)} diverging construction(s)")
         return screen(args.screen, registry)
+    if args.statable is not None:
+        snapshot, vocabulary = load_vocabulary(args.env_snapshot, args.vocabulary)
+        env = set(snapshot["declarations"])
+        bridge = set(vocabulary["bridge"])
+        print(f"SCREEN {args.statable} against "
+              f"{len(registry)} diverging construction(s) and "
+              f"{len(env)} kernel declaration(s) + {len(bridge)} bridge "
+              f"constant(s)")
+        return statable_screen(args.statable, registry, env, bridge)
 
     facts = load_facts(args.facts_dir)
-    held, mutation = load_partitions(args.nursery)
+    held, mutation = load_partitions(args.nursery, args.extension)
+    snapshot, vocabulary = load_vocabulary(args.env_snapshot, args.vocabulary)
+    catalog = load_catalog(args.catalog)
     buckets = classify(facts, held, mutation, registry)
     fails = guard_registry(facts, registry)
+    fails += guard_vocabulary(snapshot, vocabulary, facts, catalog)
 
     dispatchable = buckets["dispatchable"]
     total_open = sum(len(v) for v in buckets.values())
