@@ -100,6 +100,7 @@ mod sign;
 mod statements;
 mod sub;
 mod sub_nat_nat;
+mod two_sided_induction;
 mod wilson;
 
 use ops::IntDev;
@@ -1125,6 +1126,15 @@ pub struct IntPrelude {
     /// `Odd`/`Even` are stated via `natAbs`, per the earlier lane's
     /// prediction).
     pub fib_of_odd: NameId,
+    /// `induction_on : ∀ (P : Int → Prop), P zero → (∀ n, P n → P (add n
+    /// one)) → (∀ n, P n → P (sub n one)) → ∀ n, P n` — two-sided induction
+    /// over `ℤ`: prove the motive at `0` and step in both directions.
+    ///
+    /// `Int.rec` is a *case split* into `ofNat`/`negSucc`, not an induction
+    /// principle; this is the first combinator in the development that
+    /// actually inducts over `ℤ`. See `two_sided_induction.rs`'s module doc
+    /// for why every bridging step is pure reduction.
+    pub induction_on: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1374,6 +1384,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         odd_iff_nat_abs_odd: child(kernel, "odd_iff_nat_abs_odd"),
         even_iff_nat_abs_even: child(kernel, "even_iff_nat_abs_even"),
         fib_of_odd: child(kernel, "fib_of_odd"),
+        induction_on: child(kernel, "induction_on"),
     }
 }
 
@@ -1571,6 +1582,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_totient::declare_euler_unit_injective(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
+        two_sided_induction::declare_induction_on(&mut d)?;
         fibonacci::declare_fib_cassini_all(&mut d)?;
         fibonacci::declare_fib(&mut d)?;
         fibonacci::declare_fib_two_mul_add_one_pos(&mut d)?;
