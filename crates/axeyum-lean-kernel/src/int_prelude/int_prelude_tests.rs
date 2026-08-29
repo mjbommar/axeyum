@@ -3157,3 +3157,170 @@ fn fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign() {
         "Int.fib_of_odd must rest on zero axioms"
     );
 }
+
+/// `Int.induction_on` applied to a real motive, and the result read at an
+/// index of **each sign**.
+///
+/// The motive is `zero + n = n`, which the prelude does not carry (it has
+/// `add_zero`, not `zero_add`), so both steps genuinely consume the induction
+/// hypothesis rather than re-deriving the goal from an existing lemma.
+/// Reading the conclusion at `negSucc 4` (`-5`) is the half that an
+/// `ofNat`-only combinator could not produce.
+#[test]
+fn induction_on_proves_a_two_sided_law_and_reaches_both_signs() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    let int_ty = d.int_ty();
+    let izero = d.izero();
+    let ione = d.ione();
+
+    // P n := Eq Int (add zero n) n
+    let motive = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let lhs = d.iadd(izero, n);
+        let body = d.ieq(lhs, n);
+        d.lam_fv(n_fv, int_ty, body)
+    };
+
+    // `add zero zero` reduces PURELY to `zero`, so `irefl` reads at `P zero`.
+    let base = {
+        let lhs = d.iadd(izero, izero);
+        d.irefl(lhs)
+    };
+
+    // One step, shared by both directions: `zero + (n + off) = (zero + n) + off
+    // = n + off`, the first by `add_assoc` reversed and the second by the
+    // induction hypothesis. For `off = neg one` the conclusion is built as
+    // `add n (neg one)` and read as `sub n one` -- `Int.sub` is a plain
+    // `Definition`, exactly the state-folded/prove-unfolded idiom `sub.rs` uses.
+    let stepper = |d: &mut super::ops::IntDev<'_>, offset: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let zn = d.iadd(izero, n);
+        let ih_ty = d.ieq(zn, n);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+
+        let n_off = d.iadd(n, offset);
+        let start = d.iadd(izero, n_off);
+        let assoc = d.lemma(p.add_assoc, &[izero, n, offset]);
+        let left = d.iadd(zn, offset);
+        let assoc_rev = d.isymm(left, start, assoc);
+        let by_ih = d.icongr(zn, n, ih, &|d, t| d.iadd(t, offset));
+        let (_, chained) = d.ichain(start, &[(left, assoc_rev), (n_off, by_ih)]);
+        let inner = d.lam_fv(ih_fv, ih_ty, chained);
+        d.lam_fv(n_fv, int_ty, inner)
+    };
+
+    let up = stepper(&mut d, ione);
+    let neg_one = d.ineg(ione);
+    let down = stepper(&mut d, neg_one);
+
+    let thm = d.const_app(p.induction_on, &[motive, base, up, down]);
+    d.kernel()
+        .infer(thm)
+        .unwrap_or_else(|e| panic!("Int.induction_on must apply at this motive: {e:?}"));
+
+    let three = d.num(3);
+    let pos = d.of_nat(three);
+    let at_pos = d.apply(thm, &[pos]);
+    let ty_pos = d
+        .kernel()
+        .infer(at_pos)
+        .unwrap_or_else(|e| panic!("the conclusion must read at ofNat 3: {e:?}"));
+    let expected_pos = {
+        let lhs = d.iadd(izero, pos);
+        d.ieq(lhs, pos)
+    };
+    assert!(
+        d.kernel().def_eq(ty_pos, expected_pos),
+        "induction_on's conclusion at ofNat 3 must be Eq Int (add zero 3) 3"
+    );
+
+    let four = d.num(4);
+    let neg_five = d.neg_succ(four);
+    let at_neg = d.apply(thm, &[neg_five]);
+    let ty_neg = d
+        .kernel()
+        .infer(at_neg)
+        .unwrap_or_else(|e| panic!("the conclusion must read at negSucc 4: {e:?}"));
+    let expected_neg = {
+        let lhs = d.iadd(izero, neg_five);
+        d.ieq(lhs, neg_five)
+    };
+    assert!(
+        d.kernel().def_eq(ty_neg, expected_neg),
+        "induction_on's conclusion at negSucc 4 must be Eq Int (add zero (-5)) (-5)"
+    );
+
+    // The two `def_eq` assertions above are capable of failing: the same
+    // left-hand side against the wrong right-hand side is rejected.
+    let wrong = {
+        let lhs = d.iadd(izero, neg_five);
+        d.ieq(lhs, pos)
+    };
+    assert!(
+        !d.kernel().def_eq(ty_neg, wrong),
+        "Eq Int (add zero (-5)) (-5) must NOT be def_eq to Eq Int (add zero (-5)) 3"
+    );
+}
+
+/// Each of `Int.induction_on`'s three hypotheses is load-bearing.
+///
+/// The trusted gate proves whatever statement it is handed, so a combinator
+/// that *reads* correctly is not thereby correct. Each mutation below keeps the
+/// shipped proof value byte-identical and perturbs only the statement; the
+/// kernel must reject all three, and must accept the unmutated pair by the same
+/// route (without that positive control the loop could be passing because
+/// `build` is broken outright).
+#[test]
+fn induction_on_needs_each_of_its_three_hypotheses() {
+    use super::two_sided_induction::{Mutation, build};
+
+    for (mutation, why) in [
+        (
+            Mutation::BaseAtOne,
+            "a base at `one` cannot start either Nat.rec branch",
+        ),
+        (
+            Mutation::UpIsAlsoDown,
+            "a second down-step cannot climb the ofNat branch",
+        ),
+        (
+            Mutation::DownIsAlsoUp,
+            "a second up-step cannot reach negSucc 0 from zero",
+        ),
+    ] {
+        let mut k = Kernel::new();
+        let p = build_int_prelude(&mut k).expect("Int prelude must build");
+        let anon = k.anon();
+        let scratch = k.name_str(anon, "scratchInductionOn");
+        let mut d = super::ops::IntDev::new(&mut k, p);
+        let (ty, value) = build(&mut d, mutation);
+        let outcome = d.kernel().add_declaration(Declaration::Theorem {
+            name: scratch,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(outcome.is_err(), "the kernel must reject {mutation:?}: {why}");
+    }
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let scratch = k.name_str(anon, "scratchInductionOn");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+    let (ty, value) = build(&mut d, Mutation::None);
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: scratch,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .expect("the unmutated statement must be accepted by the same route");
+}

@@ -61,6 +61,9 @@ use crate::nat_prelude::NatOps;
 /// (`int_prelude_tests`'s `two_sided_induction_*` controls), which is what
 /// shows the shipped statement's three hypotheses are each doing work.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// The three defective variants are constructed only by the negative controls,
+// which live behind `cfg(test)`; the shipped build only ever passes `None`.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(super) enum Mutation {
     /// Ship the real statement.
     None,
