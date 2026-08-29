@@ -132,30 +132,58 @@ The fix bought about 42× — three coefficient doublings — and no more.
 
 **This is the honest residual and it is a decomposition, not a one-liner.**
 
+### What drives the residual — measured, and it is NOT what I first wrote
+
+Counting inside the compact modules (`/usr/bin/grep -o`, and `^def ` for the
+hoisted bindings):
+
+| a, b | bytes | `Int.one` | `Int.add` | top-level `def`s |
+| --- | --- | --- | --- | --- |
+| 2, 4 | 218,478 | 216 | 767 | 763 |
+| 6, 9 | 666,950 | 630 | 2,419 | 4,712 |
+| 14, 21 | 2,268,010 | 233 | 8,594 | 18,463 |
+| 22, 33 | 7,168,617 | 273 | 26,782 | 60,317 |
+
+`Int` literals in this reconstruction context **are** unary — `mk_intlit`
+(`crates/axeyum-solver/src/int_reconstruct.rs:264`) is
+`for _ in 1..count { acc = mk_add(acc, unit) }`, and the pre-fix tree carried
+32,758 `Int.one` occurrences. But **after compaction the unary literals are
+shared away and stop mattering**: `Int.one` stays in the low hundreds across a
+33× byte range and does not even grow monotonically. So the unary-literal
+family (`CLAUDE.md`, "EVERY `Nat` NUMERAL THIS PRELUDE BUILDS IS UNARY") is
+*not* the driver here, and a lane sent at it would find nothing.
+
+What grows is the **number of distinct proof nodes** — 763 → 60,317 hoisted
+definitions, i.e. proof *length*, roughly quadratic-to-cubic in the coefficient.
+
 ## Slices for the residual, smallest first
 
-1. **`combine_equalities` scales by `|λ|` repeated additions.**
-   `crates/axeyum-solver/src/int_reconstruct/diophantine.rs:141-165`: the
-   `for _ in 1..count` loop builds `λ·L` as `L + L + … + L` with an
-   `eq_trans(congr_add_left, congr_add_right)` per copy. Coefficient magnitude
-   therefore becomes proof *length*, and each step's rewrite chain then costs
-   size in the length. A `mul`-based scaling (one `congr_mul_right` against an
-   `Int` literal) replaces `O(λ)` steps with one. This is the single largest
-   lever and is local to one function.
+1. **`combine_equalities` scales by `|λ|` repeated additions — this is the
+   lever.** `crates/axeyum-solver/src/int_reconstruct/diophantine.rs`, the
+   `for _ in 1..count` loop (`count = lambda.unsigned_abs()`) builds `λ·L` as
+   `L + L + … + L` with an `eq_trans(congr_add_left, congr_add_right)` per copy.
+   Coefficient *magnitude* becomes proof *length*, and the normalization that
+   follows is then quadratic in that length. `IntReconstructCtx::congr_mul_right`
+   already exists (`int_reconstruct.rs:468`) and `kernel_expr_to_zexpr` already
+   recognises `ZExpr::Mul`, so `h : L = R  ⟹  λ·L = λ·R` is one step and the
+   normalizer can consume it.
+
+   **The trap to check first**: `congr_mul_right` needs the literal `λ` as a
+   kernel term, and `mk_intlit` builds it as a unary tower, so the normalizer
+   may distribute it straight back into `|λ|` copies. Measure whether
+   `normalize`'s `ZExpr::Mul` arm keeps a literal factor symbolic before
+   committing to this shape.
+
 2. **The faithful linear form is unary too.** `lin_to_zexpr(combined_dense, 0)`
    renders `14x` as a 35-term sum of bare `x`/`y` atoms (visible in the rendered
-   `dio.hyp._2` axiom), so the *normalizer* that follows has an `O(n²)`
-   assoc/comm bubble to run over `n = Σ|coefficients|` terms rather than over
-   the number of variables. Emitting `Int.mul (intlit 14) x` shrinks `n` from 35
-   to 2 for this query.
-3. **`Int` literals are unary as well** — `7` renders as
-   `Int.add (… (Int.add Int.one Int.one) …)`, 32,758 `Int.one` occurrences in
-   the pre-fix term. Same family as the kernel's unary-`Nat` finding
-   (`CLAUDE.md`, "EVERY `Nat` NUMERAL THIS PRELUDE BUILDS IS UNARY"), and the
-   same remedy applies: keep formed magnitudes small, or route through a literal.
+   `dio.hyp._2` axiom), so the normalizer bubbles over `n = Σ|coefficients|`
+   terms rather than over the number of *variables*. Emitting
+   `Int.mul (intlit 14) x` takes `n` from 35 to 2 for this query. Same shape as
+   slice 1 seen from the term side; they should land together.
 
-Slices 1 and 2 are the same change seen from two sides and should be done
-together; slice 3 is independent and smaller.
+3. **A binary `Int` literal representation.** Independent of 1 and 2, and by the
+   table above it buys little on its own *after* compaction — record it, do not
+   prioritise it.
 
 ## Verification — all foreground, all completed
 
