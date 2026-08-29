@@ -133,6 +133,54 @@
 //! `eq_or_eq_of_totient_eq_totient`). None of these is a small addition to
 //! staple onto a proof under this session's budget; recorded here so the
 //! next lane on this family does not re-derive the same triage.
+//!
+//! ## Update: piece 1 landed (the "≥ 2 witnesses" machinery), 2026-08-29
+//!
+//! `Nat.countRange_succ_of_true`, `Nat.countRange_le_of_le`, and
+//! `Nat.countRange_ge_two_of_two_witnesses` (below) are the general
+//! existence-witness-to-positive-count lemma named above as blocking
+//! `totient_eq_one_iff`'s forward direction and `dvd_two_of_totient_le_one`.
+//! Chosen over the other two pieces because it needed no new induction
+//! principle: `Int.prod_range_pairing_collapse`
+//! (`int_prelude/wilson.rs`, checked first per this lane's own brief) is a
+//! REAL fixed-point-free-involution/pairing lemma, but it collapses an
+//! `Int.prodRange` to `1` under `ModEq`, over a Wilson-specific concrete
+//! `sigma := Nat.inverseIndex` — it does not transport to "a
+//! `Bool`-predicate-defined `countRange` subset has even cardinality"
+//! without re-deriving the two-step structural induction against a
+//! `Nat`-valued conclusion. `totient_even`'s pairing argument is therefore
+//! still a from-scratch piece of work, not a corollary of that lemma.
+//!
+//! **The concrete witnesses that turn this into the two blocked mirrors are
+//! now known and cheap: `i = 1` (always coprime, `coprime_one_left_iff` —
+//! `gcd one n = one` directly, no `gcd_comm` bridge needed after all, since
+//! `totient`'s predicate order is `gcd k n`) and `j = pred n` (the top
+//! index, `coprime_succ_self`), valid whenever `2 < n` (so `i < j`).** What
+//! is still missing to actually close either mirror is NOT more counting
+//! machinery — it is a small-numeral case split:
+//!
+//! - **`dvd_two_of_totient_le_one`** (`0 < a → totient a ≤ 1 → a ∣ 2`):
+//!   first get `1 ≤ totient a` from `0 < a` (contrapositive of
+//!   `totient_eq_zero`, cheap), so `totient a = 1` (antisymmetry with the
+//!   hypothesis). Then case-split `a` via `trichotomy(d, &p, 2, a)`
+//!   (`finite.rs`, `pub(super)`, already reusable from a sibling module —
+//!   see `group.rs`'s `use super::finite::{le_of_lt, pos_implies_succ_pred}`
+//!   for the import precedent): `a < 2` combined with `0 < a` forces `a = 1`
+//!   (`1 ∣ 2` trivially); `a = 2` is `2 ∣ 2` trivially; `2 < a` contradicts
+//!   `totient a = 1` via `countRange_ge_two_of_two_witnesses` at `i=1`,
+//!   `j = pred a` — `Le 2 (totient a)` against `totient a = 1` is refuted by
+//!   `lt_irrefl`/`le_antisymm`-shaped reasoning on the two concrete
+//!   numerals `1`/`2`.
+//! - **`totient_eq_one_iff`**: the same `2 < n` case of the same trichotomy
+//!   closes the forward direction's hard case identically (`totient n = 1`
+//!   contradicts `Le 2 (totient n)`); the reverse direction and the `n ≤ 2`
+//!   cases are the cheap concrete `def_eq` computations already noted above.
+//!
+//! Neither mirror was attempted this session — the trichotomy assembly
+//! above is a genuine next slice, not a corollary — but the ingredients
+//! (`trichotomy`, `lt_or_eq_of_le`, `le_antisymm`, the three lemmas below)
+//! are now all present, so the next lane on this family should not need to
+//! build anything new to close them, only compose.
 
 use super::NatPrelude;
 use super::helpers::iff_reverse;
