@@ -999,6 +999,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_aux_agree_of_fuel,
         p.bitwise_aux_comm_of_fuel,
         p.bitwise_comm,
+        p.bitwise_aux_swap_of_fuel,
+        p.bitwise_swap,
         p.land_aux_le_left,
         p.land_le_left,
         p.bit_div_two,
@@ -6482,7 +6484,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 489,
+        93 + 491,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -12038,6 +12040,94 @@ fn bitwise_comm_applies_at_a_concrete_discriminating_instance() {
     );
 }
 
+/// `Nat.bitwise_swap` applies at a CONCRETE, DISCRIMINATING instance --
+/// `F:ml430-nat-bitwise-swap-7175e90e`. `and`/`or`/`xor` are all
+/// COMMUTATIVE, so none of them can discriminate this statement from the
+/// vacuous case where swapping `f`'s arguments changes nothing: [`fst_fn`]
+/// (`fun a b => a`) is the deliberately non-commutative fixture that
+/// actually exercises the swap (`swap fst = fun a b => b`, the second
+/// projection). Unlike `bitwise_comm`, no `hf` hypothesis is threaded --
+/// `bitwise_swap` holds for EVERY `f`, proved unconditionally.
+#[test]
+fn bitwise_swap_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let fst_fn_term = super::bitwise::fst_fn(&mut f);
+    let swap_fst_term = super::bitwise::swap_fn(&mut f, fst_fn_term);
+
+    // Symbolic: the statement re-declared over bound variables, proved by
+    // the prelude theorem alone (at this fixed concrete `f`).
+    {
+        let name = f.name("bitwise_swap_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(p.bitwise, &[swap_fst_term, m, n]);
+            let rhs = d.const_app(p.bitwise, &[fst_fn_term, n, m]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.bitwise_swap, &[fst_fn_term, m, n]);
+            (stmt, proof)
+        })
+        .expect("bitwise_swap must apply at symbolic m/n for a fixed f");
+    }
+
+    // Concrete: `fst` always returns its FIRST projection, so canonical-fuel
+    // `bitwise fst m n` computes to `m` regardless of `n` (verified by hand
+    // before writing this test: fuel = m always suffices to expose every
+    // bit `fst` ever inspects). `swap fst = snd` therefore computes to `n`.
+    // `m = 5, n = 3` (m != n) makes this genuinely discriminating -- an
+    // `m = n` instance would pass even with the sides transposed.
+    {
+        let five = f.num(5);
+        let three = f.num(3);
+        let lhs = f.const_app(p.bitwise, &[swap_fst_term, five, three]);
+        let rhs = f.const_app(p.bitwise, &[fst_fn_term, three, five]);
+        let applied = f.lemma(p.bitwise_swap, &[fst_fn_term, five, three]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_swap must apply at (f=fst, m=5, n=3): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_swap fst 5 3 must state Eq (bitwise (swap fst) 5 3) (bitwise fst 3 5)"
+        );
+        assert!(
+            f.k.def_eq(lhs, three),
+            "bitwise (swap fst) 5 3 = bitwise snd 5 3 must compute to n = 3"
+        );
+        assert!(
+            f.k.def_eq(rhs, three),
+            "bitwise fst 3 5 must compute to m = 3 (fst always returns its \
+             first projection)"
+        );
+        // Non-vacuity: confirm the UNSWAPPED value at the same operands
+        // really is different, so this instance actually distinguishes
+        // `bitwise fst 5 3` from `bitwise (swap fst) 5 3`.
+        let unswapped = f.const_app(p.bitwise, &[fst_fn_term, five, three]);
+        assert!(
+            f.k.def_eq(unswapped, five),
+            "bitwise fst 5 3 must compute to m = 5"
+        );
+        assert!(
+            !f.k.def_eq(unswapped, lhs),
+            "the chosen (f, m, n) must be DISCRIMINATING: bitwise fst 5 3 \
+             and bitwise (swap fst) 5 3 must differ, or this instance \
+             proves nothing about the swap"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.bitwise_aux_swap_of_fuel).is_empty(),
+        "bitwise_aux_swap_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bitwise_swap).is_empty(),
+        "bitwise_swap must rest on zero axioms"
+    );
+}
+
 /// `Nat.land_aux_le_left`/`Nat.land_le_left` apply at symbolic arguments and
 /// at a concrete instance where `land a b < a` STRICTLY (`land 5 6 = 4 < 5`,
 /// `101 & 110 = 100`) -- a pair where `land a b = a` (e.g. `a` a submask of
@@ -12281,15 +12371,6 @@ fn zero_or_succ_applies_at_a_compound_term_and_is_consumed_by_or_elim() {
     );
 }
 
-/// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
-/// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
-/// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
-/// recursion's guard, exercising `(n + b - 1) / b` at each). The boundary
-/// equations then apply at a concrete argument and are axiom-free.
-///
-/// Negative controls differ from the truth by ONE successor, deliberately
-/// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
-#[test]
 /// `Nat.land_bit` — the `Nat.bit` decode bridge's payoff
 /// (`nat_prelude::bit_decode`), closing `F:ml430-nat-land-bit-b9ab7475`.
 /// Applies at a fully symbolic `(a, m, b, n)` (the theorem itself), and at a
@@ -12394,6 +12475,22 @@ fn land_bit_applies_at_a_concrete_discriminating_instance() {
     );
 }
 
+/// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
+/// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
+/// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
+/// recursion's guard, exercising `(n + b - 1) / b` at each). The boundary
+/// equations then apply at a concrete argument and are axiom-free.
+///
+/// Negative controls differ from the truth by ONE successor, deliberately
+/// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
+///
+/// This doc comment and its `#[test]` attribute were separated from this
+/// function by a merge (a "TWO LANES ADDING FUNCTIONS TO ONE RUST FILE"
+/// hunk-boundary artifact, CLAUDE.md's Gotchas): the attribute had drifted
+/// onto `land_bit_applies_at_a_concrete_discriminating_instance` above,
+/// duplicating ITS `#[test]` and leaving this function silently untested
+/// dead code. Restored to its own function by `nat-bitwise-bit-swap`.
+#[test]
 fn clog_computes_and_its_boundary_equations_apply() {
     let mut f = Fixture::new();
     let clog = f.p.clog;

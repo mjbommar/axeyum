@@ -207,7 +207,7 @@ use binomial::{
 };
 use bit_decode::declare_bit_decode_all;
 use bits::declare_bit_all;
-use bitwise::{declare_bitwise_all, declare_bitwise_comm};
+use bitwise::{declare_bitwise_all, declare_bitwise_comm, declare_bitwise_swap};
 use ble::declare_boolean_le;
 use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
@@ -3023,6 +3023,19 @@ pub struct NatPrelude {
     /// [`Self::bitwise_aux_agree_of_fuel`] through the shared fuel `m + n`,
     /// exactly as `land_comm`/`lor_comm`. See `nat_prelude::bitwise`.
     pub bitwise_comm: NameId,
+    /// `Nat.bitwise_aux_swap_of_fuel : ∀ f fuel m n, Le m fuel → Le n fuel →
+    /// Eq (bitwiseAux (swap f) fuel m n) (bitwiseAux f fuel n m)` — the
+    /// `swap` counterpart of [`Self::bitwise_aux_comm_of_fuel`], and
+    /// strictly simpler: no `hf` hypothesis, since `swap f` applied to any
+    /// two `Bool`s beta-reduces directly to `f` applied to them in the
+    /// other order. See `nat_prelude::bitwise`.
+    pub bitwise_aux_swap_of_fuel: NameId,
+    /// `Nat.bitwise_swap : ∀ f m n, Eq (bitwise (swap f) m n) (bitwise f n
+    /// m)` — `F:ml430-nat-bitwise-swap-7175e90e`. Routes
+    /// [`Self::bitwise_aux_swap_of_fuel`] and
+    /// [`Self::bitwise_aux_agree_of_fuel`] through the shared fuel `m + n`,
+    /// exactly as `bitwise_comm`'s own assembly. See `nat_prelude::bitwise`.
+    pub bitwise_swap: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3677,6 +3690,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_aux_agree_of_fuel: kernel.name_str(nat, "bitwise_aux_agree_of_fuel"),
             bitwise_aux_comm_of_fuel: kernel.name_str(nat, "bitwise_aux_comm_of_fuel"),
             bitwise_comm: kernel.name_str(nat, "bitwise_comm"),
+            bitwise_aux_swap_of_fuel: kernel.name_str(nat, "bitwise_aux_swap_of_fuel"),
+            bitwise_swap: kernel.name_str(nat, "bitwise_swap"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3929,6 +3944,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // over a symbolic `f`, unlike `land`/`lor`'s fixed-`f` versions);
         // nothing needs it, so it goes right after its `land`/`lor` siblings.
         declare_bitwise_comm(&mut d, &p)?;
+        // `Nat.bitwise_swap`: needs `Nat.bitwise`/`Nat.bitwiseAux`
+        // (`declare_bitwise_all`, far above) and the ALREADY-DECLARED
+        // `Nat.bitwise_aux_agree_of_fuel` (declared inside
+        // `declare_bitwise_comm`, just above) — so it must come after its
+        // `bitwise_comm` sibling, not merely after `bitwise` itself.
+        declare_bitwise_swap(&mut d, &p)?;
         // `Nat.land_aux_le_left`/`Nat.land_le_left`: needs `Nat.landAux`
         // (`declare_land_all`, far above) and division lemmas
         // (`div_mod_exec`, `mul_le_mul_left`, `add_le_add_left/right`,

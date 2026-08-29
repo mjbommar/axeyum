@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-bitwise-swap",
+  "title": "bitwise commutes with swapping the combinator's argument order",
+  "statement": "For every Bool -> Bool -> Bool function f and every natural m, n: bitwise(fun a b => f(b, a), m, n) = bitwise(f, n, m).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x3 : Bool) => fun (x4 : Bool) => x0 x4 x3) x1 x2) (AxNat.bitwise x0 x2 x1))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.bitwise_swap",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_swap",
+      "supports": "Nat.bitwise_swap is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_swap 2>/dev/null | grep -Ec '^Nat\\.bitwise_swap[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.bitwise_swap[[:space:]]` so a sibling name cannot satisfy this row. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.bitwise_swap",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.bitwise_swap",
+      "supports": "With f = fst (fun a b => a, deliberately NON-commutative), swap(fst) = snd (fun a b => b): bitwise(swap(fst), 5, 3) = 3 and bitwise(fst, 3, 5) = 3, while the UNSWAPPED bitwise(fst, 5, 3) = 5 -- a discriminating instance where m != n and f is not commutative, so a vacuous test built from and/or/xor (all commutative) could not have caught a transposed swap.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bitwise_swap_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.bitwise_swap` symbolically (against free `m`, `n` at a fixed concrete `f = fst_fn`) and at the concrete instance `(m, n) = (5, 3)`, confirming both that the admitted type matches `Eq (bitwise (swap fst) 5 3) (bitwise fst 3 5)` and that the swapped/unswapped values genuinely differ (3 vs 5), so the instance is non-vacuous."
+    },
+    {
+      "id": "footprint-Nat.bitwise_swap",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-operations",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-bitwise-bit-swap",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0` is `f`, `x1`/`x2` are `m`/`n`, and the inline lambda `fun x3 x4 => x0 x4 x3` is `Function.swap f`.\n\nSimpler than `Nat.bitwise_comm` (`F:nat-bitwise-comm`), and worth recording why: `swap f` applied to any two `Bool`s beta-reduces DIRECTLY to `f` applied to them in the other order, because the swap is baked into which function gets applied rather than asserted about a fixed one. So `bitwise_swap` needs NO hypothesis on `f` at all -- every site `bitwise_comm` needed `hf : forall a b, f a b = f b a` plus a propositional `Bool` congruence for (the two boundary rows and the per-bit combine) is pure defeq here. Confirmed by hand (case-by-case substitution, not Python -- the recursion is small enough to trace directly) before writing any Rust: expanding `bitwiseAux (swap f) fuel m n` and `bitwiseAux f fuel n m` matches by beta/iota alone in every case except the both-nonzero recursive step, which needs exactly the induction hypothesis (the per-bit `bit` term there also matches the other side exactly, by the same beta-swap, so only the recursive sub-call needs a `d.congr`).\n\nTwo new lemmas land in `nat_prelude/bitwise.rs` (uncontended at landing time): `bitwise_aux_swap_of_fuel` (fuel induction, `Le m fuel -> Le n fuel -> ...`, no `hf` needed) and `bitwise_swap` (assembled through the shared fuel `m + n`, reusing the ALREADY-DECLARED `bitwise_aux_agree_of_fuel` from `bitwise_comm`'s own dispatch, exactly as `bitwise_comm`'s own final assembly).\n\nThis is the `Nat.bitwise` twin of Mathlib v4.30's `Nat.bitwise_swap` (`F:ml430-nat-bitwise-swap-7175e90e`, flipped alongside this fact) -- our `Nat.bitwise` is Mathlib's OWN general combinator (not a specialization), so this closes the same proposition Mathlib states, restated pointwise because this kernel has no `funext` to state Mathlib's `Function.swap`-level function equality directly (the same restatement convention used throughout this prelude, e.g. `nat_prelude/cantor.rs`'s module doc)."
+}
