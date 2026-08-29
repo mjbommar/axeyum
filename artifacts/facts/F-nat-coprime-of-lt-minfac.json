@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-coprime-of-lt-minfac",
+  "title": "a number below minFac(n) and not zero is coprime to n",
+  "statement": "For every natural n, m: if m is not 0 and m < minFac(n), then gcd(n, m) = 1.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Not (Eq.{1} AxNat x1 AxNat.zero)) -> ((x3 : AxNat.lt x1 (AxNat.minFac x0)) -> Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.coprime_of_lt_min_fac",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.coprime_of_lt_min_fac",
+      "supports": "Nat.coprime_of_lt_min_fac is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_of_lt_min_fac 2>/dev/null | grep -Ec '^Nat\\.coprime_of_lt_min_fac[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` prints nothing for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.coprime_of_lt_min_fac[[:space:]]` so a future sibling (e.g. a helper of the same shape) cannot satisfy this row. Run `--release`: the debug build SIGABRTs building the full constructed environment (see CLAUDE.md's `prelude_theorem_inventory` gotcha)."
+    },
+    {
+      "id": "compute-Nat.coprime_of_lt_min_fac",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.coprime_of_lt_min_fac",
+      "supports": "gcd(25, 4) = 1: 25's least prime factor is 5, and 4 < 5, 4 != 0. m=4 is a DISCRIMINATING witness -- it shares no factor with 25 or with minFac(25)=5, unlike m=2 (also coprime, but would pass even under a broken bound that let m reach minFac(n) itself).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::coprime_of_lt_min_fac_applies_at_a_concrete_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.coprime_of_lt_min_fac` at the concrete instance `(n, m) = (25, 4)`, confirming the admitted type matches `Eq (gcd 25 4) 1`, that `minFac 25` reduces to `5`, and a NEGATIVE control that `gcd 25 5 != 1` -- `m := minFac n` itself is genuinely excluded by the strict bound, not merely untested."
+    },
+    {
+      "id": "footprint-Nat.coprime_of_lt_min_fac",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:coprime-numbers",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-fastfib-minfac",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0`/`x1` are `n`/`m`.\n\nThis is NOT a flip of `F:ml430-nat-coprime-of-lt-minfac-0f79bdba`, and it deliberately stays a SEPARATE fact rather than closing that mirror. Mathlib's `Nat.minFac n := if 2 | n then 2 else minFacAux n 3` is well-founded recursion on `sqrt n + 2 - k`, skipping even candidates and exiting early once `k*k > n`; this repository's `Nat.minFac` (`nat_prelude/min_fac.rs`) is fuel-STRUCTURAL recursion scanning every candidate `2, 3, 4, ...` with no skip and no early exit. The two compute the identical VALUE for every `n` but are not the same construction -- per the established `ml430` mirror-flip criterion (CLAUDE.md), a theorem about coprimality relative to Mathlib's `minFac` is a different proposition from one about THIS `minFac`, so the `ml430` fact stays `open` and this is new content over our own construction instead. (This reasoning was already recorded in `min_fac.rs`'s module doc by the prior lane that built `minFac`/`minFacAux`, before this fact's proof was attempted.)\n\nThe proof route: `Nat.minFacAuxMinimal` is a fuel-generalized minimality invariant for the linear search (`forall fuel n candidate, Le 2 candidate -> Eq (add candidate fuel) n -> (nothing in [2,candidate) divides n) -> nothing in [2, minFacAux fuel n candidate) divides n`), proved by induction on `fuel` with `n`/`candidate` generalized inside the motive (mirroring `fibonacci.rs`'s `fib_aux_add_two_gen` seed-generalization) and a `Bool.rec`-with-dependent-motive case split on the divisibility test at each step (mirroring `primes.rs`'s `least_divisor_search` succ case). `Nat.min_fac_minimal_of_two_le` specializes it to `minFac` itself at `n >= 2` by unwinding `minFac`'s two `bool_select_nat` boundary wrappers (both provably `false`, since `2 <= n` rules out `n = 0` and `n = 1`) down to `minFacAux (n-2) n 2`. `Nat.coprime_of_lt_min_fac` then case-splits on `n`: `n = 0` (`minFac 0 = 2`, so `m < 2` and `m != 0` force `m = 1`, and `gcd 0 1 = 1` directly), `n = 1` (`minFac 1 = 1`, vacuous -- nothing is both `< 1` and `!= 0`), and `n >= 2` (the real argument: if `gcd n m` were `>= 2`, it would be a divisor of `n` that is `<= m < minFac n`, via `le_of_dvd` on `gcd n m | m` and `m`'s positivity from `m != 0`, contradicting minimality).\n\nRequires `Nat.add_sub_cancel_of_le` (`nat_prelude/diagonal.rs`), so `declare_min_fac_minimal_all` is dispatched at the very end of `build_nat_prelude` rather than beside `declare_min_fac_all` -- the earlier placement produced `UnknownConst` (a forward reference), poisoning the whole shared prelude build; confirmed by bisecting the three new `declare_*` calls one at a time against the fast `min_fac_computes_the_least_prime_factor_with_negative_controls` test.",
+  "schema_version": 1
+}
