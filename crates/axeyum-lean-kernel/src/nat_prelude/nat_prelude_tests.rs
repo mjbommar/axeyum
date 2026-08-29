@@ -990,6 +990,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.multichoose_zero_right,
         p.multichoose_one,
         p.multichoose_one_right,
+        p.min_fac_aux_minimal,
+        p.min_fac_minimal_of_two_le,
+        p.coprime_of_lt_min_fac,
     ]
 }
 
@@ -6272,7 +6275,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        88 + 454,
+        88 + 457,
         "every promised definition and theorem must be rendered"
     );
 }

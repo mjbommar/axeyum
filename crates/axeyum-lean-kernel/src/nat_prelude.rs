@@ -3510,7 +3510,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.sub` (all declared long before this point); placed here to
         // sit next to the other prime/coprimality declarations.
         declare_min_fac_all(&mut d, &p)?;
-        declare_min_fac_minimal_all(&mut d, &p)?;
         declare_prime_pred_pos(&mut d, &p)?;
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
@@ -3667,6 +3666,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // declared by `declare_choose_all`); nothing needs `Nat.multichoose`,
         // so it goes last too.
         declare_multichoose_all(&mut d, &p)?;
+        // `Nat.minFacAuxMinimal`/`min_fac_minimal_of_two_le`/
+        // `coprime_of_lt_min_fac` need `Nat.add_sub_cancel_of_le`
+        // (`declare_diagonal`, far above), `Nat.gcd_dvd_left`/`_right`,
+        // `Nat.le_of_dvd`, `Nat.zero_lt_of_ne_zero` and the other
+        // order/divisibility lemmas used throughout this file, all declared
+        // long before this point; nothing needs these, so they go last too.
+        declare_min_fac_minimal_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

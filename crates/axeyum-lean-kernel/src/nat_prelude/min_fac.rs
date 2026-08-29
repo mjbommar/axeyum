@@ -369,7 +369,9 @@ fn min_condition_of_succ(
         let body = d.transport(spc, motive, not_divides_spc, e, reversed);
         d.lam_fv(h_fv, equal_ty, body)
     };
-    let body = or_cases(d, &p, strict_ty, equal_ty, goal, lt_branch, eq_branch, split);
+    let body = or_cases(
+        d, &p, strict_ty, equal_ty, goal, lt_branch, eq_branch, split,
+    );
     let with_lt = d.lam_fv(lt_fv, lt_ty, body);
     let with_ge = d.lam_fv(ge_fv, ge_ty, with_lt);
     d.lam_fv(e_fv, nat, with_ge)
@@ -478,7 +480,10 @@ fn min_fac_aux_minimal_step(d: &mut NatDev<'_>, p: &NatPrelude, j: ExprId, ih: E
     };
     let level_zero = d.kernel().level_zero();
     let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
-    let selected = d.apply(bool_rec, &[motive_sel, refutes_branch, divides_branch, condition_c]);
+    let selected = d.apply(
+        bool_rec,
+        &[motive_sel, refutes_branch, divides_branch, condition_c],
+    );
     let reflexivity = d.bool_refl(condition_c);
     let t = d.apply(selected, &[reflexivity]);
 
@@ -599,7 +604,10 @@ pub(super) fn declare_min_fac_minimal_of_two_le(
 
         let ge2_2 = d.lemma(p.le_refl, &[two]);
         let cancel = d.lemma(p.add_sub_cancel_of_le, &[two, n, h2n]);
-        let minimal_at_fuel = d.lemma(p.min_fac_aux_minimal, &[fuel, n, two, ge2_2, cancel, vacuous]);
+        let minimal_at_fuel = d.lemma(
+            p.min_fac_aux_minimal,
+            &[fuel, n, two, ge2_2, cancel, vacuous],
+        );
 
         let min_fac_n = d.const_app(p.min_fac, &[n]);
         let rev = d.symm(min_fac_n, searched, unfold_eq);
@@ -672,20 +680,52 @@ pub(super) fn declare_coprime_of_lt_min_fac(
             let lt_fv = d.fresh_fvar();
             let lt = d.kernel().fvar(lt_fv);
 
-            let m_motive = |d: &mut NatDev<'_>, y: ExprId| -> ExprId {
-                let zero = d.zero();
-                let g = d.gcd(zero, y);
-                let one = d.num(1);
+            // `Lt m (minFac 0)` is defeq `Lt m 2 = Le (succ m) (succ one)`.
+            let le_m_1 = d.lemma(p.le_of_succ_le_succ, &[m, one, lt]);
+            let split = d.lemma(p.lt_or_eq_of_le, &[m, one, le_m_1]);
+            let lt_m1_ty = d.lt(m, one);
+            let eq_m1_ty = d.eq(m, one);
+            let goal = {
+                let g = d.gcd(zero, m);
                 d.eq(g, one)
             };
-            let case_m0 = {
-                let refl0 = d.refl(zero);
-                let false_proof = d.apply(ne, &[refl0]);
-                let goal0 = m_motive(d, zero);
-                absurd(d, &p, goal0, false_proof)
+
+            // `Lt m 1`: forces `m = 0`, contradicting `ne`.
+            let lt_branch_m = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let le_m_0 = d.lemma(p.le_of_succ_le_succ, &[m, zero, h]);
+                let le_0_m = d.lemma(p.zero_le, &[m]);
+                let m_eq_0 = d.lemma(p.le_antisymm, &[m, zero, le_m_0, le_0_m]);
+                let false_proof = d.apply(ne, &[m_eq_0]);
+                let body = absurd(d, &p, goal, false_proof);
+                d.lam_fv(h_fv, lt_m1_ty, body)
             };
-            let case_m1 = d.lemma(p.gcd_zero_left, &[one]);
-            let body = super::ops::cases_lt_bound(d, &p, m, 2, lt, &m_motive, &[case_m0, case_m1]);
+            // `Eq m 1`: transport `gcd 0 1 = 1` along `Eq 1 m`.
+            let eq_branch_m = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let base = d.lemma(p.gcd_zero_left, &[one]);
+                let reversed = d.symm(m, one, h);
+                let motive = d.eq_motive(one, &|d, x| {
+                    let zero = d.zero();
+                    let g = d.gcd(zero, x);
+                    let one = d.num(1);
+                    d.eq(g, one)
+                });
+                let body = d.transport(one, motive, base, m, reversed);
+                d.lam_fv(h_fv, eq_m1_ty, body)
+            };
+            let body = or_cases(
+                d,
+                &p,
+                lt_m1_ty,
+                eq_m1_ty,
+                goal,
+                lt_branch_m,
+                eq_branch_m,
+                split,
+            );
             let with_lt = d.lam_fv(lt_fv, lt_ty, body);
             d.lam_fv(ne_fv, ne_ty, with_lt)
         };
@@ -755,15 +795,14 @@ pub(super) fn declare_coprime_of_lt_min_fac(
                 let g_dvd_x = d.lemma(p.gcd_dvd_left, &[x, m]);
                 let g_le_m = d.lemma(p.le_of_dvd, &[g, m, m_pos, g_dvd_m]);
                 let g_lt_min_fac = d.lemma(p.lt_of_le_of_lt, &[g, m, min_fac_x, g_le_m, lt]);
-                let not_dvd = d.lemma(
-                    p.min_fac_minimal_of_two_le,
-                    &[x, h2x, g, h, g_lt_min_fac],
-                );
+                let not_dvd = d.lemma(p.min_fac_minimal_of_two_le, &[x, h2x, g, h, g_lt_min_fac]);
                 let false_proof = d.apply(not_dvd, &[g_dvd_x]);
                 let result = absurd(d, &p, goal, false_proof);
                 d.lam_fv(h_fv, lt_1_g_ty, result)
             };
-            let proof_body = or_cases(d, &p, lt_1_g_ty, eq_1_g_ty, goal, lt_branch, eq_branch, split);
+            let proof_body = or_cases(
+                d, &p, lt_1_g_ty, eq_1_g_ty, goal, lt_branch, eq_branch, split,
+            );
             let with_lt = d.lam_fv(lt_fv, lt_ty, proof_body);
             d.lam_fv(ne_fv, ne_ty, with_lt)
         };

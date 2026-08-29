@@ -129,7 +129,12 @@ fn prime_divisor_predicate(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> Exp
 }
 
 /// `False.rec` into `goal` from a proof of `False`.
-pub(super) fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+pub(super) fn absurd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    goal: ExprId,
+    contradiction: ExprId,
+) -> ExprId {
     let anon = d.anon_name();
     let level = d.kernel().level_zero();
     let false_ty = d.kernel().const_(p.logic.false_, vec![]);
