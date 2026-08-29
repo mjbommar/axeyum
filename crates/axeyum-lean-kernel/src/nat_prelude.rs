@@ -185,11 +185,11 @@ mod restrict_pair;
 mod sqrt;
 mod subset_product;
 mod testbit_bitwise;
-mod xor_algebra;
 mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
 mod xor;
+mod xor_algebra;
 mod xor_order;
 mod xor_parity;
 

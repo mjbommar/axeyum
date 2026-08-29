@@ -155,7 +155,8 @@ fn reconstruct_div_mod(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId 
     let two = d.num(2);
     let dx = d.div(x, two);
     let rx = d.modulo(x, two);
-    let sum = d.add(d.mul(two, dx), rx);
+    let two_dx = d.mul(two, dx);
+    let sum = d.add(two_dx, rx);
     let eq_ty = d.eq(x, sum);
     let bound_ty = d.lt(rx, two);
     let h_exec = d.lemma(p.div_mod_exec, &[one, x]);
@@ -190,7 +191,8 @@ fn declare_eq_of_test_bit_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
         let le_ty = d.le(m, k);
         let bt = bits_ty_at(d, m, n);
         let eqmn = d.eq(m, n);
-        let inner = d.arrow(le_ty, d.arrow(bt, eqmn));
+        let arrow_bt = d.arrow(bt, eqmn);
+        let inner = d.arrow(le_ty, arrow_bt);
         let over_m = d.pi_fv(m_fv, nat, inner);
         d.pi_fv(n_fv, nat, over_m)
     };
@@ -228,7 +230,8 @@ fn declare_eq_of_test_bit_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
             let le_ty = d.le(mm, succ_pk);
             let bt = bits_ty_at(d, mm, n);
             let eqmn = d.eq(mm, n);
-            d.arrow(le_ty, d.arrow(bt, eqmn))
+            let arrow_bt = d.arrow(bt, eqmn);
+            d.arrow(le_ty, arrow_bt)
         };
 
         let at_zero = |d: &mut NatDev<'_>| -> ExprId {
@@ -263,7 +266,8 @@ fn declare_eq_of_test_bit_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                 let j = d.kernel().fvar(j_fv);
                 let succ_j = d.succ(j);
                 let h = d.apply(bits_hyp, &[succ_j]);
-                d.lam_fv(j_fv, d.nat_ty(), h)
+                let nat_ty = d.nat_ty();
+                d.lam_fv(j_fv, nat_ty, h)
             };
 
             let half_le_pk = half_le_predecessor_of_succ(d, &p, pm, pk, le_hyp);
@@ -278,9 +282,11 @@ fn declare_eq_of_test_bit_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 
             let m_mod = d.modulo(m_succ, two);
             let n_mod = d.modulo(n, two);
-            let mid_m = d.add(d.mul(two, half_m), m_mod);
-            let mid_shared = d.add(d.mul(two, half_n), m_mod);
-            let mid_n = d.add(d.mul(two, half_n), n_mod);
+            let two_half_m = d.mul(two, half_m);
+            let two_half_n = d.mul(two, half_n);
+            let mid_m = d.add(two_half_m, m_mod);
+            let mid_shared = d.add(two_half_n, m_mod);
+            let mid_n = d.add(two_half_n, n_mod);
 
             let step1 = d.congr(half_m, half_n, half_eq, &|d, x| {
                 let two = d.num(2);
@@ -299,8 +305,10 @@ fn declare_eq_of_test_bit_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
             let recon_m = reconstruct_div_mod(d, &p, m_succ);
             let recon_n = reconstruct_div_mod(d, &p, n);
             let recon_n_symm = d.symm(n, mid_n, recon_n);
-            let (_, eq_final) =
-                d.chain(m_succ, &[(mid_m, recon_m), (mid_n, combined), (n, recon_n_symm)]);
+            let (_, eq_final) = d.chain(
+                m_succ,
+                &[(mid_m, recon_m), (mid_n, combined), (n, recon_n_symm)],
+            );
 
             let wb = d.lam_fv(bits_fv, bt_s, eq_final);
             d.lam_fv(le_fv, le_ty_s, wb)
