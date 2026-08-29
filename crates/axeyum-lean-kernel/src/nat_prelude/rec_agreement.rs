@@ -3874,7 +3874,14 @@ fn lor_bit_assoc(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: Ex
 
     let outer_zero = middle_at(d, zero);
     let outer_one = middle_at(d, one);
-    cases_mod_two(d, &p, a, &|d, x| claim(d, x, bit_b, bit_c), outer_zero, outer_one)
+    cases_mod_two(
+        d,
+        &p,
+        a,
+        &|d, x| claim(d, x, bit_b, bit_c),
+        outer_zero,
+        outer_one,
+    )
 }
 
 /// The hard leaf of [`declare_lor_aux_assoc_of_fuel`]: `a = succ_a`,
@@ -4318,8 +4325,7 @@ fn declare_lor_aux_assoc_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
                                     let y = d.const_app(p.lor_aux, &[sk, succ_b, succ_c]);
                                     let lhs_is_y = d.refl(y);
                                     let rhs = d.const_app(p.lor_aux, &[sk, zero, y]);
-                                    let rhs_is_y =
-                                        d.lemma(p.lor_aux_zero_left_any_fuel, &[sk, y]);
+                                    let rhs_is_y = d.lemma(p.lor_aux_zero_left_any_fuel, &[sk, y]);
                                     let rhs_is_y_rev = d.symm(rhs, y, rhs_is_y);
                                     d.trans(lhs, y, rhs, lhs_is_y, rhs_is_y_rev)
                                 },
@@ -4543,8 +4549,7 @@ fn declare_lor_aux_le_add(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
                         // ih_at : Le rec (add half_m half_n)
 
                         let sum_halves = d.add(half_m, half_n);
-                        let two_rec_le =
-                            d.lemma(p.mul_le_mul_left, &[two, rec, sum_halves, ih_at]);
+                        let two_rec_le = d.lemma(p.mul_le_mul_left, &[two, rec, sum_halves, ih_at]);
                         // two_rec_le : Le (mul 2 rec) (mul 2 sum_halves)
 
                         let dist = d.lemma(p.left_distrib, &[two, half_m, half_n]);
@@ -4564,8 +4569,10 @@ fn declare_lor_aux_le_add(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
                         let ble_mn = d.ble(bit_m, bit_n);
                         let bit = d.bool_select_nat(ble_mn, bit_n, bit_m);
 
-                        let step_a =
-                            d.lemma(p.add_le_add_right, &[bit, two_rec, sum_doubled, two_rec_le2]);
+                        let step_a = d.lemma(
+                            p.add_le_add_right,
+                            &[bit, two_rec, sum_doubled, two_rec_le2],
+                        );
                         // step_a : Le (add two_rec bit) (add sum_doubled bit)
                         let bit_sum = d.add(bit_m, bit_n);
                         let step_b =
