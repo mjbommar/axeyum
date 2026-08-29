@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-orthocentre-cofactor-identity-kernel-checked",
+  "title": "The orthocentre certificate's cofactor identity is kernel-reconstructed at symbolic coordinates -- the first multivariate CAS->kernel bridge",
+  "statement": "For the eight-variable polynomial identity F:geometry-orthocentre-altitudes-concurrent's certificate states -- conclusion = (-1)*generator_0 + (-1)*generator_1 over the coordinates ax, ay, bx, by, cx, cy, px, py -- the identity itself is reconstructed through crate::Kernel::add_declaration at SYMBOLIC coordinates (eight universally quantified Rat variables), not merely checked inside axeyum-cas's own MvPoly normal form. This is the first CAS->kernel bridge in the repository that is not univariate and not evaluated at concrete points. It is deliberately WEAKER than the geometry fact it is a sibling of, in four ways spelled out in axiom_footprint: it does not establish that those eight Rat variables ARE plane coordinates or that the polynomials MEAN perpendicularity (the coordinatisation is relocated into a kernel definition choice, not discharged); it does not discharge the hypotheses, so the implication generator_0 = 0 and generator_1 = 0 implies conclusion = 0 is one further step this fact does not take; it says nothing about non-degeneracy (this certificate has none); and it covers only CONSTANT cofactors and INTEGER coefficients, which is 2 of the 10 geometry certificates.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (forall ((ax Rat) (ay Rat) (bx Rat) (by Rat) (cx Rat) (cy Rat) (px Rat) (py Rat))\n  (= (+ (* ax cx) (* -1 ax px) (* ay cy) (* -1 ay py)\n        (* -1 bx cx) (* bx px) (* -1 by cy) (* by py))\n     (+ (* -1 (+ (* ax bx) (* -1 ax cx) (* ay by) (* -1 ay cy)\n                 (* -1 bx px) (* -1 by py) (* cx px) (* cy py)))\n        (* -1 (+ (* -1 ax bx) (* ax px) (* -1 ay by) (* ay py)\n                 (* bx cx) (* by cy) (* -1 cx px) (* -1 cy py)))))))",
+    "fragment": "nra-geometry-cofactor-identity",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "px",
+      "py"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:geometry-orthocentre-altitudes-concurrent"
+  ],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a Kernel::add_declaration acceptance whose axiom_footprint is asserted EMPTY in the test itself, built from rat_prelude/int_prelude/nat_prelude constants that are all measured axiom-free -- but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane: RELOCATED, NOT DISCHARGED. The kernel sees eight Rat variables and an algebraic identity. That ax is the abscissa of a point A, that ax*bx + ay*by - ... is perpendicularity, and that the two hypotheses describe two altitudes of a triangle, are modelling choices made in axeyum_cas::geometry_corpus::altitudes_concurrent and reproduced verbatim by this bridge's translator. Reconstruction moves that assumption from a CAS-internal convention into a kernel definition choice; it does not remove it. This is exactly the qualification docs/research/11-design-review/2026-08-29-row-three-is-blocked-on-multivariate.md insists must survive when the kernel-reconstructed number moves.",
+    "geometry.implication-not-discharged: this fact states the polynomial IDENTITY conclusion = -g0 - g1, which is what the certificate carries. It does NOT state the implication (g0 = 0 and g1 = 0) implies conclusion = 0. That step is one Rat rewrite away and is not taken here: no Rat hypothesis is discharged and no implication is declared, so the theorem admitted is an equation between eight-variable polynomials, not the geometric conditional.",
+    "geometry.characteristic-zero-specialisation: inherited unchanged from F:geometry-orthocentre-altitudes-concurrent. A rational-coefficient cofactor identity holds in every Q-algebra, so the theorem is one of every characteristic-zero field, not specifically of the real plane; and this reconstruction is over Rat, not over CReal, so nothing here says the coordinates are real numbers.",
+    "cas.multivariate-bridge-covers-constant-cofactors-and-integer-coefficients-only: the proof-emitting normalizer built for this fact handles a LINEAR combination of canonical sums over an ordered monomial basis. It does not multiply two non-constant polynomials, so it reaches only the 2 of 10 geometry certificates whose cofactors are constants (orthocentre and medians-concurrent), and its translator declines any non-integer coefficient, which excludes medians-concurrent's +-1/2 -- leaving orthocentre as the only one of the ten currently in range."
+  ],
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-orthocentre-cofactor-identity",
+      "kind": "kernel-term",
+      "supports": "conclusion = (-1)*g0 + (-1)*g1 at eight universally quantified Rat coordinates, admitted by crate::Kernel::add_declaration as Check.geometry_orthocentre_cofactor_identity. The polynomials are NOT hand-copied: the test calls axeyum_cas::geometry_corpus::corpus() for the orthocentre-altitudes-concurrent problem, runs axeyum_cas::geometry_certify::certify on it, and translates cert.generators / cert.conclusions[0].poly / cert.conclusions[0].cofactors -- asserting first that both cofactors are the CONSTANT -1 and that the coordinate ORDER is the certificate's own. The proof is emitted by a Rust-side normalizer (prove_scale, prove_merge) whose every step is a Rat ring lemma (left_distrib, right_distrib, add_assoc, add_comm, mul_assoc, mul_comm, mul_zero, zero_add, add_zero, Rat.ofInt_add, Rat.ofInt_mul); the kernel re-derives all of them. The declaration's axiom_footprint is asserted EMPTY and its kind asserted Declaration::Theorem in the same test.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (untrusted producer: cofactor-tracked Buchberger reduction that finds the cofactors; this bridge never recomputes them)",
+        "rat_prelude::cas_geometry_bridge_tests::prove_scale and prove_merge (the proof-emitting normalizer, entirely Rust-side and entirely untrusted -- it only proposes a term)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated eight-variable Eq Rat from the supplied proof term, and supplies the axiom_footprint the test asserts empty)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_bridge_tests::tests::geometry_orthocentre_cofactor_identity_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_geometry_bridge_tests::tests::geometry_orthocentre_cofactor_identity_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 8,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs",
+      "notes": "Measured wall-clock 7.09s for all three tests in the module together, including the one-time Rat prelude build -- comparable to the univariate sibling bridges despite being symbolic in eight variables, because every monomial is built by one function and is therefore an OPAQUE atom: no mul_comm or mul_assoc step ever has to see inside one, so the identity is linear rather than a ring-normalisation problem. MUTATION-VERIFIED both halves separately, each killing exactly one test: (a) perturbing the scaled coefficient (k*c -> k*c+1) kills it at the merged == conclusion assertion, pinning the STATEMENT to the certificate; (b) swapping one lemma in the zero-drop path (Rat.zero_add -> Rat.add_zero, same arity, same argument, wrong direction) kills it with a TypeMismatch out of add_declaration in 6.93s, showing the PROOF is genuinely re-derived by the trust anchor and that a wrong rewrite is refused in bounded time."
+    },
+    {
+      "id": "translator-and-normal-form-arithmetic-checked-against-numbers",
+      "kind": "instance-pin",
+      "supports": "That the translator read the certificate the CAS actually produced, and that the IntPoly arithmetic mirroring prove_scale/prove_merge computes the right answer -- neither of which the kernel can see, because it never sees the MvPoly. The two polynomials and the conclusion are evaluated at an integer point OFF the orthocentre (A=(0,0), B=(4,0), C=(1,3), P=(2,1)) where they take three DISTINCT nonzero values (-3, -1, 4), so a transposition between any two of the three changes the answer; the identity is then checked numerically at that point (4 = 3 + 1). Separately, -g0 - g1 is computed on the term lists and asserted equal to the conclusion, with 16 terms in and 8 out because four monomials cancel exactly -- and a negative control asserts that +g0 - g1 does NOT equal the conclusion, without which the equality assertion could be satisfied by an add_poly that ignored its arguments.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (produces the MvPoly values being read)",
+        "rat_prelude::cas_geometry_bridge_tests::eval_int_poly (independent integer evaluation, used only in the test and never in a proof)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_bridge_tests::tests:: 2>/dev/null | grep -cE '^test result: ok\\. 3 passed; 0 failed'",
+      "checker_seconds": 8,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs",
+      "notes": "The evaluation triple was first written by hand as (-4, -3, 7) and is actually (-3, -1, 4) -- wrong in all three slots. The test caught it, which is the reason this row asserts against numbers rather than against a shape: CLAUDE.md's standing rule is that only evaluation can tell you a construction computes the wrong value, and a hand-computed expectation is exactly what it catches."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "lane cas-multivariate: rat_prelude::cas_geometry_bridge_tests (crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs), dispatched against docs/research/11-design-review/2026-08-29-row-three-is-blocked-on-multivariate.md, which named multivariate polynomial identity checking as the single dependency blocking 19 of row 3's 28 cas-internal facts",
+    "source": "the cofactor identity of axeyum_cas::geometry_corpus::altitudes_concurrent's certificate, produced by axeyum_cas::geometry_certify::certify and committed at artifacts/geometry-certificates/orthocentre-altitudes-concurrent.json",
+    "prior_art": [
+      {
+        "who": "Hilbert; Wu Wen-Tsun; Buchberger",
+        "what": "the Nullstellensatz cofactor form of a geometry theorem, and its mechanisation by characteristic sets / Groebner bases",
+        "year": 1978,
+        "where": "Wu, 'On the decision problem and the mechanization of theorem-proving in elementary geometry', Sci. Sinica 21 (1978)",
+        "attribution": "standard attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:geometry-orthocentre-altitudes-concurrent, not an edit to it, for the same reason the IVT/EVT/MVT bridges are siblings: folding this evidence into the parent would make scripts/validate-facts.py's classify_cas_certificate_fact label the WHOLE certificate -- the coordinatisation and the implication included -- as kernel-reconstructed, which would overclaim exactly what the design review says must not be overclaimed. THE ARITY SURVEY THAT SIZED THIS: measured over the ten committed geometry certificates, coordinate counts run 6 (thales) to 19 (pappus, including its saturation variable), so the fixed-arity (bivariate/trivariate) alternative the brief asked to be considered is refuted -- no small fixed arity covers even two of the ten. Two of the ten also carry a VACUOUS identity and are therefore not the cheap wins their term counts suggest: varignon's conclusion polynomials are both the zero polynomial with no generators, and thales' single cofactor is the constant 1 against a conclusion byte-identical to its generator, so the kernel obligation there is refl. Orthocentre is the cheapest NON-vacuous one. The representation chosen, and why no new kernel type was added, is argued at length in the module doc: the ambient Rat ring expression with the CAS's canonical sparse form as the NORMAL FORM rather than as a datatype -- a certificate's obligation is one closed identity with no quantification over polynomials, so a polynomial type would carry no statement the plain expression cannot, while a Nat -> Nat exponent vector would buy a product-over-range whose Rat.one padding is ~150 rewrites of pure cost at this size. The remaining 18 of the 28 and what each needs are recorded in docs/plan/status/277-cas-multivariate.md."
+}
