@@ -1702,3 +1702,210 @@ pub(super) fn declare_land_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<()
     })?;
     Ok(())
 }
+
+// ============================================================================
+// `land_aux_le_left` / `land_le_left` — the bound the `land_assoc` brief
+// names as needed when a `landAux` application occupies an ARGUMENT
+// position of another (e.g. `landAux fuel (landAux fuel a b) c`): the outer
+// application's fuel-sufficiency requirement (`Le m fuel`,
+// [`declare_land_aux_agree_of_fuel`]) needs a bound on the nested value, and
+// nothing in this prelude supplied one before this.
+//
+// `landAux fuel m n ≤ m` holds at ANY fuel, sufficient or not (unlike
+// fuel-irrelevance, this needs NO hypothesis) — by induction on fuel alone,
+// with the value arguments generalized exactly as
+// [`agree_by_fuel_induction`] already generalizes them:
+//
+// - `fuel = 0`: the base row is the constant `0` regardless of `m`, `n`
+//   (even a fully symbolic/stuck `m`, `n`) — `Le 0 m` is `zero_le`.
+// - `fuel = succ k`, `m = 0`: `landAux (succ k) 0 n = 0`
+//   ([`declare_land_aux_zero_left_any_fuel`]) — `Le 0 0`.
+// - `fuel = succ k`, `m = succ _`, `n = 0`: the OUTER `n = 0` guard is
+//   LITERAL, so `landAux (succ k) m 0 = 0` regardless of `m`'s shape —
+//   `Le 0 m` again.
+// - `fuel = succ k`, both positive: the row is `2 * rec + bit` with
+//   `rec ≤ m/2` (the IH) and `bit = (m%2)*(n%2) ≤ m%2` (`n%2 ≤ 1`,
+//   monotonicity), so the row is `≤ 2*(m/2) + m%2 = m` (the executable
+//   div/mod identity, `div_mod_exec`).
+// ============================================================================
+
+/// Given `bit_n ≤ 1`, `Le (mul bit_m bit_n) bit_m` — monotonicity of `mul`
+/// in the right argument at `bit_n ≤ 1`, closed by `mul_one`. Shared by the
+/// "both positive" leaf below.
+fn bit_product_le_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    bit_m: ExprId,
+    bit_n: ExprId,
+    bit_n_le_one: ExprId,
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let bit = d.mul(bit_m, bit_n);
+    let bit_m_one = d.mul(bit_m, one);
+    let mono = d.lemma(p.mul_le_mul_left, &[bit_m, bit_n, one, bit_n_le_one]);
+    // mono : Le bit bit_m_one
+    let mul_one_eq = d.lemma(p.mul_one, &[bit_m]); // Eq bit_m_one bit_m
+    let motive = d.eq_motive(bit_m_one, &|d, x| d.le(bit, x));
+    d.transport(bit_m_one, motive, mono, bit_m, mul_one_eq)
+}
+
+/// `land_aux_le_left : ∀ fuel m n, Le (landAux fuel m n) m` — see the
+/// section doc above.
+fn declare_land_aux_le_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    let statement = |d: &mut NatDev<'_>, fuel: ExprId, m: ExprId, n: ExprId| {
+        let lhs = d.const_app(p.land_aux, &[fuel, m, n]);
+        d.le(lhs, m)
+    };
+
+    let base = |d: &mut NatDev<'_>, m: ExprId, _n: ExprId| -> ExprId { d.lemma(p.zero_le, &[m]) };
+
+    let step = |d: &mut NatDev<'_>, k: ExprId, ih: ExprId, m: ExprId, n: ExprId| -> ExprId {
+        let sk = d.succ(k);
+
+        cases_zero_succ(
+            d,
+            m,
+            &|d, candidate| {
+                let lhs = d.const_app(p.land_aux, &[sk, candidate, n]);
+                d.le(lhs, candidate)
+            },
+            &|d| {
+                // m = 0: landAux sk 0 n = 0 (bool_select_nat_same is needed
+                // here too -- n stays symbolic, exactly
+                // `land_aux_zero_left_any_fuel`'s own succ branch).
+                let zero = d.zero();
+                let lhs = d.const_app(p.land_aux, &[sk, zero, n]);
+                let eq0 = d.lemma(p.land_aux_zero_left_any_fuel, &[sk, n]); // Eq lhs 0
+                let le00 = d.lemma(p.le_refl, &[zero]); // Le 0 0
+                let motive = d.eq_motive(zero, &|d, x| d.le(x, zero));
+                let eq0_rev = d.symm(lhs, zero, eq0); // Eq 0 lhs
+                d.transport(zero, motive, le00, lhs, eq0_rev)
+            },
+            &|d, m_pred| {
+                let succ_m = d.succ(m_pred);
+                cases_zero_succ(
+                    d,
+                    n,
+                    &|d, candidate| {
+                        let lhs = d.const_app(p.land_aux, &[sk, succ_m, candidate]);
+                        d.le(lhs, succ_m)
+                    },
+                    &|d| {
+                        // n = 0 (LITERAL): the outer guard fires directly,
+                        // regardless of succ_m's shape.
+                        d.lemma(p.zero_le, &[succ_m])
+                    },
+                    &|d, n_pred| {
+                        let succ_n = d.succ(n_pred);
+                        let two = d.num(2);
+                        let one = d.num(1);
+                        let half_m = d.div(succ_m, two);
+                        let half_n = d.div(succ_n, two);
+                        let bit_m = d.modulo(succ_m, two);
+                        let bit_n = d.modulo(succ_n, two);
+
+                        let rec = d.const_app(p.land_aux, &[k, half_m, half_n]);
+                        let ih_at = d.apply(ih, &[half_m, half_n]); // Le rec half_m
+
+                        let pos2 = d.zero_lt_succ(one); // Lt 0 2
+                        let bit_n_lt_2 = d.lemma(p.mod_lt, &[succ_n, two, pos2]);
+                        let bit_n_le_1 = d.lemma(p.le_of_lt_succ, &[bit_n, one, bit_n_lt_2]);
+                        let bit_le_bit_m = bit_product_le_left(d, &p, bit_m, bit_n, bit_n_le_1);
+                        let bit = d.mul(bit_m, bit_n);
+
+                        let two_rec_le = d.lemma(p.mul_le_mul_left, &[two, rec, half_m, ih_at]);
+                        // two_rec_le : Le (2*rec) (2*half_m)
+
+                        let two_rec = d.mul(two, rec);
+                        let two_half_m = d.mul(two, half_m);
+                        let step_a =
+                            d.lemma(p.add_le_add_right, &[bit, two_rec, two_half_m, two_rec_le]);
+                        // step_a : Le (2*rec + bit) (2*half_m + bit)
+                        let step_b = d.lemma(
+                            p.add_le_add_left,
+                            &[two_half_m, bit, bit_m, bit_le_bit_m],
+                        );
+                        // step_b : Le (2*half_m + bit) (2*half_m + bit_m)
+
+                        let value = d.add(two_rec, bit);
+                        let mid = d.add(two_half_m, bit);
+                        let target = d.add(two_half_m, bit_m);
+                        let combined = d.lemma(p.le_trans, &[value, mid, target, step_a, step_b]);
+                        // combined : Le value target
+
+                        // target = succ_m, via the executable div/mod identity.
+                        let h_exec = d.lemma(p.div_mod_exec, &[one, succ_m]);
+                        // h_exec : divMod 2 succ_m half_m bit_m
+                        let eq_ty = d.eq(succ_m, target);
+                        let bound_ty = d.lt(bit_m, two);
+                        let eq1 = and_left(d, eq_ty, bound_ty, h_exec); // Eq succ_m target
+                        let eq1_rev = d.symm(succ_m, target, eq1); // Eq target succ_m
+
+                        let final_motive = d.eq_motive(target, &|d, x| d.le(value, x));
+                        d.transport(target, final_motive, combined, succ_m, eq1_rev)
+                        // : Le value succ_m -- and `landAux sk succ_m succ_n`
+                        // is defeq to `value` (both guards resolve `false`
+                        // directly, succ_m/succ_n literal), so this closes
+                        // the goal `Le (landAux sk succ_m succ_n) succ_m`.
+                    },
+                )
+            },
+        )
+    };
+
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+    let proof_fn = agree_by_fuel_induction(d, &statement, &base, &step, fuel);
+
+    let nat = d.nat_ty();
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let applied = d.apply(proof_fn, &[m, n]);
+    let ty = {
+        let body = statement(d, fuel, m, n);
+        let with_n = d.pi_fv(n_fv, nat, body);
+        let with_m = d.pi_fv(m_fv, nat, with_n);
+        d.pi_fv(fuel_fv, nat, with_m)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, applied);
+        let with_m = d.lam_fv(m_fv, nat, with_n);
+        d.lam_fv(fuel_fv, nat, with_m)
+    };
+    d.declare_theorem(p.land_aux_le_left, ty, value)
+}
+
+/// `land_le_left : ∀ a b, Le (land a b) a` — [`declare_land_aux_le_left`] at
+/// `fuel := a`, `m := a`: `land a b` and `landAux a a b` are the SAME term
+/// by definition, so the kernel accepts the bound directly against this
+/// `land`-headed statement via defeq, no extra proof step.
+fn declare_land_le_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.land_le_left, 2, &|d, values| {
+        let a = values[0];
+        let b = values[1];
+        let bound = d.lemma(p.land_aux_le_left, &[a, a, b]);
+        let lhs = d.const_app(p.land, &[a, b]);
+        (d.le(lhs, a), bound)
+    })?;
+    Ok(())
+}
+
+/// Declare [`declare_land_aux_le_left`] and its `land`-headed corollary.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_land_le_left_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_land_aux_le_left(d, p)?;
+    declare_land_le_left(d, p)?;
+    Ok(())
+}
