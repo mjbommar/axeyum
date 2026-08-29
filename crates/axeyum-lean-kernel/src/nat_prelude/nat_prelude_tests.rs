@@ -12284,15 +12284,6 @@ fn zero_or_succ_applies_at_a_compound_term_and_is_consumed_by_or_elim() {
     );
 }
 
-/// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
-/// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
-/// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
-/// recursion's guard, exercising `(n + b - 1) / b` at each). The boundary
-/// equations then apply at a concrete argument and are axiom-free.
-///
-/// Negative controls differ from the truth by ONE successor, deliberately
-/// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
-#[test]
 /// `Nat.land_bit` — the `Nat.bit` decode bridge's payoff
 /// (`nat_prelude::bit_decode`), closing `F:ml430-nat-land-bit-b9ab7475`.
 /// Applies at a fully symbolic `(a, m, b, n)` (the theorem itself), and at a
@@ -12397,6 +12388,15 @@ fn land_bit_applies_at_a_concrete_discriminating_instance() {
     );
 }
 
+/// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
+/// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
+/// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
+/// recursion's guard, exercising `(n + b - 1) / b` at each). The boundary
+/// equations then apply at a concrete argument and are axiom-free.
+///
+/// Negative controls differ from the truth by ONE successor, deliberately
+/// (see `log_computes_and_its_boundary_equations_apply`'s doc for why).
+#[test]
 fn clog_computes_and_its_boundary_equations_apply() {
     let mut f = Fixture::new();
     let clog = f.p.clog;

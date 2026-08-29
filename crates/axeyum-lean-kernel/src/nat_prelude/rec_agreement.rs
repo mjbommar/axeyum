@@ -2839,8 +2839,7 @@ fn declare_land_aux_assoc_hard_leaf(
         });
         // cong_x : Eq c_x c_cba
 
-        let (_, lhs_is_zero) =
-            d.chain(lhs, &[(c_x, comm_xc), (c_cba, cong_x), (zero, prop_cba)]);
+        let (_, lhs_is_zero) = d.chain(lhs, &[(c_x, comm_xc), (c_cba, cong_x), (zero, prop_cba)]);
 
         let cong_rhs = d.congr(y, zero, hy, &|d, hole| {
             d.const_app(p.land_aux, &[sk, succ_a, hole])
@@ -3037,7 +3036,11 @@ fn declare_land_aux_assoc_hard_leaf(
             });
             let (_, rec_xc_eq_rec_ay) = d.chain(
                 rec_xc,
-                &[(rec_ab_c, cong_rec1), (half_a_rec_bc, ih_at), (rec_ay, cong_rec2)],
+                &[
+                    (rec_ab_c, cong_rec1),
+                    (half_a_rec_bc, ih_at),
+                    (rec_ay, cong_rec2),
+                ],
             );
 
             // bit_Xc -[congr bit_p_eq]-> mul bit_ab bit_c
@@ -3054,7 +3057,11 @@ fn declare_land_aux_assoc_hard_leaf(
             });
             let (_, bit_xc_eq_bit_ay) = d.chain(
                 bit_xc,
-                &[(mul_ab_c, cong_bit1), (mul_a_bc, assoc), (bit_ay, cong_bit2)],
+                &[
+                    (mul_ab_c, cong_bit1),
+                    (mul_a_bc, assoc),
+                    (bit_ay, cong_bit2),
+                ],
             );
 
             // Lift both equalities through the shared `2 * rec + bit` shape.
@@ -3082,7 +3089,11 @@ fn declare_land_aux_assoc_hard_leaf(
             let cong_r_rev = d.symm(rhs, rhs_at_q, cong_r);
             let (_, body) = d.chain(
                 lhs,
-                &[(lhs_at_p, cong_l), (rhs_at_q, stepped_eq), (rhs, cong_r_rev)],
+                &[
+                    (lhs_at_p, cong_l),
+                    (rhs_at_q, stepped_eq),
+                    (rhs, cong_r_rev),
+                ],
             );
 
             let minor_inner = d.lam_fv(hxp_fv, hxp_ty, body);
