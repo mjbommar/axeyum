@@ -8,12 +8,28 @@
     "statement": "∀ (n m : ℕ), n &&& m = m &&& n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-nat-bitwise-comm-1a273bae"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "reconciliation-Nat.land_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_comm",
+      "supports": "∀ (n m : ℕ), n &&& m = m &&& n",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel",
+        "axeyum-lean-import/checked-proposition-compatibility"
+      ],
+      "artifact": "F:nat-land-comm",
+      "notes": "Registers an independently constructed native theorem (`F:nat-land-comm`, `Nat.land_comm` in `nat_prelude/rec_agreement.rs`) whose proposition definitionally matches this proof-free imported goal -- Mathlib's `Nat.land` is `Nat.bitwise and`, and our `Nat.land` is proved equal to the `bitwise and_fn` specialization by `Nat.bitwise_and_eq_land`, so this closes the SAME function's commutativity, not a lookalike about a different definition (the criterion this repository uses to decide when flipping an `ml430` mirror is honest: Mathlib's `def` is the same function, not merely a theorem about a different one). No Autogenesis operation produced the theorem; the route taken (same-fuel commutativity plus fuel-irrelevance through a shared fuel `m + n`) is NOT Mathlib's own route via `bitwise_comm`, which is why `depends_on` still names the still-open `F:ml430-nat-bitwise-comm-1a273bae` -- that edge records curriculum lineage, not a dependency this proof actually used."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -28,5 +44,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Proved in Axeyum by reconciliation with the independently constructed native theorem `F:nat-land-comm` (`Nat.land_comm`) -- see that fact's `notes` for the construction. The external theorem declaration remains prior art, not the source of this proof; formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module, not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review; that edge is curriculum and leakage metadata (Mathlib's OWN route to `land_comm` is via `bitwise_comm`, which our proof does not use) and grants no dispatch, proof, or admission authority."
 }

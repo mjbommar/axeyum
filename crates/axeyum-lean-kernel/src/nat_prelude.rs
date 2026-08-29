@@ -260,7 +260,10 @@ use primes::{
     declare_prime_dvd_of_dvd_pow, declare_prime_even_iff, declare_prime_not_dvd_mul,
     declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
-use rec_agreement::{declare_land_fuel_irrelevance_all, declare_rec_agreement_all};
+use rec_agreement::{
+    declare_land_comm, declare_land_fuel_irrelevance_all, declare_ldiff_fuel_irrelevance_all,
+    declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
+};
 use rectangle::declare_rectangle;
 use relation::{
     declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
@@ -2695,6 +2698,52 @@ pub struct NatPrelude {
     /// [`Self::land_aux_agree_of_fuel`] at `fuel2 := m` (`le_refl`), since
     /// `landAux m m n` and `land m n` are the SAME term by definition.
     pub land_aux_eq_land_of_le: NameId,
+    /// `Nat.lor_aux_zero_left_any_fuel : ∀ fuel n, Eq (lorAux fuel 0 n) n` —
+    /// the `lor` twin of [`Self::land_aux_zero_left_any_fuel`], closing to
+    /// `n` rather than `0` (`lorAux`'s fuel-exhaustion row RETURNS `n`; see
+    /// `lor.rs`'s module doc). Unlike the `land` version, the `fuel = succ f`
+    /// case genuinely needs `n`'s shape exposed (a nested case split), since
+    /// its two guard branches are `m` (`= 0`, literal) and the reduced inner
+    /// term (`= n`) — two DIFFERENT terms, not one repeated. See
+    /// `nat_prelude::rec_agreement`.
+    pub lor_aux_zero_left_any_fuel: NameId,
+    /// `Nat.lor_aux_agree_of_fuel : ∀ fuel1 m n fuel2, Le m fuel1 → Le m
+    /// fuel2 → Eq (lorAux fuel1 m n) (lorAux fuel2 m n)` — the `lor` twin of
+    /// [`Self::land_aux_agree_of_fuel`]. See `nat_prelude::rec_agreement`.
+    pub lor_aux_agree_of_fuel: NameId,
+    /// `Nat.lor_aux_eq_lor_of_le : ∀ fuel m n, Le m fuel → Eq (lorAux fuel m
+    /// n) (lor m n)` — fuel-irrelevance for `lorAux`, the `lor` twin of
+    /// [`Self::land_aux_eq_land_of_le`].
+    pub lor_aux_eq_lor_of_le: NameId,
+    /// `Nat.ldiff_aux_zero_left_any_fuel : ∀ fuel n, Eq (ldiffAux fuel 0 n)
+    /// 0` — the `ldiff` twin of [`Self::land_aux_zero_left_any_fuel`],
+    /// byte-for-byte the same proof (`ldiffAux` shares `land`'s
+    /// absorbing-zero base case exactly — see `ldiff.rs`'s module doc).
+    pub ldiff_aux_zero_left_any_fuel: NameId,
+    /// `Nat.ldiff_aux_agree_of_fuel : ∀ fuel1 m n fuel2, Le m fuel1 → Le m
+    /// fuel2 → Eq (ldiffAux fuel1 m n) (ldiffAux fuel2 m n)` — the `ldiff`
+    /// twin of [`Self::land_aux_agree_of_fuel`], with `ldiffAux`'s hybrid
+    /// guards in the `m = succ predecessor` step (`on_n_zero = m`
+    /// pass-through, `on_m_zero = 0` absorbing — see `ldiff.rs`'s module
+    /// doc) and its `beq`-based per-bit combine.
+    pub ldiff_aux_agree_of_fuel: NameId,
+    /// `Nat.ldiff_aux_eq_ldiff_of_le : ∀ fuel m n, Le m fuel → Eq (ldiffAux
+    /// fuel m n) (ldiff m n)` — fuel-irrelevance for `ldiffAux`, the `ldiff`
+    /// twin of [`Self::land_aux_eq_land_of_le`].
+    pub ldiff_aux_eq_ldiff_of_le: NameId,
+    /// `Nat.land_aux_comm_of_fuel : ∀ fuel m n, Eq (landAux fuel m n)
+    /// (landAux fuel n m)` — commutativity of `landAux` at a SHARED fuel.
+    /// The second piece (beyond fuel-irrelevance) `land_comm` needs: since
+    /// `land`'s guard is symmetric (both `on_n_zero`/`on_m_zero` are the
+    /// constant `0`), swapping the value arguments only changes WHICH guard
+    /// fires first, never the answer.
+    pub land_aux_comm_of_fuel: NameId,
+    /// `Nat.land_comm : ∀ m n, Eq (land m n) (land n m)` — one of the seven
+    /// `natural-bitwise` facts fuel-irrelevance was blocking
+    /// (`F:ml430-nat-land-comm-7e6ad72e`). Proved by routing
+    /// [`Self::land_aux_comm_of_fuel`] and [`Self::land_aux_agree_of_fuel`]
+    /// through the shared fuel `m + n`.
+    pub land_comm: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3291,6 +3340,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             land_aux_zero_left_any_fuel: kernel.name_str(nat, "land_aux_zero_left_any_fuel"),
             land_aux_agree_of_fuel: kernel.name_str(nat, "land_aux_agree_of_fuel"),
             land_aux_eq_land_of_le: kernel.name_str(nat, "land_aux_eq_land_of_le"),
+            lor_aux_zero_left_any_fuel: kernel.name_str(nat, "lor_aux_zero_left_any_fuel"),
+            lor_aux_agree_of_fuel: kernel.name_str(nat, "lor_aux_agree_of_fuel"),
+            lor_aux_eq_lor_of_le: kernel.name_str(nat, "lor_aux_eq_lor_of_le"),
+            ldiff_aux_zero_left_any_fuel: kernel.name_str(nat, "ldiff_aux_zero_left_any_fuel"),
+            ldiff_aux_agree_of_fuel: kernel.name_str(nat, "ldiff_aux_agree_of_fuel"),
+            ldiff_aux_eq_ldiff_of_le: kernel.name_str(nat, "ldiff_aux_eq_ldiff_of_le"),
+            land_aux_comm_of_fuel: kernel.name_str(nat, "land_aux_comm_of_fuel"),
+            land_comm: kernel.name_str(nat, "land_comm"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3495,6 +3552,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `div_mod_exec`, `succ_pred_of_pos`, `le_trans`, `zero_lt_succ`);
         // nothing needs fuel-irrelevance, so it goes last too.
         declare_land_fuel_irrelevance_all(&mut d, &p)?;
+        // Transport of the same fuel-irrelevance to `lorAux`: needs
+        // `Nat.lorAux`/`Nat.lor` (`declare_lor_all`, far above) and the same
+        // order/division lemmas `declare_land_fuel_irrelevance_all` composes;
+        // nothing needs it, so it goes right after its `land` sibling.
+        declare_lor_fuel_irrelevance_all(&mut d, &p)?;
+        // Transport to `ldiffAux`: needs `Nat.ldiffAux`/`Nat.ldiff`
+        // (`declare_ldiff_all`, far above) and the same order/division
+        // lemmas; nothing needs it, so it goes last of the three.
+        declare_ldiff_fuel_irrelevance_all(&mut d, &p)?;
+        // `Nat.land_comm`: needs `Nat.land_aux_agree_of_fuel` (just above)
+        // plus `Nat.le_add_right`/`Nat.add_comm`/`Nat.le_refl`, all far
+        // above; nothing needs it, so it goes right after fuel-irrelevance.
+        declare_land_comm(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

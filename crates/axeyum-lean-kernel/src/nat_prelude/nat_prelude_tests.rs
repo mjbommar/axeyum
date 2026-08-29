@@ -967,6 +967,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.land_aux_zero_left_any_fuel,
         p.land_aux_agree_of_fuel,
         p.land_aux_eq_land_of_le,
+        p.lor_aux_zero_left_any_fuel,
+        p.lor_aux_agree_of_fuel,
+        p.lor_aux_eq_lor_of_le,
+        p.ldiff_aux_zero_left_any_fuel,
+        p.ldiff_aux_agree_of_fuel,
+        p.ldiff_aux_eq_ldiff_of_le,
+        p.land_aux_comm_of_fuel,
+        p.land_comm,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6258,7 +6266,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 443,
+        85 + 451,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -10626,6 +10634,275 @@ fn land_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_ne
     assert!(
         f.k.axiom_footprint(p.land_aux_agree_of_fuel).is_empty(),
         "land_aux_agree_of_fuel must rest on zero axioms"
+    );
+}
+
+/// The `lor` transport of
+/// `land_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control`.
+///
+/// **The mandatory negative control differs from `land`'s witness**, because
+/// `lorAux`'s fuel-exhaustion row returns `n`, not `0` — the same numeral
+/// pair that discriminates `land` does not discriminate `lor` (e.g.
+/// `(fuel=1, m=7, n=7)` gives `lorAux 1 7 7 = 7 = lor 7 7`, no disagreement
+/// at all). `(fuel = 1, m = 3, n = 4)` does discriminate: `lorAux 1 3 4 = 5`
+/// against `lor 3 4 = 7` (`011 | 100 = 111`).
+#[test]
+fn lor_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables plus the
+    // `Le m fuel` hypothesis, proved by the prelude theorem alone.
+    {
+        let name = f.name("lor_aux_eq_lor_of_le_restated");
+        f.theorem(name, 3, &|d, values| {
+            let fuel = values[0];
+            let m = values[1];
+            let n = values[2];
+            let bound_ty = d.le(m, fuel);
+            let bound_fv = d.fresh_fvar();
+            let bound = d.kernel().fvar(bound_fv);
+            let lhs = d.const_app(p.lor_aux, &[fuel, m, n]);
+            let rhs = d.const_app(p.lor, &[m, n]);
+            let concl = d.eq(lhs, rhs);
+            let stmt = d.arrow(bound_ty, concl);
+            let lemma_fn = d.lemma(p.lor_aux_eq_lor_of_le, &[fuel, m, n]);
+            let proof = d.apply(lemma_fn, &[bound]);
+            let value = d.lam_fv(bound_fv, bound_ty, proof);
+            (stmt, value)
+        })
+        .expect("lor_aux_eq_lor_of_le must apply at symbolic fuel/m/n given Le m fuel");
+    }
+
+    // Concrete, ABOVE canonical fuel: `fuel = 7`, `m = 1`, `n = 7` — `Le 1 7`
+    // holds, and both `lorAux 7 1 7` and `lor 1 7` compute to `7`.
+    {
+        let fuel = f.num(7);
+        let m = f.num(1);
+        let n = f.num(7);
+        let true_ = f.bool_true();
+        let ble_refl = f.bool_refl(true_);
+        let bound = f.lemma(p.le_of_ble_eq_true, &[m, fuel, ble_refl]);
+        let applied = f.const_app(p.lor_aux_eq_lor_of_le, &[fuel, m, n]);
+        let applied = f.apply(applied, &[bound]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_aux_eq_lor_of_le must apply at (fuel=7, m=1, n=7): {shown}")
+        });
+        let lhs = f.const_app(p.lor_aux, &[fuel, m, n]);
+        let rhs = f.const_app(p.lor, &[m, n]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lor_aux_eq_lor_of_le 7 1 7 must state Eq (lorAux 7 1 7) (lor 1 7)"
+        );
+        assert!(f.k.def_eq(lhs, n), "lorAux 7 1 7 must compute to 7");
+        assert!(f.k.def_eq(rhs, n), "lor 1 7 must compute to 7");
+        assert!(
+            f.k.axiom_footprint(p.lor_aux_eq_lor_of_le).is_empty(),
+            "lor_aux_eq_lor_of_le must rest on zero axioms"
+        );
+    }
+
+    // Negative control: at INSUFFICIENT fuel, the auxiliary genuinely
+    // disagrees with the canonical answer -- `lorAux 1 3 4 = 5` against
+    // `lor 3 4 = 7`. Checked by evaluation alone (no `Le 3 1` proof exists),
+    // confirming the hypothesis is load-bearing.
+    {
+        let fuel = f.num(1);
+        let m = f.num(3);
+        let n = f.num(4);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let insufficient = f.const_app(p.lor_aux, &[fuel, m, n]);
+        let canonical = f.const_app(p.lor, &[m, n]);
+        assert!(
+            f.k.def_eq(insufficient, five),
+            "lorAux 1 3 4 must be 5 (one fuel step short)"
+        );
+        assert!(
+            f.k.def_eq(canonical, seven),
+            "lor 3 4 must be 7 (the canonical answer)"
+        );
+        assert!(
+            !f.k.def_eq(insufficient, canonical),
+            "the chosen fuel must be INSUFFICIENT, or this control proves nothing \
+             about why `Le m fuel` is needed"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.lor_aux_zero_left_any_fuel).is_empty(),
+        "lor_aux_zero_left_any_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.lor_aux_agree_of_fuel).is_empty(),
+        "lor_aux_agree_of_fuel must rest on zero axioms"
+    );
+}
+
+/// The `ldiff` transport of
+/// `land_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control`.
+///
+/// **The mandatory negative control differs from BOTH `land`'s and `lor`'s
+/// witness.** `ldiffAux`'s fuel-exhaustion row is the constant `0` (like
+/// `land`'s), but the discriminating case for `ldiff` is `fuel = 0` itself:
+/// `ldiffAux 0 7 0 = 0` directly (the outer `Nat.rec` never even reaches the
+/// `n = 0` pass-through guard), against `ldiff 7 0 = 7` (`ldiff m 0 = m`,
+/// `ldiff`'s `n = 0` guard IS reached at canonical fuel, since canonical
+/// fuel `m = 7` is `succ`-shaped).
+#[test]
+fn ldiff_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables plus the
+    // `Le m fuel` hypothesis, proved by the prelude theorem alone.
+    {
+        let name = f.name("ldiff_aux_eq_ldiff_of_le_restated");
+        f.theorem(name, 3, &|d, values| {
+            let fuel = values[0];
+            let m = values[1];
+            let n = values[2];
+            let bound_ty = d.le(m, fuel);
+            let bound_fv = d.fresh_fvar();
+            let bound = d.kernel().fvar(bound_fv);
+            let lhs = d.const_app(p.ldiff_aux, &[fuel, m, n]);
+            let rhs = d.const_app(p.ldiff, &[m, n]);
+            let concl = d.eq(lhs, rhs);
+            let stmt = d.arrow(bound_ty, concl);
+            let lemma_fn = d.lemma(p.ldiff_aux_eq_ldiff_of_le, &[fuel, m, n]);
+            let proof = d.apply(lemma_fn, &[bound]);
+            let value = d.lam_fv(bound_fv, bound_ty, proof);
+            (stmt, value)
+        })
+        .expect("ldiff_aux_eq_ldiff_of_le must apply at symbolic fuel/m/n given Le m fuel");
+    }
+
+    // Concrete, ABOVE canonical fuel: `fuel = 7`, `m = 1`, `n = 7` — `Le 1 7`
+    // holds, and both `ldiffAux 7 1 7` and `ldiff 1 7` compute to `0`.
+    {
+        let fuel = f.num(7);
+        let m = f.num(1);
+        let n = f.num(7);
+        let true_ = f.bool_true();
+        let ble_refl = f.bool_refl(true_);
+        let bound = f.lemma(p.le_of_ble_eq_true, &[m, fuel, ble_refl]);
+        let applied = f.const_app(p.ldiff_aux_eq_ldiff_of_le, &[fuel, m, n]);
+        let applied = f.apply(applied, &[bound]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("ldiff_aux_eq_ldiff_of_le must apply at (fuel=7, m=1, n=7): {shown}")
+        });
+        let lhs = f.const_app(p.ldiff_aux, &[fuel, m, n]);
+        let rhs = f.const_app(p.ldiff, &[m, n]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "ldiff_aux_eq_ldiff_of_le 7 1 7 must state Eq (ldiffAux 7 1 7) (ldiff 1 7)"
+        );
+        let zero = f.zero();
+        assert!(f.k.def_eq(lhs, zero), "ldiffAux 7 1 7 must compute to 0");
+        assert!(f.k.def_eq(rhs, zero), "ldiff 1 7 must compute to 0");
+        assert!(
+            f.k.axiom_footprint(p.ldiff_aux_eq_ldiff_of_le).is_empty(),
+            "ldiff_aux_eq_ldiff_of_le must rest on zero axioms"
+        );
+    }
+
+    // Negative control: at INSUFFICIENT fuel (in fact `fuel = 0`, so the
+    // outer `Nat.rec` never runs at all), the auxiliary genuinely disagrees
+    // with the canonical answer -- `ldiffAux 0 7 0 = 0` against
+    // `ldiff 7 0 = 7`. Checked by evaluation alone (no `Le 7 0` proof
+    // exists), confirming the hypothesis is load-bearing.
+    {
+        let fuel = f.zero();
+        let m = f.num(7);
+        let n = f.zero();
+        let zero = f.zero();
+        let seven = f.num(7);
+        let insufficient = f.const_app(p.ldiff_aux, &[fuel, m, n]);
+        let canonical = f.const_app(p.ldiff, &[m, n]);
+        assert!(
+            f.k.def_eq(insufficient, zero),
+            "ldiffAux 0 7 0 must be 0 (zero fuel, the outer Nat.rec never runs)"
+        );
+        assert!(
+            f.k.def_eq(canonical, seven),
+            "ldiff 7 0 must be 7 (the canonical answer)"
+        );
+        assert!(
+            !f.k.def_eq(insufficient, canonical),
+            "the chosen fuel must be INSUFFICIENT, or this control proves nothing \
+             about why `Le m fuel` is needed"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.ldiff_aux_zero_left_any_fuel)
+            .is_empty(),
+        "ldiff_aux_zero_left_any_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.ldiff_aux_agree_of_fuel).is_empty(),
+        "ldiff_aux_agree_of_fuel must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_comm` applies at symbolic `m`/`n` and at a concrete,
+/// DISCRIMINATING instance where `m` and `n` have DIFFERENT bit patterns
+/// (`land 3 6 = 2`, `011 & 110 = 010`) -- a symmetric pair like `(5, 5)`
+/// cannot catch a transposed argument, since both orderings would agree
+/// regardless of whether the proof is right.
+#[test]
+fn land_comm_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables, proved by
+    // the prelude theorem alone.
+    {
+        let name = f.name("land_comm_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(p.land, &[m, n]);
+            let rhs = d.const_app(p.land, &[n, m]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.land_comm, &[m, n]);
+            (stmt, proof)
+        })
+        .expect("land_comm must apply at symbolic m/n");
+    }
+
+    // Concrete: `land 3 6 = 2` and `land 6 3 = 2` (`011 & 110 = 010`).
+    {
+        let three = f.num(3);
+        let six = f.num(6);
+        let two = f.num(2);
+        let lhs = f.const_app(p.land, &[three, six]);
+        let rhs = f.const_app(p.land, &[six, three]);
+        let applied = f.lemma(p.land_comm, &[three, six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_comm must apply at (m=3, n=6): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_comm 3 6 must state Eq (land 3 6) (land 6 3)"
+        );
+        assert!(f.k.def_eq(lhs, two), "land 3 6 must compute to 2");
+        assert!(f.k.def_eq(rhs, two), "land 6 3 must compute to 2");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_aux_comm_of_fuel).is_empty(),
+        "land_aux_comm_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_comm).is_empty(),
+        "land_comm must rest on zero axioms"
     );
 }
 

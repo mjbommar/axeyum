@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-land-comm",
+  "title": "land is commutative",
+  "statement": "For every natural m, n: land(m, n) = land(n, m).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.land x0 x1) (AxNat.land x1 x0)))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.land_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_comm",
+      "supports": "Nat.land_comm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- land_comm 2>/dev/null | grep -Ec '^Nat\\.land_comm[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type -- producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the tested count is what decides the exit status. Anchored with `^Nat\\.land_comm[[:space:]]` so a future sibling (e.g. a hypothetical `land_comm_of_fuel`) cannot satisfy this row."
+    },
+    {
+      "id": "compute-Nat.land_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_comm",
+      "supports": "land(3, 6) = land(6, 3) = 2 (0b011 & 0b110 = 0b010), a DISCRIMINATING instance -- a symmetric pair like (5, 5) cannot catch a transposed argument, since both orderings agree regardless of whether the proof is right.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_comm_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.land_comm` symbolically (against free `m`, `n`) and at the concrete, bit-differing instance `(m, n) = (3, 6)`, confirming both that the admitted type matches `Eq (land 3 6) (land 6 3)` and that both sides compute to `2`."
+    },
+    {
+      "id": "footprint-Nat.land_comm",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-and",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-fuel-transport",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0`/`x1` are `m`/`n`.\n\nThis is one of the seven `natural-bitwise` facts fuel-irrelevance (`F:nat-land-aux-eq-land-of-le`) was blocking (`docs/plan/status/233-nat-rec-agreement.md`, `docs/plan/status/237-nat-fuel-irrelevance.md`). Fuel-irrelevance alone is NOT enough: `land m n = landAux m m n` and `land n m = landAux n n m` put DIFFERENT values (`m` vs `n`) in the fuel slot, so a second, genuinely separate piece was needed -- `Nat.land_aux_comm_of_fuel : forall fuel m n, landAux fuel m n = landAux fuel n m` (same-fuel commutativity, a new `agree_by_fuel_induction` instance with a 4-way `(m = 0?, n = 0?)` case split). `Nat.land_comm` chains: `land m n = landAux m m n = landAux (m+n) m n = landAux (m+n) n m = landAux n n m = land n m`, the outer two steps via `Nat.land_aux_agree_of_fuel` at the shared fuel `m + n` (`Nat.le_add_right`/`Nat.add_comm`), the middle step via `Nat.land_aux_comm_of_fuel`.\n\nThis is the `Nat.land` twin of Mathlib v4.30's `Nat.land_comm` (`F:ml430-nat-land-comm-7e6ad72e`, flipped alongside this fact) -- our `Nat.land` is itself proved equal to Mathlib's `bitwise and` specialization by `Nat.bitwise_and_eq_land` (`F:nat-*`, `nat_prelude/rec_agreement.rs`), so this closes the same proposition Mathlib states, not a lookalike about a different definition.",
+  "schema_version": 1
+}
