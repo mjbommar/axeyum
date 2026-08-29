@@ -170,6 +170,7 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-msb-exists | Landed `Nat.testBit_eq_zero_of_lt` (the "cheap half" of `exists_most_significant_bit`, piece 2 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`) as the new local fact `F:nat-testbit-eq-zero-of-lt` (Mathlib's `Nat.testBit_eq_false_of_lt` is Bool-valued; ours stays Nat-valued), admitted axiom-free on the first real kernel-check attempt via `value_eq_sum_range` at `bound := j` and `bound := succ j` plus `sum_range_succ`/`add_left_cancel`/`mul_eq_zero`; the "highest bit is set" hard half remains open and is re-confirmed (not newly discovered) to need either a new `size`-recursion lemma relating `size n` to `size (n/2)` or an independent ~150-line bottom-up `msbAux`-fuel construction |
 | 2026-08-29 | nat-xor-ne-zero | Landed `Nat.xor_ne_zero_iff` (piece 4's fourth and last sub-target toward `F:ml430-nat-lt-xor-cases-c43a1e85`), read directly from the pinned Batteries checkout (`Batteries/Data/Nat/Bitwise/Lemmas.lean:68`, confirming the "Lean core, not Mathlib" reading two prior lanes established for its siblings); built via `mt` (modus tollens, previously declared but unused in this prelude) applied twice rather than an `Iff`-of-`Eq` intermediate; the `mpr` direction confirmed NOT needing the cancel lemmas per the prior lane's own handoff, via a new per-bit lemma reusing `round_trip_le_one`; the `mp` direction via a new `Nat.xor_self`-shaped argument; every route confirmed by Python truth-table simulation before writing Rust, and no `false_true_elim` needed anywhere; new fact `F:nat-xor-ne-zero-iff`, axiom-free; all four of piece 4's sub-targets now landed, leaving 2 of the original 4 larger pieces (`lt_of_testBit`, `xor_trichotomy` composition) plus `lt_xor_cases` itself |
 | 2026-08-29 | nat-msb-hard | Landed `Nat.msb_exists_of_le_fuel` (fuel-generalized) and `Nat.exists_most_significant_bit` (the hard half of piece 2 of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85`: the highest bit really IS set, not just that no higher bit is needed) as the new local fact `F:nat-exists-most-significant-bit` (Mathlib's `testBit` is Bool-valued; ours stays Nat-valued), admitted axiom-free on the first real kernel-check attempt via an independent fuel/half-recursion (same `div_mod_lt_mul_iff`+`n_lt_mul_two` bound `declare_size_aux_lt_pow` uses, split on `beq half zero` mirroring Mathlib's `Nat.binaryRec`) rather than a `size`-recursion lemma -- `Nat.size` re-confirmed to not shortcut this, since its own development only ever proves an upper bound; pieces 1-3 of the 4 pieces blocking `lt_xor_cases` are now all DONE, piece 4's status needs a fresh check before dispatching the final composition |
+| 2026-08-29 | logic-excluded-middle | `Formula` AST + 3-element Heyting-chain semantic countermodel (`ipc_heyting.rs`); new fact `F:heyting-3-chain-refutes-excluded-middle` (proved); `F:excluded-middle-not-intuitionistic` stays open with scoping notes recorded |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -17757,6 +17758,106 @@ committing (kernel admission by name via `nat_theorem_inventory`, the
 instantiation test by name, axiom-free footprint via
 `nat_axiom_inventory --require-axiom-free nat`). Workspace gate NOT run
 (coordinator re-verifies before merging, per the lane brief). Not pushed.
+
+**Your lane's block (`WIP`, logic-excluded-middle, 2026-08-29).** Task was
+`F:excluded-middle-not-intuitionistic` (one of five open facts outside the
+Mathlib-mirror population). Step 0 (mandatory) was to determine what this
+kernel already has toward a syntactic underivability result, before building
+anything, and report honestly if the fact needs a substantial new
+development.
+
+**What exists in the kernel toward this, confirmed by reading source and
+`kernel.environment()`, not by inventory tool:**
+
+- No inductive type of syntactic formulas or derivations existed anywhere in
+  the kernel before this lane (confirmed by
+  `ipc_heyting::tests::no_prior_derivation_relation_exists_before_this_file`,
+  which greps `kernel.environment()` for `Provable`/`Derivation`/`.Deriv`
+  after building this lane's own prelude, paired with a positive control —
+  `Formula`, this lane's own new declaration — so the negative cannot pass
+  vacuously).
+- The inductive-type list a prior lane enumerated
+  (`True/False/And/Or/Iff/Eq/Exists/Acc/Bool/Nat/Decidable` + `Nat.le` +
+  `Nat.Fin` + `Char` + `Nat.Pair`) is still current as far as this lane's
+  grep of `add_inductive`/`add_datatype_family`/`add_recursive_datatype_family`
+  call sites showed; nothing landed since adds a formula/derivation/proof-
+  system type.
+- The logic prelude (`prelude.rs`) already carries a substantial, genuinely
+  useful family of Prop-generic results **around** excluded middle —
+  `not_not_em : ¬¬(p ∨ ¬p)`, and the equivalences `dne_of_em`, `em_of_dne`,
+  `peirce_of_em`, `em_of_peirce` — but every one is either a double-negation
+  of `p ∨ ¬p` or a conditional equivalence taking EM/DNE/Peirce as a
+  hypothesis. None is an instance of EM itself, and none is a derivation
+  relation. This is the closest existing analogue and is NOT what the fact
+  needs.
+- **Generic infrastructure that DOES help**: `Kernel::add_recursive_datatype_family`
+  (`prelude.rs`, already exercised in production by `string_prelude`'s `Str`
+  and by the `IntList` example in `prelude/prelude_tests.rs`) builds exactly
+  the AST shape a `Formula` type needs — mixed opaque-carrier / self-
+  referential fields, non-parametric, non-indexed.
+
+**Decomposition** (recorded in full, with rationale, in the module docs of
+`crates/axeyum-lean-kernel/src/ipc_heyting.rs`):
+
+1. `Formula` AST (var/bot/and_/or_/imp over a `Nat` carrier) — **landed this
+   lane**.
+2. Inductive derivation relation `Provable : Formula -> Prop` (or
+   context-indexed) encoding IPC natural deduction's rules — **not
+   attempted**, genuine research/engineering sized comparably to this
+   kernel's other multi-hundred-line prelude developments.
+3. Generic `eval : Formula -> (Nat -> Nat) -> Nat` via `Formula.rec` — **not
+   attempted** (this lane's countermodel evaluates the ONE closed instance
+   directly in `Nat`, without the recursor, which is cheaper but does not
+   generalize).
+4. Soundness theorem (`Provable f -> forall valuations, eval f = top`) by
+   induction on the derivation — **not attempted**, the real missing
+   mathematical content.
+5. A 3-element Gödel/Łukasiewicz Heyting-chain semantic countermodel
+   (`meet3`/`join3`/`himp3`/`not3` as `Nat -> Nat -> Nat` definitions,
+   `join3(1, not3(1)) = 1 != 2`) — **landed this lane**, as a kernel
+   `Theorem` (`ipc_heyting_join_not_ne_top`), axiom-free
+   (`Kernel::axiom_footprint` checked empty in-test).
+
+**Combining 1+2+3+4+5 closes `F:excluded-middle-not-intuitionistic`** in the
+same style as `CReal.evt_attained_max_decides_sign` /
+`CReal.ivt_exact_root_decides_sign` (ADR-0603 row 2). Slices 2–4 are the
+remaining gap and are the next lane's task; 1 and 5 are done and reusable.
+
+**Landed as a NEW, honestly-scoped fact** (per the standing rule: do not
+weaken the target fact's statement, land a genuinely different proposition
+under its own id instead):
+[`F:heyting-3-chain-refutes-excluded-middle`](artifacts/facts/F-heyting-3-chain-refutes-excluded-middle.json) —
+a purely SEMANTIC countermodel result (`proved`, `kernel-lean`,
+`axiom_footprint: []`), which does **not** close
+`F:excluded-middle-not-intuitionistic` (that stays `open`, with its `notes`
+field updated to record this scoping and point here).
+
+**File**: `crates/axeyum-lean-kernel/src/ipc_heyting.rs` (new module, does
+not touch `nat_prelude/` or `creal/`). Registered in `lib.rs` with a 2-line
+diff (`mod ipc_heyting;` + one `pub use`). 7 unit tests, all passing;
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` clean;
+`rustfmt --edition 2024 --check` clean on both changed files;
+`python3 scripts/validate-facts.py` reports 0 errors over 1950 facts
+(up from 1949).
+
+**Gotcha hit and worth recording**: building `Eq Nat lhs two_nat` with the
+`Eq` universe parameter at `level_zero` (Prop) instead of `level_succ(zero)`
+(Type, since `Nat` lives at `Sort 1`) produced
+`TypeMismatch { expected: ExprId(0), got: ExprId(2) }` — exactly the
+"a sort-shaped low `ExprId` means the kernel wanted a different SORT"
+signature this file's Gotchas section already documents, isolated by
+bisecting the four `declare_*` calls one at a time against a throwaway
+`isolation_probe` test module (removed before the final commit).
+
+**What the next lane needs**: build the `Provable` inductive relation (slice
+2) over `crates/axeyum-lean-kernel/src/ipc_heyting.rs`'s `Formula` type —
+assumption, `∧I`/`∧E1`/`∧E2`, `∨I1`/`∨I2`/`∨E`, `→I`/`→E`, `⊥E` — most likely
+context-indexed (`Provable : List Formula -> Formula -> Prop`, needing a
+`List`-shaped carrier the kernel does not have either — `Nat.Pair`-style
+`Bool`-selected encoding, or another `add_recursive_datatype_family`, is the
+likely route). Then slices 3–4. Do not attempt all of 2–4 in one sitting;
+slice further if needed (e.g. land `Provable` and a handful of easy closure
+lemmas about it before attempting soundness).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
