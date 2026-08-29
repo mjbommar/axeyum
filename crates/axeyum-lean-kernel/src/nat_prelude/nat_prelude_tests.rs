@@ -516,6 +516,9 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise,
         p.asc_factorial,
         p.multichoose,
+        p.is_rel_prime,
+        p.min_fac_aux,
+        p.min_fac,
     ]
 }
 
@@ -677,6 +680,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_of_dvd,
         p.coprime_of_forall_prime_dvd,
         p.dvd_of_forall_prime_mul_dvd,
+        p.coprime_iff_is_rel_prime,
         p.prime_dvd_iff_not_coprime,
         p.coprime_add_self_right,
         p.coprime_self_add_right,
@@ -6266,7 +6270,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 451,
+        88 + 452,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8685,6 +8689,192 @@ fn dvd_of_forall_prime_mul_dvd_holds_at_a_concrete_vacuous_instance() {
         f.k.axiom_footprint(p.dvd_of_forall_prime_mul_dvd)
             .is_empty(),
         "Nat.dvd_of_forall_prime_mul_dvd must rest on zero axioms"
+    );
+}
+
+/// `Nat.coprime_iff_isRelPrime` (`rel_prime.rs`) at a concrete coprime pair:
+/// `.mp` applied to the (computed) proof `gcd 3 5 = 1` must land on a type
+/// defeq to `IsRelPrime 3 5`, and round-tripping through `.mpr` must land
+/// back on `Eq (gcd 3 5) 1` — the same swap-detecting technique as
+/// `coprime_two_left_applies_at_a_concrete_odd_witness_and_is_axiom_free`:
+/// if `mp`/`mpr` had been passed to `iff_intro` in the wrong order, one leg
+/// of the round trip receives a value of the wrong shape and
+/// `Kernel::infer` rejects it.
+#[test]
+fn coprime_iff_is_rel_prime_round_trips_at_a_concrete_coprime_pair() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let five = f.num(5);
+    let one = f.num(1);
+    let gcd_35 = f.gcd(three, five);
+    assert!(f.k.def_eq(gcd_35, one), "gcd 3 5 must compute to 1");
+
+    let cop_ty = f.eq(gcd_35, one);
+    let rp_ty = f.lemma(p.is_rel_prime, &[three, five]);
+    // `Eq.refl gcd_35 : Eq gcd_35 gcd_35`, accepted below against `cop_ty`
+    // only because `gcd 3 5` genuinely reduces to `1`.
+    let cop_proof = f.refl(gcd_35);
+
+    let iff_35 = f.lemma(p.coprime_iff_is_rel_prime, &[three, five]);
+    let mp_fn = f.const_app(p.logic.iff_mp, &[cop_ty, rp_ty, iff_35]);
+    let rp_from_cop = f.apply(mp_fn, &[cop_proof]);
+    let rp_from_cop_ty = f.k.infer(rp_from_cop).unwrap_or_else(|e| {
+        panic!(
+            "coprime_iff_isRelPrime(3,5).mp applied to gcd 3 5 = 1 should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(rp_from_cop_ty, rp_ty),
+        "coprime_iff_isRelPrime(3,5).mp(gcd 3 5=1) must land on IsRelPrime 3 5"
+    );
+
+    let mpr_fn = f.const_app(p.logic.iff_mpr, &[cop_ty, rp_ty, iff_35]);
+    let cop_roundtrip = f.apply(mpr_fn, &[rp_from_cop]);
+    let cop_roundtrip_ty = f.k.infer(cop_roundtrip).unwrap_or_else(|e| {
+        panic!(
+            "coprime_iff_isRelPrime(3,5).mpr applied to the mp result should type-check \
+             (this fails if mp/mpr were swapped): {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(cop_roundtrip_ty, cop_ty),
+        "the mp/mpr round trip on gcd 3 5 = 1 must land back on Eq (gcd 3 5) 1"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.coprime_iff_is_rel_prime).is_empty(),
+        "coprime_iff_isRelPrime must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.is_rel_prime).is_empty(),
+        "IsRelPrime must rest on zero axioms"
+    );
+}
+
+/// `Nat.IsRelPrime 4 6` is FALSE — `gcd 4 6` computes to `2`, so applying an
+/// assumed `IsRelPrime 4 6` at `d := gcd 4 6` (via `gcd_dvd_left`/
+/// `gcd_dvd_right`) forces `Eq 2 1`, refuted by `succ_injective` +
+/// `succ_ne_zero`. This is the discriminating negative control the brief
+/// asks for ("inhabited at (3,5), refutable at (4,6)"): a mis-stated
+/// `IsRelPrime` that dropped, say, the `d ∣ n` premise would let a wrong
+/// pair through this exact shape of construction, and `(4, 6)` is chosen
+/// because `2` genuinely divides both.
+#[test]
+fn is_rel_prime_is_refuted_at_a_concrete_non_coprime_pair() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let four = f.num(4);
+    let six = f.num(6);
+    let one = f.num(1);
+    let zero = f.zero();
+    let two = f.num(2);
+    let gcd_46 = f.gcd(four, six);
+    assert!(f.k.def_eq(gcd_46, two), "gcd 4 6 must compute to 2");
+
+    let rp_46 = f.lemma(p.is_rel_prime, &[four, six]);
+    let not_rp_46 = f.const_app(p.logic.not, &[rp_46]);
+
+    let h_fv = f.fresh_fvar();
+    let h = f.kernel().fvar(h_fv); // assumed h : IsRelPrime 4 6 (folded)
+
+    let g_dvd_4 = f.lemma(p.gcd_dvd_left, &[four, six]);
+    let g_dvd_6 = f.lemma(p.gcd_dvd_right, &[four, six]);
+    let step1 = f.apply(h, &[gcd_46]);
+    let step2 = f.apply(step1, &[g_dvd_4]);
+    let g_eq_one = f.apply(step2, &[g_dvd_6]); // : Eq gcd_46 one, defeq Eq (succ one) (succ zero)
+
+    let one_eq_zero = f.lemma(p.succ_injective, &[one, zero, g_eq_one]);
+    let false_pf = f.lemma(p.succ_ne_zero, &[zero, one_eq_zero]);
+    let proof = f.lam_fv(h_fv, rp_46, false_pf);
+
+    let name = f.name("is_rel_prime_4_6_is_false");
+    f.declare_theorem(name, not_rp_46, proof)
+        .unwrap_or_else(|e| {
+            panic!(
+                "Not (IsRelPrime 4 6) should admit from gcd 4 6 = 2 != 1: {}",
+                f.explain(&e)
+            )
+        });
+
+    assert!(
+        f.k.axiom_footprint(name).is_empty(),
+        "the Not (IsRelPrime 4 6) proof must rest on zero axioms"
+    );
+}
+
+/// `Nat.minFac` (`min_fac.rs`) computes by pure reduction: `minFac 0 = 2`,
+/// `minFac 1 = 1` (the two boundary conventions, checked BEFORE the fuel
+/// search ever runs), `minFac 2 = 2` (the degenerate one-step search),
+/// `minFac 9 = 3` (a composite whose least divisor is not its first
+/// candidate), and the discriminating pair the brief names: `minFac 12 = 2`
+/// against `minFac 15 = 3` — these share no digit, so a "first divisor"
+/// search and a "smallest PRIME divisor" search cannot silently agree on
+/// both by accident (they agree here because the two notions coincide for a
+/// search that scans upward from 2, as the module doc argues, but a search
+/// that scanned in the wrong direction or off-by-one would fail at least one
+/// of these). NEGATIVE reduction controls, matching `test_bit`'s pattern —
+/// a fuel-recursive definition that type-checks but computes the wrong value
+/// has an empty axiom footprint and would pass every other sweep here.
+#[test]
+fn min_fac_computes_the_least_prime_factor_with_negative_controls() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let nine = f.num(9);
+    let twelve = f.num(12);
+    let fifteen = f.num(15);
+
+    let min_fac_of_0 = f.const_app(p.min_fac, &[zero]);
+    let min_fac_of_1 = f.const_app(p.min_fac, &[one]);
+    let min_fac_of_2 = f.const_app(p.min_fac, &[two]);
+    let min_fac_of_9 = f.const_app(p.min_fac, &[nine]);
+    let min_fac_of_12 = f.const_app(p.min_fac, &[twelve]);
+    let min_fac_of_15 = f.const_app(p.min_fac, &[fifteen]);
+
+    assert!(f.k.def_eq(min_fac_of_0, two), "minFac 0 must reduce to 2");
+    assert!(f.k.def_eq(min_fac_of_1, one), "minFac 1 must reduce to 1");
+    assert!(f.k.def_eq(min_fac_of_2, two), "minFac 2 must reduce to 2");
+    assert!(f.k.def_eq(min_fac_of_9, three), "minFac 9 must reduce to 3");
+    assert!(f.k.def_eq(min_fac_of_12, two), "minFac 12 must reduce to 2");
+    assert!(
+        f.k.def_eq(min_fac_of_15, three),
+        "minFac 15 must reduce to 3"
+    );
+
+    // NEGATIVE reduction controls -- a checker that can't fail is worse than
+    // none.
+    assert!(
+        !f.k.def_eq(min_fac_of_0, one),
+        "minFac 0 must NOT be 1 (that is minFac's OTHER boundary value)"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_1, two),
+        "minFac 1 must NOT be 2 (that is minFac's OTHER boundary value)"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_9, two),
+        "minFac 9 must NOT be 2 (9 is odd)"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_12, three),
+        "minFac 12 must NOT be 3 -- its least divisor is 2, found first"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_15, two),
+        "minFac 15 must NOT be 2 -- 15 is odd, so the smallest divisor is 3"
+    );
+    assert!(
+        !f.k.def_eq(min_fac_of_12, min_fac_of_15),
+        "minFac 12 and minFac 15 must not collapse to the same value"
     );
 }
 
