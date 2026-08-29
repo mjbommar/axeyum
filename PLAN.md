@@ -190,6 +190,7 @@ now. Nothing was deleted.
 | 2026-08-29 | `e72119787` | lane-turn-controls case 4 fixture fixed: SKIP a stale baseline instead of asserting a false expectation. |
 | 2026-08-29 | nat-lcm-gcd | `Nat.gcd_dvd_mul`, `Nat.gcd_le_mul`, `Nat.eq_zero_of_lcm_eq_zero`, `Nat.lcm_assoc`, `Nat.lcm_div` — 5 new axiom-free theorems (`nat_prelude/lcm_gcd_lemmas.rs`), plus 5 status-flip closures of pre-existing `Nat.lcm_comm`/`Nat.lcm_dvd`/`Nat.dvd_lcm_left`/`Nat.dvd_lcm_right`/`Nat.gcd_mul_lcm`. 10 of 10 dispatched `ml430` lcm/gcd mirrors closed. |
 | 2026-08-29 | nat-totient | `Nat.coprime_succ_self` (new: consecutive naturals are coprime) and `Nat.totient_eq_zero` — 1 of 9 dispatched `ml430` totient mirrors, axiom-free, via a top-index-witness argument (`nat_prelude/totient_lemmas.rs`). The other 8 triaged and left open: blocked on a general existence-witness-to-positive-count lemma and/or the `totient_even` fixed-point-free-involution pairing argument and/or the multiplicative formula for `totient` — none built yet, none a small addition. |
+| 2026-08-29 | int-emod-additive | `emod` additive law (`Int.ModEq`-based `modeq_add`) + `Int.even_add`/`Int.even_add'`/`Int.even_add_one` closed, all axiom-free; two `nat-*` stragglers left for a future lane |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -20440,6 +20441,148 @@ needs the same "second distinct witness below `n`" argument
 higher-leverage build (unlocks three more mirrors transitively) but is a
 genuinely larger slice — size it as its own task, not a continuation of
 this one.
+
+**Lane block (DONE, int-emod-additive, 2026-08-29).** The `int-parity-two`
+lane closed 7 of 10 `ml430-int-*` division-by-two mirrors and left exactly
+three open, all needing "an additive compatibility law for `emod` under
+`Int.add`'s branch table" that it sized as a separate, comparably-large task.
+This lane built that law and closed all three.
+
+```
+F:ml430-int-even-add-3c4536e3       F:ml430-int-even-add-bc8e1394
+F:ml430-int-even-add-one-af33da18
+```
+
+**The law did NOT need a fresh `Int.rec` case split on `Int.add`'s branch
+table**, contrary to the sizing in `docs/plan/status/282-int-parity-two.md`.
+`Int.ModEq` (`modeq.rs`) already carries general additive congruences —
+`mod_eq_add_right : ModEq n a b → ModEq n (a+c) (b+c)` and
+`mod_eq_add_left : ModEq n a b → ModEq n (c+a) (c+b)` — and composing them
+via `mod_eq_trans` gives the additive law directly:
+`ModEq n a b → ModEq n c d → ModEq n (a+c) (b+d)` (`modeq_add`,
+`parity.rs`). One composition, no new case analysis. This is the answer to
+the brief's "check whether the `Nat` `div_mod_shift` shape transports"
+question: **it did not need to** — `div_mod_shift`'s shape (shift a
+dividend by an exact multiple of the divisor, via `div_mod_unique`) solves a
+different problem than "what is `(m+n) % 2` given `m % 2`/`n % 2`", and the
+`ModEq` route already in this prelude was the closer fit.
+
+**The route, in full:**
+
+1. `emod_two_eq_zero_or_one` (already built by the prior lane) splits each of
+   `m`'s and `n`'s parity into `emod _ 2 = 0` or `= 1`.
+2. `to_modeq(d, n, x, r, h, hr)` lifts a plain `Eq (emod x n) r` fact into an
+   `Int.ModEq n x r` fact — `ModEq` unfolds to exactly that `Eq`, one delta
+   step, so `Eq.trans h (Eq.symm hr)` already has the right shape (`hr` is a
+   tiny idempotence fact, `emod_zero_two`/`emod_one_two`, both closed by
+   plain reduction on magnitudes 0/1).
+3. `modeq_add` combines `m`'s and `n`'s `ModEq` facts into one for `m+n`
+   against the literal sum of residues (`sum_parity_hyp`).
+4. The residue sum (`0+0`, `0+1`, `1+0`, `1+1`) reduces by plain computation
+   to the target residue (`0` or `1`) — magnitudes are all ≤ 2, so this is
+   cheap (see the "unary numeral blowup" gotcha — not triggered here).
+5. Reading the resulting residue back into `Even`/`Odd` needed the
+   CONVERSE of what the prior lane built (`even_implies_emod_zero`/
+   `odd_implies_emod_one`, `mp`-only) — new here:
+   `emod_zero_implies_even`/`emod_one_implies_odd`. `ofNat m` branch: plain
+   `int_eq_rewrite` injectivity through `natAbs`. `negSucc m` branch: the map
+   `r ↦ subNatNat 2 (succ r)` SWAPS `0`/`1` rather than fixing them, so this
+   case-splits on `Nat.mod_two_eq_zero_or_one m` itself and refutes the wrong
+   disjunct via the already-private `izero_ne_one`. Needed one new Nat-level
+   helper, `nat_odd_implies_even_succ` (mirror of the existing
+   `nat_even_succ_implies_odd`).
+6. Each of the three theorems' proof is then a case split (four-way for
+   `even_add`/`even_add'`, two-way for `even_add_one`) combined through a
+   small generic `Iff`-truth-value combinator (`TruthFact`/`iff_fact`) that
+   handles "both hold" / "both refuted" / "exactly one, so the whole `Iff` is
+   refuted" uniformly — shared by all three theorems and both the inner
+   (`Even m ↔ Even n` or `Odd m ↔ Odd n`) and outer (`Even (m+n) ↔ …`) `Iff`.
+
+**`Int.even_add` vs `Int.even_add'` re-confirmed genuinely different**
+(the prior lane already verified this against Mathlib source; not
+re-litigated here beyond reuse): `even_add`'s inner predicate is `Even`,
+`even_add'`'s is `Odd`. Both share `even_add_family_stmt_and_proof`,
+parametrized by `inner_fact`/`inner_pred` (`even_fact`/`even_pred` vs
+`odd_fact`/`odd_pred`); only the inner predicate differs, the outer `Even
+(m+n)` and the whole case-split/`ModEq` machinery are identical.
+
+**A real bug, found and fixed via a throwaway probe.** First attempt failed
+every one of the 49 `int_prelude::` tests with `TypeMismatch { expected:
+<huge>, got: ExprId(3) }` — the "one bad declaration poisons the whole
+prelude build" symptom. Bisected by disabling two of the three new
+`declare_*` calls and confirming the culprit was `declare_even_add`, then
+built a temporary `#[cfg(test)] mod debug_probe` (removed before the final
+commit, per the standing rule) that constructed a fresh `IntDev` over the
+ALREADY-BUILT kernel via axiom-typed placeholder `m`/`n`/`hm0`/`hn0`, and ran
+`Kernel::infer` on each intermediate (`sum_parity_hyp` → `even_fact` for
+`m`/`n`/sum → `iff_fact` inner → outer) to find exactly which step failed.
+Root cause: `emod_zero_implies_even`/`emod_one_implies_odd` used `d.irefl`
+(the `IntDev`-specific, **Int-typed** `Eq.refl`) on `r := Nat.mod m 2`, a
+**Nat**-sorted term — wrong carrier. Fixed by using `d.refl` (the `NatOps`
+trait's Nat-level reflexivity, already used correctly elsewhere in this same
+file). Worth carrying forward: `IntDev` exposes BOTH an Int-level `irefl`
+(its own inherent method) and a Nat-level `refl` (via `NatOps`), with no
+type-level guard against calling the wrong one on the wrong-sorted term —
+the kernel's own type check is what caught it, not the Rust type system.
+
+**Files:**
+- `crates/axeyum-lean-kernel/src/int_prelude/parity.rs` — all new code
+  (`modeq_add`, `to_modeq`, `emod_zero_two`/`emod_one_two`,
+  `emod_zero_implies_even`/`emod_one_implies_odd`,
+  `nat_odd_implies_even_succ`, `TruthFact`/`iff_fact`/`mk_iff_both_true`/
+  `mk_iff_both_false`/`refute_iff_from_mp`/`refute_iff_from_mpr`,
+  `even_fact`/`odd_fact`/`even_pred`/`odd_pred`, `sum_parity_hyp`,
+  `add_case`/`even_add_family_stmt_and_proof`, `add_one_parity_hyp`/
+  `even_add_one_case`, and the three `declare_even_add*` functions).
+- `crates/axeyum-lean-kernel/src/int_prelude.rs` — three new `IntPrelude`
+  fields (`even_add`, `even_add_prime` → kernel name `"even_add'"`,
+  `even_add_one`) and their dispatch calls, placed right after
+  `parity::declare_odd_of_mul_right` (after `Int.ModEq`'s additive
+  congruences, declared much earlier in the same build).
+- `crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs` — the
+  three new theorems added to `derived_laws`; the pinned array size
+  recounted 177 → 180 via `scripts/recount-pinned-inventory.py` (not
+  incremented by hand).
+- `artifacts/facts/F-ml430-int-even-add-3c4536e3.json`,
+  `F-ml430-int-even-add-bc8e1394.json`,
+  `F-ml430-int-even-add-one-af33da18.json` — flipped `open` → `proved`, each
+  with a `kernel-term` evidence row (`cargo test -p axeyum-lean-kernel --lib
+  int_prelude::`) and a `theorem_axiom_footprint`-based axiom-freedom row.
+
+**Checks run:** `cargo test -p axeyum-lean-kernel --lib int_prelude::` (49
+passed), `rustfmt --edition 2024 --check` on all four touched Rust files
+(clean), `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings`
+(clean), `python3 scripts/check-test-attribute-integrity.py` (0 findings —
+touched `int_prelude_tests.rs`), `python3 scripts/validate-facts.py` (2034
+facts, 0 errors). Each `theorem_axiom_footprint` `checker_command` verified
+three ways: passes for real (count 1), fails on a mutated footprint value
+(`...\t1\t`, count 0), fails on a nonexistent theorem name (count 0) — the
+`-xF` exact-line grep is load-bearing because the tool's own CLI name
+argument is a PREFIX match (`Int.even_add` alone also returns
+`Int.even_add'`/`Int.even_add_one` rows).
+
+**Straggler note (NOT attempted, per the brief — do not start until the
+`emod` law was done, which it now is).** Two facts named as possible
+follow-ons in the brief:
+- `F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0` — the `nat-div-mod-family`
+  lane's own leftover; route sketch in
+  `docs/plan/status/283-nat-div-mod-family.md`.
+- `F:ml430-nat-base-induction-83561d4c` — not investigated at all in this
+  lane.
+
+Neither was started: this lane's time went to the `emod` law (which turned
+out cheaper than sized, but the debugging round-trip on the `irefl`/`refl`
+bug cost real time) plus the three mirrors and their evidence. Both remain
+open for a future lane. `nat_prelude/div_mod_lemmas.rs` was NOT touched (per
+the brief, since a sibling lane may still be in it).
+
+Commits (not pushed):
+- `wip(int): emod additive law + even_add/even_add'/even_add_one (untested)`
+  — early checkpoint, uncompiled.
+- `fix(int): emod additive law fix (irefl->refl bug) + close all 3 even_add
+  mirrors` — the working kernel/prelude code.
+- `facts: flip the three ml430-int-even-add-* mirrors to proved` — the fact
+  ledger.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

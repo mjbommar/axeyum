@@ -8,10 +8,36 @@
     "statement": "∀ {n : ℤ}, Even (n + 1) ↔ ¬Even n",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.even_add_one",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.even_add_one` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`Int.even_add_one` in `crates/axeyum-lean-kernel/src/int_prelude/parity.rs` (`declare_even_add_one`). Mirrors Mathlib v4.30's `Int.even_add_one` verbatim. A two-case (not four-case) specialisation of the same additive-`emod` machinery as `Int.even_add`/`Int.even_add'`: `add_one_parity_hyp` computes `(n+1)`'s residue via `modeq_add` with the second addend's `ModEq` fixed to `Int.mod_eq_refl` (since `ModEq 2 one one` needs no case split), then reads the parity back off via `emod_zero_implies_even`/`emod_one_implies_odd`."
+    },
+    {
+      "id": "footprint-Int.even_add_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.even_add_one 2>/dev/null | /usr/bin/grep -xFc $'integer\\tInt.even_add_one\\t0\\t')\" -ge 1",
+      "notes": "The matched row is `integer<TAB>Int.even_add_one<TAB>0<TAB>` with an EMPTY trailing footprint column, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Uses `/usr/bin/grep` explicitly (not the interactive `ugrep` alias) and ANSI-C-quoted literal tabs. Verified to pass for real (count 1) and to fail on a mutated footprint (`...\\t1\\t`, count 0) and a nonexistent name (`Int.even_add_one_bogus`, count 0). Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED via the `int-emod-additive` lane, 2026-08-29, as `Int.even_add_one` -- axiom-free, statement identical to Mathlib's. Left `open` by the `int-parity-two` lane pending an additive compatibility law for `emod`.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

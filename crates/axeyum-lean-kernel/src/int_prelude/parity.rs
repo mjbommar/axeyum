@@ -201,12 +201,22 @@ pub(super) fn declare_parity_all(d: &mut IntDev<'_>) -> Result<(), KernelError> 
 //   `right_distrib`/`left_distrib` since neither has a home in `nat_prelude`
 //   yet and this lane does not touch that crate.
 //
-// `Int.even_add`/`Int.even_add'` (the two `ml430-int-even-add-*` mirrors) and
-// `Int.even_add_one` are NOT attempted here: relating `Even (m+n)` to `Even
-// m`/`Even n` needs an additive compatibility law for `emod`
-// (`(m+n) % 2` vs `m % 2`, `n % 2`) that does not exist yet in any branch-free
-// form, and building it from scratch is a separate-sized task. Left `open`;
-// see the lane status file.
+// `Int.even_add`/`Int.even_add'`/`Int.even_add_one` (2026-08-29, int-emod-
+// additive lane) — the additive compatibility law for `emod` the previous
+// lane called out as missing. It did NOT need a fresh `Int.rec` case split on
+// `Int.add`'s branch table: `Int.ModEq`'s already-general additive
+// congruences (`modeq.rs`'s `mod_eq_add_right`/`mod_eq_add_left`/
+// `mod_eq_trans`) compose directly into [`modeq_add`], one composition away.
+// The route: split `m`'s and `n`'s parity via [`declare_emod_two_eq_zero_or_one`]
+// (already built), lift each side's concrete residue to a `ModEq 2 x r` fact
+// via [`to_modeq`], add the two `ModEq`s via [`modeq_add`] to get `(m+n)`'s
+// residue, then read the resulting parity back off via the converses of
+// [`even_implies_emod_zero`]/[`odd_implies_emod_one`] built here
+// ([`emod_zero_implies_even`]/[`emod_one_implies_odd`]). The sign-flip
+// between `negSucc m`'s residue and `m`'s own (documented on
+// [`declare_emod_two_eq_zero_or_one`]) is handled the same way there: a
+// concrete case split on `Nat.mod_two_eq_zero_or_one m` refutes the wrong
+// disjunct via [`izero_ne_one`].
 
 /// `Int.ofNat 2` — the literal divisor every lemma below is stated against.
 fn two_int(d: &mut IntDev<'_>) -> ExprId {
@@ -905,6 +915,732 @@ pub(super) fn declare_odd_of_mul_right(d: &mut IntDev<'_>) -> Result<(), KernelE
             };
             nat_not_even_implies_odd(d, b, not_even_b)
         });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// The `emod` additive law, and the three `ml430-int-even-add-*` mirrors.
+// ============================================================================
+
+/// `Nat.Odd m ⊢ Nat.Even (succ m)` — [`nat_even_succ_implies_odd`]'s mirror,
+/// swapping `Even`/`Odd`: `even_iff_odd_succ` gives `Even m ↔ Odd (succ m)`,
+/// so `Odd (succ m)` would force `Even m` via its `mpr`, contradicting `Odd
+/// m` via `Nat.odd_not_even`; combined with `Nat.even_or_odd_exists (succ
+/// m)`.
+fn nat_odd_implies_even_succ(d: &mut IntDev<'_>, m: ExprId, h_odd: ExprId) -> ExprId {
+    let p = d.int();
+    let succ_m = d.succ(m);
+    let not_odd_succ_m = {
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+        let odd_succ_ty = d.const_app(p.nat.odd, &[succ_m]);
+        let even_m_ty = d.const_app(p.nat.even, &[m]);
+        let iff_ty = d.const_app(p.nat.even_iff_odd_succ, &[m]);
+        let mpr = d.const_app(p.logic.iff_mpr, &[even_m_ty, odd_succ_ty, iff_ty]);
+        let even_m_from_hm = d.apply(mpr, &[hm]);
+        let odd_not_even_m = d.const_app(p.nat.odd_not_even, &[m]);
+        let not_even_m = d.apply(odd_not_even_m, &[h_odd]);
+        let false_proof = d.apply(not_even_m, &[even_m_from_hm]);
+        d.lam_fv(hm_fv, odd_succ_ty, false_proof)
+    };
+    let even_succ_ty = d.const_app(p.nat.even, &[succ_m]);
+    let odd_succ_ty = d.const_app(p.nat.odd, &[succ_m]);
+    let disj = d.const_app(p.nat.even_or_odd_exists, &[succ_m]);
+    d.or_elim(
+        even_succ_ty,
+        odd_succ_ty,
+        even_succ_ty,
+        disj,
+        &|_d, h_even| h_even,
+        &|d, h_odd2| {
+            let f = d.apply(not_odd_succ_m, &[h_odd2]);
+            d.absurd(even_succ_ty, f)
+        },
+    )
+}
+
+/// `Eq (emod n 2) 0 ⊢ Even n` — the converse of [`even_implies_emod_zero`].
+///
+/// `ofNat m` branch: extracts `Eq Nat (mod m 2) 0` from the Int hypothesis
+/// via `int_eq_rewrite`'s injectivity route (`natAbs (ofNat m) ≡ m` is free),
+/// then `Nat.even_iff_mod_two_eq_zero`'s `mpr`.
+///
+/// `negSucc m` branch: the map `r ↦ subNatNat 2 (succ r)` SWAPS `0`/`1`
+/// rather than fixing them, so injectivity alone does not recover `r` from
+/// this hypothesis — this case-splits on `Nat.mod_two_eq_zero_or_one m`
+/// itself and refutes the wrong disjunct (`r = 0`, which would force `emod =
+/// ofNat 1`) via [`izero_ne_one`] applied to the concrete reduction at that
+/// side.
+fn emod_zero_implies_even(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let p = d.int();
+    let stmt_at = |d: &mut IntDev<'_>, nn: ExprId| -> ExprId {
+        let (eq0, _eq1, _r) = emod_two_disjuncts(d, nn);
+        let even_ty = d.const_app(p.even, &[nn]);
+        d.arrow(eq0, even_ty)
+    };
+    case_split(d, &[n], &|d, args| stmt_at(d, args[0]), &|d, branches| {
+        let (shape, m) = branches[0];
+        let n_term = d.branch_term(branches[0]);
+        let (eq0, _eq1, _r) = emod_two_disjuncts(d, n_term);
+        let two_nat = d.num(2);
+        match shape {
+            Shape::OfNat => {
+                let two = two_int(d);
+                let r = d.modulo(m, two_nat);
+                let zero_nat = d.zero();
+                let p_expr = d.iemod(n_term, two);
+                let izero = d.izero();
+                with_hyps(d, &[eq0], &|d, h| {
+                    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+                        let mag = nat_abs(d, x);
+                        d.eq(r, mag)
+                    };
+                    let proof_at_p = d.refl(r);
+                    let nat_eq0 = d.int_eq_rewrite(p_expr, izero, h[0], proof_at_p, &motive);
+                    let even_m_ty = d.const_app(p.nat.even, &[m]);
+                    let eq0_ty = d.eq(r, zero_nat);
+                    let iff_ty = d.const_app(p.nat.even_iff_mod_two_eq_zero, &[m]);
+                    let mpr = d.const_app(p.logic.iff_mpr, &[even_m_ty, eq0_ty, iff_ty]);
+                    d.apply(mpr, &[nat_eq0])
+                })
+            }
+            Shape::NegSucc => {
+                let r = d.modulo(m, two_nat);
+                let succ_m = d.succ(m);
+                let even_succ_ty = d.const_app(p.nat.even, &[succ_m]);
+                with_hyps(d, &[eq0], &|d, h| {
+                    let zero_nat = d.zero();
+                    let one_nat = d.num(1);
+                    let r_cases = d.const_app(p.nat.mod_two_eq_zero_or_one, &[m]);
+                    let eq_r0_ty = d.eq(r, zero_nat);
+                    let eq_r1_ty = d.eq(r, one_nat);
+                    d.or_elim(
+                        eq_r0_ty,
+                        eq_r1_ty,
+                        even_succ_ty,
+                        r_cases,
+                        &|d, hr0| {
+                            let h_at_zero = d.nat_rewrite(r, zero_nat, hr0, h[0], &|d, x| {
+                                let sx = d.succ(x);
+                                let sub = d.sub_nat_nat(two_nat, sx);
+                                let izero = d.izero();
+                                d.ieq(sub, izero)
+                            });
+                            let ione = d.ione();
+                            let izero = d.izero();
+                            let flip = d.isymm(ione, izero, h_at_zero);
+                            let ne = izero_ne_one(d);
+                            let false_proof = d.apply(ne, &[flip]);
+                            d.absurd(even_succ_ty, false_proof)
+                        },
+                        &|d, hr1| {
+                            let odd_m_ty = d.const_app(p.nat.odd, &[m]);
+                            let eq1_ty = d.eq(r, one_nat);
+                            let iff_ty = d.const_app(p.nat.odd_iff_mod_two_eq_one, &[m]);
+                            let mpr = d.const_app(p.logic.iff_mpr, &[odd_m_ty, eq1_ty, iff_ty]);
+                            let odd_m = d.apply(mpr, &[hr1]);
+                            nat_odd_implies_even_succ(d, m, odd_m)
+                        },
+                    )
+                })
+            }
+        }
+    })
+}
+
+/// `Eq (emod n 2) 1 ⊢ Odd n` — [`emod_zero_implies_even`]'s twin.
+///
+/// `negSucc m` branch: `r = 0` is the CORRECT disjunct here (`subNatNat 2
+/// (succ 0) = 1`), read off directly via `even_iff_mod_two_eq_zero`'s `mpr`
+/// then `even_iff_odd_succ`'s `mp`; `r = 1` is the wrong one, refuted the
+/// same way as [`emod_zero_implies_even`]'s wrong branch.
+fn emod_one_implies_odd(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let p = d.int();
+    let stmt_at = |d: &mut IntDev<'_>, nn: ExprId| -> ExprId {
+        let (_eq0, eq1, _r) = emod_two_disjuncts(d, nn);
+        let odd_ty = d.const_app(p.odd, &[nn]);
+        d.arrow(eq1, odd_ty)
+    };
+    case_split(d, &[n], &|d, args| stmt_at(d, args[0]), &|d, branches| {
+        let (shape, m) = branches[0];
+        let n_term = d.branch_term(branches[0]);
+        let (_eq0, eq1, _r) = emod_two_disjuncts(d, n_term);
+        let two_nat = d.num(2);
+        match shape {
+            Shape::OfNat => {
+                let two = two_int(d);
+                let r = d.modulo(m, two_nat);
+                let one_nat = d.num(1);
+                let p_expr = d.iemod(n_term, two);
+                let ione = d.ione();
+                with_hyps(d, &[eq1], &|d, h| {
+                    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+                        let mag = nat_abs(d, x);
+                        d.eq(r, mag)
+                    };
+                    let proof_at_p = d.refl(r);
+                    let nat_eq1 = d.int_eq_rewrite(p_expr, ione, h[0], proof_at_p, &motive);
+                    let odd_m_ty = d.const_app(p.nat.odd, &[m]);
+                    let eq1_ty = d.eq(r, one_nat);
+                    let iff_ty = d.const_app(p.nat.odd_iff_mod_two_eq_one, &[m]);
+                    let mpr = d.const_app(p.logic.iff_mpr, &[odd_m_ty, eq1_ty, iff_ty]);
+                    d.apply(mpr, &[nat_eq1])
+                })
+            }
+            Shape::NegSucc => {
+                let r = d.modulo(m, two_nat);
+                let succ_m = d.succ(m);
+                let odd_succ_ty = d.const_app(p.nat.odd, &[succ_m]);
+                with_hyps(d, &[eq1], &|d, h| {
+                    let zero_nat = d.zero();
+                    let one_nat = d.num(1);
+                    let r_cases = d.const_app(p.nat.mod_two_eq_zero_or_one, &[m]);
+                    let eq_r0_ty = d.eq(r, zero_nat);
+                    let eq_r1_ty = d.eq(r, one_nat);
+                    d.or_elim(
+                        eq_r0_ty,
+                        eq_r1_ty,
+                        odd_succ_ty,
+                        r_cases,
+                        &|d, hr0| {
+                            let even_m_ty = d.const_app(p.nat.even, &[m]);
+                            let eq0_ty = d.eq(r, zero_nat);
+                            let iff_ty = d.const_app(p.nat.even_iff_mod_two_eq_zero, &[m]);
+                            let mpr = d.const_app(p.logic.iff_mpr, &[even_m_ty, eq0_ty, iff_ty]);
+                            let even_m = d.apply(mpr, &[hr0]);
+                            let iff_es = d.const_app(p.nat.even_iff_odd_succ, &[m]);
+                            let mp_es =
+                                d.const_app(p.logic.iff_mp, &[even_m_ty, odd_succ_ty, iff_es]);
+                            d.apply(mp_es, &[even_m])
+                        },
+                        &|d, hr1| {
+                            let h_at_one = d.nat_rewrite(r, one_nat, hr1, h[0], &|d, x| {
+                                let sx = d.succ(x);
+                                let sub = d.sub_nat_nat(two_nat, sx);
+                                let ione = d.ione();
+                                d.ieq(sub, ione)
+                            });
+                            let ne = izero_ne_one(d);
+                            let false_proof = d.apply(ne, &[h_at_one]);
+                            d.absurd(odd_succ_ty, false_proof)
+                        },
+                    )
+                })
+            }
+        }
+    })
+}
+
+/// `ModEq n a b, ModEq n c dd ⊢ ModEq n (a+c) (b+dd)` — additive
+/// compatibility of `Int.ModEq`, built from the already-general
+/// `mod_eq_add_right`/`mod_eq_add_left`/`mod_eq_trans` (`modeq.rs`) rather
+/// than re-derived from scratch: this IS the "additive law for `emod`" the
+/// earlier lane called out as missing — it was one composition away.
+#[allow(clippy::too_many_arguments)]
+fn modeq_add(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+    h_ab: ExprId,
+    h_cd: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let ac = d.iadd(a, c);
+    let bc = d.iadd(b, c);
+    let bd = d.iadd(b, dd);
+    let step1 = d.const_app(p.mod_eq_add_right, &[n, a, b, c]);
+    let h1 = d.apply(step1, &[h_ab]); // ModEq n ac bc
+    let step2 = d.const_app(p.mod_eq_add_left, &[n, c, dd, b]);
+    let h2 = d.apply(step2, &[h_cd]); // ModEq n bc bd
+    let trans = d.const_app(p.mod_eq_trans, &[n, ac, bc, bd]);
+    let with_h1 = d.apply(trans, &[h1]);
+    d.apply(with_h1, &[h2])
+}
+
+/// From `h : Eq (emod x n) r` and `hr : Eq (emod r n) r`, derive `ModEq n x
+/// r` — `ModEq n a b` unfolds to exactly `Eq (emod a n) (emod b n)`, one
+/// delta step (`modeq.rs`'s module doc), so `Eq.trans h (Eq.symm hr)` already
+/// has the right shape.
+fn to_modeq(d: &mut IntDev<'_>, n: ExprId, x: ExprId, r: ExprId, h: ExprId, hr: ExprId) -> ExprId {
+    let emod_x = d.iemod(x, n);
+    let emod_r = d.iemod(r, n);
+    let flip = d.isymm(emod_r, r, hr);
+    d.itrans(emod_x, r, emod_r, h, flip)
+}
+
+/// `Eq (emod 0 2) 0` — plain computation (two-step `Int.rec` then `Nat.mod`
+/// on tiny concrete magnitudes); used as the idempotence fact [`to_modeq`]
+/// needs at `r := 0`.
+fn emod_zero_two(d: &mut IntDev<'_>) -> ExprId {
+    let izero = d.izero();
+    d.irefl(izero)
+}
+
+/// `Eq (emod 1 2) 1` — same computation at magnitude 1.
+fn emod_one_two(d: &mut IntDev<'_>) -> ExprId {
+    let ione = d.ione();
+    d.irefl(ione)
+}
+
+/// A proposition this module has decided one way or the other in the current
+/// branch: either a proof it `Holds`, or a proof it is `Refuted` (`Not p`).
+enum TruthFact {
+    Holds(ExprId),
+    Refuted(ExprId),
+}
+
+/// Whichever proof `fact` carries — used only where the caller's own case
+/// analysis has already established the fact must be `Holds`, and a
+/// mismatch would be a bug in that analysis (in which case the kernel's own
+/// type check at `add_declaration`, not this function, is what catches it).
+fn expect_holds(fact: &TruthFact) -> ExprId {
+    match *fact {
+        TruthFact::Holds(x) | TruthFact::Refuted(x) => x,
+    }
+}
+
+/// `Even x` as a [`TruthFact`], given `hx : Eq (emod x 2) 0` (if `is_even`)
+/// or `hx : Eq (emod x 2) 1` (otherwise).
+fn even_fact(d: &mut IntDev<'_>, x: ExprId, is_even: bool, hx: ExprId) -> TruthFact {
+    if is_even {
+        let f = emod_zero_implies_even(d, x);
+        TruthFact::Holds(d.apply(f, &[hx]))
+    } else {
+        let f = emod_one_implies_odd(d, x);
+        let ox = d.apply(f, &[hx]);
+        let p = d.int();
+        let mag = nat_abs(d, x);
+        let bridge = d.const_app(p.nat.odd_not_even, &[mag]);
+        TruthFact::Refuted(d.apply(bridge, &[ox]))
+    }
+}
+
+/// `Odd x` as a [`TruthFact`] — [`even_fact`]'s twin, same `hx` convention.
+fn odd_fact(d: &mut IntDev<'_>, x: ExprId, is_even: bool, hx: ExprId) -> TruthFact {
+    if is_even {
+        let f = emod_zero_implies_even(d, x);
+        let ex = d.apply(f, &[hx]);
+        let p = d.int();
+        let mag = nat_abs(d, x);
+        let bridge = d.const_app(p.nat.even_not_odd, &[mag]);
+        TruthFact::Refuted(d.apply(bridge, &[ex]))
+    } else {
+        let f = emod_one_implies_odd(d, x);
+        TruthFact::Holds(d.apply(f, &[hx]))
+    }
+}
+
+fn even_pred(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
+    let p = d.int();
+    d.const_app(p.even, &[x])
+}
+
+fn odd_pred(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
+    let p = d.int();
+    d.const_app(p.odd, &[x])
+}
+
+/// `Iff pa pb` from `Not pa` and `Not pb` both held — both directions fire
+/// vacuously through the refuted antecedent.
+fn mk_iff_both_false(
+    d: &mut IntDev<'_>,
+    pa: ExprId,
+    pb: ExprId,
+    not_pa: ExprId,
+    not_pb: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let mp = with_hyps(d, &[pa], &|d, h| {
+        let f = d.apply(not_pa, &[h[0]]);
+        d.absurd(pb, f)
+    });
+    let mpr = with_hyps(d, &[pb], &|d, h| {
+        let f = d.apply(not_pb, &[h[0]]);
+        d.absurd(pa, f)
+    });
+    d.const_app(p.logic.iff_intro, &[pa, pb, mp, mpr])
+}
+
+/// `Iff pa pb` from `pa` and `pb` both held — both directions are constant
+/// functions.
+fn mk_iff_both_true(
+    d: &mut IntDev<'_>,
+    pa: ExprId,
+    pb: ExprId,
+    pa_proof: ExprId,
+    pb_proof: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let mp = {
+        let h_fv = d.fresh_fvar();
+        d.lam_fv(h_fv, pa, pb_proof)
+    };
+    let mpr = {
+        let h_fv = d.fresh_fvar();
+        d.lam_fv(h_fv, pb, pa_proof)
+    };
+    d.const_app(p.logic.iff_intro, &[pa, pb, mp, mpr])
+}
+
+/// From `h : Iff pa pb`, `pa_proof : pa`, `not_pb : Not pb`, derive `False` —
+/// `h`'s `mp` applied to `pa_proof` gives `pb`, contradicting `not_pb`.
+fn refute_iff_from_mp(
+    d: &mut IntDev<'_>,
+    pa: ExprId,
+    pb: ExprId,
+    h: ExprId,
+    pa_proof: ExprId,
+    not_pb: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let mp = d.const_app(p.logic.iff_mp, &[pa, pb, h]);
+    let pb_proof = d.apply(mp, &[pa_proof]);
+    d.apply(not_pb, &[pb_proof])
+}
+
+/// From `h : Iff pa pb`, `pb_proof : pb`, `not_pa : Not pa`, derive `False` —
+/// the `mpr` mirror of [`refute_iff_from_mp`].
+fn refute_iff_from_mpr(
+    d: &mut IntDev<'_>,
+    pa: ExprId,
+    pb: ExprId,
+    h: ExprId,
+    pb_proof: ExprId,
+    not_pa: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let mpr = d.const_app(p.logic.iff_mpr, &[pa, pb, h]);
+    let pa_proof = d.apply(mpr, &[pb_proof]);
+    d.apply(not_pa, &[pa_proof])
+}
+
+/// `Iff pa pb` as a [`TruthFact`], from `fa`/`fb` — the four-way combine
+/// every branch of [`declare_even_add`]/[`declare_even_add_prime`]/
+/// [`declare_even_add_one`] bottoms out in: both hold (constant functions),
+/// both refuted (vacuous both ways), or exactly one of each (the whole `Iff`
+/// is refuted, via [`refute_iff_from_mp`]/[`refute_iff_from_mpr`]).
+fn iff_fact(
+    d: &mut IntDev<'_>,
+    pa: ExprId,
+    pb: ExprId,
+    fa: &TruthFact,
+    fb: &TruthFact,
+) -> TruthFact {
+    match (fa, fb) {
+        (TruthFact::Holds(a), TruthFact::Holds(b)) => {
+            TruthFact::Holds(mk_iff_both_true(d, pa, pb, *a, *b))
+        }
+        (TruthFact::Refuted(a), TruthFact::Refuted(b)) => {
+            TruthFact::Holds(mk_iff_both_false(d, pa, pb, *a, *b))
+        }
+        (TruthFact::Holds(a), TruthFact::Refuted(b)) => {
+            let (a, b) = (*a, *b);
+            let iff_ty = {
+                let p = d.int();
+                d.const_app(p.logic.iff, &[pa, pb])
+            };
+            let refute = with_hyps(d, &[iff_ty], &|d, h| {
+                refute_iff_from_mp(d, pa, pb, h[0], a, b)
+            });
+            TruthFact::Refuted(refute)
+        }
+        (TruthFact::Refuted(a), TruthFact::Holds(b)) => {
+            let (a, b) = (*a, *b);
+            let iff_ty = {
+                let p = d.int();
+                d.const_app(p.logic.iff, &[pa, pb])
+            };
+            let refute = with_hyps(d, &[iff_ty], &|d, h| {
+                refute_iff_from_mpr(d, pa, pb, h[0], b, a)
+            });
+            TruthFact::Refuted(refute)
+        }
+    }
+}
+
+/// `Eq (emod (add m n) 2) target`, where `target` is `0` if `m`/`n` have the
+/// SAME parity and `1` otherwise — the additive law for `emod`, computed via
+/// [`to_modeq`] + [`modeq_add`] rather than a fresh `Int.rec` split on
+/// `Int.add`.
+#[allow(clippy::too_many_arguments)]
+fn sum_parity_hyp(
+    d: &mut IntDev<'_>,
+    m: ExprId,
+    n: ExprId,
+    rm: ExprId,
+    rn: ExprId,
+    hm: ExprId,
+    hn: ExprId,
+    m_even: bool,
+    n_even: bool,
+) -> ExprId {
+    let two = two_int(d);
+    let sum = d.iadd(m, n);
+    let hr_m = if m_even {
+        emod_zero_two(d)
+    } else {
+        emod_one_two(d)
+    };
+    let hr_n = if n_even {
+        emod_zero_two(d)
+    } else {
+        emod_one_two(d)
+    };
+    let modeq_m = to_modeq(d, two, m, rm, hm, hr_m);
+    let modeq_n = to_modeq(d, two, n, rn, hn, hr_n);
+    let modeq_sum = modeq_add(d, two, m, rm, n, rn, modeq_m, modeq_n);
+    let rsum = d.iadd(rm, rn);
+    let target = if m_even == n_even {
+        d.izero()
+    } else {
+        d.ione()
+    };
+    let collapse = d.irefl(target);
+    let emod_sum = d.iemod(sum, two);
+    let emod_rsum = d.iemod(rsum, two);
+    d.itrans(emod_sum, emod_rsum, target, modeq_sum, collapse)
+}
+
+/// One of the four `(m parity, n parity)` combinations shared by
+/// [`declare_even_add`] (`inner_fact := even_fact`) and
+/// [`declare_even_add_prime`] (`inner_fact := odd_fact`).
+#[allow(clippy::too_many_arguments)]
+fn add_case(
+    d: &mut IntDev<'_>,
+    m: ExprId,
+    n: ExprId,
+    rm: ExprId,
+    rn: ExprId,
+    hm: ExprId,
+    hn: ExprId,
+    m_even: bool,
+    n_even: bool,
+    inner_fact: &dyn Fn(&mut IntDev<'_>, ExprId, bool, ExprId) -> TruthFact,
+    inner_pred: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let p = d.int();
+    let sum = d.iadd(m, n);
+    let pa = inner_pred(d, m);
+    let pb = inner_pred(d, n);
+    let inner_ty = d.const_app(p.logic.iff, &[pa, pb]);
+    let even_sum_ty = d.const_app(p.even, &[sum]);
+
+    let fm = inner_fact(d, m, m_even, hm);
+    let fnn = inner_fact(d, n, n_even, hn);
+    let h_sum = sum_parity_hyp(d, m, n, rm, rn, hm, hn, m_even, n_even);
+    let sum_even = m_even == n_even;
+    let fsum = even_fact(d, sum, sum_even, h_sum);
+
+    let inner = iff_fact(d, pa, pb, &fm, &fnn);
+    let outer = iff_fact(d, even_sum_ty, inner_ty, &fsum, &inner);
+    expect_holds(&outer)
+}
+
+/// The shared `stmt`/`proof` builder for [`declare_even_add`]/
+/// [`declare_even_add_prime`]: `Iff (Even (add m n)) (Iff (P m) (P n))` for
+/// `P := Even` or `P := Odd`, via a four-way case split on `m`'s and `n`'s
+/// parity ([`declare_emod_two_eq_zero_or_one`]).
+fn even_add_family_stmt_and_proof(
+    d: &mut IntDev<'_>,
+    m: ExprId,
+    n: ExprId,
+    inner_fact: &dyn Fn(&mut IntDev<'_>, ExprId, bool, ExprId) -> TruthFact,
+    inner_pred: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> (ExprId, ExprId) {
+    let p = d.int();
+    let sum = d.iadd(m, n);
+    let pa0 = inner_pred(d, m);
+    let pb0 = inner_pred(d, n);
+    let inner_ty0 = d.const_app(p.logic.iff, &[pa0, pb0]);
+    let even_sum_ty0 = d.const_app(p.even, &[sum]);
+    let stmt = d.const_app(p.logic.iff, &[even_sum_ty0, inner_ty0]);
+
+    let (eq0m, eq1m, _rm) = emod_two_disjuncts(d, m);
+    let (eq0n, eq1n, _rn) = emod_two_disjuncts(d, n);
+    let par_m = d.const_app(p.emod_two_eq_zero_or_one, &[m]);
+    let par_n = d.const_app(p.emod_two_eq_zero_or_one, &[n]);
+    let izero = d.izero();
+    let ione = d.ione();
+
+    let proof = d.or_elim(
+        eq0m,
+        eq1m,
+        stmt,
+        par_m,
+        &|d, hm0| {
+            d.or_elim(
+                eq0n,
+                eq1n,
+                stmt,
+                par_n,
+                &|d, hn0| {
+                    add_case(
+                        d, m, n, izero, izero, hm0, hn0, true, true, inner_fact, inner_pred,
+                    )
+                },
+                &|d, hn1| {
+                    add_case(
+                        d, m, n, izero, ione, hm0, hn1, true, false, inner_fact, inner_pred,
+                    )
+                },
+            )
+        },
+        &|d, hm1| {
+            d.or_elim(
+                eq0n,
+                eq1n,
+                stmt,
+                par_n,
+                &|d, hn0| {
+                    add_case(
+                        d, m, n, ione, izero, hm1, hn0, false, true, inner_fact, inner_pred,
+                    )
+                },
+                &|d, hn1| {
+                    add_case(
+                        d, m, n, ione, ione, hm1, hn1, false, false, inner_fact, inner_pred,
+                    )
+                },
+            )
+        },
+    );
+    (stmt, proof)
+}
+
+/// `Int.even_add : ∀ m n, Iff (Even (add m n)) (Iff (Even m) (Even n))` —
+/// `F:ml430-int-even-add-3c4536e3`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_even_add(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.even_add, 2, &|d, v| {
+        let (m, n) = (v[0], v[1]);
+        even_add_family_stmt_and_proof(d, m, n, &even_fact, &even_pred)
+    })?;
+    Ok(())
+}
+
+/// `Int.even_add' : ∀ m n, Iff (Even (add m n)) (Iff (Odd m) (Odd n))` —
+/// `F:ml430-int-even-add-bc8e1394`. [`declare_even_add`]'s twin, via
+/// [`odd_fact`]/[`odd_pred`] instead of [`even_fact`]/[`even_pred`] for the
+/// inner predicate (the outer `Even (add m n)` is unchanged — Mathlib's
+/// `even_add'` differs from `even_add` only in which predicate the inner
+/// `Iff` uses).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_even_add_prime(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.even_add_prime, 2, &|d, v| {
+        let (m, n) = (v[0], v[1]);
+        even_add_family_stmt_and_proof(d, m, n, &odd_fact, &odd_pred)
+    })?;
+    Ok(())
+}
+
+/// `Eq (emod (add n 1) 2) target`, where `target` is `1` if `n` is even and
+/// `0` otherwise — [`sum_parity_hyp`] specialised to the second addend being
+/// the literal `1` (`ModEq 2 one one` is just `Int.mod_eq_refl`).
+fn add_one_parity_hyp(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    rn: ExprId,
+    hn: ExprId,
+    n_even: bool,
+) -> ExprId {
+    let p = d.int();
+    let two = two_int(d);
+    let one = d.ione();
+    let sum = d.iadd(n, one);
+    let hr_n = if n_even {
+        emod_zero_two(d)
+    } else {
+        emod_one_two(d)
+    };
+    let modeq_n = to_modeq(d, two, n, rn, hn, hr_n);
+    let modeq_one = d.const_app(p.mod_eq_refl, &[two, one]);
+    let modeq_sum = modeq_add(d, two, n, rn, one, one, modeq_n, modeq_one);
+    let rsum = d.iadd(rn, one);
+    let target = if n_even { d.ione() } else { d.izero() };
+    let collapse = d.irefl(target);
+    let emod_sum = d.iemod(sum, two);
+    let emod_rsum = d.iemod(rsum, two);
+    d.itrans(emod_sum, emod_rsum, target, modeq_sum, collapse)
+}
+
+/// One of the two `n` parity cases in [`declare_even_add_one`].
+fn even_add_one_case(d: &mut IntDev<'_>, n: ExprId, hn: ExprId, n_even: bool) -> ExprId {
+    let p = d.int();
+    let one = d.ione();
+    let sum = d.iadd(n, one);
+    let even_n_ty = d.const_app(p.even, &[n]);
+    let not_even_n_ty = d.not(even_n_ty);
+    let even_sum_ty = d.const_app(p.even, &[sum]);
+
+    let (rn, sum_even) = if n_even {
+        (d.izero(), false)
+    } else {
+        (d.ione(), true)
+    };
+    let h_sum = add_one_parity_hyp(d, n, rn, hn, n_even);
+    let fsum = even_fact(d, sum, sum_even, h_sum);
+
+    let not_even_fact: TruthFact = if n_even {
+        let f = emod_zero_implies_even(d, n);
+        let en = d.apply(f, &[hn]);
+        let refute = with_hyps(d, &[not_even_n_ty], &|d, h| d.apply(h[0], &[en]));
+        TruthFact::Refuted(refute)
+    } else {
+        let f = emod_one_implies_odd(d, n);
+        let on = d.apply(f, &[hn]);
+        let mag = nat_abs(d, n);
+        let bridge = d.const_app(p.nat.odd_not_even, &[mag]);
+        TruthFact::Holds(d.apply(bridge, &[on]))
+    };
+
+    let outer = iff_fact(d, even_sum_ty, not_even_n_ty, &fsum, &not_even_fact);
+    expect_holds(&outer)
+}
+
+/// `Int.even_add_one : ∀ n, Iff (Even (add n 1)) (Not (Even n))` —
+/// `F:ml430-int-even-add-one-af33da18`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_even_add_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.even_add_one, 1, &|d, v| {
+        let n = v[0];
+        let one = d.ione();
+        let sum = d.iadd(n, one);
+        let even_n_ty = d.const_app(p.even, &[n]);
+        let not_even_n_ty = d.not(even_n_ty);
+        let even_sum_ty = d.const_app(p.even, &[sum]);
+        let stmt = d.const_app(p.logic.iff, &[even_sum_ty, not_even_n_ty]);
+
+        let (eq0n, eq1n, _rn) = emod_two_disjuncts(d, n);
+        let par_n = d.const_app(p.emod_two_eq_zero_or_one, &[n]);
+
+        let proof = d.or_elim(
+            eq0n,
+            eq1n,
+            stmt,
+            par_n,
+            &|d, hn0| even_add_one_case(d, n, hn0, true),
+            &|d, hn1| even_add_one_case(d, n, hn1, false),
+        );
         (stmt, proof)
     })?;
     Ok(())
