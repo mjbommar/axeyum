@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -213,6 +214,7 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-descfact-lemmas | `Nat.descFactorial_le` (monotone in the base for fixed exponent: `k <= m -> k.descFactorial n <= m.descFactorial n`, via `choose_le_choose` + `mul_le_mul_left` + two transports across the bridge equation); closes `F:ml430-nat-descfactorial-le-2b8cc09a` |
 | 2026-08-28 | nat-descfact-lemmas | `Nat.self_le_factorial` (`n <= n!`, direct induction on `n` using `one_le_factorial`, independent of the `descFactorial`/`choose` bridge); closes `F:ml430-nat-self-le-factorial-cfdffc69` |
 | 2026-08-28 | nat-descfact-lemmas | `F:ml430-nat-descfactorial-of-lt-fbcf5d26` status flip only — `Nat.descFactorial_of_lt` already existed and already matched the fact's `formal.statement` verbatim; attached evidence (kernel-term + axiom-footprint checkers) and flipped `epistemic_status` to `proved`, no new proof work |
+| 2026-08-28 | nat-multichoose-facts | Confirmed (via Mathlib source at the pinned commit) that our `Nat.multichoose` is a formula-based definition while Mathlib's is a genuine double recursion, so the three `ml430` multichoose mirror facts correctly stay `open`; no code or fact changes needed, all three theorems and their local facts were already proved by the prior lane. |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -11069,6 +11071,145 @@ sum, `the_build_is_deterministic`'s own pin): 85+429=514 before this lane,
 85+432=517 after (+3 theorems: `descFactorial_self`, `descFactorial_le`,
 `self_le_factorial`; 0 new definitions). Both increments were read off the
 test's own panic message, never hand-counted.
+
+**Your lane's block (`DONE`, nat-multichoose-facts, 2026-08-28).** The three
+target facts (`F:ml430-nat-multichoose-zero-right-6ef827c8`,
+`F:ml430-nat-multichoose-one-b210386a`,
+`F:ml430-nat-multichoose-one-right-7755072d`) and the `Nat.multichoose`
+theorems they mirror had already landed the day before this lane started
+(`nat_prelude/multichoose.rs`, three `declare_multichoose_*` theorems, the
+paired local facts `F-nat-multichoose-zero-right.json` /
+`F-nat-multichoose-one.json` / `F-nat-multichoose-one-right.json`, all
+`proved`). This lane's job was the judgement the definition lane had already
+made but that this brief asked to be checked independently: **does our
+`Nat.multichoose` match Mathlib's, so the `ml430` mirrors could honestly be
+flipped instead of staying as separate local facts?**
+
+**Verdict: no — confirmed by reading Mathlib's actual source, not by prose.**
+Fetched `Mathlib/Data/Nat/Choose/Basic.lean` at the pinned commit
+`c5ea00351c28e24afc9f0f84379aa41082b1188f` (v4.30.0). Mathlib's `multichoose`
+is a genuine three-case double recursion (Pascal-triangle style):
+
+```lean
+def multichoose : ℕ → ℕ → ℕ
+  | _, 0 => 1
+  | 0, _ + 1 => 0
+  | n + 1, k + 1 => multichoose n (k + 1) + multichoose (n + 1) k
+```
+
+and `multichoose_eq : multichoose n k = (n + k - 1).choose k` is a **proved
+theorem** about that recursion, not the definition. Our `Nat.multichoose` is
+defined *directly* as that formula (`choose (pred (add n k)) k`) — i.e. we
+define as a body what Mathlib proves as a theorem about a structurally
+different function. This is the same shape as the `Nat.log`/`sqrt`/`clog`
+caution the brief pointed at (fuel/formula construction vs. Mathlib's own
+recursion), not the "literally the same function" case — so the "never flip
+a mirror when the construction differs" rule was necessary here, and the
+definition lane's decision (recorded in the three local facts' `notes`) was
+correct. All three `ml430` facts remain `epistemic_status: open`, untouched
+— per the log/sqrt precedent (`F-ml430-nat-log-le-self-da387172.json`), a
+declined mirror keeps its original boilerplate `notes`, and the reasoning
+lives in the paired local fact instead.
+
+The statement TEXT does match exactly (`Nat.multichoose_zero_right`,
+`_one`, `_one_right` — same names, same universally-quantified shape,
+verified against `formal.statement` in each `ml430` JSON and each theorem's
+`Kernel::render_lean`'d type), so the boundary values are the same and both
+libraries' theorems are true of both functions. What differs is the function
+symbol they are about, which is exactly what "flip" would misrepresent.
+
+Verification run: `cargo test -p axeyum-lean-kernel --lib nat_prelude` — 117
+passed, 0 failed (includes `the_build_is_deterministic`, pinned at
+`85 + 429`, unchanged; `every_nat_declaration_is_checked_and_axiom_free`;
+`multichoose_evaluates_correctly`). `cargo fmt --all --check` clean. No
+source files touched by this lane — the definition and the three theorems
+were already complete and correct.
+
+**Skipped, as instructed:** `F:ml430-mutation-edb05acf07d9ef3f9f8232fc`
+(`n.choose n = 0`, false — `choose_self` proves it is 1).
+
+**Budget-permitting factorial bridge: not attempted.** No `ml430` fact names
+a multichoose-in-terms-of-factorial identity to close (searched
+`artifacts/facts/*multichoose*factorial*` and `*ml430*multichoose*` —
+only the three zero-right/one/one-right mirrors exist), so there was no
+concrete target to hang new proof work on without manufacturing a fact that
+was not asked for.
+
+**Your lane's block (`DONE for this pass`, int-gcd-div, 2026-08-29).** One of
+three facts landed, fully kernel-checked; the other two are re-scoped open
+with a concrete, verified reason each — not "hard", a named missing lemma.
+
+**Landed: `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e`
+(`Nat.exists_mul_mod_eq_gcd`).** The second-lane refutation in the brief
+("this needs genuine Int/Nat mod-arithmetic bridging, not a corollary of the
+Bezout witnesses") held under my own construction: `declare_exists_mul_mod_eq_gcd`
+(`crates/axeyum-lean-kernel/src/int_prelude/gcd.rs`) reduces the Bezout
+coefficient `Nat.gcdA n k` modulo `k` through `Int.modEq_add_mul_left` /
+`Int.ModEq.mul_left` / `Int.mod_modEq` / `Int.ModEq.symm` (all pre-existing in
+`modeq.rs`/`modeq_family.rs`) plus one call to `super::wilson::emod_eq_self_of_in_range`
+(already `pub(super)`), then descends the resulting `Int` equation to the
+stated `Nat` equation via `natAbs`. No new axiom, no infrastructure change
+outside `gcd.rs` + one `IntPrelude` field + one build-order line. Verified:
+`cargo test -p axeyum-lean-kernel --lib int_prelude::` — 40 passed, including
+`every_int_declaration_is_checked_and_axiom_free` and
+`derived_laws_have_no_axiom_footprint` — plus the fact's own
+`theorem_axiom_footprint` grep checker, both run by hand before landing.
+`cargo fmt --edition 2024 --check` and `cargo clippy -p axeyum-lean-kernel
+--all-targets -- -D warnings` both clean. `python3 scripts/validate-facts.py`:
+0 errors.
+
+**Not landed, re-scoped open, both for the SAME underlying reason:**
+
+- `F:ml430-int-gcd-div-5e01872f` (`Int.gcd_div`) — the fully general
+  statement (`c` an arbitrary, possibly negative or zero, `Int`) needs an
+  exact-quotient uniqueness argument for a NEGATIVE divisor. This kernel's
+  `Int.ediv_emod_unique` (`division.rs`) is stated only for `0 < b`; there is
+  no proved analogue for `b < 0` (checked: no `ediv_neg`/`mul_ediv_cancel`-style
+  lemma exists for a negative or zero divisor anywhere in `int_prelude`).
+  Building that generality is a real, separate piece of work, not a
+  rearrangement of what exists.
+- `F:ml430-int-gcd-div-gcd-div-gcd-2db608dc` (`Int.gcd_div_gcd_div_gcd`) —
+  the divisor here (`↑(i.gcd j)`) is always `≥ 0`, so the negative-divisor gap
+  above does NOT block it; Mathlib itself derives this fact as a one-line
+  corollary of `Int.gcd_div`, which we do not have. I worked out an
+  independent Bézout-based route that avoids needing `Int.gcd_div` at all
+  (reduce `qi := i/c`, `qj := j/c`'s common Bézout combination `X` mod `c`,
+  show `natAbs(X) = 1` via `Nat.mul_left_cancel_of_pos` on `c*1 = c*X`, then
+  `gcd(qi,qj) ∣ natAbs(X) = 1`). Every lemma the route needs exists
+  (`gcd_dvd_left/right`, `dvd_mul_right`, `dvd_add`, `dvd_trans`,
+  `nat_abs_mul`, `nat.mul_left_cancel_of_pos`, `nat.eq_one_of_dvd_one`,
+  `nat_abs_dvd_nat_abs_of_dvd`, `gcd_eq_gcd_ab_witnesses`, `mul_assoc`,
+  `left_distrib`, `mul_one`) — but I stopped short of implementing it because
+  the last algebraic step (`natAbs(c*1)` reducing to a bare `g`) does **not**
+  reduce by computation for a SYMBOLIC `g := Nat.gcd i j` — `Nat.mul g 1`
+  gets stuck at `Nat.add Nat.zero g` (`Nat.add` recurses on its RIGHT
+  argument, per this repo's own standing gotcha), so the step needs an
+  explicit `Nat.mul_one`/`Nat.zero_add`-style lemma rather than raw defeq,
+  and I ran out of budget to nail that down and verify it against the kernel
+  in this pass rather than leave a plausible-but-unverified term. Left open
+  rather than landing something unchecked.
+
+**Re-confirmed myself (not just trusted the brief):**
+`scripts/check-autogenesis-semantic-contract-target-census.py` references
+`F:ml430-int-gcd-div-5e01872f` only inside a static, pinned manifest row
+(`EXPECTED_NARROWEST["fact_id"]`) compared against
+`artifacts/autogenesis/mathlib-semantic-contract-target-census-v1.json`'s own
+content by `source_content_sha256` and a handful of structural counts. Grepped
+the whole script for `epistemic_status`: zero hits. It never reads the fact's
+live status, so leaving `5e01872f` open does not disturb it.
+
+**Mutation marker:** `F:ml430-mutation-48fe130e2b8eadb6f626b66f` is in this
+family per the brief; skipped, not touched.
+
+**What the kernel REJECTED and why:** nothing — `cargo check`,
+`cargo test --lib int_prelude::`, `cargo fmt --check`, and `cargo clippy`
+all passed on the first constructed term for `Nat.exists_mul_mod_eq_gcd`
+(the term construction was planned in full, including every intermediate
+lemma's exact signature, before writing any Rust).
+
+**Timing:** `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 40
+passed, 0 failed, finished in 3.79s before the rustfmt fixup and 3.97s after
+(unchanged test count both times).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
