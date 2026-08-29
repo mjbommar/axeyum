@@ -958,6 +958,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_xor_three_five,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
+        p.bitwise_aux_eq_land_aux,
+        p.bitwise_aux_eq_lor_aux,
         p.bitwise_and_eq_land,
         p.bitwise_or_eq_lor,
         p.asc_factorial_zero,
@@ -6251,7 +6253,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 436,
+        85 + 438,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -10110,6 +10112,263 @@ fn bitwise_computes_and_its_boundary_theorems_apply() {
     assert!(
         f.k.axiom_footprint(p.bitwise_aux).is_empty(),
         "Nat.bitwiseAux must rest on zero axioms"
+    );
+}
+
+/// The `Nat.mod _ 2 ∈ {0, 1}` split `bitwise.rs` named as absent, in both its
+/// forms: `Nat.lt_two_cases` (from a `Lt r 2` hypothesis) and
+/// `Nat.mod_two_eq_zero_or_one` (the `Nat.mod` instance of it).
+///
+/// Both negative controls change ONE literal — `Eq _ 2` where the theorem
+/// says `Eq _ 1` — deliberately: a control that transposes whole subterms
+/// makes the kernel run a *failing* defeq with no early exit, which is a
+/// pathology rather than a check.
+#[test]
+fn the_mod_two_split_is_available_in_both_its_forms() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // lt_two_cases at the one case we can witness without a `le_refl`:
+    // `Lt 0 2` from `zero_lt_succ 1`.
+    {
+        let one = f.num(1);
+        let zero = f.num(0);
+        let witness = f.zero_lt_succ(one);
+        let applied = f.const_app(p.lt_two_cases, &[zero, witness]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lt_two_cases must apply at r = 0: {shown}")
+        });
+        let is_zero = f.eq(zero, zero);
+        let is_one = f.eq(zero, one);
+        let logic = f.p.logic;
+        let want = f.const_app(logic.or, &[is_zero, is_one]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lt_two_cases 0 must state Or (Eq 0 0) (Eq 0 1)"
+        );
+        let two = f.num(2);
+        let is_two = f.eq(zero, two);
+        let bad_want = f.const_app(logic.or, &[is_zero, is_two]);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: lt_two_cases 0 must not state Or (Eq 0 0) (Eq 0 2)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.lt_two_cases).is_empty(),
+            "lt_two_cases must rest on zero axioms"
+        );
+    }
+
+    // mod_two_eq_zero_or_one at a concrete argument, and the disjunction's
+    // two sides must be genuinely different propositions (a split whose
+    // branches coincided would be vacuous).
+    {
+        let seven = f.num(7);
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let applied = f.const_app(p.mod_two_eq_zero_or_one, &[seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("mod_two_eq_zero_or_one must apply at n = 7: {shown}")
+        });
+        let remainder = f.modulo(seven, two);
+        let is_zero = f.eq(remainder, zero);
+        let is_one = f.eq(remainder, one);
+        let logic = f.p.logic;
+        let want = f.const_app(logic.or, &[is_zero, is_one]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "mod_two_eq_zero_or_one 7 must state Or (Eq (mod 7 2) 0) (Eq (mod 7 2) 1)"
+        );
+        let is_two = f.eq(remainder, two);
+        let bad_want = f.const_app(logic.or, &[is_zero, is_two]);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: the right disjunct is Eq (mod 7 2) 1, not Eq (mod 7 2) 2"
+        );
+        // 7 % 2 = 1, so the LEFT disjunct is false here: the two sides are
+        // not the same proposition and the split is not vacuous.
+        assert!(
+            !f.k.def_eq(is_zero, is_one),
+            "the two disjuncts must be different propositions"
+        );
+        assert!(
+            f.k.axiom_footprint(p.mod_two_eq_zero_or_one).is_empty(),
+            "mod_two_eq_zero_or_one must rest on zero axioms"
+        );
+    }
+}
+
+/// The UNIVERSAL specialization equivalences —
+/// `Nat.bitwise_and_eq_land : ∀ m n, Eq (bitwise and_fn m n) (land m n)` and
+/// its `lor` twin — which supersede `bitwise.rs`'s single-point
+/// `_three_five` witnesses.
+///
+/// Checked BOTH ways, because the two catch disjoint defects (see
+/// `CLAUDE.md`: numerals reduce, and reduction hides every defeq-shaped gap,
+/// while a symbolic check cannot catch a transposed branch):
+///
+/// - **symbolically**, by re-declaring the statement in a consumer namespace
+///   with the prelude theorem instantiated at genuinely bound variables — if
+///   the theorem only held at numerals this would not admit;
+/// - **concretely**, at operand pairs whose AND and OR values differ, so a
+///   copy-paste between the two blocks fails loudly.
+///
+/// The negative control reuses the very proof that certifies the `land`
+/// instance against the `lor` statement at `(3, 5)`, where the two sides
+/// reduce to `1` and `7`: the kernel must reject it.
+#[test]
+fn the_bitwise_specialization_equivalences_hold_universally() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let bitwise = p.bitwise;
+
+    let and_ = super::bitwise::and_fn(&mut f);
+    let or_ = super::bitwise::or_fn(&mut f);
+
+    // Symbolic: the statement re-declared over bound variables, proved by the
+    // prelude theorem alone.
+    {
+        let land = p.land;
+        let name = f.name("bitwise_and_eq_land_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(bitwise, &[and_, m, n]);
+            let rhs = d.const_app(land, &[m, n]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.bitwise_and_eq_land, &[m, n]);
+            (stmt, proof)
+        })
+        .expect("bitwise_and_eq_land must apply at symbolic operands");
+    }
+    {
+        let lor = p.lor;
+        let name = f.name("bitwise_or_eq_lor_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(bitwise, &[or_, m, n]);
+            let rhs = d.const_app(lor, &[m, n]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.bitwise_or_eq_lor, &[m, n]);
+            (stmt, proof)
+        })
+        .expect("bitwise_or_eq_lor must apply at symbolic operands");
+    }
+
+    // Concrete: instantiated at pairs where AND and OR disagree, so the two
+    // theorems cannot be confused for each other.
+    for (m, n) in [(0u32, 0u32), (0, 5), (5, 0), (3, 5), (5, 3), (6, 3), (7, 7)] {
+        let mm = f.num(m);
+        let nn = f.num(n);
+
+        let applied = f.const_app(p.bitwise_and_eq_land, &[mm, nn]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_and_eq_land must apply at ({m}, {n}): {shown}")
+        });
+        let lhs = f.const_app(bitwise, &[and_, mm, nn]);
+        let rhs = f.const_app(p.land, &[mm, nn]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_and_eq_land {m} {n} must state Eq (bitwise and_fn {m} {n}) (land {m} {n})"
+        );
+
+        let applied = f.const_app(p.bitwise_or_eq_lor, &[mm, nn]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_or_eq_lor must apply at ({m}, {n}): {shown}")
+        });
+        let lhs = f.const_app(bitwise, &[or_, mm, nn]);
+        let rhs = f.const_app(p.lor, &[mm, nn]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_or_eq_lor {m} {n} must state Eq (bitwise or_fn {m} {n}) (lor {m} {n})"
+        );
+    }
+
+    // Negative control: the AND agreement proof against the OR statement, at
+    // (3, 5) where the two sides reduce to 1 and 7.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(bitwise, &[and_, three, five]);
+        let wrong_rhs = f.const_app(p.lor, &[three, five]);
+        let wrong_ty = f.eq(lhs, wrong_rhs);
+        let proof = f.lemma(p.bitwise_and_eq_land, &[three, five]);
+        let name = f.name("bitwise_and_eq_lor_three_five");
+        let error = f
+            .declare_theorem(name, wrong_ty, proof)
+            .expect_err("NC: the land agreement must not prove the lor statement");
+        assert!(matches!(
+            error,
+            KernelError::DeclarationValueMismatch { .. }
+        ));
+        assert!(!f.k.environment().contains(name));
+    }
+
+    // The FUEL-GENERALIZED form holds at a fuel that is NOT the canonical
+    // `fuel = m`, and specifically at an INSUFFICIENT one. This is the
+    // evidence that agreement does not depend on fuel sufficiency, so no
+    // fuel-irrelevance lemma is a prerequisite for it: at `(fuel, m, n) =
+    // (1, 7, 7)` both auxiliaries take a single step and stop, giving `1`
+    // where the canonical answer is `7` -- and they still agree.
+    {
+        let one = f.num(1);
+        let seven = f.num(7);
+        let applied = f.const_app(p.bitwise_aux_eq_land_aux, &[one, seven, seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_aux_eq_land_aux must apply at fuel 1: {shown}")
+        });
+        let lhs = f.const_app(p.bitwise_aux, &[and_, one, seven, seven]);
+        let rhs = f.const_app(p.land_aux, &[one, seven, seven]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_aux_eq_land_aux 1 7 7 must state \
+             Eq (bitwiseAux and_fn 1 7 7) (landAux 1 7 7)"
+        );
+        // The fuel really is insufficient: one step gives 1, the canonical
+        // `land 7 7` is 7. Without this the block above would be vacuous --
+        // it would only be re-checking the canonical instance under another
+        // name.
+        assert!(
+            f.k.def_eq(rhs, one),
+            "landAux 1 7 7 must be 1 (a single fuel step)"
+        );
+        let canonical = f.const_app(p.land, &[seven, seven]);
+        assert!(
+            f.k.def_eq(canonical, seven),
+            "land 7 7 must be 7 (the canonical answer)"
+        );
+        assert!(
+            !f.k.def_eq(rhs, canonical),
+            "the chosen fuel must be INSUFFICIENT, or this instance says nothing \
+             about non-canonical fuel"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bitwise_aux_eq_land_aux).is_empty(),
+            "bitwise_aux_eq_land_aux must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.bitwise_aux_eq_lor_aux).is_empty(),
+        "bitwise_aux_eq_lor_aux must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bitwise_and_eq_land).is_empty(),
+        "bitwise_and_eq_land must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bitwise_or_eq_lor).is_empty(),
+        "bitwise_or_eq_lor must rest on zero axioms"
     );
 }
 

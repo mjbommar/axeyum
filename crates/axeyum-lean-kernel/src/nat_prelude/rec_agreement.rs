@@ -178,10 +178,25 @@ fn bit_agreement(
 /// `top`/`aux` are a specialization's public/auxiliary names and the three
 /// closures describe its successor row.
 ///
-/// Both definitions are `Aux m m n` over the *same* fuel counter, so the proof
-/// is [`agree_by_fuel_induction`] on that shared fuel with `m`, `n`
-/// generalized, then one application at `(m, n)`; `Nat.bitwise`/`top` unfold
-/// to the `Aux` forms definitionally, so no bridging step is needed.
+/// **Two theorems land, not one, and the FUEL-GENERALIZED one is the
+/// reusable half.** `aux_name` is
+/// `∀ fuel m n, Eq (bitwiseAux f fuel m n) (aux fuel m n)` — true at
+/// *arbitrary* fuel, sufficient or not — and `name` is the public
+/// `∀ m n, Eq (bitwise f m n) (top m n)`, which is that lemma at
+/// `fuel := m` plus the two definitional unfoldings. The general form is
+/// exposed rather than left as an anonymous intermediate because it is what a
+/// caller reasoning about a *non-canonical* fuel needs, and an inline step
+/// with no name is this repository's most expensive hiding place.
+///
+/// **No fuel-irrelevance lemma is required, and the reason is structural**:
+/// `Nat.bitwise f m n := bitwiseAux f m m n` and `top m n := aux m m n` put
+/// the SAME expression `m` in the fuel slot, and the successor row steps both
+/// sides to the same `k`. The two `Nat.rec` instances are therefore indexed by
+/// **one** counter decrementing in lockstep, never by two that must be
+/// reconciled. Note what the step does with it: the IH is used at fuel `k`
+/// with operand `m / 2`, which is *not* that operand's canonical fuel — and
+/// that is harmless precisely because agreement is proved fuel-parametrically,
+/// so both sides carry the same non-canonical fuel. See the module doc.
 ///
 /// # Errors
 ///
@@ -190,6 +205,7 @@ fn bit_agreement(
 fn declare_bitwise_agreement(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
+    aux_name: NameId,
     name: NameId,
     f: ExprId,
     aux: NameId,
@@ -199,9 +215,10 @@ fn declare_bitwise_agreement(
     combine: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
 ) -> Result<(), KernelError> {
     let p = *p;
-    d.theorem(name, 2, &|d, values| {
-        let m = values[0];
-        let n = values[1];
+    d.theorem(aux_name, 3, &|d, values| {
+        let fuel = values[0];
+        let m = values[1];
+        let n = values[2];
 
         let statement = |d: &mut NatDev<'_>, fuel: ExprId, x: ExprId, y: ExprId| {
             let lhs = d.const_app(p.bitwise_aux, &[f, fuel, x, y]);
@@ -259,8 +276,18 @@ fn declare_bitwise_agreement(
             d.trans(start, middle, finish, recursion_step, bit_step)
         };
 
-        let agreement = agree_by_fuel_induction(d, &statement, &base, &step, m);
+        let agreement = agree_by_fuel_induction(d, &statement, &base, &step, fuel);
         let proof = d.apply(agreement, &[m, n]);
+        let stmt = statement(d, fuel, m, n);
+        (stmt, proof)
+    })?;
+
+    // The public form: the fuel-generalized lemma at `fuel := m`, which is the
+    // fuel both `Nat.bitwise` and `top` supply definitionally.
+    d.theorem(name, 2, &|d, values| {
+        let m = values[0];
+        let n = values[1];
+        let proof = d.lemma(aux_name, &[m, m, n]);
         let lhs = d.const_app(p.bitwise, &[f, m, n]);
         let rhs = d.const_app(top, &[m, n]);
         let stmt = d.eq(lhs, rhs);
@@ -375,6 +402,7 @@ pub(super) fn declare_rec_agreement_all(
     declare_bitwise_agreement(
         d,
         &p,
+        p.bitwise_aux_eq_land_aux,
         p.bitwise_and_eq_land,
         and_,
         p.land_aux,
@@ -394,6 +422,7 @@ pub(super) fn declare_rec_agreement_all(
     declare_bitwise_agreement(
         d,
         &p,
+        p.bitwise_aux_eq_lor_aux,
         p.bitwise_or_eq_lor,
         or_,
         p.lor_aux,

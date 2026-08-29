@@ -2637,6 +2637,18 @@ pub struct NatPrelude {
     /// as a lemma "this prelude does not yet carry". The eliminator form
     /// (a motive varying with the remainder's value) is `ops::cases_mod_two`.
     pub mod_two_eq_zero_or_one: NameId,
+    /// `Nat.bitwise_aux_eq_land_aux : ∀ fuel m n, Eq (bitwiseAux and_fn fuel
+    /// m n) (landAux fuel m n)` — the FUEL-GENERALIZED agreement, true at
+    /// arbitrary fuel rather than only the canonical `fuel = m`, of which
+    /// [`Self::bitwise_and_eq_land`] is the instance at `fuel := m`. Exposed
+    /// separately because a caller reasoning about a non-canonical fuel needs
+    /// this form, and because it makes fuel-irrelevance for `bitwiseAux` and
+    /// for `landAux` interderivable. See `nat_prelude::rec_agreement`.
+    pub bitwise_aux_eq_land_aux: NameId,
+    /// `Nat.bitwise_aux_eq_lor_aux : ∀ fuel m n, Eq (bitwiseAux or_fn fuel m
+    /// n) (lorAux fuel m n)` — the `lor` twin of
+    /// [`Self::bitwise_aux_eq_land_aux`].
+    pub bitwise_aux_eq_lor_aux: NameId,
     /// `Nat.bitwise_and_eq_land : ∀ m n, Eq (bitwise and_fn m n) (land m n)`
     /// — the UNIVERSAL specialization equivalence, superseding
     /// [`Self::bitwise_and_eq_land_three_five`]'s single concrete witness.
@@ -3235,6 +3247,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_xor_three_five: kernel.name_str(nat, "bitwise_xor_three_five"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
+            bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
+            bitwise_aux_eq_lor_aux: kernel.name_str(nat, "bitwise_aux_eq_lor_aux"),
             bitwise_and_eq_land: kernel.name_str(nat, "bitwise_and_eq_land"),
             bitwise_or_eq_lor: kernel.name_str(nat, "bitwise_or_eq_lor"),
         };
