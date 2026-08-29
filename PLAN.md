@@ -185,6 +185,7 @@ now. Nothing was deleted.
 | 2026-08-29 | `0348564ab` | Break the `auto<->nat_induction` and `qinst_egraph<->quant_instance_set_cert` cycle-closing edges from 2026-08-17; `modules_in_cycles` now matches the pre-regression baseline exactly. Residual mass/fan-out growth on the same gate is pre-existing, tracked by D1/D3, left untouched. |
 | 2026-08-29 | int-parity-two | 7 of 10 `ml430` division-by-two mirrors closed (`Int.emod_two_ne_zero`/`_ne_one`, `Int.ediv_two_mul_two_of_even`, `Int.ediv_two_mul_two_add_one_of_odd`, `Int.add_one_ediv_two_mul_two_of_odd`, `Int.odd_of_mul_left`/`_right`), all axiom-free; `even_add`/`even_add'`/`even_add_one` left open |
 | 2026-08-29 | nat-div-mod-family | `Nat.add_mul_div_left`/`_right`, `Nat.add_mul_mod_self_left`/`_right`, `Nat.add_mod_left`/`_right`, `Nat.add_div_left`/`_right` — 8 of 9 dispatched `ml430` add/div/mod mirrors, axiom-free, via a new reusable `div_mod_shift` helper (`nat_prelude/div_mod_lemmas.rs`). `add_div_of_dvd_add_add_one` left open (needs a different argument). |
+| 2026-08-29 | nat-totient | `Nat.coprime_succ_self` (new: consecutive naturals are coprime) and `Nat.totient_eq_zero` — 1 of 9 dispatched `ml430` totient mirrors, axiom-free, via a top-index-witness argument (`nat_prelude/totient_lemmas.rs`). The other 8 triaged and left open: blocked on a general existence-witness-to-positive-count lemma and/or the `totient_even` fixed-point-free-involution pairing argument and/or the multiplicative formula for `totient` — none built yet, none a small addition. |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -19806,6 +19807,152 @@ divisibility hypothesis (via `div_mod_exec`/`div_mod_unique` at dividend
 case-split on whether `a % c + b % c` overflows `c` — this is the step that
 actually needs new machinery beyond `div_mod_shift`, and is why it was left
 open rather than attempted under time pressure.
+
+**Lane block (`DONE for this dispatch`, nat-totient, 2026-08-29).**
+
+**The task.** Nine freshly-preregistered `ml430` `Nat.totient` mirrors were
+dispatchable:
+
+```
+F:ml430-nat-totient-eq-zero-3be161d6            F:ml430-nat-totient-eq-one-iff-68d883a0
+F:ml430-nat-totient-even-28e0415f               F:ml430-nat-totient-dvd-of-dvd-9622e44a
+F:ml430-nat-odd-totient-iff-b6a6596f            F:ml430-nat-odd-totient-iff-eq-one-d0491d84
+F:ml430-nat-totient-coprime-totient-iff-3932cf83
+F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7
+F:ml430-nat-dvd-two-of-totient-le-one-3642bf31
+F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7
+```
+
+**Step 0.** `Nat.totient` is a `Definition` (`nat_prelude/totient.rs`,
+already there before this lane, along with `Nat.countRange` and one prior
+theorem `Nat.totient_prime`). A theorem inventory returns zero rows for it
+by construction — confirmed the trap doesn't apply here since the family's
+own file already reads it from the environment/source, not from an
+inventory. Checked which of the nine already existed under a different
+name: **none did** — `theorem_dependency_inventory`/`prelude_theorem_inventory
+--include-constructed --release` had no match for any of `totient_eq_zero`,
+`totient_eq_one_iff`, `totient_even`, `totient_dvd_of_dvd`,
+`odd_totient_iff{,_eq_one}`, `totient_coprime_totient_iff`,
+`eq_or_eq_of_totient_eq_totient`, `dvd_two_of_totient_le_one`,
+`totient_gcd_mul_totient_mul` before this lane, and `coprime_succ_self`
+(the one new supporting lemma this lane needed) was also absent (`gcd_comm`,
+`gcd_succ_self` too — the only prior `gcd_comm`-shaped fact in the tree is
+`int_prelude`'s, over `Int` arguments).
+
+**Mirror-flip check.** Read `Mathlib/Data/Nat/Totient.lean:38` at the pinned
+v4.30 commit (`c5ea0035…`, checked out at
+`/data0/axeyum/lean-import-toolchain/mathlib4`): `def totient (n : ℕ) : ℕ :=
+#{a ∈ range n | n.Coprime a}` — the cardinality of the coprime-to-`n` subset
+of `range n = [0,n)`. This kernel's `Nat.totient n := countRange (fun k =>
+beq (gcd k n) 1) n` is the SAME construction (count over `[0,n)` filtered by
+a coprimality predicate), differing only in `gcd`'s argument order
+(`gcd k n` vs Mathlib's `gcd n a`, the same proposition by commutativity).
+**Every mirror in this family is an honest flip target in principle** —
+what blocks eight of the nine is proof difficulty over an honest statement,
+not a definitional mismatch. Full reasoning, restated per-mirror, is in
+`crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs`'s module doc.
+
+**Closed, 1 of 9 — `F:ml430-nat-totient-eq-zero-3be161d6`.** `∀ n,
+Iff (totient n = 0) (n = 0)`. New building block:
+`Nat.coprime_succ_self : ∀ m, gcd m (succ m) = 1` (consecutive naturals are
+coprime), which fell out cheaply from three already-declared facts with no
+new induction — `coprime_add_self_right(m, 1)` plus `coprime_one_right_iff(m)`
+give `gcd m (add 1 m) = 1` unconditionally, and `add 1 m = succ m` via
+`succ_add`/`zero_add` congr'd through `succ`. `totient_eq_zero` then
+case-splits `n` (`cases_zero_succ`, no induction hypothesis): `n = 0` is the
+`countRange` base case by pure `Eq.refl`; `n = succ k` uses the range's own
+TOP index `k` as the witness (`coprime_succ_self k` promotes the predicate
+at `k` to `true` via `beq_eq_true_of_eq`, so `countRange`'s succ-case
+defining equation makes `totient (succ k)` defeq `succ (countRange f k)` —
+never `0`, matching `succ k` itself never being `0`) — both `Iff` legs close
+by `ex_falso`. No existence/counting machinery beyond the top-index witness
+was needed. New file `crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs`.
+
+**Open, 8 of 9 — triaged, not attempted, and why (all detail in the module
+doc, summarized here):**
+
+- **`totient_eq_one_iff`** (`totient n = 1 ↔ n = 1 ∨ n = 2`): reverse
+  direction is cheap (concrete `def_eq` computation, like
+  `totient_computes_on_small_numerals`). Forward direction needs a SECOND,
+  DISTINCT coprime witness below the top index once `n ≥ 3`, plus a lemma
+  this prelude does not have: "two distinct true witnesses below `n` give
+  `countRange f n ≥ 2`". The top-index technique above only ever produces
+  `≥ 1`, by construction.
+- **`totient_even`** (`2 < n → Even (totient n)`): needs the classical
+  fixed-point-free-involution pairing argument (`k ↦ n - k` on the coprime
+  residues) — `totient.rs`'s own module doc already calls this out as
+  separate, larger work. Not machinery this prelude has for a
+  `Bool`-predicate-defined subset of `[0,n)`.
+- **`odd_totient_iff`**, **`odd_totient_iff_eq_one`**: both reduce to
+  `totient_eq_one_iff` combined with `totient_even` — blocked on both.
+- **`totient_coprime_totient_iff`**: the "if" direction is cheap; the "only
+  if" direction's contrapositive needs `totient_even` at both arguments.
+  Blocked on `totient_even`.
+- **`eq_or_eq_of_totient_eq_totient`**, **`totient_gcd_mul_totient_mul`**:
+  both need real structural results connecting `totient` to
+  multiplication/divisibility — standardly the multiplicative formula
+  `totient(m*n) = totient(m)*totient(n)` for coprime `m,n` (a CRT-style
+  bijection argument) or an equivalent prime-power decomposition. Neither
+  exists in this prelude; building it is a project on the scale of
+  `totient_even`'s pairing argument, not a slice of this one.
+- **`totient_dvd_of_dvd`**: also standardly proved via the multiplicative
+  formula. Same blocker.
+
+So the honest shape: one closed, and the rest bottleneck on one of two
+missing pieces of real infrastructure (a general
+existence-witness-to-positive-count lemma — small, unlocks
+`totient_eq_one_iff`'s forward direction and `dvd_two_of_totient_le_one`;
+the fixed-point-free-involution pairing argument for `totient_even` — large,
+additionally unlocks `odd_totient_iff{,_eq_one}` and half of
+`totient_coprime_totient_iff`) plus the multiplicative formula (largest,
+needed by `totient_gcd_mul_totient_mul`, `totient_dvd_of_dvd`, and the other
+half of `eq_or_eq_of_totient_eq_totient`).
+
+**Verification.** `cargo test -p axeyum-lean-kernel --lib nat_prelude::` —
+**161 passed, 0 failed** (159 baseline + two new tests,
+`coprime_succ_self_applies_at_a_concrete_instance_and_symbolically` and
+`totient_eq_zero_applies_at_zero_a_concrete_successor_and_symbolically`,
+each instantiated concretely with a discriminating negative control
+(`gcd 4 6 ≠ 1`, `totient 5 ≠ 0`) AND against a genuinely free variable via
+an explicit `LocalContext` + `Kernel::infer_in` — a bare unregistered
+`FVar` is `UnboundFVar` to `Kernel::infer` directly, which is what the first
+draft of these tests hit and is recorded as a discovery in the commit
+history, not left undocumented). `cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both
+clean. `python3 scripts/check-test-attribute-integrity.py`: 0 findings.
+`python3 scripts/validate-facts.py`: 0 errors. `the_build_is_deterministic`'s
+pin moved from `93 + 524` to `93 + 526` (two new theorems), taken from the
+panic message's own mismatch (619 vs 617), not hand-incremented.
+
+`F:ml430-nat-totient-eq-zero-3be161d6` flipped to `proved`,
+`proof_route: kernel-lean`, `axiom_footprint: []`, with a kernel-term
+evidence row (`nat_theorem_inventory -- totient_eq_zero`, verified both to
+pass for real — count 1 — and to fail on a mutated name — count 0, exit 1)
+and an exhaustive-enumeration axiom-freedom row
+(`nat_axiom_inventory --require-axiom-free nat`, exit 0). `Nat.coprime_succ_self`
+is a direct theorem dependency of `totient_eq_zero`
+(`theorem_dependency_inventory Nat.totient_eq_zero`) with no fact ledger
+entry of its own — an unregistered nat-prelude theorem, not an axiom, per
+the empty-footprint evidence; noted in the fact's `notes` field rather than
+silently omitted.
+
+**Commits** (not pushed): `4df14e45d` (wip: the two declarations, build
+unverified — landed within the first ten tool calls per the session rule),
+`eaeab9d5a` (borrow-checker + clippy doc-lint fixes, the two concrete+
+symbolic tests, the determinism-pin recount, and coverage-list
+registration), `978c1fd18` (the fact-ledger flip). This status file is
+uncommitted as of writing it — commit it together with `PLAN.md`
+regeneration before ending the session.
+
+**For the next lane on this family:** the two missing infrastructure pieces
+above are the actual blockers, not proof difficulty on any individual
+mirror beyond them. `dvd_two_of_totient_le_one` is the cheapest next target
+once the existence-witness-to-positive-count lemma exists (its contrapositive
+needs the same "second distinct witness below `n`" argument
+`totient_eq_one_iff`'s forward direction needs). `totient_even` is the
+higher-leverage build (unlocks three more mirrors transitively) but is a
+genuinely larger slice — size it as its own task, not a continuation of
+this one.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
