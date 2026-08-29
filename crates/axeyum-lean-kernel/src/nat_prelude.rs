@@ -174,6 +174,7 @@ mod perfect;
 mod permutation;
 mod powsq;
 mod primes;
+mod rec_agreement;
 mod rectangle;
 mod relation;
 mod restrict_pair;
@@ -259,6 +260,7 @@ use primes::{
     declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes,
     declare_succ_pred_prime,
 };
+use rec_agreement::declare_rec_agreement_all;
 use rectangle::declare_rectangle;
 use relation::{
     declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
@@ -2626,6 +2628,26 @@ pub struct NatPrelude {
     /// XOR sibling exists to cross-check against, so this closes against a
     /// hand-computed numeral (`0b011 xor 0b101 = 0b110`) instead.
     pub bitwise_xor_three_five: NameId,
+    /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
+    /// propositional form of the two-way bounded split. See
+    /// `nat_prelude::rec_agreement`.
+    pub lt_two_cases: NameId,
+    /// `Nat.mod_two_eq_zero_or_one : ∀ n, Or (Eq (mod n 2) 0) (Eq (mod n 2)
+    /// 1)` — the `Nat.mod _ 2 ∈ {0, 1}` fact `bitwise.rs`'s module doc named
+    /// as a lemma "this prelude does not yet carry". The eliminator form
+    /// (a motive varying with the remainder's value) is `ops::cases_mod_two`.
+    pub mod_two_eq_zero_or_one: NameId,
+    /// `Nat.bitwise_and_eq_land : ∀ m n, Eq (bitwise and_fn m n) (land m n)`
+    /// — the UNIVERSAL specialization equivalence, superseding
+    /// [`Self::bitwise_and_eq_land_three_five`]'s single concrete witness.
+    /// Proved by induction on the shared fuel counter with both operands
+    /// generalized in the motive; see `nat_prelude::rec_agreement`.
+    pub bitwise_and_eq_land: NameId,
+    /// `Nat.bitwise_or_eq_lor : ∀ m n, Eq (bitwise or_fn m n) (lor m n)` —
+    /// the `lor` twin of [`Self::bitwise_and_eq_land`], and the evidence that
+    /// the agreement route is not specific to an operator with an absorbing
+    /// zero on the fuel operand (`lor` has none; see `lor.rs`).
+    pub bitwise_or_eq_lor: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3211,6 +3233,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_and_eq_land_three_five: kernel.name_str(nat, "bitwise_and_eq_land_three_five"),
             bitwise_or_eq_lor_three_five: kernel.name_str(nat, "bitwise_or_eq_lor_three_five"),
             bitwise_xor_three_five: kernel.name_str(nat, "bitwise_xor_three_five"),
+            lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
+            mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
+            bitwise_and_eq_land: kernel.name_str(nat, "bitwise_and_eq_land"),
+            bitwise_or_eq_lor: kernel.name_str(nat, "bitwise_or_eq_lor"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3398,6 +3424,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // and `Nat.lor` (just above) for its concrete specialization
         // checks; nothing needs `Nat.bitwise`, so it goes last too.
         declare_bitwise_all(&mut d, &p)?;
+        // Needs `Nat.bitwise` and `Nat.land`/`Nat.lor` (all just above),
+        // `Nat.mod_lt` (`declare_gcd_all`, far above) and the bounded-cases
+        // eliminator's own lemmas (`le_of_lt_succ`, `lt_or_eq_of_le`,
+        // `zero_le`, `le_antisymm`). Nothing needs these agreement theorems,
+        // so they go after everything they relate.
+        declare_rec_agreement_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.
