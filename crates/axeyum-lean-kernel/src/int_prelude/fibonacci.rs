@@ -2280,7 +2280,7 @@ fn eq_sub_of_add_eq_left(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, h:
     let ab = d.iadd(a, b);
     let ba = d.iadd(b, a);
     let comm = d.lemma(p.add_comm, &[a, b]); // Eq(add a b, add b a)
-    let comm_rev = d.isymm(ba, ab, comm); // Eq(add b a, add a b)
+    let comm_rev = d.isymm(ab, ba, comm); // Eq(add b a, add a b)
     let h_ba = d.itrans(ba, ab, c, comm_rev, h); // Eq(add b a, c)
 
     let neg_a = d.ineg(a);
@@ -2346,7 +2346,7 @@ fn add_sub_self_left(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
     let xx = d.iadd(x, x);
     let xx_negy = d.iadd(xx, neg_y);
     let assoc = d.lemma(p.add_assoc, &[x, x, neg_y]); // Eq((x+x)+(-y), x+(x+(-y)))
-    let s2 = d.isymm(x_x_negy, xx_negy, assoc);
+    let s2 = d.isymm(xx_negy, x_x_negy, assoc);
 
     let (_, chain) = d.ichain(start, &[(x_x_negy, s1), (xx_negy, s2)]);
     chain
@@ -2371,7 +2371,7 @@ fn add_p_qp_eq_pp_q(d: &mut IntDev<'_>, p_: ExprId, q_: ExprId) -> ExprId {
     let pp_q = d.iadd(pp, q_);
     let s2 = {
         let assoc = d.lemma(p.add_assoc, &[p_, p_, q_]); // Eq((p+p)+q, p+(p+q))
-        d.isymm(p_pq, pp_q, assoc)
+        d.isymm(pp_q, p_pq, assoc)
     };
 
     let (_, chain) = d.ichain(start, &[(p_pq, s1), (pp_q, s2)]);
@@ -2421,7 +2421,7 @@ fn fib_pred_eq_sub(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
     let k_one = d.iadd(k, one);
     let f_k1 = fibt(d, k_one);
     let bridge_two = fib_shift_minus_one_plus_two(d, k); // Eq(f_kk2, f_k1)
-    let back_two = d.isymm(f_k1, f_kk2, bridge_two); // Eq(f_k1, f_kk2)
+    let back_two = d.isymm(f_kk2, f_k1, bridge_two); // Eq(f_k1, f_kk2)
 
     let f_k = fibt(d, k);
     let cancel_k1 = sub_add_cancel(d, k); // Eq(kk1, k)
@@ -2529,7 +2529,7 @@ pub(super) fn declare_fib_two_mul(d: &mut IntDev<'_>) -> Result<(), KernelError>
         let add_bp1bp1 = d.iadd(bp1, bp1);
         let mul_a_addbp1bp1 = d.imul(a, add_bp1bp1);
         let ld1 = d.lemma(p.left_distrib, &[a, bp1, bp1]); // Eq(mul_a_addbp1bp1, add_x1x1)
-        let s1 = d.isymm(add_x1x1, mul_a_addbp1bp1, ld1);
+        let s1 = d.isymm(mul_a_addbp1bp1, add_x1x1, ld1);
         let mts = mul_two_eq_add_self(d, bp1); // Eq(mul two bp1, add_bp1bp1)
         let mul_two_bp1 = d.imul(two, bp1);
         let mts_back = d.isymm(mul_two_bp1, add_bp1bp1, mts); // Eq(add_bp1bp1, mul_two_bp1)
@@ -2640,9 +2640,13 @@ pub(super) fn declare_fib_two_mul_add_two(d: &mut IntDev<'_>) -> Result<(), Kern
         let lift_b = d.icongr(f_n1_plus, f_n2, bridge_b, &|d, t| d.imul(bp1, t)); // Eq(mul_bp1_fn1p, mul_bp1_fn2)
 
         let mid_rhs = d.iadd(mul_a_bp1, mul_bp1_fn1p);
-        let step_a = d.icongr(mul_fn1m_bp1, mul_a_bp1, lift_a, &|d, t| d.iadd(t, mul_bp1_fn1p));
+        let step_a = d.icongr(mul_fn1m_bp1, mul_a_bp1, lift_a, &|d, t| {
+            d.iadd(t, mul_bp1_fn1p)
+        });
         let h2_rhs = d.iadd(mul_a_bp1, mul_bp1_fn2);
-        let step_b = d.icongr(mul_bp1_fn1p, mul_bp1_fn2, lift_b, &|d, t| d.iadd(mul_a_bp1, t));
+        let step_b = d.icongr(mul_bp1_fn1p, mul_bp1_fn2, lift_b, &|d, t| {
+            d.iadd(mul_a_bp1, t)
+        });
         let (_, subst) = d.ichain(h1_rhs, &[(mid_rhs, step_a), (h2_rhs, step_b)]);
         let h2 = d.itrans(f_n1n1, h1_rhs, h2_rhs, h1, subst);
 
@@ -2652,7 +2656,9 @@ pub(super) fn declare_fib_two_mul_add_two(d: &mut IntDev<'_>) -> Result<(), Kern
         let mul_bp1_addbp1a = d.imul(bp1, add_bp1_a);
         let lift_rec = d.icongr(f_n2, add_bp1_a, rec_n, &|d, t| d.imul(bp1, t)); // Eq(mul_bp1_fn2, mul_bp1_addbp1a)
         let h3_rhs = d.iadd(mul_a_bp1, mul_bp1_addbp1a);
-        let lift_rec_add = d.icongr(mul_bp1_fn2, mul_bp1_addbp1a, lift_rec, &|d, t| d.iadd(mul_a_bp1, t));
+        let lift_rec_add = d.icongr(mul_bp1_fn2, mul_bp1_addbp1a, lift_rec, &|d, t| {
+            d.iadd(mul_a_bp1, t)
+        });
         let h3 = d.itrans(f_n1n1, h2_rhs, h3_rhs, h2, lift_rec_add);
 
         // Step 3: `mul bp1 (add bp1 a) = add (mul bp1 bp1) (mul bp1 a)`.
@@ -2661,7 +2667,9 @@ pub(super) fn declare_fib_two_mul_add_two(d: &mut IntDev<'_>) -> Result<(), Kern
         let dist1 = d.lemma(p.left_distrib, &[bp1, bp1, a]); // Eq(mul_bp1_addbp1a, add q_ p_prime)
         let sum_q_pprime = d.iadd(q_, p_prime);
         let h4_rhs = d.iadd(mul_a_bp1, sum_q_pprime);
-        let lift_dist = d.icongr(mul_bp1_addbp1a, sum_q_pprime, dist1, &|d, t| d.iadd(mul_a_bp1, t));
+        let lift_dist = d.icongr(mul_bp1_addbp1a, sum_q_pprime, dist1, &|d, t| {
+            d.iadd(mul_a_bp1, t)
+        });
         let h4 = d.itrans(f_n1n1, h3_rhs, h4_rhs, h3, lift_dist);
 
         // Step 4: convert `P' = mul bp1 a` to `P = mul a bp1` (commute) inside the inner sum.
@@ -2689,7 +2697,14 @@ pub(super) fn declare_fib_two_mul_add_two(d: &mut IntDev<'_>) -> Result<(), Kern
         let sb = d.icongr(p_, p_prime, symm_comm_p, &|d, t| d.iadd(p_prime, t)); // Eq(p_prime_p, p_prime_p_prime)
         let dist2 = d.lemma(p.left_distrib, &[bp1, a, a]); // Eq(mul_bp1_addaa, p_prime_p_prime)
         let dist2_back = d.isymm(mul_bp1_addaa, p_prime_p_prime, dist2);
-        let (_, pp_to_mul) = d.ichain(pp, &[(p_prime_p, sa), (p_prime_p_prime, sb), (mul_bp1_addaa, dist2_back)]);
+        let (_, pp_to_mul) = d.ichain(
+            pp,
+            &[
+                (p_prime_p, sa),
+                (p_prime_p_prime, sb),
+                (mul_bp1_addaa, dist2_back),
+            ],
+        );
 
         let mts = mul_two_eq_add_self(d, a); // Eq(mul two a, add_a_a)
         let mul_two_a = d.imul(two, a);
