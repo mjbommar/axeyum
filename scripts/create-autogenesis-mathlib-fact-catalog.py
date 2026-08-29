@@ -306,12 +306,35 @@ def verify_catalog(actual: dict[str, Any], expected: dict[str, Any]) -> None:
         raise CatalogError("catalog fact ids are duplicate or out of order")
 
 
+# Fields this catalog authors and never relinquishes, even once a fact leaves
+# the "open" state this generator writes it in. A later flywheel stage (a
+# dispatched producer, `Kernel::add_declaration`, `check-fact-depends-derived.py`)
+# owns `epistemic_status`, `proof_route`, `axiom_footprint`, `evidence`,
+# `depends_on`, `notes`, `concept_refs`, and `provenance` from that point on --
+# and, per ADR-0601 ("evidence_checked means re-derives, not portable"), a
+# genuinely proved fact's `formal` is REPLACED wholesale with the kernel's own
+# `render_lean` type (`language` flips "lean4-surface" -> "lean4"), so `formal`
+# is not held invariant either. See docs/plan/status/284-autogenesis-gate-rot.md
+# for the field-by-field measurement across all 156 currently-settled catalog
+# facts that justified this split: every one of them diverges only in the
+# fields listed above; NONE ever touches the fields checked here.
+_IMMUTABLE_FACT_FIELDS = ("id", "title", "statement", "external_status", "schema_version")
+
+
+def _fact_still_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+    if actual.get("epistemic_status") == "open":
+        return actual == expected
+    return all(actual.get(key) == expected.get(key) for key in _IMMUTABLE_FACT_FIELDS)
+
+
 def verify_outputs(catalog: dict[str, Any], facts: dict[str, dict[str, Any]]) -> None:
     actual = load_object(CATALOG)
     verify_catalog(actual, catalog)
     for fact_id, expected in facts.items():
         path = fact_path(fact_id)
-        if not path.is_file() or load_object(path) != expected:
+        if not path.is_file():
+            raise CatalogError(f"fact {fact_id} is absent, stale, or mutated")
+        if not _fact_still_matches(load_object(path), expected):
             raise CatalogError(f"fact {fact_id} is absent, stale, or mutated")
     catalog_ids = {row["fact_id"] for row in catalog["facts"]}
     if catalog_ids != set(facts):

@@ -135,6 +135,61 @@ class MathlibFactCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.CatalogError, "stale or mutated"):
             MODULE.verify_catalog(actual, catalog)
 
+    def test_settled_fact_may_diverge_in_lifecycle_fields(self) -> None:
+        # A fact this catalog wrote as "open" is later dispatched, proved, and
+        # its evidence/notes/depends_on/axiom_footprint/proof_route/formal are
+        # rewritten by the flywheel -- exactly what happened to 156 of 214
+        # committed mathlib facts on 2026-08-29 (see
+        # docs/plan/status/284-autogenesis-gate-rot.md). That must NOT read as
+        # catalog tampering.
+        review, components = self.inputs()
+        catalog, facts = self.build(review, components)
+        fact_id = MODULE.source_fact_id(review["reviewed_candidates"][0])
+        expected = facts[fact_id]
+        settled = copy.deepcopy(expected)
+        settled["epistemic_status"] = "proved"
+        settled["proof_route"] = "kernel-lean"
+        settled["axiom_footprint"] = []
+        settled["depends_on"] = ["F:some-other-fact"]
+        settled["evidence"] = [{"id": "kernel-x", "checker_command": "cargo test"}]
+        settled["notes"] = "CLOSED via some lane."
+        settled["provenance"] = {"date": "2026-08-29", "established_by": "some-lane"}
+        settled["formal"] = {"language": "lean4", "statement": "theorem ...", "fragment": "Nat"}
+        self.assertTrue(MODULE._fact_still_matches(settled, expected))
+
+    def test_settled_fact_with_altered_identity_still_fails(self) -> None:
+        # The lifecycle exemption must not become a blank check: a settled
+        # fact that also mutates the fields this catalog is ALWAYS
+        # authoritative over is still a genuine mismatch.
+        review, components = self.inputs()
+        catalog, facts = self.build(review, components)
+        fact_id = MODULE.source_fact_id(review["reviewed_candidates"][0])
+        expected = facts[fact_id]
+        for field, corruption in (
+            ("title", "a different title entirely"),
+            ("statement", "a different statement entirely"),
+            ("external_status", "unknown"),
+            ("id", "F:not-the-same-fact"),
+            ("schema_version", 2),
+        ):
+            with self.subTest(field=field):
+                settled = copy.deepcopy(expected)
+                settled["epistemic_status"] = "proved"
+                settled[field] = corruption
+                self.assertFalse(MODULE._fact_still_matches(settled, expected))
+
+    def test_open_fact_mutation_still_fails_exact_verification(self) -> None:
+        # An UNSETTLED (still "open") fact keeps the original byte-exact
+        # invariant -- the lifecycle exemption above only applies once a fact
+        # has actually left the "open" state this generator wrote it in.
+        review, components = self.inputs()
+        catalog, facts = self.build(review, components)
+        fact_id = MODULE.source_fact_id(review["reviewed_candidates"][0])
+        expected = facts[fact_id]
+        mutated = copy.deepcopy(expected)
+        mutated["notes"] = "quietly edited while still open"
+        self.assertFalse(MODULE._fact_still_matches(mutated, expected))
+
 
 if __name__ == "__main__":
     unittest.main()
