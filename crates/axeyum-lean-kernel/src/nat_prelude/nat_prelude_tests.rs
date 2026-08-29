@@ -514,6 +514,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.ldiff,
         p.bitwise_aux,
         p.bitwise,
+        p.xor,
         p.asc_factorial,
         p.multichoose,
         p.is_rel_prime,
@@ -965,6 +966,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_and_eq_land_three_five,
         p.bitwise_or_eq_lor_three_five,
         p.bitwise_xor_three_five,
+        p.xor_three_five,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6372,7 +6374,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        88 + 459,
+        89 + 460,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -10560,6 +10562,105 @@ fn bitwise_computes_and_its_boundary_theorems_apply() {
     assert!(
         f.k.axiom_footprint(p.bitwise_aux).is_empty(),
         "Nat.bitwiseAux must rest on zero axioms"
+    );
+}
+
+/// `Nat.xor` computes bitwise XOR at concrete points -- including the same
+/// `(3, 5)` pair every sibling operator's own sanity check uses (`land` = 1,
+/// `lor` = 7, `ldiff` = 2, `xor` = 6: four distinct numerals from one
+/// operand pair, so a copy-paste from any neighbour fails loudly) -- and
+/// builds against a FREE variable pair as a direct unfolding of
+/// `Nat.bitwise xor_fn`, disjoint from the concrete check per the standing
+/// rule that a concrete instantiation can hide a defect a symbolic build
+/// exposes.
+#[test]
+fn xor_computes_and_is_bitwise_xor_fn() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let xor = p.xor;
+    let bitwise = p.bitwise;
+
+    for (m, n, expected) in [
+        (0u32, 0u32, 0u32),
+        (0, 5, 5),
+        (5, 0, 5),
+        (1, 1, 0),
+        (3, 5, 6),
+        (6, 3, 5),
+        (7, 7, 0),
+    ] {
+        let mm = f.num(m);
+        let nn = f.num(n);
+        let lhs = f.const_app(xor, &[mm, nn]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "xor {m} {n} must reduce to {expected}"
+        );
+    }
+
+    // Negative controls: `3 xor 5 = 6`, not `1` (land's value at this pair)
+    // and not `7` (lor's value at the same pair).
+    let three = f.num(3);
+    let five = f.num(5);
+    let xor_three_five = f.const_app(xor, &[three, five]);
+    let bad_one = f.num(1);
+    assert!(
+        !f.k.def_eq(xor_three_five, bad_one),
+        "negative control: xor 3 5 is 6, not 1 (that is land's value)"
+    );
+    let bad_seven = f.num(7);
+    assert!(
+        !f.k.def_eq(xor_three_five, bad_seven),
+        "negative control: xor 3 5 is 6, not 7 (that is lor's value)"
+    );
+
+    // Symbolic build: `xor a b` must be a direct unfolding of
+    // `bitwise xor_fn a b` for a genuinely FREE `a`, `b` -- not merely at
+    // numerals, per the standing rule that concrete instantiation alone can
+    // hide a defect a symbolic build exposes.
+    {
+        let a_fv = f.fresh_fvar();
+        let a = f.k.fvar(a_fv);
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let lhs = f.const_app(xor, &[a, b]);
+        let xor_fn_term = super::bitwise::xor_fn(&mut f);
+        let rhs = f.const_app(bitwise, &[xor_fn_term, a, b]);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "xor a b must be a direct unfolding of bitwise xor_fn a b for free a, b"
+        );
+    }
+
+    // xor_three_five : Eq (xor 3 5) 6
+    {
+        let applied = f.const_app(p.xor_three_five, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("xor_three_five must type-check: {shown}")
+        });
+        let lhs = f.const_app(xor, &[three, five]);
+        let six = f.num(6);
+        let want = f.eq(lhs, six);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "xor_three_five must state Eq (xor 3 5) 6"
+        );
+        let bad_want = f.eq(lhs, bad_one);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: xor_three_five must not also state Eq (xor 3 5) 1"
+        );
+        assert!(
+            f.k.axiom_footprint(p.xor_three_five).is_empty(),
+            "xor_three_five must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(xor).is_empty(),
+        "Nat.xor must rest on zero axioms"
     );
 }
 

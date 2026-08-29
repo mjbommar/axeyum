@@ -185,6 +185,7 @@ mod subset_product;
 mod totient;
 pub(crate) mod transposition;
 mod vandermonde;
+mod xor;
 
 pub use ops::{NatDev, NatOps, NatState};
 
@@ -287,6 +288,7 @@ use transposition::{
     declare_transposition_maps_into,
 };
 use vandermonde::declare_vandermonde_all;
+use xor::declare_xor_all;
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -2691,6 +2693,16 @@ pub struct NatPrelude {
     /// XOR sibling exists to cross-check against, so this closes against a
     /// hand-computed numeral (`0b011 xor 0b101 = 0b110`) instead.
     pub bitwise_xor_three_five: NameId,
+    /// `Nat.xor m n := Nat.bitwise xor_fn m n` — bitwise XOR (`Mathlib`:
+    /// `Nat.xor`, via the general `Nat.bitwise`, the SAME shape as the
+    /// upstream definition). Landed as a direct partial application of
+    /// `Nat.bitwise` rather than a fourth hand-rolled fuel recursion —
+    /// see `nat_prelude::xor`.
+    pub xor: NameId,
+    /// `Nat.xor_three_five : Eq (xor 3 5) 6` — concrete sanity check, the
+    /// same reduction `bitwise_xor_three_five` already checks, now against
+    /// the public `Nat.xor` name.
+    pub xor_three_five: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3418,6 +3430,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_and_eq_land_three_five: kernel.name_str(nat, "bitwise_and_eq_land_three_five"),
             bitwise_or_eq_lor_three_five: kernel.name_str(nat, "bitwise_or_eq_lor_three_five"),
             bitwise_xor_three_five: kernel.name_str(nat, "bitwise_xor_three_five"),
+            xor: kernel.name_str(nat, "xor"),
+            xor_three_five: kernel.name_str(nat, "xor_three_five"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
@@ -3641,6 +3655,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // and `Nat.lor` (just above) for its concrete specialization
         // checks; nothing needs `Nat.bitwise`, so it goes last too.
         declare_bitwise_all(&mut d, &p)?;
+        // `Nat.xor := Nat.bitwise xor_fn`: needs `Nat.bitwise`
+        // (`declare_bitwise_all`, just above) and nothing else; a direct
+        // partial application, not a new recursion. Nothing needs
+        // `Nat.xor`, so it goes right after `Nat.bitwise`.
+        declare_xor_all(&mut d, &p)?;
         // Needs `Nat.bitwise` and `Nat.land`/`Nat.lor` (all just above),
         // `Nat.mod_lt` (`declare_gcd_all`, far above) and the bounded-cases
         // eliminator's own lemmas (`le_of_lt_succ`, `lt_or_eq_of_le`,
