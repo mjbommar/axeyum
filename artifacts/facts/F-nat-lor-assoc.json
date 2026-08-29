@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lor-assoc",
+  "title": "lor is associative",
+  "statement": "For every natural a, b, c: lor(lor(a, b), c) = lor(a, lor(b, c)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.lor (AxNat.lor x0 x1) x2) (AxNat.lor x0 (AxNat.lor x1 x2)))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-lor-comm"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lor_assoc",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lor_assoc",
+      "supports": "Nat.lor_assoc is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- lor_assoc 2>/dev/null | grep -Ec '^Nat\\.lor_assoc[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type -- producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count decides the exit status. Anchored with `^Nat\\.lor_assoc[[:space:]]` so a sibling name cannot satisfy this row. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.lor_assoc",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lor_assoc",
+      "supports": "lor(lor(3, 5), 6) = lor(3, lor(5, 6)) = 7, with BOTH intermediate values (lor(3,5)=7, lor(5,6)=7) genuinely NONZERO -- the fully-generic sub-case of the hard leaf (both nested lorAux applications stuck, neither settling for the easy zero-corner), not a degenerate instance a wrong proof of the easy leaves alone could pass.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::lor_assoc_applies_at_a_nonzero_concrete_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Applies `Nat.lor_assoc` symbolically (against free `a`, `b`, `c`) and at the concrete instance `(a, b, c) = (3, 5, 6)`, confirming the admitted type matches `Eq (lor (lor 3 5) 6) (lor 3 (lor 5 6))`, that `lor 3 5` and `lor 5 6` are each nonzero (non-vacuity of the hard-leaf exercise), and that both sides compute to `7`."
+    },
+    {
+      "id": "footprint-Nat.lor_assoc",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-or",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-lor-assoc-exec",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*); `x0`/`x1`/`x2` are `a`/`b`/`c`.\n\nBuilt on `Nat.lor_aux_assoc_of_fuel : forall fuel a b c, lorAux fuel (lorAux fuel a b) c = lorAux fuel a (lorAux fuel b c)`, itself proved by `agree_by_double_fuel_induction`, unconditional in `fuel`. UNLIKE `Nat.land_assoc`'s hard leaf, `lor` has no absorbing zero, so the direct analogue of `land`'s zero-propagation lemma is FALSE for `lor` (`lor a b = 0` forces `a = b = 0`, confirmed by exhaustive Python simulation before any Rust). What holds instead, and is the actual invariant this proof rests on: `Nat.lor_aux_ne_zero_of_right_ne_zero : forall fuel m n, n != 0 -> lorAux fuel m n != 0` -- at any fuel `succ _`, a positive RIGHT operand alone forces a positive result, independent of the left operand. This makes the hard leaf's two nested `lorAux` values UNCONDITIONALLY positive once both outer operands are positive, so both zero/nonzero dichotomies close by direct contradiction rather than `land`'s mirrored propagation argument -- SIMPLER than `land`'s hard leaf, not harder, once the invariant exists.\n\nThe hard leaf's fully generic case reconstructs both nested values' own div/mod decomposition via `Nat.div_mod_unique`/`Nat.div_mod_exec` (identical technique to `land`'s, since this is about the `2*q+r` shape, not about which operator combines the bits) and closes via the outer induction's own `ih` (for the recursive halves) plus a new `lor_bit_assoc` lemma (max-associativity over `{0,1}`, via three nested `Nat.mod _ 2` splits, 8 leaves, each `refl`) in place of `Nat.mul_assoc`.\n\n`Nat.lor_aux_le_add : forall fuel m n, Le (lorAux fuel m n) (add m n)` (unconditional in `fuel`, confirmed by exhaustive Python simulation) supplies the refuel bound `Nat.lor_assoc`'s bookkeeping needs in place of `Nat.land_le_left` -- `Nat.lor` has no left-operand bound analogue, since `lor` can exceed both operands (e.g. `lor 1 2 = 3`). `Nat.lor_assoc` itself re-fuels through the shared fuel `F := add(a, b)`, following `Nat.land_assoc`'s exact bookkeeping pattern one argument wider; unlike `land_assoc`, the bound `Le (lor a b) F` comes directly from `lor_aux_le_add` at `(a, a, b)` (the bound already targets `F` exactly), so no `Nat.le_trans` chain is needed.\n\nThis is the `Nat.lor` twin of Mathlib v4.30's `Nat.lor_assoc` (`F:ml430-nat-lor-assoc-82c4d0fd`, flipped alongside this fact) -- our `Nat.lor` is itself proved equal to Mathlib's `bitwise or` specialization by `Nat.bitwise_or_eq_lor` (`nat_prelude/rec_agreement.rs`), so this closes the same proposition Mathlib states, not a lookalike about a different definition. Traced without building across two prior lanes (`docs/plan/status/257-nat-land-assoc-impl.md`'s counterpart for `lor`, `docs/plan/status/266-nat-lor-assoc.md`); this lane executed the fully-worked plan in `266`, verifying every traced step against the actual `guarded`/`lor_aux_agree_of_fuel`/`lor_aux_ne_zero_of_right_ne_zero` signatures rather than trusting the prose -- and finding one transcription bug during that verification (a self-review pass before the first compile, not a kernel rejection): a first draft of `y_succ_case`'s closing had accidentally closed over the outer `X`-dichotomy's binders (`hxp_fv`/`hxp_ty`/`p_fv`/`x_succ_predicate`/`hx`/`hx_fv`/`x_succ_exists_ty`) instead of its own `Y`-dichotomy binders (`heq_fv`/`heq_ty`/`q_fv`/`y_succ_predicate`/`hy`/`hy_fv`/`y_succ_exists_ty`) -- the same trap the this-file gotcha section names for `X_succ_case`/`X_zero_case`, arriving one nesting level deeper. Fixed before the first `cargo build`; the kernel accepted the corrected term on its first check."
+}

@@ -8,12 +8,28 @@
     "statement": "∀ (n m k : ℕ), n ||| m ||| k = n ||| (m ||| k)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-nat-lor-bit-a2f98c7c"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "reconciliation-Nat.lor_assoc",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lor_assoc",
+      "supports": "∀ (n m k : ℕ), n ||| m ||| k = n ||| (m ||| k)",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel",
+        "axeyum-lean-import/checked-proposition-compatibility"
+      ],
+      "artifact": "F:nat-lor-assoc",
+      "notes": "Registers an independently constructed native theorem (`F:nat-lor-assoc`, `Nat.lor_assoc` in `nat_prelude/rec_agreement.rs`) whose proposition definitionally matches this proof-free imported goal -- Mathlib's `Nat.lor` is `Nat.bitwise or`, and our `Nat.lor` is proved equal to the `bitwise or_fn` specialization by `Nat.bitwise_or_eq_lor`, so this closes the SAME function's associativity, not a lookalike about a different definition (the criterion this repository uses to decide when flipping an `ml430` mirror is honest: Mathlib's `def` is the same function, not merely a theorem about a different one). No Autogenesis operation produced the theorem; the route taken (`lor_aux_assoc_of_fuel` via the `lor_aux_ne_zero_of_right_ne_zero` invariant, a double `Nat.div_mod_unique` reconstruction, the outer induction's own `ih`, and a new `lor_bit_assoc` max-associativity lemma) is NOT Mathlib's own route, which is why `depends_on` still names the still-open `F:ml430-nat-lor-bit-a2f98c7c` -- that edge records curriculum lineage, not a dependency this proof actually used."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -28,5 +44,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Closed via reconciliation against the independently constructed native theorem `F:nat-lor-assoc` (see the `reconciliation-Nat.lor_assoc` evidence entry) -- the external theorem declaration is prior art, not the proof itself. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review, and records curriculum/leakage lineage rather than this proof's own dependency (see the evidence note)."
 }
