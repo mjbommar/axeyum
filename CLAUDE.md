@@ -1901,6 +1901,33 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `congr_nat_to` keeping the hypothesis at `Nat` and moving only the motive's
   body. Anyone building over `Nat.Pair`, `Nat.Fin` or `CReal` will hit it.
 
+- **THE DEV-HELPER LAYER HARDCODES A CARRIER, AND EVERY CROSS-CARRIER USE FAILS
+  AS ONE OPAQUE `TypeMismatch` ACROSS THE WHOLE SUITE.** Three separate lanes
+  hit this on 2026-08-29, in three different helpers:
+
+  - `NatOps::congr` states its conclusion at `Nat`, so rewriting a component of
+    a value in another type gives `expected: AxNat, got: AxNat.Pair`. The
+    `Nat.Pair` lane needed a `congr_nat_to` that keeps the hypothesis at `Nat`
+    and moves only the motive's body.
+  - The same defect for `Bool`: the `xor_assoc` lane had to build
+    `congr_bool_to_nat` for exactly the same reason.
+  - `IntDev::irefl` is the **Int-typed** `Eq.refl`. Applied to a `Nat`-sorted
+    term it made EVERY `int_prelude` test fail with one `TypeMismatch`; the fix
+    was `d.refl`, the `NatOps` trait's Nat-level reflexivity.
+
+  None of the three is visible from the call site — the helper name says
+  `congr` or `refl`, not `congr_at_Nat`. **Before using a dev helper on a term
+  whose carrier is not the module's own, check what carrier the helper states
+  its conclusion at.** A tiny `expected` `ExprId` (single digits) means the
+  kernel wanted a SORT; a mismatch between two large ids in a module that only
+  touches one carrier usually means this instead.
+
+  All three were isolated the same way, and it is the standard move: a
+  throwaway `#[cfg(test)] mod debug_probe` built against a prelude with the new
+  declarations disabled, running `Kernel::infer` on each intermediate. Five
+  lanes used it that day rather than reading a poisoned-prelude failure across
+  every test in the suite.
+
 - **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
   TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
   2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and
