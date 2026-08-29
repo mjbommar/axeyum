@@ -176,6 +176,7 @@ mod powsq;
 mod primes;
 mod rec_agreement;
 mod rectangle;
+mod rel_prime;
 mod relation;
 mod restrict_pair;
 mod sqrt;
@@ -262,6 +263,7 @@ use primes::{
 };
 use rec_agreement::{declare_land_fuel_irrelevance_all, declare_rec_agreement_all};
 use rectangle::declare_rectangle;
+use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
 use relation::{
     declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
     declare_eq_equivalence_on, declare_injective_on_comp, declare_mod_eq_equivalence_on,
@@ -1121,6 +1123,15 @@ pub struct NatPrelude {
     /// dvd k a → dvd (mul k a) b) → dvd a b`. Closes ledger fact
     /// `F:ml430-nat-dvd-of-forall-prime-mul-dvd`.
     pub dvd_of_forall_prime_mul_dvd: NameId,
+    /// `Nat.IsRelPrime m n := ∀ d, d ∣ m → d ∣ n → d = 1` — a `Definition`,
+    /// Mathlib's `IsUnit d` specialized to `Nat`'s only unit `1`. See
+    /// `rel_prime.rs`'s module doc for why this predicate, unlike `Coprime`,
+    /// needs a name of its own.
+    pub is_rel_prime: NameId,
+    /// `Nat.coprime_iff_isRelPrime : ∀ m n, Iff (Eq (gcd m n) one)
+    /// (IsRelPrime m n)`. Closes ledger fact
+    /// `F:ml430-nat-coprime-iff-isrelprime-0c08eb25`.
+    pub coprime_iff_is_rel_prime: NameId,
     /// `Nat.coprime_self_add_right : ∀ m n, Iff (Eq (gcd m (add m n)) one)
     /// (Eq (gcd m n) one)` — [`coprime_add_self_right`](Self::coprime_add_self_right)
     /// with `m`/`n`'s sum reordered via `add_comm`: the only difference is
@@ -3002,6 +3013,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_dvd: kernel.name_str(nat, "coprime_of_dvd"),
             coprime_of_forall_prime_dvd: kernel.name_str(nat, "coprime_of_forall_prime_dvd"),
             dvd_of_forall_prime_mul_dvd: kernel.name_str(nat, "dvd_of_forall_prime_mul_dvd"),
+            is_rel_prime: kernel.name_str(nat, "IsRelPrime"),
+            coprime_iff_is_rel_prime: kernel.name_str(nat, "coprime_iff_isRelPrime"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
             not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
@@ -3367,6 +3380,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`two_divisor_dichotomy`) is not available before this point.
         declare_coprime_of_forall_prime_dvd(&mut d, &p)?;
         declare_dvd_of_forall_prime_mul_dvd(&mut d, &p)?;
+        // `IsRelPrime` only needs `dvd_gcd`/`gcd_dvd_left`/`gcd_dvd_right`/
+        // `eq_one_of_dvd_one`, all declared long before this point; placed
+        // here to sit next to the other `Coprime` characterisation theorems.
+        declare_is_rel_prime(&mut d, &p)?;
+        declare_coprime_iff_is_rel_prime(&mut d, &p)?;
         declare_prime_pred_pos(&mut d, &p)?;
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
