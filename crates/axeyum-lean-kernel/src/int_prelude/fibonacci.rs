@@ -2262,7 +2262,7 @@ fn fib_add_down_step(d: &mut IntDev<'_>, m: ExprId, a: ExprId, b: ExprId) -> Exp
 // first place that changes.
 // ============================================================================
 
-/// `h : Eq Int (add a b) c  ⊢  Eq Int b (sub c a)` — "eq_sub_of_add_eq_left".
+/// `h : Eq Int (add a b) c  ⊢  Eq Int b (sub c a)` — `eq_sub_of_add_eq_left`.
 ///
 /// From `a + b = c` derive `b = c - a`. The mirror image of
 /// [`add_right_cancel`] (which needs the SAME addend on both sides to
