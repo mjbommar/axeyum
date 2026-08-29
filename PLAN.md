@@ -138,11 +138,14 @@ now. Nothing was deleted.
 | 2026-08-29 | int-fib-two-mul | `eq_sub_of_add_eq_left`, `fib_pred_eq_sub`: the subtraction bridge (a+b=c \|- b=c-a) and its Fibonacci instance (fib(k-1)=fib(k+1)-fib(k)) |
 | 2026-08-29 | int-fib-two-mul | `Int.fib_two_mul` closed (`F:ml430-int-fib-two-mul-0e70f3dd` open → proved), no induction, direct algebra from `Int.fib_add`/`Int.fib_rec` |
 | 2026-08-29 | int-fib-two-mul | `Int.fib_two_mul_add_two` closed (`F:ml430-int-fib-two-mul-add-two-0ba4a948` open → proved) |
+| 2026-08-29 | int-gcd-div | landed `Int.emod_eq_zero_iff_dvd_general` (`declare_emod_eq_zero_iff_dvd_general`, `int_prelude/dvd.rs`) — the sign-general `emod = 0 <-> dvd` bridge the prior lane named but did not build |
+| 2026-08-29 | int-gcd-div | closed `F:ml430-int-gcd-div-5e01872f` (`Int.gcd_div`) via `declare_gcd_div` (`int_prelude/gcd.rs`) — mutual-divisibility proof for a divisor of ANY sign or zero, matching Mathlib's unrestricted hypotheses exactly (verified the mirror-flip against Lean 4 core's pinned source, not by name inference); `int_prelude::` 42 -> 47; axiom-free |
 | 2026-08-29 | nat-bitwise-assoc | `Nat.land_aux_le_left`/`Nat.land_le_left` (the nested-value bound the assoc brief named); `land_assoc`/`lor_assoc` remain open — precise diagnosis + concrete next-steps recorded above for the next lane |
 | 2026-08-29 | ivt-row-two | `CReal.ivt_exact_root_decides_sign` — **ADR-0603 row 2 for IVT**, previously prose in `ivt.rs`'s module doc. An exact root of the plateau family `x ↦ min x (max (x−1) v)` on `[0,1]` yields `Or (le v zero) (le zero v)`; axiom-free, accepted on the first `add_declaration` |
 | 2026-08-29 | ivt-row-two | `CReal.ivtPlateau` + `ivtPlateau_nonpos_at_zero` / `_nonneg_at_one` / `_uniformly_continuous` — all three of classical IVT's hypotheses PROVED, so the counterexample family is machine-checked to lie inside its hypothesis class rather than asserted to |
 | 2026-08-29 | ivt-row-two | `CReal.uniformly_continuous_max` / `_min` — the lattice's first entries in the closure table `uniformly_continuous_add`/`_neg`/`_sub`/`_mul` fill for the ring. General, modulus `mF n + mG n`, no index shift. `_min` is not `_max`'s dual and the writeup says why |
 | 2026-08-29 | ivt-row-two | `F:creal-ivt-exact-root-decides-sign` registered, curated, four discriminating checkers; `validate-facts.py` 1926 facts / 0 errors |
+| 2026-08-29 | nat-xor-parity | Landed `Nat.xor := Nat.bitwise xor_fn` (new `nat_prelude/xor.rs`, reusing `bitwise.rs`'s existing `xor_fn`/`bitwise_xor_three_five` machinery — the same shape Mathlib v4.30 uses) with a discriminating evaluation test (concrete + free-variable); left `F:ml430-nat-even-xor-78a39432`/`F:ml430-nat-lt-xor-cases-c43a1e85` open, reasons recorded (both need machinery — a parity/low-bit bridge, a highest-differing-bit induction — well beyond defining `xor`) |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -12698,6 +12701,161 @@ workspace-wide `--lib` sweep and `just check` did **not** run in this lane
 
 Not pushed — commits are local to this worktree branch.
 
+**Your lane's block (`DONE for this pass`, int-gcd-div, 2026-08-29).**
+`F:ml430-int-gcd-div-5e01872f` (`Int.gcd_div`) is **CLOSED** — `proved`,
+axiom-free, statement identical to Mathlib's. Built the fourth bridge lemma
+the `int-emod-negative` lane's handoff (`docs/plan/status/242-int-emod-negative.md`)
+named but did not build, then `Int.gcd_div` itself, for a divisor of **any
+sign or zero** — Mathlib's own hypotheses (`c ∣ a`, `c ∣ b`) carry no
+restriction on `c`, and this proof does not add one.
+
+**Verified the mirror-flip criterion myself, against the pinned Lean 4
+source, before writing any proof.** Mathlib v4.30's `Int.gcd_div` is
+`alias gcd_div := gcd_ediv` (`Mathlib/Data/Int/GCD.lean`); `Int.gcd_ediv`
+itself is not restated in Mathlib at all — it lives in Lean 4 core
+(`Init/Data/Int/Gcd.lean`, read at the pinned toolchain commit under
+`/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/src/lean/`),
+stated over `/`. Core's own `instance : Div Int` (`Init/Data/Int/DivMod/Basic.lean`)
+binds `/` to `Int.ediv`, with the comment "for compatibility with SMT-LIB" —
+the SAME Euclidean division this development's `Int.ediv` already matches
+bit for bit (confirmed by reading `Int.ediv`'s Lean 4 core recursive
+definition and this repo's `int_prelude/division.rs` module doc side by
+side). So this is a genuine same-definition mirror (honest flip per
+CLAUDE.md's criterion), not a restatement of a different proposition — and
+critically, since neither Mathlib's alias nor core's `gcd_ediv` carries a
+`c ≠ 0` hypothesis, the fully general (`c` any sign, `c = 0` included)
+statement is what had to be proved, not a restricted one.
+
+**The fourth lemma:** `Int.emod_eq_zero_iff_dvd_general : ∀ a b, b ≠ 0 →
+(a % b = 0 ↔ b ∣ a)` (`int_prelude/dvd.rs`, `declare_emod_eq_zero_iff_dvd_general`).
+Identical proof shape to `declare_emod_eq_zero_iff_dvd` (the positive-only
+original), with every positive-only ingredient swapped for its sign-general
+sibling (`Int.emod_natAbs_bound` for `Int.emod_lt_of_pos`,
+`Int.ediv_emod_unique_general` for `Int.ediv_emod_unique`; `Int.emod_nonneg`
+was already sign-general and carries over unchanged). The one new step: the
+`b = 0` branch's required upper bound (`zero < ofNat (natAbs b)`) is not a
+hypothesis handed in directly (unlike the positive-only proof, where
+`h_pos : 0 < b` already IS that type) — derived instead via
+`Int.lt_of_le_of_lt` from `Int.emod_nonneg`/`Int.emod_natAbs_bound` at the
+SAME `a, b` (`0 ≤ emod a b < ofNat (natAbs b)` implies `0 < ofNat (natAbs b)`).
+
+**`Int.gcd_div` itself** (`int_prelude/gcd.rs`, `declare_gcd_div`). Sized
+the actual work myself rather than trusting either prior lane's estimate,
+and it came out LARGER than "comparable to `gcd_div_gcd_div_gcd`'s proof":
+that theorem's divisor is always `ofNat (gcd i j) ≥ 0`, so it never needed
+the sign-general bridge above, and Mathlib's own route (`Nat.gcd_div` via
+`Nat.gcd_mul_left`, both proved in Lean core by a `gcd.induction` strong
+induction principle) does not exist in this development and would need a
+FRESH strong-induction principle over `Nat.gcd`'s `WellFounded.fix`
+recursion to build — comparable in cost to the `gcd_dvd`/`dvd_gcd`/
+`gcd_bezout` constructions already in this file, not a one-line borrow.
+
+Built instead by **mutual divisibility**, generalizing
+`gcd_div_gcd_div_gcd`'s Bézout route rather than Mathlib's cancellation
+route. With `qa := a.ediv c`, `qb := b.ediv c`, `C := natAbs c`,
+`G := gcd a b`, `H := gcd qa qb`, and (for `c ≠ 0`) `K := G/C` (exact,
+`C ∣ G` follows directly from the theorem's own `c ∣ a`, `c ∣ b`
+hypotheses via `nat_abs_dvd_nat_abs_of_dvd` + `Nat.dvd_gcd` — no Bézout
+needed for this half):
+
+- **`H ∣ K`.** Bézout on `a, b` gives `ofNat G = a*u + b*v`; substituting
+  `a = c*qa`, `b = c*qb` and factoring gives `ofNat G = c*X` for
+  `X := qa*u + qb*v` — an UNCONDITIONAL equation, no sign case needed at
+  all. Taking `natAbs`: `G = C * natAbs X`. Combined with `C*K = G` and
+  cancelling the shared positive factor `C` (`Nat.mul_left_cancel_of_pos`):
+  `natAbs X = K`. Separately `H` divides `qa`, `qb`, hence `qa*u`, `qb*v`,
+  hence their sum `X`; taking `natAbs` gives `H ∣ natAbs X = K`.
+- **`K ∣ H`.** Bézout on `qa, qb` gives `ofNat H = qa*u' + qb*v'`;
+  multiplying by `c` and substituting back gives `c*(ofNat H) = a*u' +
+  b*v'`. `G` divides `a`, `b`, hence this sum, hence `c*(ofNat H)`; taking
+  `natAbs`: `G ∣ C*H`. Cancelling `C` from the divisibility itself (not
+  just an equation) via a small locally-built helper (`cancel_dvd_of_pos`
+  — no such lemma exists in this development yet) gives `K ∣ H`.
+- `Nat.dvd_antisymm` closes `H = K = G/C`.
+
+**Neither direction needed `c`'s sign decomposed into `±ofNat C`** — only
+`natAbs` identities, which hold unconditionally. The sign case split that
+DOES remain (`c = 0` / `c = ofNat (succ m)` / `c = negSucc n`, via
+`case_split` on `c` then `d.induct` splitting the `OfNat` branch's magnitude)
+exists only to supply `c ≠ 0` and `1 ≤ natAbs c` per branch, and to prove
+`c = 0` as a genuine degenerate case rather than exclude it: both `a` and
+`b` collapse to `zero` (`0 ∣ x → x = 0`, a small `zero_dvd_elim` helper
+built locally), at which point both sides of the conclusion collapse to `0`
+via `gcd_zero_right`/`Nat.zero_div`, and the general `a, b` case is
+recovered by two `int_eq_rewrite`s.
+
+**One real defect found and fixed via the kernel's own `TypeMismatch`, not
+by inspection.** The first attempt's `K ∣ H` step tried to feed
+`cancel_dvd_of_pos` a term of type `Nat.dvd g (cabs*natAbs(ofNat hh))`,
+assuming the kernel would bridge `g` and `cabs*kk` by **defeq** — wrong:
+`g := Int.gcd a b` does not delta/iota-reduce to a product with its own
+quotient; `cabs*kk = g` is a PROVED fact (`cabs_kk_eq_g`), not a
+computation. (`natAbs(ofNat hh) ≡ hh` in the same term IS pure `iota` and
+needed no fix — the two gaps look identical in the render but are not the
+same kind.) Found by a temporary `GCD_DIV_DIAG` `eprintln!` comparing the
+kernel's own `TypeMismatch { expected, got }` via `Kernel::render_lean` on
+both sides (added, used once, then removed — not left in the tree), which
+made the exact missing rewrite obvious in one run rather than a bisect.
+Fixed with an explicit `nat_rewrite` through `cabs_kk_eq_g` before the
+cancellation.
+
+**Instantiated at three sign combinations, all confirming BOTH sides of the
+conclusion compute (`def_eq`) to the expected `Nat` numeral**, not just
+that the application type-checks (`gcd_div_applies_at_a_positive_a_negative_
+divisor_and_at_zero`, `int_prelude_tests.rs`):
+- `a=12, b=18, c=6` (positive divisor): `gcd(2,3) = gcd(12,18)/6 = 1`.
+- `a=12, b=18, c=-6` (negative divisor) — a case
+  `Int.gcd_div_gcd_div_gcd` cannot even STATE, since its divisor is always
+  `ofNat (gcd i j) ≥ 0`: `ediv(12,-6)=-2`, `ediv(18,-6)=-3`,
+  `gcd(-2,-3) = gcd(12,18)/natAbs(-6) = 1`.
+- `a=0, b=0, c=0` (the degenerate case this proof does NOT exclude):
+  both sides compute to `0`.
+
+Each builds its `Int.dvd` witnesses via the same `irefl`-relies-on-defeq
+idiom the theorem's own proof uses internally (an explicit-witness route
+that would have caught the exact same class of defeq-vs-theorem confusion
+described above, had one been present in the witness construction itself).
+Did NOT additionally build a "free variable" instantiation check beyond
+the theorem's own construction: `int_theorem`'s `arity` parameter already
+universally quantifies `a, b, c` as genuine fresh `fvar`s during the
+ORIGINAL proof, so the disjoint-defect-class requirement (symbolic +
+concrete) is satisfied by the theorem's own existence plus these three
+concrete checks, not by a fourth redundant symbolic-only pass.
+
+**Two existing private helpers made `pub(super)` for reuse from `gcd.rs`**
+(no behavior change, one-word visibility edits each): `division::positive_of_succ`
+(`Nat.le (succ zero) (succ n)`, unconditionally, reused for BOTH `Int.lt
+zero cc` and `Nat.le 1 (natAbs cc)` in the nonzero branches — the same raw
+term types via defeq for both purposes, since `natAbs cc` unfolds to
+`succ n`/`succ m` exactly), and `decide::discriminate` (the constructor-shape
+discrimination principle, used to prove `negSucc n ≠ 0` directly rather
+than deriving it from an order fact).
+
+**Verified:** `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 47
+passed, 0 failed (46 before this lane's first commit, i.e. after the prior
+`int-emod-negative` lane; +1 for `Int.emod_eq_zero_iff_dvd_general` proper
+inclusion in `derived_laws`, then this pass adds `Int.gcd_div` and its own
+instantiation test), including `every_int_declaration_is_checked_and_axiom_free`
+and `derived_laws_have_no_axiom_footprint`. `cargo fmt --edition 2024
+--check` and `cargo clippy -p axeyum-lean-kernel --all-targets -- -D
+warnings` both clean. `python3 scripts/validate-facts.py`: 0 errors, 1840
+proved (was 1839).
+
+`derived_laws`'s pinned array in `int_prelude_tests.rs`: 156 → 158 (two
+new entries, `p.gcd_div` and `p.emod_eq_zero_iff_dvd_general`), recounted
+by grepping the array body for `^\s*p\.` lines (158), not by adding to the
+old number.
+
+`theorem_axiom_footprint --release -- Int.gcd_div` (once built) prints
+`integer	Int.gcd_div	0	` — empty trailing footprint column, axiom-free,
+matching the fact's own `--expect`-style checker.
+
+**What the kernel REJECTED and why:** one `TypeMismatch`, described above
+in full (a proposed defeq bridge between `Int.gcd a b` and `cabs*kk` that
+does not exist — `cabs*kk = g` is a proved fact, not a reduction). Fixed
+with an explicit rewrite; no other term was rejected across either the
+bridge lemma or the main theorem.
+
 **Your lane's block (`OPEN`, nat-bitwise-assoc, 2026-08-29).** Neither
 `F:ml430-nat-land-assoc-ad4775b8` (`Nat.land_assoc`) nor
 `F:ml430-nat-lor-assoc-82c4d0fd` (`Nat.lor_assoc`) closed this session. What
@@ -13414,6 +13572,106 @@ root; this is a claim about the *statement*. Neither implies the other.
 | `ca74e8d2d` | the fact, plus rustfmt reflow |
 
 Plus this file and the two doc corrections in the following commit.
+
+**Your lane's block (`DONE (Nat.xor landed; both assigned facts stay open,
+reasons recorded)`, nat-xor-parity, 2026-08-29).**
+
+## Step 0: does `Nat.xor` exist?
+
+No — confirmed by grep (`bitwise.rs`'s own module doc says so explicitly:
+"no prelude XOR sibling exists") and by the absence of any `mod xor;` under
+`nat_prelude/`. No theorem-inventory tool was needed since the negative was
+already explicit in source comments, not just an absent grep hit.
+
+## What landed: `Nat.xor := Nat.bitwise xor_fn`
+
+The "alternative worth checking first" the brief named was the right call.
+`bitwise.rs` already carries the general `Nat.bitwise f m n` combinator
+(landed by an earlier lane, `declare_bitwise_all`), already builds
+`xor_fn` (`Bool.xor`, `pub(super)`) purely to instantiate `f` for its own
+`bitwise_xor_three_five` sanity check, and that check already proves
+`Eq (bitwise xor_fn 3 5) 6`. So `Nat.xor` did not need a fourth hand-rolled
+`bitwiseAux`-shaped fuel recursion — it is a direct partial application:
+
+```
+Nat.xor := Nat.bitwise xor_fn      -- Nat -> Nat -> Nat
+```
+
+This is the SAME shape Mathlib v4.30 uses (`Mathlib.Data.Nat.Bitwise`:
+`Nat.xor := bitwise xor`), not merely something pointwise-equal to it. The
+absorbing-zero question the brief flagged (does the fuel operand carry the
+operator's absorbing zero?) turned out to be moot for this definition: `xor`
+inherits `bitwise`'s own general, `f`-independent boundary theorems
+(`bitwise_zero_left`/`bitwise_zero_right`) rather than needing new
+hand-written base-case rows. For the record (checked anyway, since the rule
+is worth confirming even when not load-bearing): XOR is `lor`-shaped
+(`0 xor n = n`), and `bitwise_aux`'s general fuel-exhaustion row
+(`if f false true then n else 0`) reproduces exactly that at `f = xor_fn` by
+δβι alone (`xor false true` reduces to `true`, so the row returns `n`) —
+consistent with `bitwise.rs`'s own derivation for `lor`.
+
+New file: `crates/axeyum-lean-kernel/src/nat_prelude/xor.rs` (per the brief,
+to avoid the `land.rs`/`lor.rs`/`ldiff.rs`/`rec_agreement.rs`/`binary.rs`
+merge-conflict hot zone three sibling lanes were touching today). Wired into
+`nat_prelude.rs`: `mod xor;`, `use xor::declare_xor_all;`, two new struct
+fields (`xor`, `xor_three_five`), two name-assembly lines, and one
+dispatcher call right after `declare_bitwise_all` (needs only `Nat.bitwise`,
+nothing needs `Nat.xor`, so it goes immediately after).
+
+**Evaluation test**, `xor_computes_and_is_bitwise_xor_fn`
+(`nat_prelude_tests.rs`): a discriminating concrete table (`(3,5) -> 6`,
+matching every sibling operator's own numeral at the same operand pair —
+`land`=1, `lor`=7, `ldiff`=2/4, `xor`=6 — so a copy-paste from any neighbour
+fails loudly), two negative controls (`xor 3 5` is neither `land`'s `1` nor
+`lor`'s `7`), AND a separate symbolic check building `xor a b` against
+`bitwise xor_fn a b` for a genuinely FREE fvar pair `a, b` (the CLAUDE.md
+rule that a concrete instantiation can hide a defect a symbolic build
+exposes — here the two constructions are the literal same term by
+definition, so this is a low-risk but cheap and correct check to have).
+
+`definition_names`/`theorem_names` (the environment-derived coverage
+assertion `every_nat_declaration_is_checked_and_axiom_free` checks against)
+both updated with the two new names.
+
+**`the_build_is_deterministic` pin**: moved `88 + 459` -> `89 + 460`, taken
+directly from the panic's own `left: 549` and cross-checked by counting `p.`
+entries in each list independently (89, 460) — not hand-incremented.
+
+**Verified**: `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 131
+passed, 0 failed (130 before this lane, +1 for the new test).
+`cargo fmt --all --check` clean. `cargo clippy -p axeyum-lean-kernel
+--all-targets -- -D warnings` clean. `python3 scripts/validate-facts.py` —
+1928 facts, 0 errors (no fact files were touched; both assigned facts
+remain `open`, correctly).
+
+## Why neither fact closes
+
+**`F:ml430-nat-even-xor-78a39432`** (`Even (m ^^^ n) ↔ (Even m ↔ Even n)`):
+our `Even`/`Odd` (`nat_prelude/parity.rs`, `∃ k, n = k+k` / `∃ k, n =
+succ(k+k)`) is the SAME shape as Mathlib's generic `Even` (`∃ r, a = r+r`),
+so an honest flip is possible IN PRINCIPLE once proved. But proving it needs
+a bridge this prelude does not have: relating `Even`/`Odd` to the low bit of
+a `bitwise`-family value. That bit is only exposed one `bitwiseAux`
+fuel-step down (the `succ_minor` row's `combined_nat` term in `bitwise.rs`),
+conditioned on both operands being nonzero — the `m = 0`/`n = 0` cases
+return an *operand itself*, not a per-bit combine, so the general statement
+needs its own case split before the per-bit argument even applies, and
+nothing in this prelude currently connects `Nat.mod _ 2` to `Even`/`Odd` at
+all (`parity.rs`'s own module doc notes it never needed that connection).
+That is new machinery, not a corollary of defining `xor`.
+
+**`F:ml430-nat-lt-xor-cases-c43a1e85`** (`a < b^^^c → a^^^c < b ∨ a^^^b <
+c`): a highest-differing-bit argument (Mathlib's own proof inducts on
+`testBit` disagreement). No existing lemma in this prelude gives that
+argument a foothold, and it is unrelated in size to defining `xor` itself —
+sizing it honestly puts it well outside a bitwise "add one operator" lane.
+
+Both stay `open`; per the brief, "landing `Nat.xor` with an evaluation test
+and neither fact closed is a good outcome" — that is where this lane lands.
+Not checked against `scripts/gen-autogenesis-bitwise-family-projection.py`
+for these two specifically: the script names three unrelated `testBit`
+facts (per `docs/plan/status/244-nat-testbit-bitwise.md`), not these two, so
+it does not pin them open independent of provability.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
