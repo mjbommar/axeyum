@@ -8,10 +8,26 @@
     "statement": "∀ {m n : ℕ}, Even (m ^^^ n) ↔ (Even m ↔ Even n)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "reconciliation-Nat.even_xor",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.even_xor",
+      "supports": "∀ {m n : ℕ}, Even (m ^^^ n) ↔ (Even m ↔ Even n)",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel",
+        "axeyum-lean-import/checked-proposition-compatibility"
+      ],
+      "artifact": "F:nat-even-xor",
+      "notes": "Registers an independently constructed native theorem (`F:nat-even-xor`, `Nat.even_xor` in `nat_prelude/xor_parity.rs`) whose proposition definitionally matches this proof-free imported goal -- Mathlib's `Nat.xor` is `Nat.bitwise xor`, and our `Nat.xor` is DEFINED the same way (`nat_prelude/xor.rs`: `Nat.xor := Nat.bitwise xor_fn`), so this closes the SAME function's parity characterization, not a lookalike about a different definition (the criterion this repository uses to decide when flipping an `ml430` mirror is honest: Mathlib's `def` is the same function, not merely a theorem about a different one). No Autogenesis operation produced the theorem; the route taken (a fresh parity <-> `mod _ 2` bridge plus one step of `bitwiseAux`'s recursor) is NOT necessarily Mathlib's own proof route."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +42,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Proved in Axeyum by reconciliation with the independently constructed native theorem `F:nat-even-xor` (`Nat.even_xor`) -- see that fact's `notes` for the construction. The external theorem declaration remains prior art, not the source of this proof; formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module, not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review; that edge is curriculum and leakage metadata and grants no dispatch, proof, or admission authority."
 }

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-even-xor",
+  "title": "Even (xor m n) iff Even m iff Even n",
+  "statement": "For every natural m, n: Even(xor(m, n)) holds iff Even(m) holds iff Even(n) holds.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Iff (AxNat.Even (AxNat.xor x0 x1)) (Iff (AxNat.Even x0) (AxNat.Even x1))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.even_xor",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.even_xor",
+      "supports": "Nat.even_xor is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- even_xor 2>/dev/null | grep -Ec '^Nat\\.even_xor[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type -- producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the tested count is what decides the exit status. Anchored with `^Nat\\.even_xor[[:space:]]` so a future sibling cannot satisfy this row."
+    },
+    {
+      "id": "compute-Nat.even_xor",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.even_xor",
+      "supports": "even_xor(4, 6): both even, xor(4, 6) = 2 (even) -- mp/mpr round-trip through a hand-built Even 2/Even 4/Even 6. even_xor(3, 5): both odd, xor(3, 5) = 6 (even) -- mpr applied to a constructed Iff (Even 3) (Even 5) (built from Not (Even 3)/Not (Even 5)) lands on Even 6. Both instances exercise the genuinely-bitwise (both-nonzero) branch of the proof, not just the m=0/n=0 boundary shortcuts.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::even_xor_applies_at_concrete_even_even_and_odd_odd_instances",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "A swapped mp/mpr, a wrong remainder in the even_iff_mod_two_eq_zero bridge, or a sign error in the per-bit XOR combine would make one of these applications either fail to type-check or land on a type that is not defeq to the expected side."
+    },
+    {
+      "id": "footprint-Nat.even_xor",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the full trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:bitwise-xor",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-parity-lowbit",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is Kernel::render_lean of the admitted type, taken verbatim from nat_theorem_inventory, not transcribed by hand. AxNat is the kernel's CONSTRUCTED inductive Nat (the Ax is axeyum, not axiomatized); x0/x1 are m/n.\n\nProved via a new reusable bridge, `Nat.even_iff_mod_two_eq_zero`/`Nat.odd_iff_mod_two_eq_one` (`nat_prelude/parity.rs`) relating `Even`/`Odd`'s existential `k+k`/`succ(k+k)` witness shape to `Nat.mod _ 2`, plus a new `mod_two_mul_add_of_lt` helper (same `div_mod_exec`/`div_mod_unique` technique as `binary.rs`'s `declare_mod_two_mul_split`, but with a `refl` witness since the dividend needs no reconstruction algebra). `Nat.even_xor` itself (`nat_prelude/xor_parity.rs`) case-splits on `m` then `n`: the `m = 0`/`n = 0` boundaries reduce `xor` to the other operand by pure `refl` (needing only a hand-built `Even 0`); the genuinely-bitwise case exposes ONE step of `bitwiseAux`'s own recursor, erases the (never-inspected) higher-order recursive term under `mod _ 2` via `mod_two_mul_add_of_lt`, and closes with a four-leaf `cases_mod_two` case split mirroring `rec_agreement.rs`'s `bit_agreement` shape.\n\nThis is the `Nat.xor`/`Nat.Even` twin of Mathlib v4.30's `Nat.even_xor` (`F:ml430-nat-even-xor-78a39432`, flipped alongside this fact) -- our `Nat.xor` is itself `Nat.bitwise xor_fn` (`nat_prelude/xor.rs`), the same shape Mathlib's `Nat.xor := bitwise xor` uses, so this closes the same proposition Mathlib states, not a lookalike about a different definition. `F:ml430-nat-lt-xor-cases-c43a1e85` (the sibling fact) stays open: it needs a highest-differing-bit induction this file's per-bit-at-the-boundary technique gives no foothold for.",
+  "schema_version": 1
+}

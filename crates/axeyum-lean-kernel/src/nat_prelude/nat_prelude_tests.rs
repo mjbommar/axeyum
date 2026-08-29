@@ -924,6 +924,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_not_odd,
         p.odd_not_even,
         p.even_iff_odd_succ,
+        p.even_iff_mod_two_eq_zero,
+        p.odd_iff_mod_two_eq_one,
         p.coprime_two_left,
         p.coprime_two_right,
         p.coprime_odd_of_left,
@@ -973,6 +975,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_or_eq_lor_three_five,
         p.bitwise_xor_three_five,
         p.xor_three_five,
+        p.even_xor,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6475,7 +6478,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 482,
+        93 + 485,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -9391,6 +9394,320 @@ fn parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free() {
     assert!(
         f.k.axiom_footprint(p.add_self_ne_succ_add_self).is_empty(),
         "add_self_ne_succ_add_self must rest on zero axioms"
+    );
+}
+
+/// `even_iff_mod_two_eq_zero`/`odd_iff_mod_two_eq_one` round-trip at
+/// concrete witnesses, in both directions: `mp` applied to a hand-built
+/// `Even 4`/`Odd 5` lands on `Eq (mod 4 2) 0`/`Eq (mod 5 2) 1`, and `mpr`
+/// applied to a `refl`-proved `Eq (mod 4 2) 0`/`Eq (mod 5 2) 1` lands back
+/// on a type defeq to the ORIGINAL `Even 4`/`Odd 5`. Same swap-detecting
+/// shape as `parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free`'s
+/// `even_iff_odd_succ` check: if `mp`/`mpr` were swapped, or if the bridge
+/// pointed at the wrong remainder (`0` vs `1`), one of these applications
+/// would receive an argument of the wrong type and `Kernel::infer` would
+/// reject it. The transposed-remainder negative controls confirm the
+/// bridge is not vacuously provable both ways at once.
+#[test]
+fn even_iff_mod_two_eq_zero_and_odd_iff_mod_two_eq_one_apply_and_agree() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let four = f.num(4);
+    let five = f.num(5);
+    let two = f.num(2);
+    let zero = f.num(0);
+    let one = f.num(1);
+
+    // Even 4, witnessed by 2 (4 = 2+2).
+    let even4 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(four, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(four);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+    let even4_ty =
+        f.k.infer(even4)
+            .unwrap_or_else(|e| panic!("Even 4 (witness 2) should type-check: {}", f.explain(&e)));
+
+    // Odd 5, witnessed by 2 (5 = succ(2+2)).
+    let odd5 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(five, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(five);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+    let odd5_ty =
+        f.k.infer(odd5)
+            .unwrap_or_else(|e| panic!("Odd 5 (witness 2) should type-check: {}", f.explain(&e)));
+
+    let mod4_two = f.modulo(four, two);
+    let mod5_two = f.modulo(five, two);
+    let mod4_eq_zero_ty = f.eq(mod4_two, zero);
+    let mod4_eq_one_ty = f.eq(mod4_two, one);
+    let mod5_eq_one_ty = f.eq(mod5_two, one);
+    let mod5_eq_zero_ty = f.eq(mod5_two, zero);
+
+    // even_iff_mod_two_eq_zero(4).mp(even4) : Eq (mod 4 2) 0.
+    let even_iff_at_4 = f.lemma(p.even_iff_mod_two_eq_zero, &[four]);
+    let even_mp = f.const_app(p.logic.iff_mp, &[even4_ty, mod4_eq_zero_ty, even_iff_at_4]);
+    let mod4_from_even4 = f.apply(even_mp, &[even4]);
+    let mod4_from_even4_ty = f.k.infer(mod4_from_even4).unwrap_or_else(|e| {
+        panic!(
+            "even_iff_mod_two_eq_zero(4).mp(Even 4) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(mod4_from_even4_ty, mod4_eq_zero_ty),
+        "even_iff_mod_two_eq_zero(4).mp(Even 4) must land on Eq (mod 4 2) 0"
+    );
+    assert!(
+        !f.k.def_eq(mod4_from_even4_ty, mod4_eq_one_ty),
+        "negative control: Eq (mod 4 2) 0 must not be defeq to Eq (mod 4 2) 1"
+    );
+
+    // even_iff_mod_two_eq_zero(4).mpr(refl : Eq (mod 4 2) 0) : Even 4.
+    let mod4_refl = f.refl(mod4_two);
+    let even_mpr = f.const_app(p.logic.iff_mpr, &[even4_ty, mod4_eq_zero_ty, even_iff_at_4]);
+    let even4_from_mod = f.apply(even_mpr, &[mod4_refl]);
+    let even4_from_mod_ty = f.k.infer(even4_from_mod).unwrap_or_else(|e| {
+        panic!(
+            "even_iff_mod_two_eq_zero(4).mpr(Eq (mod 4 2) 0) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(even4_from_mod_ty, even4_ty),
+        "even_iff_mod_two_eq_zero(4).mpr(refl) must land back on Even 4"
+    );
+    assert!(
+        f.k.axiom_footprint(p.even_iff_mod_two_eq_zero).is_empty(),
+        "even_iff_mod_two_eq_zero must rest on zero axioms"
+    );
+
+    // odd_iff_mod_two_eq_one(5).mp(odd5) : Eq (mod 5 2) 1.
+    let odd_iff_at_5 = f.lemma(p.odd_iff_mod_two_eq_one, &[five]);
+    let odd_mp = f.const_app(p.logic.iff_mp, &[odd5_ty, mod5_eq_one_ty, odd_iff_at_5]);
+    let mod5_from_odd5 = f.apply(odd_mp, &[odd5]);
+    let mod5_from_odd5_ty = f.k.infer(mod5_from_odd5).unwrap_or_else(|e| {
+        panic!(
+            "odd_iff_mod_two_eq_one(5).mp(Odd 5) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(mod5_from_odd5_ty, mod5_eq_one_ty),
+        "odd_iff_mod_two_eq_one(5).mp(Odd 5) must land on Eq (mod 5 2) 1"
+    );
+    assert!(
+        !f.k.def_eq(mod5_from_odd5_ty, mod5_eq_zero_ty),
+        "negative control: Eq (mod 5 2) 1 must not be defeq to Eq (mod 5 2) 0"
+    );
+
+    // odd_iff_mod_two_eq_one(5).mpr(refl : Eq (mod 5 2) 1) : Odd 5.
+    let mod5_refl = f.refl(mod5_two);
+    let odd_mpr = f.const_app(p.logic.iff_mpr, &[odd5_ty, mod5_eq_one_ty, odd_iff_at_5]);
+    let odd5_from_mod = f.apply(odd_mpr, &[mod5_refl]);
+    let odd5_from_mod_ty = f.k.infer(odd5_from_mod).unwrap_or_else(|e| {
+        panic!(
+            "odd_iff_mod_two_eq_one(5).mpr(Eq (mod 5 2) 1) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(odd5_from_mod_ty, odd5_ty),
+        "odd_iff_mod_two_eq_one(5).mpr(refl) must land back on Odd 5"
+    );
+    assert!(
+        f.k.axiom_footprint(p.odd_iff_mod_two_eq_one).is_empty(),
+        "odd_iff_mod_two_eq_one must rest on zero axioms"
+    );
+}
+
+/// `even_xor` at two concrete instances, both exercising the "genuinely
+/// bitwise" case (`m`, `n` both nonzero) `even_xor_hard_case` builds:
+///
+/// - `(4, 6)`: both even, `xor 4 6 = 2` (even) -- `mp` applied to a
+///   hand-built `Even 2` (standing for `Even (xor 4 6)`, defeq) must land on
+///   `Iff (Even 4) (Even 6)`, and applying THAT `.mp` to a hand-built
+///   `Even 4` must land on a type defeq to the independently hand-built
+///   `Even 6`.
+/// - `(3, 5)`: both odd, `xor 3 5 = 6` (even) -- `mpr` applied to a
+///   constructed `Iff (Even 3) (Even 5)` (built from `Not (Even 3)`/
+///   `Not (Even 5)`, both derived via `odd_not_even`) must land on a type
+///   defeq to a hand-built `Even 6` (standing for `Even (xor 3 5)`).
+///
+/// Both are discriminating: a swapped `mp`/`mpr`, a wrong remainder in the
+/// bridge, or a sign error in the per-bit combine would make one of these
+/// applications either fail to type-check or land on the wrong side.
+#[test]
+fn even_xor_applies_at_concrete_even_even_and_odd_odd_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let even_witness = |f: &mut Fixture, target: ExprId, witness: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(target, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(target);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, witness, proof])
+    };
+    let odd_witness = |f: &mut Fixture, target: ExprId, witness: ExprId| -> ExprId {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(target, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(target);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, witness, proof])
+    };
+
+    // --- (4, 6): both even, xor 4 6 = 2 -------------------------------------
+    {
+        let four = f.num(4);
+        let six = f.num(6);
+        let two = f.num(2);
+        let one = f.num(1);
+        let three = f.num(3);
+
+        let even2 = even_witness(&mut f, two, one);
+        let even4 = even_witness(&mut f, four, two);
+        let even6 = even_witness(&mut f, six, three);
+        let even6_ty = f
+            .k
+            .infer(even6)
+            .unwrap_or_else(|e| panic!("Even 6 (witness 3) should type-check: {}", f.explain(&e)));
+        let even4_ty = f
+            .k
+            .infer(even4)
+            .unwrap_or_else(|e| panic!("Even 4 (witness 2) should type-check: {}", f.explain(&e)));
+
+        let xor_4_6 = f.const_app(p.xor, &[four, six]);
+        let even_xor_ty = f.lemma(p.even, &[xor_4_6]);
+        let iff_4_6 = f.lemma(p.even_xor, &[four, six]);
+        let even4_iff_even6_ty = f.const_app(p.logic.iff, &[even4_ty, even6_ty]);
+        let iff_from_even2 = {
+            let mp_fn = f.const_app(p.logic.iff_mp, &[even_xor_ty, even4_iff_even6_ty, iff_4_6]);
+            f.apply(mp_fn, &[even2])
+        };
+        let iff_from_even2_ty = f.k.infer(iff_from_even2).unwrap_or_else(|e| {
+            panic!(
+                "even_xor(4, 6).mp(Even 2) should type-check: {}",
+                f.explain(&e)
+            )
+        });
+        assert!(
+            f.k.def_eq(iff_from_even2_ty, even4_iff_even6_ty),
+            "even_xor(4, 6).mp(Even 2) must land on Iff (Even 4) (Even 6)"
+        );
+
+        let inner_mp = f.const_app(p.logic.iff_mp, &[even4_ty, even6_ty, iff_from_even2]);
+        let even6_derived = f.apply(inner_mp, &[even4]);
+        let even6_derived_ty = f.k.infer(even6_derived).unwrap_or_else(|e| {
+            panic!(
+                "even_xor(4, 6).mp(Even 2).mp(Even 4) should type-check: {}",
+                f.explain(&e)
+            )
+        });
+        assert!(
+            f.k.def_eq(even6_derived_ty, even6_ty),
+            "even_xor(4, 6) round-trip must land back on (a type defeq to) Even 6"
+        );
+    }
+
+    // --- (3, 5): both odd, xor 3 5 = 6 ---------------------------------------
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let one = f.num(1);
+        let two = f.num(2);
+        let six = f.num(6);
+
+        let odd3 = odd_witness(&mut f, three, one);
+        let odd5 = odd_witness(&mut f, five, two);
+        let even6 = even_witness(&mut f, six, three);
+        let even6_ty = f
+            .k
+            .infer(even6)
+            .unwrap_or_else(|e| panic!("Even 6 (witness 3) should type-check: {}", f.explain(&e)));
+
+        let not_even3 = {
+            let odd_not_even3 = f.lemma(p.odd_not_even, &[three]);
+            f.apply(odd_not_even3, &[odd3])
+        };
+        let not_even5 = {
+            let odd_not_even5 = f.lemma(p.odd_not_even, &[five]);
+            f.apply(odd_not_even5, &[odd5])
+        };
+        let even3_ty = f.lemma(p.even, &[three]);
+        let even5_ty = f.lemma(p.even, &[five]);
+        let iff_even3_even5 = {
+            let false_ty = f.k.const_(p.logic.false_, vec![]);
+            let level_zero = f.k.level_zero();
+            let mp = {
+                let h_fv = f.fresh_fvar();
+                let h = f.k.fvar(h_fv);
+                let false_from_h = f.apply(not_even3, &[h]);
+                let anon = f.anon_name();
+                let motive = f.k.lam(anon, false_ty, even5_ty, BinderInfo::Default);
+                let rec = f.k.const_(p.logic.false_rec, vec![level_zero]);
+                let out = f.apply(rec, &[motive, false_from_h]);
+                f.lam_fv(h_fv, even3_ty, out)
+            };
+            let mpr = {
+                let h_fv = f.fresh_fvar();
+                let h = f.k.fvar(h_fv);
+                let false_from_h = f.apply(not_even5, &[h]);
+                let anon = f.anon_name();
+                let motive = f.k.lam(anon, false_ty, even3_ty, BinderInfo::Default);
+                let rec = f.k.const_(p.logic.false_rec, vec![level_zero]);
+                let out = f.apply(rec, &[motive, false_from_h]);
+                f.lam_fv(h_fv, even5_ty, out)
+            };
+            f.const_app(p.logic.iff_intro, &[even3_ty, even5_ty, mp, mpr])
+        };
+
+        let xor_3_5 = f.const_app(p.xor, &[three, five]);
+        let even_xor_ty = f.lemma(p.even, &[xor_3_5]);
+        let iff_3_5 = f.lemma(p.even_xor, &[three, five]);
+        let even3_iff_even5_ty = f.const_app(p.logic.iff, &[even3_ty, even5_ty]);
+        let mpr_fn = f.const_app(p.logic.iff_mpr, &[even_xor_ty, even3_iff_even5_ty, iff_3_5]);
+        let derived = f.apply(mpr_fn, &[iff_even3_even5]);
+        let derived_ty = f.k.infer(derived).unwrap_or_else(|e| {
+            panic!(
+                "even_xor(3, 5).mpr(Iff (Even 3) (Even 5)) should type-check: {}",
+                f.explain(&e)
+            )
+        });
+        assert!(
+            f.k.def_eq(derived_ty, even6_ty),
+            "even_xor(3, 5).mpr(..) must land on (a type defeq to) Even 6, \
+             standing for Even (xor 3 5)"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.even_xor).is_empty(),
+        "even_xor must rest on zero axioms"
     );
 }
 

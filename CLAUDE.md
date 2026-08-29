@@ -1817,6 +1817,30 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   definition only as far as the theorem's own content reaches, which for an
   existence statement is often not at all.
 
+- **IF THE GOAL ONLY CONSTRAINS A BOUNDED PROJECTION OF A RECURSIVE VALUE, YOU
+  DO NOT HAVE TO REASON ABOUT THE RECURSION AT ALL — AND THIS REFUTES THE
+  "NEEDS A DEEP INDUCTION" SIZING INSTINCT.** Measured 2026-08-29 closing
+  `Nat.even_xor`, which TWO prior sizings — a lane's handoff and `xor.rs`'s own
+  module doc — called out of reach, needing machinery "well beyond defining
+  xor".
+
+  It took one unfold. The goal constrains only the **low bit** of `xor m n`,
+  and that survives exactly one step of `bitwiseAux`'s recursor; the
+  higher-order recursive term underneath never has to be related to anything,
+  because `mod 2` erases it. Admitted axiom-free.
+
+  So before budgeting an induction, ask: **how much of the recursive value does
+  the goal actually mention?** If it is a bounded projection — a low bit, a
+  parity, a residue, a head element — unfold once, erase the tail, and check
+  whether the obligation is already discharged. The instinct to match the
+  recursion's depth to the definition's depth is what made two independent
+  readers oversize this.
+
+  Note the shape of the counter-example this does NOT cover: `lt_xor_cases`
+  stayed open in the same lane, because a highest-differing-bit statement
+  mentions an **unbounded** part of the value and the technique gives no
+  foothold.
+
 - **NO FUEL ENCODING CAN BE A DEPENDENT RECURSOR, AND THAT PERMANENTLY DECIDES
   A WHOLE CLASS OF `ml430` MIRRORS.** Measured 2026-08-29 building
   `Nat.binaryRec`. Mathlib's (`Mathlib/Data/Nat/BinaryRec.lean:88` at the pinned

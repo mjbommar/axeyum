@@ -48,6 +48,8 @@
 //! other lanes edit concurrently.
 
 use super::NatPrelude;
+use super::helpers::and_left;
+use super::helpers::and_right;
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -57,7 +59,7 @@ use crate::expr::ExprId;
 
 /// `fun k : Nat => Eq n (add k k)` — the witness predicate defining
 /// [`NatPrelude::even`].
-fn even_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn even_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
     let kk = d.add(k, k);
@@ -68,7 +70,7 @@ fn even_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
 
 /// `fun k : Nat => Eq n (succ (add k k))` — the witness predicate defining
 /// [`NatPrelude::odd`].
-fn odd_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn odd_predicate(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
     let kk = d.add(k, k);
@@ -515,9 +517,369 @@ fn declare_even_iff_odd_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
     Ok(())
 }
 
+/// `Eq (mul (succ one) k) (add k k)` — the multiplicative form of a doubled
+/// witness, via `succ_mul` then `one_mul` (the identical technique
+/// `binary.rs`'s `n_lt_mul_two` already inlines for a `Lt` conclusion,
+/// extracted here as a standalone equality). `succ one` and a literal `two`
+/// are the same term by construction, so callers may freely use either —
+/// see `n_lt_mul_two`'s own doc for why the kernel's final `def_eq` check
+/// bridges any residual surface difference.
+///
+/// This is the bridge's one piece of new arithmetic: `Even`/`Odd` are
+/// stated in `k+k`/`succ(k+k)` form (see the module doc for why), while
+/// `Nat.divMod`'s reconstruction equation is stated in `mul divisor
+/// quotient + remainder` form. Connecting the two needs exactly this
+/// conversion, in both directions.
+fn mul_two_eq_add_self(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let succ_one = d.succ(one);
+    let mul_succ_one_k = d.mul(succ_one, k);
+    let mul_one_k = d.mul(one, k);
+    let add_mul_one_k_k = d.add(mul_one_k, k);
+    let kk = d.add(k, k);
+
+    let succ_mul_eq = d.lemma(p.succ_mul, &[one, k]);
+    let one_mul_eq = d.lemma(p.one_mul, &[k]);
+    let congr_step = d.congr(mul_one_k, k, one_mul_eq, &|d, x| d.add(x, k));
+
+    let (_, result) = d.chain(
+        mul_succ_one_k,
+        &[(add_mul_one_k_k, succ_mul_eq), (kk, congr_step)],
+    );
+    result
+}
+
+/// `Eq (succ a) (add a one)` — via `add_succ` (`add a (succ zero) = succ
+/// (add a zero)`) then `add_zero`, reversed. The `succ(k+k)` shape `Odd`
+/// uses and the `add (mul two j) one` shape `Nat.divMod`'s reconstruction
+/// needs otherwise never meet.
+fn succ_eq_add_one(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let zero = d.zero();
+    let add_a_one = d.add(a, one);
+    let add_a_zero = d.add(a, zero);
+    let succ_add_a_zero = d.succ(add_a_zero);
+    let succ_a = d.succ(a);
+
+    let add_succ_eq = d.lemma(p.add_succ, &[a, zero]);
+    let add_zero_eq = d.lemma(p.add_zero, &[a]);
+    let congr_step = d.congr(add_a_zero, a, add_zero_eq, &|d, x| d.succ(x));
+
+    let (_, result) = d.chain(
+        add_a_one,
+        &[(succ_add_a_zero, add_succ_eq), (succ_a, congr_step)],
+    );
+    d.symm(add_a_one, succ_a, result)
+}
+
+/// `Eq (mod (add (mul two x) r) two) r`, given `Lt r two` — the "the
+/// reconstructed dividend has the DECLARED remainder" half of `Nat.divMod`
+/// uniqueness, specialized to divisor `2`. Built exactly like
+/// [`super::binary::declare_mod_two_mul_split`]: a hand-built `divMod`
+/// witness (here simply `refl`, since the dividend IS `add (mul two x) r`
+/// verbatim — no reconstruction algebra needed, unlike that theorem's own
+/// witness) compared against the executable `div_mod_exec` instance via
+/// `div_mod_unique`.
+pub(super) fn mod_two_mul_add_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    r: ExprId,
+    r_lt_two: ExprId,
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let two = d.num(2);
+    let mul_two_x = d.mul(two, x);
+    let dividend = d.add(mul_two_x, r);
+
+    let eq_ty = d.eq(dividend, dividend);
+    let bound_ty = d.lt(r, two);
+    let refl_eq = d.refl(dividend);
+    let h_construct = d.const_app(p.logic.and_intro, &[eq_ty, bound_ty, refl_eq, r_lt_two]);
+
+    let h_exec = d.lemma(p.div_mod_exec, &[one, dividend]);
+    let q_exec = d.div(dividend, two);
+    let r_exec = d.modulo(dividend, two);
+
+    let unique = d.lemma(
+        p.div_mod_unique,
+        &[two, dividend, q_exec, r_exec, x, r, h_exec, h_construct],
+    );
+    let eq_q_ty = d.eq(q_exec, x);
+    let eq_r_ty = d.eq(r_exec, r);
+    and_right(d, eq_q_ty, eq_r_ty, unique)
+}
+
+/// `Nat.even_iff_mod_two_eq_zero : ∀ n, Iff (Even n) (Eq (mod n 2) 0)` —
+/// the parity <-> low-bit bridge `xor.rs`'s module doc named as missing
+/// ("no established connection to `Nat.mod _ 2` anywhere in this prelude").
+///
+/// `mp`: eliminate `Even n` (`Exists.rec`, exactly `declare_even_not_odd`'s
+/// shape) to `k, hk : Eq n (add k k)`, rewrite `mod n 2` along `hk` and
+/// [`mul_two_eq_add_self`] down to `mod (add (mul two k) 0) 2`, and close
+/// with [`mod_two_mul_add_of_lt`] at `r := 0`.
+///
+/// `mpr`: `div_mod_exec` gives `n = add (mul two (div n 2)) (mod n 2)`;
+/// substitute the hypothesis `mod n 2 = 0`, simplify the `+ 0` away, rewrite
+/// `mul two (div n 2)` to `add (div n 2) (div n 2)` via
+/// [`mul_two_eq_add_self`], and hand the result to `Exists.intro` at witness
+/// `div n 2`.
+fn declare_even_iff_mod_two_eq_zero(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    d.theorem(p.even_iff_mod_two_eq_zero, 1, &|d, values| {
+        let n = values[0];
+        let two = d.num(2);
+        let zero = d.zero();
+        let mod_n_two = d.modulo(n, two);
+        let even_ty = d.lemma(p.even, &[n]);
+        let mod_zero_ty = d.eq(mod_n_two, zero);
+        let stmt = d.const_app(p.logic.iff, &[even_ty, mod_zero_ty]);
+
+        let even_pred = even_predicate(d, n);
+
+        // mp : Even n -> Eq (mod n 2) 0
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let hk_fv = d.fresh_fvar();
+            let hk = d.kernel().fvar(hk_fv);
+            let kk = d.add(k, k);
+            let hk_ty = d.eq(n, kk);
+
+            let minor = {
+                let mul_two_k = d.mul(two, k);
+                let mul_eq_kk = mul_two_eq_add_self(d, &p, k);
+                let kk_eq_mul = d.symm(mul_two_k, kk, mul_eq_kk);
+
+                let one_tmp = d.num(1);
+                let zero_lt_two = d.zero_lt_succ(one_tmp);
+                let mul_two_k_plus_zero = d.add(mul_two_k, zero);
+
+                let congr_n = d.congr(n, kk, hk, &|d, x| d.modulo(x, two));
+                let congr_kk = d.congr(kk, mul_two_k, kk_eq_mul, &|d, x| d.modulo(x, two));
+                let add_zero_eq = d.lemma(p.add_zero, &[mul_two_k]);
+                let congr_mtk = d.congr(mul_two_k_plus_zero, mul_two_k, add_zero_eq, &|d, x| {
+                    d.modulo(x, two)
+                });
+                let mod_mtk_plus_zero_pre = d.modulo(mul_two_k_plus_zero, two);
+                let mod_mtk_pre = d.modulo(mul_two_k, two);
+                let rev_congr_mtk = d.symm(mod_mtk_plus_zero_pre, mod_mtk_pre, congr_mtk);
+                let final_step = mod_two_mul_add_of_lt(d, &p, k, zero, zero_lt_two);
+
+                let mod_kk = d.modulo(kk, two);
+                let mod_mul_two_k = d.modulo(mul_two_k, two);
+                let mod_mul_two_k_plus_zero = d.modulo(mul_two_k_plus_zero, two);
+                let (_, chained) = d.chain(
+                    mod_n_two,
+                    &[
+                        (mod_kk, congr_n),
+                        (mod_mul_two_k, congr_kk),
+                        (mod_mul_two_k_plus_zero, rev_congr_mtk),
+                        (zero, final_step),
+                    ],
+                );
+                chained
+            };
+
+            let motive = {
+                let anon = d.anon_name();
+                d.kernel()
+                    .lam(anon, even_ty, mod_zero_ty, BinderInfo::Default)
+            };
+            let minor_fn = {
+                let inner = d.lam_fv(hk_fv, hk_ty, minor);
+                d.lam_fv(k_fv, nat, inner)
+            };
+            let one_lvl = d.level_one();
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+            let body = d.apply(rec, &[nat, even_pred, motive, minor_fn, h]);
+            d.lam_fv(h_fv, even_ty, body)
+        };
+
+        // mpr : Eq (mod n 2) 0 -> Even n
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let one_p = d.num(1);
+            let h_exec = d.lemma(p.div_mod_exec, &[one_p, n]);
+            let half = d.div(n, two);
+            let mul_two_half = d.mul(two, half);
+            let recon = d.add(mul_two_half, mod_n_two);
+            let eq_ty = d.eq(n, recon);
+            let bound_ty = d.lt(mod_n_two, two);
+            let n_eq_recon = and_left(d, eq_ty, bound_ty, h_exec);
+
+            let recon_zero = d.add(mul_two_half, zero);
+            let congr_h = d.congr(mod_n_two, zero, h, &|d, x| d.add(mul_two_half, x));
+            let add_zero_eq = d.lemma(p.add_zero, &[mul_two_half]);
+            let half_half = d.add(half, half);
+            let mul_eq_half_half = mul_two_eq_add_self(d, &p, half);
+
+            let (_, n_eq_half_half) = d.chain(
+                n,
+                &[
+                    (recon, n_eq_recon),
+                    (recon_zero, congr_h),
+                    (mul_two_half, add_zero_eq),
+                    (half_half, mul_eq_half_half),
+                ],
+            );
+
+            let one_lvl_intro = d.level_one();
+            let intro = d.kernel().const_(p.logic.exists_intro, vec![one_lvl_intro]);
+            let ev_proof = d.apply(intro, &[nat, even_pred, half, n_eq_half_half]);
+            d.lam_fv(h_fv, mod_zero_ty, ev_proof)
+        };
+
+        let proof = d.const_app(p.logic.iff_intro, &[even_ty, mod_zero_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.odd_iff_mod_two_eq_one : ∀ n, Iff (Odd n) (Eq (mod n 2) 1)` —
+/// [`declare_even_iff_mod_two_eq_zero`]'s `succ` twin, via
+/// [`succ_eq_add_one`] to bridge `succ(k+k)` and `add (mul two k) 1`.
+fn declare_odd_iff_mod_two_eq_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    d.theorem(p.odd_iff_mod_two_eq_one, 1, &|d, values| {
+        let n = values[0];
+        let two = d.num(2);
+        let one = d.num(1);
+        let mod_n_two = d.modulo(n, two);
+        let odd_ty = d.lemma(p.odd, &[n]);
+        let mod_one_ty = d.eq(mod_n_two, one);
+        let stmt = d.const_app(p.logic.iff, &[odd_ty, mod_one_ty]);
+
+        let odd_pred = odd_predicate(d, n);
+
+        // mp : Odd n -> Eq (mod n 2) 1
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let hj_fv = d.fresh_fvar();
+            let hj = d.kernel().fvar(hj_fv);
+            let jj = d.add(j, j);
+            let succ_jj = d.succ(jj);
+            let hj_ty = d.eq(n, succ_jj);
+
+            let minor = {
+                let mul_two_j = d.mul(two, j);
+                let mul_eq_jj = mul_two_eq_add_self(d, &p, j);
+                let jj_eq_mul = d.symm(mul_two_j, jj, mul_eq_jj);
+                let succ_congr = d.congr(jj, mul_two_j, jj_eq_mul, &|d, x| d.succ(x));
+                let succ_mul_two_j = d.succ(mul_two_j);
+                let succ_eq_add = succ_eq_add_one(d, &p, mul_two_j);
+                let add_mul_two_j_one = d.add(mul_two_j, one);
+
+                let one_lt_two = d.lemma(p.le_refl, &[two]);
+                let final_step = mod_two_mul_add_of_lt(d, &p, j, one, one_lt_two);
+
+                let congr_n = d.congr(n, succ_jj, hj, &|d, x| d.modulo(x, two));
+                let congr_succ = d.congr(succ_jj, succ_mul_two_j, succ_congr, &|d, x| {
+                    d.modulo(x, two)
+                });
+                let congr_add = d.congr(succ_mul_two_j, add_mul_two_j_one, succ_eq_add, &|d, x| {
+                    d.modulo(x, two)
+                });
+
+                let mod_succ_jj = d.modulo(succ_jj, two);
+                let mod_succ_mul_two_j = d.modulo(succ_mul_two_j, two);
+                let mod_add_mul_two_j_one = d.modulo(add_mul_two_j_one, two);
+                let (_, chained) = d.chain(
+                    mod_n_two,
+                    &[
+                        (mod_succ_jj, congr_n),
+                        (mod_succ_mul_two_j, congr_succ),
+                        (mod_add_mul_two_j_one, congr_add),
+                        (one, final_step),
+                    ],
+                );
+                chained
+            };
+
+            let motive = {
+                let anon = d.anon_name();
+                d.kernel()
+                    .lam(anon, odd_ty, mod_one_ty, BinderInfo::Default)
+            };
+            let minor_fn = {
+                let inner = d.lam_fv(hj_fv, hj_ty, minor);
+                d.lam_fv(j_fv, nat, inner)
+            };
+            let one_lvl = d.level_one();
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+            let body = d.apply(rec, &[nat, odd_pred, motive, minor_fn, h]);
+            d.lam_fv(h_fv, odd_ty, body)
+        };
+
+        // mpr : Eq (mod n 2) 1 -> Odd n
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let one_p = d.num(1);
+            let h_exec = d.lemma(p.div_mod_exec, &[one_p, n]);
+            let half = d.div(n, two);
+            let mul_two_half = d.mul(two, half);
+            let recon = d.add(mul_two_half, mod_n_two);
+            let eq_ty = d.eq(n, recon);
+            let bound_ty = d.lt(mod_n_two, two);
+            let n_eq_recon = and_left(d, eq_ty, bound_ty, h_exec);
+
+            let recon_one = d.add(mul_two_half, one);
+            let congr_h = d.congr(mod_n_two, one, h, &|d, x| d.add(mul_two_half, x));
+
+            let succ_mul_two_half = d.succ(mul_two_half);
+            let succ_eq_add = succ_eq_add_one(d, &p, mul_two_half);
+            let add_eq_succ = d.symm(recon_one, succ_mul_two_half, succ_eq_add);
+
+            let half_half = d.add(half, half);
+            let succ_half_half = d.succ(half_half);
+            let mul_eq_half_half = mul_two_eq_add_self(d, &p, half);
+            let succ_congr = d.congr(mul_two_half, half_half, mul_eq_half_half, &|d, x| d.succ(x));
+
+            let (_, n_eq_succ_half_half) = d.chain(
+                n,
+                &[
+                    (recon, n_eq_recon),
+                    (recon_one, congr_h),
+                    (succ_mul_two_half, add_eq_succ),
+                    (succ_half_half, succ_congr),
+                ],
+            );
+
+            let one_lvl_intro = d.level_one();
+            let intro = d.kernel().const_(p.logic.exists_intro, vec![one_lvl_intro]);
+            let od_proof = d.apply(intro, &[nat, odd_pred, half, n_eq_succ_half_half]);
+            d.lam_fv(h_fv, mod_one_ty, od_proof)
+        };
+
+        let proof = d.const_app(p.logic.iff_intro, &[odd_ty, mod_one_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declaration order: `Even`/`Odd` first, then `even_or_odd_exists` (needs
 /// both), then the disjointness theorem, then the two bridges that consume
-/// it, then the cheap `succ` iff.
+/// it, then the cheap `succ` iff, then the parity <-> low-bit bridge (needs
+/// only `Even`/`Odd` themselves plus `division.rs`'s `div_mod_exec`/
+/// `div_mod_unique`, already available by this point in the prelude).
 pub(super) fn declare_parity_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_even_odd_defs(d, p)?;
     declare_even_or_odd_exists(d, p)?;
@@ -525,5 +887,7 @@ pub(super) fn declare_parity_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_even_not_odd(d, p)?;
     declare_odd_not_even(d, p)?;
     declare_even_iff_odd_succ(d, p)?;
+    declare_even_iff_mod_two_eq_zero(d, p)?;
+    declare_odd_iff_mod_two_eq_one(d, p)?;
     Ok(())
 }
