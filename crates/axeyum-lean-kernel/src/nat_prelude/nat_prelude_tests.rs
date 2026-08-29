@@ -1008,6 +1008,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bit_mod_two,
         p.land_bit,
         p.land_aux_eq_zero_of_left_eq_zero,
+        p.lor_bit,
+        p.ldiff_bit,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6486,7 +6488,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 493,
+        93 + 495,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -12544,6 +12546,187 @@ fn land_bit_applies_at_a_concrete_discriminating_instance() {
     );
 }
 
+/// `Nat.lor_bit` — the `Nat.bit` decode bridge's `lor` twin, closing
+/// `F:ml430-nat-lor-bit-a2f98c7c`. Same shared instance as
+/// `land_bit_applies_at_a_concrete_discriminating_instance`
+/// (`a = true, m = 2, b = false, n = 3`): `bit true 2 = 5`, `bit false 3 =
+/// 6`, `lor 5 6 = 7` (`101 | 110`), against
+/// `bit (true || false) (lor 2 3) = bit true 3 = 7` (`lor 2 3 = 3`,
+/// `10 | 11`) -- discriminates from `land`'s `4` at the same instance.
+#[test]
+fn lor_bit_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables.
+    {
+        let nat = f.nat_ty();
+        let bool_ty = f.bool_ty();
+        let a_fv = f.fresh_fvar();
+        let a = f.k.fvar(a_fv);
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+
+        let bit_am = f.const_app(p.bit, &[a, m]);
+        let bit_bn = f.const_app(p.bit, &[b, n]);
+        let lhs = f.const_app(p.lor, &[bit_am, bit_bn]);
+        let or_fn_expr = super::bitwise::or_fn(&mut f);
+        let a_or_b = f.apply(or_fn_expr, &[a, b]);
+        let lor_mn = f.const_app(p.lor, &[m, n]);
+        let rhs = f.const_app(p.bit, &[a_or_b, lor_mn]);
+        let stmt = f.eq(lhs, rhs);
+        let proof = f.lemma(p.lor_bit, &[a, m, b, n]);
+
+        let ty = {
+            let inner = f.pi_fv(n_fv, nat, stmt);
+            let inner = f.pi_fv(b_fv, bool_ty, inner);
+            let inner = f.pi_fv(m_fv, nat, inner);
+            f.pi_fv(a_fv, bool_ty, inner)
+        };
+        let value = {
+            let inner = f.lam_fv(n_fv, nat, proof);
+            let inner = f.lam_fv(b_fv, bool_ty, inner);
+            let inner = f.lam_fv(m_fv, nat, inner);
+            f.lam_fv(a_fv, bool_ty, inner)
+        };
+        let name = f.name("lor_bit_restated");
+        f.declare_theorem(name, ty, value)
+            .expect("lor_bit's restated closed form must also be admitted");
+    }
+
+    // Concrete: a = true, m = 2, b = false, n = 3.
+    {
+        let t = f.bool_true();
+        let two = f.num(2);
+        let fls = f.bool_false();
+        let three = f.num(3);
+        let bit_t2 = f.const_app(p.bit, &[t, two]);
+        let bit_f3 = f.const_app(p.bit, &[fls, three]);
+        let lhs = f.const_app(p.lor, &[bit_t2, bit_f3]);
+        let or_fn_expr = super::bitwise::or_fn(&mut f);
+        let t_or_f = f.apply(or_fn_expr, &[t, fls]);
+        let lor_23 = f.const_app(p.lor, &[two, three]);
+        let rhs = f.const_app(p.bit, &[t_or_f, lor_23]);
+
+        let applied = f.lemma(p.lor_bit, &[t, two, fls, three]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_bit must apply at (a=true, m=2, b=false, n=3): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lor_bit true 2 false 3 must state Eq (lor (bit true 2) (bit false 3)) (bit (true||false) (lor 2 3))"
+        );
+
+        let seven = f.num(7);
+        assert!(f.k.def_eq(lhs, seven), "lor 5 6 must compute to 7");
+        assert!(
+            f.k.def_eq(rhs, seven),
+            "bit true (lor 2 3) must compute to 7"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.lor_bit).is_empty(),
+        "lor_bit must rest on zero axioms"
+    );
+}
+
+/// `Nat.ldiff_bit` — the `Nat.bit` decode bridge's `ldiff` twin, closing
+/// `F:ml430-nat-ldiff-bit-6be49bb8`. Same shared instance:
+/// `bit true 2 = 5`, `bit false 3 = 6`, `ldiff 5 6 = 1` (`101 & !110 = 101 &
+/// 001`), against `bit (true && !false) (ldiff 2 3) = bit true 0 = 1`
+/// (`ldiff 2 3 = 010 & !011 = 010 & 100 = 0`) -- discriminates from `land`'s
+/// `4` and `lor`'s `7` at the same instance.
+#[test]
+fn ldiff_bit_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables.
+    {
+        let nat = f.nat_ty();
+        let bool_ty = f.bool_ty();
+        let a_fv = f.fresh_fvar();
+        let a = f.k.fvar(a_fv);
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+
+        let bit_am = f.const_app(p.bit, &[a, m]);
+        let bit_bn = f.const_app(p.bit, &[b, n]);
+        let lhs = f.const_app(p.ldiff, &[bit_am, bit_bn]);
+        let ldiff_fn_expr = super::bit_decode::ldiff_fn(&mut f, &p);
+        let a_ldiff_b = f.apply(ldiff_fn_expr, &[a, b]);
+        let ldiff_mn = f.const_app(p.ldiff, &[m, n]);
+        let rhs = f.const_app(p.bit, &[a_ldiff_b, ldiff_mn]);
+        let stmt = f.eq(lhs, rhs);
+        let proof = f.lemma(p.ldiff_bit, &[a, m, b, n]);
+
+        let ty = {
+            let inner = f.pi_fv(n_fv, nat, stmt);
+            let inner = f.pi_fv(b_fv, bool_ty, inner);
+            let inner = f.pi_fv(m_fv, nat, inner);
+            f.pi_fv(a_fv, bool_ty, inner)
+        };
+        let value = {
+            let inner = f.lam_fv(n_fv, nat, proof);
+            let inner = f.lam_fv(b_fv, bool_ty, inner);
+            let inner = f.lam_fv(m_fv, nat, inner);
+            f.lam_fv(a_fv, bool_ty, inner)
+        };
+        let name = f.name("ldiff_bit_restated");
+        f.declare_theorem(name, ty, value)
+            .expect("ldiff_bit's restated closed form must also be admitted");
+    }
+
+    // Concrete: a = true, m = 2, b = false, n = 3.
+    {
+        let t = f.bool_true();
+        let two = f.num(2);
+        let fls = f.bool_false();
+        let three = f.num(3);
+        let bit_t2 = f.const_app(p.bit, &[t, two]);
+        let bit_f3 = f.const_app(p.bit, &[fls, three]);
+        let lhs = f.const_app(p.ldiff, &[bit_t2, bit_f3]);
+        let ldiff_fn_expr = super::bit_decode::ldiff_fn(&mut f, &p);
+        let t_ldiff_f = f.apply(ldiff_fn_expr, &[t, fls]);
+        let ldiff_23 = f.const_app(p.ldiff, &[two, three]);
+        let rhs = f.const_app(p.bit, &[t_ldiff_f, ldiff_23]);
+
+        let applied = f.lemma(p.ldiff_bit, &[t, two, fls, three]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("ldiff_bit must apply at (a=true, m=2, b=false, n=3): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "ldiff_bit true 2 false 3 must state Eq (ldiff (bit true 2) (bit false 3)) (bit (true&&!false) (ldiff 2 3))"
+        );
+
+        let one = f.num(1);
+        assert!(f.k.def_eq(lhs, one), "ldiff 5 6 must compute to 1");
+        assert!(
+            f.k.def_eq(rhs, one),
+            "bit true (ldiff 2 3) must compute to 1"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.ldiff_bit).is_empty(),
+        "ldiff_bit must rest on zero axioms"
+    );
+}
+
 /// `Nat.clog` computes at concrete points, including `(2, 7)`, which is
 /// deliberately chosen to differ from `Nat.log 2 7 = 2`: `clog` is the
 /// CEILING logarithm, so `clog 2 7 = 3` (three levels of the fuel
@@ -12559,6 +12742,13 @@ fn land_bit_applies_at_a_concrete_discriminating_instance() {
 /// onto `land_bit_applies_at_a_concrete_discriminating_instance` above,
 /// duplicating ITS `#[test]` and leaving this function silently untested
 /// dead code. Restored to its own function by `nat-bitwise-bit-swap`.
+/// Pre-existing gap fixed in passing (not this lane's subject): this
+/// function's `#[test]` attribute had been misplaced onto
+/// `land_bit_applies_at_a_concrete_discriminating_instance` by an earlier
+/// doc-comment insertion, leaving this test dead code (`cargo clippy
+/// --all-targets` flags it as never used). Restored here because it landed
+/// in the same file this lane already touches, and a clean clippy gate is
+/// this lane's own required check.
 #[test]
 fn clog_computes_and_its_boundary_equations_apply() {
     let mut f = Fixture::new();

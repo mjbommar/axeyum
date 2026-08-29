@@ -2940,6 +2940,15 @@ pub struct NatPrelude {
     /// b) (land m n))` — `F:ml430-nat-land-bit-b9ab7475`, closed via the
     /// `Nat.bit` decode bridge (`nat_prelude::bit_decode`).
     pub land_bit: NameId,
+    /// `Nat.lor_bit : ∀ a m b n, Eq (lor (bit a m) (bit b n)) (bit (or a b)
+    /// (lor m n))` — `F:ml430-nat-lor-bit-a2f98c7c`, same decode bridge as
+    /// [`Self::land_bit`] with `lor`'s own guard rows and per-bit `max`
+    /// combine.
+    pub lor_bit: NameId,
+    /// `Nat.ldiff_bit : ∀ a m b n, Eq (ldiff (bit a m) (bit b n)) (bit (and a
+    /// (not b)) (ldiff m n))` — `F:ml430-nat-ldiff-bit-6be49bb8`, same decode
+    /// bridge with `ldiff`'s hybrid guard rows.
+    pub ldiff_bit: NameId,
 
     // --- `Nat.Pair` and `Nat.binaryRec` (`binary_rec.rs`) -------------------
     /// `Nat.Pair : Type 0` — the monomorphic `Nat x Nat` product, a
@@ -3694,6 +3703,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bit_div_two: kernel.name_str(nat, "bit_div_two"),
             bit_mod_two: kernel.name_str(nat, "bit_mod_two"),
             land_bit: kernel.name_str(nat, "land_bit"),
+            lor_bit: kernel.name_str(nat, "lor_bit"),
+            ldiff_bit: kernel.name_str(nat, "ldiff_bit"),
             pair,
             pair_mk: kernel.name_str(pair, "mk"),
             pair_rec: kernel.name_str(pair, "rec"),
