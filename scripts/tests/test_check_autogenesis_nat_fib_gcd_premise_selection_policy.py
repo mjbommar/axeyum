@@ -49,12 +49,16 @@ class NatFibGcdPremiseSelectionPolicyTests(unittest.TestCase):
         self.reject(lambda value: value["authority"].__setitem__("evaluation_credit_so_far", 1), "authority")
 
     def test_live_progress_must_be_a_proved_prefix(self):
+        # All four chain facts are genuinely `proved` in the live ledger now
+        # (real proof work landed since this policy was preregistered), so
+        # forcing the LAST one to `proved` -- the original mutation here --
+        # is a no-op against reality and can no longer construct a
+        # proved-prefix violation. Regress an EARLIER chain fact back to
+        # `open` instead, leaving a LATER one `proved`: that is still a gap
+        # in the prefix regardless of how far real progress has advanced.
         facts = copy.deepcopy(self.facts)
-        later = facts["F:ml430-nat-fib-gcd-d1d98407"]
-        later["epistemic_status"] = "proved"
-        later["proof_route"] = "kernel-lean"
-        later["axiom_footprint"] = []
-        later["evidence"] = [{"check_status": "checked"}]
+        earlier = facts["F:ml430-nat-gcd-fib-add-self-5a92d5e3"]
+        earlier["epistemic_status"] = "open"
         with self.assertRaisesRegex(MODULE.PremiseSelectionError, "proved prefix"):
             MODULE.validate_policy(self.policy, self.reviewed, facts)
 

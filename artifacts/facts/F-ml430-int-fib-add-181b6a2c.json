@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": [],
+  "depends_on": ["F:int-add-assoc", "F:int-add-comm", "F:int-add-neg-cancel-right", "F:int-add-zero", "F:int-fib-rec", "F:int-left-distrib", "F:int-mul-one", "F:int-mul-zero", "F:int-two-sided-induction"],
   "epistemic_status": "proved",
   "evidence": [
     {

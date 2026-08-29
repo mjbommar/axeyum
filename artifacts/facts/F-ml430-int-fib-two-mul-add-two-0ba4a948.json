@@ -1,6 +1,14 @@
 {
   "axiom_footprint": [],
   "depends_on": [
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-neg-cancel-right",
+    "F:int-fib-rec",
+    "F:int-left-distrib",
+    "F:int-mul-comm",
+    "F:int-mul-one",
+    "F:ml430-int-fib-add-181b6a2c",
     "F:ml430-int-fib-two-mul-0e70f3dd"
   ],
   "epistemic_status": "proved",

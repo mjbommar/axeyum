@@ -19,9 +19,12 @@
     "F:int-sub-nat-nat-add-right",
     "F:nat-add-assoc",
     "F:nat-add-comm",
+    "F:nat-add-lt-add-left",
+    "F:nat-add-succ",
     "F:nat-add-zero",
     "F:nat-div-mod-exists",
     "F:nat-le-succ-succ",
+    "F:nat-mul-succ",
     "F:nat-sub-add-cancel",
     "F:nat-zero-le"
   ],

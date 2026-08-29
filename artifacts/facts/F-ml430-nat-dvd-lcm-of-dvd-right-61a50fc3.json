@@ -17,6 +17,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
+    "F:nat-dvd-lcm-right",
     "F:nat-dvd-trans"
   ],
   "evidence": [

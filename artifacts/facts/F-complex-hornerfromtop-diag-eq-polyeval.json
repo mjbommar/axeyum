@@ -26,6 +26,7 @@
     "F:complex-mul-congr",
     "F:complex-polyeval-succ",
     "F:complex-polyeval-zero",
+    "F:complex-pow-zero",
     "F:creal-add-assoc",
     "F:creal-add-comm",
     "F:creal-add-congr",

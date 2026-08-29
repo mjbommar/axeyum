@@ -19,6 +19,7 @@
   "depends_on": [
     "F:creal-bound-within",
     "F:nat-add-comm",
+    "F:nat-add-succ",
     "F:nat-mul-comm",
     "F:nat-mul-one",
     "F:nat-succ-add",
@@ -28,6 +29,7 @@
     "F:rat-natdivsucc-mul",
     "F:rat-natdivsucc-scale",
     "F:rat-neg-le-neg",
+    "F:rat-neg-mul-le-of-bounds",
     "F:rat-neg-neg",
     "F:rat-zero-add",
     "F:rat-zero-le-natdivsucc"

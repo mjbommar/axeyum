@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": [],
+  "depends_on": ["F:nat-le-of-ble-eq-true", "F:nat-lt-irrefl", "F:nat-lt-of-lt-of-le"],
   "epistemic_status": "proved",
   "evidence": [
     {

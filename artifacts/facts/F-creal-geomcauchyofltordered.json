@@ -23,10 +23,12 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-geom-pair-within",
     "F:nat-add-comm",
     "F:rat-add-assoc",
     "F:rat-add-comm",
     "F:rat-add-le-add",
+    "F:rat-le-of-sub-le",
     "F:rat-le-refl",
     "F:rat-le-trans",
     "F:rat-natdivsucc-add",

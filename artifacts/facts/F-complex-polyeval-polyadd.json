@@ -20,6 +20,8 @@
   "depends_on": [
     "F:complex-equiv-refl",
     "F:complex-equiv-trans",
+    "F:complex-sumrange-add",
+    "F:complex-sumrange-congr",
     "F:creal-add-assoc",
     "F:creal-add-comm",
     "F:creal-add-congr",

@@ -56,7 +56,33 @@ generations would have broken the ones that import them, so all 7 are now
 registered instead. The 5 `check-autogenesis-*` result/plan controls with live,
 unchanged targets are registered too.
 
-What remains at 14 is not a backlog of coverage, it is four distinct kinds of
+**Re-measured 2026-08-29: 16, not 14 -- and the honest recount is HIGHER than
+the committed baseline, which the naive "the count fell, lower it" reading
+would have missed.** `check-fact-depends-derived.py`'s own gate had gone
+stale the same day for the same underlying reason (nobody had run the full
+sweep in a while), and a first pass here made the identical mistake in the
+opposite direction: measuring the raw orphan count gave 9, which reads as an
+improvement worth locking in. It was not. `scripts/control-optout.tsv`
+(ADR-0612, landed the same day) is `name<TAB>reason`, not a script, and its
+reason column routinely reads "pytest dialect; `pytest` is not installed" --
+a plain, uncommented row naming a module next to the word `pytest`, which is
+exactly what `modules_run_by`'s comment guard was never taught to skip (that
+guard only strips lines starting with `#`; this file has none). All seven
+`pytest`-dialect orphans below were being silently credited as "executed by
+scripts/control-optout.tsv" -- the ledger of modules NOT run, vouching for the
+modules it exists to name as unrun. Fixed by excluding the file outright from
+`tracked()` (`RUNNER_MENTION_TRAP`), the same treatment `scripts/tests/`
+itself already gets and for the identical reason: an exclusion registry can
+never itself be a runner. With the bug fixed, the seven reappear as real
+orphans, joined by two new ones from ADR-0612's OWN auto-discovery mechanism
+(`test_run_python_controls`, `test_frontier_definition_coverage`): both are
+genuinely run, but only via `scripts/run-python-controls.py`'s glob-based
+discovery, which leaves no literal `unittest`/`pytest` invocation line for
+this older, text-scanning gate to see -- a real coverage gap in THIS gate's
+method, not a regression in either module. 7 (unmasked) + 2 (new, glob-only)
++ the unchanged 7 below (2 autogenesis-plan + 4 tock-log2 + 1 glaurung) = 16.
+
+What remains at 16 is not a backlog of coverage, it is five distinct kinds of
 resistance:
 
 - **Seven are pytest-style, and a pytest interpreter is not installed here.**
@@ -90,10 +116,21 @@ resistance:
 - **One is the single genuinely rotted control found in the 2026-08-17
   sweep, still rotted**: `test_validate_glaurung_llvm_loop_semantic_census`
   still fails with `ResultValidationError: producer drift: Cargo.lock`.
+- **Two are only discovered, never literally invoked**:
+  `test_run_python_controls` and `test_frontier_definition_coverage` are both
+  run for real, every time, by `scripts/run-python-controls.py`'s glob over
+  `scripts/tests/test_*.py` -- but that discovery is dynamic, so no tracked
+  file contains a line naming either module beside `unittest`/`pytest` for
+  this gate's text scanner to find. Teaching this scanner to trust the glob
+  the way it trusts a literal invocation is a separate, later change; until
+  then these two count against the baseline despite being genuinely covered.
 
 A module naming itself proves nothing, so `scripts/tests/` is excluded from the
-search. `scripts/check-aggregate-scope.expected` is a pinned inventory of gate
-steps rather than a runner, but it is derived from the runners and excluding it
+search, and `scripts/control-optout.tsv` is excluded for the same reason (see
+`RUNNER_MENTION_TRAP` below): an exclusion registry documents non-coverage, it
+cannot BE coverage, however much its reason text reads like a runner line.
+`scripts/check-aggregate-scope.expected` is a pinned inventory of gate steps
+rather than a runner, but it is derived from the runners and excluding it
 would not change the count, so it is left in.
 """
 
@@ -113,8 +150,16 @@ TESTS = ROOT / "scripts/tests"
 # controls whose scripts are still cross-referenced by later generations). The
 # remaining 14 are characterised above ("What the remaining 14 are") rather than
 # left as a bare number. Previously 19, measured 2026-08-17.
-# MAY ONLY GO DOWN.
-ORPHAN_BASELINE = 14
+#
+# Re-measured 2026-08-29 at 16, NOT a regression in this ratchet's own terms:
+# fixing the `control-optout.tsv` false-credit bug (see `RUNNER_MENTION_TRAP`)
+# unmasked 7 orphans that were never actually reachable, and ADR-0612's new
+# glob-based discovery added 2 modules this text-scanning gate cannot see as
+# run. Both are explained above ("Re-measured 2026-08-29" / "Two are only
+# discovered, never literally invoked"). This is a corrected measurement, not
+# new rot -- the true count was always at least this high.
+# MAY ONLY GO DOWN FROM A CORRECT MEASUREMENT.
+ORPHAN_BASELINE = 16
 # The controls exist; if this collapses, the glob is wrong and every count lies.
 MIN_MODULES = 130
 
@@ -125,11 +170,31 @@ def modules() -> set[str]:
     return {p.stem for p in TESTS.glob("test_*.py")}
 
 
+# `scripts/control-optout.tsv` (ADR-0612) is a plain TSV, not a script, so its
+# lines never start with `#` -- and its own format is `name<TAB>reason`, where
+# the reason routinely explains a pytest-dialect exclusion in prose like
+# "pytest dialect; `pytest` is not installed". `modules_run_by`'s comment guard
+# only strips lines starting with `#`, so each such row reads as a module named
+# on a line that also says `pytest` -- exactly the false-positive shape
+# `ACommentIsAMentionHoweverRunnerishItLooks` exists to catch, recurring in a
+# file format that guard was never written to see. Measured 2026-08-29: all
+# seven of that file's `pytest dialect` rows were being credited as "executed
+# by scripts/control-optout.tsv", vouching for the exact modules the file
+# records as NOT run. Excluding the file (it is definitionally an exclusion
+# registry, never a runner, the same reason `scripts/tests/` itself is
+# excluded above) restored the true count.
+RUNNER_MENTION_TRAP = {"scripts/control-optout.tsv"}
+
+
 def tracked() -> list[str]:
     out = subprocess.run(
         ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
     ).stdout.split()
-    return [f for f in out if not f.startswith("scripts/tests/")]
+    return [
+        f
+        for f in out
+        if not f.startswith("scripts/tests/") and f not in RUNNER_MENTION_TRAP
+    ]
 
 
 def logical_lines(text: str) -> list[str]:

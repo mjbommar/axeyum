@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-euclid-lemma", "F:nat-le-of-dvd", "F:nat-le-of-succ-le-succ", "F:nat-le-trans", "F:nat-not-succ-le-zero", "F:nat-pow-succ", "F:nat-pow-zero"],
   "evidence": [
     {
       "check_status": "checked",

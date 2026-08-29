@@ -19,16 +19,18 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:creal-sumrange-converges-of-dominated",
-    "F:creal-equiv-refl",
-    "F:creal-equiv-symm",
-    "F:creal-equiv-trans",
     "F:creal-abs-le",
     "F:creal-add-comm",
     "F:creal-add-neg",
     "F:creal-add-zero",
+    "F:creal-converges-cauchy",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
     "F:creal-le-congr",
-    "F:creal-le-trans"
+    "F:creal-le-trans",
+    "F:creal-neg-le-neg",
+    "F:creal-sumrange-converges-of-dominated"
   ],
   "axiom_footprint": [],
   "evidence": [

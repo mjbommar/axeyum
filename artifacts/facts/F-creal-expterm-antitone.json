@@ -18,6 +18,7 @@
     "F:creal-ofrat-le",
     "F:int-mul-assoc",
     "F:int-mul-comm",
+    "F:nat-factorial-succ",
     "F:nat-le-succ-succ",
     "F:nat-mul-le-mul-left",
     "F:nat-mul-one",

@@ -23,6 +23,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-abs-add-le",
     "F:creal-abs-congr",
     "F:creal-abs-le",
     "F:creal-add-assoc",
@@ -49,6 +50,7 @@
     "F:nat-add-comm",
     "F:nat-le-add-right",
     "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-antitone",
     "F:rat-natdivsucc-halve"
   ],
   "axiom_footprint": [],

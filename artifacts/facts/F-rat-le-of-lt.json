@@ -15,7 +15,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:int-le-of-lt"],
   "axiom_footprint": [],
   "evidence": [
     {

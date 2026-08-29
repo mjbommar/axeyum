@@ -12,7 +12,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:creal-converges-of-scaled-cauchy", "F:creal-riemannsumdeepcauchyfolded"],
   "axiom_footprint": [],
   "evidence": [
     {

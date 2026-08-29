@@ -16,6 +16,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:creal-alternatingupperbound",
+    "F:creal-exp-term-nonneg",
     "F:creal-expterm-antitone",
     "F:creal-le-trans",
     "F:creal-sinoneconverges",

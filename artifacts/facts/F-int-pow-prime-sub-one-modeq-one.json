@@ -24,6 +24,7 @@
     "F:int-mul-comm",
     "F:int-mul-one",
     "F:int-of-nat-pow",
+    "F:ml430-nat-coprime-of-lt-prime-1978a919",
     "F:nat-coprime-of-lt-prime",
     "F:nat-le-trans",
     "F:nat-pow-prime-modeq-self",

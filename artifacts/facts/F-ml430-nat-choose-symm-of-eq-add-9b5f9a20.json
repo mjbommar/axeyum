@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": [],
+  "depends_on": ["F:nat-add-sub-cancel-left", "F:nat-choose-symm", "F:nat-le-add-right"],
   "epistemic_status": "proved",
   "evidence": [
     {

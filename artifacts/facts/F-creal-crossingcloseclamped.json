@@ -40,8 +40,12 @@
     "F:creal-equiv-trans",
     "F:creal-le-add-of-nonneg",
     "F:creal-le-congr",
+    "F:creal-le-min",
     "F:creal-le-refl",
     "F:creal-le-trans",
+    "F:creal-min-le-left",
+    "F:creal-min-le-right",
+    "F:creal-neg-le-neg",
     "F:creal-uniformlycontinuouson-spec",
     "F:rat-zero-le-natdivsucc"
   ],

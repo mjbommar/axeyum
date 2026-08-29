@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-dvd-mul"],
   "evidence": [
     {
       "check_status": "checked",

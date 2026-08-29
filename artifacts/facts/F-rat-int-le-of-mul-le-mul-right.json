@@ -20,7 +20,11 @@
   "depends_on": [
     "F:int-equality-is-decidable",
     "F:int-le-refl",
-    "F:int-le-total"
+    "F:int-le-total",
+    "F:int-lt-irrefl",
+    "F:int-lt-of-le-of-ne",
+    "F:int-lt-of-lt-of-le",
+    "F:rat-int-mul-lt-mul-right"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -12,8 +12,10 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-testbit-xor",
-    "F:nat-eq-of-testbit-eq"
+    "F:nat-eq-of-testbit-eq",
+    "F:nat-le-succ-succ",
+    "F:nat-testbit-le-one",
+    "F:nat-testbit-xor"
   ],
   "axiom_footprint": [],
   "evidence": [

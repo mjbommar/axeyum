@@ -12,7 +12,18 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-add-lt-add-left",
+    "F:nat-add-zero",
+    "F:nat-div-mod-exec",
+    "F:nat-div-mod-lt-mul-iff",
+    "F:nat-le-antisymm",
+    "F:nat-le-of-succ-le-succ",
+    "F:nat-le-succ-succ",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-one-mul",
+    "F:nat-succ-mul",
     "F:nat-testbit-succ",
+    "F:nat-zero-le",
     "F:nat-zero-of-testbit-eq-zero"
   ],
   "axiom_footprint": [],

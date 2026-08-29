@@ -24,7 +24,11 @@
     "F:complex-equiv-symm",
     "F:complex-equiv-trans",
     "F:complex-hornerfromtop-succsucc",
+    "F:nat-le-of-lt-succ",
     "F:nat-le-trans",
+    "F:nat-lt-of-le-of-lt",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-succ-sub-of-le",
     "F:nat-zero-le"
   ],
   "axiom_footprint": [],

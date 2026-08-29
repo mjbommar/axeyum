@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-coprime-odd-of-left-ed80ab44", "F:ml430-nat-coprime-or-dvd-of-prime-65f47114", "F:ml430-nat-coprime-symmetric-9b5cfa12", "F:nat-dvd-refl", "F:nat-le-antisymm", "F:nat-le-of-dvd", "F:nat-le-of-succ-le-succ", "F:nat-not-succ-le-zero", "F:nat-one-le-of-dvd-pos", "F:nat-one-mul", "F:nat-succ-mul", "F:nat-succ-pred-of-pos", "F:nat-two-le-succ-or-eq-one"],
   "evidence": [
     {
       "check_status": "checked",

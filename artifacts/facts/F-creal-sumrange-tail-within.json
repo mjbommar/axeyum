@@ -23,6 +23,7 @@
     "F:creal-le-trans",
     "F:creal-neg-le-abs",
     "F:creal-sumrange-tail-le",
+    "F:rat-le-of-sub-le",
     "F:rat-neg-le-neg",
     "F:rat-neg-neg"
   ],

@@ -13,7 +13,8 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:nat-gcd-zero-left"
+    "F:nat-gcd-zero-left",
+    "F:nat-succ-ne-zero"
   ],
   "evidence": [
     {

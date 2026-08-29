@@ -46,6 +46,7 @@
     "F:rat-le-trans",
     "F:rat-mul-le-mul-of-nonneg-left",
     "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-antitone",
     "F:rat-natdivsucc-halve",
     "F:rat-natdivsucc-le-add-left",
     "F:rat-natdivsucc-mul",

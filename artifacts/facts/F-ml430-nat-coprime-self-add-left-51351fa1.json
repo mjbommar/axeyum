@@ -16,7 +16,8 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-coprime-add-self-left-5e93448c"
+    "F:ml430-nat-coprime-add-self-left-5e93448c",
+    "F:nat-add-comm"
   ],
   "evidence": [
     {

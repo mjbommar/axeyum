@@ -26,6 +26,7 @@
     "F:nat-one-le-factorial",
     "F:nat-one-le-mul",
     "F:nat-one-mul",
+    "F:nat-pow-pos",
     "F:nat-zero-le",
     "F:rat-int-le-of-mul-le-mul-right",
     "F:rat-int-mul-le-mul-right",

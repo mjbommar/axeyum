@@ -24,6 +24,7 @@
     "F:creal-equiv-refl",
     "F:creal-equiv-symm",
     "F:creal-equiv-trans",
+    "F:creal-equiv-zero-of-rate",
     "F:creal-le-abs-self",
     "F:creal-le-congr",
     "F:creal-le-of-equiv",

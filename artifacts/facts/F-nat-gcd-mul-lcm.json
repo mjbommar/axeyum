@@ -15,11 +15,13 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:nat-div-mul-cancel-of-dvd",
     "F:nat-dvd-mul-right-of-dvd",
     "F:nat-gcd-dvd-left",
     "F:nat-le-succ-succ",
     "F:nat-mul-zero",
     "F:nat-one-le-of-dvd-pos",
+    "F:nat-zero-div",
     "F:nat-zero-le",
     "F:nat-zero-mul"
   ],

@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-choose-le-choose-907b5042", "F:nat-mul-le-mul-left"],
   "evidence": [
     {
       "check_status": "checked",

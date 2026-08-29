@@ -21,6 +21,7 @@
   "depends_on": [
     "F:creal-add-assoc",
     "F:creal-add-congr",
+    "F:creal-crossinglower",
     "F:creal-equiv-refl",
     "F:creal-equiv-symm",
     "F:creal-equiv-trans",

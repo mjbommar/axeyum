@@ -2,7 +2,8 @@
   "axiom_footprint": [],
   "depends_on": [
     "F:nat-desc-factorial-succ",
-    "F:nat-desc-factorial-zero"
+    "F:nat-desc-factorial-zero",
+    "F:nat-mul-one"
   ],
   "epistemic_status": "proved",
   "evidence": [

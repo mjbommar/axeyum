@@ -16,6 +16,7 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-add-zero",
+    "F:nat-dvd-of-mod-eq-zero-of-pos",
     "F:nat-le-succ-succ",
     "F:nat-mod-eq-zero-of-dvd",
     "F:nat-zero-add",

@@ -1,6 +1,8 @@
 {
   "axiom_footprint": [],
   "depends_on": [
+    "F:int-dvd-mul-right",
+    "F:ml430-int-modeq-of-dvd-b9c41fce",
     "F:ml430-int-modeq-of-mul-left-c4ccd51e"
   ],
   "epistemic_status": "proved",

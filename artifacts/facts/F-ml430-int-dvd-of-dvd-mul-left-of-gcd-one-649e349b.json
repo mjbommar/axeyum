@@ -11,6 +11,8 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
+    "F:int-gauss-lemma",
+    "F:int-mul-comm",
     "F:ml430-int-gcd-eq-gcd-ab-63005aef"
   ],
   "evidence": [

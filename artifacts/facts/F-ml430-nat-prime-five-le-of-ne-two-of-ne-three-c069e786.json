@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0", "F:nat-dvd-mul", "F:nat-le-add-right", "F:nat-le-antisymm", "F:nat-le-of-lt-succ", "F:nat-le-of-succ-le-succ", "F:nat-lt-irrefl", "F:nat-lt-or-eq-of-le", "F:nat-lt-or-ge", "F:nat-not-succ-le-zero", "F:nat-zero-le"],
   "evidence": [
     {
       "id": "kernel-Nat.five_le_of_ne_two_of_ne_three",

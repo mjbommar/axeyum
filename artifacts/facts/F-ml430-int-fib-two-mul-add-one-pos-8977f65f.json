@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-mul-assoc", "F:int-mul-neg", "F:int-mul-one", "F:int-neg-one-mul", "F:int-one-mul", "F:int-pow-succ", "F:nat-fib-pos-of-pos", "F:nat-le-succ-succ", "F:nat-one-mul", "F:nat-zero-le"],
   "evidence": [
     {
       "id": "kernel-Int.fib_two_mul_add_one_pos",

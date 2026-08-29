@@ -17,7 +17,8 @@
   "depends_on": [
     "F:nat-le-succ-succ",
     "F:nat-mod-lt",
-    "F:nat-zero-le"
+    "F:nat-zero-le",
+    "F:wellfounded-fix-eq"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -17,7 +17,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:rat-max-cases"],
   "axiom_footprint": [],
   "evidence": [
     {

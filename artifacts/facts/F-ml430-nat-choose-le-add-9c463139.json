@@ -12,7 +12,8 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-choose-le-succ-62ae968b"
+    "F:ml430-nat-choose-le-succ-62ae968b",
+    "F:nat-le-trans"
   ],
   "evidence": [
     {

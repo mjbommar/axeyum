@@ -36,6 +36,7 @@
     "F:rat-neg-add-cancel",
     "F:rat-neg-mul",
     "F:rat-neg-neg",
+    "F:rat-variance-scaled-add-nonneg",
     "F:rat-zero-add"
   ],
   "axiom_footprint": [],

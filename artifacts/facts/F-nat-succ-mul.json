@@ -14,7 +14,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-add-right-comm"],
   "axiom_footprint": [],
   "evidence": [
     {

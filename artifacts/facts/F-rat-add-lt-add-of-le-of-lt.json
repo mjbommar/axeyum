@@ -25,7 +25,9 @@
     "F:nat-one-le-mul",
     "F:rat-add-cross",
     "F:rat-den-pos",
+    "F:rat-int-lt-of-mul-lt-mul-right",
     "F:rat-int-mul-le-mul-right",
+    "F:rat-int-mul-lt-mul-right",
     "F:rat-int-right-distrib"
   ],
   "axiom_footprint": [],

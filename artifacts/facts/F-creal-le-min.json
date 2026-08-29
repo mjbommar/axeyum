@@ -18,7 +18,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:rat-min-cases"],
   "axiom_footprint": [],
   "evidence": [
     {

@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-mul-assoc", "F:int-mul-neg", "F:int-neg-one-mul", "F:int-one-mul"],
   "evidence": [
     {
       "id": "kernel-Int.gcd_eq_gcd_ab_witnesses",

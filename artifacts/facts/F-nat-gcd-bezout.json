@@ -17,6 +17,7 @@
   "depends_on": [
     "F:nat-add-assoc",
     "F:nat-add-comm",
+    "F:nat-add-right-comm",
     "F:nat-div-mod-exec",
     "F:nat-gcd-succ",
     "F:nat-gcd-zero-left",

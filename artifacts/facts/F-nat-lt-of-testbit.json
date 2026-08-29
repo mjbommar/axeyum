@@ -12,7 +12,25 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-testbit-xor"
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-add-le-add-right",
+    "F:nat-add-zero",
+    "F:nat-le-add-right",
+    "F:nat-le-succ-succ",
+    "F:nat-le-trans",
+    "F:nat-mod-eq-self-of-lt",
+    "F:nat-mod-lt",
+    "F:nat-one-mul",
+    "F:nat-pow-pos",
+    "F:nat-succ-add",
+    "F:nat-sum-testbit-lt",
+    "F:nat-sumrange-congr",
+    "F:nat-sumrange-split",
+    "F:nat-sumrange-succ",
+    "F:nat-testbit-xor",
+    "F:nat-zero-le",
+    "F:nat-zero-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

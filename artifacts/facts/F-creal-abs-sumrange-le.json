@@ -17,6 +17,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-abs-add-le",
     "F:creal-abs-le",
     "F:creal-add-assoc",
     "F:creal-add-comm",

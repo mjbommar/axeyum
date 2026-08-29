@@ -17,6 +17,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:ml430-nat-coprime-of-lt-prime-1978a919",
     "F:nat-beq-eq-false-of-ne",
     "F:nat-beq-eq-true-of-eq",
     "F:nat-coprime-of-lt-prime",

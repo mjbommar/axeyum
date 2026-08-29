@@ -24,6 +24,7 @@
     "F:rat-mul-comm",
     "F:rat-mul-inv-cancel",
     "F:rat-mul-le-mul-of-nonneg-left",
+    "F:rat-mul-nonneg",
     "F:rat-mul-one"
   ],
   "axiom_footprint": [],

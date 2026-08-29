@@ -19,7 +19,12 @@
     "F:nat-dvd-mul",
     "F:nat-mul-comm",
     "F:rat-den-pos",
-    "F:rat-int-mul-right-cancel"
+    "F:rat-ext",
+    "F:rat-int-mul-right-cancel",
+    "F:rat-nat-abs-mul-of-nat",
+    "F:rat-nat-dvd-antisymm-pos",
+    "F:rat-nat-gauss",
+    "F:rat-reduced"
   ],
   "axiom_footprint": [],
   "evidence": [

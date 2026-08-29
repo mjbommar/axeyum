@@ -18,7 +18,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-add-comm"
+    "F:nat-add-comm",
+    "F:nat-mod-eq-add-left"
   ],
   "axiom_footprint": [],
   "evidence": [

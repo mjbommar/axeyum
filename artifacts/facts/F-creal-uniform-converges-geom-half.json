@@ -28,7 +28,10 @@
     "F:creal-mul-le-mul-of-nonneg-left",
     "F:creal-mul-nonneg",
     "F:creal-mul-one",
+    "F:creal-neg-le-neg",
     "F:creal-ofrat-le",
+    "F:creal-pow-half-le-natdivsucc",
+    "F:creal-pow-nonneg",
     "F:rat-zero-le-natdivsucc"
   ],
   "axiom_footprint": [],

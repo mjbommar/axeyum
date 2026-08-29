@@ -42,6 +42,7 @@
     "F:creal-le-congr",
     "F:creal-le-refl",
     "F:creal-le-trans",
+    "F:creal-neg-le-neg",
     "F:creal-uniformlycontinuouson-spec"
   ],
   "axiom_footprint": [],

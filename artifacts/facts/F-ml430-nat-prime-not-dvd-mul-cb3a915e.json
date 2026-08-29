@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-euclid-lemma"],
   "evidence": [
     {
       "check_status": "checked",

@@ -16,7 +16,16 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:int-odd"
+    "F:int-mul-assoc",
+    "F:int-mul-neg",
+    "F:int-mul-one",
+    "F:int-neg-one-mul",
+    "F:int-odd",
+    "F:int-one-mul",
+    "F:int-pow-succ",
+    "F:nat-add-succ",
+    "F:nat-one-mul",
+    "F:nat-succ-add"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -37,6 +37,7 @@
     "F:rat-neg-zero",
     "F:rat-right-distrib",
     "F:rat-sq-nonneg",
+    "F:rat-variance-scaled-add-nonneg",
     "F:rat-zero-add"
   ],
   "axiom_footprint": [],

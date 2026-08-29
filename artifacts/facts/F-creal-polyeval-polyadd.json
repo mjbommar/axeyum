@@ -22,7 +22,9 @@
     "F:creal-equiv-refl",
     "F:creal-equiv-trans",
     "F:creal-left-distrib",
-    "F:creal-mul-comm"
+    "F:creal-mul-comm",
+    "F:creal-sumrange-add",
+    "F:creal-sumrange-congr"
   ],
   "axiom_footprint": [],
   "evidence": [

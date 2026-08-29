@@ -25,6 +25,7 @@
     "F:rat-add-neg",
     "F:rat-add-zero",
     "F:rat-le-of-lt",
+    "F:rat-le-of-sub-le",
     "F:rat-le-or-lt",
     "F:rat-le-refl",
     "F:rat-le-trans",

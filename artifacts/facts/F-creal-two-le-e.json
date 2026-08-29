@@ -13,9 +13,13 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-converges-lower-bound-shift",
     "F:creal-e-converges",
+    "F:creal-exp-term-nonneg",
     "F:creal-le-refl",
     "F:creal-le-trans",
+    "F:creal-sumrange-mono-outer",
+    "F:nat-add-le-add-right",
     "F:nat-zero-le"
   ],
   "axiom_footprint": [],

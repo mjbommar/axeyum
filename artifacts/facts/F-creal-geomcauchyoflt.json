@@ -19,6 +19,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-geomcauchyofltordered",
+    "F:creal-geomybound",
     "F:nat-le-total",
     "F:rat-add-comm",
     "F:rat-bounds-neg",

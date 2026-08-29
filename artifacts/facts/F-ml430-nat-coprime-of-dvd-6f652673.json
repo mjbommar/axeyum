@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-dvd-trans", "F:nat-dvd-zero", "F:nat-exists-prime-dvd", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-le-antisymm", "F:nat-le-of-dvd", "F:nat-le-of-succ-le-succ", "F:nat-le-trans", "F:nat-lt-or-ge", "F:nat-not-succ-le-zero", "F:nat-one-le-of-dvd-pos", "F:nat-succ-pred-of-pos", "F:nat-two-le-succ-or-eq-one", "F:nat-zero-le", "F:nat-zero-mul"],
   "evidence": [
     {
       "check_status": "checked",

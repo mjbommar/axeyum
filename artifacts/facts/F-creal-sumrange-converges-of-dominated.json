@@ -18,6 +18,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-converges-of-cauchy",
     "F:creal-sumrange-cauchy-of-dominated"
   ],
   "axiom_footprint": [],

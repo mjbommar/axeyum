@@ -12,7 +12,9 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-prime-dvd-iff-not-coprime-77854741"
+    "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+    "F:nat-eq-of-beq-eq-true",
+    "F:nat-ne-of-beq-eq-false"
   ],
   "evidence": [
     {

@@ -21,6 +21,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
+    "F:creal-geomscaledcauchyoflt",
+    "F:creal-ratiodecaybound",
     "F:creal-sumrange-cauchy-of-dominated"
   ],
   "axiom_footprint": [],

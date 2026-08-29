@@ -17,7 +17,8 @@
   "depends_on": [
     "F:int-sub-nat-nat-elim",
     "F:nat-add-comm",
-    "F:nat-le-add-right"
+    "F:nat-le-add-right",
+    "F:nat-succ-injective"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-le-of-succ-le-succ", "F:nat-le-trans", "F:nat-succ-pred-of-pos"],
   "evidence": [
     {
       "check_status": "checked",

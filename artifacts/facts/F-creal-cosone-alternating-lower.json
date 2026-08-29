@@ -17,6 +17,7 @@
   "depends_on": [
     "F:creal-alternatinglowerbound",
     "F:creal-cosoneconverges",
+    "F:creal-exp-term-nonneg",
     "F:creal-expterm-antitone",
     "F:creal-le-trans",
     "F:nat-succ-add"

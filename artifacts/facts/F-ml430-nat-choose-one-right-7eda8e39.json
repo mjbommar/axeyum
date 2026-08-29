@@ -1,7 +1,11 @@
 {
   "axiom_footprint": [],
   "depends_on": [
-    "F:ml430-nat-choose-zero-right-1ed2802a"
+    "F:ml430-nat-choose-zero-right-1ed2802a",
+    "F:nat-add-comm",
+    "F:nat-choose-succ-succ",
+    "F:nat-choose-zero-right",
+    "F:nat-zero-choose-succ"
   ],
   "epistemic_status": "proved",
   "evidence": [

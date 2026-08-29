@@ -28,7 +28,8 @@
     "F:nat-pow-pos",
     "F:nat-zero-le",
     "F:rat-normalize-congr",
-    "F:rat-normalize-mul-normalize"
+    "F:rat-normalize-mul-normalize",
+    "F:rat-pow-natdivsucc-two"
   ],
   "axiom_footprint": [],
   "evidence": [

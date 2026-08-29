@@ -12,7 +12,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-sum-testbit-eq", "F:nat-sumrange-congr", "F:nat-zero-mul"],
   "axiom_footprint": [],
   "evidence": [
     {

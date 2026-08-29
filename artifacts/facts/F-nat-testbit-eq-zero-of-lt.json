@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-add-left-cancel", "F:nat-add-zero", "F:nat-le-add-right", "F:nat-le-succ-succ", "F:nat-lt-irrefl", "F:nat-lt-of-lt-of-le", "F:nat-mod-eq-self-of-lt", "F:nat-mul-eq-zero", "F:nat-pow-pos", "F:nat-sum-testbit-lt", "F:nat-sumrange-succ", "F:nat-zero-add", "F:nat-zero-le", "F:or-resolve-right"],
   "axiom_footprint": [],
   "evidence": [
     {
