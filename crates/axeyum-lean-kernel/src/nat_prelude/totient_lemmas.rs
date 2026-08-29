@@ -106,15 +106,15 @@
 //!   `1`). Blocked on `totient_even`.
 //! - **`eq_or_eq_of_totient_eq_totient`** (`a | b -> totient a = totient b
 //!   -> a = b \/ 2*a = b`) and **`totient_gcd_mul_totient_mul`** (the
-//!   multiplicativity identity `totient(gcd a b) * totient(a*b) = totient a
-//!   * totient b * gcd a b`): both need real structural results about how
-//!   `totient` interacts with multiplication/divisibility — the standard
-//!   routes go through the multiplicative formula `totient (m*n) = totient m
-//!   * totient n` for coprime `m`,`n` (itself a CRT-style bijection argument
-//!   between `[0,mn)` and `[0,m) x [0,n)` restricted to units) or an
-//!   equivalent prime-power decomposition. Neither exists in this prelude;
-//!   building it is a project on the scale of `totient_even`'s pairing
-//!   argument, not a slice of this one.
+//!   multiplicativity identity relating `totient (gcd a b)`, `totient (a*b)`,
+//!   `totient a`, `totient b`, and `gcd a b`): both need real structural
+//!   results about how `totient` interacts with multiplication/divisibility
+//!   — the standard route is the multiplicative formula (`totient` of a
+//!   product of COPRIME factors is the product of their `totient`s, itself a
+//!   CRT-style bijection argument between the residues mod `m*n` and pairs of
+//!   residues mod `m`, mod `n`) or an equivalent prime-power decomposition.
+//!   Neither exists in this prelude; building it is a project on the scale
+//!   of `totient_even`'s pairing argument, not a slice of this one.
 //! - **`totient_dvd_of_dvd`** (`a | b -> totient a | totient b`): also
 //!   standardly proved via the multiplicative formula (factor `b = a * c`,
 //!   split into the coprime and non-coprime parts of `c` relative to `a`'s
@@ -302,11 +302,13 @@ pub(super) fn declare_totient_eq_zero(
             let rhs_ty = d.eq(zero, zero);
             let mp = {
                 let h_fv = d.fresh_fvar();
-                d.lam_fv(h_fv, lhs_ty, d.refl(zero))
+                let body = d.refl(zero);
+                d.lam_fv(h_fv, lhs_ty, body)
             };
             let mpr = {
                 let h_fv = d.fresh_fvar();
-                d.lam_fv(h_fv, rhs_ty, d.refl(zero))
+                let body = d.refl(zero);
+                d.lam_fv(h_fv, rhs_ty, body)
             };
             d.const_app(p.logic.iff_intro, &[lhs_ty, rhs_ty, mp, mpr])
         },
