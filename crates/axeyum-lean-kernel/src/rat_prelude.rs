@@ -2116,3 +2116,6 @@ mod cas_extremum_deriv_bridge_tests;
 
 #[cfg(test)]
 mod cas_mvt_secant_bridge_tests;
+
+#[cfg(test)]
+mod cas_taylor_remainder_bridge_tests;
