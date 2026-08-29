@@ -40,7 +40,7 @@ use crate::expr::ExprId;
 
 /// `∀ e, 2 ≤ e → e < x → ¬ (e ∣ m)` — the minimality side condition carried by
 /// the least-divisor search.
-fn min_condition(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, x: ExprId) -> ExprId {
+pub(super) fn min_condition(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, x: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let two = d.num(2);
     let e_fv = d.fresh_fvar();
@@ -129,7 +129,7 @@ fn prime_divisor_predicate(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> Exp
 }
 
 /// `False.rec` into `goal` from a proof of `False`.
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+pub(super) fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
     let anon = d.anon_name();
     let level = d.kernel().level_zero();
     let false_ty = d.kernel().const_(p.logic.false_, vec![]);
@@ -140,7 +140,7 @@ fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprI
 
 /// `Or.rec` with a non-dependent motive.
 #[allow(clippy::too_many_arguments)]
-fn or_cases(
+pub(super) fn or_cases(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     left_ty: ExprId,

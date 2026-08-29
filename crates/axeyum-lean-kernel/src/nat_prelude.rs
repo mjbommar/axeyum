@@ -237,7 +237,7 @@ use lcm::{
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
 use lor::declare_lor_all;
-use min_fac::declare_min_fac_all;
+use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use modular::declare_modular_congruence;
 use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
@@ -1145,6 +1145,34 @@ pub struct NatPrelude {
     /// `Nat.minFac n : Nat` — the least prime factor of `n`, with `minFac 0 =
     /// 2` and `minFac 1 = 1` as boundary conventions (matching Mathlib's).
     pub min_fac: NameId,
+    /// `Nat.minFacAuxMinimal : ∀ fuel n candidate, Le 2 candidate → Eq (add
+    /// candidate fuel) n → (∀ e, 2 ≤ e → e < candidate → ¬ e∣n) →
+    /// ∀ e, 2 ≤ e → e < minFacAux fuel n candidate → ¬ e∣n` — the
+    /// fuel-generalized minimality invariant carried by the linear search:
+    /// nothing below the value the search returns divides `n`, for a search
+    /// started at any `candidate ≥ 2` already known to be minimal below
+    /// itself. See `min_fac.rs`'s module doc for the induction.
+    pub min_fac_aux_minimal: NameId,
+    /// `Nat.min_fac_minimal_of_two_le : ∀ n, Le 2 n → ∀ e, Le 2 e → Lt e
+    /// (minFac n) → Not (dvd e n)` — [`min_fac_aux_minimal`](Self::min_fac_aux_minimal)
+    /// specialized to `minFac`'s own search (`candidate := 2`,
+    /// `fuel := sub n 2`), for `n ≥ 2` (the boundary values `minFac 0 = 2`
+    /// and `minFac 1 = 1` are not a search result — see `min_fac.rs`).
+    pub min_fac_minimal_of_two_le: NameId,
+    /// `Nat.coprime_of_lt_min_fac : ∀ n m, Not (Eq m zero) → Lt m (minFac n)
+    /// → Eq (gcd n m) one` — a NEW local fact about THIS repository's
+    /// `minFac`, not a flip of `F:ml430-nat-coprime-of-lt-minfac`: that
+    /// mirror stays open because this `minFac` is fuel-recursive, not
+    /// Mathlib's well-founded `minFacAux` (see `min_fac.rs`'s module doc).
+    /// Case split on `n`: `n = 0` forces `m = 1` (the only value `< minFac 0
+    /// = 2` other than `0`), `n = 1` is vacuous (`minFac 1 = 1`, nothing is
+    /// `< 1` other than `0`, excluded by hypothesis), and `n ≥ 2` uses
+    /// [`min_fac_minimal_of_two_le`](Self::min_fac_minimal_of_two_le): if
+    /// `gcd n m ≠ 1` then (since `m ≠ 0` forces `gcd n m ≠ 0`, hence `gcd n m
+    /// ≥ 2` by `lt_or_eq_of_le`) `gcd n m` is a divisor of `n` that is `≥ 2`
+    /// and `≤ m < minFac n` (via `le_of_dvd` on `gcd n m ∣ m`), contradicting
+    /// minimality.
+    pub coprime_of_lt_min_fac: NameId,
     /// `Nat.coprime_self_add_right : ∀ m n, Iff (Eq (gcd m (add m n)) one)
     /// (Eq (gcd m n) one)` — [`coprime_add_self_right`](Self::coprime_add_self_right)
     /// with `m`/`n`'s sum reordered via `add_comm`: the only difference is
@@ -3095,6 +3123,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_iff_is_rel_prime: kernel.name_str(nat, "coprime_iff_isRelPrime"),
             min_fac_aux: kernel.name_str(nat, "minFacAux"),
             min_fac: kernel.name_str(nat, "minFac"),
+            min_fac_aux_minimal: kernel.name_str(nat, "minFacAuxMinimal"),
+            min_fac_minimal_of_two_le: kernel.name_str(nat, "min_fac_minimal_of_two_le"),
+            coprime_of_lt_min_fac: kernel.name_str(nat, "coprime_of_lt_min_fac"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
             not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
@@ -3479,6 +3510,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.sub` (all declared long before this point); placed here to
         // sit next to the other prime/coprimality declarations.
         declare_min_fac_all(&mut d, &p)?;
+        declare_min_fac_minimal_all(&mut d, &p)?;
         declare_prime_pred_pos(&mut d, &p)?;
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
