@@ -8,13 +8,49 @@
     "statement": "∀ {a b : ℤ} (c : ℤ), a + c ≤ b + c ↔ a ≤ b",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.add_le_add_iff_right",
+      "kind": "kernel-term",
+      "supports": "`Int.add_le_add_iff_right` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Iff (Int.le (Int.add x0 x2) (Int.add x1 x2)) (Int.le x0 x1))))`. Built in a new file, int_prelude/order_add.rs, as a corollary of the already-derived Int.add_le_add plus Int.add_neg_cancel_right (algebra.rs) and modeq.rs's cancel_neg_add/cancel_neg_add_left -- no Int.rec case split anywhere in the new file.",
+      "check_status": "checked",
+      "checkers": [
+        "int_theorem_inventory (renders the kernel type of every Theorem; matched on the exact kind/name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"theorem\" && $2 == \"Int.add_le_add_iff_right\" && $4 == \"((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Iff (Int.le (Int.add x0 x2) (Int.add x1 x2)) (Int.le x0 x1))))\"' | wc -l)\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/order_add.rs"
+    },
+    {
+      "id": "footprint-Int.add_le_add_iff_right",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Int.add_le_add_iff_right`. The `integer` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for Int.add_le_add_iff_right among the 169 derived laws and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free integer (independently sums the whole integer prelude's trusted surface and fails nonzero)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs"
+    },
+    {
+      "id": "coverage-Int.add_le_add_iff_right",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Int.add_le_add_iff_right` derived from `kernel.environment()` directly, not from an inventory list -- an Int-namespace declaration missing from `derived_laws` fails this test by name.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::every_int_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane int-order-add (2026-08-29): built directly as a kernel declaration in the new file int_prelude/order_add.rs, as pure algebra on top of the already-derived Int.add_le_add (order.rs), Int.add_neg_cancel_right (algebra.rs), and modeq.rs's cancel_neg_add / cancel_neg_add_left (the latter widened from private to pub(super) for this reuse -- no other change to modeq.rs). No Int.rec case split anywhere in the new file.",
     "source": "statement-only extraction of `Int.add_le_add_iff_right` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +62,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Established in Axeyum, not merely matched against Mathlib's prior statement. Confirmed against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that `Int.add_le_add_iff_right` is a standard order/additive lemma about the SAME Int.add/Int.le/Int.sub this kernel already has (no new definition introduced), so mirroring it is honest under the mirror-flip criterion. depends_on projects only direct upstream theorem uses whose endpoints both survived review; it grants no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
