@@ -132,6 +132,7 @@ mod algebra;
 mod asc_factorial;
 mod bezout;
 mod binary;
+mod binary_rec;
 mod binomial;
 mod bits;
 mod bitwise;
@@ -196,6 +197,7 @@ use algebra::{
 use asc_factorial::declare_asc_factorial_all;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
+use binary_rec::declare_binary_rec_all;
 use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
     declare_succ_sub_of_le,
@@ -2864,6 +2866,76 @@ pub struct NatPrelude {
     /// at `fuel := a`, `m := a` (`land a b` and `landAux a a b` are the SAME
     /// term by definition).
     pub land_le_left: NameId,
+
+    // --- `Nat.Pair` and `Nat.binaryRec` (`binary_rec.rs`) -------------------
+    /// `Nat.Pair : Type 0` — the monomorphic `Nat x Nat` product, a
+    /// zero-parameter one-constructor inductive. This prelude's FIRST product
+    /// type; before it, a pair-shaped value had to be encoded as a
+    /// `Bool`-selected function (`Nat.xgcdAux`, `Nat.divModState`).
+    pub pair: NameId,
+    /// `Nat.Pair.mk : Nat -> Nat -> Nat.Pair`.
+    pub pair_mk: NameId,
+    /// `Nat.Pair.rec` — the kernel-generated recursor both projections go
+    /// through.
+    pub pair_rec: NameId,
+    /// `Nat.Pair.fst : Nat.Pair -> Nat`.
+    pub pair_fst: NameId,
+    /// `Nat.Pair.snd : Nat.Pair -> Nat`.
+    pub pair_snd: NameId,
+    /// `Nat.Pair.fst_mk : ∀ a b, Eq Nat (fst (mk a b)) a` — `refl`.
+    pub pair_fst_mk: NameId,
+    /// `Nat.Pair.snd_mk : ∀ a b, Eq Nat (snd (mk a b)) b` — `refl`.
+    pub pair_snd_mk: NameId,
+    /// `Nat.Pair.eta : ∀ q, Eq Pair (mk (fst q) (snd q)) q`.
+    pub pair_eta: NameId,
+    /// `Nat.Pair.ext : ∀ q r, Eq Nat (fst q) (fst r) -> Eq Nat (snd q) (snd r)
+    /// -> Eq Pair q r`.
+    pub pair_ext: NameId,
+    /// `Nat.lt_two_mul_of_pos : ∀ n, Lt zero n -> Lt n (mul 2 n)` — the named
+    /// home for arithmetic that existed as an unnamed private copy in
+    /// `log.rs`, `binary.rs`, `powsq.rs` and `rec_agreement.rs`.
+    pub lt_two_mul_of_pos: NameId,
+    /// `Nat.half_le_of_succ_le_succ : ∀ m k, Le (succ m) (succ k) ->
+    /// Le (div (succ m) 2) k` — the fuel-sufficiency step every halving family
+    /// in this prelude needs, likewise previously duplicated four times.
+    pub half_le_of_succ_le_succ: NameId,
+    /// `Nat.binaryRecAux alpha z f fuel n` — bit-halving recursion with an
+    /// explicit fuel counter (`binary_rec.rs`). NOT Mathlib's `Nat.binaryRec`,
+    /// which is well-founded recursion on a `log2` measure with a dependent
+    /// motive; see the module doc.
+    pub binary_rec_aux: NameId,
+    /// `Nat.binaryRec alpha z f n := binaryRecAux alpha z f n n` — the
+    /// canonical instantiation, fuel `= n`.
+    pub binary_rec: NameId,
+    /// `Nat.binaryRecAux_zero_fuel : ∀ alpha z f n, binaryRecAux … 0 n = z` —
+    /// `refl`.
+    pub binary_rec_aux_zero_fuel: NameId,
+    /// `Nat.binaryRecAux_zero : ∀ alpha z f fuel, binaryRecAux … fuel 0 = z` —
+    /// holds at ANY fuel, sufficient or not.
+    pub binary_rec_aux_zero: NameId,
+    /// `Nat.binaryRecAux_succ : ∀ alpha z f k m, binaryRecAux … (succ k)
+    /// (succ m) = f (beq ((succ m) % 2) 1) ((succ m) / 2)
+    /// (binaryRecAux … k ((succ m) / 2))` — `refl`.
+    pub binary_rec_aux_succ: NameId,
+    /// `Nat.binaryRec_zero : ∀ alpha z f, binaryRec alpha z f 0 = z` — `refl`.
+    pub binary_rec_zero: NameId,
+    /// `Nat.binaryRecAux_agree_of_fuel : ∀ alpha z f fuel1 n fuel2,
+    /// Le n fuel1 -> Le n fuel2 -> Eq alpha (binaryRecAux … fuel1 n)
+    /// (binaryRecAux … fuel2 n)` — the DOUBLE-fuel irrelevance theorem.
+    pub binary_rec_aux_agree_of_fuel: NameId,
+    /// `Nat.binaryRec_succ : ∀ alpha z f m, binaryRec … (succ m) =
+    /// f (beq ((succ m) % 2) 1) ((succ m) / 2) (binaryRec … ((succ m) / 2))` —
+    /// the recursive equation Mathlib's well-founded `binaryRec` has
+    /// definitionally and a fuel encoding has to prove.
+    pub binary_rec_succ: NameId,
+    /// `Nat.binaryRec_rebuilds_thirteen : Eq (binaryRec Nat 0
+    /// (fun b _ acc => bit b acc) 13) 13` — the evaluation check the trusted
+    /// gate cannot perform (a `Definition` is admitted on its TYPE).
+    pub binary_rec_rebuilds_thirteen: NameId,
+    /// `Nat.binaryRec_rebuilds_six : Eq (binaryRec Nat 0
+    /// (fun b _ acc => bit b acc) 6) 6` — the same round trip at a value with
+    /// a trailing zero bit.
+    pub binary_rec_rebuilds_six: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2911,6 +2983,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // below consult for lemma handles) exists before anything is declared.
         let le = kernel.name_str(nat, "le");
         let fin = kernel.name_str(nat, "Fin");
+        let pair = kernel.name_str(nat, "Pair");
         let p = NatPrelude {
             logic,
             nat,
@@ -3484,6 +3557,27 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lor_comm: kernel.name_str(nat, "lor_comm"),
             land_aux_le_left: kernel.name_str(nat, "land_aux_le_left"),
             land_le_left: kernel.name_str(nat, "land_le_left"),
+            pair,
+            pair_mk: kernel.name_str(pair, "mk"),
+            pair_rec: kernel.name_str(pair, "rec"),
+            pair_fst: kernel.name_str(pair, "fst"),
+            pair_snd: kernel.name_str(pair, "snd"),
+            pair_fst_mk: kernel.name_str(pair, "fst_mk"),
+            pair_snd_mk: kernel.name_str(pair, "snd_mk"),
+            pair_eta: kernel.name_str(pair, "eta"),
+            pair_ext: kernel.name_str(pair, "ext"),
+            lt_two_mul_of_pos: kernel.name_str(nat, "lt_two_mul_of_pos"),
+            half_le_of_succ_le_succ: kernel.name_str(nat, "half_le_of_succ_le_succ"),
+            binary_rec_aux: kernel.name_str(nat, "binaryRecAux"),
+            binary_rec: kernel.name_str(nat, "binaryRec"),
+            binary_rec_aux_zero_fuel: kernel.name_str(nat, "binaryRecAux_zero_fuel"),
+            binary_rec_aux_zero: kernel.name_str(nat, "binaryRecAux_zero"),
+            binary_rec_aux_succ: kernel.name_str(nat, "binaryRecAux_succ"),
+            binary_rec_zero: kernel.name_str(nat, "binaryRec_zero"),
+            binary_rec_aux_agree_of_fuel: kernel.name_str(nat, "binaryRecAux_agree_of_fuel"),
+            binary_rec_succ: kernel.name_str(nat, "binaryRec_succ"),
+            binary_rec_rebuilds_thirteen: kernel.name_str(nat, "binaryRec_rebuilds_thirteen"),
+            binary_rec_rebuilds_six: kernel.name_str(nat, "binaryRec_rebuilds_six"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3744,6 +3838,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // order/divisibility lemmas used throughout this file, all declared
         // long before this point; nothing needs these, so they go last too.
         declare_min_fac_minimal_all(&mut d, &p)?;
+        // `Nat.Pair` and `Nat.binaryRec`: needs `Nat.div`/`Nat.mod`
+        // (`declare_executable_division`), `Nat.beq`
+        // (`declare_boolean_equality`), `Nat.bit` (`declare_bit_all`, above)
+        // for its evaluation checks, and the order/division lemmas
+        // `half_le_of_succ_le_succ` composes (`add_lt_add_left`, `succ_mul`,
+        // `one_mul`, `div_mod_lt_mul_iff`, `div_mod_exec`, `lt_of_lt_of_le`,
+        // `le_of_succ_le_succ`, `succ_pred_of_pos`, `le_antisymm`,
+        // `le_trans`). Nothing needs it, so it goes last -- and dispatching a
+        // declaration before a dependency exists gives `UnknownConst`, which
+        // `cargo check` cannot see.
+        declare_binary_rec_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
