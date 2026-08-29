@@ -979,6 +979,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.ldiff_aux_eq_ldiff_of_le,
         p.land_aux_comm_of_fuel,
         p.land_comm,
+        p.lor_aux_comm_of_fuel,
+        p.lor_comm,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6270,7 +6272,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        88 + 452,
+        88 + 454,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11093,6 +11095,116 @@ fn land_comm_applies_at_a_concrete_discriminating_instance() {
     assert!(
         f.k.axiom_footprint(p.land_comm).is_empty(),
         "land_comm must rest on zero axioms"
+    );
+}
+
+/// `Nat.lor_comm` applies at symbolic `m`/`n` and at a concrete,
+/// DISCRIMINATING instance where `m` and `n` have DIFFERENT bit patterns
+/// (`lor 3 6 = 7`, `011 | 110 = 111`) -- the `lor` twin of
+/// `land_comm_applies_at_a_concrete_discriminating_instance`. Unlike
+/// `land_aux_comm_of_fuel`, `lor_aux_comm_of_fuel` carries `Le` hypotheses
+/// (see `nat_prelude::rec_agreement`'s module doc for why), so this also
+/// checks the theorem applies once those bounds are supplied at fuel `m + n`.
+#[test]
+fn lor_comm_applies_at_a_concrete_discriminating_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables, proved by
+    // the prelude theorem alone.
+    {
+        let name = f.name("lor_comm_restated");
+        f.theorem(name, 2, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let lhs = d.const_app(p.lor, &[m, n]);
+            let rhs = d.const_app(p.lor, &[n, m]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.lor_comm, &[m, n]);
+            (stmt, proof)
+        })
+        .expect("lor_comm must apply at symbolic m/n");
+    }
+
+    // Concrete: `lor 3 6 = 7` and `lor 6 3 = 7` (`011 | 110 = 111`).
+    {
+        let three = f.num(3);
+        let six = f.num(6);
+        let seven = f.num(7);
+        let lhs = f.const_app(p.lor, &[three, six]);
+        let rhs = f.const_app(p.lor, &[six, three]);
+        let applied = f.lemma(p.lor_comm, &[three, six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_comm must apply at (m=3, n=6): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lor_comm 3 6 must state Eq (lor 3 6) (lor 6 3)"
+        );
+        assert!(f.k.def_eq(lhs, seven), "lor 3 6 must compute to 7");
+        assert!(f.k.def_eq(rhs, seven), "lor 6 3 must compute to 7");
+    }
+
+    // `lor_aux_comm_of_fuel` applies at the shared fuel `m + n` once both
+    // `Le` bounds are supplied -- the piece `land_aux_comm_of_fuel` does not
+    // need at all.
+    {
+        let three = f.num(3);
+        let six = f.num(6);
+        let sum = f.add(three, six);
+        let le_three_sum = f.lemma(p.le_add_right, &[three, six]);
+        // `Le six sum` needs `add_comm` since only `le_add_right` (not a
+        // `le_add_left`) exists -- same transport `lor_comm` itself uses.
+        let six_sum = f.add(six, three);
+        let le_six_six_sum = f.lemma(p.le_add_right, &[six, three]);
+        let add_comm_63 = f.lemma(p.add_comm, &[six, three]);
+        let motive = f.eq_motive(six_sum, &|d, x| d.le(six, x));
+        let le_six_sum = f.transport(six_sum, motive, le_six_six_sum, sum, add_comm_63);
+        let applied = f.lemma(p.lor_aux_comm_of_fuel, &[sum, three, six]);
+        let applied = f.apply(applied, &[le_three_sum, le_six_sum]);
+        f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_aux_comm_of_fuel must apply at fuel = 3 + 6: {shown}")
+        });
+    }
+
+    // Negative control: WITHOUT the `Le` hypotheses,
+    // `lor_aux_comm_of_fuel`'s unconditional analogue would be FALSE --
+    // unlike `land_aux_comm_of_fuel`, which needs no hypothesis at all
+    // because `landAux`'s fuel-exhaustion row is the absorbing constant `0`
+    // regardless of argument order. `lorAux`'s row is pass-through
+    // (`lorAux 0 m n = n`), so at insufficient fuel `lorAux fuel a b` and
+    // `lorAux fuel b a` can disagree: `lorAux 0 0 1 = 1` while
+    // `lorAux 0 1 0 = 0` (simulated in Python before committing to this
+    // control). Checked by evaluation alone, at deliberately small operands
+    // (a failing `def_eq` has no early exit).
+    {
+        let fuel = f.num(0);
+        let a = f.num(0);
+        let b = f.num(1);
+        let one = f.num(1);
+        let zero = f.num(0);
+        let lhs = f.const_app(p.lor_aux, &[fuel, a, b]);
+        let rhs = f.const_app(p.lor_aux, &[fuel, b, a]);
+        assert!(f.k.def_eq(lhs, one), "lorAux 0 0 1 must compute to 1");
+        assert!(f.k.def_eq(rhs, zero), "lorAux 0 1 0 must compute to 0");
+        assert!(
+            !f.k.def_eq(lhs, rhs),
+            "the chosen (fuel, a, b) must be INSUFFICIENT and DISCRIMINATING, \
+             or this control proves nothing about why lor_aux_comm_of_fuel \
+             needs the Le hypotheses"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.lor_aux_comm_of_fuel).is_empty(),
+        "lor_aux_comm_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.lor_comm).is_empty(),
+        "lor_comm must rest on zero axioms"
     );
 }
 
