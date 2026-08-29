@@ -12275,6 +12275,21 @@ types `crate::NameId` / `NameId` / `&str` / `(&str, crate::NameId, &str)`:
 **72 pinned-array definition sites**, all internally consistent. The design
 review surveyed a kernel-shaped subset and reported 12.
 
+| shape | sites | correct with the OLD engine | correct now |
+| --- | --- | --- | --- |
+| `[&str; N]` | 62 | 3 | 62 |
+| `[NameId; N]` | 6 | 6 | 6 |
+| `[crate::NameId; N]` | 4 | 4 | 4 |
+| `[(&str, crate::NameId, &str); N]` | **0** | — | — |
+| total | **72** | **13** | **72** |
+
+The "old engine" column is the shape-independent engine with only the
+string-masking fix reverted, measured in a scratch copy — not the original
+line-shape tool, which recognized `let expected: [(&str, crate::NameId, &str);
+N]` and therefore **0 of these 72**. The 3 accidental successes are arrays whose
+entries are identifiers rather than literals (`const ROOTS: [&str; 2] =
+[POS_BRANCH, NEG_BRANCH];`), so nothing was masked away.
+
 The distinction that matters is not the shape — it is **whether a lane's ordinary
 work adds a row.** Only a growing list can produce the documented merge failure
 (two lanes each bump the pin correctly against their own base; git merges the
@@ -12313,7 +12328,7 @@ EXPECTED_STEP_ORDER.as_slice())` against `super::STEPS`.
 | `complex.rs:1417` `ring_laws` | `[NameId; N]` | 9 | the commutative-ring laws over ℂ |
 | `axreal_call_site_guard.rs:56` `FLAGGED_CALLS` | `[&str; N]` | 2 | two identifiers the guard keeps out of shipped code |
 | `theorem_composition.rs:32` | `[&str; N]` | 3 | the declaration-exact Lean 4.30 `Acc` package SHA-256s |
-| ~60 further sites in `axeyum-lean-import/examples/`, `axeyum-cas`, fuzz alphabets | `[&str; N]` | small | per-capsule hash/label/root lists and fixed test domains |
+| 54 further sites in `axeyum-lean-import/examples/`, `axeyum-cas`, fuzz alphabets | `[&str; N]` | small | per-capsule hash/label/root lists and fixed test domains |
 
 `30` is not a choice: CLAUDE.md records it as the **floor for an axiomatized
 ordered field**, since `AxReal`'s carrier is opaque and every operation and law
