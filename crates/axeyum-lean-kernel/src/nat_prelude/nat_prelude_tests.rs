@@ -6376,7 +6376,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        89 + 460,
+        89 + 462,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -9241,6 +9241,145 @@ fn parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free() {
     assert!(
         f.k.axiom_footprint(p.add_self_ne_succ_add_self).is_empty(),
         "add_self_ne_succ_add_self must rest on zero axioms"
+    );
+}
+
+/// `even_iff_mod_two_eq_zero`/`odd_iff_mod_two_eq_one` round-trip at
+/// concrete witnesses, in both directions: `mp` applied to a hand-built
+/// `Even 4`/`Odd 5` lands on `Eq (mod 4 2) 0`/`Eq (mod 5 2) 1`, and `mpr`
+/// applied to a `refl`-proved `Eq (mod 4 2) 0`/`Eq (mod 5 2) 1` lands back
+/// on a type defeq to the ORIGINAL `Even 4`/`Odd 5`. Same swap-detecting
+/// shape as `parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free`'s
+/// `even_iff_odd_succ` check: if `mp`/`mpr` were swapped, or if the bridge
+/// pointed at the wrong remainder (`0` vs `1`), one of these applications
+/// would receive an argument of the wrong type and `Kernel::infer` would
+/// reject it. The transposed-remainder negative controls confirm the
+/// bridge is not vacuously provable both ways at once.
+#[test]
+fn even_iff_mod_two_eq_zero_and_odd_iff_mod_two_eq_one_apply_and_agree() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let four = f.num(4);
+    let five = f.num(5);
+    let two = f.num(2);
+    let zero = f.num(0);
+    let one = f.num(1);
+
+    // Even 4, witnessed by 2 (4 = 2+2).
+    let even4 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(four, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(four);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+    let even4_ty =
+        f.k.infer(even4)
+            .unwrap_or_else(|e| panic!("Even 4 (witness 2) should type-check: {}", f.explain(&e)));
+
+    // Odd 5, witnessed by 2 (5 = succ(2+2)).
+    let odd5 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(five, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(five);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+    let odd5_ty =
+        f.k.infer(odd5)
+            .unwrap_or_else(|e| panic!("Odd 5 (witness 2) should type-check: {}", f.explain(&e)));
+
+    let mod4_two = f.modulo(four, two);
+    let mod5_two = f.modulo(five, two);
+    let mod4_eq_zero_ty = f.eq(mod4_two, zero);
+    let mod4_eq_one_ty = f.eq(mod4_two, one);
+    let mod5_eq_one_ty = f.eq(mod5_two, one);
+    let mod5_eq_zero_ty = f.eq(mod5_two, zero);
+
+    // even_iff_mod_two_eq_zero(4).mp(even4) : Eq (mod 4 2) 0.
+    let even_iff_at_4 = f.lemma(p.even_iff_mod_two_eq_zero, &[four]);
+    let even_mp = f.const_app(p.logic.iff_mp, &[even4_ty, mod4_eq_zero_ty, even_iff_at_4]);
+    let mod4_from_even4 = f.apply(even_mp, &[even4]);
+    let mod4_from_even4_ty = f.k.infer(mod4_from_even4).unwrap_or_else(|e| {
+        panic!(
+            "even_iff_mod_two_eq_zero(4).mp(Even 4) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(mod4_from_even4_ty, mod4_eq_zero_ty),
+        "even_iff_mod_two_eq_zero(4).mp(Even 4) must land on Eq (mod 4 2) 0"
+    );
+    assert!(
+        !f.k.def_eq(mod4_from_even4_ty, mod4_eq_one_ty),
+        "negative control: Eq (mod 4 2) 0 must not be defeq to Eq (mod 4 2) 1"
+    );
+
+    // even_iff_mod_two_eq_zero(4).mpr(refl : Eq (mod 4 2) 0) : Even 4.
+    let mod4_refl = f.refl(mod4_two);
+    let even_mpr = f.const_app(p.logic.iff_mpr, &[even4_ty, mod4_eq_zero_ty, even_iff_at_4]);
+    let even4_from_mod = f.apply(even_mpr, &[mod4_refl]);
+    let even4_from_mod_ty = f.k.infer(even4_from_mod).unwrap_or_else(|e| {
+        panic!(
+            "even_iff_mod_two_eq_zero(4).mpr(Eq (mod 4 2) 0) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(even4_from_mod_ty, even4_ty),
+        "even_iff_mod_two_eq_zero(4).mpr(refl) must land back on Even 4"
+    );
+    assert!(
+        f.k.axiom_footprint(p.even_iff_mod_two_eq_zero).is_empty(),
+        "even_iff_mod_two_eq_zero must rest on zero axioms"
+    );
+
+    // odd_iff_mod_two_eq_one(5).mp(odd5) : Eq (mod 5 2) 1.
+    let odd_iff_at_5 = f.lemma(p.odd_iff_mod_two_eq_one, &[five]);
+    let odd_mp = f.const_app(p.logic.iff_mp, &[odd5_ty, mod5_eq_one_ty, odd_iff_at_5]);
+    let mod5_from_odd5 = f.apply(odd_mp, &[odd5]);
+    let mod5_from_odd5_ty = f.k.infer(mod5_from_odd5).unwrap_or_else(|e| {
+        panic!(
+            "odd_iff_mod_two_eq_one(5).mp(Odd 5) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(mod5_from_odd5_ty, mod5_eq_one_ty),
+        "odd_iff_mod_two_eq_one(5).mp(Odd 5) must land on Eq (mod 5 2) 1"
+    );
+    assert!(
+        !f.k.def_eq(mod5_from_odd5_ty, mod5_eq_zero_ty),
+        "negative control: Eq (mod 5 2) 1 must not be defeq to Eq (mod 5 2) 0"
+    );
+
+    // odd_iff_mod_two_eq_one(5).mpr(refl : Eq (mod 5 2) 1) : Odd 5.
+    let mod5_refl = f.refl(mod5_two);
+    let odd_mpr = f.const_app(p.logic.iff_mpr, &[odd5_ty, mod5_eq_one_ty, odd_iff_at_5]);
+    let odd5_from_mod = f.apply(odd_mpr, &[mod5_refl]);
+    let odd5_from_mod_ty = f.k.infer(odd5_from_mod).unwrap_or_else(|e| {
+        panic!(
+            "odd_iff_mod_two_eq_one(5).mpr(Eq (mod 5 2) 1) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(odd5_from_mod_ty, odd5_ty),
+        "odd_iff_mod_two_eq_one(5).mpr(refl) must land back on Odd 5"
+    );
+    assert!(
+        f.k.axiom_footprint(p.odd_iff_mod_two_eq_one).is_empty(),
+        "odd_iff_mod_two_eq_one must rest on zero axioms"
     );
 }
 
