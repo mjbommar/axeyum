@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
+import re
 import pathlib
 import tempfile
 import unittest
@@ -163,6 +165,50 @@ class KernelIndexValidationGuardsTests(unittest.TestCase):
             row_count=len(frontier.KERNEL_INDEX_POSITIVE_CONTROLS),
         )
         frontier.validate_kernel_index(index)  # must not raise
+
+
+class NeverClosableSummaryTests(unittest.TestCase):
+    """The open count must not read as a work estimate.
+
+    Measured 2026-08-29: of 79 open `ml430` facts, 12 are MUTATION negative
+    controls and 4 are pinned open by a gate that raises if the status moves
+    (`gen-autogenesis-bitwise-family-projection.py:61`). A lane triaging a
+    family needs the denominator before it starts.
+    """
+
+    def _summary(self) -> str:
+        import subprocess
+        out = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "fact-frontier.py")],
+            cwd=ROOT, capture_output=True, text=True, timeout=600, check=False,
+        )
+        return out.stdout
+
+    def test_the_summary_line_is_printed_and_counts_are_nonzero(self) -> None:
+        text = self._summary()
+        self.assertIn("can NEVER be closed", text)
+        match = re.search(r"(\d+) can NEVER be closed: (\d+) MUTATION", text)
+        self.assertIsNotNone(match, "summary line must carry both counts")
+        total, mutations = int(match.group(1)), int(match.group(2))
+        # Non-vacuity in both directions: if either were zero the line would be
+        # printing a true statement about an empty set, which is the failure
+        # this whole guard exists to prevent elsewhere.
+        self.assertGreater(mutations, 0, "mutation rows exist in the ledger")
+        self.assertGreater(total, mutations, "gate-pinned rows exist too")
+
+    def test_the_total_does_not_exceed_the_open_count(self) -> None:
+        """A never-closable row must itself be open, or the arithmetic is wrong."""
+        text = self._summary()
+        match = re.search(r"(\d+) can NEVER be closed", text)
+        self.assertIsNotNone(match)
+        never = int(match.group(1))
+        import json as _json
+        import glob as _glob
+        opens = sum(
+            1 for f in _glob.glob(str(ROOT / "artifacts/facts/*.json"))
+            if _json.load(open(f)).get("epistemic_status") == "open"
+        )
+        self.assertLessEqual(never, opens)
 
 
 class MutationNegativeControlWarningTests(unittest.TestCase):

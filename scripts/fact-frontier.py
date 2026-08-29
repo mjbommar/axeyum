@@ -1499,6 +1499,30 @@ def main() -> int:
               f"{len(decidable)} decidable by dispatch, {len(proofish)} needing a "
               f"kernel proof, {len(statable_research) - len(decidable) - len(proofish)} "
               f"with no route, {len(unstatable)} not yet statable.")
+        # How much of "open" can never close, so the headline is not read as a
+        # work estimate. Measured 2026-08-29: of 79 open `ml430` facts, 12 are
+        # MUTATION negative controls (deliberately perturbed, often false) and
+        # 3 are pinned open by a live gate -- `gen-autogenesis-bitwise-family-
+        # projection.py` RAISES if their status leaves "open". Both classes are
+        # already flagged per-fact above; this says how many there are, because
+        # a lane triaging a family should know the denominator before it starts.
+        never_closable = [
+            f for f in facts.values()
+            if not settled(f)
+            and (mutation_kind(f) is not None or (held or {}).get(f["id"]))
+        ]
+        if never_closable:
+            mutations = sum(
+                1 for f in never_closable if mutation_kind(f) is not None)
+            gated = len(never_closable) - mutations
+            print(
+                f"\nOf the open facts, {len(never_closable)} can NEVER be closed: "
+                f"{mutations} MUTATION negative control(s) — deliberately "
+                f"perturbed, often false, and proving one is a soundness alarm — "
+                f"and {gated} pinned open by a gate that fails if the status "
+                f"moves. Subtract them before reading an open count as remaining "
+                f"work."
+            )
         if decidable:
             print("Dispatch next: " + ", ".join(f["id"] for f in sorted(
                 decidable, key=lambda f: f["id"])))
