@@ -188,6 +188,7 @@ mod sqrt;
 mod subset_product;
 mod testbit_bitwise;
 mod totient;
+mod totient_lemmas;
 pub(crate) mod transposition;
 mod vandermonde;
 mod xor;
@@ -301,6 +302,7 @@ use sqrt::declare_sqrt_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
+use totient_lemmas::declare_totient_lemmas_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
     declare_transposition_injective, declare_transposition_involutive,
@@ -1587,6 +1589,30 @@ pub struct NatPrelude {
     /// makes Euler's theorem generalize Fermat's: every prime's totient is
     /// `p - 1`.
     pub totient_prime: NameId,
+
+    // --- `totient_lemmas.rs`: the `ml430` totient mirrors -------------------
+    /// `Nat.coprime_succ_self : ∀ m, Eq (gcd m (succ m)) one` — consecutive
+    /// naturals are coprime. Falls out of `coprime_add_self_right(m, one)`
+    /// (`Iff (gcd m (add one m) = one) (gcd m one = one)`) plus
+    /// `coprime_one_right_iff` (`gcd m one = one` unconditionally), then
+    /// `add one m = succ m` via `succ_add`/`zero_add`. The general
+    /// `∀ m, coprime m (succ m)` fact this prelude had not yet named, and the
+    /// key witness `totient_eq_zero` needs: the top index `n - 1` of the
+    /// range `[0, n)` is always coprime to `n = succ (n - 1)`.
+    pub coprime_succ_self: NameId,
+    /// `Nat.totient_eq_zero : ∀ n, Iff (Eq (totient n) 0) (Eq n 0)` —
+    /// `F:ml430-nat-totient-eq-zero`. Case-split on `n`: `n = 0` is
+    /// `count_range_zero` on both sides; `n = succ k` reduces `totient
+    /// (succ k)` to `succ (countRange f k)` for `f := totient's own
+    /// predicate at succ k` (defeq unfold of `countRange`'s `Nat.rec`, plus
+    /// `coprime_succ_self k` promoting `beq (gcd k (succ k)) 1` to `true`
+    /// through `bool_select_nat`), which is never `0` (`succ_ne_zero`) —
+    /// matching `succ k`'s own never-`0`ness, so both sides of the `Iff` are
+    /// simply `False` and it closes by `ex_falso` in each direction. No
+    /// existence/counting machinery beyond the top-index witness is needed,
+    /// unlike `totient_eq_one_iff`/`totient_even`/the rest of this family
+    /// (see `totient_lemmas.rs`'s module doc for what those still need).
+    pub totient_eq_zero: NameId,
 
     // --- `Fin`, and the pigeonhole notions (`finite.rs`) --------------------
     /// `Nat.Fin : Nat → Type 0` — the canonical finite index type
@@ -3698,6 +3724,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_eq_pred_of_only_zero_false: kernel
                 .name_str(nat, "countRange_eq_pred_of_only_zero_false"),
             totient_prime: kernel.name_str(nat, "totient_prime"),
+            coprime_succ_self: kernel.name_str(nat, "coprime_succ_self"),
+            totient_eq_zero: kernel.name_str(nat, "totient_eq_zero"),
             fin,
             fin_mk: kernel.name_str(fin, "mk"),
             fin_rec: kernel.name_str(fin, "rec"),
@@ -4096,6 +4124,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
+        // Needs `coprime_add_self_right`/`coprime_one_right_iff` (declared
+        // far above, alongside the other `Coprime` characterisations) plus
+        // `count_range`/`totient`, just declared above.
+        declare_totient_lemmas_all(&mut d, &p)?;
         declare_perfect_all(&mut d, &p)?;
         declare_finite_set_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
