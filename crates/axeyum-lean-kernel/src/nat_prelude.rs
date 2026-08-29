@@ -189,8 +189,8 @@ mod vandermonde;
 pub use ops::{NatDev, NatOps, NatState};
 
 use algebra::{
-    declare_additive_theorems, declare_finite_sum_theorems, declare_mul_no_zero_divisors,
-    declare_multiplicative_theorems, declare_subtraction_theorems,
+    declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
+    declare_mul_no_zero_divisors, declare_multiplicative_theorems, declare_subtraction_theorems,
 };
 use asc_factorial::declare_asc_factorial_all;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
@@ -995,6 +995,19 @@ pub struct NatPrelude {
     /// `b = succ y` makes the product `succ_mul` + `add_succ` away from a bare
     /// successor, which `succ_ne_zero` refutes against the hypothesis.
     pub mul_eq_zero: NameId,
+    /// `Nat.add_eq_zero : ∀ a b, a + b = 0 → a = 0 ∧ b = 0`. `Nat.add`
+    /// recurses on its RIGHT argument, so this is a single `cases_zero_succ`
+    /// on `b` (not a nested double case-split like `mul_eq_zero`): at
+    /// `b = 0`, `add a 0` is defeq to `a`, so the hypothesis itself already
+    /// has the shape `a = 0`; at `b = succ y`, `add a (succ y)` is defeq to
+    /// `succ (add a y)`, which `succ_ne_zero` refutes against the hypothesis.
+    /// Built for `nat-assoc-dichotomy`'s `land_aux_assoc_of_fuel` attempt
+    /// (`docs/plan/status/247-nat-bitwise-assoc.md`'s item 1): the per-bit
+    /// successor row is `2 * rec + bit`, and deciding whether that compound
+    /// value is zero needs `2 * rec = 0 ∧ bit = 0` from `add_eq_zero`, then
+    /// `rec = 0` from the existing `mul_eq_zero` (eliminating the `2 = 0`
+    /// disjunct via `succ_ne_zero`, no new `mul`-side lemma needed).
+    pub add_eq_zero: NameId,
     /// `Nat.dvd_factorial_of_le : ∀ d n, Le 1 d → Le d n → dvd d (factorial n)`.
     ///
     /// Every positive number at most `n` divides `n!`. This is the first of the
@@ -3112,6 +3125,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             one_le_of_dvd_pos: kernel.name_str(nat, "one_le_of_dvd_pos"),
             one_le_mul: kernel.name_str(nat, "one_le_mul"),
             mul_eq_zero: kernel.name_str(nat, "mul_eq_zero"),
+            add_eq_zero: kernel.name_str(nat, "add_eq_zero"),
             dvd_factorial_of_le: kernel.name_str(nat, "dvd_factorial_of_le"),
             factorial_dvd_factorial: kernel.name_str(nat, "factorial_dvd_factorial"),
             factorial_le: kernel.name_str(nat, "factorial_le"),
@@ -3455,6 +3469,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_order(&mut d, &p)?;
         declare_no_confusion(&mut d, &p)?;
         declare_mul_no_zero_divisors(&mut d, &p)?;
+        declare_add_no_zero_summands(&mut d, &p)?;
         declare_order_extra(&mut d, &p)?;
         declare_order_more(&mut d, &p)?;
         declare_boolean_le(&mut d, &p)?;

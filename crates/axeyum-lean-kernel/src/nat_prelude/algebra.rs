@@ -1,7 +1,7 @@
 //! Additive, multiplicative, subtraction, and finite-sum theorems.
 
 use super::NatPrelude;
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, cases_zero_succ};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -732,6 +732,112 @@ pub(super) fn declare_mul_no_zero_divisors(
         };
 
         let proof = d.induct(&claim_a, &at_zero_a, &at_succ_a, a);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.add_eq_zero` — the additive twin of [`declare_mul_no_zero_divisors`].
+///
+/// Built for `nat-assoc-dichotomy`'s `land_aux_assoc_of_fuel` attempt
+/// (`docs/plan/status/247-nat-bitwise-assoc.md`): the successor row of
+/// `landAux`/`lorAux`/`ldiffAux` is `2 * rec + bit`, and deciding whether
+/// that COMPOUND value is zero (needed once it appears in an ARGUMENT
+/// position of an outer application, where the outer guard cannot resolve
+/// by mere unfolding) needs `2 * rec = 0 ∧ bit = 0` from this lemma, then
+/// `rec = 0` from the ALREADY-EXISTING `Nat.mul_eq_zero` (eliminating the
+/// `2 = 0` disjunct inline via `Nat.succ_ne_zero` — no
+/// `mul_eq_zero_of_left`/`eq_zero_of_mul_eq_zero`-style lemma is needed on
+/// top of `mul_eq_zero`, contrary to one reading of that status doc's item
+/// 1: `mul_eq_zero` alone, plus the one-line disjunct elimination, already
+/// gets you from `mul 2 x = 0` to `x = 0`).
+///
+/// Unlike `mul_eq_zero`'s nested case-split on BOTH factors, this is a
+/// single [`cases_zero_succ`] on `b` alone, because `Nat.add` recurses on
+/// its RIGHT argument only: at `b = 0`, `add a 0` is defeq to `a`, so the
+/// hypothesis `Eq (add a 0) 0` already HAS the shape `Eq a 0` (no rewriting
+/// needed, `h` is reused directly at the left conjunct); at `b = succ y`,
+/// `add a (succ y)` is defeq to `succ (add a y)` in a SINGLE iota step (no
+/// `succ_mul`/`add_succ`-style bridging lemma needed, unlike `mul_eq_zero`'s
+/// succ/succ leaf), so `h` is reused directly as the argument
+/// `Nat.succ_ne_zero` needs.
+pub(super) fn declare_add_no_zero_summands(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // add_eq_zero : ∀ a b, add a b = 0 → a = 0 ∧ b = 0
+    d.theorem(p.add_eq_zero, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+
+        let conclusion = |d: &mut NatDev<'_>, x: ExprId, y: ExprId| {
+            let zero = d.zero();
+            let left = d.eq(x, zero);
+            let zero = d.zero();
+            let right = d.eq(y, zero);
+            d.const_app(p.logic.and, &[left, right])
+        };
+
+        let stmt = {
+            let zero = d.zero();
+            let sum = d.add(a, b);
+            let hyp = d.eq(sum, zero);
+            let goal = conclusion(d, a, b);
+            d.arrow(hyp, goal)
+        };
+
+        // The motive for the case-split on `b`, closing over `a`.
+        let claim_b = |d: &mut NatDev<'_>, y: ExprId| {
+            let zero = d.zero();
+            let sum = d.add(a, y);
+            let hyp = d.eq(sum, zero);
+            let goal = conclusion(d, a, y);
+            d.arrow(hyp, goal)
+        };
+
+        let at_zero = |d: &mut NatDev<'_>| {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let zero = d.zero();
+            let sum = d.add(a, zero); // defeq `a`
+            let hyp_ty = d.eq(sum, zero);
+            let left_ty = d.eq(a, zero);
+            let zero2 = d.zero();
+            let right_ty = d.eq(zero2, zero2);
+            let refl_right = d.refl(zero2);
+            // `h : Eq (add a 0) 0` is defeq to `Eq a 0` (add's base row is
+            // the constant identity), so `h` is accepted directly where
+            // `left_ty` is expected -- no rewrite step.
+            let body = d.const_app(p.logic.and_intro, &[left_ty, right_ty, h, refl_right]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, y: ExprId| {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let sy = d.succ(y);
+            let sum = d.add(a, sy);
+            let zero = d.zero();
+            let hyp_ty = d.eq(sum, zero);
+            let goal = conclusion(d, a, sy);
+
+            // `sum` is defeq to `succ (add a y)` in one iota step, so `h`
+            // (typed `Eq sum zero`) is accepted directly as the witness
+            // `succ_ne_zero` needs -- no `add_succ` bridging lemma.
+            let inner_sum = d.add(a, y);
+            let contradiction = d.lemma(p.succ_ne_zero, &[inner_sum, h]);
+
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let level = d.kernel().level_zero();
+            let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+            let anon = d.anon_name();
+            let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+            let body = d.apply(rec, &[motive, contradiction]);
+            d.lam_fv(h_fv, hyp_ty, body)
+        };
+
+        let proof = cases_zero_succ(d, b, &claim_b, &at_zero, &at_succ);
         (stmt, proof)
     })?;
     Ok(())
