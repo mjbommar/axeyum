@@ -63,3 +63,30 @@ which is exactly how a real one gets resolved mechanically too.
 - CLAUDE.md, "TWO LANES CAN EACH BUMP A PINNED COUNT CORRECTLY AND THE MERGE
   STILL WILL NOT COMPILE" and "AN INVENTORY TEST THAT ITERATES ITS OWN LIST
   CANNOT SEE WHAT IS MISSING FROM IT".
+
+## CORRECTION (2026-08-29, same day): the survey above is wrong, in the worse direction
+
+The Opus lane dispatched against this document re-measured and found **72 sites,
+of which the tool covered ZERO** — not 12 sites with 1 covered.
+
+**The 12/4/1 table above was produced by a grep that did not mask comments.**
+`crates/axeyum-lean-kernel/src/creal/inventory.rs:8` is a `//!` line reading
+
+    //! `let expected: [(&str, crate::NameId, &str); 432] = [ ... ];` covering
+
+— a prose quote of a pin declaration in module documentation, describing the
+array that was **deleted** when `creal_tests.rs` was sharded. There are **zero**
+real sites of the tuple shape. So the one shape the tool handled had no live
+consumer at all, which is why nobody noticed it had stopped working.
+
+Three further corrections, all measured by the lane: `inductive_tests.rs` has no
+pinned list (return-tuple components, no literal); `ordered_ring.rs` has three
+sites, not two, and the third is what makes the other two load-bearing; and two
+more sites exist in `geometry_corpus.rs`/`geometry_certify.rs`.
+
+**The lesson is not about this table.** It is that a number produced by an
+unvalidated grep was committed as "Measured, in the shared checkout". The grep
+ran, exited 0, and printed something plausible — this repository's most-repeated
+failure signature, arriving here through a survey rather than a gate. A survey
+whose output will be quoted as a measurement needs the same comment/string
+masking any parser does, which is precisely what the fixed tool now performs.
