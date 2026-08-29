@@ -54,7 +54,29 @@ def load_facts() -> dict[str, dict[str, Any]]:
 def theorem_index(
     facts: dict[str, dict[str, Any]], theorem_of
 ) -> tuple[dict[str, str], list[str]]:
+    """Map each kernel theorem to the ONE fact this catalog treats as its
+    owner for proof-derived-edge purposes.
+
+    More than one fact can legitimately name the same kernel theorem: an
+    ADR-0603 "mirror" fact is deliberately flipped onto an existing
+    declaration rather than re-derived (measured 2026-08-29:
+    `Int.modEq_add_left`, `Nat.coprime_of_lt_prime`, `Nat.descFactorial_of_lt`
+    -- see docs/plan/status/284-autogenesis-gate-rot.md), and
+    `check-fact-depends-derived.py` already accepts this shape
+    (`theorem_to_fact.setdefault`, first fact wins) rather than treating it as
+    an anomaly. This mirrors that acceptance, with one refinement: a fact
+    whose `formal.kernel_theorem` is explicitly PINNED is preferred over one
+    resolved only through the checker_command regex fallback, because a pin
+    is a deliberate assertion and a fallback is a guess. Among facts with the
+    same pinned-ness, the first by sorted fact id wins, deterministically.
+
+    Raising here was the ORIGINAL behaviour and it was wrong: it could not
+    tell a genuine duplicate-authorship bug from the intended mirror-flip
+    pattern above, so it went red the moment the pattern was used -- three
+    times, independently, all legitimate.
+    """
     by_theorem: dict[str, str] = {}
+    pinned: dict[str, bool] = {}
     unnamed: list[str] = []
     for fact_id, fact in sorted(facts.items()):
         if fact.get("proof_route") != "kernel-lean" or fact.get(
@@ -65,11 +87,11 @@ def theorem_index(
         if theorem is None:
             unnamed.append(fact_id)
             continue
-        if theorem in by_theorem:
-            raise ChainCatalogError(
-                f"kernel theorem {theorem!r} maps to multiple fact rows"
-            )
-        by_theorem[theorem] = fact_id
+        formal = fact.get("formal")
+        is_pinned = isinstance(formal, dict) and "kernel_theorem" in formal
+        if theorem not in by_theorem or (is_pinned and not pinned[theorem]):
+            by_theorem[theorem] = fact_id
+            pinned[theorem] = is_pinned
     return by_theorem, unnamed
 
 

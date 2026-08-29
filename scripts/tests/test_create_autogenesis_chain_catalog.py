@@ -76,11 +76,47 @@ class ChainCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.ChainCatalogError, "stale"):
             MODULE.verify_catalog(mutated, second)
 
-    def test_duplicate_theorem_mapping_is_rejected(self):
+    def test_duplicate_theorem_mapping_resolves_deterministically(self):
+        # ADR-0603 mirror facts are deliberately flipped onto an EXISTING
+        # kernel declaration (measured 2026-08-29: Int.modEq_add_left,
+        # Nat.coprime_of_lt_prime, Nat.descFactorial_of_lt all landed as two
+        # facts naming one theorem -- see
+        # docs/plan/status/284-autogenesis-gate-rot.md). This must resolve,
+        # not raise: the old "reject on any duplicate" behaviour could not
+        # tell that pattern apart from a genuine authorship bug and was red
+        # for exactly that reason.
         facts, graph = self.inputs()
         facts["F:duplicate"] = fact("F:duplicate", "Nat.b", [])
-        with self.assertRaisesRegex(MODULE.ChainCatalogError, "multiple"):
-            MODULE.build_catalog(facts, graph, theorem_of)
+        by_theorem, unnamed = MODULE.theorem_index(facts, theorem_of)
+        self.assertEqual(unnamed, [])
+        # Deterministic: among two equally-unpinned claimants, the first by
+        # sorted fact id wins ("F:B" < "F:duplicate").
+        self.assertEqual(by_theorem["Nat.b"], "F:B")
+        # And the whole catalog still builds rather than raising.
+        MODULE.build_catalog(facts, graph, theorem_of)
+
+    def test_pinned_kernel_theorem_wins_over_regex_fallback(self):
+        # A fact whose formal.kernel_theorem is explicitly pinned is a
+        # deliberate assertion; one resolved only through theorem_of's
+        # regex fallback is a guess. The pin must win regardless of sort
+        # order.
+        facts, graph = self.inputs()
+        pinned = fact("F:z-pinned-duplicate", "Nat.b", [])
+        pinned["formal"] = {"kernel_theorem": "Nat.b"}
+        facts["F:z-pinned-duplicate"] = pinned
+        by_theorem, _ = MODULE.theorem_index(facts, theorem_of)
+        self.assertEqual(by_theorem["Nat.b"], "F:z-pinned-duplicate")
+
+    def test_two_pinned_claimants_break_ties_by_fact_id(self):
+        facts, graph = self.inputs()
+        for extra_id in ("F:z-pinned-two", "F:a-pinned-one"):
+            row = fact(extra_id, "Nat.b", [])
+            row["formal"] = {"kernel_theorem": "Nat.b"}
+            facts[extra_id] = row
+        by_theorem, _ = MODULE.theorem_index(facts, theorem_of)
+        # "F:B" (unpinned) loses to either pinned claimant; between the two
+        # pinned claimants, "F:a-pinned-one" sorts first.
+        self.assertEqual(by_theorem["Nat.b"], "F:a-pinned-one")
 
     def test_named_fact_outside_inventory_is_reported_not_inferred(self):
         facts, graph = self.inputs()

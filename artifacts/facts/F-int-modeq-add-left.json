@@ -5,7 +5,7 @@
   "statement": "MECHANICALLY GENERATED, UNREVIEWED PROSE -- this sentence deliberately makes NO mathematical characterisation of the theorem. What is asserted, and all that is asserted, is this: the kernel declaration `Int.modEq_add_left` is a `Declaration::Theorem` admitted into the environment by `build_int_prelude` through the trusted `Kernel::add_declaration` gate, which re-derives its type from its proof term; its type is recorded verbatim in `formal.statement`; and its axiom footprint, as computed by `Kernel::axiom_footprint`, is empty. The authoritative content of this fact is `formal.statement`. A human-readable characterisation of what Int.modEq_add_left SAYS has not been supplied, because a generator cannot supply one honestly -- see `notes`.",
   "formal": {
     "language": "lean4",
-    "statement": "theorem Int.modEq_add_left : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.lt Int.zero x0) -> ((x5 : Int.ModEq x0 x1 x2) -> Int.ModEq x0 (Int.add x3 x1) (Int.add x3 x2)))))))",
+    "statement": "theorem Int.modEq_add_left : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.ModEq x0 x1 x2) -> Int.ModEq x0 (Int.add x3 x1) (Int.add x3 x2))))))",
     "fragment": "Int",
     "free_symbols": [
       "x0",
