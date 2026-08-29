@@ -194,7 +194,7 @@ use algebra::{
 };
 use asc_factorial::declare_asc_factorial_all;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
-use binary::{declare_binary_all, declare_size_all};
+use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
 use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
     declare_succ_sub_of_le,
@@ -1668,6 +1668,12 @@ pub struct NatPrelude {
     /// `Nat.testBit_le_one : ∀ n i, Le (testBit n i) 1` — every bit is `0` or
     /// `1`.
     pub test_bit_le_one: NameId,
+    /// `Nat.test_bit_of_zero : ∀ i, Eq (testBit 0 i) zero` — every bit of
+    /// `0` is `0`. Induction on `i`: base is `testBit_zero` plus `zero_mod`;
+    /// step is `testBit_succ` plus `zero_div` (`div zero 2 = zero`, so the
+    /// recursive call is at the SAME `0`) applied to the induction
+    /// hypothesis.
+    pub test_bit_of_zero: NameId,
     /// `Nat.mod_two_mul_split : ∀ n m, Lt 0 m →
     /// add (mul 2 (mod (div n 2) m)) (mod n 2) = mod n (mul m 2)` — peeling
     /// the low bit of `n` before dividing by `m`, the reusable arithmetic
@@ -1718,6 +1724,27 @@ pub struct NatPrelude {
     /// at `k := size n`, closed by [`Self::lt_pow_size`] and
     /// [`Self::mod_eq_self_of_lt`].
     pub sum_test_bit_eq: NameId,
+    /// `Nat.sumRange_const_zero : ∀ k, sumRange (fun _ => zero) k = zero` —
+    /// a reusable arithmetic fact (not specific to `testBit`), by induction
+    /// on `k`: `sumRange_zero` closes the base; the step
+    /// `sumRange g (succ j) = sumRange g j + g j` collapses via the
+    /// induction hypothesis to `add zero zero`, which is `refl` (`add_zero`
+    /// at `n := zero`).
+    pub sum_range_const_zero: NameId,
+    /// `Nat.zero_of_testBit_eq_zero : ∀ n, (∀ i, testBit n i = zero) → n =
+    /// zero` — the Nat-valued analogue of Mathlib's
+    /// `Nat.zero_of_testBit_eq_false` (`(∀ i, n.testBit i = false) → n =
+    /// 0`), NOT a proof of that Bool-typed statement: our `testBit` returns
+    /// `{0,1} : Nat`, a genuinely different codomain (see `binary.rs`'s
+    /// module doc and `docs/plan/status/235-nat-bitwise-facts.md`), so this
+    /// is registered as its own local fact rather than used to flip the
+    /// pinned `ml430` mirror. Proved via [`Self::sum_test_bit_eq`]: the
+    /// hypothesis makes every summand `mul (testBit n i) (pow 2 i)`
+    /// collapse to `zero` (via [`Self::zero_mul`]), so
+    /// [`Self::sum_range_congr`] plus [`Self::sum_range_const_zero`] gives
+    /// `sumRange … (size n) = zero`, which `sum_testBit_eq` identifies with
+    /// `n` itself.
+    pub zero_of_test_bit_eq_zero: NameId,
 
     // --- Fibonacci numbers (`fibonacci.rs`) ----------------------------------
     /// `Nat.fibAux : Nat -> Nat -> Nat -> Nat`, `fibAux i a b`: recursion on
@@ -3174,6 +3201,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             test_bit_zero: kernel.name_str(nat, "testBit_zero"),
             test_bit_succ: kernel.name_str(nat, "testBit_succ"),
             test_bit_le_one: kernel.name_str(nat, "testBit_le_one"),
+            test_bit_of_zero: kernel.name_str(nat, "testBit_of_zero"),
             mod_two_mul_split: kernel.name_str(nat, "mod_two_mul_split"),
             sum_test_bit_lt: kernel.name_str(nat, "sum_testBit_lt"),
             size_aux: kernel.name_str(nat, "sizeAux"),
@@ -3183,6 +3211,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lt_pow_size: kernel.name_str(nat, "lt_pow_size"),
             mod_eq_self_of_lt: kernel.name_str(nat, "mod_eq_self_of_lt"),
             sum_test_bit_eq: kernel.name_str(nat, "sum_testBit_eq"),
+            sum_range_const_zero: kernel.name_str(nat, "sumRange_const_zero"),
+            zero_of_test_bit_eq_zero: kernel.name_str(nat, "zero_of_testBit_eq_zero"),
             fib_aux: kernel.name_str(nat, "fibAux"),
             fib: kernel.name_str(nat, "fib"),
             fib_add_two: kernel.name_str(nat, "fib_add_two"),
@@ -3491,6 +3521,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
+        declare_zero_of_test_bit(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
         declare_relation_properties(&mut d, &p)?;
         declare_eq_equivalence_on(&mut d, &p)?;
