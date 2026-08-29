@@ -280,8 +280,9 @@ use primes::{
 use rec_agreement::{
     declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
     declare_land_le_left_all, declare_land_zero_propagation_all,
-    declare_ldiff_fuel_irrelevance_all, declare_lor_aux_ne_zero_of_right_ne_zero_all,
-    declare_lor_comm, declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
+    declare_ldiff_fuel_irrelevance_all, declare_lor_assoc_all,
+    declare_lor_aux_ne_zero_of_right_ne_zero_all, declare_lor_comm,
+    declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
 };
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
@@ -3199,6 +3200,49 @@ pub struct NatPrelude {
     /// case, directly in the base case since `lorAux 0 _ _` is the
     /// zero-fuel row's own third argument). See `nat_prelude::rec_agreement`.
     pub lor_aux_ne_zero_of_right_ne_zero: NameId,
+    /// `Nat.lor_aux_assoc_of_fuel : ∀ fuel a b c,
+    /// Eq (lorAux fuel (lorAux fuel a b) c) (lorAux fuel a (lorAux fuel b c))`
+    /// — `lor`'s counterpart of [`Self::land_aux_assoc_of_fuel`], via
+    /// [`agree_by_double_fuel_induction`](rec_agreement::ops), same
+    /// `c`-then-`b`-then-`a` split order. SIMPLER than `land`'s hard leaf:
+    /// [`Self::lor_aux_ne_zero_of_right_ne_zero`] makes the two stuck
+    /// intermediates unconditionally positive here, so both dichotomies'
+    /// `= 0` branches close by direct contradiction rather than a mirrored
+    /// propagation argument, and the per-bit step uses a new
+    /// max-associativity fact (`bool_select_nat`/`ble` shape, three nested
+    /// `Nat.mod _ 2` splits, 8 leaves) in place of `Nat.mul_assoc`. See
+    /// `docs/plan/status/266-nat-lor-assoc.md` and
+    /// `nat_prelude::rec_agreement`.
+    pub lor_aux_assoc_of_fuel: NameId,
+    /// `Nat.lor_aux_le_add : ∀ fuel m n, Le (lorAux fuel m n) (add m n)` —
+    /// the refuel bound `lor_assoc`'s bookkeeping needs in place of
+    /// [`Self::land_le_left`] (`Nat.lor` has no left-operand bound analogue:
+    /// `lor` can exceed both operands, e.g. `lor 1 2 = 3`). Unconditional in
+    /// `fuel`, confirmed by exhaustive Python simulation before any Rust.
+    /// Proved by [`agree_by_fuel_induction`](rec_agreement::ops): the base
+    /// case and the `n = 0`/`m = 0` step rows close via `Nat.le_add_right`
+    /// plus an `Nat.add_comm`/`Nat.zero_add`/`Nat.add_zero` transport; the
+    /// both-positive row combines the IH (`Le rec (add half_m half_n)`)
+    /// with a new `max bit_m bit_n ≤ add bit_m bit_n` fact via
+    /// `Nat.mul_le_mul_left`/`Nat.left_distrib`/`Nat.add_le_add_left`/
+    /// `Nat.add_le_add_right`/`Nat.le_trans`, then rearranges
+    /// `(2·half_m+2·half_n)+(bit_m+bit_n)` to `succ_m+succ_n` via the
+    /// per-file `add_add_add_comm` four-term regrouping (see
+    /// `nat_prelude::binomial`'s own copy) plus the two `Nat.div_mod_exec`
+    /// decompositions. See `docs/plan/status/266-nat-lor-assoc.md` and
+    /// `nat_prelude::rec_agreement`.
+    pub lor_aux_le_add: NameId,
+    /// `Nat.lor_assoc : ∀ a b c, Eq (lor (lor a b) c) (lor a (lor b c))` —
+    /// `F:ml430-nat-lor-assoc-82c4d0fd`. Routes
+    /// [`Self::lor_aux_assoc_of_fuel`] and [`Self::lor_aux_agree_of_fuel`]
+    /// through the shared fuel `add a b`, exactly as [`Self::land_assoc`]
+    /// (one argument wider; `c` itself never needs its own `Le` bound).
+    /// Unlike `land_assoc`, the bound `Le (lor a b) (add a b)` comes
+    /// directly from [`Self::lor_aux_le_add`] at `(a, a, b)` — the bound
+    /// already targets the shared fuel exactly, so no `Nat.le_trans` chain
+    /// is needed (`land_assoc` needs one, via `Nat.land_le_left`). See
+    /// `nat_prelude::rec_agreement`.
+    pub lor_assoc: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3874,6 +3918,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise_bit: kernel.name_str(nat, "bitwise_bit'"),
             lor_aux_ne_zero_of_right_ne_zero: kernel
                 .name_str(nat, "lor_aux_ne_zero_of_right_ne_zero"),
+            lor_aux_assoc_of_fuel: kernel.name_str(nat, "lor_aux_assoc_of_fuel"),
+            lor_aux_le_add: kernel.name_str(nat, "lor_aux_le_add"),
+            lor_assoc: kernel.name_str(nat, "lor_assoc"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -4185,6 +4232,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // "invariant that replaces zero propagation" for `lor` rather than
         // a transport of `land_aux_eq_zero_of_left_eq_zero`.
         declare_lor_aux_ne_zero_of_right_ne_zero_all(&mut d, &p)?;
+        // `Nat.lor_aux_le_add`/`Nat.lor_aux_assoc_of_fuel`/`Nat.lor_assoc`:
+        // needs `Nat.lorAux`/`Nat.lor` (`declare_lor_all`, far above),
+        // `Nat.lor_aux_zero_left_any_fuel`/`Nat.lor_aux_agree_of_fuel`
+        // (`declare_lor_fuel_irrelevance_all`, far above),
+        // `Nat.lor_aux_ne_zero_of_right_ne_zero` (just above),
+        // `Nat.zero_or_succ` (far above), and
+        // `Nat.div_mod_unique`/`Nat.div_mod_exec`/`Nat.mod_lt`/
+        // `Nat.left_distrib`/`Nat.mul_le_mul_left`/`Nat.add_le_add_left`/
+        // `Nat.add_le_add_right`/`Nat.le_trans`/`Nat.le_add_right`/
+        // `Nat.add_comm`/`Nat.add_assoc` (all far above); nothing needs it,
+        // so it goes last of the `lor` family. See
+        // `docs/plan/status/266-nat-lor-assoc.md`.
+        declare_lor_assoc_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

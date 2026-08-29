@@ -1786,6 +1786,19 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   boundary rows are *different partial applications of `f`*, where for a
   concrete operator they reduce to comparable constants.
 
+  **AND WHEN TRANSPORTING A *PROOF*, CHECK THE NESTING ORDER OF ITS CASE
+  SPLITS — COPY-PASTING A CLOSING WRAPPER SILENTLY CLOSES OVER THE WRONG
+  BINDERS.** Measured 2026-08-29 executing `lor_assoc` from `land_assoc`'s
+  shape. `land`'s hard leaf nests its two dichotomies **Y-outer / X-inner**;
+  `lor`'s nests them the **opposite** way. The copied closing wrapper therefore
+  captured the outer `X`-dichotomy's binders where it needed its own inner
+  `Y`-dichotomy's. Caught by self-review before the first compile — but it
+  would have surfaced as an opaque `TypeMismatch` naming neither dichotomy.
+
+  So a transported proof needs its **binder structure** re-derived, not only
+  its lemma names re-pointed. The tell is a wrapper referring to fvars whose
+  names match the source proof rather than the one you are writing.
+
   The rule to carry: **when transporting a lemma between these operators, ask
   first whether the fuel-exhaustion row is symmetric in the two operands.** If
   it is not, the transported statement needs sufficiency hypotheses that the

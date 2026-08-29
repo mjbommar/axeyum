@@ -1023,6 +1023,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.land_aux_assoc_of_fuel,
         p.land_assoc,
         p.lor_aux_ne_zero_of_right_ne_zero,
+        p.lor_aux_assoc_of_fuel,
+        p.lor_aux_le_add,
+        p.lor_assoc,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6501,7 +6504,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 508,
+        93 + 511,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -13853,5 +13856,86 @@ fn lor_aux_ne_zero_of_right_ne_zero_applies_symbolically_and_at_a_positive_concr
         f.k.axiom_footprint(p.lor_aux_ne_zero_of_right_ne_zero)
             .is_empty(),
         "lor_aux_ne_zero_of_right_ne_zero must rest on zero axioms"
+    );
+}
+
+/// `Nat.lor_assoc` -- `F:ml430-nat-lor-assoc-82c4d0fd`. Applies at symbolic
+/// `a`/`b`/`c` and at a concrete instance where BOTH intermediate `lor`
+/// values are NONZERO (`lor 3 5 = 7`, `lor 5 6 = 7`), exercising
+/// `lor_aux_assoc_of_fuel`'s hard leaf's fully-generic (both operands
+/// positive) sub-case via the `lor_aux_ne_zero_of_right_ne_zero` invariant
+/// rather than settling for one of the easy leaves.
+#[test]
+fn lor_assoc_applies_at_a_nonzero_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: the statement re-declared over bound variables, proved by
+    // the prelude theorem alone.
+    {
+        let name = f.name("lor_assoc_restated");
+        f.theorem(name, 3, &|d, values| {
+            let a = values[0];
+            let b = values[1];
+            let c = values[2];
+            let ab = d.const_app(p.lor, &[a, b]);
+            let lhs = d.const_app(p.lor, &[ab, c]);
+            let bc = d.const_app(p.lor, &[b, c]);
+            let rhs = d.const_app(p.lor, &[a, bc]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.lor_assoc, &[a, b, c]);
+            (stmt, proof)
+        })
+        .expect("lor_assoc must apply at symbolic a/b/c");
+    }
+
+    // Concrete: a=3 (011), b=5 (101), c=6 (110) -- lor(a,b)=7 and lor(b,c)=7,
+    // BOTH nonzero, exercising the both-positive hard leaf.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let six = f.num(6);
+        let seven = f.num(7);
+        let ab = f.const_app(p.lor, &[three, five]);
+        let lhs = f.const_app(p.lor, &[ab, six]);
+        let bc = f.const_app(p.lor, &[five, six]);
+        let rhs = f.const_app(p.lor, &[three, bc]);
+        let zero = f.zero();
+        assert!(f.k.def_eq(ab, seven), "lor 3 5 must compute to 7");
+        assert!(
+            !f.k.def_eq(ab, zero),
+            "lor 3 5 must be nonzero -- else this instance is vacuous"
+        );
+        assert!(f.k.def_eq(bc, seven), "lor 5 6 must compute to 7");
+        assert!(
+            !f.k.def_eq(bc, zero),
+            "lor 5 6 must be nonzero -- else this instance is vacuous"
+        );
+
+        let applied = f.lemma(p.lor_assoc, &[three, five, six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_assoc must apply at (a=3, b=5, c=6): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lor_assoc 3 5 6 must state Eq (lor (lor 3 5) 6) (lor 3 (lor 5 6))"
+        );
+        assert!(f.k.def_eq(lhs, seven), "lor (lor 3 5) 6 must compute to 7");
+        assert!(f.k.def_eq(rhs, seven), "lor 3 (lor 5 6) must compute to 7");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.lor_aux_assoc_of_fuel).is_empty(),
+        "lor_aux_assoc_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.lor_aux_le_add).is_empty(),
+        "lor_aux_le_add must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.lor_assoc).is_empty(),
+        "lor_assoc must rest on zero axioms"
     );
 }
