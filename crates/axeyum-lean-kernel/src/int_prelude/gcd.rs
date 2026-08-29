@@ -3351,8 +3351,16 @@ fn gcd_div_nonzero_case(
         d.nat_rewrite(natabs_cchh, cabs_natabshh, mul_cchh_lemma, g_dvd_natabs_cchh, &|d, w| {
             d.dvd(g, w)
         });
-    // g_dvd_cabs_natabshh : Nat.dvd g cabs_natabshh, defeq Nat.dvd (cabs*kk) (cabs*hh)
-    let kk_dvd_hh = cancel_dvd_of_pos(d, cabs, kk, hh, one_le_cabs, g_dvd_cabs_natabshh);
+    // g_dvd_cabs_natabshh : Nat.dvd g cabs_natabshh, defeq Nat.dvd g (cabs*hh)
+    // (`natAbs (ofNat hh) ≡ hh` is pure `iota`, but `g ≡ cabs*kk` is a PROVED
+    // fact, not defeq -- rewrite the divisor explicitly via `cabs_kk_eq_g`.)
+    let g_eq_cabs_kk = d.symm(cabs_kk, g, cabs_kk_eq_g); // Eq Nat g cabs_kk
+    let cabs_kk_dvd_cabs_natabshh =
+        d.nat_rewrite(g, cabs_kk, g_eq_cabs_kk, g_dvd_cabs_natabshh, &|d, w| {
+            d.dvd(w, cabs_natabshh)
+        });
+    // cabs_kk_dvd_cabs_natabshh : Nat.dvd cabs_kk cabs_natabshh, defeq Nat.dvd (cabs*kk) (cabs*hh)
+    let kk_dvd_hh = cancel_dvd_of_pos(d, cabs, kk, hh, one_le_cabs, cabs_kk_dvd_cabs_natabshh);
 
     // --- Antisymmetry closes it: hh = kk = g / cabs. ------------------------
     let hh_eq_kk = d.lemma(p.nat.dvd_antisymm, &[hh, kk, hh_dvd_kk, kk_dvd_hh]);
