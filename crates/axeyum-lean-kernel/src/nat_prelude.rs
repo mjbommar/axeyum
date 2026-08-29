@@ -2860,6 +2860,20 @@ pub struct NatPrelude {
     /// transported from [`Self::xor_xor_cancel_left`] via `Nat.xor_comm`
     /// twice. See `nat_prelude::xor_algebra`.
     pub xor_xor_cancel_right: NameId,
+    /// `Nat.xor_ne_zero_iff : ∀ a b, Iff (Not (Eq (xor a b) 0)) (Not (Eq a
+    /// b))` --- the last of the four sub-targets (`Nat.xor_assoc`,
+    /// `Nat.xor_xor_cancel_left`/`_right`, `Nat.xor_ne_zero_iff`) piece 4
+    /// toward `F:ml430-nat-lt-xor-cases-c43a1e85` names. Matches Lean core
+    /// `Nat.xor_ne_zero_iff : x ^^^ y ≠ 0 ↔ x ≠ y` (read from the pinned
+    /// Batteries checkout, `Batteries/Data/Nat/Bitwise/Lemmas.lean:68`, not
+    /// Mathlib-authored). Built via `mt` (modus tollens) applied twice to a
+    /// forward corollary (`Eq (xor a b) 0 → Eq a b`, a direct consequence of
+    /// `Nat.eq_of_testBit_eq` + `Nat.testBit_xor`, needing no cancel lemma)
+    /// and a reverse corollary (`Eq a b → Eq (xor a b) 0`, via a new
+    /// `Nat.xor` self-cancellation-to-zero argument) --- NOT via an `Iff` of
+    /// `xor_eq_zero_iff`, since `mt` already produces both `Not`-`Not`
+    /// directions directly. See `nat_prelude::xor_algebra`.
+    pub xor_ne_zero_iff: NameId,
     /// `Nat.lt_two_cases : ∀ r, Lt r 2 → Or (Eq r 0) (Eq r 1)` — the
     /// propositional form of the two-way bounded split. See
     /// `nat_prelude::rec_agreement`.
@@ -3814,6 +3828,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             xor_assoc: kernel.name_str(nat, "xor_assoc"),
             xor_xor_cancel_left: kernel.name_str(nat, "xor_xor_cancel_left"),
             xor_xor_cancel_right: kernel.name_str(nat, "xor_xor_cancel_right"),
+            xor_ne_zero_iff: kernel.name_str(nat, "xor_ne_zero_iff"),
             lt_two_cases: kernel.name_str(nat, "lt_two_cases"),
             mod_two_eq_zero_or_one: kernel.name_str(nat, "mod_two_eq_zero_or_one"),
             bitwise_aux_eq_land_aux: kernel.name_str(nat, "bitwise_aux_eq_land_aux"),
