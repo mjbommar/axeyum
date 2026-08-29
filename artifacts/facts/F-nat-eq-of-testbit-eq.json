@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-eq-of-testbit-eq",
+  "title": "two naturals with the same bits at every index are equal",
+  "statement": "For every natural m, n: if testBit(m, i) equals testBit(n, i) for every i, then m equals n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 x2) (AxNat.testBit x1 x2))) -> Eq.{1} AxNat x0 x1)))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-testbit-succ",
+    "F:nat-zero-of-testbit-eq-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.eq_of_testBit_eq",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.eq_of_testBit_eq",
+      "supports": "Nat.eq_of_testBit_eq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- eq_of_testBit_eq 2>/dev/null | grep -Ec '^Nat\\.eq_of_testBit_eq[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab, per this ledger's own grep-dialect gotcha. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "compute-Nat.eq_of_testBit_eq",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.eq_of_testBit_eq",
+      "supports": "At a concrete REFLEXIVE instance (m = n = 6, bits trivially equal via refl at every i), the theorem's conclusion def-eqs to Eq 6 6 and NOT to the negative control Eq 6 7; and the theorem re-derives against a genuinely free (m, n) pair with an assumed (not derivable) bit-equality hypothesis, not merely a concrete instance.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::eq_of_test_bit_eq_applies_at_a_concrete_reflexive_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "A concrete instantiation alone can hide a defect a symbolic build exposes (and vice versa), so both are checked. A genuinely DISCRIMINATING concrete instance is not available for this statement without first proving what it proves (two distinct naturals cannot honestly be given the same bits without deriving m = n), so the concrete leg instead uses the REFLEXIVE case (m = n) with a negative control on the CONCLUSION (Eq 6 6, not Eq 6 7), and the symbolic leg is the one that exercises the theorem's real content -- it type-checks against a genuinely free (m, n) pair carrying only an ASSUMED bit-equality hypothesis, never derived from m = n."
+    },
+    {
+      "id": "footprint-Nat.eq_of_testBit_eq",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-xor-algebra",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis generalizes `F:nat-zero-of-testbit-eq-zero` (`binary.rs`'s `Nat.zero_of_testBit_eq_zero`, the ONE-SIDED case \"all bits zero implies the number is zero\") to the general two-value form. No `ml430` fact for this exact statement was found in the ledger, and no such general extensionality statement appears in `Mathlib/Data/Nat/Bitwise.lean` at the pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f` under this or a related name, so it is registered as a new local fact rather than a flip of a pre-registered mirror.\n\nBuilt toward piece 4 of the 4 pieces `docs/plan/status/260-nat-lt-xor-cases.md` named as blocking `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.xor_assoc`, `Nat.xor_xor_cancel_left`/`_right`, `Nat.xor_ne_zero_iff`) -- combined with the already-landed `Nat.testBit_xor` (`F:nat-testbit-xor`, piece 1) and a `Bool.rec` case split on `xor_bit`'s Boolean algebra, this extensionality lemma is intended to close each of the three by reducing a value-level xor identity to a per-bit one. NONE of those three are declared by this fact or by the lane that produced it -- see `docs/plan/status/264-nat-xor-algebra.md` for the exact remaining shape, time-boxed out this session.\n\nProved by induction on a FUEL `k` bounding `m` (the same \"generalize over an outer bound, induct on the fuel\" device `rec_agreement.rs`'s fuel-irrelevance lemmas and `testbit_bitwise.rs`'s own index/value recursion bridge use), with motive `P(k) := forall n, forall m, Le m k -> (forall i, testBit m i = testBit n i) -> Eq m n`. The base case (`k = 0`) forces `m = 0` via `le_antisymm`/`zero_le`, then the bit hypothesis at `m := 0` forces every bit of `n` to be `0` too (via `test_bit_of_zero` and `zero_of_testBit_eq_zero`), giving `n = 0 = m`. The step case (`k = succ pk`) case-splits on `m` (`cases_zero_succ`, folding the `Le`/bit hypotheses into the per-case motive rather than pre-introducing them, per that helper's own documented device for a hypothesis a caller wants specialized per branch); at `m = succ pm`, the bit-0 hypothesis gives `mod (succ pm) 2 = mod n 2` (`testBit _ 0` is `refl`-defeq to `mod _ 2`) and the bit-(succ j) hypotheses give the IH's own hypothesis at the halved operands (`testBit _ (succ j)` is `refl`-defeq to `testBit (_ / 2) j`), bounded via `half_le_predecessor_of_succ`; the IH's conclusion is then combined with the bit-0 equation and the Euclidean reconstruction identity `x = 2*(x/2) + x%2` (`div_mod_exec`/`and_left`, the same identity `testbit_bitwise.rs`'s `div_two_mul_add_of_lt` is built from the other half of) on both sides to give `succ pm = n`. Instantiating the fuel bound at `k := m` itself (`le_refl`) turns `P(m)` directly into the public two-argument statement. See `nat_prelude/xor_algebra.rs`'s module doc for the full derivation."
+}

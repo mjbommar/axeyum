@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-xor-assoc",
+  "title": "xor is associative",
+  "statement": "For every natural a, b, c: xor(xor(a, b), c) equals xor(a, xor(b, c)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.xor (AxNat.xor x0 x1) x2) (AxNat.xor x0 (AxNat.xor x1 x2)))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-testbit-xor",
+    "F:nat-eq-of-testbit-eq"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.xor_assoc",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.xor_assoc",
+      "supports": "Nat.xor_assoc is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- xor_assoc 2>/dev/null | grep -Ec '^Nat\\.xor_assoc[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab, per this ledger's own grep-dialect gotcha. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "compute-Nat.xor_assoc",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.xor_assoc",
+      "supports": "At the discriminating concrete triple (a, b, c) = (1, 2, 4) (three non-overlapping bits), both xor(xor(1,2),4) and xor(1,xor(2,4)) def-eq to 7, and the theorem's conclusion does NOT def-eq to the negative control 6; and the theorem re-derives against a genuinely free (a, b, c) triple, not merely a concrete instance.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::xor_assoc_applies_at_a_concrete_discriminating_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "A concrete instantiation alone can hide a defect a symbolic build exposes (and vice versa), so both are checked. (1, 2, 4) is chosen because its bits do not overlap, so both associations compute to the same non-trivial value (7) rather than degenerating to 0, giving the negative control (6) something to discriminate against."
+    },
+    {
+      "id": "footprint-Nat.xor_assoc",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-xor-algebra",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nNo `ml430` fact for this exact statement was found in the ledger. Read directly at the pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`, `Mathlib/Data/Nat/Bitwise.lean` cites `Nat.xor_assoc`/`Nat.xor_xor_cancel_left`/`Nat.xor_xor_cancel_right`/`Nat.xor_ne_zero_iff` in `xor_trichotomy`'s proof but does not define them there -- they are Lean4 core lemmas about `Nat.xor`/`^^^`, not Mathlib-authored, so no `ml430` mirror fact exists to flip; this lands as a new local fact instead. Every operator and codomain involved (`Nat.xor`, `Le`, `Eq`) matches Mathlib's, unlike the six sibling `testBit`-family mirrors a `Bool`-valued codomain blocked.\n\nBuilt toward piece 4 of the 4 pieces `docs/plan/status/260-nat-lt-xor-cases.md` named as blocking `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`). This is the FIRST of the four sub-targets Mathlib's own `xor_trichotomy` proof composes (`xor_assoc`, `xor_xor_cancel_left`, `xor_xor_cancel_right`, `xor_ne_zero_iff`); the other three are NOT built by this fact -- see `docs/plan/status/264-nat-xor-algebra.md` for the exact remaining shape.\n\nProved WITHOUT any fuel-level case analysis on `bitwiseAux` and WITHOUT the zero-propagation-lemma route `Nat.land_assoc` uses (which a prior sizing warned might not transport, and turned out to be unnecessary here): `Nat.testBit_xor` (`F:nat-testbit-xor`) is applied TWICE per side to reduce the value-level identity to a per-bit one -- `testBit (xor (xor a b) c) i` unfolds (via `testBit_xor` at `(xor a b, c)` then at `(a, b)`) to `xor_bit (xor_bit (testBit a i) (testBit b i)) (testBit c i)`, and symmetrically for the right-hand side -- and then `Nat.eq_of_testBit_eq` (`F:nat-eq-of-testbit-eq`) turns per-bit agreement back into a value-level equation, given a proof that `xor_bit` itself associates.\n\n`xor_bit`'s associativity is proved at the `Bool` level and lifted: `xor_bit(x, y) := bool_select_nat (xor_fn (beq x 1) (beq y 1)) 1 0` depends on `x`, `y` ONLY through whether each equals `1`, so the identity holds for ALL `x, y, z : Nat`, not merely bits in `{0, 1}` -- no `test_bit_le_one` restriction needed anywhere. The underlying `Bool` fact (`xor_fn (xor_fn a b) c = xor_fn a (xor_fn b c)`) is confirmed by a Python truth-table simulation over all 8 Boolean triples before any Lean-kernel term was built, then proved by a shallow `Bool.rec` case split: splitting on the OUTER argument alone collapses `a = false` to `refl` for ANY `b, c` (since `xor_fn false w` reduces to `w` regardless of `w`'s shape, the outer `Bool.rec` scrutinee being the LITERAL `false`), so only 4 of the 8 leaves need an explicit split (one more level on `b`, then `c`, only inside the `a = true` branch). Lifting this `Bool`-level fact through `xor_bit`'s `Nat` decoder needs a round-trip lemma (`beq (bool_select_nat cond 1 0) 1 = cond`) plus a cross-carrier congruence (`h : Eq Bool a b`, `f : Bool -> Nat` gives `Eq Nat (f a) (f b)`) that `NatOps::congr` cannot supply on its own, since that helper's `eq_motive`/`transport` hardcode the `Nat` carrier for the HYPOTHESIS slot too -- built here as `congr_bool_to_nat` via `bool_eq_motive`/`bool_transport` instead, with the CONCLUSION built at `Nat`.\n\nOne genuine defect this construction surfaced and fixed before landing: `Eq.refl.{1} Bool sel` was built for `sel := digitize(cond)` (a `Nat`-typed value, `bool_select_nat`'s own output), which is ill-typed -- the round-trip lemma's reflexivity witness needs to be of `beq (digitize cond) 1` (the `Bool`-typed re-encoding), not of `digitize cond` itself. Isolated via a throwaway `#[cfg(test)]` probe module calling each helper directly (`beq_digitize_one` alone, `bool_xor_assoc` alone, `congr_bool_to_nat` alone, `xor_bit_assoc` alone) before wiring the full `declare_xor_assoc`, per the standing rule that a bisected probe finds a `TypeMismatch` faster than reading it whole; the probe module was removed before this fact was recorded, leaving only the corrected `beq_digitize_one`/`bool_xor_assoc`/`congr_bool_to_nat`/`xor_bit_assoc` helpers in `xor_algebra.rs`."
+}
