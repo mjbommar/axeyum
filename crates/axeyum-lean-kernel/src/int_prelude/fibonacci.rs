@@ -2253,3 +2253,493 @@ fn fib_add_down_step(d: &mut IntDev<'_>, m: ExprId, a: ExprId, b: ExprId) -> Exp
     let inner = d.lam_fv(h_fv, hyp_ty, pair);
     d.lam_fv(n_fv, int_ty, inner)
 }
+
+// ============================================================================
+// The subtraction bridge: `Int.fib_two_mul` and `Int.fib_two_mul_add_two`
+// need `Int.fib_rec`'s recurrence turned into a difference (`fib(n-1) =
+// fib(n+1) - fib n`), and every other addition-formula proof in this file
+// deliberately stays inside `add`/`mul` and never forms one. This is the
+// first place that changes.
+// ============================================================================
+
+/// `h : Eq Int (add a b) c  ⊢  Eq Int b (sub c a)` — `eq_sub_of_add_eq_left`.
+///
+/// From `a + b = c` derive `b = c - a`. The mirror image of
+/// [`add_right_cancel`] (which needs the SAME addend on both sides to
+/// cancel, and concludes an equation between the two remaining terms); this
+/// needs only one occurrence of `a` and concludes a DIFFERENCE. There is no
+/// `eq_sub_of_add_eq`-shaped lemma anywhere in `int_prelude/` (`eq_add_sub`
+/// in `modeq.rs` is a different identity, `x + (y-x) = y`, private to that
+/// module and built for a different purpose).
+///
+/// Route: commute `a+b` to `b+a` (so `h`, transported, reads `b+a = c`);
+/// `add_neg_cancel_right b a : (b+a)+(-a) = b`; substituting `c` for `b+a`
+/// gives `c+(-a) = b`, i.e. (folding `Int.sub`) `sub c a = b`; flip.
+fn eq_sub_of_add_eq_left(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, h: ExprId) -> ExprId {
+    let p = d.int();
+    let ab = d.iadd(a, b);
+    let ba = d.iadd(b, a);
+    let comm = d.lemma(p.add_comm, &[a, b]); // Eq(add a b, add b a)
+    let comm_rev = d.isymm(ab, ba, comm); // Eq(add b a, add a b)
+    let h_ba = d.itrans(ba, ab, c, comm_rev, h); // Eq(add b a, c)
+
+    let neg_a = d.ineg(a);
+    let cancel = d.lemma(p.add_neg_cancel_right, &[b, a]); // Eq((b+a)+(-a), b)
+    let ba_neg_a = d.iadd(ba, neg_a);
+    let c_neg_a = d.iadd(c, neg_a); // == sub c a, unfolded
+    let congr_step = d.icongr(ba, c, h_ba, &|d, t| d.iadd(t, neg_a)); // Eq(ba_neg_a, c_neg_a)
+    let back = d.isymm(ba_neg_a, b, cancel); // Eq(b, ba_neg_a)
+    d.itrans(b, ba_neg_a, c_neg_a, back, congr_step) // Eq(b, sub c a)
+}
+
+/// `Eq Int (mul (ofNat 2) t) (add t t)` — `2*t = t+t`. There is no
+/// `right_distrib` in this prelude (`left_distrib` only), so this goes
+/// through `mul_comm` first: `2*t = t*2 = t*(1+1) = t*1+t*1 = t+t`. The
+/// `2 ≡ 1+1` step is a pure reduction (`Int.add` on two `ofNat`s, the trick
+/// `plus_two_spelling` already uses), not a named lemma.
+fn mul_two_eq_add_self(d: &mut IntDev<'_>, t: ExprId) -> ExprId {
+    let p = d.int();
+    let two_nat = d.num(2);
+    let two = d.of_nat(two_nat);
+    let t_two_l = d.imul(two, t);
+    let t_two_r = d.imul(t, two);
+    let comm = d.lemma(p.mul_comm, &[two, t]); // Eq(mul two t, mul t two)
+
+    let one = d.ione();
+    let dist = d.lemma(p.left_distrib, &[t, one, one]);
+    // dist's real type: Eq(mul t (add one one), add(mul t one)(mul t one));
+    // `two` and `add one one` are defeq (both reduce to `ofNat 2`).
+    let mt1 = d.imul(t, one);
+    let sum_mt1 = d.iadd(mt1, mt1);
+
+    let mo = d.lemma(p.mul_one, &[t]); // Eq(mul t one, t)
+    let t_mt1 = d.iadd(t, mt1);
+    let after_mo1 = d.icongr(mt1, t, mo, &|d, x| d.iadd(x, mt1)); // Eq(sum_mt1, t_mt1)
+    let tt = d.iadd(t, t);
+    let after_mo2 = d.icongr(mt1, t, mo, &|d, x| d.iadd(t, x)); // Eq(t_mt1, tt)
+
+    let (_, chain) = d.ichain(
+        t_two_l,
+        &[
+            (t_two_r, comm),
+            (sum_mt1, dist),
+            (t_mt1, after_mo1),
+            (tt, after_mo2),
+        ],
+    );
+    chain
+}
+
+/// `Eq Int (add (sub x y) x) (sub (add x x) y)` — `(x-y)+x = (x+x)-y`. Ring
+/// rearrangement, unfolding `sub` and folding it back (the `sub.rs` idiom):
+/// `(x+(-y))+x = x+(x+(-y))` (`add_comm`) `= (x+x)+(-y)` (`add_assoc`,
+/// reversed).
+fn add_sub_self_left(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
+    let p = d.int();
+    let neg_y = d.ineg(y);
+    let x_negy = d.iadd(x, neg_y); // sub x y, unfolded
+    let start = d.iadd(x_negy, x);
+
+    let x_x_negy = d.iadd(x, x_negy);
+    let s1 = d.lemma(p.add_comm, &[x_negy, x]); // Eq(add x_negy x, add x x_negy)
+
+    let xx = d.iadd(x, x);
+    let xx_negy = d.iadd(xx, neg_y);
+    let assoc = d.lemma(p.add_assoc, &[x, x, neg_y]); // Eq((x+x)+(-y), x+(x+(-y)))
+    let s2 = d.isymm(xx_negy, x_x_negy, assoc);
+
+    let (_, chain) = d.ichain(start, &[(x_x_negy, s1), (xx_negy, s2)]);
+    chain
+}
+
+/// `Eq Int (add p (add q p)) (add (add p p) q)` — `p+(q+p) = (p+p)+q`.
+/// Another ring rearrangement of the same flavour as [`add_sub_self_left`]:
+/// `p+(q+p) = p+(p+q)` (`add_comm`) `= (p+p)+q` (`add_assoc`, reversed).
+fn add_p_qp_eq_pp_q(d: &mut IntDev<'_>, p_: ExprId, q_: ExprId) -> ExprId {
+    let p = d.int();
+    let qp = d.iadd(q_, p_);
+    let start = d.iadd(p_, qp);
+
+    let pq = d.iadd(p_, q_);
+    let p_pq = d.iadd(p_, pq);
+    let s1 = {
+        let comm = d.lemma(p.add_comm, &[q_, p_]); // Eq(add q_ p_, add p_ q_)
+        d.icongr(qp, pq, comm, &|d, t| d.iadd(p_, t))
+    };
+
+    let pp = d.iadd(p_, p_);
+    let pp_q = d.iadd(pp, q_);
+    let s2 = {
+        let assoc = d.lemma(p.add_assoc, &[p_, p_, q_]); // Eq((p+p)+q, p+(p+q))
+        d.isymm(pp_q, p_pq, assoc)
+    };
+
+    let (_, chain) = d.ichain(start, &[(p_pq, s1), (pp_q, s2)]);
+    chain
+}
+
+/// `Eq Int (fib (add (sub k one) two)) (fib (add k one))` — the index bridge
+/// `(k-1)+2 = k+1`, lifted through `fib`. Same `add_assoc` computation
+/// [`declare_fib_add`]'s `P 1` base case uses inline (there at `m`, generic
+/// here), extracted because [`fib_pred_eq_sub`] needs it too.
+fn fib_shift_minus_one_plus_two(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
+    let p = d.int();
+    let one = d.ione();
+    let neg_one = d.ineg(one);
+    let two_nat = d.num(2);
+    let two = d.of_nat(two_nat);
+    let k_minus = d.isub(k, one);
+    let kk_two = d.iadd(k_minus, two);
+    let idx_two = d.lemma(p.add_assoc, &[k, neg_one, two]); // Eq((k+(-1))+2, k+((-1)+2))
+    let k_one = d.iadd(k, one);
+    fib_congr(d, kk_two, k_one, idx_two)
+}
+
+/// `Eq Int (fib (sub k one)) (sub (fib (add k one)) (fib k))` — `fib(k-1) =
+/// fib(k+1) - fib(k)`, the recurrence read as a subtraction. Built from
+/// [`declare_fib_rec`] at `k-1` (which gives `fib((k-1)+2) = fib((k-1)+1) +
+/// fib(k-1)`), the two index bridges [`fib_shift_minus_one_plus_two`] and
+/// [`sub_add_cancel`] (already built for [`declare_fib_add`]: `(k-1)+1 =
+/// k`), and [`eq_sub_of_add_eq_left`] to turn the resulting addition into
+/// the difference both `fib_two_mul*` statements are stated with.
+fn fib_pred_eq_sub(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
+    let p = d.int();
+    let one = d.ione();
+    let two_nat = d.num(2);
+    let two = d.of_nat(two_nat);
+    let k_minus = d.isub(k, one);
+
+    let rec_at = d.lemma(p.fib_rec, &[k_minus]);
+    // rec_at : Eq(fib((k-1)+2), add(fib((k-1)+1), fib(k-1)))
+    let kk2 = d.iadd(k_minus, two);
+    let kk1 = d.iadd(k_minus, one);
+    let f_kk2 = fibt(d, kk2);
+    let f_kk1 = fibt(d, kk1);
+    let f_km1 = fibt(d, k_minus);
+    let rec_rhs = d.iadd(f_kk1, f_km1);
+
+    let k_one = d.iadd(k, one);
+    let f_k1 = fibt(d, k_one);
+    let bridge_two = fib_shift_minus_one_plus_two(d, k); // Eq(f_kk2, f_k1)
+    let back_two = d.isymm(f_kk2, f_k1, bridge_two); // Eq(f_k1, f_kk2)
+
+    let f_k = fibt(d, k);
+    let cancel_k1 = sub_add_cancel(d, k); // Eq(kk1, k)
+    let bridge_one = fib_congr(d, kk1, k, cancel_k1); // Eq(f_kk1, f_k)
+    let sum_after = d.iadd(f_k, f_km1);
+    let lift_sum = d.icongr(f_kk1, f_k, bridge_one, &|d, t| d.iadd(t, f_km1)); // Eq(rec_rhs, sum_after)
+
+    let (_, forward) = d.ichain(
+        f_k1,
+        &[(f_kk2, back_two), (rec_rhs, rec_at), (sum_after, lift_sum)],
+    );
+    // forward : Eq(f_k1, add f_k f_km1)
+    let h_ba = d.isymm(f_k1, sum_after, forward); // Eq(add f_k f_km1, f_k1)
+    eq_sub_of_add_eq_left(d, f_k, f_km1, f_k1, h_ba)
+    // result : Eq(f_km1, sub f_k1 f_k), i.e. fib(k-1) = fib(k+1) - fib(k)
+}
+
+// ============================================================================
+// `Int.fib_two_mul` : `fib (2*n) = fib n * (2*fib(n+1) - fib n)`.
+// ============================================================================
+
+/// The statement, at a given `n`.
+fn fib_two_mul_stmt(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let two_nat = d.num(2);
+    let two = d.of_nat(two_nat);
+    let idx = d.imul(two, n);
+    let lhs = fibt(d, idx);
+
+    let one = d.ione();
+    let n1 = d.iadd(n, one);
+    let a = fibt(d, n);
+    let bp1 = fibt(d, n1);
+    let two_bp1 = d.imul(two, bp1);
+    let inner = d.isub(two_bp1, a);
+    let rhs = d.imul(a, inner);
+    d.ieq(lhs, rhs)
+}
+
+/// `Int.fib_two_mul : ∀ n, Eq Int (fib (mul two n)) (mul (fib n)
+/// (sub (mul two (fib (add n one))) (fib n)))` — Mathlib's `Int.fib_two_mul`.
+///
+/// No induction: [`declare_fib_add`] at `(n, n)` already gives
+/// `fib(n+n) = fib(n-1)*fib n + fib n*fib(n+1)`; [`fib_pred_eq_sub`]
+/// rewrites the `fib(n-1)` factor as `fib(n+1) - fib n`; the rest is ring
+/// algebra (`mul_comm`, `Int.mul_sub`, `left_distrib`,
+/// [`add_sub_self_left`], [`mul_two_eq_add_self`]) to fold the result into
+/// the `2*fib(n+1) - fib n` shape the statement names, plus
+/// [`mul_two_eq_add_self`] again to bridge the index `2*n` to `n+n`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_fib_two_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.fib_two_mul, 1, &|d, v| {
+        let n = v[0];
+        let stmt = fib_two_mul_stmt(d, n);
+
+        let one = d.ione();
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let a = fibt(d, n);
+        let n1 = d.iadd(n, one);
+        let bp1 = fibt(d, n1);
+        let n_minus = d.isub(n, one);
+        let bm1 = fibt(d, n_minus);
+        let idx_nn = d.iadd(n, n);
+        let f_nn = fibt(d, idx_nn);
+
+        // Step 1: `Int.fib_add n n`.
+        let h1 = d.lemma(p.fib_add, &[n, n]);
+        let mul_bm1_a = d.imul(bm1, a);
+        let mul_a_bp1 = d.imul(a, bp1);
+        let h1_rhs = d.iadd(mul_bm1_a, mul_a_bp1);
+
+        // Step 2/3: substitute `fib(n-1) = fib(n+1) - fib n`.
+        let hc = fib_pred_eq_sub(d, n); // Eq(bm1, sub bp1 a)
+        let sub_bp1_a = d.isub(bp1, a);
+        let mul_sub_a = d.imul(sub_bp1_a, a);
+        let sub_lift = d.icongr(bm1, sub_bp1_a, hc, &|d, t| d.imul(t, a)); // Eq(mul_bm1_a, mul_sub_a)
+        let h2_rhs = d.iadd(mul_sub_a, mul_a_bp1);
+        let lift_add = d.icongr(mul_bm1_a, mul_sub_a, sub_lift, &|d, t| d.iadd(t, mul_a_bp1));
+        let h2 = d.itrans(f_nn, h1_rhs, h2_rhs, h1, lift_add);
+
+        // Step 4: `mul (sub bp1 a) a = mul a (sub bp1 a) = sub (mul a bp1) (mul a a)`.
+        let x1 = mul_a_bp1;
+        let y1 = d.imul(a, a);
+        let mul_a_sub = d.imul(a, sub_bp1_a);
+        let comm1 = d.lemma(p.mul_comm, &[sub_bp1_a, a]); // Eq(mul_sub_a, mul_a_sub)
+        let sub_x1_y1 = d.isub(x1, y1);
+        let mulsub1 = d.lemma(p.mul_sub, &[a, bp1, a]); // Eq(mul_a_sub, sub_x1_y1)
+        let (_, step4) = d.ichain(mul_sub_a, &[(mul_a_sub, comm1), (sub_x1_y1, mulsub1)]);
+        let h3_rhs = d.iadd(sub_x1_y1, x1);
+        let lift4 = d.icongr(mul_sub_a, sub_x1_y1, step4, &|d, t| d.iadd(t, x1));
+        let h3 = d.itrans(f_nn, h2_rhs, h3_rhs, h2, lift4);
+
+        // Step 5: `add (sub x1 y1) x1 = sub (add x1 x1) y1`.
+        let step5 = add_sub_self_left(d, x1, y1);
+        let add_x1x1 = d.iadd(x1, x1);
+        let h4_rhs = d.isub(add_x1x1, y1);
+        let h4 = d.itrans(f_nn, h3_rhs, h4_rhs, h3, step5);
+
+        // Step 6: `add x1 x1 = mul a (mul two bp1)`.
+        let add_bp1bp1 = d.iadd(bp1, bp1);
+        let mul_a_addbp1bp1 = d.imul(a, add_bp1bp1);
+        let ld1 = d.lemma(p.left_distrib, &[a, bp1, bp1]); // Eq(mul_a_addbp1bp1, add_x1x1)
+        let s1 = d.isymm(mul_a_addbp1bp1, add_x1x1, ld1);
+        let mts = mul_two_eq_add_self(d, bp1); // Eq(mul two bp1, add_bp1bp1)
+        let mul_two_bp1 = d.imul(two, bp1);
+        let mts_back = d.isymm(mul_two_bp1, add_bp1bp1, mts); // Eq(add_bp1bp1, mul_two_bp1)
+        let mul_a_2bp1 = d.imul(a, mul_two_bp1);
+        let s2 = d.icongr(add_bp1bp1, mul_two_bp1, mts_back, &|d, t| d.imul(a, t));
+        let (_, step6) = d.ichain(add_x1x1, &[(mul_a_addbp1bp1, s1), (mul_a_2bp1, s2)]);
+        let h5_rhs = d.isub(mul_a_2bp1, y1);
+        let lift6 = d.icongr(add_x1x1, mul_a_2bp1, step6, &|d, t| d.isub(t, y1));
+        let h5 = d.itrans(f_nn, h4_rhs, h5_rhs, h4, lift6);
+
+        // Step 7: fold back via `mul_sub`.
+        let sub_2bp1_a = d.isub(mul_two_bp1, a);
+        let mul_a_final = d.imul(a, sub_2bp1_a);
+        let mulsub2 = d.lemma(p.mul_sub, &[a, mul_two_bp1, a]); // Eq(mul_a_final, h5_rhs)
+        let step7 = d.isymm(mul_a_final, h5_rhs, mulsub2);
+        let h6 = d.itrans(f_nn, h5_rhs, mul_a_final, h5, step7);
+
+        // Step 8: bridge `fib (mul two n)` to `fib (add n n)`.
+        let bridge0 = mul_two_eq_add_self(d, n); // Eq(mul two n, add n n)
+        let mul_two_n = d.imul(two, n);
+        let fib_idx = fibt(d, mul_two_n);
+        let bridge0_fib = fib_congr(d, mul_two_n, idx_nn, bridge0); // Eq(fib_idx, f_nn)
+        let final_proof = d.itrans(fib_idx, f_nn, mul_a_final, bridge0_fib, h6);
+
+        (stmt, final_proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Int.fib_two_mul_add_two` : `fib (2*n+2) = fib(n+1) * (2*fib n + fib(n+1))`.
+// ============================================================================
+
+/// The statement, at a given `n`.
+fn fib_two_mul_add_two_stmt(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let two_nat = d.num(2);
+    let two = d.of_nat(two_nat);
+    let mul_two_n = d.imul(two, n);
+    let idx = d.iadd(mul_two_n, two);
+    let lhs = fibt(d, idx);
+
+    let one = d.ione();
+    let n1 = d.iadd(n, one);
+    let a = fibt(d, n);
+    let bp1 = fibt(d, n1);
+    let two_a = d.imul(two, a);
+    let inner = d.iadd(two_a, bp1);
+    let rhs = d.imul(bp1, inner);
+    d.ieq(lhs, rhs)
+}
+
+/// `Int.fib_two_mul_add_two : ∀ n, Eq Int (fib (add (mul two n) two))
+/// (mul (fib (add n one)) (add (mul two (fib n)) (fib (add n one))))` —
+/// Mathlib's `Int.fib_two_mul_add_two`.
+///
+/// Same shape of proof as [`declare_fib_two_mul`], one index up:
+/// [`declare_fib_add`] at `(n+1, n+1)` gives `fib((n+1)+(n+1)) =
+/// fib n * fib(n+1) + fib(n+1) * fib(n+2)`, [`declare_fib_rec`] at `n`
+/// rewrites `fib(n+2)` as `fib(n+1) + fib n` (an ADDITION this time, not a
+/// subtraction — [`fib_pred_eq_sub`] is not needed here), and the rest is
+/// the same ring algebra plus [`add_p_qp_eq_pp_q`] (the addition-side
+/// analogue of [`add_sub_self_left`]) to reach the
+/// `fib(n+1)*(2*fib n + fib(n+1))` shape, plus index bridges for
+/// `(n+1)-1 = n`, `(n+1)+1 = n+2` (`Int.add_neg_cancel_right`,
+/// [`plus_two_spelling`]) and `(n+1)+(n+1) = 2n+2` ([`add_regroup_four`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_fib_two_mul_add_two(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.fib_two_mul_add_two, 1, &|d, v| {
+        let n = v[0];
+        let stmt = fib_two_mul_add_two_stmt(d, n);
+
+        let one = d.ione();
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let a = fibt(d, n);
+        let n1 = d.iadd(n, one);
+        let bp1 = fibt(d, n1);
+        let n1_1 = d.iadd(n1, n1);
+        let f_n1n1 = fibt(d, n1_1);
+
+        // Step 1: `Int.fib_add (n+1) (n+1)`, then bridge both index shifts.
+        let h1 = d.lemma(p.fib_add, &[n1, n1]);
+        let n1_minus = d.isub(n1, one);
+        let f_n1_minus = fibt(d, n1_minus);
+        let n1_plus = d.iadd(n1, one);
+        let f_n1_plus = fibt(d, n1_plus);
+        let mul_fn1m_bp1 = d.imul(f_n1_minus, bp1);
+        let mul_bp1_fn1p = d.imul(bp1, f_n1_plus);
+        let h1_rhs = d.iadd(mul_fn1m_bp1, mul_bp1_fn1p);
+
+        // Bridge `(n+1)-1 = n`.
+        let cancel_a = d.lemma(p.add_neg_cancel_right, &[n, one]); // Eq((n+1)+(-1), n) ~ Eq(n1_minus, n)
+        let bridge_a = fib_congr(d, n1_minus, n, cancel_a); // Eq(f_n1_minus, a)
+        let mul_a_bp1 = d.imul(a, bp1);
+        let lift_a = d.icongr(f_n1_minus, a, bridge_a, &|d, t| d.imul(t, bp1)); // Eq(mul_fn1m_bp1, mul_a_bp1)
+
+        // Bridge `(n+1)+1 = n+2`.
+        let n_two = d.iadd(n, two);
+        let f_n2 = fibt(d, n_two);
+        let plus_two = plus_two_spelling(d, n); // Eq(n1_plus, n_two) [via defeq (1+1)=two]
+        let bridge_b = fib_congr(d, n1_plus, n_two, plus_two); // Eq(f_n1_plus, f_n2)
+        let mul_bp1_fn2 = d.imul(bp1, f_n2);
+        let lift_b = d.icongr(f_n1_plus, f_n2, bridge_b, &|d, t| d.imul(bp1, t)); // Eq(mul_bp1_fn1p, mul_bp1_fn2)
+
+        let mid_rhs = d.iadd(mul_a_bp1, mul_bp1_fn1p);
+        let step_a = d.icongr(mul_fn1m_bp1, mul_a_bp1, lift_a, &|d, t| {
+            d.iadd(t, mul_bp1_fn1p)
+        });
+        let h2_rhs = d.iadd(mul_a_bp1, mul_bp1_fn2);
+        let step_b = d.icongr(mul_bp1_fn1p, mul_bp1_fn2, lift_b, &|d, t| {
+            d.iadd(mul_a_bp1, t)
+        });
+        let (_, subst) = d.ichain(h1_rhs, &[(mid_rhs, step_a), (h2_rhs, step_b)]);
+        let h2 = d.itrans(f_n1n1, h1_rhs, h2_rhs, h1, subst);
+
+        // Step 2: `fib_rec n` rewrites `fib(n+2) = fib(n+1) + fib n`.
+        let rec_n = d.lemma(p.fib_rec, &[n]); // Eq(f_n2, add bp1 a)
+        let add_bp1_a = d.iadd(bp1, a);
+        let mul_bp1_addbp1a = d.imul(bp1, add_bp1_a);
+        let lift_rec = d.icongr(f_n2, add_bp1_a, rec_n, &|d, t| d.imul(bp1, t)); // Eq(mul_bp1_fn2, mul_bp1_addbp1a)
+        let h3_rhs = d.iadd(mul_a_bp1, mul_bp1_addbp1a);
+        let lift_rec_add = d.icongr(mul_bp1_fn2, mul_bp1_addbp1a, lift_rec, &|d, t| {
+            d.iadd(mul_a_bp1, t)
+        });
+        let h3 = d.itrans(f_n1n1, h2_rhs, h3_rhs, h2, lift_rec_add);
+
+        // Step 3: `mul bp1 (add bp1 a) = add (mul bp1 bp1) (mul bp1 a)`.
+        let q_ = d.imul(bp1, bp1);
+        let p_prime = d.imul(bp1, a); // "P'" = mul bp1 a
+        let dist1 = d.lemma(p.left_distrib, &[bp1, bp1, a]); // Eq(mul_bp1_addbp1a, add q_ p_prime)
+        let sum_q_pprime = d.iadd(q_, p_prime);
+        let h4_rhs = d.iadd(mul_a_bp1, sum_q_pprime);
+        let lift_dist = d.icongr(mul_bp1_addbp1a, sum_q_pprime, dist1, &|d, t| {
+            d.iadd(mul_a_bp1, t)
+        });
+        let h4 = d.itrans(f_n1n1, h3_rhs, h4_rhs, h3, lift_dist);
+
+        // Step 4: convert `P' = mul bp1 a` to `P = mul a bp1` (commute) inside the inner sum.
+        let p_ = mul_a_bp1; // "P" = mul a bp1
+        let comm_p = d.lemma(p.mul_comm, &[bp1, a]); // Eq(p_prime, p_)
+        let sum_q_p = d.iadd(q_, p_);
+        let lift_comm = d.icongr(p_prime, p_, comm_p, &|d, t| d.iadd(q_, t)); // Eq(sum_q_pprime, sum_q_p)
+        let h5_rhs = d.iadd(p_, sum_q_p);
+        let lift_comm_outer = d.icongr(sum_q_pprime, sum_q_p, lift_comm, &|d, t| d.iadd(p_, t));
+        let h5 = d.itrans(f_n1n1, h4_rhs, h5_rhs, h4, lift_comm_outer);
+
+        // Step 5: `add p_ (add q_ p_) = add (add p_ p_) q_`.
+        let step5 = add_p_qp_eq_pp_q(d, p_, q_);
+        let pp = d.iadd(p_, p_);
+        let h6_rhs = d.iadd(pp, q_);
+        let h6 = d.itrans(f_n1n1, h5_rhs, h6_rhs, h5, step5);
+
+        // Step 6: `add p_ p_ = mul bp1 (mul two a)`.
+        let add_a_a = d.iadd(a, a);
+        let mul_bp1_addaa = d.imul(bp1, add_a_a);
+        let symm_comm_p = d.isymm(p_prime, p_, comm_p); // Eq(p_, p_prime)
+        let p_prime_p = d.iadd(p_prime, p_);
+        let sa = d.icongr(p_, p_prime, symm_comm_p, &|d, t| d.iadd(t, p_)); // Eq(pp, p_prime_p)
+        let p_prime_p_prime = d.iadd(p_prime, p_prime);
+        let sb = d.icongr(p_, p_prime, symm_comm_p, &|d, t| d.iadd(p_prime, t)); // Eq(p_prime_p, p_prime_p_prime)
+        let dist2 = d.lemma(p.left_distrib, &[bp1, a, a]); // Eq(mul_bp1_addaa, p_prime_p_prime)
+        let dist2_back = d.isymm(mul_bp1_addaa, p_prime_p_prime, dist2);
+        let (_, pp_to_mul) = d.ichain(
+            pp,
+            &[
+                (p_prime_p, sa),
+                (p_prime_p_prime, sb),
+                (mul_bp1_addaa, dist2_back),
+            ],
+        );
+
+        let mts = mul_two_eq_add_self(d, a); // Eq(mul two a, add_a_a)
+        let mul_two_a = d.imul(two, a);
+        let mts_back = d.isymm(mul_two_a, add_a_a, mts); // Eq(add_a_a, mul_two_a)
+        let mul_bp1_2a = d.imul(bp1, mul_two_a);
+        let sc = d.icongr(add_a_a, mul_two_a, mts_back, &|d, t| d.imul(bp1, t)); // Eq(mul_bp1_addaa, mul_bp1_2a)
+        let (_, step6) = d.ichain(pp, &[(mul_bp1_addaa, pp_to_mul), (mul_bp1_2a, sc)]);
+        let h7_rhs = d.iadd(mul_bp1_2a, q_);
+        let lift7 = d.icongr(pp, mul_bp1_2a, step6, &|d, t| d.iadd(t, q_));
+        let h7 = d.itrans(f_n1n1, h6_rhs, h7_rhs, h6, lift7);
+
+        // Step 7: fold back via `left_distrib`, reversed.
+        let two_a_bp1 = d.iadd(mul_two_a, bp1);
+        let mul_bp1_final = d.imul(bp1, two_a_bp1);
+        let dist3 = d.lemma(p.left_distrib, &[bp1, mul_two_a, bp1]); // Eq(mul_bp1_final, add mul_bp1_2a q_)
+        let step7 = d.isymm(mul_bp1_final, h7_rhs, dist3);
+        let h8 = d.itrans(f_n1n1, h7_rhs, mul_bp1_final, h7, step7);
+
+        // Step 8: bridge `(n+1)+(n+1)` to `2*n+2`.
+        let regroup = add_regroup_four(d, n, one, n, one);
+        // regroup : Eq((n+one)+(n+one), (n+n)+(one+one)) ~ Eq(n1_1, (n+n)+two)
+        let nn = d.iadd(n, n);
+        let nn_two = d.iadd(nn, two);
+        let mul_two_n = d.imul(two, n);
+        let mts_n = mul_two_eq_add_self(d, n); // Eq(mul_two_n, nn)
+        let nn_to_mtn = d.isymm(mul_two_n, nn, mts_n); // Eq(nn, mul_two_n)
+        let mtn_two = d.iadd(mul_two_n, two);
+        let lift_nn = d.icongr(nn, mul_two_n, nn_to_mtn, &|d, t| d.iadd(t, two)); // Eq(nn_two, mtn_two)
+        let (_, idx_chain) = d.ichain(n1_1, &[(nn_two, regroup), (mtn_two, lift_nn)]);
+        let f_idx = fibt(d, mtn_two);
+        let idx_fib = fib_congr(d, n1_1, mtn_two, idx_chain); // Eq(f_n1n1, f_idx)
+        let idx_fib_back = d.isymm(f_n1n1, f_idx, idx_fib); // Eq(f_idx, f_n1n1)
+        let final_proof = d.itrans(f_idx, f_n1n1, mul_bp1_final, idx_fib_back, h8);
+
+        (stmt, final_proof)
+    })?;
+    Ok(())
+}

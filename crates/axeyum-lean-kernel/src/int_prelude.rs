@@ -1168,6 +1168,17 @@ pub struct IntPrelude {
     /// since even the `m = 0` corner reads a value at a negative index. See
     /// `fibonacci.rs`'s `declare_fib_add` doc.
     pub fib_add: NameId,
+    /// `fib_two_mul : ∀ n, Eq Int (fib (mul two n)) (mul (fib n)
+    /// (sub (mul two (fib (add n one))) (fib n)))` — Mathlib's
+    /// `Int.fib_two_mul`. Direct algebra from `fib_add n n` and `fib_rec`,
+    /// no induction; see `fibonacci.rs`'s `declare_fib_two_mul` doc.
+    pub fib_two_mul: NameId,
+    /// `fib_two_mul_add_two : ∀ n, Eq Int (fib (add (mul two n) two))
+    /// (mul (fib (add n one)) (add (mul two (fib n)) (fib (add n one))))` —
+    /// Mathlib's `Int.fib_two_mul_add_two`. Same shape of proof as
+    /// `fib_two_mul`, one index up (`fib_add (n+1) (n+1)` plus `fib_rec`);
+    /// see `fibonacci.rs`'s `declare_fib_two_mul_add_two` doc.
+    pub fib_two_mul_add_two: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1422,6 +1433,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         induction_on: child(kernel, "induction_on"),
         fib_rec: child(kernel, "fib_rec"),
         fib_add: child(kernel, "fib_add"),
+        fib_two_mul: child(kernel, "fib_two_mul"),
+        fib_two_mul_add_two: child(kernel, "fib_two_mul_add_two"),
     }
 }
 
@@ -1635,6 +1648,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         fibonacci::declare_fib_of_odd(&mut d)?;
         fibonacci::declare_fib_rec(&mut d)?;
         fibonacci::declare_fib_add(&mut d)?;
+        fibonacci::declare_fib_two_mul(&mut d)?;
+        fibonacci::declare_fib_two_mul_add_two(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;

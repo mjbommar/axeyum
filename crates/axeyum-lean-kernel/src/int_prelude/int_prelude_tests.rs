@@ -183,7 +183,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 156] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 158] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -197,6 +197,8 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 156] {
         p.induction_on,
         p.fib_rec,
         p.fib_add,
+        p.fib_two_mul,
+        p.fib_two_mul_add_two,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
@@ -3872,4 +3874,132 @@ fn induction_on_needs_each_of_its_three_hypotheses() {
             value,
         })
         .expect("the unmutated statement must be accepted by the same route");
+}
+
+/// `Int.fib_two_mul` at a positive and a negative index, checked by reduction.
+///
+/// `n = 5`: `fib(10) = 55`, `fib(5)*(2*fib(6)-fib(5)) = 5*(16-5) = 55`.
+/// `n = -3`: `fib(-6) = -8`, `fib(-3)*(2*fib(-2)-fib(-3)) = 2*(-2-2) = -8`
+/// (`Int.fib`'s sign extension: `fib(negSucc m) = (-1)^m * fib(succ m)`, so
+/// `fib(-2) = -1`, `fib(-3) = 2`, `fib(-6) = -8`). Each case is paired with
+/// the value the OTHER plausible-looking (but wrong) coefficient assignment
+/// gives -- `fib(n)*(2*fib(n)-fib(n+1))` instead of the true
+/// `fib(n)*(2*fib(n+1)-fib(n))` -- which must NOT be `def_eq`.
+#[test]
+fn fib_two_mul_computes_at_a_concrete_index_of_each_sign() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    // (n, fib(2n), a value fib(2n) is NOT).
+    let cases: [(ExprId, ExprId, ExprId); 2] = {
+        let five_nat = d.num(5);
+        let n_pos = d.of_nat(five_nat);
+        let fifty_five_nat = d.num(55);
+        let truth_pos = d.of_nat(fifty_five_nat);
+        let ten_nat = d.num(10);
+        let false_pos = d.of_nat(ten_nat);
+
+        // n = -3 = negSucc 2.
+        let two_nat = d.num(2);
+        let n_neg = d.neg_succ(two_nat);
+        // fib(-6) = -8 = negSucc 7.
+        let seven_nat = d.num(7);
+        let truth_neg = d.neg_succ(seven_nat);
+        let false_neg = d.of_nat(ten_nat);
+
+        [(n_pos, truth_pos, false_pos), (n_neg, truth_neg, false_neg)]
+    };
+
+    for (n, truth, falsehood) in cases {
+        let instance = d.lemma(p.fib_two_mul, &[n]);
+        let ty = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("Int.fib_two_mul must instantiate: {e:?}"));
+
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let idx = d.imul(two, n);
+        let lhs = d.const_app(p.fib, &[idx]);
+
+        let expected = d.ieq(lhs, truth);
+        assert!(
+            d.kernel().def_eq(ty, expected),
+            "fib_two_mul's instance must reduce to the true arithmetic identity"
+        );
+        let wrong = d.ieq(lhs, falsehood);
+        assert!(
+            !d.kernel().def_eq(ty, wrong),
+            "the check above must be capable of failing"
+        );
+    }
+
+    assert!(
+        d.kernel().axiom_footprint(p.fib_two_mul).is_empty(),
+        "Int.fib_two_mul must rest on zero axioms"
+    );
+}
+
+/// `Int.fib_two_mul_add_two` at a positive and a negative index, checked by
+/// reduction.
+///
+/// `n = 5`: `fib(12) = 144`, `fib(6)*(2*fib(5)+fib(6)) = 8*(10+8) = 144`.
+/// `n = -3`: `fib(-4) = -3`, `fib(-2)*(2*fib(-3)+fib(-2)) = (-1)*(4-1) = -3`.
+/// Each case is paired with the value the factors-swapped assignment
+/// `fib(n)*(2*fib(n+1)+fib(n))` gives, which must NOT be `def_eq`.
+#[test]
+fn fib_two_mul_add_two_computes_at_a_concrete_index_of_each_sign() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    // (n, fib(2n+2), a value fib(2n+2) is NOT).
+    let cases: [(ExprId, ExprId, ExprId); 2] = {
+        let five_nat = d.num(5);
+        let n_pos = d.of_nat(five_nat);
+        let one_forty_four_nat = d.num(144);
+        let truth_pos = d.of_nat(one_forty_four_nat);
+        let one_oh_five_nat = d.num(105);
+        let false_pos = d.of_nat(one_oh_five_nat);
+
+        // n = -3 = negSucc 2.
+        let two_nat = d.num(2);
+        let n_neg = d.neg_succ(two_nat);
+        // fib(-4) = -3 = negSucc 2.
+        let truth_neg = d.neg_succ(two_nat);
+        let false_neg = d.izero();
+
+        [(n_pos, truth_pos, false_pos), (n_neg, truth_neg, false_neg)]
+    };
+
+    for (n, truth, falsehood) in cases {
+        let instance = d.lemma(p.fib_two_mul_add_two, &[n]);
+        let ty = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("Int.fib_two_mul_add_two must instantiate: {e:?}"));
+
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let mul_two_n = d.imul(two, n);
+        let idx = d.iadd(mul_two_n, two);
+        let lhs = d.const_app(p.fib, &[idx]);
+
+        let expected = d.ieq(lhs, truth);
+        assert!(
+            d.kernel().def_eq(ty, expected),
+            "fib_two_mul_add_two's instance must reduce to the true arithmetic identity"
+        );
+        let wrong = d.ieq(lhs, falsehood);
+        assert!(
+            !d.kernel().def_eq(ty, wrong),
+            "the check above must be capable of failing"
+        );
+    }
+
+    assert!(
+        d.kernel().axiom_footprint(p.fib_two_mul_add_two).is_empty(),
+        "Int.fib_two_mul_add_two must rest on zero axioms"
+    );
 }

@@ -933,6 +933,22 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   against what the next lemma's conclusion expects. The first step whose shape
   differs is the one needing an explicit `mul_assoc` (or `add_assoc`) rewrite.
 
+  **AND THE ERRORS CAN BE MUTUALLY CONSISTENT, WHICH DEFEATS CHECKING THE
+  INTERMEDIATES ONE BY ONE.** Measured 2026-08-29 on `Int.fib_two_mul`. Five
+  `isymm(a, b, h)` call sites had their arguments backwards relative to the
+  hypothesis actually in hand — and **each individually type-checked**, because
+  each was checked against an expectation that was backwards in the same way.
+  A concrete `n = 3` test passed every named intermediate cleanly. The defect
+  surfaced only when the pieces were chained through `itrans` at a genuinely
+  free `n`.
+
+  So "instantiate concretely AND check symbolically" is right, and *where* you
+  check symbolically matters: a per-step symbolic check can pass on a chain that
+  does not compose. The technique that found it was to re-derive the whole proof
+  against a real `fresh_fvar` pushed into an explicit `LocalContext`, checking
+  each named intermediate with `infer_in`/`def_eq_in` — the free variable is
+  what makes a self-consistent pair of reversals disagree.
+
 - **A CERTIFICATE MUST CARRY EVERY DISTINCTION ITS PRODUCER MAKES, or the checker
   cannot re-derive the refutation — and mutation testing will not find the gap.**
   Measured 2026-08-20 in `nra_monomial_bound_cert.rs`. The producer distinguished
