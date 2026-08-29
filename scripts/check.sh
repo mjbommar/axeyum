@@ -365,6 +365,21 @@ step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
 # were written, both pass, and one of them was invoked by nothing for a day
 # because registering a control is a manual step separate from writing it.
 step control-registration ./scripts/check-control-registration.sh
+# A `#[test]` attribute separated from its function, or duplicated onto one.
+# Measured 2026-08-29: a `lane-merge-additive.py splice` anchored on an item's
+# `fn` line inserted the spliced items BETWEEN a `#[test]` and its function, so
+# one test silently never ran -- while `cargo test` reported a healthy nonzero
+# count throughout. The count is the check this repo leans on hardest and it
+# CANNOT see this. FOUR separate lanes repaired the damage before it was gated.
+step test-attribute-integrity python3 ./scripts/check-test-attribute-integrity.py
+# ...and its controls, each mutation-verified to be killed by exactly one case,
+# including a false-positive control (a multi-line `#[allow]` between the
+# attribute and the fn), which the gate's own first draft failed.
+step test-attribute-integrity-controls ./scripts/tests/test-check-test-attribute-integrity.sh
+# The creal prelude-build ratio gate's controls. Written earlier in the same
+# session as the gate and never registered -- caught by check-control-
+# registration.sh, which is exactly the failure that script exists for.
+step creal-prelude-build-ratio-controls ./scripts/tests/test-creal-prelude-build-ratio.sh
 # The registration gate's OWN controls. It had none until 2026-08-27 -- the gate
 # whose subject is "a check nobody invokes cannot fail" was itself unverified,
 # and its python half then pinned an unexplained floor of 188 unnamed suites.

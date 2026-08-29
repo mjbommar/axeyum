@@ -474,6 +474,13 @@ gate-controls:
     # because registering a control is a manual step separate from writing it.
     # A control nobody runs cannot fail, so it is not a control.
     scripts/check-control-registration.sh
+    # A `#[test]` separated from its function, or duplicated onto one. A splice
+    # merge did exactly that on 2026-08-29 and ONE TEST SILENTLY NEVER RAN,
+    # with `cargo test`'s count healthy the whole time. Four lanes repaired it.
+    python3 scripts/check-test-attribute-integrity.py
+    # ...and its controls, each mutation-verified, including the false-positive
+    # case (multi-line `#[allow]`) that the gate's first draft failed.
+    scripts/tests/test-check-test-attribute-integrity.sh
     # The registration gate's OWN controls -- it had none, which is the joke
     # this file exists to stop being. 15 cases, each mutation-verified.
     scripts/tests/test-check-control-registration.sh
