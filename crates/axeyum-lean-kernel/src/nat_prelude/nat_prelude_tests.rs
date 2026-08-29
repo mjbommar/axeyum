@@ -977,6 +977,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.xor_three_five,
         p.even_xor,
         p.xor_comm,
+        p.test_bit_xor,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6488,7 +6489,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 495,
+        93 + 496,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11207,6 +11208,85 @@ fn xor_comm_applies_at_a_concrete_discriminating_instance_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.xor_comm).is_empty(),
         "xor_comm must rest on zero axioms"
+    );
+}
+
+/// `Nat.testBit_xor` -- bridges `testBitAux`'s INDEX recursion with
+/// `bitwiseAux`'s VALUE recursion (`testbit_bitwise.rs`). Checked at
+/// `(m, n) = (5, 3)` (binary `101`/`011`, `xor 5 3 = 6` = `110`) across all
+/// three of its meaningfully differing bits (bit `0`: `1`/`1` -> XOR `0`;
+/// bit `1`: `0`/`1` -> XOR `1`; bit `2`: `1`/`0` -> XOR `1`) -- a single bit
+/// position could not discriminate a swapped combine, so all three are
+/// checked -- AND symbolically against a genuinely FREE `(m, n, i)` triple,
+/// per the standing rule that a concrete instantiation alone can hide a
+/// defect a symbolic build exposes.
+#[test]
+fn test_bit_xor_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: xor 5 3 = 6 (101 xor 011 = 110); check all three bits.
+    {
+        let five = f.num(5);
+        let three = f.num(3);
+        for (i, expected_bit) in [(0u32, 0u32), (1, 1), (2, 1)] {
+            let idx = f.num(i);
+            let applied = f.lemma(p.test_bit_xor, &[five, three, idx]);
+            let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+                let shown = f.explain(&e);
+                panic!("test_bit_xor must apply at (m=5, n=3, i={i}): {shown}")
+            });
+            let xor_53 = f.const_app(p.xor, &[five, three]);
+            let lhs = f.const_app(p.test_bit, &[xor_53, idx]);
+            let tb_m = f.const_app(p.test_bit, &[five, idx]);
+            let tb_n = f.const_app(p.test_bit, &[three, idx]);
+            let rhs = super::testbit_bitwise::xor_bit(&mut f, tb_m, tb_n);
+            let want = f.eq(lhs, rhs);
+            assert!(
+                f.k.def_eq(inferred, want),
+                "test_bit_xor must state Eq (testBit (xor 5 3) {i}) \
+                 (xor_bit (testBit 5 {i}) (testBit 3 {i}))"
+            );
+            let expected = f.num(expected_bit);
+            assert!(
+                f.k.def_eq(lhs, expected),
+                "testBit (xor 5 3) {i} must compute to {expected_bit}"
+            );
+            // Negative control: the OTHER bit value must not also def_eq.
+            let other = f.num(1 - expected_bit);
+            let bad_want = f.eq(lhs, other);
+            assert!(
+                !f.k.def_eq(inferred, bad_want),
+                "negative control: bit {i} of xor 5 3 must not ALSO be {}",
+                1 - expected_bit
+            );
+        }
+    }
+
+    // Symbolic: test_bit_xor applies at a genuinely FREE (m, n, i) triple.
+    // Wrapped in a fresh theorem (like `xor_comm_restated`'s own block)
+    // so the bound variables are properly registered via `pi_fv`/`lam_fv`.
+    {
+        let name = f.name("test_bit_xor_restated");
+        f.theorem(name, 3, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let i = values[2];
+            let xor_mn = d.const_app(p.xor, &[m, n]);
+            let lhs = d.const_app(p.test_bit, &[xor_mn, i]);
+            let tb_m = d.const_app(p.test_bit, &[m, i]);
+            let tb_n = d.const_app(p.test_bit, &[n, i]);
+            let rhs = super::testbit_bitwise::xor_bit(d, tb_m, tb_n);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.test_bit_xor, &[m, n, i]);
+            (stmt, proof)
+        })
+        .expect("test_bit_xor must apply at symbolic m, n, i");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.test_bit_xor).is_empty(),
+        "test_bit_xor must rest on zero axioms"
     );
 }
 

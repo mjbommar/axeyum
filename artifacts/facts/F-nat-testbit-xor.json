@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-testbit-xor",
+  "title": "a bit of xor m n is the per-bit XOR of the corresponding bits of m and n",
+  "statement": "For every natural m, n, i: testBit(xor(m, n), i) equals the (0/1-valued) XOR combine of testBit(m, i) and testBit(n, i).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.testBit (AxNat.xor x0 x1) x2) (Bool.rec.{1} (fun (x3 : Bool) => AxNat) AxNat.zero (AxNat.succ AxNat.zero) ((fun (x3 : Bool) => fun (x4 : Bool) => Bool.rec.{1} (fun (x5 : Bool) => Bool) x4 (Bool.rec.{1} (fun (x5 : Bool) => Bool) Bool.true Bool.false x4) x3) (AxNat.beq (AxNat.testBit x0 x2) (AxNat.succ AxNat.zero)) (AxNat.beq (AxNat.testBit x1 x2) (AxNat.succ AxNat.zero)))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-testbit-succ",
+    "F:nat-testbit-le-one"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.testBit_xor",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.testBit_xor",
+      "supports": "Nat.testBit_xor is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- testBit_xor 2>/dev/null | grep -Ec '^Nat\\.testBit_xor[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab, per this ledger's own grep-dialect gotcha. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "compute-Nat.testBit_xor",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.testBit_xor",
+      "supports": "At the discriminating instance (m, n) = (5, 3) (binary 101/011, xor 5 3 = 6 = 110), all three meaningfully differing bits (0, 1, 2) check against independently hand-computed values (0, 1, 1), each with a negative control asserting the OTHER bit value does not also def-eq; and the theorem re-derives against a genuinely free (m, n, i) triple, not merely a concrete instance.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::test_bit_xor_applies_at_a_concrete_discriminating_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "A concrete instantiation alone can hide a defect a symbolic build exposes (and vice versa), so both are checked. The concrete leg checks all three of (5,3)'s differing bits rather than one, since a single bit position could not discriminate a combine with the operands or the two bit-arguments transposed."
+    },
+    {
+      "id": "footprint-Nat.testBit_xor",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-testbit-xor",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the Nat-valued analogue of the per-bit XOR correctness statement Mathlib v4.30 states with `Nat.testBit : Nat -> Bool`. It is registered as its OWN local fact rather than a flip of any pinned `ml430` mirror, for the same reason `F:nat-zero-of-testbit-eq-zero` is: this kernel's `Nat.testBit : Nat -> Nat -> Nat` returns `{0,1}` as a `Nat`, a different codomain from Mathlib's `Bool`-valued `testBit` (see `nat_prelude/binary.rs`'s module doc). No `ml430` fact for this specific statement was found in the ledger at the time this was landed.\n\nThis fact is piece (1) of 4 toward `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`), which stays `open` -- see that fact and `docs/plan/status/263-nat-testbit-xor.md` for what pieces 2-4 (`exists_most_significant_bit`, `lt_of_testBit`, `xor_assoc`/`xor_xor_cancel`/`xor_ne_zero_iff`) still need. `lt_xor_cases` itself is NOT proved by this fact.\n\nProved by induction on the bit index `i`, generalizing over BOTH `m` and `n` in the motive (the standard `testBit_le_one`/`sum_testBit_lt` \"generalize the OTHER variable\" device, widened to two variables since `xor` mixes them): the base case (`i = 0`) reduces via `refl` (`testBit_zero`) to a new low-bit lemma relating `mod (xor m n) 2` to the per-bit combine of `mod m 2`/`mod n 2` (a case split on `m` then `n` via `cases_zero_succ`, generalizing `xor_parity.rs`'s `even_xor_hard_case` step from `Iff Even` to a plain `Eq`); the step case (`i = succ j`) reduces via `refl` (`testBit_succ`) to a new lemma relating `div (xor m n) 2` to `xor (div m 2) (div n 2)`, whose hardest case needs `Nat.bitwise_aux_agree_of_fuel` (fuel-irrelevance) composed with `half_le_predecessor_of_succ` to bridge the recursor's exposed fuel to the canonical fuel `xor`'s own definition uses. See `nat_prelude/testbit_bitwise.rs`'s module doc for the full derivation."
+}

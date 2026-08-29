@@ -76,7 +76,7 @@ use crate::expr::ExprId;
 /// `fun x y => bool_select_nat (xor_fn (beq x 1) (beq y 1)) 1 0` — the
 /// per-bit XOR combine (duplicated from `xor_parity.rs`'s private
 /// `xor_bit`, see the module doc for why).
-fn xor_bit(d: &mut NatDev<'_>, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn xor_bit<D: NatOps>(d: &mut D, x: ExprId, y: ExprId) -> ExprId {
     let one = d.num(1);
     let zero = d.zero();
     let x_bool = d.beq(x, one);
