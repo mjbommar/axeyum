@@ -264,12 +264,8 @@ use primes::{
     declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
 use rec_agreement::{
-    declare_land_comm,
-    declare_land_fuel_irrelevance_all,
-    declare_land_le_left_all,
-    declare_ldiff_fuel_irrelevance_all,
-    declare_lor_comm,
-    declare_lor_fuel_irrelevance_all,
+    declare_land_comm, declare_land_fuel_irrelevance_all, declare_land_le_left_all,
+    declare_ldiff_fuel_irrelevance_all, declare_lor_comm, declare_lor_fuel_irrelevance_all,
     declare_rec_agreement_all,
 };
 use rectangle::declare_rectangle;
