@@ -2890,3 +2890,602 @@ pub(super) fn declare_gcd_div_gcd_div_gcd(d: &mut IntDev<'_>) -> Result<(), Kern
     })?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// `Int.gcd_div` — dividing two integers by a COMMON divisor of arbitrary sign
+// (or zero) divides their gcd by its magnitude.
+// ---------------------------------------------------------------------------
+//
+// Mathlib v4.30's `Int.gcd_div` is `alias gcd_div := gcd_ediv`, and Lean 4
+// core's `Int.gcd_ediv` (`Init.Data.Int.Gcd`) states it over `/`, which core's
+// own `instance : Div Int` binds to `Int.ediv` "for compatibility with
+// SMT-LIB" (`Init.Data.Int.DivMod.Basic`) — the SAME division this
+// development's `Int.ediv` already matches bit for bit. So this is a
+// same-definition mirror, not a restatement of a different proposition, and
+// it carries NO restriction on `c`'s sign (Mathlib's own hypotheses are only
+// `c ∣ a`, `c ∣ b`) -- `c = 0` is a genuine, if degenerate, case of the
+// statement and is proved here rather than excluded.
+//
+// The proof does NOT go through `Nat.gcd_mul_left`/`gcd_mul_right` (Lean
+// core's own route, via `Nat.gcd_div`): neither exists in this development,
+// and building either would need a fresh strong-induction principle over
+// `Nat.gcd`'s well-founded recursion (see the `WellFounded.fix`-based
+// `gcd_dvd`/`dvd_gcd`/`gcd_bezout` constructions earlier in this file for
+// what that costs). Instead this is MUTUAL DIVISIBILITY, generalizing
+// [`declare_gcd_div_gcd_div_gcd`]'s Bézout route rather than
+// `Nat.gcd_div`'s cancellation route:
+//
+// With `qa := a.ediv c`, `qb := b.ediv c`, `C := natAbs c`, `G := gcd a b`,
+// `H := gcd qa qb`, and (for `c ≠ 0`) `K := G / C` (exact, since `C ∣ G`
+// follows directly from `c ∣ a`, `c ∣ b` via `nat_abs_dvd_nat_abs_of_dvd` +
+// `Nat.dvd_gcd` -- no Bézout needed for THIS half):
+//
+// - **`H ∣ K`.** Bézout on `a, b` gives `ofNat G = a*u + b*v`; substituting
+//   `a = c*qa`, `b = c*qb` and factoring gives `ofNat G = c*X` for
+//   `X := qa*u + qb*v` -- an UNCONDITIONAL equation, no sign case needed.
+//   Taking `natAbs` of both sides: `G = C * natAbs X`. Combined with
+//   `C*K = G` and cancelling the shared positive factor `C`
+//   (`Nat.mul_left_cancel_of_pos`): `natAbs X = K`. Separately, `H` divides
+//   `qa` and `qb` (`gcd_dvd_left`/`_right`), hence `qa*u` and `qb*v`
+//   (`dvd_mul_right`), hence their sum `X` (`dvd_add`); taking `natAbs`
+//   (`nat_abs_dvd_nat_abs_of_dvd`) gives `H ∣ natAbs X = K`.
+// - **`K ∣ H`.** Bézout on `qa, qb` gives `ofNat H = qa*u' + qb*v'`;
+//   multiplying by `c` and substituting back gives `c*(ofNat H) = a*u' +
+//   b*v'`. `G` divides `a` and `b`, hence this sum, hence `c*(ofNat H)`;
+//   taking `natAbs`: `G ∣ C*H`. Since `G = C*K`, this is `C*K ∣ C*H`;
+//   cancelling `C` from the divisibility itself (not just an equation --
+//   [`cancel_dvd_of_pos`], built locally since no such lemma exists yet)
+//   gives `K ∣ H`.
+// - `Nat.dvd_antisymm` closes `H = K = G/C`.
+//
+// Neither direction needed `c`'s sign decomposed into `±ofNat C` at any
+// point -- only `natAbs` identities, which hold unconditionally. The sign
+// case split that DOES remain (`c = 0`, `c = ofNat (succ m)`, `c = negSucc
+// n`) exists only to supply `c ≠ 0` (for [`super::dvd::ne_zero_of_pos`]/
+// discrimination) and `1 ≤ natAbs c` (for the two cancellations), and to
+// handle `c = 0` separately, where both sides collapse to `0` via
+// `gcd_zero_right`/`Nat.zero_div`.
+
+/// From `h_dvd : Nat.dvd (cabs*x) (cabs*y)` and `1 ≤ cabs`, derive
+/// `Nat.dvd x y` -- cancel a shared positive factor out of a divisibility
+/// statement itself, not just an equation. No such lemma exists in this
+/// development; the witness manipulation is short enough to build locally
+/// (eliminate `h_dvd`'s witness `w`, reassociate `(cabs*x)*w` to
+/// `cabs*(x*w)` via `Nat.mul_assoc`, cancel `cabs` from the resulting
+/// equation via `Nat.mul_left_cancel_of_pos`, and re-introduce `w` as the
+/// witness for `Nat.dvd x y`).
+fn cancel_dvd_of_pos(
+    d: &mut IntDev<'_>,
+    cabs: ExprId,
+    x: ExprId,
+    y: ExprId,
+    one_le_cabs: ExprId,
+    h_dvd: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let cabs_x = NatOps::mul(d, cabs, x);
+    let cabs_y = NatOps::mul(d, cabs, y);
+    let pred = d.dvd_predicate(cabs_x, cabs_y);
+    let goal = d.dvd(x, y);
+    let nat = d.nat_ty();
+
+    let minor = {
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let cabs_x_w = NatOps::mul(d, cabs_x, w);
+        let heq_ty = d.eq(cabs_y, cabs_x_w);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let xw = NatOps::mul(d, x, w);
+        let cabs_xw = NatOps::mul(d, cabs, xw);
+        let assoc = {
+            let name = p.nat.mul_assoc;
+            d.const_app(name, &[cabs, x, w])
+        }; // Eq Nat (cabs_x*w) cabs_xw
+        let (_, chained) = d.chain(cabs_y, &[(cabs_x_w, heq), (cabs_xw, assoc)]);
+        // chained : Eq Nat cabs_y cabs_xw
+
+        let y_eq_xw = {
+            let name = p.nat.mul_left_cancel_of_pos;
+            d.const_app(name, &[cabs, y, xw, one_le_cabs, chained])
+        }; // Eq Nat y xw
+        let witness_proof = nat_dvd_intro(d, x, y, w, y_eq_xw);
+        let with_heq = d.lam_fv(heq_fv, heq_ty, witness_proof);
+        d.lam_fv(w_fv, nat, with_heq)
+    };
+    exists_elim(d, pred, goal, h_dvd, minor)
+}
+
+/// `Eq Int x zero` from `h_dvd : Int.dvd zero_int x` (the `Int`-level
+/// `dvd zero_int x := ∃ c, x = zero_int*c`). `zero_int*c = c*zero_int`
+/// (comm) `= zero_int` (`mul_zero`), so any witness forces `x = zero_int`.
+fn zero_dvd_elim(d: &mut IntDev<'_>, x: ExprId, h_dvd: ExprId) -> ExprId {
+    let p = d.int();
+    let zero_int = d.izero();
+    let pred = idvd_predicate(d, zero_int, x);
+    let goal = d.ieq(x, zero_int);
+    let int_ty = d.int_ty();
+
+    let minor = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let zc = d.imul(zero_int, c);
+        let heq_ty = d.ieq(x, zc);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let cz = d.imul(c, zero_int);
+        let comm = d.const_app(p.mul_comm, &[zero_int, c]); // Eq Int zc cz
+        let mz = d.const_app(p.mul_zero, &[c]); // Eq Int cz zero_int
+        let (_, chained) = d.ichain(zc, &[(cz, comm), (zero_int, mz)]);
+        let result = d.itrans(x, zc, zero_int, heq, chained);
+        let with_heq = d.lam_fv(heq_fv, heq_ty, result);
+        d.lam_fv(c_fv, int_ty, with_heq)
+    };
+    int_exists_elim(d, pred, goal, h_dvd, minor)
+}
+
+/// The `Eq Nat` conclusion `gcd (a.ediv c) (b.ediv c) = gcd a b / natAbs c`,
+/// at caller-supplied `a, b, cc`.
+fn gcd_div_concl(d: &mut IntDev<'_>, a: ExprId, b: ExprId, cc: ExprId) -> ExprId {
+    let qa = d.iediv(a, cc);
+    let qb = d.iediv(b, cc);
+    let lhs = igcd(d, qa, qb);
+    let g = igcd(d, a, b);
+    let cabs = nat_abs(d, cc);
+    let rhs = NatOps::div(d, g, cabs);
+    d.eq(lhs, rhs)
+}
+
+/// `Int.gcd_div`'s full per-`c`-shape goal: `c ∣ a → c ∣ b → <concl>`.
+fn gcd_div_goal(d: &mut IntDev<'_>, a: ExprId, b: ExprId, cc: ExprId) -> ExprId {
+    let dvd_ca = idvd(d, cc, a);
+    let dvd_cb = idvd(d, cc, b);
+    let concl = gcd_div_concl(d, a, b, cc);
+    let inner = d.arrow(dvd_cb, concl);
+    d.arrow(dvd_ca, inner)
+}
+
+/// The degenerate `c = 0` case: `dvd 0 a → dvd 0 b → <concl at c = 0>`.
+/// Both `a` and `b` collapse to `zero` (via [`zero_dvd_elim`]), at which
+/// point both sides of the conclusion collapse to `0`
+/// (`gcd_zero_right`/`Nat.zero_div`), and the general `a, b` case is
+/// recovered by two `int_eq_rewrite`s.
+fn gcd_div_zero_case(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let zero_int = d.izero();
+    let dvd_ca = idvd(d, zero_int, a);
+    let dvd_cb = idvd(d, zero_int, b);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let a_eq_zero = zero_dvd_elim(d, a, h1);
+    let b_eq_zero = zero_dvd_elim(d, b, h2);
+    let zero_eq_a = d.isymm(a, zero_int, a_eq_zero);
+    let zero_eq_b = d.isymm(b, zero_int, b_eq_zero);
+
+    let proof0 = gcd_div_concl_zero_zero_zero(d);
+    let lifted_a = d.int_eq_rewrite(zero_int, a, zero_eq_a, proof0, &|d, x| {
+        gcd_div_concl(d, x, zero_int, zero_int)
+    });
+    let lifted_ab = d.int_eq_rewrite(zero_int, b, zero_eq_b, lifted_a, &|d, x| {
+        gcd_div_concl(d, a, x, zero_int)
+    });
+
+    let with_h2 = d.lam_fv(h2_fv, dvd_cb, lifted_ab);
+    d.lam_fv(h1_fv, dvd_ca, with_h2)
+}
+
+/// A concrete proof of `gcd_div_concl(zero, zero, zero)`: both
+/// `ediv (ofNat 0) (ofNat 0)` and `natAbs (ofNat 0)` reduce (pure `Int.rec`
+/// `iota`) to `Nat.div zero zero` / `zero` respectively, and
+/// `Nat.zero_div`/`gcd_zero_right` close the rest.
+fn gcd_div_concl_zero_zero_zero(d: &mut IntDev<'_>) -> ExprId {
+    let p = d.int();
+    let zero_int = d.izero();
+    let nat_zero = d.zero();
+
+    // qa0 := ediv(zero,zero) = zero_int, via `Nat.zero_div` bridged across
+    // the `ediv`/`Int.rec` `iota` reduction by a plain `d.irefl`.
+    let qa0 = d.iediv(zero_int, zero_int);
+    let div00 = NatOps::div(d, nat_zero, nat_zero);
+    let ofnat_div00 = d.of_nat(div00);
+    let zero_div_lemma = {
+        let name = p.nat.zero_div;
+        d.const_app(name, &[nat_zero])
+    }; // Eq Nat div00 nat_zero
+    let ofnat_div00_eq_zero = d.nat_eq_to_int(div00, nat_zero, zero_div_lemma, &|d, x| d.of_nat(x));
+    let step_refl = d.irefl(qa0); // typed (by defeq) as Eq Int qa0 ofnat_div00
+    let (_, qa0_eq_zero) = d.ichain(
+        qa0,
+        &[(ofnat_div00, step_refl), (zero_int, ofnat_div00_eq_zero)],
+    );
+
+    // LHS: gcd(qa0,qa0) = gcd(zero,zero) = natAbs(zero) = zero.
+    let g_qa0 = igcd(d, qa0, qa0);
+    let step_a = icongr_nat(d, qa0, zero_int, qa0_eq_zero, &|d, x| igcd(d, x, qa0));
+    let step_b = icongr_nat(d, qa0, zero_int, qa0_eq_zero, &|d, x| igcd(d, zero_int, x));
+    let gzz_eq_natabs0 = d.const_app(p.gcd_zero_right, &[zero_int]); // Eq Nat (gcd 0 0) (natAbs 0)
+    let natabs0 = nat_abs(d, zero_int);
+    let natabs0_eq_zero = d.refl(natabs0); // typed (by defeq) as Eq Nat natabs0 nat_zero
+    let g_zero_qa0 = igcd(d, zero_int, qa0);
+    let g_zero_zero = igcd(d, zero_int, zero_int);
+    let (lhs_final, lhs_proof) = d.chain(
+        g_qa0,
+        &[
+            (g_zero_qa0, step_a),
+            (g_zero_zero, step_b),
+            (natabs0, gzz_eq_natabs0),
+            (nat_zero, natabs0_eq_zero),
+        ],
+    );
+    let _ = lhs_final;
+
+    // RHS: div(gcd(zero,zero), natAbs zero) = div(zero, zero) = zero.
+    let g00 = igcd(d, zero_int, zero_int);
+    let cabs0 = nat_abs(d, zero_int);
+    let rhs_start = NatOps::div(d, g00, cabs0);
+    let g00_eq_zero = {
+        let (_, pr) = d.chain(
+            g00,
+            &[(natabs0, gzz_eq_natabs0), (nat_zero, natabs0_eq_zero)],
+        );
+        pr
+    };
+    let step_r1 = NatOps::congr(d, g00, nat_zero, g00_eq_zero, &|d, x| {
+        NatOps::div(d, x, cabs0)
+    });
+    let div_nat_zero_cabs0 = NatOps::div(d, nat_zero, cabs0);
+    let step_r2 = NatOps::congr(d, cabs0, nat_zero, natabs0_eq_zero, &|d, x| {
+        NatOps::div(d, nat_zero, x)
+    });
+    let (rhs_final, rhs_proof) = d.chain(
+        rhs_start,
+        &[
+            (div_nat_zero_cabs0, step_r1),
+            (div00, step_r2),
+            (nat_zero, zero_div_lemma),
+        ],
+    );
+    let _ = rhs_final;
+
+    let rhs_proof_rev = d.symm(rhs_start, nat_zero, rhs_proof);
+    d.trans(g_qa0, nat_zero, rhs_start, lhs_proof, rhs_proof_rev)
+}
+
+/// The nonzero-divisor case, shared by `c = ofNat (succ m)` and
+/// `c = negSucc n`: given `hne : Not (Eq Int cc zero)` and
+/// `one_le_cabs : Nat.le (succ zero) (natAbs cc)`, proves
+/// `gcd_div_goal(a, b, cc)` by the mutual-divisibility argument described in
+/// this section's module doc.
+fn gcd_div_nonzero_case(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    cc: ExprId,
+    hne: ExprId,
+    one_le_cabs: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let dvd_ca = idvd(d, cc, a);
+    let dvd_cb = idvd(d, cc, b);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let qa = d.iediv(a, cc);
+    let qb = d.iediv(b, cc);
+    let cabs = nat_abs(d, cc);
+    let g = igcd(d, a, b);
+    let hh = igcd(d, qa, qb);
+
+    let a_eq_cqa = exact_general(d, a, cc, h1, hne); // Eq Int a (cc*qa)
+    let b_eq_cqb = exact_general(d, b, cc, h2, hne); // Eq Int b (cc*qb)
+
+    // --- C ∣ G; K := G/C with C*K = G. --------------------------------------
+    let natabs_a = nat_abs(d, a);
+    let natabs_b = nat_abs(d, b);
+    let c_dvd_natabs_a = d.const_app(p.nat_abs_dvd_nat_abs_of_dvd, &[cc, a, h1]);
+    let c_dvd_natabs_b = d.const_app(p.nat_abs_dvd_nat_abs_of_dvd, &[cc, b, h2]);
+    let c_dvd_g = d.lemma(
+        p.nat.dvd_gcd,
+        &[cabs, natabs_a, natabs_b, c_dvd_natabs_a, c_dvd_natabs_b],
+    );
+    // c_dvd_g : Nat.dvd cabs (Nat.gcd natabs_a natabs_b), defeq Nat.dvd cabs g
+
+    let kk = NatOps::div(d, g, cabs);
+    let cabs_kk_eq_g = {
+        let name = p.nat.div_mul_cancel_of_dvd;
+        d.const_app(name, &[cabs, g, one_le_cabs, c_dvd_g])
+    }; // Eq Nat (cabs*kk) g
+
+    // --- Bézout on a, b: ofNat g = a*u + b*v = c*X, X := qa*u + qb*v. -------
+    let u = d.const_app(p.gcd_a, &[a, b]);
+    let vv = d.const_app(p.gcd_b, &[a, b]);
+    let eq_bezout = d.lemma(p.gcd_eq_gcd_ab_witnesses, &[a, b]); // Eq Int (ofNat g) (a*u+b*v)
+    let ofnat_g = d.of_nat(g);
+
+    let au = d.imul(a, u);
+    let bv = d.imul(b, vv);
+    let c_qa = d.imul(cc, qa);
+    let c_qb = d.imul(cc, qb);
+    let c_qa_u = d.imul(c_qa, u);
+    let c_qb_v = d.imul(c_qb, vv);
+
+    let au_to_cqau = d.icongr(a, c_qa, a_eq_cqa, &|d, x| d.imul(x, u));
+    let bv_to_cqbv = d.icongr(b, c_qb, b_eq_cqb, &|d, x| d.imul(x, vv));
+    let step_sum1 = d.icongr(au, c_qa_u, au_to_cqau, &|d, x| d.iadd(x, bv));
+    let step_sum2 = d.icongr(bv, c_qb_v, bv_to_cqbv, &|d, x| d.iadd(c_qa_u, x));
+
+    let au_plus_bv = d.iadd(au, bv);
+    let cqau_plus_bv = d.iadd(c_qa_u, bv);
+    let cqau_plus_cqbv = d.iadd(c_qa_u, c_qb_v);
+    let (_, sub_chained) = d.ichain(
+        au_plus_bv,
+        &[(cqau_plus_bv, step_sum1), (cqau_plus_cqbv, step_sum2)],
+    );
+    let g_eq_prod = d.itrans(ofnat_g, au_plus_bv, cqau_plus_cqbv, eq_bezout, sub_chained);
+
+    let qa_u = d.imul(qa, u);
+    let qb_v = d.imul(qb, vv);
+    let c_qau2 = d.imul(cc, qa_u);
+    let c_qbv2 = d.imul(cc, qb_v);
+    let assoc_a = d.const_app(p.mul_assoc, &[cc, qa, u]); // Eq Int (c_qa*u) c_qau2
+    let assoc_b = d.const_app(p.mul_assoc, &[cc, qb, vv]); // Eq Int (c_qb*v) c_qbv2
+    let step3 = d.icongr(c_qa_u, c_qau2, assoc_a, &|d, x| d.iadd(x, c_qb_v));
+    let step4 = d.icongr(c_qb_v, c_qbv2, assoc_b, &|d, x| d.iadd(c_qau2, x));
+    let cqau2_plus_cqbv = d.iadd(c_qau2, c_qb_v);
+    let cqau2_plus_cqbv2 = d.iadd(c_qau2, c_qbv2);
+    let (_, factor_chained) = d.ichain(
+        cqau_plus_cqbv,
+        &[(cqau2_plus_cqbv, step3), (cqau2_plus_cqbv2, step4)],
+    );
+
+    let x_expr = d.iadd(qa_u, qb_v); // X
+    let c_x = d.imul(cc, x_expr);
+    let distrib = d.const_app(p.left_distrib, &[cc, qa_u, qb_v]); // Eq Int c_x cqau2_plus_cqbv2
+    let distrib_rev = d.isymm(c_x, cqau2_plus_cqbv2, distrib);
+    let (_, g_eq_cx) = d.ichain(
+        ofnat_g,
+        &[
+            (cqau_plus_cqbv, g_eq_prod),
+            (cqau2_plus_cqbv2, factor_chained),
+            (c_x, distrib_rev),
+        ],
+    ); // g_eq_cx : Eq Int (ofNat g) (c*X)
+
+    // --- natAbs both sides: g = cabs * natAbs(X). ---------------------------
+    let natabs_x = nat_abs(d, x_expr);
+    let natabs_cx = nat_abs(d, c_x);
+    let natabs_congr = icongr_nat(d, ofnat_g, c_x, g_eq_cx, &|d, y| nat_abs(d, y));
+    // natabs_congr : Eq Nat (natAbs ofnat_g) natabs_cx, defeq Eq Nat g natabs_cx
+    let cabs_natabsx = NatOps::mul(d, cabs, natabs_x);
+    let mul_cx_lemma = d.const_app(p.nat_abs_mul, &[cc, x_expr]); // Eq Nat natabs_cx cabs_natabsx
+    let (_, g_eq_cabs_natabsx) = d.chain(
+        g,
+        &[(natabs_cx, natabs_congr), (cabs_natabsx, mul_cx_lemma)],
+    );
+
+    // cabs*kk = g = cabs*natAbs(X)  =>  kk = natAbs(X)  (cancel cabs).
+    let cabs_kk = NatOps::mul(d, cabs, kk);
+    let (_, cabs_kk_eq_cabs_natabsx) = d.chain(
+        cabs_kk,
+        &[(g, cabs_kk_eq_g), (cabs_natabsx, g_eq_cabs_natabsx)],
+    );
+    let kk_eq_natabsx = {
+        let name = p.nat.mul_left_cancel_of_pos;
+        d.const_app(
+            name,
+            &[cabs, kk, natabs_x, one_le_cabs, cabs_kk_eq_cabs_natabsx],
+        )
+    }; // Eq Nat kk natabs_x
+
+    // --- Direction 1: H ∣ K. -------------------------------------------------
+    let ofnat_hh = d.of_nat(hh);
+    let dvd_qa = d.const_app(p.gcd_dvd_left, &[qa, qb]); // idvd(ofnat_hh, qa)
+    let dvd_qb = d.const_app(p.gcd_dvd_right, &[qa, qb]); // idvd(ofnat_hh, qb)
+    let dvd_qau = {
+        let step = d.const_app(p.dvd_mul_right, &[qa, u]);
+        d.const_app(p.dvd_trans, &[ofnat_hh, qa, qa_u, dvd_qa, step])
+    };
+    let dvd_qbv = {
+        let step = d.const_app(p.dvd_mul_right, &[qb, vv]);
+        d.const_app(p.dvd_trans, &[ofnat_hh, qb, qb_v, dvd_qb, step])
+    };
+    let dvd_x = d.const_app(p.dvd_add, &[ofnat_hh, qa_u, qb_v, dvd_qau, dvd_qbv]); // idvd(ofnat_hh, x_expr)
+    let hh_dvd_natabsx = d.const_app(p.nat_abs_dvd_nat_abs_of_dvd, &[ofnat_hh, x_expr, dvd_x]);
+    // hh_dvd_natabsx : Nat.dvd (natAbs ofnat_hh) natabs_x, defeq Nat.dvd hh natabs_x
+
+    let natabsx_eq_kk = d.symm(kk, natabs_x, kk_eq_natabsx); // Eq Nat natabs_x kk
+    let hh_dvd_kk = d.nat_rewrite(natabs_x, kk, natabsx_eq_kk, hh_dvd_natabsx, &|d, w| {
+        d.dvd(hh, w)
+    });
+
+    // --- Direction 2: K ∣ H. -------------------------------------------------
+    let up = d.const_app(p.gcd_a, &[qa, qb]);
+    let vp = d.const_app(p.gcd_b, &[qa, qb]);
+    let eq_bezout2 = d.lemma(p.gcd_eq_gcd_ab_witnesses, &[qa, qb]); // Eq Int (ofNat hh) (qa*u'+qb*v')
+
+    let cc_hh = d.imul(cc, ofnat_hh);
+    let qau2 = d.imul(qa, up);
+    let qbv2 = d.imul(qb, vp);
+    let sum2 = d.iadd(qau2, qbv2);
+    let cc_sum2 = d.imul(cc, sum2);
+    let cc_qau2 = d.imul(cc, qau2);
+    let cc_qbv2 = d.imul(cc, qbv2);
+    let distrib2 = d.const_app(p.left_distrib, &[cc, qau2, qbv2]); // Eq Int cc_sum2 (cc_qau2+cc_qbv2)
+    let cc_eq_hh_to_cc_sum2 = d.icongr(ofnat_hh, sum2, eq_bezout2, &|d, x| d.imul(cc, x));
+    let ccqau2_plus_ccqbv2 = d.iadd(cc_qau2, cc_qbv2);
+    let (_, chain_a) = d.ichain(
+        cc_hh,
+        &[
+            (cc_sum2, cc_eq_hh_to_cc_sum2),
+            (ccqau2_plus_ccqbv2, distrib2),
+        ],
+    ); // chain_a : Eq Int cc_hh ccqau2_plus_ccqbv2
+
+    let au2 = d.imul(a, up);
+    let bv2 = d.imul(b, vp);
+    let a_to_cqa_u = d.icongr(a, c_qa, a_eq_cqa, &|d, x| d.imul(x, up));
+    let assoc_a2 = d.const_app(p.mul_assoc, &[cc, qa, up]); // Eq Int (c_qa*up) cc_qau2
+    let cqa_up = d.imul(c_qa, up);
+    let (_, au2_eq_ccqau2) = d.ichain(au2, &[(cqa_up, a_to_cqa_u), (cc_qau2, assoc_a2)]);
+
+    let b_to_cqb_v = d.icongr(b, c_qb, b_eq_cqb, &|d, x| d.imul(x, vp));
+    let assoc_b2 = d.const_app(p.mul_assoc, &[cc, qb, vp]); // Eq Int (c_qb*vp) cc_qbv2
+    let cqb_vp = d.imul(c_qb, vp);
+    let (_, bv2_eq_ccqbv2) = d.ichain(bv2, &[(cqb_vp, b_to_cqb_v), (cc_qbv2, assoc_b2)]);
+
+    let step_s1 = d.icongr(au2, cc_qau2, au2_eq_ccqau2, &|d, x| d.iadd(x, bv2));
+    let step_s2 = d.icongr(bv2, cc_qbv2, bv2_eq_ccqbv2, &|d, x| d.iadd(cc_qau2, x));
+    let au2_plus_bv2 = d.iadd(au2, bv2);
+    let ccqau2_plus_bv2 = d.iadd(cc_qau2, bv2);
+    let (_, sum_chain2) = d.ichain(
+        au2_plus_bv2,
+        &[(ccqau2_plus_bv2, step_s1), (ccqau2_plus_ccqbv2, step_s2)],
+    );
+    let sum_chain2_rev = d.isymm(au2_plus_bv2, ccqau2_plus_ccqbv2, sum_chain2);
+    let cc_hh_eq_sum = d.itrans(
+        cc_hh,
+        ccqau2_plus_ccqbv2,
+        au2_plus_bv2,
+        chain_a,
+        sum_chain2_rev,
+    );
+    // cc_hh_eq_sum : Eq Int cc_hh au2_plus_bv2
+
+    let dvd_a = d.const_app(p.gcd_dvd_left, &[a, b]); // idvd(ofnat_g, a)
+    let dvd_b = d.const_app(p.gcd_dvd_right, &[a, b]); // idvd(ofnat_g, b)
+    let dvd_au2 = {
+        let step = d.const_app(p.dvd_mul_right, &[a, up]);
+        d.const_app(p.dvd_trans, &[ofnat_g, a, au2, dvd_a, step])
+    };
+    let dvd_bv2 = {
+        let step = d.const_app(p.dvd_mul_right, &[b, vp]);
+        d.const_app(p.dvd_trans, &[ofnat_g, b, bv2, dvd_b, step])
+    };
+    let dvd_sum2 = d.const_app(p.dvd_add, &[ofnat_g, au2, bv2, dvd_au2, dvd_bv2]); // idvd(ofnat_g, au2_plus_bv2)
+    let sum_eq_cchh = d.isymm(cc_hh, au2_plus_bv2, cc_hh_eq_sum); // Eq Int au2_plus_bv2 cc_hh
+    let dvd_cchh = d.int_eq_rewrite(au2_plus_bv2, cc_hh, sum_eq_cchh, dvd_sum2, &|d, y| {
+        idvd(d, ofnat_g, y)
+    }); // idvd(ofnat_g, cc_hh)
+
+    let g_dvd_natabs_cchh = d.const_app(p.nat_abs_dvd_nat_abs_of_dvd, &[ofnat_g, cc_hh, dvd_cchh]);
+    // g_dvd_natabs_cchh : Nat.dvd (natAbs ofnat_g) (natAbs cc_hh), defeq Nat.dvd g (natAbs cc_hh)
+    let natabs_cchh = nat_abs(d, cc_hh);
+    let mul_cchh_lemma = d.const_app(p.nat_abs_mul, &[cc, ofnat_hh]); // Eq Nat natabs_cchh (cabs*natAbs(ofnat_hh))
+    let natabs_ofnat_hh = nat_abs(d, ofnat_hh);
+    let cabs_natabshh = NatOps::mul(d, cabs, natabs_ofnat_hh);
+    let g_dvd_cabs_natabshh = d.nat_rewrite(
+        natabs_cchh,
+        cabs_natabshh,
+        mul_cchh_lemma,
+        g_dvd_natabs_cchh,
+        &|d, w| d.dvd(g, w),
+    );
+    // g_dvd_cabs_natabshh : Nat.dvd g cabs_natabshh, defeq Nat.dvd g (cabs*hh)
+    // (`natAbs (ofNat hh) ≡ hh` is pure `iota`, but `g ≡ cabs*kk` is a PROVED
+    // fact, not defeq -- rewrite the divisor explicitly via `cabs_kk_eq_g`.)
+    let g_eq_cabs_kk = d.symm(cabs_kk, g, cabs_kk_eq_g); // Eq Nat g cabs_kk
+    let cabs_kk_dvd_cabs_natabshh =
+        d.nat_rewrite(g, cabs_kk, g_eq_cabs_kk, g_dvd_cabs_natabshh, &|d, w| {
+            d.dvd(w, cabs_natabshh)
+        });
+    // cabs_kk_dvd_cabs_natabshh : Nat.dvd cabs_kk cabs_natabshh, defeq Nat.dvd (cabs*kk) (cabs*hh)
+    let kk_dvd_hh = cancel_dvd_of_pos(d, cabs, kk, hh, one_le_cabs, cabs_kk_dvd_cabs_natabshh);
+
+    // --- Antisymmetry closes it: hh = kk = g / cabs. ------------------------
+    let hh_eq_kk = d.lemma(p.nat.dvd_antisymm, &[hh, kk, hh_dvd_kk, kk_dvd_hh]);
+
+    let with_h2 = d.lam_fv(h2_fv, dvd_cb, hh_eq_kk);
+    d.lam_fv(h1_fv, dvd_ca, with_h2)
+}
+
+/// From `x`, `cc`, `dvd_c_x : idvd(cc, x)` and `hne : Not (Eq Int cc zero)`,
+/// derive `Eq Int x (cc * x.ediv cc)` -- exact division, sign-general
+/// analogue of [`declare_gcd_div_gcd_div_gcd`]'s local `exact` closure, via
+/// [`super::dvd::declare_emod_eq_zero_iff_dvd_general`] in place of the
+/// positive-only bridge.
+fn exact_general(
+    d: &mut IntDev<'_>,
+    x: ExprId,
+    cc: ExprId,
+    dvd_c_x: ExprId,
+    hne: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let ediv_xc = d.iediv(x, cc);
+    let emod_xc = d.iemod(x, cc);
+    let zero_i = d.izero();
+    let zero_eq_ty = d.ieq(emod_xc, zero_i);
+    let dvd_ty = idvd(d, cc, x);
+    let iff_xc = d.const_app(p.emod_eq_zero_iff_dvd_general, &[x, cc, hne]);
+    let mpr = d.const_app(p.logic.iff_mpr, &[zero_eq_ty, dvd_ty, iff_xc]);
+    let emod_eq_zero = d.apply(mpr, &[dvd_c_x]);
+
+    let mul_q = d.imul(cc, ediv_xc);
+    let sum_with_emod = d.iadd(mul_q, emod_xc);
+    let full_eq = d.const_app(p.ediv_add_emod, &[x, cc]); // Eq(sum_with_emod, x)
+    let full_eq_rev = d.isymm(sum_with_emod, x, full_eq); // Eq(x, sum_with_emod)
+    let sum_with_zero = d.iadd(mul_q, zero_i);
+    let step = d.icongr(emod_xc, zero_i, emod_eq_zero, &|d, y| d.iadd(mul_q, y));
+    let add_zero_q = d.const_app(p.add_zero, &[mul_q]); // Eq(sum_with_zero, mul_q)
+    let (_, chained) = d.ichain(sum_with_emod, &[(sum_with_zero, step), (mul_q, add_zero_q)]);
+    d.itrans(x, sum_with_emod, mul_q, full_eq_rev, chained) // Eq(x, cc*(x/cc))
+}
+
+/// `Int.gcd_div : ∀ a b c, c ∣ a → c ∣ b →
+/// Eq Nat (gcd (a.ediv c) (b.ediv c)) (Nat.div (gcd a b) (natAbs c))`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's rejection if the constructed term does
+/// not check.
+pub(super) fn declare_gcd_div(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.gcd_div, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let stmt = gcd_div_goal(d, a, b, c);
+        let proof = case_split(
+            d,
+            &[c],
+            &|d, args| gcd_div_goal(d, a, b, args[0]),
+            &|d, branches| {
+                let (shape, n) = branches[0];
+                match shape {
+                    Shape::NegSucc => {
+                        let cc = d.neg_succ(n);
+                        let zero_int = d.izero();
+                        let eq_ty = d.ieq(cc, zero_int);
+                        let h_fv = d.fresh_fvar();
+                        let h = d.kernel().fvar(h_fv);
+                        let false_proof = super::decide::discriminate(d, cc, zero_int, h, false);
+                        let hne = d.lam_fv(h_fv, eq_ty, false_proof);
+                        let one_le_cabs = super::division::positive_of_succ(d, n);
+                        gcd_div_nonzero_case(d, a, b, cc, hne, one_le_cabs)
+                    }
+                    Shape::OfNat => d.induct(
+                        &|d, nn| {
+                            let cc = d.of_nat(nn);
+                            gcd_div_goal(d, a, b, cc)
+                        },
+                        &|d| gcd_div_zero_case(d, a, b),
+                        &|d, m, _ih| {
+                            let succ_m = d.succ(m);
+                            let cc = d.of_nat(succ_m);
+                            let one_le_cabs = super::division::positive_of_succ(d, m);
+                            let hne = super::dvd::ne_zero_of_pos(d, cc, one_le_cabs);
+                            gcd_div_nonzero_case(d, a, b, cc, hne, one_le_cabs)
+                        },
+                        n,
+                    ),
+                }
+            },
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}

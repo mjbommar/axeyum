@@ -1663,7 +1663,7 @@ fn neg_mul_neg(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
 /// `positive` binding uses, extracted here because
 /// [`declare_ediv_emod_unique_general`] needs it independently of any
 /// particular divisor branch's `emod` row.
-fn positive_of_succ(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn positive_of_succ(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
     let zero = d.zero();
     let base = {
         let name = d.int().nat.zero_le;

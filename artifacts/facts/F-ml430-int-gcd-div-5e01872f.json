@@ -8,13 +8,40 @@
     "statement": "∀ {a b c : ℤ}, c ∣ a → c ∣ b → (a / c).gcd (b / c) = a.gcd b / c.natAbs",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.gcd_div",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.gcd_div` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint",
+        "int_prelude_tests::gcd_div_applies_at_a_positive_a_negative_divisor_and_at_zero"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`Int.gcd_div` in `crates/axeyum-lean-kernel/src/int_prelude/gcd.rs` (`declare_gcd_div`). Mirrors Mathlib v4.30's `Int.gcd_div` (`alias gcd_div := gcd_ediv`, `Mathlib/Data/Int/GCD.lean`) exactly: Lean 4 core's `Int.gcd_ediv` (`Init.Data.Int.Gcd`) states the same proposition over `/`, and core's own `instance : Div Int` binds `/` to `Int.ediv` \"for compatibility with SMT-LIB\" (`Init.Data.Int.DivMod.Basic`) -- the SAME division this development's `Int.ediv` matches bit for bit (verified against the pinned toolchain source, not inferred). This is a same-definition mirror (honest flip), not a restatement of a different proposition, and it carries NO restriction on `c`'s sign or `c = 0`, matching Mathlib's own unrestricted hypotheses (`c ∣ a`, `c ∣ b`) exactly -- `c = 0` is proved here as a genuine degenerate case, not excluded. Proved by mutual divisibility (Bezout on `a,b` and on `a/c,b/c`, entirely through `natAbs` identities with no case split on `c`'s sign needed for the algebra itself), NOT via Lean core's own route through `Nat.gcd_div`/`Nat.gcd_mul_left` -- neither exists in this development and either would need a fresh strong-induction principle over `Nat.gcd`'s well-founded recursion. `int_prelude::` sweep: 45 -> 47 (one bridge lemma `Int.emod_eq_zero_iff_dvd_general` plus this theorem)."
+    },
+    {
+      "id": "footprint-Int.gcd_div",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.gcd_div 2>/dev/null | /usr/bin/grep -xFc $'integer\\tInt.gcd_div\\t0\\t')\" -ge 1",
+      "notes": "The matched row is `integer<TAB>Int.gcd_div<TAB>0<TAB>` with an EMPTY trailing footprint column, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Uses `/usr/bin/grep` explicitly (not the interactive `ugrep` alias) and ANSI-C-quoted literal tabs, per this repository's own grep-dialect gotcha. Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "established_by": "the `int-gcd-div` lane, completing the `int-emod-negative` lane's two landed sign-general division-algorithm lemmas (`Int.emod_natAbs_bound`, `Int.ediv_emod_unique_general`) with a third bridge lemma (`Int.emod_eq_zero_iff_dvd_general`) and the mutual-divisibility argument for `Int.gcd_div` itself",
     "source": "statement-only extraction of `Int.gcd_div` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED via the `int-gcd-div` lane, 2026-08-29, as `Int.gcd_div` -- axiom-free, statement identical to Mathlib's (confirmed a same-definition mirror by reading Lean 4 core's pinned `Init/Data/Int/Gcd.lean` and `Init/Data/Int/DivMod/Basic.lean` sources directly, not by inference from the name).\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
