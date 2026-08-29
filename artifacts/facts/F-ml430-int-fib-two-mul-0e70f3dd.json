@@ -1,32 +1,74 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-fib-two-mul-0e70f3dd",
-  "title": "Mathlib v4.30 source proposition Int.fib_two_mul",
-  "statement": "The proposition declared as `Int.fib_two_mul` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (n : ℤ), Int.fib (2 * n) = Int.fib n * (2 * Int.fib (n + 1) - Int.fib n)",
-    "fragment": "Int"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-int-fib-add-181b6a2c"
   ],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- fib_two_mul 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\.fib_two_mul[[:space:]]+\\(\\(x0[[:space:]]+:[[:space:]]+Int\\)[[:space:]]+->[[:space:]]+Eq\\.\\{1\\}[[:space:]]+Int[[:space:]]+\\(Int\\.fib[[:space:]]+\\(Int\\.mul[[:space:]]+\\(Int\\.ofNat[[:space:]]+\\(AxNat\\.succ[[:space:]]+\\(AxNat\\.succ[[:space:]]+AxNat\\.zero\\)\\)\\)[[:space:]]+x0\\)\\)[[:space:]]+\\(Int\\.mul[[:space:]]+\\(Int\\.fib[[:space:]]+x0\\)[[:space:]]+\\(Int\\.sub[[:space:]]+\\(Int\\.mul[[:space:]]+\\(Int\\.ofNat[[:space:]]+\\(AxNat\\.succ[[:space:]]+\\(AxNat\\.succ[[:space:]]+AxNat\\.zero\\)\\)\\)[[:space:]]+\\(Int\\.fib[[:space:]]+\\(Int\\.add[[:space:]]+x0[[:space:]]+Int\\.one\\)\\)\\)[[:space:]]+\\(Int\\.fib[[:space:]]+x0\\)\\)\\)\\)$'",
+      "checker_seconds": 3,
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "int_theorem_inventory re-list, WHOLE-TYPE anchored"
+      ],
+      "id": "kernel-Int.fib_two_mul",
+      "kind": "kernel-term",
+      "notes": "The pattern pins the ENTIRE rendered type, not just the name, so a transposed factor (`fib n` and `fib(n+1)` swapped inside the `sub`, or `sub` folded to `add`) cannot pass. Verified discriminating on this tree: 1 against the real row, 0 against a row with `Int.sub` rewritten to `Int.add` and 0 against a row with the `2` literal (`AxNat.succ (AxNat.succ AxNat.zero)`) collapsed to `AxNat.zero`. Tab separators matched with `[[:space:]]`, never `\\t` -- see this repository's documented GNU-grep/ugrep divergence. `--release` is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack, and a debug run's empty output would read as ABSENT.",
+      "supports": "Int.fib_two_mul is admitted by the trusted kernel gate, and its canonical type is the pinned Mathlib statement symbol for symbol: ((x0 : Int) -> Eq.{1} Int (Int.fib (Int.mul (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) x0)) (Int.mul (Int.fib x0) (Int.sub (Int.mul (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) (Int.fib (Int.add x0 Int.one))) (Int.fib x0))))."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "checker_seconds": 3,
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Int.fib_two_mul",
+      "kind": "exhaustive-enumeration",
+      "notes": "Re-measured on this tree: integer trusted surface = 0. --require-axiom-free exits nonzero when the count is not zero, so the exit status depends on the finding. --release is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack, and a debug run's empty output would read as ABSENT.",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.fib_two_mul"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -q -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::fib_two_mul_computes_at_a_concrete_index_of_each_sign 2>/dev/null | grep -cE '^test result: ok\\. 1 passed')\" -eq 1",
+      "checker_seconds": 3,
+      "checkers": [
+        "cargo test (Kernel::infer + Kernel::def_eq, with a negative control per case)"
+      ],
+      "id": "evaluation-Int.fib_two_mul-each-sign",
+      "kind": "witness-replay",
+      "notes": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs. The command asserts EXACTLY ONE test passed, so a filter matching nothing fails rather than exiting 0.",
+      "supports": "fib_two_mul instantiated at n=5 (fib(10)=55=fib(5)*(2*fib(6)-fib(5))=5*11) and n=-3 (fib(-6)=-8=fib(-3)*(2*fib(-2)-fib(-3))=2*(-4)), each paired with the value the swapped-coefficient formula fib(n)*(2*fib(n)-fib(n+1)) gives (10 at both indices), which must NOT be def_eq. n=5 was chosen so a transposed factor changes the numeric result."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "kernel_theorem": "Int.fib_two_mul",
+    "language": "lean4-surface",
+    "statement": "∀ (n : ℤ), Int.fib (2 * n) = Int.fib n * (2 * Int.fib (n + 1) - Int.fib n)"
+  },
+  "id": "F:ml430-int-fib-two-mul-0e70f3dd",
+  "notes": "Closed in-tree. No induction was needed -- the prior lane's sizing ('~200-250 lines, no new device') held once the subtraction bridge existed. Route: Int.fib_add n n gives fib(n+n) = fib(n-1)*fib n + fib n*fib(n+1); the new bridge fib_pred_eq_sub (built for this lane, general form `a+b=c |- b=c-a`, named eq_sub_of_add_eq_left) rewrites fib(n-1) as fib(n+1)-fib(n) via Int.fib_rec at n-1; the rest is ring algebra (mul_comm, Int.mul_sub, left_distrib, and a small `(x-y)+x = (x+x)-y` rearrangement) to fold the result into the `2*fib(n+1)-fib n` shape, plus a `2*t = t+t` helper (mul_two_eq_add_self) to bridge the index `2*n` to `n+n`.\n\nThe real cost was not the algebra but a direction bug: `Int.isymm(a, b, h)` requires `h : Eq(a,b)` and returns `Eq(b,a)`; five call sites across this lane's new helpers passed the arguments in the wrong order relative to the hypothesis actually in hand. Every individual sub-proof still type-checked in isolation against its own (also-backwards) declared expectation, so a concrete `n=3` instantiation test passed cleanly on the first attempt; the mismatch surfaced only once the pieces were chained with a genuinely free `n`, diagnosed by re-deriving the construction against a free variable pushed into an explicit LocalContext and checking each named intermediate one at a time.",
+  "proof_route": "kernel-lean",
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.fib_two_mul` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs, declare_fib_two_mul)",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition statement was read from the pinned statement-only inventory; the proof PRODUCED here is this kernel's own construction (Int.fib_add plus a purpose-built subtraction bridge and ring algebra), not a transcription of Mathlib's tactic proof, which was never consulted.",
         "what": "the theorem declaration `Int.fib_two_mul`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "proved in-tree over the CONSTRUCTED integers. The canonical type was read from int_theorem_inventory's own output and compared symbol for symbol against the pinned Mathlib statement already recorded in formal.statement, which is unchanged."
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Int.fib_two_mul` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Int.fib_two_mul"
 }
