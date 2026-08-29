@@ -155,6 +155,7 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-binaryrec | `Nat.binaryRecAux`/`Nat.binaryRec` + 4 refl equations + `binaryRecAux_agree_of_fuel` (double-fuel) + `binaryRec_succ`; new facts `F:nat-binary-rec-fuel-irrelevance`, `F:nat-binary-rec-succ` |
 | 2026-08-29 | nat-binaryrec | `Nat.lt_two_mul_of_pos`/`Nat.half_le_of_succ_le_succ` — the halving arithmetic promoted out of four unnamed private copies (`log.rs`, `binary.rs`, `powsq.rs`, `rec_agreement.rs`); the copies are NOT yet deleted |
 | 2026-08-29 | nat-binaryrec | `F:ml430-nat-fastfib-eq-cde11774` confirmed staying `open`: Mathlib's `binaryRec` is well-founded recursion with a dependent `Sort u` motive, ours is a non-dependent fuel encoding — a different `def`, so any `fastFib` built here lands as a new local fact. `Nat.fastFib` NOT built. |
+| 2026-08-29 | nat-land-assoc-impl | `Nat.land_aux_eq_zero_of_left_eq_zero` (the propagation lemma `252` traced but did not build); a complete, implementation-ready, guard-slot-verified derivation for `land_aux_assoc_of_fuel`'s 4-leaf structure (corrected leaf split order to c,b,a; the hard leaf's double `div_mod_unique` reconstruction closing via `ih` + `mul_assoc` alone, no new lemmas); `land_assoc`'s fuel-bookkeeping shape (mechanical, `land_comm` one slot wider); `land_assoc`/`lor_assoc` remain open |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -14832,6 +14833,535 @@ a live `!def_eq` control and adds `Nat.Pair`'s. `mk 3 5` is deliberately
 ASYMMETRIC, so `fst`/`snd` transposition changes the value — the failure a
 commutative operator's numerals cannot expose on their own. Magnitudes are
 tiny throughout: these numerals are unary `succ` towers.
+
+Status: `bitwise_comm` LANDED and closed. `lt_xor_cases` NOT attempted --
+sized only (see below), per the brief's "landing bitwise_comm alone is a
+good outcome."
+
+## Task
+- `F:ml430-nat-bitwise-comm-1a273bae` (`Nat.bitwise_comm`) -- primary
+  target. **DONE**, flipped to `proved`.
+- `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`) -- secondary.
+  **NOT attempted.** Still `open`.
+
+## `bitwise_comm`: what was built and why
+
+### Did the unconditional form hold, or did it need `Le` hypotheses?
+
+Needed `Le` hypotheses -- `lor`'s shape, not `land`'s. A Python simulation
+(`bitwiseAux` re-implemented directly, not committed -- pure scratchpad)
+run BEFORE any Rust was written:
+
+```python
+def bitwiseAux(f, fuel, m, n):
+    if fuel == 0:
+        return n if f(False, True) else 0
+    if n == 0:
+        return m if f(True, False) else 0
+    if m == 0:
+        return n if f(False, True) else 0
+    return 2 * bitwiseAux(f, fuel - 1, m // 2, n // 2) + \
+        (1 if f(m % 2 == 1, n % 2 == 1) else 0)
+```
+
+Result: `bitwiseAux(or, 0, 0, 1) = 1` but `bitwiseAux(or, 0, 1, 0) = 0` --
+the unconditional (fuel not necessarily sufficient) form is FALSE whenever
+`f false true = true` (`f = or`, `f = xor`), and true only when
+`f false true = false` (`f = and`, matching `land`'s absorbing-zero row --
+see CLAUDE.md's own "AND IT PROPAGATES INTO THE STATEMENT" entry, added
+independently the same day and describing exactly this). With `Le m fuel`
+AND `Le n fuel` (sufficient fuel for both operands), the statement held for
+`and`/`or`/`xor` over 2000 random trials each, and `bitwise f m n =
+bitwise f n m` (canonical fuel) held for all three over the full `0..60`
+grid. So `bitwise_aux_comm_of_fuel` needed `lor`'s shape
+(`Le m fuel -> Le n fuel -> ...`), generalized over `f`, plus an explicit
+`hf : forall a b, f a b = f b a` hypothesis `land`/`lor` never needed
+(their `f` is fixed and concrete, so commutativity is a closed fact, not a
+hypothesis to thread).
+
+### How `f`'s commutativity threads through the per-bit step (and where else it's needed)
+
+Two sites need `hf`, not one:
+
+1. **The per-bit combine** (expected). `bitwiseAux`'s successor row combines
+   `f (beq (m%2) 1) (beq (n%2) 1)` into a `Nat` via `bool_select_nat`. Since
+   `hf (beq (m%2) 1) (beq (n%2) 1) : Eq Bool (f a b) (f b a)` directly IS the
+   swapped equality at those two concrete-shaped-but-symbolic-valued `Bool`
+   terms, no case split is needed (unlike `bit_agreement`/`lor_bit_comm`,
+   which case-split on `m % 2`/`n % 2` because their `f` is concrete). That
+   `Bool` equality is lifted into a `Nat` equality (the two
+   `bool_select_nat` applications) via a small `congr_bool_to_nat` helper
+   (`bitwise.rs`) built from `ops.rs`'s ALREADY-GENERIC
+   `NatOps::bool_eq_motive`/`NatOps::bool_transport` -- a first pass
+   reinvented `Eq.{1} Bool` and the raw `Eq.rec` application by hand before
+   noticing `ops.rs` already carries the whole
+   `bool_eq`/`bool_refl`/`bool_transport`/`bool_eq_motive`/`bool_symm`/
+   `bool_trans` family (built originally for `false_true_elim`). Exactly
+   the "search for the STEP, not the NAME" trap CLAUDE.md's Gotchas
+   describes -- caught only because the duplicate `d.refl` (hardcoded to
+   `Nat`) produced a `TypeMismatch` on a `Bool`-typed term
+   (`expected: AxNat, got: (fun x0:Bool => Bool) Bool.false`), which is the
+   "sort error wearing a TypeMismatch's clothes" pattern from the same file.
+2. **The `m = 0`/`n = 0` boundary** (NOT anticipated going in). For `land`/
+   `lor` (concrete `f`), the two boundary rows (`f false true`-conditioned
+   and `f true false`-conditioned) evaluate to the SAME literal on both
+   sides trivially. For a SYMBOLIC `f` they are two genuinely different
+   partial applications, equal only via `hf true false`/`hf false true`.
+   `declare_bitwise_aux_comm_of_fuel`'s two single-zero branches (`a = 0`,
+   `b = 0`) each need one `congr_bool_to_nat` call over `hf` at the
+   boundary literals -- this is the "genuinely new proof content beyond
+   `lor_aux_comm_of_fuel`'s transport" CLAUDE.md's own fact-registration
+   guidance anticipated.
+
+### The four lemmas landed (`nat_prelude/bitwise.rs`, uncontended)
+
+1. `bitwise_aux_zero_left_any_fuel : forall f fuel n, Eq (bitwiseAux f fuel
+   0 n) (bool_select_nat (f false true) n 0)` -- unconditional in `f`, no
+   `hf` needed (structural, mirrors `land`/`lor`'s `_zero_left_any_fuel`,
+   with `lor`'s extra nested `cases_zero_succ` on `n` since the fuel-exhaustion
+   value is not the constant `0`).
+2. `bitwise_aux_agree_of_fuel` (double-fuel induction via
+   `agree_by_double_fuel_induction`) -- no `hf` needed: fuel-irrelevance
+   never swaps the value arguments. The succ-step's guard values
+   (`on_n_zero`/`on_m_zero`) are the REAL `bitwiseAux` formulas
+   (`bool_select_nat (f true false) ...`/`bool_select_nat (f false true)
+   ...`), not placeholders -- `n` stays symbolic in this lemma, so the
+   guard never reduces and a placeholder would fail to be defeq to the
+   actual unfolding.
+3. `bitwise_aux_comm_of_fuel : forall f, (forall a b, f a b = f b a) ->
+   forall fuel m n, Le m fuel -> Le n fuel -> Eq (bitwiseAux f fuel m n)
+   (bitwiseAux f fuel n m)` -- the both-nonzero step's guard values ARE
+   placeholders (`succ_a`, `succ_b` themselves), because BOTH
+   `beq(succ_a, 0)` and `beq(succ_b, 0)` reduce to the literal `false`
+   regardless of what sits in the discarded branch -- `lor_aux_comm_of_fuel`'s
+   own precedent, and the opposite of (2)'s situation.
+4. `bitwise_comm` -- assembled through the shared fuel `m + n`, exactly as
+   `land_comm`/`lor_comm`.
+
+`half_le_predecessor_of_succ` (`rec_agreement.rs`, fully generic Nat
+arithmetic, previously private) was widened to `pub(super)` -- a two-line,
+visibility-only diff -- rather than duplicating ~40 lines of arithmetic a
+fifth time.
+
+### Verification
+
+- Kernel accepted all four proof terms on the FIRST attempt (no
+  `TypeMismatch`/`UnboundFVar` iteration on the core construction --
+  the borrow-checker errors and the test-helper `d.refl`/duplicate-`bool_eq`
+  bugs described above were the only issues, both outside the kernel
+  proof terms themselves).
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude::` -- 133 passed, 0
+  failed (was 132 before this lane; +1 from the new concrete test).
+- New test `bitwise_comm_applies_at_a_concrete_discriminating_instance`:
+  symbolic restatement at a fixed concrete `f = xor_fn` (with a
+  from-scratch `hf` proof for `xor` built by a four-leaf `Bool.rec` case
+  split, `bool_fn_comm`), concrete discriminating instance
+  `bitwise(xor, 3, 5) = bitwise(xor, 5, 3) = 6`, and a negative control at
+  `f = or_fn`, insufficient fuel `(0, 0, 1)` confirming
+  `bitwiseAux(or, 0, 0, 1) = 1 != 0 = bitwiseAux(or, 0, 1, 0)` -- the same
+  witness the Python simulation used, NOT copied from `lor`'s own control
+  (which is `(1, 3, 4)`/`(1, 7, 7)`-shaped, for a different lemma).
+- `every_nat_declaration_is_checked_and_axiom_free` -- required adding the
+  four new names to `theorem_names` (the environment-derived coverage
+  assertion caught the omission immediately, exactly as designed).
+- `the_build_is_deterministic` -- pin moved `89 + 463` -> `89 + 467` (4 new
+  theorems, 0 new definitions), taken from the panic's own mismatch
+  (`left: 556`), not hand-incremented.
+- `cargo fmt --edition 2024` (per-file) and
+  `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both
+  clean.
+- `python3 scripts/validate-facts.py` -- 0 errors (1930 facts checked).
+- Both fact `checker_command`s run and confirmed exit 0: the
+  `nat_theorem_inventory`/`grep -Ec` anchor (count 1) and
+  `nat_axiom_inventory --require-axiom-free nat` (prints
+  `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`).
+
+### Facts closed
+
+- `F:nat-bitwise-comm` -- NEW native fact, `proved`, `kernel-lean` route,
+  `axiom_footprint: []`. `formal.statement` is `nat_theorem_inventory`'s
+  `render_lean` output verbatim (paste, not transcription).
+- `F:ml430-nat-bitwise-comm-1a273bae` -- flipped `open -> proved` via
+  reconciliation with `F:nat-bitwise-comm`. Checked the mirror-flip
+  criterion first: unlike `land_comm`/`lor_comm` (which needed a DIFFERENT
+  route than Mathlib's own `bitwise_comm`, since `land`/`lor` are hand-rolled
+  fuel recursions, not `bitwise` specializations, at proof-construction
+  time), this fact's native proof genuinely IS Mathlib's own general
+  `Nat.bitwise` combinator -- an honest flip in the strongest sense: same
+  `def`, same theorem, modulo the cosmetic `n m`/`m n` argument-name order.
+
+## `lt_xor_cases`: what it still needs (not attempted)
+
+The lane that built `Nat.xor` (`docs/plan/status/253-nat-xor-parity.md`)
+sized this as needing a **highest-differing-bit induction** -- unrelated in
+size to defining `xor` itself. I did not open that file or investigate
+further; per the brief, `bitwise_comm` was the priority and "landing
+`bitwise_comm` alone is a good outcome." Whoever picks this up next should
+re-read `docs/plan/status/253-nat-xor-parity.md` directly rather than
+trusting this paragraph (per CLAUDE.md's own repeated warning that a
+second-hand sizing claim can be stale) and verify `Nat.xor`/its bit-decode
+lemmas (`xor.rs`, `bit_decode.rs`) are still exactly as described before
+budgeting the induction.
+
+## Commits (this lane, `nat-bitwise-comm`)
+
+1. `wip(nat): bitwise_comm -- Python simulation confirms Le-hypothesis shape`
+   -- plan only, no code.
+2. `wip(nat): bitwise_comm -- compiles, kernel acceptance not yet verified`
+   -- the four lemmas + `nat_prelude.rs` wiring + `half_le_predecessor_of_succ`
+   visibility change.
+3. (this commit) -- test-inventory registration, pin fix, concrete
+   discriminating test, `congr_bool_to_nat`/`bool_eq` deduplication against
+   `ops.rs`'s existing `Bool`-`Eq` family, fact ledger updates, this status
+   file.
+
+Run `git log --oneline` on this branch for exact SHAs.
+
+**Your lane's block (`OPEN`, nat-land-assoc-impl, 2026-08-29).** This lane
+executed `docs/plan/status/252-nat-assoc-dichotomy.md`'s traced-but-unbuilt
+theorem, verified the plan's own case tree against the actual guard
+argument order and helper signatures, and landed it with tests. Neither
+`F:ml430-nat-land-assoc-ad4775b8` (`Nat.land_assoc`) nor
+`F:ml430-nat-lor-assoc-82c4d0fd` (`Nat.lor_assoc`) closed this session --
+this is the fourth lane to stop short of `land_assoc` itself, but the
+first to leave `land_aux_assoc_of_fuel` (the theorem that actually blocks
+it) with a complete, line-by-line, implementation-ready derivation rather
+than a sketch.
+
+## What landed and is kernel-checked
+
+**`Nat.land_aux_eq_zero_of_left_eq_zero : ∀ fuel a b c,
+Eq (landAux fuel a b) 0 → Eq (landAux fuel a (landAux fuel b c)) 0`**
+(`rec_agreement.rs`), exactly the statement `252` traced. Built via
+`agree_by_double_fuel_induction` (its "two independently chosen fuels"
+design reused here for three plain value arguments plus one fuel --
+nothing in that helper actually requires the third generalized argument
+to BE a second fuel, only that it be universally quantified alongside the
+induction variable, which is exactly what this statement needs).
+
+**Every step of `252`'s plan held, verified by compiling and running it,
+not by re-reading the prose:**
+
+- 3 of 4 base leaves (`a=0`; `a=succ,b=0`; `a=succ,b=succ,c=0`) close
+  exactly as traced: `a=0` and `a=succ,b=0` each need ONE call to the
+  already-existing `land_aux_zero_left_any_fuel` (the inner `landAux _ 0
+  n` for symbolic `n`); `a=succ,b=succ,c=0` closes by **pure `d.refl`
+  retyping**, no lemma at all, because `landAux`'s OUTER guard checks its
+  SECOND argument first and `c=0` is literal there.
+- The hard leaf (`a,b,c` all `succ`) needed exactly the arithmetic chain
+  `252` traced: `add_eq_zero` → `mul_eq_zero` + `succ_ne_zero` (eliminate
+  the `2=0` disjunct) → `rec_ab=0 ∧ bit_ab=0`; `zero_or_succ` on the inner
+  `landAux fuel b c` (`Y`); in the `Y=succ q` branch, `div_mod_exec` +
+  `div_mod_unique` reconstruct `div(succ q,2)`/`mod(succ q,2)` back to
+  `Y`'s own `rec_bc`/`bit_bc`, which feeds `rec_ab=0` into the outer
+  induction's own `ih` at `(half_a,half_b,half_c)` and `bit_ab=0` into
+  `mul_assoc` -- **exactly the chain `252` specified, with no missing
+  lemma and no new one needed.**
+- The one place `252`'s prose was imprecise rather than wrong: it says
+  the top-level structure is a 3-leaf tree "not a 2×2 grid" without
+  spelling out that the `X=0` sub-case's proof does not need the `Y=succ
+  q` witness `q` at all (it is available in scope from the outer
+  `exists_elim` but simply unused) -- a detail that only matters for
+  writing the Rust (the arrow-typed hypothesis at that leaf is `Arrow(Eq X
+  0, …)`, and the exists-witness binder is still there, just dead).
+
+**Two build errors in my own first pass, fixed before this was tested,
+recorded because they are the two generic Rust traps this repository's
+CLAUDE.md already names:** a missing `use crate::BinderInfo;` (needed for
+my own private `or_elim`/`absurd`/`exists_elim` copies, per the existing
+per-file convention), and one `d.add(d.mul(two, rec_bc), bit_bc)` --
+`E0499`, the exact "cannot find type" -> "double mutable borrow" shape
+CLAUDE.md's Hard Rules/Gotchas sections do not name explicitly but which
+is the same family as the documented `d.kernel().const_(d.prelude()...)`
+hazard: never nest two calls that each need `&mut d` in one expression.
+Fixed by hoisting the inner call to a `let`.
+
+Registered in `theorem_names` (coverage is environment-derived, so an
+unregistered live declaration fails `every_nat_declaration_is_checked_and_
+axiom_free` loudly). `the_build_is_deterministic`'s pin moved `89+465 →
+89+466`, confirmed by the test itself passing (not hand-derived and
+trusted blind).
+
+**Test**: `land_aux_eq_zero_of_left_eq_zero_applies_at_a_mixed_concrete_
+instance` -- symbolic restatement at fully free `fuel`/`a`/`b`/`c`, plus
+`252`'s own non-vacuous Python-cross-checked witness `(fuel=2, a=1, b=2,
+c=2)`: `land 1 2 = 0` (hypothesis genuinely true, not vacuous) while
+`land 2 2 = 2` is genuinely **nonzero** -- the "mixed" case `252` measured
+at 108/343 triples, not a corner where the whole statement degenerates to
+`0 = 0`. Both directions asserted (`ab` defeq `0`, `bc` NOT defeq `0`).
+
+**135 of 135 `nat_prelude::` tests pass** (was 134 before this lane).
+`cargo fmt --edition 2024` on the three touched files and `cargo clippy -p
+axeyum-lean-kernel --all-targets -- -D warnings` both clean.
+`python3 scripts/validate-facts.py`: 1929 facts, 0 errors (unaffected --
+no fact file touched, `F:ml430-nat-land-assoc-ad4775b8` and
+`F:ml430-nat-lor-assoc-82c4d0fd` both remain `open` exactly as found).
+Confirmed neither fact is pinned open independent of provability
+(`grep -rln` for both fact ids across `scripts/` returns nothing).
+
+## The propagation lemma's exact statement, as built
+
+```
+Nat.land_aux_eq_zero_of_left_eq_zero :
+  ∀ (fuel a b c : Nat),
+    Eq Nat (Nat.landAux fuel a b) Nat.zero →
+    Eq Nat (Nat.landAux fuel a (Nat.landAux fuel b c)) Nat.zero
+```
+
+No `Le` hypothesis on `fuel` -- it holds at ANY fuel, including
+insufficient fuel, because `landAux`'s fuel-exhaustion row is the
+absorbing constant `0` and the whole inductive argument never needed a
+sufficiency bound (verified concretely: it is what makes `fuel=0` -- the
+degenerate case -- close by pure `refl`).
+
+## `land_aux_assoc_of_fuel`: a complete, implementation-ready derivation
+
+**Not built this lane** (budget), but every leaf below was hand-traced
+against the ACTUAL helper signatures and the ACTUAL guard argument order
+in `land.rs`/`rec_agreement.rs::guarded` (which `252`'s plan did not
+cross-check this precisely -- see the correction below), so this should
+transcribe into Rust with no further mathematical discovery needed.
+
+**Statement:**
+```
+land_aux_assoc_of_fuel : ∀ fuel a b c,
+  Eq (landAux fuel (landAux fuel a b) c) (landAux fuel a (landAux fuel b c))
+```
+via `agree_by_double_fuel_induction` again (fuel, a, b, c), no hypothesis
+this time (a plain `Eq`, not an arrow).
+
+**Base case (`fuel=0`):** both sides defeq `0` (the zero-fuel row is
+constant regardless of the argument), and LHS is actually **defeq to
+RHS directly** (both fully reduce to `Nat.zero`), so the base closure is
+one line: `d.refl(LHS)` retyped as `Eq LHS RHS`. No `trans`/`symm`
+plumbing needed, simpler than the propagation lemma's base case.
+
+**CORRECTION TO `252`'s LEAF ORDER, verified against `guarded`'s actual
+guard slots (`land.rs`: the SECOND positional argument, "n", is checked
+OUTERMOST):** `252`'s prose says "case-split on `(a,b,c)` in that order,"
+but its own four enumerated leaves are unambiguously split **`c` first,
+then `b`, then `a`** -- write `X := landAux (succ k) a b`, `Y := landAux
+(succ k) b c` (as `252` does); `X`'s own `n`-slot is `b`, `Y`'s own
+`n`-slot is `c`, and the OUTER application `landAux (succ k) X c` has `c`
+in its `n`-slot while `landAux (succ k) a Y` has `Y` in its `n`-slot. So
+splitting `c` first is what makes the OUTER LHS resolve directly, and
+what (via a second reduction) makes `Y` collapse to `0` for free without
+touching `b`. The propagation lemma split `a,b,c` in `a,b,c` order for a
+DIFFERENT reason (its own statement's outer application has `a` in the
+`m`-slot, and its hypothesis is ABOUT `a,b` specifically) -- the two
+lemmas are not the same shape and should not use the same split order.
+**Use `cases_zero_succ` nested `c`, then `b`, then `a`.**
+
+- **Leaf 1 (`c=0`, `a,b` untouched):** `landAux (succ k) X 0` is defeq `0`
+  regardless of `X` (`n=0` literal, outer check alone resolves). `Y =
+  landAux (succ k) b 0` is defeq `0` regardless of `b`, same reason; then
+  `landAux (succ k) a Y` transports to `landAux (succ k) a 0`, defeq `0`
+  regardless of `a`. **Zero lemmas, zero further case-splits** -- matches
+  `252` exactly.
+- **Leaf 2 (`c=succ c'`, `b=0`, `a` untouched):** `Y = landAux (succ k) 0
+  (succ c')` -- `m=0` literal, `n=succ c'` literal nonzero: outer check
+  resolves "proceed" (iota on two literal constructors), inner check
+  resolves `m=0` true, giving `Y` defeq `0` by **two iota steps, no
+  lemma** (this is SHARPER than `252`'s own prose, which did not verify
+  this leaf could skip `land_aux_zero_left_any_fuel` entirely -- it can,
+  because `b=0` is literal here, unlike the propagation lemma's own
+  leaf 2 where the symmetric position was symbolic). `X = landAux (succ
+  k) a 0` (`b=0` literal) is ALSO defeq `0` regardless of `a`, same
+  one-step reason as leaf 1. Transport both zeros through and finish.
+  **Zero lemmas.**
+- **Leaf 3 (`c=succ c'`, `b=succ b'`, `a=0`):** `X = landAux (succ k) 0
+  (succ b')` is defeq `0` by the same two-iota-step argument as leaf 2's
+  `Y` (`m=0` literal, `n=succ b'` literal nonzero). Transport into `landAux
+  (succ k) X (succ c')` gives `landAux (succ k) 0 (succ c')`, defeq `0` by
+  the identical two-step argument (`succ c'` was ALREADY literal from the
+  outer split). `Y = landAux (succ k) (succ b') (succ c')` is now a
+  genuine stuck compound (do not evaluate it) -- but the RHS is `landAux
+  (succ k) 0 Y` (`a=0` literal), whose OUTER check is on `Y` (NOT
+  literal, stuck), so THIS one needs `land_aux_zero_left_any_fuel (succ
+  k) Y`, which holds for ANY `n` including a stuck one. **One lemma call,
+  exactly matching `252`'s "the existing `land_aux_zero_left_any_fuel`
+  alone suffices."**
+- **Leaf 4 (`c=succ c'`, `b=succ b'`, `a=succ a'`) -- the hard leaf.**
+  Write `succ_a, succ_b, succ_c` for the three (now literal) candidates,
+  `sk := succ k`. Define exactly as in the propagation lemma's hard leaf:
+  `half_a/half_b/half_c := div(succ_a/b/c, 2)`, `bit_a/b/c := mod(succ_a/b/c,
+  2)`, `rec_ab := landAux k half_a half_b`, `bit_ab := mul(bit_a,bit_b)`,
+  `rec_bc := landAux k half_b half_c`, `bit_bc := mul(bit_b,bit_c)`. Then
+  `X := landAux sk succ_a succ_b` is defeq `2*rec_ab+bit_ab`; `Y := landAux
+  sk succ_b succ_c` is defeq `2*rec_bc+bit_bc` (both via `guarded`, both
+  guards resolve `false`, all three operands literal `succ`).
+
+  **Dichotomize `Y` via `zero_or_succ`:**
+
+  - **`Y=0`:** mirror the propagation lemma via `land_aux_comm_of_fuel`,
+    exactly as `252` describes for the top-level assoc proof's own
+    `Y=0` case (this is the SAME mirroring trick, now instantiated at the
+    concrete literal-succ triple):
+    ```
+    comm_bc   := land_aux_comm_of_fuel(sk, succ_b, succ_c)      : Eq Y (landAux sk succ_c succ_b)
+    hyp_cb    := trans(landAux sk succ_c succ_b, Y, 0, symm(comm_bc), hyp_Y_zero)
+    prop_cba  := land_aux_eq_zero_of_left_eq_zero(sk, succ_c, succ_b, succ_a, hyp_cb)
+                 : Eq (landAux sk succ_c (landAux sk succ_b succ_a)) 0
+    comm_ab   := land_aux_comm_of_fuel(sk, succ_a, succ_b)      : Eq X (landAux sk succ_b succ_a)
+    comm_Xc   := land_aux_comm_of_fuel(sk, X, succ_c)           : Eq (landAux sk X succ_c) (landAux sk succ_c X)
+    cong_X    := congr(X, landAux sk succ_b succ_a, comm_ab, |z| landAux sk succ_c z)
+    LHS_zero  := trans/trans chain: landAux sk X succ_c -> landAux sk succ_c X
+                 -> landAux sk succ_c (landAux sk succ_b succ_a) -> 0
+    ```
+    RHS: transport `Y→0` into `landAux sk succ_a Y`, giving `landAux sk
+    succ_a 0`, defeq `0` regardless of `succ_a` (literal `n=0` after
+    transport). Combine `LHS_zero`/`RHS_zero` via `trans`+`symm`.
+
+  - **`Y=succ q`** (via `exists_elim`, witness `q`, `heq : Eq Y (succ
+    q)`): **dichotomize `X` via `zero_or_succ`:**
+
+    - **`X=0`:** `landAux sk X succ_c` transports to `landAux sk 0
+      succ_c`, defeq `0` by a PURE two-iota-step reduction (both `m=0`
+      and `n=succ_c` are now literal -- NO lemma needed here, sharper
+      than the propagation lemma's own analogous branch, because there
+      `n` was still symbolic; here it is literal from the outer split).
+      RHS: `landAux sk succ_a Y` with hypothesis `X = landAux sk succ_a
+      succ_b = 0` is **exactly** `land_aux_eq_zero_of_left_eq_zero(sk,
+      succ_a, succ_b, succ_c, hx)`, whose conclusion IS `Eq (landAux sk
+      succ_a Y) 0` verbatim (`Y` already denotes `landAux sk succ_b
+      succ_c`, no substitution needed). `heq`/`q` unused, exactly as
+      `252` notes.
+
+    - **`X=succ p`** (via a second `exists_elim`, witness `p`, `hxp : Eq
+      X (succ p)`) -- **the one truly generic leaf, needing reconstruction
+      on BOTH sides:**
+      ```
+      cong_L := congr(X, succ_p, hxp, |z| landAux sk z succ_c)
+                : Eq (landAux sk X succ_c) (landAux sk succ_p succ_c)
+      cong_R := congr(Y, succ_q, heq, |z| landAux sk succ_a z)
+                : Eq (landAux sk succ_a Y) (landAux sk succ_a succ_q)
+      ```
+      `landAux sk succ_p succ_c` now reduces via `guarded` (both literal
+      succ) to `2*rec_Xc+bit_Xc` with `rec_Xc := landAux k (div succ_p 2)
+      half_c`, `bit_Xc := mul (mod succ_p 2) bit_c`. Symmetrically
+      `landAux sk succ_a succ_q` reduces to `2*rec_aY+bit_aY` with
+      `rec_aY := landAux k half_a (div succ_q 2)`, `bit_aY := mul bit_a
+      (mod succ_q 2)`.
+
+      Reconstruct `div(succ_p,2)`/`mod(succ_p,2)` from `X`'s OWN
+      decomposition, via `div_mod_unique`+`div_mod_exec` **exactly the
+      pattern already built and tested in the propagation lemma's `Y=succ
+      q` branch** (`candidate_divmod` from `hxp` retyped against `X`'s
+      `2*rec_ab+bit_ab` unfolding, `bit_ab_lt_2` via
+      `bit_product_le_left`+`mod_lt`+`lt_of_le_of_lt`, `exec_divmod` via
+      `div_mod_exec(1, succ_p)`, `div_mod_unique` combining them) to get
+      `half_p_eq : Eq (div succ_p 2) rec_ab` and `bit_p_eq : Eq (mod
+      succ_p 2) bit_ab`. **Do the identical thing for `succ_q`** (this is
+      the code already written for the propagation lemma's `Y=succ q`
+      branch, reusable close to verbatim) to get `half_q_eq : Eq (div
+      succ_q 2) rec_bc` and `bit_q_eq : Eq (mod succ_q 2) bit_bc`.
+
+      Now the closing argument is clean and needs **no new lemma**:
+      ```
+      rec_Xc -[congr half_p_eq]-> landAux k rec_ab half_c
+             -[ih at (half_a,half_b,half_c)]-> landAux k half_a rec_bc
+             -[symm(congr half_q_eq)]-> rec_aY
+      ```
+      because `landAux k rec_ab half_c` IS `landAux k (landAux k half_a
+      half_b) half_c` **syntactically** (that is what `rec_ab` denotes),
+      matching `ih`'s own LHS shape at `(half_a,half_b,half_c)` exactly,
+      and `landAux k half_a rec_bc` IS `landAux k half_a (landAux k
+      half_b half_c)` matching `ih`'s RHS exactly. **This is `ih` applied
+      at the halves, nothing more** -- the same "self-referential"
+      technique `252` names for the propagation lemma's own hard leaf,
+      now closing the OUTER induction instead.
+      ```
+      bit_Xc -[congr bit_p_eq]-> mul bit_ab bit_c
+             -[mul_assoc(bit_a,bit_b,bit_c)]-> mul bit_a bit_bc   (LITERAL match, no massaging)
+             -[symm(congr bit_q_eq)]-> bit_aY
+      ```
+      because `mul_assoc`'s stated LHS `mul (mul bit_a bit_b) bit_c` IS
+      `mul bit_ab bit_c` literally (`bit_ab := mul bit_a bit_b`), and its
+      RHS `mul bit_a (mul bit_b bit_c)` IS `mul bit_a bit_bc` literally.
+      Finish with two `congr`+`trans` steps combining `rec_Xc_eq_rec_aY`
+      and `bit_Xc_eq_bit_aY` into `Eq (landAux sk succ_p succ_c) (landAux
+      sk succ_a succ_q)`, then chain through `cong_L`/`symm(cong_R)` to
+      the actual goal `Eq (landAux sk X succ_c) (landAux sk succ_a Y)`.
+
+  **No new arithmetic lemma is needed anywhere in this leaf** beyond what
+  the propagation lemma already used (`div_mod_unique`, `div_mod_exec`,
+  `mul_assoc`, `bit_product_le_left`, `mod_lt`, `lt_of_le_of_lt`) plus
+  `land_aux_comm_of_fuel` (already in the tree) for the `Y=0` mirror.
+  Budget this leaf at roughly DOUBLE the propagation lemma's hard leaf
+  (two reconstructions instead of one), the rest of the theorem (leaves
+  1-3, the `Y=0`/`X=0` sub-cases) at roughly the same size as the
+  propagation lemma's easy leaves combined.
+
+## `land_assoc` from `land_aux_assoc_of_fuel`: the fuel bookkeeping
+
+Not derived to the same depth (no reason to -- it is mechanical, `land_
+comm`'s own pattern one argument wider), but the shape is:
+
+Pick a common fuel `F` sufficient for `a`, `b`, `c`, AND for `land a b`'s
+own canonical fuel (`land a b ≤ a` via `land_le_left`, so `F ≥ a` already
+suffices via `le_trans`). `F := a + b + c` works (or `a + (b + c)`,
+whichever makes the `Le` derivations cleanest with `le_add_right`/
+`add_comm`/`add_assoc`, exactly `land_comm`'s own `m + n` bookkeeping one
+slot wider). Then:
+
+1. `land_aux_agree_of_fuel(F,a,b,a) : Eq(landAux F a b)(land a b)` (needs
+   `Le a F`, `Le a a` via `le_refl`).
+2. `land_aux_agree_of_fuel(F,b,c,b) : Eq(landAux F b c)(land b c)` (needs
+   `Le b F`, `Le b b`).
+3. `land_aux_assoc_of_fuel(F,a,b,c) : Eq(landAux F (landAux F a b) c)
+   (landAux F a (landAux F b c))`.
+4. Congr step 1 into step 3's LHS-inner and step 2 into step 3's
+   RHS-inner, giving `Eq(landAux F (land a b) c)(landAux F a (land b c))`.
+5. `land_aux_agree_of_fuel(F, land a b, c, land a b) : Eq(landAux F (land
+   a b) c)(land (land a b) c)` -- needs `Le (land a b) F`, obtained via
+   `land_le_left` (`Le (land a b) a`) + `le_trans` with `Le a F`, and `Le
+   (land a b) (land a b)` via `le_refl`.
+6. `land_aux_agree_of_fuel(F, a, land b c, a) : Eq(landAux F a (land b
+   c))(land a (land b c))` -- needs `Le a F` (already have) and `Le a a`.
+7. Chain 4-6 to close `Eq(land (land a b) c)(land a (land b c))`, the
+   `land_assoc` statement.
+
+This is the exact same shape `land_comm` already executes (see
+`rec_agreement.rs`'s `declare_land_comm`), widened from two `Le`
+derivations to four. No new machinery.
+
+## `lor_assoc`: still not attempted, still not a mechanical transport
+
+Unchanged from `252`'s own warning, restated because it is still true and
+still worth not re-deriving carelessly: `lorAux`'s fuel-exhaustion row is
+pass-through (`n`, not `0`), so `lor a b = 0 → a=0 ∧ b=0` (OR's only
+zero), and `lor a (lor b c)` when `lor a b = 0` is `lor 0 c = c`, **not
+`0`** in general. The whole leaf-4 strategy above (dichotomize on
+zero-ness, reconstruct via `div_mod_unique`) does not transport, because
+`lor`'s interesting/absorbing values are different. **Simulate the `lor`
+recursion in Python at small arguments before writing any Rust for it**,
+per this repository's own standing rule.
+
+## Counts
+
+`nat_prelude`: 134 passed before this lane, **135 passed after** (1 new
+declaration, a theorem; 1 new test). `the_build_is_deterministic`'s pin:
+`89+465 → 89+466`. `nat` trusted surface still `axiom=0 opaque=0
+quotient=0` (the new theorem's `axiom_footprint` is asserted empty in its
+test). `cargo fmt --edition 2024 --check`-equivalent (via direct
+`rustfmt --edition 2024` on the touched files) clean. `cargo clippy -p
+axeyum-lean-kernel --all-targets -- -D warnings`: clean. `python3
+scripts/validate-facts.py`: 1929 facts, 0 errors (neither target fact
+touched; both remain `open`). NOT run: the aggregate `just check` /
+`./scripts/check.sh` (coordinator re-verifies before merging, per this
+repo's standing rule).
+
+Neither `F:ml430-nat-land-assoc-ad4775b8` nor
+`F:ml430-nat-lor-assoc-82c4d0fd` was touched (both remain `open`, exactly
+as found).
+
+## Commits
+
+- `36b7d4f0c` -- wip: field/name plumbing + the whole propagation-lemma
+  proof, landed before compiling (first-ten-tool-calls commit)
+- `a397e7a67` -- feat: fixes the two build errors, adds the theorem_names
+  registration + pin bump + the concrete/symbolic test; 135/135
+  `nat_prelude::` tests pass
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

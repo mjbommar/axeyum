@@ -1,5 +1,7 @@
 # 256 -- nat-bitwise-comm (lane `nat-bitwise-comm`)
 
+<!-- plan-section: lane-status -->
+
 Status: `bitwise_comm` LANDED and closed. `lt_xor_cases` NOT attempted --
 sized only (see below), per the brief's "landing bitwise_comm alone is a
 good outcome."
