@@ -129,6 +129,10 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-singles | `Nat.mod_lcm`: unconditional lcm-combination of two congruences, closes `F:ml430-nat-mod-lcm-ee6bdd41` |
 | 2026-08-29 | nat-singles | `Nat.dvd_of_forall_prime_mul_dvd`: needs only one prime witness, closes `F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b` |
 | 2026-08-29 | nat-singles | `gap_dvd`/`modeq_of_dvd_gap` (`crt.rs`) widened `fn` -> `pub(super) fn` so `lcm.rs` can reuse them |
+| 2026-08-29 | nat-minfac-relprime | `Nat.IsRelPrime`/`Nat.coprime_iff_isRelPrime`: closes `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` |
+| 2026-08-29 | nat-minfac-relprime | `Nat.minFacAux`/`Nat.minFac`: fuel-recursive least-prime-factor definition (bonus; no fact closed, `ml430` mirror stays open — different algorithm from Mathlib's) |
+| 2026-08-29 | int-emod-negative | landed `Int.emod_natAbs_bound` (`declare_emod_natabs_bound`, `int_prelude/division.rs`) — the sign-general remainder bound `emod_lt_of_pos` cannot state; `int_prelude::` 40 -> 41 |
+| 2026-08-29 | int-emod-negative | landed `Int.ediv_emod_unique_general` (`declare_ediv_emod_unique_general`, same file) — sign-general division-algorithm uniqueness via a negate-and-reduce-to-the-positive-case argument; `int_prelude::` 41 -> 42; `F:ml430-int-gcd-div-5e01872f` (`Int.gcd_div`) left open, precisely scoped to a fourth not-yet-built bridge lemma plus its own mutual-divisibility argument |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -12003,6 +12007,461 @@ not hand-counted).
 - Did NOT run the full aggregate `just check`/`./scripts/check.sh` (out of
   scope for a single-lane targeted change; the coordinator re-runs the full
   gate before merge per standing project convention).
+
+**Your lane's block (`DONE`, nat-minfac-relprime, 2026-08-29).** Landed the
+required fact and the bonus definition sized in
+[`docs/plan/status/240-nat-singles.md`](docs/plan/status/240-nat-singles.md).
+
+`Nat.IsRelPrime m n := ∀ d, d ∣ m → d ∣ n → d = 1` (`rel_prime.rs`), a genuine
+new `Definition` — Mathlib's generic `∀ d, d∣x → d∣y → IsUnit d`
+(`Mathlib/Algebra/Divisibility/Units.lean:150`) specialized to `Nat`'s only
+unit, `1`. Both directions of `Nat.coprime_iff_isRelPrime` were exactly as
+cheap as the handoff predicted: forward combines `d∣m`/`d∣n` via `dvd_gcd`,
+transports along the hypothesis to `d∣1`, and closes with
+`eq_one_of_dvd_one`; backward applies the hypothesis directly at
+`d := gcd m n`, discharged by `gcd_dvd_left`/`gcd_dvd_right`. No case
+analysis in either direction, and neither unfolds `Nat.gcd`'s own recursion.
+Closes `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` (flipped `open` ->
+`proved`; the mirror flip is honest — verified by reading Mathlib's actual
+source for `IsRelPrime` at the pinned commit, not inferring from the
+theorem's statement).
+
+**Bonus: `Nat.minFac`/`Nat.minFacAux` landed** (`min_fac.rs`), a fuel-recursive
+linear divisor search — structural `Nat.rec` on a `fuel` argument (the same
+device `Nat.div`/`Nat.mod`/`Nat.log` use), fuel `= n - 2`, scanning candidates
+`2, 3, 4, …` via `beq (mod n candidate) 0`. Fuel exhaustion coincides exactly
+with `candidate = n` (never earlier), so the base case "return the candidate
+unchanged" is correct — `n` trivially divides itself. `minFac 0 = 2` and
+`minFac 1 = 1` are an outer case split before the search runs, matching
+Mathlib's boundary conventions.
+
+**The `F:ml430-nat-coprime-of-lt-minfac-0f79bdba` mirror stays `open`,
+deliberately.** Mathlib's own `Nat.minFac` is NOT this — theirs is
+well-founded recursion on `sqrt n`-bounded measure, skips even candidates,
+and exits early once `k*k > n`. The two agree pointwise (both are "the least
+divisor ≥ 2 of `n`" with identical boundary values) but are structurally
+different `def`s, so per the established mirror-flip criterion this is the
+`Nat.multichoose` case, not the `Nat.descFactorial_of_lt` case. A theorem
+about coprimality relative to THIS `minFac` needs its own new `F:nat-*` fact
+and a minimality property (`∀ d, 2 ≤ d → d ∣ n → minFac n ≤ d`) not attempted
+here — sized as further, separate work.
+
+**Kernel REJECTED nothing in this lane** — both declarations and every test
+were accepted on first `add_declaration`/`declare_theorem`. The one real
+correctness risk (a `Definition` that type-checks but computes the wrong
+value; `Kernel::add_declaration` cannot catch this) was caught by evaluation
+tests, not the kernel: `min_fac_computes_the_least_prime_factor_with_negative_controls`
+checks `minFac 12 = 2` against `minFac 15 = 3` (the brief's discriminating
+pair — "first divisor" and "smallest prime divisor" coincide for an
+upward-from-2 scan, argued in `min_fac.rs`'s module doc) plus `minFac 0 = 2`,
+`minFac 1 = 1`, `minFac 2 = 2`, `minFac 9 = 3`, each with a negative `def_eq`
+control (including `minFac 12` vs `minFac 15` not collapsing to each other).
+
+`nat_prelude` count: **85 + 443 -> 88 + 444** (1 new theorem
+`coprime_iff_isRelPrime`, 3 new definitions `IsRelPrime`, `minFacAux`,
+`minFac`; confirmed by `the_build_is_deterministic`'s own panic message, not
+hand-counted).
+
+## Verification run
+
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude` (targeted `nat_prelude::`
+  filter): **127 passed, 0 failed** (was 126 before this lane's declarations
+  + tests, 120 before `nat-singles`).
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings`:
+  clean, no allow-lists needed.
+- `rustfmt --edition 2024` on every touched file.
+- `python3 scripts/validate-facts.py`: 0 errors (1922 facts, 1834 proved).
+- `F:ml430-nat-coprime-iff-isrelprime-0c08eb25`'s new `checker_command`s run
+  and confirmed to actually discriminate: `nat_theorem_inventory` prints the
+  exact rendered type for `Nat.coprime_iff_isRelPrime`,
+  `nat_axiom_inventory --require-axiom-free nat` exits 0, and both
+  concrete-instance tests (mp/mpr round trip at (3,5); a real
+  `Not (IsRelPrime 4 6)` proof from `gcd 4 6 = 2`) pass individually by name.
+- Did NOT run the full aggregate `just check`/`./scripts/check.sh` (out of
+  scope for a single-lane targeted change; the coordinator re-runs the full
+  gate before merge per standing project convention).
+
+## What's still needed for `F:ml430-nat-coprime-of-lt-minfac-0f79bdba`
+
+A NEW fact (not the `ml430` mirror — see above) stating coprimality relative
+to THIS `Nat.minFac`, which needs:
+
+- **Minimality**: `∀ n, 2 ≤ n → ∀ d, 2 ≤ d → d ∣ n → minFac n ≤ d` — that
+  `minFac n` really is the LEAST divisor `≥ 2`, not merely A divisor. Not yet
+  proved; the natural route is an induction over the fuel search itself
+  (every candidate `2, …, minFac n - 1` was tried and failed), mirroring
+  `primes.rs`'s existing `least_divisor_search` minimality argument but
+  adapted to the concrete recursive function rather than an existential
+  witness.
+- **The coprimality argument itself**, once minimality is in hand: for
+  `m ≠ 0`, `m < minFac n`, suppose `g := gcd n m > 1`; `g ∣ n` and `g ≥ 2`
+  gives `g ≥ minFac n` by minimality, but `g ∣ m` and `m ≠ 0` gives `g ≤ m`,
+  contradicting `m < minFac n ≤ g ≤ m`. So `gcd n m = 1`.
+
+**Your lane's block (`DONE for this pass`, int-emod-negative, 2026-08-29).**
+Landed **two of the three** lemmas `docs/plan/status/236-int-gcd-div-2.md`
+named as the missing pieces for `F:ml430-int-gcd-div-5e01872f`
+(`Int.gcd_div`): `Int.emod_natAbs_bound` (the keystone) and
+`Int.ediv_emod_unique_general`. `Int.gcd_div` itself stays open, precisely
+scoped below. No ledger edit was made — the fact is still `open`.
+
+**Verified before starting**: no inline negative-divisor `emod` bound exists
+anywhere in `wilson.rs`, `crt.rs`, or `modinv.rs` (grepped proof bodies, not
+names, per the brief). `crt.rs`'s own module doc already states the gap
+directly — "this development has no bound on emod's magnitude for a
+negative modulus" — confirming the prior handoff's assessment rather than
+finding a shortcut around it.
+
+**1. `Int.emod_natAbs_bound`** (`int_prelude/division.rs`):
+`∀ a b, Not (Eq Int b zero) → Int.lt (emod a b) (ofNat (natAbs b))`.
+Every one of the four `Int.rec` branches reuses existing machinery rather
+than re-deriving it: `natAbs` is an unconditional ι-reduction (`ofNat n ↦
+n`, `negSucc n ↦ succ n`), so the divisor's magnitude collapses to exactly
+the shapes `emod_lt_of_pos`'s two row builders (`row_emod_lt_of_pos_of`,
+`row_emod_lt_of_pos_neg`) and the `sub_nat_nat_lt_ofnat` combinator already
+handle — reused directly. The `b ≠ 0` hypothesis is load-bearing in exactly
+one of the four branches (`ofNat m, ofNat n`, where `n` could be `0`),
+derived via the contrapositive of `nat_eq_to_int` plus
+`Nat.zero_lt_of_ne_zero` and the general `Nat.mod_lt : 0 < n → m % n < n`
+(no `succ`-shape pinning needed, unlike `emod_lt_of_pos`, which cannot state
+this bound for a negative divisor at all).
+
+Instantiated at a positive divisor (`b = 1`), a negative divisor (`b = -1`,
+where `emod_lt_of_pos`'s own hypothesis `0 < b` is structurally FALSE, so
+that theorem could not even be invoked there), and independently checked
+the excluded `b = 0` corner as a negative control: `emod a 0 = a` and
+`natAbs 0 = 0` make the excluded conclusion demand `5 < 0`, refuted by
+`Nat.not_succ_le_zero` — confirming the hypothesis is genuinely
+load-bearing, not decoration.
+
+**Build-order gotcha**: `Int.natAbs` is not declared until well after
+`Int.ediv_emod_unique` in `build_int_prelude_uncached`'s call sequence, so
+`declare_emod_natabs_bound` (and later `declare_ediv_emod_unique_general`)
+had to move to right after `nat_abs::declare_nat_abs(&mut d)?;`, not beside
+their `emod_nonneg`/`emod_lt_of_pos`/`ediv_emod_unique` siblings higher up
+the list. Confirmed by a temporary debug harness
+(`match build_int_prelude(&mut k) { Err(UnknownConst{name}) => panic!("{}",
+k.display_name(name)), ... }`) which named `Int.natAbs` directly — this is
+the fast way to diagnose this build-order class of failure, cheaper than
+bisecting call-site positions by hand.
+
+**2. `Int.ediv_emod_unique_general`** (same file): `∀ a b q1 r1 q2 r2, Not
+(Eq Int b zero) → a = b*q1+r1 → 0 ≤ r1 → r1 < ofNat (natAbs b) → a =
+b*q2+r2 → 0 ≤ r2 → r2 < ofNat (natAbs b) → q1 = q2 ∧ r1 = r2`. `
+ediv_emod_unique` needs `0 < b` for two independent reasons — it bounds the
+remainder against `b` itself, AND its proof (`build_core`/`solve_le_case`)
+reasons about `Int.mul b _` growing monotonically in the quotient, which
+only holds for a positive multiplier. Rather than re-deriving that
+machinery for a negative divisor, this reduces to the already-proved
+positive case by a change of variable, exploiting a definitional
+coincidence: `Int.neg (negSucc n)` ι-reduces to `ofNat (succ n)` — the SAME
+value `Int.natAbs (negSucc n)` ι-reduces to. So for `b < 0`, `neg b` already
+**is** (up to defeq) the positive divisor the bound hypotheses are already
+stated against; only the two reconstruction equations need rewriting (`b*q
+= (neg b)*(neg q)`, via a small local `neg_mul_neg` extraction of `gcd.rs`'s
+already-proved `neg_mul`/`neg_neg`). Applying `ediv_emod_unique` at divisor
+`neg b` and negated quotients gives `neg q1 = neg q2`; un-negate with
+`neg_neg` twice to recover `q1 = q2`. The positive-divisor branch needs no
+rewriting at all — `natAbs (ofNat n) ≡ n` makes the general bound already
+defeq to `ediv_emod_unique`'s own bound.
+
+Two bugs caught before the first successful build, both by immediate
+compile/kernel feedback rather than inspection: a double-mutable-borrow in
+the `case_split` `stmt` closure (`d.arrow(d.not(eq_ty), inner_goal)` —
+flattened into a `let`, the exact idiom Gotcha #10 in `CLAUDE.md`
+documents), and reusing bare hypothesis-value fvars as their own `lam_fv`
+TYPE arguments in the negative-divisor branch (fixed by computing the six
+actual hypothesis types via a new `unique_hyps_general` helper mirroring
+`build_core`'s existing `UniqueHyps`-typed pattern, rather than improvising
+types from the value fvars).
+
+Instantiated at a genuine positive divisor (`13 = 4*3+1`, mirroring the
+existing `ediv_emod_unique_applies_at_a_concrete_decomposition` test) and a
+genuine negative divisor (`13 = (-4)*(-3)+1` — a decomposition
+`ediv_emod_unique` cannot even be invoked on, since `Int.lt Int.zero (-4)`
+is FALSE). Both type-check end to end and land on the exact `q1=q2 ∧ r1=r2`
+conclusion.
+
+**What the kernel REJECTED and why**: nothing, in either declaration, once
+the two Rust-level bugs above were fixed (a borrow-checker error and a
+malformed `lam_fv` call — both caught before `add_declaration` was ever
+invoked). No proof term was rejected by the trusted gate.
+
+**Left open, precisely: `Int.gcd_div` itself.** Assessed but not attempted
+this pass, for a reason beyond the two lemmas above. The natural proof
+route for a negative common divisor `c` is NOT a simple sign-flip of
+`gcd_div_gcd_div_gcd`'s route (which only ever used a positive `c = ofNat
+(gcd a b)`): `gcd_div_gcd_div_gcd` obtained `i = c*qi` via the POSITIVE-only
+`emod_eq_zero_iff_dvd`'s `mp` direction plus `ediv_add_emod`. Generalizing
+`Int.gcd_div` to a negative `c` needs the SIGN-GENERAL analogue of that
+bridge (`c ≠ 0 → (emod a c = 0 ↔ c ∣ a)`) — a **fourth** lemma this lane's
+two landed pieces make constructible (from `emod_natAbs_bound` +
+`ediv_emod_unique_general`, by the same proof shape `emod_eq_zero_iff_dvd`
+already uses, generalized) but which is **not itself built yet**, and which
+the prior handoff's three-lemma decomposition did not name. Once that
+bridge exists, `Int.gcd_div`'s own proof still needs a genuine new
+mutual-divisibility argument relating `gcd(a.ediv c, b.ediv c)` to
+`gcd(a,b)/natAbs c` — comparable in size to `gcd_div_gcd_div_gcd`, as the
+prior handoff estimated, but now for an arbitrary sign `c` rather than the
+always-nonnegative `c = gcd a b`.
+
+Given the size and risk of that combined remaining work relative to this
+lane's remaining budget, and given the brief's own framing that landing the
+keystone (`emod_natAbs_bound`) alone was a complete success, this pass
+stops here having landed both of the general-purpose lemmas rather than
+risk a rushed or incorrect `Int.gcd_div` construction. A future lane can
+pick up directly: build the sign-general `emod = 0 ↔ dvd` bridge first (it
+is now a short derivation from the two lemmas this pass landed), then
+attempt `Int.gcd_div` itself with `gcd_div_gcd_div_gcd`'s proof as the
+template for the positive-divisor case.
+
+**Timing / counts**: `cargo test -p axeyum-lean-kernel --lib int_prelude::`
+— 40 passed before this lane started, 41 after landing
+`emod_natAbs_bound`, 42 after landing `ediv_emod_unique_general`.
+`derived_laws`'s pinned array: 151 → 152 → 153, recounted each time by
+grepping the array body for `^\s*p\.` lines, never by incrementing the old
+number. `cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both
+clean at each commit. No `python3 scripts/validate-facts.py` run was needed
+(no ledger file was edited this pass).
+
+**Your lane's block (`DONE for this pass`, pin-recount-shapes, 2026-08-29).**
+`scripts/recount-pinned-inventory.py` recognized exactly one array shape and
+answered "no pinned inventory array found" for the site whose merge it was run
+against. Its counting engine is now shape-independent, verified against every
+pinned array in the tree, and carries six new mutation-verified controls. The
+survey below **re-measures**
+[`docs/research/11-design-review/2026-08-29-the-pin-recount-tool-covers-one-of-four-shapes.md`](docs/research/11-design-review/2026-08-29-the-pin-recount-tool-covers-one-of-four-shapes.md)
+and corrects it in four places.
+
+Commits: `ce173137b` (engine), `ed8335521` (controls), plus this file.
+
+## What landed
+
+**One engine, not four regexes.** The line-shape heuristic (`^        \("` /
+`^        \($`) is gone. The tool now masks comments, string literals and char
+literals, then splits each array literal on **top-level commas** with a
+bracket-depth counter. That covers `[(&str, crate::NameId, &str); N]`,
+`[crate::NameId; N]`, `[&str; N]`, `let`/`const`/`static` and function-return
+positions, and multiple pinned arrays per file.
+
+Masking is load-bearing twice, not cleanup. This repository's doc comments carry
+deliberately unbalanced brackets (`[0,n)`, intra-doc links) that wreck a depth
+counter; and `creal/inventory.rs`'s module docs **quote a pin declaration in
+prose** to explain why that pin is gone, which an unmasked scan matches and then
+fails on as "not terminated by `];`". The old control suite worked around that
+with an anchored grep and noted the anchor "is also the right fix for the tool" —
+masking is that fix and is strictly stronger (an anchored scan still matches an
+indented `//!` code block).
+
+**Verified, both directions.** All 72 pinned-array sites in the tree report
+`declared == counted`, which agrees with the compiler (the tree builds, so every
+pin is correct by construction) — so a tool that were wrong about any real shape
+would show a false `PIN WRONG` here. That is not a vacuous pass: the pre-existing
+`a_wrong_pin_exits_nonzero` control pins that the tool can say `PIN WRONG` at
+all, and `every_wrong_pin_in_one_file_is_rewritten` pins that it rewrites the
+right pin when a file has several.
+
+**One diagnostic bug found and fixed.** `single`/`wrapped` were measured on the
+source, so an entry preceded by a `//` block read as *wrapped*.
+`int_prelude_tests.rs`'s `derived_lemmas` reported `wrapped=1` with nothing
+wrapped in it. `wrapped` names the measured 210-vs-283 failure, so it must not
+also fire for a comment; it is now measured on the masked text.
+
+## Deliverable 1 — the re-measured survey
+
+Whole-tree, using the new engine over `git ls-files '*.rs'`, filtered to element
+types `crate::NameId` / `NameId` / `&str` / `(&str, crate::NameId, &str)`:
+**72 pinned-array definition sites**, all internally consistent. The design
+review surveyed a kernel-shaped subset and reported 12.
+
+The distinction that matters is not the shape — it is **whether a lane's ordinary
+work adds a row.** Only a growing list can produce the documented merge failure
+(two lanes each bump the pin correctly against their own base; git merges the
+entry lines cleanly and leaves the declared size short).
+
+### Growing lists — a lane's work adds rows here
+
+| site | shape | N | authority-derived assertion covering completeness |
+| --- | --- | --- | --- |
+| `int_prelude_tests.rs:186` `derived_laws` | `[crate::NameId; N]` | 156 | `every_int_declaration_is_checked_and_axiom_free` |
+| `int_prelude_tests.rs:352` `derived_lemmas` | `[crate::NameId; N]` | 28 | same |
+| `int_prelude_tests.rs:396` `definition_names` | `[crate::NameId; N]` | 27 | same |
+| `int_prelude_tests.rs:434` `asserted_laws` | `[crate::NameId; N]` | 0 | `the_only_trusted_declarations_are_the_asserted_laws` |
+| `complex/complex_tests.rs:3010` `EXPECTED_STEP_ORDER` | `[&str; N]` | 91 | `steps_table_matches_recorded_extraction` (slice `assert_eq!` against `STEPS`) |
+
+The four `int_prelude_tests.rs` lists are read by
+`every_int_declaration_is_checked_and_axiom_free`, which enumerates
+`k.environment().iter()`, filters to `Definition`/`Theorem` under `Int.`, and
+fails naming anything absent from the union of all four. That is the assertion
+CLAUDE.md's `creal` resolution points at, in this file, already landed, and its
+own doc comment records that it found `definition_names` missing **entirely**
+and two unlisted `natAbs` theorems.
+
+`EXPECTED_STEP_ORDER` is compared with `assert_eq!(labels.as_slice(),
+EXPECTED_STEP_ORDER.as_slice())` against `super::STEPS`.
+
+### Fixed lists — load-bearing, and a lane never grows them
+
+| site | shape | N | what the pin does |
+| --- | --- | --- | --- |
+| `ordered_ring.rs:71` `RING_BINDER_NAMES` | `[&str; N]` | 30 | positionally aligned with `ring_telescope() -> [NameId; 30]`; `.len()` feeds `pub const SETOID_RING_BINDERS` and `RING_LAW_BINDERS` |
+| `ordered_ring.rs:112` `SETOID_RING_BINDER_NAMES` | `[&str; N]` | 39 | aligned with `setoid_ring_telescope() -> [NameId; 39]` |
+| `ordered_ring.rs:893` `setoid_ring_telescope` | `[NameId; N]` | 39 | the other half of that alignment — **the design review missed this site** |
+| `ordered_ring.rs:942` `ring_telescope` | `[NameId; N]` | 30 | returns `RingSignature::declarations()`, itself `[NameId; 30]` |
+| `creal.rs:6346`, `rat_prelude.rs:1719`, `arith_prelude.rs:232`, `rat_prelude/model.rs:98` | `[NameId; N]` | 22 | the 22 ordered-commutative-ring laws |
+| `complex.rs:1417` `ring_laws` | `[NameId; N]` | 9 | the commutative-ring laws over ℂ |
+| `axreal_call_site_guard.rs:56` `FLAGGED_CALLS` | `[&str; N]` | 2 | two identifiers the guard keeps out of shipped code |
+| `theorem_composition.rs:32` | `[&str; N]` | 3 | the declaration-exact Lean 4.30 `Acc` package SHA-256s |
+| ~60 further sites in `axeyum-lean-import/examples/`, `axeyum-cas`, fuzz alphabets | `[&str; N]` | small | per-capsule hash/label/root lists and fixed test domains |
+
+`30` is not a choice: CLAUDE.md records it as the **floor for an axiomatized
+ordered field**, since `AxReal`'s carrier is opaque and every operation and law
+must be assumed. `39 = 30 + 9` equality-slot binders. These pins tie two arrays
+to one length at the type level, which is exactly what makes the positional
+hand-off in `specialize_setoid_to_eq` safe.
+
+### Four corrections to the design review
+
+1. **The "covered" row is wrong: there are ZERO sites of the tuple shape.**
+   `creal/inventory.rs`'s `[(&str, crate::NameId, &str); 432]` is a **prose
+   quote inside `//!` module docs**, explaining why that pin was deleted. The
+   existing control suite already knew this — its last case is literally named
+   `no_real_file_currently_uses_this_pin_shape` and it passes. So the tool
+   covered **one of four shapes and zero of twelve real sites**, which is worse
+   than the review states, and is why nobody noticed it had stopped working.
+2. **`inductive_tests.rs` has no pinned list.** Both `[crate::NameId; 2]`
+   occurrences are components of a function's return **tuple type**
+   (`-> (NameId, NameId, [NameId; 2])`), with no array literal following. The
+   new engine correctly declines them — that is what
+   `a_bare_type_annotation_is_not_a_pin` pins.
+3. **`ordered_ring.rs` has three sites, not two** (the `[NameId; 39]` telescope
+   at line 893 is the one that makes the other two load-bearing).
+4. **`geometry_corpus.rs` / `geometry_certify.rs` carry `[&str; 7]` and
+   `[&str; 4]`** — fixed test domains (`["a","b","c","p","x","y","z"]`), not
+   growable inventories.
+
+## Deliverable 2 — per-site judgment
+
+The question the brief asks, per site: **what would this pin catch that nothing
+else catches?**
+
+### `int_prelude_tests.rs` ×4 — DELETE the pin, keep the lists
+
+*What the pin catches: nothing.* No code compares these lengths against
+anything derived from the kernel. The number was never derived from an
+authority — somebody wrote `156` because there were 156 entries. It constrains
+the list against itself, which is precisely the reasoning CLAUDE.md used to
+delete `creal_tests.rs`'s 432-entry pin.
+
+*What subsumes it:* `every_int_declaration_is_checked_and_axiom_free` reads
+`kernel.environment()` and fails on any `Int.` `Definition`/`Theorem` absent
+from the union of the four lists. That covers the direction that matters
+(a declaration nobody listed) which the pin **cannot see at all**, and it
+covers the merge-drop direction (an entry lost in a merge) too, because the
+declaration is still live and now unlisted.
+
+*What it costs:* it is the exact site of today's incident — lane 151→153, HEAD
+151→154, merged list 156, declared 154, clean merge, broken build. Five lanes
+are live in this file right now.
+
+*Prior art in the same tree:* `nat_prelude_tests.rs`'s `theorem_names` is
+already `fn theorem_names(p: &NatPrelude) -> Vec<NameId> { vec![ ... ] }`, has
+the same `every_nat_declaration_is_checked_and_axiom_free` backstop, and is
+being edited by several of the same lanes **without this friction**. The house
+pattern already exists; `int_prelude_tests.rs` simply predates it.
+
+*Recipe* (four functions, two lines each):
+
+```
+-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 156] {
+-    [
++fn derived_laws(p: &IntPrelude) -> Vec<crate::NameId> {
++    vec![
+ ...
+-    ]
++    ]
+ }
+```
+
+`asserted_laws` becomes `-> Vec<crate::NameId> { Vec::new() }`. Every consumer
+already uses `.into_iter()`, `.chain(...)` and `.collect()`, all of which are
+`Vec`-compatible; the doc comment on `asserted_laws` ("expected to shrink and
+must never grow") stays true and stays enforced by
+`the_only_trusted_declarations_are_the_asserted_laws`, which reads the
+environment.
+
+### `complex_tests.rs` `EXPECTED_STEP_ORDER` — DELETE the pin, keep the list
+
+*What the pin catches: nothing.* `assert_eq!` on two slices already fails on a
+length mismatch, with a message naming the position — strictly better than a
+compile error. The **list** is a golden record of the pre-refactor hand-written
+call sequence and is genuinely load-bearing; only the `91` is not.
+
+*Recipe:* `const EXPECTED_STEP_ORDER: &[&str] = &[ ... ];` and drop the
+`.as_slice()` at the single use site (line 3113).
+
+### `ordered_ring.rs` ×4, and the `[NameId; 22]` / `[NameId; 9]` law arrays — KEEP
+
+*What the pin catches:* a length disagreement between two arrays that are read
+**positionally against each other** — zipped at `ordered_ring.rs:362`/`:367`,
+and at `:1004` indexed as `RING_BINDER_NAMES[position]` where `position`
+enumerates `ring_telescope()`. That second form would **panic at runtime** if
+the two lengths ever diverged; the pin is what makes the divergence
+unrepresentable. `RING_BINDER_NAMES.len()` is additionally consumed by two
+`pub const`s (`SETOID_RING_BINDERS`, `RING_LAW_BINDERS`). These
+are architectural constants (30 = the ordered-field floor, 39 = 30 + 9, 22 = the
+ring laws), not inventories, and no lane's ordinary work adds a row. Zero merge
+friction, real diagnostic value. The tool now covers them, which is the right
+outcome for this class.
+
+### `axreal_call_site_guard.rs`, `theorem_composition.rs`, and the ~60
+`axeyum-lean-import` capsule constants — KEEP
+
+Fixed pinned data (flagged identifiers, package SHA-256s, per-capsule hash and
+label lists). They change only when the thing they pin changes, which is the
+point. Now covered by the tool at no cost.
+
+## Deliverable 3 — what was executed, and what was not
+
+**Executed:** the engine (`ce173137b`) and the controls (`ed8335521`). This was
+the brief's stated first priority and it unblocks the merge path for the five
+running lanes immediately — `python3 scripts/recount-pinned-inventory.py
+crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs` now reports
+`156/28/27/0` and rewrites any that moved.
+
+**NOT executed: the two pin deletions.** Both are Rust changes and the brief
+conditions them on "only where the tests still pass". This worktree has **no
+`target/` directory**, so any `cargo` invocation here is a full cold workspace
+build behind the host-wide `cargo-serialized.sh` flock — the mechanical cause
+CLAUDE.md identifies for the tenth subagent stall (83 GB across 125 worktrees,
+each paying a cold build before a single test runs). Spending that on a
+cosmetic pin removal, while five lanes contend for the same lock, is the wrong
+trade; and shipping an unverified Rust edit is the failure
+`cargo-check-is-not-the-kernel-gate` names. So the recipes above are handed to
+the coordinator, who re-verifies before merging anyway.
+
+The `int_prelude_tests.rs` conversion should land **after** the five concurrent
+lanes merge, not before: it touches the same signature lines they are bumping,
+and doing it during the merge window trades a silent breakage for a noisy
+conflict in every one of them at once. Doing it after costs one conflict, in
+one lane, resolved by taking the `Vec` side — and removes the friction for good.
+
+## Suggested follow-up (not done here)
+
+`scripts/recount-pinned-inventory.py --check` over the growing files is a
+one-line gate step and would turn today's post-merge compile error into a
+pre-merge diagnostic naming the file, the line, and both numbers. It is not
+wired into `just check` or `check.sh` by this lane, because a pin deletion would
+then need the gate updated in the same commit and the deletions are deferred
+above.
+
+## Landed changes
+
+| commit | what |
+| --- | --- |
+| `ce173137b` | shape-independent counting engine; masking; multi-pin support; `single`/`wrapped` measured on masked text |
+| `ed8335521` | six new controls, each mutation-verified in a scratch `copytree`; measured kill matrix and its two honest caveats recorded in the suite header |
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

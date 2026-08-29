@@ -97,9 +97,21 @@ def mask(src):
     i, n = 0, len(src)
 
     def blank(a, b):
+        """Blank `[a, b)` to spaces, preserving newlines."""
         for k in range(a, b):
             if out[k] != "\n":
                 out[k] = " "
+
+    def blank_inner(a, b):
+        """Blank a literal's CONTENT but keep its outermost delimiters.
+
+        A `[&str; N]` array is entries that are nothing BUT string literals, so
+        blanking a string whole leaves an entry of pure whitespace, which
+        `split_entries` then drops -- every such pin counted 0. Keeping the
+        quotes keeps the entry non-empty while still removing any comma or
+        bracket that lived inside it.
+        """
+        blank(a + 1, max(a + 1, b - 1))
 
     while i < n:
         c = src[i]
@@ -131,7 +143,7 @@ def mask(src):
                 term = '"' + "#" * hashes
                 j = src.find(term, k + 1)
                 j = n if j < 0 else j + len(term)
-                blank(i, j)
+                blank_inner(i, j)
                 i = j
             else:
                 i += 1
@@ -145,7 +157,7 @@ def mask(src):
                     j += 1
                     break
                 j += 1
-            blank(i, j)
+            blank_inner(i, j)
             i = j
         elif c == "'":
             # char literal vs lifetime: a char literal closes with `'` within a
@@ -156,10 +168,10 @@ def mask(src):
                 while j < n and src[j] != "'":
                     j += 1
                 j = min(j + 1, n)
-                blank(i, j)
+                blank_inner(i, j)
                 i = j
             elif j + 1 < n and src[j + 1] == "'":
-                blank(i, j + 2)
+                blank_inner(i, j + 2)
                 i = j + 2
             else:
                 i += 1
