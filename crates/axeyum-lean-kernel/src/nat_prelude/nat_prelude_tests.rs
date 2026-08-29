@@ -20,8 +20,8 @@
 use crate::BinderInfo;
 use crate::env::Declaration;
 use crate::{
-    ExprId, Kernel, KernelError, NameId, NatOps, NatPrelude, NatState, build_nat_prelude,
-    on_a_deep_stack,
+    ExprId, Kernel, KernelError, LocalContext, LocalDecl, NameId, NatOps, NatPrelude, NatState,
+    build_nat_prelude, on_a_deep_stack,
 };
 
 /// A downstream development: a kernel carrying the prelude, plus a name root of
@@ -756,6 +756,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.beq_eq_false_of_ne,
         p.count_range_eq_pred_of_only_zero_false,
         p.totient_prime,
+        p.coprime_succ_self,
+        p.totient_eq_zero,
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
@@ -1414,6 +1416,134 @@ fn totient_computes_on_small_numerals() {
         !f.k.def_eq(totient_nine, five),
         "totient 9 must NOT be def-eq to 5"
     );
+}
+
+/// `Nat.coprime_succ_self` — consecutive naturals are coprime — applies at a
+/// concrete instance (where its content REDUCES: `gcd 5 6` must be
+/// def-eq `1`) and at a genuinely free variable (disjoint defect classes,
+/// per this file's own standing rule: a concrete instance can hide a
+/// defeq-shaped gap a symbolic check exposes, and a symbolic check alone can
+/// miss a wrong hand-computed expectation).
+#[test]
+fn coprime_succ_self_applies_at_a_concrete_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: gcd 5 6 = 1, and NOT gcd 4 6 = 1 (a negative control on a
+    // DIFFERENT pair, both even, sharing the factor 2 -- `gcd 5 7 = 1` too,
+    // so that pair would not have discriminated anything).
+    let five = f.num(5);
+    let six = f.num(6);
+    let one = f.num(1);
+    let gcd_5_6 = f.gcd(five, six);
+    assert!(f.k.def_eq(gcd_5_6, one), "gcd 5 6 must reduce to 1");
+    let four = f.num(4);
+    let gcd_4_6 = f.gcd(four, six);
+    assert!(!f.k.def_eq(gcd_4_6, one), "gcd 4 6 must NOT reduce to 1");
+
+    let proof = f.const_app(p.coprime_succ_self, &[five]);
+    let expected = f.eq(gcd_5_6, one);
+    let inferred =
+        f.k.infer(proof)
+            .expect("coprime_succ_self 5 must type-check");
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "coprime_succ_self 5 must prove gcd 5 6 = 1"
+    );
+
+    // Symbolic: a genuinely free `m`, pushed into an explicit `LocalContext`
+    // so `infer_in` can look up its type (a bare unregistered `FVar` is
+    // `UnboundFVar` to the checker, not merely "unknown").
+    let m_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let sm = f.succ(m);
+    let one2 = f.num(1);
+    let gcd_m_sm = f.gcd(m, sm);
+    let expected_sym = f.eq(gcd_m_sm, one2);
+    let proof_sym = f.const_app(p.coprime_succ_self, &[m]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(proof_sym, &mut ctx)
+            .expect("coprime_succ_self must apply at a free variable");
+    assert!(
+        f.k.def_eq(inferred_sym, expected_sym),
+        "coprime_succ_self m must prove gcd m (succ m) = 1 symbolically"
+    );
+}
+
+/// `Nat.totient_eq_zero` at three shapes: `n = 0` (both `Iff` legs are
+/// trivially true), a concrete `n = succ k` with `k` a literal (`totient 5 =
+/// 0` and `5 = 0` are both refutable, so both `Iff` legs are `ex_falso`
+/// routes), and a genuinely free `n = succ m` (the universally-quantified
+/// case the theorem was actually proved over — the concrete instances alone
+/// would not catch a wrong direction inside `at_succ`'s defeq chain, since a
+/// concrete numeral papers over exactly the kind of defeq gap this file's
+/// standing rule warns about).
+#[test]
+fn totient_eq_zero_applies_at_zero_a_concrete_successor_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+
+    // n = 0: mp and mpr are both immediate.
+    let totient_0 = f.const_app(p.totient, &[zero]);
+    let iff_0 = f.const_app(p.totient_eq_zero, &[zero]);
+    let expected_lhs_0 = f.eq(totient_0, zero);
+    let expected_rhs_0 = f.eq(zero, zero);
+    let expected_0 = f.const_app(p.logic.iff, &[expected_lhs_0, expected_rhs_0]);
+    let inferred_0 = f.k.infer(iff_0).expect("totient_eq_zero 0 must type-check");
+    assert!(f.k.def_eq(inferred_0, expected_0));
+    assert!(
+        f.k.def_eq(totient_0, zero),
+        "totient 0 must reduce to 0 by the countRange base case"
+    );
+
+    // n = 5 (a concrete successor): totient 5 must NOT reduce to 0 (a
+    // negative control on the theorem's actual content, not just its type).
+    let five = f.num(5);
+    let totient_5 = f.const_app(p.totient, &[five]);
+    assert!(
+        !f.k.def_eq(totient_5, zero),
+        "totient 5 must NOT reduce to 0"
+    );
+    let iff_5 = f.const_app(p.totient_eq_zero, &[five]);
+    let expected_lhs_5 = f.eq(totient_5, zero);
+    let expected_rhs_5 = f.eq(five, zero);
+    let expected_5 = f.const_app(p.logic.iff, &[expected_lhs_5, expected_rhs_5]);
+    let inferred_5 = f.k.infer(iff_5).expect("totient_eq_zero 5 must type-check");
+    assert!(f.k.def_eq(inferred_5, expected_5));
+
+    // Symbolic: a genuinely free `n`, pushed into an explicit `LocalContext`
+    // (see `coprime_succ_self_applies_at_a_concrete_instance_and_symbolically`
+    // for why a bare unregistered `FVar` cannot be `infer`red directly).
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let totient_n = f.const_app(p.totient, &[n]);
+    let iff_n = f.const_app(p.totient_eq_zero, &[n]);
+    let expected_lhs_n = f.eq(totient_n, zero);
+    let expected_rhs_n = f.eq(n, zero);
+    let expected_n = f.const_app(p.logic.iff, &[expected_lhs_n, expected_rhs_n]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_n =
+        f.k.infer_in(iff_n, &mut ctx)
+            .expect("totient_eq_zero must apply at a free variable");
+    assert!(f.k.def_eq(inferred_n, expected_n));
 }
 
 /// `Nat.prodRangeIf` computes on small numerals by REDUCTION, not merely
@@ -6692,7 +6822,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 529,
+        93 + 531,
         "every promised definition and theorem must be rendered"
     );
 }

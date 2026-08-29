@@ -4,18 +4,48 @@
   "title": "Mathlib v4.30 source proposition Nat.totient_eq_zero",
   "statement": "The proposition declared as `Nat.totient_eq_zero` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n : ℕ}, n.totient = 0 ↔ n = 0",
-    "fragment": "Nat"
+    "language": "lean4",
+    "statement": "theorem Nat.totient_eq_zero : ((x0 : AxNat) -> Iff (Eq.{1} AxNat (AxNat.totient x0) AxNat.zero) (Eq.{1} AxNat x0 AxNat.zero))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Nat.totient_eq_zero"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-beq-eq-true-of-eq",
+    "F:nat-succ-ne-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.totient_eq_zero",
+      "kind": "kernel-term",
+      "supports": "n.totient = 0 iff n = 0",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_eq_zero 2>/dev/null | grep -Ec '^Nat\\.totient_eq_zero[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the constructed proof term against the stated type. Case-split on `n`: `n = 0` holds by the `countRange` base case directly (`Eq.refl`); `n = succ k` uses the top index `k` of the range `[0,n)` as the witness -- `Nat.coprime_succ_self k` (new, unregistered as its own fact: `gcd k (succ k) = 1` for every `k`) promotes the predicate at `k` to `true`, so `countRange`'s succ-case defining equation makes `totient (succ k)` defeq `succ (countRange f k)`, never `0` (`succ_ne_zero`), matching `succ k` itself never being `0` -- both `Iff` legs are then `ex_falso` from that contradiction. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed."
+    },
+    {
+      "id": "footprint-Nat.totient_eq_zero",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.totient_eq_zero` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-totient",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.totient_eq_zero` and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +56,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Honest flip, confirmed against the pinned Mathlib v4.30 source: `Nat.totient n := #{a in range n | n.Coprime a}` (Mathlib/Data/Nat/Totient.lean:38) and this kernel's `Nat.totient n := countRange (fun k => beq (gcd k n) 1) n` (`nat_prelude/totient.rs`) are the SAME construction -- a count over `[0,n)` filtered by a coprimality predicate, differing only in `gcd`'s argument order (`gcd k n` vs `gcd n a`), which this proof never needed to bridge. `formal.statement` is the actual kernel-core `render_lean` output for `Nat.totient_eq_zero`, not the Mathlib surface form named in `title` (matching `Nat.coprime_one_left_iff`'s established convention). `depends_on` restricts to entries that already carry a fact ledger entry; `Nat.coprime_succ_self` is a direct theorem dependency (`theorem_dependency_inventory Nat.totient_eq_zero`) with no fact entry of its own -- an unregistered nat-prelude theorem, not an axiom, per the empty-footprint evidence above. This fact's partition in `artifacts/autogenesis/nursery-v2-extension.json` is `development`, not held-out."
 }
