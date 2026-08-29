@@ -129,6 +129,13 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-singles | `Nat.mod_lcm`: unconditional lcm-combination of two congruences, closes `F:ml430-nat-mod-lcm-ee6bdd41` |
 | 2026-08-29 | nat-singles | `Nat.dvd_of_forall_prime_mul_dvd`: needs only one prime witness, closes `F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b` |
 | 2026-08-29 | nat-singles | `gap_dvd`/`modeq_of_dvd_gap` (`crt.rs`) widened `fn` -> `pub(super) fn` so `lcm.rs` can reuse them |
+| 2026-08-29 | nat-minfac-relprime | `Nat.IsRelPrime`/`Nat.coprime_iff_isRelPrime`: closes `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` |
+| 2026-08-29 | nat-minfac-relprime | `Nat.minFacAux`/`Nat.minFac`: fuel-recursive least-prime-factor definition (bonus; no fact closed, `ml430` mirror stays open — different algorithm from Mathlib's) |
+| 2026-08-29 | int-emod-negative | landed `Int.emod_natAbs_bound` (`declare_emod_natabs_bound`, `int_prelude/division.rs`) — the sign-general remainder bound `emod_lt_of_pos` cannot state; `int_prelude::` 40 -> 41 |
+| 2026-08-29 | int-emod-negative | landed `Int.ediv_emod_unique_general` (`declare_ediv_emod_unique_general`, same file) — sign-general division-algorithm uniqueness via a negate-and-reduce-to-the-positive-case argument; `int_prelude::` 41 -> 42; `F:ml430-int-gcd-div-5e01872f` (`Int.gcd_div`) left open, precisely scoped to a fourth not-yet-built bridge lemma plus its own mutual-divisibility argument |
+| 2026-08-29 | int-fib-two-mul | `eq_sub_of_add_eq_left`, `fib_pred_eq_sub`: the subtraction bridge (a+b=c \|- b=c-a) and its Fibonacci instance (fib(k-1)=fib(k+1)-fib(k)) |
+| 2026-08-29 | int-fib-two-mul | `Int.fib_two_mul` closed (`F:ml430-int-fib-two-mul-0e70f3dd` open → proved), no induction, direct algebra from `Int.fib_add`/`Int.fib_rec` |
+| 2026-08-29 | int-fib-two-mul | `Int.fib_two_mul_add_two` closed (`F:ml430-int-fib-two-mul-add-two-0ba4a948` open → proved) |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -12003,6 +12010,364 @@ not hand-counted).
 - Did NOT run the full aggregate `just check`/`./scripts/check.sh` (out of
   scope for a single-lane targeted change; the coordinator re-runs the full
   gate before merge per standing project convention).
+
+**Your lane's block (`DONE`, nat-minfac-relprime, 2026-08-29).** Landed the
+required fact and the bonus definition sized in
+[`docs/plan/status/240-nat-singles.md`](docs/plan/status/240-nat-singles.md).
+
+`Nat.IsRelPrime m n := ∀ d, d ∣ m → d ∣ n → d = 1` (`rel_prime.rs`), a genuine
+new `Definition` — Mathlib's generic `∀ d, d∣x → d∣y → IsUnit d`
+(`Mathlib/Algebra/Divisibility/Units.lean:150`) specialized to `Nat`'s only
+unit, `1`. Both directions of `Nat.coprime_iff_isRelPrime` were exactly as
+cheap as the handoff predicted: forward combines `d∣m`/`d∣n` via `dvd_gcd`,
+transports along the hypothesis to `d∣1`, and closes with
+`eq_one_of_dvd_one`; backward applies the hypothesis directly at
+`d := gcd m n`, discharged by `gcd_dvd_left`/`gcd_dvd_right`. No case
+analysis in either direction, and neither unfolds `Nat.gcd`'s own recursion.
+Closes `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` (flipped `open` ->
+`proved`; the mirror flip is honest — verified by reading Mathlib's actual
+source for `IsRelPrime` at the pinned commit, not inferring from the
+theorem's statement).
+
+**Bonus: `Nat.minFac`/`Nat.minFacAux` landed** (`min_fac.rs`), a fuel-recursive
+linear divisor search — structural `Nat.rec` on a `fuel` argument (the same
+device `Nat.div`/`Nat.mod`/`Nat.log` use), fuel `= n - 2`, scanning candidates
+`2, 3, 4, …` via `beq (mod n candidate) 0`. Fuel exhaustion coincides exactly
+with `candidate = n` (never earlier), so the base case "return the candidate
+unchanged" is correct — `n` trivially divides itself. `minFac 0 = 2` and
+`minFac 1 = 1` are an outer case split before the search runs, matching
+Mathlib's boundary conventions.
+
+**The `F:ml430-nat-coprime-of-lt-minfac-0f79bdba` mirror stays `open`,
+deliberately.** Mathlib's own `Nat.minFac` is NOT this — theirs is
+well-founded recursion on `sqrt n`-bounded measure, skips even candidates,
+and exits early once `k*k > n`. The two agree pointwise (both are "the least
+divisor ≥ 2 of `n`" with identical boundary values) but are structurally
+different `def`s, so per the established mirror-flip criterion this is the
+`Nat.multichoose` case, not the `Nat.descFactorial_of_lt` case. A theorem
+about coprimality relative to THIS `minFac` needs its own new `F:nat-*` fact
+and a minimality property (`∀ d, 2 ≤ d → d ∣ n → minFac n ≤ d`) not attempted
+here — sized as further, separate work.
+
+**Kernel REJECTED nothing in this lane** — both declarations and every test
+were accepted on first `add_declaration`/`declare_theorem`. The one real
+correctness risk (a `Definition` that type-checks but computes the wrong
+value; `Kernel::add_declaration` cannot catch this) was caught by evaluation
+tests, not the kernel: `min_fac_computes_the_least_prime_factor_with_negative_controls`
+checks `minFac 12 = 2` against `minFac 15 = 3` (the brief's discriminating
+pair — "first divisor" and "smallest prime divisor" coincide for an
+upward-from-2 scan, argued in `min_fac.rs`'s module doc) plus `minFac 0 = 2`,
+`minFac 1 = 1`, `minFac 2 = 2`, `minFac 9 = 3`, each with a negative `def_eq`
+control (including `minFac 12` vs `minFac 15` not collapsing to each other).
+
+`nat_prelude` count: **85 + 443 -> 88 + 444** (1 new theorem
+`coprime_iff_isRelPrime`, 3 new definitions `IsRelPrime`, `minFacAux`,
+`minFac`; confirmed by `the_build_is_deterministic`'s own panic message, not
+hand-counted).
+
+## Verification run
+
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude` (targeted `nat_prelude::`
+  filter): **127 passed, 0 failed** (was 126 before this lane's declarations
+  + tests, 120 before `nat-singles`).
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings`:
+  clean, no allow-lists needed.
+- `rustfmt --edition 2024` on every touched file.
+- `python3 scripts/validate-facts.py`: 0 errors (1922 facts, 1834 proved).
+- `F:ml430-nat-coprime-iff-isrelprime-0c08eb25`'s new `checker_command`s run
+  and confirmed to actually discriminate: `nat_theorem_inventory` prints the
+  exact rendered type for `Nat.coprime_iff_isRelPrime`,
+  `nat_axiom_inventory --require-axiom-free nat` exits 0, and both
+  concrete-instance tests (mp/mpr round trip at (3,5); a real
+  `Not (IsRelPrime 4 6)` proof from `gcd 4 6 = 2`) pass individually by name.
+- Did NOT run the full aggregate `just check`/`./scripts/check.sh` (out of
+  scope for a single-lane targeted change; the coordinator re-runs the full
+  gate before merge per standing project convention).
+
+## What's still needed for `F:ml430-nat-coprime-of-lt-minfac-0f79bdba`
+
+A NEW fact (not the `ml430` mirror — see above) stating coprimality relative
+to THIS `Nat.minFac`, which needs:
+
+- **Minimality**: `∀ n, 2 ≤ n → ∀ d, 2 ≤ d → d ∣ n → minFac n ≤ d` — that
+  `minFac n` really is the LEAST divisor `≥ 2`, not merely A divisor. Not yet
+  proved; the natural route is an induction over the fuel search itself
+  (every candidate `2, …, minFac n - 1` was tried and failed), mirroring
+  `primes.rs`'s existing `least_divisor_search` minimality argument but
+  adapted to the concrete recursive function rather than an existential
+  witness.
+- **The coprimality argument itself**, once minimality is in hand: for
+  `m ≠ 0`, `m < minFac n`, suppose `g := gcd n m > 1`; `g ∣ n` and `g ≥ 2`
+  gives `g ≥ minFac n` by minimality, but `g ∣ m` and `m ≠ 0` gives `g ≤ m`,
+  contradicting `m < minFac n ≤ g ≤ m`. So `gcd n m = 1`.
+
+**Your lane's block (`DONE for this pass`, int-emod-negative, 2026-08-29).**
+Landed **two of the three** lemmas `docs/plan/status/236-int-gcd-div-2.md`
+named as the missing pieces for `F:ml430-int-gcd-div-5e01872f`
+(`Int.gcd_div`): `Int.emod_natAbs_bound` (the keystone) and
+`Int.ediv_emod_unique_general`. `Int.gcd_div` itself stays open, precisely
+scoped below. No ledger edit was made — the fact is still `open`.
+
+**Verified before starting**: no inline negative-divisor `emod` bound exists
+anywhere in `wilson.rs`, `crt.rs`, or `modinv.rs` (grepped proof bodies, not
+names, per the brief). `crt.rs`'s own module doc already states the gap
+directly — "this development has no bound on emod's magnitude for a
+negative modulus" — confirming the prior handoff's assessment rather than
+finding a shortcut around it.
+
+**1. `Int.emod_natAbs_bound`** (`int_prelude/division.rs`):
+`∀ a b, Not (Eq Int b zero) → Int.lt (emod a b) (ofNat (natAbs b))`.
+Every one of the four `Int.rec` branches reuses existing machinery rather
+than re-deriving it: `natAbs` is an unconditional ι-reduction (`ofNat n ↦
+n`, `negSucc n ↦ succ n`), so the divisor's magnitude collapses to exactly
+the shapes `emod_lt_of_pos`'s two row builders (`row_emod_lt_of_pos_of`,
+`row_emod_lt_of_pos_neg`) and the `sub_nat_nat_lt_ofnat` combinator already
+handle — reused directly. The `b ≠ 0` hypothesis is load-bearing in exactly
+one of the four branches (`ofNat m, ofNat n`, where `n` could be `0`),
+derived via the contrapositive of `nat_eq_to_int` plus
+`Nat.zero_lt_of_ne_zero` and the general `Nat.mod_lt : 0 < n → m % n < n`
+(no `succ`-shape pinning needed, unlike `emod_lt_of_pos`, which cannot state
+this bound for a negative divisor at all).
+
+Instantiated at a positive divisor (`b = 1`), a negative divisor (`b = -1`,
+where `emod_lt_of_pos`'s own hypothesis `0 < b` is structurally FALSE, so
+that theorem could not even be invoked there), and independently checked
+the excluded `b = 0` corner as a negative control: `emod a 0 = a` and
+`natAbs 0 = 0` make the excluded conclusion demand `5 < 0`, refuted by
+`Nat.not_succ_le_zero` — confirming the hypothesis is genuinely
+load-bearing, not decoration.
+
+**Build-order gotcha**: `Int.natAbs` is not declared until well after
+`Int.ediv_emod_unique` in `build_int_prelude_uncached`'s call sequence, so
+`declare_emod_natabs_bound` (and later `declare_ediv_emod_unique_general`)
+had to move to right after `nat_abs::declare_nat_abs(&mut d)?;`, not beside
+their `emod_nonneg`/`emod_lt_of_pos`/`ediv_emod_unique` siblings higher up
+the list. Confirmed by a temporary debug harness
+(`match build_int_prelude(&mut k) { Err(UnknownConst{name}) => panic!("{}",
+k.display_name(name)), ... }`) which named `Int.natAbs` directly — this is
+the fast way to diagnose this build-order class of failure, cheaper than
+bisecting call-site positions by hand.
+
+**2. `Int.ediv_emod_unique_general`** (same file): `∀ a b q1 r1 q2 r2, Not
+(Eq Int b zero) → a = b*q1+r1 → 0 ≤ r1 → r1 < ofNat (natAbs b) → a =
+b*q2+r2 → 0 ≤ r2 → r2 < ofNat (natAbs b) → q1 = q2 ∧ r1 = r2`. `
+ediv_emod_unique` needs `0 < b` for two independent reasons — it bounds the
+remainder against `b` itself, AND its proof (`build_core`/`solve_le_case`)
+reasons about `Int.mul b _` growing monotonically in the quotient, which
+only holds for a positive multiplier. Rather than re-deriving that
+machinery for a negative divisor, this reduces to the already-proved
+positive case by a change of variable, exploiting a definitional
+coincidence: `Int.neg (negSucc n)` ι-reduces to `ofNat (succ n)` — the SAME
+value `Int.natAbs (negSucc n)` ι-reduces to. So for `b < 0`, `neg b` already
+**is** (up to defeq) the positive divisor the bound hypotheses are already
+stated against; only the two reconstruction equations need rewriting (`b*q
+= (neg b)*(neg q)`, via a small local `neg_mul_neg` extraction of `gcd.rs`'s
+already-proved `neg_mul`/`neg_neg`). Applying `ediv_emod_unique` at divisor
+`neg b` and negated quotients gives `neg q1 = neg q2`; un-negate with
+`neg_neg` twice to recover `q1 = q2`. The positive-divisor branch needs no
+rewriting at all — `natAbs (ofNat n) ≡ n` makes the general bound already
+defeq to `ediv_emod_unique`'s own bound.
+
+Two bugs caught before the first successful build, both by immediate
+compile/kernel feedback rather than inspection: a double-mutable-borrow in
+the `case_split` `stmt` closure (`d.arrow(d.not(eq_ty), inner_goal)` —
+flattened into a `let`, the exact idiom Gotcha #10 in `CLAUDE.md`
+documents), and reusing bare hypothesis-value fvars as their own `lam_fv`
+TYPE arguments in the negative-divisor branch (fixed by computing the six
+actual hypothesis types via a new `unique_hyps_general` helper mirroring
+`build_core`'s existing `UniqueHyps`-typed pattern, rather than improvising
+types from the value fvars).
+
+Instantiated at a genuine positive divisor (`13 = 4*3+1`, mirroring the
+existing `ediv_emod_unique_applies_at_a_concrete_decomposition` test) and a
+genuine negative divisor (`13 = (-4)*(-3)+1` — a decomposition
+`ediv_emod_unique` cannot even be invoked on, since `Int.lt Int.zero (-4)`
+is FALSE). Both type-check end to end and land on the exact `q1=q2 ∧ r1=r2`
+conclusion.
+
+**What the kernel REJECTED and why**: nothing, in either declaration, once
+the two Rust-level bugs above were fixed (a borrow-checker error and a
+malformed `lam_fv` call — both caught before `add_declaration` was ever
+invoked). No proof term was rejected by the trusted gate.
+
+**Left open, precisely: `Int.gcd_div` itself.** Assessed but not attempted
+this pass, for a reason beyond the two lemmas above. The natural proof
+route for a negative common divisor `c` is NOT a simple sign-flip of
+`gcd_div_gcd_div_gcd`'s route (which only ever used a positive `c = ofNat
+(gcd a b)`): `gcd_div_gcd_div_gcd` obtained `i = c*qi` via the POSITIVE-only
+`emod_eq_zero_iff_dvd`'s `mp` direction plus `ediv_add_emod`. Generalizing
+`Int.gcd_div` to a negative `c` needs the SIGN-GENERAL analogue of that
+bridge (`c ≠ 0 → (emod a c = 0 ↔ c ∣ a)`) — a **fourth** lemma this lane's
+two landed pieces make constructible (from `emod_natAbs_bound` +
+`ediv_emod_unique_general`, by the same proof shape `emod_eq_zero_iff_dvd`
+already uses, generalized) but which is **not itself built yet**, and which
+the prior handoff's three-lemma decomposition did not name. Once that
+bridge exists, `Int.gcd_div`'s own proof still needs a genuine new
+mutual-divisibility argument relating `gcd(a.ediv c, b.ediv c)` to
+`gcd(a,b)/natAbs c` — comparable in size to `gcd_div_gcd_div_gcd`, as the
+prior handoff estimated, but now for an arbitrary sign `c` rather than the
+always-nonnegative `c = gcd a b`.
+
+Given the size and risk of that combined remaining work relative to this
+lane's remaining budget, and given the brief's own framing that landing the
+keystone (`emod_natAbs_bound`) alone was a complete success, this pass
+stops here having landed both of the general-purpose lemmas rather than
+risk a rushed or incorrect `Int.gcd_div` construction. A future lane can
+pick up directly: build the sign-general `emod = 0 ↔ dvd` bridge first (it
+is now a short derivation from the two lemmas this pass landed), then
+attempt `Int.gcd_div` itself with `gcd_div_gcd_div_gcd`'s proof as the
+template for the positive-divisor case.
+
+**Timing / counts**: `cargo test -p axeyum-lean-kernel --lib int_prelude::`
+— 40 passed before this lane started, 41 after landing
+`emod_natAbs_bound`, 42 after landing `ediv_emod_unique_general`.
+`derived_laws`'s pinned array: 151 → 152 → 153, recounted each time by
+grepping the array body for `^\s*p\.` lines, never by incrementing the old
+number. `cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both
+clean at each commit. No `python3 scripts/validate-facts.py` run was needed
+(no ledger file was edited this pass).
+
+**Your lane's block (`DONE`, int-fib-two-mul, 2026-08-29).** Both targets
+landed, kernel-checked and axiom-free, closing `F:ml430-int-fib-two-mul-0e70f3dd`
+and `F:ml430-int-fib-two-mul-add-two-0ba4a948`.
+
+- `Int.fib_two_mul : ∀ n, Eq Int (fib (mul two n)) (mul (fib n) (sub (mul two
+  (fib (add n one))) (fib n)))`.
+- `Int.fib_two_mul_add_two : ∀ n, Eq Int (fib (add (mul two n) two)) (mul
+  (fib (add n one)) (add (mul two (fib n)) (fib (add n one))))`.
+
+`int_prelude::` went **46 → 48 passing** (44 → 46 before the two new
+concrete-instantiation negative-control tests were added), `derived_laws`
+156 → 158 (recounted by grep, not incremented), integer trusted surface
+still 0. No induction was needed for either theorem — both are direct
+algebra from `Int.fib_add` (already proved) and `Int.fib_rec`.
+
+**The prior lane's sizing was accurate on the algebra and silent on the
+actual cost.** "~200–250 lines each, no new device" held for the algebra
+itself, and no genuinely new proof DEVICE was needed (everything routes
+through `mul_comm`, `left_distrib`, `Int.mul_sub`, `add_assoc`/`add_comm`,
+`Int.fib_add`, `Int.fib_rec`). What the sizing didn't — and couldn't —
+predict was a mechanical bug that cost most of this lane's time.
+
+## The subtraction bridge
+
+Built first, as the brief asked, before either theorem:
+
+```
+/// h : Eq Int (add a b) c  |-  Eq Int b (sub c a)
+fn eq_sub_of_add_eq_left(d, a, b, c, h) -> ExprId
+```
+
+From `a + b = c` derive `b = c - a`. Route: commute `a+b` to `b+a` (so `h`
+reads `b+a = c` after a `trans`), then `Int.add_neg_cancel_right b a :
+(b+a)+(-a) = b`; substituting `c` for `b+a` gives `c+(-a) = b` (== `sub c a
+= b` after folding `Int.sub`); flip. It is reusable and IS reused —
+`fib_pred_eq_sub` (below) is its only consumer so far, but the shape (turn
+a recurrence equation into a subtraction) is generic and not tied to
+Fibonacci at all.
+
+On top of it, `fib_pred_eq_sub(d, k) : Eq Int (fib (sub k one)) (sub (fib
+(add k one)) (fib k))` — "`fib(k-1) = fib(k+1) - fib(k)`" — built from
+`Int.fib_rec` at `k-1`, the index bridges `fib_shift_minus_one_plus_two`
+(new, same `add_assoc` technique `declare_fib_add`'s `P 1` branch already
+used inline) and `sub_add_cancel` (already existing, reused verbatim), and
+`eq_sub_of_add_eq_left` itself.
+
+Two small ring-rearrangement helpers were also needed and are equally
+reusable: `add_sub_self_left(x,y) : Eq Int (add (sub x y) x) (sub (add x x)
+y)` — "`(x-y)+x = (x+x)-y`" — and its addition-side analogue
+`add_p_qp_eq_pp_q(p,q) : Eq Int (add p (add q p)) (add (add p p) q)` —
+"`p+(q+p) = (p+p)+q`" — used by `fib_two_mul` and `fib_two_mul_add_two`
+respectively to fold a doubled term back into the statement's `2*x` shape.
+
+## What the kernel rejected, and why
+
+Nothing was rejected by a bare `TypeMismatch` that named the real cause —
+that is the whole story here. The full construction (all steps assembled
+via `int_theorem`, symbolic `n`) failed to build, and **every** other test
+in `int_prelude::` failed alongside it (one bad declaration poisons the
+whole shared prelude build, per the standing gotcha) — so the failure count
+said nothing about how many things were broken.
+
+**A concrete instantiation test (n = ofNat 3) passed on every single named
+intermediate value, with zero failures.** That is the trap this file
+already documents under "a concrete instantiation can hide the bug a
+symbolic one exposes" — and it is worth recording precisely why THIS bug
+specifically survives concreteness, because it is a different mechanism
+than the associativity-hole case already in `CLAUDE.md`.
+
+The actual bug: `IntDev::isymm(a, b, h)` requires `h : Eq Int a b` and
+returns `Eq Int b a` (it is genuinely symmetry, not a no-op relabeling).
+Five call sites in this lane's new code passed `h`'s two endpoints to
+`isymm` in the WRONG order — i.e. called `isymm(a, b, h)` where `h`'s real
+type was `Eq b a`, not `Eq a b`. Each such call still *type-checks in
+isolation* as long as you check it against a self-consistent (but equally
+backwards) expectation, which is exactly what a naive intermediate-value
+check does. The bug only surfaces when the (wrongly-typed) result is fed
+into a `trans` further down the chain, at which point the accumulated
+proof genuinely has the wrong type and `infer` reports a `TypeMismatch`
+whose two `ExprId`s name neither the direction bug nor which `isymm` call
+caused it.
+
+Why concrete `n=3` didn't catch it: it isn't a defeq/reduction issue at
+all (unlike the associativity-hole case) — `isymm`'s type requirement is
+exactly as strict at a concrete literal as at a free variable. What
+differed is that my *test* checked each named value against an expectation
+I had ALSO derived from (silently) the same wrong mental model of
+`isymm`'s direction, so the individual checks agreed with each other
+without ever comparing against the ACTUAL data flow through `ichain`/
+`itrans`. The symbolic test caught it only because I added a check for
+`back_two` as its own named value for the first time — the concrete test
+had skipped verifying it directly, jumping straight to `hc`.
+
+**Diagnosis method:** re-derive the proof step by step against a genuinely
+free `n` (a real `fresh_fvar`, not a concrete `ofNat`), pushed into an
+explicit `LocalContext` via `ctx.push(LocalDecl { fvar, name, ty: int_ty,
+info: BinderInfo::Default })`, then use `Kernel::infer_in`/`def_eq_in` (not
+the ambient-context `infer`/`def_eq`, which build a fresh empty context and
+report every free-variable-containing term as `UnboundFVar`) to check each
+named intermediate ONE AT A TIME against its intended type, narrowing down
+which named value first diverges. This found the exact `isymm` call within
+minutes once applied; guessing at the term structure from the bare
+`TypeMismatch { expected, got }` ExprIds would not have.
+
+**General rule this adds to the standing "symbolic + concrete" pair:** a
+symbolic check that only compares NAMED, isolated sub-terms against
+individually-derived expectations can still miss a systematic direction
+bug, if the same wrong mental model produced both the code and the
+expectation. The check that actually finds it is the one that traces the
+ACCUMULATED proof through the same combinators the real declaration uses
+(`itrans`/`icongr` chains), not a parallel re-derivation of "what each
+piece should equal."
+
+## Reusability
+
+- `eq_sub_of_add_eq_left` — general, `Int`-only, no dependency on
+  Fibonacci. Reusable anywhere a recurrence/sum equation needs to become a
+  difference.
+- `fib_pred_eq_sub`, `fib_shift_minus_one_plus_two` — Fibonacci-specific but
+  reusable by any future `Int.fib` identity needing `fib(k-1)`.
+- `add_sub_self_left`, `add_p_qp_eq_pp_q` — pure ring rearrangements, no
+  Fibonacci dependency, reusable by any proof needing to fold `x+x` (or
+  `(x-y)+x`) back into a doubled/halved shape.
+- `mul_two_eq_add_self` — checked before writing it: no `2*t = t+t` lemma
+  existed anywhere in `int_prelude/` (the prelude has `left_distrib` only,
+  no `right_distrib`). New, general, reusable by anything needing to move
+  between the `2*x` and `x+x` spellings of doubling.
+
+## Gates run (foreground, this worktree)
+
+`cargo test -p axeyum-lean-kernel --lib int_prelude::` → 48 passed, 0
+failed. `cargo fmt --all --check` clean (safe here: own isolated worktree,
+not the shared checkout). `cargo clippy -p axeyum-lean-kernel --all-targets
+-- -D warnings` clean (one `doc_markdown` lint fixed along the way).
+`nat_axiom_inventory --require-axiom-free integer` → `ok: integer trusted
+surface = 0`. `validate-facts.py` → 1925 facts, 0 errors. The
+workspace-wide `--lib` sweep and `just check` did **not** run in this lane
+(per brief).
+
+Not pushed — commits are local to this worktree branch.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
