@@ -919,7 +919,7 @@ fn ineg_add(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
 
 /// `Eq Int (add (neg c) (add c x)) x` — "cancel a left addend":
 /// `-c+(c+x)=x`.
-fn cancel_neg_add_left(d: &mut IntDev<'_>, c: ExprId, x: ExprId) -> ExprId {
+pub(super) fn cancel_neg_add_left(d: &mut IntDev<'_>, c: ExprId, x: ExprId) -> ExprId {
     let p = d.int();
     let neg_c = d.ineg(c);
     let cx = d.iadd(c, x);

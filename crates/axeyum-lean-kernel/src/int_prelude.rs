@@ -92,6 +92,7 @@ mod modinv;
 mod nat_abs;
 pub(crate) mod ops;
 mod order;
+mod order_add;
 mod parity;
 mod prod;
 mod rat;
@@ -257,6 +258,26 @@ pub struct IntPrelude {
     /// `add_lt_add_of_le_of_lt :
     /// ∀ (a b c d : Int), le a b → lt c d → lt (add a c) (add b d)`.
     pub add_lt_add_of_le_of_lt: NameId,
+    /// `add_le_add_left : ∀ (a b : Int), le a b → ∀ (c : Int), le (add c a) (add c b)`.
+    pub add_le_add_left: NameId,
+    /// `add_le_add_right : ∀ (a b : Int), le a b → ∀ (c : Int), le (add a c) (add b c)`.
+    pub add_le_add_right: NameId,
+    /// `add_le_add_iff_left : ∀ (b c a : Int), Iff (le (add a b) (add a c)) (le b c)`.
+    pub add_le_add_iff_left: NameId,
+    /// `add_le_add_iff_right : ∀ (a b c : Int), Iff (le (add a c) (add b c)) (le a b)`.
+    pub add_le_add_iff_right: NameId,
+    /// `add_le_add_three :
+    /// ∀ (a b c d e f : Int), le a d → le b e → le c f →
+    /// le (add (add a b) c) (add (add d e) f)`.
+    pub add_le_add_three: NameId,
+    /// `add_le_iff_le_sub : ∀ (a b c : Int), Iff (le (add a b) c) (le a (sub c b))`.
+    pub add_le_iff_le_sub: NameId,
+    /// `add_le_of_le_neg_add : ∀ (a b c : Int), le b (add (neg a) c) → le (add a b) c`.
+    pub add_le_of_le_neg_add: NameId,
+    /// `add_le_of_le_sub_left : ∀ (a b c : Int), le b (sub c a) → le (add a b) c`.
+    pub add_le_of_le_sub_left: NameId,
+    /// `add_le_of_le_sub_right : ∀ (a b c : Int), le a (sub c b) → le (add a b) c`.
+    pub add_le_of_le_sub_right: NameId,
 
     // --- multiplicative / ring laws -----------------------------------------
     /// `mul_le_mul_of_nonneg_left :
@@ -1273,6 +1294,15 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         add_neg: child(kernel, "add_neg"),
         add_neg_cancel_right: child(kernel, "add_neg_cancel_right"),
         add_lt_add_of_le_of_lt: child(kernel, "add_lt_add_of_le_of_lt"),
+        add_le_add_left: child(kernel, "add_le_add_left"),
+        add_le_add_right: child(kernel, "add_le_add_right"),
+        add_le_add_iff_left: child(kernel, "add_le_add_iff_left"),
+        add_le_add_iff_right: child(kernel, "add_le_add_iff_right"),
+        add_le_add_three: child(kernel, "add_le_add_three"),
+        add_le_iff_le_sub: child(kernel, "add_le_iff_le_sub"),
+        add_le_of_le_neg_add: child(kernel, "add_le_of_le_neg_add"),
+        add_le_of_le_sub_left: child(kernel, "add_le_of_le_sub_left"),
+        add_le_of_le_sub_right: child(kernel, "add_le_of_le_sub_right"),
         mul_le_mul_of_nonneg_left: child(kernel, "mul_le_mul_of_nonneg_left"),
         zero_lt_one: child(kernel, "zero_lt_one"),
         mul_comm: child(kernel, "mul_comm"),
@@ -1528,6 +1558,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sub::declare_mul_sub(&mut d)?;
         order::declare_difference_lemmas(&mut d)?;
         order::declare_additive_order(&mut d)?;
+        order_add::declare_add_le_add_left_right(&mut d)?;
+        order_add::declare_add_le_add_iff(&mut d)?;
+        order_add::declare_add_le_add_three(&mut d)?;
+        order_add::declare_add_le_iff_le_sub(&mut d)?;
+        order_add::declare_add_le_of_le_sub(&mut d)?;
         decide::declare_decidable_equality(&mut d)?;
         order::declare_le_antisymm(&mut d)?;
         algebra::declare_ordered_multiplication(&mut d)?;
