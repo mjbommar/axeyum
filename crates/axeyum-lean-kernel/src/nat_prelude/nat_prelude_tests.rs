@@ -986,6 +986,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.xor_assoc,
         p.xor_xor_cancel_left,
         p.xor_xor_cancel_right,
+        p.xor_ne_zero_iff,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6501,7 +6502,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 508,
+        93 + 509,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11761,6 +11762,100 @@ fn xor_xor_cancel_applies_at_a_concrete_discriminating_instance_and_symbolically
     assert!(
         f.k.axiom_footprint(p.xor_xor_cancel_right).is_empty(),
         "xor_xor_cancel_right must rest on zero axioms"
+    );
+}
+
+/// `Nat.xor_ne_zero_iff` (`xor_algebra.rs`) -- the last of the four
+/// sub-targets toward `F:ml430-nat-lt-xor-cases-c43a1e85`'s piece 4. Checked
+/// at the discriminating concrete pair `(a, b) = (3, 5)` (`xor 3 5 = 6`, so
+/// `Not (Eq (xor 3 5) 0)` and `Not (Eq 3 5)` are both genuinely true, via
+/// `Nat.succ_ne_zero` at `5`) AND symbolically against a genuinely FREE
+/// `(a, b)` pair. Built via `mt` (modus tollens) applied twice, not via an
+/// `Iff (Eq _ 0) (Eq _ _)` intermediate -- see `xor_algebra.rs`'s module doc.
+#[test]
+fn xor_ne_zero_iff_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let five = f.num(5);
+    let six = f.num(6);
+    let xor35 = f.const_app(p.xor, &[three, five]);
+    assert!(f.k.def_eq(xor35, six), "xor 3 5 must compute to 6");
+
+    let iff_35 = f.lemma(p.xor_ne_zero_iff, &[three, five]);
+    let zero = f.zero();
+    let eq_xor_zero_ty = f.eq(xor35, zero);
+    let not_xor_zero_ty = f.const_app(p.logic.not, &[eq_xor_zero_ty]);
+    let eq_35_ty = f.eq(three, five);
+    let not_35_ty = f.const_app(p.logic.not, &[eq_35_ty]);
+
+    // Not (Eq (succ 5) 0), defeq to Not (Eq (xor 3 5) 0) (succ 5 = 6 = xor 3 5).
+    let not_xor_zero_proof = f.lemma(p.succ_ne_zero, &[five]);
+    let not_xor_zero_ty_check =
+        f.k.infer(not_xor_zero_proof)
+            .unwrap_or_else(|e| panic!("succ_ne_zero(5) should type-check: {}", f.explain(&e)));
+    assert!(
+        f.k.def_eq(not_xor_zero_ty_check, not_xor_zero_ty),
+        "Not (Eq (succ 5) 0) must be defeq to Not (Eq (xor 3 5) 0)"
+    );
+
+    let mp = f.const_app(p.logic.iff_mp, &[not_xor_zero_ty, not_35_ty, iff_35]);
+    let not_35_proof = f.apply(mp, &[not_xor_zero_proof]);
+    let not_35_inferred = f.k.infer(not_35_proof).unwrap_or_else(|e| {
+        panic!(
+            "xor_ne_zero_iff(3,5).mp(succ_ne_zero 5) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(not_35_inferred, not_35_ty),
+        "xor_ne_zero_iff(3,5).mp(...) must land on Not (Eq 3 5)"
+    );
+    // Negative control: must not ALSO be defeq to Not (Eq 3 3).
+    let eq_33_ty = f.eq(three, three);
+    let not_33_ty = f.const_app(p.logic.not, &[eq_33_ty]);
+    assert!(
+        !f.k.def_eq(not_35_inferred, not_33_ty),
+        "negative control: Not (Eq 3 5) must not be defeq to Not (Eq 3 3)"
+    );
+
+    // mpr: feed the just-derived Not (Eq 3 5) back through and land on
+    // Not (Eq (xor 3 5) 0) again.
+    let mpr = f.const_app(p.logic.iff_mpr, &[not_xor_zero_ty, not_35_ty, iff_35]);
+    let roundtrip = f.apply(mpr, &[not_35_proof]);
+    let roundtrip_ty = f.k.infer(roundtrip).unwrap_or_else(|e| {
+        panic!(
+            "xor_ne_zero_iff(3,5).mpr(Not (Eq 3 5)) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(roundtrip_ty, not_xor_zero_ty),
+        "xor_ne_zero_iff(3,5).mpr(...) must land back on Not (Eq (xor 3 5) 0)"
+    );
+
+    // Symbolic: applies at a genuinely FREE (a, b) pair.
+    {
+        let name = f.name("xor_ne_zero_iff_restated");
+        f.theorem(name, 2, &|d, values| {
+            let (a, b) = (values[0], values[1]);
+            let xab = d.const_app(p.xor, &[a, b]);
+            let zero = d.zero();
+            let eq_xor_zero = d.eq(xab, zero);
+            let eq_ab = d.eq(a, b);
+            let not_xor_zero = d.const_app(p.logic.not, &[eq_xor_zero]);
+            let not_ab = d.const_app(p.logic.not, &[eq_ab]);
+            let stmt = d.const_app(p.logic.iff, &[not_xor_zero, not_ab]);
+            let proof = d.lemma(p.xor_ne_zero_iff, &[a, b]);
+            (stmt, proof)
+        })
+        .expect("xor_ne_zero_iff must apply at symbolic a, b");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.xor_ne_zero_iff).is_empty(),
+        "xor_ne_zero_iff must rest on zero axioms"
     );
 }
 

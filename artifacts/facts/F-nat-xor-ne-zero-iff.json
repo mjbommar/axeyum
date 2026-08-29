@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-xor-ne-zero-iff",
+  "title": "xor a b != 0 iff a != b",
+  "statement": "For every natural a, b: xor(a, b) is not equal to 0 if and only if a is not equal to b.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Iff (Not (Eq.{1} AxNat (AxNat.xor x0 x1) AxNat.zero)) (Not (Eq.{1} AxNat x0 x1))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-testbit-xor",
+    "F:nat-eq-of-testbit-eq"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.xor_ne_zero_iff",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.xor_ne_zero_iff",
+      "supports": "Nat.xor_ne_zero_iff is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- xor_ne_zero_iff 2>/dev/null | grep -Ec '^Nat\\.xor_ne_zero_iff[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab, per this ledger's own grep-dialect gotcha. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "compute-Nat.xor_ne_zero_iff",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.xor_ne_zero_iff",
+      "supports": "At the discriminating concrete pair (a, b) = (3, 5), xor(3, 5) def-eq's to 6, so Not (Eq (xor 3 5) 0) is genuinely inhabited (via Nat.succ_ne_zero at 5, since succ 5 def-eq's to 6); the Iff.mp direction lands on Not (Eq 3 5) (and NOT on the negative control Not (Eq 3 3)), and the Iff.mpr direction lands back on Not (Eq (xor 3 5) 0). The theorem also re-derives against a genuinely free (a, b) pair, not merely a concrete instance.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::xor_ne_zero_iff_applies_at_a_concrete_discriminating_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "A concrete instantiation alone can hide a defect a symbolic build exposes (and vice versa), so both are checked. (3, 5) is chosen because xor(3,5)=6 is neither operand, giving the negative control (Eq 3 3) something to discriminate against, and because Nat.succ_ne_zero at 5 supplies a genuine, cheap proof of Not (Eq (xor 3 5) 0) without needing a separate numeral-inequality lemma."
+    },
+    {
+      "id": "footprint-Nat.xor_ne_zero_iff",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-xor-ne-zero",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nMatches Lean core's `Nat.xor_ne_zero_iff : x ^^^ y != 0 <-> x != y`, read directly from the pinned Batteries checkout at commit `c5ea00351c28e24afc9f0f84379aa41082b1188f` (`Batteries/Data/Nat/Bitwise/Lemmas.lean:68`) rather than trusted from prose -- `xor_ne_zero_iff`/`xor_xor_cancel_left`/`xor_xor_cancel_right` all live there (cited, not defined, in Mathlib's own `Bitwise.lean:266-297`, in `xor_trichotomy`'s proof), confirming F:nat-xor-assoc's and F:nat-xor-xor-cancel-left's \"Lean core, not Mathlib-authored\" reading -- no `ml430` mirror fact exists to flip, so this lands as a new local fact.\n\nLast of the four sub-targets Mathlib's own `xor_trichotomy` proof composes toward `F:ml430-nat-lt-xor-cases-c43a1e85` (`xor_assoc`, `xor_xor_cancel_left`, `xor_xor_cancel_right`, `xor_ne_zero_iff`); all four are now landed.\n\nBuilt via `mt` (modus tollens, `Pi a b, (a -> b) -> (b -> False) -> (a -> False)`, already in the logic prelude and unused until this fact) applied twice, NOT via an `Iff (Eq _ 0) (Eq _ _)` intermediate -- partially applying `mt` with the two propositions and a direction lemma gives a complete `Not`-to-`Not` implication with no further `Iff`-not-congruence wrapping needed. Two small directional corollaries feed it, confirmed by a Python truth-table simulation before any Rust was written:\n\n1. `Eq (xor a b) 0 -> Eq a b` (the `mpr` side) -- does NOT need `Nat.xor_xor_cancel_left`/`_right` at all, confirming F:nat-xor-xor-cancel-left's own handoff note. Per bit, `Nat.testBit_xor` plus the hypothesis gives `Eq (xor_bit (testBit a i) (testBit b i)) 0`, and a NEW per-bit fact (`xor_bit_eq_zero_implies_eq` in `xor_algebra.rs`) closes it to `Eq (testBit a i) (testBit b i)` given both are `<= 1` (`Nat.testBit_le_one`), reusing `round_trip_le_one` (built for F:nat-xor-xor-cancel-left) rather than re-deriving a bound lemma. The route: `xor_bit x y = 0` gives `xor_fn (beq x 1) (beq y 1) = false` (a NEW lemma, `digitize_eq_zero_implies_false`, needing one genuine ex-falso via `Nat.succ_ne_zero` in its `cond = true` branch), hence `beq x 1 = beq y 1` (a NEW lemma, `bool_eq_of_xor_eq_false`, confirmed unconditionally true over all 4 Bool pairs by simulation -- the `a = true, b = false` leaf needs NO ex-falso at all, since there the hypothesis `Eq true false` already IS the goal, the identity function). Congruence plus `round_trip_le_one` at each of `x`, `y` closes the chain back to `Eq x y`. `Nat.eq_of_testBit_eq` turns the per-bit result back into `Eq a b`.\n2. `Eq a b -> Eq (xor a b) 0` (the `mp` side) -- via a NEW `Nat.xor_self`-shaped argument (`xor_self` in `xor_algebra.rs`): `congrArg (xor a .)` on the hypothesis gives `Eq (xor a a) (xor a b)`, and a per-bit self-cancellation-to-zero fact (`xor_bit_self_zero`, built from a NEW `Bool`-level `xor_fn x x = false` fact, `bool_xor_self`, a 2-leaf `Bool.rec` split both closing by `refl`) plus `Nat.eq_of_testBit_eq` gives `Eq (xor a a) 0`.\n\nNo `false_true_elim` combinator is needed anywhere in this fact's route -- the only genuinely impossible hypothesis encountered (`digitize_eq_zero_implies_false`'s `cond = true` branch, where the hypothesis reduces to the impossible `Eq (succ zero) zero`) is refuted directly via `Nat.succ_ne_zero` plus `False.rec`, the same device `gcd.rs`/`log.rs`/`fibonacci.rs` already use elsewhere in this prelude.\n\nWhat `Nat.lt_xor_cases` (`F:ml430-nat-lt-xor-cases-c43a1e85`) still needs, now that all four sub-targets of its piece 4 are landed: re-check `docs/plan/status/260-nat-lt-xor-cases.md` for the remaining pieces this fact's own lane did not attempt -- Mathlib's own proof route composes `xor_trichotomy` (which itself needs `exists_most_significant_bit`, an unbounded highest-set-bit existence statement, composed with `lt_of_testBit`) with the four sub-targets this fact and its two predecessor facts close. The four sub-targets being complete removes exactly one blocker of several; the highest-differing-bit machinery (piece 2's hard half, per `docs/plan/status/268-nat-xor-cancel.md`'s handoff) is a separate, larger piece a sibling lane is working."
+}

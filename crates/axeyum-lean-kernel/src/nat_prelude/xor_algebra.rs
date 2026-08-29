@@ -6,10 +6,11 @@
 //! `docs/plan/status/263-nat-testbit-xor.md` for piece 1 (`Nat.testBit_xor`,
 //! landed), `docs/plan/status/264-nat-xor-algebra.md` for the lane that
 //! landed `Nat.eq_of_testBit_eq`/`Nat.xor_assoc` and diagnosed the `y <= 1`
-//! restriction below, and `docs/plan/status/268-nat-xor-cancel.md` for the
-//! lane that closed `Nat.xor_xor_cancel_left`/`_right` using it. Only
-//! `Nat.xor_ne_zero_iff` (piece 4's fourth sub-target) is NOT declared in
-//! this file — see "What this file does NOT reach" below.
+//! restriction below, `docs/plan/status/268-nat-xor-cancel.md` for the
+//! lane that closed `Nat.xor_xor_cancel_left`/`_right` using it, and
+//! `docs/plan/status/270-nat-xor-ne-zero.md` for the lane that closed
+//! `Nat.xor_ne_zero_iff` — the last of piece 4's four sub-targets, now ALL
+//! declared in this file. See "`Nat.xor_ne_zero_iff`" below for its route.
 //!
 //! # The intended route: `testBit_xor` + extensionality, not fuel induction
 //!
@@ -68,16 +69,63 @@
 //! Instantiating the fuel bound at `k := m` itself (`le_refl`) turns
 //! `P(m)` directly into the public two-argument statement.
 //!
-//! # What this file does NOT reach (documented, not sketched)
+//! # `xor_bit`'s two restriction regimes
 //!
-//! `Nat.xor_ne_zero_iff` is the one sub-target NOT declared in this file —
-//! see `docs/plan/status/268-nat-xor-cancel.md` for the exact remaining
-//! shape. `Nat.xor_assoc`'s `xor_bit` associativity holds for ALL `x, y, z :
+//! `Nat.xor_assoc`'s `xor_bit` associativity holds for ALL `x, y, z :
 //! Nat` (not merely bits in `{0, 1}`), but `Nat.xor_xor_cancel_left`/
 //! `_right`'s per-bit cancel identity `xor_bit x (xor_bit x y) = y` is FALSE
 //! for a general `Nat` `y` (only `y in {0, 1}`), which is why closing those
 //! two needed an extra `y <= 1` round-trip lemma ([`round_trip_le_one`]) that
 //! `xor_assoc` never needed.
+//!
+//! # `Nat.xor_ne_zero_iff` — via `mt` twice, not via an `Iff` of `Eq`
+//!
+//! ```text
+//! Nat.xor_ne_zero_iff : ∀ a b, Iff (Not (Eq (xor a b) 0)) (Not (Eq a b))
+//! ```
+//!
+//! Matches Lean core's `Nat.xor_ne_zero_iff : x ^^^ y ≠ 0 ↔ x ≠ y`, read
+//! directly from the pinned Batteries checkout
+//! (`Batteries/Data/Nat/Bitwise/Lemmas.lean:68`) rather than trusted from
+//! prose — `xor_ne_zero_iff`/`xor_xor_cancel_left`/`xor_xor_cancel_right`
+//! all live there (cited, not defined, in Mathlib's own `Bitwise.lean`),
+//! confirming the prior lane's "Lean core, not Mathlib-authored" reading.
+//!
+//! The natural-looking route — build `Nat.xor_eq_zero_iff : Eq (xor a b) 0
+//! ↔ Eq a b` first, then negate both sides — needs an extra `Iff`
+//! not-congruence combinator this prelude does not have. `mt` (modus
+//! tollens, `Π a b, (a → b) → (b → False) → (a → False)`, already in the
+//! logic prelude and unused until now) skips that: partially applying `mt`
+//! with just the two propositions and a DIRECTION lemma gives a complete
+//! `Not`-to-`Not` implication with no further wrapping needed —
+//! `mt (Eq a b) (Eq (xor a b) 0) f : Not (Eq (xor a b) 0) → Not (Eq a b)`
+//! for `f : Eq a b → Eq (xor a b) 0`, and symmetrically for the other
+//! direction. Two small directional corollaries feed it:
+//!
+//! - **`Eq (xor a b) 0 → Eq a b`** (the `mpr` side) — does NOT need
+//!   [`declare_xor_xor_cancel_left`]/`_right` at all, confirming
+//!   `docs/plan/status/268-nat-xor-cancel.md`'s handoff: per bit,
+//!   `Nat.testBit_xor` plus the hypothesis gives `Eq (xor_bit (testBit a i)
+//!   (testBit b i)) 0`, and a NEW per-bit fact
+//!   ([`xor_bit_eq_zero_implies_eq`]) closes it to `Eq (testBit a i)
+//!   (testBit b i)` given both are `<= 1` (`Nat.testBit_le_one`) — reusing
+//!   [`round_trip_le_one`] rather than re-deriving a bound lemma.
+//!   `Nat.eq_of_testBit_eq` turns the per-bit result back into `Eq a b`.
+//! - **`Eq a b → Eq (xor a b) 0`** (the `mp` side) — via a NEW
+//!   `Nat.xor_self`-shaped argument ([`xor_self`]): `congrArg (xor a ·)` on
+//!   the hypothesis gives `Eq (xor a a) (xor a b)`, and a per-bit
+//!   self-cancellation-to-zero fact ([`xor_bit_self_zero`], built from a
+//!   NEW `Bool`-level `xor_fn x x = false` fact, [`bool_xor_self`]) plus
+//!   `Nat.eq_of_testBit_eq` gives `Eq (xor a a) 0`.
+//!
+//! Confirmed by a Python truth-table simulation before any Rust was written:
+//! `xor_fn a b = false → a = b` holds unconditionally over all 4 `Bool`
+//! pairs. The `a = false` branch closes for ANY `b` by `bool_symm` on the
+//! (defeq-reduced) hypothesis; the `a = true, b = true` branch is `refl`;
+//! the `a = true, b = false` branch needs no ex-falso at all, because there
+//! the hypothesis (`Eq true false`, since `xor_fn true false` reduces to
+//! `true`) already IS the goal (`Eq true false`) — the identity function.
+//! So no `false_true_elim` is needed anywhere in this file.
 //!
 //! # Codomain / mirror check
 //!
@@ -966,8 +1014,326 @@ fn declare_xor_xor_cancel_right(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<()
     Ok(())
 }
 
-/// Everything this module declares. See the module doc for what's NOT
-/// declared here (`Nat.xor_ne_zero_iff`).
+// ============================================================================
+// `Nat.xor_ne_zero_iff` -- the last of piece 4's four sub-targets. See the
+// module doc ("`Nat.xor_ne_zero_iff` — via `mt` twice") for the route.
+// ============================================================================
+
+/// `Eq (xor_fn x x) false`, for all `Bool` `x` --- confirmed by the Python
+/// truth-table simulation in the module doc (`xor_fn false false = false`,
+/// `xor_fn true true = false`, both `refl`).
+fn bool_xor_self(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+    let p = *p;
+    let motive = |d: &mut NatDev<'_>, xx: ExprId| -> ExprId {
+        let xor_ = super::bitwise::xor_fn(d);
+        let lhs = d.apply(xor_, &[xx, xx]);
+        let false_ = d.bool_false();
+        d.bool_eq(lhs, false_)
+    };
+    let at_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    let at_true = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        d.bool_refl(false_)
+    };
+    cases_bool(d, &p, x, &motive, &at_false, &at_true)
+}
+
+/// `Eq (xor_bit x x) 0`, for all `Nat` `x` --- lifts [`bool_xor_self`]
+/// through `digitize` the same way [`xor_bit_assoc`]/[`xor_bit_cancel_left`]
+/// lift their own `Bool`-level facts: `xor_bit x x := digitize (xor_fn (beq
+/// x 1) (beq x 1))` by definition, and `digitize false` iota-reduces to `0`.
+fn xor_bit_self_zero(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let bx = d.beq(x, one);
+    let xor_ = super::bitwise::xor_fn(d);
+    let cond = d.apply(xor_, &[bx, bx]);
+    let self_bool = bool_xor_self(d, &p, bx); // Eq cond false
+    let false_ = d.bool_false();
+    // Eq (digitize cond) (digitize false) -- refl-defeq to Eq (xor_bit x x) 0.
+    congr_bool_to_nat(d, cond, false_, self_bool, &|d, w| digitize(d, w))
+}
+
+/// `Nat.xor_self`-shaped: `Eq (xor a a) 0`, for all `Nat` `a` --- applies
+/// [`declare_eq_of_test_bit_eq`]'s extensionality lemma to a per-bit proof
+/// built from `Nat.testBit_xor` and [`xor_bit_self_zero`].
+fn xor_self(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let zero = d.zero();
+    let xaa = d.const_app(p.xor, &[a, a]);
+
+    let bits_hyp = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+
+        let tb_a = d.const_app(p.test_bit, &[a, i]);
+        let tb_xaa = d.const_app(p.test_bit, &[xaa, i]);
+        let outer = d.lemma(p.test_bit_xor, &[a, a, i]); // Eq tb_xaa (xor_bit tb_a tb_a)
+        let xor_bit_aa = super::testbit_bitwise::xor_bit(d, tb_a, tb_a);
+        let self_zero = xor_bit_self_zero(d, &p, tb_a); // Eq xor_bit_aa 0
+        let a_eq_zero = d.trans(tb_xaa, xor_bit_aa, zero, outer, self_zero); // Eq tb_xaa 0
+
+        let tb_zero = d.const_app(p.test_bit, &[zero, i]);
+        let tb_zero_i = d.lemma(p.test_bit_of_zero, &[i]); // Eq tb_zero zero
+        let tb_zero_i_symm = d.symm(tb_zero, zero, tb_zero_i); // Eq zero tb_zero
+
+        let bit_eq = d.trans(tb_xaa, zero, tb_zero, a_eq_zero, tb_zero_i_symm); // Eq tb_xaa tb_zero
+        d.lam_fv(i_fv, nat, bit_eq)
+    };
+
+    d.lemma(p.eq_of_test_bit_eq, &[xaa, zero, bits_hyp])
+}
+
+/// `Eq (digitize cond) 0 -> Eq cond false`, for all `Bool` `cond` --- the
+/// `false` branch is `refl` (`digitize false` iota-reduces to `0`, and the
+/// hypothesis at that point is the trivial `Eq 0 0`). The `true` branch DOES
+/// need an ex-falso, unlike [`bool_eq_of_xor_eq_false`]'s `true, false` leaf
+/// below (which is genuinely the identity): `digitize true` reduces to `1`
+/// (`succ zero`), so the hypothesis is the IMPOSSIBLE `Eq (succ zero) zero`,
+/// refuted by `Nat.succ_ne_zero` into whatever the goal (`Eq true false`)
+/// happens to be, via `False.rec`.
+fn digitize_eq_zero_implies_false(d: &mut NatDev<'_>, p: &NatPrelude, cond: ExprId) -> ExprId {
+    let p = *p;
+    let motive = |d: &mut NatDev<'_>, c: ExprId| -> ExprId {
+        let dg = digitize(d, c);
+        let zero = d.zero();
+        let hyp = d.eq(dg, zero);
+        let false_b = d.bool_false();
+        let concl = d.bool_eq(c, false_b);
+        d.arrow(hyp, concl)
+    };
+    let at_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_b = d.bool_false();
+        let dg0 = digitize(d, false_b); // computes to 0
+        let zero = d.zero();
+        let hyp_ty = d.eq(dg0, zero);
+        let h_fv = d.fresh_fvar();
+        let body = d.bool_refl(false_b);
+        d.lam_fv(h_fv, hyp_ty, body)
+    };
+    let at_true = |d: &mut NatDev<'_>| -> ExprId {
+        let true_ = d.bool_true();
+        let dg1 = digitize(d, true_); // computes to 1 = succ zero
+        let zero = d.zero();
+        let hyp_ty = d.eq(dg1, zero); // =defeq= Eq (succ zero) zero, an impossible hypothesis
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let false_b = d.bool_false();
+        let concl_ty = d.bool_eq(true_, false_b);
+
+        // ex falso: succ_ne_zero(zero) : Not (Eq (succ zero) zero); applied
+        // to h gives False, then False.rec.{0} eliminates into concl_ty.
+        let neg = d.lemma(p.succ_ne_zero, &[zero]); // Eq (succ zero) zero -> False
+        let impossible = d.apply(neg, &[h]); // False
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let anon = d.anon_name();
+        let false_motive = d
+            .kernel()
+            .lam(anon, false_ty, concl_ty, crate::BinderInfo::Default);
+        let level_zero = d.kernel().level_zero();
+        let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+        let body = d.apply(false_rec, &[false_motive, impossible]);
+        d.lam_fv(h_fv, hyp_ty, body)
+    };
+    cases_bool(d, &p, cond, &motive, &at_false, &at_true)
+}
+
+/// `Eq (xor_fn a b) false -> Eq a b`, for all `Bool` `a, b` --- confirmed by
+/// the module doc's Python simulation. Splitting on `a` alone closes `a =
+/// false` for ANY `b` via `bool_symm` on the (defeq-reduced) hypothesis
+/// (`xor_fn false b` reduces to `b`); `a = true` needs one more split on
+/// `b`: `b = false` is the IDENTITY (`xor_fn true false` reduces to `true`,
+/// so the hypothesis `Eq true false` already IS the goal `Eq true false`);
+/// `b = true` is `refl` (`xor_fn true true` reduces to `false`, so the
+/// hypothesis is the trivial `Eq false false`, and the goal `Eq true true`
+/// needs no case analysis on it at all).
+fn bool_eq_of_xor_eq_false(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let p = *p;
+
+    let motive_a = |d: &mut NatDev<'_>, aa: ExprId| -> ExprId {
+        let xor_ = super::bitwise::xor_fn(d);
+        let lhs = d.apply(xor_, &[aa, b]);
+        let false_ = d.bool_false();
+        let hyp = d.bool_eq(lhs, false_);
+        let concl = d.bool_eq(aa, b);
+        d.arrow(hyp, concl)
+    };
+
+    let at_a_false = |d: &mut NatDev<'_>| -> ExprId {
+        let false_ = d.bool_false();
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let hyp_ty = d.bool_eq(b, false_); // =defeq= Eq (xor_fn false b) false
+        let body = d.bool_symm(b, false_, h); // Eq false b
+        d.lam_fv(h_fv, hyp_ty, body)
+    };
+
+    let at_a_true = |d: &mut NatDev<'_>| -> ExprId {
+        let motive_b = |d: &mut NatDev<'_>, bb: ExprId| -> ExprId {
+            let true_ = d.bool_true();
+            let xor_ = super::bitwise::xor_fn(d);
+            let lhs = d.apply(xor_, &[true_, bb]);
+            let false_ = d.bool_false();
+            let hyp = d.bool_eq(lhs, false_);
+            let true_2 = d.bool_true();
+            let concl = d.bool_eq(true_2, bb);
+            d.arrow(hyp, concl)
+        };
+        let at_b_false = |d: &mut NatDev<'_>| -> ExprId {
+            // xor_fn true false = true (refl). hyp: Eq true false. concl:
+            // Eq true false. The identity -- not an ex-falso.
+            let true_ = d.bool_true();
+            let false_ = d.bool_false();
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let hyp_ty = d.bool_eq(true_, false_);
+            d.lam_fv(h_fv, hyp_ty, h)
+        };
+        let at_b_true = |d: &mut NatDev<'_>| -> ExprId {
+            // xor_fn true true = false (refl). hyp: Eq false false. concl:
+            // Eq true true.
+            let false_ = d.bool_false();
+            let true_ = d.bool_true();
+            let h_fv = d.fresh_fvar();
+            let hyp_ty = d.bool_eq(false_, false_);
+            let body = d.bool_refl(true_);
+            d.lam_fv(h_fv, hyp_ty, body)
+        };
+        cases_bool(d, &p, b, &motive_b, &at_b_false, &at_b_true)
+    };
+
+    cases_bool(d, &p, a, &motive_a, &at_a_false, &at_a_true)
+}
+
+/// `Eq (xor_bit x y) 0 -> Eq x y`, given `Le x 1` and `Le y 1` --- the
+/// per-bit fact [`declare_xor_ne_zero_iff`]'s `mpr`-side corollary needs.
+///
+/// Route: `xor_bit x y = 0` gives `xor_fn (beq x 1) (beq y 1) = false`
+/// ([`digitize_eq_zero_implies_false`]), hence `beq x 1 = beq y 1`
+/// ([`bool_eq_of_xor_eq_false`]). Congruence lifts that Bool equality to an
+/// equality of `digitize`d values, and [`round_trip_le_one`] at each of `x`
+/// and `y` (using the `<= 1` hypotheses -- the SAME restriction
+/// [`xor_bit_cancel_left`] needs, and for the same reason: the round-trip
+/// only recovers the raw operand when it is already a bit) closes the chain
+/// back to `Eq x y`.
+fn xor_bit_eq_zero_implies_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    y: ExprId,
+    h_le_x: ExprId,
+    h_le_y: ExprId,
+    h_zero: ExprId, // Eq (xor_bit x y) 0
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let bx = d.beq(x, one);
+    let by = d.beq(y, one);
+    let xor_ = super::bitwise::xor_fn(d);
+    let cond = d.apply(xor_, &[bx, by]);
+
+    let cond_false_fn = digitize_eq_zero_implies_false(d, &p, cond); // Eq (digitize cond) 0 -> Eq cond false
+    let cond_false = d.apply(cond_false_fn, &[h_zero]); // Eq cond false
+
+    let bx_eq_by_fn = bool_eq_of_xor_eq_false(d, &p, bx, by); // Eq cond false -> Eq bx by
+    let bx_eq_by = d.apply(bx_eq_by_fn, &[cond_false]); // Eq bx by
+
+    let dg_bx = digitize(d, bx);
+    let dg_by = digitize(d, by);
+    let congr_step = congr_bool_to_nat(d, bx, by, bx_eq_by, &|d, w| digitize(d, w)); // Eq dg_bx dg_by
+
+    let rt_x = round_trip_le_one(d, &p, x, h_le_x); // Eq dg_bx x
+    let rt_y = round_trip_le_one(d, &p, y, h_le_y); // Eq dg_by y
+    let rt_x_symm = d.symm(dg_bx, x, rt_x); // Eq x dg_bx
+
+    let (_, chain_proof) = d.chain(x, &[(dg_bx, rt_x_symm), (dg_by, congr_step), (y, rt_y)]);
+    chain_proof
+}
+
+/// `Nat.xor_ne_zero_iff : ∀ a b, Iff (Not (Eq (xor a b) 0)) (Not (Eq a b))`
+/// --- see the module doc ("`Nat.xor_ne_zero_iff` — via `mt` twice") for the
+/// route: two directional corollaries ([`xor_self`] for `mp`,
+/// [`xor_bit_eq_zero_implies_eq`] plus `Nat.eq_of_testBit_eq` for `mpr`) fed
+/// into `mt` (modus tollens) directly, with no `Iff`-of-`Eq` intermediate.
+fn declare_xor_ne_zero_iff(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    d.theorem(p.xor_ne_zero_iff, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let xab = d.const_app(p.xor, &[a, b]);
+        let zero = d.zero();
+        let eq_xor_zero = d.eq(xab, zero);
+        let eq_ab = d.eq(a, b);
+        let not_xor_zero = d.const_app(p.logic.not, &[eq_xor_zero]);
+        let not_ab = d.const_app(p.logic.not, &[eq_ab]);
+        let stmt = d.const_app(p.logic.iff, &[not_xor_zero, not_ab]);
+
+        // eq_of_xor_eq_zero_fn : Eq (xor a b) 0 -> Eq a b
+        let eq_of_xor_eq_zero_fn = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let bits_hyp = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+
+                let tb_a = d.const_app(p.test_bit, &[a, i]);
+                let tb_b = d.const_app(p.test_bit, &[b, i]);
+                let tb_xab = d.const_app(p.test_bit, &[xab, i]);
+
+                let congr_h = d.congr(xab, zero, h, &|d, w| d.const_app(p.test_bit, &[w, i])); // Eq tb_xab (testBit 0 i)
+                let tb_zero = d.const_app(p.test_bit, &[zero, i]);
+                let tb_zero_i = d.lemma(p.test_bit_of_zero, &[i]); // Eq tb_zero zero
+                let (_, tb_xab_eq_zero) = d.chain(tb_xab, &[(tb_zero, congr_h), (zero, tb_zero_i)]); // Eq tb_xab 0
+
+                let outer = d.lemma(p.test_bit_xor, &[a, b, i]); // Eq tb_xab (xor_bit tb_a tb_b)
+                let xab_bit = super::testbit_bitwise::xor_bit(d, tb_a, tb_b);
+                let outer_symm = d.symm(tb_xab, xab_bit, outer); // Eq xab_bit tb_xab
+                let bit_zero = d.trans(xab_bit, tb_xab, zero, outer_symm, tb_xab_eq_zero); // Eq xab_bit 0
+
+                let h_le_a = d.lemma(p.test_bit_le_one, &[a, i]); // Le tb_a 1
+                let h_le_b = d.lemma(p.test_bit_le_one, &[b, i]); // Le tb_b 1
+                let bit_eq =
+                    xor_bit_eq_zero_implies_eq(d, &p, tb_a, tb_b, h_le_a, h_le_b, bit_zero);
+                d.lam_fv(i_fv, nat, bit_eq)
+            };
+
+            let proof = d.lemma(p.eq_of_test_bit_eq, &[a, b, bits_hyp]);
+            d.lam_fv(h_fv, eq_xor_zero, proof)
+        };
+
+        // xor_eq_zero_of_eq_fn : Eq a b -> Eq (xor a b) 0
+        let xor_eq_zero_of_eq_fn = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let xaa = d.const_app(p.xor, &[a, a]);
+            let congr_h = d.congr(a, b, h, &|d, w| {
+                let a2 = a;
+                d.const_app(p.xor, &[a2, w])
+            }); // Eq xaa xab
+            let congr_h_symm = d.symm(xaa, xab, congr_h); // Eq xab xaa
+            let self_zero = xor_self(d, &p, a); // Eq xaa 0
+            let proof = d.trans(xab, xaa, zero, congr_h_symm, self_zero); // Eq xab 0
+            d.lam_fv(h_fv, eq_ab, proof)
+        };
+
+        let mt = p.logic.mt;
+        let mp = d.const_app(mt, &[eq_ab, eq_xor_zero, xor_eq_zero_of_eq_fn]); // Not eq_xor_zero -> Not eq_ab
+        let mpr = d.const_app(mt, &[eq_xor_zero, eq_ab, eq_of_xor_eq_zero_fn]); // Not eq_ab -> Not eq_xor_zero
+
+        let proof = d.const_app(p.logic.iff_intro, &[not_xor_zero, not_ab, mp, mpr]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// Everything this module declares.
 pub(super) fn declare_xor_algebra_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -976,5 +1342,6 @@ pub(super) fn declare_xor_algebra_all(
     declare_xor_assoc(d, p)?;
     declare_xor_xor_cancel_left(d, p)?;
     declare_xor_xor_cancel_right(d, p)?;
+    declare_xor_ne_zero_iff(d, p)?;
     Ok(())
 }
