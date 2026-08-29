@@ -10,7 +10,10 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:int-ediv-add-emod",
+        "F:int-mul-comm"
+    ],
   "evidence": [
     {
       "id": "kernel-Int.ediv_two_mul_two_add_one_of_odd",

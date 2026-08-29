@@ -10,7 +10,14 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:int-add-assoc",
+        "F:int-add-comm",
+        "F:int-add-le-add",
+        "F:int-add-neg",
+        "F:int-add-zero",
+        "F:int-le-refl"
+    ],
   "evidence": [
     {
       "id": "kernel-Int.add_le_of_le_sub_right",

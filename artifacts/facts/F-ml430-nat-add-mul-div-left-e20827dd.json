@@ -10,7 +10,12 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:nat-div-mod-add-multiple",
+        "F:nat-div-mod-exec",
+        "F:nat-div-mod-unique",
+        "F:nat-succ-pred-of-pos"
+    ],
   "evidence": [
     {
       "check_status": "checked",

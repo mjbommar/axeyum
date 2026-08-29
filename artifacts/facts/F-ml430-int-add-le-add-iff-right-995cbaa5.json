@@ -10,7 +10,11 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:int-add-le-add",
+        "F:int-add-neg-cancel-right",
+        "F:int-le-refl"
+    ],
   "evidence": [
     {
       "id": "kernel-Int.add_le_add_iff_right",

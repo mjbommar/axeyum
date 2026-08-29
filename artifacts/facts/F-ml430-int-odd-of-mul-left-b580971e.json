@@ -10,7 +10,10 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:int-nat-abs-mul",
+        "F:nat-right-distrib"
+    ],
   "evidence": [
     {
       "id": "kernel-Int.odd_of_mul_left",

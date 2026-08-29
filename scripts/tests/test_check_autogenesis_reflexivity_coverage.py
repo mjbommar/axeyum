@@ -96,6 +96,19 @@ class ReflexivityCoverageResultTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.CoverageResultError, "totals"):
             MODULE.validate_observation(manifest, mapping, changed)
 
+    def test_pinned_fact_fails_closed_on_unreachable_commit(self):
+        # `pinned_fact` must never fall back to the live filesystem -- that
+        # would silently restore the exact bug it exists to remove (a
+        # census reading a fact's CONTENT live while its nursery MEMBERSHIP
+        # is pinned, so a later proof -- which rewrites `formal.language`
+        # from "lean4-surface" to the kernel's own render_lean output --
+        # makes a valid, already-sealed census go red for a change it
+        # predates. See docs/plan/status/284-autogenesis-gate-rot.md.
+        with self.assertRaisesRegex(MODULE.CoverageResultError, "unreachable"):
+            MODULE.pinned_fact(
+                "0" * 40, MODULE.ROOT / "artifacts/facts/F-int-modeq-add-left.json"
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

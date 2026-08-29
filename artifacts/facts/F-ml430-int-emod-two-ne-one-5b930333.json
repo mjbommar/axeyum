@@ -10,7 +10,10 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:int-lt-irrefl",
+        "F:int-zero-lt-one"
+    ],
   "evidence": [
     {
       "id": "kernel-Int.emod_two_ne_one",

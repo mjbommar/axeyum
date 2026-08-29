@@ -10,7 +10,12 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:int-add-assoc",
+        "F:int-add-comm",
+        "F:int-le-dest",
+        "F:int-le-of-nat-add"
+    ],
   "evidence": [
     {
       "id": "kernel-Int.add_le_add",

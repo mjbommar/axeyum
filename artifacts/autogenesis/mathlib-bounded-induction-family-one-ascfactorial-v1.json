@@ -8,7 +8,7 @@
     "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
     "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natOneAscFactorial",
     "goal_sha256": "081f88a78526f992e7e4bae20a309e45ee85626a4700ed126dbd7a6805eb077a",
-    "proof_sha256": "d44d2b103768f69e8df408a8610db09b9bfa5ca9468497c9d2718da1ecdc1d30",
+    "proof_sha256": "08465cb3a454dff1f52d24326b84e64752353dce4884b7b33579991b6e6a9705",
     "target_content_sha256": "920465cca20920ed378e387293d21b10f198bf2056c0fbfdb737e6fdff181a3d",
     "binders_used": 1,
     "inductions_used": 1,

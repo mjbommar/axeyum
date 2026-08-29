@@ -10,7 +10,11 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": [
+        "F:int-add-zero",
+        "F:int-ediv-add-emod",
+        "F:int-mul-comm"
+    ],
   "evidence": [
     {
       "id": "kernel-Int.ediv_two_mul_two_of_even",
