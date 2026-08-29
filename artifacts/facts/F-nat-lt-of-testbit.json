@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lt-of-testbit",
+  "title": "bit-i disagreement plus agreement above i forces the order",
+  "statement": "For every natural n, m, i: if testBit(n, i) = 0, testBit(m, i) = 1, and testBit(n, j) = testBit(m, j) for every j > i, then n < m.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.testBit x0 x2) AxNat.zero) -> ((x4 : Eq.{1} AxNat (AxNat.testBit x1 x2) (AxNat.succ AxNat.zero)) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat.lt x2 x5) -> Eq.{1} AxNat (AxNat.testBit x0 x5) (AxNat.testBit x1 x5)))) -> AxNat.lt x0 x1))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-testbit-xor"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lt_of_testBit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lt_of_testBit",
+      "supports": "Nat.lt_of_testBit is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- lt_of_testBit 2>/dev/null | grep -Ec '^Nat\\.lt_of_testBit[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "shape-Nat.lt_of_testBit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lt_of_testBit",
+      "supports": "The declared type's exact SHAPE (hypothesis order, that H0 is about n not m, that H1's target is one not zero, that the conclusion is Lt n m not Lt m n) is confirmed by applying it to a genuinely free (n, m, i, H0, H1, Hagree) tuple, wrapped in a fresh theorem so the free variables are properly registered via pi_fv/lam_fv.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::lt_of_test_bit_applies_at_a_genuinely_symbolic_hypothesis_set",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::add_declaration"
+      ],
+      "notes": "A concrete DISCRIMINATING numeric instance was scoped out of this test: building one honestly needs Hagree's full universally-quantified proof (forall j, i < j -> ...), which requires a general \"testBit is eventually zero above a magnitude bound\" lemma this lane did not build (see docs/plan/status/265-nat-msb-order.md). The kernel's own admission of the full universally-quantified statement is strictly stronger evidence than any single concrete instantiation would be; this test additionally confirms the shape."
+    },
+    {
+      "id": "footprint-Nat.lt_of_testBit",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-msb-order",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the Nat-valued analogue of the pinned Mathlib v4.30 proposition `Nat.lt_of_testBit` (`F:ml430-nat-lt-of-testbit-72f64ab8`, which stays `open`): Mathlib's `Nat.testBit` returns `Bool`, this kernel's returns `Nat` in `{0,1}` (see `nat_prelude/binary.rs`'s module doc), so a Nat-valued proof here cannot honestly flip that Bool-typed mirror. Registered as its own local fact instead, matching the `F:nat-testbit-xor`/`F:nat-zero-of-testbit-eq-zero` pattern.\n\nThis is piece (3) of the 4 pieces `docs/plan/status/260-nat-lt-xor-cases.md` named as blocking `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`), which stays `open` -- pieces 2 (`exists_most_significant_bit`) and 4 (`xor_assoc`/`xor_xor_cancel_left`/`xor_xor_cancel_right`/`xor_ne_zero_iff`) are still needed; see `docs/plan/status/265-nat-msb-order.md`.\n\nProof route: pick `N := add n (add m (succ i))`, large enough (via the new, self-contained `Nat.self_lt_two_pow_add : forall a b, Lt a (pow 2 (add a b))`, which lets a proof bound TWO independent values by ONE common power of two without any general Le-based `pow` monotonicity lemma) to bound BOTH n and m by `pow 2 N`. Rearranged via `add_assoc`/`add_comm`/`add_right_comm`, N is already of the shape `add (succ i) (add n m)` that the pre-existing `Nat.sumRange_split` needs to peel off everything up to and including bit i. n and m each decompose as `(low bits below i) + (bit i's own contribution) + (a TAIL over bits above i)`; the agreement hypothesis makes the two tails LITERALLY equal (`sumRange_congr`), H0/H1 collapse bit i's contribution to 0 for n and `pow 2 i` for m, and n's low bits are `< pow 2 i` (`sumRange_split`'s sibling `sum_testBit_lt` plus `mod_lt`) while m's low bits contribute at least 0 -- so n's total is strictly below m's."
+}
