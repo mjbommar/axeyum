@@ -238,6 +238,7 @@ fn cancel_at_msb(
 /// Given `Eq (testBit a i) 0`, `Eq (testBit b i) 0`, `Eq (testBit c i) 0`,
 /// produce `Eq (testBit (xor (xor a b) c) i) 0` — the degenerate branch of
 /// the trichotomy's bit case-split, refuted against `hi : testBit v i = 1`.
+#[allow(clippy::too_many_arguments)]
 fn all_zero_gives_v_zero(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -451,7 +452,8 @@ fn build_rotations(
             d.const_app(p.xor, &[a2, w])
         });
         let xor_a_v = d.const_app(p.xor, &[a, v]);
-        d.chain(xor_a_v, &[(xor_a_axbc, congr_v), (xbc, cancel_a)]).1
+        d.chain(xor_a_v, &[(xor_a_axbc, congr_v), (xbc, cancel_a)])
+            .1
     };
 
     // e_b : Eq (xor b v) xca -- via xor_comm(a,b), xor_assoc(b,a,c),
@@ -467,9 +469,7 @@ fn build_rotations(
         let xassoc_bac = d.lemma(p.xor_assoc, &[b, a, c]); // Eq xor_ba_c (xor b (xor a c))
         let xac = d.const_app(p.xor, &[a, c]);
         let xor_b_xac = d.const_app(p.xor, &[b, xac]);
-        let v_eq_b_xac = d
-            .chain(v, &[(xor_ba_c, congr1), (xor_b_xac, xassoc_bac)])
-            .1; // Eq v xor_b_xac
+        let v_eq_b_xac = d.chain(v, &[(xor_ba_c, congr1), (xor_b_xac, xassoc_bac)]).1; // Eq v xor_b_xac
 
         let cancel_b = d.lemma(p.xor_xor_cancel_left, &[b, xac]); // Eq (xor b (xor b xac)) xac
         let xor_b_bxac = d.const_app(p.xor, &[b, xor_b_xac]);
@@ -500,7 +500,8 @@ fn build_rotations(
             d.const_app(p.xor, &[c2, w])
         });
         let xor_c_v = d.const_app(p.xor, &[c, v]);
-        d.chain(xor_c_v, &[(xor_c_cxab, congr_vc), (xab, cancel_c)]).1
+        d.chain(xor_c_v, &[(xor_c_cxab, congr_vc), (xab, cancel_c)])
+            .1
     };
 
     (e_a, e_b, e_c)
@@ -608,8 +609,7 @@ fn declare_xor_trichotomy(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
                     let branch_tc0 = {
                         let hf0c = d.fresh_fvar();
                         let h_tc0 = d.kernel().fvar(hf0c);
-                        let v_zero =
-                            all_zero_gives_v_zero(d, &p, a, b, c, i, h_ta0, h_tb0, h_tc0);
+                        let v_zero = all_zero_gives_v_zero(d, &p, a, b, c, i, h_ta0, h_tb0, h_tc0);
                         let hi_symm = d.symm(tb_v_i, one, hi); // Eq one tb_v_i
                         let one_eq_zero = d.trans(one, tb_v_i, zero, hi_symm, v_zero); // Eq one zero
                         let false_proof = d.lemma(p.succ_ne_zero, &[zero, one_eq_zero]);
