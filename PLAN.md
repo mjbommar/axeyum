@@ -121,6 +121,12 @@ now. Nothing was deleted.
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
 | 2026-08-29 | int-gcd-div-2 | closed `F:ml430-int-gcd-div-gcd-div-gcd-2db608dc` via `declare_gcd_div_gcd_div_gcd`, an `Int.mul_one`-based finish of the predecessor's Bézout route; confirmed `Int.gcd_div` genuinely absent (no positive-divisor version exists either) and left `F:ml430-int-gcd-div-5e01872f` open with the three missing lemma statements named |
+| 2026-08-29 | nat-fuel-irrelevance | Fuel-irrelevance for `landAux` (`Nat.land_aux_eq_land_of_le`), via a new generic two-fuel agreement induction (`agree_by_double_fuel_induction`); transport to `lorAux`/`ldiffAux` sized but not landed; none of the 7 blocked facts closed |
+| 2026-08-29 | nat-singles | `Nat.mod_lcm`: unconditional lcm-combination of two congruences, closes `F:ml430-nat-mod-lcm-ee6bdd41` |
+| 2026-08-29 | nat-singles | `Nat.dvd_of_forall_prime_mul_dvd`: needs only one prime witness, closes `F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b` |
+| 2026-08-29 | nat-singles | `gap_dvd`/`modeq_of_dvd_gap` (`crt.rs`) widened `fn` -> `pub(super) fn` so `lcm.rs` can reuse them |
+| 2026-08-29 | nat-minfac-relprime | `Nat.IsRelPrime`/`Nat.coprime_iff_isRelPrime`: closes `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` |
+| 2026-08-29 | nat-minfac-relprime | `Nat.minFacAux`/`Nat.minFac`: fuel-recursive least-prime-factor definition (bonus; no fact closed, `ml430` mirror stays open — different algorithm from Mathlib's) |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -11535,6 +11541,339 @@ written for the latter) went through without a single rejected term.
 **Timing**: `cargo test -p axeyum-lean-kernel --lib int_prelude::` —
 3.81s before, 3.83s after (test count 40 → 40, one panic on the coverage
 list fixed by adding the new name, no other regression).
+
+**Your lane's block (`DONE (one auxiliary; transport sized)`, nat-fuel-irrelevance, 2026-08-29).**
+Fuel-irrelevance landed for `landAux`, kernel-admitted on the corrected
+attempt (one direction bug, see below). None of the 7 blocked facts
+(`land_comm`, `land_assoc`, `land_bit`, `lor_comm`, `lor_assoc`, `lor_bit`,
+`ldiff_bit`) closed this session — see "What is still needed" for why that is
+a separate, larger piece of work than fuel-irrelevance itself, and why the
+brief's second acceptance criterion ("fuel-irrelevance for one auxiliary,
+with transport to the others sized") is what this lane delivers.
+
+**The statement, and why this hypothesis.** In `nat_prelude/rec_agreement.rs`:
+
+```
+Nat.land_aux_eq_land_of_le :
+  ∀ fuel m n, Le m fuel → Eq (landAux fuel m n) (land m n)
+```
+
+`Le m fuel`, not an unconditional statement: the canonical call
+`landAux m m n` puts `m` in the fuel slot and the recursion halves the value
+argument every step, so a caller unfolding at a NON-canonical fuel (e.g.
+`fuel = bit a m`, `land_bit`'s shape) always has MORE fuel than canonical,
+never less — but `landAux 0 m n` for `m > 0` is genuinely `0` while
+`land m n` need not be, so the statement is false without some sufficiency
+hypothesis. Weaker alternatives were considered and rejected:
+
+- No hypothesis at all: false (the `m > 0`, `fuel = 0` counterexample above).
+- `Eq m fuel` (only the canonical fuel): true but useless — it says nothing
+  about the very case the 7 facts need, fuel strictly above canonical.
+
+**Which side proved, and why the transport is NOT free (correcting the
+brief's framing).** The brief's suggested route was `agree_by_fuel_induction`
+inducting on `fuel` alone, generalizing `m`/`n`. That route hits a
+self-reference: `land m n` unfolds to `landAux m m n`, which puts the SAME
+value `m` in the fuel slot, so relating it to `landAux (succ k) m n` (`k`
+from the induction) needs `landAux m m n` to unfold via `m`'s own shape —
+and once `m = succ predecessor` is exposed, the recursive call on THAT side
+is at fuel `predecessor`, a value the induction's own hypothesis (fixed at
+fuel `k`) says nothing about.
+
+The fix, landed here: generalize over BOTH fuels at once
+(`ops::agree_by_double_fuel_induction`, a new 3-value-generalized sibling of
+`agree_by_fuel_induction`):
+
+```
+Nat.land_aux_agree_of_fuel :
+  ∀ fuel1 m n fuel2, Le m fuel1 → Le m fuel2 →
+    Eq (landAux fuel1 m n) (landAux fuel2 m n)
+```
+
+This is symmetric in which fuel is "the" canonical one, so it NEVER needs
+`landAux`'s own canonical instance to unfold. `land_aux_eq_land_of_le` is a
+one-line corollary at `fuel2 := m` via `le_refl` — `land m n` and
+`landAux m m n` are the SAME term by definition, so the kernel accepts the
+double-fuel proof directly against the `land`-headed statement via defeq,
+with no extra proof step.
+
+**New reusable machinery, in `ops.rs`:**
+
+- `agree_by_double_fuel_induction` — `agree_by_fuel_induction`'s three-value
+  sibling; entirely generic, no `land`-specific content.
+- `cases_zero_succ` — a motive-general zero/succ case split via `Nat.rec`,
+  discarding the induction hypothesis (the reusable form of what
+  `land_zero_right`/`lor_zero_right` each inline by hand for one fixed goal).
+  Needed because the step case of the double-fuel induction must case-split
+  `m` (not just `fuel1`) to expose whether `landAux`'s inner `m = 0` guard
+  reduces.
+- `bool_select_nat_same` — `Eq (bool_select_nat b x x) x` for ANY `b`. The
+  kernel's defeq checker does not special-case "both recursor branches equal
+  regardless of the scrutinee", so this is needed wherever a guard stays
+  symbolic but both branches happen to coincide (the `m = 0` base case, where
+  BOTH of `landAux`'s absorbing-zero rows are the constant `0`).
+
+**Two case splits, and why each is unavoidable.** Induction is on `fuel1`.
+The base case (`fuel1 = 0`) needs no split: `landAux 0 m n` is the constant
+`0` row for ANY `m`, `n` (`Nat.land_aux_zero_left_any_fuel`, a NEW "any fuel"
+lemma — `landAux`'s fuel-exhaustion row is `0` regardless of `m`/`n`, unlike
+`Nat.land_zero_left`, which needs no lemma because `Nat.land` supplies fuel
+`= m = 0` automatically). The step (`fuel1 = succ k`) case-splits `m`: at
+`m = 0` both sides are `0` (same "any fuel" lemma, no hypotheses needed); at
+`m = succ predecessor`, `beq (succ predecessor) zero` reduces to `false` on
+BOTH sides (the guard only mentions `m`), so `d.congr` reduces the goal to
+the recursive sub-terms `landAux k half half'` vs `landAux f2' half half'`
+(`f2' := pred fuel2`), closed by the IH at `a := half`, given `Le half k` and
+`Le half f2'` from a per-fuel arithmetic helper
+(`half_le_predecessor_of_succ`, a direct copy of the derivation inline in
+`powsq.rs`'s `declare_powsq_eq_pow` — that copy is not exposed and
+`powsq.rs` is out of scope, so this is the FOURTH site with this exact
+`e < 2e ⇒ e/2 < e ⇒ e/2 ≤ f` arithmetic in this prelude, after `log.rs`,
+`binary.rs`, `powsq.rs`).
+
+**What the kernel REJECTED, and why.** First attempt failed with
+`TypeMismatch` on an `Eq` whose two sides were `succ (pred fuel2)`/`fuel2` in
+opposite orders from what I'd assumed. Cause: `Nat.succ_pred_of_pos(c, h)`
+proves `Eq c (succ (pred c))` — `c` on the LEFT — not
+`Eq (succ (pred c)) c` as I misread from a neighbouring doc comment
+(`two_divisor_dichotomy`'s OWN `Eq.rec` usage, re-read carefully, confirms
+the direction: it transports FROM `c` TO `succ (pred c)` with no `symm`). I
+had inserted an extra `d.symm` to "fix" the direction I assumed was needed,
+which flipped it the WRONG way. Removed the spurious `symm`, and swapped
+which side of the later `d.congr` call plays `a`/`b` to match — kernel
+accepted on the second attempt with no other changes needed.
+
+**Negative control at insufficient fuel.** Same pinned witness the
+`rec_agreement` lane used for `bitwise_aux_eq_land_aux`:
+`(fuel, m, n) = (1, 7, 7)`. `landAux 1 7 7 = 1` (one fuel step) while
+`land 7 7 = 7` (the canonical answer) — checked by evaluation alone (`Le 7 1`
+has no proof, so the theorem cannot be applied there; the control exists to
+confirm the hypothesis is load-bearing, not to exercise the theorem itself).
+`nat_prelude_tests.rs`'s
+`land_fuel_irrelevance_holds_above_canonical_fuel_with_an_insufficient_fuel_negative_control`
+also applies the theorem symbolically and at `(fuel, m, n) = (7, 1, 7)`
+(fuel STRICTLY above canonical), where both sides compute to `1`.
+
+**What is still needed to close any of the 7 facts, and why it is NOT free.**
+`land_bit`/`lor_bit`/`ldiff_bit` need relating `land`/`lor`/`ldiff` at a
+`Nat.bit`-constructed argument to the recursive step — fuel-irrelevance is
+the piece that lets the non-canonical fuel `landAux` reaches there be
+discharged, but the `Nat.bit` decode/encode bridge itself is separate work
+this lane did not attempt. `land_comm`/`lor_comm`/`land_assoc`/`lor_assoc`
+need, IN ADDITION to fuel-irrelevance, a SAME-FUEL commutativity lemma
+(`∀ fuel m n, Eq (landAux fuel m n) (landAux fuel n m)`) to relate
+`land m n = landAux m m n` and `land n m = landAux n n m` through a common
+larger fuel (e.g. `m + n`) — this is genuinely separate proof content
+(needs `Nat.mul_comm` for the bit term and a guard-reordering argument,
+`lor`'s and `land`'s guards check `n` before `m`), not a corollary of what
+landed here.
+
+**Transport to `lorAux`/`ldiffAux` — sized, not landed.**
+`agree_by_double_fuel_induction`, `half_le_predecessor_of_succ`, and the
+private `n_lt_mul_two` copy are ENTIRELY generic and transport UNCHANGED.
+What does NOT transport unchanged is `land_aux_zero_left_any_fuel`:
+`lorAux`'s fuel-exhaustion row returns `n`, not `0` (`lor.rs`'s module doc),
+so its "any fuel" analogue is `Eq (lorAux fuel 0 n) n`, proved the same way
+(a `bool_select_nat_same` call in the `succ` branch) but closing to a
+different value. The `m = succ predecessor` step's proof body is otherwise a
+direct transcription — same case split, same IH application, same congr —
+with `lor`'s own `on_n_zero`/`on_m_zero`/`combine` closures dropped in.
+`ldiffAux` shares `land`'s absorbing-zero base case exactly (`ldiff.rs`'s
+module doc), so its `any_fuel` lemma is a byte-for-byte copy of `land`'s with
+the name and `p.ldiff_aux` swapped in. Estimate: each of `lorAux`/`ldiffAux`
+costs one new "any fuel" lemma (~20 lines) plus one new `declare_*_aux_agree_of_fuel`
+function that is `declare_land_aux_agree_of_fuel` with the absorbing-zero
+constants and combine formula swapped (~150 lines, no new proof technique).
+
+**Counts.** `nat_prelude` before: 121 passed. After: 122 passed (added one
+instantiation test with the mandated negative control), plus 3 new
+declarations (all theorems, `land_aux_zero_left_any_fuel`,
+`land_aux_agree_of_fuel`, `land_aux_eq_land_of_le`) — `the_build_is_deterministic`'s
+pin moved `85 + 438` → `85 + 441` (counted from the panic message's own
+mismatch, not hand-incremented). `nat` trusted surface still
+`axiom=0 opaque=0 quotient=0` (`nat_axiom_inventory --require-axiom-free nat`).
+New fact `F:nat-land-aux-eq-land-of-le`; `python3 scripts/validate-facts.py`
+clean (1922 facts, 0 errors). `cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both clean
+on the touched files. NOT run: the aggregate `just check` / `./scripts/check.sh`.
+
+Three `testbit` facts remain pinned OPEN by the live
+`gen-autogenesis-bitwise-family-projection.py` gate and were not touched.
+
+**Your lane's block (`DONE`, nat-singles, 2026-08-29).** Landed both
+unassessed facts: `Nat.mod_lcm` and `Nat.dvd_of_forall_prime_mul_dvd`.
+Neither needed the stated blockers to be investigated first -- nobody had
+looked, and both turned out to have short proofs from infrastructure already
+in the prelude (`Nat.lcm_dvd`, `crt.rs`'s `gap_dvd`/`modeq_of_dvd_gap`,
+`Nat.exists_prime_dvd`).
+
+`Nat.mod_lcm : modEq n x y -> modEq m x y -> modEq (lcm n m) x y`,
+**unconditional** in `n`/`m` (unlike `Nat.crt_unique`, which needs
+`gcd n m = 1`). The combination step is `Nat.lcm_dvd : dvd n c -> dvd m c ->
+dvd (lcm n m) c`, already unconditional, so the whole proof is `crt_unique`'s
+own `crt_le`/`gap_dvd`/`modeq_of_dvd_gap` shape with `lcm_dvd` swapped in for
+`coprime_mul_dvd`. `gap_dvd`/`modeq_of_dvd_gap` (`crt.rs`, private) were
+widened to `pub(super)` and reused from `lcm.rs` rather than duplicated.
+
+`Nat.dvd_of_forall_prime_mul_dvd : (forall p, Prime p -> p|a -> p*a|b) ->
+a|b`. Turned out to need only ONE prime dividing `a` (any one), not
+induction over `a`'s factorization: `a=0` uses the hypothesis at `k=2`;
+`a=1` needs `dvd_mul`+`one_mul` and never touches the hypothesis; `a>=2`
+uses `exists_prime_dvd` for a witness `pw`, the hypothesis at `k=pw` gives
+`pw*a | b`, and `a | (a*pw)` (`dvd_mul` + `mul_comm`) chains via `dvd_trans`.
+Same nested `lt_or_ge`-on-`a` trichotomy as the neighbouring
+`coprime_of_forall_prime_dvd`.
+
+The other two facts (`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`,
+`F:ml430-nat-coprime-iff-isrelprime-0c08eb25`) are left `open`, confirmed
+still blocked (re-grepped the whole `crates/axeyum-lean-kernel/src/` for
+`minFac`/`min_fac` and `IsRelPrime`/`is_rel_prime`/`isRelPrime`: zero hits
+outside this status doc and the fact files themselves) -- see "What's still
+needed" below for the precise construction each one is missing.
+
+`nat_prelude` count: **85 + 441 -> 85 + 443** (2 new theorems, 0 new
+definitions; confirmed by `the_build_is_deterministic`'s own panic message,
+not hand-counted).
+
+## What's still needed for the other two facts
+
+- **`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`** (`m != 0 -> m < n.minFac ->
+  n.Coprime m`) needs `Nat.minFac` as a COMPUTABLE definition with defining
+  equations, which does not exist. `Nat.exists_prime_dvd`/
+  `Nat.least_divisor_search` only give an EXISTENCE proof of a prime
+  divisor, not a value-returning function. Building `Nat.minFac` as a
+  fuel-recursive `Nat -> Nat` (mirroring `nat_prelude/log.rs`'s pattern,
+  deciding `dvd d n` via `beq (mod n d) 0` the way
+  `least_divisor_search` already does) is a legitimate definition task per
+  this lane's brief, but Mathlib's own `Nat.minFac` uses well-founded
+  recursion bounded by `sqrt n`, not a simple fuel bound, and getting the
+  defining equations AND an evaluation test (with a negative control
+  discriminating "first divisor" from "smallest prime divisor", e.g.
+  `minFac 12 = 2` vs `minFac 15 = 3`, plus the `minFac 1 = 1` boundary) right
+  is a sized task on its own -- not attempted this lane, to avoid
+  half-landing it.
+- **`F:ml430-nat-coprime-iff-isrelprime-0c08eb25`** (`m.Coprime n <->
+  IsRelPrime m n`) needs an `IsRelPrime` predicate, confirmed absent from
+  the whole kernel (this lane's own grep, zero hits). Mathlib's
+  `IsRelPrime m n := forall d, d ∣ m -> d ∣ n -> IsUnit d`, specialized to
+  `Nat` where the only unit is `1`, so `IsRelPrime m n := forall d, dvd d m
+  -> dvd d n -> Eq d 1`. This is a NEW predicate declaration (not merely a
+  theorem), and the iff with `gcd m n = 1` needs both directions: forward
+  (`gcd m n = 1 -> IsRelPrime m n`) via `dvd_gcd` + `eq_one_of_dvd_one` (a
+  direct consequence, cheap); backward (`IsRelPrime m n -> gcd m n = 1`) via
+  `gcd_dvd_left`/`gcd_dvd_right` fed into the hypothesis at `d := gcd m n`
+  (also cheap, symmetric to `coprime_of_forall_prime_dvd`'s existing shape).
+  Neither direction looked hard once the predicate exists; the predicate
+  itself is the only missing piece.
+
+## Verification run
+
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude` (targeted `nat_prelude::`
+  filter): **120 passed, 0 failed** (was 118 before this lane's two new
+  theorems + two new tests).
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings`:
+  clean (needed one `#[allow(clippy::too_many_arguments)]` on the new
+  `mod_lcm_le`, matching `crt.rs`'s `crt_le`).
+- `rustfmt --edition 2024` on every touched file.
+- `python3 scripts/validate-facts.py`: 0 errors.
+- Both new `checker_command`s (from each fact's evidence) run and confirmed
+  to actually discriminate: `nat_theorem_inventory` prints the exact
+  `formal.statement` for each name, `nat_axiom_inventory --require-axiom-free
+  nat` exits 0, and both concrete-instance tests (with negative controls)
+  pass individually by name.
+- Did NOT run the full aggregate `just check`/`./scripts/check.sh` (out of
+  scope for a single-lane targeted change; the coordinator re-runs the full
+  gate before merge per standing project convention).
+
+**Your lane's block (`DONE`, nat-minfac-relprime, 2026-08-29).** Landed the
+required fact and the bonus definition sized in
+[`docs/plan/status/240-nat-singles.md`](docs/plan/status/240-nat-singles.md).
+
+`Nat.IsRelPrime m n := ∀ d, d ∣ m → d ∣ n → d = 1` (`rel_prime.rs`), a genuine
+new `Definition` — Mathlib's generic `∀ d, d∣x → d∣y → IsUnit d`
+(`Mathlib/Algebra/Divisibility/Units.lean:150`) specialized to `Nat`'s only
+unit, `1`. Both directions of `Nat.coprime_iff_isRelPrime` were exactly as
+cheap as the handoff predicted: forward combines `d∣m`/`d∣n` via `dvd_gcd`,
+transports along the hypothesis to `d∣1`, and closes with
+`eq_one_of_dvd_one`; backward applies the hypothesis directly at
+`d := gcd m n`, discharged by `gcd_dvd_left`/`gcd_dvd_right`. No case
+analysis in either direction, and neither unfolds `Nat.gcd`'s own recursion.
+Closes `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` (flipped `open` ->
+`proved`; the mirror flip is honest — verified by reading Mathlib's actual
+source for `IsRelPrime` at the pinned commit, not inferring from the
+theorem's statement).
+
+**Bonus: `Nat.minFac`/`Nat.minFacAux` landed** (`min_fac.rs`), a fuel-recursive
+linear divisor search — structural `Nat.rec` on a `fuel` argument (the same
+device `Nat.div`/`Nat.mod`/`Nat.log` use), fuel `= n - 2`, scanning candidates
+`2, 3, 4, …` via `beq (mod n candidate) 0`. Fuel exhaustion coincides exactly
+with `candidate = n` (never earlier), so the base case "return the candidate
+unchanged" is correct — `n` trivially divides itself. `minFac 0 = 2` and
+`minFac 1 = 1` are an outer case split before the search runs, matching
+Mathlib's boundary conventions.
+
+**The `F:ml430-nat-coprime-of-lt-minfac-0f79bdba` mirror stays `open`,
+deliberately.** Mathlib's own `Nat.minFac` is NOT this — theirs is
+well-founded recursion on `sqrt n`-bounded measure, skips even candidates,
+and exits early once `k*k > n`. The two agree pointwise (both are "the least
+divisor ≥ 2 of `n`" with identical boundary values) but are structurally
+different `def`s, so per the established mirror-flip criterion this is the
+`Nat.multichoose` case, not the `Nat.descFactorial_of_lt` case. A theorem
+about coprimality relative to THIS `minFac` needs its own new `F:nat-*` fact
+and a minimality property (`∀ d, 2 ≤ d → d ∣ n → minFac n ≤ d`) not attempted
+here — sized as further, separate work.
+
+**Kernel REJECTED nothing in this lane** — both declarations and every test
+were accepted on first `add_declaration`/`declare_theorem`. The one real
+correctness risk (a `Definition` that type-checks but computes the wrong
+value; `Kernel::add_declaration` cannot catch this) was caught by evaluation
+tests, not the kernel: `min_fac_computes_the_least_prime_factor_with_negative_controls`
+checks `minFac 12 = 2` against `minFac 15 = 3` (the brief's discriminating
+pair — "first divisor" and "smallest prime divisor" coincide for an
+upward-from-2 scan, argued in `min_fac.rs`'s module doc) plus `minFac 0 = 2`,
+`minFac 1 = 1`, `minFac 2 = 2`, `minFac 9 = 3`, each with a negative `def_eq`
+control (including `minFac 12` vs `minFac 15` not collapsing to each other).
+
+`nat_prelude` count: **85 + 443 -> 88 + 444** (1 new theorem
+`coprime_iff_isRelPrime`, 3 new definitions `IsRelPrime`, `minFacAux`,
+`minFac`; confirmed by `the_build_is_deterministic`'s own panic message, not
+hand-counted).
+
+## Verification run
+
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude` (targeted `nat_prelude::`
+  filter): **127 passed, 0 failed** (was 126 before this lane's declarations
+  + tests, 120 before `nat-singles`).
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings`:
+  clean, no allow-lists needed.
+- `rustfmt --edition 2024` on every touched file.
+- `python3 scripts/validate-facts.py`: 0 errors (1922 facts, 1834 proved).
+- `F:ml430-nat-coprime-iff-isrelprime-0c08eb25`'s new `checker_command`s run
+  and confirmed to actually discriminate: `nat_theorem_inventory` prints the
+  exact rendered type for `Nat.coprime_iff_isRelPrime`,
+  `nat_axiom_inventory --require-axiom-free nat` exits 0, and both
+  concrete-instance tests (mp/mpr round trip at (3,5); a real
+  `Not (IsRelPrime 4 6)` proof from `gcd 4 6 = 2`) pass individually by name.
+- Did NOT run the full aggregate `just check`/`./scripts/check.sh` (out of
+  scope for a single-lane targeted change; the coordinator re-runs the full
+  gate before merge per standing project convention).
+
+## What's still needed for `F:ml430-nat-coprime-of-lt-minfac-0f79bdba`
+
+A NEW fact (not the `ml430` mirror — see above) stating coprimality relative
+to THIS `Nat.minFac`, which needs:
+
+- **Minimality**: `∀ n, 2 ≤ n → ∀ d, 2 ≤ d → d ∣ n → minFac n ≤ d` — that
+  `minFac n` really is the LEAST divisor `≥ 2`, not merely A divisor. Not yet
+  proved; the natural route is an induction over the fuel search itself
+  (every candidate `2, …, minFac n - 1` was tried and failed), mirroring
+  `primes.rs`'s existing `least_divisor_search` minimality argument but
+  adapted to the concrete recursive function rather than an existential
+  witness.
+- **The coprimality argument itself**, once minimality is in hand: for
+  `m ≠ 0`, `m < minFac n`, suppose `g := gcd n m > 1`; `g ∣ n` and `g ≥ 2`
+  gives `g ≥ minFac n` by minimality, but `g ∣ m` and `m ≠ 0` gives `g ≤ m`,
+  contradicting `m < minFac n ≤ g ≤ m`. So `gcd n m = 1`.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
