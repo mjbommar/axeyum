@@ -152,6 +152,37 @@ class TheRatchetFires(unittest.TestCase):
         self.assertIn("stopped matching", failures[0])
 
 
+class AnOptoutReasonColumnIsNotARunnerLine(unittest.TestCase):
+    """`scripts/control-optout.tsv` (ADR-0612) is `name<TAB>reason`, not a
+    script, so its rows never start with `#` -- and the reason column
+    routinely explains a pytest-dialect exclusion in prose containing the
+    word `pytest`. Found crediting all seven of that file's `pytest dialect`
+    rows as "executed by scripts/control-optout.tsv": a ledger of modules
+    NOT run, vouching for the exact modules it names as unrun. Same shape as
+    `ACommentIsAMentionHoweverRunnerishItLooks` above, recurring in a file
+    format that guard was never written to see."""
+
+    def test_a_bare_optout_row_would_fool_the_raw_scanner(self) -> None:
+        """Pins WHY the file must be excluded outright: unlike a `#` comment,
+        a plain TSV row naming a module beside `pytest` is exactly what
+        `modules_run_by` treats as a run when handed the text directly."""
+        row = "test_something\tpytest dialect; `pytest` is not installed here.\n"
+        self.assertEqual(
+            CT.modules_run_by({"test_something"}, row), {"test_something"}
+        )
+
+    def test_the_optout_ledger_itself_is_not_scanned_as_a_runner(self) -> None:
+        self.assertNotIn("scripts/control-optout.tsv", CT.tracked())
+
+    def test_no_real_module_is_credited_to_the_optout_ledger(self) -> None:
+        mods = CT.modules()
+        runs = CT.executed(mods, CT.tracked())
+        credited = {
+            m for m, files in runs.items() if "scripts/control-optout.tsv" in files
+        }
+        self.assertEqual(credited, set())
+
+
 class TheCommittedTreeIsMeasuredNotAssumed(unittest.TestCase):
     def test_the_baseline_matches_what_is_actually_there(self) -> None:
         """A baseline above the real count would silently allow new orphans."""
