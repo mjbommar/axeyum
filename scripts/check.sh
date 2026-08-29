@@ -136,6 +136,13 @@ step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.t
 step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
 step autogenesis-holdout-isolation-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
 step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-isolation.py
+# The flywheel's input queue. `fact-frontier.py` prints the bands but never a
+# number that reaches zero, and exits 0 either way -- so a queue that has run
+# out reads exactly like a queue being worked down. This one fails when the
+# dispatchable set empties, and screens candidate mirrors for the four
+# construction-level divergences before they are preregistered.
+step dispatchable-frontier-tests bash scripts/tests/test-dispatchable-frontier.sh
+step dispatchable-frontier python3 scripts/check-dispatchable-frontier.py
 step autogenesis-holdout-contamination-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_contamination
 step autogenesis-holdout-contamination python3 scripts/check-autogenesis-holdout-contamination.py
 step development-partition-tests python3 -m unittest scripts.tests.test_development_partition

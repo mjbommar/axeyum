@@ -135,6 +135,8 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-holdout-isolation.py
     python3 -m unittest scripts.tests.test_check_autogenesis_holdout_contamination
     python3 scripts/check-autogenesis-holdout-contamination.py
+    bash scripts/tests/test-dispatchable-frontier.sh
+    python3 scripts/check-dispatchable-frontier.py
     python3 -m unittest scripts.tests.test_development_partition
     python3 scripts/check-development-partition.py
     python3 -m unittest scripts.tests.test_check_autogenesis_must_decline_population
