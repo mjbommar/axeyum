@@ -6374,7 +6374,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        88 + 459,
+        89 + 460,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -60,7 +60,7 @@
 
 use super::NatPrelude;
 use super::bitwise::xor_fn;
-use super::ops::NatDev;
+use super::ops::{NatDev, NatOps};
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::env::ReducibilityHint;
