@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-exists-most-significant-bit",
+  "title": "a nonzero natural has a highest set bit, with every bit above it zero",
+  "statement": "For every natural n: if n != 0 then there is an index i such that testBit(n, i) = 1 and for every j > i, testBit(n, j) = 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : ((x1 : Eq.{1} AxNat x0 AxNat.zero) -> False)) -> Exists.{1} AxNat (fun (x2 : AxNat) => And (Eq.{1} AxNat (AxNat.testBit x0 x2) (AxNat.succ AxNat.zero)) (((x3 : AxNat) -> ((x4 : AxNat.lt x2 x3) -> Eq.{1} AxNat (AxNat.testBit x0 x3) AxNat.zero))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-testbit-eq-zero-of-lt"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.exists_most_significant_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.exists_most_significant_bit",
+      "supports": "Nat.exists_most_significant_bit is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- exists_most_significant_bit 2>/dev/null | grep -Ec '^Nat\\.exists_most_significant_bit[[:space:]]'",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "instance-Nat.exists_most_significant_bit",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.exists_most_significant_bit",
+      "supports": "Applies at a CONCRETE discriminating instance (n := 5 = 101_2), confirming the witness's index 2 really has testBit 5 2 = 1 while testBit 5 1 is NOT 1 (ruling out an off-by-one or vacuous witness), AND symbolically at a genuinely FREE n with a free `n != 0` hypothesis, confirming the declared Exists shape independently of `bit_order.rs`'s own predicate-building helpers.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::exists_most_significant_bit_applies_at_a_concrete_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq",
+        "Kernel::add_declaration"
+      ],
+      "notes": "The Exists shape is restated independently of `bit_order.rs`'s own `msb_predicate`/`msb_exists_ty` helpers rather than calling them, so a bug in those helpers could not be invisible to this check."
+    },
+    {
+      "id": "footprint-Nat.exists_most_significant_bit",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 15,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint (and the fuel-generalized `Nat.msb_exists_of_le_fuel` it is built from) because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-msb-hard",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the Nat-valued analogue of the pinned Mathlib v4.30 proposition `Nat.exists_most_significant_bit` (`theorem exists_most_significant_bit {n : ℕ} (h : n ≠ 0) : ∃ i, testBit n i = true ∧ ∀ j, i < j → testBit n j = false`, `Mathlib/Data/Nat/Bitwise.lean:176` at the pinned commit `c5ea0035…`): Mathlib's `Nat.testBit` returns `Bool`, this kernel's returns `Nat` in `{0,1}` (see `nat_prelude/binary.rs`'s module doc), so a Nat-valued proof here cannot honestly flip that Bool-typed mirror. Registered as its own local fact instead, matching the `F:nat-testbit-eq-zero-of-lt`/`F:nat-lt-of-testbit` pattern. No `ml430` fact for this specific Mathlib statement exists in the ledger.\n\nThis is the completion of piece (2) of the 4 pieces `docs/plan/status/260-nat-lt-xor-cases.md` named as blocking `F:ml430-nat-lt-xor-cases-c43a1e85` (`Nat.lt_xor_cases`), which stays `open` (pieces 1 and 3 landed as `F:nat-testbit-xor`/`F:nat-lt-of-testbit`; piece 4, `Nat.xor_assoc`/`xor_xor_cancel_*`/`xor_ne_zero_iff`, landed separately in `xor_algebra.rs`). `F:nat-testbit-eq-zero-of-lt` was the \"cheap half\" (every bit above a value's own magnitude bound is zero, stated directly rather than via `Nat.size`); this fact is the \"hard half\" -- the highest bit really IS set, not merely that no higher bit is needed. `Nat.size`'s existing development (`binary.rs`'s `Nat.size_aux_lt_pow`) only ever proves an UPPER bound (`n < 2^(size n)`) and has no lemma relating `size n` to `size (n/2)`, so it does not shortcut this; the route below is an independent fuel-recursion, not built on `size` at all.\n\nProof route (`nat_prelude/bit_order.rs`'s `declare_msb_exists_of_le_fuel`/`declare_exists_most_significant_bit`): a fuel-generalized lemma `Nat.msb_exists_of_le_fuel : ∀ fuel n, Le n fuel → Not (Eq n zero) → Exists (...)`, induction on `fuel` generalized over `n`, mirroring `declare_size_aux_lt_pow`'s own fuel/half-recursion shape (SAME `div_mod_lt_mul_iff` + `n_lt_mul_two` bound giving `half <= f` from `half < n <= succ f`, where `half := div n 2`). The step splits on `beq half zero` (not `beq n zero`), mirroring Mathlib's own `Nat.binaryRec` case split at the pinned source. The key simplification: `testBit n (succ i) ≡ testBit (div n 2) i` is `refl` (`Nat.testBit_succ`'s own proof is `d.refl`), so a proof about bit `i'` of `half` is ALREADY, with zero rewriting, a proof about bit `succ i'` of `n` for the \"bit is 1\" witness component; only the universally-quantified \"every higher bit is zero\" component needs an explicit rewrite (`succ_pred_of_pos` turning `Lt zero j` into `j = succ (pred j)`, then transport), because there the bit index is an arbitrary bound variable rather than syntactically `succ`-shaped. The `half = 0` base case derives `n = 1` from the `div_mod_exec` reconstruction `n = 2*half + (n mod 2)` collapsing to `n = n mod 2 < 2` given `half = 0`, then `le_antisymm` against `n`'s own positivity. `Nat.exists_most_significant_bit` is the `fuel := n` specialization via `le_refl`, matching `Nat.lt_pow_size`'s own relationship to `Nat.size_aux_lt_pow`."
+}

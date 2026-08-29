@@ -982,6 +982,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.self_lt_two_pow_add,
         p.lt_of_test_bit,
         p.test_bit_eq_zero_of_lt,
+        p.msb_exists_of_le_fuel,
+        p.exists_most_significant_bit,
         p.eq_of_test_bit_eq,
         p.xor_assoc,
         p.xor_xor_cancel_left,
@@ -6501,7 +6503,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 508,
+        93 + 510,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11514,6 +11516,127 @@ fn test_bit_eq_zero_of_lt_applies_at_a_concrete_instance_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.test_bit_eq_zero_of_lt).is_empty(),
         "test_bit_eq_zero_of_lt must rest on zero axioms"
+    );
+}
+
+/// `Nat.exists_most_significant_bit` -- the "hard half" of piece 2 (the
+/// highest bit really IS set, not merely that no higher bit is needed;
+/// `Nat.testBit_eq_zero_of_lt` above is the cheap half). Checked at a
+/// CONCRETE discriminating instance (`n := 5 = 101₂`, whose highest set bit
+/// is at index 2, distinguishing this from a vacuous or off-by-one witness)
+/// AND symbolically at a genuinely FREE `n` with a free `n != 0` hypothesis.
+/// The expected `Exists` shape is restated independently of
+/// `bit_order.rs`'s own `msb_predicate`/`msb_exists_ty` helpers (not reused
+/// here), so a bug in those helpers would not be invisible to this check.
+#[test]
+fn exists_most_significant_bit_applies_at_a_concrete_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one = f.num(1);
+    let zero = f.zero();
+    let one_lvl = f.level_one();
+
+    // Concrete: n := 5 (built as `succ 4`, matching `succ_ne_zero`'s own
+    // shape so the positivity witness is structurally exact, not merely
+    // def_eq).
+    {
+        let four = f.num(4);
+        let five = f.succ(four);
+        let hne = f.lemma(p.succ_ne_zero, &[four]);
+        let result = f.lemma(p.exists_most_significant_bit, &[five, hne]);
+        let inferred = f.k.infer(result).unwrap_or_else(|e| {
+            panic!(
+                "exists_most_significant_bit(5) should infer: {}",
+                f.explain(&e)
+            )
+        });
+
+        let predicate = {
+            let i_fv = f.fresh_fvar();
+            let i = f.k.fvar(i_fv);
+            let tb_i = f.const_app(p.test_bit, &[five, i]);
+            let a = f.eq(tb_i, one);
+            let b = {
+                let j_fv = f.fresh_fvar();
+                let j = f.k.fvar(j_fv);
+                let lt_i_j = f.lt(i, j);
+                let tb_j = f.const_app(p.test_bit, &[five, j]);
+                let eq_j = f.eq(tb_j, zero);
+                let body = f.arrow(lt_i_j, eq_j);
+                f.pi_fv(j_fv, nat, body)
+            };
+            let and_ty = f.const_app(p.logic.and, &[a, b]);
+            f.lam_fv(i_fv, nat, and_ty)
+        };
+        let exists_c = f.k.const_(p.logic.exists_, vec![one_lvl]);
+        let expected_ty = f.apply(exists_c, &[nat, predicate]);
+        assert!(
+            f.k.def_eq(inferred, expected_ty),
+            "exists_most_significant_bit(5) should state Exists (msb predicate at 5)"
+        );
+
+        // Anti-vacuity: bit 2 of 5 (= 101₂) is really 1, and bit 1 is really
+        // 0 -- not a swapped or off-by-one witness.
+        let two_idx = f.num(2);
+        let tb2 = f.const_app(p.test_bit, &[five, two_idx]);
+        assert!(f.k.def_eq(tb2, one), "testBit 5 2 must reduce to 1");
+        let one_idx = f.num(1);
+        let tb1 = f.const_app(p.test_bit, &[five, one_idx]);
+        assert!(!f.k.def_eq(tb1, one), "testBit 5 1 must NOT be 1");
+    }
+
+    // Symbolic: applies at a genuinely FREE `n` with a free `n != 0`
+    // hypothesis.
+    let name = f.name("exists_most_significant_bit_restated");
+    f.theorem(name, 1, &|d, values| {
+        let n = values[0];
+        let zero = d.zero();
+        let eq_ty = d.eq(n, zero);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let ne_ty = d.arrow(eq_ty, false_ty);
+        let ne_fv = d.fresh_fvar();
+        let hne = d.kernel().fvar(ne_fv);
+        let result = d.lemma(p.exists_most_significant_bit, &[n, hne]);
+
+        let nat = d.nat_ty();
+        let one = d.num(1);
+        let one_lvl = d.level_one();
+        let predicate = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let tb_i = d.const_app(p.test_bit, &[n, i]);
+            let a = d.eq(tb_i, one);
+            let b = {
+                let j_fv = d.fresh_fvar();
+                let j = d.kernel().fvar(j_fv);
+                let lt_i_j = d.lt(i, j);
+                let tb_j = d.const_app(p.test_bit, &[n, j]);
+                let zero2 = d.zero();
+                let eq_j = d.eq(tb_j, zero2);
+                let body = d.arrow(lt_i_j, eq_j);
+                d.pi_fv(j_fv, nat, body)
+            };
+            let and_ty = d.const_app(p.logic.and, &[a, b]);
+            d.lam_fv(i_fv, nat, and_ty)
+        };
+        let exists_c = d.kernel().const_(p.logic.exists_, vec![one_lvl]);
+        let concl = d.apply(exists_c, &[nat, predicate]);
+
+        let stmt = d.arrow(ne_ty, concl);
+        let proof = d.lam_fv(ne_fv, ne_ty, result);
+        (stmt, proof)
+    })
+    .expect("exists_most_significant_bit must apply at a symbolic n");
+
+    assert!(
+        f.k.axiom_footprint(p.exists_most_significant_bit)
+            .is_empty(),
+        "exists_most_significant_bit must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.msb_exists_of_le_fuel).is_empty(),
+        "msb_exists_of_le_fuel must rest on zero axioms"
     );
 }
 

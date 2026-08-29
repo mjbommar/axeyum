@@ -970,7 +970,9 @@ fn declare_msb_exists_of_le_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
 
             let source_ty = msb_exists_ty(d, &p, half);
             let anon = d.anon_name();
-            let elim_motive = d.kernel().lam(anon, source_ty, target_ty, BinderInfo::Default);
+            let elim_motive = d
+                .kernel()
+                .lam(anon, source_ty, target_ty, BinderInfo::Default);
 
             let minor = {
                 let i_fv = d.fresh_fvar();
@@ -1075,7 +1077,10 @@ fn declare_msb_exists_of_le_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
             let congr_half = d.congr(half, zero, eq_half_zero, &|d, x| d.mul(two, x));
             let mul_zero_eq = d.lemma(p.mul_zero, &[two]);
             let mul_half_eq_zero = d
-                .chain(mul_two_half, &[(mul_two_zero, congr_half), (zero, mul_zero_eq)])
+                .chain(
+                    mul_two_half,
+                    &[(mul_two_zero, congr_half), (zero, mul_zero_eq)],
+                )
                 .1;
 
             let congr_recon = d.congr(mul_two_half, zero, mul_half_eq_zero, &|d, x| d.add(x, r1));
