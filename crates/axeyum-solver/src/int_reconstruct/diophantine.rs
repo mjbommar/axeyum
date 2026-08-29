@@ -36,9 +36,36 @@ pub fn reconstruct_diophantine_proof(
 const DIO_LEAN_THEOREM: &str = "axeyum_refutation";
 
 /// **Like [`reconstruct_diophantine_proof`], but also renders a self-contained Lean
-/// module** (`render_lean_module`) re-proving the refutation. A successful return
-/// means the proof was emitted, kernel-checked to `False`, and rendered to
+/// module** (`render_lean_module_compact`) re-proving the refutation. A successful
+/// return means the proof was emitted, kernel-checked to `False`, and rendered to
 /// externally-checkable Lean source.
+///
+/// # Why `_compact`
+///
+/// The Diophantine proof term is a hash-consed **DAG**, and the plain renderer
+/// prints it as a **tree**. Measured 2026-08-29 on
+/// `artifacts/examples/math/number-theory-v0/smt2/diophantine-gcd-obstruction-conflict.smt2`
+/// — the query `14x + 21y = 5`, refuted because `gcd(14, 21) = 7 ∤ 5`:
+///
+/// | | |
+/// | --- | --- |
+/// | distinct DAG nodes in the `False` term | **18,018** (46 leaf, 17,972 app) |
+/// | printed as a tree (`render_lean_module`) | **96,297,506 bytes** |
+/// | most-repeated single subterm | **169,184** occurrences |
+///
+/// One line — the `axeyum_refutation` body — was 96,155,365 of those bytes,
+/// 99.85 % of the file, and the module exceeded the 64 MB safety cap in
+/// `scripts/check-lra-hypothesis-binding.py`, crashing that gate deterministically.
+/// Nothing about the *argument* is large; the amplification is purely the
+/// tree expansion of a small DAG, because every `Eq.rec` rewrite step reprints
+/// its subject term about four times and the normalization chain nests hundreds
+/// of them.
+///
+/// [`Kernel::render_lean_module_compact`] is documented as semantically
+/// equivalent — it hoists repeated **closed** nodes to top-level definitions and
+/// never hoists anything with loose de Bruijn or free variables — and it is
+/// already what the LRA, string-length, counterexample-cover and quantifier-BV
+/// routes emit, so `check-lra-hypothesis-binding.py` parses this shape today.
 ///
 /// # Errors
 ///
@@ -54,7 +81,7 @@ pub fn reconstruct_diophantine_to_lean_module(
     };
     Ok(ctx
         .kernel()
-        .render_lean_module(DIO_LEAN_THEOREM, false_, proof))
+        .render_lean_module_compact(DIO_LEAN_THEOREM, false_, proof))
 }
 
 /// Shared core: run the Diophantine decision, build the `False` proof over a fresh
