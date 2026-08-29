@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-binary-rec-succ",
+  "title": "the recursive equation for bit-halving recursion at a successor",
+  "statement": "For any carrier alpha, base value z, step function f, and natural m: binaryRec alpha z f (m+1) = f (bit ((m+1) mod 2 = 1)) ((m+1) / 2) (binaryRec alpha z f ((m+1) / 2)).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Sort (1)) -> ((x1 : x0) -> ((x2 : ((x2 : Bool) -> ((x3 : AxNat) -> ((x4 : x0) -> x0)))) -> ((x3 : AxNat) -> Eq.{1} x0 (AxNat.binaryRec x0 x1 x2 (AxNat.succ x3)) (x2 (AxNat.beq (AxNat.mod (AxNat.succ x3) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero)) (AxNat.div (AxNat.succ x3) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.binaryRec x0 x1 x2 (AxNat.div (AxNat.succ x3) (AxNat.succ (AxNat.succ AxNat.zero)))))))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "unknown",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-binary-rec-fuel-irrelevance"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.binaryRec_succ",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.binaryRec_succ",
+      "supports": "Nat.binaryRec_succ is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- binaryRec_succ 2>/dev/null | grep -Ec '^Nat\\.binaryRec_succ[[:space:]]')\" -ge 1",
+      "notes": "`grep -Ec` consumes the pipe and the tested COUNT decides the exit status; `nat_theorem_inventory` prints nothing for a name that does not exist. Pattern verified with `/usr/bin/grep` (GNU grep, not the interactive `ugrep` shell function): 1 for `^Nat\\.binaryRec_succ[[:space:]]`, 0 for a fabricated sibling name against the same output. `--release` is required; the debug build SIGABRTs building the constructed environment.",
+      "checkers": [
+        "Kernel::add_declaration"
+      ]
+    },
+    {
+      "id": "compute-binaryRec-round-trip",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.binaryRec_rebuilds_thirteen",
+      "supports": "binaryRec 0 (fun b _ acc => bit b acc) n reduces to n at n = 0, 1, 6, 10, 13 -- the definition really performs the bit-halving traversal the equation describes -- with four transposition negative controls.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::pair_and_binary_rec_compute_with_transposed_negative_controls",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "The trusted gate admits a `Definition` on its TYPE, so `Nat.binaryRecAux`'s admission says nothing about what it computes; only evaluation can. Two of these round trips are additionally declared as `Eq.refl` THEOREMS in the prelude (`Nat.binaryRec_rebuilds_thirteen`, `Nat.binaryRec_rebuilds_six`), so the prelude build itself fails if the definition stops computing. Mutation-verified during construction: restating `_rebuilds_thirteen` as `= 11` -- `13 = 0b1101` with its bits reversed -- makes the build fail with `DeclarationValueMismatch`, declared `binaryRec … 13` against inferred `11`. The Rust test repeats that as a live `!def_eq` control, so a traversal consuming the bits in the wrong ORDER is excluded rather than passing by symmetry."
+    },
+    {
+      "id": "footprint-nat-environment",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-binaryrec",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`. `AxNat.beq (AxNat.mod (succ x3) 2) 1` is this prelude's ad-hoc `Nat.bodd` (the spelling `nat_prelude/bitwise.rs` also uses; Mathlib's `Nat.bodd` is not declared here), and `AxNat.div (succ x3) 2` is the halved index.\n\nThis is the equation Mathlib's `binaryRec` gets DEFINITIONALLY from `WellFounded.fix` and a fuel encoding has to PROVE. `Nat.binaryRec alpha z f n := binaryRecAux alpha z f n n`, so at `succ m` the definition supplies fuel `succ m` while the recursive call needs fuel `(succ m) / 2`; `F:nat-binary-rec-fuel-irrelevance` closes exactly that gap, instantiated at `(fuel1, fuel2) := (m, (succ m) / 2)` with `Nat.half_le_of_succ_le_succ m m (le_refl (succ m))` and `le_refl`. The rest is one congruence in the step function's third argument.\n\nTogether with `Nat.binaryRec_zero` (refl) this is a complete recursion principle for `Nat`'s binary representation, and it is the piece `docs/plan/status/250-nat-fastfib-minfac.md` identified as blocking `Nat.fastFib`.\n\nIt does NOT close `F:ml430-nat-fastfib-eq-cde11774`, and no theorem built on this definition can. Mathlib's `Nat.binaryRec` (`Mathlib/Data/Nat/BinaryRec.lean:88`, pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`) is well-founded recursion on `if n = 0 then 0 else n.log2.succ` with a dependent motive `{motive : Nat -> Sort u}`; this is structural recursion on a fuel counter with a motive constant in `n`. Agreeing at every argument is not being the same `def` -- the `Nat.multichoose`/`Nat.minFac` side of the mirror-flip criterion. A `Nat.fastFib` built on this recursor would therefore land as a new local fact, exactly as `F:nat-coprime-of-lt-minfac` did for `minFac`."
+}
