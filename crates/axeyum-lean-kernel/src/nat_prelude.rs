@@ -163,6 +163,7 @@ mod helpers;
 mod irrational;
 mod land;
 mod lcm;
+mod lcm_gcd_lemmas;
 mod ldiff;
 mod log;
 mod lor;
@@ -251,6 +252,7 @@ use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd, declare_mod_lcm,
 };
+use lcm_gcd_lemmas::declare_lcm_gcd_lemmas;
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
 use lor::declare_lor_all;
@@ -912,6 +914,34 @@ pub struct NatPrelude {
     /// the unconditional `gcd_mul_lcm`, substituting the coprimality
     /// hypothesis and cancelling the leading `1` with `one_mul`.
     pub coprime_lcm_eq_mul: NameId,
+    /// `Nat.gcd_dvd_mul : ∀ m n, gcd m n ∣ m * n`. `gcd_dvd_left` composed
+    /// with `dvd_mul_right_of_dvd`, no induction. Closes ledger fact
+    /// `F:ml430-nat-gcd-dvd-mul`.
+    pub gcd_dvd_mul: NameId,
+    /// `Nat.gcd_le_mul : ∀ m n, 0 < m → 0 < n → gcd m n ≤ m * n`.
+    /// `gcd_dvd_mul` plus `one_le_mul` (from the two positivity hypotheses)
+    /// feeding `le_of_dvd`. Closes ledger fact `F:ml430-nat-gcd-le-mul`.
+    pub gcd_le_mul: NameId,
+    /// `Nat.eq_zero_of_lcm_eq_zero : ∀ m n, lcm m n = 0 → m = 0 ∨ n = 0`.
+    /// `gcd_mul_lcm` transported along the hypothesis collapses `m * n` to
+    /// `0`, and `mul_eq_zero` finishes. Closes ledger fact
+    /// `F:ml430-nat-eq-zero-of-lcm-eq-zero`.
+    pub eq_zero_of_lcm_eq_zero: NameId,
+    /// `Nat.lcm_assoc : ∀ m n k, (lcm m n).lcm k = lcm m (lcm n k)`. Pure
+    /// mutual-divisibility argument: both sides divide each other via
+    /// `dvd_lcm_left`/`dvd_lcm_right`/`dvd_trans`/`lcm_dvd`, and
+    /// `dvd_antisymm` closes it — no induction. Closes ledger fact
+    /// `F:ml430-nat-lcm-assoc`.
+    pub lcm_assoc: NameId,
+    /// `Nat.lcm_div : ∀ m n k, dvd k m → dvd k n → lcm (m/k) (n/k) = lcm m n / k`.
+    /// Induction on `k`: at `k = 0`, `div _ 0 = 0` on every term collapses
+    /// both sides to `0` regardless of the hypotheses. At `k = succ k'`,
+    /// write `m = k*m1`, `n = k*n1` (`dvd_elim` on the two hypotheses) and
+    /// show `k * lcm m1 n1 = lcm m n` by mutual divisibility (the same
+    /// `dvd_antisymm`-via-`lcm_dvd` technique as `lcm_assoc`, scaled by `k`
+    /// through two small local cancellation helpers), then divide out `k`.
+    /// Closes ledger fact `F:ml430-nat-lcm-div`.
+    pub lcm_div: NameId,
     /// Balanced natural Bézout certificates:
     /// `bezout m n g := ∃ mp mn np nn, g + m*mn + n*nn = m*mp + n*np`.
     pub bezout: NameId,
@@ -3558,6 +3588,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
             lcm_comm: kernel.name_str(nat, "lcm_comm"),
             coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
+            gcd_dvd_mul: kernel.name_str(nat, "gcd_dvd_mul"),
+            gcd_le_mul: kernel.name_str(nat, "gcd_le_mul"),
+            eq_zero_of_lcm_eq_zero: kernel.name_str(nat, "eq_zero_of_lcm_eq_zero"),
+            lcm_assoc: kernel.name_str(nat, "lcm_assoc"),
+            lcm_div: kernel.name_str(nat, "lcm_div"),
             bezout: kernel.name_str(nat, "bezout"),
             gcd_bezout: kernel.name_str(nat, "gcd_bezout"),
             mod_eq: kernel.name_str(nat, "modEq"),
@@ -4040,6 +4075,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_modeq_gcd_eq(&mut d, &p)?;
         declare_lcm_comm(&mut d, &p)?;
         declare_coprime_lcm_eq_mul(&mut d, &p)?;
+        // Needs `dvd_antisymm` (just declared above) for `lcm_assoc`/`lcm_div`,
+        // and `le_of_dvd` (from `declare_primes`, already run above this
+        // point) for `gcd_le_mul`. `lcm_dvd`/`dvd_lcm_left`/`dvd_lcm_right`/
+        // `gcd_mul_lcm` come from `declare_lcm` far above, and `one_le_mul`/
+        // `dvd_mul_right_of_dvd` from `declare_divisibility`, earlier still.
+        declare_lcm_gcd_lemmas(&mut d, &p)?;
         declare_coprime_of_lt_prime(&mut d, &p)?;
         declare_coprime_of_dvd(&mut d, &p)?;
         declare_coprime_of_dvd_both(&mut d, &p)?;

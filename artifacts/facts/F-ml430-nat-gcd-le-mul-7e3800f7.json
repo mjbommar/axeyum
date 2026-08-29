@@ -8,10 +8,31 @@
     "statement": "∀ {m n : ℕ}, 0 < m → 0 < n → m.gcd n ≤ m * n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- gcd_le_mul 2>/dev/null | grep -Ec '^Nat\\.gcd_le_mul[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.gcd_le_mul",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.gcd_le_mul` through the trusted `Kernel::add_declaration` gate (declared in the new `nat_prelude/lcm_gcd_lemmas.rs`'s `declare_gcd_le_mul`). Route: `gcd_dvd_mul` gives `dvd (gcd m n) (mul m n)`; `one_le_mul` on the two positivity hypotheses gives `1 <= mul m n`; `le_of_dvd` combines them into the bound. `nat_theorem_inventory`'s rendered type for `Nat.gcd_le_mul` is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero x0) -> ((x3 : AxNat.lt AxNat.zero x1) -> AxNat.le (AxNat.gcd x0 x1) (AxNat.mul x0 x1)))))`, matching this fact's `formal.statement` verbatim (`x0`/`x1`/`x2` are the universally quantified variables in order). `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ {m n : ℕ}, 0 < m → 0 < n → m.gcd n ≤ m * n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it), and `lcm_gcd_lemmas_apply_at_concrete_discriminating_instances` re-checks it at a concrete instantiation chosen to discriminate a swapped argument or a wrong disjunct/conclusion order via `def_eq` plus a genuinely false negative control rejected by `declare_theorem`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.gcd_le_mul"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-29 in this ledger: a fresh local construction, not a transcription of Mathlib's proof. `depends_on` is empty because the route builds directly on prelude machinery, not on another `ml430` fact.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -649,6 +649,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.catalan_mul_succ,
         p.lcm_comm,
         p.coprime_lcm_eq_mul,
+        p.gcd_dvd_mul,
+        p.gcd_le_mul,
+        p.eq_zero_of_lcm_eq_zero,
+        p.lcm_assoc,
+        p.lcm_div,
         p.fib_add,
         p.coprime_fib_succ,
         p.fib_add_two_strictmono,
@@ -3920,6 +3925,176 @@ fn lcm_computes_and_satisfies_its_checked_properties() {
     ));
 }
 
+/// Build a proof of `dvd a n` from a witness `q` when `n` is defeq to
+/// `mul a q` (e.g. both are concrete numerals that reduce to the same
+/// value) — `f.refl(n)` typechecks against the required `Eq n (mul a q)`
+/// via that defeq, exactly the technique `dvd_intro`'s callers throughout
+/// `nat_prelude` rely on for concrete instantiation tests.
+fn concrete_dvd(f: &mut Fixture, a: ExprId, n: ExprId, q: ExprId) -> ExprId {
+    let nat = f.nat_ty();
+    let one = f.level_one();
+    let predicate = f.dvd_predicate(a, n);
+    let intro_name = f.p.logic.exists_intro;
+    let intro = f.k.const_(intro_name, vec![one]);
+    let eq_proof = f.refl(n);
+    f.apply(intro, &[nat, predicate, q, eq_proof])
+}
+
+/// `gcd_dvd_mul`, `gcd_le_mul`, `eq_zero_of_lcm_eq_zero`, `lcm_assoc`, and
+/// `lcm_div` each apply at concrete instances chosen to discriminate a
+/// swapped argument or a wrong disjunct order, not merely to confirm the
+/// formula evaluates.
+#[test]
+fn lcm_gcd_lemmas_apply_at_concrete_discriminating_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let twelve = f.num(12);
+    let twentyfour = f.num(24);
+
+    // `gcd_dvd_mul (4,6) : dvd (gcd 4 6) (mul 4 6)`, i.e. `dvd 2 24`.
+    let gcd_46 = f.gcd(four, six);
+    assert!(f.k.def_eq(gcd_46, two), "gcd 4 6 must reduce to 2");
+    let mul_46 = f.mul(four, six);
+    assert!(f.k.def_eq(mul_46, twentyfour), "4*6 must reduce to 24");
+    let dvd_mul_proof = f.lemma(p.gcd_dvd_mul, &[four, six]);
+    let dvd_mul_ty = f.dvd(gcd_46, mul_46);
+    let inferred =
+        f.k.infer(dvd_mul_proof)
+            .expect("gcd_dvd_mul must apply at (4,6)");
+    assert!(f.k.def_eq(inferred, dvd_mul_ty));
+    // Negative control: the SWAPPED conclusion (dividend/divisor reversed)
+    // is a different (and false, since 24 does not divide 2) statement --
+    // the trusted gate must reject it, not just look wrong to a reader.
+    let swapped_ty = f.dvd(mul_46, gcd_46);
+    let swapped_name = f.name("gcd_dvd_mul_with_divisor_and_dividend_swapped");
+    let error = f
+        .declare_theorem(swapped_name, swapped_ty, dvd_mul_proof)
+        .expect_err("gcd_dvd_mul's proof must not typecheck with dividend/divisor swapped");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    // `gcd_le_mul (4,6) (0<4) (0<6) : le (gcd 4 6) (mul 4 6)`, i.e. `le 2 24`.
+    let pos4 = f.zero_lt_succ(three);
+    let five_for_pos = f.num(5);
+    let pos6 = f.zero_lt_succ(five_for_pos);
+    let le_mul_proof = f.lemma(p.gcd_le_mul, &[four, six, pos4, pos6]);
+    let le_mul_ty = f.le(gcd_46, mul_46);
+    let inferred =
+        f.k.infer(le_mul_proof)
+            .expect("gcd_le_mul must apply at (4,6)");
+    assert!(f.k.def_eq(inferred, le_mul_ty));
+
+    // `eq_zero_of_lcm_eq_zero`: one instance with the LEFT factor zero, one
+    // with the RIGHT factor zero -- together these discriminate a swapped
+    // `Or` (a proof built as `Or (Eq n zero) (Eq m zero)` would fail to
+    // `def_eq` the expected type below on at least one of the two).
+    let five = f.num(5);
+    let lcm_0_5 = f.const_app(p.lcm, &[zero, five]);
+    assert!(f.k.def_eq(lcm_0_5, zero), "lcm 0 5 must reduce to 0");
+    let h_left = f.refl(lcm_0_5); // Eq lcm_0_5 lcm_0_5, defeq Eq lcm_0_5 zero
+    let left_proof = f.lemma(p.eq_zero_of_lcm_eq_zero, &[zero, five, h_left]);
+    let left_expected = {
+        let m0 = f.eq(zero, zero);
+        let n0 = f.eq(five, zero);
+        f.const_app(p.logic.or, &[m0, n0])
+    };
+    let inferred =
+        f.k.infer(left_proof)
+            .expect("eq_zero_of_lcm_eq_zero must apply with the left factor zero");
+    assert!(f.k.def_eq(inferred, left_expected));
+
+    let lcm_6_0 = f.const_app(p.lcm, &[six, zero]);
+    assert!(f.k.def_eq(lcm_6_0, zero), "lcm 6 0 must reduce to 0");
+    let h_right = f.refl(lcm_6_0);
+    let right_proof = f.lemma(p.eq_zero_of_lcm_eq_zero, &[six, zero, h_right]);
+    let right_expected = {
+        let m0 = f.eq(six, zero);
+        let n0 = f.eq(zero, zero);
+        f.const_app(p.logic.or, &[m0, n0])
+    };
+    let inferred =
+        f.k.infer(right_proof)
+            .expect("eq_zero_of_lcm_eq_zero must apply with the right factor zero");
+    assert!(f.k.def_eq(inferred, right_expected));
+
+    // `lcm_assoc (2,3,4) : (lcm 2 3).lcm 4 = lcm 2 (lcm 3 4)`, both sides 12.
+    let lcm_23 = f.const_app(p.lcm, &[two, three]);
+    let lcm_23_4 = f.const_app(p.lcm, &[lcm_23, four]);
+    assert!(
+        f.k.def_eq(lcm_23_4, twelve),
+        "(lcm 2 3).lcm 4 must reduce to 12"
+    );
+    let lcm_34 = f.const_app(p.lcm, &[three, four]);
+    let lcm_2_34 = f.const_app(p.lcm, &[two, lcm_34]);
+    assert!(
+        f.k.def_eq(lcm_2_34, twelve),
+        "lcm 2 (lcm 3 4) must reduce to 12"
+    );
+    let assoc_proof = f.lemma(p.lcm_assoc, &[two, three, four]);
+    let assoc_ty = f.eq(lcm_23_4, lcm_2_34);
+    let inferred =
+        f.k.infer(assoc_proof)
+            .expect("lcm_assoc must apply at (2,3,4)");
+    assert!(f.k.def_eq(inferred, assoc_ty));
+    // Negative control: a genuinely FALSE right-hand side (`6`, not `12`) --
+    // picking a DIFFERENT correct grouping of the same three numbers is not
+    // discriminating here (lcm is associative AND commutative, so every
+    // parenthesization of `2,3,4` reduces to the same `12`, and the
+    // "wrong grouping" would typecheck vacuously via that shared value).
+    let wrong_assoc_ty = f.eq(lcm_23_4, six);
+    let wrong_assoc_name = f.name("lcm_assoc_with_wrong_right_hand_side");
+    let error = f
+        .declare_theorem(wrong_assoc_name, wrong_assoc_ty, assoc_proof)
+        .expect_err("lcm_assoc's proof must not typecheck against a false right-hand side");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    // `lcm_div (4,6,2) (2|4) (2|6) : lcm (4/2) (6/2) = lcm 4 6 / 2`, i.e.
+    // `lcm 2 3 = 6`.
+    let dvd_2_4 = concrete_dvd(&mut f, two, four, two);
+    let dvd_2_6 = concrete_dvd(&mut f, two, six, three);
+    let div_proof = f.lemma(p.lcm_div, &[four, six, two, dvd_2_4, dvd_2_6]);
+    let div_ty = {
+        let div_m_k = f.div(four, two);
+        let div_n_k = f.div(six, two);
+        let lcm_div_mk_nk = f.const_app(p.lcm, &[div_m_k, div_n_k]);
+        let lcm_mn = f.const_app(p.lcm, &[four, six]);
+        let div_lcm_mn_k = f.div(lcm_mn, two);
+        f.eq(lcm_div_mk_nk, div_lcm_mn_k)
+    };
+    let inferred =
+        f.k.infer(div_proof)
+            .expect("lcm_div must apply at (m=4, n=6, k=2)");
+    assert!(f.k.def_eq(inferred, div_ty));
+    // Independent numeric cross-check: both sides of `div_ty` really are 6.
+    let lcm_div_mk_nk = {
+        let div_m_k = f.div(four, two);
+        let div_n_k = f.div(six, two);
+        f.const_app(p.lcm, &[div_m_k, div_n_k])
+    };
+    assert!(
+        f.k.def_eq(lcm_div_mk_nk, six),
+        "lcm (4/2) (6/2) = lcm 2 3 must reduce to 6"
+    );
+    let div_lcm_mn_k = {
+        let lcm_mn = f.const_app(p.lcm, &[four, six]);
+        f.div(lcm_mn, two)
+    };
+    assert!(
+        f.k.def_eq(div_lcm_mn_k, six),
+        "lcm 4 6 / 2 = 12/2 must reduce to 6"
+    );
+}
+
 #[test]
 fn mod_lt_matches_the_general_positive_denominator_contract() {
     let mut f = Fixture::new();
@@ -6517,7 +6692,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 524,
+        93 + 529,
         "every promised definition and theorem must be rendered"
     );
 }

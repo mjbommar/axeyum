@@ -188,6 +188,7 @@ now. Nothing was deleted.
 | 2026-08-29 | `04a77fbf6` | example-inventory count regenerated 193 -> 202 (real growth). |
 | 2026-08-29 | `dcc100cc6` | PLAN.md regenerated for the same count. |
 | 2026-08-29 | `e72119787` | lane-turn-controls case 4 fixture fixed: SKIP a stale baseline instead of asserting a false expectation. |
+| 2026-08-29 | nat-lcm-gcd | `Nat.gcd_dvd_mul`, `Nat.gcd_le_mul`, `Nat.eq_zero_of_lcm_eq_zero`, `Nat.lcm_assoc`, `Nat.lcm_div` — 5 new axiom-free theorems (`nat_prelude/lcm_gcd_lemmas.rs`), plus 5 status-flip closures of pre-existing `Nat.lcm_comm`/`Nat.lcm_dvd`/`Nat.dvd_lcm_left`/`Nat.dvd_lcm_right`/`Nat.gcd_mul_lcm`. 10 of 10 dispatched `ml430` lcm/gcd mirrors closed. |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -20172,6 +20173,126 @@ log). Verdicts:
 - `crates/`, `artifacts/kernel-stack-envelope.tsv`, `artifacts/autogenesis/`,
   `scripts/tests/test_check_fact_depends_derived.py`,
   `scripts/tests/test_check_control_tests_reachable.py` — per instructions.
+
+**Lane block (`DONE for this dispatch`, nat-lcm-gcd, 2026-08-29).**
+
+**The task.** Ten dispatchable `ml430` mirrors:
+
+```
+F:ml430-nat-lcm-comm-d5f8aae0        F:ml430-nat-lcm-assoc-cb00bb43
+F:ml430-nat-lcm-div-eb5d8892         F:ml430-nat-lcm-dvd-07899eea
+F:ml430-nat-dvd-lcm-left-c83bcebc    F:ml430-nat-dvd-lcm-right-18ab8e2f
+F:ml430-nat-eq-zero-of-lcm-eq-zero-d09b7af7
+F:ml430-nat-gcd-dvd-mul-81cb13df     F:ml430-nat-gcd-le-mul-7e3800f7
+F:ml430-nat-gcd-mul-lcm-b7217ace
+```
+
+**Closed, 10 of 10.**
+
+**Step 0 found five already proved under the identical statement**, before
+any new proof work: `nat_prelude/lcm.rs` already declared `Nat.lcm_comm`,
+`Nat.lcm_dvd`, `Nat.dvd_lcm_left`, `Nat.dvd_lcm_right`, and
+`Nat.gcd_mul_lcm`, each matching its fact's `formal.statement` verbatim
+(confirmed via `nat_theorem_inventory`'s rendered type, not by reading the
+Rust source). Pure status flip plus evidence for these five, no proof work.
+
+**Five new theorems**, all in a new file
+`crates/axeyum-lean-kernel/src/nat_prelude/lcm_gcd_lemmas.rs`:
+
+- `Nat.gcd_dvd_mul : gcd m n ∣ m * n` — one-liner, `gcd_dvd_left` composed
+  with `dvd_mul_right_of_dvd`. No induction.
+- `Nat.gcd_le_mul : 0 < m → 0 < n → gcd m n ≤ m * n` — `gcd_dvd_mul` plus
+  `one_le_mul` on the two positivity hypotheses, combined via `le_of_dvd`.
+- `Nat.eq_zero_of_lcm_eq_zero : lcm m n = 0 → m = 0 ∨ n = 0` — transport
+  `gcd_mul_lcm` along the hypothesis to collapse `m*n` to `0`, then
+  `mul_eq_zero` splits it. No induction.
+- `Nat.lcm_assoc : (lcm m n).lcm k = lcm m (lcm n k)` — the "usually
+  hardest" one, and it turned out to need NO induction at all: both sides
+  divide each other purely from the universal property
+  (`dvd_lcm_left`/`dvd_lcm_right` give the "it's a multiple" half,
+  `lcm_dvd` gives the "it's the least" half, `dvd_trans` chains them), and
+  the pre-existing `dvd_antisymm` closes the two directions into one
+  equality.
+- `Nat.lcm_div : dvd k m → dvd k n → lcm (m/k) (n/k) = lcm m n / k` — the
+  actual hardest one. Induction on `k`: at `k=0`, `div _ 0 = 0` collapses
+  every term on both sides regardless of the hypotheses (no case-split on
+  the hypotheses needed at all). At `k=succ k'`, write `m=k*m1`, `n=k*n1`
+  (`dvd_elim` on the two hypotheses) and let `q := (lcm m n)/k`; the same
+  mutual-divisibility technique `lcm_assoc` uses shows `lcm m1 n1 = q`,
+  scaled by `k` through two new small reusable local helpers
+  (`scale_dvd : dvd a b -> dvd (k*a) (k*b)` and its converse
+  `dvd_cancel_left_of_pos : Le 1 k -> dvd (k*a) (k*b) -> dvd a b`), then a
+  third helper (`div_eq_of_mul_eq`) rewrites the conclusion from the
+  witnesses `m1`/`n1` back to `div m k`/`div n k`.
+
+**A single reusable helper beats N independent proofs, per the brief** —
+here it's three small local helpers (`div_eq_of_mul_eq`, `scale_dvd`,
+`dvd_cancel_left_of_pos`) shared between `lcm_div`'s body and (implicitly)
+the same mutual-divisibility pattern `lcm_assoc` already established.
+
+**One real bug caught before landing:** the first `lcm_assoc` negative
+control compared the proof against a DIFFERENT correct grouping of the
+same three numbers (`(lcm 2 4).lcm 3` vs `lcm 2 (lcm 3 4)`) and it
+type-checked — lcm is associative AND commutative, so every parenthesization
+of `(2,3,4)` reduces to the same `12`, making that control vacuous exactly
+in the shape CLAUDE.md warns about. Replaced with a genuinely false
+right-hand side (`6` instead of `12`).
+
+**`gcd_le_mul`'s two `0 < x` hypotheses** are stated as `d.lt(zero, x)`
+(this codebase's standing convention for such hypotheses, confirmed via
+`mod_lt`'s declaration and its test-file callers) and fed directly into
+`one_le_mul`, which wants `Le 1 x` — the kernel's own delta-unfolding
+`def_eq` on `Nat.lt`'s `Regular(1)` definition accepts this with no
+explicit conversion, exactly the technique `mod_lt`'s own callers
+(`f.zero_lt_succ(three)` fed where `Lt zero four` is expected) already
+rely on. Confirmed working, not merely assumed — this was the one place in
+the whole lane genuinely uncertain before `cargo test` ran.
+
+**Verification.** `scripts/cargo-serialized.sh test -p axeyum-lean-kernel
+--lib nat_prelude::` — **160 passed, 0 failed** (159 baseline + the new
+`lcm_gcd_lemmas_apply_at_concrete_discriminating_instances` test). That
+test instantiates all five new theorems at concrete numerals chosen to
+discriminate a swapped argument or a wrong disjunct order (e.g.
+`eq_zero_of_lcm_eq_zero` is checked once with the LEFT factor zero and
+once with the RIGHT factor zero — a proof built as `Or (Eq n 0) (Eq m 0)`
+instead of `Or (Eq m 0) (Eq n 0)` would fail `def_eq` on at least one of
+the two), plus two genuinely-false negative controls
+(`gcd_dvd_mul`'s dividend/divisor swapped, `lcm_assoc`'s wrong right-hand
+side) confirmed rejected with `KernelError::DeclarationValueMismatch`.
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` clean.
+`python3 scripts/check-test-attribute-integrity.py`: 0 findings.
+`python3 scripts/validate-facts.py`: 2034 facts checked, 0 errors.
+`nat_axiom_inventory --require-axiom-free nat`: `axiom=0 opaque=0
+quotient=0`, exit 0.
+
+Every `checker_command` verified BOTH directions against the prebuilt
+`target/release/examples/nat_theorem_inventory` binary (no cargo lock): the
+real name's `grep -Ec '^Nat\.<name>[[:space:]]'` count is 1 for all 10, and
+a nonexistent name's count is 0 (grep exit 1).
+
+The `the_build_is_deterministic` pin moved `93 + 524` → `93 + 529` (the
+five new theorem names added to `theorem_names`), recomputed from the
+panic message's own mismatch, not hand-incremented blind.
+
+All ten facts flipped to `epistemic_status: proved`, each with a
+kernel-term evidence row (`nat_theorem_inventory -- <name>`, rendered type
+compared verbatim against `formal.statement`) and an
+exhaustive-enumeration axiom-freedom row
+(`nat_axiom_inventory --require-axiom-free nat`). `proof_route:
+kernel-lean`, `axiom_footprint: []` on all ten.
+
+**Commits** (not pushed): `067d3c60f` (WIP: five new declarations,
+untested), `03a2c21ef` (formatted + concrete-instance test, confirmed
+green), `0bf53f907` (all ten fact-ledger JSON updates). This status file is
+uncommitted as of writing — commit it together with `PLAN.md`
+regeneration.
+
+**For the next lane on this family:** nothing left open here — 10 of 10
+closed. If more `Nat.lcm`/`Nat.gcd` mirrors get preregistered, the three
+new local helpers in `lcm_gcd_lemmas.rs`
+(`scale_dvd`/`dvd_cancel_left_of_pos`/`div_eq_of_mul_eq`) plus the
+mutual-divisibility-via-`dvd_antisymm` pattern `lcm_assoc`/`lcm_div` both
+use are the reusable pieces to reach for first.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
