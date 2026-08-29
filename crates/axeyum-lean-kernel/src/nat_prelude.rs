@@ -280,8 +280,8 @@ use primes::{
 use rec_agreement::{
     declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
     declare_land_le_left_all, declare_land_zero_propagation_all,
-    declare_ldiff_fuel_irrelevance_all, declare_lor_comm, declare_lor_fuel_irrelevance_all,
-    declare_rec_agreement_all,
+    declare_ldiff_fuel_irrelevance_all, declare_lor_aux_ne_zero_of_right_ne_zero_all,
+    declare_lor_comm, declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
 };
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
@@ -3158,6 +3158,30 @@ pub struct NatPrelude {
     /// a leading-zero ambiguity the fixed-`f` specializations never have.
     /// See `nat_prelude::bitwise`.
     pub bitwise_bit: NameId,
+    /// `Nat.lor_aux_ne_zero_of_right_ne_zero : ∀ fuel m n, Not (Eq n 0) →
+    /// Not (Eq (lorAux (succ fuel) m n) 0)` — the invariant that plays
+    /// `land_aux_eq_zero_of_left_eq_zero`'s role for `lor`, and NOT its
+    /// direct analogue: OR has no absorbing zero, so "zero propagates" is
+    /// false for `lor` (`lor a b = 0` forces `a = b = 0`, so
+    /// `lor a (lor b c)` collapses to `c`, not `0`). What DOES hold,
+    /// confirmed by exhaustive Python simulation before any Rust: at any
+    /// fuel of the form `succ _`, a positive RIGHT operand alone forces a
+    /// positive result, independent of the left operand's shape. Proved by
+    /// induction on `fuel` ([`agree_by_fuel_induction`](rec_agreement::ops)):
+    /// the `n = 0` branch is immediate from the hypothesis; the `m = 0`
+    /// branch reduces to `Not (Eq (succ n') 0)` via `Nat.succ_ne_zero`; the
+    /// both-positive branch case-splits `Nat.mod n 2` (`Nat.cases_mod_two`,
+    /// folding `Nat.div_mod_exec`'s reconstruction equation into an
+    /// ARROW-typed motive, since the split does not otherwise expose it as
+    /// a usable hypothesis): bit 1 closes at either bit of `m` via
+    /// `Nat.succ_ne_zero` alone (`add x 1` is defeq `succ x`); bit 0 needs
+    /// `Nat.div_mod_exec` to show the half must itself be nonzero (else `n`
+    /// would be `0`, contradicting its own literal `succ` shape), then the
+    /// SAME `mul_eq_zero`/`succ_ne_zero` contrapositive `land`'s zero-
+    /// propagation lemma uses, applied to the half (via `ih` in the step
+    /// case, directly in the base case since `lorAux 0 _ _` is the
+    /// zero-fuel row's own third argument). See `nat_prelude::rec_agreement`.
+    pub lor_aux_ne_zero_of_right_ne_zero: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3828,6 +3852,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             land_aux_assoc_of_fuel: kernel.name_str(nat, "land_aux_assoc_of_fuel"),
             land_assoc: kernel.name_str(nat, "land_assoc"),
             bitwise_bit: kernel.name_str(nat, "bitwise_bit'"),
+            lor_aux_ne_zero_of_right_ne_zero: kernel
+                .name_str(nat, "lor_aux_ne_zero_of_right_ne_zero"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -4129,6 +4155,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (all far above); nothing needs it, so it goes last of the
         // `land` family.
         declare_land_assoc_all(&mut d, &p)?;
+        // `Nat.lor_aux_ne_zero_of_right_ne_zero`: needs `Nat.lorAux`
+        // (`declare_lor_all`, far above), `Nat.succ_ne_zero`
+        // (`declare_no_confusion_all`, far above), `Nat.mul_eq_zero`
+        // (`declare_mul_no_zero_divisors`, far above), and
+        // `Nat.div_mod_exec`/`Nat.mod_lt` (far above); nothing needs it yet,
+        // so it goes right after the `land` family. See
+        // `docs/plan/status/266-nat-lor-assoc.md` for why this is the
+        // "invariant that replaces zero propagation" for `lor` rather than
+        // a transport of `land_aux_eq_zero_of_left_eq_zero`.
+        declare_lor_aux_ne_zero_of_right_ne_zero_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.
