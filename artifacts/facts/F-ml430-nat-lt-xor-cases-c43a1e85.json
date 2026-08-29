@@ -8,10 +8,55 @@
     "statement": "∀ {a b c : ℕ}, a < b ^^^ c → a ^^^ c < b ∨ a ^^^ b < c",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-testbit-xor",
+    "F:nat-exists-most-significant-bit",
+    "F:nat-lt-of-testbit",
+    "F:nat-xor-assoc",
+    "F:nat-xor-xor-cancel-left",
+    "F:nat-xor-xor-cancel-right",
+    "F:nat-xor-ne-zero-iff"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lt_xor_cases",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lt_xor_cases",
+      "supports": "∀ {a b c : ℕ}, a < b ^^^ c → a ^^^ c < b ∨ a ^^^ b < c",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- lt_xor_cases 2>/dev/null | grep -Ec '^Nat\\.lt_xor_cases[[:space:]]')\" -ge 1",
+      "checker_seconds": 15,
+      "notes": "`build_nat_prelude` admits `Nat.lt_xor_cases` (`nat_prelude/xor_trichotomy.rs`, `declare_lt_xor_cases`) through the trusted `Kernel::add_declaration` gate, on the first real kernel-check attempt (only Rust-level compile errors needed fixing first). This is the last of the four pieces `docs/plan/status/260-nat-lt-xor-cases.md` named (`testBit_xor`, `exists_most_significant_bit`, `lt_of_testBit`, `xor_assoc`/`xor_xor_cancel_left`/`_right`/`xor_ne_zero_iff` -- see `depends_on`), composed via the auxiliary theorem `Nat.xor_trichotomy` (same file) following Mathlib's own proof route (`Mathlib/Data/Nat/Bitwise.lean`, pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`, read directly). `nat_theorem_inventory` exits non-zero for a name that does not exist, and the anchored `grep -Ec` count (tested `-ge 1`, never piped into `grep -q`) requires the admitted declaration to actually be printed with the exact rendered name."
+    },
+    {
+      "id": "compute-Nat.lt_xor_cases",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.lt_xor_cases",
+      "supports": "At the discriminating instance (a, b, c) = (0, 2, 3) (h : Lt 0 (xor 2 3) = Lt 0 1), the conclusion Or (Lt (xor 0 3) 2) (Lt (xor 0 2) 3) = Or (Lt 3 2) (Lt 2 3) is checked -- Lt 3 2 is false and Lt 2 3 is true, so the RIGHT disjunct must hold, discriminating the two branches -- with a negative control asserting the disjuncts are not swappable; and the theorem re-derives against a genuinely free (a, b, c) triple with a free hypothesis fvar, confirming the declared shape (hypothesis order, which disjunct is which).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::xor_trichotomy_and_lt_xor_cases_apply_at_concrete_discriminating_instances_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "The same test also checks the auxiliary `Nat.xor_trichotomy` at (a, b, c) = (1, 2, 4), where all three disjuncts of `Or (Lt 6 1) (Or (Lt 5 2) (Lt 3 4))` are genuinely discriminating (exactly the third holds)."
+    },
+    {
+      "id": "footprint-Nat.lt_xor_cases",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_seconds": 15,
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.lt_xor_cases`'s own footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly, by name, in-tree."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +71,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Established 2026-08-29 in this ledger (lane nat-lt-xor-cases-final), composing the four pieces five prior lanes landed the same day (`F:nat-testbit-xor`, `F:nat-exists-most-significant-bit`, `F:nat-lt-of-testbit`, and `xor_assoc`/`xor_xor_cancel_left`/`_right`/`xor_ne_zero_iff` in `xor_algebra.rs`) via Mathlib's own proof route, read directly from the pinned v4.30 source (`Mathlib/Data/Nat/Bitwise.lean:266-297`, commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`) rather than reinvented. The declared statement matches this fact's `formal.statement` verbatim, and this fact's own `formal.statement` mentions no `testBit`/`Bool` at all -- unlike six sibling `testBit`-family mirrors this session found unflippable, this one is fully `Nat`-valued throughout (`<`, `^^^`, `∨`), so the flip is honest per this ledger's own mirror-flip criterion (Mathlib's `def` is the same function; here there is no codomain mismatch to begin with, since the statement never mentions `Bool`). `scripts/gen-autogenesis-bitwise-family-projection.py` was checked directly and does not name this fact, so nothing pins it open independent of provability. The external theorem declaration is prior art for the STATEMENT only; the local proof term and tactic trace were never consulted. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on names the four direct dependency facts this proof actually used.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

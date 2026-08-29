@@ -989,6 +989,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.xor_xor_cancel_left,
         p.xor_xor_cancel_right,
         p.xor_ne_zero_iff,
+        p.xor_trichotomy,
+        p.lt_xor_cases,
         p.lt_two_cases,
         p.mod_two_eq_zero_or_one,
         p.bitwise_aux_eq_land_aux,
@@ -6507,7 +6509,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 514,
+        93 + 516,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -11982,6 +11984,131 @@ fn xor_ne_zero_iff_applies_at_a_concrete_discriminating_instance_and_symbolicall
     assert!(
         f.k.axiom_footprint(p.xor_ne_zero_iff).is_empty(),
         "xor_ne_zero_iff must rest on zero axioms"
+    );
+}
+
+/// `Nat.xor_trichotomy` and `Nat.lt_xor_cases` -- the composition step for
+/// `F:ml430-nat-lt-xor-cases-c43a1e85`, now that all four blocking pieces
+/// (`testBit_xor`, `exists_most_significant_bit`, `lt_of_testBit`,
+/// `xor_assoc`/`xor_xor_cancel_left`/`_right`/`xor_ne_zero_iff`) are landed.
+/// See `nat_prelude::xor_trichotomy`'s module doc for the full route.
+///
+/// `xor_trichotomy` checked at `(a, b, c) = (1, 2, 4)`: `v := xor (xor 1 2) 4
+/// = xor 3 4 = 7`, all THREE disjuncts genuinely discriminating (`Lt 6 1`
+/// false, `Lt 5 2` false, `Lt 3 4` true -- exactly the third holds, not a
+/// vacuous "any branch would do" instance).
+///
+/// `lt_xor_cases` checked at `(a, b, c) = (0, 2, 3)`: `h : Lt 0 (xor 2 3) =
+/// Lt 0 1`, conclusion `Or (Lt (xor 0 3) 2) (Lt (xor 0 2) 3) = Or (Lt 3 2)
+/// (Lt 2 3)` -- `Lt 3 2` false, `Lt 2 3` true, so the RIGHT disjunct must
+/// hold, discriminating the two branches. Both checked AND symbolically at a
+/// genuinely free `(a, b, c)` triple with a free hypothesis fvar, confirming
+/// the declared shape.
+#[test]
+fn xor_trichotomy_and_lt_xor_cases_apply_at_concrete_discriminating_instances_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // xor_trichotomy, concrete: (a, b, c) = (1, 2, 4).
+    {
+        let one = f.num(1);
+        let two = f.num(2);
+        let four = f.num(4);
+        let six = f.num(6);
+        let seven = f.num(7);
+        let xab_12 = f.const_app(p.xor, &[one, two]);
+        let v = f.const_app(p.xor, &[xab_12, four]);
+        assert!(f.k.def_eq(v, seven), "xor (xor 1 2) 4 must compute to 7");
+
+        let h_ne = f.lemma(p.succ_ne_zero, &[six]); // Not (Eq (succ 6) 0), defeq Not (Eq v 0)
+        let applied = f.lemma(p.xor_trichotomy, &[one, two, four, h_ne]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("xor_trichotomy must apply at (1, 2, 4): {shown}")
+        });
+
+        let xbc = f.const_app(p.xor, &[two, four]); // 6
+        let xca = f.const_app(p.xor, &[four, one]); // 5
+        let xab = f.const_app(p.xor, &[one, two]); // 3
+        let lt_bc_a = f.lt(xbc, one);
+        let lt_ca_b = f.lt(xca, two);
+        let lt_ab_c = f.lt(xab, four);
+        let inner = f.const_app(p.logic.or, &[lt_ca_b, lt_ab_c]);
+        let want = f.const_app(p.logic.or, &[lt_bc_a, inner]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "xor_trichotomy(1,2,4) must state Or (Lt 6 1) (Or (Lt 5 2) (Lt 3 4))"
+        );
+        // Negative control: reordering the disjuncts must not ALSO match.
+        let bad_inner = f.const_app(p.logic.or, &[lt_bc_a, lt_ca_b]);
+        let bad_want = f.const_app(p.logic.or, &[lt_ab_c, bad_inner]);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: the disjunct order must not be reorderable"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.xor_trichotomy).is_empty(),
+        "xor_trichotomy must rest on zero axioms"
+    );
+
+    // lt_xor_cases, concrete: (a, b, c) = (0, 2, 3).
+    {
+        let zero = f.zero();
+        let two = f.num(2);
+        let three = f.num(3);
+        let h_proof = f.lemma(p.zero_lt_succ, &[zero]); // Lt 0 1, defeq Lt 0 (xor 2 3)
+        let applied = f.lemma(p.lt_xor_cases, &[zero, two, three, h_proof]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lt_xor_cases must apply at (0, 2, 3): {shown}")
+        });
+
+        let xac = f.const_app(p.xor, &[zero, three]); // 3
+        let xab = f.const_app(p.xor, &[zero, two]); // 2
+        let lt_ac_b = f.lt(xac, two); // Lt 3 2, false
+        let lt_ab_c = f.lt(xab, three); // Lt 2 3, true
+        let want = f.const_app(p.logic.or, &[lt_ac_b, lt_ab_c]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lt_xor_cases(0,2,3) must state Or (Lt 3 2) (Lt 2 3)"
+        );
+        // Negative control: swapping the disjuncts must not ALSO match.
+        let bad_want = f.const_app(p.logic.or, &[lt_ab_c, lt_ac_b]);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: the disjunct order must not be swappable"
+        );
+    }
+
+    // Symbolic: lt_xor_cases applies at a genuinely FREE (a, b, c) triple
+    // with a free hypothesis fvar.
+    {
+        let name = f.name("lt_xor_cases_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (a, b, c) = (values[0], values[1], values[2]);
+            let xbc = d.const_app(p.xor, &[b, c]);
+            let xac = d.const_app(p.xor, &[a, c]);
+            let xab = d.const_app(p.xor, &[a, b]);
+            let h_ty = d.lt(a, xbc);
+            let lt_ac_b = d.lt(xac, b);
+            let lt_ab_c = d.lt(xab, c);
+            let concl = d.const_app(p.logic.or, &[lt_ac_b, lt_ab_c]);
+            let stmt = d.arrow(h_ty, concl);
+
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let proof = d.lemma(p.lt_xor_cases, &[a, b, c, h]);
+            let proof = d.lam_fv(h_fv, h_ty, proof);
+            (stmt, proof)
+        })
+        .expect("lt_xor_cases must apply at a symbolic (a, b, c, H) tuple");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.lt_xor_cases).is_empty(),
+        "lt_xor_cases must rest on zero axioms"
     );
 }
 
