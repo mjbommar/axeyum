@@ -1876,8 +1876,7 @@ fn declare_lor_aux_comm_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<()
                         let lhs_is_succ_a = d.refl(succ_a);
                         let rhs_is_succ_a = d.lemma(p.lor_aux_zero_left_any_fuel, &[sk, succ_a]);
                         let rhs_is_succ_a_rev = d.symm(rhs, succ_a, rhs_is_succ_a);
-                        let body =
-                            d.trans(lhs, succ_a, rhs, lhs_is_succ_a, rhs_is_succ_a_rev);
+                        let body = d.trans(lhs, succ_a, rhs, lhs_is_succ_a, rhs_is_succ_a_rev);
 
                         let with_h2 = d.lam_fv(h2_fv, bound_b_ty, body);
                         d.lam_fv(h1_fv, bound_a_ty, with_h2)
@@ -2024,13 +2023,7 @@ pub(super) fn declare_lor_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
         let loraux_n_n_m = d.const_app(p.lor_aux, &[n, n, m]);
         let step_c_rev = d.symm(loraux_n_n_m, loraux_sum_n_m, step_c);
 
-        let step_ab = d.trans(
-            loraux_m_m_n,
-            loraux_sum_m_n,
-            loraux_sum_n_m,
-            step_a,
-            step_b,
-        );
+        let step_ab = d.trans(loraux_m_m_n, loraux_sum_m_n, loraux_sum_n_m, step_a, step_b);
         let proof = d.trans(
             loraux_m_m_n,
             loraux_sum_n_m,
