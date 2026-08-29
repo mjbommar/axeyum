@@ -183,7 +183,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 154] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 156] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -279,7 +279,9 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 154] {
         p.ediv_add_emod,
         p.emod_nonneg,
         p.emod_lt_of_pos,
+        p.emod_natabs_bound,
         p.ediv_emod_unique,
+        p.ediv_emod_unique_general,
         p.dvd_refl,
         p.dvd_trans,
         p.dvd_add,
@@ -1105,6 +1107,186 @@ fn ediv_add_emod_computes_at_concrete_values() {
     }
 }
 
+/// `Int.emod_natAbs_bound` — the sign-general remainder bound
+/// `Int.emod_lt_of_pos` cannot state (bounding against `b` itself is FALSE
+/// for a negative `b`). Instantiated at a POSITIVE divisor (`b = 1`, where
+/// `natAbs b = b` and the bound coincides with what `emod_lt_of_pos` already
+/// gives), a NEGATIVE divisor (`b = -1`, where `emod_lt_of_pos`'s own
+/// hypothesis `Int.lt Int.zero b` is structurally FALSE — checked below —
+/// so that theorem cannot even be invoked here), and a NEGATIVE CONTROL at
+/// the excluded `b = 0` corner, checked independently of the theorem (whose
+/// hypothesis is correctly unsatisfiable there): `emod a 0 = a` (the
+/// totality convention) and `natAbs 0 = 0`, so the excluded conclusion would
+/// demand `5 < 0`, refuted by `Nat.not_succ_le_zero` — confirming the `b ≠
+/// 0` hypothesis is genuinely load-bearing, not merely unused decoration.
+#[test]
+fn emod_natabs_bound_instantiates_at_positive_negative_and_zero_divisors() {
+    use crate::BinderInfo;
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.emod_natabs_bound).is_empty(),
+        "Int.emod_natAbs_bound must rest on no axiom"
+    );
+
+    let zero_c = k.const_(p.zero, vec![]);
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+
+    // From `order_at_b : Int.lt zero_c b` (`zero_on_left`) or `Int.lt b
+    // zero_c` (otherwise), build `Not (Eq Int b zero_c)`: assume `h : Eq Int
+    // b zero_c`, transport `order_at_b` along `h` (`Eq.rec`) to `Int.lt
+    // zero_c zero_c` / `Int.lt zero_c zero_c`, and refute with `lt_irrefl`.
+    let ne_zero_from_order = |k: &mut Kernel,
+                              b: crate::ExprId,
+                              order_at_b: crate::ExprId,
+                              zero_on_left: bool|
+     -> crate::ExprId {
+        let int_ty = k.const_(p.z, vec![]);
+        let h_fv = 900_100;
+        let h = k.fvar(h_fv);
+        let eq_ty = {
+            let eq = k.const_(p.logic.eq, vec![one_level]);
+            let e = k.app(eq, int_ty);
+            let e = k.app(e, b);
+            k.app(e, zero_c)
+        };
+        let x_fv = 900_101;
+        let x = k.fvar(x_fv);
+        let motive_body = {
+            let lt = k.const_(p.lt, vec![]);
+            if zero_on_left {
+                let e = k.app(lt, zero_c);
+                k.app(e, x)
+            } else {
+                let e = k.app(lt, x);
+                k.app(e, zero_c)
+            }
+        };
+        let eq_b_x = {
+            let eq = k.const_(p.logic.eq, vec![one_level]);
+            let e = k.app(eq, int_ty);
+            let e = k.app(e, b);
+            k.app(e, x)
+        };
+        let anon = k.anon();
+        let inner = k.lam(anon, eq_b_x, motive_body, BinderInfo::Default);
+        let motive = {
+            let body = k.abstract_fvars(inner, &[x_fv]);
+            k.lam(anon, int_ty, body, BinderInfo::Default)
+        };
+        let rec_name = p.logic.eq_rec;
+        let rec = k.const_(rec_name, vec![zero_level, one_level]);
+        let e = k.app(rec, int_ty);
+        let e = k.app(e, b);
+        let e = k.app(e, motive);
+        let e = k.app(e, order_at_b);
+        let e = k.app(e, zero_c);
+        let rewritten = k.app(e, h);
+        let irrefl = k.const_(p.lt_irrefl, vec![]);
+        let irrefl_zero = k.app(irrefl, zero_c);
+        let false_proof = k.app(irrefl_zero, rewritten);
+        let body = k.abstract_fvars(false_proof, &[h_fv]);
+        k.lam(anon, eq_ty, body, BinderInfo::Default)
+    };
+
+    // --- positive divisor: b = Int.one, a = 5.  emod(5,1)=0 < natAbs(1)=1. ---
+    {
+        let a = numeral(&mut k, &p, 5);
+        let b = k.const_(p.one, vec![]);
+        // `Int.zero_lt_one : Int.lt Int.zero Int.one` -- exactly `Int.lt
+        // zero_c b`, already proved, no fresh `Nat` order proof needed.
+        let order_at_b = k.const_(p.zero_lt_one, vec![]);
+        let ne_proof = ne_zero_from_order(&mut k, b, order_at_b, true);
+
+        let theorem = k.const_(p.emod_natabs_bound, vec![]);
+        let applied = k.app(theorem, a);
+        let applied = k.app(applied, b);
+        let applied = k.app(applied, ne_proof);
+        k.infer(applied).unwrap_or_else(|e| {
+            panic!("emod_natAbs_bound at a=5,b=1 (positive divisor) should type-check: {e:?}")
+        });
+
+        let emod = k.const_(p.emod, vec![]);
+        let e = k.app(emod, a);
+        let emod_ab = k.app(e, b);
+        let want = numeral(&mut k, &p, 0);
+        assert!(k.def_eq(emod_ab, want), "emod 5 1 should be 0");
+    }
+
+    // --- negative divisor: b = negSucc 0 = -1, a = 5.  emod(5,-1)=0 <
+    //     natAbs(-1)=1.  `Int.lt Int.zero b` is FALSE here (`Int.lt`'s
+    //     `ofNat _, negSucc _` branch is unconditionally `False`,
+    //     `defs.rs::declare_order_definitions`), so `emod_lt_of_pos` could
+    //     not be invoked at this `b` at all -- this theorem is the only one
+    //     that can state a bound here. ---
+    {
+        let a = numeral(&mut k, &p, 5);
+        let b = numeral(&mut k, &p, -1);
+        // `Int.lt (negSucc 0) zero_c` reduces to `True` unconditionally
+        // (the mixed-sign branch), so `True.intro` suffices.
+        let order_at_b = k.const_(p.logic.true_intro, vec![]);
+        let ne_proof = ne_zero_from_order(&mut k, b, order_at_b, false);
+
+        let theorem = k.const_(p.emod_natabs_bound, vec![]);
+        let applied = k.app(theorem, a);
+        let applied = k.app(applied, b);
+        let applied = k.app(applied, ne_proof);
+        k.infer(applied).unwrap_or_else(|e| {
+            panic!("emod_natAbs_bound at a=5,b=-1 (negative divisor) should type-check: {e:?}")
+        });
+
+        let emod = k.const_(p.emod, vec![]);
+        let e = k.app(emod, a);
+        let emod_ab = k.app(e, b);
+        let want = numeral(&mut k, &p, 0);
+        assert!(k.def_eq(emod_ab, want), "emod 5 (-1) should be 0");
+    }
+
+    // --- negative control: b = 0 is excluded, and for good reason. The
+    //     theorem's hypothesis is correctly unsatisfiable there (no proof of
+    //     `Not (Eq Int b zero)` exists for `b = zero`), so the theorem
+    //     cannot be applied -- checked instead directly against `emod`'s
+    //     own totality convention and `natAbs`. ---
+    {
+        let a = numeral(&mut k, &p, 5);
+        let b = numeral(&mut k, &p, 0);
+        let emod = k.const_(p.emod, vec![]);
+        let e = k.app(emod, a);
+        let emod_ab = k.app(e, b);
+        assert!(
+            k.def_eq(emod_ab, a),
+            "Int.emod a 0 must be the totality convention `a` itself"
+        );
+        let nat_abs_b = {
+            let f = k.const_(p.nat_abs, vec![]);
+            k.app(f, b)
+        };
+        let bound = {
+            let of_nat = k.const_(p.of_nat, vec![]);
+            k.app(of_nat, nat_abs_b)
+        };
+        let zero_bound = numeral(&mut k, &p, 0);
+        assert!(k.def_eq(bound, zero_bound), "ofNat (natAbs 0) must be 0");
+
+        // The excluded conclusion `Int.lt (emod 5 0) (ofNat (natAbs 0))`
+        // is `Int.lt (ofNat 5) (ofNat 0)`, which reduces to `Nat.le 6 0` --
+        // refuted by `Nat.not_succ_le_zero`, confirming the `b ≠ 0`
+        // hypothesis is load-bearing rather than unused.
+        let five_nat = numeral_nat(&mut k, &p, 5);
+        let refutation = {
+            let lemma = k.const_(p.nat.not_succ_le_zero, vec![]);
+            k.app(lemma, five_nat)
+        };
+        k.infer(refutation).unwrap_or_else(|e| {
+            panic!(
+                "Nat.not_succ_le_zero should type-check at 5, refuting the excluded bound: {e:?}"
+            )
+        });
+    }
+}
+
 /// `Int.ediv_emod_unique` applied at a genuine positive divisor and a genuine
 /// valid decomposition (`13 = 4*3+1`, remainder `1` in `[0,4)`) type-checks
 /// end to end: every one of the six hypothesis proofs is a real `Nat.le`/
@@ -1219,6 +1401,212 @@ fn ediv_emod_unique_applies_at_a_concrete_decomposition() {
         k.def_eq(inferred, expected),
         "ediv_emod_unique's conclusion should be exactly q1=q2 ∧ r1=r2"
     );
+}
+
+/// `Nat.le lo hi`, for concrete `lo ≤ hi`, built by peeling `succ` off both
+/// sides down to `Nat.le 0 (hi-lo)` (`Nat.zero_le`), then re-wrapping with
+/// `le_succ_succ` -- the same recipe `ediv_emod_unique_applies_at_a_concrete_
+/// decomposition` inlines twice by hand, generalized so the sign-general
+/// test below can build both a `0 ≤ r` and an `r < natAbs b` witness (the
+/// latter is `Nat.le (r+1) (natAbs b)`) from the same helper.
+fn nat_le_proof(k: &mut Kernel, p: &IntPrelude, lo: u32, hi: u32) -> crate::ExprId {
+    assert!(lo <= hi, "nat_le_proof: {lo} > {hi}");
+    if lo == 0 {
+        let hi_nat = numeral_nat(k, p, hi);
+        let f = k.const_(p.nat.zero_le, vec![]);
+        return k.app(f, hi_nat);
+    }
+    let inner = nat_le_proof(k, p, lo - 1, hi - 1);
+    let lo1 = numeral_nat(k, p, lo - 1);
+    let hi1 = numeral_nat(k, p, hi - 1);
+    let f = k.const_(p.nat.le_succ_succ, vec![]);
+    let f = k.app(f, lo1);
+    let f = k.app(f, hi1);
+    k.app(f, inner)
+}
+
+/// `Int.ediv_emod_unique_general` applied at a genuine POSITIVE divisor
+/// (`13 = 4*3+1`, the same decomposition `ediv_emod_unique_applies_at_a_
+/// concrete_decomposition` uses, now via the `b ≠ 0` hypothesis instead of
+/// `0 < b`) and at a genuine NEGATIVE divisor (`13 = (-4)*(-3)+1`, remainder
+/// `1` in `[0, natAbs(-4)) = [0,4)`) -- a decomposition `ediv_emod_unique`
+/// cannot even be STATED for, since its hypothesis `0 < b` is false at
+/// `b = -4`. Both instantiations type-check end to end and land on the exact
+/// `q1=q2 ∧ r1=r2` conclusion.
+#[test]
+fn ediv_emod_unique_general_applies_at_a_positive_and_a_negative_divisor() {
+    use crate::BinderInfo;
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.ediv_emod_unique_general).is_empty(),
+        "Int.ediv_emod_unique_general must rest on no axiom"
+    );
+
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+    let z_ty = k.const_(p.z, vec![]);
+
+    // Builds `Not (Eq Int b zero_c)` from `order_at_b : Int.lt zero_c b`
+    // (`zero_on_left`) or `Int.lt b zero_c` (otherwise) -- same construction
+    // as `emod_natabs_bound_instantiates_at_positive_negative_and_zero_
+    // divisors`'s local helper, rebuilt here since each test in this file is
+    // self-contained by this file's own convention.
+    let ne_zero_from_order = |k: &mut Kernel,
+                              b: crate::ExprId,
+                              order_at_b: crate::ExprId,
+                              zero_on_left: bool|
+     -> crate::ExprId {
+        let zero_c = k.const_(p.zero, vec![]);
+        let int_ty = k.const_(p.z, vec![]);
+        let h_fv = 900_200;
+        let h = k.fvar(h_fv);
+        let eq_ty = {
+            let eq = k.const_(p.logic.eq, vec![one_level]);
+            let e = k.app(eq, int_ty);
+            let e = k.app(e, b);
+            k.app(e, zero_c)
+        };
+        let x_fv = 900_201;
+        let x = k.fvar(x_fv);
+        let motive_body = {
+            let lt = k.const_(p.lt, vec![]);
+            if zero_on_left {
+                let e = k.app(lt, zero_c);
+                k.app(e, x)
+            } else {
+                let e = k.app(lt, x);
+                k.app(e, zero_c)
+            }
+        };
+        let eq_b_x = {
+            let eq = k.const_(p.logic.eq, vec![one_level]);
+            let e = k.app(eq, int_ty);
+            let e = k.app(e, b);
+            k.app(e, x)
+        };
+        let anon = k.anon();
+        let inner = k.lam(anon, eq_b_x, motive_body, BinderInfo::Default);
+        let motive = {
+            let body = k.abstract_fvars(inner, &[x_fv]);
+            k.lam(anon, int_ty, body, BinderInfo::Default)
+        };
+        let rec_name = p.logic.eq_rec;
+        let rec = k.const_(rec_name, vec![zero_level, one_level]);
+        let e = k.app(rec, int_ty);
+        let e = k.app(e, b);
+        let e = k.app(e, motive);
+        let e = k.app(e, order_at_b);
+        let e = k.app(e, zero_c);
+        let rewritten = k.app(e, h);
+        let irrefl = k.const_(p.lt_irrefl, vec![]);
+        let irrefl_zero = k.app(irrefl, zero_c);
+        let false_proof = k.app(irrefl_zero, rewritten);
+        let body = k.abstract_fvars(false_proof, &[h_fv]);
+        k.lam(anon, eq_ty, body, BinderInfo::Default)
+    };
+
+    let refl_at = |k: &mut Kernel, at: crate::ExprId| -> crate::ExprId {
+        let refl = k.const_(p.logic.eq_refl, vec![one_level]);
+        let e = k.app(refl, z_ty);
+        k.app(e, at)
+    };
+
+    let check_expected_conclusion = |k: &mut Kernel,
+                                     inferred: crate::ExprId,
+                                     q: crate::ExprId,
+                                     r: crate::ExprId,
+                                     label: &str| {
+        let eq = k.const_(p.logic.eq, vec![one_level]);
+        let eq_q = k.app(eq, z_ty);
+        let eq_q = k.app(eq_q, q);
+        let eq_q = k.app(eq_q, q);
+        let eq_r = k.const_(p.logic.eq, vec![one_level]);
+        let eq_r = k.app(eq_r, z_ty);
+        let eq_r = k.app(eq_r, r);
+        let eq_r = k.app(eq_r, r);
+        let and = k.const_(p.logic.and, vec![]);
+        let expected = k.app(and, eq_q);
+        let expected = k.app(expected, eq_r);
+        assert!(
+            k.def_eq(inferred, expected),
+            "ediv_emod_unique_general ({label}): conclusion should be exactly q1=q2 ∧ r1=r2"
+        );
+    };
+
+    // --- positive divisor: 13 = 4*3+1, remainder 1 in [0, natAbs 4) = [0,4). ---
+    {
+        let a = numeral(&mut k, &p, 13);
+        let b = numeral(&mut k, &p, 4);
+        let q = numeral(&mut k, &p, 3);
+        let r = numeral(&mut k, &p, 1);
+
+        let order_at_b = nat_le_proof(&mut k, &p, 1, 4); // Nat.le 1 4 ≡ Int.lt zero_c b
+        let ne_proof = ne_zero_from_order(&mut k, b, order_at_b, true);
+        let eq_proof = refl_at(&mut k, a);
+        let lower_proof = nat_le_proof(&mut k, &p, 0, 1); // 0 ≤ 1
+        let upper_proof = nat_le_proof(&mut k, &p, 2, 4); // 1 < 4
+
+        let theorem = k.const_(p.ediv_emod_unique_general, vec![]);
+        let mut proof = theorem;
+        for arg in [a, b, q, r, q, r] {
+            proof = k.app(proof, arg);
+        }
+        for arg in [
+            ne_proof,
+            eq_proof,
+            lower_proof,
+            upper_proof,
+            eq_proof,
+            lower_proof,
+            upper_proof,
+        ] {
+            proof = k.app(proof, arg);
+        }
+        let inferred = k.infer(proof).unwrap_or_else(|e| {
+            panic!("ediv_emod_unique_general 13 4 3 1 3 1 (positive) should type-check: {e:?}")
+        });
+        check_expected_conclusion(&mut k, inferred, q, r, "positive divisor");
+    }
+
+    // --- negative divisor: 13 = (-4)*(-3)+1, remainder 1 in
+    //     [0, natAbs (-4)) = [0,4).  `Int.ediv_emod_unique` cannot even be
+    //     invoked here: `Int.lt Int.zero (-4)` is FALSE. ---
+    {
+        let a = numeral(&mut k, &p, 13);
+        let b = numeral(&mut k, &p, -4);
+        let q = numeral(&mut k, &p, -3);
+        let r = numeral(&mut k, &p, 1);
+
+        // `Int.lt (negSucc 3) zero_c` reduces to `True` unconditionally.
+        let order_at_b = k.const_(p.logic.true_intro, vec![]);
+        let ne_proof = ne_zero_from_order(&mut k, b, order_at_b, false);
+        let eq_proof = refl_at(&mut k, a);
+        let lower_proof = nat_le_proof(&mut k, &p, 0, 1); // 0 ≤ 1
+        let upper_proof = nat_le_proof(&mut k, &p, 2, 4); // 1 < natAbs(-4) = 4
+
+        let theorem = k.const_(p.ediv_emod_unique_general, vec![]);
+        let mut proof = theorem;
+        for arg in [a, b, q, r, q, r] {
+            proof = k.app(proof, arg);
+        }
+        for arg in [
+            ne_proof,
+            eq_proof,
+            lower_proof,
+            upper_proof,
+            eq_proof,
+            lower_proof,
+            upper_proof,
+        ] {
+            proof = k.app(proof, arg);
+        }
+        let inferred = k.infer(proof).unwrap_or_else(|e| {
+            panic!("ediv_emod_unique_general 13 -4 -3 1 -3 1 (negative) should type-check: {e:?}")
+        });
+        check_expected_conclusion(&mut k, inferred, q, r, "negative divisor");
+    }
 }
 
 /// `Int.emod_eq_zero_iff_dvd`'s `mp` direction, applied at a genuine multiple

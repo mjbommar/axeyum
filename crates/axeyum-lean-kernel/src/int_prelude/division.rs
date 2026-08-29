@@ -62,6 +62,7 @@
 //! (on its two `Nat` arguments) already covers it.
 
 use super::defs::{DERIVED_HEIGHT, define_binary_int};
+use super::gcd::{neg_mul, neg_neg};
 use super::ops::{IntDev, Shape, case_split, exists_elim};
 use super::sub_nat_nat::by_borrow;
 use crate::BinderInfo;
@@ -927,6 +928,166 @@ pub(super) fn declare_emod_lt_of_pos(d: &mut IntDev<'_>) -> Result<(), KernelErr
 }
 
 // ---------------------------------------------------------------------------
+// `Int.emod_natAbs_bound` — the sign-general remainder bound.
+// ---------------------------------------------------------------------------
+//
+// `emod_lt_of_pos` bounds the remainder against `b` itself, which is only an
+// upper bound when `b > 0`: for `b < 0` (a `negSucc`), `Int.lt (emod a b) b`
+// would require the (nonnegative-by-construction, in three of four `Int.rec`
+// rows) remainder to be less than a NEGATIVE number, which is false. The
+// sign-general statement bounds against `ofNat (natAbs b)` instead —
+// `natAbs` is an unconditional `Int.rec` (`ofNat n ↦ n`, `negSucc n ↦ succ n`,
+// both ι, `nat_abs.rs`), so `ofNat (natAbs (ofNat n))` is defeq to `ofNat n`
+// and `ofNat (natAbs (negSucc n))` is defeq to `ofNat (succ n)` — meaning
+// EVERY branch below is literally one of the two existing `emod_lt_of_pos`
+// row builders, or the existing `sub_nat_nat_lt_ofnat` combinator, applied to
+// whichever `Nat` `natAbs` ι-reduces the divisor to. `b`'s hypothesis
+// (`b ≠ 0`) is needed in exactly one of the four branches — `ofNat m, ofNat
+// n` — because that is the only row where the bound `m % n < n` can fail
+// (at `n = 0`, `Nat.mod_zero` gives `emod = ofNat m` unconditionally, and
+// `m < 0` is false). The other three rows never depend on the hypothesis: a
+// `negSucc` divisor is never zero, and `sub_nat_nat_lt_ofnat`'s own bound
+// holds for the divisor's magnitude at ANY value including `0`.
+
+/// `ofNat m, ofNat n` branch, general `n` (possibly `0`): derive `Nat.lt zero
+/// n` from the hypothesis `Not (Eq Int (ofNat n) zero)` via the contrapositive
+/// of [`super::ops::IntDev::nat_eq_to_int`] (`n = 0 → ofNat n = ofNat 0 ≡
+/// Int.zero`), then close with the general `Nat.mod_lt : 0 < n → m % n < n`
+/// (no `succ`-shape pinning needed, unlike [`row_emod_lt_of_pos_of`], which
+/// this row cannot reuse because its divisor is unconditionally positive).
+fn row_natabs_bound_of_of(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let ofnat_n = d.of_nat(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(ofnat_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero_nat = d.zero();
+    let ne_nat = {
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+        let eq_int_from_nat = d.nat_eq_to_int(n, zero_nat, hn, &|d, x| d.of_nat(x));
+        let contra = d.apply(h, &[eq_int_from_nat]);
+        let eq_nat_ty = d.eq(n, zero_nat);
+        d.lam_fv(hn_fv, eq_nat_ty, contra)
+    };
+    let positive = {
+        let name = d.int().nat.zero_lt_of_ne_zero;
+        d.const_app(name, &[n, ne_nat])
+    };
+    let bound = {
+        let name = d.int().nat.mod_lt;
+        d.const_app(name, &[m, n, positive])
+    };
+    d.lam_fv(h_fv, hyp_ty, bound)
+}
+
+/// `ofNat m, negSucc n` branch: `natAbs (negSucc n) ≡ succ n`, and `emod (ofNat
+/// m) (negSucc n) ≡ ofNat (m % succ n)` — exactly [`row_emod_lt_of_pos_of`]'s
+/// shape (divisor `succ n`, unconditionally positive), so the hypothesis is
+/// bound and discarded.
+fn row_natabs_bound_of_neg(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let negsucc_n = d.neg_succ(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(negsucc_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let body = row_emod_lt_of_pos_of(d, m, n);
+    d.lam_fv(h_fv, hyp_ty, body)
+}
+
+/// `negSucc m, ofNat n` branch, general `n` (possibly `0`): `emod (negSucc m)
+/// (ofNat n) ≡ subNatNat n (succ (m % n))`, and [`sub_nat_nat_lt_ofnat`]'s
+/// bound `Int.lt (subNatNat a (succ r)) (ofNat a)` holds for ANY `Nat` `a`
+/// (at `a = 0` the borrow always fires, landing on the unconditionally-true
+/// `negSucc _ < ofNat _` row), so the hypothesis is bound and discarded here
+/// too.
+fn row_natabs_bound_neg_of(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let ofnat_n = d.of_nat(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(ofnat_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let body = {
+        let r = NatOps::modulo(d, m, n);
+        sub_nat_nat_lt_ofnat(d, n, r)
+    };
+    d.lam_fv(h_fv, hyp_ty, body)
+}
+
+/// `negSucc m, negSucc n` branch: `natAbs (negSucc n) ≡ succ n`, and `emod
+/// (negSucc m) (negSucc n) ≡ subNatNat (succ n) (succ (m % succ n))` —
+/// exactly [`row_emod_lt_of_pos_neg`]'s shape, so the hypothesis is bound and
+/// discarded.
+fn row_natabs_bound_neg_neg(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let negsucc_n = d.neg_succ(n);
+    let zero_int = d.izero();
+    let hyp_ty = {
+        let eq_ty = d.ieq(negsucc_n, zero_int);
+        d.not(eq_ty)
+    };
+    let h_fv = d.fresh_fvar();
+    let body = row_emod_lt_of_pos_neg(d, m, n);
+    d.lam_fv(h_fv, hyp_ty, body)
+}
+
+/// `Int.emod_natAbs_bound : ∀ a b, Not (Eq Int b Int.zero) → Int.lt (Int.emod
+/// a b) (Int.ofNat (Int.natAbs b))` — the sign-general remainder bound
+/// [`declare_emod_lt_of_pos`] cannot state, because bounding against `b`
+/// itself is false for a negative divisor.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_emod_natabs_bound(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.emod_natabs_bound, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let full_stmt_at = |d: &mut IntDev<'_>, aa: ExprId, bb: ExprId| -> ExprId {
+            let zero = d.izero();
+            let hyp = {
+                let eq_ty = d.ieq(bb, zero);
+                d.not(eq_ty)
+            };
+            let emod_ab = d.iemod(aa, bb);
+            let nat_abs_bb = {
+                let f = d.int().nat_abs;
+                d.const_app(f, &[bb])
+            };
+            let bound = d.of_nat(nat_abs_bb);
+            let goal = d.ilt(emod_ab, bound);
+            d.arrow(hyp, goal)
+        };
+        let stmt = full_stmt_at(d, a, b);
+        let proof = case_split(
+            d,
+            &[a, b],
+            &|d, args| full_stmt_at(d, args[0], args[1]),
+            &|d, branches| {
+                let (a_shape, m) = branches[0];
+                let (b_shape, n) = branches[1];
+                match (a_shape, b_shape) {
+                    (Shape::OfNat, Shape::OfNat) => row_natabs_bound_of_of(d, m, n),
+                    (Shape::OfNat, Shape::NegSucc) => row_natabs_bound_of_neg(d, m, n),
+                    (Shape::NegSucc, Shape::OfNat) => row_natabs_bound_neg_of(d, m, n),
+                    (Shape::NegSucc, Shape::NegSucc) => row_natabs_bound_neg_neg(d, m, n),
+                }
+            },
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // `Int.ediv_emod_unique` — the division algorithm's uniqueness, for a
 // positive divisor.
 // ---------------------------------------------------------------------------
@@ -1437,6 +1598,320 @@ pub(super) fn declare_ediv_emod_unique(d: &mut IntDev<'_>) -> Result<(), KernelE
 
         let body = exists_elim(d, predicate, goal, dest, minor);
         let proof = d.lam_fv(h_pos_fv, pos_ty, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// `Int.ediv_emod_unique_general` — the division algorithm's uniqueness, for
+// EITHER divisor sign.
+// ---------------------------------------------------------------------------
+//
+// `ediv_emod_unique` needs `0 < b` for two reasons at once: it bounds the
+// remainders against `b` itself, and its proof (`build_core`/`solve_le_case`)
+// reasons about `Int.mul b _` growing monotonically in the quotient, which
+// only holds for a POSITIVE multiplier. Rather than re-deriving that
+// machinery for a negative `b` (where multiplication REVERSES order), this
+// reduces to the already-proved positive case by a change of variable:
+//
+// `Int.neg (negSucc n) ≡ ofNat (succ n)` by ι-reduction alone
+// (`defs.rs::declare_operations`'s `neg` definition) -- the SAME value
+// `Int.natAbs (negSucc n)` ι-reduces to. So for `b < 0`, `neg b` IS (up to
+// defeq) the positive divisor `ofNat (natAbs b)` the hypotheses are already
+// stated against -- no rewrite of the bound hypotheses is needed at all, only
+// of the two RECONSTRUCTION equations, via `b*q = (neg b)*(neg q)`
+// ([`neg_mul_neg`]). Applying `ediv_emod_unique` at divisor `neg b` and
+// quotients `neg q1`/`neg q2` gives `neg q1 = neg q2`, and negation is its own
+// inverse (`neg_neg`) so that un-negates back to `q1 = q2`.
+
+/// `Eq Int (mul (neg a) (neg b)) (mul a b)` — mirrors `bezout_witnesses.rs`'s
+/// private helper of the same name and shape (that one is not `pub(super)`,
+/// so this is a second small extraction from `gcd.rs`'s `neg_mul`/`neg_neg`,
+/// per this crate's own convention of not sharing a handful-of-lines private
+/// helper across files).
+fn neg_mul_neg(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let p = d.int();
+    let neg_a = d.ineg(a);
+    let neg_b = d.ineg(b);
+    let product = d.imul(a, b);
+    let neg_product = d.ineg(product);
+    let a_neg_b = d.imul(a, neg_b);
+    let neg_a_neg_b = d.imul(neg_a, neg_b);
+
+    let step_one = neg_mul(d, a, neg_b);
+    let neg_a_neg_b_folded = d.ineg(a_neg_b);
+    let mul_neg_proof = d.lemma(p.mul_neg, &[a, b]);
+    let double_neg = d.ineg(neg_product);
+    let step_two = d.icongr(a_neg_b, neg_product, mul_neg_proof, &|d, x| d.ineg(x));
+    let step_three = neg_neg(d, product);
+
+    let (_, chained) = d.ichain(
+        neg_a_neg_b,
+        &[
+            (neg_a_neg_b_folded, step_one),
+            (double_neg, step_two),
+            (product, step_three),
+        ],
+    );
+    chained
+}
+
+/// `Nat.le (succ Nat.zero) (succ n)` — i.e. `Int.lt Int.zero (ofNat (succ
+/// n))`, unconditionally (no hypothesis: a successor magnitude is always
+/// positive). The same construction [`row_emod_lt_of_pos_of`]'s local
+/// `positive` binding uses, extracted here because
+/// [`declare_ediv_emod_unique_general`] needs it independently of any
+/// particular divisor branch's `emod` row.
+fn positive_of_succ(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let zero = d.zero();
+    let base = {
+        let name = d.int().nat.zero_le;
+        d.const_app(name, &[n])
+    };
+    let name = d.int().nat.le_succ_succ;
+    d.const_app(name, &[zero, n, base])
+}
+
+/// [`unique_hyps`], generalized to bound the remainders against
+/// `ofNat (natAbs bb)` rather than `bb` itself.
+fn unique_hyps_general(
+    d: &mut IntDev<'_>,
+    bb: ExprId,
+    a: ExprId,
+    q1: ExprId,
+    r1: ExprId,
+    q2: ExprId,
+    r2: ExprId,
+) -> UniqueHyps {
+    let bound = {
+        let f = d.int().nat_abs;
+        let nat_abs_bb = d.const_app(f, &[bb]);
+        d.of_nat(nat_abs_bb)
+    };
+    let zero = d.izero();
+    let reconstruct = |d: &mut IntDev<'_>, q: ExprId, r: ExprId| -> ExprId {
+        let product = d.imul(bb, q);
+        let sum = d.iadd(product, r);
+        d.ieq(a, sum)
+    };
+    let eq1 = reconstruct(d, q1, r1);
+    let lower1 = d.ile(zero, r1);
+    let upper1 = d.ilt(r1, bound);
+    let eq2 = reconstruct(d, q2, r2);
+    let lower2 = d.ile(zero, r2);
+    let upper2 = d.ilt(r2, bound);
+    let target = {
+        let e1 = d.ieq(q1, q2);
+        let e2 = d.ieq(r1, r2);
+        d.and(e1, e2)
+    };
+    UniqueHyps {
+        eq1,
+        lower1,
+        upper1,
+        eq2,
+        lower2,
+        upper2,
+        target,
+    }
+}
+
+/// The statement [`declare_ediv_emod_unique_general`] proves, at a
+/// **caller-supplied** divisor `bb` — mirrors [`unique_goal`], via
+/// [`unique_hyps_general`].
+fn unique_goal_general(
+    d: &mut IntDev<'_>,
+    bb: ExprId,
+    a: ExprId,
+    q1: ExprId,
+    r1: ExprId,
+    q2: ExprId,
+    r2: ExprId,
+) -> ExprId {
+    let h = unique_hyps_general(d, bb, a, q1, r1, q2, r2);
+    let a6 = d.arrow(h.upper2, h.target);
+    let a5 = d.arrow(h.lower2, a6);
+    let a4 = d.arrow(h.eq2, a5);
+    let a3 = d.arrow(h.upper1, a4);
+    let a2 = d.arrow(h.lower1, a3);
+    d.arrow(h.eq1, a2)
+}
+
+/// `Int.ediv_emod_unique_general : ∀ a b q1 r1 q2 r2,
+/// Not (Eq Int b zero) → a = b*q1+r1 → 0 ≤ r1 → r1 < ofNat (natAbs b) →
+/// a = b*q2+r2 → 0 ≤ r2 → r2 < ofNat (natAbs b) → q1 = q2 ∧ r1 = r2`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_ediv_emod_unique_general(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.ediv_emod_unique_general, 6, &|d, v| {
+        let (a, b, q1, r1, q2, r2) = (v[0], v[1], v[2], v[3], v[4], v[5]);
+        let zero = d.izero();
+        let ne_ty = {
+            let eq_ty = d.ieq(b, zero);
+            d.not(eq_ty)
+        };
+        let goal = unique_goal_general(d, b, a, q1, r1, q2, r2);
+        let stmt = d.arrow(ne_ty, goal);
+
+        let proof = case_split(
+            d,
+            &[b],
+            &|d, args| {
+                let bb = args[0];
+                let inner_goal = unique_goal_general(d, bb, a, q1, r1, q2, r2);
+                let zero = d.izero();
+                let eq_ty = d.ieq(bb, zero);
+                let not_eq_ty = d.not(eq_ty);
+                d.arrow(not_eq_ty, inner_goal)
+            },
+            &|d, branches| {
+                let (shape, n) = branches[0];
+                match shape {
+                    Shape::OfNat => {
+                        // `natAbs (ofNat n) ≡ n`, so the goal's bound
+                        // `ofNat (natAbs b)` is already defeq to `b = ofNat
+                        // n` itself: every hypothesis passed straight
+                        // through to `ediv_emod_unique` type-checks as is.
+                        // Only the positivity premise (`b ≠ 0 → 0 < b`) is
+                        // new -- the contrapositive of `nat_eq_to_int`
+                        // (`n = 0 → ofNat n = ofNat 0 ≡ Int.zero`) plus
+                        // `Nat.zero_lt_of_ne_zero`, exactly
+                        // [`row_natabs_bound_of_of`]'s route.
+                        let ofnat_n = d.of_nat(n);
+                        let zero_int = d.izero();
+                        let hyp_ty = {
+                            let eq_ty = d.ieq(ofnat_n, zero_int);
+                            d.not(eq_ty)
+                        };
+                        let h_fv = d.fresh_fvar();
+                        let h = d.kernel().fvar(h_fv);
+                        let zero_nat = d.zero();
+                        let ne_nat = {
+                            let hn_fv = d.fresh_fvar();
+                            let hn = d.kernel().fvar(hn_fv);
+                            let eq_int_from_nat =
+                                d.nat_eq_to_int(n, zero_nat, hn, &|d, x| d.of_nat(x));
+                            let contra = d.apply(h, &[eq_int_from_nat]);
+                            let eq_nat_ty = d.eq(n, zero_nat);
+                            d.lam_fv(hn_fv, eq_nat_ty, contra)
+                        };
+                        let pos = {
+                            let name = d.int().nat.zero_lt_of_ne_zero;
+                            d.const_app(name, &[n, ne_nat])
+                        };
+                        let core = {
+                            let f = d.int().ediv_emod_unique;
+                            d.const_app(f, &[a, ofnat_n, q1, r1, q2, r2, pos])
+                        };
+                        d.lam_fv(h_fv, hyp_ty, core)
+                    }
+                    Shape::NegSucc => {
+                        // `b = negSucc n`, `natAbs b ≡ succ n`, and
+                        // `neg b ≡ ofNat (succ n)` -- the SAME value, by two
+                        // independent ι-reductions. So `neg b` is the
+                        // positive divisor the hypotheses are already
+                        // bounded against; only the two reconstruction
+                        // equations need rewriting (`b*q = (neg b)*(neg
+                        // q)`), via [`neg_mul_neg`].
+                        let negsucc_n = d.neg_succ(n);
+                        let zero_int = d.izero();
+                        let hyp_ty = {
+                            let eq_ty = d.ieq(negsucc_n, zero_int);
+                            d.not(eq_ty)
+                        };
+                        let h_fv = d.fresh_fvar();
+
+                        let n_pos = d.ineg(negsucc_n); // ≡ ofNat (succ n)
+                        let pos = positive_of_succ(d, n);
+                        let neg_q1 = d.ineg(q1);
+                        let neg_q2 = d.ineg(q2);
+
+                        // The SIX hypothesis types this branch's goal is
+                        // stated against (bound by `ofNat (natAbs negsucc_n)`
+                        // ≡ `n_pos`, per [`unique_hyps_general`]).
+                        let h = unique_hyps_general(d, negsucc_n, a, q1, r1, q2, r2);
+
+                        let eq1_fv = d.fresh_fvar();
+                        let eq1 = d.kernel().fvar(eq1_fv);
+                        let lower1_fv = d.fresh_fvar();
+                        let lower1 = d.kernel().fvar(lower1_fv);
+                        let upper1_fv = d.fresh_fvar();
+                        let upper1 = d.kernel().fvar(upper1_fv);
+                        let eq2_fv = d.fresh_fvar();
+                        let eq2 = d.kernel().fvar(eq2_fv);
+                        let lower2_fv = d.fresh_fvar();
+                        let lower2 = d.kernel().fvar(lower2_fv);
+                        let upper2_fv = d.fresh_fvar();
+                        let upper2 = d.kernel().fvar(upper2_fv);
+
+                        // `eq1' : a = n_pos*(neg q1)+r1`, from `eq1 : a =
+                        // negsucc_n*q1+r1` by rewriting `negsucc_n*q1` to
+                        // `n_pos*(neg q1)` via
+                        // `neg_mul_neg(negsucc_n, q1) : n_pos*(neg q1) =
+                        // negsucc_n*q1`, symm'd to the other direction.
+                        let rewrite_eq = |d: &mut IntDev<'_>, q: ExprId, r: ExprId, eq: ExprId| {
+                            let orig_prod = d.imul(negsucc_n, q);
+                            let neg_q = d.ineg(q);
+                            let new_prod = d.imul(n_pos, neg_q);
+                            let fwd = neg_mul_neg(d, negsucc_n, q); // : new_prod = orig_prod
+                            let h_eq = d.isymm(new_prod, orig_prod, fwd); // : orig_prod = new_prod
+                            d.int_eq_rewrite(orig_prod, new_prod, h_eq, eq, &|d, x| {
+                                let sum = d.iadd(x, r);
+                                d.ieq(a, sum)
+                            })
+                        };
+                        let eq1_new = rewrite_eq(d, q1, r1, eq1);
+                        let eq2_new = rewrite_eq(d, q2, r2, eq2);
+
+                        let core = {
+                            let f = d.int().ediv_emod_unique;
+                            d.const_app(
+                                f,
+                                &[
+                                    a, n_pos, neg_q1, r1, neg_q2, r2, pos, eq1_new, lower1, upper1,
+                                    eq2_new, lower2, upper2,
+                                ],
+                            )
+                        };
+                        // `core : neg q1 = neg q2 ∧ r1 = r2`.
+                        let neg_q1_eq_ty = d.ieq(neg_q1, neg_q2);
+                        let r1_eq_ty = d.ieq(r1, r2);
+                        let neg_q_eq = d.and_left(neg_q1_eq_ty, r1_eq_ty, core);
+                        let r_eq = d.and_right(neg_q1_eq_ty, r1_eq_ty, core);
+
+                        // `q1 = q2` from `neg q1 = neg q2` via `neg_neg`
+                        // twice: `q1 = neg(neg q1) = neg(neg q2) = q2`.
+                        let cong = d.icongr(neg_q1, neg_q2, neg_q_eq, &|d, x| d.ineg(x));
+                        let neg_neg_q1 = d.ineg(neg_q1);
+                        let neg_neg_q2 = d.ineg(neg_q2);
+                        let nn1 = neg_neg(d, q1); // : neg(neg q1) = q1
+                        let nn2 = neg_neg(d, q2); // : neg(neg q2) = q2
+                        let nn1_rev = d.isymm(neg_neg_q1, q1, nn1); // : q1 = neg(neg q1)
+                        let step_a = d.itrans(q1, neg_neg_q1, neg_neg_q2, nn1_rev, cong);
+                        let q_eq = d.itrans(q1, neg_neg_q2, q2, step_a, nn2);
+
+                        let target_q = d.ieq(q1, q2);
+                        let target_r = d.ieq(r1, r2);
+                        let and_intro_name = d.int().logic.and_intro;
+                        let final_and =
+                            d.const_app(and_intro_name, &[target_q, target_r, q_eq, r_eq]);
+
+                        let with_upper2 = d.lam_fv(upper2_fv, h.upper2, final_and);
+                        let with_lower2 = d.lam_fv(lower2_fv, h.lower2, with_upper2);
+                        let with_eq2 = d.lam_fv(eq2_fv, h.eq2, with_lower2);
+                        let with_upper1 = d.lam_fv(upper1_fv, h.upper1, with_eq2);
+                        let with_lower1 = d.lam_fv(lower1_fv, h.lower1, with_upper1);
+                        let with_eq1 = d.lam_fv(eq1_fv, h.eq1, with_lower1);
+                        d.lam_fv(h_fv, hyp_ty, with_eq1)
+                    }
+                }
+            },
+        );
         (stmt, proof)
     })?;
     Ok(())
