@@ -2069,6 +2069,23 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   ABSENT. That is the coverage trap below, with the tool broken rather than
   misaimed.
 
+- **`theorem_dependency_inventory` CONSUMES ONLY ITS FIRST NAME ARGUMENT AND
+  SILENTLY IGNORES THE REST — a three-name call reads as success.** Measured
+  2026-08-29 while checking seven new declarations at once. The run printed one
+  row and the summary line
+
+      1 theorems, 1 with dependencies, 1 edges
+
+  which looks like a clean result rather than a tool that discarded six of the
+  seven names it was handed. Exit 0 either way. This is the
+  checker-that-cannot-fail defect in its quietest form: the output is not empty,
+  not an error, and not obviously about the wrong subject.
+
+  For a MULTI-declaration check use `prelude_theorem_inventory` with a **tested
+  count**, and anchor the match on the prelude column — `complex` and `cpoint`
+  re-declare every `CReal` name, so an unanchored `grep -c` over a `CReal.*`
+  pattern comes out **3x** and a count-based guard passes for the wrong reason.
+
 - **`prelude_theorem_inventory` LISTS THEOREMS, NOT DEFINITIONS — so `Nat.add`
   returns ZERO ROWS, and every construction this project is proudest of is
   invisible to it.** Measured 2026-08-27 on one inventory of 5,130 rows, each
