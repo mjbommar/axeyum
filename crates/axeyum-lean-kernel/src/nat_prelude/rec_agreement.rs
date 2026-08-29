@@ -85,6 +85,7 @@ use super::ops::{
     NatDev, NatOps, agree_by_double_fuel_induction, agree_by_fuel_induction, bool_select_nat_same,
     cases_lt_bound, cases_mod_two, cases_zero_succ,
 };
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 use crate::name::NameId;
@@ -2472,7 +2473,8 @@ fn declare_land_aux_eq_zero_hard_leaf(
         );
 
         // candidate_divmod : divMod 2 succ_q rec_bc bit_bc
-        let add_term = d.add(d.mul(two, rec_bc), bit_bc);
+        let doubled_bc = d.mul(two, rec_bc);
+        let add_term = d.add(doubled_bc, bit_bc);
         let candidate_eq_ty = d.eq(succ_q, add_term);
         let candidate_bound_ty = d.lt(bit_bc, two);
         // `heq : Eq y (succ q)` is defeq `Eq add_term succ_q` (y unfolds to
