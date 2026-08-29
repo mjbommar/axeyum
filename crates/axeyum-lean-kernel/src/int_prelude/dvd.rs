@@ -640,10 +640,7 @@ pub(super) fn declare_emod_eq_zero_iff_dvd_general(d: &mut IntDev<'_>) -> Result
                         d.of_nat(nat_abs_b)
                     };
                     let name = d.int().lt_of_le_of_lt;
-                    d.const_app(
-                        name,
-                        &[zero, emod_ab, bound, emod_nonneg_ab, emod_lt_bound],
-                    )
+                    d.const_app(name, &[zero, emod_ab, bound, emod_nonneg_ab, emod_lt_bound])
                 };
                 let eq2 = {
                     // `Int.ediv_add_emod a b : Eq Int (b*(a/b)+a%b) a` —

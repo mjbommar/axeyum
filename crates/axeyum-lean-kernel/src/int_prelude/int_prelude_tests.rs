@@ -22,6 +22,7 @@
 //!   no `Quotient` primitive.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
+use super::ops::IntDev;
 use crate::ExprId;
 use crate::env::Declaration;
 use crate::nat_prelude::NatOps;
@@ -3874,4 +3875,145 @@ fn induction_on_needs_each_of_its_three_hypotheses() {
             value,
         })
         .expect("the unmutated statement must be accepted by the same route");
+}
+
+/// `Int.gcd_div` at three sign combinations `emod_natabs_bound_instantiates_
+/// at_positive_negative_and_zero_divisors` established as the discriminating
+/// set for this development: a POSITIVE divisor, a NEGATIVE divisor (a case
+/// the non-general `Int.gcd_div_gcd_div_gcd` cannot even state, since its
+/// divisor is always `ofNat (gcd i j) >= 0`), and the excluded-nowhere `c =
+/// 0` degenerate case this theorem's statement does NOT exclude (unlike
+/// Mathlib's route through `Nat.gcd_div`, which this development does not
+/// have). Builds `Int.dvd` witnesses by the SAME defeq-bridging idiom
+/// `Int.gcd_div`'s own proof uses (`irefl` at a concrete numeral, relying on
+/// the kernel's own defeq check to confirm `x` computes to `cc*w`), so a
+/// wrong witness would be REJECTED by the kernel here exactly as it would be
+/// inside the theorem's own proof.
+#[test]
+fn gcd_div_applies_at_a_positive_a_negative_divisor_and_at_zero() {
+    fn int_num(d: &mut IntDev<'_>, n: u32) -> ExprId {
+        let mut nat = d.zero();
+        for _ in 0..n {
+            nat = d.succ(nat);
+        }
+        d.of_nat(nat)
+    }
+
+    fn int_neg_num(d: &mut IntDev<'_>, magnitude: u32) -> ExprId {
+        assert!(magnitude >= 1, "negSucc represents magnitudes >= 1");
+        let mut nat = d.zero();
+        for _ in 0..(magnitude - 1) {
+            nat = d.succ(nat);
+        }
+        d.neg_succ(nat)
+    }
+
+    /// `Int.dvd cc x` from a witness `w`, via `Eq.refl x` relying on the
+    /// kernel's own defeq check that `x` computes to `cc*w` -- the SAME
+    /// idiom `Int.gcd_div`'s own proof uses (`exact_general`/`d.irefl`)
+    /// rather than hand-computing the product.
+    fn dvd_by_computation(d: &mut IntDev<'_>, cc: ExprId, x: ExprId, w: ExprId) -> ExprId {
+        let p = d.int();
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let cq = d.imul(cc, q);
+        let body = d.ieq(x, cq);
+        let int_ty = d.int_ty();
+        let pred = d.lam_fv(q_fv, int_ty, body);
+        let one = d.level_one();
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let proof = d.irefl(x);
+        d.apply(intro, &[int_ty, pred, w, proof])
+    }
+
+    /// Apply `Int.gcd_div` at concrete `a, b, cc` (with witnesses `wa, wb`
+    /// for `cc ∣ a`, `cc ∣ b`), confirm the kernel accepts it, and confirm
+    /// the conclusion's LHS/RHS both compute to `expected` (a `Nat`
+    /// numeral) -- so a wrong quotient anywhere would show up as a
+    /// non-defeq numeral, not merely a type-check pass.
+    fn check_gcd_div(
+        d: &mut IntDev<'_>,
+        a: ExprId,
+        b: ExprId,
+        cc: ExprId,
+        wa: ExprId,
+        wb: ExprId,
+        expected: u32,
+        label: &str,
+    ) {
+        let p = d.int();
+        let dvd_ca = dvd_by_computation(d, cc, a, wa);
+        let dvd_cb = dvd_by_computation(d, cc, b, wb);
+        let theorem = d.kernel().const_(p.gcd_div, vec![]);
+        let applied = d.apply(theorem, &[a, b, cc, dvd_ca, dvd_cb]);
+        d.kernel()
+            .infer(applied)
+            .unwrap_or_else(|e| panic!("Int.gcd_div at {label} should type-check: {e:?}"));
+
+        let qa = d.iediv(a, cc);
+        let qb = d.iediv(b, cc);
+        let lhs = d.const_app(p.gcd, &[qa, qb]);
+        let g = d.const_app(p.gcd, &[a, b]);
+        let cabs = d.const_app(p.nat_abs, &[cc]);
+        let rhs = NatOps::div(d, g, cabs);
+
+        let want = {
+            let mut n = d.zero();
+            for _ in 0..expected {
+                n = d.succ(n);
+            }
+            n
+        };
+        assert!(
+            d.kernel().def_eq(lhs, want),
+            "{label}: gcd(a/c,b/c) should compute to {expected}"
+        );
+        assert!(
+            d.kernel().def_eq(rhs, want),
+            "{label}: gcd(a,b)/natAbs(c) should compute to {expected}"
+        );
+    }
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.gcd_div).is_empty(),
+        "Int.gcd_div must rest on no axiom"
+    );
+    let mut d = IntDev::new(&mut k, p);
+
+    // --- positive divisor: a=12, b=18, c=6.  gcd(2,3) = gcd(12,18)/6 = 1. --
+    {
+        let a = int_num(&mut d, 12);
+        let b = int_num(&mut d, 18);
+        let cc = int_num(&mut d, 6);
+        let wa = int_num(&mut d, 2);
+        let wb = int_num(&mut d, 3);
+        check_gcd_div(&mut d, a, b, cc, wa, wb, 1, "a=12,b=18,c=6 (positive)");
+    }
+
+    // --- negative divisor: a=12, b=18, c=-6 -- a case
+    //     `Int.gcd_div_gcd_div_gcd` cannot even state (its divisor is always
+    //     `ofNat (gcd i j) >= 0`).  ediv(12,-6)=-2, ediv(18,-6)=-3;
+    //     gcd(-2,-3) = gcd(12,18)/natAbs(-6) = 1. ---
+    {
+        let a = int_num(&mut d, 12);
+        let b = int_num(&mut d, 18);
+        let cc = int_neg_num(&mut d, 6);
+        let wa = int_neg_num(&mut d, 2);
+        let wb = int_neg_num(&mut d, 3);
+        check_gcd_div(&mut d, a, b, cc, wa, wb, 1, "a=12,b=18,c=-6 (negative)");
+    }
+
+    // --- c = 0: the degenerate case Mathlib's own hypotheses do NOT
+    //     exclude, and which this proof handles rather than refuses.
+    //     dvd 0 0 holds at witness 0; both sides collapse to 0. ---
+    {
+        let a = d.izero();
+        let b = d.izero();
+        let cc = d.izero();
+        let wa = d.izero();
+        let wb = d.izero();
+        check_gcd_div(&mut d, a, b, cc, wa, wb, 0, "a=0,b=0,c=0 (degenerate)");
+    }
 }
