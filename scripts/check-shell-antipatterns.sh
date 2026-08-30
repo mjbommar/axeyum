@@ -45,6 +45,17 @@ for f in $(git ls-files '*.sh'); do
   # A linter that matches its own pattern strings is reporting on its source
   # text, not on behaviour. Measured the moment the gate first ran in CI.
   [ "$f" = "scripts/check-shell-antipatterns.sh" ] && continue
+  # ITS CONTROLS ARE EXCLUDED FOR THE SAME REASON, and it is the reason one line
+  # above: a suite proving this detector catches `cmd | grep -q x` has to
+  # CONTAIN `cmd | grep -q x`. All six hits in that file are single-quoted
+  # arguments to its `case_` helper -- fixture data, never executed. Read every
+  # one before excluding; a real pipeline there would be a genuine finding.
+  #
+  # The cost, stated rather than hidden: a real `| grep -q` written into the
+  # controls file later would not be flagged. Bounded -- it is a hundred lines
+  # of fixtures, and it exercises the detector directly, so it can conceal a bug
+  # in itself but never a bug in the detector.
+  [ "$f" = "scripts/tests/test-check-shell-antipatterns.sh" ] && continue
   # `grep -c`, deliberately: this gate must not contain the bug it bans.
   [ "$(grep -cE 'set -[a-z]*o pipefail' "$f")" -gt 0 ] || continue
   # Whole-line comments are prose, not code: a commented-out example must not
@@ -73,6 +84,17 @@ pipe_status=0
 for f in $(git ls-files '*.sh'); do
   [ -e "$f" ] || continue
   [ "$f" = "scripts/check-shell-antipatterns.sh" ] && continue
+  # ITS CONTROLS ARE EXCLUDED FOR THE SAME REASON, and it is the reason one line
+  # above: a suite proving this detector catches `cmd | grep -q x` has to
+  # CONTAIN `cmd | grep -q x`. All six hits in that file are single-quoted
+  # arguments to its `case_` helper -- fixture data, never executed. Read every
+  # one before excluding; a real pipeline there would be a genuine finding.
+  #
+  # The cost, stated rather than hidden: a real `| grep -q` written into the
+  # controls file later would not be flagged. Bounded -- it is a hundred lines
+  # of fixtures, and it exercises the detector directly, so it can conceal a bug
+  # in itself but never a bug in the detector.
+  [ "$f" = "scripts/tests/test-check-shell-antipatterns.sh" ] && continue
   n=$(grep -vE '^[[:space:]]*#' "$f" | grep -cE '\|.*;[[:space:]]*(echo|printf)[^;]*\$\?')
   if [ "$n" -gt 0 ]; then
     echo "SHELL_ANTIPATTERN_ERROR|$f reads \$? after a pipeline ($n occurrence(s));" \
