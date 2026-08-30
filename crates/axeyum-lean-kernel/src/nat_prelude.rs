@@ -320,8 +320,8 @@ use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
 use totient_lemmas::{
-    declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_even,
-    declare_totient_lemmas_all,
+    declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_coprime_totient_iff,
+    declare_totient_even, declare_totient_lemmas_all,
 };
 use totient_multiplicative::declare_gcd_comm;
 use transposition::{
@@ -1786,6 +1786,22 @@ pub struct NatPrelude {
     /// [`NatPrelude::totient_eq_one_iff`] by direct `mp`/`mpr` function
     /// composition (no general `iff_trans` helper).
     pub odd_totient_iff: NameId,
+    /// `Nat.totient_coprime_totient_iff : ∀ m n, Iff (Eq (gcd (totient m)
+    /// (totient n)) one) (Or (Or (Eq m one) (Eq m two)) (Or (Eq n one) (Eq n
+    /// two)))` (`F:ml430-nat-totient-coprime-totient-iff-3932cf83`). `mpr` is
+    /// unconditional composition: whichever disjunct holds forces one side's
+    /// totient to `one` ([`totient_eq_one_iff`](Self::totient_eq_one_iff)),
+    /// and `gcd 1 x = 1` / `gcd x 1 = 1` regardless of the other argument
+    /// (`coprime_one_left_iff`/`coprime_one_right_iff`). `mp`'s hard case is
+    /// `2 < m` and `2 < n` both holding: two even naturals
+    /// ([`totient_even`](Self::totient_even)) cannot be coprime, since each
+    /// is divisible by `2` (`succ_mul`/`one_mul` turn the `Even` witness
+    /// `k+k` into `mul two k`) and `dvd_gcd` then forces `2 | 1`, refuted by
+    /// peeling one `succ` to `not_succ_le_zero` (the same ending
+    /// `totient_le_one_contradiction_above_two` uses). The `m = 0` / `n = 0`
+    /// sub-cases route through `gcd_zero_left` (this prelude has no named
+    /// `gcd_zero_right`, so the `n = 0` sub-case bridges via `gcd_comm` first).
+    pub totient_coprime_totient_iff: NameId,
     /// `Nat.beq_eq_false_of_ne : ∀ a b, Not (Eq Nat a b) → beq a b = false` —
     /// the converse of `ne_of_beq_eq_false`, closing the boolean/propositional
     /// bridge from the other side. Proved by deciding `beq a b` itself
@@ -4037,6 +4053,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
             odd_totient_iff: kernel.name_str(nat, "odd_totient_iff"),
+            totient_coprime_totient_iff: kernel.name_str(nat, "totient_coprime_totient_iff"),
             beq_eq_false_of_ne: kernel.name_str(nat, "beq_eq_false_of_ne"),
             totient: kernel.name_str(nat, "totient"),
             count_range_eq_pred_of_only_zero_false: kernel
@@ -4583,6 +4600,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_parity_all`, above that).
         declare_odd_totient_iff_eq_one(&mut d, &p)?;
         declare_odd_totient_iff(&mut d, &p)?;
+        // `Nat.totient_coprime_totient_iff`: needs `Nat.totient_even`, just
+        // declared above.
+        declare_totient_coprime_totient_iff(&mut d, &p)?;
         // Needs `Nat.Even`/`Nat.Odd`/`even_or_odd_exists`/`even_not_odd`, just
         // declared by `declare_parity_all` above -- cannot run alongside the
         // other `coprime_*` declarations near `declare_primes` since parity
