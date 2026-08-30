@@ -711,3 +711,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0733](adr-0733-supon-bounds-f-at-every-point-and-evt-becomes-comparable.md) | `CReal.supOn_ub` is landed, axiom-free, first-attempt kernel | accepted |
 | [0745](adr-0745-number-theory-certificates-are-cas-internal-and-adversarially-gated.md) | Classical number theory gets independently re-derivable | accepted |
 | [0746](adr-0746-the-safety-matrix-is-generated-and-gated.md) | S0 of ADR-0717 measured. 2,117 proved facts x 9 protections, | accepted |
+| [0760](adr-0760-independent-replay-is-graded-per-declaration-by-name.md) | S4 of ADR-0717. A replay grade is membership of a declaration's | accepted |
