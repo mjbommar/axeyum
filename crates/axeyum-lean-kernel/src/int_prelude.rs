@@ -94,6 +94,7 @@ mod nat_abs;
 pub(crate) mod ops;
 mod order;
 mod order_add;
+mod order_coercion;
 mod parity;
 mod prod;
 mod rat;
@@ -203,6 +204,27 @@ pub struct IntPrelude {
     pub lt_of_nat_add: NameId,
     /// `lt_dest : ∀ (a b : Int), lt a b → ∃ (i : Nat), b = a + ofNat (i+1)`.
     pub lt_dest: NameId,
+    /// `le_of_ofNat_le_ofNat : ∀ {m n : Nat}, le (ofNat m) (ofNat n) → Nat.le m n`
+    /// — Mathlib's coercion-order lemma. `Int.le (ofNat m) (ofNat n)` is
+    /// definitionally `Nat.le m n` (`define_binary_int`'s `of_of` branch for
+    /// `p.le` is literally `NatOps::le`), so the proof is the hypothesis
+    /// itself under that defeq.
+    pub le_of_ofnat_le_ofnat: NameId,
+    /// `lt_of_ofNat_lt_ofNat : ∀ {n m : Nat}, lt (ofNat n) (ofNat m) → Nat.lt n m`
+    /// — the `lt` sibling of [`le_of_ofnat_le_ofnat`](Self::le_of_ofnat_le_ofnat),
+    /// same defeq argument against `NatOps::lt`.
+    pub lt_of_ofnat_lt_ofnat: NameId,
+    /// `Int.le.elim : ∀ {a b}, le a b → ∀ {P : Prop}, (∀ (n : Nat), a + ofNat n = b → P) → P`
+    /// — the CPS elimination form of [`le_dest`](Self::le_dest)'s existential,
+    /// built by `Exists.elim` (`ops::exists_elim`) over `le_dest`'s witness,
+    /// flipping its `b = a + ofNat i` equation with `isymm`. Declared as a
+    /// child of `le` (`Int.le.elim`), not of `Int` directly — the same
+    /// namespacing `Nat.le.step` uses for a name under an unrelated head.
+    pub le_elim: NameId,
+    /// `Int.lt.elim : ∀ {a b}, lt a b → ∀ {P : Prop}, (∀ (n : Nat), a + ofNat n.succ = b → P) → P`
+    /// — the `lt` sibling of [`le_elim`](Self::le_elim), built the same way
+    /// from [`lt_dest`](Self::lt_dest).
+    pub lt_elim: NameId,
 
     // --- operations ----------------------------------------------------------
     /// `add : Int → Int → Int`.
@@ -1294,6 +1316,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
     let child = |kernel: &mut Kernel, name: &str| kernel.name_str(z, name);
     let nat_root = nat.nat;
     let rat = kernel.name_str(anon, "Rat");
+    let le_name = child(kernel, "le");
+    let lt_name = child(kernel, "lt");
+    let le_elim = kernel.name_str(le_name, "elim");
+    let lt_elim = kernel.name_str(lt_name, "elim");
     IntPrelude {
         logic: nat.logic,
         nat,
@@ -1329,14 +1355,18 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         le_dest: child(kernel, "le_dest"),
         lt_of_nat_add: child(kernel, "lt_ofNat_add"),
         lt_dest: child(kernel, "lt_dest"),
+        le_of_ofnat_le_ofnat: child(kernel, "le_of_ofNat_le_ofNat"),
+        lt_of_ofnat_lt_ofnat: child(kernel, "lt_of_ofNat_lt_ofNat"),
+        le_elim,
+        lt_elim,
         add: child(kernel, "add"),
         mul: child(kernel, "mul"),
         neg: child(kernel, "neg"),
         sub: child(kernel, "sub"),
         zero: child(kernel, "zero"),
         one: child(kernel, "one"),
-        le: child(kernel, "le"),
-        lt: child(kernel, "lt"),
+        le: le_name,
+        lt: lt_name,
         le_refl: child(kernel, "le_refl"),
         le_trans: child(kernel, "le_trans"),
         lt_irrefl: child(kernel, "lt_irrefl"),
@@ -1633,6 +1663,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sub::declare_mul_sub(&mut d)?;
         add_basics::declare_add_basics(&mut d)?;
         order::declare_difference_lemmas(&mut d)?;
+        order_coercion::declare_ofnat_order_coercions(&mut d)?;
+        order_coercion::declare_dest_elim(&mut d)?;
         order::declare_additive_order(&mut d)?;
         order_add::declare_add_le_add_left_right(&mut d)?;
         order_add::declare_add_le_add_iff(&mut d)?;

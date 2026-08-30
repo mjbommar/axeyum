@@ -129,6 +129,7 @@ use crate::build_logic_prelude;
 use crate::name::NameId;
 
 mod add_basics;
+mod add_pos;
 mod algebra;
 mod asc_factorial;
 mod base_induction;
@@ -208,6 +209,7 @@ mod xor_trichotomy;
 pub use ops::{NatDev, NatOps, NatState};
 
 use add_basics::declare_add_basics;
+use add_pos::declare_add_pos;
 use algebra::{
     declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
     declare_mul_no_zero_divisors, declare_multiplicative_theorems, declare_subtraction_theorems,
@@ -808,6 +810,13 @@ pub struct NatPrelude {
     /// `Bool.false ≠ Bool.true` discriminator (`NatOps::false_true_elim`), so
     /// no new `Bool.noConfusion` machinery was needed for this one.
     pub ne_of_beq_eq_false: NameId,
+    /// `Nat.add_pos_right : ∀ {b : Nat} (a : Nat), Lt zero b → Lt zero (add a b)`
+    /// — Mathlib's `Int.add_pos_right`'s `Nat` sibling. A case split on `b`:
+    /// at `zero` the hypothesis is impossible ([`not_lt_zero`](Self::not_lt_zero));
+    /// at `succ k`, `add a (succ k)` is definitionally `succ (add a k)`, so
+    /// the conclusion is [`NatOps::zero_lt_succ`](super::ops::NatOps::zero_lt_succ),
+    /// independent of the hypothesis.
+    pub add_pos_right: NameId,
 
     // --- boolean `≤`, bridging `Nat.ble` to `Nat.le` -------------------------
     /// `Nat.ble : Nat → Nat → Bool` — the executable analogue of [`beq`](Self::beq):
@@ -3824,6 +3833,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             le_of_lt_add_one: kernel.name_str(nat, "le_of_lt_add_one"),
             zero_lt_of_ne_zero: kernel.name_str(nat, "zero_lt_of_ne_zero"),
             ne_of_beq_eq_false: kernel.name_str(nat, "ne_of_beq_eq_false"),
+            add_pos_right: kernel.name_str(nat, "add_pos_right"),
             ble: kernel.name_str(nat, "ble"),
             ble_self_eq_true: kernel.name_str(nat, "ble_self_eq_true"),
             ble_succ_eq_true: kernel.name_str(nat, "ble_succ_eq_true"),
@@ -4376,6 +4386,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_zero_or_succ(&mut d, &p)?;
         declare_order_extra(&mut d, &p)?;
         declare_order_more(&mut d, &p)?;
+        declare_add_pos(&mut d, &p)?;
         declare_add_basics(&mut d, &p)?;
         declare_boolean_le(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
