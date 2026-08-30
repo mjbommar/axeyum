@@ -195,6 +195,7 @@ now. Nothing was deleted.
 | 2026-08-29 | totient-counting | `Nat.countRange_succ_of_true`, `Nat.countRange_le_of_le`, `Nat.countRange_ge_two_of_two_witnesses` — the general "two distinct witnesses ⇒ count ≥ 2" machinery (piece 1 of the nat-totient triage), axiom-free, chosen over the `Int.prod_range_pairing_collapse`-transport route (checked, does not corollary) and the multiplicative-formula piece because it needed no new induction. Does not close any mirror by itself; the exact remaining trichotomy assembly for `totient_eq_one_iff`/`dvd_two_of_totient_le_one` is recorded in `totient_lemmas.rs`'s module doc for the next lane. |
 | 2026-08-29 | nat-stragglers | `Nat.add_div_of_dvd_add_add_one` — the ninth/last `ml430` add/div/mod shift-family mirror, axiom-free (new file `nat_prelude/div_mod_lemmas.rs` extension). |
 | 2026-08-29 | nat-stragglers | `Nat.base_induction` — strong induction over `Nat.lt`'s well-foundedness, axiom-free (new file `nat_prelude/base_induction.rs`); confirmed the pinned source is Lean core (`Init.Data.Nat.Div.Lemmas`), not Mathlib proper. |
+| 2026-08-29 | `2f9162c98` | Five `Nat` mul/div order mirrors (`mul_lt_mul_left`/`right`, `lt_of_mul_lt_mul_left`/`right`, `div_lt_of_lt_mul`) in a new `nat_prelude/mul_order_lemmas.rs`; five facts flipped to `proved`. |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -21915,6 +21916,68 @@ short chain of already-declared `Iff`s. Build Step 3 as a standalone,
 `totient`-independent lemma first (it has no `totient`/`gcd` content at
 all), test it in isolation against a synthetic `h`/`L`, and only then wire
 it to Steps 0-2 and 4.
+
+**Closed all five targets** (`DONE`, nat-mul-order, 2026-08-29): `2f9162c98`.
+New file `crates/axeyum-lean-kernel/src/nat_prelude/mul_order_lemmas.rs`
+declares `Nat.mul_lt_mul_left`, `Nat.mul_lt_mul_right`,
+`Nat.lt_of_mul_lt_mul_left`, `Nat.lt_of_mul_lt_mul_right`,
+`Nat.div_lt_of_lt_mul`, dispatched last in `nat_prelude.rs`'s build order.
+
+Step 0 (`nat_theorem_inventory --release`) confirmed all five absent under any
+rendered type before writing any proof — no duplicate work.
+
+The two `lt_of_mul_lt_mul_*` cancellation lemmas carry **no** positivity
+hypothesis, matching the pinned Mathlib v4.30 source exactly (`a*b < a*c` at
+`a = 0` is vacuous, so requiring `0 < a` would only be a weaker true
+statement). Proved by contradiction via `lt_or_ge` + `mul_le_mul_left`/
+`le_trans`/`lt_irrefl`, no `Nat.rec` case split. `mul_lt_mul_left`/`right` are
+the matching `Iff` (`mp` = the cancellation lemma, `mpr` = a positive-monotone
+core). `div_lt_of_lt_mul` is the one real case split, on the divisor
+(`cases_zero_succ`): `n = 0` is absurd via `zero_mul`/`not_lt_zero`; `n = succ
+n'` is `div_mod_lt_mul_iff`'s forward direction fed the `div_mod_exec`
+witness.
+
+**One real bug, found by bisection.** A first draft of
+`mul_lt_mul_pos_right_core` assumed `mul(succ b, a) = add(mul b a, a)` held BY
+REFL — copying the pattern that genuinely does hold in the *left* core
+(`mul_succ`, a refl-provable defining equation, since `Nat.mul` recurses on
+its right argument). The left-successor form (`succ_mul`) is instead a real
+theorem under "multiplicative theorems", proved by induction. This poisoned
+the whole prelude build (`TypeMismatch` across all 169 `nat_prelude::` tests);
+bisected by toggling the three new `declare_*` dispatch calls one at a time
+against `nat_theorem_inventory`, then further by disabling the second
+`d.theorem` call inside `declare_mul_lt_mul_iff`. Fixed with an explicit
+`transport` along `succ_mul`.
+
+`theorem_names`/`the_build_is_deterministic` pin: `93 + 538` → `93 + 543`
+(new value taken from the panic's own mismatch, not hand-incremented). New
+test `mul_order_lemmas_apply_at_concrete_and_boundary_instances` applies all
+five at concrete numerals, including the boundary `a = 1` (smallest value
+satisfying `0 < a`) and `n = 1` (smallest divisor taking the `succ`
+case-split branch), plus `7 < 2*4` at the `div_lt_of_lt_mul` boundary.
+Confirmed "1 passed", never "0 filtered out".
+
+Checks run (foreground): `cargo fmt --all --check` clean;
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` clean;
+`env -u RUST_MIN_STACK scripts/cargo-serialized.sh test -p axeyum-lean-kernel
+--lib nat_prelude::` → **170 passed, 0 failed** (169 pre-existing + 1 new);
+`python3 scripts/check-test-attribute-integrity.py` → 0 findings.
+
+Facts closed (`open` → `proved`): `F:ml430-nat-mul-lt-mul-left-af33301e`,
+`F:ml430-nat-mul-lt-mul-right-de5b6046`,
+`F:ml430-nat-lt-of-mul-lt-mul-left-234e8530`,
+`F:ml430-nat-lt-of-mul-lt-mul-right-54c1120b`,
+`F:ml430-nat-div-lt-of-lt-mul-818dc4c7`. Each carries three evidence rows
+(exact rendered-type match against `nat_theorem_inventory`, axiom-footprint
+via `nat_axiom_inventory --require-axiom-free nat`, coverage via
+`every_nat_declaration_is_checked_and_axiom_free`); every `checker_command`
+verified to pass on the real name and fail (count 0) on a nonexistent one.
+`depends_on` edges added via `scripts/check-fact-depends-derived.py --fix`.
+`python3 scripts/validate-facts.py` → 0 errors.
+
+Not attempted: no further targets in this family were assigned. Next lane
+picking up `Nat` order work should re-run `prelude_theorem_inventory
+--release` step 0 before starting, per the standing rule.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
