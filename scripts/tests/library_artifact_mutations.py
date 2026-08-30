@@ -37,7 +37,10 @@ GOOD_PACK = REPO_ROOT / "artifacts" / "library-artifact" / "packs" / "nat-add-co
 GOOD_TYPEPROJ = REPO_ROOT / "artifacts" / "library-artifact" / "packs" / "nat-add-comm-v1.typeproj.json"
 POPULATION_DIR = REPO_ROOT / "artifacts" / "library-artifact" / "populations"
 
-MUTATION_NAMES = ["missing", "duplicate", "reordered", "truncated", "value_exposed"]
+MUTATION_NAMES = [
+    "missing", "duplicate", "reordered", "truncated", "value_exposed",
+    "unstated_provenance",
+]
 # Which guard, in scripts/check-library-artifact-contract.py, is supposed to
 # be the ONLY one that rejects each mutation.
 MUTATION_TO_GUARD = {
@@ -46,6 +49,7 @@ MUTATION_TO_GUARD = {
     "reordered": "REORDERED",
     "truncated": "TRUNCATED",
     "value_exposed": "VALUE_EXPOSED",
+    "unstated_provenance": "PROVENANCE",
 }
 
 
@@ -124,6 +128,19 @@ def build_truncated(pack: dict) -> dict:
     return mutated
 
 
+
+def build_unstated_provenance(pack: dict) -> dict:
+    """A pack that does not say whether its text was EXTRACTED or written.
+
+    The version pins beside it are real either way, so without this field a
+    hand-authored pack is indistinguishable from `lean4export` output to
+    anything that reads the JSON rather than the README.
+    """
+    out = copy.deepcopy(pack)
+    out.pop("text_provenance", None)
+    return out
+
+
 def build_value_exposed(typeproj: dict) -> dict:
     """Inject a `value` key -- proof-derived data -- into one record of the
     type-only producer projection. The full pack is untouched for this
@@ -159,6 +176,7 @@ def write_fixtures(target_dir: Path) -> dict:
     _write("reordered", build_reordered(pack), typeproj)
     _write("truncated", build_truncated(pack), typeproj)
     _write("value_exposed", pack, build_value_exposed(typeproj))
+    _write("unstated_provenance", build_unstated_provenance(pack), typeproj)
 
     reg_dir = target_dir / "populations"
     if reg_dir.exists():

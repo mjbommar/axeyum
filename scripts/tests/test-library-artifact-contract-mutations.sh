@@ -27,8 +27,8 @@ cp "$REPO_ROOT/scripts/check-library-artifact-contract.py" "$SCRATCH/scripts/che
 /usr/bin/python3 "$REPO_ROOT/scripts/tests/library_artifact_mutations.py" \
   --write-fixtures "$SCRATCH/fixtures" > /dev/null
 
-FIXTURES=(good missing duplicate reordered truncated value_exposed)
-GUARDS=(MISSING DUPLICATE REORDERED TRUNCATED VALUE_EXPOSED)
+FIXTURES=(good missing duplicate reordered truncated value_exposed unstated_provenance)
+GUARDS=(MISSING DUPLICATE REORDERED TRUNCATED VALUE_EXPOSED PROVENANCE)
 # Which fixture each guard is supposed to be the ONLY thing rejecting.
 declare -A GUARD_TARGET=(
   [MISSING]=missing
@@ -36,6 +36,7 @@ declare -A GUARD_TARGET=(
   [REORDERED]=reordered
   [TRUNCATED]=truncated
   [VALUE_EXPOSED]=value_exposed
+  [PROVENANCE]=unstated_provenance
 )
 declare -A STUB=(
   [MISSING]='def check_missing_roots(pack, population_dir):\n    return []\n'
@@ -43,6 +44,7 @@ declare -A STUB=(
   [REORDERED]='def check_pack_digest(pack):\n    return []\n'
   [TRUNCATED]='def check_record_digests(pack):\n    return []\n'
   [VALUE_EXPOSED]='def check_typeproj_no_value_leak(typeproj_path):\n    return []\n'
+  [PROVENANCE]='def check_text_provenance(pack, pack_path):\n    return []\n'
 )
 
 clear_pycache() {
@@ -74,7 +76,7 @@ if [ "$good_count" -ne 1 ]; then
   echo "FATAL: baseline does not pass the good fixture -- fixtures or validator are broken" >&2
   exit 1
 fi
-for f in missing duplicate reordered truncated value_exposed; do
+for f in missing duplicate reordered truncated value_exposed unstated_provenance; do
   count="$(echo "$baseline" | grep -c "^${f}=FAIL\$")"
   if [ "$count" -ne 1 ]; then
     echo "FATAL: baseline does not reject '$f' -- fixtures or validator are broken" >&2
@@ -155,4 +157,4 @@ if [ "$overall_pass" -ne 1 ]; then
   echo "test-library-artifact-contract-mutations: FAILED" >&2
   exit 1
 fi
-echo "test-library-artifact-contract-mutations: all 5 guards kill exactly their own mutation"
+echo "test-library-artifact-contract-mutations: all ${#GUARDS[@]} guards kill exactly their own mutation"

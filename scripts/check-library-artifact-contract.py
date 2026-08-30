@@ -42,8 +42,11 @@ TRUSTED_KINDS = {"Inductive", "Constructor", "Recursor", "Axiom", "Opaque", "Quo
 ALL_KINDS = TRUSTED_KINDS | {"Definition", "Theorem"}
 
 REQUIRED_PACK_KEYS = {
-    "contract_version", "text_provenance",
-    "lean_version", "lean_commit", "mathlib_version",
+    # `text_provenance` is deliberately NOT here: `check_text_provenance` owns
+    # both its absence and a wrong value. Listing it in both places made two
+    # guards reject one fixture, so neither could be shown load-bearing --
+    # the shared-rejection-path defect, arriving through a redundant check.
+    "contract_version", "lean_version", "lean_commit", "mathlib_version",
     "mathlib_commit", "normalization_version", "renderer_version",
     "source_population", "trusted_declaration_identities", "pack_digest",
     "declarations",
@@ -149,7 +152,6 @@ def check_basic_shape(pack: dict, path: Path) -> list[str]:
     return errors
 
 
-# GUARD:MISSING begin
 # `lean_commit` and `mathlib_commit` are real pins, so a pack READS as extracted
 # output whatever its text actually is. C0's pack is hand-authored: the README
 # says so four times and the pack said so nowhere, which is a disclosure that a
@@ -161,6 +163,7 @@ TEXT_PROVENANCE = {
 }
 
 
+# GUARD:PROVENANCE begin
 def check_text_provenance(pack: dict, pack_path) -> list[str]:
     got = pack.get("text_provenance")
     if got not in TEXT_PROVENANCE:
@@ -171,7 +174,10 @@ def check_text_provenance(pack: dict, pack_path) -> list[str]:
             "beside it look identical either way"
         ]
     return []
+# GUARD:PROVENANCE end
 
+
+# GUARD:MISSING begin
 
 def check_missing_roots(pack: dict, population_dir: Path) -> list[str]:
     """The pack's declared `source_population.population_id` selects an
