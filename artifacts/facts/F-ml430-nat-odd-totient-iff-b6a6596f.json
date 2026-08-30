@@ -6,16 +6,44 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, Odd n.totient ↔ n = 1 ∨ n = 2",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.odd_totient_iff",
+    "kernel_statement": "theorem Nat.odd_totient_iff : ((x0 : AxNat) -> Iff (AxNat.Odd (AxNat.totient x0)) (Or (Eq.{1} AxNat x0 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x0 (AxNat.succ (AxNat.succ AxNat.zero)))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:ml430-nat-odd-totient-iff-eq-one-d0491d84",
+    "F:ml430-nat-totient-eq-one-iff-68d883a0"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.odd_totient_iff",
+      "kind": "kernel-term",
+      "supports": "Odd (totient n) iff n = 1 or n = 2",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- odd_totient_iff 2>/dev/null | grep -Ec '^Nat\\.odd_totient_iff[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. Route: `Nat.odd_totient_iff_eq_one` (`Odd (totient n) <-> totient n = 1`) composed with `Nat.totient_eq_one_iff` (`totient n = 1 <-> n = 1 \\/ n = 2`) by direct `mp`/`mpr` function composition, no general `iff_trans` helper. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed (confirmed 1 for the real name, distinguished from `Nat.odd_totient_iff_eq_one` by the anchored `[[:space:]]` after the name)."
+    },
+    {
+      "id": "footprint-Nat.odd_totient_iff",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.odd_totient_iff` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane totient-even-finish",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.odd_totient_iff` and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +54,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Honest flip, confirmed against the pinned Mathlib v4.30 source per `F:ml430-nat-totient-eq-zero-3be161d6`'s own mirror-flip check (same `Nat.totient` construction, `nat_prelude/totient.rs`). `formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output. This proof composes two ALREADY-PROVED facts (`depends_on`) with no new arithmetic of its own beyond the `Iff` composition. This fact's partition in `artifacts/autogenesis/nursery-v2-extension.json` is `development`, not held-out."
 }

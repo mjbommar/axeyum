@@ -319,7 +319,10 @@ use sqrt::declare_sqrt_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
-use totient_lemmas::declare_totient_lemmas_all;
+use totient_lemmas::{
+    declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_even,
+    declare_totient_lemmas_all,
+};
 use totient_multiplicative::declare_gcd_comm;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
@@ -1755,6 +1758,34 @@ pub struct NatPrelude {
     /// `coprime_self_add_right`/`coprime_symmetric` to supply this lemma's
     /// two hypotheses, but nothing here mentions `gcd`/`totient`.
     pub count_range_reversal_even: NameId,
+    /// `Nat.totient_even : ∀ n, Lt two n → Even (totient n)` — Euler's
+    /// totient is even above `2` (`F:ml430-nat-totient-even-28e0415f`).
+    /// Peels index `0` off `[0,n)` (`countRange_split(f,1,n-1)`, `f 0 =
+    /// false` since `n > 1`), then applies
+    /// [`count_range_reversal_even`](Self::count_range_reversal_even) to the
+    /// shifted predicate `h(k) := f(1+k)` at `L := n-1`: the reflection
+    /// invariance chains `gcd(n-k,n) = gcd(k,n)` through
+    /// `coprime_self_add_right`/`coprime_symmetric` (no new gcd fact), and
+    /// the no-fixed-point hypothesis derives `2 < n` contradicts a fixed
+    /// point directly (`gcd k n = 1` at a fixed point forces `n = 2k` and
+    /// `k | gcd k n = 1`, so `k = 1`, `n = 2`). See `totient_lemmas.rs`'s
+    /// module doc for the full route (`docs/plan/status/295-totient-even.md`,
+    /// `299-totient-even-exec.md`).
+    pub totient_even: NameId,
+    /// `Nat.odd_totient_iff_eq_one : ∀ n, Iff (Odd (totient n)) (Eq (totient
+    /// n) one)` (`F:ml430-nat-odd-totient-iff-eq-one-d0491d84`) — both
+    /// unblocked by [`totient_even`](Self::totient_even): `mp`'s hard case
+    /// (`2 < n`) refutes `Odd (totient n)` against `Even (totient n)`
+    /// (`totient_even` + `odd_not_even`); the `n ≤ 2` cases and `mpr` are
+    /// cheap `def_eq`/existential-witness closures, the same shape
+    /// `totient_eq_one_iff` already uses.
+    pub odd_totient_iff_eq_one: NameId,
+    /// `Nat.odd_totient_iff : ∀ n, Iff (Odd (totient n)) (Or (Eq n one) (Eq n
+    /// two))` (`F:ml430-nat-odd-totient-iff-b6a6596f`) —
+    /// [`odd_totient_iff_eq_one`](Self::odd_totient_iff_eq_one) composed with
+    /// [`NatPrelude::totient_eq_one_iff`] by direct `mp`/`mpr` function
+    /// composition (no general `iff_trans` helper).
+    pub odd_totient_iff: NameId,
     /// `Nat.beq_eq_false_of_ne : ∀ a b, Not (Eq Nat a b) → beq a b = false` —
     /// the converse of `ne_of_beq_eq_false`, closing the boolean/propositional
     /// bridge from the other side. Proved by deciding `beq a b` itself
@@ -4003,6 +4034,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_congr: kernel.name_str(nat, "countRange_congr"),
             count_range_split: kernel.name_str(nat, "countRange_split"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
+            totient_even: kernel.name_str(nat, "totient_even"),
+            odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
+            odd_totient_iff: kernel.name_str(nat, "odd_totient_iff"),
             beq_eq_false_of_ne: kernel.name_str(nat, "beq_eq_false_of_ne"),
             totient: kernel.name_str(nat, "totient"),
             count_range_eq_pred_of_only_zero_false: kernel
@@ -4537,6 +4571,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `zero_lt_succ` (order lemmas, far above), and `add_assoc`/
         // `add_comm`/`zero_add`/`succ_add` (additive theorems, far above).
         declare_count_range_reversal_even(&mut d, &p)?;
+        // `Nat.totient_even`: needs `Nat.countRange_reversal_even`, just
+        // declared above, and `Nat.Even` (`declare_parity_all`, just above
+        // that) -- see `totient_lemmas.rs`'s module doc / the doc comment on
+        // `declare_totient_lemmas_all` for why this cannot be dispatched
+        // alongside the rest of that file's `declare_totient_lemmas_all`
+        // call, far above.
+        declare_totient_even(&mut d, &p)?;
+        // `Nat.odd_totient_iff_eq_one`/`Nat.odd_totient_iff`: need
+        // `Nat.totient_even`, just declared above, and `Nat.odd_not_even`
+        // (`declare_parity_all`, above that).
+        declare_odd_totient_iff_eq_one(&mut d, &p)?;
+        declare_odd_totient_iff(&mut d, &p)?;
         // Needs `Nat.Even`/`Nat.Odd`/`even_or_odd_exists`/`even_not_odd`, just
         // declared by `declare_parity_all` above -- cannot run alongside the
         // other `coprime_*` declarations near `declare_primes` since parity

@@ -790,6 +790,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_ge_two_of_two_witnesses,
         p.dvd_two_of_totient_le_one,
         p.totient_eq_one_iff,
+        p.totient_even,
+        p.odd_totient_iff_eq_one,
+        p.odd_totient_iff,
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
@@ -2118,6 +2121,205 @@ fn totient_eq_one_iff_applies_at_small_numerals_and_symbolically() {
     let inferred_n =
         f.k.infer_in(iff_n, &mut ctx)
             .expect("totient_eq_one_iff must apply at a free variable");
+    assert!(f.k.def_eq(inferred_n, expected_n));
+}
+
+/// `Nat.totient_even` at `n = 6` (`totient 6 = 2`, EVEN) and `n = 9`
+/// (`totient 9 = 6`, EVEN) — both already confirmed by
+/// `totient_computes_on_small_numerals`'s own reduction, reused here rather
+/// than re-derived — plus a genuinely free `n`/`hn`. `Even`'s witness is
+/// existential, so this checks the STATED type, not the witness value;
+/// discriminating negative reduction controls for the underlying `totient`
+/// computation already live in `totient_computes_on_small_numerals`.
+#[test]
+fn totient_even_applies_at_six_nine_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let six = f.num(6);
+    let nine = f.num(9);
+
+    // `Lt two n` via `le_add_right(three, k) : Le three (add three k)`,
+    // i.e. `Lt two n` for `n = add three k` -- `six = add three three`,
+    // `nine = add three six`.
+    for (n, k) in [(six, three), (nine, six)] {
+        let hn = f.lemma(p.le_add_right, &[three, k]); // Le three (add three k) = Lt two n
+        let proof = f.const_app(p.totient_even, &[n, hn]);
+        let totient_n = f.const_app(p.totient, &[n]);
+        let expected = f.const_app(p.even, &[totient_n]);
+        let inferred =
+            f.k.infer(proof)
+                .expect("totient_even must type-check at n in {6,9}");
+        assert!(
+            f.k.def_eq(inferred, expected),
+            "totient_even must prove Even (totient n) at n in {{6,9}}"
+        );
+    }
+
+    // Symbolic: genuinely free `n`, `hn`.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let hn_ty = f.lt(two, n);
+    let hn_fv = f.fresh_fvar();
+    let hn = f.k.fvar(hn_fv);
+    let proof_sym = f.const_app(p.totient_even, &[n, hn]);
+    let totient_n = f.const_app(p.totient, &[n]);
+    let expected_sym = f.const_app(p.even, &[totient_n]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: hn_fv,
+        name: anon,
+        ty: hn_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(proof_sym, &mut ctx)
+            .expect("totient_even must apply at a genuinely free n/hn");
+    assert!(
+        f.k.def_eq(inferred_sym, expected_sym),
+        "totient_even must prove Even (totient n) symbolically"
+    );
+}
+
+/// `Nat.odd_totient_iff_eq_one` at `n = 1`, `n = 2` (`totient 1 = totient 2 =
+/// 1`, both `Odd`), `n = 6` (`totient 6 = 2` -- discriminating: neither
+/// `Odd` nor `= 1`), and a genuinely free `n`.
+#[test]
+fn odd_totient_iff_eq_one_applies_at_small_numerals_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+
+    for n in [one, f.num(2)] {
+        let totient_n = f.const_app(p.totient, &[n]);
+        let iff_n = f.const_app(p.odd_totient_iff_eq_one, &[n]);
+        let lhs = f.const_app(p.odd, &[totient_n]);
+        let rhs = f.eq(totient_n, one);
+        let expected = f.const_app(p.logic.iff, &[lhs, rhs]);
+        let inferred =
+            f.k.infer(iff_n)
+                .expect("odd_totient_iff_eq_one must type-check at n in {1,2}");
+        assert!(
+            f.k.def_eq(inferred, expected),
+            "odd_totient_iff_eq_one must state Iff (Odd (totient n)) (totient n = 1)"
+        );
+    }
+
+    // Discriminating: n = 6, totient 6 = 2 -- neither Odd nor = 1.
+    let six = f.num(6);
+    let totient_6 = f.const_app(p.totient, &[six]);
+    assert!(
+        !f.k.def_eq(totient_6, one),
+        "totient 6 must NOT reduce to 1 (it is 2)"
+    );
+    let iff_6 = f.const_app(p.odd_totient_iff_eq_one, &[six]);
+    let lhs_6 = f.const_app(p.odd, &[totient_6]);
+    let rhs_6 = f.eq(totient_6, one);
+    let expected_6 = f.const_app(p.logic.iff, &[lhs_6, rhs_6]);
+    let inferred_6 =
+        f.k.infer(iff_6)
+            .expect("odd_totient_iff_eq_one must type-check at n=6");
+    assert!(f.k.def_eq(inferred_6, expected_6));
+
+    // Symbolic: a genuinely free `n`.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let totient_n = f.const_app(p.totient, &[n]);
+    let iff_n = f.const_app(p.odd_totient_iff_eq_one, &[n]);
+    let lhs_n = f.const_app(p.odd, &[totient_n]);
+    let rhs_n = f.eq(totient_n, one);
+    let expected_n = f.const_app(p.logic.iff, &[lhs_n, rhs_n]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_n =
+        f.k.infer_in(iff_n, &mut ctx)
+            .expect("odd_totient_iff_eq_one must apply at a free variable");
+    assert!(f.k.def_eq(inferred_n, expected_n));
+}
+
+/// `Nat.odd_totient_iff` at `n = 1`, `n = 2` (both legs of the RHS
+/// disjunction), `n = 6` (discriminating: `totient 6 = 2`, neither `Odd` nor
+/// `n in {1,2}`), and a genuinely free `n`.
+#[test]
+fn odd_totient_iff_applies_at_small_numerals_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+
+    for n in [one, two] {
+        let totient_n = f.const_app(p.totient, &[n]);
+        let iff_n = f.const_app(p.odd_totient_iff, &[n]);
+        let lhs = f.const_app(p.odd, &[totient_n]);
+        let eq_n_1 = f.eq(n, one);
+        let eq_n_2 = f.eq(n, two);
+        let rhs = f.const_app(p.logic.or, &[eq_n_1, eq_n_2]);
+        let expected = f.const_app(p.logic.iff, &[lhs, rhs]);
+        let inferred =
+            f.k.infer(iff_n)
+                .expect("odd_totient_iff must type-check at n in {1,2}");
+        assert!(
+            f.k.def_eq(inferred, expected),
+            "odd_totient_iff must state Iff (Odd (totient n)) (n=1 or n=2)"
+        );
+    }
+
+    // Discriminating: n = 6, totient 6 = 2.
+    let six = f.num(6);
+    let totient_6 = f.const_app(p.totient, &[six]);
+    assert!(
+        !f.k.def_eq(totient_6, one),
+        "totient 6 must NOT reduce to 1 (it is 2)"
+    );
+    let iff_6 = f.const_app(p.odd_totient_iff, &[six]);
+    let lhs_6 = f.const_app(p.odd, &[totient_6]);
+    let eq_6_1 = f.eq(six, one);
+    let eq_6_2 = f.eq(six, two);
+    let rhs_6 = f.const_app(p.logic.or, &[eq_6_1, eq_6_2]);
+    let expected_6 = f.const_app(p.logic.iff, &[lhs_6, rhs_6]);
+    let inferred_6 =
+        f.k.infer(iff_6)
+            .expect("odd_totient_iff must type-check at n=6");
+    assert!(f.k.def_eq(inferred_6, expected_6));
+
+    // Symbolic: a genuinely free `n`.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let totient_n = f.const_app(p.totient, &[n]);
+    let iff_n = f.const_app(p.odd_totient_iff, &[n]);
+    let lhs_n = f.const_app(p.odd, &[totient_n]);
+    let eq_n_1 = f.eq(n, one);
+    let eq_n_2 = f.eq(n, two);
+    let rhs_n = f.const_app(p.logic.or, &[eq_n_1, eq_n_2]);
+    let expected_n = f.const_app(p.logic.iff, &[lhs_n, rhs_n]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_n =
+        f.k.infer_in(iff_n, &mut ctx)
+            .expect("odd_totient_iff must apply at a free variable");
     assert!(f.k.def_eq(inferred_n, expected_n));
 }
 
@@ -7534,7 +7736,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 568,
+        93 + 571,
         "every promised definition and theorem must be rendered"
     );
 }

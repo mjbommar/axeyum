@@ -6,16 +6,49 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, Odd n.totient ↔ n.totient = 1",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.odd_totient_iff_eq_one",
+    "kernel_statement": "theorem Nat.odd_totient_iff_eq_one : ((x0 : AxNat) -> Iff (AxNat.Odd (AxNat.totient x0)) (Eq.{1} AxNat (AxNat.totient x0) (AxNat.succ AxNat.zero)))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:ml430-nat-totient-even-28e0415f",
+    "F:nat-le-of-succ-le-succ",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-le-antisymm",
+    "F:nat-zero-le",
+    "F:nat-succ-ne-zero",
+    "F:nat-le-total"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.odd_totient_iff_eq_one",
+      "kind": "kernel-term",
+      "supports": "Odd (totient n) iff totient n = 1",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- odd_totient_iff_eq_one 2>/dev/null | grep -Ec '^Nat\\.odd_totient_iff_eq_one[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. Route: the same `trichotomy(two, n)` split `totient_eq_one_iff` uses. Forward (`Odd (totient n) -> totient n = 1`): `n < 2` splits into `n = 0` (transports the hypothesis to `Odd (totient 0)`, defeq `Odd 0`, refuted by `even_not_odd` against a fresh `Even 0` witness) or `n = 1` (`totient 1 = 1` by defeq, closes by `Eq.refl` transported); `n = 2` closes the same way (`totient 2 = 1` by defeq); `2 < n` derives `Even (totient n)` from `totient_even` and refutes it against the hypothesis via `odd_not_even`. Reverse: transports a fresh `Odd 1` witness (`Exists.intro` at `k = 0`, `Eq.refl`) along the hypothesised `totient n = 1`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed (confirmed 1 for the real name)."
+    },
+    {
+      "id": "footprint-Nat.odd_totient_iff_eq_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.odd_totient_iff_eq_one` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane totient-even-finish",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.odd_totient_iff_eq_one` and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +59,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Honest flip, confirmed against the pinned Mathlib v4.30 source per `F:ml430-nat-totient-eq-zero-3be161d6`'s own mirror-flip check (same `Nat.totient` construction, `nat_prelude/totient.rs`). `formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output. `depends_on` restricts to entries that already carry a fact ledger entry; the route also composes `Nat.even_not_odd`/`Nat.odd_not_even` (parity.rs) and two fresh local existential witnesses (`Odd 1`, `Even 0`), none of which carry a fact entry of their own -- not axioms, per the empty-footprint evidence above. This fact's partition in `artifacts/autogenesis/nursery-v2-extension.json` is `development`, not held-out."
 }
