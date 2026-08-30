@@ -164,6 +164,7 @@ mod euler;
 mod factorization;
 mod fermat;
 mod fermat_number;
+mod fermat_number_mirrors;
 mod fibonacci;
 mod finite;
 mod finite_set;
@@ -282,6 +283,7 @@ use euler::declare_mod_eq_cancel;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
 use fermat_number::declare_fermat_number_all;
+use fermat_number_mirrors::declare_fermat_number_mirrors_all;
 use fibonacci::declare_fib_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
@@ -4366,6 +4368,17 @@ pub struct NatPrelude {
     /// **Definition only, deliberately** — see `fermat_number.rs`'s module
     /// doc for why no theorem about it is declared here.
     pub fermat_number: NameId,
+
+    // -- `fermat-mirrors` lane: `fermat_number_mirrors.rs` --
+    /// `Nat.fermatNumber_ne_one : ∀ n, Ne (fermatNumber n) 1`.
+    pub fermatnumber_ne_one: NameId,
+    /// `Nat.fermatNumber_mono : Monotone Nat.fermatNumber` (core-rendered
+    /// `∀ x y, Le x y → Le (fermatNumber x) (fermatNumber y)`).
+    pub fermatnumber_mono: NameId,
+    /// `Nat.coprime_fermatNumber_fermatNumber : ∀ m n, Ne m n →
+    /// Coprime (fermatNumber m) (fermatNumber n)` — Goldbach's coprimality
+    /// theorem, `fermat_number_mirrors.rs`.
+    pub coprime_fermatnumber_fermatnumber: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5204,6 +5217,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
             fermat_number: kernel.name_str(nat, "fermatNumber"),
+            fermatnumber_ne_one: kernel.name_str(nat, "fermatNumber_ne_one"),
+            fermatnumber_mono: kernel.name_str(nat, "fermatNumber_mono"),
+            coprime_fermatnumber_fermatnumber: kernel
+                .name_str(nat, "coprime_fermatNumber_fermatNumber"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -5867,6 +5884,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mul_left_cancel_of_pos` (all far above), so it goes here rather
         // than beside `declare_prime_not_prime_pow_all`.
         declare_prime_mul_eq_prime_sq_iff(&mut d, &p)?;
+        // `fermat-mirrors` lane: needs only `Nat.fermatNumber`
+        // (`declare_fermat_number_all`, far above), `Nat.pow_pos`/
+        // `Nat.pow_lt_pow_of_lt`/`Nat.succ_pred_of_pos` (`declare_order`/
+        // `perfect.rs`, far above), `Nat.mod_eq_pow`/`Nat.mod_eq_gcd_eq`
+        // (`declare_modular_congruence`, far above), `Nat.coprime_two_left`/
+        // `Nat.coprime_symmetric` (`primes.rs`, far above) and
+        // `Nat.even_iff_odd_succ` (`declare_parity_all`, far above). Nothing
+        // needs it, so it goes last.
+        declare_fermat_number_mirrors_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
