@@ -554,6 +554,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient_mul_of_dvd,
         p.totient_pow_succ_of_prime,
         p.totient_prime_pow,
+        p.totient_dvd_totient_mul_prime,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -18978,5 +18979,107 @@ fn the_totient_prime_power_family_applies_at_free_variables() {
     assert!(
         f.k.def_eq(sub_ty, sub_expected),
         "totient_prime_pow must state totient (q^(j+1)) = q^(j+1) - q^j"
+    );
+}
+
+/// `Nat.totient_dvd_totient_mul_prime` — the prime step — at free variables,
+/// with a discriminating control that is deliberately NOT the composite one.
+///
+/// **A composite-base control here would be VACUOUS, and that is measured
+/// rather than assumed.** This statement is `F:ml430-nat-totient-dvd-of-dvd`
+/// specialised (`x` always divides `x*q`), so it is TRUE for every `q`, prime
+/// or not — check `11V` of `scripts/tests/check-totient-prime-power-numerics.py`
+/// confirms it fails at zero composite multipliers. Primality is a requirement
+/// of the proof ROUTE (`coprime_or_dvd_of_prime` is what decides the case
+/// split), not of the proposition. Copying the composite control from
+/// `totient_prime_pow`, where it genuinely discriminates, would have produced
+/// a control that cannot fail — the exact trap this repository has been caught
+/// by three times in this area.
+///
+/// The usable control is the TRANSPOSED divisibility, which fails at 142 pairs
+/// with the smallest being `x = 1, q = 3` (`totient 3 = 2` does not divide
+/// `totient 1 = 1`); check `11N`.
+#[test]
+fn the_prime_step_divides_at_free_variables_with_a_transposed_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    let x_fv = f.fresh_fvar();
+    let x = f.k.fvar(x_fv);
+    let q_fv = f.fresh_fvar();
+    let q = f.k.fvar(q_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [x_fv, q_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let prime_q_ty = prime_condition_for_test(&mut f, q);
+    let hq_fv = f.fresh_fvar();
+    let hq = f.k.fvar(hq_fv);
+    ctx.push(LocalDecl {
+        fvar: hq_fv,
+        name: anon,
+        ty: prime_q_ty,
+        info: BinderInfo::Default,
+    });
+
+    let step = f.const_app(p.totient_dvd_totient_mul_prime, &[x, q, hq]);
+    let step_ty =
+        f.k.infer_in(step, &mut ctx)
+            .expect("totient_dvd_totient_mul_prime must apply at free variables");
+
+    let xq = f.mul(x, q);
+    let tot_x = f.const_app(p.totient, &[x]);
+    let tot_xq = f.const_app(p.totient, &[xq]);
+    let expected = f.dvd(tot_x, tot_xq);
+    assert!(
+        f.k.def_eq(step_ty, expected),
+        "the prime step must state Dvd (totient x) (totient (x*q))"
+    );
+
+    // The TRANSPOSED divisibility is a different, FALSE statement.
+    let transposed = f.dvd(tot_xq, tot_x);
+    assert!(
+        !f.k.def_eq(step_ty, transposed),
+        "Dvd (totient (x*q)) (totient x) is the opposite statement and is \
+         false at x = 1, q = 3 (2 does not divide 1); the two must not be \
+         def-eq"
+    );
+
+    // --- CLOSED instance: x = 6, q = 2, where 2 DIVIDES 6 -----------------
+    // This exercises the `q | x` branch, the one that routes through this
+    // lane's own `totient_mul_of_dvd`. totient 6 = 2 divides totient 12 = 4.
+    let two = f.num(2);
+    let four = f.num(4);
+    let six = f.num(6);
+    let twelve = f.num(12);
+    let six_two = f.mul(six, two);
+    let tot_6 = f.const_app(p.totient, &[six]);
+    let tot_12 = f.const_app(p.totient, &[six_two]);
+    assert!(f.k.def_eq(six_two, twelve), "6*2 must compute to 12");
+    assert!(f.k.def_eq(tot_6, two), "totient 6 must compute to 2");
+    assert!(f.k.def_eq(tot_12, four), "totient 12 must compute to 4");
+
+    // --- CLOSED instance: x = 3, q = 2, the COPRIME branch ----------------
+    // totient 3 = 2 divides totient 6 = 2. Exercises the other branch, which
+    // routes through totient_mul_of_coprime instead.
+    let three = f.num(3);
+    let three_two = f.mul(three, two);
+    let tot_3 = f.const_app(p.totient, &[three]);
+    let tot_6b = f.const_app(p.totient, &[three_two]);
+    assert!(f.k.def_eq(three_two, six), "3*2 must compute to 6");
+    assert!(f.k.def_eq(tot_3, two), "totient 3 must compute to 2");
+    assert!(f.k.def_eq(tot_6b, two), "totient 6 must compute to 2");
+
+    assert!(
+        f.k.axiom_footprint(p.totient_dvd_totient_mul_prime)
+            .is_empty(),
+        "totient_dvd_totient_mul_prime must rest on zero axioms"
     );
 }

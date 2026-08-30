@@ -2011,6 +2011,22 @@ pub struct NatPrelude {
     /// FALSE at composite bases — 42 composite `(c,k)` pairs, smallest
     /// `c = 4, k = 1` where `φ(4) = 2` and not `3`.
     pub totient_prime_pow: NameId,
+    /// `Nat.totient_dvd_totient_mul_prime : ∀ x q, Prime q →
+    /// Dvd (totient x) (totient (mul x q))` — **the prime step**:
+    /// multiplying by a prime multiplies the totient by `q` or by `q - 1`, and
+    /// either way the old totient divides the new one. One case split on
+    /// [`coprime_or_dvd_of_prime`](Self::coprime_or_dvd_of_prime), whose two
+    /// branches have the IDENTICAL shape and differ only in which product
+    /// lemma supplies the rewrite —
+    /// [`totient_mul_of_coprime`](Self::totient_mul_of_coprime) or
+    /// [`totient_mul_of_dvd`](Self::totient_mul_of_dvd).
+    ///
+    /// This is the rung that makes `F:ml430-nat-totient-dvd-of-dvd-9622e44a`
+    /// and `F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7` reachable
+    /// WITHOUT unique factorisation (ADR-0668): the consumer supplies primes
+    /// one at a time from [`exists_prime_dvd`](Self::exists_prime_dvd), ANY
+    /// choice works, and no factor multiset is ever named.
+    pub totient_dvd_totient_mul_prime: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4650,6 +4666,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             totient_mul_of_dvd: kernel.name_str(nat, "totient_mul_of_dvd"),
             totient_pow_succ_of_prime: kernel.name_str(nat, "totient_pow_succ_of_prime"),
             totient_prime_pow: kernel.name_str(nat, "totient_prime_pow"),
+            totient_dvd_totient_mul_prime: kernel.name_str(nat, "totient_dvd_totient_mul_prime"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),

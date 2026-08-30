@@ -549,6 +549,56 @@ check(
 
 
 # ---------------------------------------------------------------------------
+# 11. THE PRIME STEP AS A DIVISIBILITY, and a warning about its control.
+#
+#     Nat.totient_dvd_totient_mul_prime : q prime -> totient x | totient (x*q)
+#
+#     A composite-q control on THIS statement would be VACUOUS, and that is
+#     worth measuring rather than assuming: the statement is TARGET 1
+#     specialised (x always divides x*q), so it is true for EVERY q, prime or
+#     not.  Primality is needed by the proof ROUTE -- `coprime_or_dvd_of_prime`
+#     is what decides the case split -- not by the proposition.
+#
+#     Copying the composite control from `totient_prime_pow`, where it IS
+#     discriminating, would produce a control that cannot fail.  The honest
+#     discriminating control is the TRANSPOSED divisibility.
+# ---------------------------------------------------------------------------
+
+bad = [
+    (x, q)
+    for x in range(1, 40)
+    for q in PRIMES
+    if totient(x * q) % totient(x) != 0
+]
+check("11. the prime step: totient x | totient (x*q) for prime q", not bad, f"{len(bad)} bad")
+
+composite_ctrl = [
+    (x, c)
+    for x in range(1, 40)
+    for c in COMPOSITES
+    if totient(x * c) % totient(x) != 0
+]
+check(
+    "11V. a COMPOSITE control on the prime step would be VACUOUS -- it never fails",
+    len(composite_ctrl) == 0,
+    "true at every composite q too, because x | x*q always; primality is a "
+    "requirement of the proof ROUTE, not of the statement",
+)
+
+transposed_ctrl = [
+    (x, q)
+    for x in range(1, 20)
+    for q in PRIMES
+    if q < 20 and totient(x) % totient(x * q) != 0
+]
+check(
+    "11N. the TRANSPOSED divisibility GENUINELY FAILS (the usable control)",
+    len(transposed_ctrl) > 0,
+    f"fails at {len(transposed_ctrl)} pairs, smallest {transposed_ctrl[0] if transposed_ctrl else None}",
+)
+
+
+# ---------------------------------------------------------------------------
 
 print()
 print(f"{CHECKS} checks, {len(FAILURES)} failed")

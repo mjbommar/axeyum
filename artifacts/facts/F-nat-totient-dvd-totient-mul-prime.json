@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-totient-dvd-totient-mul-prime",
+  "title": "The prime step: multiplying by a prime preserves totient divisibility",
+  "statement": "For every natural x and every prime q, totient(x) divides totient(x*q). Multiplying by a prime multiplies the totient by q (when q divides x) or by q-1 (when it does not), and either way the old value divides the new one. This is one rung of the chain that reaches the two remaining divisibility-shaped ml430 totient mirrors without unique factorization.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.totient_dvd_totient_mul_prime : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x1) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x1))))) -> AxNat.dvd (AxNat.totient x0) (AxNat.totient (AxNat.mul x0 x1)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.totient_dvd_totient_mul_prime",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-totient-mul-of-dvd",
+    "F:nat-totient-mul-of-coprime",
+    "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+    "F:ml430-nat-dvd-mul-right-a87a83c4"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.totient_dvd_totient_mul_prime",
+      "kind": "kernel-term",
+      "supports": "totient(x) | totient(x*q) for prime q, with the whole rendered type pinned.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_dvd_totient_mul_prime 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.totient_dvd_totient_mul_prime 5 ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x1) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x1))))) -> AxNat.dvd (AxNat.totient x0) (AxNat.totient (AxNat.mul x0 x1)))))')\" -ge 1",
+      "notes": "The grep pins the WHOLE rendered type. The direction of the divisibility is the thing worth pinning: `AxNat.dvd (AxNat.totient x0) (AxNat.totient (AxNat.mul x0 x1))` transposed to `dvd (totient (mul x0 x1)) (totient x0)` is a FALSE statement (at x = 1, q = 3 it asks 2 | 1), and the Rust test asserts `!def_eq` between the two at free variables. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Fc` consumes the whole pipe with the count then tested, rather than `grep -q`, which would SIGPIPE the producer under pipefail. Exactly one name is passed: measured 2026-08-30, this tool silently keeps only the LAST of several name arguments.",
+      "kernel_declaration": "Nat.totient_dvd_totient_mul_prime"
+    },
+    {
+      "id": "instances-Nat.totient_dvd_totient_mul_prime",
+      "kind": "exhaustive-enumeration",
+      "supports": "The divisibility holds at every prime q < 30 and 1 <= x < 40; the TRANSPOSED direction fails at 142 of those pairs, which is the control that discriminates.",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/tests/check-totient-prime-power-numerics.py",
+      "checker_seconds": 5,
+      "notes": "Checks 11, 11V and 11N. **11V is the one to read**: it MEASURES that a composite control on this statement would be VACUOUS rather than assuming a control copied from the sibling `totient_prime_pow` would work. This proposition is `F:ml430-nat-totient-dvd-of-dvd-9622e44a` specialised -- x always divides x*q -- so it is TRUE at every composite multiplier too, and it fails at zero of them. Primality is a requirement of the proof ROUTE (`coprime_or_dvd_of_prime` decides the case split), not of the proposition. Writing the obvious composite control would have produced a check that cannot fail; the usable control is the transposed divisibility, check 11N, smallest failure x = 1, q = 3.",
+      "checkers": [
+        "scripts/tests/check-totient-prime-power-numerics.py",
+        "cargo test -p axeyum-lean-kernel --lib nat_prelude::the_prime_step"
+      ]
+    },
+    {
+      "id": "footprint-nat-prelude",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`--require-axiom-free` exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is non-empty, and errors rather than passing silently for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:eulers-totient-function",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel nat_prelude::totient_prime_pow (totient-prime-power lane)",
+    "source": "statement and proof authored here; both branches rest on totient laws landed the same day",
+    "prior_art": [
+      {
+        "who": "Leonhard Euler",
+        "what": "the behaviour of the totient under multiplication by a prime",
+        "year": 1763,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "One case split on `Nat.coprime_or_dvd_of_prime`, which decides `gcd q x = 1 or q | x` constructively (`Bool` has two constructors -- case analysis, not excluded middle). BOTH BRANCHES HAVE THE IDENTICAL SHAPE: rewrite `totient (x*q)` into a product carrying `totient x` on the LEFT, then `Nat.dvd_mul`. Only the lemma supplying the product differs -- `F:nat-totient-mul-of-coprime` giving `totient x * totient q` in the coprime branch, `F:nat-totient-mul-of-dvd` giving `totient x * q` in the dividing one. The coprime half was landed by the totient-mul-finish lane and the dividing half by this one, and the step needs nothing further. WHAT IS NOT HERE: no factorization, no product over primes, no multiset. A consumer supplies primes one at a time from `Nat.exists_prime_dvd`, and ANY choice of prime works at each rung -- which is precisely why uniqueness never enters, and why the two divisibility-shaped mirrors `F:ml430-nat-totient-dvd-of-dvd-9622e44a` and `F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7` are reachable on this route. See ADR-0668 for the full argument and the simulated inductions. WHAT REMAINS for those two: the well-founded induction on the cofactor `b/a` that chains this step, plus (for the third mirror) the observation that the multiplier is 1 only when q = 2 and the current value is odd, so the chain has length 0 or 1. Neither needs new number theory."
+}

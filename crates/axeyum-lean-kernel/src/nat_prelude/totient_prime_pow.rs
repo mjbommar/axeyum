@@ -821,6 +821,107 @@ pub(super) fn declare_totient_prime_pow(
     Ok(())
 }
 
+/// `Nat.totient_dvd_totient_mul_prime : ∀ x q, Prime q →
+/// Dvd (totient x) (totient (mul x q))`.
+///
+/// **The prime step** — one rung of the chain that
+/// `F:ml430-nat-totient-dvd-of-dvd-9622e44a` and
+/// `F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7` are built from, and
+/// the piece that makes both of them reachable WITHOUT unique factorisation
+/// (ADR-0668). Multiplying by a prime multiplies the totient by `q` or by
+/// `q - 1`, and either way the old totient divides the new one.
+///
+/// The proof is one case split on
+/// [`coprime_or_dvd_of_prime`](super::NatPrelude::coprime_or_dvd_of_prime),
+/// which decides `gcd q x = 1 ∨ q ∣ x` constructively (`Bool` has two
+/// constructors — this is case analysis, not excluded middle). **Both
+/// branches have the identical shape**: rewrite `totient (x*q)` into a
+/// product with `totient x` on the LEFT, then `Nat.dvd_mul`. Only the lemma
+/// supplying the product differs —
+/// [`totient_mul_of_coprime`](super::NatPrelude::totient_mul_of_coprime)
+/// giving `totient x * totient q` in the coprime branch, and
+/// [`totient_mul_of_dvd`](super::NatPrelude::totient_mul_of_dvd) giving
+/// `totient x * q` in the dividing one.
+///
+/// That symmetry is the whole point: the coprime case was landed by the
+/// `totient-mul-finish` lane and the dividing case by this one, and the step
+/// needs nothing else. Note what is NOT here — no factorisation, no product
+/// over primes, no multiset. The consumer supplies primes one at a time from
+/// `Nat.exists_prime_dvd`, and any choice of prime works, which is exactly
+/// why uniqueness never enters.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+pub(super) fn declare_totient_dvd_totient_mul_prime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.totient_dvd_totient_mul_prime, 2, &|d, v| {
+        let (x, q) = (v[0], v[1]);
+        let prime_hyp = prime_ty(d, &p, q);
+        let xq = d.mul(x, q);
+        let tot_x = d.const_app(p.totient, &[x]);
+        let tot_xq = d.const_app(p.totient, &[xq]);
+        let target = d.dvd(tot_x, tot_xq);
+        let stmt = d.arrow(prime_hyp, target);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let one = d.num(1);
+        let g_qx = d.gcd(q, x);
+        let coprime_ty = d.eq(g_qx, one);
+        let dvd_qx_ty = d.dvd(q, x);
+
+        // --- `gcd q x = 1`: the product is `totient x * totient q` ---------
+        let on_coprime = {
+            let hc_fv = d.fresh_fvar();
+            let hc = d.kernel().fvar(hc_fv);
+            // `coprime_or_dvd_of_prime` states the gcd with the PRIME first;
+            // `totient_mul_of_coprime` wants it with `x` first.
+            let g_xq = d.gcd(x, q);
+            let comm = d.lemma(p.gcd_comm, &[q, x]);
+            let flipped = d.symm(g_qx, g_xq, comm);
+            let hx = d.trans(g_xq, g_qx, one, flipped, hc);
+            let eq = d.lemma(p.totient_mul_of_coprime, &[x, q, hx]);
+            let tot_q = d.const_app(p.totient, &[q]);
+            let rhs = d.mul(tot_x, tot_q);
+            let witness = d.lemma(p.dvd_mul, &[tot_x, tot_q]);
+            let back = d.symm(tot_xq, rhs, eq);
+            let motive = d.eq_motive(rhs, &|d, t| d.dvd(tot_x, t));
+            let body = d.transport(rhs, motive, witness, tot_xq, back);
+            d.lam_fv(hc_fv, coprime_ty, body)
+        };
+
+        // --- `q ∣ x`: the product is `totient x * q` ------------------------
+        let on_dvd = {
+            let hd_fv = d.fresh_fvar();
+            let hd = d.kernel().fvar(hd_fv);
+            let eq = {
+                let applied = d.lemma(p.totient_mul_of_dvd, &[x, q]);
+                d.apply(applied, &[hd])
+            };
+            let rhs = d.mul(tot_x, q);
+            let witness = d.lemma(p.dvd_mul, &[tot_x, q]);
+            let back = d.symm(tot_xq, rhs, eq);
+            let motive = d.eq_motive(rhs, &|d, t| d.dvd(tot_x, t));
+            let body = d.transport(rhs, motive, witness, tot_xq, back);
+            d.lam_fv(hd_fv, dvd_qx_ty, body)
+        };
+
+        let decided = d.lemma(p.coprime_or_dvd_of_prime, &[q, x, h]);
+        let body = or_elim(
+            d, &p, coprime_ty, dvd_qx_ty, target, on_coprime, on_dvd, decided,
+        );
+        let proof = d.lam_fv(h_fv, prime_hyp, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare everything in this file, in dependency order.
 ///
 /// # Errors
@@ -835,5 +936,6 @@ pub(super) fn declare_totient_prime_pow_all(
     declare_totient_mul_of_dvd(d, p)?;
     declare_totient_pow_succ_of_prime(d, p)?;
     declare_totient_prime_pow(d, p)?;
+    declare_totient_dvd_totient_mul_prime(d, p)?;
     Ok(())
 }
