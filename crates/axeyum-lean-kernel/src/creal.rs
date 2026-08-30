@@ -6413,6 +6413,41 @@ pub struct CRealPrelude {
     /// the same estimate restated on canonical SAMPLES rather than as a
     /// real-valued bound. See `creal/supremum.rs`.
     pub sup_seq_cauchy: NameId,
+    /// `CReal.supOn : ∀ F a b, le a b → UniformlyContinuousOn F a b → CReal`
+    /// — **the supremum of a uniformly continuous function on a compact
+    /// interval, produced rather than asserted to exist.**
+    ///
+    /// EVT's row 1 under ADR-0603's grading. Row 2,
+    /// [`Self::evt_attained_max_decides_sign`], proves a MAXIMISER cannot be
+    /// constructed; this is the maximum's VALUE, which can. Nothing here names
+    /// a point attaining it, and nothing should.
+    ///
+    /// `CReal.mk (speedup (diagonal (supSeq F a b u)) 3)
+    /// (regular_of_scaled_cauchy … )`, `integral.rs`'s own shape one
+    /// construction over. `K := 3` is forced:
+    /// [`Self::sup_seq_abs_diff_le`] gives `K = 1` and
+    /// [`Self::scaled_cauchy_of_abs_diff_le`]'s index shift costs `+2`.
+    ///
+    /// **Hypotheses, honestly.** `le a b`, and a `UniformlyContinuousOn`
+    /// witness whose modulus is DATA — the constructive substitute for
+    /// "continuous on a compact set", which no constructive development can
+    /// derive from pointwise continuity. There is no Archimedean hypothesis
+    /// and no positivity side condition: the interval width is handled by
+    /// [`Self::bound`] inside [`Self::mesh_le_of_ge`].
+    /// See `creal/supremum.rs`.
+    pub sup_on: NameId,
+    /// `CReal.supSeq_converges_supOn : ∀ F a b (hab : le a b) u,
+    /// Converges (supSeq F a b u) (supOn F a b hab u)` — **`supOn` is the
+    /// limit of the mesh maxima, not merely a well-typed `CReal.mk`.**
+    ///
+    /// The kernel accepting a `Definition` says nothing about what it
+    /// computes; this is the theorem that pins `supOn` to the thing it is
+    /// supposed to be. One application of
+    /// [`Self::converges_of_scaled_cauchy`], whose conclusion NAMES the same
+    /// `CReal.mk` term `supOn`'s body builds — the identical `ExprId`, so the
+    /// kernel never unfolds the `Definition` to compare the two sides.
+    /// See `creal/supremum.rs`.
+    pub sup_seq_converges_sup_on: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7178,6 +7213,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         le_mesh_level_count: kernel.name_str(creal, "le_meshLevelCount"),
         sup_seq_abs_diff_le: kernel.name_str(creal, "supSeq_abs_diff_le"),
         sup_seq_cauchy: kernel.name_str(creal, "supSeq_cauchy"),
+        sup_on: kernel.name_str(creal, "supOn"),
+        sup_seq_converges_sup_on: kernel
+            .name_str(creal, "supSeq_converges_supOn"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12879,6 +12917,26 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.sup_seq_cauchy,
         ],
         run: supremum::declare_sup_seq_cauchy,
+    },
+    BuildStep {
+        label: "supremum::declare_sup_on",
+        requires: &[
+            |p: CRealPrelude| p.converges,
+            |p: CRealPrelude| p.converges_of_scaled_cauchy,
+            |p: CRealPrelude| p.mk,
+            |p: CRealPrelude| p.regular_of_scaled_cauchy,
+            |p: CRealPrelude| p.scaled_cauchy_of_abs_diff_le,
+            |p: CRealPrelude| p.seq,
+            |p: CRealPrelude| p.speedup,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_abs_diff_le,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_seq_converges_sup_on,
+        ],
+        run: supremum::declare_sup_on,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",

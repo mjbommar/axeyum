@@ -4708,3 +4708,219 @@ pub(super) fn declare_sup_seq_cauchy(
     declare_sup_seq_abs_diff_le_thm(d, p)?;
     declare_sup_seq_cauchy_thm(d, p)
 }
+
+// ---------------------------------------------------------------------------
+// Rung 7: `CReal.supOn`.
+//
+// Everything above is `Prop`. This is the step where the estimate becomes a
+// REAL, and it is the one place kernel fact 1 bites: `K` and the sequence feed
+// `CReal.speedup`, a `Type`-level construction, so neither may be pulled out of
+// an existential. Both are concrete here -- `K` is the literal `3` and the
+// sequence is `CReal.supSeq` applied to the given arguments -- so nothing is
+// eliminated and `Exists.rec` never appears on the data path.
+//
+// The shape is `integral.rs`'s `declare_creal_integral` verbatim, one
+// construction over: `CReal.mk (speedup (diagonal f) K) (regular_of_scaled_
+// cauchy f K raw)`.
+// ---------------------------------------------------------------------------
+
+/// `CReal.supOn : ∀ F a b, le a b → UniformlyContinuousOn F a b → CReal` —
+/// **the supremum of a uniformly continuous function on a compact interval,
+/// produced rather than asserted to exist.**
+///
+/// EVT's row 1 under ADR-0603's grading. Its row 2,
+/// [`CRealPrelude::evt_attained_max_decides_sign`], proves that a MAXIMISER
+/// cannot be constructed; this is the maximum's VALUE, which can. Nothing in
+/// this file names or produces a point at which the value is attained, and
+/// nothing should — see the module documentation's value/argmax section.
+///
+/// `K := 3`, not a tuning constant: [`CRealPrelude::sup_seq_abs_diff_le`]
+/// gives the real-valued estimate at `K = 1` (the geometric schedule's doing),
+/// and [`CRealPrelude::scaled_cauchy_of_abs_diff_le`]'s canonical-sample index
+/// shift costs exactly `+2`.
+///
+/// **The hypotheses, stated honestly.** `le a b` and a
+/// `UniformlyContinuousOn` witness. The second is the constructive substitute
+/// for "continuous on a compact set" and carries a MODULUS as data — this
+/// kernel cannot derive one from pointwise continuity, and no constructive
+/// development can. The first is ordinary. There is no Archimedean hypothesis
+/// and no positivity side condition: the interval width is handled by
+/// [`CRealPrelude::bound`], a total computable projection, inside
+/// [`CRealPrelude::mesh_le_of_ge`].
+fn declare_sup_on_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+
+    let value_body = sup_on_body(d, p, f, a, b, hab, u);
+
+    let ty = {
+        let after_u = d.arrow(u_ty, carrier);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, func_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, value_body);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, func_ty, over_a)
+    };
+    let _ = nat;
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sup_on,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(MAX_RANGE_HEIGHT),
+    })
+}
+
+/// `CReal.mk (speedup (fun n => seq (supSeq F a b u n) n) 3)
+/// (regular_of_scaled_cauchy (supSeq F a b u) 3 raw)` — `supOn`'s body, shared
+/// with [`declare_sup_seq_converges_thm`] so that theorem's conclusion is the
+/// SAME `ExprId` rather than merely defeq to it.
+///
+/// That sharing is deliberate. Rebuilding the `CReal.mk` term by hand on the
+/// other side of the equation is what forces the kernel to delta-unfold the
+/// whole `Definition` — the 18.7 s → 92.6 s regression this module's
+/// neighbourhood already paid for once (`creal/integral.rs`'s
+/// `riemannSum_integral_close`).
+fn sup_on_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+    u: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+
+    let f_lambda = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.const_app(p.sup_seq, &[f, a, b, u, n]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let one_nat = d.num(1);
+    let k = d.num(3);
+
+    let estimate = d.lemma(p.sup_seq_abs_diff_le, &[f, a, b, u, hab]);
+    let raw = d.lemma(
+        p.scaled_cauchy_of_abs_diff_le,
+        &[f_lambda, one_nat, estimate],
+    );
+    let regularity = d.lemma(p.regular_of_scaled_cauchy, &[f_lambda, k, raw]);
+
+    let diag = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_term = d.apply(f_lambda, &[n]);
+        let body = d.const_app(p.seq, &[fn_term, n]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let speedup_term = d.const_app(p.speedup, &[diag, k]);
+    d.const_app(p.mk, &[speedup_term, regularity])
+}
+
+/// `CReal.supSeq_converges_supOn : ∀ F a b (hab : le a b) u,
+/// Converges (supSeq F a b u) (supOn F a b hab u)` — **`supOn` is the limit of
+/// the mesh maxima, not merely a well-typed `CReal.mk`.**
+///
+/// Without this, `supOn` would be an opaque construction whose only guarantee
+/// is that the kernel accepted its regularity proof — and this file's own
+/// documentation is emphatic that a `Definition` type-checking says nothing
+/// about what it computes. This is the theorem that pins it.
+///
+/// One application of [`CRealPrelude::converges_of_scaled_cauchy`], whose
+/// conclusion NAMES `CReal.mk (speedup (diagonal f) K) (regular_of_scaled_
+/// cauchy f K h)` — the same term [`sup_on_body`] builds, from the same
+/// arguments, so the two are the identical `ExprId` and the kernel never
+/// unfolds `supOn`'s `Definition` to compare them.
+fn declare_sup_seq_converges_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+
+    let f_lambda = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.const_app(p.sup_seq, &[f, a, b, u, n]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let one_nat = d.num(1);
+    let k = d.num(3);
+    let estimate = d.lemma(p.sup_seq_abs_diff_le, &[f, a, b, u, hab]);
+    let raw = d.lemma(
+        p.scaled_cauchy_of_abs_diff_le,
+        &[f_lambda, one_nat, estimate],
+    );
+    let proof = d.lemma(p.converges_of_scaled_cauchy, &[f_lambda, k, raw]);
+
+    let target = d.const_app(p.sup_on, &[f, a, b, hab, u]);
+    let concl = d.const_app(p.converges, &[f_lambda, target]);
+
+    let ty = {
+        let after_u = d.arrow(u_ty, concl);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, func_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, proof);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, func_ty, over_a)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sup_seq_converges_sup_on,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.supOn` and `CReal.supSeq_converges_supOn`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sup_on(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_sup_on_def(d, p)?;
+    declare_sup_seq_converges_thm(d, p)
+}
