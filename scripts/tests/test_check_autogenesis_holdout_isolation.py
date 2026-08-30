@@ -159,7 +159,26 @@ class HoldoutIsolationTests(unittest.TestCase):
         # generator line reports `held-out=120` independently. No v1 row moved:
         # `nursery-v1.json` is byte-identical to the pre-draw tree, checked
         # with `git hash-object`, and `settled=0 references=0` still hold.
-        self.assertIn("held_out=136", out)
+        #
+        # 136 -> 116 on 2026-08-30 (ADR-0695): a FALL, and the ledger is what
+        # licenses it -- amendments five and six, `natural-parity` and
+        # `fermat-numbers`, 10 rows each. Neither was a spend by ordinary
+        # development after preregistration; both rows sets were settled BEFORE
+        # the draw that called them blind.
+        #
+        #   natural-parity   preregistered 2026-08-29 17:22:14 (94b3e61ee);
+        #                    Nat.even_iff_mod_two_eq_zero admitted
+        #                    2026-08-29 12:10:13 (414eef0a2), 5h12m earlier.
+        #   fermat-numbers   preregistered 2026-08-30 07:09:52 (29d51bd0b);
+        #                    Nat.fermatNumber admitted 06:48:10 (0065c83b1),
+        #                    21m earlier, which decides three rows by REDUCTION.
+        #
+        # Composition now 16 in v1 + 100 in the v2 extension. Both are recorded
+        # in mathlib-nursery-split-policy-v1.json with commits, and R10 in
+        # gen-autogenesis-nursery-refill.py refuses the manifest's move without
+        # them -- so this number cannot fall without a ledger row, which is the
+        # property that makes pinning it worth anything.
+        self.assertIn("held_out=116", out)
 
     # --- guard 1: a held-out fact must not be settled ---------------------
     def test_a_settled_held_out_fact_is_a_violation(self) -> None:
@@ -194,6 +213,26 @@ class HoldoutIsolationTests(unittest.TestCase):
         code, _, err = self.run_guard()
         self.assertEqual(code, 1)
         self.assertIn("invented_field", err)
+
+    def test_a_reference_in_an_artifact_SUBDIRECTORY_is_a_violation(self) -> None:
+        """The scan is `rglob`, not `glob`.
+
+        `artifacts/autogenesis/producer-contracts/` did not exist when the
+        non-recursive glob was written, so its 2 JSON files were unscanned --
+        and a producer contract is prospective dispatch, where naming a held-out
+        fact is exactly the breach this gate exists for. Without this case a
+        revert to `glob` is unkillable, because every other reference fixture
+        sits at the top level.
+        """
+        nested = self.artifacts / "producer-contracts"
+        nested.mkdir()
+        (nested / "some-contract-v1.json").write_text(
+            json.dumps({"applicability": {"fact_ids": [HELD]}})
+        )
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("verdict=FAIL", out)
+        self.assertIn("held-out-reference", err)
 
     def test_a_train_fact_reference_is_not_a_violation(self) -> None:
         (self.artifacts / "some-plan-v1.json").write_text(
