@@ -183,6 +183,7 @@
 //! build anything new to close them, only compose.
 
 use super::NatPrelude;
+use super::finite::{pos_implies_succ_pred, trichotomy, zero_lt_via_c};
 use super::helpers::iff_reverse;
 use super::ops::{NatDev, NatOps, cases_zero_succ};
 use crate::BinderInfo;
@@ -743,10 +744,376 @@ pub(super) fn declare_count_range_ge_two_of_two_witnesses(
     d.declare_theorem(p.count_range_ge_two_of_two_witnesses, ty, value)
 }
 
-/// Declare `Nat.coprime_succ_self`, `Nat.totient_eq_zero`, and the general
+// ============================================================================
+// Shared core: from `Lt two x` and `Le (totient x) one`, derive `False`.
+// The `2 < a`/`2 < n` branch of both `dvd_two_of_totient_le_one` and
+// `totient_eq_one_iff`'s forward direction.
+// ============================================================================
+
+/// `Nat.dvd a n` (`Exists (fun q => Eq n (mul a q))`), built from a witness
+/// `q` and `eq_proof : Eq n (mul a q)` -- local copy of `divisibility.rs`'s
+/// private `dvd_intro`, per this file's own stated convention (local copies
+/// per file rather than a shared private module).
+fn dvd_intro(d: &mut NatDev<'_>, a: ExprId, n: ExprId, witness: ExprId, eq_proof: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let predicate = d.dvd_predicate(a, n);
+    let intro_name = d.prelude().logic.exists_intro;
+    let intro = d.kernel().const_(intro_name, vec![one]);
+    d.apply(intro, &[nat, predicate, witness, eq_proof])
+}
+
+/// Eliminate a [`trichotomy`] (`Or (Lt x c) (Or (Eq x c) (Lt c x))`) directly
+/// into a proof of `target`, given a proof for each of the three cases --
+/// local generalization of `finite.rs`'s `two_way_split` (which eliminates
+/// only the middle case) into a full three-way eliminator.
+fn trichotomy_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    x: ExprId,
+    target: ExprId,
+    on_lt: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    on_eq: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    on_gt: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let p = *p;
+    let logic = p.logic;
+    let lt_xc = d.lt(x, c);
+    let eq_xc = d.eq(x, c);
+    let lt_cx = d.lt(c, x);
+    let inner = d.const_app(logic.or, &[eq_xc, lt_cx]);
+
+    let tri = trichotomy(d, &p, c, x);
+
+    let on_left = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = on_lt(d, h);
+        d.lam_fv(h_fv, lt_xc, body)
+    };
+    let on_right = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let sub_on_left = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let body = on_eq(d, h2);
+            d.lam_fv(h2_fv, eq_xc, body)
+        };
+        let sub_on_right = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let body = on_gt(d, h2);
+            d.lam_fv(h2_fv, lt_cx, body)
+        };
+        let body = d.const_app(
+            logic.or_elim,
+            &[eq_xc, lt_cx, target, h, sub_on_left, sub_on_right],
+        );
+        d.lam_fv(h_fv, inner, body)
+    };
+    d.const_app(logic.or_elim, &[lt_xc, inner, target, tri, on_left, on_right])
+}
+
+/// From `h_gt : Lt two x` and `h_le : Le (totient x) one`, derive `False`.
+///
+/// The two coprime residues below `x` that make this a contradiction are
+/// `1` (`coprime_one_left_iff`, unconditional) and `pred x` (`coprime_succ_
+/// self (pred x)`, valid since `x = succ (pred x)` once `0 < x`) -- distinct
+/// whenever `2 < x` (`1 < pred x`, since `pred x >= 2`). Composing
+/// `countRange_ge_two_of_two_witnesses` at those two witnesses gives `Le two
+/// (totient x)`, which `le_trans` chains with `h_le` into the impossible
+/// `Le two one` -- refuted by peeling two `succ`s down to `not_succ_le_zero`.
+///
+/// Shared by `dvd_two_of_totient_le_one`'s `2 < a` branch and
+/// `totient_eq_one_iff`'s forward direction's `2 < n` branch.
+fn totient_le_one_contradiction_above_two(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    h_gt: ExprId,
+    h_le: ExprId,
+) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+
+    // `x = succ (pred x)`, from `0 < x` (via `2 < x`).
+    let pos_x = zero_lt_via_c(d, &p, two, x, h_gt);
+    let eq_x_fn = pos_implies_succ_pred(d, &p, x);
+    let eq_x = d.apply(eq_x_fn, &[pos_x]); // Eq x (succ (pred x))
+
+    let pa = d.pred(x);
+    let spa = d.succ(pa);
+    let eq_spa_x = d.symm(x, spa, eq_x); // Eq spa x
+
+    // `pred x < x`.
+    let lt_pa_spa = d.lemma(p.lt_succ_self, &[pa]);
+    let motive_lt = d.eq_motive(spa, &|d, z| d.lt(pa, z));
+    let lt_pa_x = d.transport(spa, motive_lt, lt_pa_spa, x, eq_spa_x);
+
+    // `1 < pred x`, rewriting `h_gt`'s underlying `Le (succ two) x` along
+    // `x = succ (pred x)`.
+    let motive_le = d.eq_motive(x, &|d, z| {
+        let succ_two = d.succ(two);
+        d.le(succ_two, z)
+    });
+    let le_succ2_spa = d.transport(x, motive_le, h_gt, spa, eq_x); // Le (succ two) spa
+    let le_two_pa = d.lemma(p.le_of_succ_le_succ, &[two, pa, le_succ2_spa]); // Le two pa = Lt one pa
+
+    // Witness `1`: `gcd one x = one` unconditionally.
+    let true_ty = d.kernel().const_(p.logic.true_, vec![]);
+    let true_intro = d.kernel().const_(p.logic.true_intro, vec![]);
+    let gcd1x = d.gcd(one, x);
+    let cop1_ty = d.eq(gcd1x, one);
+    let iff1 = d.lemma(p.coprime_one_left_iff, &[x]);
+    let mpr1 = iff_reverse(d, cop1_ty, true_ty, iff1);
+    let gcd1x_eq1 = d.apply(mpr1, &[true_intro]);
+    let hfi = d.lemma(p.beq_eq_true_of_eq, &[gcd1x, one, gcd1x_eq1]);
+
+    // Witness `pred x`: `gcd (pred x) x = one`.
+    let gcd_pa_spa_eq1 = d.lemma(p.coprime_succ_self, &[pa]); // Eq (gcd pa spa) one
+    let motive_gcd = d.eq_motive(spa, &|d, z| {
+        let g = d.gcd(pa, z);
+        d.eq(g, one)
+    });
+    let gcd_pa_x_eq1 = d.transport(spa, motive_gcd, gcd_pa_spa_eq1, x, eq_spa_x);
+    let gcd_pa_x = d.gcd(pa, x);
+    let hfj = d.lemma(p.beq_eq_true_of_eq, &[gcd_pa_x, one, gcd_pa_x_eq1]);
+
+    // Assemble: `Le two (countRange f x)`, defeq `Le two (totient x)`.
+    let f = totient_predicate(d, x);
+    let cr_f_x = count_range(d, &p, f, x);
+    let le_two_cr = d.lemma(
+        p.count_range_ge_two_of_two_witnesses,
+        &[f, x, one, pa, le_two_pa, lt_pa_x, hfi, hfj],
+    );
+
+    // `Le two one`, then refute.
+    let le_2_1 = d.lemma(p.le_trans, &[two, cr_f_x, one, le_two_cr, h_le]);
+    let le_1_0 = d.lemma(p.le_of_succ_le_succ, &[one, zero, le_2_1]);
+    let not_le_1_0 = d.lemma(p.not_succ_le_zero, &[zero]);
+    d.apply(not_le_1_0, &[le_1_0])
+}
+
+// ============================================================================
+// `Nat.dvd_two_of_totient_le_one : ∀ a, Lt zero a → Le (totient a) one →
+// dvd a two`.
+// ============================================================================
+
+/// See the module doc / `NatPrelude::dvd_two_of_totient_le_one` for the
+/// route: `trichotomy` at `c = two` on `a`, with the `a < 2` and `a = 2`
+/// branches closed by direct concrete divisibility witnesses and the
+/// `2 < a` branch refuted by [`totient_le_one_contradiction_above_two`].
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_dvd_two_of_totient_le_one(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+
+    let hpos_ty = d.lt(zero, a);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+
+    let totient_a = d.const_app(p.totient, &[a]);
+    let hle_ty = d.le(totient_a, one);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let goal = d.dvd(a, two);
+
+    let body = trichotomy_elim(
+        d,
+        &p,
+        two,
+        a,
+        goal,
+        &|d, h_lt| {
+            // h_lt : Lt a two. Combined with hpos : Lt zero a (defeq Le one
+            // a), forces a = one.
+            let le_a_1 = d.lemma(p.le_of_succ_le_succ, &[a, one, h_lt]); // Le a one
+            let eq_a_1 = d.lemma(p.le_antisymm, &[a, one, le_a_1, hpos]); // Eq a one
+
+            // `dvd one two`, witness `two`: `Eq two (mul one two)`.
+            let mul_1_2 = d.mul(one, two);
+            let one_mul_2 = d.lemma(p.one_mul, &[two]); // Eq (mul one two) two
+            let eq_2_mul = d.symm(mul_1_2, two, one_mul_2); // Eq two (mul one two)
+            let dvd_1_2 = dvd_intro(d, one, two, two, eq_2_mul);
+
+            let eq_1_a = d.symm(a, one, eq_a_1); // Eq one a
+            let motive = d.eq_motive(one, &|d, z| d.dvd(z, two));
+            d.transport(one, motive, dvd_1_2, a, eq_1_a)
+        },
+        &|d, h_eq| {
+            // h_eq : Eq a two.
+            let dvd_2_2 = d.lemma(p.dvd_refl, &[two]);
+            let eq_2_a = d.symm(a, two, h_eq);
+            let motive = d.eq_motive(two, &|d, z| d.dvd(z, two));
+            d.transport(two, motive, dvd_2_2, a, eq_2_a)
+        },
+        &|d, h_gt| {
+            // h_gt : Lt two a.
+            let false_pf = totient_le_one_contradiction_above_two(d, &p, a, h_gt, hle);
+            ex_falso(d, &p, goal, false_pf)
+        },
+    );
+
+    let full_stmt = d.arrow(hpos_ty, d.arrow(hle_ty, goal));
+    let ty = d.pi_fv(a_fv, nat, full_stmt);
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, body);
+        let with_hpos = d.lam_fv(hpos_fv, hpos_ty, with_hle);
+        d.lam_fv(a_fv, nat, with_hpos)
+    };
+    d.declare_theorem(p.dvd_two_of_totient_le_one, ty, value)
+}
+
+// ============================================================================
+// `Nat.totient_eq_one_iff : ∀ n, Iff (Eq (totient n) one) (Or (Eq n one)
+// (Eq n two))`.
+// ============================================================================
+
+/// See the module doc / `NatPrelude::totient_eq_one_iff` for the route.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_totient_eq_one_iff(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+
+    let totient_n = d.const_app(p.totient, &[n]);
+    let lhs_ty = d.eq(totient_n, one);
+    let eq_n_1 = d.eq(n, one);
+    let eq_n_2 = d.eq(n, two);
+    let rhs_ty = d.const_app(p.logic.or, &[eq_n_1, eq_n_2]);
+    let stmt = d.const_app(p.logic.iff, &[lhs_ty, rhs_ty]);
+
+    // Forward: `Eq (totient n) one -> Or (Eq n one) (Eq n two)`.
+    let mp = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = trichotomy_elim(
+            d,
+            &p,
+            two,
+            n,
+            rhs_ty,
+            &|d, h_lt| {
+                // h_lt : Lt n two. Split `n = 0` vs `n = 1`.
+                let le_n_1 = d.lemma(p.le_of_succ_le_succ, &[n, one, h_lt]); // Le n one
+                let disj = d.lemma(p.lt_or_eq_of_le, &[n, one, le_n_1]); // Or (Lt n one) (Eq n one)
+                let lt_n_1 = d.lt(n, one);
+
+                let on_zero = {
+                    let h2_fv = d.fresh_fvar();
+                    let h2 = d.kernel().fvar(h2_fv); // h2 : Lt n one
+                    let le_n_0 = d.lemma(p.le_of_succ_le_succ, &[n, zero, h2]); // Le n zero
+                    let le_0_n = d.lemma(p.zero_le, &[n]);
+                    let eq_n_0 = d.lemma(p.le_antisymm, &[n, zero, le_n_0, le_0_n]); // Eq n zero
+
+                    // `Eq (totient n) one` rewritten along `n = 0` gives
+                    // `Eq (totient zero) one`, defeq `Eq zero one`.
+                    let motive_t0 = d.eq_motive(n, &|d, x| {
+                        let t = d.const_app(p.totient, &[x]);
+                        d.eq(t, one)
+                    });
+                    let h_t0_1 = d.transport(n, motive_t0, h, zero, eq_n_0);
+                    let totient_zero = d.const_app(p.totient, &[zero]);
+                    let symm1 = d.symm(totient_zero, one, h_t0_1); // Eq one (totient zero), defeq Eq one zero
+                    let ne1 = d.lemma(p.succ_ne_zero, &[zero]); // Not (Eq one zero)
+                    let false_pf = d.apply(ne1, &[symm1]);
+                    let body = ex_falso(d, &p, rhs_ty, false_pf);
+                    d.lam_fv(h2_fv, lt_n_1, body)
+                };
+                let on_one = {
+                    let h2_fv = d.fresh_fvar();
+                    let h2 = d.kernel().fvar(h2_fv); // h2 : Eq n one
+                    let body = d.const_app(p.logic.or_inl, &[eq_n_1, eq_n_2, h2]);
+                    d.lam_fv(h2_fv, eq_n_1, body)
+                };
+                d.const_app(p.logic.or_elim, &[lt_n_1, eq_n_1, rhs_ty, disj, on_zero, on_one])
+            },
+            &|d, h_eq| d.const_app(p.logic.or_inr, &[eq_n_1, eq_n_2, h_eq]),
+            &|d, h_gt| {
+                // h_gt : Lt two n. `Le (totient n) one`, from `h : Eq
+                // (totient n) one`, via `le_refl` transported along `h`.
+                let le_refl_tn = d.lemma(p.le_refl, &[totient_n]);
+                let motive_le = d.eq_motive(totient_n, &|d, x| d.le(totient_n, x));
+                let le_tn_1 = d.transport(totient_n, motive_le, le_refl_tn, one, h);
+                let false_pf = totient_le_one_contradiction_above_two(d, &p, n, h_gt, le_tn_1);
+                ex_falso(d, &p, rhs_ty, false_pf)
+            },
+        );
+        d.lam_fv(h_fv, lhs_ty, body)
+    };
+
+    // Reverse: `Or (Eq n one) (Eq n two) -> Eq (totient n) one`.
+    let mpr = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let on_one = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv); // h2 : Eq n one
+            let motive = d.eq_motive(one, &|d, x| {
+                let t = d.const_app(p.totient, &[x]);
+                d.eq(t, one)
+            });
+            let refl_at_one = d.refl(one);
+            let eq_1_n = d.symm(n, one, h2);
+            let body = d.transport(one, motive, refl_at_one, n, eq_1_n);
+            d.lam_fv(h2_fv, eq_n_1, body)
+        };
+        let on_two = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv); // h2 : Eq n two
+            let motive = d.eq_motive(two, &|d, x| {
+                let t = d.const_app(p.totient, &[x]);
+                d.eq(t, one)
+            });
+            let refl_at_two = d.refl(one);
+            let eq_2_n = d.symm(n, two, h2);
+            let body = d.transport(two, motive, refl_at_two, n, eq_2_n);
+            d.lam_fv(h2_fv, eq_n_2, body)
+        };
+        let body = d.const_app(p.logic.or_elim, &[eq_n_1, eq_n_2, lhs_ty, h, on_one, on_two]);
+        d.lam_fv(h_fv, rhs_ty, body)
+    };
+
+    let proof = d.const_app(p.logic.iff_intro, &[lhs_ty, rhs_ty, mp, mpr]);
+    let ty = d.pi_fv(n_fv, nat, stmt);
+    let value = d.lam_fv(n_fv, nat, proof);
+    d.declare_theorem(p.totient_eq_one_iff, ty, value)
+}
+
+/// Declare `Nat.coprime_succ_self`, `Nat.totient_eq_zero`, the general
 /// `countRange` counting machinery (`countRange_succ_of_true`,
-/// `countRange_le_of_le`, `countRange_ge_two_of_two_witnesses`), in
-/// dependency order.
+/// `countRange_le_of_le`, `countRange_ge_two_of_two_witnesses`), and the two
+/// mirrors that compose it (`dvd_two_of_totient_le_one`,
+/// `totient_eq_one_iff`), in dependency order.
 pub(super) fn declare_totient_lemmas_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -756,5 +1123,7 @@ pub(super) fn declare_totient_lemmas_all(
     declare_count_range_succ_of_true(d, p)?;
     declare_count_range_le_of_le(d, p)?;
     declare_count_range_ge_two_of_two_witnesses(d, p)?;
+    declare_dvd_two_of_totient_le_one(d, p)?;
+    declare_totient_eq_one_iff(d, p)?;
     Ok(())
 }
