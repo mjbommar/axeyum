@@ -493,6 +493,101 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
     "natural-prime-arithmetic": ("Mathlib.Data.Nat.Prime.Basic",),
     "natural-prime-characterizations": ("Mathlib.Data.Nat.Prime.Defs",),
     "fermat-numbers": ("Mathlib.NumberTheory.Fermat",),
+    # --- draw 9, 2026-08-30 (ADR-0830) ---------------------------------------
+    # ADR-0762 (draw 8, declined) measured the un-owned floor at 7 modules, all
+    # either R9-contaminated (`Mathlib.Data.Nat.Dist`, `Mathlib.Data.Nat.
+    # Factorial.Basic`, `Mathlib.Data.Int.GCD`) or topically adjacent to a
+    # PUBLISHED development/train family (`natural-bitwise`, `natural-gcd`,
+    # `natural-binomial`), and concluded draw 9 needs TWO NEW CONSTRUCTIONS
+    # (`Nat.nthRoot` clean, a second unidentified) before any held-out-safe
+    # family exists. Re-measured here, byte-identical: `env=2383`, same seven
+    # modules, same contamination. That half of ADR-0762 still holds.
+    #
+    # What ADR-0762 did NOT check is whether several modules BELOW the
+    # PER_FAMILY floor, each already admissible today (no new construction),
+    # combine into >= 10 rows the way draws 3, 4 and 5 built
+    # `integer-division-boundary-cases`, `range-induction` and
+    # `integer-absolute-value`. They do. Two such combinations exist, checked
+    # against `scripts/check-holdout-adjacency.py`'s real `screen_family` (R11)
+    # rather than by inspection, and BOTH are R9/R11-clean with zero new
+    # kernel declarations:
+    #
+    #   integer-elementary-identities (held-out) -- `Init.Data.Int.Basic` (6:
+    #   `Int.ofNat`/`natCast` identities), `Init.Data.Int.Compare` (1: a strict
+    #   order trichotomy), `Init.Data.Int.Linear` (2: `omega`-adjacent not-le/
+    #   not-lt rewrites), `Mathlib.Data.Int.DivMod` (2: `emod`/`ediv`
+    #   identities) -- 11 rows. Every constant CONST_RE extracts from these
+    #   eleven statements is typeclass/operator PLUMBING under
+    #   `check-holdout-adjacency.py`'s own `is_syntax` filter (`Int.ofNat`,
+    #   `LE.le`, `HMod.hMod`, ... -- explicitly listed or pattern-matched), so
+    #   `subject_constants` is EMPTY and both the topic and vocabulary signals
+    #   are vacuously clean. Blind beside blind besides: the natCast rows sit
+    #   next to the EXISTING held-out `integer-natcast` (draw 2) and the DivMod
+    #   rows next to `integer-division`/`integer-division-boundary-cases`
+    #   (held-out, v2/draw 3) -- the draw-2 precedent, not a new judgment call.
+    #
+    #   natural-elementary-bounds (held-out) -- ten small leftover Nat modules,
+    #   none individually near the floor, each a basic order/bound/successor
+    #   identity no existing family's topic or vocabulary reaches:
+    #   `Mathlib.Data.Nat.SuccPred` (2), `Batteries.Data.Nat.Lemmas` (2),
+    #   `Mathlib.Data.Nat.Basic` (1), `Mathlib.Data.Nat.Order.Lemmas` (1),
+    #   `Init.SimpLemmas` (1), `Init.Data.Nat.Simproc` (1),
+    #   `Mathlib.Algebra.Order.Group.Nat` (1), `Mathlib.Order.Monotone.Basic`
+    #   (1), `Mathlib.Data.Nat.Sqrt` (1 -- the one row NOT excluded by
+    #   `HELD_OUT_CONSTRUCTIONS`, about squeezing between consecutive squares
+    #   rather than about `Nat.sqrt` itself), `Mathlib.Data.Nat.Digits.Defs`
+    #   (1) -- 12 rows, of which `select()` keeps the alphabetically-first ten.
+    #   This one is honestly a grab-bag rather than one clean subject (unlike
+    #   `integer-absolute-value`'s four modules, all about `natAbs`) -- the
+    #   remaining un-owned supply below the floor is this thin, matching
+    #   ADR-0762's own count. `Init.Core`'s single survivor (`Nat.add_zero`)
+    #   was deliberately EXCLUDED: it is already IN-ENV (R9-contaminated), the
+    #   one leftover row this draw could not use for held-out.
+    #
+    # Both were verified with the real `select()` + `guard()` (R1-R11) in
+    # memory before this edit, not by inspection: `GUARD PASSED`, both new
+    # held-out pools 0/10 against the kernel environment, `_adjacency_screen`
+    # (R11) raised nothing.
+    #
+    # THE TWO DISPATCHABLE SLOTS use ADR-0762's own stated ready supply rather
+    # than inventing new adjacency risk: `natural-bitwise-basics`
+    # (`Init.Data.Nat.Bitwise.Lemmas`, 33 rows, R9 0/10) and `natural-distance`
+    # (`Mathlib.Data.Nat.Dist`, 18 rows, R9 2/10 -- `dist_comm`/`dist_self`,
+    # harmless outside held-out) -- exactly the module ADR-0653's closing
+    # recommendation named as "real supply for development or train" once a
+    # draw's cycle positions allow it. Both duplicate an existing v1
+    # development/train family's TOPIC (`natural-bitwise`, and Dist is
+    # `natural-distance`'s own namesake) -- accepted for the same reason draw 7
+    # accepted `natural-prime-arithmetic`/`natural-prime-characterizations`
+    # beside v1 `natural-primes`: contamination in a PUBLISHED partition is a
+    # fast-closure feature, not the ADR-0542 leak, which only threatens blind
+    # rows.
+    #
+    # PRIMARY-MODULE ORDERING IS CHOSEN, as in every prior draw: the four
+    # primaries sort `Init.Data.Int.Basic` < `Init.Data.Nat.Bitwise.Lemmas` <
+    # `Mathlib.Data.Nat.Dist` < `Mathlib.Data.Nat.SuccPred`, so the mechanical
+    # held-out/development/train/held-out cycle lands
+    #
+    #   integer-elementary-identities    held-out
+    #   natural-bitwise-basics           development
+    #   natural-distance                 train
+    #   natural-elementary-bounds        held-out
+    #
+    # exactly the 2-held-out/2-dispatchable split R4/R5 require. No target
+    # outcome was consulted; the SET and each tuple's primary module are a
+    # lane's judgment under measured scarcity, the assignment is the mechanical
+    # rule above. Full measurements: docs/plan/notes/nursery-refill-draw-9.md.
+    "integer-elementary-identities": (
+        "Init.Data.Int.Basic", "Init.Data.Int.Compare",
+        "Init.Data.Int.Linear", "Mathlib.Data.Int.DivMod"),
+    "natural-bitwise-basics": ("Init.Data.Nat.Bitwise.Lemmas",),
+    "natural-distance": ("Mathlib.Data.Nat.Dist",),
+    "natural-elementary-bounds": (
+        "Mathlib.Data.Nat.SuccPred", "Batteries.Data.Nat.Lemmas",
+        "Mathlib.Data.Nat.Basic", "Mathlib.Data.Nat.Order.Lemmas",
+        "Init.SimpLemmas", "Init.Data.Nat.Simproc",
+        "Mathlib.Algebra.Order.Group.Nat", "Mathlib.Order.Monotone.Basic",
+        "Mathlib.Data.Nat.Sqrt", "Mathlib.Data.Nat.Digits.Defs"),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -541,6 +636,12 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
         "divisibility-library-application", "kernel-induction"),
     "fermat-numbers": (
         "divisibility-library-application", "recursive-function-reconstruction"),
+    # --- draw 9, 2026-08-30 (ADR-0830) ---------------------------------------
+    "integer-elementary-identities": (
+        "kernel-library-application", "modular-arithmetic-reconstruction"),
+    "natural-bitwise-basics": ("kernel-induction", "kernel-library-application"),
+    "natural-distance": ("kernel-induction", "kernel-library-application"),
+    "natural-elementary-bounds": ("kernel-induction", "kernel-library-application"),
 }
 
 PER_FAMILY = 10
