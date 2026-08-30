@@ -4893,8 +4893,12 @@ fn declare_sup_seq_converges_thm(
     let concl = d.const_app(p.converges, &[f_lambda, target]);
 
     let ty = {
-        let after_u = d.arrow(u_ty, concl);
-        let after_hab = d.arrow(hab_ty, after_u);
+        // BOTH binders must be `pi_fv`, not `arrow`: the conclusion mentions
+        // `u` (through `supSeq`) and `hab` (through `supOn`'s own explicit
+        // argument), so a non-dependent arrow leaves them free and the kernel
+        // reports only `UnboundFVar`, naming neither.
+        let after_u = d.pi_fv(u_fv, u_ty, concl);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_u);
         let over_b = d.pi_fv(b_fv, carrier, after_hab);
         let over_a = d.pi_fv(a_fv, carrier, over_b);
         d.pi_fv(f_fv, func_ty, over_a)
