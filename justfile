@@ -343,6 +343,13 @@ facts:
     python3 -m unittest scripts.tests.test_check_cas_substance
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 scripts/check-settled-fact-statements.py
+    # S0 of the trusted-library safety roadmap (ADR-0746): the facts x
+    # protections census. Refuses on the committed matrix going stale -- a
+    # fact or checker_command silently added, removed, or downgraded from an
+    # own-subject checker to a shared prelude sweep -- and on a classifier
+    # that has stopped discriminating, which would otherwise report a
+    # cheerful zero for a whole protection column.
+    python3 scripts/gen-safety-matrix.py --check
     # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so
     # the Mathlib proposition lives only in `formal.statement`. Nineteen had it
     # overwritten with our own `render_lean` output, and the mirror claim -- "we
