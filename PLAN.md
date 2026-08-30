@@ -170,7 +170,9 @@ now. Nothing was deleted.
 | 2026-08-30 | nat-parity-div | 6 new axiom-free Nat kernel theorems (parity/div-two cluster) + 1 mirror flipped onto a pre-existing theorem; 7 of 10 dispatched facts proved, 3 blocked with named reasons |
 | 2026-08-30 | fermat-mirrors | `Nat.fermatNumber_ne_one`/`_mono`/`coprime_fermatNumber_fermatNumber` — three new axiom-free kernel theorems (`nat_prelude/fermat_number_mirrors.rs`), facts flipped to `proved` with evidence, 208 `nat_prelude::` tests passing (was 204). |
 | 2026-08-30 | pow-add-prime | `Nat.pow_mul`, `Nat.dvd_pow_add_one_of_odd_exp`, `Nat.dvd_pow_add_one_of_odd_mul_exp` — the odd-factor divisibility step toward `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`, subtraction-free (no alternating sum, no `Int` transport); fact stays `open`, full lemma not assembled |
+| 2026-08-30 | `planning` | Accept ADR-0717; add artifact, graph, safety, and discovery roadmaps; promote L0–L4 into the generated primary plan with collision-free 2–3 lane ownership. |
 | 2026-08-30 | parity-finish | 3 axiom-free Nat kernel theorems closing the parity/division-by-two cluster's last blockers (`Nat.even_add`, `Nat.even_add'`, `Nat.even_div`); all 3 dispatched facts proved; two of three handoff sizings were wrong (one undersold, one — `even_div` — badly oversold: an existing unconditional lemma closed it in ~75 lines) |
+| 2026-08-30 | pow-add-prime-finish | `Nat.pow_two_or_has_odd_factor` (odd-factor extraction, ordinary fuel-bounded `Nat.rec`, NOT `WellFounded.fix` — the prior handoff's sizing was wrong) and `Nat.pow_of_pow_add_prime` — closes `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3` (open → proved, axiom-free); 222/222 `nat_prelude::` |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
@@ -628,10 +630,11 @@ changes that still determine the immediate queue.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
-here as closed evidence boundaries. A3 remains incomplete, but all currently
-preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
-A5 is the first active item.
+The accepted library programme below is the new cross-cutting focus. It does
+not erase the retained A1–A11 solver programme: P0 safety work
+preempts it, P1 graph/artifact authority may run beside A5/A6, and production
+pilots begin only after their authorities land. A3 remains incomplete but
+yielded, A4 yielded, and A5 remains the first active solver-depth item.
 
 **The prose half of the ledger is now derived, not transcribed** (`WIP`,
 ledger-freshness, 2026-08-18). `F:schedule-critical-chain-infeasible` said "the
@@ -32577,6 +32580,16 @@ sharply. Splitting that status is a schema change with a validator and an
 - `./scripts/check-links.sh`: `all links ok`.
 - No `cargo test` run — this lane changed no Rust.
 
+**Library programme (`DONE`, library-construction-roadmaps, 2026-08-30).**
+ADR-0717 and four detailed roadmaps now define the new L0–L4 focus: universal
+theorem credit; pinned declaration-graph authority; graph join and
+infrastructure ranking; declarative, counterexample-first discovery; and a thin
+Lean adapter before demand-gated source compatibility. Project-wide plan
+sources, the plan index, research roadmap, and generated root plan carry the
+same order. Implementation belongs to new disjoint graph-authority,
+graph-ranking, safety-contract, and discovery lanes; this planning lane owns no
+producer, fact status, or generated graph artifact.
+
 ## Status
 
 **DONE.** ADR-0603 row 2 for the least-number principle over the naturals is
@@ -33092,6 +33105,93 @@ gate (`G7 queue-below-floor`) is currently failing (8 dispatchable against a
 floor of 10) — NOT this lane's to fix per its brief ("do NOT run
 `gen-autogenesis-nursery-refill.py`"); flagging for whichever lane owns
 queue refill next.
+
+**Your lane's block (`DONE`, pow-add-prime-finish, 2026-08-30).**
+
+`F:ml430-nat-pow-of-pow-add-prime-ab61d0d3` (`Nat.Prime (a^n+1) -> exists m,
+n = 2^m`, the classical fact behind Fermat primes) is now `proved`, axiom-free,
+`proof_route: kernel-lean`.
+
+**The prior handoff's sizing of the remaining work did NOT hold up, and it is
+worth recording why.** It called the odd-factor extraction ("`n` not a power
+of two has an odd factor `> 1`") "a genuine well-founded-recursion
+undertaking" needing `WellFounded.fix`, on the grounds that every existing
+strong-induction construction in this prelude (`gcd`, `bezout_witnesses`,
+`modeq`, `wilson`, `exists_prime_factorization`) uses it. That generalization
+was wrong: **ordinary structural `Nat.rec` on a FUEL BOUND** (`Le n fuel`,
+instantiated at `fuel := n` via `le_refl`) gives the induction hypothesis for
+*every* `n' <= fuel-1`, which is exactly the strong-induction shape this
+argument needs (recurse on `half := div n 2`, not on `n`'s predecessor). No
+`WellFounded`, no `Acc`, no `lt_well_founded` anywhere in the final
+construction. `bit_order.rs`'s `msb_exists_of_le_fuel` already uses this exact
+pattern for an unrelated predicate (most-significant-bit existence) and was
+the template that made the three-lemma bound (`lt_two_mul_of_pos` +
+`lt_of_lt_of_le` + `le_of_succ_le_succ`) cheap to find.
+
+**What landed** (`crates/axeyum-lean-kernel/src/nat_prelude/pow_add_prime.rs`,
+extended — same file the prior lane started, ~600 new lines):
+
+- `Nat.pow_two_or_has_odd_factor : ∀ n, Ne n zero → Or (∃ m, Eq n (pow 2 m))
+  (∃ e t, Eq n (mul e (succ (mul 2 t))) ∧ Ne t zero)` — the odd-factor
+  extraction. Splits on `Nat.even_or_odd` (already proved, `powsq.rs`), then
+  on `half := div n 2` itself via `cases_zero_succ` (`Nat`'s own
+  constructors, no decidability dance): even+half=0 is `n=0` (contradiction);
+  odd+half=0 is `n=1=2^0`; even+half=succ hp recurses via the outer fuel `ih`
+  and reassembles at `n` (`n = 2*half`); odd+half=succ hp answers directly
+  with witness `e:=1, t:=half` (`half ≠ 0` for free, being `succ hp`).
+- `Nat.pow_of_pow_add_prime` — the fact itself. The odd branch's witnesses
+  `(e,t)` feed the prior lane's `dvd_pow_add_one_of_odd_mul_exp`, exhibiting
+  `a^e+1 ∣ a^n+1`; primality (spelled inline, matching
+  `primes.rs`/`factorization.rs`'s convention — no `Nat.Prime` predicate)
+  forces that divisor to be `1` or `a^n+1`, and both are excluded: `a^e+1 ≥ 2`
+  from `pow_pos` (needs only `1 < a`), and `a^e+1 ≠ a^n+1` from `e < n` (needs
+  `exponent_of(t) > 1` from `t ≠ 0`, via `mul_lt_mul_left`, combined with
+  `pow_injective` and `lt_irrefl`).
+
+Both admitted through the trusted `Kernel::add_declaration` gate, axiom-free
+(`Kernel::axiom_footprint` empty, confirmed by
+`nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` and by
+`nat_axiom_inventory --require-axiom-free nat`, exit 0). Verified against a
+genuinely FREE `n` (resp. `a, n`) via `Kernel::infer_in` in a real
+`LocalContext` — **and** at the concrete instance `n = 6`: the construction's
+own recursion, traced by hand (`6=3+3` even; `3=succ(1+1)` odd with witness
+`t=1`; reassembled at `n=6` as `e := 2*1 = 2`), produces witness `e=2, t=1`
+(`6 = 2*(2*1+1) = 2*3`), matched against an INDEPENDENTLY built statement of
+the `n=6` disjunction in the new test
+(`pow_two_or_has_odd_factor_and_pow_of_pow_add_prime_apply_at_free_and_concrete_instances`,
+`nat_prelude_tests.rs`) via `declare_theorem`, which checks the kernel proof's
+type against that exact statement, not merely against SOME provable type — a
+genuine re-check, not a tautology. Largest numeral formed anywhere: `6` (the
+theorems themselves are proofs about free variables, per the "keep formed
+magnitudes small" rule; nothing here forces a large unary tower).
+
+Full `nat_prelude::` sweep: **222 passed, 0 failed** (was 221 immediately
+after merging `main`, which itself had landed unrelated `parity`/`sup_laws`
+work from sibling lanes; +2 theorems +1 new test net from this lane).
+`cargo fmt --all --check` and `cargo clippy -p axeyum-lean-kernel --all-targets
+-D warnings` both clean (two `#[allow(clippy::too_many_arguments)]` added for
+helpers threading through 8 `ExprId`s, matching the file's existing
+convention on `pow_of_pow_add_prime_contradiction`).
+
+**Fact ledger**: `artifacts/facts/F-ml430-nat-pow-of-pow-add-prime-ab61d0d3.json`
+flipped `open` → `proved`, `formal.statement` UNCHANGED (only
+`formal.kernel_theorem` added, per the "don't overwrite a mirror's statement"
+rule), three evidence rows added (two `kernel-term` — one per theorem, each
+`checker_command` verified against both the real name and a fabricated one
+with `/usr/bin/grep -cE`, anchored — plus one `exhaustive-enumeration` for the
+axiom-free trusted surface). `depends_on` populated by
+`scripts/check-fact-depends-derived.py --fix` from the proof term's direct
+dependencies (13 edges to existing `Nat`/generic facts); `python3
+scripts/validate-facts.py` reports **0 errors** over 2270 facts. Partition
+checked before touching anything: `artifacts/autogenesis/nursery-v2-extension.json`
+has this fact's `"partition": "development"` — never held-out.
+
+**For the next lane**: nothing left on this specific fact. The two new
+theorems (`pow_two_or_has_odd_factor`, `pow_of_pow_add_prime`) are reusable —
+`pow_two_or_has_odd_factor` in particular is a general-purpose 2-adic
+odd/even-part split that could feed other `n = 2^k * odd` arguments
+(quadratic reciprocity's `Nat`-side lemmas, further Fermat-number work) without
+re-deriving the fuel-induction machinery.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
@@ -34838,6 +34938,33 @@ for this crate unaffected.
 code. Did not extend `trusted_substitution`'s allowlist (named as the real
 remaining work). Did not weaken `TrustedDeclaration` to force a pass.
 
+### L0–L4 — Graph-directed trusted library programme (`TODO`, P0–P2)
+
+Run the accepted [ADR-0717](docs/research/09-decisions/adr-0717-library-construction-is-graph-directed-through-an-artifact-compatible-trust-anchor.md)
+programme in this order:
+
+1. **L0, P0 — theorem credit:** exact statement and closure identity, forbidden
+   trust/target checks, nonzero coverage, semantic controls, and independently
+   graded replay for every changed settled fact. See the
+   [safety roadmap](docs/plan/trusted-library-safety-roadmap-2026-08-30.md).
+2. **L1, P1 — graph authority:** freeze the pinned source/extractor and emit
+   complete, sealed declaration edge layers; proof/value edges remain forbidden
+   producer input. See the [artifact](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
+   and [graph](docs/plan/graph-directed-library-roadmap-2026-08-30.md) roadmaps.
+3. **L2, P1 — infrastructure frontier:** join exact Axeyum identities,
+   representability, destinations, obstructions, producers, and provenance;
+   expose every score component and preserve `fact-frontier.py` legality.
+4. **L3, P2 — discovery pilots:** after L0–L2, run one substrate, one reusable
+   producer, and one destination pilot with falsification before search and a
+   frozen local-ready comparison. See the
+   [efficiency roadmap](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md).
+5. **L4, P2 — Lean adapter:** complete artifact replay, then an elaborated-goal
+   adapter whose result Lean checks. Source/elaboration features remain blocked
+   until a preregistered population measures demand.
+
+Each phase's roadmap exit is mandatory. Zero-yield pilots remain results; raw
+degree never authorizes work; broad Lean-source compatibility is not an exit.
+
 ### A1 and A2 — `DONE`, archived
 
 Both completed. Moved to
@@ -35130,6 +35257,17 @@ For concurrency and resource rules, follow
 - **Determinism and replay are product promises:** stable order, explicit seeds
   and limits, original-term SAT replay, and independent UNSAT checking remain
   mandatory.
+- **Graph rank is advisory until its authority is complete:** module degree,
+  declaration centrality, curriculum mapping, and cost estimates remain visible
+  components. They never bypass fact-frontier legality, held-out isolation,
+  representability, or the theorem-credit safety contract.
+- **Proof data does not leak into autonomous discovery:** upstream proof/value
+  dependency edges may measure and sequence work but are physically excluded
+  from proof-isolated producer inputs and autonomous credit.
+- **Three parallel library lanes have different jobs:** prefer one shared
+  substrate/definition lane, one reusable producer lane, and one destination
+  theorem/evaluation lane. Each owns disjoint status, script, artifact, and test
+  paths; one generated writer owns every aggregate key.
 
 ## Durable detail map
 
@@ -35149,6 +35287,10 @@ For concurrency and resource rules, follow
 - Proof gaps: [`docs/plan/generated/proof-gap-matrix.md`](docs/plan/generated/proof-gap-matrix.md)
 - SMT-COMP lane: [`docs/plan/smtcomp-full-library-workstream/README.md`](docs/plan/smtcomp-full-library-workstream/README.md)
 - Lean implementation: [`docs/plan/lean-system-implementation-plan-2026-07-21.md`](docs/plan/lean-system-implementation-plan-2026-07-21.md)
+- Library artifact compatibility: [`docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md`](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
+- Graph-directed library construction: [`docs/plan/graph-directed-library-roadmap-2026-08-30.md`](docs/plan/graph-directed-library-roadmap-2026-08-30.md)
+- Trusted theorem-credit safety: [`docs/plan/trusted-library-safety-roadmap-2026-08-30.md`](docs/plan/trusted-library-safety-roadmap-2026-08-30.md)
+- Definition and discovery efficiency: [`docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md`](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md)
 - Exploration proposal: [`docs/plan/exploration-track/README.md`](docs/plan/exploration-track/README.md)
 - CAS pause handoff: [`docs/plan/cas-parity-handoff-2026-07-22.md`](docs/plan/cas-parity-handoff-2026-07-22.md)
 

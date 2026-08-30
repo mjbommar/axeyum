@@ -6,12 +6,42 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a n : ℕ}, 1 < a → n ≠ 0 → Nat.Prime (a ^ n + 1) → ∃ m, n = 2 ^ m",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.pow_of_pow_add_prime"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-pos-right-e43374dc", "F:ml430-nat-mul-lt-mul-left-af33301e", "F:nat-le-trans", "F:nat-lt-irrefl", "F:nat-mul-one", "F:nat-one-mul", "F:nat-pow-injective", "F:nat-pow-pos", "F:nat-succ-injective", "F:nat-succ-le-succ", "F:nat-succ-mul", "F:nat-zero-lt-of-ne-zero", "F:nat-zero-mul"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- pow_of_pow_add_prime 2>/dev/null | /usr/bin/grep -cE '^Nat\\.pow_of_pow_add_prime[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.pow_of_pow_add_prime",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.pow_of_pow_add_prime : forall a n, 1 < a -> n != 0 -> PrimeCond (a^n+1) -> exists m, n = 2^m` through the trusted `Kernel::add_declaration` gate (`nat_prelude/pow_add_prime.rs`, `declare_pow_of_pow_add_prime`). Primality is spelled inline (`2 <= x /\\ forall c, c | x -> c = 1 \\/ c = x`), matching this prelude's `exists_prime_dvd`/`exists_prime_factorization` convention -- there is no `Nat.Prime` predicate. Route: the odd-factor witnesses `(e, t)` from `Nat.pow_two_or_has_odd_factor` feed `Nat.dvd_pow_add_one_of_odd_mul_exp` (a prior lane's odd-factor divisibility step), exhibiting `a^e+1 | a^n+1`; primality then forces that divisor to be `1` or `a^n+1`, and both are excluded (`a^e+1 >= 2` from `pow_pos` since `a > 1`; `a^e+1 != a^n+1` from `e < n`, which needs `exponent_of(t) > 1` from `t != 0` via `mul_lt_mul_left`, combined with `pow_injective` and `lt_irrefl`). Checked against a genuinely FREE `a, n` (via `Kernel::infer_in` in a real `LocalContext`, `nat_prelude_tests.rs`) in addition to this named-declaration check; `nat_theorem_inventory` exits non-zero for a name that does not exist, and the anchored `grep -cE` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified against a fabricated name (`pow_of_pow_add_prime_bogus_xyz`) that the same command reports count 0.",
+      "supports": "∀ {a n : ℕ}, 1 < a → n ≠ 0 → Nat.Prime (a ^ n + 1) → ∃ m, n = 2 ^ m"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- pow_two_or_has_odd_factor 2>/dev/null | /usr/bin/grep -cE '^Nat\\.pow_two_or_has_odd_factor[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.pow_two_or_has_odd_factor",
+      "kind": "kernel-term",
+      "notes": "The odd-factor extraction lemma `Nat.pow_two_or_has_odd_factor : forall n, n != 0 -> (exists m, n = 2^m) \\/ (exists e t, n = e*(succ(2t)) /\\ t != 0)` this fact's proof route depends on. NOT a `WellFounded.fix` construction: ordinary `Nat.rec` on a FUEL BOUND (`Le n fuel`, instantiated at `fuel := n` via `le_refl`) gives the induction hypothesis for every `n' <= fuel-1`, which is the strong-induction shape needed to recurse on `half := div n 2` rather than `n`'s predecessor. Splits on `Nat.even_or_odd` then on `half` via `cases_zero_succ` (`Nat`'s own constructors). Checked against a genuinely free `n` (`Kernel::infer_in`) and at the concrete instance `n=6`, where the construction's own recursion (traced by hand) produces witness `e=2, t=1` (`6=2*3`), matched against an independently-built statement of the `n=6` disjunction via `declare_theorem` (which checks the EXACT type, not merely some provable type) in `nat_prelude_tests.rs`. Verified against a fabricated name that the same anchored `grep -cE` count is 0.",
+      "supports": "∀ n, n ≠ 0 → (∃ m, n = 2^m) ∨ (∃ e t, n = e·(2t+1) ∧ t ≠ 0)"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.pow_of_pow_add_prime",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.pow_of_pow_add_prime` and `Nat.pow_two_or_has_odd_factor`'s own footprints by `[]`. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks both by name, in-tree, via a coverage assertion derived from `kernel.environment()` itself (not a hand-maintained list read in isolation). Full `nat_prelude::` sweep: 222 passed, 0 failed.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +56,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-30 in this ledger. `formal.statement` is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type, unmodified by this closure (see `formal.kernel_theorem` / the evidence rows for the kernel's own rendering and route). Primality is spelled inline (this prelude has no `Nat.Prime`), matching the fact's own statement's use of `Nat.Prime` only nominally -- the kernel construction proves the equivalent inline-primality proposition. The odd-factor extraction (`Nat.pow_two_or_has_odd_factor`) was sized by an earlier handoff as a genuine `WellFounded.fix` undertaking; that sizing did not hold up -- it is ordinary structural induction on a fuel bound. `depends_on` was populated by `scripts/check-fact-depends-derived.py --fix` from the proof term's direct dependencies; `Nat.pow_two_or_has_odd_factor` itself, plus `pow_mul`/`dvd_pow_add_one_of_odd_exp`/`dvd_pow_add_one_of_odd_mul_exp`, are internal kernel lemmas in this same prelude with no separate fact-ledger row, so they do not appear as edges even though the proof uses them. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
