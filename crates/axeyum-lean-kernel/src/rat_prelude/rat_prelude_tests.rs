@@ -369,6 +369,13 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.dot_n_self_nonneg,
         p.dot_n_two,
         p.dot_n_cauchy_schwarz,
+        p.mat_mul,
+        p.mat_mul_zero,
+        p.mat_mul_succ,
+        p.mat_mul_assoc,
+        p.mat_mul_add_left,
+        p.mat_mul_add_right,
+        p.mat_mul_smul_left,
         p.is_distribution,
         p.prob_le_one,
         p.prob_complement,
@@ -5834,5 +5841,414 @@ fn rat_bernoulli_harmonic_bound_holds_at_x_half_t_one_m_three() {
     assert!(
         !d.kernel().def_eq(one, half),
         "1/2 and 1 must not be defeq, or this test cannot tell a wrong bound from a vacuous one"
+    );
+}
+
+// --- `Rat.matMul`: matrices at symbolic dimension (`rat_prelude::matrix_n`) --
+
+/// Every declaration `matrix_n::declare_matrix_n` adds is a **checked**
+/// definition or theorem with an empty axiom footprint, read out of the
+/// kernel rather than off the diff.
+#[test]
+fn the_matrix_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("matMul", p.mat_mul, false),
+        ("matMul_zero", p.mat_mul_zero, true),
+        ("matMul_succ", p.mat_mul_succ, true),
+        ("matMul_assoc", p.mat_mul_assoc, true),
+        ("matMul_add_left", p.mat_mul_add_left, true),
+        ("matMul_add_right", p.mat_mul_add_right, true),
+        ("matMul_smul_left", p.mat_mul_smul_left, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `matMul_assoc`'s statement rendered verbatim, pinning that it is
+/// **pointwise** — the conclusion is an `Eq` at `Rat` between two *applied*
+/// products, never an `Eq` between two `AxNat -> AxNat -> Rat` values.
+///
+/// This kernel has no `funext`, so a function-valued equation would not be
+/// provable; the pin exists so a later edit cannot quietly restate it that
+/// way and leave the module doc's `funext` argument describing something that
+/// is no longer true. Same discipline as
+/// [`the_cauchy_schwarz_statement_is_squared`].
+#[test]
+fn the_matrix_associativity_statement_is_pointwise() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let statement = rendered(&mut kernel, p.mat_mul_assoc);
+    assert_eq!(
+        statement,
+        "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> \
+         ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> \
+         ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> \
+         ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> \
+         Eq.{1} Rat (Rat.matMul (Rat.matMul x0 x1 x3) x2 x4 x5 x6) \
+         (Rat.matMul x0 (Rat.matMul x1 x2 x4) x3 x5 x6))))))))"
+    );
+}
+
+/// **The mandatory concrete computation test for `Rat.matMul`.** The kernel
+/// type-checks a `Definition` and cannot tell you it computes the wrong
+/// value, so the product is evaluated at concrete `2 x 2` matrices and every
+/// one of the four output cells is compared against a hand computation.
+///
+/// The two matrices are given by closed formulas in `i` and `j` so no case
+/// split is needed, and they are chosen to DISCRIMINATE — neither is
+/// symmetric, they are not equal, and the four product cells are pairwise
+/// distinct, so a transposed index in either factor changes at least one
+/// checked value:
+///
+/// ```text
+///   A i j = (i + i + j + 1) / 1        B i j = (i + j + j) / 1
+///   A = [ 1  2 ]                       B = [ 0  2 ]
+///       [ 3  4 ]                           [ 1  3 ]
+///
+///   A*B (0,0) = 1*0 + 2*1 =  2   (0,1) = 1*2 + 2*3 =  8
+///       (1,0) = 3*0 + 4*1 =  4   (1,1) = 3*2 + 4*3 = 18
+/// ```
+///
+/// The three transposition bugs this separates, each at cell `(0,0)`:
+/// `A^T B` gives `1*0 + 3*1 = 3`, `A B^T` gives `1*0 + 2*2 = 4`, and `B A`
+/// gives `0*1 + 2*3 = 6` — none of them `2`. The last is pinned as an
+/// explicit negative control below, because `A*B` and `B*A` happen to agree
+/// at cell `(0,1)` (both `8`) and a control placed there would be vacuous.
+///
+/// Magnitudes are kept under 20: every `Rat` numeral in this kernel is a
+/// unary `Nat`, so `Rat.normalize`'s gcd runs by unary recursion and a large
+/// constant is expensive out of all proportion to its size.
+#[test]
+fn rat_mat_mul_computes_a_two_by_two_product() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    // `n / (index + 1)` — `index = 0` is the integer `n`.
+    let literal = |d: &mut IntDev<'_>, n: u32, index: u32| -> ExprId {
+        let numerator = d.num(n);
+        let idx = d.num(index);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+
+    // `fun i j => coeff(i, j)` as a `Nat -> Nat -> Rat`.
+    let matrix = |d: &mut IntDev<'_>,
+                  coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId|
+     -> ExprId {
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = coeff(d, i, j);
+        let over_j = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, over_j)
+    };
+
+    // A i j = (2i + j + 1) / 1, written `((i + i) + j) + 1` so every literal
+    // sits on `Nat.add`'s RIGHT (the argument it recurses on).
+    let a = matrix(&mut d, &|d, i, j| {
+        let two_i = d.add(i, i);
+        let plus_j = d.add(two_i, j);
+        let one = d.num(1);
+        let numerator = d.add(plus_j, one);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    });
+    // B i j = (i + 2j) / 1.
+    let b = matrix(&mut d, &|d, i, j| {
+        let plus_j = d.add(i, j);
+        let numerator = d.add(plus_j, j);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    });
+
+    let two_n = d.num(2);
+    let cell = |d: &mut IntDev<'_>, i: u32, j: u32| -> ExprId {
+        let iu = d.num(i);
+        let ju = d.num(j);
+        d.const_app(p.mat_mul, &[a, b, two_n, iu, ju])
+    };
+
+    // A itself, so a wrong entry formula is caught before the product is.
+    for (i, j, want) in [(0, 0, 1), (0, 1, 2), (1, 0, 3), (1, 1, 4)] {
+        let iu = d.num(i);
+        let ju = d.num(j);
+        let got = d.apply(a, &[iu, ju]);
+        let expected = literal(&mut d, want, 0);
+        assert!(
+            d.kernel().def_eq(got, expected),
+            "the test matrix A should have A[{i}][{j}] = {want}"
+        );
+    }
+    for (i, j, want) in [(0, 0, 0), (0, 1, 2), (1, 0, 1), (1, 1, 3)] {
+        let iu = d.num(i);
+        let ju = d.num(j);
+        let got = d.apply(b, &[iu, ju]);
+        let expected = literal(&mut d, want, 0);
+        assert!(
+            d.kernel().def_eq(got, expected),
+            "the test matrix B should have B[{i}][{j}] = {want}"
+        );
+    }
+
+    // All four cells of the product, hand-computed above.
+    for (i, j, want) in [(0, 0, 2), (0, 1, 8), (1, 0, 4), (1, 1, 18)] {
+        let got = cell(&mut d, i, j);
+        let expected = literal(&mut d, want, 0);
+        assert!(
+            d.kernel().def_eq(got, expected),
+            "Rat.matMul A B 2 {i} {j} should reduce to {want}"
+        );
+    }
+
+    // Negative control on the CHECK, not on the definition: the four expected
+    // values must be pairwise distinct, or a wrong product could satisfy the
+    // loop above by landing on a neighbouring cell's value.
+    let values: Vec<ExprId> = [2u32, 8, 4, 18]
+        .into_iter()
+        .map(|v| literal(&mut d, v, 0))
+        .collect();
+    for (x, left) in values.iter().enumerate() {
+        for right in values.iter().skip(x + 1) {
+            assert!(
+                !d.kernel().def_eq(*left, *right),
+                "the four expected cell values must be pairwise distinct, or this \
+                 test cannot tell a transposed index from a correct product"
+            );
+        }
+    }
+
+    // Negative control on the DEFINITION: matrix multiplication is not
+    // commutative, and `matMul` must not be computing something symmetric.
+    // Cell (0,0): A*B is 2 and B*A is 0*1 + 2*3 = 6.
+    let ab_00 = cell(&mut d, 0, 0);
+    let zero_n = d.num(0);
+    let ba_00 = d.const_app(p.mat_mul, &[b, a, two_n, zero_n, zero_n]);
+    let six = literal(&mut d, 6, 0);
+    assert!(
+        d.kernel().def_eq(ba_00, six),
+        "Rat.matMul B A 2 0 0 should reduce to 6"
+    );
+    assert!(
+        !d.kernel().def_eq(ab_00, ba_00),
+        "A*B and B*A must differ at (0,0) -- if they agree, `matMul` is symmetric \
+         in its two matrix arguments and is not matrix multiplication"
+    );
+}
+
+/// The same product with a genuinely **fractional** entry, so the definition
+/// is exercised over ℚ rather than over an integer sub-ring that a wrong
+/// `Rat.mul` could still satisfy.
+///
+/// ```text
+///   A i j = (i + i + j + 1) / 2        B i j = (i + j + j) / 1
+///   A = [ 1/2   1  ]                   B = [ 0  2 ]
+///       [ 3/2   2  ]                       [ 1  3 ]
+///
+///   A*B (0,0) = (1/2)*0 + 1*1     = 1   (0,1) = (1/2)*2 + 1*3     = 4
+///       (1,0) = (3/2)*0 + 2*1     = 2   (1,1) = (3/2)*2 + 2*3     = 9
+/// ```
+///
+/// Cell `(0,1)` is the load-bearing one: `(1/2)*2` must reduce to `1`, which
+/// no integer-only reading of `Rat.mul` produces.
+#[test]
+fn rat_mat_mul_computes_over_fractional_entries() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, n: u32, index: u32| -> ExprId {
+        let numerator = d.num(n);
+        let idx = d.num(index);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+    let matrix = |d: &mut IntDev<'_>,
+                  coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId|
+     -> ExprId {
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = coeff(d, i, j);
+        let over_j = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, over_j)
+    };
+
+    // denominator index 1, i.e. `/ 2`.
+    let a = matrix(&mut d, &|d, i, j| {
+        let two_i = d.add(i, i);
+        let plus_j = d.add(two_i, j);
+        let one = d.num(1);
+        let numerator = d.add(plus_j, one);
+        let idx = d.num(1);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    });
+    let b = matrix(&mut d, &|d, i, j| {
+        let plus_j = d.add(i, j);
+        let numerator = d.add(plus_j, j);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    });
+
+    // A[0][0] = 1/2 exactly, and it is NOT the integer 1 or 0.
+    let a00 = {
+        let z = d.num(0);
+        d.apply(a, &[z, z])
+    };
+    let half = literal(&mut d, 1, 1);
+    assert!(
+        d.kernel().def_eq(a00, half),
+        "the fractional test matrix should have A[0][0] = 1/2"
+    );
+    let one_r = literal(&mut d, 1, 0);
+    assert!(
+        !d.kernel().def_eq(half, one_r),
+        "1/2 and 1 must not be defeq, or this test proves nothing about ℚ"
+    );
+
+    let two_n = d.num(2);
+    for (i, j, want) in [(0u32, 0u32, 1u32), (0, 1, 4), (1, 0, 2), (1, 1, 9)] {
+        let iu = d.num(i);
+        let ju = d.num(j);
+        let got = d.const_app(p.mat_mul, &[a, b, two_n, iu, ju]);
+        let expected = literal(&mut d, want, 0);
+        assert!(
+            d.kernel().def_eq(got, expected),
+            "Rat.matMul A B 2 {i} {j} over fractional entries should reduce to {want}"
+        );
+    }
+}
+
+/// `matMul_assoc` at a concrete instance, applied rather than merely
+/// declared: `(A*B)*C` and `A*(B*C)` at `2 x 2` with `k = m = 2`, cell
+/// `(0,0)`, both reducing to the SAME hand-computed value.
+///
+/// This is the other half of the "concrete AND symbolic" pair. The theorem
+/// itself is stated and proved at genuinely free `A B C k m i j`, which
+/// numerals cannot hide a definitional-equality gap in; this instance checks
+/// that the theorem is about the definition this file actually declared, and
+/// that its two sides are not trivially the same expression.
+#[test]
+fn rat_mat_mul_assoc_holds_at_a_concrete_instance() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::req;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, n: u32| -> ExprId {
+        let numerator = d.num(n);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+    let matrix = |d: &mut IntDev<'_>,
+                  coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId|
+     -> ExprId {
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = coeff(d, i, j);
+        let over_j = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, over_j)
+    };
+
+    // A = [[1,2],[3,4]], B = [[0,2],[1,3]], C = [[1,0],[0,1]] is a bad choice
+    // (C would be the identity and hide a bug), so C i j = (j + 1) / 1:
+    // C = [[1,2],[1,2]].
+    let a = matrix(&mut d, &|d, i, j| {
+        let two_i = d.add(i, i);
+        let plus_j = d.add(two_i, j);
+        let one = d.num(1);
+        let numerator = d.add(plus_j, one);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    });
+    let b = matrix(&mut d, &|d, i, j| {
+        let plus_j = d.add(i, j);
+        let numerator = d.add(plus_j, j);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    });
+    let c = matrix(&mut d, &|d, _i, j| {
+        let one = d.num(1);
+        let numerator = d.add(j, one);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    });
+
+    let two_n = d.num(2);
+    let zero_n = d.num(0);
+    let proof = d.lemma(p.mat_mul_assoc, &[a, b, c, two_n, two_n, zero_n, zero_n]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("Rat.matMul_assoc at a concrete instance should infer: {e:?}"));
+
+    // A*B = [[2,8],[4,18]] (see `rat_mat_mul_computes_a_two_by_two_product`),
+    // so ((A*B)*C)[0][0] = 2*1 + 8*1 = 10.
+    let ten = literal(&mut d, 10);
+    let expected = req(&mut d, ten, ten);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "at A=[[1,2],[3,4]], B=[[0,2],[1,3]], C=[[1,2],[1,2]] the (0,0) entry of \
+         (A*B)*C and of A*(B*C) is 2*1 + 8*1 = 10"
+    );
+
+    // Non-vacuity: the two sides of the instantiated statement are DIFFERENT
+    // expressions (they associate the product differently), so this is not a
+    // reflexivity check dressed up as an associativity check.
+    let ab = d.const_app(p.mat_mul, &[a, b, two_n]);
+    let bc = d.const_app(p.mat_mul, &[b, c, two_n]);
+    let left = d.const_app(p.mat_mul, &[ab, c, two_n, zero_n, zero_n]);
+    let right = d.const_app(p.mat_mul, &[a, bc, two_n, zero_n, zero_n]);
+    assert_ne!(
+        left, right,
+        "(A*B)*C and A*(B*C) must not be the same ExprId, or the instance is vacuous"
+    );
+    let eleven = literal(&mut d, 11);
+    assert!(
+        !d.kernel().def_eq(ten, eleven),
+        "10 and 11 must not be defeq, or the value check above cannot fail"
     );
 }
