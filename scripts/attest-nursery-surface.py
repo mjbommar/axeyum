@@ -366,7 +366,17 @@ def main() -> int:
     if failures or unattributed:
         print("VERDICT: NOT ATTESTED -- see the failing rows above.")
         return 1
-    scope = f"the first {len(rows)} of {total_rows} rows" if subset else f"all {len(rows)} rows"
+    scope = f"{len(rows)} of {total_rows} rows" if subset else f"all {len(rows)} rows"
+    if negative_line is None:
+        # A run with no row that MUST fail cannot distinguish "everything
+        # elaborated" from "the harness saw nothing". That is not a quibble
+        # here: it is exactly what happened on this script's first real run,
+        # when the diagnostic regex missed Lean 4.30's tagged `error(...)`. So
+        # the verdict says so rather than reading as an attestation.
+        print(f"VERDICT: NOT AN ATTESTATION -- {scope} produced no diagnostics, "
+              f"but the negative control was disabled, so this run cannot "
+              f"distinguish that from a harness that sees nothing.")
+        return 1
     print(f"VERDICT: ATTESTED -- {scope} elaborate as proof-free axioms against Mathlib {commit[:12]}.")
     return 0
 
