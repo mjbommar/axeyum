@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-testbit-land",
+  "title": "each bit of a bitwise AND is the product of the two operand bits",
+  "statement": "For every natural m, n, i: testBit(land(m, n), i) = testBit(m, i) * testBit(n, i).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.testBit (AxNat.land x0 x1) x2) (AxNat.mul (AxNat.testBit x0 x2) (AxNat.testBit x1 x2)))))",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-land-zero-left",
+    "F:nat-land-zero-right",
+    "F:nat-land-aux-eq-land-of-le",
+    "F:nat-testbit-xor",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:nat-add-lt-add-left",
+    "F:nat-add-zero",
+    "F:nat-div-mod-exec",
+    "F:nat-div-mod-lt-mul-iff",
+    "F:nat-div-mod-unique",
+    "F:nat-le-succ-succ",
+    "F:nat-lt-of-le-of-lt",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-mod-lt",
+    "F:nat-mul-le-mul-left",
+    "F:nat-mul-one",
+    "F:nat-mul-zero",
+    "F:nat-one-mul",
+    "F:nat-succ-mul",
+    "F:nat-zero-div",
+    "F:nat-zero-le",
+    "F:nat-zero-mod",
+    "F:nat-zero-mul"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.testBit_land",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.testBit_land",
+      "supports": "Nat.testBit_land is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- testBit_land 2>/dev/null | grep -Ec '^Nat\\.testBit_land[[:space:]]')\" -ge 1",
+      "checker_seconds": 60,
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe so the tested count (expected >= 1) decides the exit status, never `grep -q` under pipefail. Anchored with `[[:space:]]`, never a literal tab. `--release` is mandatory: this tool builds `creal`/`complex`/`cpoint`, which overflow the default debug thread stack."
+    },
+    {
+      "id": "concrete-Nat.testBit_land",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.testBit_land",
+      "supports": "Checked at the concrete discriminating instance (m, n) = (3, 5) (binary 011/101, land 3 5 = 1 = 001) across all three of its meaningfully differing bits (bit 0: 1/1 -> AND 1; bit 1: 1/0 -> AND 0; bit 2: 0/1 -> AND 0), each with a negative control that the OTHER bit value does not also def-eq -- and symbolically against a genuinely free (m, n, i) triple.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::test_bit_land_applies_at_a_concrete_discriminating_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq",
+        "Kernel::add_declaration"
+      ],
+      "notes": "A single bit position could not discriminate a swapped combine (e.g. an OR-shaped step), so all three bits at (3,5) are checked."
+    },
+    {
+      "id": "footprint-Nat.testBit_land",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 60,
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than `Declaration::Axiom` alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane blocked-mirror-divergences",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the Nat-valued analogue of Mathlib v4.30's `Nat.testBit_land` (`F:ml430-nat-testbit-land-dfef7ca4`, which stays `open`): Mathlib's `Nat.testBit (n i : Nat) : Bool` returns `Bool` and states `testBit (m &&& n) k = (testBit m k && testBit n k)` using `Bool.&&`, while this kernel's `Nat.testBit : Nat -> Nat -> Nat` returns `{0,1}` as a `Nat` (see `nat_prelude/binary.rs`'s module doc). Restating the Bool-typed pinned statement over a Nat-valued predicate would be manufacturing a flip against a mismatched-codomain mirror, per this project's CLAUDE.md honest-flip criterion. `F:ml430-nat-testbit-land-dfef7ca4` stays open, and `scripts/gen-autogenesis-bitwise-family-projection.py --check` requires it to stay open regardless.\n\nProof route: transported `testbit_bitwise.rs`'s existing `Nat.testBit_xor` technique (induction on the bit index `i`, generalizing over both `m` and `n`, reduced at each level to a low-bit lemma `land_low_bit` and a div-by-2 lemma `land_div_two`) from `bitwiseAux` to `landAux` directly -- `land` is a separate fuel recursion from `bitwiseAux`, not `bitwise and_fn`. `land`'s absorbing zero (`land 0 n = 0`, `land m 0 = 0`, BOTH by refl) makes the boundary cases collapse to `0` on both sides, simpler than the `xor`/`lor` shape (`0 op n = n`). The per-bit bound `Lt (mul (mod m 2) (mod n 2)) 2` is symbolic, no case split needed, via `mul_le_mul_left`/`mul_one` chained with `mod_lt`. The genuinely-bitwise step (`m`, `n` both `succ`) reuses the already-proved `Nat.land_aux_agree_of_fuel` fuel-irrelevance lemma to bridge the exposed non-canonical fuel to the canonical one, exactly as `test_bit_xor`'s own hard case does via `bitwise_aux_agree_of_fuel`."
+}
