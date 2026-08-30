@@ -184,20 +184,25 @@ def exportable_fact_ids() -> set[str]:
     census gets wrong.
     """
     index = read_json(EXPORT_INDEX, "the frozen-export index")
-    entries = index.get("entries")
-    if not isinstance(entries, list) or not entries:
+    # The locals are named apart from `held_out_ids`'s deliberately: the two
+    # fail-closed guards are line-for-line identical otherwise, and
+    # `scripts/tests/mutation_controls.py` anchors a mutant on the line text.
+    # A shared anchor matches in two functions and the harness reports AMBIGUOUS
+    # ANCHOR -- not a result -- so both guards would go unmeasured.
+    exports = index.get("entries")
+    if not isinstance(exports, list) or not exports:
         raise CensusError(
             "the frozen-export index has no entries; every freshness rule below would pass "
             "vacuously and this gate exists to make them bite"
         )
-    ids = {
-        entry["fact_id"]
-        for entry in entries
-        if isinstance(entry, dict) and isinstance(entry.get("fact_id"), str)
+    exportable = {
+        export["fact_id"]
+        for export in exports
+        if isinstance(export, dict) and isinstance(export.get("fact_id"), str)
     }
-    if not ids:
+    if not exportable:
         raise CensusError("the frozen-export index names no fact ids")
-    return ids
+    return exportable
 
 
 def fact_path_at(fact_id: str) -> str:
