@@ -8,10 +8,31 @@
     "statement": "∀ {a b c : ℤ}, c ∣ a * b ↔ ∃ c₁ c₂, c₁ ∣ a ∧ c₂ ∣ b ∧ c₁ * c₂ = c",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:int-dvd-of-nat-abs-dvd", "F:int-dvd-refl", "F:int-equality-is-decidable", "F:int-gcd-dvd-left", "F:int-gcd-dvd-right", "F:int-mul-assoc", "F:int-mul-comm", "F:int-mul-eq-zero", "F:int-mul-zero", "F:int-nat-abs-dvd-nat-abs-of-dvd", "F:int-nat-abs-mul", "F:ml430-nat-dvd-gcd-e5184fc5", "F:ml430-nat-dvd-mul-right-a87a83c4", "F:ml430-nat-eq-zero-of-gcd-eq-zero-left-72cc4246", "F:nat-mul-assoc", "F:nat-mul-left-cancel-of-pos", "F:nat-succ-ne-zero", "F:nat-zero-lt-of-ne-zero"],
+  "evidence": [
+    {
+      "id": "kernel-Int.dvd_mul_split",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- dvd_mul_split 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.dvd_mul_split[[:space:]]')\" -ge 1",
+      "supports": "∀ {a b c : ℤ}, c ∣ a * b ↔ ∃ c₁ c₂, c₁ ∣ a ∧ c₂ ∣ b ∧ c₁ * c₂ = c",
+      "notes": "`build_int_prelude` admits `Int.dvd_mul_split` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. New proof, lane int-dvd-mul-split: `int_prelude/dvd_mul_split.rs`, wired in via one `declare_dvd_mul_split` call after `gcd_scaled_mirrors::declare_all` (last in the build, since it needs `gcd.rs`, `ring.rs`'s `Int.mul_eq_zero`, and the whole Nat prelude). NOT named `Int.dvd_mul` for the same reason the Nat mirror isn't (Mathlib's literal name space collision class). None of the three blockers the prior lane's handoff (docs/plan/status/343-dvd-mul-split.md) identified turned out to be needed: no general `Int.gcd_mul_right` was built (the real content routes entirely through `natAbs c`/`natAbs a`/`natAbs b` and the already-proved `Nat.gcd_mul_right`, so the sign of `b` never has to be split on or reconstructed), no new Int-level cancellation lemma was built (the one cancellation is at the Nat level, via `Nat.mul_left_cancel_of_pos`), and `g1 != 0` from `c != 0` needed only `Nat.eq_zero_of_gcd_eq_zero_left` plus a local copy of `ring.rs`'s private `nat_abs_zero_implies_int_zero`. Witnesses `c1 := ofNat(Nat.gcd(natAbs c, natAbs a))`, `c2 := w` (from Int-level `dvd_elim` on `gcd_dvd_left`, so genuinely Int-signed, never reconstructed from a Nat witness after the fact -- the sign-ambiguous route the handoff correctly warned off). The `c=0` case is handled by a direct case split on `a=0 ∨ b=0` (`Int.mul_eq_zero`), matching the Nat proof's own corner. Reverse direction is the same uniform four-factor regrouping the Nat proof uses, built from `Int.mul_assoc`/`Int.mul_comm` since no `Int.mul_left_comm` field exists. `int_theorem_inventory`'s rendered type is `(x0:Int)->(x1:Int)->(x2:Int)->Iff (Int.dvd x0 (Int.mul x1 x2)) (Exists x3, Exists x4, And (Int.dvd x3 x1) (And (Int.dvd x4 x2) (Eq (Int.mul x3 x4) x0)))`, matching this fact's `formal.statement` exactly (x0/x1/x2/x3/x4 = c/a/b/c1/c2). `int_theorem_inventory` exits non-zero for a name that does not exist (verified: `dvd_mul_split_bogus_xyz` -> exit 1, `error: no Int declaration matches ...`), and the anchored `grep -cE` (tested `-ge 1` directly, not piped through `grep -q`) requires the exact name preceded by `theorem` and followed by whitespace -- verified both directions with `/usr/bin/grep` explicitly (positive count 1, bogus-name count 0)."
+    },
+    {
+      "id": "footprint-Int.dvd_mul_split",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "notes": "`prelude_axiom_inventory --require-axiom-free integer` enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: `integer: axiom=0`, exit 0; the same run's `axreal: axiom=30` row is the separate, unrelated legacy axiomatized-reals package -- see CLAUDE.md's `AxReal`/`CReal` gotcha). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Int.dvd_mul_split`'s own footprint by []. `int_prelude_tests::every_int_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `derived_laws` (it is listed there), and a dedicated test `dvd_mul_split_applies_at_a_discriminating_negative_and_free_degenerate_instance` applies it at three axes: `Iff.mpr` at a discriminating instance where `c` shares a factor with BOTH `a` and `b` (`c=6,a=4,b=9,c1=2,c2=3`, producing a real proof of `Int.dvd 6 36`), `Iff.mp` at a NEGATIVE divisor (`c=-6,a=4,b=9`, witness `-6`), and `Iff.mp` at the `c=0` degenerate branch with a genuinely FREE `b` (pushed into an explicit `LocalContext` as an axiom-declared variable)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "The external theorem declaration is prior art, not what was reconstructed here; the ledger's own proof is new. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type, and int_theorem_inventory's rendered type matches it exactly -- see evidence notes. New proof, lane int-dvd-mul-split (2026-08-30), following on from the Nat sibling F:ml430-nat-dvd-mul-ebd102e2 closed the same day (docs/plan/status/343-dvd-mul-split.md). That lane's handoff named three prerequisites it believed were missing -- a general Int.gcd_mul_right, an Int-level cancellation lemma for a nonzero common factor, and a way to establish g1 != 0 from c != 0 -- and verifying each in the tree (rather than inheriting the list) showed the first two were not needed at all once the real content routes through natAbs bridging instead of scaling Int.gcd directly by a signed factor; only the third was a genuine, and genuinely cheap, gap. See the kernel-Int.dvd_mul_split evidence note for the full route. Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: development), which carries the partition; that manifest, not this file, is the split authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
