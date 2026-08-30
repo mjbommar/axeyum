@@ -230,6 +230,14 @@
     "supersedes": {
       "type": "array",
       "items": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$" }
+    },
+
+    "equivalent_to": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$" },
+      "description": "Deliberately NOT `supersedes` -- this fact is not obsolete and nothing here was replaced. It marks that this fact's `formal.statement` is a BYTE-IDENTICAL kernel proposition to the named fact (same `Kernel::render_lean` canonical type, verified by scripts/check-proposition-duplication.py against scripts/check-trust-closure.py's identity classes), proved either independently or by literally invoking the named fact's kernel theorem in this one's proof term. Both facts stay `proved`; neither is retracted (ADR-0542: no deletion of a settled fact, only an amendment). The field exists so a headline count can separate FACTS SETTLED (includes both members of a pair) from DISTINCT PROPOSITIONS ESTABLISHED (collapses each pair to its one non-`equivalent_to` member) -- see ADR-0790. Length-1 by construction: this project's duplicate identity classes are all size-2 (identity-map.tsv), and a fact points at exactly the ONE class-mate the counting rule designates canonical, never at a whole class."
     }
   }
 }

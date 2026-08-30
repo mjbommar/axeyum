@@ -54,5 +54,8 @@
   },
   "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction (`Monotone f` is Mathlib's own `def Monotone (f : a -> b) := forall x y, x <= y -> f x <= f y`, so with `b` fixed first this is the identical core rendering as `Nat.log_mono_right` (the same treatment already given `Nat.choose_mono`) -- a separate kernel declaration specializing `Nat.log_mono_right` directly, no new induction. `crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs`.) This is a genuine library-composition increment, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
   "proof_route": "kernel-lean",
-  "axiom_footprint": []
+  "axiom_footprint": [],
+  "equivalent_to": [
+    "F:ml430-nat-log-mono-right-b8939fee"
+  ]
 }

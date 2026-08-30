@@ -792,6 +792,28 @@ def main() -> int:
 
     spread = " ".join(f"{k}={v}" for k, v in sorted(by_status.items()))
     print(f"{len(facts)} facts checked, 0 errors  ({spread})")
+    # ADR-0790: some settled facts state the SAME kernel proposition as a
+    # sibling fact (a byte-identical `Kernel::render_lean` canonical type --
+    # see scripts/check-proposition-duplication.py). Both stay `proved`, but
+    # only one is canonical; the other carries `equivalent_to`. Quoting
+    # "N proved" alone double-counts every such pair, which is exactly how
+    # this project's headline metric was overstated before this line existed
+    # -- so print DISTINCT PROPOSITIONS beside FACTS SETTLED, always together.
+    settled_for_count = {"proved", "computed"}
+    settled_established = sum(
+        1 for f in facts.values() if f.get("epistemic_status") in settled_for_count
+    )
+    restatements = sum(
+        1
+        for f in facts.values()
+        if f.get("epistemic_status") in settled_for_count and f.get("equivalent_to")
+    )
+    print(
+        f"  {settled_established} facts settled ({sorted(settled_for_count)}), "
+        f"{restatements} of those restate a sibling's proposition "
+        f"(`equivalent_to`) -- {settled_established - restatements} DISTINCT "
+        f"PROPOSITIONS ESTABLISHED"
+    )
     if routes:
         route_parts = []
         for k, v in sorted(routes.items()):

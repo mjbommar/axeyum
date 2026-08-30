@@ -1,0 +1,4 @@
+{
+  "generated_by": "scripts/check-proposition-duplication.py --update",
+  "min_identity_classes": 15
+}

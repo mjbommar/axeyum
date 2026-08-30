@@ -62,5 +62,8 @@
     "source": "see F:rat-add-comm for the extraction method (shared for the whole batch)."
   },
   "notes": "depends_on is empty because the sole direct kernel dependency, Rat.chebyshev_sampleMean_uncorrelated, is a distinct intermediate theorem from Rat.chebyshev_inequality above and is not itself a registered fact in this batch -- the relationship to F:rat-chebyshev-inequality is thematic (both instantiate Chebyshev), not a direct proof-term citation, and depends_on records only direct citations, never thematic ones (the convention set by F:int-add-comm).",
-  "external_status": "proved"
+  "external_status": "proved",
+  "equivalent_to": [
+    "F:rat-chebyshev-samplemean-uncorrelated"
+  ]
 }
