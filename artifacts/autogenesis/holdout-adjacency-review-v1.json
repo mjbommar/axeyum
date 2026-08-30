@@ -1,0 +1,40 @@
+{
+  "kind": "holdout-adjacency-review",
+  "schema_version": 1,
+  "authority": "docs/research/09-decisions/adr-0768-the-adjacency-rule-becomes-r11-and-covers-one-of-three-contamination-shapes.md",
+  "why": [
+    "R11's `environment` signal asks whether our kernel declares anything about",
+    "a candidate held-out family's subject operators. It cannot be a threshold,",
+    "and measuring it is what shows why: `natural-square-root` is a legitimate",
+    "standing held-out family and we declare `Nat.sqrt`, `Nat.sqrt_zero` and",
+    "`Nat.sqrt_one` (draw 8 compared all four by hand; none is a mirror), while",
+    "a `natural-nth-root` candidate picks up 9 hits on the stem `root` whose top",
+    "is `Complex.root_of_unity_pow` -- unrelated mathematics sharing a word. No",
+    "count separates those. A person reading five names does, in a minute.",
+    "",
+    "So a NEW held-out family whose sweep is non-empty must be reviewed here",
+    "before it may be drawn. The review must reproduce the LIVE sweep exactly:",
+    "that is what makes it a disclosure rather than a rubber stamp, because a",
+    "later declaration landing in that namespace changes the sweep and",
+    "invalidates the review instead of passing silently.",
+    "",
+    "The DEMAND is scoped to draw time. Every standing held-out family was",
+    "preregistered before this screen existed, so demanding a review for one",
+    "retroactively would mean either a red gate on `main` or a file asserting",
+    "diligence nobody performed -- and the second is the checker-that-cannot-fail",
+    "defect wearing a paper trail. A STALE review is refused wherever it is",
+    "found, because that is a claim someone made."
+  ],
+  "how_to_add_a_row": [
+    "1. Run `python3 scripts/check-holdout-adjacency.py` (or read the refusal",
+    "   R11 prints) to get the live sweep for the family: a list of",
+    "   [stem, example_declaration, count].",
+    "2. Read the declarations that sweep names and compare them against the ten",
+    "   statements the family would draw. You are answering one question: does",
+    "   our development already settle any of them, under any name?",
+    "3. Record the sweep VERBATIM in `swept`, what you found in `finding`, and",
+    "   the ADR that carries the decision in `authority`. If you found a mirror,",
+    "   do not write a row -- the family is not blind and must not be drawn."
+  ],
+  "reviews": {}
+}
