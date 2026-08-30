@@ -825,7 +825,7 @@ mod tests {
             .kernel()
             .name_str(anon, "Check.cas_geometry_prove_mul_difference_of_squares");
 
-        let names = vec!["x".to_owned(), "y".to_owned()];
+        let names = ["x".to_owned(), "y".to_owned()];
         let expected_for_build = expected.clone();
         let result = rat_theorem(&mut d, name, names.len(), &|d, fvars| {
             let vars: BTreeMap<String, ExprId> =
