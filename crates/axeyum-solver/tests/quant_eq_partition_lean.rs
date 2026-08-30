@@ -69,10 +69,31 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
     // Re-pinned 2026-08-20 at the same 111_821-byte length: the native Bool
     // package now follows official Lean order `[false, true]`, and the checked
     // partition eliminator therefore writes the false cell before the true cell.
+    // RE-PINNED 2026-08-30 -- a PERMUTATION, not an edit. Every one of the five
+    // golden modules moved by +0 bytes with a different hash on the same day,
+    // and the cause is shared: `a70e2dc4d` (four Int order-coercion mirrors)
+    // and `07c9c9f09` (the sign-of-a-product family) added declarations that
+    // reference `Int.le`/`Int.lt`, pulling both definitions earlier in the
+    // dependency-ordered emission -- to directly after `inductive Int`.
+    // Emitting a `def` earlier is always safe in Lean; a definition must
+    // precede its uses, never follow them. Verified by dumping each module at
+    // the previous pin commit and at HEAD: `LC_ALL=C sort | cmp` is IDENTICAL
+    // for all five, so no character changed anywhere.
+    //
+    // `LC_ALL=C` is load-bearing in that check. Under this host's en_US.UTF-8,
+    // GNU `sort` compares `--` and a blank line as EQUAL and breaks the tie by
+    // input order, so a plain `sort | cmp` called two of these five "content
+    // changed" when they are permutations like the rest.
+    //
+    // For the next mover: a `+0 bytes` delta on a golden body is the signature
+    // of a reordering. `LC_ALL=C sort | cmp` on two dumps answers
+    // "permutation or not" in one command, far cheaper than the bisect the
+    // delta invites -- and three runs first, since a same-length hash change
+    // is also what a nondeterministic render would produce.
     lean_golden::assert_golden_module(
         "equality-partition",
         &source,
-        (111_821, 0xdd44_2b73_bd9c_3779),
+        (111_821, 0x9f0e_95b5_fa74_c6ab),
     );
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));
