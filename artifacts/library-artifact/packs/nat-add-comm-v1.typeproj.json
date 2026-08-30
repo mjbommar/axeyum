@@ -1,0 +1,127 @@
+{
+  "contract_version": "0.1.0",
+  "source_pack_digest": "sha256:53bf00956d2013858667f54516a7fce2a3caea99bd441a3bdd6d27b2d61ef3cf",
+  "declarations": [
+    {
+      "name": "Eq",
+      "kind": "Inductive",
+      "universes": [
+        "u"
+      ],
+      "type": "{alpha : Sort u} -> alpha -> alpha -> Prop",
+      "type_digest": "sha256:96465c2da1011dcc7fe1436d902c73efe7e8081e492fc95dd37803e33e314509",
+      "direct_type_deps": [],
+      "transitive_type_deps": []
+    },
+    {
+      "name": "Eq.refl",
+      "kind": "Constructor",
+      "universes": [
+        "u"
+      ],
+      "type": "{alpha : Sort u} -> (a : alpha) -> Eq a a",
+      "type_digest": "sha256:815e3487094e356aa5c5a7469f777a6a8f254297c740ec552131543fbf43358e",
+      "direct_type_deps": [
+        "Eq"
+      ],
+      "transitive_type_deps": [
+        "Eq"
+      ]
+    },
+    {
+      "name": "Nat",
+      "kind": "Inductive",
+      "universes": [],
+      "type": "Type",
+      "type_digest": "sha256:baaddf70fb5d432b8bd948ef91d6f910124a6d138edae4d5f000c4610ddc8eae",
+      "direct_type_deps": [],
+      "transitive_type_deps": []
+    },
+    {
+      "name": "Nat.add",
+      "kind": "Definition",
+      "universes": [],
+      "type": "Nat -> Nat -> Nat",
+      "type_digest": "sha256:b0453ca5909fe92c6b0aa495c092916f6920c5df05b4f3fc03c34401fc4be18c",
+      "direct_type_deps": [
+        "Nat"
+      ],
+      "transitive_type_deps": [
+        "Nat"
+      ]
+    },
+    {
+      "name": "Nat.add_comm",
+      "kind": "Theorem",
+      "universes": [],
+      "type": "(n m : Nat) -> Eq (Nat.add n m) (Nat.add m n)",
+      "type_digest": "sha256:1c3b5ca0f535992c587304afc58db9691b15224f98dfb331a8ef4178fad596c5",
+      "direct_type_deps": [
+        "Eq",
+        "Nat",
+        "Nat.add"
+      ],
+      "transitive_type_deps": [
+        "Eq",
+        "Nat",
+        "Nat.add"
+      ]
+    },
+    {
+      "name": "Nat.rec",
+      "kind": "Recursor",
+      "universes": [
+        "u"
+      ],
+      "type": "{motive : Nat -> Sort u} -> motive Nat.zero -> ((n : Nat) -> motive n -> motive (Nat.succ n)) -> (t : Nat) -> motive t",
+      "type_digest": "sha256:5f85cfc545c35291b4c5d5453694dfb5139199ec766cde5e3b81cb90bac731e9",
+      "direct_type_deps": [
+        "Nat",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "transitive_type_deps": [
+        "Nat",
+        "Nat.succ",
+        "Nat.zero"
+      ]
+    },
+    {
+      "name": "Nat.succ",
+      "kind": "Constructor",
+      "universes": [],
+      "type": "Nat -> Nat",
+      "type_digest": "sha256:451df3e1d578f9965b840c7f740b8affd6c56fa882268e08e9b8407d3f3d7edf",
+      "direct_type_deps": [
+        "Nat"
+      ],
+      "transitive_type_deps": [
+        "Nat"
+      ]
+    },
+    {
+      "name": "Nat.zero",
+      "kind": "Constructor",
+      "universes": [],
+      "type": "Nat",
+      "type_digest": "sha256:3d1917aa425fd7059394e1413a9cf36a1304374e10ea4b88200fd2d34ce749d4",
+      "direct_type_deps": [
+        "Nat"
+      ],
+      "transitive_type_deps": [
+        "Nat"
+      ]
+    },
+    {
+      "name": "id",
+      "kind": "Definition",
+      "universes": [
+        "u"
+      ],
+      "type": "{alpha : Sort u} -> alpha -> alpha",
+      "type_digest": "sha256:1bcc26d0b0529f63770c581727361a93962530e133c741e6777ca5bd0fca8a9a",
+      "direct_type_deps": [],
+      "transitive_type_deps": []
+    }
+  ]
+}

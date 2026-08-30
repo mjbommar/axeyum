@@ -1,0 +1,224 @@
+{
+  "contract_version": "0.1.0",
+  "lean_version": "4.30.0",
+  "lean_commit": "d024af09",
+  "mathlib_version": "v4.30.0",
+  "mathlib_commit": "c5ea0035",
+  "normalization_version": 1,
+  "renderer_version": 1,
+  "source_population": {
+    "population_id": "nat-add-comm-v1",
+    "requested_roots": [
+      "Nat.add_comm",
+      "id"
+    ],
+    "expected_declaration_count": 9
+  },
+  "trusted_declaration_identities": [
+    "Eq",
+    "Eq.refl",
+    "Nat",
+    "Nat.rec",
+    "Nat.succ",
+    "Nat.zero"
+  ],
+  "pack_digest": "sha256:53bf00956d2013858667f54516a7fce2a3caea99bd441a3bdd6d27b2d61ef3cf",
+  "declarations": [
+    {
+      "name": "Eq",
+      "kind": "Inductive",
+      "universes": [
+        "u"
+      ],
+      "type": "{alpha : Sort u} -> alpha -> alpha -> Prop",
+      "value": null,
+      "type_digest": "sha256:96465c2da1011dcc7fe1436d902c73efe7e8081e492fc95dd37803e33e314509",
+      "value_digest": null,
+      "identity_digest": "sha256:78fe02b5e12f813c8fbdbc2d61e15160ed30cdc62c60d907a87c4654345121e6",
+      "direct_type_deps": [],
+      "direct_value_deps": [],
+      "transitive_type_deps": [],
+      "transitive_value_deps": []
+    },
+    {
+      "name": "Eq.refl",
+      "kind": "Constructor",
+      "universes": [
+        "u"
+      ],
+      "type": "{alpha : Sort u} -> (a : alpha) -> Eq a a",
+      "value": null,
+      "type_digest": "sha256:815e3487094e356aa5c5a7469f777a6a8f254297c740ec552131543fbf43358e",
+      "value_digest": null,
+      "identity_digest": "sha256:9762ef947dde3c498e4b757ef57469d6fd7bd1328674c23bedb58a66dbff1387",
+      "direct_type_deps": [
+        "Eq"
+      ],
+      "direct_value_deps": [],
+      "transitive_type_deps": [
+        "Eq"
+      ],
+      "transitive_value_deps": [
+        "Eq"
+      ]
+    },
+    {
+      "name": "Nat",
+      "kind": "Inductive",
+      "universes": [],
+      "type": "Type",
+      "value": null,
+      "type_digest": "sha256:baaddf70fb5d432b8bd948ef91d6f910124a6d138edae4d5f000c4610ddc8eae",
+      "value_digest": null,
+      "identity_digest": "sha256:234ff6784a67596c817148fbc11e695fba51474b1176c1d8d66281a79cda8466",
+      "direct_type_deps": [],
+      "direct_value_deps": [],
+      "transitive_type_deps": [],
+      "transitive_value_deps": []
+    },
+    {
+      "name": "Nat.add",
+      "kind": "Definition",
+      "universes": [],
+      "type": "Nat -> Nat -> Nat",
+      "value": "fun n m => Nat.rec n (fun _ ih => Nat.succ ih) m",
+      "type_digest": "sha256:b0453ca5909fe92c6b0aa495c092916f6920c5df05b4f3fc03c34401fc4be18c",
+      "value_digest": "sha256:64b7a307b355817d911089e98bd6092cbfb626508ad6805c6d6683c97398dbe6",
+      "identity_digest": "sha256:055b914422fff53a9413ec0acde1941feed84c30703b8b6c0a8da7fae17f9293",
+      "direct_type_deps": [
+        "Nat"
+      ],
+      "direct_value_deps": [
+        "Nat.rec",
+        "Nat.succ"
+      ],
+      "transitive_type_deps": [
+        "Nat"
+      ],
+      "transitive_value_deps": [
+        "Nat",
+        "Nat.rec",
+        "Nat.succ",
+        "Nat.zero"
+      ]
+    },
+    {
+      "name": "Nat.add_comm",
+      "kind": "Theorem",
+      "universes": [],
+      "type": "(n m : Nat) -> Eq (Nat.add n m) (Nat.add m n)",
+      "value": "fun n m => Nat.rec (motive := fun k => Eq (Nat.add n k) (Nat.add k n)) (Eq.refl n) (fun k ih => Nat.rec (Eq.refl (Nat.succ (Nat.add n k))) (fun _ _ => Eq.refl (Nat.succ (Nat.add n k))) ih) m",
+      "type_digest": "sha256:1c3b5ca0f535992c587304afc58db9691b15224f98dfb331a8ef4178fad596c5",
+      "value_digest": "sha256:db78769b7a84ccebf0186655f2afc4a240c697f83c56f1dee333d754cc0e023d",
+      "identity_digest": "sha256:51403d1ab0aacf6891b3da0f981c353cd599a7069c9816d52bf42ca7ccd6ac20",
+      "direct_type_deps": [
+        "Eq",
+        "Nat",
+        "Nat.add"
+      ],
+      "direct_value_deps": [
+        "Eq.refl",
+        "Nat.rec",
+        "Nat.succ"
+      ],
+      "transitive_type_deps": [
+        "Eq",
+        "Nat",
+        "Nat.add"
+      ],
+      "transitive_value_deps": [
+        "Eq",
+        "Eq.refl",
+        "Nat",
+        "Nat.add",
+        "Nat.rec",
+        "Nat.succ",
+        "Nat.zero"
+      ]
+    },
+    {
+      "name": "Nat.rec",
+      "kind": "Recursor",
+      "universes": [
+        "u"
+      ],
+      "type": "{motive : Nat -> Sort u} -> motive Nat.zero -> ((n : Nat) -> motive n -> motive (Nat.succ n)) -> (t : Nat) -> motive t",
+      "value": null,
+      "type_digest": "sha256:5f85cfc545c35291b4c5d5453694dfb5139199ec766cde5e3b81cb90bac731e9",
+      "value_digest": null,
+      "identity_digest": "sha256:7b27b91df55d5480c7363a29a333f7dcf727a6c3b223ea9a3bf412c4c19fe79c",
+      "direct_type_deps": [
+        "Nat",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "direct_value_deps": [],
+      "transitive_type_deps": [
+        "Nat",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "transitive_value_deps": [
+        "Nat",
+        "Nat.succ",
+        "Nat.zero"
+      ]
+    },
+    {
+      "name": "Nat.succ",
+      "kind": "Constructor",
+      "universes": [],
+      "type": "Nat -> Nat",
+      "value": null,
+      "type_digest": "sha256:451df3e1d578f9965b840c7f740b8affd6c56fa882268e08e9b8407d3f3d7edf",
+      "value_digest": null,
+      "identity_digest": "sha256:9c25bb237dafe4f0f3f618a8e135c11edd76500459e4226427c858e6d3edd492",
+      "direct_type_deps": [
+        "Nat"
+      ],
+      "direct_value_deps": [],
+      "transitive_type_deps": [
+        "Nat"
+      ],
+      "transitive_value_deps": [
+        "Nat"
+      ]
+    },
+    {
+      "name": "Nat.zero",
+      "kind": "Constructor",
+      "universes": [],
+      "type": "Nat",
+      "value": null,
+      "type_digest": "sha256:3d1917aa425fd7059394e1413a9cf36a1304374e10ea4b88200fd2d34ce749d4",
+      "value_digest": null,
+      "identity_digest": "sha256:51f517d316bb213db6a7fcbf2d9a1669b12ea6ba3fffb37678c941db7c0da874",
+      "direct_type_deps": [
+        "Nat"
+      ],
+      "direct_value_deps": [],
+      "transitive_type_deps": [
+        "Nat"
+      ],
+      "transitive_value_deps": [
+        "Nat"
+      ]
+    },
+    {
+      "name": "id",
+      "kind": "Definition",
+      "universes": [
+        "u"
+      ],
+      "type": "{alpha : Sort u} -> alpha -> alpha",
+      "value": "fun a => a",
+      "type_digest": "sha256:1bcc26d0b0529f63770c581727361a93962530e133c741e6777ca5bd0fca8a9a",
+      "value_digest": "sha256:815c6149ea47a777dcb7a4cb4a643ac86a4a2bfc7cb68e9dab8dc523405911bd",
+      "identity_digest": "sha256:65415fdde9b930b1ef2937e83274a6f17420e1e6ddb41bd87fec37a4ea949644",
+      "direct_type_deps": [],
+      "direct_value_deps": [],
+      "transitive_type_deps": [],
+      "transitive_value_deps": []
+    }
+  ]
+}
