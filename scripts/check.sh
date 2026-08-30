@@ -159,6 +159,15 @@ step autogenesis-nursery-refill python3 scripts/gen-autogenesis-nursery-refill.p
 # construction-level divergences before they are preregistered.
 step dispatchable-frontier-tests bash scripts/tests/test-dispatchable-frontier.sh
 step dispatchable-frontier python3 scripts/check-dispatchable-frontier.py
+# ...and the question that comes NEXT, which the frontier cannot answer: can the
+# queue be refilled at all? Measured 2026-08-30, a "draw" is a hand edit to
+# gen-autogenesis-nursery-refill.py's FAMILY_MODULES/FAMILY_ROUTES, so
+# re-running the generator adds nothing and nothing computed whether the pinned
+# pool still HAS families to draw from. R3 makes the exit status depend on that.
+# Host-independent: it reads a tracked snapshot whose freshness is re-derived
+# from every screen input, because the 39 MB pool lives on /nas3.
+step propose-nursery-refill-tests bash scripts/tests/test-propose-nursery-refill.sh
+step propose-nursery-refill python3 scripts/propose-nursery-refill.py
 # A name match against the kernel environment for an OPEN mirror -- necessary,
 # not sufficient, for "already proved". Written 2026-08-29 by the lane that
 # refused a draw, then archived by the orphan sweep because nothing invoked it.

@@ -183,6 +183,11 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-holdout-contamination.py
     bash scripts/tests/test-dispatchable-frontier.sh
     python3 scripts/check-dispatchable-frontier.py
+    # Can the queue be REFILLED? The frontier says how deep it is; a draw is a
+    # hand edit to gen-autogenesis-nursery-refill.py, so re-running that adds
+    # nothing and nobody was computing whether the pool still has families.
+    bash scripts/tests/test-propose-nursery-refill.sh
+    python3 scripts/propose-nursery-refill.py
     python3 scripts/check-autogenesis-already-proved.py
     python3 scripts/check-dispatchable-frontier.py --statable artifacts/autogenesis/nursery-v2-extension.json
     python3 -m unittest scripts.tests.test_development_partition
