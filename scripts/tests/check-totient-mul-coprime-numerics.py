@@ -343,6 +343,89 @@ check(
 )
 
 
+# --------------------------------------------------------------------------
+# (9) the two Mathlib mirrors: exactly how far this theorem gets them
+# --------------------------------------------------------------------------
+# F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7
+#   forall a b, totient(gcd a b) * totient(a*b) = totient a * totient b * gcd a b
+# F:ml430-nat-totient-dvd-of-dvd-9622e44a
+#   forall a b, a | b -> totient a | totient b
+
+RANGE = range(1, 13)
+
+bad_gcd_mul = [
+    (a, b)
+    for a in RANGE
+    for b in RANGE
+    if totient(gcd(a, b)) * totient(a * b) != totient(a) * totient(b) * gcd(a, b)
+]
+check(
+    "MIRROR gcd_mul_totient_mul holds at every 1<=a,b<=12 (the statement is right)",
+    not bad_gcd_mul,
+    str(bad_gcd_mul[:3]),
+)
+
+# At a COPRIME pair the mirror collapses to `totient_mul_of_coprime`, because
+# totient(1) = 1 and the trailing gcd factor is 1. So the landed theorem
+# already covers that half exactly -- and only that half.
+collapses = [
+    (a, b)
+    for a in RANGE
+    for b in RANGE
+    if gcd(a, b) == 1
+    and not (totient(gcd(a, b)) == 1 and gcd(a, b) == 1)
+]
+check(
+    "MIRROR at coprime pairs collapses to totient(a*b) = totient a * totient b",
+    not collapses,
+    str(collapses[:3]),
+)
+# NEGATIVE CONTROL: at a NON-coprime pair it does NOT collapse -- both the
+# leading totient(gcd) and the trailing gcd differ from 1, so the landed
+# theorem says nothing there and the mirror is strictly stronger.
+non_collapsing = [
+    (a, b)
+    for a in RANGE
+    for b in RANGE
+    if gcd(a, b) != 1 and (totient(gcd(a, b)) != 1 or gcd(a, b) != 1)
+]
+check(
+    "NEGATIVE CONTROL: at every non-coprime pair the mirror does NOT collapse",
+    len(non_collapsing) == len([1 for a in RANGE for b in RANGE if gcd(a, b) != 1]),
+    "some non-coprime pair collapsed, so the mirror would be no stronger there",
+)
+note(f"{len(non_collapsing)} non-coprime pairs with 1<=a,b<=12 where the mirror is")
+note("strictly stronger than the landed theorem -- that gap is the whole task")
+
+bad_dvd = [
+    (a, b)
+    for a in RANGE
+    for b in RANGE
+    if b % a == 0 and totient(b) % totient(a) != 0
+]
+check(
+    "MIRROR totient_dvd_of_dvd holds at every 1<=a,b<=12 with a | b",
+    not bad_dvd,
+    str(bad_dvd[:3]),
+)
+# NEGATIVE CONTROL: dropping the divisibility hypothesis breaks it, so the
+# mirror is not a disguised unconditional fact.
+non_dvd_failures = [
+    (a, b)
+    for a in RANGE
+    for b in RANGE
+    if b % a != 0 and totient(b) % totient(a) != 0
+]
+check(
+    "NEGATIVE CONTROL: without a | b the totient divisibility fails somewhere",
+    non_dvd_failures,
+    "totient a | totient b held for every pair, so the hypothesis is untested",
+)
+note(f"fails at {len(non_dvd_failures)} non-dividing pairs, e.g. {non_dvd_failures[0]}")
+note("NEITHER mirror follows from totient_mul_of_coprime: both quantify over ALL")
+note("pairs, and the coprime half of each is what the landed theorem already gives.")
+
+
 print()
 if FAILURES:
     print(f"{len(FAILURES)} CHECK(S) FAILED: {FAILURES}")
