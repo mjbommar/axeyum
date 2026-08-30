@@ -8,10 +8,35 @@
     "statement": "∀ {n m k : ℕ}, n ∣ m → k.Coprime m → k.Coprime n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-coprime-of-dvd-right-a640bd56"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.coprime_dvd_right",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Nat.Coprime.coprime_dvd_right` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::",
+      "notes": "`Nat.coprime_dvd_right` in `crates/axeyum-lean-kernel/src/nat_prelude/coprime_lemmas.rs (declare_coprime_dvd_right)`. Restates the already-proved `Nat.coprime_of_dvd_right` (primes.rs) under Mathlib's name -- same proposition, `Coprime` unfolds to `gcd _ _ = one` either way."
+    },
+    {
+      "id": "footprint-Nat.coprime_dvd_right",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Nat.coprime_dvd_right 2>/dev/null | /usr/bin/grep -xFc $'nat\\tNat.coprime_dvd_right\\t0\\t')\" -ge 1",
+      "notes": "The matched row is `nat<TAB>Nat.coprime_dvd_right<TAB>0<TAB>` with an EMPTY trailing footprint column, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Uses `/usr/bin/grep` explicitly (not the interactive `ugrep` alias) and ANSI-C-quoted literal tabs, per this repository's own grep-dialect gotcha. Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +51,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED via the `nat-coprime-family` lane, 2026-08-29, as `Nat.coprime_dvd_right` -- axiom-free, confirmed against Mathlib v4.30's `Init.Data.Nat.Coprime` (Lean core, not mathlib4 itself) read directly from the pinned toolchain source at `~/.elan/toolchains/leanprover--lean4---v4.30.0/src/lean/Init/Data/Nat/Coprime.lean`.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "axiom_footprint": [],
+  "proof_route": "kernel-lean"
 }
