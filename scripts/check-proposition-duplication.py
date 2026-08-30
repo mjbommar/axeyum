@@ -96,6 +96,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import pathlib
 import sys
 from dataclasses import dataclass
@@ -224,6 +225,85 @@ def guard_unlabeled_duplicate_pair(
                 f"one must carry no `equivalent_to` and the rest must point at it"
             )
     return GuardResult("unlabeled_duplicate_pair", scanned, hits, failures)
+
+
+# GUARD:SHARED_DECLARATION_PAIR begin
+def guard_shared_declaration_pair(facts: dict) -> GuardResult:
+    """Two settled facts that name the SAME kernel declaration AND state the
+    same proposition, with neither marked as restating the other.
+
+    `guard_unlabeled_duplicate_pair` groups by IDENTITY CLASS -- two DIFFERENT
+    declarations whose rendered types are byte-identical. It structurally
+    cannot see this shape, where ONE declaration is named by two facts, and
+    that is the simpler duplicate of the two.
+
+    Measured 2026-08-30: a lane closed `F:ml430-nat-and-comm-*` against
+    `Nat.land_comm`, which `F:ml430-nat-land-comm-*` already named. Mathlib
+    carries that proposition under two declaration names over one function, so
+    both mirrors are honest and both are the same statement. The duplication
+    gate passed, because there was only ever one declaration to put in a class.
+
+    Sharing a declaration is NOT sufficient on its own -- an umbrella fact
+    legitimately cites several declarations that narrower facts also cite. The
+    STATEMENTS must match too, up to bound-variable naming.
+    """
+    by_decl: dict[str, set[str]] = {}
+    for fid, fact in facts.items():
+        if fact.get("epistemic_status") not in ("proved", "computed"):
+            continue
+        for ev in fact.get("evidence") or []:
+            decl = ev.get("kernel_declaration")
+            if decl:
+                by_decl.setdefault(decl, set()).add(fid)
+
+    failures = []
+    hits = 0
+    scanned = 0
+    for decl, fids in sorted(by_decl.items()):
+        if len(fids) < 2:
+            continue
+        scanned += 1
+        groups: dict[str, list[str]] = {}
+        for fid in sorted(fids):
+            key = _normalise_statement(
+                (facts[fid].get("formal") or {}).get("statement", "")
+            )
+            groups.setdefault(key, []).append(fid)
+        for _key, group in groups.items():
+            if len(group) < 2:
+                continue
+            unmarked = [f for f in group if not facts[f].get("equivalent_to")]
+            if len(unmarked) > 1:
+                hits += 1
+                failures.append(
+                    f"SHARED-DECLARATION-PAIR `{decl}` is named by {len(unmarked)} settled "
+                    f"facts stating the same proposition, none marked as restating the "
+                    f"others: {', '.join(unmarked)} -- exactly one must be canonical"
+                )
+    return GuardResult("shared_declaration_pair", scanned, hits, failures)
+# GUARD:SHARED_DECLARATION_PAIR end
+
+
+def _normalise_statement(text: str) -> str:
+    """Same proposition up to bound-variable naming.
+
+    Renames single-letter variables by FIRST OCCURRENCE, not alphabetically.
+    An alphabetical pass maps `n &&& m` and `x &&& y` to different strings and
+    reports two identical propositions as distinct -- I made exactly that
+    mistake measuring this, and only a control on a known-identical pair caught
+    it.
+    """
+    text = re.sub(r"\s+", " ", (text or "").strip())
+    seen: dict[str, str] = {}
+
+    def rename(match: "re.Match[str]") -> str:
+        name = match.group(0)
+        if name not in seen:
+            seen[name] = f"v{len(seen)}"
+        return seen[name]
+
+    return re.sub(r"\b[a-z]\b", rename, text)
+
 
 
 def guard_no_canonical_designated(
@@ -420,6 +500,7 @@ def main(argv: list[str]) -> int:
         guard_identity_classes_empty(classes),
         guard_identity_classes_below_floor(classes, floor),
         guard_unlabeled_duplicate_pair(class_facts),
+        guard_shared_declaration_pair(facts),
         guard_no_canonical_designated(class_facts),
         guard_equivalent_to_target_absent(facts),
         guard_equivalent_to_target_unsettled(facts),

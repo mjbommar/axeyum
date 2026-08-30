@@ -67,7 +67,10 @@
       }
     ]
   },
-  "notes": "Proved in Axeyum by reconciliation with the already-proved `Nat.land_assoc` (`nat_prelude/rec_agreement.rs`), which this ledger already reconciled to Mathlib's OWN `Nat.land_assoc` (F:ml430-nat-land-assoc-ad4775b8). This lane additionally reconciles `Init.Data.Nat.Bitwise.Lemmas`'s `Nat.and_assoc` -- a second pinned declaration name for the identical proposition -- to the SAME kernel theorem. No new proof was written.",
+  "notes": "Proved in Axeyum by reconciliation with the already-proved `Nat.land_assoc` (`nat_prelude/rec_agreement.rs`), which this ledger already reconciled to Mathlib's OWN `Nat.land_assoc` (F:ml430-nat-land-assoc-ad4775b8). This lane additionally reconciles `Init.Data.Nat.Bitwise.Lemmas`'s `Nat.and_assoc` -- a second pinned declaration name for the identical proposition -- to the SAME kernel theorem. No new proof was written.\n\n2026-08-30: marked as restating [[F:ml430-nat-land-assoc-ad4775b8]]. Mathlib carries this proposition under TWO declaration names -- the `Nat.and_*` family in `Init.Data.Nat.Bitwise.Lemmas` and the `Nat.land_*` family -- over the same function, so both mirrors resolve to the same kernel theorem and state the same thing up to bound-variable naming. Both stay `proved`; only the distinct-proposition count changes.",
   "proof_route": "kernel-lean",
-  "axiom_footprint": []
+  "axiom_footprint": [],
+  "equivalent_to": [
+    "F:ml430-nat-land-assoc-ad4775b8"
+  ]
 }

@@ -12242,11 +12242,23 @@
       "prose_sha256": "23e0bfea62003913d8a184da2430b521b85b166be166d7c35aa9ec80716e0699"
     },
     {
+      "fact_id": "F:nat-testbit-land",
+      "language": "lean4",
+      "statement_sha256": "2605a8a0d1407176cb7caf317ab10699d9b4b9c49e2a1aef3e1d8667eb11e0fc",
+      "prose_sha256": "db1090c580d3041172316f16ca926d851eefcaa578ad6d994570f5b5bb45e7a5"
+    },
+    {
       "fact_id": "F:nat-testbit-le-one",
       "language": "lean4",
       "statement_sha256": "93d20191c827ac63a350f817823d3585ff9be4e7678043ffe8e609344f21c336",
       "prose_sha256": "54e16d73cdfb16fafba7267c445e6af30f7e5109e7a10b8135354601775d9bc2",
       "kernel_theorem": "Nat.testBit_le_one"
+    },
+    {
+      "fact_id": "F:nat-testbit-lor",
+      "language": "lean4",
+      "statement_sha256": "50df2832a80f0e44775eaa8369ab22bcd3b393854c23ceb0dba992ffedbb3ff0",
+      "prose_sha256": "7de448595aefdf4712ecd78ae84174f464948bce442b139a9e87276fb0a464ad"
     },
     {
       "fact_id": "F:nat-testbit-succ",

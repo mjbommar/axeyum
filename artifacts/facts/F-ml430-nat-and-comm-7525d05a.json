@@ -65,7 +65,10 @@
       }
     ]
   },
-  "notes": "Proved in Axeyum by reconciliation with the already-proved `Nat.land_comm` (`nat_prelude/rec_agreement.rs`), which this ledger already reconciled to Mathlib's OWN `Nat.land_comm` (F:ml430-nat-land-comm-7e6ad72e). This lane additionally reconciles Mathlib's `Init.Data.Nat.Bitwise.Lemmas` `Nat.and_comm` -- a second pinned declaration name for the identical `&&&`-headed proposition -- to the SAME kernel theorem. No new proof was written; formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module, not kernel-core render_lean output.",
+  "notes": "Proved in Axeyum by reconciliation with the already-proved `Nat.land_comm` (`nat_prelude/rec_agreement.rs`), which this ledger already reconciled to Mathlib's OWN `Nat.land_comm` (F:ml430-nat-land-comm-7e6ad72e). This lane additionally reconciles Mathlib's `Init.Data.Nat.Bitwise.Lemmas` `Nat.and_comm` -- a second pinned declaration name for the identical `&&&`-headed proposition -- to the SAME kernel theorem. No new proof was written; formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module, not kernel-core render_lean output.\n\n2026-08-30: marked as restating [[F:ml430-nat-land-comm-7e6ad72e]]. Mathlib carries this proposition under TWO declaration names -- the `Nat.and_*` family in `Init.Data.Nat.Bitwise.Lemmas` and the `Nat.land_*` family -- over the same function, so both mirrors resolve to the same kernel theorem and state the same thing up to bound-variable naming. Both stay `proved`; only the distinct-proposition count changes.",
   "proof_route": "kernel-lean",
-  "axiom_footprint": []
+  "axiom_footprint": [],
+  "equivalent_to": [
+    "F:ml430-nat-land-comm-7e6ad72e"
+  ]
 }

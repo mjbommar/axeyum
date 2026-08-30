@@ -212,6 +212,18 @@ case_different_proposition() {  # guard_equivalent_to_different_proposition
   run_case "$dir"; expect_tag different-proposition "$dir" "EQUIVALENT-TO-DIFFERENT-PROPOSITION"
 }
 
+case_shared_declaration_pair() {  # guard_shared_declaration_pair
+  local dir="$WORK/$1/shared-decl"; new_case "$dir" || { fixture_failed "${FUNCNAME[0]}"; return 1; }
+  # Two settled facts naming ONE kernel declaration and stating the SAME
+  # proposition (variable names differ, which must not matter), neither marked.
+  # `guard_unlabeled_duplicate_pair` cannot see this: it groups by identity
+  # CLASS -- two DIFFERENT declarations with byte-identical types -- and here
+  # there is only ever one declaration to put in a class.
+  printf '{\n  "id": "F:sd1",\n  "proof_route": "kernel-lean",\n  "epistemic_status": "proved",\n  "formal": { "kernel_theorem": "T.shared", "statement": "forall (n m : N), n & m = m & n" },\n  "depends_on": [],\n  "evidence": [{ "id": "e", "check_status": "checked", "checker_command": "true", "kernel_declaration": "T.shared" }]\n}\n' > "$dir/facts/F-sd1.json"
+  printf '{\n  "id": "F:sd2",\n  "proof_route": "kernel-lean",\n  "epistemic_status": "proved",\n  "formal": { "kernel_theorem": "T.shared", "statement": "forall (x y : N), x & y = y & x" },\n  "depends_on": [],\n  "evidence": [{ "id": "e", "check_status": "checked", "checker_command": "true", "kernel_declaration": "T.shared" }]\n}\n' > "$dir/facts/F-sd2.json"
+  run_case "$dir"; expect_tag shared-declaration-pair "$dir" "SHARED-DECLARATION-PAIR"
+}
+
 CASES=(
   case_baseline
   case_empty_projection
@@ -222,6 +234,7 @@ CASES=(
   case_target_unsettled
   case_chain
   case_different_proposition
+  case_shared_declaration_pair
 )
 
 # Case name -> the mutation expected to kill it, and the anchor that mutation
@@ -237,6 +250,7 @@ MUTATION_NAMES=(
   equivalent_to_target_unsettled
   equivalent_to_chain
   equivalent_to_different_proposition
+  shared_declaration_pair
 )
 MUTATION_ANCHORS=(
   "    if len(classes) == 0:"
@@ -247,6 +261,7 @@ MUTATION_ANCHORS=(
   "        if target_status not in SETTLED:"
   "        if target_eq:"
   "        if own_type != target_type:"
+  "            if len(unmarked) > 1:"
 )
 MUTATION_REPLACEMENTS=(
   "    if False:"
@@ -257,6 +272,7 @@ MUTATION_REPLACEMENTS=(
   "        if False:"
   "        if False:"
   "        if False:"
+  "            if False:"
 )
 
 run_all_cases() {
