@@ -72,6 +72,45 @@ def balance(text: str, ext: str) -> dict[str, int]:
     return counts
 
 
+# A DUPLICATED DEFINITION is the failure that delimiter balance cannot see, and
+# it bit twice in one session. Keeping both sides of a conflict where each side
+# edited THE SAME definition line leaves two of them:
+#
+#   * `justfile` gained three `check:` recipes across three merges. `just`
+#     refuses the whole file -- "recipe `check` first defined on line 58 is
+#     redefined on line 59" -- so every gate behind it stops running.
+#   * `check-lean-gate.sh` gained two `CHECK_FLOOR=` assignments, 230 and 261.
+#     Bash takes the LAST, so it happened to be right, and a reordering or a
+#     third merge would have silently restored the lower floor.
+#
+# Both sides balance perfectly. There is nothing cut mid-item. The file is
+# simply wrong in a way only the consumer notices.
+DEFINITION = {
+    "justfile": re.compile(r"^([a-z0-9][a-z0-9._-]*):(?![=])", re.M),
+    ".sh": re.compile(r"^([A-Za-z_][A-Za-z_0-9]*)=", re.M),
+    ".py": re.compile(r"^(?:def|class)\s+([A-Za-z_][A-Za-z_0-9]*)|^([A-Z_][A-Z_0-9]*)\s*=", re.M),
+    ".rs": re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:fn|const|static|struct|enum)\s+([A-Za-z_][A-Za-z_0-9]*)", re.M),
+}
+
+
+def defined_names(text: str, key: str) -> set[str]:
+    pat = DEFINITION.get(key)
+    if pat is None:
+        return set()
+    out = set()
+    for m in pat.finditer(_strip_comments(text, key if key.startswith(".") else ".sh")):
+        out |= {g for g in m.groups() if g}
+    return out
+
+
+def duplicated_definitions(sides, key: str) -> set[str]:
+    """Names BOTH sides define -- keeping both would define them twice."""
+    dupes: set[str] = set()
+    for ours, theirs in sides:
+        dupes |= defined_names(ours, key) & defined_names(theirs, key)
+    return dupes
+
+
 def side_texts(path: str) -> list[tuple[str, str]]:
     return CONFLICT.findall(Path(path).read_text())
 
@@ -159,6 +198,15 @@ def main() -> int:
         if not sides:
             refused.append(f)
             print(f"  {f}: REFUSED — no conflict hunk parsed; look at it")
+            continue
+
+        key = "justfile" if Path(f).name == "justfile" else ext
+        dupes = duplicated_definitions(sides, key)
+        if dupes:
+            refused.append(f)
+            print(f"  {f}: REFUSED — both sides define {sorted(dupes)}; keeping "
+                  f"both would define each twice. Merge those lines by hand "
+                  f"(for a dependency list, take the UNION).")
             continue
 
         if ext in BALANCED:

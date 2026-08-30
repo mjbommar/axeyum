@@ -78,9 +78,27 @@ check "additive markdown keeps both" 0 'kept both' n.md \
 - theirs
 '
 
+
+# 5-6. THE SECOND INCIDENT: both sides edited the SAME definition line. Keeping
+# both leaves two, which balances perfectly and breaks the consumer.
+check "justfile duplicate recipe refused" 1 'both sides define|REFUSED' justfile \
+'check: a b
+    echo hi
+' 'check: a b module-baseline
+    echo hi
+' 'check: a b kernel-differential
+    echo hi
+'
+
+check "shell duplicate assignment refused" 1 'both sides define|REFUSED' g.sh \
+'FLOOR=100
+' 'FLOOR=230
+' 'FLOOR=261
+'
+
 # --- mutations: each guard must be killed by exactly one case ---------------
 echo "  mutations (each must kill exactly one case):"
-for m in "json_no_parse|resolve_json|CUT" "balance_off|if cut:|if False and cut:"; do
+for m in "json_no_parse|resolve_json|CUT" "balance_off|if cut:|if False and cut:" "dupdef_off|if dupes:|if False and dupes:"; do
   NAME="${m%%|*}"; REST="${m#*|}"; FROM="${REST%%|*}"; TO="${REST#*|}"
   T=$(mktemp -d); cp "$SCRIPT" "$T/mutant.py"
   if [ "$TO" = "CUT" ]; then
@@ -100,6 +118,13 @@ PY
   D=$(fixture cfg.json "$J_BASE" "$J_OURS" "$J_THEIRS")
   ( cd "$D" && python3 "$T/mutant.py" >/dev/null 2>&1 )
   python3 -c "import json;json.load(open('$D/cfg.json'))" 2>/dev/null || KILLED=$((KILLED+1))
+  rm -rf "$D"
+  D=$(fixture justfile 'check: a
+' 'check: a m
+' 'check: a k
+')
+  ( cd "$D" && python3 "$T/mutant.py" >/dev/null 2>&1; echo $? > c )
+  [ "$(cat "$D/c")" != "1" ] && KILLED=$((KILLED+1))
   rm -rf "$D"
   D=$(fixture a.rs 'fn b(){}
 ' 'fn b(){}

@@ -240,7 +240,6 @@ cd "$(dirname "$0")/.." || exit 2
 # own `checker_command` exits 101. The guards were fail-closed; nobody ran
 # them. `AXEYUM_REQUIRE_LEAN=1` does NOT catch it -- it fires only when a
 # toolchain cannot be resolved, and the abort happens before the probe.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-230}"
 CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-261}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
