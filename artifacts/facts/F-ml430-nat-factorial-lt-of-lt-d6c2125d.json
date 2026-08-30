@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-factorial-le-d0f4a912", "F:nat-add-comm", "F:nat-add-lt-add-left", "F:nat-lt-of-lt-of-le", "F:nat-one-le-factorial", "F:nat-one-le-mul"],
+  "depends_on": ["F:ml430-nat-factorial-le-d0f4a912", "F:nat-add-comm", "F:nat-add-lt-add-left", "F:nat-lt-of-lt-of-le", "F:nat-one-le-factorial", "F:nat-one-le-mul", "F:ml430-nat-add-comm-56a2d614"],
   "evidence": [
     {
       "check_status": "checked",

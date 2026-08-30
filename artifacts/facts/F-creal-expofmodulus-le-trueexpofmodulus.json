@@ -17,7 +17,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-add-comm",
-    "F:nat-le-add-right"
+    "F:nat-le-add-right",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "axiom_footprint": [],
   "evidence": [

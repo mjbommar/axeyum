@@ -8,10 +8,31 @@
     "statement": "∀ {m n : ℕ}, m + n = 0 ↔ m = 0 ∧ n = 0",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-zero-add"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_eq_zero_iff 2>/dev/null | grep -Ec '^Nat\\.add_eq_zero_iff[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.add_eq_zero_iff",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.add_eq_zero_iff` through the trusted `Kernel::add_declaration` gate, declared in `nat_prelude/add_basics.rs`. Declared as `Nat.add_eq_zero_iff`, NOT `Nat.add_eq_zero` -- that name is already taken in this prelude by a distinct, WEAKER theorem: `nat_prelude/algebra.rs`'s `declare_add_no_zero_summands` admits `Nat.add_eq_zero : add a b = 0 -> a = 0 /\\ b = 0`, the mp-ONLY arrow (built for a bitwise `land_aux`/`lor_aux` zero-summand argument, predating this session), not the `Iff` Mathlib's pinned v4.30 source states for `Nat.add_eq_zero` today (Mathlib deprecated the arrow-only reading and renamed the `Iff` to `Nat.add_eq_zero_iff` on 2025-10-26, per `Init/Data/Nat/Lemmas.lean` at the pinned commit -- `Nat.add_eq_zero` there is now the deprecated alias for the SAME `Iff` this fact states). A prelude can never redeclare a taken name, so this fact closes under the post-rename name; `declare_add_eq_zero_iff`'s mp reuses the existing `add_eq_zero` arrow directly, and mpr substitutes both conjuncts via `congr` and closes with `zero_add`. `nat_theorem_inventory`'s rendered type is `(x0:AxNat)->(x1:AxNat)->Iff (Eq (add x0 x1) zero) (And (Eq x0 zero) (Eq x1 zero))`, matching this fact's `formal.statement`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified both ways: the real name greps to a count `-ge 1`; grepping a made-up name (`Nat.add_eq_zero_iff_bogus`) greps to `0`.",
+      "supports": "∀ {m n : ℕ}, m + n = 0 ↔ m = 0 ∧ n = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names`, and `the_build_is_deterministic`/`every_promised_name_is_admitted_with_the_expected_kind` (both re-run on every `nat_prelude::` sweep) confirm the declaration is admitted at the exact rendered type checked below.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.add_eq_zero_iff"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-29 in this ledger by the `nat-add-basics` lane: a fresh local construction (`nat_prelude/add_basics.rs`), not a transcription of Mathlib's proof. The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `depends_on` is empty because the route builds directly on prelude machinery already declared earlier in `build_nat_prelude` (`add_zero`/`zero_add`/`add_comm`/`add_assoc`/`add_left_cancel`/`add_right_cancel`/`add_eq_zero`/`le_add_right`/`lt_or_eq_of_le`/`le_of_lt_succ`/`not_lt_zero`), not on another `ml430` fact.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

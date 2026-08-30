@@ -19,7 +19,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-add-assoc"
+    "F:nat-add-assoc",
+    "F:ml430-nat-add-assoc-8c87a1f1"
   ],
   "axiom_footprint": [],
   "evidence": [

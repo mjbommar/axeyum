@@ -29,7 +29,9 @@
     "F:nat-succ-ne-zero",
     "F:nat-zero-add",
     "F:nat-zero-lt-succ",
-    "F:nat-zero-mul"
+    "F:nat-zero-mul",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "evidence": [
     {

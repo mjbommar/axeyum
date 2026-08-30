@@ -26,7 +26,8 @@
     "F:nat-sumrange-congr-lt",
     "F:nat-sumrange-succ",
     "F:nat-sumrange-zero",
-    "F:nat-zero-add"
+    "F:nat-zero-add",
+    "F:ml430-nat-add-assoc-8c87a1f1"
   ],
   "axiom_footprint": [],
   "evidence": [

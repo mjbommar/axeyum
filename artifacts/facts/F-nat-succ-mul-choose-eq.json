@@ -28,7 +28,9 @@
     "F:nat-succ-add",
     "F:nat-succ-mul",
     "F:nat-zero-add",
-    "F:nat-zero-choose-succ"
+    "F:nat-zero-choose-succ",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "axiom_footprint": [],
   "evidence": [

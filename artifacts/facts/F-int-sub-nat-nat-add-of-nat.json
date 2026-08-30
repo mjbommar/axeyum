@@ -18,7 +18,8 @@
   "depends_on": [
     "F:int-add-comm",
     "F:int-of-nat-add-sub-nat-nat",
-    "F:nat-add-comm"
+    "F:nat-add-comm",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "axiom_footprint": [],
   "evidence": [

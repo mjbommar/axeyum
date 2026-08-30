@@ -13,7 +13,8 @@
   "external_status": "proved",
   "depends_on": [
     "F:ml430-nat-coprime-add-self-right-c3ed0f45",
-    "F:nat-add-comm"
+    "F:nat-add-comm",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "evidence": [
     {
