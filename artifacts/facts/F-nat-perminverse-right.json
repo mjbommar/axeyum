@@ -24,7 +24,9 @@
     "F:nat-eq-of-beq-eq-true",
     "F:nat-le-of-lt-succ",
     "F:nat-lt-or-eq-of-le",
-    "F:nat-not-lt-zero"
+    "F:nat-not-lt-zero",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:ml430-nat-le-of-lt-succ-120bd6db"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -21,7 +21,10 @@
     "F:nat-dvd-mul-right-of-dvd",
     "F:nat-gcd-dvd-left",
     "F:nat-gcd-dvd-right",
-    "F:ml430-nat-add-comm-56a2d614"
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-dvd-add-0c5bcc91",
+    "F:ml430-nat-dvd-add-iff-right-bf79c0cd",
+    "F:ml430-nat-dvd-antisymm-507f9026"
   ],
   "evidence": [
     {

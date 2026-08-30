@@ -12,7 +12,8 @@
   "external_status": "proved",
   "depends_on": [
     "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
-    "F:nat-dvd-mul"
+    "F:nat-dvd-mul",
+    "F:ml430-nat-dvd-mul-right-a87a83c4"
   ],
   "evidence": [
     {

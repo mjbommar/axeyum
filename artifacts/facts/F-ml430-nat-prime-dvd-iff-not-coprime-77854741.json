@@ -22,7 +22,9 @@
     "F:nat-le-of-succ-le-succ",
     "F:nat-le-refl",
     "F:nat-le-trans",
-    "F:nat-not-succ-le-zero"
+    "F:nat-not-succ-le-zero",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:ml430-nat-le-refl-fd7d9e15"
   ],
   "axiom_footprint": [],
   "evidence": [

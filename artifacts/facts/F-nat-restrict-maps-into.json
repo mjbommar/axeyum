@@ -32,7 +32,10 @@
     "F:nat-lt-irrefl",
     "F:nat-lt-or-eq-of-le",
     "F:nat-lt-succ-self",
-    "F:nat-not-succ-le-self"
+    "F:nat-not-succ-le-self",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-add-left-cancel", "F:nat-le-add-right", "F:nat-le-of-lt-succ", "F:nat-lt-or-eq-of-le", "F:nat-not-lt-zero"],
+  "depends_on": ["F:nat-add-left-cancel", "F:nat-le-add-right", "F:nat-le-of-lt-succ", "F:nat-lt-or-eq-of-le", "F:nat-not-lt-zero", "F:ml430-nat-le-of-lt-succ-120bd6db"],
   "evidence": [
     {
       "check_status": "checked",

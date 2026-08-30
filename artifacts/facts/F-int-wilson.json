@@ -37,7 +37,8 @@
     "F:nat-le-trans",
     "F:nat-lt-or-eq-of-le",
     "F:nat-sub-add-cancel",
-    "F:nat-succ-injective"
+    "F:nat-succ-injective",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

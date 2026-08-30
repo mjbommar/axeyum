@@ -51,7 +51,9 @@
     "F:nat-lt-or-eq-of-le",
     "F:nat-not-succ-le-zero",
     "F:nat-sub-add-cancel",
-    "F:nat-zero-le"
+    "F:nat-zero-le",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

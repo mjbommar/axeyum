@@ -74,9 +74,9 @@
   "coverage": {
     "bridge_constants": 70,
     "catalogued_propositions": 202,
-    "distinct_constants": 99,
-    "open_propositions": 46,
-    "settled_propositions": 156
+    "distinct_constants": 101,
+    "open_propositions": 40,
+    "settled_propositions": 162
   },
   "derivation": "bridge = {Lean constants in the pinned type_repr of every SETTLED ml430 mirror} \\ kernel-environment-snapshot-v1.declarations. Derived, never asserted: an entry exists only because a mirror stated with that constant has already been closed here.",
   "environment_snapshot": "artifacts/autogenesis/kernel-environment-snapshot-v1.json",
@@ -1106,6 +1106,26 @@
     },
     {
       "constants": [
+        "Eq",
+        "Nat",
+        "Nat.clog",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.clog_zero_left"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.clog",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.clog_zero_right"
+    },
+    {
+      "constants": [
         "HAdd.hAdd",
         "Iff",
         "Nat",
@@ -1682,6 +1702,47 @@
         "instOfNatNat"
       ],
       "source_name": "Nat.le_fib_self"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.log",
+        "instLENat"
+      ],
+      "source_name": "Nat.log_le_self"
+    },
+    {
+      "constants": [
+        "Eq",
+        "LT.lt",
+        "Nat",
+        "Nat.log",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_of_lt"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.log",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_zero_left"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.log",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_zero_right"
     },
     {
       "constants": [

@@ -32,7 +32,10 @@
     "F:nat-pow-zero",
     "F:nat-succ-mul",
     "F:nat-zero-le",
-    "F:nat-zero-lt-of-ne-zero"
+    "F:nat-zero-lt-of-ne-zero",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -33,7 +33,10 @@
     "F:nat-not-succ-le-self",
     "F:nat-pred-le-pred",
     "F:nat-succ-pred-of-pos",
-    "F:nat-zero-le"
+    "F:nat-zero-le",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

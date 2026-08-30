@@ -35,7 +35,10 @@
     "F:nat-lt-succ-self",
     "F:nat-not-succ-le-self",
     "F:nat-restrict-injective",
-    "F:nat-restrict-maps-into"
+    "F:nat-restrict-maps-into",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:ml430-nat-le-of-lt-succ-120bd6db"
   ],
   "axiom_footprint": [],
   "evidence": [

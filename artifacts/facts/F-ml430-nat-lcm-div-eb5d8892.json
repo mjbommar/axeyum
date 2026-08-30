@@ -26,7 +26,9 @@
         "F:nat-zero-le",
         "F:nat-dvd-lcm-left",
         "F:nat-dvd-lcm-right",
-        "F:nat-lcm-dvd"
+        "F:nat-lcm-dvd",
+        "F:ml430-nat-dvd-antisymm-507f9026",
+        "F:ml430-nat-dvd-mul-right-a87a83c4"
     ],
   "evidence": [
     {

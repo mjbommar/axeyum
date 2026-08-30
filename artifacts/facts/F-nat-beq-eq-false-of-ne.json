@@ -17,7 +17,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-eq-of-beq-eq-true"
+    "F:nat-eq-of-beq-eq-true",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4"
   ],
   "axiom_footprint": [],
   "evidence": [

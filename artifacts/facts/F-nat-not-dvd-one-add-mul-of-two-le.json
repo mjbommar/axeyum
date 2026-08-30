@@ -23,7 +23,8 @@
     "F:nat-le-add-right",
     "F:nat-le-trans",
     "F:nat-not-dvd-one-of-two-le",
-    "F:ml430-nat-add-comm-56a2d614"
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-dvd-mul-right-a87a83c4"
   ],
   "axiom_footprint": [],
   "evidence": [

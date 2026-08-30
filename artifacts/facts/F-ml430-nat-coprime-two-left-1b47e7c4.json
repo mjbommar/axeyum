@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-coprime-or-dvd-of-prime-65f47114", "F:ml430-nat-prime-dvd-iff-not-coprime-77854741", "F:nat-le-antisymm", "F:nat-le-of-dvd", "F:nat-one-le-of-dvd-pos", "F:nat-one-mul", "F:nat-succ-mul", "F:nat-succ-pred-of-pos", "F:nat-two-le-succ-or-eq-one"],
+  "depends_on": ["F:ml430-nat-coprime-or-dvd-of-prime-65f47114", "F:ml430-nat-prime-dvd-iff-not-coprime-77854741", "F:nat-le-antisymm", "F:nat-le-of-dvd", "F:nat-one-le-of-dvd-pos", "F:nat-one-mul", "F:nat-succ-mul", "F:nat-succ-pred-of-pos", "F:nat-two-le-succ-or-eq-one", "F:ml430-nat-le-antisymm-79dccead"],
   "evidence": [
     {
       "check_status": "checked",

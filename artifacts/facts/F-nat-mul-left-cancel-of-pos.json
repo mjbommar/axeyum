@@ -20,7 +20,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-le-antisymm",
-    "F:nat-le-of-mul-le-mul-left"
+    "F:nat-le-of-mul-le-mul-left",
+    "F:ml430-nat-le-antisymm-79dccead"
   ],
   "axiom_footprint": [],
   "evidence": [
