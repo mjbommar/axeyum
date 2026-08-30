@@ -42,12 +42,7 @@ Nothing found already existing that the brief implied was missing — the
 described, and none of the five target names existed anywhere in the tree
 before this lane (grepped both spellings).
 
-Not done: the two second-order unlocks the brief mentioned
-(`choose_le_add` -> `choose_le_choose` -> `choose_mono`; `choose_symm_add`)
-are NOT the same as `choose_le_succ`/`choose_symm_of_eq_add` just landed —
-those are separate facts/names, still open, and out of this lane's scope
-(only the five listed facts were in scope). `docs/plan/global/` and
-`PLAN.md` untouched per brief; `scripts/gen-plan.py` not run by this lane.
+Detail moved to [`../notes/183-choose-backlog.md`](../notes/183-choose-backlog.md).
 
 <!-- plan-section: landed-changes -->
 

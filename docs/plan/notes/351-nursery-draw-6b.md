@@ -164,3 +164,42 @@ rewriting it, so authoring a draw no longer risks deleting
 `bridge_provenance` and `row_digest`. Verified here rather than assumed:
 `--check` green, the owner reports its own PASS, the ownership gate passes,
 and the vocabulary file is byte-identical to the merge-base.
+
+**A lane sent to unblock a held-out family declares the CONSTRUCTION and
+nothing else.** Every mirror-named theorem it proves alongside subtracts a
+row from the blind population it was sent to create. The `dist` lane did
+good work by its own brief; the `nth` lane declared only the construction
+and its auxiliary, and its family is the one that survived. Nobody had
+stated the constraint.
+
+Re-derived constant sweep, with the R9 screen ADR-0645's version lacked —
+each opens a new un-owned module at the floor whose first ten are clean:
+
+| declare | opens | rows | held-out-safe |
+| --- | --- | --- | --- |
+| `Nat.fermatNumber` | `Mathlib.NumberTheory.Fermat` | 13 | yes — no family names it |
+| `NatCast.natCast` | `Init.Data.Int.OfNat` | 14 | yes — beside held-out `integer-natcast` |
+| `Nat.nthRoot` | `…Pow.NthRootLemmas` | 13 | yes — beside held-out `natural-square-root` |
+| `Nat.centralBinom` | `…Choose.Central` | 14 | **no** — natural-binomial is development |
+| `Nat.div2` / `Nat.bodd` | `Mathlib.Data.Nat.Bits` | 14 / 12 | **no** — natural-bitwise is development |
+
+`Nat.fermatNumber` is cheapest (`2^(2^n)+1` over the existing `Nat.pow`; the
+sweep confirms every other constant in all thirteen rows is already
+admissible). **Draw 7 needs one more constant, not two** — `Nat.Nth` is
+banked and clean — and `Mathlib.Data.Nat.Dist` should be drawn as
+development or train, where its 18 rows are still real supply.
+
+`check-dispatchable-frontier.py` stays RED at **6** against a floor of 10,
+and **no draw can clear it**: R5 refuses any family addition that does not
+add two held-out families. The other honest route is the eleven structurally
+blocked mirrors, which is proof work.
+
+Gates: holdout isolation `held_out=116 files_scanned=1107 settled=0
+references=0 PASS` exit 0, unchanged; frontier exit 1 and byte-identical
+before and after; refill `--check` green (`entries=260 bridge=72 env=2374
+attested=411 unattested=63`, unchanged before and after); vocabulary owner
+PASS; artifact-ownership gate PASS.
+
+Detail, both screens, the probe and every command:
+[`../notes/351-nursery-draw-6b.md`](../notes/351-nursery-draw-6b.md).
+Decision: [ADR-0653](../../research/09-decisions/adr-0653-declaring-the-unblocking-constant-contaminated-the-family-it-opened.md).

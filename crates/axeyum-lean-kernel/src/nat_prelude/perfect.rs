@@ -2410,11 +2410,10 @@ pub(super) fn declare_pow_injective(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
         // both sides equal, refuted by `lt_irrefl`.
         let strict_contra = |d: &mut NatDev<'_>, x: ExprId, y: ExprId, lt_xy: ExprId| -> ExprId {
             // lt_xy : Lt x y. pow_lt_pow_of_lt gives Lt (pow b x) (pow b y).
-            let strict = d.lemma(p.pow_lt_pow_of_lt, &[b, x, y, hb, lt_xy]);
             // Transport along `heq` (Eq pow_i pow_j) is only directly usable
             // when {x,y} = {i,j} in the SAME order as heq; build the needed
             // equality locally from heq by symm if required by the caller.
-            strict
+            d.lemma(p.pow_lt_pow_of_lt, &[b, x, y, hb, lt_xy])
         };
 
         let tri = d.lemma(p.le_total, &[i, j]); // Or (Le i j) (Le j i)

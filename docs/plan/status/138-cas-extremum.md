@@ -42,11 +42,7 @@ fixtures here.
 polynomial-fragment row (per-capability contract table) and a pointer from
 the "Algebraic numbers" zero-testing row.
 
-Next for this row-3 family: a kernel-reconstruction slice (per ADR-0601 §2)
-turning `ExtremumCertificate` into a checked Lean-kernel term, mirroring
-whatever shape the sibling IVT-reconstruction lane lands on
-`polynomial_ivt`'s certificate — coordinated by certificate SHAPE per this
-task's brief, not by editing `axeyum-lean-kernel/` from this lane.
+Detail moved to [`../notes/138-cas-extremum.md`](../notes/138-cas-extremum.md).
 
 <!-- plan-section: landed-changes -->
 

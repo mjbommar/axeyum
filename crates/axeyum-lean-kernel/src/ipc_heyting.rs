@@ -161,9 +161,9 @@ pub struct IpcHeytingPrelude {
     pub join_not_ne_top: NameId,
 }
 
-/// A thin, `Copy`-able handle onto the [`NatPrelude`] names this file needs,
+/// A thin, `Copy`-able handle onto the [`crate::NatPrelude`] names this file needs,
 /// so [`IpcHeytingPrelude`] does not have to embed the (large, non-`Copy`)
-/// [`NatPrelude`] by value.
+/// [`crate::NatPrelude`] by value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NatPreludeHandle {
     /// `Nat : Type`.
@@ -190,7 +190,7 @@ pub struct NatPreludeHandle {
     pub bool_false: NameId,
 }
 
-/// Build the [`Formula`] AST and the 3-element Heyting-chain semantics,
+/// Build the `Formula` AST and the 3-element Heyting-chain semantics,
 /// registering every declaration through the trusted
 /// [`crate::Kernel::add_inductive`] / [`crate::Kernel::add_declaration`]
 /// gates. Not cached (unlike the large shared preludes): this package is
