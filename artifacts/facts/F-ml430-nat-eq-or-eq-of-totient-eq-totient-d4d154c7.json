@@ -2,29 +2,107 @@
   "schema_version": 1,
   "id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
   "title": "Mathlib v4.30 source proposition Nat.eq_or_eq_of_totient_eq_totient",
-  "statement": "The proposition declared as `Nat.eq_or_eq_of_totient_eq_totient` in the pinned Mathlib v4.30 source.",
+  "statement": "The proposition declared as `Nat.eq_or_eq_of_totient_eq_totient` in the pinned Mathlib v4.30 source: for naturals a and b, a | b and totient(a) = totient(b) implies a = b or 2*a = b.",
   "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {a b : ℕ}, a ∣ b → a.totient = b.totient → a = b ∨ 2 * a = b",
-    "fragment": "Nat"
+    "language": "lean4",
+    "statement": "theorem Nat.eq_or_eq_of_totient_eq_totient : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.dvd x0 x1) -> ((x3 : Eq.{1} AxNat (AxNat.totient x0) (AxNat.totient x1)) -> Or (Eq.{1} AxNat x0 x1) (Eq.{1} AxNat (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0) x1)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.eq_or_eq_of_totient_eq_totient",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
+    "F:ml430-nat-totient-eq-zero-3be161d6",
+    "F:nat-add-le-add-left",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-mul-comm",
+    "F:nat-mul-one",
+    "F:nat-not-succ-le-zero",
+    "F:nat-two-le-succ-or-eq-one",
+    "F:nat-zero-add",
+    "F:nat-zero-lt-of-ne-zero",
+    "F:nat-zero-lt-succ",
+    "F:nat-zero-mul"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.eq_or_eq_of_totient_eq_totient",
+      "kind": "kernel-term",
+      "supports": "a | b -> totient a = totient b -> a = b \\/ 2*a = b, with the whole rendered type pinned.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- eq_or_eq_of_totient_eq_totient 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.eq_or_eq_of_totient_eq_totient 4 ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.dvd x0 x1) -> ((x3 : Eq.{1} AxNat (AxNat.totient x0) (AxNat.totient x1)) -> Or (Eq.{1} AxNat x0 x1) (Eq.{1} AxNat (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0) x1)))))')\" -ge 1",
+      "notes": "The grep pins the WHOLE rendered type. Verified both directions with /usr/bin/grep -Fc explicitly (not the interactive-shell ugrep): the real name gives count 1; a fabricated name (`eq_or_eq_of_totient_eq_totient_nonexistent_xyz`) gives count 0 (the tool prints nothing and exits nonzero for an absent name), so `test ... -ge 1` fails as required. Exactly one name is passed, since `nat_theorem_inventory` silently keeps only the LAST of several name arguments (measured 2026-08-30).",
+      "kernel_declaration": "Nat.eq_or_eq_of_totient_eq_totient"
+    },
+    {
+      "id": "engine-Nat.totient_mul_cofactor_bound",
+      "kind": "kernel-term",
+      "supports": "The multiplier-tracking bound this theorem is built from: for cofactor k >= 2, either totient(a*k) >= 2*totient(a) outright, or k = 2 and totient(a*k) = totient(a) exactly.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_mul_cofactor_bound 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.totient_mul_cofactor_bound')\" -ge 1",
+      "notes": "By well-founded induction on the cofactor k, reusing the prime-peeling chain of Nat.totient_dvd_totient_mul plus a single-prime-step case analysis (coprime vs dividing, per Nat.coprime_or_dvd_of_prime) showing the per-step multiplier can be exactly 1 only in the coprime branch at q = 2. `totient_mul_cofactor_bound` does not collide with any other declared name as a substring (unlike `totient_dvd_totient_mul`/`totient_dvd_totient_mul_prime`), so a name-only grep is sufficient here -- verified by inspecting nat_theorem_inventory's output directly.",
+      "kernel_declaration": "Nat.totient_mul_cofactor_bound"
+    },
+    {
+      "id": "instances-eq_or_eq_of_totient_eq_totient",
+      "kind": "exhaustive-enumeration",
+      "supports": "Holds for every 0 <= a, b < 60; both hypotheses are load-bearing; the second disjunct is reachable ONLY at cofactor k = b/a = 2, and only when a is odd; no chain of length >= 2 ever reaches it.",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/tests/check-totient-dvd-chain-numerics.py",
+      "checker_seconds": 1,
+      "notes": "Checks 3 through 6. Check 3 is the bound lemma itself (k>=2 -> totient(a*k)>=2*totient(a) OR (k=2 AND equal)), with check 3N showing the k>=2 guard is load-bearing (k=1 always gives equality, which is neither disjunct as stated for k!=2). Check 4 is the target statement itself with both hypotheses' controls (4N-dvd, 4N-eq) shown load-bearing. Check 5 confirms every genuine '2a=b' witness has a ODD -- a even would force the single prime step's multiplier to 2, not 1. Check 6 confirms the second disjunct is reachable ONLY at cofactor k=2 (checked over every witness with 1<=a,b<60), which is the numeric form of the well-founded induction's own case analysis (depth-2-or-more chains always land in the first disjunct).",
+      "checkers": [
+        "scripts/tests/check-totient-dvd-chain-numerics.py",
+        "cargo test -p axeyum-lean-kernel --lib nat_prelude::eq_or_eq_of_totient_eq_totient_applies_at_a_free_hypothesis_with_a_transposed_control",
+        "cargo test -p axeyum-lean-kernel --lib nat_prelude::totient_mul_cofactor_bound_applies_at_free_variables_with_a_transposed_control"
+      ]
+    },
+    {
+      "id": "footprint-nat-prelude",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`--require-axiom-free` exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is non-empty. Measured 2026-08-30: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, exit 0."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:eulers-totient-function",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:divisibility",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.eq_or_eq_of_totient_eq_totient` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel nat_prelude::totient_dvd_chain (totient-dvd-chain lane)",
+    "source": "statement was extracted from Mathlib v4.30.0 (statement-only, no proof value exposed); the proof here is constructed independently in this kernel via a well-founded induction tracking the totient multiplier along a prime-peeling chain, per ADR-0668 -- it does NOT reconstruct Mathlib's proof, whose route was not consulted.",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
         "what": "the theorem declaration `Nat.eq_or_eq_of_totient_eq_totient`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
         "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted, and the proof actually built here uses a different route (a multiplier-tracking well-founded induction, not Mathlib's)."
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed per ADR-0668 (docs/research/09-decisions/adr-0668-the-totient-mirrors-do-not-need-multiset-uniqueness.md), the third of the three totient mirrors that ADR corrects the sizing on. Unpacks a | b into b = a*k. a = 0 forces b = 0 too (zero_mul), giving a = b directly. For a >= 1 (hence totient(a) >= 1, via Nat.totient_eq_zero's contrapositive), splits on k: k = 0 is refuted (would force totient(a) = totient(0) = 0, contradicting totient(a) >= 1); k = 1 gives a = b directly (mul_one); k >= 2 invokes Nat.totient_mul_cofactor_bound -- its first disjunct (totient b >= 2*totient a) is refuted by the totient-equality hypothesis combined with totient(a) >= 1 (2x <= x is impossible for x >= 1, Nat.lt_irrefl closes it), leaving only the second disjunct, k = 2, from which 2*a = b follows by mul_comm. The bound lemma's own proof needed five direction fixes (symm/congr/transport arguments built with a and b swapped, or the wrong Le argument substituted), found via Kernel::render_lean on the TypeMismatch payload rather than by hand-tracing -- each fix was a one-line correction once the exact mismatched pair was visible. Re-checked partition before touching: `development` (nursery-v2-extension.json), not held-out."
 }
