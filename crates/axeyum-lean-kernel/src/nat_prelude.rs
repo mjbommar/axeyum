@@ -219,6 +219,7 @@ mod subset_product;
 mod testbit_bitwise;
 mod totient;
 mod totient_dvd_chain;
+mod totient_gcd_mul;
 mod totient_lemmas;
 mod totient_mul;
 mod totient_mul_coprime;
@@ -379,6 +380,7 @@ use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
 use totient_dvd_chain::declare_totient_dvd_chain_all;
+use totient_gcd_mul::declare_totient_gcd_mul_all;
 use totient_lemmas::{
     declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_coprime_totient_iff,
     declare_totient_even, declare_totient_lemmas_all,
@@ -2186,6 +2188,23 @@ pub struct NatPrelude {
     /// its first disjunct is refuted by the totient-equality hypothesis
     /// (`2·φ(a) ≤ φ(a) < 2·φ(a)` when `φ(a) ≥ 1`), leaving only `k = 2`.
     pub eq_or_eq_of_totient_eq_totient: NameId,
+    /// `Nat.totient_gcd_mul_aux : ∀ d a b, Eq (gcd a b) d → Eq (mul (totient
+    /// d) (totient (mul a b))) (mul (mul (totient a) (totient b)) d)` —
+    /// `totient_gcd_mul.rs`. The measure-generalized form of the last
+    /// `ml430` totient mirror (ADR-0668): strong induction on the gcd
+    /// value, peeling one prime at a time via
+    /// [`coprime_or_dvd_of_prime`](Self::coprime_or_dvd_of_prime) applied
+    /// independently to each of the two reduced cofactors (no factor
+    /// multiset, no Euclid's lemma — narrower than ADR-0668's own sketch).
+    pub totient_gcd_mul_aux: NameId,
+    /// `Nat.totient_gcd_mul_totient_mul : ∀ a b, Eq (mul (totient (gcd a b))
+    /// (totient (mul a b))) (mul (mul (totient a) (totient b)) (gcd a b))`
+    /// — `F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7`, the non-coprime
+    /// generalization of [`totient_mul_of_coprime`](Self::totient_mul_of_coprime)
+    /// (which this collapses to at `gcd a b = 1`). One application of
+    /// [`totient_gcd_mul_aux`](Self::totient_gcd_mul_aux) at `val := gcd a
+    /// b`, discharged by `Eq.refl` (`totient_gcd_mul.rs`).
+    pub totient_gcd_mul_totient_mul: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4966,6 +4985,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             totient_dvd_of_dvd: kernel.name_str(nat, "totient_dvd_of_dvd"),
             totient_mul_cofactor_bound: kernel.name_str(nat, "totient_mul_cofactor_bound"),
             eq_or_eq_of_totient_eq_totient: kernel.name_str(nat, "eq_or_eq_of_totient_eq_totient"),
+            totient_gcd_mul_aux: kernel.name_str(nat, "totient_gcd_mul_aux"),
+            totient_gcd_mul_totient_mul: kernel.name_str(nat, "totient_gcd_mul_totient_mul"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -6017,6 +6038,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mul_one`, and the `WellFounded.fix` machinery `Nat.gcd` and
         // `Nat.exists_prime_factorization` already use. ADR-0668.
         declare_totient_dvd_chain_all(&mut d, &p)?;
+        // `Nat.totient_gcd_mul_totient_mul` (the last of the three `ml430`
+        // totient mirrors, ADR-0668): needs `Nat.totient_mul_of_coprime`/
+        // `Nat.totient_mul_of_dvd` (`declare_totient_all` /
+        // `declare_totient_prime_pow_all`, both above),
+        // `Nat.coprime_or_dvd_of_prime`/`Nat.exists_prime_dvd`/
+        // `Nat.gcd_mul_right`/`Nat.dvd_gcd`/`Nat.coprime_of_dvd_right`/
+        // `Nat.coprime_mul_of_coprime`/the two `dvd_mul_{left,right}_of_dvd`
+        // lemmas, and the `WellFounded.fix` machinery this file's siblings
+        // already use. Placed after `totient_dvd_chain` since it is the
+        // last of the three mirrors to close.
+        declare_totient_gcd_mul_all(&mut d, &p)?;
         // Needs only `Nat.log` (`declare_log_all`, far above). Nothing needs
         // it, so it goes last.
         declare_log2_all(&mut d, &p)?;
