@@ -408,9 +408,11 @@ pub(super) fn declare_ediv_gcd_ne_zero_of_ne_zero_left(
         let g = igcd(d, a, b);
         let c = d.of_nat(g);
         let zero_i = d.izero();
-        let a_ne_zero_ty = d.not(d.ieq(a, zero_i));
+        let a_eq_zero_ty = d.ieq(a, zero_i);
+        let a_ne_zero_ty = d.not(a_eq_zero_ty);
         let ediv_ac = d.iediv(a, c);
-        let concl = d.not(d.ieq(ediv_ac, zero_i));
+        let ediv_ac_eq_zero_ty = d.ieq(ediv_ac, zero_i);
+        let concl = d.not(ediv_ac_eq_zero_ty);
         let stmt = d.arrow(a_ne_zero_ty, concl);
 
         let ha_fv = d.fresh_fvar();
@@ -469,9 +471,11 @@ pub(super) fn declare_ediv_gcd_ne_zero_if_ne_zero_right(
         let g = igcd(d, a, b);
         let c = d.of_nat(g);
         let zero_i = d.izero();
-        let b_ne_zero_ty = d.not(d.ieq(b, zero_i));
+        let b_eq_zero_ty = d.ieq(b, zero_i);
+        let b_ne_zero_ty = d.not(b_eq_zero_ty);
         let ediv_bc = d.iediv(b, c);
-        let concl = d.not(d.ieq(ediv_bc, zero_i));
+        let ediv_bc_eq_zero_ty = d.ieq(ediv_bc, zero_i);
+        let concl = d.not(ediv_bc_eq_zero_ty);
         let stmt = d.arrow(b_ne_zero_ty, concl);
 
         let hb_fv = d.fresh_fvar();
@@ -538,7 +542,8 @@ pub(super) fn declare_mod_eq_add(d: &mut IntDev<'_>) -> Result<(), KernelError> 
         let bc = d.iadd(b, c);
         let be = d.iadd(b, e);
         let concl = imodeq(d, n, ac, be);
-        let stmt = d.arrow(modeq_ab, d.arrow(modeq_ce, concl));
+        let inner_arrow = d.arrow(modeq_ce, concl);
+        let stmt = d.arrow(modeq_ab, inner_arrow);
 
         let h1_fv = d.fresh_fvar();
         let h1 = d.kernel().fvar(h1_fv);
@@ -621,7 +626,8 @@ pub(super) fn declare_mod_eq_add_left_cancel_general(
         let be = d.iadd(b, e);
         let modeq_acbe = imodeq(d, n, ac, be);
         let modeq_ce = imodeq(d, n, c, e);
-        let stmt = d.arrow(modeq_ab, d.arrow(modeq_acbe, modeq_ce));
+        let inner_arrow = d.arrow(modeq_acbe, modeq_ce);
+        let stmt = d.arrow(modeq_ab, inner_arrow);
 
         let h1_fv = d.fresh_fvar();
         let h1 = d.kernel().fvar(h1_fv);
@@ -666,7 +672,8 @@ pub(super) fn declare_mod_eq_add_right_cancel_general(
         let be = d.iadd(b, e);
         let modeq_acbe = imodeq(d, n, ac, be);
         let modeq_ab = imodeq(d, n, a, b);
-        let stmt = d.arrow(modeq_ce, d.arrow(modeq_acbe, modeq_ab));
+        let inner_arrow = d.arrow(modeq_acbe, modeq_ab);
+        let stmt = d.arrow(modeq_ce, inner_arrow);
 
         let h1_fv = d.fresh_fvar();
         let h1 = d.kernel().fvar(h1_fv);
