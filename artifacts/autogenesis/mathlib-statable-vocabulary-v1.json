@@ -1,5 +1,6 @@
 {
   "bridge": [
+    "AntitoneOn",
     "Bool.and",
     "Bool.not",
     "Bool.or",
@@ -50,6 +51,7 @@
     "Odd",
     "OfNat.ofNat",
     "Set.Ici",
+    "Set.Ioi",
     "StrictMono",
     "StrictMonoOn",
     "Symmetric",
@@ -72,11 +74,11 @@
     "ite"
   ],
   "coverage": {
-    "bridge_constants": 70,
+    "bridge_constants": 72,
     "catalogued_propositions": 202,
-    "distinct_constants": 101,
-    "open_propositions": 40,
-    "settled_propositions": 162
+    "distinct_constants": 103,
+    "open_propositions": 28,
+    "settled_propositions": 174
   },
   "derivation": "bridge = {Lean constants in the pinned type_repr of every SETTLED ml430 mirror} \\ kernel-environment-snapshot-v1.declarations. Derived, never asserted: an entry exists only because a mirror stated with that constant has already been closed here.",
   "environment_snapshot": "artifacts/autogenesis/kernel-environment-snapshot-v1.json",
@@ -1106,6 +1108,55 @@
     },
     {
       "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.clog",
+        "instLENat"
+      ],
+      "source_name": "Nat.clog_mono_right"
+    },
+    {
+      "constants": [
+        "Monotone",
+        "Nat",
+        "Nat.clog",
+        "Nat.instPreorder"
+      ],
+      "source_name": "Nat.clog_monotone"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.clog",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.clog_one_left"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.clog",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.clog_one_right"
+    },
+    {
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.clog",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.clog_pos"
+    },
+    {
+      "constants": [
         "Eq",
         "Nat",
         "Nat.clog",
@@ -1705,12 +1756,64 @@
     },
     {
       "constants": [
+        "AntitoneOn",
+        "Nat",
+        "Nat.instPreorder",
+        "Nat.log",
+        "OfNat.ofNat",
+        "Set.Ioi",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_antitone_left"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.clog",
+        "Nat.log",
+        "instLENat"
+      ],
+      "source_name": "Nat.log_le_clog"
+    },
+    {
+      "constants": [
         "LE.le",
         "Nat",
         "Nat.log",
         "instLENat"
       ],
       "source_name": "Nat.log_le_self"
+    },
+    {
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.log",
+        "Ne",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_lt_self"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.log",
+        "instLENat"
+      ],
+      "source_name": "Nat.log_mono_right"
+    },
+    {
+      "constants": [
+        "Monotone",
+        "Nat",
+        "Nat.instPreorder",
+        "Nat.log"
+      ],
+      "source_name": "Nat.log_monotone"
     },
     {
       "constants": [
@@ -1723,6 +1826,26 @@
         "instOfNatNat"
       ],
       "source_name": "Nat.log_of_lt"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.log",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_one_left"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.log",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_one_right"
     },
     {
       "constants": [

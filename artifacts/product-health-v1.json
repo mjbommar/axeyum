@@ -1,7 +1,7 @@
 {
   "autonomous_production": {
-    "authoritative_named_facts": 37,
-    "authoritative_operations": 26,
+    "authoritative_named_facts": 53,
+    "authoritative_operations": 28,
     "producer_outcome_census": {
       "exact_source_facts": 24,
       "groups": 38,
@@ -33,8 +33,12 @@
         "proved": 2
       }
     },
-    "registered_operations": 27,
+    "registered_operations": 29,
     "reusable_multi_target_operations": [
+      {
+        "fact_count": 6,
+        "id": "authoritative-kernel-int-modeq-shift-family-v1"
+      },
       {
         "fact_count": 4,
         "id": "authoritative-mathlib-bounded-induction-factorial-family-v1"
@@ -44,26 +48,30 @@
         "id": "authoritative-mathlib-modeq-family-v1"
       },
       {
+        "fact_count": 10,
+        "id": "authoritative-mathlib-nat-modeq-congruence-family-v1"
+      },
+      {
         "fact_count": 3,
         "id": "authoritative-mathlib-nat-modeq-remainder-family-v1"
       }
     ]
   },
   "fact_ledger": {
-    "facts": 698,
+    "facts": 2220,
     "proof_route_counts": {
-      "cas-certificate": 23,
+      "cas-certificate": 42,
       "imported-kernel-lean": 5,
-      "kernel-lean": 453,
+      "kernel-lean": 1972,
       "search-certificate": 12,
-      "smt-clausal": 9,
+      "smt-clausal": 10,
       "smt-term-level": 17
     },
     "status_counts": {
       "computed": 2,
       "conjectured": 3,
-      "open": 176,
-      "proved": 513,
+      "open": 159,
+      "proved": 2052,
       "refuted": 4
     }
   },
@@ -105,15 +113,15 @@
   },
   "kind": "axeyum-product-health-snapshot",
   "knowledge_connectivity": {
-    "distinct_exactly_linked_facts": 398,
+    "distinct_exactly_linked_facts": 1337,
     "kernel_dependency_edges": 7677,
     "kernel_theorems": 1287,
     "maximum_dependency_depth": 26,
-    "theorems_with_exact_fact_links": 397,
-    "theorems_without_exact_fact_links": 890,
-    "unresolved_prefixed_kernel_evidence": 4,
+    "theorems_with_exact_fact_links": 1284,
+    "theorems_without_exact_fact_links": 3,
+    "unresolved_prefixed_kernel_evidence": 691,
     "unresolved_reason_counts": {
-      "exact kernel evidence identity is absent from the current projection": 3,
+      "exact kernel evidence identity is absent from the current projection": 690,
       "exact kernel evidence identity resolves to a current definition declaration, not a theorem": 1
     }
   },
@@ -140,12 +148,12 @@
   "scope": "committed-populations-and-static-gate-reachability",
   "semantic_coverage": {
     "concepts": 13,
-    "excluded_held_out_family_topic_facts": 37,
+    "excluded_held_out_family_topic_facts": 16,
     "excluded_held_out_formalizations": 0,
-    "family_topic_facts": 177,
+    "family_topic_facts": 198,
     "kernel_semantic_anchors": 6,
     "qualified_formalization_facts": 13,
-    "with_family_topic": 7,
+    "with_family_topic": 8,
     "with_kernel_semantic_anchors": 5,
     "with_qualified_formalizations": 3
   },
@@ -156,11 +164,11 @@
     },
     {
       "path": "artifacts/autogenesis/kernel-lemma-search-index-v1.json",
-      "sha256": "cfd3ccc95249a4085f13a4478faff30d3f270975793e9daa32c501084885fa74"
+      "sha256": "172fee1fe3d190ba8348f1be08bb2c9064817a0c47c64e39f46f4b3a605a820c"
     },
     {
       "path": "artifacts/autogenesis/operations.json",
-      "sha256": "7886695d03a39974f24554cd1e9e8a600638a565d29bb864d4278b1e24461a46"
+      "sha256": "d94becf9389b831c07a5f74a52426cef20b8146cb702e43b7dbbf6b6d77ecdb8"
     },
     {
       "path": "artifacts/autogenesis/producer-outcome-observations-v1.json",
@@ -168,15 +176,15 @@
     },
     {
       "path": "artifacts/autogenesis/concept-coverage-projection-v1.json",
-      "sha256": "abdfa02dabafb0cdbdb1f635dd58be965911a9c7bf3b7bf9b5ca5df8985153e1"
+      "sha256": "283a815bc74ddf1fe63bfa097d2d44c6d341bbfb43dca4bcc9b4c0f89d5281c3"
     },
     {
       "path": "justfile",
-      "sha256": "7ddf75c519e5eaf248a75bdafc56c1b19a41786e60af4d02a5224c30210f57f1"
+      "sha256": "5930dbcb22f652d0f19e77c4588f969c80bbb0ba2d2e4df959d04bcdc9af8f90"
     },
     {
       "path": "scripts/check.sh",
-      "sha256": "18cd78a1f62c807ab3efc4abef6919c375238c7420db624440bfc55175297274"
+      "sha256": "e60a26b0dea413438f14c63fb39ad0e14f13f278af38de66aa517c5b920e84f2"
     },
     {
       "path": "artifacts/runtime/ci-latest-v1.json",
@@ -184,8 +192,8 @@
     },
     {
       "path": "artifacts/facts/F-*.json",
-      "population": 698,
-      "sha256": "97dd74d55a0907106aba0ddf3d7486cefca492578c8162b2af9e112d979a3de0"
+      "population": 2220,
+      "sha256": "272151fbfdb371eb7409b3ba0db567cb509f54849114bb546d3b56a7a6fd9c00"
     },
     {
       "path": "artifacts/episodes/**/episode*.json excluding fixtures*",

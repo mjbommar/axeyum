@@ -19,7 +19,7 @@
     },
     "operations": {
       "path": "artifacts/autogenesis/operations.json",
-      "sha256": "7886695d03a39974f24554cd1e9e8a600638a565d29bb864d4278b1e24461a46"
+      "sha256": "d94becf9389b831c07a5f74a52426cef20b8146cb702e43b7dbbf6b6d77ecdb8"
     },
     "ordering": "priority class, accepted count descending, measured count descending, ready count descending, family",
     "producer_evaluation_frontier": {
@@ -82,7 +82,13 @@
     },
     {
       "accepted_fact_ids": [],
-      "already_registered_fact_ids": [],
+      "already_registered_fact_ids": [
+        "F:ml430-int-add-modeq-left-ee732b5b",
+        "F:ml430-int-add-modeq-right-e58108ee",
+        "F:ml430-int-mod-modeq-6bec7847",
+        "F:ml430-int-modeq-sub-3148f130",
+        "F:ml430-int-modulus-modeq-zero-5b57a898"
+      ],
       "capability_demands": {
         "non-equality-terminal-family": 5
       },
@@ -294,7 +300,16 @@
     },
     {
       "accepted_fact_ids": [],
-      "already_registered_fact_ids": [],
+      "already_registered_fact_ids": [
+        "F:ml430-nat-mod-modeq-436e4c10",
+        "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+        "F:ml430-nat-modeq-add-left-e83f0700",
+        "F:ml430-nat-modeq-add-right-8e2ca0cc",
+        "F:ml430-nat-modeq-add-right-cancel-e871facf",
+        "F:ml430-nat-modeq-of-dvd-d75cc374",
+        "F:ml430-nat-modeq-of-mul-left-88d20bca",
+        "F:ml430-nat-modeq-one-516d46e8"
+      ],
       "capability_demands": {
         "non-equality-terminal-family": 2
       },
