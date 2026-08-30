@@ -466,6 +466,74 @@ def write_summary(false_results, def_results, review_results, dispatch_entries, 
     SUMMARY.write_text("\n".join(w) + "\n")
 
 
+def build_guard_table(
+    false_results: list[dict],
+    def_results: list[dict],
+    review_results: list[dict],
+    dispatch_entries: list[dict],
+    receipts: dict[str, dict],
+    corpus_pin: dict | None,
+    defs_pin: dict | None,
+    check_pins: bool,
+) -> list[tuple[str, list[str]]]:
+    """Every guard this gate runs, by NAME, in one place.
+
+    This is the table `scripts/tests/test_falsification_screen.py` iterates
+    to confirm every guard it names is actually wired in -- so a guard added
+    with its own unit test but never added here (S3's own documented failure
+    mode: 'three guards sat outside their suite's table until I noticed')
+    fails a test immediately instead of silently never running.
+    """
+    table: list[tuple[str, list[str]]] = [
+        ("corpus_nonempty", guard_corpus_nonempty(false_results)),
+        ("zero_executed_false", guard_zero_executed_false(false_results)),
+        ("false_statement_refuted", guard_false_statement_refuted(false_results)),
+        ("definitions_nonempty", guard_definitions_nonempty(def_results)),
+        ("zero_executed_definitions", guard_zero_executed_definitions(def_results)),
+        ("correct_matches_reference", guard_correct_matches_reference(def_results)),
+        ("definition_has_mutation", guard_definition_has_mutation(def_results)),
+        ("mutation_moves_observation", guard_mutation_moves_observation(def_results)),
+        ("review_obligations_present", guard_review_obligations_present(review_results)),
+        ("review_obligations_nonempty", guard_review_obligations_nonempty(review_results)),
+        ("no_id_in_both_registries", guard_no_id_in_both_registries(def_results, review_results)),
+        ("dispatch_has_receipt", guard_dispatch_has_receipt(dispatch_entries, receipts)),
+        ("dispatch_receipt_is_clear", guard_dispatch_receipt_is_clear(dispatch_entries, receipts)),
+        ("dispatch_ordering", guard_dispatch_ordering(dispatch_entries, receipts)),
+        ("receipt_ids_are_registered", guard_receipt_ids_are_registered(receipts)),
+    ]
+    if check_pins:
+        table += [
+            ("pin_drift_corpus", guard_pin_drift(false_results, corpus_pin, "false-statement-corpus.json")),
+            ("pin_coverage_corpus", guard_pin_coverage(false_results, corpus_pin)),
+            ("pin_drift_definitions", guard_pin_drift(def_results, defs_pin, "definitions-registry.json")),
+            ("pin_coverage_definitions", guard_pin_coverage(def_results, defs_pin)),
+        ]
+    return table
+
+
+GUARD_NAMES = [
+    "corpus_nonempty",
+    "zero_executed_false",
+    "false_statement_refuted",
+    "definitions_nonempty",
+    "zero_executed_definitions",
+    "correct_matches_reference",
+    "definition_has_mutation",
+    "mutation_moves_observation",
+    "review_obligations_present",
+    "review_obligations_nonempty",
+    "no_id_in_both_registries",
+    "dispatch_has_receipt",
+    "dispatch_receipt_is_clear",
+    "dispatch_ordering",
+    "receipt_ids_are_registered",
+    "pin_drift_corpus",
+    "pin_coverage_corpus",
+    "pin_drift_definitions",
+    "pin_coverage_definitions",
+]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true", help="regenerate the pins and summary")
@@ -482,27 +550,13 @@ def main() -> int:
     corpus_pin = json.loads(CORPUS_PIN.read_text()) if CORPUS_PIN.exists() else None
     defs_pin = json.loads(DEFS_PIN.read_text()) if DEFS_PIN.exists() else None
 
+    guard_table = build_guard_table(
+        false_results, def_results, review_results, dispatch_entries, receipts,
+        corpus_pin, defs_pin, check_pins=not args.write,
+    )
     failures: list[str] = []
-    failures += guard_corpus_nonempty(false_results)
-    failures += guard_zero_executed_false(false_results)
-    failures += guard_false_statement_refuted(false_results)
-    failures += guard_definitions_nonempty(def_results)
-    failures += guard_zero_executed_definitions(def_results)
-    failures += guard_correct_matches_reference(def_results)
-    failures += guard_definition_has_mutation(def_results)
-    failures += guard_mutation_moves_observation(def_results)
-    failures += guard_review_obligations_present(review_results)
-    failures += guard_review_obligations_nonempty(review_results)
-    failures += guard_no_id_in_both_registries(def_results, review_results)
-    failures += guard_dispatch_has_receipt(dispatch_entries, receipts)
-    failures += guard_dispatch_receipt_is_clear(dispatch_entries, receipts)
-    failures += guard_dispatch_ordering(dispatch_entries, receipts)
-    failures += guard_receipt_ids_are_registered(receipts)
-    if not args.write:
-        failures += guard_pin_drift(false_results, corpus_pin, "false-statement-corpus.json")
-        failures += guard_pin_coverage(false_results, corpus_pin)
-        failures += guard_pin_drift(def_results, defs_pin, "definitions-registry.json")
-        failures += guard_pin_coverage(def_results, defs_pin)
+    for _name, bad in guard_table:
+        failures += bad
 
     if args.json:
         print(
