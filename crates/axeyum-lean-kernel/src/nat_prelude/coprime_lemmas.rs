@@ -500,6 +500,116 @@ pub(super) fn declare_coprime_div_right(
     Ok(())
 }
 
+/// `Nat.Coprime.coprime_div_left : ∀ m n a, Coprime m n → dvd a m →
+/// Coprime (div m a) n`. Mirror image of [`declare_coprime_div_right`]: the
+/// divided argument is `m` instead of `n`, and the shrinking step at the end
+/// uses `coprime_of_dvd_left` (shrinking the LEFT `gcd` argument) instead of
+/// `coprime_of_dvd_right`. See the module doc.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_div_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_div_left, 3, &|d, v| {
+        let (m, n, a) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let gcd_mn = d.gcd(m, n);
+        let cmn_ty = d.eq(gcd_mn, one);
+
+        let cmn_fv = d.fresh_fvar();
+        let cmn_hyp = d.kernel().fvar(cmn_fv);
+
+        // motive(x) := dvd x m -> Coprime (div m x) n
+        let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+            let dvd_ty = d.dvd(x, m);
+            let div_mx = d.div(m, x);
+            let gcd_div_n = d.gcd(div_mx, n);
+            let concl = d.eq(gcd_div_n, one);
+            d.arrow(dvd_ty, concl)
+        };
+        let stmt_inner = motive(d, a);
+
+        let at_zero = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let dvd_ty = d.dvd(zero, m);
+            let div_m0 = d.div(m, zero);
+            let gcd_divm0_n = d.gcd(div_m0, n);
+            let concl = d.eq(gcd_divm0_n, one);
+
+            let dvd_fv = d.fresh_fvar();
+            let dvd_hyp = d.kernel().fvar(dvd_fv);
+
+            let body = dvd_elim(d, zero, m, concl, dvd_hyp, &|d, q, eq_proof| {
+                // eq_proof : Eq m (mul zero q)
+                let zq = d.mul(zero, q);
+                let zmul = d.lemma(p.zero_mul, &[q]); // Eq (mul zero q) zero
+                let (_, m_eq_zero) = d.chain(m, &[(zq, eq_proof), (zero, zmul)]); // Eq m zero
+
+                let gcd_zero_n = d.gcd(zero, n);
+                let m_gcd_eq = d.congr(m, zero, m_eq_zero, &|d, x| d.gcd(x, n)); // Eq gcd_mn gcd_zero_n
+                let sym1 = d.symm(gcd_mn, gcd_zero_n, m_gcd_eq); // Eq gcd_zero_n gcd_mn
+                let gcd_zero_n_eq_one = d.trans(gcd_zero_n, gcd_mn, one, sym1, cmn_hyp); // Eq gcd_zero_n one
+
+                let dz = d.lemma(p.div_zero, &[m]); // Eq (div m zero) zero
+                let div_eq_gz = d.congr(div_m0, zero, dz, &|d, x| d.gcd(x, n)); // Eq gcd_divm0_n gcd_zero_n
+                d.trans(gcd_divm0_n, gcd_zero_n, one, div_eq_gz, gcd_zero_n_eq_one)
+            });
+            d.lam_fv(dvd_fv, dvd_ty, body)
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, apred: ExprId| -> ExprId {
+            let asucc = d.succ(apred);
+            let dvd_ty = d.dvd(asucc, m);
+            let div_mas = d.div(m, asucc);
+            let gcd_divmas_n = d.gcd(div_mas, n);
+            let concl = d.eq(gcd_divmas_n, one);
+
+            let dvd_fv = d.fresh_fvar();
+            let dvd_hyp = d.kernel().fvar(dvd_fv);
+
+            let k_pos = d.zero_lt_succ(apred); // Le 1 asucc
+
+            let body = dvd_elim(d, asucc, m, concl, dvd_hyp, &|d, q, eq_proof| {
+                // eq_proof : Eq m (mul asucc q)
+                let asucc_q = d.mul(asucc, q);
+                let eq_proof_rev = d.symm(m, asucc_q, eq_proof); // Eq (mul asucc q) m
+                let div_eq_q = div_eq_of_mul_eq(d, &p, asucc, q, m, k_pos, eq_proof_rev); // Eq (div m asucc) q
+                let gcd_q_n = d.gcd(q, n);
+                let div_gcd_eq = d.congr(div_mas, q, div_eq_q, &|d, x| d.gcd(x, n)); // Eq gcd_divmas_n gcd_q_n
+
+                let gcd_asuccq_n = d.gcd(asucc_q, n);
+                let m_gcd_eq = d.congr(m, asucc_q, eq_proof, &|d, x| d.gcd(x, n)); // Eq gcd_mn gcd_asuccq_n
+                let sym1 = d.symm(gcd_mn, gcd_asuccq_n, m_gcd_eq); // Eq gcd_asuccq_n gcd_mn
+                let gcd_asuccq_n_eq_one = d.trans(gcd_asuccq_n, gcd_mn, one, sym1, cmn_hyp); // Eq gcd_asuccq_n one
+
+                let q_asucc = d.mul(q, asucc);
+                let dvd_q_qasucc = d.lemma(p.dvd_mul, &[q, asucc]); // dvd q (mul q asucc)
+                let comm_qa = d.lemma(p.mul_comm, &[q, asucc]); // Eq (mul q asucc) (mul asucc q)
+                let dvd_q_asuccq =
+                    transport_dvd_right(d, q, q_asucc, asucc_q, comm_qa, dvd_q_qasucc); // dvd q (mul asucc q)
+
+                let gcd_q_n_eq_one = d.lemma(
+                    p.coprime_of_dvd_left,
+                    &[q, asucc_q, n, dvd_q_asuccq, gcd_asuccq_n_eq_one],
+                ); // Eq gcd_q_n one
+
+                d.trans(gcd_divmas_n, gcd_q_n, one, div_gcd_eq, gcd_q_n_eq_one)
+            });
+            d.lam_fv(dvd_fv, dvd_ty, body)
+        };
+
+        let inner_proof = cases_zero_succ(d, a, &motive, &at_zero, &at_succ);
+        let full_proof = d.lam_fv(cmn_fv, cmn_ty, inner_proof);
+        let full_stmt = d.arrow(cmn_ty, stmt_inner);
+        (full_stmt, full_proof)
+    })?;
+    Ok(())
+}
+
 /// Declare all nine `Nat.Coprime` mirrors. See the module doc for the shared
 /// route each group takes.
 ///
@@ -519,5 +629,6 @@ pub(super) fn declare_coprime_lemmas(
     declare_dvd_of_dvd_mul_left(d, p)?;
     declare_dvd_of_dvd_mul_right(d, p)?;
     declare_coprime_div_right(d, p)?;
+    declare_coprime_div_left(d, p)?;
     Ok(())
 }

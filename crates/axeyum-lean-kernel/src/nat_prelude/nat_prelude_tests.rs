@@ -714,6 +714,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_of_dvd_mul_left,
         p.dvd_of_dvd_mul_right,
         p.coprime_div_right,
+        p.coprime_div_left,
+        p.gcd_comm,
         p.coprime_of_forall_prime_dvd,
         p.dvd_of_forall_prime_mul_dvd,
         p.coprime_iff_is_rel_prime,
@@ -7418,7 +7420,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 557,
+        93 + 559,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -7721,6 +7723,159 @@ fn coprime_div_right_applies_at_both_branches_of_its_case_split() {
     assert!(
         f.k.axiom_footprint(p.coprime_div_right).is_empty(),
         "coprime_div_right rests on a trusted declaration"
+    );
+}
+
+/// `Nat.coprime_div_left` at two concrete instances exercising BOTH branches
+/// of its case split on `a` -- the mirror image of
+/// `coprime_div_right_applies_at_both_branches_of_its_case_split`, with the
+/// divided argument moved from `n` to `m`.
+///
+/// Zero branch: `m = 0, n = 1, a = 0` -- `dvd 0 0` (witness `0`), `Coprime 0
+/// 1` (`gcd 0 1` reduces to `1`), concluding `Coprime (0/0) 1`.
+///
+/// Succ branch: `m = 10, n = 3, a = 2` -- `dvd 2 10` (witness `5`),
+/// `Coprime 10 3` (`gcd 10 3` reduces to `1`), concluding `Coprime (10/2) 3`,
+/// and the conclusion's FIRST argument is checked to be `div 10 2` (which
+/// reduces to `5`) rather than the original `10` -- a wrong theorem that left
+/// `m` unchanged would still type-check against its own (differently shaped)
+/// conclusion, so this pins the actual residue.
+#[test]
+fn coprime_div_left_applies_at_both_branches_of_its_case_split() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+    let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+
+    // -- zero branch: m=0, n=1, a=0 --
+    let one = f.num(1);
+    let zero = f.num(0);
+
+    let gcd_0_1 = f.gcd(zero, one);
+    assert!(f.k.def_eq(gcd_0_1, one), "gcd 0 1 must reduce to 1");
+    let coprime_0_1 = f.refl(one);
+
+    let dvd_predicate_0 = f.dvd_predicate(zero, zero);
+    let mul_0_0 = f.mul(zero, zero);
+    assert!(f.k.def_eq(zero, mul_0_0), "0 must reduce to mul 0 0");
+    let eq_proof_0 = f.refl(zero);
+    let dvd_0_0 = f.apply(intro, &[nat, dvd_predicate_0, zero, eq_proof_0]);
+
+    let applied_zero = f.const_app(p.coprime_div_left, &[zero, one, zero]);
+    let applied_zero_full = f.apply(applied_zero, &[coprime_0_1, dvd_0_0]);
+    let inferred_zero =
+        f.k.infer(applied_zero_full)
+            .expect("coprime_div_left 0 1 0 (Coprime 0 1) (dvd 0 0) must type-check");
+    let rendered_zero = f.k.render_lean(inferred_zero);
+    assert!(
+        rendered_zero.contains("gcd"),
+        "unexpected conclusion type: {rendered_zero}"
+    );
+
+    // -- succ branch: m=10, n=3, a=2 --
+    let three = f.num(3);
+    let ten = f.num(10);
+    let two = f.num(2);
+    let five = f.num(5);
+
+    let gcd_10_3 = f.gcd(ten, three);
+    assert!(f.k.def_eq(gcd_10_3, one), "gcd 10 3 must reduce to 1");
+    let coprime_10_3 = f.refl(one);
+
+    let dvd_predicate_2 = f.dvd_predicate(two, ten);
+    let mul_2_5 = f.mul(two, five);
+    assert!(f.k.def_eq(ten, mul_2_5), "10 must reduce to mul 2 5");
+    let eq_proof_2 = f.refl(ten);
+    let dvd_2_10 = f.apply(intro, &[nat, dvd_predicate_2, five, eq_proof_2]);
+
+    let applied_succ = f.const_app(p.coprime_div_left, &[ten, three, two]);
+    let applied_succ_full = f.apply(applied_succ, &[coprime_10_3, dvd_2_10]);
+    let inferred_succ =
+        f.k.infer(applied_succ_full)
+            .expect("coprime_div_left 10 3 2 (Coprime 10 3) (dvd 2 10) must type-check");
+    let rendered_succ = f.k.render_lean(inferred_succ);
+    assert!(
+        rendered_succ.contains("gcd"),
+        "unexpected conclusion type: {rendered_succ}"
+    );
+
+    let div_10_2 = f.div(ten, two);
+    assert!(f.k.def_eq(div_10_2, five), "div 10 2 must reduce to 5");
+    let expected_concl = f.gcd(div_10_2, three);
+    let expected_ty = f.eq(expected_concl, one);
+    assert!(
+        f.k.def_eq(inferred_succ, expected_ty),
+        "coprime_div_left's conclusion must be Coprime (div 10 2) 3, got: {rendered_succ}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.coprime_div_left).is_empty(),
+        "coprime_div_left rests on a trusted declaration"
+    );
+}
+
+/// `Nat.gcd_comm` at a concrete discriminating pair (`gcd 6 4` vs `gcd 4 6`
+/// -- both reduce to `2`, but the STATEMENT relates the two differently-
+/// ordered applications, not two identical terms) and at a genuinely free
+/// `(a, b)` pushed into an explicit `LocalContext`.
+#[test]
+fn gcd_comm_applies_at_a_concrete_pair_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: a = 6, b = 4. gcd 6 4 = gcd 4 6 = 2, but the applied
+    // conclusion is pinned as the UNREDUCED pair `Eq (gcd 6 4) (gcd 4 6)`,
+    // not merely `Eq 2 2` -- a theorem with the arguments left unswapped
+    // would still type-check against a def_eq-equal-but-differently-shaped
+    // conclusion, so this confirms the actual residue.
+    let six = f.num(6);
+    let four = f.num(4);
+    let applied = f.const_app(p.gcd_comm, &[six, four]);
+    let inferred = f.k.infer(applied).expect("gcd_comm 6 4 must type-check");
+    let gcd_64 = f.gcd(six, four);
+    let gcd_46 = f.gcd(four, six);
+    let two = f.num(2);
+    assert!(f.k.def_eq(gcd_64, two), "gcd 6 4 must reduce to 2");
+    assert!(f.k.def_eq(gcd_46, two), "gcd 4 6 must reduce to 2");
+    let expected = f.eq(gcd_64, gcd_46);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "gcd_comm's conclusion must be Eq (gcd 6 4) (gcd 4 6)"
+    );
+
+    // Symbolic: genuinely free a, b.
+    let a_fv = f.fresh_fvar();
+    let b_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b = f.k.fvar(b_fv);
+    let applied_sym = f.const_app(p.gcd_comm, &[a, b]);
+    let gcd_ab_sym = f.gcd(a, b);
+    let gcd_ba_sym = f.gcd(b, a);
+    let expected_sym = f.eq(gcd_ab_sym, gcd_ba_sym);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: a_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: b_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(applied_sym, &mut ctx)
+            .expect("gcd_comm must apply at free variables");
+    assert!(f.k.def_eq(inferred_sym, expected_sym));
+
+    assert!(
+        f.k.axiom_footprint(p.gcd_comm).is_empty(),
+        "gcd_comm rests on a trusted declaration"
     );
 }
 

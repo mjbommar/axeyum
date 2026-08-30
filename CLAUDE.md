@@ -2138,6 +2138,25 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
      that purpose. TWO lanes discovered this independently, both against a brief
      that asserted the opposite. Read the signature, not the surrounding prose.
 
+  5. **THE SAME MODULE NAME EXISTS IN TWO PRELUDES, AND EVERYONE CHECKS THE
+     WRONG ONE.** Measured 2026-08-29. Three successive totient triages, plus a
+     brief I wrote pointing at it explicitly, all looked at
+     `int_prelude/crt.rs` and concluded the Chinese Remainder machinery did not
+     transport to a `Nat` counting argument. **`nat_prelude/crt.rs` also
+     exists** — Nat-native, 17 KB, with `Nat.crt_unique` — and it transports
+     directly. Combined with the existing pigeonhole
+     (`injective_on_imp_surjective_on`) it gives the residue-pairing map's
+     bijectivity with no Bezout witness at all.
+
+     Two files, same basename, different preludes. `ls src/*/crt.rs` would have
+     shown both in one command, and nobody ran it because everybody already
+     "knew" where CRT lived. The same pair exists for `parity.rs`, `gcd.rs`,
+     `division.rs` and others.
+
+     **When a module you need is named for a mathematical topic rather than a
+     carrier, check EVERY prelude for that basename before concluding anything
+     about transport.**
+
   4. **THERE IS NO SINGLE SPELLING, so grep fails even when you DO know the
      name.** The kernel name is `CReal.congrOfUniformlyContinuous`; the Rust
      prelude field, the design docs, every brief and this file all say
