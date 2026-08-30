@@ -19,7 +19,29 @@ own, and every failure is a nonzero exit naming the finding:
 4.  **No held-out fact id appears anywhere in the document**, scanned as text
     over the whole file rather than field by field, because a leaked id in a
     cluster, a tactic row or a free-text note costs the same split key.
-5.  Every fact id in the census exists in `artifacts/facts/` and is `open`.
+5.  Every fact id in the census exists in `artifacts/facts/`, appears once, and
+    is named by no cluster or tactic row that has no fact row of its own.
+
+5b. **Graduation is lifecycle, and it is audited rather than assumed.** A fact
+    that was `open` when the census ran and is `proved` now has GRADUATED: the
+    flywheel closed it, which is the outcome this repository exists to produce.
+    Counting that as a violation made the gate punish progress -- on
+    2026-08-30, 126 of 152 rows had graduated and the checker emitted 126
+    identical lines that buried the one finding that mattered. So graduation is
+    counted and reported. It is not taken on trust: every row's status is
+    re-read at the census's own pinned `git_commit`, and a row already settled
+    there is population padding, because `open_facts` is the denominator of the
+    census's headline ratio.
+
+5c. **Freshness: is this still a description of the OPEN backlog?** Every
+    quantity is recomputed from the ledger, the nursery and the frozen-export
+    index, never read out of the census. A frozen export is the ONLY route to
+    an evaluable goal (the census deliberately never parses `formal.statement`),
+    so the open, non-held-out facts carrying one are the census's live subject.
+    Zero of them means the census has no subject at all and regenerating cannot
+    help; some of them with none evaluated means regenerate; a zero-match
+    cluster whose facts are all settled is a capability backlog that names no
+    capability.
 6.  The counters are internally consistent: `evaluable + unevaluable` equals
     `open_facts`; `matched + unmatched + unevaluable` pairs equal
     `open_facts * tactics`; per-fact `mobility` equals `len(matched)`; every
@@ -42,6 +64,7 @@ import argparse
 import hashlib
 import json
 import pathlib
+import subprocess
 import sys
 from typing import Any
 
@@ -147,6 +170,100 @@ def ledger_statuses() -> dict[str, str]:
     return out
 
 
+def exportable_fact_ids() -> set[str]:
+    """The fact ids carrying a digest-pinned frozen statement export.
+
+    This is the census's whole subject. `docs/python-2026-08/07-mobility-census.md`
+    records the deliberate choice: a goal comes from a frozen export imported
+    into a real kernel, and there is no fallback that parses `formal.statement`
+    Lean text, because that would make every verdict rest on a goal nobody
+    pinned. So a fact with no export is `unevaluable`, always.
+
+    Recomputed here from the index rather than read out of the census, which is
+    the point -- the census's own `evaluable` count is exactly what a stale
+    census gets wrong.
+    """
+    index = read_json(EXPORT_INDEX, "the frozen-export index")
+    entries = index.get("entries")
+    if not isinstance(entries, list) or not entries:
+        raise CensusError(
+            "the frozen-export index has no entries; every freshness rule below would pass "
+            "vacuously and this gate exists to make them bite"
+        )
+    ids = {
+        entry["fact_id"]
+        for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("fact_id"), str)
+    }
+    if not ids:
+        raise CensusError("the frozen-export index names no fact ids")
+    return ids
+
+
+def fact_path_at(fact_id: str) -> str:
+    """`F:foo` lives at `artifacts/facts/F-foo.json`; git wants the path, not the id."""
+    return f"artifacts/facts/{fact_id.replace(':', '-')}.json"
+
+
+def statuses_at_commit(commit: str, fact_ids: list[str]) -> tuple[str, dict[str, str]]:
+    """Each fact's `epistemic_status` as of `commit`, in one `git cat-file --batch`.
+
+    Three outcomes, deliberately distinct:
+
+    * ``("ok", mapping)``  -- the audit ran; a fact absent from `mapping` had no
+      fact file at that commit, which is itself a finding.
+    * ``("no-git", {})``   -- this tree has no `.git` at all. `git archive`
+      snapshots (`scripts/lane-snapshot.sh`) are built and gated exactly that
+      way, so refusing there would break a supported workflow. The state is
+      printed on the status line rather than swallowed, so a run that could not
+      audit never looks like a run that audited and found nothing.
+    * ``("unreachable", {})`` -- `.git` is present and the commit is not. That is
+      a violation, not a skip: a census pinning a commit nobody can reach cannot
+      have its population audited, and "skip when the check is inconvenient" is
+      how a checker stops being able to fail.
+    """
+    if not (ROOT / ".git").exists():
+        return ("no-git", {})
+    probe = subprocess.run(
+        ["git", "-C", str(ROOT), "cat-file", "-t", commit],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if probe.returncode != 0 or probe.stdout.strip() != "commit":
+        return ("unreachable", {})
+    specs = "".join(f"{commit}:{fact_path_at(fact_id)}\n" for fact_id in fact_ids)
+    proc = subprocess.run(
+        ["git", "-C", str(ROOT), "cat-file", "--batch"],
+        input=specs.encode("utf-8"),
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return ("unreachable", {})
+    out: dict[str, str] = {}
+    data = proc.stdout
+    cursor = 0
+    while cursor < len(data):
+        newline = data.find(b"\n", cursor)
+        if newline < 0:
+            break
+        parts = data[cursor:newline].decode("utf-8", "replace").split()
+        # A missing object prints "<spec> missing" and carries no body.
+        if len(parts) != 3 or not parts[2].isdigit():
+            cursor = newline + 1
+            continue
+        size = int(parts[2])
+        try:
+            document = json.loads(data[newline + 1 : newline + 1 + size])
+        except json.JSONDecodeError:
+            document = {}
+        if isinstance(document.get("id"), str):
+            out[document["id"]] = str(document.get("epistemic_status"))
+        cursor = newline + 1 + size + 1
+    return ("ok", out)
+
+
 # ---------------------------------------------------------------------------
 # Rules
 # ---------------------------------------------------------------------------
@@ -244,10 +361,9 @@ def check_fact_ids(census: dict[str, Any], statuses: dict[str, str]) -> list[str
         seen.add(fact_id)
         if fact_id not in statuses:
             problems.append(f"{fact_id} is in the census and not in artifacts/facts/")
-        elif statuses[fact_id] != "open":
-            problems.append(
-                f"{fact_id} is {statuses[fact_id]} in the ledger; the census is over OPEN facts"
-            )
+        # A row whose fact has since settled is NOT rejected here. It has
+        # graduated, and `check_population` audits that claim against the
+        # census's pinned commit -- see rule 5b in the module docstring.
     for cluster in census.get("zero_match_clusters") or []:
         for fact_id in cluster.get("fact_ids") or []:
             if fact_id not in seen:
@@ -364,6 +480,110 @@ def check_counts(census: dict[str, Any]) -> list[str]:
     return problems
 
 
+def check_population(
+    census: dict[str, Any], statuses: dict[str, str]
+) -> tuple[list[str], int, int, str]:
+    """Split the rows into live and graduated, and audit the graduation.
+
+    Returns ``(problems, live, graduated, audit_state)``. Graduation is normal
+    lifecycle and never a violation; a row that was ALREADY settled when the
+    census ran is, because it inflates `open_facts`.
+    """
+    problems: list[str] = []
+    rows = [
+        row["fact_id"]
+        for row in census.get("facts") or []
+        if isinstance(row, dict) and isinstance(row.get("fact_id"), str)
+    ]
+    live = sum(1 for fact_id in rows if statuses.get(fact_id) == "open")
+    graduated = sum(1 for fact_id in rows if fact_id in statuses and statuses[fact_id] != "open")
+    commit = census.get("git_commit")
+    if not isinstance(commit, str) or not commit.strip():
+        problems.append(
+            "graduation-audit: the census pins no git_commit, so no row's open-at-census-time "
+            "claim can be re-read and every graduated row would be taken on trust"
+        )
+        return (problems, live, graduated, "absent")
+    state, historical = statuses_at_commit(commit, rows)
+    if state == "unreachable":
+        problems.append(
+            f"graduation-audit: git_commit {commit} is not reachable in this checkout, so the "
+            f"census's population cannot be audited"
+        )
+        return (problems, live, graduated, state)
+    if state == "no-git":
+        return (problems, live, graduated, state)
+    for fact_id in rows:
+        was = historical.get(fact_id)
+        if was is None:
+            problems.append(
+                f"graduation-audit: {fact_id} had no fact file at {commit[:12]}; the census "
+                f"counted a fact the ledger did not hold when it ran"
+            )
+        elif was != "open":
+            problems.append(
+                f"graduation-audit: {fact_id} was already {was} at {commit[:12]}; a census of OPEN "
+                f"facts may not count it, and counting it inflates open_facts"
+            )
+    return (problems, live, graduated, state)
+
+
+def check_freshness(
+    census: dict[str, Any],
+    statuses: dict[str, str],
+    held_out: set[str],
+    exportable: set[str],
+) -> tuple[list[str], int, int]:
+    """Is the census still a description of the OPEN backlog?
+
+    Returns ``(problems, live_evaluable, live_exportable)``. Both counts are
+    recomputed from the ledger, the nursery and the export index; neither is
+    read out of the census.
+    """
+    problems: list[str] = []
+    live_open = {fact_id for fact_id, status in statuses.items() if status == "open"}
+    live_exportable = sorted((live_open & exportable) - held_out)
+    rows = {
+        row["fact_id"]
+        for row in census.get("facts") or []
+        if isinstance(row, dict) and isinstance(row.get("fact_id"), str)
+    }
+    live_evaluable = sorted(
+        row["fact_id"]
+        for row in census.get("facts") or []
+        if isinstance(row, dict)
+        and row.get("evaluable")
+        and statuses.get(row.get("fact_id")) == "open"
+    )
+    if not live_exportable:
+        problems.append(
+            "freshness: no open fact carries a frozen statement export, so the census has no "
+            "subject left. A frozen export is the only route to an evaluable goal, so "
+            "REGENERATING WILL NOT HELP -- this clears only when a producer exports a statement "
+            "for a fact that is still open"
+        )
+    elif not live_evaluable:
+        problems.append(
+            f"freshness: {len(live_exportable)} open fact(s) carry a frozen export and the census "
+            f"evaluated none of them; regenerate with `just mobility-census-regen`"
+        )
+    for fact_id in live_exportable:
+        if fact_id not in rows:
+            problems.append(
+                f"freshness: {fact_id} is open and carries a frozen export, and the census has no "
+                f"row for it; the one kind of fact this census can measure went unmeasured"
+            )
+    for cluster in census.get("zero_match_clusters") or []:
+        fact_ids = list(cluster.get("fact_ids") or [])
+        if fact_ids and not any(statuses.get(fact_id) == "open" for fact_id in fact_ids):
+            problems.append(
+                f"freshness: the zero-match cluster {sorted(cluster.get('reasons') or [])} names "
+                f"{len(fact_ids)} fact(s) and every one has settled; a capability backlog of "
+                f"closed facts names no capability"
+            )
+    return (problems, len(live_evaluable), len(live_exportable))
+
+
 def check_evaluable(census: dict[str, Any]) -> list[str]:
     totals = census.get("totals") or {}
     if totals.get("evaluable", 0) > 0:
@@ -404,19 +624,37 @@ def check_must_decline(census: dict[str, Any]) -> list[str]:
 
 
 
-def validate(census_path: pathlib.Path) -> list[str]:
+def validate(census_path: pathlib.Path) -> tuple[list[str], dict[str, Any]]:
+    """Returns ``(problems, metrics)``; the metrics are recomputed, not read."""
     census = read_json(census_path, "the mobility census")
     problems = list(check_shape(census))
     if problems:
-        return problems
+        return (problems, {})
+    held_out = held_out_ids(read_json(NURSERY, "the nursery"))
+    statuses = ledger_statuses()
     problems += check_pins(census)
     problems += check_catalog_coverage(census)
-    problems += check_no_held_out(census, held_out_ids(read_json(NURSERY, "the nursery")))
-    problems += check_fact_ids(census, ledger_statuses())
+    problems += check_no_held_out(census, held_out)
+    problems += check_fact_ids(census, statuses)
+    population, live, graduated, audit = check_population(census, statuses)
+    problems += population
+    freshness, live_evaluable, live_exportable = check_freshness(
+        census, statuses, held_out, exportable_fact_ids()
+    )
+    problems += freshness
     problems += check_counts(census)
     problems += check_evaluable(census)
     problems += check_must_decline(census)
-    return problems
+    return (
+        problems,
+        {
+            "live": live,
+            "graduated": graduated,
+            "audit": audit,
+            "live_evaluable": live_evaluable,
+            "live_exportable": live_exportable,
+        },
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -425,17 +663,25 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     path = pathlib.Path(args.census)
     try:
-        problems = validate(path)
+        problems, metrics = validate(path)
     except CensusError as error:
         print(f"MOBILITY_CENSUS_ERROR|{error}", file=sys.stderr)
         return 2
     census = json.loads(path.read_text(encoding="utf-8"))
     totals = census["totals"]
+    # `open`/`evaluable` are what the census CLAIMED when it ran; `live_*` and
+    # `graduated` are recomputed against the ledger as it stands now. Printing
+    # both is the point: their gap is the staleness, and a single number would
+    # hide which side of it moved.
     print(
         f"MOBILITY_CENSUS|open={totals['open_facts']}|evaluable={totals['evaluable']}"
         f"|unevaluable={totals['unevaluable']}|tactics={totals['tactics']}"
         f"|matched_pairs={totals['matched_pairs']}|zero_match_facts={totals['zero_match_facts']}"
         f"|clusters={totals['clusters']}|held_out_excluded={totals['held_out_excluded']}"
+        f"|live={metrics.get('live', '?')}|graduated={metrics.get('graduated', '?')}"
+        f"|live_evaluable={metrics.get('live_evaluable', '?')}"
+        f"|live_exportable={metrics.get('live_exportable', '?')}"
+        f"|audit={metrics.get('audit', 'not-reached')}"
         f"|violations={len(problems)}"
     )
     if problems:
