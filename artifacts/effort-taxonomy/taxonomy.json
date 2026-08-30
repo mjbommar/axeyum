@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "floor": 20,
+  "source_spec": "docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md#D0",
+  "category_order": [
+    "statement_repair",
+    "missing_definitions",
+    "retrieval",
+    "proof_assembly",
+    "kernel_debugging",
+    "semantic_falsification",
+    "safety_evidence",
+    "integration",
+    "infrastructure_maintenance"
+  ],
+  "categories": {
+    "statement_repair": "The pinned/rendered FORMAL STATEMENT of a fact or claim was itself wrong, drifted, or internally inconsistent, and the work was to correct the statement's identity/text rather than to prove or disprove it. Distinguishes 'we proved (or graded) the wrong sentence' from proof difficulty.",
+    "missing_definitions": "A target could not even be stated or attempted until a new constructive definition, datatype, or fundamental operation existed in the kernel prelude. Includes the mandatory evaluation test, since the kernel's type-check cannot certify a Definition's meaning, only its type.",
+    "retrieval": "Effort spent determining whether needed infrastructure (a lemma, a helper, an entire theorem, a producer) already exists in the tree before writing anything new, including verifying or refuting a prior lane's 'blocked on X' handoff claim. Success here looks like doing LESS work, not more.",
+    "proof_assembly": "Constructing the actual kernel proof term for a statement already known to be true and stateable: chaining lemmas, inductions, case splits, congruence obligations. The mathematical core the D1-D4 roadmap is aimed at accelerating.",
+    "kernel_debugging": "Diagnosing a kernel-term-level failure (TypeMismatch, UnboundFVar, non-reduction, stack overflow) or exercising the kernel's own soundness via differential/mutation testing against an independent reference (pinned Lean). About the mechanics of what the kernel accepts or rejects, not about mathematical truth.",
+    "semantic_falsification": "Checking whether a proposed statement is actually TRUE, independent of the kernel: numeric counterexamples, vacuous-control detection, false/valid/vacuous fixture classification. Runs before proof effort is spent, or accounts for effort already wasted on a false target.",
+    "safety_evidence": "Building, auditing, or repairing the machinery that measures and credits TRUST itself: safety-matrix columns, statement-identity pins, duplicate-proposition audits, held-out isolation, mutation kill tables for ledger-level guards, external attestation, and adversarial audits of the project's own claims.",
+    "integration": "Wiring newly-finished work into the shared surface for the FIRST time: registering a gate in justfile/check.sh, merging a sibling lane's branch, joining one lane's artifact to another's so downstream consumers can use it.",
+    "infrastructure_maintenance": "Repairing EXISTING shared infrastructure that had gone stale, wrong, or broken since it was first built: a CI gate red from a merge nobody re-ran, a script archived out from under its own citations, a stale pinned count, a guard whose premise was simply false. Reactive repair of decay, distinct from integration (first-time wiring of new work) and from safety_evidence (building new trust measurement)."
+  },
+  "category_additions": {
+    "infrastructure_maintenance": "Not one of the D0 spec's eight named categories. Added because a large, mechanically recurring share of the sampled episodes (gate-rot reproductions, archived-script provenance breaks, a false premise about Python import mechanics) is neither a first-time integration nor a new safety measurement -- it is repair of decay in infrastructure that already existed and had already been trusted. Stretching 'integration' or 'safety_evidence' to cover it would blur exactly the distinction this taxonomy exists to keep sharp; see the D0 report for the measured share this category carries."
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "added_category_total": 4,
+  "basis_counts": {
+    "corroborated": 28,
+    "self-report": 4
+  },
+  "domain_counts": {
+    "infrastructural": 25,
+    "mathematical": 7
+  },
+  "floor": 20,
+  "kind_counts": {
+    "completed": 26,
+    "declined": 1,
+    "partial": 5
+  },
+  "primary_category_by_domain": {
+    "infrastructure_maintenance": {
+      "infrastructural": 4
+    },
+    "integration": {
+      "infrastructural": 4
+    },
+    "kernel_debugging": {
+      "infrastructural": 3
+    },
+    "missing_definitions": {
+      "mathematical": 1
+    },
+    "proof_assembly": {
+      "mathematical": 4
+    },
+    "retrieval": {
+      "infrastructural": 1,
+      "mathematical": 2
+    },
+    "safety_evidence": {
+      "infrastructural": 11
+    },
+    "semantic_falsification": {
+      "infrastructural": 1
+    },
+    "statement_repair": {
+      "infrastructural": 1
+    }
+  },
+  "primary_category_counts": {
+    "infrastructure_maintenance": 4,
+    "integration": 4,
+    "kernel_debugging": 3,
+    "missing_definitions": 1,
+    "proof_assembly": 4,
+    "retrieval": 3,
+    "safety_evidence": 11,
+    "semantic_falsification": 1,
+    "statement_repair": 1
+  },
+  "roadmap_targeted_total": 9,
+  "secondary_category_counts": {
+    "infrastructure_maintenance": 0,
+    "integration": 0,
+    "kernel_debugging": 1,
+    "missing_definitions": 0,
+    "proof_assembly": 2,
+    "retrieval": 2,
+    "safety_evidence": 3,
+    "semantic_falsification": 0,
+    "statement_repair": 1
+  },
+  "spec_named_categories_total": 28,
+  "total_episodes": 32,
+  "trust_and_plumbing_total": 19
+}
