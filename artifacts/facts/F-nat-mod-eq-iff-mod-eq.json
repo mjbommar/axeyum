@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-mod-eq-iff-mod-eq",
+  "title": "Nat.mod_eq_iff_mod_eq: the existential balanced-witness congruence agrees with the executable Nat.mod comparison",
+  "statement": "For every positive natural modulus d and every pair of naturals a, b: the existential balanced-witness congruence ModEq d a b (there exist u, v with a + d*u = b + d*v) holds if and only if the EXECUTABLE remainders a mod d and b mod d are equal. This is the bridge that makes Nat.ModEq decidable at any concrete instance: ModEq's own definition is an unbounded existential and cannot be refuted by kernel reduction alone (its negation quantifies over every u, v), while an inequality of two computed Nat.mod values reduces to a Bool comparison the kernel can evaluate directly. Built by instantiating the already-landed Nat.mod_eq_iff_div_mod_remainder_eq (stated against the relational Nat.divMod) at the executable projections Nat.div/Nat.mod, with Nat.div_mod_exec supplying the divMod witness for both sides -- no new induction. Nat.div_mod_exec needs the divisor syntactically succ-shaped (Nat.divMod's own remainder bound r < divisor is false at divisor = 0), so this theorem is built at n := succ (pred d) and transported back to d via the positivity hypothesis, the same pattern Nat.pow_prime_modeq_self's own file uses for the same reason.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.mod_eq_iff_mod_eq : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero x0) -> Iff (AxNat.modEq x0 x1 x2) (Eq.{1} AxNat (AxNat.mod x1 x0) (AxNat.mod x2 x0))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Nat.mod_eq_iff_mod_eq"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-div-mod-exec",
+    "F:nat-mod-eq-iff-div-mod-remainder-eq",
+    "F:nat-succ-pred-of-pos"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mod_eq_iff_mod_eq",
+      "kind": "kernel-term",
+      "supports": "Nat.mod_eq_iff_mod_eq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "nat_theorem_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory mod_eq_iff_mod_eq 2>/dev/null | grep -cE '^Nat\\.mod_eq_iff_mod_eq[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.mod_eq_iff_mod_eq",
+      "notes": "nat_theorem_inventory prints one row per requested name if the theorem exists and nothing if it does not, so grep -c against an anchored pattern (never \\t -- an interactive ugrep reads \\t as a real tab, GNU grep as a literal 't') is the discriminating check. Verified both ways 2026-08-30: the real name prints 1 and exits 0; a fabricated name (mod_eq_iff_mod_eq_bogus) prints 0 and grep exits 1. --release is required (this tool builds creal/complex/cpoint, which overflow the default debug thread stack).",
+      "verified_at": "2026-08-30"
+    },
+    {
+      "id": "footprint-Nat.mod_eq_iff_mod_eq",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds Nat.mod_eq_iff_mod_eq.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "nat_axiom_inventory --require-axiom-free nat enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0, total_trusted=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every declaration in it."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:modular-arithmetic",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/fermat_witness.rs)",
+    "source": "formal.statement is the verbatim Kernel::render_lean of the declaration's type, read from `cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory mod_eq_iff_mod_eq`. Prose is hand-written."
+  },
+  "notes": "This is a technical bridge lemma, not a classical-theorem family member on its own -- it exists so F:nat-not-prime-of-pow-mod-ne (the ADR-0603 row-1 statement) can be executed at any concrete instance, which is exactly what that fact's row-3 evidence exercises. Lane graded-families-number-theory, session 2026-08-30. Source: crates/axeyum-lean-kernel/src/nat_prelude/fermat_witness.rs.",
+  "external_status": "proved"
+}

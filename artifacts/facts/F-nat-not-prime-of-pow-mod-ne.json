@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-not-prime-of-pow-mod-ne",
+  "title": "Nat.not_prime_of_pow_mod_ne: Fermat's little theorem run backwards -- a computable compositeness certificate (ADR-0603 row 1)",
+  "statement": "ADR-0603 row 1 for the Fermat-witness compositeness family: for every natural p and a, if the executable remainders (a^p) mod p and a mod p disagree, then p is not prime. This is the exact contrapositive of Fermat's little theorem (F:nat-pow-prime-modeq-self, a^p is congruent to a modulo p for prime p), and it is what a Fermat primality test's compositeness branch actually runs on: find one witness a for which the two remainders differ, and p is certifiably composite. The statement is general and unconditional in both p and a -- it needs no restriction and no decidability principle beyond the executable Nat.mod comparison that F:nat-mod-eq-iff-mod-eq already supplies. ADR-0603 row 2 (a boundary/unprovability certificate) does NOT apply to this family: per ADR-0716, the decision principle every row-2 refutation over CReal extracts (order totality) is already a proved, axiom-free theorem over the naturals (Nat.le_total), so there is no undecidable comparison to reduce to here, and this statement itself is a single modus-tollens step on an unconditional theorem -- no comparison and no unbounded search to extract a boundary from. Row 3 (the decidable/exact fragment) is the SAME general statement, executed at concrete numerals and kernel-checked both as a positive certificate and as a genuine rejection at a real prime: crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs::not_prime_of_pow_mod_ne_certifies_four_composite_and_is_rejected_at_five_prime instantiates the theorem at p=4, a=3 (3^4 mod 4 = 1, 3 mod 4 = 3, 1 != 3) and admits the resulting Not (Prime 4) as a throwaway theorem, then attempts the identical construction at the real prime p=5, a=3 (3^5 mod 5 = 3 = 3 mod 5) and confirms the trusted kernel gate REFUSES it -- the non-vacuity control this shape needs, since Eq.refl cannot certify a Bool computation that actually reduces to true as false.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.not_prime_of_pow_mod_ne : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Not (Eq.{1} AxNat (AxNat.mod (AxNat.pow x1 x0) x0) (AxNat.mod x1 x0))) -> Not (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x0) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x0))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Nat.not_prime_of_pow_mod_ne"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-pow-prime-modeq-self",
+    "F:nat-mod-eq-iff-mod-eq",
+    "F:nat-le-trans"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.not_prime_of_pow_mod_ne",
+      "kind": "kernel-term",
+      "supports": "Nat.not_prime_of_pow_mod_ne is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "nat_theorem_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory not_prime_of_pow_mod_ne 2>/dev/null | grep -cE '^Nat\\.not_prime_of_pow_mod_ne[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.not_prime_of_pow_mod_ne",
+      "notes": "Verified both ways 2026-08-30: the real name prints 1 and exits 0; a fabricated name (not_prime_of_pow_mod_ne_bogus) prints 0 and grep exits 1 (SIGPIPE-free grep -c, never grep -q under pipefail). --release is required.",
+      "verified_at": "2026-08-30"
+    },
+    {
+      "id": "footprint-Nat.not_prime_of_pow_mod_ne",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds Nat.not_prime_of_pow_mod_ne.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "nat_axiom_inventory --require-axiom-free nat enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0, total_trusted=0)."
+    },
+    {
+      "id": "row3-instance-Nat.not_prime_of_pow_mod_ne",
+      "kind": "instance-pin",
+      "supports": "ADR-0603 row 3: the general theorem instantiated at DISCRIMINATING concrete numerals is kernel-checked both as an accepted composite certificate (p=4, a=3) and as a genuinely REJECTED construction at a real prime (p=5, a=3), demonstrating the check is not vacuously satisfiable.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test -p axeyum-lean-kernel --lib"
+      ],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib not_prime_of_pow_mod_ne_certifies_four_composite_and_is_rejected_at_five_prime 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The test itself asserts f.k.def_eq for both concrete mod reductions at each instance (3^4 mod 4 = 1, 3 mod 4 = 3, 3^5 mod 5 = 3 = 3 mod 5) before building any proof term, then admits the composite certificate for 4 as a throwaway theorem via Kernel::add_declaration (must be Ok) and attempts the identical construction's Bool-equality hypothesis at 5 (must be Err, since beq reduces to true there, not false). grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Verified 2026-08-30: exits 0 printing 1."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:modular-arithmetic",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:fermats-little-theorem",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/fermat_witness.rs)",
+    "source": "formal.statement is the verbatim Kernel::render_lean of the declaration's type, read from `cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory not_prime_of_pow_mod_ne`. Prose is hand-written."
+  },
+  "notes": "Motivated by ADR-0716 and docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md's survey of number theory's row 3, which found the classical number-theory CAS (axeyum-cas's is_prime, factorize, etc.) is bare computation with no witness type and no verifier. This family is deliberately built entirely inside the kernel trust anchor instead: row 1 and row 3 are the SAME statement, one symbolic and one instantiated, both admitted through Kernel::add_declaration (ADR-0601), with no separate CAS producer/verifier pair needed for this particular certificate shape. Row 2 does not apply -- see `statement` above and ADR-0716 sec 1.1/1.2, and this lane's own survey in docs/plan/status/graded-families-number-theory.md, which found the earlier-published a^phi(n) = 1 (mod n) family (ADR-0716's other named target) genuinely blocked on real remaining work (docs/plan/status/374-euler-theorem.md) and the Euclid-Euler even-perfect-number theorem under active multi-lane construction in nat_prelude/perfect.rs, so this smaller, complete, self-contained family was chosen instead of duplicating either. Lane graded-families-number-theory, session 2026-08-30. Source: crates/axeyum-lean-kernel/src/nat_prelude/fermat_witness.rs.",
+  "external_status": "proved"
+}
