@@ -418,7 +418,11 @@ fn mixed_general_case_certificate() -> PartialFractionCertificate {
         Rational::integer(-2),
         Rational::integer(1),
     ]; // (x-1)^2
-    let quad = vec![Rational::integer(1), Rational::integer(0), Rational::integer(1)]; // x^2+1
+    let quad = vec![
+        Rational::integer(1),
+        Rational::integer(0),
+        Rational::integer(1),
+    ]; // x^2+1
     let q = poly::ratpoly_mul(&lin_sq, &quad).expect("ratpoly_mul must not overflow");
     partial_fractions(&p, &q).expect("the CAS must certify mixed_general_case")
 }
@@ -445,7 +449,8 @@ fn product_excluding(factors: &[(Vec<Rational>, u32)], skip: usize) -> Vec<Ratio
         if idx == skip {
             continue;
         }
-        acc = poly::ratpoly_mul(&acc, &poly_pow(factor, *mult)).expect("product_excluding: overflow");
+        acc =
+            poly::ratpoly_mul(&acc, &poly_pow(factor, *mult)).expect("product_excluding: overflow");
     }
     acc
 }
@@ -470,7 +475,9 @@ fn factors_with_mult(cert: &PartialFractionCertificate) -> Vec<(Vec<Rational>, u
 /// where `cofactor = product_excluding(i) * factor_i^(mult_i - power)` --
 /// exactly the checker's own `p = whole*q + leading*Sigma(numerator*cofactor)`
 /// recipe, specialised to `leading = 1` (asserted, not assumed).
-fn numerator_cofactor_pairs(cert: &PartialFractionCertificate) -> Vec<(Vec<Rational>, Vec<Rational>)> {
+fn numerator_cofactor_pairs(
+    cert: &PartialFractionCertificate,
+) -> Vec<(Vec<Rational>, Vec<Rational>)> {
     assert_eq!(
         cert.leading,
         Rational::integer(1),
