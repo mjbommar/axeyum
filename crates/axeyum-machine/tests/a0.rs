@@ -2,7 +2,7 @@
 
 use axeyum_machine::a0::{
     A0Error, Conditions, Instruction, Memory, MemorySpan, Observation, ObservationError, Outcome,
-    Program, State, StateComponent, StopReason, Trap, Word, decode, run, step,
+    Program, State, StateComponent, StopReason, Trap, Word, decode, run, run_prefix, step,
 };
 
 fn word(width: u8, value: u64) -> Word {
@@ -161,6 +161,31 @@ fn bounded_trace_classifies_halt_trap_and_exhaustion() {
     let short = program(vec![0x00]);
     let trapped = run(&short, state(0), 1);
     assert_eq!(trapped.stop, StopReason::Trapped);
+}
+
+#[test]
+fn returned_prefix_is_distinct_and_can_be_resumed() {
+    let jump = program(vec![0x31, 0, 0, 0xff]);
+    let initial = state(0);
+
+    let zero_bound = run(&jump, initial.clone(), 0);
+    assert_eq!(zero_bound.stop, StopReason::BoundExhausted);
+    assert_eq!(zero_bound.states.len(), 1);
+    assert_eq!(zero_bound.states[0], initial);
+
+    let first = run_prefix(&jump, initial.clone(), 2);
+    assert_eq!(first.stop, StopReason::PrefixReturned);
+    assert_eq!(first.states.len(), 3);
+    assert_eq!(first.states.last().unwrap().outcome, Outcome::Running);
+
+    let second = run_prefix(&jump, first.states.last().unwrap().clone(), 3);
+    let whole = run_prefix(&jump, initial, 5);
+    let mut concatenated = first.states;
+    concatenated.extend(second.states.into_iter().skip(1));
+    assert_eq!(concatenated, whole.states);
+
+    let halt = program(vec![0xff, 0, 0, 0]);
+    assert_eq!(run_prefix(&halt, state(0), 4).stop, StopReason::Halted);
 }
 
 #[test]

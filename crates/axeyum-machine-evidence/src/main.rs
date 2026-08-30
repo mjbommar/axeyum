@@ -6,8 +6,9 @@ use axeyum_machine_evidence::{
     add_step_report, branch_trace_report, check_add_step, check_add_wrong_destination_control,
     check_branch_target_control, check_branch_trace, check_memory_byte_order_control,
     check_memory_trace, check_observation_omission_control, check_observation_separation,
-    check_word_roundtrip, check_word_roundtrip_reversed_control, memory_trace_report,
-    observation_separation_report, semantic_package, word_roundtrip_report, write_json,
+    check_run_classification, check_run_false_halt_control, check_word_roundtrip,
+    check_word_roundtrip_reversed_control, memory_trace_report, observation_separation_report,
+    run_classification_report, semantic_package, word_roundtrip_report, write_json,
 };
 
 fn main() {
@@ -128,6 +129,33 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_branch_target_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: wrong branch target was accepted".into());
         }
+        [command, package, output] if command == "emit-run-classification" => {
+            let report = run_classification_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "run-classification: PASS: halt={} trap={} exhausted={} prefix={} resumed={}",
+                report.halted_stop,
+                report.trapped_stop,
+                report.exhausted_stop,
+                report.prefix_stop,
+                report.resumed_equals_whole
+            );
+        }
+        [command, package, report] if command == "check-run-classification" => {
+            let checked = check_run_classification(Path::new(package), Path::new(report))?;
+            println!(
+                "run-classification: PASS: halt={} trap={} exhausted={} prefix={} resumed={}",
+                checked.halted_stop,
+                checked.trapped_stop,
+                checked.exhausted_stop,
+                checked.prefix_stop,
+                checked.resumed_equals_whole
+            );
+        }
+        [command, package, report] if command == "control-run-false-halt" => {
+            check_run_false_halt_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: running prefix was accepted as halted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -140,7 +168,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  emit-memory-trace PACKAGE OUTPUT | check-memory-trace PACKAGE REPORT | \
                  control-memory-byte-order PACKAGE REPORT | \
                  emit-branch-trace PACKAGE OUTPUT | check-branch-trace PACKAGE REPORT | \
-                 control-branch-target PACKAGE REPORT"
+                 control-branch-target PACKAGE REPORT | \
+                 emit-run-classification PACKAGE OUTPUT | \
+                 check-run-classification PACKAGE REPORT | \
+                 control-run-false-halt PACKAGE REPORT"
                 .into());
         }
     }

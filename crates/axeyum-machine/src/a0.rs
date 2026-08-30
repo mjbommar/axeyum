@@ -956,6 +956,7 @@ pub enum StopReason {
     Halted,
     Trapped,
     BoundExhausted,
+    PrefixReturned,
 }
 
 /// A replayable bounded state trace.
@@ -970,9 +971,38 @@ pub struct Trace {
 /// Runs at most `max_steps` transitions and retains every state.
 #[must_use]
 pub fn run(program: &Program, initial: State, max_steps: usize) -> Trace {
+    run_with_running_stop(program, initial, max_steps, StopReason::BoundExhausted)
+}
+
+/// Executes a caller-requested prefix without claiming that a running machine
+/// exhausted a semantic or verification bound.
+///
+/// Terminal states reached within `requested_steps` are still classified as
+/// halted or trapped. A running final state is classified as
+/// [`StopReason::PrefixReturned`].
+#[must_use]
+pub fn run_prefix(program: &Program, initial: State, requested_steps: usize) -> Trace {
+    run_with_running_stop(
+        program,
+        initial,
+        requested_steps,
+        StopReason::PrefixReturned,
+    )
+}
+
+fn run_with_running_stop(
+    program: &Program,
+    initial: State,
+    steps: usize,
+    running_stop: StopReason,
+) -> Trace {
+    debug_assert!(matches!(
+        running_stop,
+        StopReason::BoundExhausted | StopReason::PrefixReturned
+    ));
     let mut current = initial;
     let mut states = vec![current.clone()];
-    for _ in 0..max_steps {
+    for _ in 0..steps {
         if current.outcome != Outcome::Running {
             break;
         }
@@ -982,7 +1012,7 @@ pub fn run(program: &Program, initial: State, max_steps: usize) -> Trace {
     let stop = match &current.outcome {
         Outcome::Halted => StopReason::Halted,
         Outcome::Trapped(_) => StopReason::Trapped,
-        Outcome::Running => StopReason::BoundExhausted,
+        Outcome::Running => running_stop,
     };
     Trace { states, stop }
 }

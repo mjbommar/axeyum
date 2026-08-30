@@ -189,3 +189,27 @@ under strict all-target Clippy.
 Addition earns the `computation` class only for width 8. Memory and branch earn
 the `trace` class only for their printed inputs. None is a symbolic theorem,
 independent certificate, or kernel reconstruction.
+
+## 2026-08-30 — bounded exhaustion versus returned continuation
+
+Auditing `OP.a0.run` against Chapter 5 found an API-level omission. The
+concrete runner distinguished halt, trap, and bound exhaustion, but it had no
+way to return a deliberately short running prefix without calling that result
+bound exhaustion. The book treats the caller's continuation decision as
+metadata, distinct from both architectural outcome and verification budget.
+
+Added `StopReason::PrefixReturned` and `run_prefix`. Both bounded execution and
+prefix return share one private transition loop, so classification cannot
+silently change fetch/decode/step behavior. Reaching halt or trap still
+overrides the requested running-prefix label. Tests cover the zero-step bound,
+terminal override, a running prefix, resumption from its final state, and the
+concatenation law: prefixes of lengths two and three equal one prefix of length
+five after removing the duplicated join state.
+
+The semantic package is now version 3 and declares `returned-prefix`. Added a
+recomputed runner-classification report covering halted, trapped,
+bound-exhausted, and prefix-returned results. Its negative control falsely
+labels the running prefix as halted and is rejected with `semantic-mismatch`.
+Strict Clippy passes; `axeyum-machine` has 20 passing integration tests and the
+evidence crate has seven passing route/control tests. This is concrete trace
+evidence, not a termination proof.

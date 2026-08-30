@@ -7,18 +7,20 @@
 use std::{fs, path::Path};
 
 use axeyum_machine::a0::{
-    Memory, MemorySpan, Observation, Outcome, Program, State, StopReason, Trap, Word, run, step,
+    Memory, MemorySpan, Observation, Outcome, Program, State, StopReason, Trap, Word, run,
+    run_prefix, step,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v2";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v3";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
 const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
 const ADD_SCHEMA: &str = "axeyum.a0.add-step-exhaustive.v1";
 const MEMORY_SCHEMA: &str = "axeyum.a0.memory-trace.v1";
 const BRANCH_SCHEMA: &str = "axeyum.a0.branch-trace.v1";
+const RUN_SCHEMA: &str = "axeyum.a0.run-classification.v1";
 
 /// Stable metadata that binds evidence to the concrete A0 semantic authority.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -140,6 +142,29 @@ pub struct BranchTraceReport {
     pub untaken_stop: String,
 }
 
+/// Concrete coverage of all four A0 runner classifications and resumption.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RunClassificationReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Stop label for a normally halted run.
+    pub halted_stop: String,
+    /// Stop label for an illegal-fetch run.
+    pub trapped_stop: String,
+    /// Stop label for a bounded running loop.
+    pub exhausted_stop: String,
+    /// Stop label for a caller-returned running prefix.
+    pub prefix_stop: String,
+    /// State count for a zero-step bounded run.
+    pub zero_bound_states: usize,
+    /// Whether two resumed prefixes equal one prefix of their combined length.
+    pub resumed_equals_whole: bool,
+    /// PCs in the combined five-step prefix.
+    pub resumed_pcs: Vec<u64>,
+}
+
 /// Why an evidence package or report was rejected.
 #[derive(Debug)]
 pub enum EvidenceError {
@@ -185,7 +210,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "2".to_owned(),
+        version: "3".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -200,6 +225,7 @@ pub fn semantic_package() -> A0SemanticPackage {
             "dynamic-effects",
             "step",
             "bounded-trace",
+            "returned-prefix",
         ]
         .into_iter()
         .map(str::to_owned)
@@ -441,6 +467,46 @@ pub fn check_branch_target_control(
     check_branch_trace_with_control(package_path, report_path, BranchControl::WrongTargetBase)
 }
 
+/// Produces concrete coverage of the A0 runner classifications and resumption.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn run_classification_report(
+    package_path: &Path,
+) -> Result<RunClassificationReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_run_classification(
+        sha256_hex(&package_bytes),
+        RunControl::Declared,
+    ))
+}
+
+/// Recomputes and checks every runner classification and the resumption law.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_run_classification(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<RunClassificationReport, EvidenceError> {
+    check_run_classification_with_control(package_path, report_path, RunControl::Declared)
+}
+
+/// Mislabels a running returned prefix as halted and requires rejection.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing control fires.
+pub fn check_run_false_halt_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<RunClassificationReport, EvidenceError> {
+    check_run_classification_with_control(package_path, report_path, RunControl::FalseHalt)
+}
+
 #[derive(Clone, Copy)]
 enum ByteOrderControl {
     Declared,
@@ -469,6 +535,12 @@ enum MemoryControl {
 enum BranchControl {
     Declared,
     WrongTargetBase,
+}
+
+#[derive(Clone, Copy)]
+enum RunControl {
+    Declared,
+    FalseHalt,
 }
 
 fn check_word_roundtrip_with_control(
@@ -794,11 +866,76 @@ fn compute_branch_trace(
     }
 }
 
+fn check_run_classification_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: RunControl,
+) -> Result<RunClassificationReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: RunClassificationReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_run_classification(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed runner report does not equal recomputation (claimed prefix stop {}, recomputed {})",
+            claimed.prefix_stop, recomputed.prefix_stop
+        )));
+    }
+    Ok(claimed)
+}
+
+fn compute_run_classification(
+    semantic_package_sha256: String,
+    control: RunControl,
+) -> RunClassificationReport {
+    let halt_program =
+        Program::new(8, word(0), vec![0xff, 0, 0, 0]).expect("fixed halt program is valid");
+    let trap_program =
+        Program::new(8, word(0), vec![0x99, 0, 0, 0]).expect("fixed trap program is valid");
+    let loop_program =
+        Program::new(8, word(0), vec![0x31, 0, 0, 0xff]).expect("fixed loop program is valid");
+    let initial = State::new(8, Memory::zeroed(0), word(0)).expect("fixed state is valid");
+    let halted = run(&halt_program, initial.clone(), 4);
+    let trapped = run(&trap_program, initial.clone(), 4);
+    let exhausted = run(&loop_program, initial.clone(), 3);
+    let zero = run(&loop_program, initial.clone(), 0);
+    let first = run_prefix(&loop_program, initial.clone(), 2);
+    let second = run_prefix(
+        &loop_program,
+        first
+            .states
+            .last()
+            .expect("prefix has a final state")
+            .clone(),
+        3,
+    );
+    let whole = run_prefix(&loop_program, initial, 5);
+    let mut resumed = first.states;
+    resumed.extend(second.states.into_iter().skip(1));
+    let prefix_stop = if matches!(control, RunControl::FalseHalt) {
+        "halted".to_owned()
+    } else {
+        stop_label(whole.stop).to_owned()
+    };
+    RunClassificationReport {
+        schema: RUN_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        halted_stop: stop_label(halted.stop).to_owned(),
+        trapped_stop: stop_label(trapped.stop).to_owned(),
+        exhausted_stop: stop_label(exhausted.stop).to_owned(),
+        prefix_stop,
+        zero_bound_states: zero.states.len(),
+        resumed_equals_whole: resumed == whole.states,
+        resumed_pcs: resumed.iter().map(|state| state.pc.unsigned()).collect(),
+    }
+}
+
 const fn stop_label(stop: StopReason) -> &'static str {
     match stop {
         StopReason::Halted => "halted",
         StopReason::Trapped => "trapped",
         StopReason::BoundExhausted => "bound-exhausted",
+        StopReason::PrefixReturned => "prefix-returned",
     }
 }
 

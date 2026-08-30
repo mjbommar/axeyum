@@ -5,7 +5,8 @@ use std::{fs, path::PathBuf};
 use axeyum_machine_evidence::{
     EvidenceError, add_step_report, branch_trace_report, check_add_step,
     check_add_wrong_destination_control, check_branch_target_control, check_branch_trace,
-    check_memory_byte_order_control, check_memory_trace, memory_trace_report, semantic_package,
+    check_memory_byte_order_control, check_memory_trace, check_run_classification,
+    check_run_false_halt_control, memory_trace_report, run_classification_report, semantic_package,
     write_json,
 };
 
@@ -75,6 +76,31 @@ fn branch_trace_recomputes_and_wrong_target_fires() {
     );
     assert!(matches!(
         check_branch_target_control(&package_path, &report_path),
+        Err(EvidenceError::SemanticMismatch(_))
+    ));
+    fs::remove_file(package_path).unwrap();
+    fs::remove_file(report_path).unwrap();
+}
+
+#[test]
+fn runner_classifications_recompute_and_false_halt_fires() {
+    let package_path = path("run-package.json");
+    let report_path = path("run-report.json");
+    write_json(&package_path, &semantic_package()).unwrap();
+    let report = run_classification_report(&package_path).unwrap();
+    assert_eq!(report.halted_stop, "halted");
+    assert_eq!(report.trapped_stop, "trapped");
+    assert_eq!(report.exhausted_stop, "bound-exhausted");
+    assert_eq!(report.prefix_stop, "prefix-returned");
+    assert_eq!(report.zero_bound_states, 1);
+    assert!(report.resumed_equals_whole);
+    write_json(&report_path, &report).unwrap();
+    assert_eq!(
+        check_run_classification(&package_path, &report_path).unwrap(),
+        report
+    );
+    assert!(matches!(
+        check_run_false_halt_control(&package_path, &report_path),
         Err(EvidenceError::SemanticMismatch(_))
     ));
     fs::remove_file(package_path).unwrap();
