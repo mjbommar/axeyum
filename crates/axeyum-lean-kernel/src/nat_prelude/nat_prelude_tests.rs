@@ -1236,6 +1236,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fermatnumber_ne_one,
         p.fermatnumber_mono,
         p.coprime_fermatnumber_fermatnumber,
+        // `fermat-easy` lane: `fermat_number_mirrors.rs`.
+        p.fermatnumber_zero,
+        p.fermatnumber_one,
+        p.fermatnumber_two,
+        p.odd_fermatnumber,
+        p.fermatnumber_strictmono,
         // `lnp-implies-em` lane, `least_number.rs` -- ADR-0603 row 2 for the
         // least-number principle over the naturals.
         p.lnp_bounded_search,
@@ -19688,6 +19694,173 @@ fn fermat_number_mirrors_apply_at_free_and_concrete_instances_with_a_reflexive_n
         f.k.axiom_footprint(p.coprime_fermatnumber_fermatnumber)
             .is_empty(),
         "coprime_fermatNumber_fermatNumber must rest on zero axioms"
+    );
+}
+
+/// `Nat.fermatNumber_zero`/`_one`/`_two` (the three closed reductions),
+/// `Nat.odd_fermatNumber` and `Nat.fermatNumber_strictMono` — the
+/// `fermat-easy` lane. The three closed equations are pinned by `def_eq`
+/// alone (they were decided the instant `Nat.fermatNumber` was declared);
+/// oddness and strict monotonicity are each checked at a genuinely FREE
+/// variable AND at a concrete instance, with two NEGATIVE CONTROLS for
+/// `fermatNumber_strictMono`: the argument order in its conclusion is not
+/// interchangeable, and supplying a `Le` (reflexive) witness where a strict
+/// `Lt` is required is rejected outright -- the theorem does not hold
+/// vacuously at `m = n`.
+#[test]
+fn fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_negative_controls() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let seventeen = f.num(17);
+
+    let f0 = f.const_app(p.fermat_number, &[zero]);
+    let f1 = f.const_app(p.fermat_number, &[one]);
+    let f2 = f.const_app(p.fermat_number, &[two]);
+
+    // --- fermatNumber_zero/_one/_two: closed equations, admitted by refl ---
+    let applied_zero = f.const_app(p.fermatnumber_zero, &[]);
+    let inferred_zero = f
+        .k
+        .infer(applied_zero)
+        .expect("fermatNumber_zero must type-check");
+    assert!(f.k.def_eq(inferred_zero, f.eq(f0, three)));
+    let applied_one = f.const_app(p.fermatnumber_one, &[]);
+    let inferred_one = f
+        .k
+        .infer(applied_one)
+        .expect("fermatNumber_one must type-check");
+    assert!(f.k.def_eq(inferred_one, f.eq(f1, five)));
+    let applied_two = f.const_app(p.fermatnumber_two, &[]);
+    let inferred_two = f
+        .k
+        .infer(applied_two)
+        .expect("fermatNumber_two must type-check");
+    assert!(f.k.def_eq(inferred_two, f.eq(f2, seventeen)));
+
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    // --- odd_fermatNumber, at a genuinely free variable ---
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let mut ctx_n = LocalContext::new();
+    ctx_n.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let applied_odd_free = f.const_app(p.odd_fermatnumber, &[n]);
+    let inferred_odd_free = f
+        .k
+        .infer_in(applied_odd_free, &mut ctx_n)
+        .expect("odd_fermatNumber must apply at a free n");
+    let fermat_n = f.const_app(p.fermat_number, &[n]);
+    let expected_odd_free = f.const_app(p.odd, &[fermat_n]);
+    assert!(f.k.def_eq(inferred_odd_free, expected_odd_free));
+
+    // --- odd_fermatNumber, concretely at n = 1: Odd (fermatNumber 1) = Odd 5 ---
+    let applied_odd1 = f.const_app(p.odd_fermatnumber, &[one]);
+    let inferred_odd1 = f
+        .k
+        .infer(applied_odd1)
+        .expect("odd_fermatNumber must apply at n=1");
+    let expected_odd1 = f.const_app(p.odd, &[five]);
+    assert!(f.k.def_eq(inferred_odd1, expected_odd1));
+    // NEGATIVE CONTROL: `Odd 5` is a genuinely different proposition from
+    // `Even 5` -- confirming this test discriminates the predicate rather
+    // than accepting anything of the right shape.
+    let even_five = f.const_app(p.even, &[five]);
+    assert!(
+        !f.k.def_eq(inferred_odd1, even_five),
+        "Odd (fermatNumber 1) must NOT be defeq to Even 5"
+    );
+
+    // --- fermatNumber_strictMono, at genuinely free x, y ---
+    let x_fv = f.fresh_fvar();
+    let x = f.k.fvar(x_fv);
+    let y_fv = f.fresh_fvar();
+    let y = f.k.fvar(y_fv);
+    let mut ctx_xy = LocalContext::new();
+    for fvar in [x_fv, y_fv] {
+        ctx_xy.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let partial_strict = f.const_app(p.fermatnumber_strictmono, &[x, y]);
+    let inferred_strict_ty = f
+        .k
+        .infer_in(partial_strict, &mut ctx_xy)
+        .expect("fermatNumber_strictMono must apply to two free naturals");
+    let expected_hyp = f.lt(x, y);
+    let fx = f.const_app(p.fermat_number, &[x]);
+    let fy = f.const_app(p.fermat_number, &[y]);
+    let expected_concl = f.lt(fx, fy);
+    let expected_strict_ty = f.arrow(expected_hyp, expected_concl);
+    assert!(
+        f.k.def_eq(inferred_strict_ty, expected_strict_ty),
+        "fermatNumber_strictMono's type must be Lt x y -> Lt (fermatNumber x) (fermatNumber y)"
+    );
+    // NEGATIVE CONTROL 1: the conclusion's argument order is not
+    // interchangeable -- `Lt (fermatNumber y) (fermatNumber x)` (SWAPPED) is
+    // a genuinely different proposition from what is proven.
+    let swapped_concl = f.lt(fy, fx);
+    let swapped_ty = f.arrow(expected_hyp, swapped_concl);
+    assert!(
+        !f.k.def_eq(inferred_strict_ty, swapped_ty),
+        "fermatNumber_strictMono's conclusion must NOT be defeq to its argument-swapped form"
+    );
+
+    // --- fermatNumber_strictMono, concretely at (0, 1): fermatNumber 0=3 < fermatNumber 1=5 ---
+    let lt_0_1 = f.zero_lt_succ(zero);
+    let applied_strict01 = f.const_app(p.fermatnumber_strictmono, &[zero, one, lt_0_1]);
+    let inferred01 = f
+        .k
+        .infer(applied_strict01)
+        .expect("fermatNumber_strictMono must apply at (0, 1)");
+    let expected01 = f.lt(f0, f1);
+    assert!(f.k.def_eq(inferred01, expected01));
+    assert!(f.k.def_eq(f0, three));
+    assert!(f.k.def_eq(f1, five));
+
+    // --- NEGATIVE CONTROL 2: at m = n, a REFLEXIVE (`Le`) witness is
+    // rejected -- the theorem's hypothesis slot is strict `Lt`, not `Le`,
+    // and does not hold vacuously at equal arguments.
+    let partial_strict_refl = f.const_app(p.fermatnumber_strictmono, &[five, five]);
+    let le_5_5 = f.lemma(p.le_refl, &[five]);
+    let wrong_application = f.apply(partial_strict_refl, &[le_5_5]);
+    assert!(
+        f.k.infer(wrong_application).is_err(),
+        "fermatNumber_strictMono must REJECT a Le (reflexive) witness in its Lt slot at m = n"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.fermatnumber_zero).is_empty(),
+        "fermatNumber_zero must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.fermatnumber_one).is_empty(),
+        "fermatNumber_one must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.fermatnumber_two).is_empty(),
+        "fermatNumber_two must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.odd_fermatnumber).is_empty(),
+        "odd_fermatNumber must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.fermatnumber_strictmono).is_empty(),
+        "fermatNumber_strictMono must rest on zero axioms"
     );
 }
 
