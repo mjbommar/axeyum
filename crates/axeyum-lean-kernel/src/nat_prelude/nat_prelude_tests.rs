@@ -549,6 +549,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.crt_self_map_maps_into,
         p.crt_self_map_injective_on,
         p.totient_mul_of_coprime,
+        p.count_range_const_true,
+        p.coprime_mul_iff_of_dvd,
+        p.totient_mul_of_dvd,
+        p.totient_pow_succ_of_prime,
+        p.totient_prime_pow,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -18613,5 +18618,365 @@ fn fermat_number_evaluates_correctly() {
         "negative control: fermatNumber 2 must NOT be def-eq to 5 (the \
          value computing 2^n + 1 instead of 2^(2^n) + 1 would give at n=2: \
          2^2 + 1 = 5, catching a missing nested-exponent bug)"
+    );
+}
+
+/// `Nat.totient_mul_of_dvd` at CLOSED dividing pairs, with both sides required
+/// to COMPUTE, plus a non-dividing negative control where the identity is
+/// genuinely FALSE.
+///
+/// The divisibility witnesses are real proofs (`dvd_mul a q : Dvd a (mul a q)`),
+/// not `refl` standing in for one. The control is the point of the test: this
+/// theorem carries no primality and no positivity, so its ONLY hypothesis is
+/// `e ∣ m`, and a dividing-only test could not tell it from the false
+/// unconditional statement. At `(m, e) = (1, 2)` — the smallest non-dividing
+/// pair — the two sides are `1` and `2`.
+///
+/// Ranges and the smallest counterexample are from
+/// `scripts/tests/check-totient-prime-power-numerics.py`, checks `4` and `4N`.
+#[test]
+fn totient_mul_of_dvd_computes_at_closed_dividing_pairs_with_a_non_dividing_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let eight = f.num(8);
+
+    // --- (m, e) = (4, 2), a case where `e` divides `m` PROPERLY ------------
+    // `dvd_mul 2 2 : Dvd 2 (mul 2 2)`, and `mul 2 2` computes to `4`.
+    let dvd_2_4 = f.const_app(p.dvd_mul, &[two, two]);
+    let applied = f.const_app(p.totient_mul_of_dvd, &[four, two, dvd_2_4]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("totient_mul_of_dvd must apply at the dividing pair (4, 2)");
+
+    let me = f.mul(four, two);
+    let lhs = f.const_app(p.totient, &[me]);
+    let tot_4 = f.const_app(p.totient, &[four]);
+    let rhs = f.mul(tot_4, two);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the statement must be totient (4*2) = totient 4 * 2"
+    );
+    assert!(f.k.def_eq(me, eight), "4*2 must compute to 8");
+    assert!(f.k.def_eq(lhs, four), "totient 8 must compute to 4");
+    assert!(f.k.def_eq(tot_4, two), "totient 4 must compute to 2");
+    assert!(f.k.def_eq(rhs, four), "totient 4 * 2 must compute to 4");
+
+    // --- (m, e) = (6, 3): `e` divides `m` but `m` is not a prime power, so
+    // this pins the counting independently of the prime-power case.
+    let dvd_3_6 = f.const_app(p.dvd_mul, &[three, two]);
+    let applied2 = f.const_app(p.totient_mul_of_dvd, &[six, three, dvd_3_6]);
+    let inferred2 =
+        f.k.infer(applied2)
+            .expect("totient_mul_of_dvd must apply at the dividing pair (6, 3)");
+    let me2 = f.mul(six, three);
+    let lhs2 = f.const_app(p.totient, &[me2]);
+    let tot_6 = f.const_app(p.totient, &[six]);
+    let rhs2 = f.mul(tot_6, three);
+    let expected2 = f.eq(lhs2, rhs2);
+    assert!(f.k.def_eq(inferred2, expected2));
+    assert!(f.k.def_eq(tot_6, two), "totient 6 must compute to 2");
+    assert!(f.k.def_eq(lhs2, six), "totient 18 must compute to 6");
+    assert!(f.k.def_eq(rhs2, six), "totient 6 * 3 must compute to 6");
+
+    // --- NEGATIVE CONTROL: (m, e) = (1, 2), the smallest non-dividing pair -
+    // The conclusion is FALSE here, so this is not a case the theorem merely
+    // declines to cover -- it is one where covering it would be unsound.
+    let bad_me = f.mul(one, two);
+    let bad_lhs = f.const_app(p.totient, &[bad_me]);
+    let tot_1 = f.const_app(p.totient, &[one]);
+    let bad_rhs = f.mul(tot_1, two);
+    assert!(f.k.def_eq(bad_lhs, one), "totient (1*2) must compute to 1");
+    assert!(f.k.def_eq(tot_1, one), "totient 1 must compute to 1");
+    assert!(f.k.def_eq(bad_rhs, two), "totient 1 * 2 must compute to 2");
+    assert!(
+        !f.k.def_eq(bad_lhs, bad_rhs),
+        "at (m, e) = (1, 2) the identity is FALSE (1 against 2), so a \
+         dividing-only test would not discriminate this theorem at all"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.totient_mul_of_dvd).is_empty(),
+        "totient_mul_of_dvd must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.count_range_const_true).is_empty(),
+        "countRange_const_true must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.coprime_mul_iff_of_dvd).is_empty(),
+        "coprime_mul_iff_of_dvd must rest on zero axioms"
+    );
+}
+
+/// `Nat.totient_prime_pow` at `2^3` and `3^2`, with a COMPOSITE negative
+/// control where the identity is genuinely false.
+///
+/// The prime hypothesis is a hypothetical free variable — this prelude exposes
+/// no closed primality witness (`prime_two` is `fn`-private to `primes.rs`) —
+/// but every VALUE in the conclusion is closed and is required to compute, so
+/// a statement carrying the wrong arithmetic would fail here.
+///
+/// The composite control is what makes the test discriminating. At base `4`
+/// the statement reads `totient 4 = 4 - 1`, i.e. `2 = 3`: false. So primality
+/// is load-bearing rather than decorative, and it enters in exactly one place
+/// (the induction's base case, through `Nat.totient_prime`). Magnitudes are
+/// kept at `8`, `9` and `4` on purpose: prelude numerals are unary.
+#[test]
+fn totient_prime_pow_computes_at_two_cubed_and_three_squared_with_a_composite_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let anon = f.anon_name();
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let eight = f.num(8);
+    let nine = f.num(9);
+    let one = f.num(1);
+
+    // --- 2^3: totient 8 = 8 - 4 = 4 ---------------------------------------
+    let prime_two_ty = prime_condition_for_test(&mut f, two);
+    let mut ctx = LocalContext::new();
+    let h2_fv = f.fresh_fvar();
+    let h2 = f.k.fvar(h2_fv);
+    ctx.push(LocalDecl {
+        fvar: h2_fv,
+        name: anon,
+        ty: prime_two_ty,
+        info: BinderInfo::Default,
+    });
+    let applied = f.const_app(p.totient_prime_pow, &[two, two, h2]);
+    let inferred =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("totient_prime_pow must apply at base 2, exponent succ 2");
+
+    let pow_2_3 = f.const_app(p.pow, &[two, three]);
+    let pow_2_2 = f.const_app(p.pow, &[two, two]);
+    let lhs = f.const_app(p.totient, &[pow_2_3]);
+    let rhs = f.sub(pow_2_3, pow_2_2);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the statement must be totient (2^3) = 2^3 - 2^2"
+    );
+    assert!(f.k.def_eq(pow_2_3, eight), "2^3 must compute to 8");
+    assert!(f.k.def_eq(pow_2_2, four), "2^2 must compute to 4");
+    assert!(f.k.def_eq(lhs, four), "totient 8 must compute to 4");
+    assert!(f.k.def_eq(rhs, four), "8 - 4 must compute to 4");
+
+    // --- 3^2: totient 9 = 9 - 3 = 6, an ODD prime so the base is not 2 -----
+    let prime_three_ty = prime_condition_for_test(&mut f, three);
+    let h3_fv = f.fresh_fvar();
+    let h3 = f.k.fvar(h3_fv);
+    ctx.push(LocalDecl {
+        fvar: h3_fv,
+        name: anon,
+        ty: prime_three_ty,
+        info: BinderInfo::Default,
+    });
+    let applied3 = f.const_app(p.totient_prime_pow, &[three, one, h3]);
+    let inferred3 =
+        f.k.infer_in(applied3, &mut ctx)
+            .expect("totient_prime_pow must apply at base 3, exponent succ 1");
+    let pow_3_2 = f.const_app(p.pow, &[three, two]);
+    let pow_3_1 = f.const_app(p.pow, &[three, one]);
+    let lhs3 = f.const_app(p.totient, &[pow_3_2]);
+    let rhs3 = f.sub(pow_3_2, pow_3_1);
+    let expected3 = f.eq(lhs3, rhs3);
+    assert!(f.k.def_eq(inferred3, expected3));
+    assert!(f.k.def_eq(pow_3_2, nine), "3^2 must compute to 9");
+    assert!(f.k.def_eq(lhs3, six), "totient 9 must compute to 6");
+    assert!(f.k.def_eq(rhs3, six), "9 - 3 must compute to 6");
+
+    // --- NEGATIVE CONTROL: a COMPOSITE base, where the identity is FALSE ---
+    // `totient (4^1) = 4^1 - 4^0` reads `2 = 3`. Kept at base 4 exponent 1 so
+    // the formed magnitudes stay tiny.
+    let zero = f.zero();
+    let pow_4_1 = f.const_app(p.pow, &[four, one]);
+    let pow_4_0 = f.const_app(p.pow, &[four, zero]);
+    let bad_lhs = f.const_app(p.totient, &[pow_4_1]);
+    let bad_rhs = f.sub(pow_4_1, pow_4_0);
+    assert!(f.k.def_eq(pow_4_1, four), "4^1 must compute to 4");
+    assert!(f.k.def_eq(pow_4_0, one), "4^0 must compute to 1");
+    assert!(f.k.def_eq(bad_lhs, two), "totient 4 must compute to 2");
+    assert!(f.k.def_eq(bad_rhs, three), "4 - 1 must compute to 3");
+    assert!(
+        !f.k.def_eq(bad_lhs, bad_rhs),
+        "at the COMPOSITE base 4 the identity is FALSE (2 against 3), so the \
+         primality hypothesis is load-bearing and a prime-only test would not \
+         discriminate this theorem at all"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.totient_prime_pow).is_empty(),
+        "totient_prime_pow must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.totient_pow_succ_of_prime).is_empty(),
+        "totient_pow_succ_of_prime must rest on zero axioms"
+    );
+}
+
+/// The whole prime-power family at genuinely FREE variables, each inferred
+/// type checked against an independently written statement.
+///
+/// Numerals reduce, so a concrete instance can hide a definitional-equality
+/// gap that only a free variable exposes; the two checks fail on disjoint
+/// defect classes and this family needs both. The `!def_eq` guards the argument
+/// ORDER of `totient_mul_of_dvd`'s right-hand side — `totient m * e` and
+/// `totient e * m` are different theorems, and at a numeral pair where the two
+/// happen to agree a concrete test cannot separate them.
+#[test]
+fn the_totient_prime_power_family_applies_at_free_variables() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+    let one = f.num(1);
+
+    let m_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let e_fv = f.fresh_fvar();
+    let e = f.k.fvar(e_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [m_fv, e_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+
+    // --- countRange_const_true, at a free bound ---------------------------
+    let const_true = {
+        let true_ = f.bool_true();
+        f.k.lam(anon, nat, true_, BinderInfo::Default)
+    };
+    let cct = f.const_app(p.count_range_const_true, &[m]);
+    let cct_ty =
+        f.k.infer_in(cct, &mut ctx)
+            .expect("countRange_const_true must apply at a free bound");
+    let cct_lhs = f.const_app(p.count_range, &[const_true, m]);
+    let cct_expected = f.eq(cct_lhs, m);
+    assert!(
+        f.k.def_eq(cct_ty, cct_expected),
+        "countRange_const_true must state countRange (fun _ => true) m = m"
+    );
+
+    // --- the gcd bridge and Lemma B, under a free `Dvd e m` ---------------
+    let dvd_ty = f.dvd(e, m);
+    let hd_fv = f.fresh_fvar();
+    let hd = f.k.fvar(hd_fv);
+    ctx.push(LocalDecl {
+        fvar: hd_fv,
+        name: anon,
+        ty: dvd_ty,
+        info: BinderInfo::Default,
+    });
+
+    let k_fv = f.fresh_fvar();
+    let k = f.k.fvar(k_fv);
+    ctx.push(LocalDecl {
+        fvar: k_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let bridge = f.const_app(p.coprime_mul_iff_of_dvd, &[k, m, e, hd]);
+    let bridge_ty =
+        f.k.infer_in(bridge, &mut ctx)
+            .expect("coprime_mul_iff_of_dvd must apply at free variables");
+    let me = f.mul(m, e);
+    let g_me = f.gcd(k, me);
+    let g_m = f.gcd(k, m);
+    let left = f.eq(g_me, one);
+    let right = f.eq(g_m, one);
+    let bridge_expected = f.const_app(p.logic.iff, &[left, right]);
+    assert!(
+        f.k.def_eq(bridge_ty, bridge_expected),
+        "coprime_mul_iff_of_dvd must state gcd k (m*e) = 1 <-> gcd k m = 1"
+    );
+
+    let lemma_b = f.const_app(p.totient_mul_of_dvd, &[m, e, hd]);
+    let lemma_b_ty =
+        f.k.infer_in(lemma_b, &mut ctx)
+            .expect("totient_mul_of_dvd must apply at free variables");
+    let tot_me = f.const_app(p.totient, &[me]);
+    let tot_m = f.const_app(p.totient, &[m]);
+    let lb_rhs = f.mul(tot_m, e);
+    let lemma_b_expected = f.eq(tot_me, lb_rhs);
+    assert!(
+        f.k.def_eq(lemma_b_ty, lemma_b_expected),
+        "totient_mul_of_dvd must state totient (m*e) = totient m * e"
+    );
+
+    // The TRANSPOSED right-hand side is a different theorem. `totient e * m`
+    // is what a copy-paste slip would produce.
+    let tot_e = f.const_app(p.totient, &[e]);
+    let transposed_rhs = f.mul(tot_e, m);
+    let transposed = f.eq(tot_me, transposed_rhs);
+    assert!(
+        !f.k.def_eq(lemma_b_ty, transposed),
+        "totient m * e and totient e * m are different theorems; the statement \
+         must not be def-eq to the transposed one"
+    );
+
+    // --- both prime-power forms, at a free base and a free exponent -------
+    let q_fv = f.fresh_fvar();
+    let q = f.k.fvar(q_fv);
+    let j_fv = f.fresh_fvar();
+    let j = f.k.fvar(j_fv);
+    let mut ctx2 = LocalContext::new();
+    for fvar in [q_fv, j_fv] {
+        ctx2.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let prime_q_ty = prime_condition_for_test(&mut f, q);
+    let hq_fv = f.fresh_fvar();
+    let hq = f.k.fvar(hq_fv);
+    ctx2.push(LocalDecl {
+        fvar: hq_fv,
+        name: anon,
+        ty: prime_q_ty,
+        info: BinderInfo::Default,
+    });
+
+    let sj = f.succ(j);
+    let pow_sj = f.const_app(p.pow, &[q, sj]);
+    let pow_j = f.const_app(p.pow, &[q, j]);
+    let tot_pow = f.const_app(p.totient, &[pow_sj]);
+
+    let mult = f.const_app(p.totient_pow_succ_of_prime, &[q, j, hq]);
+    let mult_ty =
+        f.k.infer_in(mult, &mut ctx2)
+            .expect("totient_pow_succ_of_prime must apply at a free base and exponent");
+    let qm1 = f.sub(q, one);
+    let mult_rhs = f.mul(qm1, pow_j);
+    let mult_expected = f.eq(tot_pow, mult_rhs);
+    assert!(
+        f.k.def_eq(mult_ty, mult_expected),
+        "totient_pow_succ_of_prime must state totient (q^(j+1)) = (q-1) * q^j"
+    );
+
+    let subf = f.const_app(p.totient_prime_pow, &[q, j, hq]);
+    let sub_ty =
+        f.k.infer_in(subf, &mut ctx2)
+            .expect("totient_prime_pow must apply at a free base and exponent");
+    let sub_rhs = f.sub(pow_sj, pow_j);
+    let sub_expected = f.eq(tot_pow, sub_rhs);
+    assert!(
+        f.k.def_eq(sub_ty, sub_expected),
+        "totient_prime_pow must state totient (q^(j+1)) = q^(j+1) - q^j"
     );
 }

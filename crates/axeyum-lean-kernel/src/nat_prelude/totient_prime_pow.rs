@@ -245,17 +245,13 @@ pub(super) fn declare_count_range_const_true(
             // `countRange t 0 = 0`.
             &|d| {
                 let zero = d.zero();
-                let c = count_range(d, &p, t, zero);
-                let z = d.lemma(p.count_range_zero, &[t]);
-                let _ = c;
-                z
+                let _ = zero;
+                d.lemma(p.count_range_zero, &[t])
             },
             // `countRange t (succ j) = succ (countRange t j) = succ j`.
             &|d, j, ih| {
                 let true_ = d.bool_true();
-                let at_j = d.apply(t, &[j]);
                 let is_true = d.bool_refl(true_);
-                let _ = at_j;
                 let step = d.lemma(p.count_range_succ_of_true, &[t, j, is_true]);
                 let cj = count_range(d, &p, t, j);
                 let succ_cj = d.succ(cj);
@@ -397,7 +393,6 @@ fn iff_to_beq_eq(
         let h_fv = d.fresh_fvar();
         let h = d.kernel().fvar(h_fv);
         let ne_r = d.lemma(p.ne_of_beq_eq_false, &[gr, one, h]);
-        let false_prop = d.kernel().const_(p.logic.false_, vec![]);
         let ne_l = {
             let a_fv = d.fresh_fvar();
             let a = d.kernel().fvar(a_fv);
@@ -405,7 +400,6 @@ fn iff_to_beq_eq(
             let absurd = d.apply(ne_r, &[r_proof]);
             d.lam_fv(a_fv, left, absurd)
         };
-        let _ = false_prop;
         let hl = d.lemma(p.beq_eq_false_of_ne, &[gl, one, ne_l]);
         let flipped = d.bool_symm(br, false_, h);
         let body = d.bool_trans(bl, false_, br, hl, flipped);
@@ -744,7 +738,8 @@ pub(super) fn declare_totient_prime_pow(
         let lhs = d.const_app(p.totient, &[pow_sj]);
         let rhs = d.sub(pow_sj, pow_j);
         let prime_hyp = prime_ty(d, &p, q);
-        let stmt = d.arrow(prime_hyp, d.eq(lhs, rhs));
+        let target = d.eq(lhs, rhs);
+        let stmt = d.arrow(prime_hyp, target);
 
         let h_fv = d.fresh_fvar();
         let h = d.kernel().fvar(h_fv);
@@ -793,17 +788,12 @@ pub(super) fn declare_totient_prime_pow(
         // `sub (pow q (succ j)) (pow q j) = sub (add (pow q j) (pow q j * pred q)) (pow q j)`
         // — the transport that turns `pow q (succ j)` into the shape
         // `add_sub_cancel_left` consumes.
-        let pow_sj_is_sum = {
-            // `mul (pow q j) q = mul (pow q j) (succ (pred q))` — ι gives
-            // `add (mul (pow q j) (pred q)) (pow q j)`.
-            let across = d.congr(q, sr, q_eq, &|d, x| d.mul(pow_j, x));
-            let mul_pow_sr = d.mul(pow_j, sr);
-            let _ = mul_pow_sr;
-            // `pow q (succ j)` is definitionally `mul (pow q j) q`.
-            let to_sum = d.trans(pow_sj, mul_pow_sr, sum, across, d.refl(sum));
-            let _ = to_sum;
-            across
-        };
+        // `pow q (succ j)` is DEFINITIONALLY `mul (pow q j) q`, and
+        // `mul (pow q j) (succ (pred q))` is DEFINITIONALLY
+        // `add (mul (pow q j) (pred q)) (pow q j)` — `Nat.mul` recurses on its
+        // RIGHT argument. So this one congruence spans both ι-steps and no
+        // `pow_succ` rewrite is needed on either side.
+        let pow_sj_is_sum = d.congr(q, sr, q_eq, &|d, x| d.mul(pow_j, x));
         let mul_pow_sr = d.mul(pow_j, sr);
 
         // Assemble the right-hand side backwards:
