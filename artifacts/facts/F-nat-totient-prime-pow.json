@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-totient-prime-pow",
+  "title": "Euler's totient at a prime power",
+  "statement": "For every prime p and every k >= 1, totient(p^k) = p^k - p^(k-1). Stated at k = j+1 so the exponent is syntactically a successor. Primality is necessary: the identity fails at 42 composite (c,k) pairs with c < 30 and k <= 3, the smallest being c = 4, k = 1, where totient(4) = 2 while 4 - 1 = 3.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.totient_prime_pow : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> Eq.{1} AxNat (AxNat.totient (AxNat.pow x0 (AxNat.succ x1))) (AxNat.sub (AxNat.pow x0 (AxNat.succ x1)) (AxNat.pow x0 x1)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.totient_prime_pow",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-totient-mul-of-dvd",
+    "F:nat-totient-prime",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-add-sub-cancel-left",
+    "F:nat-le-trans",
+    "F:nat-mul-comm",
+    "F:nat-sub-succ",
+    "F:nat-sub-zero",
+    "F:nat-succ-pred-of-pos"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.totient_prime_pow",
+      "kind": "kernel-term",
+      "supports": "totient(p^(j+1)) = p^(j+1) - p^j under primality, with the whole rendered type pinned.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_prime_pow 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.totient_prime_pow 5 ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> Eq.{1} AxNat (AxNat.totient (AxNat.pow x0 (AxNat.succ x1))) (AxNat.sub (AxNat.pow x0 (AxNat.succ x1)) (AxNat.pow x0 x1)))))')\" -ge 1",
+      "notes": "The grep pins the WHOLE rendered type, not the name. The kernel re-derives the type from the proof term and so refuses a FALSE theorem, but it cannot notice a statement that is weaker or transposed, and this one has both kinds of neighbour. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Fc` consumes the whole pipe with the count then tested, rather than `grep -q`, which would SIGPIPE the producer under pipefail. Measured 2026-08-30: `nat_theorem_inventory` consumes only ONE name argument -- given two names in either order it reports on the LAST one only -- so exactly one is passed here. The primality hypothesis is quoted verbatim in its inline spelling (`2 <= p` and the divisor dichotomy) because this prelude has no `Prime` predicate to name, and because dropping or weakening it makes the statement FALSE rather than merely weaker -- the Rust test pins that with a composite base-4 control where the two sides compute to 2 and 3 and are asserted NOT def_eq. The exponent is pinned as `AxNat.succ x1` on the left and `x1` on the right: writing both as `x1` would be the k = 0 case, which is false (totient(1) = 1, not 1 - 1 = 0).",
+      "kernel_declaration": "Nat.totient_prime_pow"
+    },
+    {
+      "id": "instances-Nat.totient_prime_pow",
+      "kind": "exhaustive-enumeration",
+      "supports": "The identity holds at every prime p < 30 and 1 <= k <= 4 with p^k <= 2000, and FAILS at 42 composite bases, so primality is necessary rather than convenient.",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/tests/check-totient-prime-power-numerics.py",
+      "checker_seconds": 5,
+      "notes": "Thirty-four checks, each negative control asserted to GENUINELY fail. Checks 5 and 5N are this fact's; 5M pins the multiplicative form the induction actually builds and 5S the closing Nat.sub step, and 6/6N pin the prime step totient(p*x) = eps(x)*totient(x) that the three remaining ml430 totient mirrors need. The kernel-side instantiation is `totient_prime_pow_computes_at_two_cubed_and_three_squared_with_a_composite_control` (nat_prelude_tests.rs): 2^3 and 3^2 with every value required to COMPUTE, plus the composite base-4 control. Magnitudes are held at 8, 9 and 4 deliberately -- prelude numerals are unary, so a test at 2^10 would cost more than the prelude build.",
+      "checkers": [
+        "scripts/tests/check-totient-prime-power-numerics.py",
+        "cargo test -p axeyum-lean-kernel --lib nat_prelude::totient_prime_pow"
+      ]
+    },
+    {
+      "id": "footprint-nat-prelude",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`--require-axiom-free` exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient -- counting `Axiom` alone would not suffice, since `Opaque` has no proof body and `Quotient` admits `Quot.sound`) is non-empty, and errors rather than passing silently for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it, including this one. This is a whole-prelude bound, not a per-declaration measurement."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:eulers-totient-function",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel nat_prelude::totient_prime_pow (totient-prime-power lane)",
+    "source": "statement and proof authored here; the counting law it rests on is F:nat-totient-mul-of-dvd, landed in the same lane",
+    "prior_art": [
+      {
+        "who": "Leonhard Euler",
+        "what": "the totient of a prime power",
+        "year": 1763,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Proved WITHOUT the Euler product and therefore without uniqueness of the prime factorization. The induction is on the exponent in the multiplicative form `totient (p^(j+1)) = (p-1) * p^j` (`Nat.totient_pow_succ_of_prime`), which keeps `Nat.sub`'s truncation out of the inductive step; the subtractive form is a corollary via `Nat.add_sub_cancel_left`, after an `add_comm`, because the right-handed `add_sub_cancel` does not exist in this prelude. The step is `F:nat-totient-mul-of-dvd` at m := p^(j+1), e := p, and its `Dvd p (p^(j+1))` obligation is `Nat.dvd_mul_left` with NO arithmetic lemma, because `pow` recurses on its exponent and `pow p (succ j)` is DEFINITIONALLY `mul (pow p j) p`. PRIMALITY IS USED IN EXACTLY ONE PLACE, the base case, through `F:nat-totient-prime`; the inductive step is primality-free. That is why the composite counter-examples are all failures of the base case. WHAT THIS UNBLOCKS: combined with `F:nat-totient-mul-of-coprime` it gives the prime step totient(p*x) = p*totient(x) if p | x else (p-1)*totient(x), which is the single ingredient the three remaining ml430 totient mirrors need (`F:ml430-nat-totient-dvd-of-dvd-9622e44a`, `F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7`, `F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7`). All three are reachable from it WITHOUT multiset uniqueness -- see the ADR filed by this lane for the argument and the simulated inductions."
+}
