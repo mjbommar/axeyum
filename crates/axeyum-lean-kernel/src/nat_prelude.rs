@@ -145,6 +145,7 @@ mod cardinality;
 mod catalan;
 mod choose;
 mod clog;
+mod count_range_reversal;
 mod crt;
 mod defs;
 mod desc_factorial;
@@ -227,6 +228,7 @@ use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use clog::declare_clog_all;
+use count_range_reversal::declare_count_range_reversal_even;
 use crt::declare_crt;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
@@ -1606,6 +1608,20 @@ pub struct NatPrelude {
     /// `countRange` analogue of `sumRange_split` (`rectangle.rs`), by
     /// induction on `j` alone (`f`, `m` held fixed).
     pub count_range_split: NameId,
+    /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
+    /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
+    /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
+    /// `totient`-INDEPENDENT evenness lemma (`count_range_reversal.rs`): a
+    /// `Bool`-valued predicate over `[0,L)` invariant under the reflection
+    /// `j <-> pred L - j` with no fixed point where it is `true` counts an
+    /// EVEN number of `true`s. By well-founded induction on `L`
+    /// (`lt_well_founded`/`WellFounded.fix`), peeling both range-ends
+    /// together via `countRange_split` plus `countRange`'s own succ
+    /// equation. The `Nat.totient_even` piece this was built for chains
+    /// `gcd (n-k) n = gcd k n` through `coprime_add_self_right`/
+    /// `coprime_self_add_right`/`coprime_symmetric` to supply this lemma's
+    /// two hypotheses, but nothing here mentions `gcd`/`totient`.
+    pub count_range_reversal_even: NameId,
     /// `Nat.beq_eq_false_of_ne : ∀ a b, Not (Eq Nat a b) → beq a b = false` —
     /// the converse of `ne_of_beq_eq_false`, closing the boolean/propositional
     /// bridge from the other side. Proved by deciding `beq a b` itself
@@ -3805,6 +3821,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_le: kernel.name_str(nat, "countRange_le"),
             count_range_congr: kernel.name_str(nat, "countRange_congr"),
             count_range_split: kernel.name_str(nat, "countRange_split"),
+            count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             beq_eq_false_of_ne: kernel.name_str(nat, "beq_eq_false_of_ne"),
             totient: kernel.name_str(nat, "totient"),
             count_range_eq_pred_of_only_zero_false: kernel
@@ -4242,6 +4259,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
+        // `Nat.countRange_reversal_even`: general, `totient`-independent.
+        // Needs `count_range`/`count_range_split` (`declare_totient_all`,
+        // just above), `lt_well_founded`/`WellFounded.fix`
+        // (`declare_gcd_semantics`, far above), `zero_or_succ` (declared
+        // alongside the other basic `Nat` equational facts, far above),
+        // `succ_sub_succ`/`succ_sub_of_le`/`succ_pred_of_pos`/`zero_le`/
+        // `le_succ`/`le_trans`/`succ_le_succ`/`le_of_succ_le_succ`/
+        // `lt_succ_self`/`zero_lt_succ` (order lemmas, far above), and
+        // `add_assoc`/`add_comm`/`zero_add`/`succ_add` (additive theorems,
+        // far above).
+        declare_count_range_reversal_even(&mut d, &p)?;
         // Needs `coprime_add_self_right`/`coprime_one_right_iff` (declared
         // far above, alongside the other `Coprime` characterisations) plus
         // `count_range`/`totient`, just declared above.
