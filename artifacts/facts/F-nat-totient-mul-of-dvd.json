@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-totient-mul-of-dvd",
+  "title": "Multiplying a modulus by one of its own divisors scales the totient exactly",
+  "statement": "For all naturals m and e with e dividing m, totient(m*e) = totient(m) * e. No primality, no positivity, no factorization. The divisibility hypothesis is necessary: the identity fails at 493 non-dividing pairs with 1 <= m,e <= 25, the smallest counterexample being (m, e) = (1, 2), where totient(2) = 1 while totient(1)*2 = 2.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.totient_mul_of_dvd : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Eq.{1} AxNat (AxNat.totient (AxNat.mul x0 x1)) (AxNat.mul (AxNat.totient x0) x1))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.totient_mul_of_dvd",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-totient-mul-of-coprime",
+    "F:nat-countrange-congr",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:nat-beq-eq-false-of-ne",
+    "F:nat-beq-eq-true-of-eq",
+    "F:nat-ne-of-beq-eq-false"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.totient_mul_of_dvd",
+      "kind": "kernel-term",
+      "supports": "totient(m*e) = totient(m)*e under e | m, with the whole rendered type pinned.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_mul_of_dvd 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.totient_mul_of_dvd 3 ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Eq.{1} AxNat (AxNat.totient (AxNat.mul x0 x1)) (AxNat.mul (AxNat.totient x0) x1))))')\" -ge 1",
+      "notes": "The grep pins the WHOLE rendered type, not the name. The kernel re-derives the type from the proof term and so refuses a FALSE theorem, but it cannot notice a statement that is weaker or transposed, and this one has both kinds of neighbour. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Fc` consumes the whole pipe with the count then tested, rather than `grep -q`, which would SIGPIPE the producer under pipefail. Measured 2026-08-30: `nat_theorem_inventory` consumes only ONE name argument -- given two names in either order it reports on the LAST one only -- so exactly one is passed here. Two neighbours matter specifically here. Transposing the right-hand side to `mul x1 (AxNat.totient x0)` or to `mul (AxNat.totient x1) x0` gives different theorems that agree at many numeral pairs; the factor order is quoted verbatim, and the Rust test asserts `!def_eq` against the transposed form at FREE variables, where the two genuinely separate. Weakening the hypothesis `AxNat.dvd x1 x0` to anything satisfied by more pairs would make the theorem unsound, and it too is quoted verbatim.",
+      "kernel_declaration": "Nat.totient_mul_of_dvd"
+    },
+    {
+      "id": "instances-Nat.totient_mul_of_dvd",
+      "kind": "exhaustive-enumeration",
+      "supports": "The identity holds at every dividing pair with 0 <= m <= 25, 1 <= e <= 25 and FAILS at 493 non-dividing ones, so the hypothesis is necessary rather than convenient.",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/tests/check-totient-prime-power-numerics.py",
+      "checker_seconds": 5,
+      "notes": "Thirty-four checks, each positive one exhaustive over its stated range and each negative control asserted to GENUINELY fail; any failure exits 1 naming the check. Checks 4 and 4N are this fact's; 3 and 3N isolate the gcd bridge that is the ONLY place the divisibility hypothesis is spent, and 2/2N the block-counting step, which needs no hypothesis at all. Written and run BEFORE any Rust, because an earlier traced plan in this same area asserted an identity was coprimality-independent and 'verified numerically', and it is false at 26 of 26 non-coprime pairs. Numeric claims are re-derived here, never inherited. The kernel-side instantiation is `totient_mul_of_dvd_computes_at_closed_dividing_pairs_with_a_non_dividing_control` (nat_prelude_tests.rs), which supplies REAL `dvd_mul` witnesses at (4,2) and (6,3), requires every count to COMPUTE, and asserts `!def_eq` for the two sides at the non-dividing (1,2).",
+      "checkers": [
+        "scripts/tests/check-totient-prime-power-numerics.py",
+        "cargo test -p axeyum-lean-kernel --lib nat_prelude::totient_mul_of_dvd"
+      ]
+    },
+    {
+      "id": "footprint-nat-prelude",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`--require-axiom-free` exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient -- counting `Axiom` alone would not suffice, since `Opaque` has no proof body and `Quotient` admits `Quot.sound`) is non-empty, and errors rather than passing silently for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it, including this one. This is a whole-prelude bound, not a per-declaration measurement."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:eulers-totient-function",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:divisibility",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel nat_prelude::totient_prime_pow (totient-prime-power lane)",
+    "source": "statement and proof authored here, on top of the totient-mul-finish lane's countRange_product / div_mod_block",
+    "prior_art": [
+      {
+        "who": "Leonhard Euler",
+        "what": "the totient of a prime power and the non-coprime scaling law",
+        "year": 1763,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Proved by counting, with NO prime factorization and NO Euler product. The chain: `totient (m*e)` is `countRange P (mul m e)` by delta; `Nat.countRange_congr` -- the UNCONDITIONAL pointwise form -- replaces P by the predicate at modulus `m`, justified pointwise by `F:nat-coprime-mul-iff-of-dvd`; `Nat.countRange_product` at block width `m` and block count `e` factors the count into `countRange S m * countRange (fun _ => true) e`, its per-block hypothesis discharged by `Nat.div_mod_block` composed with `Nat.gcd_mod_left_eq_gcd`; and `Nat.countRange_const_true` collapses the second factor to `e`. `countRange S m` is `totient m` on the nose, because S is built by exactly `totient.rs`'s own predicate recipe, so nothing bridges the two. NO INDUCTION IS WRITTEN: `countRange_product` already did it. WHERE THE HYPOTHESIS GOES: exactly one step, the pointwise congruence. Measured before any Rust, the block-counting step holds for any periodic predicate and needs nothing. WHY THIS AND NOT THE EULER PRODUCT: the classical route needs the prime factorization to be UNIQUE, and `nat_prelude/factorization.rs` states in its own module doc that uniqueness 'needs multiset equality of the factor list, which needs a type this kernel does not have'. That obstruction is real and is not worked around here -- it is ROUTED around, because this statement never names a factor multiset. DEPENDENCY EDGES OMITTED: `Nat.countRange_product`, `Nat.div_mod_block`, `Nat.gcd_mod_left_eq_gcd` and `Nat.coprime_of_dvd_right` are direct dependencies this ledger does not register, and `depends_on` may only name facts that exist; all are unregistered nat-prelude theorems, not axioms -- the prelude's trusted surface is 0, per the footprint evidence above."
+}
