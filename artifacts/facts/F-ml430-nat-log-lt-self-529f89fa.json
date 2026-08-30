@@ -6,15 +6,41 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (b : ℕ) {x : ℕ}, x ≠ 0 → Nat.log b x < x",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.log_lt_self",
+    "kernel_statement": "theorem Nat.log_lt_self : (((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : Eq.{1} AxNat x1 AxNat.zero) -> False)) -> AxNat.lt (AxNat.log x0 x1) x1))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.log_lt_self",
+      "kind": "kernel-term",
+      "supports": "`Nat.log_lt_self` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.log_lt_self\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : Eq.{1} AxNat x1 AxNat.zero) -> False)) -> AxNat.lt (AxNat.log x0 x1) x1)))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.log_lt_self"
+    },
+    {
+      "id": "footprint-Nat.log_lt_self",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.log_lt_self`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.log_lt_self`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane log-clog-finish (2026-08-30), new kernel construction",
     "source": "statement-only extraction of `Nat.log_lt_self` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction. `Nat.log_aux_lt_of_pos : forall b f n, Le n f -> Not (Eq n 0) -> Lt (logAux b f n) n` by STRUCTURAL induction on the fuel `f` (n generalized inside the motive) -- not well-founded recursion on `n`, which an earlier handoff sized this as needing. `predecessor` is always sufficient fuel for `n/b`: `Nat.div_lt_self` (new infrastructure: `mul_lt_mul_right`'s backward direction plus `one_mul` then `div_lt_of_lt_mul`) plus `Le n (succ predecessor)` gives `Lt (n/b) (succ predecessor)`, hence `Le (n/b) predecessor` via `le_of_lt_succ`. The hard leaf splits on whether `n/b` is `0` using `Nat.zero_or_succ` + `Or.rec` (not a `Nat.rec` elimination directly on `n/b`, which would discard the connection between the exposed predecessor and the `n/b` expression every other derived fact in the branch is stated about). New private helper `log_aux_zero_value : Eq (logAux base fuel zero) zero` for any `fuel` given `Lt 0 base`, via one `bool_transport` at the OUTER guard's known-false evidence. `Nat.log_lt_self` is the diagonal instantiation via `le_refl`. `crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs`. This is a genuine library-composition increment, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
