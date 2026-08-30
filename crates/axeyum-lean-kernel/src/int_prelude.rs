@@ -86,6 +86,7 @@ mod dvd_gcd_mirrors;
 mod dvd_mul_split;
 mod euclid;
 mod euler;
+mod euler_theorem;
 mod euler_totient;
 mod fibonacci;
 mod gcd;
@@ -487,6 +488,31 @@ pub struct IntPrelude {
     /// closing the successor step with a `mul_assoc`/`mul_comm`
     /// rearrangement of the four factors (`prod.rs`'s `mul_swap_inner`).
     pub prod_range_mul: NameId,
+    /// `prodRangeIf : (Nat → Bool) → (Nat → Int) → Nat → Int := fun pred f n
+    ///   => prodRange (fun i => bool_select_int (pred i) (f i) one) n` — the
+    /// `Int` counterpart of `Nat.prodRangeIf`
+    /// (`nat_prelude/subset_product.rs`): a product folded over a
+    /// predicate-defined subset of `[0,n)`. See `euler_theorem.rs`'s module
+    /// doc for why this lives over `Int` rather than `Nat`.
+    pub prod_range_if: NameId,
+    /// `prodRangeIf_zero : ∀ pred f, Eq Int (prodRangeIf pred f zero) one` —
+    /// closes by `Eq.refl`.
+    pub prod_range_if_zero: NameId,
+    /// `prodRangeIf_succ : ∀ pred f n, Eq Int (prodRangeIf pred f (succ n))
+    ///   (mul (prodRangeIf pred f n) (bool_select_int (pred n) (f n) one))`
+    /// — closes by `Eq.refl`.
+    pub prod_range_if_succ: NameId,
+    /// `prodRangeIf_permute :
+    ///   ∀ pred f σ n, InjectiveOn σ n → MapsInto σ n →
+    ///     (∀ i, Lt i n → Eq Bool (pred (σ i)) (pred i)) →
+    ///     Eq Int (prodRangeIf pred f n) (prodRangeIf pred (fun k => f (σ k)) n)`
+    /// — a predicate-restricted product is invariant under any
+    /// `InjectiveOn`/`MapsInto` self-map of `[0,n)` that additionally
+    /// preserves the predicate on that range. Derived from
+    /// `prodRange_permute` (full-range invariance) plus `prodRange_congr_lt`
+    /// — see `euler_theorem.rs`'s module doc for the route and for the
+    /// precise remaining gap to Euler's totient theorem.
+    pub prod_range_if_permute: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1542,6 +1568,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_swap: child(kernel, "prodRange_swap"),
         prod_range_permute: child(kernel, "prodRange_permute"),
         prod_range_mul: child(kernel, "prodRange_mul"),
+        prod_range_if: child(kernel, "prodRangeIf"),
+        prod_range_if_zero: child(kernel, "prodRangeIf_zero"),
+        prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
+        prod_range_if_permute: child(kernel, "prodRangeIf_permute"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -1969,6 +1999,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler::declare_euler_criterion_pm_one(&mut d)?;
         euler_totient::declare_euler_unit_coprime(&mut d)?;
         euler_totient::declare_euler_unit_injective(&mut d)?;
+        euler_theorem::declare_prod_range_if_all(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;
