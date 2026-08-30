@@ -26,7 +26,7 @@
 //!
 //! It went unseen because this suite could not reach a verdict: `creal` needs
 //! 16 MiB of stack in debug and a `#[test]` thread has 2 MiB, so
-//! `build_creal_prelude` SIGABRTed here before a single Lean process ran. A
+//! `build_creal_prelude` aborted with `SIGABRT` here before a single Lean process ran. A
 //! crash read as absence. L0/S4 wrapped it in `on_a_deep_stack`; it then
 //! reached Lean and failed.
 //!

@@ -879,7 +879,7 @@ pub struct NatPrelude {
     /// — Mathlib's `Int.add_pos_right`'s `Nat` sibling. A case split on `b`:
     /// at `zero` the hypothesis is impossible ([`not_lt_zero`](Self::not_lt_zero));
     /// at `succ k`, `add a (succ k)` is definitionally `succ (add a k)`, so
-    /// the conclusion is [`NatOps::zero_lt_succ`](super::ops::NatOps::zero_lt_succ),
+    /// the conclusion is `NatOps::zero_lt_succ`,
     /// independent of the hypothesis.
     pub add_pos_right: NameId,
 
@@ -1363,7 +1363,7 @@ pub struct NatPrelude {
     pub add_eq_zero: NameId,
     /// `Nat.zero_or_succ : ∀ n, n = 0 ∨ ∃ p, n = succ p` — every `Nat` is
     /// either `0` or a successor, stated as an equational dichotomy (rather
-    /// than [`super::ops::cases_zero_succ`]'s raw elimination) so it can be
+    /// than `ops::cases_zero_succ`'s raw elimination) so it can be
     /// applied via `d.lemma` at an ARBITRARY compound term (not just a bound
     /// variable in the caller's own goal): the caller gets back a genuine
     /// `Or`-typed FACT naming that term, usable with `or_elim` without the
@@ -1751,10 +1751,10 @@ pub struct NatPrelude {
     /// `Nat.Prime.five_le_of_ne_two_of_ne_three : ∀ p, prime_condition p →
     /// Not (Eq p two) → Not (Eq p three) → Le five p` — Mathlib's
     /// `Nat.Prime.five_le_of_ne_two_of_ne_three`. Split at `Nat.lt_or_ge p
-    /// 5` ([`ops::cases_lt_or_ge`](super::ops::cases_lt_or_ge)): the `Le 5
+    /// 5` (`ops::cases_lt_or_ge`): the `Le 5
     /// p` side is the hypothesis itself. The `Lt p 5` side is a genuine
     /// 5-way case split to concrete `p ∈ {0,1,2,3,4}`
-    /// ([`ops::cases_lt_bound_absurd`](super::ops::cases_lt_bound_absurd), a
+    /// (`ops::cases_lt_bound_absurd`, a
     /// second new finite-cases eliminator whose branches discharge a FIXED
     /// goal by contradiction rather than each proving a static fact): `p =
     /// 0` and `p = 1` both contradict the primality hypothesis's own lower
@@ -1767,12 +1767,12 @@ pub struct NatPrelude {
     pub five_le_of_ne_two_of_ne_three: NameId,
     /// `Nat.Prime.pred_pos : ∀ p, prime_condition p → Lt zero (pred p)` —
     /// `2 ≤ p` transports along `p = succ (pred p)`
-    /// ([`pos_implies_succ_pred`], `finite.rs`) to `2 ≤ succ (pred p)`, then
+    /// (`pos_implies_succ_pred`, `finite.rs`) to `2 ≤ succ (pred p)`, then
     /// `le_of_succ_le_succ` strips one `succ`, leaving `1 ≤ pred p`, defeq
     /// to the goal.
     pub prime_pred_pos: NameId,
     /// `Nat.succ_pred_prime : ∀ p, prime_condition p → Eq (succ (pred p))
-    /// p` — [`pos_implies_succ_pred`] (`finite.rs`) gives `p = succ (pred
+    /// p` — `pos_implies_succ_pred` (`finite.rs`) gives `p = succ (pred
     /// p)` from `p`'s positivity (itself from `2 ≤ p`); `Eq.symm` flips it.
     pub succ_pred_prime: NameId,
     /// `Nat.Prime.not_prime_pow : ∀ x n, Le two n → Not (prime_condition
@@ -2738,10 +2738,10 @@ pub struct NatPrelude {
     /// no bare induction from `n = 0` can close the step for small `n`; any
     /// slack margin needs `n` past the threshold where `le_fib_self` already
     /// applies). Split at `Nat.lt_or_ge n 5`
-    /// ([`ops::cases_lt_or_ge`](super::ops::cases_lt_or_ge)): the `Le 5 n`
+    /// (`ops::cases_lt_or_ge`): the `Le 5 n`
     /// side chains `le_fib_self` with `le_add_right (fib n) 1`; the `Lt n 5`
     /// side is a genuine 5-way case split down to concrete `n ∈ {0,1,2,3,4}`
-    /// ([`ops::cases_lt_bound`](super::ops::cases_lt_bound)), each branch
+    /// (`ops::cases_lt_bound`), each branch
     /// closed the same way [`le_fib_self`](Self::le_fib_self)'s own base
     /// case is — `Le i (add i k)` (`le_add_right`, or `zero_le` for `i = 0`)
     /// defeq to `Le i (add (fib i) 1)` by pure `δ`/`ι` unfolding of `fib` at
@@ -3992,7 +3992,7 @@ pub struct NatPrelude {
     /// fuel2 → Eq (landAux fuel1 m n) (landAux fuel2 m n)` — TWO
     /// independently-chosen sufficient fuels agree, proved by induction on
     /// `fuel1` alone with `m`, `n`, `fuel2` all generalized
-    /// ([`ops::agree_by_double_fuel_induction`]). The two-fuel form, not a
+    /// (`ops::agree_by_double_fuel_induction`). The two-fuel form, not a
     /// fuel-vs-canonical form, is what avoids ever needing `landAux`'s OWN
     /// canonical instance (`landAux m m n`) to unfold via `m`'s shape — see
     /// `nat_prelude::rec_agreement`'s module doc.
@@ -4203,7 +4203,7 @@ pub struct NatPrelude {
     /// `docs/plan/status/252-nat-assoc-dichotomy.md` traced by hand and
     /// numerically cross-checked but did not build (both belonged in this
     /// file, under active concurrent edit at the time). Proved by a triple
-    /// fuel induction ([`agree_by_double_fuel_induction`](rec_agreement)):
+    /// fuel induction (`agree_by_double_fuel_induction`, in `rec_agreement`):
     /// 3 of 4 base leaves (`a=0`; `a=succ,b=0`; `a=succ,b=succ,c=0`) close
     /// by [`Self::land_aux_zero_left_any_fuel`] or pure defeq, and the
     /// fourth (`a,b,c` all positive) needs `Nat.add_eq_zero`/
@@ -4230,7 +4230,7 @@ pub struct NatPrelude {
     /// Eq (landAux fuel (landAux fuel a b) c) (landAux fuel a (landAux fuel b c))`
     /// — unconditional (no `Le` hypothesis; `land`'s fuel-exhaustion row is
     /// the absorbing constant `0`, so any fuel works). Proved by
-    /// [`agree_by_double_fuel_induction`](rec_agreement::ops), with the
+    /// `agree_by_double_fuel_induction`, with the
     /// step case split `c`, then `b`, then `a` (verified against
     /// `guarded`'s actual n-outermost guard order, per
     /// `docs/plan/status/257-nat-land-assoc-impl.md`): 3 of 4 base leaves
@@ -4272,7 +4272,7 @@ pub struct NatPrelude {
     /// confirmed by exhaustive Python simulation before any Rust: at any
     /// fuel of the form `succ _`, a positive RIGHT operand alone forces a
     /// positive result, independent of the left operand's shape. Proved by
-    /// induction on `fuel` ([`agree_by_fuel_induction`](rec_agreement::ops)):
+    /// induction on `fuel` (`agree_by_fuel_induction`):
     /// the `n = 0` branch is immediate from the hypothesis; the `m = 0`
     /// branch reduces to `Not (Eq (succ n') 0)` via `Nat.succ_ne_zero`; the
     /// both-positive branch case-splits `Nat.mod n 2` (`Nat.cases_mod_two`,
@@ -4290,7 +4290,7 @@ pub struct NatPrelude {
     /// `Nat.lor_aux_assoc_of_fuel : ∀ fuel a b c,
     /// Eq (lorAux fuel (lorAux fuel a b) c) (lorAux fuel a (lorAux fuel b c))`
     /// — `lor`'s counterpart of [`Self::land_aux_assoc_of_fuel`], via
-    /// [`agree_by_double_fuel_induction`](rec_agreement::ops), same
+    /// `agree_by_double_fuel_induction`, same
     /// `c`-then-`b`-then-`a` split order. SIMPLER than `land`'s hard leaf:
     /// [`Self::lor_aux_ne_zero_of_right_ne_zero`] makes the two stuck
     /// intermediates unconditionally positive here, so both dichotomies'
@@ -4306,7 +4306,7 @@ pub struct NatPrelude {
     /// [`Self::land_le_left`] (`Nat.lor` has no left-operand bound analogue:
     /// `lor` can exceed both operands, e.g. `lor 1 2 = 3`). Unconditional in
     /// `fuel`, confirmed by exhaustive Python simulation before any Rust.
-    /// Proved by [`agree_by_fuel_induction`](rec_agreement::ops): the base
+    /// Proved by `agree_by_fuel_induction`: the base
     /// case and the `n = 0`/`m = 0` step rows close via `Nat.le_add_right`
     /// plus an `Nat.add_comm`/`Nat.zero_add`/`Nat.add_zero` transport; the
     /// both-positive row combines the IH (`Le rec (add half_m half_n)`)

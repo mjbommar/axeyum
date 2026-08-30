@@ -2667,7 +2667,8 @@ fn pow_le_nat_div_succ_gap_leaf(
     );
 
     let refl_pow_xm = d.lemma(p.equiv_refl, &[pow_xm]);
-    let per_m_proof = d.lemma(
+    // per_m_proof : le pow_xm (embed (natDivSucc big_k m))
+    d.lemma(
         p.le_congr,
         &[
             pow_xm,
@@ -2678,10 +2679,7 @@ fn pow_le_nat_div_succ_gap_leaf(
             dd_k_to_target,
             pow_le_kdd,
         ],
-    );
-    // per_m_proof : le pow_xm (embed (natDivSucc big_k m))
-
-    per_m_proof
+    )
 }
 
 /// `CReal.pow_le_natDivSucc_of_lt`. See the field documentation
@@ -3275,7 +3273,8 @@ fn geom_y_bound_leaf(
     // combined : Equiv mul_c_k1a embed_target
 
     let refl_lhs = d.lemma(p.equiv_refl, &[mul_iv_pow]);
-    let final_le_a = d.lemma(
+    // final_le_a : le mul_iv_pow embed_target
+    d.lemma(
         p.le_congr,
         &[
             mul_iv_pow,
@@ -3286,10 +3285,7 @@ fn geom_y_bound_leaf(
             combined,
             chained,
         ],
-    );
-    // final_le_a : le mul_iv_pow embed_target
-
-    final_le_a
+    )
 }
 
 /// `CReal.geomYBound`. See the field documentation

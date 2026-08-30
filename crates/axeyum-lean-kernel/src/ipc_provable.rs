@@ -137,7 +137,7 @@ pub struct IpcProvablePrelude {
     pub and_elim1_example: NameId,
 }
 
-/// Build [`FormulaList`], the `Provable` natural-deduction relation, and the
+/// Build `FormulaList`, the `Provable` natural-deduction relation, and the
 /// two example derivations, registering every declaration through the
 /// trusted [`crate::Kernel::add_inductive`] / [`crate::Kernel::add_declaration`]
 /// gates.

@@ -294,7 +294,7 @@ fn export_qf_bv_unsat_proof_impl(
 /// `check_budget` is the SAME kind of observability/bound, but for the stage
 /// that runs *after* the search returns `unsat`: [`axeyum_cnf::check_drat`]
 /// and [`axeyum_cnf::elaborate_drat_to_lrat`], the checking pass
-/// [`finish_unsat_proof_outcome_with_check_budget`] performs to turn a raw
+/// `finish_unsat_proof_outcome_with_check_budget` performs to turn a raw
 /// refutation into an
 /// [`UnsatProof`]. That pass has no bound of its own — the 2026-08 incident
 /// motivating this module's checking-progress hooks was exactly this: a
@@ -303,8 +303,8 @@ fn export_qf_bv_unsat_proof_impl(
 /// previous behaviour back exactly (unbounded, unobserved).
 ///
 /// Same soundness/behaviour as [`export_qf_bv_unsat_proof_within`]: this
-/// shares its bit-blast/encode step ([`qf_bv_cnf_encoding`]) and its
-/// outcome-to-certificate mapping ([`finish_unsat_proof_outcome_with_check_budget`])
+/// shares its bit-blast/encode step (`qf_bv_cnf_encoding`) and its
+/// outcome-to-certificate mapping (`finish_unsat_proof_outcome_with_check_budget`)
 /// verbatim, differing only in which `axeyum_cnf` SAT-search entry point runs —
 /// and that entry point's own doc guarantees installing a sink cannot change
 /// the search trajectory or the emitted proof. Likewise, `check_budget`'s

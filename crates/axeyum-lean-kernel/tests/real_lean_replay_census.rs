@@ -366,6 +366,63 @@ fn classify(kernel: &mut Kernel) -> BTreeMap<String, Representability> {
     verdicts
 }
 
+/// Assert that the classifier still discriminates, report each exclusion, and
+/// return the exact set of declarations eligible for independent replay.
+fn report_classification(verdicts: &BTreeMap<String, Representability>) -> BTreeSet<String> {
+    assert_eq!(
+        verdicts.get("CReal.weierstrassMTest"),
+        Some(&Representability::TheoremTypeNotProp),
+        "`CReal.weierstrassMTest` concludes in `CReal.UniformConvergesOn`, \
+         which `creal/uniform_convergence.rs` deliberately makes \
+         `Type`-valued. If this now classifies as representable, either the \
+         declaration changed or `is_a_proposition` stopped discriminating"
+    );
+    assert_eq!(
+        verdicts.get("CReal.ivt_approx"),
+        Some(&Representability::Representable),
+        "`CReal.ivt_approx` is an ordinary `Prop`-valued theorem; if it \
+         classifies as non-representable the classifier is over-rejecting"
+    );
+
+    let representable: BTreeSet<String> = verdicts
+        .iter()
+        .filter(|(_, verdict)| **verdict == Representability::Representable)
+        .map(|(name, _)| name.clone())
+        .collect();
+    let not_prop: Vec<&String> = verdicts
+        .iter()
+        .filter(|(_, verdict)| **verdict == Representability::TheoremTypeNotProp)
+        .map(|(name, _)| name)
+        .collect();
+    let blocked: Vec<&String> = verdicts
+        .iter()
+        .filter(|(_, verdict)| matches!(verdict, Representability::BlockedBy(_)))
+        .map(|(name, _)| name)
+        .collect();
+
+    println!(
+        "{CENSUS_MARKER} population={} representable={} theorem_type_not_prop={} \
+         blocked_by_dependency={}",
+        verdicts.len(),
+        representable.len(),
+        not_prop.len(),
+        blocked.len()
+    );
+    for name in &not_prop {
+        println!("{CENSUS_MARKER} non-representable reason=theorem-type-not-prop name={name}");
+    }
+    for name in &blocked {
+        let Some(Representability::BlockedBy(dependency_blocker)) = verdicts.get(*name) else {
+            unreachable!("filtered above")
+        };
+        println!(
+            "{CENSUS_MARKER} non-representable reason=blocked-by-dependency \
+             name={name} blocker={dependency_blocker}"
+        );
+    }
+    representable
+}
+
 // ---------------------------------------------------------------------------
 // The census.
 // ---------------------------------------------------------------------------
@@ -399,60 +456,9 @@ fn pinned_lean_independently_admits_every_representable_constructed_real_declara
             );
         }
 
-        // The classifier must DISCRIMINATE. Without both halves, a classifier
-        // that had started saying `Representable` to everything -- or nothing
-        // -- would pass this suite silently.
-        assert_eq!(
-            verdicts.get("CReal.weierstrassMTest"),
-            Some(&Representability::TheoremTypeNotProp),
-            "`CReal.weierstrassMTest` concludes in `CReal.UniformConvergesOn`, \
-             which `creal/uniform_convergence.rs` deliberately makes \
-             `Type`-valued. If this now classifies as representable, either the \
-             declaration changed or `is_a_proposition` stopped discriminating"
-        );
-        assert_eq!(
-            verdicts.get("CReal.ivt_approx"),
-            Some(&Representability::Representable),
-            "`CReal.ivt_approx` is an ordinary `Prop`-valued theorem; if it \
-             classifies as non-representable the classifier is over-rejecting"
-        );
-
-        let representable: BTreeSet<String> = verdicts
-            .iter()
-            .filter(|(_, verdict)| **verdict == Representability::Representable)
-            .map(|(name, _)| name.clone())
-            .collect();
-        let not_prop: Vec<&String> = verdicts
-            .iter()
-            .filter(|(_, v)| **v == Representability::TheoremTypeNotProp)
-            .map(|(name, _)| name)
-            .collect();
-        let blocked: Vec<&String> = verdicts
-            .iter()
-            .filter(|(_, v)| matches!(v, Representability::BlockedBy(_)))
-            .map(|(name, _)| name)
-            .collect();
-
-        println!(
-            "{CENSUS_MARKER} population={} representable={} theorem_type_not_prop={} \
-             blocked_by_dependency={}",
-            verdicts.len(),
-            representable.len(),
-            not_prop.len(),
-            blocked.len()
-        );
-        for name in &not_prop {
-            println!("{CENSUS_MARKER} non-representable reason=theorem-type-not-prop name={name}");
-        }
-        for name in &blocked {
-            let Some(Representability::BlockedBy(blocker)) = verdicts.get(*name) else {
-                unreachable!("filtered above")
-            };
-            println!(
-                "{CENSUS_MARKER} non-representable reason=blocked-by-dependency \
-                 name={name} blocker={blocker}"
-            );
-        }
+        // The classifier must discriminate. Without both halves, a classifier
+        // that returned one verdict for everything would pass silently.
+        let representable = report_classification(&verdicts);
 
         let roots: Vec<NameId> = kernel
             .environment()
