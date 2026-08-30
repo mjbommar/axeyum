@@ -186,6 +186,7 @@ use super::NatPrelude;
 use super::finite::{pos_implies_succ_pred, trichotomy, zero_lt_via_c};
 use super::helpers::{iff_forward, iff_reverse};
 use super::ops::{NatDev, NatOps, bool_true_or_false, cases_zero_succ};
+use super::parity::{even_predicate, odd_predicate};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -1685,6 +1686,212 @@ pub(super) fn declare_totient_even(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         (ty, value)
     };
     d.declare_theorem(p.totient_even, ty, value)?;
+    Ok(())
+}
+
+/// `Exists.intro one (odd_predicate one) zero (Eq.refl one) : Odd one`
+/// (`one = succ (add zero zero)` by pure defeq).
+fn odd_one_witness(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let one = d.num(1);
+    let zero = d.zero();
+    let pred = odd_predicate(d, one);
+    let one_lvl = d.level_one();
+    let intro = d.kernel().const_(p.logic.exists_intro, vec![one_lvl]);
+    let refl_one = d.refl(one);
+    d.apply(intro, &[nat, pred, zero, refl_one])
+}
+
+/// `Exists.intro zero (even_predicate zero) zero (Eq.refl zero) : Even zero`.
+fn even_zero_witness(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let zero = d.zero();
+    let pred = even_predicate(d, zero);
+    let one_lvl = d.level_one();
+    let intro = d.kernel().const_(p.logic.exists_intro, vec![one_lvl]);
+    let refl_zero = d.refl(zero);
+    d.apply(intro, &[nat, pred, zero, refl_zero])
+}
+
+// ============================================================================
+// `Nat.odd_totient_iff_eq_one : ∀ n, Iff (Odd (totient n)) (Eq (totient n)
+// one)`.
+// ============================================================================
+
+/// See the module doc / [`NatPrelude::odd_totient_iff_eq_one`] for the route:
+/// the SAME `trichotomy(two, n)` shape `totient_eq_one_iff` uses, with the
+/// `2 < n` branch now refuted by `totient_even` + `odd_not_even` instead of
+/// a counting contradiction.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_odd_totient_iff_eq_one(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.odd_totient_iff_eq_one, 1, &|d, v| {
+        let n = v[0];
+        let zero = d.zero();
+        let one = d.num(1);
+        let two = d.num(2);
+
+        let totient_n = d.const_app(p.totient, &[n]);
+        let lhs_ty = d.const_app(p.odd, &[totient_n]);
+        let rhs_ty = d.eq(totient_n, one);
+        let stmt = d.const_app(p.logic.iff, &[lhs_ty, rhs_ty]);
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv); // Odd (totient n)
+            let body = trichotomy_elim(
+                d,
+                &p,
+                two,
+                n,
+                rhs_ty,
+                &|d, h_lt| {
+                    // h_lt : Lt n two. Split n = 0 vs n = 1 (same shape as
+                    // `totient_eq_one_iff`'s forward direction).
+                    let le_n_1 = d.lemma(p.le_of_succ_le_succ, &[n, one, h_lt]);
+                    let disj = d.lemma(p.lt_or_eq_of_le, &[n, one, le_n_1]);
+                    let lt_n_1 = d.lt(n, one);
+                    let eq_n_1 = d.eq(n, one);
+
+                    let on_zero = {
+                        let h2_fv = d.fresh_fvar();
+                        let h2 = d.kernel().fvar(h2_fv); // h2 : Lt n one
+                        let le_n_0 = d.lemma(p.le_of_succ_le_succ, &[n, zero, h2]);
+                        let le_0_n = d.lemma(p.zero_le, &[n]);
+                        let eq_n_0 = d.lemma(p.le_antisymm, &[n, zero, le_n_0, le_0_n]);
+
+                        // Rewrite `h : Odd (totient n)` along `n = 0` to
+                        // `Odd (totient zero)` (defeq `Odd zero`), then
+                        // refute via `even_not_odd(zero, even_zero_witness)`.
+                        let motive_odd = d.eq_motive(n, &|d, x| {
+                            let t = d.const_app(p.totient, &[x]);
+                            d.const_app(p.odd, &[t])
+                        });
+                        let h_odd0 = d.transport(n, motive_odd, h, zero, eq_n_0);
+                        let even_zero = even_zero_witness(d, &p);
+                        let not_odd_zero = d.lemma(p.even_not_odd, &[zero, even_zero]);
+                        let false_pf = d.apply(not_odd_zero, &[h_odd0]);
+                        let body = ex_falso(d, &p, rhs_ty, false_pf);
+                        d.lam_fv(h2_fv, lt_n_1, body)
+                    };
+                    let on_one = {
+                        let h2_fv = d.fresh_fvar();
+                        let h2 = d.kernel().fvar(h2_fv); // h2 : Eq n one
+                        let motive = d.eq_motive(one, &|d, x| {
+                            let t = d.const_app(p.totient, &[x]);
+                            d.eq(t, one)
+                        });
+                        let refl_at_one = d.refl(one); // Eq (totient one) one, by defeq
+                        let eq_1_n = d.symm(n, one, h2);
+                        let body = d.transport(one, motive, refl_at_one, n, eq_1_n);
+                        d.lam_fv(h2_fv, eq_n_1, body)
+                    };
+                    d.const_app(
+                        p.logic.or_elim,
+                        &[lt_n_1, eq_n_1, rhs_ty, disj, on_zero, on_one],
+                    )
+                },
+                &|d, h_eq| {
+                    // h_eq : Eq n two.
+                    let motive = d.eq_motive(two, &|d, x| {
+                        let t = d.const_app(p.totient, &[x]);
+                        d.eq(t, one)
+                    });
+                    let refl_at_two = d.refl(one); // Eq (totient two) one, by defeq
+                    let eq_2_n = d.symm(n, two, h_eq);
+                    d.transport(two, motive, refl_at_two, n, eq_2_n)
+                },
+                &|d, h_gt| {
+                    // h_gt : Lt two n. `Even (totient n)` from `totient_even`,
+                    // refuted against `h : Odd (totient n)` via `odd_not_even`.
+                    let even_tn = d.lemma(p.totient_even, &[n, h_gt]);
+                    let not_even_tn = d.lemma(p.odd_not_even, &[totient_n, h]);
+                    let false_pf = d.apply(not_even_tn, &[even_tn]);
+                    ex_falso(d, &p, rhs_ty, false_pf)
+                },
+            );
+            d.lam_fv(h_fv, lhs_ty, body)
+        };
+
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv); // Eq (totient n) one
+            let odd_one = odd_one_witness(d, &p); // Odd one
+            let motive = d.eq_motive(one, &|d, x| d.const_app(p.odd, &[x]));
+            let eq_one_tn = d.symm(totient_n, one, h); // Eq one (totient n)
+            let body = d.transport(one, motive, odd_one, totient_n, eq_one_tn);
+            d.lam_fv(h_fv, rhs_ty, body)
+        };
+
+        let proof = d.const_app(p.logic.iff_intro, &[lhs_ty, rhs_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.odd_totient_iff : ∀ n, Iff (Odd (totient n)) (Or (Eq n one) (Eq n
+// two))`.
+// ============================================================================
+
+/// [`NatPrelude::odd_totient_iff_eq_one`] composed with
+/// [`NatPrelude::totient_eq_one_iff`] by direct `mp`/`mpr` function
+/// composition.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_odd_totient_iff(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.odd_totient_iff, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let two = d.num(2);
+
+        let totient_n = d.const_app(p.totient, &[n]);
+        let lhs_ty = d.const_app(p.odd, &[totient_n]);
+        let mid_ty = d.eq(totient_n, one);
+        let eq_n_1 = d.eq(n, one);
+        let eq_n_2 = d.eq(n, two);
+        let rhs_ty = d.const_app(p.logic.or, &[eq_n_1, eq_n_2]);
+        let stmt = d.const_app(p.logic.iff, &[lhs_ty, rhs_ty]);
+
+        let iff_a = d.lemma(p.odd_totient_iff_eq_one, &[n]); // Iff lhs_ty mid_ty
+        let iff_b = d.lemma(p.totient_eq_one_iff, &[n]); // Iff mid_ty rhs_ty
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let f_a = iff_forward(d, lhs_ty, mid_ty, iff_a);
+            let step1 = d.apply(f_a, &[h]);
+            let f_b = iff_forward(d, mid_ty, rhs_ty, iff_b);
+            let step2 = d.apply(f_b, &[step1]);
+            d.lam_fv(h_fv, lhs_ty, step2)
+        };
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let r_b = iff_reverse(d, mid_ty, rhs_ty, iff_b);
+            let step1 = d.apply(r_b, &[h]);
+            let r_a = iff_reverse(d, lhs_ty, mid_ty, iff_a);
+            let step2 = d.apply(r_a, &[step1]);
+            d.lam_fv(h_fv, rhs_ty, step2)
+        };
+
+        let proof = d.const_app(p.logic.iff_intro, &[lhs_ty, rhs_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
     Ok(())
 }
 
