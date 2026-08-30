@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier",
+  "title": "Official Lean's own kernel accepts the 73 constructed-real declarations it will not take as theorems, once they are exported as definitions",
+  "statement": "The 73 declarations of the constructed-real carrier that pinned Lean 4.30.0's kernel refuses -- 48 Theorems whose type is not a proposition, and 25 whose dependency closure reaches one -- are accepted by that same kernel when the Type-valued carriers are exported as definitions rather than theorems, so that the whole carrier, and not only its representable population, holds an independent-replay grade. OPEN: nothing in this ledger has established it, and the export change it needs is a change to what `theorem` means on the wire.",
+  "formal": {
+    "language": "lean4",
+    "statement": "Let K be the kernel state after `build_creal_prelude(&mut Kernel::new())` and let N be the non-representable population of `F:lean-kernel-accepts-the-whole-constructed-real-carrier` -- the `Declaration::Theorem`s whose type is not a proposition, together with everything whose `declaration_dependency_closure` reaches one (73 of 2,058 on 2026-08-30; 48 + 25). Then there is an encoding E of K's complete checked environment, agreeing with `render_lean4export_ndjson` on every representable declaration and differing from it only in emitting each element of N under a declaration kind Lean's kernel admits (a `def`, whose value is the same proof term), such that folding `Lean.Environment.addDeclCore` over E from `mkEmptyEnvironment` under the pinned Lean 4.30.0 (commit d024af099ca4bf2c86f649261ebf59565dc8c622) succeeds, and the resulting environment holds exactly `K.environment().iter().count()` constants -- including `CReal.weierstrassMTest`, `CReal.rolle_interiorExtremum` and `CReal.mvt_interiorExtremum` by name.",
+    "fragment": "lean4-kernel-declaration-stream",
+    "free_symbols": []
+  },
+  "epistemic_status": "open",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:lean-kernel-accepts-the-whole-constructed-real-carrier"
+  ],
+  "evidence": [],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "not established in this ledger",
+    "source": "Split out of `F:lean-kernel-accepts-the-whole-constructed-real-carrier` when that fact's whole-carrier claim was corrected to its representable population (ADR-0775). L0/S4's census (docs/plan/status/386-l0-s4-independent-replay.md) measured the residue at 48 theorem-type-not-prop plus 25 blocked-by-dependency, and named the export change as the natural follow-on."
+  },
+  "notes": "WHY THIS IS A SEPARATE ROW RATHER THAN A FOOTNOTE. Its parent was `proved` while claiming the whole carrier, and the 73 declarations it did not cover were invisible: no ledger row said they held no independent-replay grade, and the suite that would have said so was crashing before it reached Lean. Narrowing the parent to what is measured only stays honest if the part that is NOT measured has somewhere to be counted. This is that place, and it is open.\n\nWHAT IS AND IS NOT AT STAKE. Nothing here is a soundness claim. Lean's kernel refused no PROOF; it refused a KIND -- `addDeclCore` will not admit a `theorem` whose type does not live in `Prop`, and this kernel has no such rule. The affected declarations are deliberate: `CReal.UniformConvergesOn` is `Type`-valued so a convergence rate is data, since `Exists.rec` cannot eliminate into `Type`. So this fact is about independent CHECKABILITY, not about whether the development is right.\n\nWHAT IT WOULD COST. L0/S4 sized it at roughly a day plus an ADR, because emitting a `theorem` as a `def` changes what the wire format means and every consumer of the export has to agree. Two flagship results are behind it -- `CReal.rolle_interiorExtremum` and `CReal.mvt_interiorExtremum` are graded not-representable today, blocked by `CReal.hasDerivative_neg` and `CReal.hasDerivative_add`.\n\nWHEN THIS CLOSES, ITS PARENT MUST BE REVISITED, AND A TEST SAYS SO: `the_superseded_whole_carrier_claim_is_refuted_by_the_same_binary` in `real_lean_creal_carrier_kernel_replay` FAILS if pinned Lean ever accepts the unfiltered export. That is deliberate. The parent's narrowing is a record of a measured boundary, not a permanent one, and the day the boundary moves the ledger must notice rather than keep quoting the narrower claim."
+}
