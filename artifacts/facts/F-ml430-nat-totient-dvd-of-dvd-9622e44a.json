@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
   "title": "Mathlib v4.30 source proposition Nat.totient_dvd_of_dvd",
-  "statement": "The proposition declared as `Nat.totient_dvd_of_dvd` in the pinned Mathlib v4.30 source: for naturals a and b, a | b implies totient(a) | totient(b).",
+  "statement": "The proposition declared as `Nat.totient_dvd_of_dvd` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b : ℕ}, a ∣ b → a.totient ∣ b.totient",
@@ -91,5 +91,5 @@
       }
     ]
   },
-  "notes": "Closed per ADR-0668 (docs/research/09-decisions/adr-0668-the-totient-mirrors-do-not-need-multiset-uniqueness.md): the classical Euler-product proof needs unique factorisation, which this kernel cannot express, but this statement is instead PRESERVED ALONG A CHAIN of prime steps built from SOME factorisation of b/a -- nothing ever compares two factorisations, so uniqueness is never needed. Strong (well-founded) induction on the cofactor k := b/a: k=0 closes via `totient (a*0) ~ 0` (Nat.mul's own iota reduction) and `Nat.dvd_zero`; k=1 closes via `Nat.mul_one` and `Nat.dvd_refl`; k = succ k' >= 2 peels a prime q | k via `Nat.exists_prime_dvd`, applies the well-founded hypothesis at the strictly smaller cofactor k/q, and extends one more step with `Nat.totient_dvd_totient_mul_prime`, closing by `Nat.dvd_trans`. Re-checked partition before touching: `development` (nursery-v2-extension.json), not held-out."
+  "notes": "Closed per ADR-0668 (docs/research/09-decisions/adr-0668-the-totient-mirrors-do-not-need-multiset-uniqueness.md): the classical Euler-product proof needs unique factorisation, which this kernel cannot express, but this statement is instead PRESERVED ALONG A CHAIN of prime steps built from SOME factorisation of b/a -- nothing ever compares two factorisations, so uniqueness is never needed. Strong (well-founded) induction on the cofactor k := b/a: k=0 closes via `totient (a*0) ~ 0` (Nat.mul's own iota reduction) and `Nat.dvd_zero`; k=1 closes via `Nat.mul_one` and `Nat.dvd_refl`; k = succ k' >= 2 peels a prime q | k via `Nat.exists_prime_dvd`, applies the well-founded hypothesis at the strictly smaller cofactor k/q, and extends one more step with `Nat.totient_dvd_totient_mul_prime`, closing by `Nat.dvd_trans`. Re-checked partition before touching: `development` (nursery-v2-extension.json), not held-out.\n\nReader-facing gloss of the preregistered statement: for naturals a and b, a | b implies totient(a) | totient(b)."
 }
