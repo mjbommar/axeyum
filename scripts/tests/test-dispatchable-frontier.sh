@@ -22,7 +22,7 @@ trap 'rm -rf "$WORK"' EXIT
 FAILURES=0
 CASES=0
 
-ALL_GUARDS=(G1 G2 G3 G4 G5 G6 S1 S2 S3 S4 S5)
+ALL_GUARDS=(G1 G2 G3 G4 G5 G6 S1 S2 S3 S4 S5 S6)
 
 # run <label> <expected-exit> <expected-guard-or-NONE> -- <args...>
 run() {
@@ -446,6 +446,59 @@ run "S5-screen-rejects-unstatable-candidate" 1 S5 -- \
     --registry "$BASE/registry.json" --env-snapshot "$BASE/env.json" \
     --vocabulary "$BASE/vocab.json" \
     --statable "$WORK/candidates-unstatable.json"
+
+# ---- case S6a: a fresh candidate carrying an elided-proof glyph is rejected -
+# `⋯` is Lean's pretty-printer glyph for an elided proof term
+# (docs/contributor-guide/lean-surface-attestation.md, "The finding"). No
+# fact_id, so this cannot be confused with the one row ADR-0615 already
+# recorded and exempted.
+cat > "$WORK/candidates-glyphed.json" <<'JSON'
+{"candidates": [
+  {"name": "Test.newlyGlyphed", "statement": "forall n, P n ⋯ -> P (n+1)",
+   "constants": ["Test.plain"]},
+  {"name": "Test.fine", "statement": "forall n, n.plain = n",
+   "constants": ["Test.plain", "Test.bridgeThing"]}
+]}
+JSON
+run "S6-screen-rejects-glyphed-candidate" 1 S6 -- \
+    --registry "$BASE/registry.json" --env-snapshot "$BASE/env.json" \
+    --vocabulary "$BASE/vocab.json" \
+    --statable "$WORK/candidates-glyphed.json"
+
+# ---- case S6b: the glyph screen's own false-positive control ---------------
+# Three ASCII periods and an identifier merely containing the letters "sorry"
+# are not Lean elision glyphs and must not be flagged -- catches a regex
+# written without the `\b` word boundary, or one that matches `.` unescaped.
+cat > "$WORK/candidates-glyph-lookalikes.json" <<'JSON'
+{"candidates": [
+  {"name": "Test.threeDots", "statement": "forall n, n...m = n",
+   "constants": ["Test.plain"]},
+  {"name": "Test.sorryLike", "statement": "forall n, n.sorryValue = n",
+   "constants": ["Test.plain"]}
+]}
+JSON
+run "S6-glyph-screen-false-positive-control" 0 NONE -- \
+    --registry "$BASE/registry.json" --env-snapshot "$BASE/env.json" \
+    --vocabulary "$BASE/vocab.json" \
+    --statable "$WORK/candidates-glyph-lookalikes.json"
+
+# ---- case S6c: the ADR-0615 exemption is scoped to ITS fact_id, not general -
+# Two candidates share the identical glyphed statement; only the one carrying
+# the recorded fact_id may pass. If the exemption were keyed on the glyph
+# alone (or on any other weaker condition), this second row would wrongly
+# escape S6 too, and this case would see NO guard fire instead of S6.
+cat > "$WORK/candidates-glyph-exemption-scope.json" <<'JSON'
+{"candidates": [
+  {"name": "Nat.le_induction", "fact_id": "F:ml430-nat-le-induction-2f088ac3",
+   "statement": "forall n, P n ⋯ -> P (n+1)", "constants": ["Test.plain"]},
+  {"name": "Test.sameGlyphDifferentId", "fact_id": "F:ml430-not-the-recorded-row",
+   "statement": "forall n, P n ⋯ -> P (n+1)", "constants": ["Test.plain"]}
+]}
+JSON
+run "S6-known-glyphed-exemption-is-scoped-to-fact-id" 1 S6 -- \
+    --registry "$BASE/registry.json" --env-snapshot "$BASE/env.json" \
+    --vocabulary "$BASE/vocab.json" \
+    --statable "$WORK/candidates-glyph-exemption-scope.json"
 
 # ---- case 0c: the positive screen's false-positive control -----------------
 cat > "$WORK/candidates-statable.json" <<'JSON'
