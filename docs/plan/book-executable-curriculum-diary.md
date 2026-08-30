@@ -423,3 +423,10 @@ the complete evidence test set pass; strict all-target Clippy passes.
 This repair advances the semantic package to version 9. It establishes the
 executable finite-map behavior and canonical representation. The universal
 symbolic memory-frame theorem remains a separate open claim.
+
+The book-facing memory report now binds the repair rather than relying on the
+crate test alone. In addition to its existing dense unaligned round trip and
+boundary trap, it records wrapped addresses `[65535, 0]`, stored bytes
+`[0xcd, 0xab]`, the sparse-hole trap, and complete-map preservation. The
+existing reversed-byte-order mutation remains load-bearing and rejects the
+widened report.
