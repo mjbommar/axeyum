@@ -159,7 +159,16 @@ TESTS = ROOT / "scripts/tests"
 # discovered, never literally invoked"). This is a corrected measurement, not
 # new rot -- the true count was always at least this high.
 # MAY ONLY GO DOWN FROM A CORRECT MEASUREMENT.
-ORPHAN_BASELINE = 16
+#
+# 16 -> 15 on 2026-08-30. The measured count had already fallen to 15 and the
+# baseline had not followed, which is the one case the unit suite treats as a
+# failure rather than a pass: an unlowered ratchet quietly re-admits an orphan
+# later, so the gain has to be locked in by the commit that earns it.
+# Confirmed the fall is not an artifact of this lane's own work -- the count
+# read 15 before these commits and still reads 15 after registering a new
+# control in both `scripts/check.sh` and the justfile, so the new control is
+# counted as executed rather than adding an orphan.
+ORPHAN_BASELINE = 15
 # The controls exist; if this collapses, the glob is wrong and every count lies.
 MIN_MODULES = 130
 
