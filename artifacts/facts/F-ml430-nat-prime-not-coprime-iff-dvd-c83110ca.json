@@ -8,10 +8,48 @@
     "statement": "∀ {m n : ℕ}, ¬m.Coprime n ↔ ∃ p, Nat.Prime p ∧ p ∣ m ∧ p ∣ n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:ml430-nat-dvd-gcd-e5184fc5",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:nat-dvd-trans",
+    "F:nat-dvd-zero",
+    "F:nat-exists-prime-dvd",
+    "F:nat-gcd-dvd-left",
+    "F:nat-gcd-dvd-right",
+    "F:nat-le-of-dvd",
+    "F:nat-lt-or-ge",
+    "F:nat-not-dvd-one-of-two-le",
+    "F:nat-one-le-of-dvd-pos",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-two-le-succ-or-eq-one",
+    "F:nat-zero-le",
+    "F:nat-zero-mul"
+  ],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_not_coprime_iff_dvd 2>/dev/null | /usr/bin/grep -Ec '^Nat\\.prime_not_coprime_iff_dvd[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.prime_not_coprime_iff_dvd",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.prime_not_coprime_iff_dvd` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against a fabricated name), and the anchored `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Primality is spelled inline (`2 ≤ p ∧ ∀ c, c ∣ p → c = 1 ∨ c = p`, matching `prime_even_iff`/`euclid_lemma`'s own convention) rather than through a named `Nat.Prime` predicate, since this prelude has none, and the existential witness pairs primality with `dvd p m ∧ dvd p n` (right-associated, matching Mathlib's `Prime p ∧ p ∣ m ∧ p ∣ n`) -- this repository's established precedent for flipping a Mathlib `Nat.Prime` mirror (`prime_even_iff`, `prime_odd_of_ne_two`, `prime_dvd_of_dvd_pow` already do the same substitution).",
+      "supports": "∀ {m n : ℕ}, ¬m.Coprime n ↔ ∃ p, Nat.Prime p ∧ p ∣ m ∧ p ∣ n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.prime_not_coprime_iff_dvd",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +64,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_prime_not_coprime_iff_dvd` (`nat_prelude/prime_char.rs`). `mpr` builds `p ∣ gcd m n` (`dvd_gcd`) and transports a hypothesised `gcd m n = one` into `p ∣ one`, refuted by `not_dvd_one_of_two_le` against the primality lower bound. `mp` trichotomizes `g := gcd m n` exactly as the already-proved `coprime_of_forall_prime_dvd` does (`lt_or_ge` twice): `g = 0` forces `m = n = 0` (`gcd_dvd_left`/`_right` transported along `g = 0`, then a local `dvd_elim` against `zero_mul`), and a locally-built `Nat.Prime 2` (this file's own `prime_two`, from `ops::two_divisor_dichotomy`) divides both trivially (`dvd_zero`); `g = 1` contradicts the hypothesis directly; `2 ≤ g` supplies a prime `pw ∣ g` (`exists_prime_dvd`), and `dvd_trans` through `gcd_dvd_left`/`_right` gives `pw ∣ m` and `pw ∣ n`. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority. Mathlib's `Nat.Prime.not_coprime_iff_dvd` is prior art for the statement only; no Mathlib proof term or tactic trace was consulted.",
+  "axiom_footprint": []
 }

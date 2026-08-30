@@ -200,6 +200,7 @@ mod parity;
 mod perfect;
 mod permutation;
 mod powsq;
+mod prime_char;
 mod prime_dvd_mirrors;
 mod primes;
 mod rec_agreement;
@@ -325,6 +326,10 @@ use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
+use prime_char::{
+    declare_prime_mul_eq_prime_sq_iff, declare_prime_not_coprime_iff_dvd,
+    declare_prime_not_prime_pow_all,
+};
 use prime_dvd_mirrors::declare_prime_dvd_mirrors_all;
 use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
@@ -1753,6 +1758,64 @@ pub struct NatPrelude {
     /// p` — [`pos_implies_succ_pred`] (`finite.rs`) gives `p = succ (pred
     /// p)` from `p`'s positivity (itself from `2 ≤ p`); `Eq.symm` flips it.
     pub succ_pred_prime: NameId,
+    /// `Nat.Prime.not_prime_pow : ∀ x n, Le two n → Not (prime_condition
+    /// (pow x n))` — the shared argument in
+    /// `prime_pow_ge2_contradiction` (`prime_char.rs`):
+    /// `x` divides `x^n` (witness `x^(n-1)`), so the divisor clause forces
+    /// `x = 1` (collapsing `x^n` to `1` via `one_pow`, contradicting the `2
+    /// ≤ x^n` lower bound) or `x = x^n` (cancelling the shared factor `x`
+    /// via `mul_left_cancel_of_pos` forces `x^(n-2) = 1`, hence `x ∣ 1`,
+    /// refuted by `not_dvd_one_of_two_le`). `n` is cased into `0`, `1`,
+    /// `succ (succ _)` first; the hypothesis is absurd in the first two.
+    /// Closes `F:ml430-nat-prime-not-prime-pow-d6480abf`.
+    pub prime_not_prime_pow_two_le: NameId,
+    /// `Nat.Prime.not_prime_pow' : ∀ x n, Not (Eq n one) → Not
+    /// (prime_condition (pow x n))` — the same case split as
+    /// [`prime_not_prime_pow_two_le`](Self::prime_not_prime_pow_two_le),
+    /// with an `n = 0` case added (`pow x 0 = 1` directly contradicts the
+    /// lower bound) and the `n = 1` case discharged by the `Not (Eq n one)`
+    /// hypothesis itself rather than by an absurd bound. Closes
+    /// `F:ml430-nat-prime-not-prime-pow-5f14afc6`.
+    pub prime_not_prime_pow_ne_one: NameId,
+    /// `Nat.Prime.eq_one_of_pow : ∀ x n, prime_condition (pow x n) → Eq n
+    /// one` — the same three-way case split on `n` read the other way:
+    /// `n = 0` and `n = succ (succ _)` both contradict the primality
+    /// hypothesis directly (the latter via
+    /// `prime_pow_ge2_contradiction` (`prime_char.rs`)),
+    /// leaving `n = 1` as the only reachable case, which **is** the goal.
+    /// Closes `F:ml430-nat-prime-eq-one-of-pow-846d2949`.
+    pub prime_eq_one_of_pow: NameId,
+    /// `Nat.Prime.not_coprime_iff_dvd : ∀ m n, Iff (Not (Eq (gcd m n) one))
+    /// (∃ p, prime_condition p ∧ (dvd p m ∧ dvd p n))` — `mpr` builds `p ∣
+    /// gcd m n` (`dvd_gcd`) and transports a hypothesised `gcd m n = one`
+    /// into `p ∣ one`, refuted by `not_dvd_one_of_two_le`. `mp` trichotomizes
+    /// `g := gcd m n` (`lt_or_ge` twice, matching
+    /// `coprime_of_forall_prime_dvd`'s own split): `g = 0` forces `m = n =
+    /// 0` (`gcd_dvd_left`/`_right` transported, then `dvd_elim` against
+    /// `zero_mul`), and `2` (this file's own `prime_two`, built from
+    /// `ops::two_divisor_dichotomy`) divides both trivially (`dvd_zero`);
+    /// `g = 1` contradicts the hypothesis directly; `2 ≤ g` supplies a prime
+    /// `pw ∣ g` (`exists_prime_dvd`), and `dvd_trans` through
+    /// `gcd_dvd_left`/`_right` gives `pw ∣ m` and `pw ∣ n`. Closes
+    /// `F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca`.
+    pub prime_not_coprime_iff_dvd: NameId,
+    /// `Nat.Prime.mul_eq_prime_sq_iff : ∀ x y p, prime_condition p → Not (Eq
+    /// x one) → Not (Eq y one) → Iff (Eq (mul x y) (pow p two)) (And (Eq x
+    /// p) (Eq y p))` — `mpr` substitutes `x = p`/`y = p` into `p * p = p^2`
+    /// (`pow_succ`/`pow_zero`/`one_mul` chained, as `divisibility.rs`'s
+    /// `valuation_at_two_mul_sq` already does). `mp` uses `x*y = p^2 = p*p`
+    /// to get `dvd p (mul x y)`, splits via `euclid_lemma` into `dvd p x ∨
+    /// dvd p y`, and both branches route through this file's own
+    /// `prime_sq_factor_case` (`prime_char.rs`): the divisor witness `k`
+    /// (`a = p*k`) substitutes into `a*b = p*p` to give `k*b = p`
+    /// (`mul_assoc` + `mul_left_cancel_of_pos`), and `k`'s own primality
+    /// clause (`prime_eq_one_or_self_of_dvd`) forces `k = 1` (giving `a = p`
+    /// and, via `k*b=p`, `b = p`) or `k = p` (giving `b = 1` via the same
+    /// cancellation, contradicting the `Not (Eq b one)` hypothesis). The
+    /// `dvd p y` branch calls the same helper with `x`/`y` swapped
+    /// (`mul_comm` rebuilds the equation) and swaps the resulting `And`
+    /// back. Closes `F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31`.
+    pub prime_mul_eq_prime_sq_iff: NameId,
     /// `Nat.Prime.dvd_mul_of_dvd_ne : ∀ p1 p2 n, Not (Eq p1 p2) →
     /// prime_condition p1 → prime_condition p2 → dvd p1 n → dvd p2 n → dvd
     /// (mul p1 p2) n` — [`coprime_primes`](Self::coprime_primes)'s `mpr`
@@ -4713,6 +4776,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             five_le_of_ne_two_of_ne_three: kernel.name_str(nat, "five_le_of_ne_two_of_ne_three"),
             prime_pred_pos: kernel.name_str(nat, "prime_pred_pos"),
             succ_pred_prime: kernel.name_str(nat, "succ_pred_prime"),
+            prime_not_prime_pow_two_le: kernel.name_str(nat, "prime_not_prime_pow_two_le"),
+            prime_not_prime_pow_ne_one: kernel.name_str(nat, "prime_not_prime_pow_ne_one"),
+            prime_eq_one_of_pow: kernel.name_str(nat, "prime_eq_one_of_pow"),
+            prime_not_coprime_iff_dvd: kernel.name_str(nat, "prime_not_coprime_iff_dvd"),
+            prime_mul_eq_prime_sq_iff: kernel.name_str(nat, "prime_mul_eq_prime_sq_iff"),
             prime_dvd_mul_of_dvd_ne: kernel.name_str(nat, "prime_dvd_mul_of_dvd_ne"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
@@ -5406,6 +5474,22 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_even_iff(&mut d, &p)?;
         declare_prime_not_dvd_mul(&mut d, &p)?;
         declare_prime_dvd_of_dvd_pow(&mut d, &p)?;
+        // `prime_char.rs`: the surviving "no prime is a proper power"
+        // family (`declare_prime_not_prime_pow_all`, needs only
+        // `pow_succ`/`pow_zero`/`one_pow`/`mul_left_cancel_of_pos`/
+        // `not_dvd_one_of_two_le`, all far above) and the `Coprime`/prime
+        // bridge (`declare_prime_not_coprime_iff_dvd`, needs
+        // `dvd_gcd`/`gcd_dvd_left`/`gcd_dvd_right`/`exists_prime_dvd`/
+        // `lt_or_ge`, all far above, and this file's own `prime_two`
+        // built from `ops::two_divisor_dichotomy`). The six numeric-bound
+        // facts, the parity facts, and `prime_eq_one_or_self_of_dvd` that
+        // used to live here now come from `prime_dvd_mirrors.rs`, declared
+        // far below (`declare_prime_dvd_mirrors_all`) -- see that call site
+        // for why it goes last, and see `declare_prime_mul_eq_prime_sq_iff`
+        // just after it for why THIS family's hardest fact has to wait for
+        // it too.
+        declare_prime_not_prime_pow_all(&mut d, &p)?;
+        declare_prime_not_coprime_iff_dvd(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;
@@ -5777,6 +5861,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `ne_of_lt`/`ne_symm` (`finite.rs`). Nothing needs it, so it goes
         // last.
         declare_prime_dvd_mirrors_all(&mut d, &p)?;
+        // `prime_char.rs`'s hardest fact needs `prime_eq_one_or_self_of_dvd`
+        // (`prime_dvd_mirrors.rs`, just above) plus `euclid_lemma`
+        // (`bezout.rs`, far above) and `pow_succ`/`pow_zero`/`mul_assoc`/
+        // `mul_left_cancel_of_pos` (all far above), so it goes here rather
+        // than beside `declare_prime_not_prime_pow_all`.
+        declare_prime_mul_eq_prime_sq_iff(&mut d, &p)?;
         Ok(p)
     })();
     match built {

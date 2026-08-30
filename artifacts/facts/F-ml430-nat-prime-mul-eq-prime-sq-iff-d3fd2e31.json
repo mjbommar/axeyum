@@ -8,10 +8,32 @@
     "statement": "∀ {x y p : ℕ}, Nat.Prime p → x ≠ 1 → y ≠ 1 → (x * y = p ^ 2 ↔ x = p ∧ y = p)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb", "F:nat-euclid-lemma", "F:nat-le-trans", "F:nat-mul-assoc", "F:nat-mul-comm", "F:nat-mul-left-cancel-of-pos", "F:nat-mul-one", "F:nat-one-mul", "F:nat-pow-succ", "F:nat-pow-zero", "F:ml430-nat-prime-dvd-or-dvd-4ae88221"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_mul_eq_prime_sq_iff 2>/dev/null | /usr/bin/grep -Ec '^Nat\\.prime_mul_eq_prime_sq_iff[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.prime_mul_eq_prime_sq_iff",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.prime_mul_eq_prime_sq_iff` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against a fabricated name), and the anchored `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Primality is spelled inline (`2 ≤ p ∧ ∀ c, c ∣ p → c = 1 ∨ c = p`, matching `prime_even_iff`/`euclid_lemma`'s own convention) rather than through a named `Nat.Prime` predicate, since this prelude has none -- this repository's established precedent for flipping a Mathlib `Nat.Prime` mirror. The proof itself is constructive: `x*y = p^2 = p*p` gives `p | x*y` (witness `p`), `euclid_lemma` splits into `p|x` or `p|y`, and each branch's divisor witness `k` (from `a = p*k`) satisfies `k*b = p` (`mul_assoc` + `mul_left_cancel_of_pos`), so `k`'s own primality clause forces `k=1` (giving both factors equal `p`) or `k=p` (forcing the OTHER factor to `1`, contradicting the corresponding `x != 1`/`y != 1` hypothesis).",
+      "supports": "∀ {x y p : ℕ}, Nat.Prime p → x ≠ 1 → y ≠ 1 → (x * y = p ^ 2 ↔ x = p ∧ y = p)"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.prime_mul_eq_prime_sq_iff",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +48,6 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_prime_mul_eq_prime_sq_iff` (`nat_prelude/prime_char.rs`), which shares its case analysis with the new private helper `prime_sq_factor_case`: given the divisor clause names one factor `a` (witness `k` from `a = p*k`), substituting into `a*b = p*p` gives `k*b = p` (`mul_assoc` + `mul_left_cancel_of_pos`, using `p`'s own lower bound for positivity), and `k`'s primality clause (`prime_eq_one_or_self_of_dvd`) forces `k=1` (so `a=p` and, from `k*b=p`, `b=p`) or `k=p` (so `b=1` via the same cancellation, contradicting the caller's `Not (Eq b one)` hypothesis). The `p | y` branch of `euclid_lemma`'s split calls the same helper with `x`/`y` swapped (rebuilding the governing equation via `mul_comm`) and swaps the resulting `And` back. `mpr` substitutes `x=p`/`y=p` into `p*p=p^2` (`pow_succ`/`pow_zero`/`one_mul` chained, the same route `divisibility.rs`'s `valuation_at_two_mul_sq` already uses for `p^2 = p*p`). formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority. Mathlib's `Nat.Prime.mul_eq_prime_sq_iff` is prior art for the statement only; no Mathlib proof term or tactic trace was consulted."
 }
