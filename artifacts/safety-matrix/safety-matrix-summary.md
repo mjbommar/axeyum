@@ -19,7 +19,7 @@ checker.
 | `circularity` | 14 / 2121 | 0.7% |
 | `semantic_falsification` | 95 / 2121 | 4.5% | **UPPER BOUND — 8 demonstrated.** Counts facts whose evidence names a semantic control, not facts whose control was shown to discriminate.
 | `mutation_control` | 15 / 2121 | 0.7% |
-| `independent_replay` | 8 / 2121 | 0.4% |
+| `independent_replay` | 7 / 2121 | 0.3% |
 | `coverage_bearing_checker` | 1443 / 2121 | 68.0% |
 
 ## Centrally-enforced coverage (NOT the same measurement)
@@ -61,8 +61,8 @@ discriminate. Measured 2026-08-30: evidence 95, demonstrated 8.
 
 | protections held | facts |
 |---:|---:|
-| 0 | 104 |
-| 1 | 543 |
+| 0 | 105 |
+| 1 | 542 |
 | 2 | 33 |
 | 3 | 1418 |
 | 4 | 14 |
@@ -70,11 +70,11 @@ discriminate. Measured 2026-08-30: evidence 95, demonstrated 8.
 
 ## Checker fan-out
 
-2293 distinct `checker_command`s cover 2121 proved facts.
+2292 distinct `checker_command`s cover 2121 proved facts.
 
 | facts sharing one command | commands |
 |---:|---:|
-| 1 | 2230 |
+| 1 | 2229 |
 | 2 | 17 |
 | 3 | 6 |
 | 4 | 10 |
@@ -125,7 +125,7 @@ Largest fan-outs:
   reliable in general") were trusted. That gap is the size of the
   ledger's unbound-subject debt, not a protection.
 - 0 / 2121 have no `formal.statement` drift pin.
-- 2113 / 2121 have no independent Lean replay.
+- 2114 / 2121 have no independent Lean replay.
 - 2026 / 2121 carry no semantic-falsification evidence row.
 - 2106 / 2121 name no mutation or negative control.
 - 2062 / 2121 have no PER-THEOREM axiom footprint check; their footprint evidence is the prelude-wide sweep.

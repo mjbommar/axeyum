@@ -1768,7 +1768,7 @@ F:not-not-imp	kernel-lean	generated-unreviewed	lean4	not_not_imp	2	2	1	8	yes	no	
 F:not-not-not-intro	kernel-lean	generated-unreviewed	lean4	not_not_not_intro	2	2	1	8	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
 F:nra-refutations-reconstruct-over-constructed-reals	kernel-lean	-	smtlib2	-	2	2	1	1	no	no	no	no	no	no	no	no	0	yes	-	no	no	no
 F:or-resolve-right	kernel-lean	generated-unreviewed	lean4	Or.resolve_right	2	2	1	8	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
-F:ordered-ring-farkas-refutation	kernel-lean	-	lean4	-	4	4	1	1	no	no	no	no	no	no	yes	no	1	yes	-	no	yes	no
+F:ordered-ring-farkas-refutation	kernel-lean	-	lean4	-	3	3	1	1	no	no	no	no	no	no	no	no	0	yes	-	no	yes	no
 F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers	kernel-lean	-	lean4	-	3	3	1	1	no	no	no	no	no	no	no	no	0	yes	-	no	no	no
 F:orders-candidate-keys-and-normal-forms	search-certificate	-	smtlib2	-	3	3	1	4	no	no	no	no	yes	yes	no	no	2	yes	-	no	yes	no
 F:orders-fd-implication-certified	search-certificate	-	smtlib2	-	3	3	1	4	no	no	no	no	yes	yes	no	no	2	yes	-	no	yes	no
