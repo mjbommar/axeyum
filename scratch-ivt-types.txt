@@ -1,0 +1,296 @@
+FILES: 27
+==============================================================================
+ID: F:creal-ivt-approx
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_approx : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x4 : CReal.le x1 x2) -> ((x5 : CReal.le (x0 x1) CReal.zero) -> ((x6 : CReal.le CReal.zero (x0 x2)) -> ((x7 : AxNat) -> Exists.{1} CReal (fun (x8 : CReal) => And (CReal.le x1 x8) (And (CReal.le x8 x2) (CReal.le (CReal.abs (x0 x8)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x7)))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_approx 2>/dev/null | grep -cE '^CReal\.ivt_approx[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-bisect-approx
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_bisect_approx : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x4 : CReal.le x1 x2) -> ((x5 : CReal.le (x0 x1) CReal.zero) -> ((x6 : CReal.le CReal.zero (x0 x2)) -> ((x7 : AxNat) -> And (CReal.le x1 (CReal.ivt_bisect_hi x0 x1 x2 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x7)) (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x3 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x7)))) (CReal.bound (CReal.add x2 (CReal.neg x1)))))) (And (CReal.le (CReal.ivt_bisect_hi x0 x1 x2 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x7)) (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x3 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x7)))) (CReal.bound (CReal.add x2 (CReal.neg x1))))) x2) (CReal.le (CReal.abs (x0 (CReal.ivt_bisect_hi x0 x1 x2 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x7)) (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x3 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x7)))) (CReal.bound (CReal.add x2 (CReal.neg x1))))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x7))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_bisect_approx 2>/dev/null | grep -cE '^CReal\.ivt_bisect_approx[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-bisect-cauchy-bound
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_bisect_cauchy_bound : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.HasDerivativeOn x0 x1 x2 x3) -> ((x5 : CReal.UniformlyContinuousOn x0 x2 x3) -> ((x6 : CReal.le x2 x3) -> ((x7 : CReal.le (x0 x2) CReal.zero) -> ((x8 : CReal.le CReal.zero (x0 x3)) -> ((x9 : AxNat) -> ((x10 : ((x10 : CReal) -> ((x11 : CReal.le x2 x10) -> ((x12 : CReal.le x10 x3) -> CReal.le (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x9)) (x1 x10))))) -> ((x11 : AxNat) -> ((x12 : AxNat) -> CReal.le (CReal.abs (CReal.add (CReal.ivt_bisect_hi x0 x2 x3 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x11)) (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x3 (CReal.neg x2)))) (CReal.UniformlyContinuousOn.modulus x0 x2 x3 x5 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x11)))) (CReal.bound (CReal.add x3 (CReal.neg x2))))) (CReal.neg (CReal.ivt_bisect_hi x0 x2 x3 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x12)) (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x3 (CReal.neg x2)))) (CReal.UniformlyContinuousOn.modulus x0 x2 x3 x5 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x12)))) (CReal.bound (CReal.add x3 (CReal.neg x2)))))))) (CReal.ofRat (Rat.add (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x9))) x11) (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x9))) x12))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_bisect_cauchy_bound 2>/dev/null | grep -cE '^CReal\.ivt_bisect_cauchy_bound[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-bisect-cauchy
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_bisect_cauchy : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.HasDerivativeOn x0 x1 x2 x3) -> ((x5 : CReal.UniformlyContinuousOn x0 x2 x3) -> ((x6 : CReal.le x2 x3) -> ((x7 : CReal.le (x0 x2) CReal.zero) -> ((x8 : CReal.le CReal.zero (x0 x3)) -> ((x9 : AxNat) -> ((x10 : ((x10 : CReal) -> ((x11 : CReal.le x2 x10) -> ((x12 : CReal.le x10 x3) -> CReal.le (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x9)) (x1 x10))))) -> CReal.Cauchy (fun (x11 : AxNat) => CReal.ivt_bisect_hi x0 x2 x3 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x11)) (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x3 (CReal.neg x2)))) (CReal.UniformlyContinuousOn.modulus x0 x2 x3 x5 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x11)))) (CReal.bound (CReal.add x3 (CReal.neg x2))))))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_bisect_cauchy 2>/dev/null | grep -cE '^CReal\.ivt_bisect_cauchy[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-bisect-invariant
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_bisect_invariant : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> ((x4 : CReal.le x1 x2) -> ((x5 : CReal.le (x0 x1) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3))) -> ((x6 : CReal.le (CReal.neg (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3))) (x0 x2)) -> ((x7 : AxNat) -> And (CReal.le x1 (CReal.ivt_bisect_lo x0 x1 x2 x3 x7)) (And (CReal.le (CReal.ivt_bisect_lo x0 x1 x2 x3 x7) (CReal.ivt_bisect_hi x0 x1 x2 x3 x7)) (And (CReal.le (CReal.ivt_bisect_hi x0 x1 x2 x3 x7) x2) (And (CReal.le (x0 (CReal.ivt_bisect_lo x0 x1 x2 x3 x7)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3))) (And (CReal.le (CReal.neg (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3))) (x0 (CReal.ivt_bisect_hi x0 x1 x2 x3 x7))) (CReal.Equiv (CReal.add (CReal.ivt_bisect_hi x0 x1 x2 x3 x7) (CReal.neg (CReal.ivt_bisect_lo x0 x1 x2 x3 x7))) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.pow (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) x7)))))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_bisect_invariant 2>/dev/null | grep -cE '^CReal\.ivt_bisect_invariant[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-exact-root-at
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_exact_root_at : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.HasDerivativeOn x0 x1 x2 x3) -> ((x5 : CReal.UniformlyContinuousOn x0 x2 x3) -> ((x6 : CReal.le x2 x3) -> ((x7 : CReal) -> ((x8 : CReal.le (x0 x2) x7) -> ((x9 : CReal.le x7 (x0 x3)) -> ((x10 : AxNat) -> ((x11 : ((x11 : CReal) -> ((x12 : CReal.le x2 x11) -> ((x13 : CReal.le x11 x3) -> CReal.le (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x10)) (x1 x11))))) -> Exists.{1} CReal (fun (x12 : CReal) => And (CReal.le x2 x12) (And (CReal.le x12 x3) (CReal.Equiv (x0 x12) x7)))))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_exact_root_at 2>/dev/null | grep -cE '^CReal\.ivt_exact_root_at[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-exact-root-decides-sign
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_exact_root_decides_sign : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le CReal.zero x1) -> ((x3 : CReal.le x1 CReal.one) -> ((x4 : CReal.Equiv (CReal.min x1 (CReal.max (CReal.add x1 (CReal.neg CReal.one)) x0)) CReal.zero) -> Or (CReal.le x0 CReal.zero) (CReal.le CReal.zero x0))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_exact_root_decides_sign 2>/dev/null | /usr/bin/grep -cE '^CReal\.ivt_exact_root_decides_sign[[:space:]]'
+  EV kind=kernel-term checked=None
+     cmd: test "$(cargo run -q --release -p axeyum-lean-kernel --example prelude_theorem_inventory -- --include-constructed 2>/dev/null | /usr/bin/grep -cE '^creal[[:space:]]CReal\.ivtPlateau_(nonpos_at_zero|nonneg_at_one|uniformly_continuous)[[:space:]]0[[:space:]]*$')" = 3
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib creal::creal_tests::ivt_row_two_derives_a_principle_absent_from_the_environment -- --exact
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-exact-root
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_exact_root : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.HasDerivativeOn x0 x1 x2 x3) -> ((x5 : CReal.UniformlyContinuousOn x0 x2 x3) -> ((x6 : CReal.le x2 x3) -> ((x7 : CReal.le (x0 x2) CReal.zero) -> ((x8 : CReal.le CReal.zero (x0 x3)) -> ((x9 : AxNat) -> ((x10 : ((x10 : CReal) -> ((x11 : CReal.le x2 x10) -> ((x12 : CReal.le x10 x3) -> CReal.le (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x9)) (x1 x10))))) -> Exists.{1} CReal (fun (x11 : CReal) => And (CReal.le x2 x11) (And (CReal.le x11 x3) (CReal.Equiv (x0 x11) CReal.zero))))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_exact_root 2>/dev/null | grep -cE '^CReal\.ivt_exact_root[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-iter
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_iter : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.lt CReal.zero x3) -> ((x5 : CReal.le x1 x2) -> ((x6 : CReal.le (x0 x1) x3) -> ((x7 : CReal.le (CReal.neg x3) (x0 x2)) -> ((x8 : AxNat) -> Exists.{1} CReal (fun (x9 : CReal) => Exists.{1} CReal (fun (x10 : CReal) => And (CReal.le x1 x9) (And (CReal.le x9 x10) (And (CReal.le x10 x2) (And (CReal.le (x0 x9) x3) (And (CReal.le (CReal.neg x3) (x0 x10)) (CReal.Equiv (CReal.add x10 (CReal.neg x9)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.pow (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) x8))))))))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_iter 2>/dev/null | grep -cE '^CReal\.ivt_iter[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-ivt-step
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.ivt_step : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.lt CReal.zero x3) -> ((x5 : CReal.le x1 x2) -> ((x6 : CReal.le (x0 x1) x3) -> ((x7 : CReal.le (CReal.neg x3) (x0 x2)) -> Exists.{1} CReal (fun (x8 : CReal) => Exists.{1} CReal (fun (x9 : CReal) => And (CReal.le x1 x8) (And (CReal.le x8 x9) (And (CReal.le x9 x2) (And (CReal.le (x0 x8) x3) (And (CReal.le (CReal.neg x3) (x0 x9)) (CReal.Equiv (CReal.add x9 (CReal.neg x8)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)))))))))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.ivt_step 2>/dev/null | grep -cE '^CReal\.ivt_step[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-evt-attained-max-decides-sign
+  epistemic: proved | external: None
+  curation: generated-unreviewed | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.evt_attained_max_decides_sign : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le CReal.zero x1) -> ((x3 : CReal.le x1 CReal.one) -> ((x4 : ((x4 : CReal) -> ((x5 : CReal.le CReal.zero x4) -> ((x6 : CReal.le x4 CReal.one) -> CReal.le (CReal.mul x4 x0) (CReal.mul x1 x0))))) -> Or (CReal.le x0 CReal.zero) (CReal.le CReal.zero x0))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.evt_attained_max_decides_sign 2>/dev/null | grep -cE '^CReal\.evt_attained_max_decides_sign[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossingclose
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : Rat) -> ((x5 : AxNat) -> ((x6 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x7 : Rat.lt Rat.zero x4) -> ((x8 : CReal.le x1 x3) -> ((x9 : CReal.le x3 x2) -> ((x10 : CReal.le x1 (CReal.add x1 (CReal.mul (CReal.ofNat (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x4)) (CReal.add x3 (CReal.neg x1))) AxNat.zero)) (CReal.ofRat x4)))) -> ((x11 : CReal.le (CReal.add x1 (CReal.mul (CReal.ofNat (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x4)) (CReal.add x3 (CReal.neg x1))) AxNat.zero)) (CReal.ofRat x4))) x2) -> ((x12 : CReal.le (CReal.add (CReal.ofRat x4) (CReal.mul (CReal.ofRat x4) (CReal.ofRat (Rat.natDivSucc (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x6 x5)))) -> ((x13 : CReal.le (CReal.neg (CReal.mul (CReal.ofRat x4) (CReal.ofRat (Rat.neg (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x6 x5)))) -> CReal.le (CReal.abs (CReal.add (x0 x3) (CReal.neg (x0 (CReal.add x1 (CReal.mul (CReal.ofNat (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x4)) (CReal.add x3 (CReal.neg x1))) AxNat.zero)) (CReal.ofRat x4))))))) (CReal.ofRat (Rat.natDivSucc (AxNat.
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.crossingClose 2>/dev/null | grep -cE '^CReal\.crossingClose[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossingcloseclamped
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.crossingCloseClamped : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : Rat) -> ((x5 : AxNat) -> ((x6 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x7 : Rat.lt Rat.zero x4) -> ((x8 : CReal.le x1 x3) -> ((x9 : CReal.le x3 x2) -> ((x10 : CReal.le (CReal.add (CReal.ofRat x4) (CReal.mul (CReal.ofRat x4) (CReal.ofRat (Rat.natDivSucc (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x6 x5)))) -> ((x11 : CReal.le (CReal.neg (CReal.mul (CReal.ofRat x4) (CReal.ofRat (Rat.neg (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x6 x5)))) -> CReal.le (CReal.abs (CReal.add (x0 x3) (CReal.neg (x0 (CReal.min (CReal.add x1 (CReal.mul (CReal.ofNat (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x4)) (CReal.add x3 (CReal.neg x1))) AxNat.zero)) (CReal.ofRat x4))) x2))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5))))))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- crossingCloseClamped 2>/dev/null | grep -cE '^CReal\.crossingCloseClamped[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossingindex
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: def CReal.crossingIndex : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> AxNat)))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.crossingIndex --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\.crossingIndex[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossinglower
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.crossingLower : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> ((x3 : Rat.lt Rat.zero x2) -> ((x4 : CReal.le x0 x1) -> CReal.le (CReal.add x0 (CReal.mul (CReal.ofRat x2) (CReal.ofRat (Rat.add (Rat.natDivSucc (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x2)) (CReal.add x1 (CReal.neg x0))) AxNat.zero) AxNat.zero) (Rat.neg (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)))))))) x1)))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.crossingLower 2>/dev/null | grep -cE '^CReal\.crossingLower[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossingsamplegea
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.crossingSampleGeA : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> ((x3 : Rat.lt Rat.zero x2) -> CReal.le x0 (CReal.add x0 (CReal.mul (CReal.ofNat (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x2)) (CReal.add x1 (CReal.neg x0))) AxNat.zero)) (CReal.ofRat x2)))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- crossingSampleGeA 2>/dev/null | grep -cE '^CReal\.crossingSampleGeA[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossingsamplelower
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.crossingSampleLower : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> ((x3 : Rat.lt Rat.zero x2) -> ((x4 : CReal.le x0 x1) -> CReal.le (CReal.add (CReal.add x0 (CReal.mul (CReal.ofNat (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x2)) (CReal.add x1 (CReal.neg x0))) AxNat.zero)) (CReal.ofRat x2))) (CReal.mul (CReal.ofRat x2) (CReal.ofRat (Rat.neg (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))))))) x1)))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.crossingSampleLower 2>/dev/null | grep -cE '^CReal\.crossingSampleLower[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossingsampleupper
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.crossingSampleUpper : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> ((x3 : Rat.lt Rat.zero x2) -> CReal.le x1 (CReal.add (CReal.add x0 (CReal.mul (CReal.ofNat (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x2)) (CReal.add x1 (CReal.neg x0))) AxNat.zero)) (CReal.ofRat x2))) (CReal.add (CReal.ofRat x2) (CReal.mul (CReal.ofRat x2) (CReal.ofRat (Rat.natDivSucc (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.crossingSampleUpper 2>/dev/null | grep -cE '^CReal\.crossingSampleUpper[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:creal-crossingupper
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: []
+  formal.kind: None | lang: lean4 | name: None
+  TYPE: theorem CReal.crossingUpper : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> ((x3 : Rat.lt Rat.zero x2) -> CReal.le x1 (CReal.add x0 (CReal.mul (CReal.ofRat x2) (CReal.ofRat (Rat.add (Rat.natDivSucc (AxNat.succ (CReal.bucketIndex (CReal.mul (CReal.ofRat (Rat.inv x2)) (CReal.add x1 (CReal.neg x0))) AxNat.zero)) AxNat.zero) (Rat.natDivSucc (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.mul (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)))))))))))
+  EV kind=kernel-term checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.crossingUpper 2>/dev/null | grep -cE '^CReal\.crossingUpper[[:space:]]'
+  EV kind=exhaustive-enumeration checked=None
+     cmd: cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal
+==============================================================================
+ID: F:cas-ivt-cbrt2-in-1-2
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ['cas.exact-rational-polynomial-normal-form', 'cas.sturm-sequence-real-root-isolation-and-counting', 'cas.ivt-certificate-not-kernel-reconstructed']
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (- (^ x 3) 2)) (assert (< (poly-eval p 1) 0)) (assert (> (poly-eval p 2) 0)) (assert (exists ((r Real))   (and (< 1 r) (< r 2) (= (poly-eval p r) 0)        (forall ((s Real))          (=> (and (< 1 s) (< s 2) (= (poly-eval p s) 0))              (= s r))))))
+  EV kind=witness-replay checked=None
+     cmd: cargo test -p axeyum-cas --lib real_algebraic::tests::ivt_names_the_root_of_a_cubic -- --exact 2>/dev/null | grep -cE '^test real_algebraic::tests::ivt_names_the_root_of_a_cubic \.\.\. ok$'
+==============================================================================
+ID: F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ["cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval, built from the same rat_prelude/int_prelude/nat_prelude constants F:cas-ivt-sign-bracket-cbrt2-kernel-checked enumerates (all measured axiom-free), but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.", "cas.ivt-certificate-root-containment-and-sturm-count-not-claimed-here: this fact states ONLY the sign bracket. Root containment (exact division of p by cert.root's minimal polynomial) and the Sturm uniqueness count are NOT reconstructed by this fact's evidence and remain cas-internal, checked only by real_algebraic::verify_ivt_certificate."]
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (- (^ x 4) 2)) (assert (< (poly-eval p 1) 0)) (assert (> (poly-eval p 2) 0))
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked \.\.\. ok$'
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked \.\.\. ok$'
+==============================================================================
+ID: F:cas-ivt-sign-bracket-cbrt2-kernel-checked
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ["cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval whose proof consults no Axiom/Opaque/Quotient declaration (every constant it calls -- Rat.pow_zero/pow_succ, Rat.ofInt_add/ofInt_mul, Nat.le.refl/le.step, Int.lt's own definitional negSucc/ofNat case, True.intro -- traces to rat_prelude/int_prelude/nat_prelude, all measured axiom-free by rat_prelude_is_axiom_free), but ADR-0601 SS2's classify_cas_certificate_fact / AXIOM_FREE_CAPABLE reserves the headline axiom-free TALLY to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support even though the underlying kernel derivation genuinely has no axioms.", "cas.ivt-certificate-root-containment-and-sturm-count-not-claimed-here: this fact states ONLY the sign bracket (item 1 of the three-part IvtCertificate in F:cas-ivt-cbrt2-in-1-2's notes) -- root containment (item 2, exact division of p by cert.root's minimal polynomial) and the Sturm uniqueness count (item 3) are NOT reconstructed by this fact's evidence and remain cas-internal, checked only by real_algebraic::verify_ivt_certificate."]
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (- (^ x 3) 2)) (assert (< (poly-eval p 1) 0)) (assert (> (poly-eval p 2) 0))
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked \.\.\. ok$'
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked \.\.\. ok$'
+==============================================================================
+ID: F:cas-evt-endpoint-exclusion-cubic-kernel-checked
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ["cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval, built from the same rat_prelude/int_prelude/nat_prelude constants the IVT sign-bracket bridge (F:cas-ivt-sign-bracket-cbrt2-kernel-checked) enumerates (all measured axiom-free), but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.", "cas.extremum-certificate-root-differentiation-and-sturm-count-not-claimed-here: this fact states ONLY that x=-1 beats both endpoints. It does not reconstruct p' = 3x^2-6, does not reconstruct that -sqrt(2) is a root of p', and does not reconstruct the Sturm count establishing completeness of critical_points -- all remain cas-internal, checked only by extremum::verify_extremum_certificate (see F:cas-extremum-irrational-argmax's own evidence notes)."]
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (- (^ x 3) (* 6 x))) (assert (> (poly-eval p -1) (poly-eval p -3))) (assert (> (poly-eval p -1) (poly-eval p 2)))
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_evt_bridge_tests::tests::evt_endpoint_exclusion_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_evt_bridge_tests::tests::evt_endpoint_exclusion_kernel_checked \.\.\. ok$'
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_evt_bridge_tests::tests::evt_endpoint_exclusion_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_evt_bridge_tests::tests::evt_endpoint_exclusion_kernel_checked \.\.\. ok$'
+==============================================================================
+ID: F:cas-extremum-deriv-sign-bracket-kernel-checked
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ["cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval, built from the same rat_prelude/int_prelude/nat_prelude constants the IVT sign-bracket bridge (F:cas-ivt-sign-bracket-cbrt2-kernel-checked) and the EVT endpoint-exclusion bridge (F:cas-evt-endpoint-exclusion-cubic-kernel-checked) both enumerate (all measured axiom-free), but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.", "cas.extremum-certificate-differentiation-completeness-and-sturm-count-not-claimed-here: this fact states ONLY that p'(-2) > 0 and p'(-1) < 0 for the CAS's OWN cert.deriv value. It does not reconstruct differentiation as a general kernel operation (a hand-differentiated polynomial is never built; cert.deriv is taken as given and merely translated), does not reconstruct that critical_points is the COMPLETE interior root set of p' (only that a sign change exists in ONE named bracket), does not claim the resulting root equals -sqrt(2) or is irrational, and does not touch the OTHER root of p' (sqrt(2)). All remain cas-internal, checked only by extremum::verify_extremum_certificate (see F:cas-extremum-irrational-argmax's own evidence notes).", "cas.ivt-implication-itself-not-reconstructed: a sign change of p' on (-2,-1) implies, by the intermediate value theorem, that p' has a root (hence p has a critical point) there -- but that IMPLICATION step is not admitted through this kernel, only the two inequalities it would need, mirroring cas_ivt_bridge_tests.rs's own discipline for the analogous IVT sign bracket."]
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (- (^ x 3) (* 6 x))) (define-poly dp (- (* 3 (^ x 2)) 6)) (assert (> (poly-eval dp -2) 0)) (assert (< (poly-eval dp -1) 0))
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked \.\.\. ok$'
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_extremum_deriv_bridge_tests::tests::extremum_deriv_sign_bracket_kernel_checked \.\.\. ok$'
+==============================================================================
+ID: F:cas-extremum-irrational-argmax
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ['cas.exact-rational-polynomial-normal-form', 'cas.sturm-sequence-real-root-isolation-and-counting', 'cas.completeness-argument-every-real-root-of-p-prime-is-isolated-not-merely-some', 'cas.extremum-certificate-not-kernel-reconstructed']
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (- (^ x 3) (* 6 x))) (assert (exists ((c Real))   (and (<= -3 c) (<= c 2)        (forall ((z Real)) (=> (and (<= -3 z) (<= z 2)) (<= (poly-eval p z) (poly-eval p c))))))) ; the certificate additionally names c = -sqrt(2) exactly (minimal polynomial x^2 - 2) ; as the unique interior argmax, rather than merely asserting existence.
+  EV kind=witness-replay checked=None
+     cmd: cargo test -p axeyum-cas --lib extremum::tests::irrational_argmax -- --exact 2>/dev/null | grep -cE '^test extremum::tests::irrational_argmax \.\.\. ok$'
+==============================================================================
+ID: F:cas-mvt-cubic-witness-sqrt3
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ['cas.exact-rational-polynomial-normal-form', 'cas.sturm-sequence-real-root-isolation-and-counting', 'cas.reuses-extremum-completeness-argument-for-existence-not-just-verification', 'cas.mvt-certificate-not-kernel-reconstructed']
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (^ x 3)) (assert (exists ((c Real))   (and (< 0 c) (< c 3)        (= (deriv p c) (/ (- (poly-eval p 3) (poly-eval p 0)) (- 3 0)))))) ; the certificate additionally names c = sqrt(3) exactly (minimal polynomial x^2 - 3) ; rather than merely asserting existence.
+  EV kind=witness-replay checked=None
+     cmd: cargo test -p axeyum-cas --lib mvt::tests::cubic_irrational_witness_x_cubed_on_0_3 -- --exact 2>/dev/null | grep -cE '^test mvt::tests::cubic_irrational_witness_x_cubed_on_0_3 \.\.\. ok$'
+==============================================================================
+ID: F:cas-mvt-secant-endpoints-kernel-checked
+  epistemic: proved | external: proved
+  curation: None | producer: None
+  axioms: ["cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval, built from the same rat_prelude/int_prelude/nat_prelude constants the IVT/EVT sign-bracket bridges enumerate (all measured axiom-free), but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.", "cas.mvt-certificate-slope-arithmetic-rolle-and-witness-not-claimed-here: this fact states ONLY the two endpoint evaluations p(3)=27 and p(0)=0. It does not reconstruct the division (27-0)/(3-0)=9 that produces the slope, does not reconstruct the Rolle reduction g/g', and does not reconstruct the witness c=sqrt(3) or its Sturm-isolated bracket -- all remain cas-internal, checked only by mvt::verify_mvt_certificate (see F:cas-mvt-cubic-witness-sqrt3's own evidence notes)."]
+  formal.kind: None | lang: cas-term | name: None
+  TYPE: (define-poly p (^ x 3)) (assert (= (poly-eval p 3) 27)) (assert (= (poly-eval p 0) 0))
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_mvt_secant_bridge_tests::tests::mvt_secant_endpoints_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_mvt_secant_bridge_tests::tests::mvt_secant_endpoints_kernel_checked \.\.\. ok$'
+  EV kind=kernel-term checked=None
+     cmd: cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_mvt_secant_bridge_tests::tests::mvt_secant_endpoints_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_mvt_secant_bridge_tests::tests::mvt_secant_endpoints_kernel_checked \.\.\. ok$'
