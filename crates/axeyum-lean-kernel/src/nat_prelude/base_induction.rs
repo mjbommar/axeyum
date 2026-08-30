@@ -101,7 +101,10 @@ fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprI
 ///
 /// Returns the kernel's rejection if the generated declaration does not
 /// type-check or the name is already taken.
-pub(super) fn declare_base_induction(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_base_induction(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
     let prop = d.kernel().sort_zero();
@@ -239,8 +242,12 @@ pub(super) fn declare_base_induction(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
                 let zero_rv = d.add(zero, rv);
                 let zero_add_rv = d.lemma(p.zero_add, &[rv]); // Eq (add zero rv) rv
                 let (_, v_eq_rv) = d.chain(v_var, &[(zero_rv, e), (rv, zero_add_rv)]);
-                let v_lt_b_motive = d.eq_motive(v_var, &|d, x| d.lt(x, b_var));
-                let v_lt_b = d.transport(v_var, v_lt_b_motive, bound, rv, v_eq_rv);
+                // bound : Lt rv b. Transport from `rv` to `v` (NOT the other
+                // way -- `bound`'s actual type is `motive(rv)`, so `rv` is
+                // the transport SOURCE and `v` the target, via `Eq rv v`).
+                let v_lt_b_motive = d.eq_motive(rv, &|d, x| d.lt(x, b_var));
+                let symm_v_eq_rv = d.symm(v_var, rv, v_eq_rv); // Eq rv v
+                let v_lt_b = d.transport(rv, v_lt_b_motive, bound, v_var, symm_v_eq_rv);
                 // Contradiction: Le b v (ge_var) and Lt v b (v_lt_b).
                 let b_lt_b = d.lemma(p.lt_of_le_of_lt, &[b_var, v_var, b_var, ge_var, v_lt_b]);
                 let irrefl = d.lemma(p.lt_irrefl, &[b_var]);
@@ -271,14 +278,21 @@ pub(super) fn declare_base_induction(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
                 let mul_qv_2 = d.mul(qv, two);
                 let symm_bridge = d.symm(mul_qv_2, qv_qv, bridge);
                 let lt_qv_mulqv2_motive = d.eq_motive(qv_qv, &|d, x| d.lt(qv, x));
-                let lt_qv_mulqv2 =
-                    d.transport(qv_qv, lt_qv_mulqv2_motive, le_succ_step, mul_qv_2, symm_bridge);
+                let lt_qv_mulqv2 = d.transport(
+                    qv_qv,
+                    lt_qv_mulqv2_motive,
+                    le_succ_step,
+                    mul_qv_2,
+                    symm_bridge,
+                );
 
                 // mul qv 2 <= mul qv b (hb : Lt one b, defeq Le two b).
                 let a_bound = d.lemma(p.mul_le_mul_left, &[qv, two, b_var, hb_var]);
                 let mul_qv_b = d.mul(qv, b_var);
-                let lt_qv_mulqvb =
-                    d.lemma(p.lt_of_lt_of_le, &[qv, mul_qv_2, mul_qv_b, lt_qv_mulqv2, a_bound]);
+                let lt_qv_mulqvb = d.lemma(
+                    p.lt_of_lt_of_le,
+                    &[qv, mul_qv_2, mul_qv_b, lt_qv_mulqv2, a_bound],
+                );
 
                 // mul qv b = mul b qv (mul_comm), so qv < mul b qv.
                 let comm_qvb = d.lemma(p.mul_comm, &[qv, b_var]);
@@ -295,8 +309,10 @@ pub(super) fn declare_base_induction(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
                 let le_mulbq_v =
                     d.transport(sum_bq_rv, le_mulbq_v_motive, le_mulbq_sum, v_var, symm_e);
 
-                let qv_lt_v =
-                    d.lemma(p.lt_of_lt_of_le, &[qv, mul_bq, v_var, lt_qv_mulbq, le_mulbq_v]);
+                let qv_lt_v = d.lemma(
+                    p.lt_of_lt_of_le,
+                    &[qv, mul_bq, v_var, lt_qv_mulbq, le_mulbq_v],
+                );
 
                 let ih_at_qv = d.apply(ih_var, &[qv, qv_lt_v]); // P qv
                 let digit_applied = d.apply(digit_var, &[qv, rv, bound, pos_qv, ih_at_qv]);
@@ -315,7 +331,10 @@ pub(super) fn declare_base_induction(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
         let or_ty = d.const_app(p.logic.or, &[lt_ty, ge_ty]);
         let goal_motive = d.kernel().lam(anon, or_ty, concl_v, BinderInfo::Default);
         let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
-        let body = d.apply(or_rec, &[lt_ty, ge_ty, goal_motive, minor_lt, minor_ge, dichotomy]);
+        let body = d.apply(
+            or_rec,
+            &[lt_ty, ge_ty, goal_motive, minor_lt, minor_ge, dichotomy],
+        );
         let with_ih = d.lam_fv(ih_fv, recursive_v, body);
         d.lam_fv(v_fv, nat, with_ih)
     };
@@ -324,7 +343,9 @@ pub(super) fn declare_base_induction(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
     let zero_level = d.kernel().level_zero();
     let relation = d.kernel().const_(p.lt, vec![]);
     let well_founded = d.kernel().const_(p.lt_well_founded, vec![]);
-    let fix = d.kernel().const_(p.logic.well_founded_fix, vec![one_level, zero_level]);
+    let fix = d
+        .kernel()
+        .const_(p.logic.well_founded_fix, vec![one_level, zero_level]);
     let proof_of_p_n = d.apply(fix, &[nat, relation, p_var, well_founded, step, n_var]);
 
     let value = {
