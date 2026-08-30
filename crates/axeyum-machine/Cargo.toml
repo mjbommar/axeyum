@@ -1,0 +1,15 @@
+[package]
+name = "axeyum-machine"
+description = "Executable instruction-set semantics and evidence routes for Axeyum"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[lints]
+workspace = true

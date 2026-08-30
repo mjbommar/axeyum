@@ -1,0 +1,410 @@
+#![allow(missing_docs)]
+
+use axeyum_machine::a0::{
+    A0Error, Conditions, Instruction, Memory, Outcome, Program, State, StopReason, Trap, Word,
+    decode, run, step,
+};
+
+fn word(width: u8, value: u64) -> Word {
+    Word::new(width, value).unwrap()
+}
+fn program(bytes: Vec<u8>) -> Program {
+    Program::new(8, word(8, 0), bytes).unwrap()
+}
+fn state(memory: usize) -> State {
+    State::new(8, Memory::zeroed(memory), word(8, 0)).unwrap()
+}
+
+#[test]
+fn word_roundtrip_and_signed_reading() {
+    let value = word(16, 0x80ff);
+    assert_eq!(value.little_endian_bytes(), [0xff, 0x80]);
+    assert_eq!(Word::from_little_endian(&[0xff, 0x80]).unwrap(), value);
+    assert_eq!(value.signed(), -32_513);
+    assert_eq!(word(8, 0x1ff).unsigned(), 0xff);
+    assert_eq!(Word::new(7, 0), Err(A0Error::InvalidWordWidth(7)));
+}
+
+#[test]
+fn decoder_rejects_reserved_and_unused_fields() {
+    assert_eq!(
+        decode([0x10, 0x0a, 0x03, 0]),
+        Ok(Instruction::Add {
+            rd: 2,
+            rs1: 1,
+            rs2: 3
+        })
+    );
+    assert!(matches!(
+        decode([0x10, 0x4a, 0x03, 0]),
+        Err(A0Error::IllegalEncoding(_))
+    ));
+    assert!(matches!(
+        decode([0x10, 0x0a, 0x0b, 0]),
+        Err(A0Error::IllegalEncoding(_))
+    ));
+    assert!(matches!(
+        decode([0x00, 0x0a, 0, 1]),
+        Err(A0Error::IllegalEncoding(_))
+    ));
+    assert!(matches!(
+        decode([0x99, 0, 0, 0]),
+        Err(A0Error::IllegalEncoding(_))
+    ));
+}
+
+#[test]
+fn add_writes_destination_flags_and_pc() {
+    let code = program(vec![0x10, 0x0a, 0x03, 0]);
+    let mut before = state(0);
+    before.registers[1] = word(8, 0x7f);
+    before.registers[3] = word(8, 1);
+    let after = step(&code, &before);
+    assert_eq!(after.registers[2].unsigned(), 0x80);
+    assert_eq!(after.registers[1], before.registers[1]);
+    assert_eq!(after.pc.unsigned(), 4);
+    assert_eq!(
+        after.conditions,
+        Conditions {
+            zero: false,
+            negative: true,
+            carry: false,
+            overflow: true
+        }
+    );
+}
+
+#[test]
+fn carry_and_no_borrow_are_distinct_contracts() {
+    let add = program(vec![0x10, 0x0a, 0x03, 0]);
+    let mut before = state(0);
+    before.registers[1] = word(8, 0xff);
+    before.registers[3] = word(8, 1);
+    let added = step(&add, &before);
+    assert_eq!(added.registers[2].unsigned(), 0);
+    assert!(added.conditions.carry);
+    assert!(added.conditions.zero);
+
+    let sub = program(vec![0x11, 0x0a, 0x03, 0]);
+    let subtracted = step(&sub, &before);
+    assert_eq!(subtracted.registers[2].unsigned(), 0xfe);
+    assert!(subtracted.conditions.carry);
+}
+
+#[test]
+fn store_then_load_is_little_endian() {
+    let code = program(vec![0x03, 0x08, 0x02, 1, 0x02, 0x0b, 0, 1]);
+    let mut before = state(8);
+    before.registers[1] = word(8, 2);
+    before.registers[2] = word(8, 0xab);
+    let stored = step(&code, &before);
+    assert_eq!(stored.memory.byte(3), Some(0xab));
+    let loaded = step(&code, &stored);
+    assert_eq!(loaded.registers[3].unsigned(), 0xab);
+}
+
+#[test]
+fn invalid_data_range_traps_without_partial_write() {
+    let code = program(vec![0x03, 0x08, 0x02, 0]);
+    let mut before = state(2);
+    before.registers[1] = word(8, 2);
+    before.registers[2] = word(8, 0xab);
+    let after = step(&code, &before);
+    assert_eq!(after.memory, before.memory);
+    assert!(matches!(
+        after.outcome,
+        Outcome::Trapped(Trap::DataRange { address: 2, .. })
+    ));
+}
+
+#[test]
+fn branch_uses_sequential_pc_as_its_base() {
+    let code = program(vec![0x30, 0, 0, 1, 0xff, 0, 0, 0, 0xff, 0, 0, 0]);
+    let mut before = state(0);
+    before.conditions.zero = true;
+    let taken = step(&code, &before);
+    assert_eq!(taken.pc.unsigned(), 8);
+    before.conditions.zero = false;
+    let not_taken = step(&code, &before);
+    assert_eq!(not_taken.pc.unsigned(), 4);
+}
+
+#[test]
+fn halt_and_trap_have_no_successor() {
+    let halt = program(vec![0xff, 0, 0, 0]);
+    let halted = step(&halt, &state(0));
+    assert_eq!(halted.outcome, Outcome::Halted);
+    assert_eq!(step(&halt, &halted), halted);
+
+    let illegal = program(vec![0x99, 0, 0, 0]);
+    let trapped = step(&illegal, &state(0));
+    assert!(matches!(
+        trapped.outcome,
+        Outcome::Trapped(Trap::IllegalEncoding { .. })
+    ));
+    assert_eq!(step(&illegal, &trapped), trapped);
+}
+
+#[test]
+fn bounded_trace_classifies_halt_trap_and_exhaustion() {
+    let halt = program(vec![0xff, 0, 0, 0]);
+    let halted = run(&halt, state(0), 4);
+    assert_eq!(halted.stop, StopReason::Halted);
+    assert_eq!(halted.states.len(), 2);
+
+    let jump = program(vec![0x31, 0, 0, 0xff]);
+    let exhausted = run(&jump, state(0), 3);
+    assert_eq!(exhausted.stop, StopReason::BoundExhausted);
+    assert_eq!(exhausted.states.len(), 4);
+
+    let short = program(vec![0x00]);
+    let trapped = run(&short, state(0), 1);
+    assert_eq!(trapped.stop, StopReason::Trapped);
+}
+
+#[test]
+fn immediate_is_sign_extended_at_every_supported_width() {
+    for width in (8..=64).step_by(8) {
+        let code = Program::new(width, word(width, 0), vec![0x01, 0x03, 0, 0x80]).unwrap();
+        let before = State::new(width, Memory::zeroed(0), word(width, 0)).unwrap();
+        let after = step(&code, &before);
+        assert_eq!(after.registers[3].signed(), -128, "width {width}");
+        assert_eq!(after.conditions, Conditions::default(), "width {width}");
+    }
+}
+
+#[test]
+fn all_data_movement_and_logic_instructions_obey_the_contract() {
+    let mut before = state(0);
+    before.registers[1] = word(8, 0b1010_0101);
+    before.registers[2] = word(8, 0b1100_0011);
+    before.conditions = Conditions {
+        zero: true,
+        negative: true,
+        carry: true,
+        overflow: true,
+    };
+
+    let moved = step(&program(vec![0x00, 0x0b, 0, 0]), &before);
+    assert_eq!(moved.registers[3], before.registers[1]);
+    assert_eq!(moved.conditions, before.conditions);
+
+    let cases = [
+        ([0x12, 0x0b, 0x02, 0], 0x81),
+        ([0x13, 0x0b, 0x02, 0], 0xe7),
+        ([0x14, 0x0b, 0x02, 0], 0x66),
+        ([0x15, 0x0b, 0, 0], 0x5a),
+    ];
+    for (bytes, expected) in cases {
+        let after = step(&program(bytes.to_vec()), &before);
+        assert_eq!(after.registers[3].unsigned(), expected);
+        assert_eq!(
+            after.conditions,
+            Conditions {
+                zero: false,
+                negative: expected & 0x80 != 0,
+                carry: false,
+                overflow: false,
+            }
+        );
+    }
+}
+
+#[test]
+fn shifts_cover_zero_count_last_bit_and_sign_extension() {
+    let cases = [
+        ([0x18, 0x0b, 0x02, 0], 0b1001_0100, false),
+        ([0x19, 0x0b, 0x02, 0], 0b0010_1001, false),
+        ([0x1a, 0x0b, 0x02, 0], 0b1110_1001, false),
+    ];
+    for (bytes, expected, carry) in cases {
+        let mut before = state(0);
+        before.registers[1] = word(8, 0b1010_0101);
+        before.registers[2] = word(8, 2);
+        let after = step(&program(bytes.to_vec()), &before);
+        assert_eq!(after.registers[3].unsigned(), expected);
+        assert_eq!(after.conditions.carry, carry);
+        assert_eq!(after.conditions.negative, expected & 0x80 != 0);
+        assert!(!after.conditions.overflow);
+    }
+
+    let mut before = state(0);
+    before.registers[1] = word(8, 0x80);
+    before.registers[2] = word(8, 8);
+    before.conditions.carry = true;
+    let after = step(&program(vec![0x1a, 0x0b, 0x02, 0]), &before);
+    assert_eq!(after.registers[3].unsigned(), 0x80);
+    assert!(!after.conditions.carry);
+}
+
+#[test]
+fn add_and_sub_flags_are_exhaustive_for_eight_bit_words() {
+    let add = program(vec![0x10, 0x0a, 0x03, 0]);
+    let sub = program(vec![0x11, 0x0a, 0x03, 0]);
+    for lhs in 0_u16..=255 {
+        for rhs in 0_u16..=255 {
+            let mut before = state(0);
+            before.registers[1] = word(8, u64::from(lhs));
+            before.registers[3] = word(8, u64::from(rhs));
+
+            let added = step(&add, &before);
+            let add_result = lhs.wrapping_add(rhs) & 0xff;
+            let add_overflow = (lhs & 0x80) == (rhs & 0x80) && (add_result & 0x80) != (lhs & 0x80);
+            assert_eq!(added.registers[2].unsigned(), u64::from(add_result));
+            assert_eq!(added.conditions.zero, add_result == 0);
+            assert_eq!(added.conditions.negative, add_result & 0x80 != 0);
+            assert_eq!(added.conditions.carry, lhs + rhs >= 256);
+            assert_eq!(added.conditions.overflow, add_overflow);
+
+            let subtracted = step(&sub, &before);
+            let sub_result = lhs.wrapping_sub(rhs) & 0xff;
+            let sub_overflow = (lhs & 0x80) != (rhs & 0x80) && (sub_result & 0x80) != (lhs & 0x80);
+            assert_eq!(subtracted.registers[2].unsigned(), u64::from(sub_result));
+            assert_eq!(subtracted.conditions.zero, sub_result == 0);
+            assert_eq!(subtracted.conditions.negative, sub_result & 0x80 != 0);
+            assert_eq!(subtracted.conditions.carry, lhs >= rhs);
+            assert_eq!(subtracted.conditions.overflow, sub_overflow);
+        }
+    }
+}
+
+#[test]
+fn compare_updates_flags_without_writing_registers() {
+    let mut before = state(0);
+    before.registers[1] = word(8, 0x80);
+    before.registers[2] = word(8, 1);
+    let after = step(&program(vec![0x20, 0x08, 0x02, 0]), &before);
+    assert_eq!(after.registers, before.registers);
+    assert!(after.conditions.overflow);
+    assert!(after.conditions.carry);
+    assert_eq!(after.pc.unsigned(), 4);
+}
+
+#[test]
+fn every_branch_condition_has_taken_and_untaken_controls() {
+    let witnesses = [
+        (
+            0_u8,
+            Conditions {
+                zero: true,
+                ..Conditions::default()
+            },
+        ),
+        (
+            1,
+            Conditions {
+                zero: false,
+                ..Conditions::default()
+            },
+        ),
+        (
+            2,
+            Conditions {
+                negative: true,
+                overflow: false,
+                ..Conditions::default()
+            },
+        ),
+        (
+            3,
+            Conditions {
+                negative: true,
+                overflow: true,
+                ..Conditions::default()
+            },
+        ),
+        (
+            4,
+            Conditions {
+                carry: false,
+                ..Conditions::default()
+            },
+        ),
+        (
+            5,
+            Conditions {
+                carry: true,
+                ..Conditions::default()
+            },
+        ),
+        (
+            6,
+            Conditions {
+                carry: true,
+                zero: false,
+                ..Conditions::default()
+            },
+        ),
+        (
+            7,
+            Conditions {
+                carry: false,
+                zero: false,
+                ..Conditions::default()
+            },
+        ),
+    ];
+    for (condition, flags) in witnesses {
+        let branch = program(vec![0x30, 0, condition << 3, 1]);
+        let mut before = state(0);
+        before.conditions = flags;
+        assert_eq!(
+            step(&branch, &before).pc.unsigned(),
+            8,
+            "condition {condition}"
+        );
+
+        before.conditions = Conditions {
+            zero: !flags.zero,
+            negative: !flags.negative,
+            carry: !flags.carry,
+            overflow: flags.overflow,
+        };
+        if condition == 3 {
+            before.conditions.overflow = !before.conditions.negative;
+        } else if condition == 7 {
+            before.conditions.carry = true;
+            before.conditions.zero = false;
+        }
+        assert_eq!(
+            step(&branch, &before).pc.unsigned(),
+            4,
+            "condition {condition}"
+        );
+    }
+}
+
+#[test]
+fn sixteen_bit_memory_access_is_little_endian_and_may_be_unaligned() {
+    let code = Program::new(16, word(16, 0), vec![0x03, 0x08, 0x02, 1, 0x02, 0x0b, 0, 1]).unwrap();
+    let mut before = State::new(16, Memory::zeroed(5), word(16, 0)).unwrap();
+    before.registers[1] = word(16, 0);
+    before.registers[2] = word(16, 0xabcd);
+    let stored = step(&code, &before);
+    assert_eq!(stored.memory.byte(1), Some(0xcd));
+    assert_eq!(stored.memory.byte(2), Some(0xab));
+    let loaded = step(&code, &stored);
+    assert_eq!(loaded.registers[3].unsigned(), 0xabcd);
+}
+
+#[test]
+fn fetch_traps_are_precise_and_code_can_cross_word_wrap() {
+    let code = program(vec![0xff, 0, 0, 0]);
+    let misaligned = State::new(8, Memory::zeroed(0), word(8, 2)).unwrap();
+    assert_eq!(
+        step(&code, &misaligned).outcome,
+        Outcome::Trapped(Trap::MisalignedProgramCounter { pc: 2 })
+    );
+
+    let incomplete = State::new(8, Memory::zeroed(0), word(8, 4)).unwrap();
+    assert_eq!(
+        step(&code, &incomplete).outcome,
+        Outcome::Trapped(Trap::IncompleteCodeFetch { pc: 4 })
+    );
+
+    let wrapping = Program::new(8, word(8, 252), vec![0x31, 0, 0, 0, 0xff, 0, 0, 0]).unwrap();
+    let initial = State::new(8, Memory::zeroed(0), word(8, 252)).unwrap();
+    let trace = run(&wrapping, initial, 2);
+    assert_eq!(trace.stop, StopReason::Halted);
+    assert_eq!(trace.states[1].pc.unsigned(), 0);
+}

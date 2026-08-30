@@ -13,6 +13,7 @@ members = [
     "crates/axeyum-ir",
     "crates/axeyum-lean-import",
     "crates/axeyum-lean-kernel",
+    "crates/axeyum-machine",
     "crates/axeyum-property",
     "crates/axeyum-property-macros",
     "crates/axeyum-py",
@@ -45,6 +46,7 @@ axeyum-cnf = { path = "crates/axeyum-cnf", version = "0.1.0" }
 axeyum-egraph = { path = "crates/axeyum-egraph", version = "0.1.0" }
 axeyum-fp = { path = "crates/axeyum-fp", version = "0.1.0" }
 axeyum-ir = { path = "crates/axeyum-ir", version = "0.1.0" }
+axeyum-machine = { path = "crates/axeyum-machine", version = "0.1.0" }
 axeyum-py = { path = "crates/axeyum-py", version = "0.1.0" }
 axeyum-query = { path = "crates/axeyum-query", version = "0.1.0" }
 axeyum-scenarios = { path = "crates/axeyum-scenarios", version = "0.1.0" }
