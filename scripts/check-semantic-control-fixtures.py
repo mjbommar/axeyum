@@ -57,7 +57,11 @@ from semantic_control_fixtures import (  # noqa: E402
     FIXTURES,
     NUMERICS_SCRIPTS,
     Fixture,
+    Mutation,
+    Outcome,
 )
+
+__all__ = ["Fixture", "Mutation", "Outcome"]
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PIN = ROOT / "artifacts" / "semantic-controls" / "fixture-pack.json"
@@ -527,6 +531,11 @@ def write_summary(results: list[dict], numerics: list[dict], cen: dict) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true", help="regenerate the pin and summary")
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="explicit form of the default: execute the pack and gate, writing nothing",
+    )
     ap.add_argument("--json", action="store_true", help="emit the full run as JSON")
     args = ap.parse_args()
 
