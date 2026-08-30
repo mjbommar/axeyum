@@ -238,6 +238,51 @@ This lane's own `check-draw7-frozen-families.py` first tripped the same rule
 and was moved from `scripts/tests/` to `scripts/`: it is a gate invoked by
 path, not a unittest control.
 
+## `check-fast.sh`, baselined as a SET comparison
+
+A raw failure count from one tree says nothing — this gate fails 27 steps at
+the merge-base. So both runs were captured and their FAILED blocks compared as
+sets, with a control that refuses an empty parse:
+
+```sh
+W=/data0/axeyum/scratch/wt-nursery-draw-7-baseline
+git worktree add --detach "$W" 4cd995620
+bash scripts/check-fast.sh > after.txt 2>&1                  # this tree
+cd "$W" && bash scripts/check-fast.sh > before.txt 2>&1       # merge-base
+```
+
+    baseline (merge-base 4cd995620) failures = 27
+    this tree failures                       = 25
+
+    FIXED by this lane (2):
+      + autogenesis-nursery-refill
+      + dispatchable-frontier
+    NEW failures introduced by this lane (0):
+      (none)
+
+### The three failures this lane did introduce, and how they were closed
+
+The first pass showed 28. Comparing sets rather than counts named them
+immediately — a count alone would have said "one worse" and hidden that two
+were fixed and three were new.
+
+1. **`propose-nursery-refill` and its controls.** The proposer refused with
+   `R2 stale-snapshot` on `drawn_modules` and `used_source_names`, plus
+   `R4 module-already-drawn` naming all four modules draw 7 took.
+   `refill-headroom-v1.json` is the proposer's own snapshot and goes stale by
+   construction when a draw lands; `--remeasure` is its documented update path.
+   After it: already-drawn 260 → 300, survivors 2,289 → 2,249, ready families
+   18 → 14, and the four drawn modules correctly leave the ready list.
+   The control `remeasure-reproduces-the-committed-snapshot` additionally
+   requires the snapshot to be **committed**, so leaving it dirty fails too.
+2. **`autogenesis-holdout-isolation-tests`** pins `held_out=116` and the draw
+   raises it to 136. Moved to the value the checker reports, not to 116+20 by
+   arithmetic: the composition is 16 in v1 + 120 in the extension, and the
+   generator's own line says `held-out=120`.
+
+Neither is a defect in the draw; both are the maintenance a draw requires, and
+neither would have been found by reading the diff.
+
 ## The frozen-families checker, and proof it can fail
 
 `scripts/check-draw7-frozen-families.py` compares each preregistered family's

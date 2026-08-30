@@ -30556,6 +30556,30 @@ exits 1 with `CONTROL FAILED`).
 environment snapshot and the headroom file are byte-identical to the
 merge-base, checked with `git hash-object`.
 
+## `check-fast.sh`, baselined against the merge-base
+
+Not read from this tree alone. A detached worktree at the merge-base
+`4cd995620` ran the same gate, and the two FAILED blocks were compared **as
+sets**, not by eye:
+
+    baseline (merge-base 4cd995620) failures = 27
+    this tree failures                       = 25
+
+    FIXED by this lane (2):
+      + autogenesis-nursery-refill
+      + dispatchable-frontier
+    NEW failures introduced by this lane (0):
+      (none)
+
+The three failures this lane did briefly introduce were found this way and
+fixed in `ac7592921`: the proposer's headroom snapshot goes stale by
+construction when a draw lands (`--remeasure` is its documented update path,
+already-drawn 260 → 300, ready families 18 → 14), and
+`test_check_autogenesis_holdout_isolation` pins the held-out population, moved
+116 → 136 to the value the checker itself reports.
+
+The 25 that remain are the merge-base's own, and none is this lane's.
+
 ## Two gates were already red on `main`
 
 Baselined before attributing anything to this lane:
@@ -30586,7 +30610,9 @@ the generator's `HYGIENE` rule first) or `Nat.nthRoot`
 | `413415fc2` | early status stub with the re-run probe numbers |
 | `635bc8576` | regenerate the extension manifest — it was stale on `main`, not from this draw |
 | `29d51bd0b` | draw 7: four families, 40 rows, generator + manifest + 40 fact files |
-| _this_ | ADR-0654, the frozen-families checker, status and notes |
+| `7097a3fc1` | ADR-0654, the frozen-families checker, status and notes |
+| `ac7592921` | remeasure the refill headroom; move the held-out pin 116 → 136 |
+| _this_ | record the `check-fast.sh` baseline comparison |
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

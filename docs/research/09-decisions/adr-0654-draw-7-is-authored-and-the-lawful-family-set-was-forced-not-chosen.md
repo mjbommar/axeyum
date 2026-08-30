@@ -173,6 +173,25 @@ vocabulary, the environment snapshot and the headroom file are all
 byte-identical to the merge-base, verified with `git hash-object` rather than
 by inspection.
 
+## `check-fast.sh` was baselined, and the comparison is a SET
+
+A failure count from one tree is not evidence: this gate fails 27 steps at the
+merge-base. Both trees were run and their FAILED blocks compared as sets.
+
+    baseline (merge-base 4cd995620) failures = 27
+    this tree failures                       = 25
+    FIXED by this lane: autogenesis-nursery-refill, dispatchable-frontier
+    NEW failures introduced by this lane: none
+
+The first pass showed 28, and the set comparison is what made that legible —
+a count alone reads as "one step worse" and conceals that two were fixed and
+three were new. The three were the maintenance a draw requires, not defects in
+the draw: `refill-headroom-v1.json` goes stale by construction when a draw
+lands and needs `--remeasure` (and needs to be **committed**, which one of the
+proposer's own controls checks), and
+`test_check_autogenesis_holdout_isolation` pins the held-out population, moved
+116 → 136 to the value the checker itself reports.
+
 ## Two gates were already red on `main`, and nobody had run them
 
 Baselined before attributing anything to this lane, which is the rule
