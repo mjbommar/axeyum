@@ -8,10 +8,31 @@
     "statement": "∀ {n a b : ℤ} (c : ℤ), a + c ≡ b + c [ZMOD n] → a ≡ b [ZMOD n]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:int-add-comm", "F:ml430-int-modeq-add-left-cancel-062ad5fe"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- mod_eq_add_right_cancel 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.mod_eq_add_right_cancel[[:space:]]')\" -ge 1",
+      "id": "kernel-Int.mod_eq_add_right_cancel",
+      "kind": "kernel-term",
+      "notes": "`build_int_prelude` admits `Int.mod_eq_add_right_cancel` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. New proof, lane int-dvd-mirrors: `int_prelude/dvd_gcd_mirrors.rs`'s `declare_mod_eq_add_right_cancel_single` -- Mathlib's `Int.ModEq.add_right_cancel'` (the single-`c` cancellation; not to be confused with F:ml430-int-modeq-add-right-cancel-d7366811, the 4-variable `.add_right_cancel`). Rewrite `a+c`/`b+c` to `c+a`/`c+b` via `Int.add_comm`, then the existing `mod_eq_add_left_cancel`. `int_theorem_inventory`'s rendered type matches this fact's `formal.statement` (`∀ {n a b : ℤ} (c : ℤ), a + c ≡ b + c [ZMOD n] → a ≡ b [ZMOD n]`). `int_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed; the anchor requires the exact name followed by whitespace, so it cannot match a longer sibling name sharing the same prefix. Verified both ways: the real name greps to a count `-ge 1`; grepping a fabricated name (`Int.mod_eq_add_right_cancel_bogus_xyz`) makes `int_theorem_inventory` fail closed (exit 1, \"no Int declaration matches\").",
+      "supports": "∀ {n a b : ℤ} (c : ℤ), a + c ≡ b + c [ZMOD n] → a ≡ b [ZMOD n]"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`prelude_axiom_inventory --require-axiom-free integer` enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: integer axiom=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. int_prelude_tests::every_int_declaration_is_checked_and_axiom_free and derived_laws_have_no_axiom_footprint (both re-run on every int_prelude:: sweep) additionally confirm this theorem's own Kernel::axiom_footprint directly.",
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "id": "footprint-Int.mod_eq_add_right_cancel"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. New proof, lane int-dvd-mirrors: see evidence notes for the construction.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
