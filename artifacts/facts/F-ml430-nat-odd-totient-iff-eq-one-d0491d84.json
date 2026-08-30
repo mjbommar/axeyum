@@ -20,7 +20,9 @@
     "F:nat-le-antisymm",
     "F:nat-zero-le",
     "F:nat-succ-ne-zero",
-    "F:nat-le-total"
+    "F:nat-le-total",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

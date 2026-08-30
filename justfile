@@ -177,6 +177,7 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-holdout-contamination.py
     bash scripts/tests/test-dispatchable-frontier.sh
     python3 scripts/check-dispatchable-frontier.py
+    python3 scripts/check-autogenesis-already-proved.py
     python3 scripts/check-dispatchable-frontier.py --statable artifacts/autogenesis/nursery-v2-extension.json
     python3 -m unittest scripts.tests.test_development_partition
     python3 scripts/check-development-partition.py

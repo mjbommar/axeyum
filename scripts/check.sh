@@ -150,6 +150,11 @@ step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-iso
 # construction-level divergences before they are preregistered.
 step dispatchable-frontier-tests bash scripts/tests/test-dispatchable-frontier.sh
 step dispatchable-frontier python3 scripts/check-dispatchable-frontier.py
+# A name match against the kernel environment for an OPEN mirror -- necessary,
+# not sufficient, for "already proved". Written 2026-08-29 by the lane that
+# refused a draw, then archived by the orphan sweep because nothing invoked it.
+# It is the 'good check nobody wired up' case, so it is wired up now.
+step autogenesis-already-proved python3 ./scripts/check-autogenesis-already-proved.py
 # ...and the POSITIVE screen, re-run over the preregistered refill on every
 # invocation rather than only at the moment it was written. `screened-ok`
 # against the divergence registry is necessary and NOT sufficient: it says
