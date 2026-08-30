@@ -20586,6 +20586,250 @@ Commits (not pushed):
 - `facts: flip the three ml430-int-even-add-* mirrors to proved` — the fact
   ledger.
 
+Lane: `diophantine-blowup`.
+
+**Status: fixed, with a measured residual.** The immediate defect is a one-word
+call-site bug and is landed. The Diophantine route's module size is still
+superlinear in the coefficients, which is a separate, bounded piece of work
+written up below rather than papered over.
+
+---
+
+## Step 0 — reproduced standalone, before reading any code
+
+    target/release/examples/lean_hypothesis_binding_dump \
+      artifacts/examples/math/number-theory-v0/smt2/diophantine-gcd-obstruction-conflict.smt2
+
+    2.24 s wall, stdout = 96,297,506 bytes (91.8 MiB)
+    stderr: BINDING_DUMP|...|fragment=Diophantine|assertions=1|indices=0
+
+Independently confirms the finding lane's number.
+
+## Where the size came from — measured, not suspected
+
+The module is 234 lines. **One of them is 96,155,365 bytes — 99.85 % of the
+file**: line 232, the body of `theorem axeyum_refutation : False :=`. The
+next-largest line is 14,183 bytes. Not a diffuse blowup; a single proof term.
+
+Hash-consing that one line back into a DAG (`scratchpad/dio-profile.py`, an
+explicit-stack tokeniser over the 10.9 M-token line) gives the answer:
+
+| | |
+| --- | --- |
+| distinct nodes in the term | **18,018** — 46 leaf, 17,972 application |
+| printed as a tree | **96,155,363 bytes** |
+| printed with full sharing (computed from the DAG) | **~967,245 bytes**, 99× smaller |
+| most-repeated single distinct subterm | **169,184** occurrences |
+| distinct app nodes occurring >10³ times | 291 |
+
+Printed-byte attribution over that line, by occurrence count × own length:
+
+    43,480,584  leaf `axeyum.reconstruct.dio.x._1`
+    20,578,860  leaf `axeyum.reconstruct.dio.x._0`
+    17,093,174  leaf `Int.add`
+     9,767,528  `Int.add` application syntax
+     1,705,104  leaf `Int.zero`
+
+So **the dominant term is not any part of the argument — it is the tree
+expansion of a small DAG.** The proof is a chain of `Eq.rec` rewrites
+(30,527 occurrences, over `Int.add_assoc`/`add_comm`/`add_zero`), and a Lean
+`Eq.rec` reprints its subject term about four times per step (the type index,
+the motive body, the two endpoints). Nest hundreds of those and you get 4^depth
+without a single large number anywhere.
+
+### Root cause: the renderer was called at the wrong entry point
+
+`crates/axeyum-lean-kernel/src/lean_pp.rs:885` builds a share plan **only under
+`compact`**:
+
+    let shares = if compact {
+        self.compact_share_plan(&[goal, proof], theorem_name, &at_consts)
+    } else {
+        LeanSharePlan::default()
+    };
+
+and `reconstruct_diophantine_to_lean_module` called `render_lean_module` — the
+non-compact one. So no sharing was attempted at all.
+
+`render_lean_module_compact` is documented as **semantically equivalent**: it
+hoists repeated *closed* nodes to top-level definitions and never hoists
+anything carrying loose de Bruijn or free variables. It is already what the
+LRA (`reconstruct.rs:2124`, `:2148`), string-length, counterexample-cover and
+quantifier-BV routes emit, so `check-lra-hypothesis-binding.py` already parses
+this shape.
+
+## The fix
+
+One call site, `crates/axeyum-solver/src/int_reconstruct/diophantine.rs`
+(`render_lean_module` → `render_lean_module_compact`), plus the reason at the
+site and a re-pinned golden.
+
+| | before | after |
+| --- | --- | --- |
+| `diophantine-gcd-obstruction-conflict.smt2` | 96,297,506 B | **2,268,010 B** (42.5× smaller) |
+| render wall | 2.24 s | 0.79 s |
+| `two_x_eq_one` golden body (`2x = 1`) | 1,142,012 B | **232,150 B** (4.9× smaller) |
+
+## A correction to how the defect was described
+
+The brief (and `docs/research/11-design-review/2026-08-29-two-gaps-the-gate-sweep-exposed.md`)
+say the renderer "emits 96 MB, over **the checker's** 64 MB safety cap". The
+64 MiB cap is **the solver's own**, `reconstruct::MAX_LEAN_MODULE_BYTES`
+(`crates/axeyum-solver/src/reconstruct.rs:2276`), and it does not merely observe
+the size — it *declines*. Measured at HEAD with a pre-fix binary built from this
+worktree:
+
+    lean_hypothesis_binding_dump: prove_unsat_to_lean_theory_module: malformed
+    `lean_module_size` step: Diophantine produced a 96297506-byte Lean module,
+    over the 67108864-byte cap. … Declining is the honest outcome
+    -> exit 1, zero bytes on stdout
+
+So the mechanism is: the solver **builds** the 96 MB module, refuses to return
+it, the dumper exits nonzero, and `check_lra_hypothesis_binding.render_module`
+turns that into `SystemExit(f"{instance}: the dumper failed: …")`. The 96 MB
+figure is right and comes from the solver's own error text; there is no separate
+checker-side cap. The cap was **not** raised, and nothing here argues it should
+be — it is doing exactly its job.
+
+## Is it a class? — yes, and the class is not closed by this fix
+
+`artifacts/examples/math/number-theory-v0/smt2/` holds three queries; the other
+two (`quadratic-nonresidue-mod7-bitblast-conflict`,
+`bad-square-witness-mod7-bitblast-conflict`) render **no theory module at all**
+— they route to `TermLevelEnum`, which emits only a structural attestation. So
+this directory has exactly one Diophantine module and it is the one that broke.
+
+The interesting measurement is synthetic. `a·x + b·y = c` with `gcd(a,b) ∤ c`,
+rendered **after** the fix:
+
+| a, b, c | compact module bytes |
+| --- | --- |
+| 2, 4, 1 | 218,478 |
+| 6, 9, 5 | 666,950 |
+| 14, 21, 5 | 2,268,010 |
+| 22, 33, 5 | 7,168,617 |
+| 30, 45, 5 | 16,851,112 |
+| 38, 57, 5 | 32,968,627 |
+| 50, 75, 5 | **72,595,011 — over the cap, declined** |
+
+Roughly cubic in the coefficient (a 2.7× coefficient increase costs 14.5× the
+bytes), for an argument whose *content* is one divisibility fact at every row.
+The fix bought about 42× — three coefficient doublings — and no more.
+
+**This is the honest residual and it is a decomposition, not a one-liner.**
+
+### What drives the residual — measured, and it is NOT what I first wrote
+
+Counting inside the compact modules (`/usr/bin/grep -o`, and `^def ` for the
+hoisted bindings):
+
+| a, b | bytes | `Int.one` | `Int.add` | top-level `def`s |
+| --- | --- | --- | --- | --- |
+| 2, 4 | 218,478 | 216 | 767 | 763 |
+| 6, 9 | 666,950 | 630 | 2,419 | 4,712 |
+| 14, 21 | 2,268,010 | 233 | 8,594 | 18,463 |
+| 22, 33 | 7,168,617 | 273 | 26,782 | 60,317 |
+
+`Int` literals in this reconstruction context **are** unary — `mk_intlit`
+(`crates/axeyum-solver/src/int_reconstruct.rs:264`) is
+`for _ in 1..count { acc = mk_add(acc, unit) }`, and the pre-fix tree carried
+32,758 `Int.one` occurrences. But **after compaction the unary literals are
+shared away and stop mattering**: `Int.one` stays in the low hundreds across a
+33× byte range and does not even grow monotonically. So the unary-literal
+family (`CLAUDE.md`, "EVERY `Nat` NUMERAL THIS PRELUDE BUILDS IS UNARY") is
+*not* the driver here, and a lane sent at it would find nothing.
+
+What grows is the **number of distinct proof nodes** — 763 → 60,317 hoisted
+definitions, i.e. proof *length*, roughly quadratic-to-cubic in the coefficient.
+
+## Slices for the residual, smallest first
+
+1. **`combine_equalities` scales by `|λ|` repeated additions — this is the
+   lever.** `crates/axeyum-solver/src/int_reconstruct/diophantine.rs`, the
+   `for _ in 1..count` loop (`count = lambda.unsigned_abs()`) builds `λ·L` as
+   `L + L + … + L` with an `eq_trans(congr_add_left, congr_add_right)` per copy.
+   Coefficient *magnitude* becomes proof *length*, and the normalization that
+   follows is then quadratic in that length. `IntReconstructCtx::congr_mul_right`
+   already exists (`int_reconstruct.rs:468`) and `kernel_expr_to_zexpr` already
+   recognises `ZExpr::Mul`, so `h : L = R  ⟹  λ·L = λ·R` is one step and the
+   normalizer can consume it.
+
+   **The trap to check first**: `congr_mul_right` needs the literal `λ` as a
+   kernel term, and `mk_intlit` builds it as a unary tower, so the normalizer
+   may distribute it straight back into `|λ|` copies. Measure whether
+   `normalize`'s `ZExpr::Mul` arm keeps a literal factor symbolic before
+   committing to this shape.
+
+2. **The faithful linear form is unary too.** `lin_to_zexpr(combined_dense, 0)`
+   renders `14x` as a 35-term sum of bare `x`/`y` atoms (visible in the rendered
+   `dio.hyp._2` axiom), so the normalizer bubbles over `n = Σ|coefficients|`
+   terms rather than over the number of *variables*. Emitting
+   `Int.mul (intlit 14) x` takes `n` from 35 to 2 for this query. Same shape as
+   slice 1 seen from the term side; they should land together.
+
+3. **A binary `Int` literal representation.** Independent of 1 and 2, and by the
+   table above it buys little on its own *after* compaction — record it, do not
+   prioritise it.
+
+## Verification — all foreground, all completed
+
+| check | result |
+| --- | --- |
+| pinned Lean 4.30.0 on the fixed 2.27 MB module | **exit 0, 11 s.** `#print axioms` = exactly `dio.hyp._2`, `dio.x._0`, `dio.x._1` — the three query-derived axioms, nothing else |
+| `check-lra-hypothesis-binding.py --instance <the query> --expect bound` | `failures=0`, the instance BINDS (the corpus-floor errors are expected for a one-instance run) |
+| **the FULL `check-lra-hypothesis-binding.py --no-build`** | ran to completion in **36 min**, `rc=1`, `instances=135 … failures=133`. **Not green — see below.** |
+| `cargo check -p axeyum-solver --all-targets --features full` | ok |
+| `cargo test -p axeyum-solver --features full --lib` | **1438 passed, 0 failed** |
+| `cargo test -p axeyum-solver --features full --test corpus_regression` | 1 passed, 0 failed |
+| `--test diophantine_lean_reconstruct` | 5 passed, 0 failed (incl. `diophantine_module_checks_in_real_lean`) |
+| `--test diophantine_evidence` | 4 passed, 0 failed |
+
+Lean toolchain resolved with `scripts/check-lean-gate.sh --print-toolchain`:
+`~/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lean`, commit `d024af09`.
+
+### The gate does not go green, and the reason is documented in its own source
+
+Full run after the fix:
+
+    LRA_HYP_BINDING|instances=135|hypotheses=38|mutants_caught=133|…|failures=133
+
+**The diophantine instance appears nowhere in the failure list** (`grep -c
+diophantine` over the log = 0), which is the whole of this lane's claim on the
+gate. The 133 are the `Real` → `CReal` carrier migration, and
+`scripts/check-lra-hypothesis-binding.py:316-323` already states the number:
+
+> THAT RUN IS FROM BEFORE `a6ee37c6a`. On HEAD `570b5c738` the same sweep
+> reports **133 FAILURES** and it is not this checker's doing: 107 instances now
+> render `axeyum.reconstruct.lra.x._N : CReal` where the carrier table expects
+> `Real`, 10 render `Int` under the same prefix, and 19 structural modules
+> changed shape. … Migrating it is the reals lane's call, not a loosening this
+> lane may make.
+
+So the state change this lane produced is exactly:
+
+| | before | after |
+| --- | --- | --- |
+| gate outcome | `SystemExit`: the dumper exits 1 on the diophantine instance, **the run aborts and reaches no verdict at all** | runs to completion, reports its documented 133 |
+| diophantine instance | crashes the run | binds, `failures=0` in isolation |
+
+**The crash was hiding the whole verdict, not one row.** Nobody had seen this
+sweep's summary line since the carrier migration, because the run died before
+producing it.
+
+Fixing the 133 is a carrier-vocabulary migration in the checker, explicitly
+reserved to the reals lane by the comment above, and is **not** this lane's to
+make. It is the honest reason the gate is red, and it is red at the same number
+it was documented at.
+
+## Method notes
+
+- The pre/post comparison uses **two binaries built from this worktree**, not
+  the stale `target/release/` copy in the shared checkout (which predates
+  `MAX_LEAN_MODULE_BYTES` and therefore returns the 96 MB module instead of
+  declining it — that difference is what surfaced the correction above).
+- Sizes are `wc -c` on stdout with stderr separated; the dumper writes its
+  provenance line to stderr.
+
 **DONE (`depends-producer`, 2026-08-29).**
 
 ## What `--fix` does
@@ -21028,6 +21272,233 @@ Until that lands, the dispatchable queue (currently 11, 9 of them
 `natural-totient`) is the only source of new work, and
 `check-autogenesis-already-proved.py` is available to any lane picking up a
 fresh batch to check for free closures before starting proof work.
+
+**DONE for this dispatch (`totient-even`, 2026-08-29).**
+
+**The task.** Land the two cheap totient mirrors the `totient-counting` lane
+left a verified route for, then spend remaining budget on `Nat.totient_even`
+(piece 2 of the `nat-totient` triage) — either build it, or produce a
+hand-traced, numerically checked plan if a build is not safe to land in the
+remaining budget.
+
+## Part 1 — the two mirrors, closed
+
+**`F:ml430-nat-dvd-two-of-totient-le-one-3642bf31`** and
+**`F:ml430-nat-totient-eq-one-iff-68d883a0`** are both `proved`,
+`proof_route: kernel-lean`, `axiom_footprint: []`. Verified the previous
+lane's recorded route by BUILDING it rather than trusting it, and it held
+with no case-split-order surprises:
+
+- `Nat.dvd_two_of_totient_le_one` (`0 < a -> totient a <= 1 -> a | 2`):
+  `trichotomy` at `c = 2` on `a`. `a < 2` combined with `0 < a` forces
+  `a = 1` (`le_of_succ_le_succ` + `le_antisymm`), closed by a concrete `dvd
+  1 2` witness (`one_mul` gives `2 = 1*2`). `a = 2` is `dvd_refl`. `2 < a`
+  is refuted by the shared core below.
+- `Nat.totient_eq_one_iff` (`totient n = 1 <-> n = 1 \/ n = 2`): reverse
+  direction is two `def_eq` reductions (`totient 1 = totient 2 = 1`,
+  `d.refl` accepted up to defeq). Forward direction shares the same
+  `trichotomy` shape: `n < 2` splits again (`lt_or_eq_of_le`) into `n = 0`
+  (contradicts `totient n = 1` via `totient 0 = 0` by defeq, refuted by
+  `succ_ne_zero`) or `n = 1` (`or_inl`); `n = 2` is `or_inr`; `2 < n` uses
+  the same shared refutation.
+- Shared core, `totient_le_one_contradiction_above_two` (new,
+  `totient_lemmas.rs`): from `Lt two x` and `Le (totient x) one`, derive
+  `False` by composing `countRange_ge_two_of_two_witnesses` at witnesses
+  `1` (`coprime_one_left_iff`, unconditional) and `pred x`
+  (`coprime_succ_self`, after `x = succ (pred x)` via `succ_pred_of_pos`),
+  then chaining the resulting `Le two (totient x)` against the hypothesis
+  via `le_trans` into the impossible `Le two one`, refuted by peeling two
+  `succ`s down to `not_succ_le_zero`.
+- New local helper `trichotomy_elim`: a full three-way eliminator for
+  `finite::trichotomy` (`Or (Lt x c) (Or (Eq x c) (Lt c x))` directly into a
+  proof of one target), generalizing `finite.rs`'s `two_way_split` (which
+  only eliminates the middle case). Also `dvd_intro`, a local copy of
+  `divisibility.rs`'s private helper of the same name (this file's own
+  local-copies-per-file convention).
+
+**Verification.** `cargo test -p axeyum-lean-kernel --lib nat_prelude::` —
+167 passed, 0 failed (165 baseline + 2 new, each with a concrete instance
+at `a`/`n` in `{1,2}`, a negative reduction control at `totient 6 = 2 !=
+1`, and a genuinely-free-variable instance via `LocalContext`/`infer_in`).
+`cargo fmt` (per-file `rustfmt --edition 2024`, workspace `cargo fmt` is
+banned in a shared checkout) and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both
+clean (one `#[allow(clippy::too_many_arguments)]` needed on
+`trichotomy_elim`, matching the precedent at `restrict_pair.rs`'s
+`compact_pair_off`). `python3 scripts/check-test-attribute-integrity.py`:
+0 findings. `the_build_is_deterministic`'s pin moved from `93 + 534` to
+`93 + 536` (2 new theorems), taken from the panic message's own mismatch
+(627 vs 629), not hand-incremented.
+
+Both facts' `evidence` carries a `kernel-term` row (`nat_theorem_inventory`,
+verified both to pass on the real name — count 1 — and fail on a fabricated
+one — count 0, exit 1) and an exhaustive-enumeration axiom-freedom row
+(`nat_axiom_inventory --require-axiom-free nat`, exit 0). `depends_on` was
+populated by hand against the counting machinery, then completed by
+`scripts/check-fact-depends-derived.py --fix` against the actual proof
+term's direct dependencies (13-14 nat-prelude basics each, none carrying
+their own fact entry — unregistered nat-prelude theorems, not axioms, per
+the empty-footprint evidence). `python3 scripts/validate-facts.py`: 2034
+facts, 0 errors.
+
+**Commits** (not pushed): `c12bd6271` (wip, unverified), `f502afe95` (the
+two theorems + tests + pin, verified), `644be1664` (the fact-ledger flips).
+
+## Part 2 — `Nat.totient_even`, hand-traced and numerically checked, NOT built
+
+**Did not build this.** The construction below is genuinely more concrete
+than the prior triage's characterization ("needs the classical
+fixed-point-free-involution pairing argument... not machinery this prelude
+has"), and most of its pieces turn out to already exist — but it still
+needs one new induction principle, and landing it wrong under time pressure
+would be worse than handing off a checked plan. Every claim below was
+verified in Python before being written down (scripts kept at
+`/tmp/claude-1000/.../scratchpad/totient-even-check.py` and
+`totient-even-verify2.py` in this session's scratchpad — not committed,
+reproduce inline below since the scratchpad is ephemeral).
+
+### The statement
+
+`Nat.totient_even : ∀ n, Lt 2 n -> Even (totient n)`, where `Even n :=
+Exists (fun k => Eq n (add k k))` (`nat_prelude.rs`'s `even` field).
+
+### Step 0 — peel index 0 for free
+
+`countRange f 1 = 0` since `f 0 = beq (gcd 0 n) 1 = beq n 1 = false` for
+`n > 1` (`gcd_zero_left`). So `totient n = countRange f n =
+countRange_split(f, 1, n-1)'s second summand = countRange (shift f 1)
+(n-1)` — counting is unaffected by dropping index `0`. This is a
+`countRange_split(f, 1, n-1)` application, already available, composed with
+the `countRange f 1 = 0` reduction (cheap, `n > 2` so `n != 1`).
+
+Define `h(j) := f(1+j) = beq (gcd (1+j) n) 1`, `L := n - 1`. Goal becomes
+`Even (countRange h L)`.
+
+### Step 1 — the reflection `h`-invariance, from EXISTING lemmas only
+
+**Verified: no new gcd lemma is needed.** For `0 <= j < L`, writing `k1 :=
+1+j` and `k2 := 1+(L-1-j)`, `k1 + k2 = n` exactly (checked for all `n` in
+`[3,40)`, all `j < L`). The claim `h(j) = h(L-1-j)`, i.e. `beq (gcd k1 n) 1
+= beq (gcd k2 n) 1`, reduces to `gcd k1 n = 1 <-> gcd k2 n = 1`, which
+chains through THREE already-declared `Iff`s (no new arithmetic fact,
+verified in Python for all `n` in `[2,40)`, all `k` in `[1,n)`):
+
+```
+gcd (n-k) n  =  gcd (n-k) k     -- coprime_add_self_right-shaped, at (n-k, k):
+                                   n = (n-k)+k, so this is "coprime (n-k)
+                                   ((n-k)+k) <-> coprime (n-k) k"
+             =  gcd k (n-k)     -- coprime_symmetric
+             =  gcd k n         -- coprime_add_self_right-shaped, at (k, n-k),
+                                   reversed: n = k+(n-k)
+```
+
+Composing the three `Iff`s is ordinary `Iff`-transitivity (build it by hand
+via nested `iff_intro`/`or_elim`-free function composition of each hop's
+`mp`/`mpr` — no `iff_trans` field exists in this prelude today, but nothing
+stops writing it inline, or adding a tiny local `iff_trans` helper). The
+exact hypotheses needed from `coprime_add_self_right`/`coprime_add_self_left`
+(both already declared, `nat_prelude.rs` fields of the same name) are
+`Iff (gcd m (add n m) = 1) (gcd m n = 1)`-shaped; matching `k1`/`k2` to the
+`add` form needs `n - k = (n-k)` restated as an actual `add`-term via
+`Nat.sub_add_cancel`-shaped rewriting (`k <= n`, in fact `k < n` here) —
+check whether this exists under `sub_add_cancel`/`add_sub_cancel'`-style
+names before rebuilding it; several `sub`/`add` round-trip lemmas already
+exist elsewhere in `nat_prelude/` for exactly this purpose (used
+pervasively in `finite.rs`'s own index bookkeeping).
+
+### Step 2 — no true fixed point
+
+Fixed point of the reflection at position `j` is `j = L-1-j`, i.e. `2j =
+L-1 = n-2`, i.e. original index `k1 = 1+j` satisfies `2*k1 = n`. If `h(j) =
+true` there, `gcd k1 n = 1` with `n = 2*k1` forces `gcd k1 (2*k1) = k1 =
+1`, so `n = 2`, contradicting `2 < n`. Verified in Python for all `n` in
+`[3,60)`: whenever `j = L-1-j`, `h(j)` is `false`.
+
+### Step 3 — the general combinatorial lemma (THE NEW PIECE)
+
+```
+Nat.count_range_reversal_even :
+  ∀ (h : Nat -> Bool) (L : Nat),
+    (∀ j, Lt j L -> Eq Bool (h (sub (pred L) j)) (h j)) ->
+    (∀ j, Lt j L -> Eq Bool (h j) true -> Not (Eq Nat j (sub (pred L) j))) ->
+    Even (countRange h L)
+```
+
+Proof sketch, by strong/well-founded induction on `L` (this prelude already
+has strong recursion over `Nat` -- see `nat_strict_well_foundedness_
+drives_generic_strong_recursion` in `nat_prelude_tests.rs` and whatever
+`lt_well_founded`-based constructor it exercises):
+
+- `L = 0`: `countRange h 0 = 0`, `Even 0` via witness `0`.
+- `L = 1`: the single index `j=0` is its own mirror (`pred 1 - 0 = 0`), so
+  hypothesis 2 forces `h 0 = false`, giving `countRange h 1 = 0`.
+- `L >= 2`: peel BOTH ends in one step.
+  - Front: `countRange h L = countRange h 1 + countRange (shift h 1)
+    (L-1)` via `countRange_split(h, 1, L-1)`, and `countRange h 1 =
+    [h(0)?1:0]`.
+  - Back: `countRange (shift h 1) (L-1)`, with `L-1 = succ (L-2)` (since
+    `L>=2`), peels its OWN top index via `countRange`'s ordinary defining
+    equation (the same equation `countRange_succ_of_true` already
+    extracted): `countRange (shift h 1) (succ (L-2)) = countRange (shift h
+    1) (L-2) + [(shift h 1)(L-2) ? 1 : 0]`, and `(shift h 1)(L-2) = h(L-1)`.
+  - So `countRange h L = [h(0)?1:0] + [h(L-1)?1:0] + countRange (shift h 1)
+    (L-2)`. By hypothesis 1 at `j=0`: `h(L-1) = h(pred L - 0) = h(0)`, so
+    the two boundary terms are EQUAL, contributing `0` or `2` (even) either
+    way -- no case split on which needed.
+  - Recurse on `h' := shift h 1`, `L' := L-2` (verified in Python: `h'`
+    inherits BOTH hypotheses at length `L'`, by direct index substitution --
+    `h'(j) = h(1+j)`, and hypothesis 1 for `h'` at `j` unfolds to exactly
+    hypothesis 1 for `h` at `1+j`, landing on `pred L' - j = L-3-j`
+    corresponding to original index `L-2-j = pred L - (1+j)`, matching).
+    `L' < L` (since `L >= 2`), so the strong induction hypothesis applies.
+  - `Even a -> Even (a + 2)`-shaped closure for the final sum (trivial:
+    witness `k+1` from `a = 2k`).
+
+**This is the one genuinely new piece.** Everything else in Part 2 composes
+existing lemmas. The risk is entirely in this induction's bookkeeping
+(matching `pred`/`sub` forms exactly, and picking the right induction
+principle -- a literal "peel 2 elements" recursion needs either genuine
+well-founded recursion on `L` or an explicit two-case-per-step structural
+device; `Nat.rec` alone does not give you `P(L) -> P(succ (succ L))`
+without also carrying `P(succ L)` as a side hypothesis you then discard, so
+reach for the well-founded route rather than fighting `Nat.rec` directly).
+
+### Step 4 — closing the mirror
+
+Apply `count_range_reversal_even` at `h := shift(totient_predicate(n), 1)`,
+`L := n-1`, using Steps 1-2 for its two hypotheses, then rewrite `Even
+(countRange h (n-1))` back to `Even (totient n)` via Step 0's `countRange_
+split` identity (reversed).
+
+### Numerically verified (all in this session's scratchpad, not committed)
+
+- `gcd(n-k,n) = gcd(k,n)` via the three-`Iff` chain: checked for `n` in
+  `[2,40)`, every `k` in `[1,n)`.
+- The index correspondence `k1=1+j`, `k2=1+(L-1-j)`, `k1+k2=n`: checked for
+  `n` in `[3,40)`, every `j < L`.
+- No true fixed point: checked for `n` in `[3,60)`.
+- The double-peel recursion (Step 3's literal recursive definition,
+  executed in Python) reproduces `totient(n)` exactly for `n` in `[3,30)`.
+- `totient(n)` is even and has no fixed point in the raw `k <-> n-k`
+  pairing over `[0,n)`, for `n` in `[3,60)`.
+
+### What is NOT yet checked
+
+- Whether `Nat.sub_add_cancel`/`add_sub_cancel'`-shaped rewriting (needed
+  to restate `n-k` as an `add`-term for `coprime_add_self_right`/`_left`)
+  exists under a name this file didn't grep for. Check before rebuilding.
+- The exact shape of this prelude's well-founded/strong-recursion
+  constructor (only confirmed a TEST exercises it, not read its API).
+- Whether `Even`'s existential witness composition (`a = 2k -> a+2 =
+  2(k+1)`) is already a named lemma or needs inline `Exists.intro` at
+  `succ k`.
+
+**For the next lane:** Part 2's weakest step is Step 3 (the new induction
+principle) -- everything else is either already-declared machinery or a
+short chain of already-declared `Iff`s. Build Step 3 as a standalone,
+`totient`-independent lemma first (it has no `totient`/`gcd` content at
+all), test it in isolation against a synthetic `h`/`L`, and only then wire
+it to Steps 0-2 and 4.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

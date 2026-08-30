@@ -1,5 +1,7 @@
 # 289 — the 96 MB Lean module for `14x + 21y = 5`
 
+<!-- plan-section: lane-status -->
+
 Lane: `diophantine-blowup`.
 
 **Status: fixed, with a measured residual.** The immediate defect is a one-word
