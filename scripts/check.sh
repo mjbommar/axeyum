@@ -1098,6 +1098,10 @@ step aggregate-scope ./scripts/check-aggregate-scope.sh
 # it runs this gate -- markers committed into ten fact JSONs and later into the
 # ADR index, and 0617/0618 each allocated by two concurrent lanes on one day.
 step merge-hygiene ./scripts/check-merge-hygiene.sh
+# ...and its controls, which it shipped WITHOUT. Ten scenarios drive the shipped
+# script against a throwaway git tree via `AXEYUM_MERGE_HYGIENE_ROOT`; every
+# guard is mutation-verified (`mutation_controls.py merge-hygiene`).
+step merge-hygiene-controls python3 -m unittest scripts.tests.test_check_merge_hygiene
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
 # ADR numbers are a shared append point ACROSS CHECKOUTS, which `adr-index`

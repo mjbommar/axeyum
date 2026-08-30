@@ -591,6 +591,10 @@ gate-controls:
     # fourth guard was RETIRED rather than shipped after it matched a pin
     # declaration quoted in a doc comment.
     scripts/check-merge-hygiene.sh
+    # ...and its controls, which it shipped WITHOUT -- the 2026-08-30 audit's
+    # first survivor. Ten scenarios drive the shipped script against a throwaway
+    # git tree via `AXEYUM_MERGE_HYGIENE_ROOT`; every guard mutation-verified.
+    python3 -m unittest scripts.tests.test_check_merge_hygiene
     # The registration gate's OWN controls -- it had none, which is the joke
     # this file exists to stop being. 15 cases, each mutation-verified.
     scripts/tests/test-check-control-registration.sh

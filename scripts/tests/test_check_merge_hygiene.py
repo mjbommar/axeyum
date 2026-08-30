@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""Controls for ``scripts/check-merge-hygiene.sh``.
+
+CLAUDE.md: *a checker that cannot fail is worse than no checker.*  This gate
+landed on 2026-08-30 with **zero** registered controls -- ``ls scripts/tests/ |
+grep -c merge-hygiene`` returned 0 against a positive control of 1 -- so every
+guard in it was a survivor by definition, whatever it did when run by hand.
+The 2026-08-30 session audit named it first among five.
+
+The shipped script is never re-implemented here.  ``AXEYUM_MERGE_HYGIENE_ROOT``
+points the real file at a throwaway git repository whose ``scripts/gen-*.py``
+are stubs, so each guard can be driven to failure and back without touching the
+checkout.  Same device as ``AXEYUM_KERNEL_SUITES_ROOT``.
+
+Every scenario drives ONE guard, plus the cases the gate must ACCEPT.  Deleting
+a guard must kill at least one of these; registered with
+``scripts/tests/mutation_controls.py`` under ``merge-hygiene``::
+
+    python3 -m unittest scripts.tests.test_check_merge_hygiene
+    python3 scripts/tests/mutation_controls.py merge-hygiene
+
+**Conflict-marker text is BUILT, never written literally.**  This file is
+scanned by the very guard it tests -- the exclusion was narrowed from
+``scripts/tests/*`` to ``scripts/tests/fixtures/*`` in the same change -- so a
+literal ``<<<<<<<`` here would make the gate fail on its own control suite.
+``_marker()`` composes them from repeated characters instead, which is also the
+only honest way to prove the narrowed exclusion is real.
+"""
+
+from __future__ import annotations
+
+import os
+import pathlib
+import subprocess
+import tempfile
+import unittest
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+SCRIPT = ROOT / "scripts/check-merge-hygiene.sh"
+
+# A generator stub: exits with $STUB_<NAME>_RC and prints a plausible line.
+STUB = """#!/usr/bin/env python3
+import os, sys
+name = {name!r}
+rc = int(os.environ.get("STUB_" + name + "_RC", "0"))
+print(f"{{name}}: {tag} rc={{rc}}")
+sys.exit(rc)
+"""
+
+
+def _marker(char: str, suffix: str = "") -> str:
+    """A conflict marker built at runtime -- see the module docstring."""
+    return char * 7 + suffix
+
+
+class MergeHygieneControls(unittest.TestCase):
+    """One scenario per guard in `scripts/check-merge-hygiene.sh`."""
+
+    def setUp(self) -> None:
+        scratch = pathlib.Path("/data0/axeyum/scratch")
+        self._tmp = tempfile.TemporaryDirectory(dir=scratch if scratch.is_dir() else None)
+        self.addCleanup(self._tmp.cleanup)
+        self.root = pathlib.Path(self._tmp.name) / "tree"
+        (self.root / "scripts").mkdir(parents=True)
+        self.git("init", "-q")
+        self.git("config", "user.email", "t@example.com")
+        self.git("config", "user.name", "t")
+        for name, tag in (("gen-adr-index", "ADR_INDEX ok"), ("gen-plan", "plan ok")):
+            path = self.root / "scripts" / f"{name}.py"
+            path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
+        self.write("README.md", "clean\n")
+        self.git("commit", "-qm", "base")
+
+    # -- tree construction --------------------------------------------------
+
+    def _git_env(self) -> dict[str, str]:
+        # A lane exports GIT_INDEX_FILE (CLAUDE.md's per-process index remedy)
+        # and it points at the REAL checkout's private index. Inherited here it
+        # would make every `git add` in this scratch repo write there instead.
+        env = dict(os.environ)
+        for var in ("GIT_INDEX_FILE", "GIT_DIR", "GIT_WORK_TREE", "GIT_CONFIG"):
+            env.pop(var, None)
+        return env
+
+    def git(self, *args: str) -> None:
+        subprocess.run(("git", *args), cwd=self.root, check=True, env=self._git_env(),
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def write(self, rel: str, text: str, *, track: bool = True) -> None:
+        path = self.root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        if track:
+            self.git("add", "-A")
+
+    def run_gate(self, **stub_rc: int) -> subprocess.CompletedProcess:
+        env = self._git_env()
+        env["AXEYUM_MERGE_HYGIENE_ROOT"] = str(self.root)
+        for name, rc in stub_rc.items():
+            env[f"STUB_{name.upper()}_RC"] = str(rc)
+        return subprocess.run(
+            ["bash", str(SCRIPT)], cwd=ROOT, env=env,
+            capture_output=True, text=True, timeout=120,
+        )
+
+    # -- the accept case ----------------------------------------------------
+
+    def test_clean_tree_passes_and_prints_its_summary(self) -> None:
+        """The positive control. Without it every guard below is satisfiable
+        by a gate that always fails, which is not a gate either."""
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("MERGE_HYGIENE|markers=0", done.stdout)
+        self.assertIn("|PASS", done.stdout)
+
+    # -- guard 1: conflict markers ------------------------------------------
+
+    def test_conflict_marker_in_a_tracked_rust_file_fails(self) -> None:
+        self.write("src/lib.rs", f"fn a() {{}}\n{_marker('<', ' ours')}\nfn b() {{}}\n")
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("conflict markers", done.stdout)
+        self.assertIn("src/lib.rs", done.stdout)
+
+    def test_a_bare_seven_equals_line_is_a_marker(self) -> None:
+        """The middle marker carries no trailing text, so a pattern written
+        only for `<<<<<<< ` / `>>>>>>> ` misses the one git leaves behind most
+        often in a JSON fact file."""
+        self.write("artifacts/facts/F-x.json", "{\n" + _marker("=") + "\n}\n")
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("artifacts/facts/F-x.json", done.stdout)
+
+    def test_a_marker_in_a_control_suite_is_NOT_exempt(self) -> None:
+        """The narrowed exclusion. `scripts/tests/*` was excluded wholesale,
+        which exempted every control suite in the repository from the gate
+        whose controls those are."""
+        self.write("scripts/tests/test-thing.sh", f"#!/bin/sh\n{_marker('>', ' theirs')}\n")
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("scripts/tests/test-thing.sh", done.stdout)
+
+    def test_a_marker_under_tests_fixtures_IS_exempt(self) -> None:
+        """The other side of the same narrowing: fixture data is allowed to
+        contain marker text, and the gate must still pass."""
+        self.write("scripts/tests/fixtures/conflicted.txt", _marker("<", " ours") + "\n")
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("markers=0", done.stdout)
+
+    def test_an_untracked_file_with_markers_does_not_fail_the_gate(self) -> None:
+        """`git grep` scans the index, deliberately: a lane's untracked scratch
+        file is not a merge defect and must not make the gate red for everyone."""
+        self.write("scratch.txt", _marker("<", " ours") + "\n", track=False)
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+
+    # -- guard 2: duplicate ADR numbers -------------------------------------
+
+    def test_adr_index_check_failure_fails_the_gate(self) -> None:
+        done = self.run_gate(gen_adr_index=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: gen-adr-index.py --check", done.stdout)
+        self.assertIn("Renumber the NEWER one", done.stdout)
+
+    def test_adr_index_failure_output_is_reported_not_swallowed(self) -> None:
+        """The remedy is useless without the ADR_INDEX line naming the clash;
+        the gate captures the checker's own output with 2>&1 for this."""
+        done = self.run_gate(gen_adr_index=1)
+        self.assertIn("ADR_INDEX", done.stdout)
+
+    # -- guard 3: stale generated files -------------------------------------
+
+    def test_stale_plan_fails_the_gate(self) -> None:
+        done = self.run_gate(gen_plan=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: gen-plan.py --check", done.stdout)
+        self.assertIn("commit PLAN.md", done.stdout)
+
+    # -- the aggregate ------------------------------------------------------
+
+    def test_every_failure_is_reported_not_only_the_first(self) -> None:
+        """A merge that broke two things must name both; short-circuiting after
+        the first sends the coordinator back for a second round."""
+        self.write("src/lib.rs", _marker("<", " ours") + "\n")
+        done = self.run_gate(gen_adr_index=1, gen_plan=1)
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("conflict markers", done.stdout)
+        self.assertIn("gen-adr-index.py --check", done.stdout)
+        self.assertIn("gen-plan.py --check", done.stdout)
+        self.assertIn("MERGE_HYGIENE|FAILED", done.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()

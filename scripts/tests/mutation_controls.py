@@ -4049,6 +4049,61 @@ SUITES["artifact-ownership"] = (
 )
 
 
+
+# --------------------------------------------------------------------------
+# `merge-hygiene` -- `scripts/check-merge-hygiene.sh`, which landed on
+# 2026-08-30 with ZERO registered controls. The 2026-08-30 session audit named
+# it first among five survivors: `ls scripts/tests/ | grep -c merge-hygiene`
+# returned 0 against a positive control of 1 for `aggregate-scope`, so every
+# guard in it was a survivor by definition however well it behaved by hand.
+#
+# The controls drive the SHIPPED script against a throwaway git repository via
+# `AXEYUM_MERGE_HYGIENE_ROOT`, with stub generators whose exit status the
+# scenario chooses. Nothing is re-implemented.
+#
+# Two of these mutants kill more than one test, and it is the structure of the
+# gate rather than a weak suite: the marker branch is ONE `if`, and three
+# scenarios (a `.rs` file, a bare `=======` in a fact file, a control suite)
+# reach failure through it. Kill sets are reported as measured.
+# --------------------------------------------------------------------------
+
+SUITES["merge-hygiene"] = (
+    "scripts/check-merge-hygiene.sh",
+    Unittest("scripts.tests.test_check_merge_hygiene"),
+    [
+        (
+            "M1 conflict markers in tracked files fail the gate",
+            'if [ "$markers" -ne 0 ]; then',
+            "if false; then",
+        ),
+        (
+            "M2 a bare `=======` counts as a marker",
+            "marker_re='^(<<<<<<< |>>>>>>> |={7}$)'",
+            "marker_re='^(<<<<<<< |>>>>>>> )'",
+        ),
+        (
+            "M3 the exemption is fixtures/, not the whole controls directory",
+            "':!scripts/tests/fixtures/*'",
+            "':!scripts/tests/*'",
+        ),
+        (
+            "M4 a duplicate ADR number fails the gate",
+            "if ! adr_out=$(python3 scripts/gen-adr-index.py --check 2>&1); then",
+            "if false; then",
+        ),
+        (
+            "M5 the ADR checker's own output is reported",
+            """printf '%s\\n' "$adr_out" | /usr/bin/grep -E 'ADR_INDEX' | sed 's/^/    /'""",
+            "true",
+        ),
+        (
+            "M6 a stale generated file fails the gate",
+            "if ! plan_out=$(python3 scripts/gen-plan.py --check 2>&1); then",
+            "if false; then",
+        ),
+    ],
+)
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()

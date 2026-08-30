@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Post-merge hygiene: the four things that have actually gone wrong when a
+# Post-merge hygiene: the things that have actually gone wrong when a
 # coordinator merges a lane branch, in one command that takes ~2 seconds.
+#
+# FOUR are listed below and THREE are enforced. The fourth is written down with
+# the reason it is not gated (there are no live subjects, so a guard for it
+# could not fail), because a header claiming four while the body enforces three
+# is exactly the kind of gap this file exists to close.
 #
 # Why this exists. Merging lane branches is the coordinator's most frequent
 # operation and the full gate is ~10 minutes, so it is not run per merge. Each
@@ -25,21 +30,38 @@
 #      correctly bump a pinned length and git merges both entries without
 #      conflict, leaving the declared size one short. Eight times in one day.
 #
-# Exit 0 only when all four pass. Each failure names its own remedy.
+# Exit 0 only when all three enforced checks pass. Each failure names its own
+# remedy.
 set -u
-cd "$(dirname "$0")/.." || exit 2
+# `AXEYUM_MERGE_HYGIENE_ROOT` points the SHIPPED script at a throwaway tree, so
+# the controls in `scripts/tests/test_check_merge_hygiene.py` drive these guards
+# to failure without re-implementing them and without dirtying the real
+# checkout. Same device as `AXEYUM_KERNEL_SUITES_ROOT`. Unset in every real run.
+cd "${AXEYUM_MERGE_HYGIENE_ROOT:-$(dirname "$0")/..}" || exit 2
 fail=0
 note() { printf '  %s\n' "$1"; }
 
 # --- 1. conflict markers in tracked files ------------------------------------
 # Only tracked files, and only real markers at line start. `git grep` skips
 # .gitignore'd trees, which is what keeps this fast in a repo with 200 worktrees.
-markers=$(git grep -lE '^(<<<<<<< |>>>>>>> |={7}$)' -- \
-            ':!*.md.orig' ':!scripts/tests/*' 2>/dev/null | /usr/bin/grep -c . || true)
+#
+# THE EXCLUSION IS `scripts/tests/fixtures/`, NOT `scripts/tests/`. The first
+# draft excluded the whole controls directory, which is where every control
+# suite in this repository lives -- so a conflict-marker-shaped defect committed
+# into a control suite was invisible to the gate whose controls those are.
+# Measured 2026-08-30: zero tracked files under `scripts/tests/` contain a
+# marker today, so narrowing it costs nothing and closes the hole. A control
+# that genuinely needs marker text as DATA writes it under `fixtures/`, or
+# builds it at runtime from repeated characters (which is what
+# `test_check_merge_hygiene.py` does, so that this gate's own controls are
+# scanned by it rather than exempt from it).
+marker_re='^(<<<<<<< |>>>>>>> |={7}$)'
+marker_paths=(':!*.md.orig' ':!scripts/tests/fixtures/*')
+markers=$(git grep -lE "$marker_re" -- "${marker_paths[@]}" 2>/dev/null | /usr/bin/grep -c . || true)
 if [ "$markers" -ne 0 ]; then
   fail=1
   echo "FAIL: $markers tracked file(s) contain conflict markers:"
-  git grep -lE '^(<<<<<<< |>>>>>>> |={7}$)' -- ':!*.md.orig' ':!scripts/tests/*' | sed 's/^/    /'
+  git grep -lE "$marker_re" -- "${marker_paths[@]}" | sed 's/^/    /'
   note "A generated file (PLAN.md, the ADR index README) is fixed by RE-GENERATING,"
   note "never by hand-editing the markers out."
 fi
