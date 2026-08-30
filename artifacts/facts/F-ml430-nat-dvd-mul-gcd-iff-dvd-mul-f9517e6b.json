@@ -8,10 +8,33 @@
     "statement": "∀ {k n m : ℕ}, k ∣ n * k.gcd m ↔ k ∣ n * m",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-dvd-gcd-iff-b8485987", "F:ml430-nat-dvd-mul-right-a87a83c4", "F:nat-mul-comm"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_mul_gcd_iff_dvd_mul 2>/dev/null | grep -Ec '^Nat\\.dvd_mul_gcd_iff_dvd_mul[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.dvd_mul_gcd_iff_dvd_mul",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.dvd_mul_gcd_iff_dvd_mul` through the trusted `Kernel::add_declaration` gate. New proof, lane gcd-mul-right, in `nat_prelude/gcd_mul_right_mirrors.rs`, wired in via `declare_gcd_mul_right_mirrors`. Route: the general shape `dvd_gcd_scaled_iff` applied at (a,b,c):=(k,m,n) gives `Iff (dvd k (gcd(k,m)*n)) (dvd k (m*n))`; `mul_comm` commutes the scaling factor from the right to the left on both sides (`gcd(k,m)*n -> n*gcd(k,m)`, `m*n -> n*m`) to land on the stated form. `nat_theorem_inventory`'s rendered type is `(x0:AxNat)->(x1:AxNat)->(x2:AxNat)->Iff (dvd x0 (mul x1 (gcd x0 x2))) (dvd x0 (mul x1 x2))`, matching this fact's `formal.statement` exactly. `nat_theorem_inventory` exits non-zero for a name that does not exist (measured: exit 1, `0 theorems` on stdout, so `test -ge 1` fails). Verified no substring overlap against the sibling facts `Nat.dvd_gcd_mul_iff_dvd_mul`/`Nat.dvd_gcd_mul_gcd_iff_dvd_mul`: the anchored pattern matched exactly its own row (count 1) in a combined inventory of all three.",
+      "supports": "∀ {k n m : ℕ}, k ∣ n * k.gcd m ↔ k ∣ n * m"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly, and `gcd_mul_right_mirrors_apply_at_concrete_and_symbolic_instances` checks it applies at a concrete discriminating triple (k,n,m)=(6,3,4) -- both the statement shape and, by applying `Iff.mp` to a real `dvd_refl` proof witness, the logical content -- and symbolically at a genuinely free triple via a fresh restating theorem.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.dvd_mul_gcd_iff_dvd_mul"
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +49,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "New proof, lane gcd-mul-right (2026-08-30): closed by building `Nat.gcd_mul_right` (well-founded induction mirroring `gcd`'s own Euclidean recursion, `nat_prelude/gcd_mul_right.rs`), the distributive lemma the prior lane (nat-gcd-dvd-mirrors, `docs/plan/status/331-nat-gcd-dvd-mirrors.md`) identified as absent from `gcd.rs`/`lcm_gcd_lemmas.rs` under any spelling and confirmed via `int_prelude/gcd.rs`'s own module doc, then this fact's own argument in `nat_prelude/gcd_mul_right_mirrors.rs`. Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: train), which carries the partition; that manifest, not this file, is the split authority."
 }
