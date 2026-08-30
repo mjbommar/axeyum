@@ -4427,6 +4427,15 @@ pub struct NatPrelude {
     /// the reusable odd-factor divisibility step behind the Fermat-prime
     /// lemma (`d := 2t+1` odd).
     pub dvd_pow_add_one_of_odd_mul_exp: NameId,
+    /// `Nat.pow_two_or_has_odd_factor : ∀ n, Ne n zero → Or (∃ m, Eq n (pow 2
+    /// m)) (∃ e t, Eq n (mul e (succ (mul 2 t))) ∧ Ne t zero)` — by
+    /// structural induction on a fuel bound `Le n fuel` (NOT
+    /// `WellFounded.fix`), instantiated at `fuel := n`.
+    pub pow_two_or_has_odd_factor: NameId,
+    /// `Nat.pow_of_pow_add_prime : ∀ a n, Lt 1 a → Ne n zero → (2 ≤
+    /// (a^n+1) ∧ ∀ c, dvd c (a^n+1) → c = 1 ∨ c = a^n+1) → ∃ m, n = 2^m` —
+    /// `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`, the Fermat-prime lemma.
+    pub pow_of_pow_add_prime: NameId,
     // -- `fermat-mirrors` lane: `fermat_number_mirrors.rs` --
     /// `Nat.fermatNumber_ne_one : ∀ n, Ne (fermatNumber n) 1`.
     pub fermatnumber_ne_one: NameId,
@@ -5323,6 +5332,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_mul: kernel.name_str(nat, "pow_mul"),
             dvd_pow_add_one_of_odd_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_exp"),
             dvd_pow_add_one_of_odd_mul_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_mul_exp"),
+            pow_two_or_has_odd_factor: kernel.name_str(nat, "pow_two_or_has_odd_factor"),
+            pow_of_pow_add_prime: kernel.name_str(nat, "pow_of_pow_add_prime"),
             fermatnumber_ne_one: kernel.name_str(nat, "fermatNumber_ne_one"),
             fermatnumber_mono: kernel.name_str(nat, "fermatNumber_mono"),
             coprime_fermatnumber_fermatnumber: kernel

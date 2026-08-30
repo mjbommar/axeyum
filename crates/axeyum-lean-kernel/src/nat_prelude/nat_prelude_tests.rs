@@ -1232,6 +1232,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_mul,
         p.dvd_pow_add_one_of_odd_exp,
         p.dvd_pow_add_one_of_odd_mul_exp,
+        p.pow_two_or_has_odd_factor,
+        p.pow_of_pow_add_prime,
         // `fermat-mirrors` lane: `fermat_number_mirrors.rs`.
         p.fermatnumber_ne_one,
         p.fermatnumber_mono,
