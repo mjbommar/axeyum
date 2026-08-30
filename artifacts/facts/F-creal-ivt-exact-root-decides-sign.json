@@ -76,8 +76,8 @@
     },
     {
       "id": "nonvacuity-le-total-absent",
-      "kind": "exhaustive-enumeration",
-      "supports": "The principle this reduction derives is ABSENT from the environment, so the reduction is a boundary rather than a detour. CReal.le_total / CReal.lt_total (and both camelCase spellings) are not declared; the same lookup finds CReal.lt_cotrans, which is.",
+      "kind": "instance-pin",
+      "supports": "The principle this reduction derives is ABSENT from the environment under four specific hand-written spellings, so the reduction is a boundary rather than a detour. CReal.le_total / CReal.lt_total (and both camelCase spellings) are not declared; the same lookup finds CReal.lt_cotrans, which is. This is NOT an exhaustive-enumeration claim: the check pins the absence of four named instances, not of every possible name a total-order principle over CReal could be given -- a declaration landed as, say, CReal.le_or_le or CReal.sign_cases would not trip this guard. Re-labeled from exhaustive-enumeration on 2026-08-30 (docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md's audit): the CHECK is sound and does what it claims (kernel.environment() enumeration with a same-kind positive control, `creal_tests::ivt_row_two_derives_a_principle_absent_from_the_environment`), the earlier LABEL overstated it.",
       "check_status": "checked",
       "checkers": [
         "kernel.environment() enumeration with a same-kind positive control"
