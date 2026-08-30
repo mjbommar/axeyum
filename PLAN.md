@@ -201,6 +201,8 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-mod-mul | `46ddfaf3e` flip all five `F:ml430-nat-mod-mul-*` facts to `proved` with kernel-term + axiom-footprint evidence; `validate-facts.py` 0 errors. |
 | 2026-08-29 | totient-multiplicative | `Nat.coprime_div_left` (1 of the family's remaining mirrors, closed) and `Nat.gcd_comm` (new, zero-induction, unblocks both this family's `totient_even` plan and the multiplicative-formula plan below) landed and verified. The multiplicative formula `totient(mn) = totient(m)*totient(n)` itself: fully traced and numerically checked (bijection, mod-gcd invariance, pointwise coprimality iff, Bézout-multiplication algebra, the row-major double-counting target statement), with the two genuinely novel pieces identified and marked (`coprime_mul_of_coprime`, the coprimality-combine number theory; `count_range_row_major`, the totient-independent double-counting induction) — NOT built in Rust, per this task's own sizing guidance. `nat_prelude/crt.rs` (Nat-native, not the `int_prelude` one) was found to transport directly for the injectivity/pigeonhole half, correcting all three prior triages, which did not find it. |
 | 2026-08-29 | int-add-basics | Nine `ml430-int-add-*` mirrors closed: `add_comm`/`add_neg_cancel_right` already existed (evidence only); `add_left_neg`/`add_neg_eq_sub`/`add_left_comm`/`add_mul`/`add_neg_cancel_left`/`add_left_cancel`/`add_left_inj` newly built in `int_prelude/add_basics.rs`, all axiom-free, no `Int.rec` case split. |
+| 2026-08-29 | orphan-script-audit | `98d17aeef` census + archive 346 dead `check-autogenesis-*` scripts (+ 92 controls) to `scripts/archive/`; register `check-shared-index.sh`, `check-sos-negative-controls.sh`, `check-evidence-portability.sh` as new gate steps |
+| 2026-08-29 | orphan-script-audit | `810ef0807` fix 3 `scripts/control-optout.tsv` entries left stale by the archival; lower `OPTOUT_CEILING` 18 -> 15 |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -23511,6 +23513,183 @@ in `defae5612` by the mirror-statement-repair lane. Untouched here.
 - The failing row stays open and unclosable as stated. Deciding what to do about
   it — an ADR-0542-style amendment, or leaving it as a permanent recorded
   defect — is a decision, not a lane's call.
+
+**Your lane's block (`DONE for this pass`, orphan-script-audit, 2026-08-29).**
+Re-measured the 2026-08-29 process retrospective's "352 of 503" orphan-script
+claim from scratch, found the correct number (349 of 504, reproducing the
+retrospective within corpus drift), diagnosed why an independent cruder query
+landed at 398, archived the 346 dead one-off capsule checkers plus their 92
+orphan controls, registered the 3 genuinely useful never-wired-up scripts as
+new gate steps, and repaired the opt-out fallout the archival caused. Nothing
+left half-done; no further action required from the next lane on this
+specific audit, though the retrospective's suggested "subject registration"
+ratchet (mirroring `check-control-registration.sh` for `check-*` SUBJECTS,
+not just their controls) remains unbuilt — see "Left for later" below.
+
+## The census: method, numbers, and why they disagree
+
+**Universe.** `scripts/check-*.{sh,py}` at the top level of `scripts/` (not
+recursive — nothing matching lives in a subdirectory): **504** files. (The
+retrospective's snapshot was 503; two scripts — `check-fast.sh`,
+`check-mirror-statement-fidelity.py` — landed between its snapshot and this
+one, both live.)
+
+**Method.** A file X "references" script Y if Y's basename (or, for
+`scripts/tests/test_*.py`, its dotted-module form `scripts.tests.NAME` too —
+see below) is a substring of X's text. Roots: `scripts/check.sh`, `justfile`,
+`hooks/*`, `.github/workflows/*`, and every `artifacts/facts/*.json`
+`checker_command`. Compute the full reference graph over every file under
+`scripts/` (not just `check-*` ones — an intermediate helper like
+`run-python-controls.py` can itself be named by a root and then name further
+scripts), BFS from the roots, and a `check-*` script is LIVE iff it is in the
+closure. Two built-in controls run every time: **positive** —
+`check-aggregate-scope.sh` must classify as live (it does); **negative** — a
+fabricated name `check-zzz-nonexistent.sh` must get zero hits anywhere (it
+does).
+
+**Three numbers, and only one survives scrutiny:**
+
+| source | orphans (of 504/503) | method |
+| --- | --- | --- |
+| coordinator's cruder query | 398 | not re-derived here, but see the bug below — almost certainly the same one |
+| this lane, first pass | 387 | full graph, basename substring only |
+| the 2026-08-29 retrospective | 352 (of 503) | not re-derived independently; this lane's fixed pass reproduces it |
+| **this lane, fixed** | **349** | full graph + dotted-module matching |
+
+**The bug that separated 387 from 349, and almost certainly explains 398
+too.** `scripts/check.sh` invokes most Python controls as
+`python3 -m unittest scripts.tests.test_X` — dotted module form, no `.py`, no
+`/`. That string does not contain the substring `test_X.py`, so a census that
+matches only literal basenames concludes `scripts/tests/test_X.py` is
+un-invoked, which then breaks the chain to every `check-*.py` subject that
+control in turn references (most controls literally read/exec their subject
+script). Fixed by also matching `scripts.tests.NAME` for any
+`scripts/tests/NAME.py` file — the same dual-form logic
+`check-control-registration.sh` already uses for exactly this reason (its own
+header notes discovering the same gap on 2026-08-27: "counting only the
+module form reported 217 orphans against a true 199"). Confirmed with a
+fix-validation control: `check-theorem-inventory-completeness.py` — orphan
+before the fix, live after, because its own control uses the dotted form —
+must land in the live set post-fix, and does.
+
+Applying the same fix moved this lane from 387 -> 349 orphans (155 live).
+That is a 38-script swing from ONE bug, comparable in size to the 46-script
+gap between the retrospective's 352 and the coordinator's 398 — strong
+circumstantial evidence the "398" query has the identical blind spot, though
+this was not independently re-derived (nobody handed over that query's exact
+form to check).
+
+**Verdict: the retrospective's 352 was right (to within the 1-2 file corpus
+drift and edge cases expected over 8+ days); trust the fixed method (349) as
+current.**
+
+## Classification of the 349 orphans
+
+| group | count | disposition |
+| --- | --- | --- |
+| `check-autogenesis-*` (the 2026-08-21/22 capsule burst) | 346 | **archived** |
+| general-purpose, well-documented, never wired up | 3 | **registered** |
+
+**346 `check-autogenesis-*` scripts.** 333 of the 349 orphans (95%) have their
+last commit on exactly 2026-08-21 or 2026-08-22. Read a random sample of 12
+plus a full-repo grep for each (positive control: the grep finds their
+matching `docs/autogenesis/*.md` plan doc and `artifacts/autogenesis/*.json`
+input every time, so the method isn't silently missing hits): each is a
+single-use verifier, typically under 2 KB, hard-coding a SHA-256 of one
+capsule's artifact and — in the sampled files — a `pathlib.Path` under a
+host-local `/nas3/...` mount that does not exist in this checkout. Not a
+reusable gate by any reading; this is the "operation registry where every
+entry names one target is a dispatch table, not a producer" pattern CLAUDE.md
+already documents for the same era. 92 of the 346 have a matching
+`scripts/tests/test_check_autogenesis_*.py` control that ran only via
+`run-python-controls.py`'s catch-all (verified: none of the 92 is separately
+named by a root — if it were, its subject would already be live, not
+orphan).
+
+**3 genuinely useful, never-wired-up scripts** (the "interesting group" the
+brief called out) — all mentioned only in a doc, never in a gate:
+  - `check-shared-index.sh` — detects the staged-revert-of-landed-work bug
+    CLAUDE.md's multi-agent section spends several incidents on.
+  - `check-sos-negative-controls.sh` — 36 assertions over 21 fixtures proving
+    the SOS certificate checker actually rejects false certificates. Exactly
+    the "a checker that cannot fail is worse than no checker" case this repo
+    audits elsewhere, just never itself gated.
+  - `check-evidence-portability.sh` — re-validates CERTIFIED certificates
+    against a fresh parse; guards the exact defect class that shipped once
+    and had to be reverted (2026-08-17, per its own header).
+
+All three were run standalone before registering (`check-shared-index.sh`:
+instant, OK; `check-sos-negative-controls.sh`: ~1s, 36/36 passed;
+`check-evidence-portability.sh --limit 5`: needs `smtcomp_cli` built first,
+~a few minutes cold, then OK) and exited 0.
+
+## What landed
+
+- **Archived** (git mv, history preserved) 346 `check-autogenesis-*.{sh,py}`
+  subjects to `scripts/archive/`, and their 92 matching
+  `scripts/tests/test_check_autogenesis_*.py` controls to
+  `scripts/archive/tests/`. Moving the controls out of `scripts/tests/` is
+  what actually stops them running — `run-python-controls.py`'s catch-all
+  globs `scripts/tests/test_*.py`, so they fall out of discovery the moment
+  they leave that directory.
+- **Registered** the 3 useful orphans as new steps: `scripts/check.sh` gained
+  three `step` lines right before the step-count summary; the `justfile`
+  gained matching recipes (`shared-index`, `sos-negative-controls`,
+  `evidence-portability`) wired into the `check:` dependency list.
+- **Repaired** 3 `scripts/control-optout.tsv` entries that named controls now
+  living under `scripts/archive/tests/` — `check-control-registration.sh`
+  correctly flagged them as "names a file that no longer exists" the moment
+  the archival landed. Removed the 3 entries (and the now-empty "(d)" section
+  header they were the sole occupant of), lowered `OPTOUT_CEILING` 18 -> 15
+  to match (a falling count is a result per that gate's own G6 comment), and
+  fixed a stale "19 suites" count in the file's header.
+- **Left everything else alone.** No non-autogenesis, non-listed script was
+  touched. The 3 registrations are the only additions to what runs.
+
+## Checks run (foreground, per the brief)
+
+- `scripts/check-control-registration.sh` — RED immediately after the
+  archival (3 stale opt-out entries), GREEN after the repair commit:
+  `controls=26|orphans=0|py_controls=295|py_orphans=0|py_named=194|py_catchall=86|py_optout=15|py_optout_ceiling=15`.
+- `python3 scripts/validate-facts.py` — `2114 facts checked, 0 errors`. No
+  fact's `checker_command` named an archived script.
+- `python3 scripts/gen-plan.py --check` — clean.
+- `scripts/check-aggregate-scope.sh` — **RED, pre-existing, not from this
+  lane.** 11 divergences reported (a `check-test-attribute-integrity.py` path
+  prefix mismatch, 9 python-binding `uv run`/`maturin`/`ruff` steps that only
+  exist in the justfile, one `test-creal-prelude-build-ratio.sh` control only
+  in `check.sh`). Diffed each against parent commit `aa74979ae`: all 11
+  existed before this lane touched anything (`git show
+  aa74979ae:justfile | grep -c "uv run\|maturin"` -> 40;
+  `git show aa74979ae:scripts/check.sh | grep -c check-test-attribute-integrity`
+  -> 2). The 3 newly-registered steps appear symmetrically in both
+  `scripts/check.sh` and the `justfile`'s `check:` list, so they add zero new
+  divergence. Not fixed here — it is a pre-existing, unrelated gap between
+  the python-bindings tooling and `check.sh`, outside this task's scope.
+
+## Left for later
+
+The retrospective's R5 also proposed "the symmetric half of
+`check-control-registration.sh`" — a ratchet asserting every `check-*`
+SUBJECT (not just its control) has a caller, so a new orphan is red at
+commit time instead of accumulating for two years. Not built in this pass:
+it is a real, separately-sized piece of work (design the CALLERS set,
+decide whether transitive script-to-script calls count or only direct
+mentions like the existing control gate, handle the fact-`checker_command`
+case, write mutation-verified controls for each guard). The 349-orphan
+number this lane produced is exactly the baseline such a gate would need to
+start from zero.
+
+Also worth flagging for whoever picks this up: `scripts/archive/` now holds
+346 scripts that are pure archaeology by design (host-specific paths,
+one-shot SHA-256 pins). If disk/clutter ever becomes a concern, they are safe
+to delete outright (git history preserves them) — moving rather than
+deleting was the more conservative choice for this pass, per the brief's "the
+cost of keeping one uncertain script is far below the cost of deleting a real
+check," even though these three are about as certain-orphan as it gets.
+
+Commits: `98d17aeef` (census + archive + register), `810ef0807` (opt-out
+repair).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
