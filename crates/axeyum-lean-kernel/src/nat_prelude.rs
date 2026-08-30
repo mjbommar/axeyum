@@ -177,6 +177,7 @@ mod lcm;
 mod lcm_gcd_lemmas;
 mod ldiff;
 mod log;
+mod log2;
 mod log_clog_order;
 mod lor;
 mod min_fac;
@@ -290,6 +291,7 @@ use lcm::{
 use lcm_gcd_lemmas::declare_lcm_gcd_lemmas;
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
+use log2::declare_log2_all;
 use log_clog_order::declare_log_clog_order_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
@@ -3297,6 +3299,19 @@ pub struct NatPrelude {
     /// [`clog_aux_antitone_base`](Self::clog_aux_antitone_base)'s diagonal
     /// `f := n`.
     pub clog_antitone_left: NameId,
+    /// `Nat.log2 : Nat → Nat`, `log2 n := log 2 n` (Lean **core**,
+    /// `Init/Data/Nat/Log2.lean` — Mathlib imports it unchanged). Lean
+    /// core's own `log2` is a fuel-recursive `Nat.rec` with a non-dependent
+    /// motive `fun _ => Nat → Nat`, fuel = the value itself, single guard
+    /// `2 ≤ n` — exactly `logAux`'s own device specialized to the literal
+    /// base `2` (the inner cut `2 ≤ 2` reduces to `Bool.true` by ι alone,
+    /// leaving only the outer cut `2 ≤ n`), so this prelude declares it
+    /// directly as `Nat.log 2` rather than re-deriving a second recursor.
+    pub log2: NameId,
+    /// `Nat.log2_eq_log_two : ∀ n, Eq (log2 n) (log 2 n)` (`Mathlib`:
+    /// `Nat.log2_eq_log_two`) — `Eq.refl`, since `log2 n` delta-unfolds
+    /// directly to `log 2 n` by construction.
+    pub log2_eq_log_two: NameId,
     /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
     /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
     /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
@@ -4713,6 +4728,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             log_antitone_left: kernel.name_str(nat, "log_antitone_left"),
             clog_aux_antitone_base: kernel.name_str(nat, "clog_aux_antitone_base"),
             clog_antitone_left: kernel.name_str(nat, "clog_antitone_left"),
+            log2: kernel.name_str(nat, "log2"),
+            log2_eq_log_two: kernel.name_str(nat, "log2_eq_log_two"),
             bit: kernel.name_str(nat, "bit"),
             bit_false: kernel.name_str(nat, "bit_false"),
             bit_true: kernel.name_str(nat, "bit_true"),
@@ -5407,6 +5424,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.mod_eq_trans`/`Nat.mod_eq_mul_right` (`euler.rs`/`modular.rs`,
         // far above). Nothing needs it, so it goes last.
         declare_modeq_cancel_div_gcd(&mut d, &p)?;
+        // Needs only `Nat.log` (`declare_log_all`, far above). Nothing needs
+        // it, so it goes last.
+        declare_log2_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
