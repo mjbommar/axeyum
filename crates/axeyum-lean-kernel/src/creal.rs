@@ -6323,6 +6323,49 @@ pub struct CRealPrelude {
     /// ACCURACY index), so the harmonic-series trap never arises. Nothing
     /// here forces that choice. See `creal/supremum.rs`.
     pub mesh_max_le_add_of_modulus: NameId,
+    /// `CReal.supLevel : ∀ F a b, UniformlyContinuousOn F a b → Nat → Nat :=
+    /// fun F a b u k => Nat.add (Nat.size (CReal.bound (add b (neg a))))
+    /// (trueExpOfModulus (UniformlyContinuousOn.modulus F a b u) k)` — the
+    /// mesh level the sup sequence samples at accuracy index `k`.
+    ///
+    /// One summand per factor of
+    /// [`Self::mesh_level_count_ge_of_size`]'s threshold: the interval WIDTH
+    /// (constant in `k`) and the MODULUS at the requested accuracy. Additive
+    /// so [`Self::exp_of_modulus_le_true_exp_of_modulus`] composes with
+    /// `Nat.add_le_add_left`. The width term is what
+    /// [`Self::exp_of_modulus`]'s own schedule does not carry.
+    /// See `creal/supremum.rs`.
+    pub sup_level: NameId,
+    /// `CReal.supLevel_mono : ∀ F a b u k k', Nat.le k k' →
+    /// Nat.le (supLevel F a b u k) (supLevel F a b u k')`.
+    /// See `creal/supremum.rs`.
+    pub sup_level_mono: NameId,
+    /// `CReal.supSeq : ∀ F a b, UniformlyContinuousOn F a b → Nat → CReal :=
+    /// fun F a b u k => meshMax F a b (supLevel F a b u k)` — the sequence
+    /// whose limit is the supremum of `F` on `[a, b]`.
+    ///
+    /// **A VALUE, never an argmax.** Each term is a finite maximum over a
+    /// mesh, so it is a height; nothing here names a point attaining it, and
+    /// [`Self::evt_attained_max_decides_sign`] says no construction can.
+    /// See `creal/supremum.rs`.
+    pub sup_seq: NameId,
+    /// `CReal.supSeq_mono : ∀ F a b u, le a b → ∀ k k', Nat.le k k' →
+    /// le (supSeq F a b u k) (supSeq F a b u k')` — the lower half of the
+    /// Cauchy estimate, exact (no epsilon): refining a mesh only adds sample
+    /// points. See `creal/supremum.rs`.
+    pub sup_seq_mono: NameId,
+    /// `CReal.supSeq_le_add : ∀ F a b u, le a b → ∀ k k', Nat.le k k' →
+    /// le (supSeq F a b u k') (add (supSeq F a b u k) (ofRat (natDivSucc 1
+    /// (meshLevelCount k))))` — the upper half, at the geometric rate
+    /// `1/2^k`.
+    ///
+    /// **One application of [`Self::mesh_max_le_add_of_modulus`], not a
+    /// telescope**, because that gap bound is uniform in refinement depth:
+    /// however many doublings `trueExpOfModulus` jumps between `k` and `k'`,
+    /// one epsilon covers all of them. `Nat.le_dest` supplies the `add j d`
+    /// shape, an `Exists.rec` into a `Prop` — permitted; the data restriction
+    /// bites only at `supOn`'s own `CReal.mk`. See `creal/supremum.rs`.
+    pub sup_seq_le_add: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7078,6 +7121,11 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max_le_add_of_step_close: kernel.name_str(creal, "meshMax_le_add_of_step_close"),
         mesh_max_le_add_of_modulus: kernel
             .name_str(creal, "meshMax_le_add_of_modulus"),
+        sup_level: kernel.name_str(creal, "supLevel"),
+        sup_level_mono: kernel.name_str(creal, "supLevel_mono"),
+        sup_seq: kernel.name_str(creal, "supSeq"),
+        sup_seq_mono: kernel.name_str(creal, "supSeq_mono"),
+        sup_seq_le_add: kernel.name_str(creal, "supSeq_le_add"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12728,6 +12776,30 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.mesh_max_le_add_of_modulus],
         run: supremum::declare_mesh_max_le_add_of_modulus,
+    },
+    BuildStep {
+        label: "supremum::declare_sup_seq",
+        requires: &[
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.exp_of_modulus,
+            |p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_max,
+            |p: CRealPrelude| p.mesh_max_le_add_of_modulus,
+            |p: CRealPrelude| p.mesh_max_mono,
+            |p: CRealPrelude| p.true_exp_of_modulus,
+            |p: CRealPrelude| p.true_exp_of_modulus_mono,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_level_mono,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_mono,
+            |p: CRealPrelude| p.sup_seq_le_add,
+        ],
+        run: supremum::declare_sup_seq,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
