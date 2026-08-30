@@ -197,8 +197,9 @@ fn declare_mat_mul_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
     })
 }
 
-/// `Rat.matMul_succ : ∀ A B k i j, matMul A B (succ k) i j = matMul A B k i j
-/// + A i k * B k j` — `Eq.refl`, mirroring [`super::sum`]'s `sumRange_succ`.
+/// `Rat.matMul_succ : ∀ A B k i j,`
+/// `matMul A B (succ k) i j = matMul A B k i j + A i k * B k j`
+/// — `Eq.refl`, mirroring [`super::sum`]'s `sumRange_succ`.
 fn declare_mat_mul_succ(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let mty = mat_ty(d);
@@ -521,11 +522,7 @@ fn declare_mat_mul_assoc(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kernel
         d.lemma(p.sum_range_congr, &[l3_fn, l4_fn, k, pointwise])
     };
 
-    let (_end, proof) = rchain(
-        d,
-        l0,
-        &[(l1, step1), (l2, step2), (l3, step3), (l4, step4)],
-    );
+    let (_end, proof) = rchain(d, l0, &[(l1, step1), (l2, step2), (l3, step3), (l4, step4)]);
 
     let ty = {
         let t = d.pi_fv(j_fv, nat, stmt);
@@ -1035,11 +1032,8 @@ fn declare_sum_range_delta(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kern
                     let step_b = d.lemma(p.zero_add, &[fm]);
                     let heq_rev = NatOps::symm(d, i, m, heq);
                     let step_c = nat_eq_to_rat(d, m, i, heq_rev, &|d, x| d.apply(f, &[x]));
-                    let (_end, proof) = rchain(
-                        d,
-                        start,
-                        &[(zero_plus, step_a), (fm, step_b), (fi, step_c)],
-                    );
+                    let (_end, proof) =
+                        rchain(d, start, &[(zero_plus, step_a), (fm, step_b), (fi, step_c)]);
                     proof
                 },
             );

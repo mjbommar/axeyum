@@ -5978,18 +5978,17 @@ fn rat_mat_mul_computes_a_two_by_two_product() {
     };
 
     // `fun i j => coeff(i, j)` as a `Nat -> Nat -> Rat`.
-    let matrix = |d: &mut IntDev<'_>,
-                  coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId|
-     -> ExprId {
-        let nat = d.nat_ty();
-        let i_fv = d.fresh_fvar();
-        let i = d.kernel().fvar(i_fv);
-        let j_fv = d.fresh_fvar();
-        let j = d.kernel().fvar(j_fv);
-        let body = coeff(d, i, j);
-        let over_j = d.lam_fv(j_fv, nat, body);
-        d.lam_fv(i_fv, nat, over_j)
-    };
+    let matrix =
+        |d: &mut IntDev<'_>, coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = coeff(d, i, j);
+            let over_j = d.lam_fv(j_fv, nat, body);
+            d.lam_fv(i_fv, nat, over_j)
+        };
 
     // A i j = (2i + j + 1) / 1, written `((i + i) + j) + 1` so every literal
     // sits on `Nat.add`'s RIGHT (the argument it recurses on).
@@ -6111,18 +6110,17 @@ fn rat_mat_mul_computes_over_fractional_entries() {
         let idx = d.num(index);
         d.const_app(p.nat_div_succ, &[numerator, idx])
     };
-    let matrix = |d: &mut IntDev<'_>,
-                  coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId|
-     -> ExprId {
-        let nat = d.nat_ty();
-        let i_fv = d.fresh_fvar();
-        let i = d.kernel().fvar(i_fv);
-        let j_fv = d.fresh_fvar();
-        let j = d.kernel().fvar(j_fv);
-        let body = coeff(d, i, j);
-        let over_j = d.lam_fv(j_fv, nat, body);
-        d.lam_fv(i_fv, nat, over_j)
-    };
+    let matrix =
+        |d: &mut IntDev<'_>, coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = coeff(d, i, j);
+            let over_j = d.lam_fv(j_fv, nat, body);
+            d.lam_fv(i_fv, nat, over_j)
+        };
 
     // denominator index 1, i.e. `/ 2`.
     let a = matrix(&mut d, &|d, i, j| {
@@ -6192,18 +6190,17 @@ fn rat_mat_mul_assoc_holds_at_a_concrete_instance() {
         let idx = d.num(0);
         d.const_app(p.nat_div_succ, &[numerator, idx])
     };
-    let matrix = |d: &mut IntDev<'_>,
-                  coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId|
-     -> ExprId {
-        let nat = d.nat_ty();
-        let i_fv = d.fresh_fvar();
-        let i = d.kernel().fvar(i_fv);
-        let j_fv = d.fresh_fvar();
-        let j = d.kernel().fvar(j_fv);
-        let body = coeff(d, i, j);
-        let over_j = d.lam_fv(j_fv, nat, body);
-        d.lam_fv(i_fv, nat, over_j)
-    };
+    let matrix =
+        |d: &mut IntDev<'_>, coeff: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = coeff(d, i, j);
+            let over_j = d.lam_fv(j_fv, nat, body);
+            d.lam_fv(i_fv, nat, over_j)
+        };
 
     // A = [[1,2],[3,4]], B = [[0,2],[1,3]], C = [[1,0],[0,1]] is a bad choice
     // (C would be the identity and hide a bug), so C i j = (j + 1) / 1:

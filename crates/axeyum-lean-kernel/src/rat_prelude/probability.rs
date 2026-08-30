@@ -2196,7 +2196,13 @@ pub(super) fn bool_select_rat(
 }
 
 /// `heq : Eq Bool cond true ⊢ Eq Rat (bool_select_rat cond a b) a`.
-pub(super) fn select_rat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_rat_true(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let true_val = d.bool_true();
     let symm_hb = d.bool_symm(cond, true_val, heq);
     let motive = d.bool_eq_motive(true_val, &|d, value| {
@@ -2208,7 +2214,13 @@ pub(super) fn select_rat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: Ex
 }
 
 /// `heq : Eq Bool cond false ⊢ Eq Rat (bool_select_rat cond a b) b`.
-pub(super) fn select_rat_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_rat_false(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let false_val = d.bool_false();
     let symm_hb = d.bool_symm(cond, false_val, heq);
     let motive = d.bool_eq_motive(false_val, &|d, value| {
