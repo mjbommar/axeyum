@@ -167,8 +167,7 @@ now. Nothing was deleted.
 | 2026-08-30 | nat-dist-nth | `Nat.dist` (def + 7 theorems, `nat_prelude/dist.rs`) and `Nat.nth`/`Nat.nthAux` (fuel-bounded, non-mirroring, `nat_prelude/nth.rs`) declared axiom-free; three evaluation-test functions added; kernel-environment-snapshot and refill-headroom regenerated, confirming the screen admits `Mathlib.Data.Nat.Dist` (18) / `Mathlib.Data.Nat.Nth` (11) exactly as ADR-0645 predicted |
 | 2026-08-30 | modeq-add-le | Closes `F:ml430-nat-modeq-add-le-of-lt-c774015b` (`Nat.ModEq.add_le_of_lt`) with `Nat.mod_eq_add_le_of_lt`, composing only pre-existing order/monotonicity lemmas — the prior handoff's "2-3 new lemmas" estimate was verified wrong in-tree. `nat_prelude::` sweep 197 -> 198. |
 | 2026-08-30 | prime-dvd-mirrors | `bf25ad981` `1fdea582b` `42ccc8e37` -- 13 new theorems (`nat_prelude/prime_dvd_mirrors.rs`) + 1 direct flip to `euclid_lemma`, closing 14/19 dispatchable `ml430` prime-divisibility facts |
-| 2026-08-30 | fermat-mirrors | `Nat.fermatNumber_ne_one`/`_mono`/`coprime_fermatNumber_fermatNumber` — three new axiom-free kernel theorems (`nat_prelude/fermat_number_mirrors.rs`), facts flipped to `proved` with evidence, 208 `nat_prelude::` tests passing (was 204). |
-| 2026-08-30 | pow-add-prime | `Nat.pow_mul`, `Nat.dvd_pow_add_one_of_odd_exp`, `Nat.dvd_pow_add_one_of_odd_mul_exp` — the odd-factor divisibility step toward `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`, subtraction-free (no alternating sum, no `Int` transport); fact stays `open`, full lemma not assembled |
+| 2026-08-30 | nat-parity-div | 6 new axiom-free Nat kernel theorems (parity/div-two cluster) + 1 mirror flipped onto a pre-existing theorem; 7 of 10 dispatched facts proved, 3 blocked with named reasons |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
@@ -32190,227 +32189,76 @@ count did not move).
   a hyphenated `.py` reachable only via a fabricated fact; 2 new cases; case 4's
   expected message updated; case-count floor 14 → 17.
 
-**Your lane's block (`DONE for 3 of 4, 1 open`, fermat-mirrors, 2026-08-30).**
-Closed three of the four dispatched `fermatNumber` mirrors with new,
-axiom-free kernel constructions in
-`crates/axeyum-lean-kernel/src/nat_prelude/fermat_number_mirrors.rs`:
+**Your lane's block (`DONE for this dispatch`, nat-parity-div, 2026-08-30).**
+Closed 7 of 10 dispatched mirrors plus flipped 1 pre-existing (see landed-changes).
+3 remain open with named blockers below. All work is direct Nat-level kernel
+construction (not Int carrier transports — see
+`crates/axeyum-lean-kernel/src/nat_prelude/parity_div.rs`'s module doc for why
+the `ofNat`/`natAbs` bridge from the `Int` siblings turned out costlier).
 
-- `F:ml430-nat-fermatnumber-ne-one-91232d67` (`Nat.fermatNumber_ne_one`) — CLOSED.
-- `F:ml430-nat-fermatnumber-mono-b051cee6` (`Nat.fermatNumber_mono`) — CLOSED.
-- `F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7`
-  (`Nat.coprime_fermatNumber_fermatNumber`, Goldbach's coprimality theorem) —
-  CLOSED. Route: for `m < n`, `a := 2^(2^m)`, `t := n-m > 0`; `2^(2^n) =
-  (a^2)^j` (`j := 2^(t-1)`) via `pow_add` + a locally-built `pow_mul_eq`;
-  `modEq (a+1) (a*a) 1` by an EXPLICIT witness (`u=1, v=a`, no subtraction);
-  `Nat.mod_eq_pow` + `mod_eq_add_right` give `fermatNumber n ≡ 2 (mod
-  fermatNumber m)`; `Nat.ModEq.gcd_eq` + `fermatNumber m` odd
-  (`coprime_two_left`) close it. All symbolic (no concrete Fermat number ever
-  formed; largest numeral touched is `2`).
+Verification run: `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 211
+passed, 0 failed (was 204 before this lane). `clippy -D warnings` clean on
+`-p axeyum-lean-kernel --all-targets --all-features`. `rustfmt --edition 2024
+--check` clean. `python3 scripts/validate-facts.py` — 2265 facts, 0 errors.
+`python3 scripts/check-mirror-statement-fidelity.py` — verdict=PASS.
 
-All three type-checked by `Kernel::add_declaration` on the FIRST attempt —
-no failed intermediate attempts to report. Each is verified: (1) symbolically,
-over a genuinely free variable via `infer_in` + `LocalContext` (not just
-concrete instantiation — see CLAUDE.md's "concrete instantiation can hide the
-bug a symbolic one exposes" entry); (2) at two small concrete pairs
-(`fermatNumber 0/1 = 3/5`, `1/2 = 5/17`, the second exercising the theorem's
-other case branch and its `coprime_symmetric` swap); (3) against a REFLEXIVE
-NEGATIVE CONTROL for the coprime theorem confirming its `Ne m n` hypothesis
-is load-bearing: `gcd(fermatNumber 0, fermatNumber 0) = gcd(3,3) = 3`,
-explicitly asserted NOT defeq to `1`.
+**Closed (new kernel theorems, `nat_prelude/parity_div.rs`):**
+- `Nat.div_two_mul_two_of_even : Even n -> n/2*2 = n`
+  (`F:ml430-nat-div-two-mul-two-of-even-9ccc5340`)
+- `Nat.div_two_mul_two_add_one_of_odd : Odd n -> n/2*2+1 = n`
+  (`F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82`)
+- `Nat.add_one_lt_of_even : Even n -> Even m -> n<m -> n+1<m`
+  (`F:ml430-nat-add-one-lt-of-even-3464b374`)
+- `Nat.odd_of_mul_left : Odd (m*n) -> Odd m` (`F:ml430-nat-odd-of-mul-left-2c6c2553`)
+- `Nat.odd_of_mul_right : Odd (m*n) -> Odd n` (`F:ml430-nat-odd-of-mul-right-fe6d20ff`)
+- `Nat.even_add_one : Even (n+1) <-> !Even n` (`F:ml430-nat-even-add-one-15b5cb18`)
+- (private helper) `Nat.even_mul_of_even_left : Even m -> Even (m*n)`, under the
+  two `odd_of_mul_*` above.
 
-New test: `nat_prelude_tests.rs::
-fermat_number_mirrors_apply_at_free_and_concrete_instances_with_a_reflexive_negative_control`.
-`cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 208 passed (was 204
-before this lane), 0 failed. `cargo clippy -p axeyum-lean-kernel --all-targets
---all-features -- -D warnings` — clean. `cargo fmt --all --check` — clean.
+**Flipped onto a pre-existing theorem, no new proof:**
+- `F:ml430-nat-even-iff-024826e9` (`Even n <-> n%2=0`) — matches
+  `Nat.even_iff_mod_two_eq_zero`, already in `nat_prelude/parity.rs` before this
+  lane started. Flipping it exposed 8 sibling facts (6 `Int` mirrors that already
+  used this Nat theorem in their proof terms, `F:ml430-nat-prime-mod-two-eq-one-iff-ne-two-25c35e73`,
+  `F:nat-even-xor`) to `check-fact-depends-derived.py`'s dependency graph; fixed
+  with `--fix` (their proof terms did not change, only their recorded
+  `depends_on`).
 
-**Held-out check, run before and after: NONE of the nine dispatchable
-`fermatNumber` facts were held-out.** ADR-0542-style amendment in
-`artifacts/autogenesis/nursery-v2-extension.json`'s `amendments` array (dated
-2026-08-30, referencing commit `0065c83b1`) had already moved the WHOLE
-`fermat-numbers` family from held-out to `development` before this lane
-started — confirmed by reading each of the nine target facts' `partition`
-field directly in that manifest (all `"development"`), not merely by the
-dispatchable-frontier script. `python3
-scripts/check-autogenesis-holdout-isolation.py` reports
-`settled=0|references=0|verdict=PASS` unchanged from before this lane's first
-commit to after its last.
+**Blocked, named, sized — next lane can pick these up directly:**
 
-**`F:ml430-nat-fermat-primefactors-one-lt-58343c6f` — LEFT OPEN, genuinely
-blocked, not merely unattempted.** Statement: `1 < n -> Prime p -> p |
-n.fermatNumber -> exists k, p = k * 2^(n+2) + 1` (Lucas's refinement of the
-classical Fermat-divisor theorem). This needs, in order: (1) a theory of the
-multiplicative order of an element mod `p` (minimality + "order divides any
-exponent making the power ≡ 1", itself a nontrivial induction) — ABSENT from
-this kernel (checked: no `order_of`/`orderOf`/`multiplicative_order` name
-anywhere in `nat_prelude.rs` or `int_prelude.rs`); (2) from `p |
-fermatNumber n`, that the order of 2 mod p is EXACTLY `2^(n+1)`, giving
-`2^(n+1) | p-1` via Fermat's little theorem (`Nat.pow_prime_modeq_self`
-EXISTS and would supply this half); (3) the STRONGER `2^(n+2) | p-1` needs
-knowing 2 is a quadratic residue mod `p` when `p ≡ 1 (mod 8)` — the second
-supplementary law of quadratic reciprocity. `int_prelude/euler.rs` has
-`Int.IsQuadraticResidue` and the UNCONDITIONAL half of Euler's criterion
-(`a^m ≡ ±1`), but its own module doc says explicitly: "The full criterion —
-that the SIGN decides quadratic-residue-hood — needs a primitive root or a
-counting argument neither this file nor `wilson.rs` builds." That missing
-sign-determination is exactly what step (3) needs. This is a multi-day
-formalization project on its own (an order-of-element theory plus enough of
-quadratic reciprocity to fix the sign), not a next slice. Left `open`, no
-code written against it, no fact touched.
+- `F:ml430-nat-even-add-31386639` (`Even(m+n) <-> (Even m <-> Even n)`) and
+  `F:ml430-nat-even-add-39e3bc07` (`Even(m+n) <-> (Odd m <-> Odd n)`): NOT
+  missing any single lemma. These need a 4-branch case split on `(m%2, n%2)`
+  (nested `Nat.mod_two_eq_zero_or_one` on `m` then `n`), computing `(m+n)%2` in
+  each of the 4 leaves (the arithmetic is the same `succ_add`/defeq-reduction
+  technique `even_add_one` already uses, just doubled), then combining into the
+  OUTER `Iff` — which itself has an `Iff` on one side, so each leaf's
+  construction must produce a full `Iff (Even m <-> Even n) ...`-shaped term
+  directly (no generic `iff_congr` combinator exists in this kernel to build it
+  generically; `int_prelude/parity.rs`'s `even_add`/`even_add'` do exactly this
+  shape already, over `Int` — read `even_add_family_stmt_and_proof` there for
+  the case-tree structure to mirror, NOT to transport). Sizing: roughly 2-3x
+  `even_add_one`'s proof volume (4 leaves vs. 2, each producing a compound
+  `Iff`), no new arithmetic lemma needed.
+- `F:ml430-nat-even-div-395c6b5e` (`Even (m/n) <-> m % (2*n) / n = 0`): genuinely
+  Nat-specific, no `Int` analog exists for this one (division doesn't carry
+  over the same way). Needs relating `Nat.div`/`Nat.mod` under SCALING the
+  divisor by 2 (`m/n` vs `m % (2n) / n`) — I did not find an existing lemma of
+  this shape in `division.rs`/`div_mod_lemmas.rs`/`mod_mul_lemmas.rs` (checked
+  all three). This is more substantial than the other two blockers: it likely
+  needs a new `Nat.div_mod_scale`-shaped identity built from `div_mod_exec`/
+  `div_mod_unique` at divisor `2*n` compared against divisor `n`, not just a
+  case split on existing facts.
 
-**Your lane's block (`WIP`, pow-add-prime, 2026-08-30).**
+**Skipped per brief:** `fermat`/`prime`-family facts in the same
+`check-dispatchable-frontier.py --json` dispatchable set (`F:ml430-nat-coprime-fermatnumber-*`,
+`F:ml430-nat-fermatnumber-*`, `F:ml430-nat-odd-fermatnumber-*`,
+`F:ml430-nat-fermat-primefactors-one-lt-*`, `F:ml430-nat-pow-of-pow-add-prime-*`,
+`F:ml430-nat-totient-gcd-mul-totient-mul-*`) — sibling lanes own those.
 
-`F:ml430-nat-pow-of-pow-add-prime-ab61d0d3` (`Nat.Prime (a^n+1) -> exists m, n
-= 2^m`, the classical fact behind Fermat primes) stays `open`. The classical
-proof needs an alternating-sum cofactor (`x^d+1 = (x+1)*(x^{d-1}-x^{d-2}+...+1)`
-for odd `d`), and this kernel has no signed sum over ℕ — so rather than build
-one (pairing terms, or transporting through `Int`), I sidestepped it entirely.
-
-**What landed** (`crates/axeyum-lean-kernel/src/nat_prelude/pow_add_prime.rs`,
-new file, wired into `nat_prelude.rs` as the last `declare_*` call):
-
-- `Nat.pow_mul : forall a e k, pow a (mul e k) = pow (pow a e) k` — mirrors
-  `Int.pow_mul`'s proof shape (`int_prelude/algebra.rs`).
-- `Nat.dvd_pow_add_one_of_odd_exp : forall x t, dvd (add x 1) (add (pow x (succ
-  (mul 2 t))) 1)` — `x+1 | x^{2t+1}+1` for every `x`, by an OUTER case split on
-  `x` (0 is trivial: `dvd 1 _`) then an INNER induction on `t` for `x = succ
-  xp`, using only `dvd_add`/`dvd_mul_left` plus one subtraction-free identity
-  `x^2 = x'*(x+1)+1` (`x'` is the genuinely free predecessor standing in for
-  `x-1`, so `Nat.sub` never appears).
-- `Nat.dvd_pow_add_one_of_odd_mul_exp : forall a e t, dvd (add (pow a e) 1)
-  (add (pow a (mul e (succ (mul 2 t)))) 1)` — `a^e+1 | a^{e*(2t+1)}+1`, the
-  reusable "odd-factor divisibility" step named in the fact's own brief as a
-  good outcome on its own (`d := 2t+1`; combines `pow_mul` with the lemma
-  above at `x := a^e`).
-
-All three are genuinely axiom-free theorems (checked via
-`Kernel::axiom_footprint`), admitted on the FIRST attempt against a real
-kernel (no debugging round-trips needed once the algebra chains were worked
-out on paper first). Verified both at a free `(a,e,t)` (the theorem's own
-`forall` IS the free-variable check, plus one `infer_in` application at fresh
-fvars) and at the concrete discriminating instance `a=2, e=1, t=1`: `3 | 9`
-(`2^3+1=9=3*3`, exactly the smallest instance the classical argument would
-use to show a prime `a^n+1` cannot have an odd exponent factor). Largest
-numeral formed anywhere in the proofs or tests: `9` (`2^3+1`) — everything
-else is symbolic, since this is a proof about free variables, not a
-computation.
-
-Registered in `nat_prelude_tests.rs`'s environment-derived coverage list
-(`theorem_names`) and confirmed via
-`every_nat_declaration_is_checked_and_axiom_free`. Full `nat_prelude::` sweep:
-**208 passed, 0 failed** (was 204 before this lane; +3 theorems +1 new test).
-`cargo fmt --all --check` and `clippy -p axeyum-lean-kernel --all-targets -D
-warnings` both clean.
-
-**What did NOT land, and why**: the fact itself. Two pieces are still needed
-and neither is attempted here:
-
-1. "`n` is not a power of two ⟹ `n` has an odd factor `d > 1`" — a 2-adic
-   valuation argument (extract the odd part of `n` via strong/well-founded
-   recursion). Nothing in this session builds it; `Nat.even_or_odd`
-   (`powsq.rs`) is the closest existing primitive but stops at one bit, not
-   an iterated valuation.
-2. The final contradiction: given `d*e = n`, `d` odd `> 1`, show
-   `dvd_pow_add_one_of_odd_mul_exp` exhibits a divisor `a^e+1` that is
-   neither `1` nor `a^n+1` (needs `e < n` from `d > 1`, and `a^e+1 > 1` from
-   `a > 1`, both easy order facts — not done here), then plug into
-   `prime_condition`'s `∀ c, c ∣ x → c = 1 ∨ c = x` to derive `False`.
-
-Bridging `dvd_pow_add_one_of_odd_exp`'s `succ (mul 2 t)` exponent shape to
-`Nat.Odd`'s own witness shape (`succ (add t t)`) needs only
-`two_mul_eq_add_self` (`powsq.rs`, module-private today) — cheap, not done
-here since nothing downstream needs it yet.
-
-**For the next lane**: piece 1 above is the harder of the two remaining
-pieces and is a genuine well-founded-recursion undertaking (`Nat.gcd`,
-`Nat.bezout_witnesses`, `Nat.modeq`, `Nat.wilson` all already use
-`WellFounded.fix` in this kernel — see CLAUDE.md's "NO FUEL ENCODING CAN BE A
-DEPENDENT RECURSOR" entry for why a fuel encoding here is the wrong tool).
-Piece 2 is comparatively short standard order-theory bookkeeping once piece 1
-exists.
-
-Status: **COMPLETE** (2026-08-30) — design/measurement lane, no kernel
-declarations built, no fact edited.
-
-Extended ADR-0603's graded-statement-family treatment from the four Spivak
-real-analysis families (MVT, LUB, Taylor remainder, FTA) to **number theory**
-(Stein, Shoup) and **linear algebra** (Boyd–Vandenberghe), the curriculum's two
-untreated destinations.
-
-## The central finding
-
-`Nat.le_total`, `Int.le_total`, `Rat.le_total` and `Rat.le_or_lt` are **proved,
-axiom-free theorems**, while `CReal.le_total`/`lt_total` are absent (controls:
-`CReal.lt_cotrans`, `CReal.apart_cotrans`, FOUND). So the decision principle
-that every real-analysis row 2 extracts is *already in the environment* for
-ℕ/ℤ/ℚ, and no number-theoretic or rational-linear-algebra statement can have a
-row 2 of that kind. That is a positive measurement of emptiness, not a failure
-to find one — the distinction ADR-0603 Amendment 4 exists to protect.
-
-Two boundaries survive, and one is **stronger** than anything analysis
-produces: the unrestricted least-number principle reduces to *full* excluded
-middle (analysis's row 2s reach only LLPO). The other is not a decision
-boundary at all but an expressiveness one, and gets its own row.
-
-## Landed
-
-| Change | Path |
-|---|---|
-| The measurement note: families, rows, targets, both subjects | `docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md` |
-| ADR: row 2 of a decidable subject; introduces **row 2′** | `docs/research/09-decisions/adr-0716-row-two-of-a-decidable-subject.md` |
-| Corrected — 3 of 4 "Lean-horizon" theorems are landed | `docs/curriculum/03-destinations/number-theory.md` |
-| Corrected — the kernel layer was missing entirely | `docs/curriculum/03-destinations/linear-algebra.md` |
-| Lens note: the ✅/◐/✗ tags measure row 3 only | `docs/curriculum/foundational-books/source-tocs.md` |
-| Comparison table now separates scenario from kernel layer | `docs/curriculum/DEPTH.md` |
-
-`curriculum.toml` was deliberately **not** touched — see "left open" below.
-
-## Verdicts
-
-- **Number theory.** Seven families proposed. Row 1 is unusually strong and
-  mostly landed (infinitude of primes, Fermat, totient multiplicativity,
-  Wilson both directions, UFD existence). Row 2 is empty in the analysis sense
-  for all of them, argued from shape per Amendment 3. The subject's **one**
-  genuine row 2 is the least-number principle, unbuilt. Row 3 — which ADR-0716
-  moves the dominance argument onto — **barely exists**: `is_prime`,
-  `factorize`, `crt`, `legendre_symbol` are bare computation with no verifier
-  (control: 19 `verify_*`/`check_*` functions exist in the same crate, none
-  number-theoretic). The one real exception is
-  `prove_lia_unsat_by_diophantine_certified`/`check_diophantine_certificate`.
-- **Linear algebra.** The type-theory premise was refuted by measurement:
-  `Rat.dotN_cauchy_schwarz` proves general-dimension Cauchy–Schwarz over ℚ at 0
-  axioms, on the same finite-function encoding number theory uses. The real
-  bound is that `funext` is absent (control: `congrFun'`, FOUND), so matrix
-  identities must be stated **pointwise**. `Rat.sumRange_swap` makes the matrix
-  layer assembly rather than new mathematics.
-
-## Highest-yield next targets
-
-1. `Nat.lnp_unrestricted_implies_em` — number theory's only row 2, and a
-   stronger boundary than any analysis one. Coordinate: four sibling lanes are
-   in `nat_prelude/`.
-2. Euler's theorem `a^φ(n) ≡ 1 (mod n)` — both residue-permutation ingredients
-   (`Int.euler_unit_coprime`, `Int.euler_unit_injective`) already landed.
-3. The matrix layer over `Nat → Nat → Rat` — unlocks three LA families' row 1
-   at once; state everything pointwise.
-
-## Left open, deliberately
-
-`curriculum.toml`'s `covered` conflates "a decidable exercise exists" with "a
-general kernel theorem exists", which is why `number-theory` and
-`linear-algebra` read identically in the map while their kernel content differs
-sharply. Splitting that status is a schema change with a validator and an
-`axeyum-scenarios::mathtour` mirror behind it, and belongs in its own ADR.
-
-## Checks run
-
-- `scripts/cargo-serialized.sh build --release …` (fresh binaries — the
-  stale-prebuilt trap invalidates ABSENT verdicts, and this lane turns on
-  several): clean, 47.3 s.
-- `shape_search --include-constructed`: 2,426 declarations indexed.
-- `python3 scripts/gen-adr-index.py --check`: exit 0, `rows=630`.
-- `./scripts/check-links.sh`: `all links ok`.
-- No `cargo test` run — this lane changed no Rust.
+Held-out check: all 10 originally-dispatched facts (and the 3 remaining open
+ones) verified against `check-dispatchable-frontier.py --json`'s `held_out`
+list before starting — none are held-out.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

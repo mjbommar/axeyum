@@ -6,15 +6,66 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, Even n → Even m → n < m → n + 1 < m",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_one_lt_of_even",
+    "kernel_statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.Even x0) -> ((x3 : AxNat.Even x1) -> ((x4 : AxNat.lt x0 x1) -> AxNat.lt (AxNat.add x0 (AxNat.succ AxNat.zero)) x1)))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-lt-or-eq-of-le"],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/parity_div.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory add_one_lt_of_even 2>/dev/null | awk -F'\\t' '$1 == \"Nat.add_one_lt_of_even\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.Even x0) -> ((x3 : AxNat.Even x1) -> ((x4 : AxNat.lt x0 x1) -> AxNat.lt (AxNat.add x0 (AxNat.succ AxNat.zero)) x1)))))\"' | wc -l)\" -ge 1",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "id": "kernel-Nat.add_one_lt_of_even",
+      "kind": "kernel-term",
+      "supports": "`Nat.add_one_lt_of_even` is admitted as a Theorem with EXACTLY the mirror's shape, pinned verbatim via the kernel's own renderer. Built via `Nat.lt_or_eq_of_le` at `(n+1, m)` -- legal because `Nat.lt n m := Nat.le (succ n) m` and `add n 1` reduces to `succ n` -- ruling out the equality branch with `Nat.even_iff_odd_succ`/`Nat.odd_not_even`."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::add_one_lt_of_even_applies_concretely_symbolically_and_rejects_an_odd_m_control -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude_tests::add_one_lt_of_even_applies_concretely_symbolically_and_rejects_an_odd_m_control"
+      ],
+      "id": "instance-Nat.add_one_lt_of_even",
+      "kind": "kernel-term",
+      "supports": "Applies at a concrete instance (n := 2, m := 6, both Even, landing on Lt 3 6) AND at a genuinely free (n, m) pair (a symbolic restatement built via the same NatOps closure machinery `d.theorem` uses)."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free nat",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free (reads Kernel::axiom_footprint for every listed Nat declaration and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free nat (independently sums the whole nat prelude's trusted surface and fails nonzero)"
+      ],
+      "id": "footprint-Nat.add_one_lt_of_even",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Nat.add_one_lt_of_even`. The `nat` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "id": "coverage-Nat.add_one_lt_of_even",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Nat.add_one_lt_of_even` derived from `kernel.environment()` directly, not from an inventory list -- a Nat-namespace declaration missing from `theorem_names` fails this test by name."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane nat-parity-div (2026-08-30): built directly as a kernel declaration in the new file nat_prelude/parity_div.rs, over `Nat.lt_or_eq_of_le`, `Nat.even_iff_odd_succ` and `Nat.odd_not_even`. Verified against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that this is a standard Nat order/parity lemma about the SAME Nat.lt/Nat.Even this kernel already has (no new definition introduced), so mirroring it under Mathlib's own name is honest under the mirror-flip criterion.",
     "source": "statement-only extraction of `Nat.add_one_lt_of_even` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +77,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established in Axeyum. formal.statement is UNCHANGED and remains a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type; do not edit it. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. That acceptance was syntax/type evidence about the statement; the evidence above is proof evidence about the claim, from a genuinely re-derivable kernel term. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
 }

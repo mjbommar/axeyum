@@ -198,6 +198,7 @@ mod order;
 mod order_extra;
 mod order_more;
 mod parity;
+mod parity_div;
 mod perfect;
 mod permutation;
 mod pow_add_prime;
@@ -324,6 +325,8 @@ use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use parity::declare_parity_all;
+use parity_div::declare_even_add_one;
+use parity_div::declare_parity_div_all;
 use perfect::declare_perfect_all;
 use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
@@ -3271,6 +3274,32 @@ pub struct NatPrelude {
     /// [`Self::even_iff_mod_two_eq_zero`]'s `succ` twin.
     pub odd_iff_mod_two_eq_one: NameId,
 
+    // --- `parity_div.rs`: the parity/division-by-two mirror cluster --------
+    /// `Nat.div_two_mul_two_of_even : ∀ n, Even n → Eq (mul (div n 2) 2) n`.
+    /// `F:ml430-nat-div-two-mul-two-of-even-9ccc5340`.
+    pub div_two_mul_two_of_even: NameId,
+    /// `Nat.div_two_mul_two_add_one_of_odd : ∀ n, Odd n → Eq
+    /// (add (mul (div n 2) 2) 1) n`.
+    /// `F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82`.
+    pub div_two_mul_two_add_one_of_odd: NameId,
+    /// `Nat.add_one_lt_of_even : ∀ n m, Even n → Even m → Lt n m → Lt
+    /// (add n 1) m`. `F:ml430-nat-add-one-lt-of-even-3464b374`.
+    pub add_one_lt_of_even: NameId,
+    /// `Nat.even_mul_of_even_left : ∀ m n, Even m → Even (mul m n)` — the
+    /// load-bearing step under [`Self::odd_of_mul_left`]/
+    /// [`Self::odd_of_mul_right`], via `right_distrib` on the `k+k` witness.
+    pub even_mul_of_even_left: NameId,
+    /// `Nat.odd_of_mul_left : ∀ m n, Odd (mul m n) → Odd m`.
+    /// `F:ml430-nat-odd-of-mul-left-2c6c2553`.
+    pub odd_of_mul_left: NameId,
+    /// `Nat.odd_of_mul_right : ∀ m n, Odd (mul m n) → Odd n` — via
+    /// [`Self::odd_of_mul_left`] and `mul_comm`.
+    /// `F:ml430-nat-odd-of-mul-right-fe6d20ff`.
+    pub odd_of_mul_right: NameId,
+    /// `Nat.even_add_one : ∀ n, Iff (Even (add n 1)) (Not (Even n))`.
+    /// `F:ml430-nat-even-add-one-15b5cb18`.
+    pub even_add_one: NameId,
+
     // --- the floor logarithm (`log.rs`) -------------------------------------
     /// `Nat.logAux : Nat → Nat → Nat → Nat` — `logAux b f n`, the floor base-`b`
     /// logarithm of `n` computed with **fuel** `f`, by structural recursion on
@@ -5054,6 +5083,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_iff_odd_succ: kernel.name_str(nat, "even_iff_odd_succ"),
             even_iff_mod_two_eq_zero: kernel.name_str(nat, "even_iff_mod_two_eq_zero"),
             odd_iff_mod_two_eq_one: kernel.name_str(nat, "odd_iff_mod_two_eq_one"),
+            div_two_mul_two_of_even: kernel.name_str(nat, "div_two_mul_two_of_even"),
+            div_two_mul_two_add_one_of_odd: kernel.name_str(nat, "div_two_mul_two_add_one_of_odd"),
+            add_one_lt_of_even: kernel.name_str(nat, "add_one_lt_of_even"),
+            even_mul_of_even_left: kernel.name_str(nat, "even_mul_of_even_left"),
+            odd_of_mul_left: kernel.name_str(nat, "odd_of_mul_left"),
+            odd_of_mul_right: kernel.name_str(nat, "odd_of_mul_right"),
+            even_add_one: kernel.name_str(nat, "even_add_one"),
             log_aux: kernel.name_str(nat, "logAux"),
             log: kernel.name_str(nat, "log"),
             log_zero_right: kernel.name_str(nat, "log_zero_right"),
@@ -5467,6 +5503,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_powsq_all(&mut d, &p)?;
         // Needs `Nat.even_or_odd`, just declared by `declare_powsq_all` above.
         declare_parity_all(&mut d, &p)?;
+        // The parity/division-by-two mirror cluster (`parity_div.rs`, lane
+        // nat-parity-div, 2026-08-30). Needs `Nat.Even`/`Nat.Odd` and their
+        // bridges, just declared above by `declare_parity_all`, plus
+        // `div_mod_exec`/`div_mod_unique` (`division.rs`, far above),
+        // `lt_or_eq_of_le` (order lemmas, far above) and `right_distrib`/
+        // `mul_comm`/`add_zero` (basic arithmetic, far above).
+        declare_parity_div_all(&mut d, &p)?;
         // `Nat.countRange_reversal_even`: general, `totient`-independent.
         // Needs `count_range`/`count_range_split` (`declare_totient_all`,
         // far above), `Nat.Even` (`declare_parity_all`, just above),
@@ -5583,6 +5626,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `zero_le`, `le_antisymm`). Nothing needs these agreement theorems,
         // so they go after everything they relate.
         declare_rec_agreement_all(&mut d, &p)?;
+        // Needs `Nat.mod_two_eq_zero_or_one`, just declared above by
+        // `declare_rec_agreement_all` (`parity_div.rs`, lane nat-parity-div,
+        // 2026-08-30 -- see that file's `declare_parity_div_all` doc for why
+        // this one call is separate from the rest of its cluster).
+        declare_even_add_one(&mut d, &p)?;
         // Needs `Nat.landAux`/`Nat.land` (`declare_land_all`, far above) and
         // the order/division lemmas `half_le_predecessor_of_succ` composes
         // (`le_of_succ_le_succ`, `lt_of_lt_of_le`, `div_mod_lt_mul_iff`,
