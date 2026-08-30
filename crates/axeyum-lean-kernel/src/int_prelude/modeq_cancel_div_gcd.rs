@@ -169,7 +169,11 @@ fn ieq_sub_eq_zero_of_eq(d: &mut IntDev<'_>, x: ExprId, y: ExprId, h: ExprId) ->
 
     let (_, chained) = d.ichain(
         sub_xy,
-        &[(x_negy, sub_xy_eq_x_negy), (y_negy, step), (zero_i, add_neg_y)],
+        &[
+            (x_negy, sub_xy_eq_x_negy),
+            (y_negy, step),
+            (zero_i, add_neg_y),
+        ],
     );
     chained
 }
@@ -326,7 +330,10 @@ fn idvd_cancel_scale(
 
         let scale_modk = d.imul(scale, mod_k);
         let assoc = d.const_app(p.mul_assoc, &[scale, modulus, k]); // Eq scaled_modulus_k scale_modk
-        let (_, eq2) = d.ichain(scaled_x, &[(scaled_modulus_k, eq_proof), (scale_modk, assoc)]);
+        let (_, eq2) = d.ichain(
+            scaled_x,
+            &[(scaled_modulus_k, eq_proof), (scale_modk, assoc)],
+        );
         // eq2 : Eq scaled_x scale_modk
 
         let cancelled = imul_left_cancel_of_ne(d, scale, x, mod_k, scale_ne, eq2); // Eq x mod_k
