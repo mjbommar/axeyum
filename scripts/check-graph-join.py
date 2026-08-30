@@ -53,21 +53,23 @@ def load_json(path: Path):
         return json.load(fh)
 
 
-# GUARD:EMPTY_POPULATION
+# GUARD:EMPTY_POPULATION begin
 def check_empty_population(rows: dict) -> list[str]:
     if not rows.get("declarations"):
         return ["EMPTY_POPULATION: declaration graph has zero declarations"]
     return []
 
+# GUARD:EMPTY_POPULATION end
 
-# GUARD:EMPTY_FACTS
+# GUARD:EMPTY_FACTS begin
 def check_empty_facts(facts_by_id: dict) -> list[str]:
     if not facts_by_id:
         return ["EMPTY_FACTS: fact ledger has zero facts"]
     return []
 
+# GUARD:EMPTY_FACTS end
 
-# GUARD:ACCOUNTING
+# GUARD:ACCOUNTING begin
 def check_accounting(join: dict) -> list[str]:
     failures = []
     for dim_name, dim in join["dimensions"].items():
@@ -86,8 +88,9 @@ def check_accounting(join: dict) -> list[str]:
             )
     return failures
 
+# GUARD:ACCOUNTING end
 
-# GUARD:STALE_ARTIFACT
+# GUARD:STALE_ARTIFACT begin
 def check_stale_artifact(committed: dict, fresh: dict) -> list[str]:
     if committed != fresh:
         return [
@@ -96,8 +99,9 @@ def check_stale_artifact(committed: dict, fresh: dict) -> list[str]:
         ]
     return []
 
+# GUARD:STALE_ARTIFACT end
 
-# GUARD:POSITIVE_CONTROL
+# GUARD:POSITIVE_CONTROL begin
 def check_positive_control(join: dict, facts_by_id: dict) -> list[str]:
     failures = []
     fact_ids = join["dimensions"]["fact_ids"]["resolved"]
@@ -133,8 +137,9 @@ def check_positive_control(join: dict, facts_by_id: dict) -> list[str]:
         )
     return failures
 
+# GUARD:POSITIVE_CONTROL end
 
-# GUARD:BARE_NAME_BASIS
+# GUARD:BARE_NAME_BASIS begin
 def check_bare_name_basis(join: dict, facts_by_id: dict, depends_derived) -> list[str]:
     failures = []
     fact_ids = join["dimensions"]["fact_ids"]["resolved"]
@@ -176,6 +181,7 @@ def check_bare_name_basis(join: dict, facts_by_id: dict, depends_derived) -> lis
             )
     return failures
 
+# GUARD:BARE_NAME_BASIS end
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
