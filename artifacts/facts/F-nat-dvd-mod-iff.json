@@ -19,7 +19,8 @@
   "depends_on": [
     "F:nat-div-mod-exec",
     "F:nat-dvd-add-iff-right",
-    "F:nat-dvd-mul-right-of-dvd"
+    "F:nat-dvd-mul-right-of-dvd",
+    "F:ml430-nat-dvd-add-iff-right-bf79c0cd"
   ],
   "axiom_footprint": [],
   "evidence": [

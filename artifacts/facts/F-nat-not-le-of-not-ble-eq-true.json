@@ -18,7 +18,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-ble-eq-true-of-le"
+    "F:nat-ble-eq-true-of-le",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e"
   ],
   "axiom_footprint": [],
   "evidence": [

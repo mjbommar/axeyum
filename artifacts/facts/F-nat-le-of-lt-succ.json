@@ -17,7 +17,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:nat-le-of-succ-le-succ"
+    "F:nat-le-of-succ-le-succ",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

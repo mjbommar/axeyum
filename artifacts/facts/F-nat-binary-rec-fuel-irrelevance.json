@@ -12,7 +12,7 @@
   "epistemic_status": "proved",
   "external_status": "unknown",
   "proof_route": "kernel-lean",
-  "depends_on": ["F:nat-le-antisymm", "F:nat-le-trans", "F:nat-succ-le-succ", "F:nat-succ-pred-of-pos", "F:nat-zero-le"],
+  "depends_on": ["F:nat-le-antisymm", "F:nat-le-trans", "F:nat-succ-le-succ", "F:nat-succ-pred-of-pos", "F:nat-zero-le", "F:ml430-nat-le-antisymm-79dccead"],
   "axiom_footprint": [],
   "evidence": [
     {

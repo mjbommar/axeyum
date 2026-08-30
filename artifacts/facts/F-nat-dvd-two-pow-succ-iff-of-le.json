@@ -25,7 +25,8 @@
     "F:nat-lt-of-lt-of-le",
     "F:nat-lt-or-eq-of-le",
     "F:nat-pow-add",
-    "F:nat-pow-lt-pow-succ"
+    "F:nat-pow-lt-pow-succ",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

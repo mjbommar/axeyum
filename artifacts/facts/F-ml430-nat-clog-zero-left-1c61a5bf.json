@@ -6,15 +6,41 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n : ℕ), Nat.clog 0 n = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.clog_zero_left",
+    "kernel_statement": "theorem Nat.clog_zero_left : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.clog AxNat.zero x0) AxNat.zero)"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.clog_zero_left",
+      "kind": "kernel-term",
+      "supports": "`Nat.clog_zero_left` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : AxNat) -> Eq.{1} AxNat (AxNat.clog AxNat.zero x0) AxNat.zero)`.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.clog_zero_left\" && $3 == \"((x0 : AxNat) -> Eq.{1} AxNat (AxNat.clog AxNat.zero x0) AxNat.zero)\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.clog_zero_left"
+    },
+    {
+      "id": "footprint-Nat.clog_zero_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.clog_zero_left`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.clog_zero_left`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "established_by": "kernel prelude build (crates/axeyum-lean-kernel/src/), predating this mirror's preregistration; found and verified by lane already-proved-sweep (2026-08-29), not proved by this lane",
     "source": "statement-only extraction of `Nat.clog_zero_left` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority. Closed by lane already-proved-sweep (2026-08-29): `scripts/brief-step0.py`'s constant-multiset ranker against the fresh kernel-environment snapshot surfaced this mirror as an exact-constant candidate; the rendered type was read character-by-character against `formal.statement` and found to be the SAME proposition (not merely the same constants -- the multiset comparison cannot see argument order, and several sibling candidates in the same sweep were rejected for exactly that reason). `Nat.clog_zero_left` was admitted by an earlier lane's prelude work for reasons unrelated to this mirror programme; this lane did no new proof work, only found the pre-existing declaration, verified the type match and the axiom footprint, and flipped the status.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

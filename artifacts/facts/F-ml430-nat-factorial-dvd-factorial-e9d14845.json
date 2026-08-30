@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-dvd-mul-right-of-dvd", "F:nat-dvd-refl", "F:nat-le-of-succ-le-succ", "F:nat-lt-or-eq-of-le", "F:nat-not-succ-le-zero"],
+  "depends_on": ["F:nat-dvd-mul-right-of-dvd", "F:nat-dvd-refl", "F:nat-le-of-succ-le-succ", "F:nat-lt-or-eq-of-le", "F:nat-not-succ-le-zero", "F:ml430-nat-le-of-succ-le-succ-a180a72c"],
   "evidence": [
     {
       "check_status": "checked",

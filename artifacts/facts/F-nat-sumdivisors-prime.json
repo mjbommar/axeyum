@@ -32,7 +32,9 @@
     "F:nat-succ-injective",
     "F:nat-sumrange-shiftfront",
     "F:nat-zero-add",
-    "F:ml430-nat-add-comm-56a2d614"
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

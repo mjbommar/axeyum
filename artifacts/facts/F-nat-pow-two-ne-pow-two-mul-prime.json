@@ -27,7 +27,9 @@
     "F:nat-lt-irrefl",
     "F:nat-mul-comm",
     "F:nat-ne-of-beq-eq-false",
-    "F:nat-zero-lt-of-ne-zero"
+    "F:nat-zero-lt-of-ne-zero",
+    "F:ml430-nat-dvd-mul-right-a87a83c4",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4"
   ],
   "axiom_footprint": [],
   "evidence": [

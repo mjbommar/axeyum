@@ -29,7 +29,9 @@
     "F:nat-le-trans",
     "F:nat-lt-or-eq-of-le",
     "F:nat-not-succ-le-zero",
-    "F:nat-two-le-succ-or-eq-one"
+    "F:nat-two-le-succ-or-eq-one",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

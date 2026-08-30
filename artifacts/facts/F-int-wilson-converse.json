@@ -36,7 +36,8 @@
     "F:nat-le-trans",
     "F:nat-lt-or-eq-of-le",
     "F:nat-one-le-of-dvd-pos",
-    "F:nat-sub-add-cancel"
+    "F:nat-sub-add-cancel",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

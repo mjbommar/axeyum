@@ -24,6 +24,8 @@
     "F:int-characterization-categorical",
     "F:int-characterization-induction",
     "F:int-characterization-iter-at-int",
+    "F:ml430-int-add-assoc-749cb0ff",
+    "F:ml430-int-add-comm-c5722728",
     "F:nat-peano-zero-ne-succ"
   ],
   "axiom_footprint": [],

@@ -27,7 +27,8 @@
     "F:nat-mul-one",
     "F:nat-one-mul",
     "F:nat-pow-succ",
-    "F:nat-pow-zero"
+    "F:nat-pow-zero",
+    "F:ml430-nat-dvd-mul-right-a87a83c4"
   ],
   "axiom_footprint": [],
   "evidence": [

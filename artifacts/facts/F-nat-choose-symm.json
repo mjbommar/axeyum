@@ -29,7 +29,9 @@
     "F:nat-succ-add",
     "F:nat-succ-sub-succ",
     "F:nat-zero-le",
-    "F:ml430-nat-add-comm-56a2d614"
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -32,7 +32,9 @@
     "F:nat-one-mul",
     "F:nat-right-distrib",
     "F:ml430-nat-add-assoc-8c87a1f1",
-    "F:ml430-nat-add-comm-56a2d614"
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-dvd-add-0c5bcc91",
+    "F:ml430-nat-dvd-mul-right-a87a83c4"
   ],
   "axiom_footprint": [],
   "evidence": [

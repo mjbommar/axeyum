@@ -18,7 +18,9 @@
     "F:nat-le-trans",
     "F:nat-lt-or-eq-of-le",
     "F:nat-lt-or-ge",
-    "F:nat-zero-le"
+    "F:nat-zero-le",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-lt-succ-120bd6db"
   ],
   "evidence": [
     {

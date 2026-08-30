@@ -18,7 +18,9 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-ble-self-eq-true",
-    "F:nat-ble-succ-eq-true"
+    "F:nat-ble-succ-eq-true",
+    "F:ml430-nat-ble-self-eq-true-839df126",
+    "F:ml430-nat-ble-succ-eq-true-000a69f4"
   ],
   "axiom_footprint": [],
   "evidence": [

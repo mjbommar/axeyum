@@ -12,7 +12,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": ["F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-gcd-zero-left", "F:nat-le-antisymm", "F:nat-le-of-dvd", "F:nat-le-of-lt-succ", "F:nat-le-of-succ-le-succ", "F:nat-lt-of-le-of-lt", "F:nat-lt-or-eq-of-le", "F:nat-lt-or-ge", "F:nat-one-le-of-dvd-pos", "F:nat-zero-le", "F:nat-zero-lt-of-ne-zero"],
+  "depends_on": ["F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-gcd-zero-left", "F:nat-le-antisymm", "F:nat-le-of-dvd", "F:nat-le-of-lt-succ", "F:nat-le-of-succ-le-succ", "F:nat-lt-of-le-of-lt", "F:nat-lt-or-eq-of-le", "F:nat-lt-or-ge", "F:nat-one-le-of-dvd-pos", "F:nat-zero-le", "F:nat-zero-lt-of-ne-zero", "F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:ml430-nat-le-of-succ-le-succ-a180a72c"],
   "axiom_footprint": [],
   "evidence": [
     {

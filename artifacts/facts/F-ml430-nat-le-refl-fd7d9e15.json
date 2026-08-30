@@ -6,15 +6,41 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n : ℕ), n ≤ n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.le_refl",
+    "kernel_statement": "theorem Nat.le_refl : ((x0 : AxNat) -> AxNat.le x0 x0)"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.le_refl",
+      "kind": "kernel-term",
+      "supports": "`Nat.le_refl` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : AxNat) -> AxNat.le x0 x0)`.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.le_refl\" && $3 == \"((x0 : AxNat) -> AxNat.le x0 x0)\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.le_refl"
+    },
+    {
+      "id": "footprint-Nat.le_refl",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.le_refl`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.le_refl`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "kernel prelude build (crates/axeyum-lean-kernel/src/), predating this mirror's preregistration; found and verified by lane already-proved-sweep (2026-08-29), not proved by this lane",
     "source": "statement-only extraction of `Nat.le_refl` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Closed by lane already-proved-sweep (2026-08-29): `scripts/brief-step0.py`'s constant-multiset ranker against the fresh kernel-environment snapshot surfaced this mirror as an exact-constant candidate; the rendered type was read character-by-character against `formal.statement` and found to be the SAME proposition (not merely the same constants -- the multiset comparison cannot see argument order, and several sibling candidates in the same sweep were rejected for exactly that reason). `Nat.le_refl` was admitted by an earlier lane's prelude work for reasons unrelated to this mirror programme; this lane did no new proof work, only found the pre-existing declaration, verified the type match and the axiom footprint, and flipped the status.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

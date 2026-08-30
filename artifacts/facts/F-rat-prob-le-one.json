@@ -29,7 +29,8 @@
     "F:rat-le-refl",
     "F:rat-le-trans",
     "F:rat-sumrange-nonneg",
-    "F:rat-zero-add"
+    "F:rat-zero-add",
+    "F:ml430-nat-le-of-lt-succ-120bd6db"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -31,7 +31,9 @@
     "F:nat-lt-succ-self",
     "F:nat-not-lt-zero",
     "F:nat-zero-le",
-    "F:nat-zero-lt-succ"
+    "F:nat-zero-lt-succ",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:ml430-nat-le-of-lt-succ-120bd6db"
   ],
   "axiom_footprint": [],
   "evidence": [

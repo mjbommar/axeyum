@@ -29,7 +29,10 @@
     "F:nat-succ-mul",
     "F:nat-testbit-le-one",
     "F:nat-testbit-succ",
-    "F:nat-zero-le"
+    "F:nat-zero-le",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c"
   ],
   "axiom_footprint": [],
   "evidence": [

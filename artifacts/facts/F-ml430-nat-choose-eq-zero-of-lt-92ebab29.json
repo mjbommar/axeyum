@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": ["F:nat-choose-succ-succ", "F:nat-le-of-succ-le-succ", "F:nat-le-succ-of-le", "F:nat-lt-irrefl", "F:nat-not-succ-le-zero", "F:nat-zero-choose-succ"],
+  "depends_on": ["F:nat-choose-succ-succ", "F:nat-le-of-succ-le-succ", "F:nat-le-succ-of-le", "F:nat-lt-irrefl", "F:nat-not-succ-le-zero", "F:nat-zero-choose-succ", "F:ml430-nat-le-of-succ-le-succ-a180a72c"],
   "epistemic_status": "proved",
   "evidence": [
     {
