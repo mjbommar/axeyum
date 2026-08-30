@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "axiom_footprint": [],
   "id": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
   "title": "Mathlib v4.30 source proposition Nat.Prime.dvd_or_dvd",
   "statement": "The proposition declared as `Nat.Prime.dvd_or_dvd` in the pinned Mathlib v4.30 source.",
@@ -8,13 +9,34 @@
     "statement": "∀ {p m n : ℕ}, Nat.Prime p → p ∣ m * n → p ∣ m ∨ p ∣ n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-dvd-add-0c5bcc91", "F:ml430-nat-dvd-mul-right-a87a83c4", "F:nat-dvd-add-right-cancel-of-pos", "F:nat-dvd-mul-right-of-dvd", "F:nat-gcd-bezout", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-le-add-right", "F:nat-le-trans", "F:nat-mul-assoc", "F:nat-mul-comm", "F:nat-one-mul", "F:nat-right-distrib"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- euclid_lemma 2>/dev/null | grep -Ec '^Nat\\.euclid_lemma[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.euclid_lemma",
+      "kind": "kernel-term",
+      "notes": "This mirror is `Nat.euclid_lemma` (`nat_prelude/bezout.rs`) verbatim, up to the bound-variable names (`a,b` vs `m,n`): `euclid_lemma : forall p a b, prime_condition p -> p|(a*b) -> p|a or p|b`. No new declaration was made for this fact; the checker below confirms `Nat.euclid_lemma` itself, and `prime_dvd_mirrors.rs`'s module doc records the identification explicitly so a later reader does not go looking for a separate `Nat.prime_dvd_or_dvd` declaration that does not exist.",
+      "supports": "∀ {p m n : ℕ}, Nat.Prime p → p ∣ m * n → p ∣ m ∨ p ∣ n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.euclid_lemma",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.euclid_lemma`'s footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (declare_euclid_lemma, bezout.rs); identified by lane prime-dvd-mirrors",
     "source": "statement-only extraction of `Nat.Prime.dvd_or_dvd` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +48,6 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "proof_route": "kernel-lean",
+  "notes": "This mirror is `Nat.euclid_lemma` (`nat_prelude/bezout.rs`) verbatim, up to the bound-variable names (`a,b` vs `m,n`): `euclid_lemma : forall p a b, prime_condition p -> p|(a*b) -> p|a or p|b`. No new declaration was made for this fact; the checker below confirms `Nat.euclid_lemma` itself, and `prime_dvd_mirrors.rs`'s module doc records the identification explicitly so a later reader does not go looking for a separate `Nat.prime_dvd_or_dvd` declaration that does not exist. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }

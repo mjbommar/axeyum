@@ -101,7 +101,7 @@ fn search_claim(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, k: ExprId) -> Exp
 }
 
 /// `2 ≤ x ∧ ∀ c, c ∣ x → c = 1 ∨ c = x` — primality, spelled inline.
-fn prime_condition(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+pub(super) fn prime_condition(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let two = d.num(2);
     let unit = d.num(1);
@@ -762,7 +762,7 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 }
 
 /// The two components of [`prime_condition`], so an `And` over it can be split.
-fn prime_parts(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> (ExprId, ExprId) {
+pub(super) fn prime_parts(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> (ExprId, ExprId) {
     let nat = d.nat_ty();
     let two = d.num(2);
     let unit = d.num(1);

@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-euclid-lemma"],
+  "depends_on": ["F:nat-euclid-lemma", "F:ml430-nat-prime-dvd-or-dvd-4ae88221"],
   "evidence": [
     {
       "check_status": "checked",

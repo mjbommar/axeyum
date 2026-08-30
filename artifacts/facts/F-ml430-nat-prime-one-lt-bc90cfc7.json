@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "axiom_footprint": [],
   "id": "F:ml430-nat-prime-one-lt-bc90cfc7",
   "title": "Mathlib v4.30 source proposition Nat.Prime.one_lt",
   "statement": "The proposition declared as `Nat.Prime.one_lt` in the pinned Mathlib v4.30 source.",
@@ -8,13 +9,34 @@
     "statement": "∀ {p : ℕ}, Nat.Prime p → 1 < p",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_one_lt 2>/dev/null | grep -Ec '^Nat\\.prime_one_lt[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.prime_one_lt",
+      "kind": "kernel-term",
+      "notes": "`prime_condition`'s lower-bound conjunct `2 <= p` is defeq to `1 < p` (`Nat.lt a b := Nat.le (succ a) b`, and `succ 1` and `2` are the same unary numeral), so the proof is the conjunct itself.",
+      "supports": "∀ {p : ℕ}, Nat.Prime p → 1 < p"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.prime_one_lt",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.prime_one_lt`'s footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane prime-dvd-mirrors",
     "source": "statement-only extraction of `Nat.Prime.one_lt` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +48,6 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_prime_one_lt` (`nat_prelude/prime_dvd_mirrors.rs`). `prime_condition`'s lower-bound conjunct `2 <= p` is defeq to `1 < p` (`Nat.lt a b := Nat.le (succ a) b`, and `succ 1` and `2` are the same unary numeral), so the proof is the conjunct itself. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }
