@@ -4,6 +4,24 @@ Audit lane `ivt-evt-pareto`, 2026-08-30. **Nothing here reclassifies a fact.**
 No fact file was edited; where a fact overstates itself that is reported, and
 the fix belongs to a separate lane.
 
+**Correction, 2026-08-30 (lane `ivt-claim-correction`, see
+[ADR-0692](../research/09-decisions/adr-0692-the-dominance-test-has-two-axes-not-a-vote-and-ivt-still-passes-it.md)).**
+An adversarial audit
+([`2026-08-30-session-audit.md`](../research/11-design-review/2026-08-30-session-audit.md)
+§Part 1 item 3) found that §4 below applied its Pareto test inconsistently:
+three Mathlib-wins were excused for IVT's "Net" verdict and one comparable
+Mathlib-win sank EVT's, with no rule stated for the difference. The charge
+against the *presentation* held — no test was written down for a reader to
+apply themselves. §4 is rewritten below to state the test explicitly (it was
+always in `07-the-cost-model-and-pareto-position.md` §1, just never carried
+here) and apply it uniformly. The verdict does **not** change to "mutually
+non-dominated": under the test `07-…` actually states — trusted base and
+computational content, on a statement we ship, with breadth explicitly
+conceded rather than scored — IVT dominates cleanly and EVT remains
+ineligible for the claim, for the reason ADR-0675 and ADR-0691 already give.
+See ADR-0692 for the full adjudication and a fresh re-derivation against the
+post-`CReal.supOn` kernel.
+
 ## Summary
 
 The standing goal is: *confirm that the architecture makes results like IVT and
@@ -431,43 +449,93 @@ named in any comparison rather than elided.
 
 ## 4. The axes, with evidence
 
-Following `07-the-cost-model-and-pareto-position.md`'s own framing — per
-statement, plus uncontested axes — and separating "we lose" from "the
-comparison is not meaningful."
+**Revised 2026-08-30 (ADR-0692) — the test, stated once, before either table.**
+`07-the-cost-model-and-pareto-position.md` §1 does not claim dominance over an
+open-ended axis list. It claims exactly two things, quoted rather than
+paraphrased:
+
+> "**On every statement we ship, strictly dominate**: constructive ⟹
+> classical plus a program; trusted base 0 vs 3 axioms; every theorem
+> executable where Mathlib's analysis is `noncomputable`."
+>
+> "**Concede breadth EXPLICITLY** at current efficiency … excluded from every
+> headline count as a stated invariant."
+
+So a per-statement dominance verdict is decided by exactly **two axes** —
+**trusted base** (axiom footprint) and **computational content**
+(constructive-with-an-extractable-program vs classical-existence) — measured
+on a statement we actually ship that is comparable in content to Mathlib's.
+Every other axis below (exactness of the conclusion where it is not already
+priced into computational content, generality of the statement, generality
+of the ambient structure, which continuity notion is assumed) is **conceded
+breadth**: reported for honesty, informative to a reader who needs the fuller
+picture, and never scored toward or against the dominance verdict. This is
+the rule the original version of this section built two seven-row tables
+without ever writing down, which is what let the "Net" lines apply it
+differently to the two theorems. Applying the same rule to both:
 
 ### IVT
+
+**Dominance axes** (the only two that decide the verdict):
 
 | axis | verdict | evidence |
 | --- | --- | --- |
 | Trusted base | **we dominate** | `ivt_approx` and all 12 IVT-family theorems read `axiom_footprint = 0` from the kernel. Mathlib's IVT sits on `Classical.choice`, `propext`, `Quot.sound` via the topology library. Uncontested. |
-| Boundary statement (row 2) | **we dominate; Mathlib has no counterpart** | `ivt_exact_root_decides_sign`, hypothesis class proved, non-vacuity checked with a positive control. A classical library cannot state this — LLPO is a theorem there. |
-| Computational content | **we dominate** | `ivt_bisect_hi`/`_lo` are definitions the kernel reduces; `ivt_bisect_approx` bounds the accuracy of a *named* algorithm. Mathlib's is a subset inclusion via `IsPreconnected` and extracts no algorithm. |
-| Exact conclusion `∃x, f x = t` | **Mathlib dominates** | Mathlib gets it from `ContinuousOn` alone; we need `ivt_exact_root`'s uniformly positive derivative. **This loss is real and permanent** — row 2 is the proof that it is not fixable, which is the point. |
-| Generality of statement (target value, orientation) | **Mathlib dominates, but reachably** | Ours fixes target `0` and one orientation; `uniformly_continuous_sub`/`_const`/`_neg` are all present, so the general form is an instantiation nobody has landed as a fact. Cheap. |
-| Generality of structure | **Mathlib dominates; not reachable here** | Mathlib: any conditionally complete densely ordered linear order → any linear order with order-closed topology. Ours: `CReal → CReal`. This kernel has no typeclasses, no `Set`, no topology, so the generality is not reachable — but a downstream user who needs IVT for another order gets it there and not here. **Report it as a loss, not as "not meaningful."** |
-| Continuity hypothesis | **not meaningful** | `ContinuousOn` does not exist in this kernel; the two statements are not comparable on this axis. |
+| Computational content (incl. exact vs approximate) | **we dominate** | `ivt_bisect_hi`/`_lo` are definitions the kernel reduces; `ivt_bisect_approx` bounds the accuracy of a *named* algorithm. Mathlib's is a subset inclusion via `IsPreconnected` and extracts no algorithm. The exact-vs-approximate root is the *same trade* read from the other side, not a second axis: Mathlib's root is exact because it assumes classical choice and computes nothing; ours is approximate because it refuses that assumption and delivers a program instead. `07-…`'s own "constructive ⟹ classical plus a program" already prices this as one trade. **This trade is real and permanent** — row 2 (below) is the proof that it is not fixable — and it is exactly what the dominance claim is about, not a loss against it. |
 
-**Net for IVT: the Pareto claim holds as `07-…` states it** — per-statement
-dominance on trusted base, boundary statement and computational content, with
-the losses either constructively forced (exact conclusion) or reachable
-(target/orientation) or off-axis (structure, continuity notion).
-
-### EVT
+**Conceded breadth** (reported, not scored):
 
 | axis | verdict | evidence |
 | --- | --- | --- |
-| Trusted base | **we dominate** — on the two theorems that exist | `evtLinear_uniformly_continuous`, `evt_attained_max_decides_sign`: `axiom_footprint = 0`. |
-| Boundary statement (row 2) | **we dominate; Mathlib has no counterpart** | `evt_attained_max_decides_sign`. The theorem is genuine; the *ledger evidence* for its non-vacuity is missing (§2). |
-| Any positive EVT statement | **Mathlib dominates outright** | Mathlib proves EVT for an arbitrary compact set. We prove **nothing** — no `supOn`, no approximate maximum, no bounded-attainment. `CReal.bounded_of_uniformly_continuous` exists and is the nearest thing; it is boundedness, not a supremum. |
-| Computational content | **not meaningful yet** | `meshMax` computes a finite mesh maximum, but no theorem connects it to a supremum, so there is nothing to compare. |
-| Generality of structure | **Mathlib dominates; not reachable here** | as for IVT, and more so: Mathlib's is over compact subsets of arbitrary topological spaces. |
+| Boundary statement (row 2) | **we have one; Mathlib has no counterpart** | `ivt_exact_root_decides_sign`, hypothesis class proved, non-vacuity checked with a positive control. A classical library cannot state this — LLPO is a theorem there. Not part of the two-axis test; recorded because it is the strongest thing either library says about *why* the trade above is forced. |
+| Generality of statement (target value, orientation) | **Mathlib is more general, reachably** | Ours fixes target `0` and one orientation; `uniformly_continuous_sub`/`_const`/`_neg` are all present, so the general form is an instantiation nobody has landed as a fact. Cheap; conceded per `07-…` §1. |
+| Generality of structure | **Mathlib is more general, not reachable here** | Mathlib: any conditionally complete densely ordered linear order → any linear order with order-closed topology. Ours: `CReal → CReal`. This kernel has no typeclasses, no `Set`, no topology. A downstream user who needs IVT for another order gets it there and not here. Conceded, not scored — but genuinely not reachable, unlike the row above. |
+| Continuity hypothesis | **not comparable** | `ContinuousOn` does not exist in this kernel; the two statements are not comparable on this axis at all. |
 
-**Net for EVT: the Pareto claim does not hold.** Pareto dominance requires
-being no worse on every axis and better on one. On the axis "does the library
-give you a usable extreme value theorem", we are worse — not marginally, but
-completely, because the row is absent. Having a boundary row Mathlib lacks does
-not repair that; it is a strict improvement on one axis with a strict regression
-on another, which is the definition of *not* dominating.
+**Net for IVT: the two-axis test holds, for `ivt_approx`.** Trusted base and
+computational content both dominate, with no excusing required — the one row
+that looked like a third, independent Mathlib-win (exact conclusion) is the
+computational-content trade counted twice. Breadth (target, orientation,
+ambient structure) is explicitly conceded per `07-…` §1, not scored either
+way. The honest, precise claim is *"`CReal.ivt_approx` dominates Mathlib's
+IVT on trusted base and computational content; it is narrower in what it
+states, by design and by kernel limitation, and that narrowing is reported
+above rather than hidden."* — not the unqualified "IVT is Pareto-dominant
+over Mathlib."
+
+### EVT
+
+**Dominance axes:**
+
+| axis | verdict | evidence |
+| --- | --- | --- |
+| Trusted base | **not applicable — no comparable statement exists** | `evtLinear_uniformly_continuous` and `evt_attained_max_decides_sign` are `axiom_footprint = 0`, but neither is comparable content to Mathlib's `exists_isMaxOn`: one is a continuity lemma, the other is an impossibility result. There is no positive EVT statement on our side to compare trusted bases with Mathlib's. |
+| Computational content | **not applicable — nothing to compare** | `meshMax` computes a finite mesh maximum and, as of `CReal.supOn` (ADR-0691), a value the mesh maxima converge to — but no landed law connects it to being a supremum, so there is no computed *maximum-realizing* content to set against Mathlib's (non-computable) one. |
+
+**Conceded breadth / other findings** (reported, not scored — because the
+dominance axes above are already inapplicable, nothing here could restore or
+sink the verdict):
+
+| axis | verdict | evidence |
+| --- | --- | --- |
+| Boundary statement (row 2) | **we have one; Mathlib has no counterpart** | `evt_attained_max_decides_sign`. The theorem is genuine; the *ledger evidence* for its non-vacuity is missing (§2). Same status as IVT's boundary row: informative, not part of the two-axis test. |
+| Generality of structure | **Mathlib is more general, not reachable here** | as for IVT, and more so: Mathlib's is over compact subsets of arbitrary topological spaces. |
+
+**Net for EVT: the two-axis test cannot currently be run, so it is not met.**
+This is not "we lose the vote" — it is that Mathlib's comparable content
+(`IsCompact.exists_isMaxOn`, a positive attained maximum) has no counterpart on
+our side to measure trusted base or computational content against.
+`CReal.evt_attained_max_decides_sign` is a different *kind* of statement (a
+refutation of what the constructive fragment cannot reach), not a weaker
+version of Mathlib's theorem, so it cannot stand in for row 1 in the
+comparison. `CReal.supOn` (landed 2026-08-30, ADR-0691) is a real step toward
+having one — re-checked against the current kernel with
+`kernel_declaration_projection`: `CReal.supOn` is present (`axioms=0`) but
+`CReal.evt_approx_max` and a `supOn`-upper-bound-shaped declaration are both
+absent, confirming ADR-0691's own statement that the two characterizing laws
+are still open. **EVT should not be cited as a dominance example until they
+land** — the same conclusion ADR-0675 reached by inventory and ADR-0691 by
+construction, now reached a third way by the axis test itself.
 
 ## 5. What would have to land
 

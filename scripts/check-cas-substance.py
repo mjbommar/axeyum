@@ -264,7 +264,7 @@ RATCHET_HEADER = """\
 #
 # A row here is ground this ledger has already established. Losing one is a
 # real regression and the gate refuses it; GAINING a fact needs no edit. See
-# ADR-0692 for why the count alone was not enough.
+# ADR-0699 for why the count alone was not enough.
 """
 
 

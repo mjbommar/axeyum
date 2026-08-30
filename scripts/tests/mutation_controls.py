@@ -3935,7 +3935,7 @@ SUITES["cas-substance"] = (
             '            if isinstance(fact.get("cas_substance"), dict):',
             "            if False:",
         ),
-        # -- THE RATCHET (ADR-0692). The 2026-08-30 audit's third survivor:
+        # -- THE RATCHET (ADR-0699). The 2026-08-30 audit's third survivor:
         # every guard above passes a CONSISTENT downgrade, so a fact could lose
         # its kernel reconstruction, or vanish, and the gate stayed green with a
         # quietly smaller headline.
