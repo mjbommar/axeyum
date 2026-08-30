@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:int-add-zero", "F:int-dvd-add", "F:int-dvd-mul-right", "F:int-dvd-trans", "F:int-ediv-add-emod", "F:int-gcd-dvd-left", "F:int-gcd-dvd-right", "F:int-gcd-zero-right", "F:int-left-distrib", "F:int-lt-irrefl", "F:int-mul-assoc", "F:int-mul-comm", "F:int-mul-zero", "F:int-nat-abs-dvd-nat-abs-of-dvd", "F:int-nat-abs-mul", "F:ml430-int-gcd-eq-gcd-ab-63005aef", "F:nat-div-mul-cancel-of-dvd", "F:nat-dvd-antisymm", "F:nat-dvd-gcd", "F:nat-le-succ-succ", "F:nat-mul-assoc", "F:nat-mul-left-cancel-of-pos", "F:nat-zero-div", "F:nat-zero-le", "F:ml430-nat-dvd-antisymm-507f9026"],
+  "depends_on": ["F:int-add-zero", "F:int-dvd-add", "F:int-dvd-mul-right", "F:int-dvd-trans", "F:int-ediv-add-emod", "F:int-gcd-dvd-left", "F:int-gcd-dvd-right", "F:int-gcd-zero-right", "F:int-left-distrib", "F:int-lt-irrefl", "F:int-mul-assoc", "F:int-mul-comm", "F:int-mul-zero", "F:int-nat-abs-dvd-nat-abs-of-dvd", "F:int-nat-abs-mul", "F:ml430-int-gcd-eq-gcd-ab-63005aef", "F:nat-div-mul-cancel-of-dvd", "F:nat-dvd-antisymm", "F:nat-dvd-gcd", "F:nat-le-succ-succ", "F:nat-mul-assoc", "F:nat-mul-left-cancel-of-pos", "F:nat-zero-div", "F:nat-zero-le", "F:ml430-nat-dvd-antisymm-507f9026", "F:ml430-nat-dvd-gcd-e5184fc5"],
   "evidence": [
     {
       "id": "kernel-Int.gcd_div",

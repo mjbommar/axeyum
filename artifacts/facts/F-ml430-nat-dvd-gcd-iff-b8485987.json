@@ -8,10 +8,31 @@
     "statement": "∀ {k : ℕ} {m n : ℕ}, k ∣ m.gcd n ↔ k ∣ m ∧ k ∣ n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-dvd-gcd-e5184fc5", "F:nat-dvd-trans", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_gcd_iff 2>/dev/null | grep -Ec '^Nat\\.dvd_gcd_iff[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.dvd_gcd_iff",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.dvd_gcd_iff` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. Predates this session; `declare_gcd_semantics` (`nat_prelude/gcd.rs`) builds it directly from the checked well-founded gcd characterization. This lane (nat-gcd-dvd-mirrors) closes the fact by evidence pointing at the existing declaration -- no new proof was written. `nat_theorem_inventory`'s rendered type is `(x0:AxNat)->(x1:AxNat)->(x2:AxNat)->Iff (dvd x0 (gcd x1 x2)) (And (dvd x0 x1) (dvd x0 x2))`, matching this fact's `formal.statement`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified both ways: the real name greps to a count `-ge 1` (confirmed by direct run); grepping a made-up name (`Nat.dvd_gcd_iff_bogus`) exits non-zero (`nat_theorem_inventory` fails closed on an absent name -- measured: `error: no Nat theorem matches ... -- an absent theorem is a failed check, not an empty report`, exit 1).",
+      "supports": "∀ {k} {m n : ℕ}, k ∣ m.gcd n ↔ k ∣ m ∧ k ∣ n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names`, and `the_build_is_deterministic`/`every_promised_name_is_admitted_with_the_expected_kind` (both re-run on every `nat_prelude::` sweep) confirm the declaration is admitted at the exact rendered type checked below.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.dvd_gcd_iff"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Flip only -- `Nat.dvd_gcd_iff` predates this session (`declare_gcd_semantics`, `nat_prelude/gcd.rs`): forward via `dvd_trans` against `gcd_dvd_left`/`gcd_dvd_right`, reverse via `dvd_gcd`. This lane (nat-gcd-dvd-mirrors) verified the rendered type against `formal.statement` and closed the fact by evidence only.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

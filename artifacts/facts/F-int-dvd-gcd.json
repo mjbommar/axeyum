@@ -21,7 +21,8 @@
   "depends_on": [
     "F:int-dvd-of-nat-abs-dvd",
     "F:int-nat-abs-dvd-nat-abs-of-dvd",
-    "F:nat-dvd-gcd"
+    "F:nat-dvd-gcd",
+    "F:ml430-nat-dvd-gcd-e5184fc5"
   ],
   "axiom_footprint": [],
   "evidence": [
