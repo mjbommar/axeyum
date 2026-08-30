@@ -154,6 +154,7 @@ mod crt;
 mod defs;
 mod desc_factorial;
 mod diagonal;
+mod dist;
 mod div_mod_lemmas;
 mod divisibility;
 mod division;
@@ -187,6 +188,7 @@ mod modular;
 mod mul_order_lemmas;
 mod multichoose;
 mod no_confusion;
+mod nth;
 mod ops;
 mod order;
 mod order_extra;
@@ -259,6 +261,7 @@ use defs::{
 };
 use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
+use dist::declare_dist_all;
 use div_mod_lemmas::{
     declare_add_div_mod_shift_family, declare_add_div_of_dvd_add_add_one, declare_div_mod_block,
 };
@@ -302,6 +305,7 @@ use mul_order_lemmas::{
 };
 use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
+use nth::declare_nth_all;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
@@ -4027,6 +4031,36 @@ pub struct NatPrelude {
     /// k/gcd(k,m)`) needs [`Self::gcd_mul_right`]; reverse is uniform
     /// four-factor regrouping. See `dvd_mul_split.rs`'s module doc.
     pub dvd_mul_split: NameId,
+
+    // -- `nat-dist-nth` lane: `dist.rs`/`nth.rs` —
+    // `docs/plan/status/348-nat-dist-nth.md`.
+    /// `Nat.dist n m := add (sub n m) (sub m n)` — Mathlib's own definition
+    /// (`Mathlib.Data.Nat.Dist`), over our `sub`/`add`. See `dist.rs`'s
+    /// module doc for why a mirror flip against it is honest.
+    pub dist: NameId,
+    /// `dist_comm : ∀ n m, Eq (dist n m) (dist m n)`.
+    pub dist_comm: NameId,
+    /// `dist_self : ∀ n, Eq (dist n n) zero`.
+    pub dist_self: NameId,
+    /// `dist_eq_sub_of_le : ∀ n m, Le n m → Eq (dist n m) (sub m n)`.
+    pub dist_eq_sub_of_le: NameId,
+    /// `dist_eq_sub_of_le_right : ∀ n m, Le m n → Eq (dist n m) (sub n m)`.
+    pub dist_eq_sub_of_le_right: NameId,
+    /// `dist_zero_right : ∀ n, Eq (dist n zero) n`.
+    pub dist_zero_right: NameId,
+    /// `dist_zero_left : ∀ n, Eq (dist zero n) n`.
+    pub dist_zero_left: NameId,
+    /// `dist_succ_succ : ∀ n m, Eq (dist (succ n) (succ m)) (dist n m)`.
+    pub dist_succ_succ: NameId,
+    /// `Nat.nthAux (dec : Nat → Bool) (fuel k n : Nat) : Nat` — fuel-bounded
+    /// search for the `n`-th (0-indexed) candidate `≥ k` satisfying `dec`,
+    /// `0` if fewer than `n+1` are found within `fuel` steps. See `nth.rs`'s
+    /// module doc for why this is NOT Mathlib's `Nat.nth` construction.
+    pub nth_aux: NameId,
+    /// `Nat.nth (dec : Nat → Bool) (bound n : Nat) : Nat := nthAux dec bound
+    /// 0 n`. Type differs from Mathlib's `(ℕ → Prop) → ℕ → ℕ`; any `ml430`
+    /// mirror against `Nat.nth` stays `open` (see `nth.rs`).
+    pub nth: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4816,6 +4850,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_gcd_pos_of_pos_right: kernel.name_str(nat, "div_gcd_pos_of_pos_right"),
             dvd_add_iff_left: kernel.name_str(nat, "dvd_add_iff_left"),
             dvd_mul_split: kernel.name_str(nat, "dvd_mul_split"),
+            dist: kernel.name_str(nat, "dist"),
+            dist_comm: kernel.name_str(nat, "dist_comm"),
+            dist_self: kernel.name_str(nat, "dist_self"),
+            dist_eq_sub_of_le: kernel.name_str(nat, "dist_eq_sub_of_le"),
+            dist_eq_sub_of_le_right: kernel.name_str(nat, "dist_eq_sub_of_le_right"),
+            dist_zero_right: kernel.name_str(nat, "dist_zero_right"),
+            dist_zero_left: kernel.name_str(nat, "dist_zero_left"),
+            dist_succ_succ: kernel.name_str(nat, "dist_succ_succ"),
+            nth_aux: kernel.name_str(nat, "nthAux"),
+            nth: kernel.name_str(nat, "nth"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -5384,6 +5428,20 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.mod_eq_trans`/`Nat.mod_eq_mul_right` (`euler.rs`/`modular.rs`,
         // far above). Nothing needs it, so it goes last.
         declare_modeq_cancel_div_gcd(&mut d, &p)?;
+        // `Nat.dist`: needs only `Nat.sub`/`Nat.add` (`declare_subtraction`/
+        // `declare_arithmetic`, far above) and the order/additive lemmas
+        // `sub_eq_zero_of_le`/`zero_le`/`sub_zero`/`add_zero`/`zero_add`/
+        // `add_comm`/`succ_sub_succ` (`declare_order`/`declare_defining_
+        // equations`/`declare_additive_theorems`/`declare_subtraction_
+        // theorems`, all far above). Nothing needs it, so it goes last —
+        // `docs/plan/status/348-nat-dist-nth.md`.
+        declare_dist_all(&mut d, &p)?;
+        // `Nat.nthAux`/`Nat.nth`: needs only `Nat.beq`/`Nat.pred`/`Nat.succ`
+        // (`declare_boolean_equality`/`declare_defining_equations`, far
+        // above) and `bool_select_nat` (an inlined `Bool.rec` application,
+        // `ops.rs`, no ordering constraint of its own). Nothing needs it, so
+        // it goes last — `docs/plan/status/348-nat-dist-nth.md`.
+        declare_nth_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
