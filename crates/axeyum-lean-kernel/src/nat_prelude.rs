@@ -1313,6 +1313,21 @@ pub struct NatPrelude {
     /// `mul_comm`). Closes ledger fact
     /// `F:ml430-nat-coprime-coprime-div-right-7a8ce438`.
     pub coprime_div_right: NameId,
+    /// `Nat.Coprime.coprime_div_left : ∀ m n a, Coprime m n → dvd a m →
+    /// Coprime (div m a) n`. Mirror image of
+    /// [`coprime_div_right`](Self::coprime_div_right): cases on `a`, at
+    /// `a = 0`, `dvd 0 m` forces `m = 0` (`zero_mul`), and `div _ 0 = 0`
+    /// (`div_zero`) collapses both `m` and `div m a` to the same value
+    /// transported from the hypothesis. At `a = succ a'`, the witness `q`
+    /// from `dvd a m` (`m = a*q`) gives `div m a = q`
+    /// (`div_mul_cancel_of_dvd` at the positive `a`, via the same private
+    /// `div_eq_of_mul_eq` helper), and `Coprime m n` transported along
+    /// `m = a*q` is `Coprime (a*q) n`, which
+    /// [`coprime_of_dvd_left`](Self::coprime_of_dvd_left) shrinks to
+    /// `Coprime q n` via `q ∣ (a*q)` (`dvd_mul` transported along
+    /// `mul_comm`). Closes ledger fact
+    /// `F:ml430-nat-coprime-coprime-div-left-6f7082bd`.
+    pub coprime_div_left: NameId,
     /// `Nat.coprime_of_dvd' : ∀ m n, (∀ k, prime_condition k → dvd k m →
     /// dvd k n → dvd k one) → gcd m n = one`. Closes ledger fact
     /// `F:ml430-nat-coprime-of-dvd`.
@@ -3853,6 +3868,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_of_dvd_mul_left: kernel.name_str(nat, "dvd_of_dvd_mul_left"),
             dvd_of_dvd_mul_right: kernel.name_str(nat, "dvd_of_dvd_mul_right"),
             coprime_div_right: kernel.name_str(nat, "coprime_div_right"),
+            coprime_div_left: kernel.name_str(nat, "coprime_div_left"),
             coprime_of_forall_prime_dvd: kernel.name_str(nat, "coprime_of_forall_prime_dvd"),
             dvd_of_forall_prime_mul_dvd: kernel.name_str(nat, "dvd_of_forall_prime_mul_dvd"),
             is_rel_prime: kernel.name_str(nat, "IsRelPrime"),
