@@ -1902,7 +1902,15 @@ fn add_sub_one_swap(
     let step3 = d.lemma(p.succ_sub_succ, &[sum_pred_base, zero]);
     let s3 = d.sub(sum_pred_base, zero);
     let step4 = d.lemma(p.sub_zero, &[sum_pred_base]);
-    let (_, lhs_eq) = d.chain(s0, &[(s1, step1), (s2, step2), (s3, step3), (sum_pred_base, step4)]);
+    let (_, lhs_eq) = d.chain(
+        s0,
+        &[
+            (s1, step1),
+            (s2, step2),
+            (s3, step3),
+            (sum_pred_base, step4),
+        ],
+    );
 
     // --- RHS: sub n 1  =  pred_n --------------------------------------------
     let t0 = d.sub(n, one);
@@ -2095,16 +2103,26 @@ pub(super) fn declare_clog_aux_antitone_base(
                     d.eq(selected, zero)
                 });
                 let refl_zero_b = d.refl(zero);
-                let inner_b_eq_zero =
-                    d.bool_transport(false_, motive_inner_b, refl_zero_b, value_exceeds_one, reversed);
+                let inner_b_eq_zero = d.bool_transport(
+                    false_,
+                    motive_inner_b,
+                    refl_zero_b,
+                    value_exceeds_one,
+                    reversed,
+                );
 
                 let motive_inner_a = d.bool_eq_motive(false_, &move |d, x| {
                     let selected = d.bool_select_nat(x, stepped_a, zero);
                     d.eq(selected, zero)
                 });
                 let refl_zero_a = d.refl(zero);
-                let inner_a_eq_zero =
-                    d.bool_transport(false_, motive_inner_a, refl_zero_a, value_exceeds_one, reversed);
+                let inner_a_eq_zero = d.bool_transport(
+                    false_,
+                    motive_inner_a,
+                    refl_zero_a,
+                    value_exceeds_one,
+                    reversed,
+                );
 
                 let mid_b = d.bool_select_nat(base_exceeds_one_b, zero, zero);
                 let congr_b = d.congr(inner_term_b, zero, inner_b_eq_zero, &move |d, x| {
@@ -2147,7 +2165,10 @@ pub(super) fn declare_clog_aux_antitone_base(
                 let div_b_inner = d.div(sub_n1, b);
                 let div_a_inner = d.div(sub_n1, a);
                 let div_mono = d.lemma(p.div_le_div_left, &[sub_n1, a, b, pos_a, hab]);
-                let add_mono = d.lemma(p.add_le_add_right, &[one, div_b_inner, div_a_inner, div_mono]);
+                let add_mono = d.lemma(
+                    p.add_le_add_right,
+                    &[one, div_b_inner, div_a_inner, div_mono],
+                );
 
                 let target_b = d.add(div_b_inner, one);
                 let target_a = d.add(div_a_inner, one);
@@ -2186,7 +2207,8 @@ pub(super) fn declare_clog_aux_antitone_base(
                     let sel = d.bool_select_nat(x, stepped_b, zero);
                     d.le(sel, stepped_a)
                 });
-                let step_b1 = d.bool_transport(true_, motive_b1, main_le, value_exceeds_one, h1_rev);
+                let step_b1 =
+                    d.bool_transport(true_, motive_b1, main_le, value_exceeds_one, h1_rev);
 
                 let hb_true_rev = d.bool_symm(base_exceeds_one_b, true_, hb_true);
                 let motive_b2 = d.bool_eq_motive(true_, &move |d, x| {
@@ -2201,7 +2223,8 @@ pub(super) fn declare_clog_aux_antitone_base(
                     let sel = d.bool_select_nat(x, stepped_a, zero);
                     d.le(lhs_full_b, sel)
                 });
-                let step_a1 = d.bool_transport(true_, motive_a1, step_b2, value_exceeds_one, h1_rev2);
+                let step_a1 =
+                    d.bool_transport(true_, motive_a1, step_b2, value_exceeds_one, h1_rev2);
 
                 let ha_true_rev = d.bool_symm(base_exceeds_one_a, true_, ha_true);
                 let motive_a2 = d.bool_eq_motive(true_, &move |d, x| {

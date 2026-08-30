@@ -6,15 +6,43 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, AntitoneOn (fun b => Nat.clog b n) (Set.Ioi 1)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.clog_antitone_left",
+    "kernel_statement": "theorem Nat.clog_antitone_left : (((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> ((x4 : AxNat.lt (AxNat.succ AxNat.zero) x1) -> ((x5 : AxNat.lt (AxNat.succ AxNat.zero) x2) -> AxNat.le (AxNat.clog x2 x0) (AxNat.clog x1 x0))))))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:ml430-nat-clog-mono-right-8d87a410"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.clog_antitone_left",
+      "kind": "kernel-term",
+      "supports": "`Nat.clog_antitone_left` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.clog_antitone_left\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> ((x4 : AxNat.lt (AxNat.succ AxNat.zero) x1) -> ((x5 : AxNat.lt (AxNat.succ AxNat.zero) x2) -> AxNat.le (AxNat.clog x2 x0) (AxNat.clog x1 x0)))))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.clog_antitone_left"
+    },
+    {
+      "id": "footprint-Nat.clog_antitone_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.clog_antitone_left`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.clog_antitone_left`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane clog-log2-finish (2026-08-30), new kernel construction",
     "source": "statement-only extraction of `Nat.clog_antitone_left` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +54,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction, finishing what `log-clog-finish` (docs/plan/status/337-log-clog-finish.md) left open. `clogAux`'s two guard cuts play SWAPPED roles from `logAux`'s: the outer cut `2 <= base` is a pure base cut, individually known true from the statement's own `1 < a`/`1 < b` hypotheses (no case split, unlike log's outer `b <= n`); the inner cut `2 <= n` is the SAME expression on both sides (the value is fixed), needing exactly one case split (unlike log's two). The hard part was the recursive step: it compares two different CEILING quotients `(n+b-1)/b` and `(n+a-1)/a` at different bases, which `Nat.div_le_div_left` does not cover directly (that lemma shares one numerator). The bridge is a new private identity `Eq (sub (add n base) 1) (add (sub n 1) base)`, valid only given `Le 1 n` (`Nat.sub` truncates -- at `n = 0` the two sides differ), proved by reconstructing `n` as `succ (pred n)` (`succ_pred_of_pos`) and cancelling the `succ` against the literal `1` on both sides via `succ_add`/`succ_sub_succ`/`sub_zero`. Composed with the existing `Nat.add_div_right`, this rewrites each side's ceiling quotient to `(n-1)/base + 1`, turning the comparison into a floor comparison at the shared numerator `n-1` (`Nat.div_le_div_left` plus `add_le_add_right`). From there the composition is the same as `log_aux_antitone_base`'s: `IH` at the SAME bases with the b-side's quotient, chained through `clog_aux_mono` at the fixed base `a`, `le_trans`, then `le_succ_succ`. `crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs` (new `Nat.clog_aux_antitone_base`, `Nat.clog_antitone_left`, plus private helpers `one_le_of_two_le`, `add_sub_one_swap`, `ceil_div_succ_of_pos`). The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

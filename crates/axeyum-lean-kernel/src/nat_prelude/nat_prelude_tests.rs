@@ -1041,6 +1041,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_le_div_left,
         p.log_aux_antitone_base,
         p.log_antitone_left,
+        p.clog_aux_antitone_base,
+        p.clog_antitone_left,
         p.bit_false,
         p.bit_true,
         p.bit_true_pos,
