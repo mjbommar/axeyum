@@ -324,7 +324,10 @@ def guard_vocabulary(snapshot: dict[str, Any], vocabulary: dict[str, Any],
                 f"S4 vocabulary-status-drift: {name} is listed as settled but "
                 f"the ledger says {status!r}. Listing a row here promotes its "
                 f"constants into the bridge, so the list is re-derived, never "
-                f"believed.")
+                f"believed. This is NOT the routine direction -- regenerating "
+                f"cannot produce this row, so either the fact was reopened or "
+                f"the screen was widened by hand. Investigate before "
+                f"regenerating.")
             continue
         witnessed |= set(row["constants"])
     # ...and the other direction, so a row cannot be DROPPED to make a
@@ -337,7 +340,12 @@ def guard_vocabulary(snapshot: dict[str, Any], vocabulary: dict[str, Any],
             f"S4 vocabulary-status-drift: {len(absent)} settled mirror(s) are "
             f"missing from the vocabulary ({', '.join(absent[:3])}), so the "
             f"false-positive control would run against a narrower population "
-            f"than the ledger has.")
+            f"than the ledger has. This is the ROUTINE direction and it fires "
+            f"every time a batch of mirrors closes: run "
+            f"`python3 scripts/gen-autogenesis-statable-vocabulary.py --write`. "
+            f"It re-derives the artifact rather than appending to it, and it "
+            f"cannot widen the screen -- a row's constants come from the pinned "
+            f"inventory, never from the closure.")
 
     # S2 -- a bridge entry nothing witnesses is an assertion; a bridge entry the
     # kernel already declares is a rename hiding as an elaboration.
