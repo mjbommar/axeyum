@@ -1,4 +1,4 @@
-# ADR-0692: A derived count is not a defended one — the cas-substance floor is a per-fact ratchet plus an absolute number
+# ADR-0699: A derived count is not a defended one — the cas-substance floor is a per-fact ratchet plus an absolute number
 
 Status: accepted
 Date: 2026-08-30
