@@ -204,6 +204,55 @@ distinct from **1** (a real suspect) and **0** (evaluated, and clean). Producing
 exports for those nine is the cheapest way to make the control real, and it is a
 smaller job than the 187.
 
+## Re-measured 2026-08-30: the census has no subject left
+
+Everything above is what was measured on 2026-08-24 and it is still an accurate
+record of that run. **It is no longer a description of the ledger**, and the
+gate now says so in three lines instead of 126.
+
+126 of the 152 written fact rows have since been **proved**. That is the
+flywheel working, and the checker used to reject each one — 126 identical
+`is proved in the ledger; the census is over OPEN facts` lines out of 127 total,
+which reddened `just check` for a long time and buried the one finding that
+mattered. [ADR-0618](../research/09-decisions/adr-0618-graduation-is-lifecycle-a-census-dies-when-its-subject-closes.md)
+makes graduation a counted, audited lifecycle event instead.
+
+The finding underneath, every number recomputed from the ledger, the nursery and
+the export index rather than read out of the census:
+
+| | 2026-08-24 | 2026-08-30 |
+|---|---:|---:|
+| open facts | 191 | 146 |
+| census rows | 187 | 152 (26 still open, 126 graduated) |
+| evaluable | 4 | 3 written, **0 still open** |
+| zero-match clusters | 2 | 1, naming **no** still-open fact |
+| entries in the frozen-export index | 4 | 4, **none** whose fact is still open |
+
+**A frozen export is the only route to an evaluable goal** — that is the
+deliberate choice argued in "Where a goal comes from" above, and it is what
+makes this state terminal for the artifact. With zero open facts carrying one,
+regenerating produces `evaluable = 0`, which rule 7 already refuses. So
+`just mobility-census-regen` is not the remedy here; a producer exporting a
+statement for a fact that is **still open** is.
+
+Read the headline row the same way as before, and note the direction it moved.
+The 2026-08-24 finding was that the bottleneck between here and volume is the
+Lean export step, not the tactic vocabulary. Since then 126 censused facts
+closed by other routes and the export index gained **nothing**. The bottleneck
+did not narrow; the ledger walked around it.
+
+The status line carries both sides so the gap is legible:
+
+```
+MOBILITY_CENSUS|open=189|evaluable=3|…|live=26|graduated=126|live_evaluable=0|live_exportable=0|audit=ok|violations=3
+```
+
+`open` and `evaluable` are what the census CLAIMED when it ran; `live*` and
+`graduated` are recomputed now. `audit=ok` means every row's status was re-read
+at the census's pinned commit and all 152 were genuinely `open` there — the
+census did not pad its population. `audit=no-git` (a `git archive` snapshot)
+means the audit could not run and says so rather than passing quietly.
+
 ## Commands and gates
 
 ```sh

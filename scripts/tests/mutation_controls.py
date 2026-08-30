@@ -2221,10 +2221,65 @@ SUITES["mobility-census"] = (
             "        if fact_id not in statuses:",
             "        if False:",
         ),
+        # The blanket "the census is over OPEN facts" guard is GONE. It rejected
+        # graduation -- a fact open at census time and proved now -- and on
+        # 2026-08-30 emitted 126 identical lines over one census, burying the
+        # finding that mattered. Graduation is now audited against the census's
+        # pinned commit by `check_population`, whose guards follow.
         (
-            "the census is over OPEN facts",
-            '        elif statuses[fact_id] != "open":',
+            "a census pinning no commit cannot be audited",
+            "    if not isinstance(commit, str) or not commit.strip():",
+            "    if False:",
+        ),
+        (
+            "an unreachable pinned commit is a violation, not a skip",
+            '    if state == "unreachable":',
+            "    if False:",
+        ),
+        (
+            "a row with no fact file at the pinned commit",
+            "        if was is None:",
+            "        if False:",
+        ),
+        (
+            "a row already settled at the pinned commit is padding",
+            '        elif was != "open":',
             "        elif False:",
+        ),
+        (
+            "held-out facts are never demanded as census rows",
+            "    live_exportable = sorted((live_open & exportable) - held_out)",
+            "    live_exportable = sorted(live_open & exportable)",
+        ),
+        (
+            "no open fact carries an export: the census has no subject",
+            "    if not live_exportable:",
+            "    if False:",
+        ),
+        (
+            "open exports the census never evaluated demand a regeneration",
+            "    elif not live_evaluable:",
+            "    elif False:",
+        ),
+        (
+            "an open exportable fact with no census row went unmeasured",
+            "        if fact_id not in rows:",
+            "        if False:",
+        ),
+        (
+            "a zero-match cluster of settled facts names no capability",
+            '        if fact_ids and not any(statuses.get(fact_id) == "open" for fact_id in fact_ids):',
+            "        if False:",
+        ),
+        (
+            "an export index with no entries fails closed",
+            "    if not isinstance(exports, list) or not exports:",
+            "    if False:",
+        ),
+        (
+            "an export index naming no fact ids fails closed",
+            "    if not exportable:",
+            "    if False:",
         ),
         (
             "no duplicated fact row",
