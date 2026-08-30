@@ -185,6 +185,7 @@ mod lor;
 mod min_fac;
 mod mod_mul_lemmas;
 mod modeq_add_cancel;
+mod modeq_add_le_of_lt;
 mod modeq_cancel_div_gcd;
 mod modular;
 mod mul_order_lemmas;
@@ -303,6 +304,7 @@ use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use mod_mul_lemmas::declare_mod_mul_family;
 use modeq_add_cancel::declare_mod_eq_add_cancel;
+use modeq_add_le_of_lt::declare_mod_eq_add_le_of_lt;
 use modeq_cancel_div_gcd::declare_modeq_cancel_div_gcd;
 use modular::declare_modular_congruence;
 use mul_order_lemmas::{
@@ -1196,6 +1198,9 @@ pub struct NatPrelude {
     /// `gcd_comm`. Closes `F:ml430-nat-modeq-cancel-left-of-coprime`
     /// (`modeq_add_cancel.rs`).
     pub mod_eq_cancel_left: NameId,
+    /// `Nat.mod_eq_add_le_of_lt : ∀ m a b, modEq m a b → a < b → a + m ≤ b`.
+    /// Closes `F:ml430-nat-modeq-add-le-of-lt-c774015b` (`modeq_add_le_of_lt.rs`).
+    pub mod_eq_add_le_of_lt: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -4452,6 +4457,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mod_eq_add_iff_left: kernel.name_str(nat, "mod_eq_add_iff_left"),
             mod_eq_add_iff_right: kernel.name_str(nat, "mod_eq_add_iff_right"),
             mod_eq_cancel_left: kernel.name_str(nat, "mod_eq_cancel_left"),
+            mod_eq_add_le_of_lt: kernel.name_str(nat, "mod_eq_add_le_of_lt"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_refl: kernel.name_str(nat, "dvd_refl"),
@@ -5552,6 +5558,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_arithmetic`, far above). Nothing needs it, so it goes
         // last — `docs/research/09-decisions/adr-0653-…`.
         declare_fermat_number_all(&mut d, &p)?;
+        // `Nat.mod_eq_add_le_of_lt`: needs only `Nat.add_le_add_left`/
+        // `Nat.le_of_add_le_add_left`/`Nat.le_of_add_le_add_right`
+        // (`declare_order`, far above), `Nat.mul_le_mul_left`/
+        // `Nat.lt_of_mul_lt_mul_left` (`declare_lt_of_mul_lt_mul`, above)
+        // and `Nat.add_comm`/`Nat.add_assoc` (`declare_algebra`-family, far
+        // above) plus the `modEq` witness helpers (`declare_modular_congruence`,
+        // far above). Nothing needs it, so it goes last.
+        declare_mod_eq_add_le_of_lt(&mut d, &p)?;
         Ok(p)
     })();
     match built {
