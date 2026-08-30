@@ -135,6 +135,79 @@ class CandidateSweepTests(unittest.TestCase):
         self.assertEqual(candidates, [])
 
 
+class WidenedSweepTests(unittest.TestCase):
+    """The two 2026-08-30 changes, each with the case that kills its mutation.
+
+    Both exist because `natural-parity` was contaminated five hours before it
+    was preregistered and this detector reported nothing: the rule could not see
+    a longer kernel name, and the detector was not reading the manifest the
+    family lives in.
+    """
+
+    def test_a_longer_kernel_name_containing_the_slug_is_surfaced(self) -> None:
+        """The real miss: `F:ml430-nat-even-iff-…` against the admitted
+        `Nat.even_iff_mod_two_eq_zero`. Equality does not reach it; subset
+        does. Kills a revert of `<=` to `==`."""
+        held = [{"fact_id": "F:ml430-nat-even-iff-024826e9"}]
+
+        def run(prelude: str, name_filter: str) -> "subprocess.CompletedProcess[str]":
+            if prelude == "nat":
+                return fake_process("Nat.even_iff_mod_two_eq_zero\t1\t(irrelevant)\n")
+            return fake_process("")
+
+        candidates = detector.candidate_sweep(held, reviewed_ids=set(), run=run)
+        self.assertEqual(
+            candidates,
+            [("F:ml430-nat-even-iff-024826e9", "nat:Nat.even_iff_mod_two_eq_zero")],
+        )
+
+    def test_the_reverse_containment_is_not_surfaced(self) -> None:
+        """A kernel name whose words are a subset of the SLUG's is noise with
+        no mechanism behind it. Kills a mutation flipping the direction."""
+        held = [{"fact_id": "F:ml430-nat-even-add-one-deadbeef00"}]
+
+        def run(prelude: str, name_filter: str) -> "subprocess.CompletedProcess[str]":
+            return fake_process("Nat.even\t1\t(irrelevant)\n" if prelude == "nat" else "")
+
+        self.assertEqual(detector.candidate_sweep(held, reviewed_ids=set(), run=run), [])
+
+    def test_both_manifests_are_read(self) -> None:
+        """120 of the 136 pre-amendment held-out rows lived in the extension.
+        Kills a revert to reading `NURSERY` alone."""
+        with tempfile.TemporaryDirectory() as tmp:
+            v1 = pathlib.Path(tmp) / "v1.json"
+            v2 = pathlib.Path(tmp) / "v2.json"
+            v1.write_text(json.dumps({"entries": [
+                {"fact_id": "F:only-in-v1", "partition": "held-out"}]}))
+            v2.write_text(json.dumps({"entries": [
+                {"fact_id": "F:only-in-v2", "partition": "held-out"}]}))
+            saved = (detector.NURSERY, detector.EXTENSION)
+            try:
+                detector.NURSERY, detector.EXTENSION = v1, v2
+                ids = {e["fact_id"] for e in detector.held_out_everywhere()}
+            finally:
+                detector.NURSERY, detector.EXTENSION = saved
+        self.assertEqual(ids, {"F:only-in-v1", "F:only-in-v2"})
+
+    def test_an_extension_with_no_held_out_rows_is_an_error(self) -> None:
+        """Each manifest must CONTRIBUTE, or half the population goes unwatched
+        while the gate still prints a count."""
+        with tempfile.TemporaryDirectory() as tmp:
+            v1 = pathlib.Path(tmp) / "v1.json"
+            v2 = pathlib.Path(tmp) / "v2.json"
+            v1.write_text(json.dumps({"entries": [
+                {"fact_id": "F:only-in-v1", "partition": "held-out"}]}))
+            v2.write_text(json.dumps({"entries": [
+                {"fact_id": "F:trainish", "partition": "train"}]}))
+            saved = (detector.NURSERY, detector.EXTENSION)
+            try:
+                detector.NURSERY, detector.EXTENSION = v1, v2
+                with self.assertRaises(detector.ContaminationDetectorError):
+                    detector.held_out_everywhere()
+            finally:
+                detector.NURSERY, detector.EXTENSION = saved
+
+
 class InfrastructureFailureTests(unittest.TestCase):
     def test_a_missing_manifest_is_an_error(self) -> None:
         with self.assertRaises(detector.ContaminationDetectorError):

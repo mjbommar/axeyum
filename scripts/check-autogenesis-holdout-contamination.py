@@ -57,6 +57,19 @@ from typing import Any, Callable
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
+# The 2026-08-29 refill preregisters its held-out rows HERE, not in v1, and this
+# detector read v1 alone until 2026-08-30. Measured that day against the
+# pre-amendment population: 136 held-out rows, **16 in v1 and 120 in the
+# extension**, so the detector was aimed at 12% of the population it names. Of
+# the 9 rows its own matching rule would have surfaced, 6 were extension rows it
+# never read -- including `F:ml430-nat-odd-of-mul-left-2c6c2553`, which matches
+# the admitted `Int.odd_of_mul_left` by the EXISTING equality rule. The
+# `natural-parity` contamination was reachable by this gate as already written;
+# it was pointed at the wrong file. Same fail-closed treatment as
+# `check-autogenesis-holdout-isolation.py`: BOTH manifests are required and each
+# must contribute rows, because a detector reading one of two populations
+# reports the same "clean" as a detector that works.
+EXTENSION = ROOT / "artifacts/autogenesis/nursery-v2-extension.json"
 
 EXAMPLE_BY_PRELUDE = {
     "nat": "nat_theorem_inventory",
@@ -160,6 +173,20 @@ def held_out_entries(nursery: dict[str, Any]) -> list[dict[str, Any]]:
     return held
 
 
+def held_out_everywhere() -> list[dict[str, Any]]:
+    """Every held-out row, from BOTH manifests, each required to contribute.
+
+    Deliberately not a loop over "whatever manifests exist": a third manifest
+    landing without this function being updated should be a visible omission,
+    and a manifest that has stopped carrying held-out rows is an error rather
+    than a quiet halving of the population.
+    """
+    rows: list[dict[str, Any]] = []
+    for path in (NURSERY, EXTENSION):
+        rows += held_out_entries(load_nursery(path))
+    return rows
+
+
 def load_nursery(path: pathlib.Path) -> dict[str, Any]:
     if not path.is_file():
         raise ContaminationDetectorError(f"nursery manifest is missing: {path}")
@@ -221,6 +248,39 @@ def candidate_sweep(
     verdict: per the doc-263 audit, most candidates it would surface are
     refuted by statement comparison, which a human still has to do.
 
+    **SUBSET, not equality, since 2026-08-30.** The rule was
+    `word_set(short) == slug_words`, which requires the kernel theorem to be
+    named with EXACTLY the ledger slug's words -- so a proof of the same
+    proposition under a longer, more specific name is invisible. That is the
+    `natural-parity` contamination precisely: `F:ml430-nat-even-iff-024826e9`
+    has slug words `{even, iff}` and the admitted theorem is
+    `Nat.even_iff_mod_two_eq_zero`, `{even, iff, mod, two, eq, zero}`. Not
+    equal, so not flagged; a strict superset, so flagged now.
+
+    The cost was measured before changing it, over the 136-row pre-amendment
+    population against the committed 2,383-name environment snapshot:
+
+        equality  ->   9 rows flagged,  9 (row, name) pairs
+        subset    ->  15 rows flagged, 34 (row, name) pairs
+
+    Six extra rows and 25 extra pairs of ADVISORY `needs-review` output, for a
+    detector whose own docstring says most candidates are refuted by hand. That
+    is the right side of the trade for a population of 116. It would not be at
+    ten times the size, and the number to re-measure is the pair count, not the
+    row count.
+
+    The direction matters and the other one is wrong: `slug_words <=
+    name_words` means "the kernel name says at least what the ledger row says".
+    The reverse (`name_words <= slug_words`) would flag every kernel theorem
+    whose name is a fragment of the row's -- `Nat.even` for `even-add-one` --
+    which is noise with no mechanism behind it.
+
+    Still blind, by construction, to a proposition proved under a name sharing
+    NO word with the slug, and to an inline step that has no declaration name
+    at all. And blind to a `Definition` in either rule, because it reads a
+    THEOREM inventory: see `check-holdout-closed-evaluation.py` for the shape
+    this cannot reach.
+
     `run` defaults to `None`, not `run_inventory`, for the same late-binding
     reason `check_known` does -- see its docstring.
     """
@@ -249,7 +309,7 @@ def candidate_sweep(
         for prelude, names in prelude_dumps.items():
             for name in names:
                 short = name.rsplit(".", 1)[-1]
-                if word_set(short) == slug_words:
+                if slug_words <= word_set(short):
                     candidates.append((fact_id, f"{prelude}:{name}"))
     return candidates
 
@@ -264,8 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        nursery = load_nursery(NURSERY)
-        held = held_out_entries(nursery)
+        held = held_out_everywhere()
         held_ids = {e["fact_id"] for e in held}
         contaminated, skipped = check_known(held_ids)
         candidates: list[tuple[str, str]] = []
