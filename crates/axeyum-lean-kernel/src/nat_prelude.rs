@@ -199,6 +199,7 @@ mod order_more;
 mod parity;
 mod perfect;
 mod permutation;
+mod pow_add_prime;
 mod powsq;
 mod prime_char;
 mod prime_dvd_mirrors;
@@ -325,6 +326,7 @@ use perfect::declare_perfect_all;
 use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
+use pow_add_prime::declare_pow_add_prime_all;
 use powsq::declare_powsq_all;
 use prime_char::{
     declare_prime_mul_eq_prime_sq_iff, declare_prime_not_coprime_iff_dvd,
@@ -4366,6 +4368,19 @@ pub struct NatPrelude {
     /// **Definition only, deliberately** — see `fermat_number.rs`'s module
     /// doc for why no theorem about it is declared here.
     pub fermat_number: NameId,
+
+    // -- `pow-add-prime` lane: `pow_add_prime.rs` — toward
+    // `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`.
+    /// `Nat.pow_mul : ∀ a e k, Eq (pow a (mul e k)) (pow (pow a e) k)`.
+    pub pow_mul: NameId,
+    /// `Nat.dvd_pow_add_one_of_odd_exp : ∀ x t, dvd (add x 1) (add (pow x
+    /// (succ (mul 2 t))) 1)` — `x+1 ∣ x^{2t+1}+1` for every `x`.
+    pub dvd_pow_add_one_of_odd_exp: NameId,
+    /// `Nat.dvd_pow_add_one_of_odd_mul_exp : ∀ a e t, dvd (add (pow a e) 1)
+    /// (add (pow a (mul e (succ (mul 2 t)))) 1)` — `a^e+1 ∣ a^{e*(2t+1)}+1`,
+    /// the reusable odd-factor divisibility step behind the Fermat-prime
+    /// lemma (`d := 2t+1` odd).
+    pub dvd_pow_add_one_of_odd_mul_exp: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5204,6 +5219,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
             fermat_number: kernel.name_str(nat, "fermatNumber"),
+            pow_mul: kernel.name_str(nat, "pow_mul"),
+            dvd_pow_add_one_of_odd_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_exp"),
+            dvd_pow_add_one_of_odd_mul_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_mul_exp"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -5867,6 +5885,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mul_left_cancel_of_pos` (all far above), so it goes here rather
         // than beside `declare_prime_not_prime_pow_all`.
         declare_prime_mul_eq_prime_sq_iff(&mut d, &p)?;
+        // `pow_add_prime.rs`: needs only `Nat.pow_add`/`mul`/`add`/`dvd_add`/
+        // `dvd_mul_left` (all far above). Nothing needs it, so it goes last.
+        declare_pow_add_prime_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
