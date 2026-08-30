@@ -19725,24 +19725,21 @@ fn fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_nega
     // --- fermatNumber_zero/_one/_two: closed equations, admitted by refl ---
     let expected_zero_eq = f.eq(f0, three);
     let applied_zero = f.const_app(p.fermatnumber_zero, &[]);
-    let inferred_zero = f
-        .k
-        .infer(applied_zero)
-        .expect("fermatNumber_zero must type-check");
+    let inferred_zero =
+        f.k.infer(applied_zero)
+            .expect("fermatNumber_zero must type-check");
     assert!(f.k.def_eq(inferred_zero, expected_zero_eq));
     let expected_one_eq = f.eq(f1, five);
     let applied_one = f.const_app(p.fermatnumber_one, &[]);
-    let inferred_one = f
-        .k
-        .infer(applied_one)
-        .expect("fermatNumber_one must type-check");
+    let inferred_one =
+        f.k.infer(applied_one)
+            .expect("fermatNumber_one must type-check");
     assert!(f.k.def_eq(inferred_one, expected_one_eq));
     let expected_two_eq = f.eq(f2, seventeen);
     let applied_two = f.const_app(p.fermatnumber_two, &[]);
-    let inferred_two = f
-        .k
-        .infer(applied_two)
-        .expect("fermatNumber_two must type-check");
+    let inferred_two =
+        f.k.infer(applied_two)
+            .expect("fermatNumber_two must type-check");
     assert!(f.k.def_eq(inferred_two, expected_two_eq));
 
     let nat = f.nat_ty();
@@ -19759,20 +19756,18 @@ fn fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_nega
         info: BinderInfo::Default,
     });
     let applied_odd_free = f.const_app(p.odd_fermatnumber, &[n]);
-    let inferred_odd_free = f
-        .k
-        .infer_in(applied_odd_free, &mut ctx_n)
-        .expect("odd_fermatNumber must apply at a free n");
+    let inferred_odd_free =
+        f.k.infer_in(applied_odd_free, &mut ctx_n)
+            .expect("odd_fermatNumber must apply at a free n");
     let fermat_n = f.const_app(p.fermat_number, &[n]);
     let expected_odd_free = f.const_app(p.odd, &[fermat_n]);
     assert!(f.k.def_eq(inferred_odd_free, expected_odd_free));
 
     // --- odd_fermatNumber, concretely at n = 1: Odd (fermatNumber 1) = Odd 5 ---
     let applied_odd1 = f.const_app(p.odd_fermatnumber, &[one]);
-    let inferred_odd1 = f
-        .k
-        .infer(applied_odd1)
-        .expect("odd_fermatNumber must apply at n=1");
+    let inferred_odd1 =
+        f.k.infer(applied_odd1)
+            .expect("odd_fermatNumber must apply at n=1");
     let expected_odd1 = f.const_app(p.odd, &[five]);
     assert!(f.k.def_eq(inferred_odd1, expected_odd1));
     // NEGATIVE CONTROL: `Odd 5` is a genuinely different proposition from
@@ -19799,10 +19794,9 @@ fn fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_nega
         });
     }
     let partial_strict = f.const_app(p.fermatnumber_strictmono, &[x, y]);
-    let inferred_strict_ty = f
-        .k
-        .infer_in(partial_strict, &mut ctx_xy)
-        .expect("fermatNumber_strictMono must apply to two free naturals");
+    let inferred_strict_ty =
+        f.k.infer_in(partial_strict, &mut ctx_xy)
+            .expect("fermatNumber_strictMono must apply to two free naturals");
     let expected_hyp = f.lt(x, y);
     let fx = f.const_app(p.fermat_number, &[x]);
     let fy = f.const_app(p.fermat_number, &[y]);
@@ -19825,10 +19819,9 @@ fn fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_nega
     // --- fermatNumber_strictMono, concretely at (0, 1): fermatNumber 0=3 < fermatNumber 1=5 ---
     let lt_0_1 = f.zero_lt_succ(zero);
     let applied_strict01 = f.const_app(p.fermatnumber_strictmono, &[zero, one, lt_0_1]);
-    let inferred01 = f
-        .k
-        .infer(applied_strict01)
-        .expect("fermatNumber_strictMono must apply at (0, 1)");
+    let inferred01 =
+        f.k.infer(applied_strict01)
+            .expect("fermatNumber_strictMono must apply at (0, 1)");
     let expected01 = f.lt(f0, f1);
     assert!(f.k.def_eq(inferred01, expected01));
     assert!(f.k.def_eq(f0, three));
