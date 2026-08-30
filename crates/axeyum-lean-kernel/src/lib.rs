@@ -62,6 +62,7 @@ mod env;
 mod expr;
 mod inductive;
 mod int_prelude;
+mod ipc_eval;
 mod ipc_heyting;
 mod ipc_provable;
 mod lean_export;
@@ -98,6 +99,7 @@ pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
+pub use ipc_eval::{IpcEvalPrelude, build_ipc_eval_prelude};
 pub use ipc_heyting::{
     IpcHeytingPrelude, NatPreludeHandle, build_ipc_heyting_prelude, pem_instance,
 };
