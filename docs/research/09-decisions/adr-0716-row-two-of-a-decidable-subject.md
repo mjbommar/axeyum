@@ -58,9 +58,11 @@ Amendment 4 exists to protect.
 
 **(a) Unbounded search.** "Decidable" is pointwise. Bounded minimization is a
 theorem here (`Nat.least_divisor_search`, `Nat.minFacAuxMinimal`, both 0
-axioms); unbounded minimization does not exist (no `Nat.find`-shaped
-declaration; control: `Nat.least_divisor_search`, FOUND), and neither does
-unrestricted excluded middle (the kernel has `Decidable.em`, which takes a
+axioms); unbounded minimization does not exist — checked by SHAPE rather than by name,
+since a name search is weak evidence: `shape_search --ns Nat --hyp Exists`
+returns **FOUND 2**, both Cantor-diagonal and unrelated, so nothing in the `Nat`
+namespace has the form "given `∃ n, P n`, produce a witness or a least such
+`n`". Neither does unrestricted excluded middle (the kernel has `Decidable.em`, which takes a
 `Decidable` instance; controls `em_of_dne`, `em_of_peirce`, `dne_of_em`,
 `peirce_of_em`, `not_not_em`, all FOUND and all conditional or weak).
 

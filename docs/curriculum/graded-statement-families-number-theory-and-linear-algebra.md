@@ -119,9 +119,15 @@ with no bound is not. Measured:
 - **Bounded** minimization exists: `Nat.least_divisor_search` (theorem, 0
   axioms) returns `Or (∃ least divisor ≥ 2) (no divisor ≥ 2 below the bound)`;
   `Nat.minFacAux`/`Nat.minFac`/`Nat.minFacAuxMinimal` likewise.
-- **Unbounded** minimization does not: no `Nat.find`-shaped declaration exists
-  (ABSENT; positive control of the same kind: `Nat.least_divisor_search`,
-  FOUND).
+- **Unbounded** minimization does not. A name search is weak evidence here, so
+  this was checked by SHAPE: `shape_search --ns Nat --hyp Exists` — every `Nat`
+  declaration taking an existential hypothesis — returns **FOUND 2**, and both
+  are `Nat.cantor_diagonal_neg` / `Nat.cantor_no_fixed_point`, unrelated. So
+  **no declaration anywhere in the `Nat` namespace has the form "given
+  `∃ n, P n`, produce a witness or a least such `n`"**, which is exactly the
+  `Nat.find` / LNP shape. The query answering FOUND 2 rather than erroring is
+  its own positive control; `Nat.least_divisor_search` is unconditional (it
+  returns an `Or`, taking no existential) and is the bounded counterpart.
 - Unrestricted excluded middle does not exist either. The kernel has
   `Decidable.em`, which **takes a `Decidable` instance**; the unconditional
   form is absent. Positive controls of the same kind, all FOUND:
