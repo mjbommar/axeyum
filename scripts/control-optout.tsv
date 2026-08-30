@@ -11,10 +11,21 @@
 # accumulated one lane at a time, and it made 49% of this repository's Python
 # controls permanently invisible.
 #
-# EVERY LINE BELOW IS A LIABILITY, NOT A SETTLEMENT.  These 19 suites were
+# EVERY LINE BELOW IS A LIABILITY, NOT A SETTLEMENT.  These suites were
 # measured on 2026-08-27 (commit a00924af0) and each one is either unrunnable by
 # the gate's invocation form or RED TODAY.  Nothing here is "fine" -- it is
 # named so it can be fixed.
+#
+# 2026-08-29: three entries (section (d) and two in section (c), the ones
+# naming `check-autogenesis-official-gcd-balanced-bezout-official-kernel-result`,
+# `check-autogenesis-nat-gcd-greatest-plan`, and
+# `check-autogenesis-balanced-bezout-euclidean-update-dependency-audit-plan`)
+# were removed by the orphan-script-audit lane (docs/plan/status/
+# 308-orphan-script-audit.md): the check-*.py subjects those entries were about
+# had no caller anywhere and were archived to scripts/archive/, along with
+# their controls, so the opt-out entries became stale references to files that
+# no longer exist at scripts/tests/.  15 entries remain; `OPTOUT_CEILING`
+# dropped from 18 to 15 to match.
 #
 # --------------------------------------------------------------------------
 # (a) pytest dialect, and `pytest` is not installed on this fleet.
@@ -58,11 +69,5 @@ test_prove_tock_log2_v3	Same root cause as test_prove_tock_log2 (see that entry)
 test_prove_tock_log2_v4	Same root cause as test_prove_tock_log2 (see that entry): stale `producer_files_hash` for `tock_log2_external.rs` after the doc-comment-only commit `d4ffe2a54`, frozen registration `proof-v4-registration.json`.
 test_validate_glaurung_llvm_loop_semantic_census	BROKEN DETECTOR, diagnosed by lane red-drift (2026-08-27): `producer drift: Cargo.lock` fires because the manifest pins the SHA-256 of the WHOLE workspace `Cargo.lock` as a "producer file" for a narrow axeyum-verify LLVM census. `Cargo.lock` has changed 12+ times since this manifest was frozen (`2784aba40`), entirely from unrelated new crates (`axeyum-cas`, `axeyum-lean-import`, `axeyum-py`, `axeyum-search`, pyo3/rustpython/toml/chrono, ...) -- none touch `axeyum-verify`'s own dependency subtree. The pin is too broad to ever hold in an active monorepo; fix belongs to whoever owns `scripts/validate-glaurung-llvm-loop-semantic-census.py`/`docs/consumer-track/verify/`.
 test_check_autogenesis_official_gcd_balanced_bezout_generic_base_result	STALE PIN, root-caused by lane red-drift (2026-08-27): `crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs` was gutted from 699 lines to a small `include!` shim in `e3a8611b4` ("a file cannot be both a Cargo target and an `include!`d body") -- the 697-line body moved verbatim to the new `support/official_gcd_balanced_bezout.rs` to fix a clippy `missing_docs`/`E0753` conflict, not a logic change. The pinned `SOURCE_SHA256` + commit predate that move. Re-pin belongs to whoever owns `scripts/check-autogenesis-official-gcd-balanced-bezout-generic-base-result.py`/`artifacts/autogenesis/`.
-test_check_autogenesis_official_gcd_balanced_bezout_official_kernel_result	Same root cause as the `generic_base_result` entry above (see that entry): `e3a8611b4` moved `official_gcd_balanced_bezout_composition.rs`'s body into `support/official_gcd_balanced_bezout.rs`, staling this checker's separate `SOURCE_SHA256` pin too.
 test_check_autogenesis_nat_gcd_fib_add_self_qualification	RED on 2026-08-27, diagnosed by lane red-drift: the checker fails even on the COMMITTED, unmutated manifest (not only the mutation-message tests) with `dispatch_baseline identity changed`. `check-autogenesis-nat-gcd-fib-add-self-qualification.py` pins the SHA-256 of the shared, actively-written `artifacts/autogenesis/mathlib-nursery-dispatch-baseline-v1.json`; that file has moved under many later autogenesis commits (most recently `3ade08628`, "measure held-out contamination"). This is real drift in a subject `check-autogenesis-nat-gcd-fib-add-self-qualification.py`/`artifacts/autogenesis/` owns, not a test bug -- re-freeze or retire the manifest.
-test_check_autogenesis_nat_gcd_greatest_plan	RED on 2026-08-27, diagnosed by lane red-drift, and GOOD NEWS: the checker fails even on the committed, unmutated plan with `target fact identity or open state changed` because the plan required `artifacts/facts/F-ml430-nat-gcd-greatest-0a04214a.json` to still be `epistemic_status: open` -- and it is now `proved` (`proof_route: kernel-lean`, `axiom_footprint: []`, one checked kernel-term evidence entry). `Nat.gcd_greatest` got proved after this "preregistered, before code or execution" plan was frozen. The detector correctly caught real progress it was never updated for; the plan needs a closing/superseded record from whoever owns `artifacts/autogenesis/`, not a test fix.
 test_gen_autogenesis_mathlib_stable_statement_comparison	RED on 2026-08-27, diagnosed by lane red-drift, and NOT content drift: `verify_inputs()` in `scripts/gen-autogenesis-mathlib-stable-statement-comparison.py` runs `git -C /nas3/.../mathlib-v4.32.1-checkout rev-parse HEAD` and treats a nonzero exit the same as a commit mismatch. On this host that `git` call fails with "detected dubious ownership" (the NFS-shared checkout is owned by a different uid), NOT because HEAD moved -- `git -c safe.directory='*' -C <checkout> rev-parse HEAD` prints exactly the pinned `520045ab14e26149ee970e2e617ca04b09bde5d6`. The checker's subprocess call should pass `-c safe.directory=<path>` itself rather than depending on ambient git config (CLAUDE.md: never `git config --global` in a shared checkout). Fix belongs to whoever owns `scripts/gen-autogenesis-mathlib-stable-statement-comparison.py`.
-#
-# --------------------------------------------------------------------------
-# (d) needs a build artifact the fast gate does not produce.
-test_check_autogenesis_balanced_bezout_euclidean_update_dependency_audit_plan	Needs target/debug/examples/theorem_footprint_batch_audit, which no fast gate builds. Belongs behind a cargo build step.

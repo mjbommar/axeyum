@@ -71,7 +71,7 @@ OPTOUT=scripts/control-optout.tsv
 
 # G6. A ratchet over the opt-out list. Every entry is a written liability;
 # adding one must be deliberate, and removing one is a RESULT that lowers this.
-OPTOUT_CEILING=${AXEYUM_CONTROL_OPTOUT_CEILING:-18}
+OPTOUT_CEILING=${AXEYUM_CONTROL_OPTOUT_CEILING:-15}
 
 rc=0
 
