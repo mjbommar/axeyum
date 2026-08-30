@@ -227,7 +227,9 @@ fn mod_mul_eq(
     let mod_x_ab = d.modulo(x, ab);
     let both = d.lemma(
         p.div_mod_unique,
-        &[ab, x, qb, remainder, div_x_ab, mod_x_ab, relation, canonical],
+        &[
+            ab, x, qb, remainder, div_x_ab, mod_x_ab, relation, canonical,
+        ],
     );
     let q_eq_ty = d.eq(qb, div_x_ab);
     let r_eq_ty = d.eq(remainder, mod_x_ab);
@@ -262,14 +264,26 @@ fn div_of_lt(
     let manufactured_eq = d.symm(add_dvsrzero_val, val, eq_pf); // val = add(mul dvsr zero, val)
     let eq_ty = d.eq(val, add_dvsrzero_val);
     let bound_ty = d.lt(val, dvsr);
-    let manufactured = d.const_app(p.logic.and_intro, &[eq_ty, bound_ty, manufactured_eq, bound]);
+    let manufactured = d.const_app(
+        p.logic.and_intro,
+        &[eq_ty, bound_ty, manufactured_eq, bound],
+    );
 
     let canonical = div_mod_reconstructed(d, &p, dvsr, pos_dvsr, val);
     let div_val_dvsr = d.div(val, dvsr);
     let mod_val_dvsr = d.modulo(val, dvsr);
     let both = d.lemma(
         p.div_mod_unique,
-        &[dvsr, val, zero, val, div_val_dvsr, mod_val_dvsr, manufactured, canonical],
+        &[
+            dvsr,
+            val,
+            zero,
+            val,
+            div_val_dvsr,
+            mod_val_dvsr,
+            manufactured,
+            canonical,
+        ],
     );
     let q_eq_ty = d.eq(zero, div_val_dvsr);
     let r_eq_ty = d.eq(val, mod_val_dvsr);
@@ -403,6 +417,7 @@ fn mod_of_dvd_mod(
 
 /// For positive `n`, `k`, and `e = mul n k` (witnessed by `e_eq : Eq e (mul n
 /// k)`): `Eq (div (mod m e) n) (mod (div m n) k)`. See the module doc.
+#[allow(clippy::too_many_arguments)]
 fn mod_mul_div_self(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -575,10 +590,7 @@ pub(super) fn declare_mod_mul_family(
                 // x = ra + mul_a_qa
                 let addracomm_eq_x = d.symm(x, add_ra_mulaqa, x_eq_addracomm);
 
-                let (_, rhs_eq) = d.chain(
-                    rhs,
-                    &[(add_ra_mulaqa, rhs_step1), (x, addracomm_eq_x)],
-                );
+                let (_, rhs_eq) = d.chain(rhs, &[(add_ra_mulaqa, rhs_step1), (x, addracomm_eq_x)]);
                 let x_eq_rhs = d.symm(rhs, x, rhs_eq);
                 d.trans(lhs, x, rhs, lhs_eq, x_eq_rhs)
             };
@@ -622,7 +634,10 @@ pub(super) fn declare_mod_mul_family(
             // step2 : Eq (mod mod_a_zero zero) (mod a zero) = Eq(after1, mod_a_zero)
             let step2 = d.congr(mod_a_zero, a, mod_zero_a, &|d, v| d.modulo(v, zero));
             // final step reuses mod_zero_a: mod_a_zero = a.
-            let (_, lhs_eq) = d.chain(lhs, &[(after1, step1), (mod_a_zero, step2), (a, mod_zero_a)]);
+            let (_, lhs_eq) = d.chain(
+                lhs,
+                &[(after1, step1), (mod_a_zero, step2), (a, mod_zero_a)],
+            );
             // lhs_eq : Eq lhs a; rhs (motive at zero) is `mod_a_zero`, so bridge via mod_zero_a reversed.
             let a_eq_mod_a_zero = d.symm(mod_a_zero, a, mod_zero_a);
             d.trans(lhs, a, mod_a_zero, lhs_eq, a_eq_mod_a_zero)
