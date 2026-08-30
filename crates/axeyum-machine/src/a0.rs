@@ -320,6 +320,201 @@ impl State {
     }
 }
 
+/// One finite half-open byte range selected by an observation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MemorySpan {
+    /// First selected byte address.
+    pub start: usize,
+    /// Number of selected bytes.
+    pub len: usize,
+}
+
+/// A declared projection from complete A0 state to visible components.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Observation {
+    registers: Vec<u8>,
+    memory: Vec<MemorySpan>,
+    include_pc: bool,
+    include_conditions: bool,
+    include_outcome: bool,
+}
+
+impl Observation {
+    /// Constructs a canonical register-and-memory observation.
+    ///
+    /// Register indices and memory spans are sorted. Duplicate registers,
+    /// empty spans, and overlapping spans are rejected rather than normalized
+    /// to a second spelling of the same observation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a categorized error for an invalid register or memory span.
+    pub fn new(
+        mut registers: Vec<u8>,
+        mut memory: Vec<MemorySpan>,
+    ) -> Result<Self, ObservationError> {
+        registers.sort_unstable();
+        if let Some(index) = registers.iter().copied().find(|index| *index >= 8) {
+            return Err(ObservationError::InvalidRegister(index));
+        }
+        if let Some(index) = registers
+            .windows(2)
+            .find_map(|pair| (pair[0] == pair[1]).then_some(pair[0]))
+        {
+            return Err(ObservationError::DuplicateRegister(index));
+        }
+        memory.sort_unstable_by_key(|span| span.start);
+        for span in &memory {
+            if span.len == 0 {
+                return Err(ObservationError::EmptyMemorySpan { start: span.start });
+            }
+            if span.start.checked_add(span.len).is_none() {
+                return Err(ObservationError::MemorySpanOverflow {
+                    start: span.start,
+                    len: span.len,
+                });
+            }
+        }
+        for pair in memory.windows(2) {
+            let previous_end = pair[0].start.saturating_add(pair[0].len);
+            if previous_end > pair[1].start {
+                return Err(ObservationError::OverlappingMemorySpans {
+                    first: pair[0],
+                    second: pair[1],
+                });
+            }
+        }
+        Ok(Self {
+            registers,
+            memory,
+            include_pc: false,
+            include_conditions: false,
+            include_outcome: false,
+        })
+    }
+
+    /// Includes the program counter.
+    #[must_use]
+    pub const fn with_program_counter(mut self) -> Self {
+        self.include_pc = true;
+        self
+    }
+
+    /// Includes all four arithmetic conditions.
+    #[must_use]
+    pub const fn with_conditions(mut self) -> Self {
+        self.include_conditions = true;
+        self
+    }
+
+    /// Includes the running, halted, or trapped outcome.
+    #[must_use]
+    pub const fn with_outcome(mut self) -> Self {
+        self.include_outcome = true;
+        self
+    }
+
+    /// Applies this observation without changing the complete state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ObservationError::MemoryRange`] if a selected span is not
+    /// contained in the state's finite memory.
+    pub fn apply(&self, state: &State) -> Result<ObservedState, ObservationError> {
+        let registers = self
+            .registers
+            .iter()
+            .map(|index| RegisterObservation {
+                index: *index,
+                value: state.registers[usize::from(*index)],
+            })
+            .collect();
+        let mut memory = Vec::with_capacity(self.memory.len());
+        for span in &self.memory {
+            let end = span
+                .start
+                .checked_add(span.len)
+                .filter(|end| *end <= state.memory.bytes.len())
+                .ok_or(ObservationError::MemoryRange {
+                    start: span.start,
+                    len: span.len,
+                    memory_len: state.memory.len(),
+                })?;
+            memory.push(MemoryObservation {
+                start: span.start,
+                bytes: state.memory.bytes[span.start..end].to_vec(),
+            });
+        }
+        Ok(ObservedState {
+            width: state.width,
+            registers,
+            memory,
+            pc: self.include_pc.then_some(state.pc),
+            conditions: self.include_conditions.then_some(state.conditions),
+            outcome: self.include_outcome.then_some(state.outcome.clone()),
+        })
+    }
+}
+
+/// One register retained by an observation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RegisterObservation {
+    /// Register index in canonical order.
+    pub index: u8,
+    /// Retained word.
+    pub value: Word,
+}
+
+/// One memory span retained by an observation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MemoryObservation {
+    /// First retained byte address.
+    pub start: usize,
+    /// Retained bytes in increasing address order.
+    pub bytes: Vec<u8>,
+}
+
+/// Canonical visible result of applying an [`Observation`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ObservedState {
+    /// Architectural word width.
+    pub width: u8,
+    /// Selected registers, sorted by index.
+    pub registers: Vec<RegisterObservation>,
+    /// Selected nonoverlapping memory spans, sorted by start address.
+    pub memory: Vec<MemoryObservation>,
+    /// Program counter when requested.
+    pub pc: Option<Word>,
+    /// Arithmetic conditions when requested.
+    pub conditions: Option<Conditions>,
+    /// Machine outcome when requested.
+    pub outcome: Option<Outcome>,
+}
+
+/// Construction or application failure for an A0 observation.
+#[allow(missing_docs)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ObservationError {
+    InvalidRegister(u8),
+    DuplicateRegister(u8),
+    EmptyMemorySpan {
+        start: usize,
+    },
+    MemorySpanOverflow {
+        start: usize,
+        len: usize,
+    },
+    OverlappingMemorySpans {
+        first: MemorySpan,
+        second: MemorySpan,
+    },
+    MemoryRange {
+        start: usize,
+        len: usize,
+        memory_len: usize,
+    },
+}
+
 /// A decoded A0 instruction.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -361,6 +556,104 @@ pub enum Instruction {
     Jump { offset: i8 },
     /// Stop normally.
     Halt,
+}
+
+/// One architectural state component in an instruction footprint.
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StateComponent {
+    Register(u8),
+    Memory { address: Word, bytes: usize },
+    ProgramCounter,
+    Conditions,
+    Outcome,
+}
+
+/// Dynamic architectural read and write footprints for one instruction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Effects {
+    /// Components whose old values determine the successor.
+    pub reads: Vec<StateComponent>,
+    /// Components that may differ after success or a declared trap.
+    pub writes: Vec<StateComponent>,
+}
+
+impl Instruction {
+    /// Returns the complete dynamic architectural footprint in `state`.
+    ///
+    /// Memory operands name the wrapped effective address and word-sized byte
+    /// count even when the later range check traps.
+    #[must_use]
+    pub fn effects(self, state: &State) -> Effects {
+        use StateComponent::{Conditions, Memory, Outcome, ProgramCounter, Register};
+        let mut reads = vec![ProgramCounter, Outcome];
+        let mut writes = vec![ProgramCounter];
+        let bytes = usize::from(state.width / 8);
+        match self {
+            Self::Mov { rd, rs1 } => {
+                reads.push(Register(rs1));
+                writes.push(Register(rd));
+            }
+            Self::MovImmediate { rd, .. } => writes.push(Register(rd)),
+            Self::Load { rd, base, offset } => {
+                let address =
+                    state.registers[usize::from(base)].wrapping_add_signed(i128::from(offset));
+                reads.extend([Register(base), Memory { address, bytes }]);
+                writes.extend([Register(rd), Outcome]);
+            }
+            Self::Store {
+                base,
+                source,
+                offset,
+            } => {
+                let address =
+                    state.registers[usize::from(base)].wrapping_add_signed(i128::from(offset));
+                reads.extend([Register(base), Register(source)]);
+                writes.extend([Memory { address, bytes }, Outcome]);
+            }
+            Self::Add { rd, rs1, rs2 }
+            | Self::Sub { rd, rs1, rs2 }
+            | Self::And { rd, rs1, rs2 }
+            | Self::Or { rd, rs1, rs2 }
+            | Self::Xor { rd, rs1, rs2 }
+            | Self::ShiftLeft { rd, rs1, rs2 }
+            | Self::ShiftRight { rd, rs1, rs2 }
+            | Self::ArithmeticShiftRight { rd, rs1, rs2 } => {
+                reads.extend([Register(rs1), Register(rs2)]);
+                writes.extend([Register(rd), Conditions]);
+            }
+            Self::Not { rd, rs1 } => {
+                reads.push(Register(rs1));
+                writes.extend([Register(rd), Conditions]);
+            }
+            Self::Compare { rs1, rs2 } => {
+                reads.extend([Register(rs1), Register(rs2)]);
+                writes.push(Conditions);
+            }
+            Self::Branch { .. } => reads.push(Conditions),
+            Self::Jump { .. } => {}
+            Self::Halt => {
+                reads.clear();
+                reads.push(Outcome);
+                writes.clear();
+                writes.push(Outcome);
+            }
+        }
+        Effects {
+            reads: unique_components(reads),
+            writes: unique_components(writes),
+        }
+    }
+}
+
+fn unique_components(components: Vec<StateComponent>) -> Vec<StateComponent> {
+    let mut unique = Vec::with_capacity(components.len());
+    for component in components {
+        if !unique.contains(&component) {
+            unique.push(component);
+        }
+    }
+    unique
 }
 
 /// A0's eight condition-code predicates.
@@ -555,7 +848,10 @@ fn execute(instruction: Instruction, state: &State) -> State {
         Instruction::Jump { offset } => {
             next.pc = sequential.wrapping_add_signed(i128::from(offset) * 4);
         }
-        Instruction::Halt => next.outcome = Outcome::Halted,
+        Instruction::Halt => {
+            next.pc = state.pc;
+            next.outcome = Outcome::Halted;
+        }
     }
     next
 }

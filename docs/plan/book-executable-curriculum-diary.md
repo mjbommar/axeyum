@@ -116,3 +116,30 @@ EXPECTED NONZERO: semantic-mismatch
 
 This earns only the `computation` trust class over the printed 8- and 16-bit
 domain. It is not a general-width theorem, certificate, or kernel result.
+
+## 2026-08-30 — observations, footprints, and a halt-PC defect
+
+The next audit compared the executable step to A0's opcode effect table rather
+than relying on terminal-state stuttering alone. It found a real defect: the
+executor assigned the sequential PC before dispatch, so `halt` changed PC by
+four even though the contract says it writes only the outcome. The original
+test established that an already halted state had no successor but did not
+inspect the transition that entered the halted state. `halt` now preserves PC,
+and the regression asserts that value directly.
+
+Added canonical observations over selected registers, nonoverlapping finite
+memory spans, PC, conditions, and outcome. Construction sorts the selection
+while rejecting duplicate registers, empty or overlapping spans, arithmetic
+overflow, invalid register indices, and ranges outside the observed state's
+memory. Applying an observation is pure and returns a canonical visible state.
+
+Added dynamic read/write footprints for every decoded instruction. They expose
+implicit PC and running-outcome reads, condition reads and writes, possible
+trap-outcome writes, wrapped effective memory addresses, and word-sized byte
+counts. Components are deduplicated when operands alias. `halt` is explicitly
+`reads={outcome}, writes={outcome}`.
+
+Focused evidence is now 19 passing A0 integration tests under both `cargo test`
+and strict all-target Clippy. The new tests cover narrow versus broad
+observations, purity, canonical ordering, malformed selectors, every
+instruction footprint, operand aliasing, and the halt-PC regression.

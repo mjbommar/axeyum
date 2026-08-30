@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 
 use axeyum_machine::a0::{
-    A0Error, Conditions, Instruction, Memory, Outcome, Program, State, StopReason, Trap, Word,
-    decode, run, step,
+    A0Error, Conditions, Instruction, Memory, MemorySpan, Observation, ObservationError, Outcome,
+    Program, State, StateComponent, StopReason, Trap, Word, decode, run, step,
 };
 
 fn word(width: u8, value: u64) -> Word {
@@ -134,6 +134,7 @@ fn halt_and_trap_have_no_successor() {
     let halt = program(vec![0xff, 0, 0, 0]);
     let halted = step(&halt, &state(0));
     assert_eq!(halted.outcome, Outcome::Halted);
+    assert_eq!(halted.pc.unsigned(), 0);
     assert_eq!(step(&halt, &halted), halted);
 
     let illegal = program(vec![0x99, 0, 0, 0]);
@@ -407,4 +408,228 @@ fn fetch_traps_are_precise_and_code_can_cross_word_wrap() {
     let trace = run(&wrapping, initial, 2);
     assert_eq!(trace.stop, StopReason::Halted);
     assert_eq!(trace.states[1].pc.unsigned(), 0);
+}
+
+#[test]
+fn observations_are_canonical_pure_and_range_checked() {
+    let mut left = state(4);
+    left.registers[0] = word(8, 7);
+    left.registers[3] = word(8, 19);
+    left.memory = Memory::from_bytes(vec![0xaa, 0xbb, 0xcc, 0xdd]);
+    let mut right = left.clone();
+    right.registers[3] = word(8, 20);
+
+    let result = Observation::new(vec![0], vec![]).unwrap().with_outcome();
+    assert_eq!(result.apply(&left).unwrap(), result.apply(&right).unwrap());
+
+    let broad = Observation::new(
+        vec![3, 0],
+        vec![
+            MemorySpan { start: 2, len: 2 },
+            MemorySpan { start: 0, len: 1 },
+        ],
+    )
+    .unwrap()
+    .with_program_counter()
+    .with_conditions()
+    .with_outcome();
+    let before = left.clone();
+    let observed = broad.apply(&left).unwrap();
+    assert_eq!(left, before, "observation must not mutate complete state");
+    assert_eq!(observed.registers[0].index, 0);
+    assert_eq!(observed.registers[1].index, 3);
+    assert_eq!(observed.memory[0].start, 0);
+    assert_eq!(observed.memory[1].bytes, vec![0xcc, 0xdd]);
+    assert_ne!(observed, broad.apply(&right).unwrap());
+
+    assert_eq!(
+        Observation::new(vec![0, 0], vec![]),
+        Err(ObservationError::DuplicateRegister(0))
+    );
+    assert!(matches!(
+        Observation::new(
+            vec![],
+            vec![
+                MemorySpan { start: 0, len: 2 },
+                MemorySpan { start: 1, len: 2 }
+            ]
+        ),
+        Err(ObservationError::OverlappingMemorySpans { .. })
+    ));
+    let out_of_range = Observation::new(vec![], vec![MemorySpan { start: 3, len: 2 }]).unwrap();
+    assert!(matches!(
+        out_of_range.apply(&left),
+        Err(ObservationError::MemoryRange { .. })
+    ));
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn every_instruction_exposes_implicit_effects_without_duplicates() {
+    use StateComponent::{
+        Conditions as C, Memory as M, Outcome as O, ProgramCounter as P, Register as R,
+    };
+
+    let mut before = state(16);
+    before.registers[1] = word(8, 5);
+    let cases = [
+        (
+            Instruction::Mov { rd: 3, rs1: 1 },
+            vec![P, O, R(1)],
+            vec![P, R(3)],
+        ),
+        (
+            Instruction::MovImmediate {
+                rd: 3,
+                immediate: -1,
+            },
+            vec![P, O],
+            vec![P, R(3)],
+        ),
+        (
+            Instruction::Load {
+                rd: 3,
+                base: 1,
+                offset: -1,
+            },
+            vec![
+                P,
+                O,
+                R(1),
+                M {
+                    address: word(8, 4),
+                    bytes: 1,
+                },
+            ],
+            vec![P, R(3), O],
+        ),
+        (
+            Instruction::Store {
+                base: 1,
+                source: 2,
+                offset: 1,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![
+                P,
+                M {
+                    address: word(8, 6),
+                    bytes: 1,
+                },
+                O,
+            ],
+        ),
+        (
+            Instruction::Add {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::Sub {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::And {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::Or {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::Xor {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::Not { rd: 3, rs1: 1 },
+            vec![P, O, R(1)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::ShiftLeft {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::ShiftRight {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::ArithmeticShiftRight {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, R(3), C],
+        ),
+        (
+            Instruction::Compare { rs1: 1, rs2: 2 },
+            vec![P, O, R(1), R(2)],
+            vec![P, C],
+        ),
+        (
+            Instruction::Branch {
+                condition: axeyum_machine::a0::BranchCondition::Eq,
+                offset: 1,
+            },
+            vec![P, O, C],
+            vec![P],
+        ),
+        (Instruction::Jump { offset: 1 }, vec![P, O], vec![P]),
+        (Instruction::Halt, vec![O], vec![O]),
+    ];
+    for (instruction, reads, writes) in cases {
+        let effects = instruction.effects(&before);
+        assert_eq!(effects.reads, reads, "reads for {instruction:?}");
+        assert_eq!(effects.writes, writes, "writes for {instruction:?}");
+        for (index, component) in effects.reads.iter().enumerate() {
+            assert!(!effects.reads[..index].contains(component));
+        }
+        for (index, component) in effects.writes.iter().enumerate() {
+            assert!(!effects.writes[..index].contains(component));
+        }
+    }
+
+    let aliased = Instruction::Add {
+        rd: 1,
+        rs1: 1,
+        rs2: 1,
+    }
+    .effects(&before);
+    assert_eq!(aliased.reads, vec![P, O, R(1)]);
+    assert_eq!(aliased.writes, vec![P, R(1), C]);
 }
