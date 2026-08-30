@@ -13,26 +13,60 @@ checker.
 
 | protection | proved facts with it | share |
 |---|---:|---:|
-| `exact_statement` | 2121 / 2121 | 100.0% |
 | `kernel_theorem` | 1467 / 2121 | 69.2% |
 | `per_theorem_footprint` | 59 / 2121 | 2.8% |
 | `env_footprint` | 1863 / 2121 | 87.8% |
-| `circularity` | 38 / 2121 | 1.8% |
+| `circularity` | 14 / 2121 | 0.7% |
 | `semantic_falsification` | 95 / 2121 | 4.5% |
 | `mutation_control` | 15 / 2121 | 0.7% |
 | `independent_replay` | 8 / 2121 | 0.4% |
 | `coverage_bearing_checker` | 1443 / 2121 | 68.0% |
 
+## Centrally-enforced coverage (NOT the same measurement)
+
+The columns above are PER-FACT EVIDENCE: this fact's own record
+exercises the protection. A gate that enforces the same protection on
+every merge, for facts that cite nothing, moves none of them. The two
+are different questions and neither dominates -- per-fact evidence is
+self-describing and survives the fact being copied elsewhere; central
+coverage is stronger in practice and far cheaper. ADR-0795.
+
+A gate earns a column here only by publishing, machine-readably, the
+PER-FACT SET it reached. A headline number confers nothing on any
+member, and `protection_count` above deliberately excludes these: a
+fact is not better protected because somebody else measured it.
+
+| coverage | proved facts | share | published per-fact set |
+|---|---:|---:|---|
+| `exact_statement` | 2121 / 2121 | 100.0% | `artifacts/ontology/settled-fact-statement-pins.json` `pins[].fact_id` (S1, ADR-0763) |
+
+Gates that enforce a protection this census names and publish NO
+machine-readable per-fact set, so they cannot be credited here. Each
+row is a finding about the GATE, not about the facts; the missing
+column is what the gate would have to emit (ADR-0795).
+
+| protection | gate | publishes | what it would have to emit |
+|---|---|---|---|
+| `circularity`, `per_theorem_footprint` | `scripts/check-trust-closure.py` (S2) | `subjects` / `unresolved` counts | the `subjects.resolved` fact-id set it already builds and discards |
+| `semantic_falsification` | `scripts/check-semantic-control-fixtures.py` (S3) | `census.load_bearing_facts` count in `fixture-pack.json` | the `load_bearing` map keyed by fact id, which it already computes |
+| `independent_replay` | `real_lean_replay_census` (S4, ADR-0760) | declaration names Lean's kernel admitted | the fact-to-declaration join, so a NAME grade becomes a FACT grade |
+| `mutation_control` | `scripts/check-statement-identity-mutations.py` (S1) | one ledger-wide pass/fail | nothing -- it is not a per-fact protection and should not be read as one |
+
+S3's own artifact already states the direction that matters: its
+`semantic_falsification` figure is an UPPER bound, counting facts with a
+semantic evidence row rather than facts whose control was shown to
+discriminate. Measured 2026-08-30: evidence 95, demonstrated 8.
+
 ## Protections per fact
 
 | protections held | facts |
 |---:|---:|
-| 1 | 104 |
-| 2 | 543 |
-| 3 | 33 |
-| 4 | 1395 |
-| 5 | 36 |
-| 6 | 10 |
+| 0 | 104 |
+| 1 | 543 |
+| 2 | 33 |
+| 3 | 1418 |
+| 4 | 14 |
+| 5 | 9 |
 
 ## Checker fan-out
 
@@ -83,7 +117,7 @@ Largest fan-outs:
 
 ## Thin spots
 
-- 647 / 2121 proved facts hold two protections or fewer.
+- 680 / 2121 proved facts hold two protections or fewer.
 - 678 / 2121 have no discriminating checker naming their own subject, where the subject is taken only from an EXPLICIT
   `formal.kernel_theorem` / `kernel_declaration` binding.
 - of those, 305 would gain one if the ledger's regex
@@ -111,18 +145,18 @@ Largest fan-outs:
 
 | curation | facts | median protections | own-subject checker | statement pin |
 |---|---:|---:|---:|---:|
-| (unset) | 1071 | 2 | 393 | 1071 |
-| curated | 12 | 4 | 12 | 12 |
-| generated-unreviewed | 1038 | 4 | 1038 | 1038 |
+| (unset) | 1071 | 1 | 393 | 1071 |
+| curated | 12 | 3 | 12 | 12 |
+| generated-unreviewed | 1038 | 3 | 1038 | 1038 |
 
 ## By proof route
 
 | route | facts | median protections |
 |---|---:|---:|
-| cas-certificate | 41 | 2 |
-| imported-kernel-lean | 5 | 3 |
-| kernel-lean | 2041 | 4 |
-| search-certificate | 7 | 3 |
-| smt-clausal | 10 | 2 |
-| smt-term-level | 17 | 2 |
+| cas-certificate | 41 | 1 |
+| imported-kernel-lean | 5 | 2 |
+| kernel-lean | 2041 | 3 |
+| search-certificate | 7 | 2 |
+| smt-clausal | 10 | 1 |
+| smt-term-level | 17 | 1 |
 

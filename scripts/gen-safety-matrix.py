@@ -89,10 +89,28 @@ PER_THEOREM_FOOTPRINT = re.compile(
     r"(theorem_axiom_footprint|footprint_closure_audit|--expect-axioms"
     r"|check-imported-fact-lean-axioms)"
 )
-DEPENDENCY_CLOSURE = re.compile(
-    r"(footprint_closure_audit|dependency-audit|check-fact-depends-derived"
-    r"|kernel_declaration_projection)"
-)
+# A command that WALKS A DEPENDENCY CLOSURE.  Audited per alternative by
+# ADR-0795; the column was measured against the tools it names, not assumed.
+#
+# `footprint_closure_audit` qualifies: it rebuilds the narrow and widened
+# closures over the kernel's public surface and aborts if either disagrees with
+# `Kernel::axiom_footprint` / `Kernel::declaration_dependency_closure`.
+#
+# THREE ALTERNATIVES WERE REMOVED, and the reasons differ:
+#
+# - `kernel_declaration_projection` matched **24 of the 38** rows this column
+#   reported and walks no closure at all.  Its `--require-declaration X
+#   --require-kind K` prints `found <label> <kind> <name> <footprint-size>` and
+#   its own module doc says the projection "is search vocabulary and must not be
+#   confused with a transitive closure".  Every one of those 24 rows names a
+#   `definition`, which has no proof body to be circular in, and the committed
+#   greps do not even constrain the footprint-size field.  All 24 already read
+#   `coverage_bearing_checker: yes`, so removing them here loses no measurement.
+# - `dependency-audit` and `check-fact-depends-derived` matched **zero**
+#   commands.  A dead alternative in a classifier is not harmless: it makes the
+#   pattern look broader than it is, which is how the column came to be read as
+#   a coverage claim.
+DEPENDENCY_CLOSURE = re.compile(r"(footprint_closure_audit)")
 REAL_LEAN_REPLAY = re.compile(
     r"(real_lean_[a-z_]*replay|lean4export|check-lean-gate|elan|AXEYUM_LEAN_BIN"
     r"|check-imported-fact-lean-axioms|infeasibility_farkas_lean)"
@@ -175,8 +193,16 @@ def subject_of(fact: dict) -> str | None:
     return None
 
 
+# THE NINE ARE PER-FACT EVIDENCE COLUMNS. Every one asks the same question:
+# does THIS fact's own record exercise this protection? Eight read the fact's
+# own `checker_command`s; `exact_statement` reads a ledger-wide manifest keyed
+# by fact id, which is why it is the one that reached 100% (ADR-0763).
+#
+# THEY ARE NOT COVERAGE. A protection can be enforced centrally, on every
+# merge, for a fact that cites nothing — and then no column here moves. ADR-0795
+# measures the gap; `COVERAGE_COLUMNS` below carries the one central set that is
+# publishable per fact today.
 COLUMNS = [
-    "exact_statement",
     "kernel_theorem",
     "per_theorem_footprint",
     "env_footprint",
@@ -185,6 +211,19 @@ COLUMNS = [
     "mutation_control",
     "independent_replay",
     "coverage_bearing_checker",
+]
+
+# CENTRALLY-ENFORCED COVERAGE, credited only from a gate's OWN published
+# per-fact set. Never from a gate's headline number, never from a family, never
+# from a route. A protection whose gate cannot say which facts it reached gets
+# no column here — that inability is a finding about the gate (ADR-0795), and
+# reporting it as coverage would be the inflation this census exists to avoid.
+#
+# These are reported separately from `COLUMNS` and do NOT enter
+# `protection_count`: a fact does not become better protected because somebody
+# else measured it, and mixing the two is exactly the confusion ADR-0795 found.
+COVERAGE_COLUMNS = [
+    "exact_statement",
 ]
 
 
@@ -308,6 +347,14 @@ POSITIVE_CONTROLS = [
     # silently start saying yes (or no) to everything.
     ("F:nat-sumrange-add", "checkers_name_producer", True),
     ("F:alternating-binomial-row-sum-zero", "checkers_name_producer", False),
+    # ADR-0795. `circularity` matched `kernel_declaration_projection`, which
+    # walks no closure; 24 of 38 yes-rows came from it and every one named a
+    # `definition`. These two pin the repair from both sides -- a genuine
+    # closure walk still counts, and a projection row no longer does -- so
+    # reinstating the removed alternative fails here rather than silently
+    # re-inflating the column.
+    ("F:cpoint-cauchy-schwarz", "circularity", True),
+    ("F:complex-factorquotient", "circularity", False),
 ]
 
 
@@ -323,9 +370,65 @@ POSITIVE_CONTROLS = [
 # fire the day somebody proved it, for no fault of this predicate).
 UNPINNABLE_PROBE = "F:this-fact-id-does-not-exist-and-must-never-be-pinned"
 
+# ...AND THAT PROBE ALONE IS WEAKER THAN THE CENSUS ROW IT REPLACED, which S1
+# flagged for review and ADR-0795 confirms. It watches `statement_pinned_ids()`
+# and nothing else, so two failures walk past it:
+#
+#   1. a `statement_pinned_ids()` that read the FACTS directory instead of the
+#      manifest would return every real fact id, contain no probe, and report
+#      `exact_statement` at 100% -- exactly today's number, from no manifest;
+#   2. a `classify()` whose `exact_statement` became a constant `True` never
+#      consults `pinned` at all.
+#
+# `SYNTHETIC_UNPINNED` restores the census-row polarity without needing an
+# unpinned fact to exist: it runs the REAL `classify()` over a fact-shaped dict
+# whose id is in no manifest, and requires `exact_statement` to come back False.
+SYNTHETIC_UNPINNED = {
+    "id": "F:synthetic-unpinned-control-not-in-any-manifest",
+    "proof_route": "kernel-lean",
+    "formal": {"language": "lean4", "kernel_theorem": "Synthetic.control"},
+    "evidence": [],
+}
 
-def run_controls(by_id: dict[str, dict], pinned: set[str] | None = None) -> list[str]:
+
+def run_controls(by_id: dict[str, dict], pinned: set[str] | None = None,
+                 unsettled: set[str] | None = None) -> list[str]:
     failures = []
+    # ...AND NEITHER PROBE ABOVE CATCHES A PIN SET READ FROM THE WRONG SOURCE.
+    # Mutation-verified 2026-08-30 (ADR-0795): replacing the manifest read with
+    # `{fact["id"] for fact in FACTS}` exits 0 with ZERO control failures --
+    # `exact_statement` still reads 2121/2121, from no manifest at all, and both
+    # the unpinnable probe and the synthetic row are blind to it because neither
+    # id is a real fact.
+    #
+    # This is the one that fires: the manifest pins SETTLED facts, so an `open`
+    # or `refuted` fact id appearing in it means the set did not come from the
+    # manifest. 145 such ids exist today, so the control has real subjects; a
+    # ledger with none would make it vacuous, which is why it says so.
+    if pinned is not None and unsettled is not None:
+        if not unsettled:
+            failures.append(
+                "control vacuous: no unsettled facts exist, so the "
+                "`exact_statement` source control has no subject to detect a "
+                "pin set read from the ledger rather than the manifest"
+            )
+        leaked = sorted(pinned & unsettled)
+        if leaked:
+            failures.append(
+                f"control failed: statement_pinned_ids() contains {len(leaked)} "
+                f"UNSETTLED fact id(s), first {leaked[0]!r}. The manifest pins "
+                "settled facts only, so the set is not being read from it -- "
+                "`exact_statement` would report full coverage from no manifest"
+            )
+    if pinned is not None:
+        synth = classify(SYNTHETIC_UNPINNED, pinned, {})
+        if synth["exact_statement"] is not False:
+            failures.append(
+                "control failed: classify() reports `exact_statement` True for "
+                f"{SYNTHETIC_UNPINNED['id']!r}, which is in no manifest -- the "
+                "column is not being decided by manifest membership"
+            )
+
     if pinned is not None and UNPINNABLE_PROBE in pinned:
         failures.append(
             f"control failed: statement_pinned_ids() contains {UNPINNABLE_PROBE!r}, "
@@ -349,7 +452,8 @@ def render_tsv(rows: list[dict]) -> str:
     head = [
         "fact_id", "route", "curation", "language", "subject",
         "n_evidence", "n_checkers", "checker_fanout_min", "checker_fanout_max",
-        *COLUMNS, "protection_count", "subject_guessed", "coverage_by_guess_only",
+        *COLUMNS, "protection_count", *COVERAGE_COLUMNS,
+        "subject_guessed", "coverage_by_guess_only",
         "checkers_multi", "checkers_name_producer",
     ]
     lines = ["\t".join(head)]
@@ -361,6 +465,7 @@ def render_tsv(rows: list[dict]) -> str:
             str(r["checker_fanout_min"]), str(r["checker_fanout_max"]),
             *("yes" if r[c] else "no" for c in COLUMNS),
             str(r["protection_count"]),
+            *("yes" if r[c] else "no" for c in COVERAGE_COLUMNS),
             r["subject_guessed"] or "-",
             "yes" if r["coverage_by_guess_only"] else "no",
             "yes" if r["checkers_multi"] else "no",
@@ -393,6 +498,55 @@ def render_summary(rows: list[dict], fan: dict[str, set[str]],
     for c in COLUMNS:
         k = sum(1 for r in rows if r[c])
         w(f"| `{c}` | {k} / {n} | {100.0 * k / n:.1f}% |")
+    w("")
+
+    w("## Centrally-enforced coverage (NOT the same measurement)")
+    w("")
+    w("The columns above are PER-FACT EVIDENCE: this fact's own record")
+    w("exercises the protection. A gate that enforces the same protection on")
+    w("every merge, for facts that cite nothing, moves none of them. The two")
+    w("are different questions and neither dominates -- per-fact evidence is")
+    w("self-describing and survives the fact being copied elsewhere; central")
+    w("coverage is stronger in practice and far cheaper. ADR-0795.")
+    w("")
+    w("A gate earns a column here only by publishing, machine-readably, the")
+    w("PER-FACT SET it reached. A headline number confers nothing on any")
+    w("member, and `protection_count` above deliberately excludes these: a")
+    w("fact is not better protected because somebody else measured it.")
+    w("")
+    w("| coverage | proved facts | share | published per-fact set |")
+    w("|---|---:|---:|---|")
+    for c in COVERAGE_COLUMNS:
+        k = sum(1 for r in rows if r[c])
+        w(f"| `{c}` | {k} / {n} | {100.0 * k / n:.1f}% | "
+          "`artifacts/ontology/settled-fact-statement-pins.json` `pins[].fact_id` "
+          "(S1, ADR-0763) |")
+    w("")
+    w("Gates that enforce a protection this census names and publish NO")
+    w("machine-readable per-fact set, so they cannot be credited here. Each")
+    w("row is a finding about the GATE, not about the facts; the missing")
+    w("column is what the gate would have to emit (ADR-0795).")
+    w("")
+    w("| protection | gate | publishes | what it would have to emit |")
+    w("|---|---|---|---|")
+    w("| `circularity`, `per_theorem_footprint` | `scripts/check-trust-closure.py` "
+      "(S2) | `subjects` / `unresolved` counts | the `subjects.resolved` fact-id "
+      "set it already builds and discards |")
+    w("| `semantic_falsification` | `scripts/check-semantic-control-fixtures.py` "
+      "(S3) | `census.load_bearing_facts` count in `fixture-pack.json` | the "
+      "`load_bearing` map keyed by fact id, which it already computes |")
+    w("| `independent_replay` | `real_lean_replay_census` (S4, ADR-0760) | "
+      "declaration names Lean's kernel admitted | the fact-to-declaration join, "
+      "so a NAME grade becomes a FACT grade |")
+    w("| `mutation_control` | "
+      "`scripts/check-statement-identity-mutations.py` (S1) | one ledger-wide "
+      "pass/fail | nothing -- it is not a per-fact protection and should not "
+      "be read as one |")
+    w("")
+    w("S3's own artifact already states the direction that matters: its")
+    w("`semantic_falsification` figure is an UPPER bound, counting facts with a")
+    w("semantic evidence row rather than facts whose control was shown to")
+    w("discriminate. Measured 2026-08-30: evidence 95, demonstrated 8.")
     w("")
 
     w("## Protections per fact")
@@ -527,7 +681,11 @@ def main(argv: list[str] | None = None) -> int:
         print("SAFETY_MATRIX|ERROR|duplicate fact id in census", file=sys.stderr)
         return 2
 
-    failures = run_controls(by_id, pinned)
+    unsettled = {
+        f["id"] for f in all_facts
+        if f.get("epistemic_status") not in SETTLED | {"computed"}
+    }
+    failures = run_controls(by_id, pinned, unsettled)
     if failures:
         for line in failures:
             print(f"SAFETY_MATRIX|CONTROL|{line}", file=sys.stderr)
