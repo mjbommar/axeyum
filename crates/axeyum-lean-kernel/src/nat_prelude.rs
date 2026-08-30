@@ -163,6 +163,7 @@ mod fibonacci;
 mod finite;
 mod finite_set;
 mod gcd;
+mod gcd_dvd_mirrors;
 mod group;
 mod helpers;
 mod irrational;
@@ -260,6 +261,7 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
+use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
@@ -3673,6 +3675,43 @@ pub struct NatPrelude {
     /// is `Nat.div_mod_lt_mul_iff`'s forward direction fed the canonical
     /// `Nat.div_mod_exec` witness.
     pub div_lt_of_lt_mul: NameId,
+    /// `Nat.dvd_mul_left : ∀ a b, Dvd a (mul b a)` —
+    /// `F:ml430-nat-dvd-mul-left-a1a8a4b8`. `dvd_mul a b : Dvd a (mul a b)`
+    /// transported along `mul_comm a b`.
+    pub dvd_mul_left: NameId,
+    /// `Nat.dvd_mul_left_of_dvd : ∀ a b c, Dvd a b → Dvd a (mul c b)` —
+    /// `F:ml430-nat-dvd-mul-left-of-dvd-200e20a4`. `dvd_mul_right_of_dvd`
+    /// transported along `mul_comm b c`.
+    pub dvd_mul_left_of_dvd: NameId,
+    /// `Nat.eq_zero_of_gcd_eq_zero_left : ∀ m n, Eq (gcd m n) zero → Eq m
+    /// zero` — `F:ml430-nat-eq-zero-of-gcd-eq-zero-left-72cc4246`.
+    /// `gcd_dvd_left` transported along the hypothesis gives `Dvd zero m`;
+    /// a `Dvd zero x` witness forces `x = zero` via `zero_mul`.
+    pub eq_zero_of_gcd_eq_zero_left: NameId,
+    /// `Nat.eq_zero_of_gcd_eq_zero_right : ∀ m n, Eq (gcd m n) zero → Eq n
+    /// zero` — `F:ml430-nat-eq-zero-of-gcd-eq-zero-right-24054a86`, the
+    /// mirror of [`Self::eq_zero_of_gcd_eq_zero_left`] via `gcd_dvd_right`.
+    pub eq_zero_of_gcd_eq_zero_right: NameId,
+    /// `Nat.dvd_mod_iff_gen : ∀ k m n, Dvd k n → (Dvd k (mod m n) ↔ Dvd k m)`
+    /// — `F:ml430-nat-dvd-mod-iff-2d082f10`, the full-generality (every
+    /// `n`, including zero) form of [`Self::dvd_mod_iff`], which only
+    /// covers positive `n`. Case split on `n`: `zero` collapses `mod m 0`
+    /// to `m` (`mod_zero`) so the goal is a reflexive `Iff`; `succ j` is
+    /// exactly `dvd_mod_iff` at `(k, j, m)`.
+    pub dvd_mod_iff_gen: NameId,
+    /// `Nat.div_mul_cancel : ∀ n m, Dvd n m → Eq (mul (div m n) n) m` —
+    /// `F:ml430-nat-div-mul-cancel-99799a00`, the full-generality (every
+    /// `n`) form of `div_mul_cancel_of_dvd` (positive `n` only), factors
+    /// commuted to Mathlib's `m / n * n = m` order. `n = zero`: `Dvd zero
+    /// m` forces `m = zero` and both sides collapse. `n = succ j`: the
+    /// existing lemma plus `mul_comm`.
+    pub div_mul_cancel: NameId,
+    /// `Nat.dvd_iff_mod_eq_zero : ∀ m n, Dvd m n ↔ Eq (mod n m) zero` —
+    /// `F:ml430-nat-dvd-iff-mod-eq-zero-d795bfff`. Case split on `m`:
+    /// `zero` reduces both sides to `Eq n zero`; `succ j` specializes
+    /// `div_mod_remainder_eq_zero_iff_dvd` at the executable witness
+    /// (`div_mod_exec`) and flips the `Iff` order.
+    pub dvd_iff_mod_eq_zero: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4417,6 +4456,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mul_lt_mul_left: kernel.name_str(nat, "mul_lt_mul_left"),
             mul_lt_mul_right: kernel.name_str(nat, "mul_lt_mul_right"),
             div_lt_of_lt_mul: kernel.name_str(nat, "div_lt_of_lt_mul"),
+            dvd_mul_left: kernel.name_str(nat, "dvd_mul_left"),
+            dvd_mul_left_of_dvd: kernel.name_str(nat, "dvd_mul_left_of_dvd"),
+            eq_zero_of_gcd_eq_zero_left: kernel.name_str(nat, "eq_zero_of_gcd_eq_zero_left"),
+            eq_zero_of_gcd_eq_zero_right: kernel.name_str(nat, "eq_zero_of_gcd_eq_zero_right"),
+            dvd_mod_iff_gen: kernel.name_str(nat, "dvd_mod_iff_gen"),
+            div_mul_cancel: kernel.name_str(nat, "div_mul_cancel"),
+            dvd_iff_mod_eq_zero: kernel.name_str(nat, "dvd_iff_mod_eq_zero"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -4927,6 +4973,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lt_of_mul_lt_mul(&mut d, &p)?;
         declare_mul_lt_mul_iff(&mut d, &p)?;
         declare_div_lt_of_lt_mul(&mut d, &p)?;
+        declare_gcd_dvd_mirrors(&mut d, &p)?;
         Ok(p)
     })();
     match built {
