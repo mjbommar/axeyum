@@ -2,6 +2,8 @@
 //! equality partitions.
 #![cfg(feature = "full")]
 
+use std::process::Command;
+
 use axeyum_smtlib::{Script, parse_script};
 use axeyum_solver::{
     EqualityPartitionRefutationCertificate, Evidence, ProofFragment, SolverConfig,
@@ -210,4 +212,56 @@ fn free_and_direct_arithmetic_forms_do_not_route() {
             ProofFragment::SinglePivotEqualityPartition
         );
     }
+}
+
+// Real-Lean toolchain discovery and skip accounting, shared with the other
+// Lean-gated suites. Until this test existed, the golden pin above only
+// asserted the rendered bytes matched a blessed hash -- never that a real Lean
+// binary still accepts them. See `lean_probe.rs`'s module doc for the
+// resolution policy (elan's toolchain directories are not on `PATH`).
+#[path = "../../axeyum-lean-kernel/tests/support/lean_probe.rs"]
+mod lean_probe;
+
+/// **Real-Lean crosscheck**: the rendered sdlx equality-partition module must
+/// be accepted by a genuine `lean` binary (skips gracefully if none is
+/// installed), and `#print axioms axeyum_refutation` must not depend on
+/// `sorryAx`. This is the end-to-end kernel-checked payoff of ADR-0106 that
+/// the byte pin alone cannot demonstrate.
+#[test]
+fn equality_partition_module_checks_in_real_lean() {
+    let (script, certificate) = checked_certificate(SDLX);
+    let source = reconstruct_single_pivot_equality_partition_to_lean_module(
+        &script.arena,
+        &script.assertions,
+        &certificate,
+    )
+    .expect("sdlx reconstructs");
+
+    let Some(bin) = lean_probe::lean_bin_or_skip("equality-partition", 1) else {
+        return;
+    };
+    let dir = std::env::temp_dir().join("axeyum_lean_equality_partition");
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join("equality_partition.lean");
+    std::fs::write(&file, &source).expect("write lean module");
+    let out = Command::new(&bin).arg(&file).output().expect("run lean");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success(),
+        "lean REJECTED the equality-partition module\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}"
+    );
+    assert!(
+        !stdout.contains("sorryAx"),
+        "equality-partition proof depends on sorryAx:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("axeyum_refutation"),
+        "missing #print axioms output:\n{stdout}"
+    );
+    eprintln!(
+        "[lean ok] equality-partition: {}",
+        stdout.trim().replace('\n', " | ")
+    );
+    lean_probe::report_checked("equality-partition", 1);
 }
