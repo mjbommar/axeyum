@@ -82,10 +82,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import pathlib
 import re
 import sys
+import types
 from collections import Counter
 from typing import Any
 
@@ -1186,6 +1188,63 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
             f"R9 {len(contaminated)} held-out candidate(s) already have a "
             f"declaration of the same Mathlib name in the kernel environment, "
             f"so they are not blind: {contaminated[:5]}")
+
+    # R11 -- ADR-0653's adjacency rule, which was PROSE until 2026-08-30.
+    #
+    # R9 above compares a candidate's Mathlib NAME against the environment.
+    # ADR-0762 measured what that leaves open: a draw putting
+    # `Init.Data.Nat.Bitwise.Lemmas` and `Mathlib.Data.Nat.GCD.Basic` into
+    # held-out -- beside `natural-bitwise` and `natural-gcd`, both DEVELOPMENT
+    # and both worked by lanes that week -- is R9-clean 0/10 on each, and the
+    # whole guard returned `GUARD PASSED -- 340 entries, 120 held-out rows`.
+    # The rule that forbids it existed only in an ADR, so a lane could author
+    # the ADR-0542 breach deliberately and see green.
+    #
+    # The screen lives in its own script because it is worth running on its own
+    # (`scripts/check-holdout-adjacency.py`, registered in both aggregate
+    # gates) and because it needs the fact ledger to recover v1's Mathlib names.
+    # It is imported rather than reimplemented, and an import failure is a
+    # REFUSAL: a draw that cannot run the adjacency screen has not passed it.
+    if new_entries:
+        _adjacency_screen(new_entries, env)
+
+
+def _adjacency_screen(new_entries: list[dict[str, Any]], env: set[str]) -> None:
+    """R11's body. Separate so the import failure has one place to be reported."""
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_holdout_adjacency", ROOT / "scripts/check-holdout-adjacency.py")
+        adjacency = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(adjacency)
+    except Exception as exc:  # noqa: BLE001 -- any failure means the screen did not run
+        raise RefillError(
+            "R11 the adjacency screen (scripts/check-holdout-adjacency.py) "
+            f"could not be loaded, so ADR-0653's rule was not applied: {exc}")
+
+    new_rows: dict[str, list[Any]] = {}
+    new_partition: dict[str, str] = {}
+    for entry in new_entries:
+        new_partition[entry["family"]] = entry["partition"]
+        new_rows.setdefault(entry["family"], []).append(
+            adjacency.Row(entry["source_name"], entry["module"],
+                          frozenset(entry["constants"])))
+    # `resolve_families` needs only these two from this module, and passing a
+    # namespace rather than `sys.modules[__name__]` keeps it working when this
+    # file is itself loaded by path (which every in-memory draw probe does --
+    # `module_from_spec` does NOT register in `sys.modules`).
+    existing_rows, existing_partition, _counts = adjacency.resolve_families(
+        types.SimpleNamespace(read_inventory=read_inventory, CONST_RE=CONST_RE))
+    # A family this draw ADDS cannot also be part of what is already published;
+    # scoring it against itself would make the screen vacuous, and
+    # `screen_family` raises rather than allow it.
+    for family in new_rows:
+        existing_rows.pop(family, None)
+    try:
+        adjacency.assert_draw_lawful(new_rows, new_partition, existing_rows,
+                                     existing_partition, env=env)
+    except adjacency.RefusalError as exc:
+        raise RefillError(str(exc))
+
 
 def stored_surface_validation() -> dict[str, Any]:
     """What the manifest already records about its own surface grade."""

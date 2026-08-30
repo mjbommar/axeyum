@@ -187,11 +187,27 @@ STEM_STOPWORDS = frozenset({
 })
 
 # An adjacency the project has looked at and accepted, with the numbers it was
-# accepted at. This is the "required disclosure" half of the rule: a family may
+# accepted at. This is one half of the "required disclosure": a family may
 # appear here only with an ADR, and the row must MATCH the live measurement, so
 # a stale acceptance goes red instead of standing forever. Topic overlap is not
 # waivable -- only the vocabulary count is, and only up to a stated number.
 ADJACENCY_ACCEPTED: dict[str, dict[str, Any]] = {}
+
+# The other half. The `environment` signal cannot be a threshold, and measuring
+# it is what shows why: `natural-square-root` is a legitimate standing held-out
+# family and our kernel declares `Nat.sqrt`, `Nat.sqrt_zero`, `Nat.sqrt_one`
+# (draw 8 compared all four by hand and none is a mirror), while
+# `natural-nth-root` picks up 9 hits on the stem `root` of which the top is
+# `Complex.root_of_unity_pow` -- unrelated mathematics that happens to share a
+# word. A count cannot separate those; a person reading five names can, in a
+# minute.
+#
+# So a NEW held-out family whose sweep is non-empty must carry a review here
+# before it may be drawn, and the review must reproduce the live sweep exactly.
+# That is what makes it a disclosure rather than a rubber stamp: the file
+# records what was looked at, and a later declaration landing in that namespace
+# changes the sweep and invalidates the review instead of silently passing.
+REVIEW_FILE = AUTOGEN / "holdout-adjacency-review-v1.json"
 
 
 class RefusalError(Exception):
@@ -305,9 +321,20 @@ def resolve_families(refill) -> tuple[dict[str, list[Row]], dict[str, str], dict
 # the three signals
 # --------------------------------------------------------------------------
 def topics(module: str) -> frozenset:
-    """The topic segments of a module path, carrier and convention removed."""
+    """The topic segments of a module path, carrier and convention removed.
+
+    The LEADING component is dropped unconditionally: it names the library
+    (`Init`, `Mathlib`, `Batteries`, and `Test` in the refill generator's own
+    fixtures), and a library name shared by two modules says nothing about
+    their mathematics. Enumerating the known roots is not enough -- measured
+    2026-08-30, it made every fixture family in
+    `test_gen_autogenesis_nursery_refill.py` adjacent to every other through
+    the shared segment `Test`, and two of that suite's tests failed for a
+    reason that had nothing to do with what they were testing.
+    """
+    segments = module.split(".")[1:]
     return frozenset(
-        seg for seg in module.split(".")
+        seg for seg in segments
         if seg not in MODULE_ROOTS and seg not in MODULE_GENERIC
     )
 
@@ -354,8 +381,15 @@ def environment_sweep(subjects: Iterable[str], env: Iterable[str],
     question than "does our development prove this theorem" -- the question R9
     asks and gets a clean answer to even when a differently-named proof exists.
     """
-    env = list(env)
-    lowered = [(name, name.lower()) for name in env]
+    # SORTED, not merely listed. The caller passes a `set`, and Python's string
+    # hashing is randomised per process, so an unsorted sweep printed a
+    # different example declaration on every run -- measured 2026-08-30:
+    # `Nat.coprime_mul_of_coprime`, then `Nat.coprime_dvd_left`, then
+    # `Nat.coprime_two_right`, all for the same stem and the same count. A
+    # recorded review could then never match the live sweep, so the disclosure
+    # rule would have refused every draw for a reason that was pure noise, and
+    # determinism in output is a public promise here besides.
+    lowered = sorted((name, name.lower()) for name in env)
     hits = []
     for constant in sorted(set(subjects)):
         for stem in sorted(_stems(constant)):
@@ -366,11 +400,27 @@ def environment_sweep(subjects: Iterable[str], env: Iterable[str],
     return tuple(hits[:limit])
 
 
+def load_reviews() -> dict[str, dict[str, Any]]:
+    """The recorded environment-sweep reviews. Absent file means none."""
+    if not REVIEW_FILE.is_file():
+        return {}
+    data = json.loads(REVIEW_FILE.read_text())
+    reviews = data.get("reviews")
+    if not isinstance(reviews, dict):
+        raise SystemExit(
+            f"check-holdout-adjacency: {REVIEW_FILE.name} has no `reviews` "
+            "object; refusing to treat an unreadable review file as 'nothing "
+            "to disclose'")
+    return reviews
+
+
 def screen_family(family: str, rows: list[Row],
                   published_rows: dict[str, list[Row]],
                   published_partition: dict[str, str],
                   env: Iterable[str] | None = None,
-                  vocabulary_max_rows: int = VOCABULARY_MAX_ROWS) -> Finding:
+                  vocabulary_max_rows: int = VOCABULARY_MAX_ROWS,
+                  reviews: dict[str, dict[str, Any]] | None = None,
+                  require_disclosure: bool = False) -> Finding:
     """ADR-0653's rule applied to ONE candidate held-out family.
 
     `published_rows` must NOT contain `family` itself: a family is trivially
@@ -428,10 +478,31 @@ def screen_family(family: str, rows: list[Row],
             f"development/train family publishes (allowance {allowance}) -- {shown}")
     if accepted is not None and accepted.get("vocabulary_rows") not in (None, hit_rows):
         reasons.append(
-            f"disclosure: ADJACENCY_ACCEPTED[{family!r}] records "
+            f"acceptance: ADJACENCY_ACCEPTED[{family!r}] records "
             f"vocabulary_rows={accepted['vocabulary_rows']} but the live "
             f"measurement is {hit_rows}; the acceptance no longer describes "
             "this draw")
+
+    # The environment sweep is a DISCLOSURE, not a threshold -- see REVIEW_FILE.
+    # A stale review is refused wherever it is found, because a review that no
+    # longer describes the environment is worse than no review: it reads as due
+    # diligence and reports on a tree that no longer exists.
+    review = (reviews or {}).get(family)
+    if review is not None:
+        recorded = tuple(tuple(x) for x in review.get("swept", []))
+        if recorded != env_hits:
+            reasons.append(
+                f"disclosure: the recorded review of {family!r} swept "
+                f"{list(recorded)} but the live sweep is {list(env_hits)}; the "
+                "review no longer describes this environment, so re-review it "
+                f"and update {REVIEW_FILE.name}")
+    elif require_disclosure and env_hits:
+        reasons.append(
+            f"disclosure: the kernel environment declares {len(env_hits)} "
+            f"stem(s) of this family's subject operators {list(env_hits)} and "
+            f"no review is recorded in {REVIEW_FILE.name}; compare those "
+            "declarations against the drawn statements and record what you "
+            "found before preregistering the family blind")
 
     return Finding(
         family=family,
@@ -449,7 +520,9 @@ def screen_draw(new_families: dict[str, list[Row]],
                 existing_rows: dict[str, list[Row]],
                 existing_partition: dict[str, str],
                 env: Iterable[str] | None = None,
-                vocabulary_max_rows: int = VOCABULARY_MAX_ROWS) -> list[Finding]:
+                vocabulary_max_rows: int = VOCABULARY_MAX_ROWS,
+                reviews: dict[str, dict[str, Any]] | None = None,
+                require_disclosure: bool = True) -> list[Finding]:
     """Every NEW held-out family of a draw, screened against what is published.
 
     Same-draw development/train families are included in the published set: a
@@ -468,7 +541,9 @@ def screen_draw(new_families: dict[str, list[Row]],
             continue
         out.append(screen_family(fam, new_families[fam], published, partition,
                                  env=env,
-                                 vocabulary_max_rows=vocabulary_max_rows))
+                                 vocabulary_max_rows=vocabulary_max_rows,
+                                 reviews=reviews,
+                                 require_disclosure=require_disclosure))
     return out
 
 
@@ -476,9 +551,12 @@ def assert_draw_lawful(new_families: dict[str, list[Row]],
                        new_partition: dict[str, str],
                        existing_rows: dict[str, list[Row]],
                        existing_partition: dict[str, str],
-                       env: Iterable[str] | None = None) -> list[Finding]:
+                       env: Iterable[str] | None = None,
+                       reviews: dict[str, dict[str, Any]] | None = None) -> list[Finding]:
     findings = screen_draw(new_families, new_partition, existing_rows,
-                           existing_partition, env=env)
+                           existing_partition, env=env,
+                           reviews=reviews if reviews is not None else load_reviews(),
+                           require_disclosure=True)
     refused = [f for f in findings if f.verdict == "refused"]
     if refused:
         detail = "; ".join(f"{f.family}: {' | '.join(f.reasons)}" for f in refused)
@@ -521,15 +599,17 @@ def cmd_check(args) -> int:
     """Gate the COMMITTED manifests: every held-out family, screened."""
     refill, rows, partition, counts, env = _context()
     membership = _draw_membership(refill)
+    reviews = load_reviews()
     held = sorted(f for f, p in partition.items() if p == "held-out")
     if not held:
         print("check-holdout-adjacency: zero held-out families; refusing to "
               "report a clean screen over an empty population")
         return 1
     bad = 0
+    undisclosed = 0
     print(f"population  v1={counts['v1']} extension={counts['extension']} "
           f"unresolved={counts.get('unresolved', 0)} families={len(partition)} "
-          f"held_out_families={len(held)}")
+          f"held_out_families={len(held)} reviews={len(reviews)}")
     for fam in held:
         others = {f: r for f, r in rows.items() if f != fam}
         # A family is screened against what was published by the time it was
@@ -537,14 +617,28 @@ def cmd_check(args) -> int:
         # them in would refuse the whole standing population.
         mine = membership.get(fam, 0)
         others = {f: r for f, r in others.items() if membership.get(f, 0) <= mine}
-        finding = screen_family(fam, rows[fam], others, partition, env=env)
+        # `require_disclosure` is FALSE here and TRUE in the draw-time guard,
+        # and the asymmetry is deliberate. Every standing held-out family was
+        # preregistered before this screen existed; demanding a review for one
+        # retroactively would mean either a red gate on `main` or a review file
+        # asserting diligence nobody performed, and the second is the
+        # checker-that-cannot-fail defect wearing a paper trail. A stale review
+        # IS refused here, because that is a claim someone made.
+        finding = screen_family(fam, rows[fam], others, partition, env=env,
+                                reviews=reviews, require_disclosure=False)
         mark = "REFUSED" if finding.verdict == "refused" else "clean  "
+        disclosure = ("reviewed" if fam in reviews
+                      else ("undisclosed" if finding.environment_hits else "-"))
+        undisclosed += disclosure == "undisclosed"
         print(f"  {mark} draw{mine:<2d} {fam:36s} topic={len(finding.topic_hits):2d} "
-              f"vocab={finding.vocabulary_rows}/{len(rows[fam])}")
+              f"vocab={finding.vocabulary_rows}/{len(rows[fam])} "
+              f"env={[h[0] for h in finding.environment_hits]} {disclosure}")
         for reason in finding.reasons:
             print(f"          {reason}")
         bad += finding.verdict == "refused"
-    print(f"check-holdout-adjacency: {len(held)} held-out families, {bad} refused")
+    print(f"check-holdout-adjacency: {len(held)} held-out families, {bad} refused, "
+          f"{undisclosed} with an undisclosed environment sweep (advisory here, "
+          f"REFUSED at draw time)")
     return 1 if bad else 0
 
 
@@ -614,6 +708,17 @@ def _self_test_cases():
     }
 
 
+def _disclosure_cases():
+    """Fixtures for the two disclosure guards, which the four above cannot reach."""
+    def R(name, module, *consts):
+        return Row(name, module, frozenset(consts))
+    rows = [R(f"Nat.nthRoot{i}", "Mathlib.Analysis.Pow.NthRootLemmas",
+              "Nat.nthRoot", "Eq") for i in range(10)]
+    env = ["Nat.nthRoot", "Nat.nthRoot_zero_left", "Complex.rootOfUnity"]
+    live = environment_sweep({"Nat.nthRoot"}, env)
+    return rows, env, live
+
+
 def cmd_self_test(args) -> int:
     dev, part, cases = _self_test_cases()
     failures = []
@@ -647,7 +752,33 @@ def cmd_self_test(args) -> int:
         print(f"  FAIL env-sweep      positive={hits} negative={miss}")
         failures.append("env-sweep")
 
-    print(f"self-test: {len(cases) + 2 - len(failures)} passed, "
+    # the two disclosure guards, each reached only by its own fixture
+    drows, denv, dlive = _disclosure_cases()
+    checks = [
+        ("no-review", {}, True, "refused", "disclosure"),
+        ("reviewed", {"cand-d": {"swept": [list(h) for h in dlive]}},
+         True, "clean", None),
+        ("stale-review", {"cand-d": {"swept": [["gcd", "Nat.gcd", 1]]}},
+         True, "refused", "disclosure"),
+        # a stale review is refused even where disclosure is not REQUIRED
+        ("stale-review-not-required", {"cand-d": {"swept": [["gcd", "Nat.gcd", 1]]}},
+         False, "refused", "disclosure"),
+        # ... and not requiring disclosure must not refuse an unreviewed family
+        ("no-review-not-required", {}, False, "clean", None),
+    ]
+    for label, reviews, require, want, want_reason in checks:
+        got = screen_family("cand-d", drows, dev, part, env=denv,
+                            reviews=reviews, require_disclosure=require)
+        ok = got.verdict == want
+        if ok and want_reason:
+            ok = any(r.startswith(want_reason) for r in got.reasons)
+        print(f"  {'ok  ' if ok else 'FAIL'} {label:26s} verdict={got.verdict} "
+              f"reasons={[r.split(':')[0] for r in got.reasons]}")
+        if not ok:
+            failures.append(label)
+
+    total = len(cases) + 2 + len(checks)
+    print(f"self-test: {total - len(failures)} passed, "
           f"{len(failures)} failed {failures}")
     return 1 if failures else 0
 
