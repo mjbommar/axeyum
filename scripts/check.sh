@@ -744,6 +744,7 @@ step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+step lane-merge-resolve-controls ./scripts/tests/test-lane-merge-resolve.sh
 # The gate-ADMISSION mechanism (2026-08-27): lane cargo work is niced so the
 # push battery stops being starved by it, and this script takes a cargo slot.
 # Scheduling changes are an easy place to write a check that cannot fail --

@@ -617,6 +617,7 @@ gate-controls:
     # rather than a vacuous pass.
     scripts/tests/test-deep-stack-call-sites.sh
     scripts/tests/test-lane-commit.sh
+    scripts/tests/test-lane-merge-resolve.sh
     scripts/tests/test-recount-pinned-inventory.sh
     scripts/tests/test-open-frontier-axiom-freeness.sh
     # The lane stamp must PARSE as a git trailer, not merely appear as text:
