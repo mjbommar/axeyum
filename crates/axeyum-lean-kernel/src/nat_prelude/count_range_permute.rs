@@ -1266,10 +1266,10 @@ fn count_range_zero_of_false_below(
     d.apply(proof, &[hf])
 }
 
-/// `∀ a b, Lt b n → Eq Bool (R a) `value` → Eq Bool (P (add (mul n a) b))
-/// `rhs(b)`` — the shape of both of [`declare_count_range_product`]'s
-/// per-block hypotheses, differing only in which `Bool` `R a` is pinned to and
-/// what `P` is then equal to.
+/// `∀ a b, Lt b n → Eq Bool (R a) VALUE → Eq Bool (P (add (mul n a) b)) RHS(b)`
+/// — the shape of both of [`declare_count_range_product`]'s per-block
+/// hypotheses, differing only in which `Bool` `R a` is pinned to and what `P`
+/// is then equal to.
 fn block_hypothesis(
     d: &mut NatDev<'_>,
     pred: ExprId,

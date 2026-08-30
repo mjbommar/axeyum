@@ -232,6 +232,34 @@ check(
     count_range(f, 4) == 2 and count_range(lambda k: f(0), 4) == 0,
 )
 
+# ---------------------------------------------------------------------------
+# 8. The concrete `countRange_product` instance the Rust test uses, and its
+#    negative control.  n = 2, m = 3; R a := (a == 1), S b := (b == 0);
+#    P y := (y == 2) is exactly the factoring predicate.
+# ---------------------------------------------------------------------------
+R8 = lambda a: a == 1
+S8 = lambda b: b == 0
+P8 = lambda y: y == 2
+check(
+    "product instance: countRange P 6 == countRange S 2 * countRange R 3 == 1",
+    count_range(P8, 6) == count_range(S8, 2) * count_range(R8, 3) == 1,
+)
+ok = all(
+    P8(2 * a + b) == (S8(b) if R8(a) else False)
+    for a in range(0, 12)
+    for b in range(0, 2)
+)
+check("product instance: P really factors through (y // 2, y % 2), a < 12", ok)
+check(
+    "NEGATIVE CONTROL: a non-factoring P (y >= 4) breaks the identity, 2 vs 1",
+    count_range(lambda y: y >= 4, 6) == 2
+    and count_range(S8, 2) * count_range(R8, 3) == 1,
+)
+check(
+    "the degenerate n = 0 instance holds with NO positivity hypothesis",
+    count_range(P8, 0 * 5) == count_range(S8, 0) * count_range(R8, 5) == 0,
+)
+
 print()
 if FAIL:
     print(f"{len(FAIL)} CHECK(S) FAILED: {FAIL}")
