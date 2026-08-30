@@ -103,6 +103,23 @@ def nat_gcd(a: int, b: int) -> int:
     return a
 
 
+def nat_log(b: int, n: int) -> int:
+    """Mathlib `Nat.log b n`: the greatest `k` with `b^k <= n`.
+
+    Zero when `b <= 1` or `n < b` -- including `Nat.log b 0 = 0` for every `b`,
+    which is the whole counterexample for the strengthened-conclusion mutation.
+    """
+    if b < 0 or n < 0:
+        raise MustDeclineError("nat_log: negative argument")
+    if b <= 1 or n < b:
+        return 0
+    k, value = 0, 1
+    while value * b <= n:
+        value *= b
+        k += 1
+    return k
+
+
 def nat_pred(n: int) -> int:
     return n - 1 if n > 0 else 0
 
@@ -131,6 +148,9 @@ CHECKS = {
     "bitwise_operator_substituted": lambda w: (w["n"] | w["m"]) != (w["n"] & w["m"]),
     "modeq_premise_removed": lambda w: (w["a"] % w["n"]) != (w["b"] % w["n"]),
     "coprime_polarity_reversed": lambda w: nat_gcd(w["a"], w["b"]) != 1,
+    # `Nat.log b n <= n` strengthened to `<`. Refuted wherever `n = 0`:
+    # `Nat.log b 0 = 0` for every `b`, and `0 < 0` is false.
+    "log_conclusion_strengthened": lambda w: not (nat_log(w["b"], w["x"]) < w["x"]),
 }
 
 

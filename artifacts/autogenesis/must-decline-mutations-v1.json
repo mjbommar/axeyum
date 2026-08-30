@@ -4,39 +4,22 @@
   "description": "Ground-truth classification of the nursery's 'generated-mutation' rows in the train/development partitions. Every row here is FALSE, established by a concrete counterexample rather than by looking at the mutation label. This is the negative-control population a producer census is checked against by scripts/check-autogenesis-must-decline-population.py: a census that reports any one of these fact_ids as an admitted/admissible proof is void, because admitting a false statement is a soundness failure, not a low conversion rate.",
   "population_source": "artifacts/autogenesis/nursery-v1.json",
   "population_definition": "every entry with provenance_class == 'generated-mutation' and partition != 'held-out'",
-  "held_out_exclusion": "3 of the nursery's 12 generated-mutation rows are partition 'held-out' (natural-square-root, natural-logarithm, natural-binomial families) and are deliberately NOT evaluated or referenced here, by name or fact_id, per the held-out isolation policy in scripts/check-autogenesis-holdout-isolation.py. Determining ground truth for a held-out row and publishing that determination in a committed artifact is itself a form of touching the partition; it is withheld the same way an operation's fact_ids over held-out are withheld.",
+  "held_out_exclusion": "2 of the nursery's 12 generated-mutation rows are partition 'held-out' (natural-square-root and natural-binomial families) and are deliberately NOT evaluated or referenced here, by name or fact_id, per the held-out isolation policy in scripts/check-autogenesis-holdout-isolation.py. Determining ground truth for a held-out row and publishing that determination in a committed artifact is itself a form of touching the partition; it is withheld the same way an operation's fact_ids over held-out are withheld. AMENDED 2026-08-30: this said 3 rows and named natural-logarithm among them. The ADR-0542 amendment moved that family out of held-out, which correctly brought its mutation row into the must-decline population and left this artifact stale -- the gate caught it, naming exactly the one row and NOT the square-root row that is still blind.",
   "verification_method": "Each row's witness is a concrete Nat/Int numeral (or tuple of numerals) that a bounded, elementary evaluator (embedded in scripts/check-autogenesis-must-decline-population.py) recomputes independently at gate time -- the JSON below is not trusted on its own; check_kind selects the evaluator function and the gate refuses to pass if recomputation does not confirm the refutation. Every witness is small enough to check by hand.",
   "entries": [
-    {
-      "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
-      "partition": "train",
-      "family": "natural-factorial",
-      "mutation_of": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
-      "formal_statement": "∀ (n : ℕ), n.factorial = 0",
-      "mutation_kind": "polarity-reversal",
-      "claim": "false",
-      "check_kind": "factorial_polarity_reversed",
-      "witness": {
-        "n": 0
-      },
-      "counterexample_explanation": "0! = 1 by the standard empty-product convention, so n.factorial = 0 fails at n = 0. (n.factorial != 0 for every n, so any n witnesses this; n = 0 is the smallest.)",
-      "verified_value": {
-        "nat_factorial(0)": 1
-      }
-    },
     {
       "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
       "partition": "train",
       "family": "natural-fibonacci",
       "mutation_of": "F:ml430-nat-fib-eq-zero-61879073",
-      "formal_statement": "∀ {n : ℕ}, Nat.fib n = 0 ↔ n = 0 ∨ n = 1",
+      "formal_statement": "\u2200 {n : \u2115}, Nat.fib n = 0 \u2194 n = 0 \u2228 n = 1",
       "mutation_kind": "boundary-widening-biconditional",
       "claim": "false",
       "check_kind": "fib_widened",
       "witness": {
         "n": 1
       },
-      "counterexample_explanation": "Nat.fib 1 = 1, so the left side (fib n = 0) is false at n = 1, but the widened right side (n = 0 ∨ n = 1) is true at n = 1. A biconditional with one side true and the other false is false.",
+      "counterexample_explanation": "Nat.fib 1 = 1, so the left side (fib n = 0) is false at n = 1, but the widened right side (n = 0 \u2228 n = 1) is true at n = 1. A biconditional with one side true and the other false is false.",
       "verified_value": {
         "nat_fib(1)": 1
       }
@@ -46,7 +29,7 @@
       "partition": "train",
       "family": "integer-gcd",
       "mutation_of": "F:ml430-int-ne-zero-of-gcd-f71f00df",
-      "formal_statement": "∀ {x y : ℤ}, x.gcd y ≠ 0 → x ≠ 0 ∧ y ≠ 0",
+      "formal_statement": "\u2200 {x y : \u2124}, x.gcd y \u2260 0 \u2192 x \u2260 0 \u2227 y \u2260 0",
       "mutation_kind": "conclusion-strengthening",
       "claim": "false",
       "check_kind": "gcd_conclusion_strengthened",
@@ -54,46 +37,9 @@
         "x": 0,
         "y": 5
       },
-      "counterexample_explanation": "gcd(0, 5) = 5 ≠ 0, so the hypothesis holds, but x = 0 makes the strengthened conjunctive conclusion (x ≠ 0 ∧ y ≠ 0) false. (The original, un-mutated statement uses ∨ here, which this witness leaves true.)",
+      "counterexample_explanation": "gcd(0, 5) = 5 \u2260 0, so the hypothesis holds, but x = 0 makes the strengthened conjunctive conclusion (x \u2260 0 \u2227 y \u2260 0) false. (The original, un-mutated statement uses \u2228 here, which this witness leaves true.)",
       "verified_value": {
         "nat_gcd(0,5)": 5
-      }
-    },
-    {
-      "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
-      "partition": "train",
-      "family": "integer-fibonacci",
-      "mutation_of": "F:ml430-int-fib-eq-zero-8193c7cb",
-      "formal_statement": "∀ {n : ℤ}, Int.fib n = 0 ↔ n = 0 ∨ n = 1",
-      "mutation_kind": "boundary-widening-biconditional",
-      "claim": "false",
-      "check_kind": "fib_widened",
-      "witness": {
-        "n": 1
-      },
-      "counterexample_explanation": "For nonnegative n, Int.fib n = Nat.fib n (the standard extension only changes the sign convention for negative n), so at n = 1 this is the same failure as the Nat.fib mutation: fib(1) = 1 ≠ 0 while n = 1 makes the widened right side true.",
-      "verified_value": {
-        "nat_fib(1)": 1
-      }
-    },
-    {
-      "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
-      "partition": "train",
-      "family": "integer-modular-equivalence",
-      "mutation_of": "F:ml430-int-modeq-symm-984a6e67",
-      "formal_statement": "∀ {n a b : ℤ}, b ≡ a [ZMOD n]",
-      "mutation_kind": "premise-removal",
-      "claim": "false",
-      "check_kind": "modeq_premise_removed",
-      "witness": {
-        "n": 2,
-        "a": 0,
-        "b": 1
-      },
-      "counterexample_explanation": "The premise 'a ≡ b [ZMOD n]' was removed, leaving an unconditional claim that ALL a, b are congruent mod every n. At n = 2, a = 0, b = 1: a % n = 0 and b % n = 1, which differ, so b ≡ a [ZMOD 2] is false.",
-      "verified_value": {
-        "0 % 2": 0,
-        "1 % 2": 1
       }
     },
     {
@@ -101,7 +47,7 @@
       "partition": "development",
       "family": "natural-primes",
       "mutation_of": "F:ml430-nat-prime-pred-pos-4e67ac4c",
-      "formal_statement": "∀ {p : ℕ}, Nat.Prime p → 1 < p.pred",
+      "formal_statement": "\u2200 {p : \u2115}, Nat.Prime p \u2192 1 < p.pred",
       "mutation_kind": "bound-strengthening",
       "claim": "false",
       "check_kind": "prime_pred_bound_strengthened",
@@ -115,11 +61,28 @@
       }
     },
     {
+      "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+      "partition": "train",
+      "family": "natural-factorial",
+      "mutation_of": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "formal_statement": "\u2200 (n : \u2115), n.factorial = 0",
+      "mutation_kind": "polarity-reversal",
+      "claim": "false",
+      "check_kind": "factorial_polarity_reversed",
+      "witness": {
+        "n": 0
+      },
+      "counterexample_explanation": "0! = 1 by the standard empty-product convention, so n.factorial = 0 fails at n = 0. (n.factorial != 0 for every n, so any n witnesses this; n = 0 is the smallest.)",
+      "verified_value": {
+        "nat_factorial(0)": 1
+      }
+    },
+    {
       "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
       "partition": "development",
       "family": "natural-bitwise",
       "mutation_of": "F:ml430-nat-lor-comm-2666d7ef",
-      "formal_statement": "∀ (n m : ℕ), n ||| m = n &&& m",
+      "formal_statement": "\u2200 (n m : \u2115), n ||| m = n &&& m",
       "mutation_kind": "operator-substitution",
       "claim": "false",
       "check_kind": "bitwise_operator_substituted",
@@ -127,10 +90,47 @@
         "n": 1,
         "m": 0
       },
-      "counterexample_explanation": "1 ||| 0 (bitwise OR) = 1, and 1 &&& 0 (bitwise AND) = 0. 1 ≠ 0, so the substituted-operator equality fails. (The original statement compares n ||| m to m ||| n, i.e. commutativity of OR, which this witness does not bear on.)",
+      "counterexample_explanation": "1 ||| 0 (bitwise OR) = 1, and 1 &&& 0 (bitwise AND) = 0. 1 \u2260 0, so the substituted-operator equality fails. (The original statement compares n ||| m to m ||| n, i.e. commutativity of OR, which this witness does not bear on.)",
       "verified_value": {
         "1|0": 1,
         "1&0": 0
+      }
+    },
+    {
+      "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
+      "partition": "train",
+      "family": "integer-fibonacci",
+      "mutation_of": "F:ml430-int-fib-eq-zero-8193c7cb",
+      "formal_statement": "\u2200 {n : \u2124}, Int.fib n = 0 \u2194 n = 0 \u2228 n = 1",
+      "mutation_kind": "boundary-widening-biconditional",
+      "claim": "false",
+      "check_kind": "fib_widened",
+      "witness": {
+        "n": 1
+      },
+      "counterexample_explanation": "For nonnegative n, Int.fib n = Nat.fib n (the standard extension only changes the sign convention for negative n), so at n = 1 this is the same failure as the Nat.fib mutation: fib(1) = 1 \u2260 0 while n = 1 makes the widened right side true.",
+      "verified_value": {
+        "nat_fib(1)": 1
+      }
+    },
+    {
+      "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+      "partition": "train",
+      "family": "integer-modular-equivalence",
+      "mutation_of": "F:ml430-int-modeq-symm-984a6e67",
+      "formal_statement": "\u2200 {n a b : \u2124}, b \u2261 a [ZMOD n]",
+      "mutation_kind": "premise-removal",
+      "claim": "false",
+      "check_kind": "modeq_premise_removed",
+      "witness": {
+        "n": 2,
+        "a": 0,
+        "b": 1
+      },
+      "counterexample_explanation": "The premise 'a \u2261 b [ZMOD n]' was removed, leaving an unconditional claim that ALL a, b are congruent mod every n. At n = 2, a = 0, b = 1: a % n = 0 and b % n = 1, which differ, so b \u2261 a [ZMOD 2] is false.",
+      "verified_value": {
+        "0 % 2": 0,
+        "1 % 2": 1
       }
     },
     {
@@ -146,7 +146,7 @@
         "a": 0,
         "b": 0
       },
-      "counterexample_explanation": "Nat.Coprime a b is defined as gcd a b = 1. gcd(0, 0) = 0 by the standard convention (gcd 0 n = n), and 0 ≠ 1, so Nat.Coprime 0 0 is false. (The un-mutated original states the negation, ¬Nat.Coprime 0 0, which this same fact confirms.)",
+      "counterexample_explanation": "Nat.Coprime a b is defined as gcd a b = 1. gcd(0, 0) = 0 by the standard convention (gcd 0 n = n), and 0 \u2260 1, so Nat.Coprime 0 0 is false. (The un-mutated original states the negation, \u00acNat.Coprime 0 0, which this same fact confirms.)",
       "verified_value": {
         "nat_gcd(0,0)": 0
       }
@@ -156,7 +156,7 @@
       "partition": "development",
       "family": "natural-modular-equivalence",
       "mutation_of": "F:ml430-nat-modeq-symm-0a3d4d18",
-      "formal_statement": "∀ {n a b : ℕ}, b ≡ a [MOD n]",
+      "formal_statement": "\u2200 {n a b : \u2115}, b \u2261 a [MOD n]",
       "mutation_kind": "premise-removal",
       "claim": "false",
       "check_kind": "modeq_premise_removed",
@@ -165,18 +165,34 @@
         "a": 0,
         "b": 1
       },
-      "counterexample_explanation": "Same shape as the Int.ModEq.symm mutation, over ℕ instead of ℤ: the premise was removed, and at n = 2, a = 0, b = 1, a % n = 0 while b % n = 1, so b ≡ a [MOD 2] is false.",
+      "counterexample_explanation": "Same shape as the Int.ModEq.symm mutation, over \u2115 instead of \u2124: the premise was removed, and at n = 2, a = 0, b = 1, a % n = 0 while b % n = 1, so b \u2261 a [MOD 2] is false.",
       "verified_value": {
         "0 % 2": 0,
         "1 % 2": 1
       }
     },
     {
+      "fact_id": "F:ml430-mutation-e8583599cfae2d40cefae3f0",
+      "partition": "development",
+      "family": "natural-logarithm",
+      "mutation_of": "F:ml430-nat-log-le-self-da387172",
+      "formal_statement": "\u2200 (b x : \u2115), Nat.log b x < x",
+      "mutation_kind": "conclusion-strengthened",
+      "claim": "false",
+      "check_kind": "log_conclusion_strengthened",
+      "witness": {
+        "b": 2,
+        "x": 0
+      },
+      "counterexample_explanation": "Nat.log b 0 = 0 for every b (the definition returns 0 when n < b, and 0 < b for any b >= 1; for b <= 1 it returns 0 outright). So the conclusion reads 0 < 0, which is false. The parent F:ml430-nat-log-le-self states Nat.log b n <= n, which holds at n = 0 as 0 <= 0 -- strengthening <= to < is exactly what breaks it.",
+      "verified_value": false
+    },
+    {
       "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
       "partition": "development",
       "family": "natural-binomial",
       "mutation_of": "F:ml430-nat-choose-self-25bb9fb8",
-      "formal_statement": "∀ (n : ℕ), n.choose n = 0",
+      "formal_statement": "\u2200 (n : \u2115), n.choose n = 0",
       "mutation_kind": "polarity-reversal",
       "claim": "false",
       "check_kind": "choose_self_polarity_reversed",
