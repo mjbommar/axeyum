@@ -69,7 +69,7 @@ fn even_zero(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
 
 /// `Iff A B` when both `A` and `B` are already proved true — ignore the
 /// hypothesis on each side and hand back the other side's proof.
-fn iff_of_true_true(
+pub(super) fn iff_of_true_true(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     a_ty: ExprId,
@@ -87,7 +87,7 @@ fn iff_of_true_true(
 
 /// `Iff A B` when both `A` and `B` are already refuted — from either
 /// hypothesis, derive `False` via the OTHER side's refutation and eliminate.
-fn iff_of_false_false(
+pub(super) fn iff_of_false_false(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     a_ty: ExprId,
@@ -122,7 +122,7 @@ fn iff_of_false_false(
 }
 
 /// `h1 : Iff A B, h2 : Iff B C  ⊢  Iff A C`.
-fn iff_trans(
+pub(super) fn iff_trans(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     a_ty: ExprId,
@@ -154,7 +154,13 @@ fn iff_trans(
 }
 
 /// `h : Iff A B  ⊢  Iff B A`.
-fn iff_symm(d: &mut NatDev<'_>, p: &NatPrelude, a_ty: ExprId, b_ty: ExprId, h: ExprId) -> ExprId {
+pub(super) fn iff_symm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a_ty: ExprId,
+    b_ty: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = *p;
     let mp = d.const_app(p.logic.iff_mpr, &[a_ty, b_ty, h]);
     let mpr = d.const_app(p.logic.iff_mp, &[a_ty, b_ty, h]);

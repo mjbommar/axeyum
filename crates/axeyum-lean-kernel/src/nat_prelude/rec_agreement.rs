@@ -98,7 +98,7 @@ use crate::name::NameId;
 /// `bitwise`'s alike — see `land.rs`'s module doc for why it is load-bearing
 /// there. Here it only has to *match*, which it does on both sides, so the
 /// scaffolding never needs rewriting: only `recursive` and `bit` move.
-fn guarded(
+pub(super) fn guarded(
     d: &mut NatDev<'_>,
     m: ExprId,
     n: ExprId,
