@@ -151,6 +151,21 @@ a no-op because `{}` is falsy. Corrected; it kills 15.
     CONTROL_REGISTRATION|controls=31|orphans=0|py_orphans=0
     ADR_INDEX|rows=619|curated_summaries=524|duplicate_numbers=0166,0167
 
+`scripts/check-fast.sh` exits 1, and it does so **independently of this lane**.
+A/B against the merge base `c7b22c5dd` in a detached worktree:
+
+    failing checks in this tree  42
+    failing checks at the base   43
+    failing ONLY in this tree     0
+
+The one check that differed between the two captured logs,
+`control-tests-reachable-controls`, fails **identically in both** when run
+directly (`AssertionError: 15 != 16`, the same numbers), so the log difference
+was a capture artifact rather than a change. Its assertion asks for
+`ORPHAN_BASELINE` to be lowered to 15; that gain belongs to whoever earned it
+and is deliberately not taken here, since lowering a baseline this lane did not
+move could mask another lane's in-flight work.
+
 No new script needs registering: both guards extend scripts already wired into
 `check.sh` and the justfile, so `check-aggregate-scope.sh` is unaffected. The
 measurement and mutation helpers are deliberately **not** under `scripts/tests/`
