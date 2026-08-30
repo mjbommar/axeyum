@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-thales-cofactor-identity-kernel-checked",
+  "title": "The Thales certificate's cofactor identity is kernel-reconstructed at symbolic coordinates -- and it is disclosed here as REFL-SHAPED, not a genuine combination",
+  "statement": "For the six-variable polynomial identity F:geometry-thales-right-angle-in-semicircle's certificate states -- conclusion = 1*generator_0 over the coordinates ax, ay, bx, by, cx, cy -- the identity itself is reconstructed through crate::Kernel::add_declaration at SYMBOLIC coordinates (six universally quantified Rat variables), not merely checked inside axeyum-cas's own MvPoly normal form. UNLIKE the orthocentre sibling this fact otherwise mirrors, this certificate's single generator is BYTE-IDENTICAL to its conclusion polynomial (same 8 terms, same coefficients) and its cofactor is the constant 1, so the kernel obligation degenerates to poly_expr(concl) = Rat.ofInt 1 * poly_expr(hyp) where concl and hyp build the SAME term -- a mul_one shaped fact true of ANY polynomial, not specific to this geometry. The substantive claim that these two independently-derived geometric predicates (C on the circle with diameter AB; CA perpendicular to CB) reduce to the identical polynomial is checked ONLY at the Rust level, by an assert_eq! in the translator test, never by add_declaration. What add_declaration DOES independently confirm: that the translator's 8-term, 6-variable transcription of the certificate is a well-typed Rat expression obeying left_distrib/mul_assoc/Rat.ofInt_mul -- the same assurance floor every sibling bridge in this family rests on, without orthocentre's additional additive-combination content (16 terms merging to 8 with real cancellation). This fact is registered anyway because it is not content-free the way a hypothetical varignon sibling would be (see that certificate's own artifact: zero coordinates, zero generators, an already-empty conclusion polynomial) -- it does exercise the translator on a real six-variable, eight-term, degree-2 polynomial drawn from the certificate, and add_declaration does independently re-derive a well-typed Rat identity from it.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (forall ((ax Rat) (ay Rat) (bx Rat) (by Rat) (cx Rat) (cy Rat))\n  (= (+ (* ax bx) (* -1 ax cx) (* ay by) (* -1 ay cy)\n        (* -1 bx cx) (* -1 by cy) (* cx cx) (* cy cy))\n     (* 1 (+ (* ax bx) (* -1 ax cx) (* ay by) (* -1 ay cy)\n             (* -1 bx cx) (* -1 by cy) (* cx cx) (* cy cy))))))",
+    "fragment": "nra-geometry-cofactor-identity",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:geometry-thales-right-angle-in-semicircle"
+  ],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a Kernel::add_declaration acceptance whose axiom_footprint is asserted EMPTY in the test itself, built from rat_prelude/int_prelude/nat_prelude constants that are all measured axiom-free -- but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane: RELOCATED, NOT DISCHARGED. The kernel sees six Rat variables and an algebraic identity. That ax is the abscissa of A, that the eight-term polynomial IS |OC|^2 - |OA|^2 with O the midpoint of AB, and that the same polynomial also encodes CA.CB, are modelling choices made in axeyum_cas::geometry_corpus::thales and reproduced verbatim by this bridge's translator. Reconstruction moves that assumption from a CAS-internal convention into a kernel definition choice; it does not remove it.",
+    "geometry.implication-not-discharged: this fact states the polynomial IDENTITY conclusion = 1*generator_0. It does NOT state the implication (generator_0 = 0) implies conclusion = 0. That step is one Rat rewrite away and is not taken here.",
+    "geometry.characteristic-zero-specialisation: inherited unchanged from F:geometry-thales-right-angle-in-semicircle. A rational-coefficient identity holds in every Q-algebra; this reconstruction is over Rat, not over CReal, so nothing here says the coordinates are real numbers.",
+    "cas.thales-cofactor-is-refl-shaped-not-a-genuine-combination: THE PRIMARY DISCLOSURE FOR THIS FACT, spelled out in full in the statement field and in this module's test doc comments. The certificate's single generator is byte-identical (same IntPoly, hence the same kernel ExprId once translated) to its conclusion polynomial, and the cofactor is the constant 1. The kernel obligation is therefore poly_expr(X) = Rat.ofInt 1 * poly_expr(X) for one specific X -- a mul_one-shaped ring fact that holds for EVERY polynomial, not one that discriminates Thales' theorem from any other. The genuinely geometric coincidence -- that 'C on the circle' and 'CA perp CB' expand to the identical polynomial -- is verified by a plain Rust assert_eq! on two IntPoly values in translator_reads_the_thales_certificate_the_cas_produced, never inside add_declaration. Contrast F:geometry-orthocentre-cofactor-identity-kernel-checked, whose two generators are genuinely DIFFERENT polynomials additively combined with real cancellation (16 terms in, 8 out) -- that reconstruction's kernel obligation is not refl-shaped in this sense.",
+    "cas.multivariate-bridge-covers-constant-cofactors-and-integer-coefficients-only: the proof-emitting normalizer this fact reuses unchanged handles a LINEAR combination of canonical sums over an ordered monomial basis; it does not multiply two non-constant polynomials and its translator declines any non-integer coefficient."
+  ],
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-thales-cofactor-identity",
+      "kind": "kernel-term",
+      "supports": "conclusion = 1*generator_0 at six universally quantified Rat coordinates, admitted by crate::Kernel::add_declaration as Check.geometry_thales_cofactor_identity. The polynomials are NOT hand-copied: the test calls axeyum_cas::geometry_corpus::corpus() for the thales-right-angle-in-semicircle problem, runs axeyum_cas::geometry_certify::certify on it, and translates cert.generators[0] / cert.conclusions[0].poly / cert.conclusions[0].cofactors -- asserting first that the single cofactor is the CONSTANT 1 and that the coordinate ORDER is the certificate's own. The proof is emitted by the SAME Rust-side normalizer used for orthocentre (prove_scale; prove_merge is never reached because there is only one generator), whose every step is a Rat ring lemma (left_distrib, mul_assoc, mul_zero, Rat.ofInt_mul); the kernel re-derives all of them. The declaration's axiom_footprint is asserted EMPTY and its kind asserted Declaration::Theorem in the same test. Read this fact's own axiom_footprint entry cas.thales-cofactor-is-refl-shaped-not-a-genuine-combination before treating this as evidence of the same strength as orthocentre's.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (untrusted producer: cofactor-tracked Buchberger reduction that finds the cofactor; this bridge never recomputes it)",
+        "rat_prelude::cas_geometry_bridge_tests::prove_scale (the proof-emitting normalizer, entirely Rust-side and entirely untrusted -- it only proposes a term)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated six-variable Eq Rat from the supplied proof term, and supplies the axiom_footprint the test asserts empty)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_bridge_tests::tests::geometry_thales_cofactor_identity_kernel_checked -- --exact 2>/dev/null | /usr/bin/grep -cE '^test rat_prelude::cas_geometry_bridge_tests::tests::geometry_thales_cofactor_identity_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 8,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs",
+      "notes": "Measured wall-clock 7.60s standalone (7.57s for the module's 5 tests together, this host, uncontended through scripts/cargo-serialized.sh) -- cheaper than orthocentre's 8.14s/152.79s-class siblings, as expected: prove_const_combination's recursion terminates after a single prove_scale call and never reaches add_poly/prove_merge's cancellation branch, because there is exactly one generator."
+    },
+    {
+      "id": "translator-checked-against-numbers-thales",
+      "kind": "instance-pin",
+      "supports": "That the translator read the certificate the CAS actually produced. Both the hypothesis and conclusion polynomials are evaluated at the certificate's own generic witness (the unit semicircle A=(-1,0), B=(1,0), C=(0,1), where both vanish) and at a point OFF the circle (C=(0,2)) where both take the SAME value, 3, independently hand-computed from the certificate's raw coefficient list -- a translator bug that silently produced the empty (always-zero) polynomial, or mis-signed/dropped a term, cannot pass. The genuinely geometric fact this fact's axiom_footprint discloses as un-kernel-checked -- that the hypothesis and conclusion polynomials are byte-identical -- is asserted here via assert_eq! on the two IntPoly values, which is the ONLY place in this fact's evidence that check runs.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (produces the MvPoly values being read)",
+        "rat_prelude::cas_geometry_bridge_tests::eval_int_poly (independent integer evaluation, used only in the test and never in a proof)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_bridge_tests::tests::translator_reads_the_thales_certificate_the_cas_produced -- --exact 2>/dev/null | /usr/bin/grep -cE '^test rat_prelude::cas_geometry_bridge_tests::tests::translator_reads_the_thales_certificate_the_cas_produced \\.\\.\\. ok$'",
+      "checker_seconds": 8,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs",
+      "notes": "The off-circle value (3) was hand-computed from the certificate's own coefficient list (ax*bx - ax*cx + ay*by - ay*cy - bx*cx - by*cy + cx^2 + cy^2 at ax=-1,ay=0,bx=1,by=0,cx=0,cy=2) before running the test, following CLAUDE.md's rule that only evaluation catches a wrong hand-computed expectation."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane cas-thales-varignon: rat_prelude::cas_geometry_bridge_tests (crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs), dispatched against docs/plan/status/327-cas-geometry-pair.md's next-cheapest-target measurement",
+    "source": "the cofactor identity of axeyum_cas::geometry_corpus::thales's certificate, produced by axeyum_cas::geometry_certify::certify and committed at artifacts/geometry-certificates/thales-right-angle-in-semicircle.json",
+    "prior_art": [
+      {
+        "who": "Hilbert; Wu Wen-Tsun; Buchberger",
+        "what": "the Nullstellensatz cofactor form of a geometry theorem, and its mechanisation by characteristic sets / Groebner bases",
+        "year": 1978,
+        "where": "Wu, 'On the decision problem and the mechanization of theorem-proving in elementary geometry', Sci. Sinica 21 (1978)",
+        "attribution": "standard attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:geometry-thales-right-angle-in-semicircle, not an edit to it, for the same reason every other cas-certificate-family reconstruction is a sibling: folding this evidence into the parent would make scripts/validate-facts.py's classify_cas_certificate_fact label the WHOLE certificate -- coordinatisation and implication included -- as kernel-reconstructed. THE HARD LOOK THIS FACT RECORDS: the orthocentre sibling fact's own notes field already flagged, before this lane started, that 'thales' single cofactor is the constant 1 against a conclusion byte-identical to its generator, so the kernel obligation there is refl.' This lane verified that characterisation is correct (see the axiom_footprint entry cas.thales-cofactor-is-refl-shaped-not-a-genuine-combination) and registered this fact anyway, because unlike varignon-midpoint-parallelogram's certificate (zero coordinates, zero generators, an already-empty conclusion polynomial -- see cas_geometry_bridge_tests.rs's module doc for why NO sibling fact was registered for that one), Thales's certificate still carries a real six-variable, eight-term, degree-two polynomial that the translator must transcribe correctly and that add_declaration independently re-derives as a well-typed Rat ring identity. The distinction between 'refl-shaped but non-empty' (Thales, registered with full disclosure) and 'genuinely empty' (Varignon, not registered at all) is the substance of docs/plan/status/332-cas-thales-varignon.md."
+}
