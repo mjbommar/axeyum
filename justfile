@@ -378,6 +378,20 @@ facts:
     # ...and its controls: 17 cases, then 15 guard deletions each required to
     # kill EXACTLY ONE.
     bash scripts/tests/test-trust-closure.sh
+    # S6 of the same roadmap (ADR-0785): a fault-injectable two-phase-commit
+    # transaction over a fixture ledger (facts/pins/graph/dashboards/receipts).
+    # Runs a crash-boundary sweep -- one full transaction is executed to count
+    # every low-level write op (26, currently), then re-run once per op with a
+    # fault injected at that exact op, and the recovered state must match
+    # byte-for-byte OLD or NEW, never neither -- plus four staleness fixtures
+    # (receipt pointer, source, graph, checker version) each rejecting with
+    # its OWN exception class, a fresh-read demonstration, and an
+    # idempotent-replay check. Fails closed on an empty sweep or fixture set.
+    python3 scripts/check-credit-transaction.py
+    # ...its own test suite (27 tests) and mutation table: 9 guard deletions
+    # in a SCRATCH COPY, each required to kill EXACTLY its own canary.
+    python3 scripts/tests/test-credit-transaction.py
+    bash scripts/tests/test-credit-transaction-mutations.sh
     # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so
     # the Mathlib proposition lives only in `formal.statement`. Nineteen had it
     # overwritten with our own `render_lean` output, and the mirror claim -- "we
