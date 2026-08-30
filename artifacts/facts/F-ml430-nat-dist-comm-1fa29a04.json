@@ -5,16 +5,51 @@
   "statement": "The proposition declared as `Nat.dist_comm` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "∀ (n m : ℕ), n.dist m = m.dist n",
+    "statement": "\u2200 (n m : \u2115), n.dist m = m.dist n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-comm-56a2d614"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.dist_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_comm",
+      "supports": "\u2200 (n m : \u2115), n.dist m = m.dist n",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dist_comm 2>/dev/null | grep -Ec '^Nat\\.dist_comm[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.dist_comm` through the trusted `Kernel::add_declaration` gate (`nat_prelude/dist.rs`), proved by `add_comm` on the two truncated subtractions -- `dist n m` and `dist m n` are definitionally `add(sub n m, sub m n)` and `add(sub m n, sub n m)`, so commutativity of `dist` is exactly commutativity of `add` applied to those two terms. `nat_theorem_inventory`'s rendered type `((x0:AxNat)->((x1:AxNat)->Eq.{1} AxNat (AxNat.dist x0 x1) (AxNat.dist x1 x0)))` matches this fact's `formal.statement`. Anchored with `^Nat\\.dist_comm[[:space:]]` so a sibling name cannot satisfy this row; `nat_theorem_inventory` exits non-zero for a name that does not exist and `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.dist_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_comm",
+      "supports": "dist(3,5) = dist(5,3) = 2, and BOTH symbolically (free n,m) and at this concrete, non-symmetric pair -- covered by nat_prelude_tests::dist_theorems_apply_at_free_variables_and_concrete_instances and dist_evaluates_correctly.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::dist_theorems_apply_at_free_variables_and_concrete_instances nat_prelude::nat_prelude_tests::dist_evaluates_correctly",
+      "checkers": [
+        "Kernel::infer_in",
+        "Kernel::def_eq"
+      ],
+      "notes": "`dist_theorems_apply_at_free_variables_and_concrete_instances` applies `dist_comm` at a genuinely free `(n, m)` pushed into an explicit `LocalContext` and confirms the inferred type is `Eq (dist n m) (dist m n)`, not merely that SOME type-checks. `dist_evaluates_correctly` confirms `dist 3 5` and `dist 5 3` both reduce to `2` and NOT to `0` (the value a dropped-reverse-subtraction bug would give)."
+    },
+    {
+      "id": "footprint-Nat.dist_comm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.dist_comm`'s footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane draw9-first-theorems, reconciled against pre-existing nat_prelude/dist.rs",
     "source": "statement-only extraction of `Nat.dist_comm` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +61,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum: `Nat.dist_comm` (`nat_prelude/dist.rs`), declared alongside `Nat.dist` by the `nat-dist-nth` lane (2026-08-30, `docs/plan/status/348-nat-dist-nth.md`) but not yet reconciled to this ml430 mirror. `Nat.dist n m := add (sub n m) (sub m n)` over our own `Nat.sub`/`Nat.add` -- the SAME definition Mathlib.Data.Nat.Dist states, not merely a construction that agrees with it pointwise -- so flipping this mirror is honest under the mirror-flip criterion in CLAUDE.md. This lane confirmed the rendered type matches `formal.statement` and closed the fact by evidence only; no new proof was written.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

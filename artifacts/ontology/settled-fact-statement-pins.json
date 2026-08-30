@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1294,
+    "min_identity_bound": 1296,
     "max_header_exempt": 30
   },
   "amendments": [
@@ -8187,6 +8187,18 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-dist-comm-1fa29a04",
+      "language": "lean4-surface",
+      "statement_sha256": "787eae9a8b1e8021fa782e572435af93daec6296a271d0f180343540a17736fd",
+      "prose_sha256": "f92599066c5c5d15ce8109ec3b543bcddf233c76c4d638d1659acba800bc23a1"
+    },
+    {
+      "fact_id": "F:ml430-nat-dist-self-0cfa5426",
+      "language": "lean4-surface",
+      "statement_sha256": "e58e4dcc33014734333c3d8513941f8c3929ffb7d9803bb461e104af8f5342ac",
+      "prose_sha256": "152ad11480fd6417567f9f687e39b4ba2832a25f05f5c479fbafb9c480e558c9"
+    },
+    {
       "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
       "language": "lean4-surface",
       "statement_sha256": "6ecc5bde1aae84ea0b26c0c136fcd488204b5b19bde1361ee3b8e4f6be44dfeb",
@@ -11072,6 +11084,13 @@
       "kernel_theorem": "Nat.mod_eq_iff_div_mod_remainder_eq"
     },
     {
+      "fact_id": "F:nat-mod-eq-iff-mod-eq",
+      "language": "lean4",
+      "statement_sha256": "423b63a4121c0934269f369d4d61b92724efb50ed1b3ebe82772e511b61cb6dc",
+      "prose_sha256": "2020e2af00e6f49dae4a403ef9da2a3c9c91e3cdc1238f815dea9da2a5a6c132",
+      "kernel_theorem": "Nat.mod_eq_iff_mod_eq"
+    },
+    {
       "fact_id": "F:nat-mod-eq-mul",
       "language": "lean4",
       "statement_sha256": "8ea96f819e19264497d76c132078ce0acfcbf82fede3ee9dfd3b1c2640db457a",
@@ -11361,6 +11380,13 @@
       "language": "lean4",
       "statement_sha256": "92125266765535cd31901c5239b3c8bfe22b88318984aff912f456b549bf6e7d",
       "prose_sha256": "2a81877c904feaa3eed2ce6c246996bfdc2a3488ffef2355a864eddc070349b0"
+    },
+    {
+      "fact_id": "F:nat-not-prime-of-pow-mod-ne",
+      "language": "lean4",
+      "statement_sha256": "8f2e7e0daabb0adeb03d636898bb2ec4a89be1f4650f220dbc9a99568bf19049",
+      "prose_sha256": "203b63d49d9d138452ef4e4d2e0c03a01072128655160e87fab0753ae6fb6f4f",
+      "kernel_theorem": "Nat.not_prime_of_pow_mod_ne"
     },
     {
       "fact_id": "F:nat-not-succ-le-self",
