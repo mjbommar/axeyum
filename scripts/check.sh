@@ -1228,6 +1228,13 @@ step tock-log2-cache-v5-tests   python3 -m unittest scripts.tests.test_prepare_t
 # the "genuinely useful but never wired up" case CLAUDE.md warns is a gate
 # waiting to be registered, not a deletion candidate, and each ran clean when
 # tested standing them up here.
+# ADR-0623. The gate's own per-step caps, proved to FIRE rather than merely to
+# exist -- 8 cases / 19 assertions, ~90 s, no cargo. It is the time analogue of
+# `cargo-serialized.sh --self-check`: a cap nobody has watched bite is a cap you
+# do not have, and `check-fast.sh` shipped one for weeks that could not fire.
+# Registered here so a future edit cannot quietly drop `--kill-after` or the
+# group kill and stay green.
+step gate-step-timeout ./scripts/check-gate-step-timeout.sh
 step shared-index      ./scripts/check-shared-index.sh
 step sos-negative-controls ./scripts/check-sos-negative-controls.sh
 step evidence-portability  ./scripts/check-evidence-portability.sh
