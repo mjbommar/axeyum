@@ -218,8 +218,7 @@ pub(super) fn declare_gcd_dvd_mirrors(
                 let hyp_fv = d.fresh_fvar();
                 let modm0 = d.modulo(m, zero);
                 let mod_zero_m = d.lemma(p.mod_zero, &[m]); // eq(mod(m,0), m)
-                let iff_proof =
-                    pred_iff_of_eq(d, &p, modm0, m, mod_zero_m, &|d, x| d.dvd(k, x));
+                let iff_proof = pred_iff_of_eq(d, &p, modm0, m, mod_zero_m, &|d, x| d.dvd(k, x));
                 d.lam_fv(hyp_fv, dvd_k_zero_ty, iff_proof)
             },
             &|d, j, _ih| d.lemma(p.dvd_mod_iff, &[k, j, m]),
@@ -379,7 +378,14 @@ pub(super) fn declare_gcd_dvd_mirrors(
                 let congr_q = d.congr(quotient, zero, heq, &|d, x| d.mul(x, n));
                 let zero_mul_n = d.lemma(p.zero_mul, &[n]); // eq(zero_product, zero)
                 let cancel_symm = d.symm(product, m, cancel); // eq(m, product)
-                let (_, m_eq_zero) = d.chain(m, &[(product, cancel_symm), (zero_product, congr_q), (zero, zero_mul_n)]);
+                let (_, m_eq_zero) = d.chain(
+                    m,
+                    &[
+                        (product, cancel_symm),
+                        (zero_product, congr_q),
+                        (zero, zero_mul_n),
+                    ],
+                );
                 let motive = d.eq_motive(m, &|d, x| d.lt(zero, x));
                 let lt_zero_zero = d.transport(m, motive, pos_m, zero, m_eq_zero);
                 let contra = d.lemma(p.not_lt_zero, &[zero]); // Not (lt zero zero)
