@@ -84,7 +84,25 @@ fn two_x_eq_one_reconstructs_to_false() {
     // the 64 MB safety cap in `scripts/check-lra-hypothesis-binding.py`, which
     // that gate was crashing on deterministically. Compact renders it at
     // 2,268,010 bytes.
-    lean_golden::assert_golden_module("diophantine", &source, (232_150, 0x96fe_a630_1de2_c779));
+    // RE-PINNED 2026-08-30, SAME LENGTH, DIFFERENT HASH: +0 bytes, and the
+    // reason is a pure PERMUTATION rather than any change to proof text.
+    // Dumping the rendered module at the previous pin commit (`a7d555e59`) and
+    // at HEAD and diffing showed exactly eight differing lines -- `def Int.le`
+    // and `def Int.lt`, byte-identical, moved from ~line 171 up to ~line 127,
+    // directly after `inductive Int`. Sorting both files gives IDENTICAL
+    // output, so nothing else moved and no character changed.
+    //
+    // Cause: `a70e2dc4d` (four Int order-coercion mirrors) and `07c9c9f09`
+    // (the sign-of-a-product family) added declarations that reference
+    // `Int.le`/`Int.lt`, which pulls both earlier in the dependency-ordered
+    // emission. Emitting a `def` EARLIER is always safe in Lean -- a
+    // definition must precede its uses, never follow them -- and the real-Lean
+    // check below re-verifies the module rather than taking that on argument.
+    //
+    // Worth knowing for the next mover: a `+0 bytes` delta on this pin is the
+    // signature of a reordering, not an edit. Diff two dumps before assuming a
+    // proof changed; `sort | cmp` answers "permutation or not" in one command.
+    lean_golden::assert_golden_module("diophantine", &source, (232_150, 0xa19c_c777_e9d8_eddb));
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
         ProofFragment::Diophantine
