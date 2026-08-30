@@ -213,6 +213,7 @@ mod totient_lemmas;
 mod totient_mul;
 mod totient_mul_coprime;
 mod totient_multiplicative;
+mod totient_prime_pow;
 pub(crate) mod transposition;
 mod vandermonde;
 mod xor;
@@ -361,6 +362,7 @@ use totient_lemmas::{
 use totient_mul::declare_totient_mul_all;
 use totient_mul_coprime::{declare_coprime_mul_iff, declare_gcd_mod_left_eq_gcd};
 use totient_multiplicative::{declare_coprime_mul_of_coprime, declare_gcd_comm};
+use totient_prime_pow::declare_totient_prime_pow_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
     declare_transposition_injective, declare_transposition_involutive,
@@ -1950,6 +1952,65 @@ pub struct NatPrelude {
     /// [`count_range_product`](Self::count_range_product) (Fubini, also
     /// unconditional).
     pub totient_mul_of_coprime: NameId,
+
+    // --- `totient_prime_pow.rs`: the totient at a prime power ---------------
+    /// `Nat.countRange_const_true : ∀ n, Eq Nat (countRange (fun _ => true) n) n`
+    /// — counting a predicate that is `true` everywhere over `[0,n)` gives
+    /// `n`. The trivial `countRange` companion that did not exist; a three-line
+    /// induction over
+    /// [`count_range_succ_of_true`](Self::count_range_succ_of_true), whose
+    /// `f k = true` hypothesis is `Eq.refl true` for a constant predicate.
+    /// Collapses the block-count factor
+    /// [`count_range_product`](Self::count_range_product) leaves behind.
+    pub count_range_const_true: NameId,
+    /// `Nat.coprime_mul_iff_of_dvd : ∀ k m e, Dvd e m →
+    /// Iff (Eq (gcd k (mul m e)) 1) (Eq (gcd k m) 1)` — when `e ∣ m`,
+    /// multiplying the modulus by `e` does not change which residues are
+    /// coprime to it. Forward is
+    /// [`coprime_mul_iff`](Self::coprime_mul_iff)'s `mp` projected left (that
+    /// direction is unconditional); backward is its `mpr` with
+    /// [`coprime_of_dvd_right`](Self::coprime_of_dvd_right) supplying
+    /// `gcd k e = 1`, and that is the ONLY place `e ∣ m` is spent.
+    /// Load-bearing: the `Iff` fails at 165 non-dividing pairs with
+    /// `1 ≤ m,e ≤ 15` (`scripts/tests/check-totient-prime-power-numerics.py`,
+    /// check `3N`).
+    pub coprime_mul_iff_of_dvd: NameId,
+    /// `Nat.totient_mul_of_dvd : ∀ m e, Dvd e m →
+    /// Eq Nat (totient (mul m e)) (mul (totient m) e)` — the non-coprime
+    /// counting law (`totient_prime_pow.rs`). **No primality, no positivity,
+    /// no factorization**; the hypothesis is `e ∣ m` and nothing more, and it
+    /// is genuinely load-bearing (the identity fails at 493 non-dividing pairs
+    /// with `1 ≤ m,e ≤ 25`, smallest `(1,2)`: `φ(2) = 1` against
+    /// `φ(1)·2 = 2`). Proved by
+    /// [`coprime_mul_iff_of_dvd`](Self::coprime_mul_iff_of_dvd) under
+    /// [`count_range_congr`](Self::count_range_congr), then
+    /// [`count_range_product`](Self::count_range_product) at block width `m`
+    /// and block count `e`, then
+    /// [`count_range_const_true`](Self::count_range_const_true). Nothing here
+    /// runs an induction: `countRange_product` already did.
+    pub totient_mul_of_dvd: NameId,
+    /// `Nat.totient_pow_succ_of_prime : ∀ q j, Prime q →
+    /// Eq Nat (totient (pow q (succ j))) (mul (sub q 1) (pow q j))` — the
+    /// prime-power induction in the multiplicative form, which keeps
+    /// `Nat.sub`'s truncation out of the inductive step. The step is
+    /// [`totient_mul_of_dvd`](Self::totient_mul_of_dvd) at
+    /// `m := pow q (succ j)`, `e := q`, whose `Dvd q (pow q (succ j))`
+    /// obligation is [`dvd_mul_left`](Self::dvd_mul_left) because
+    /// `pow q (succ j)` is DEFINITIONALLY `mul (pow q j) q`.
+    /// **Primality is used in the base case only**, through
+    /// [`totient_prime`](Self::totient_prime).
+    pub totient_pow_succ_of_prime: NameId,
+    /// `Nat.totient_prime_pow : ∀ q j, Prime q →
+    /// Eq Nat (totient (pow q (succ j))) (sub (pow q (succ j)) (pow q j))`
+    /// — Euler's totient at a prime power, `φ(p^k) = p^k − p^(k−1)`,
+    /// stated at `succ j` rather than with a `Lt 0 k` hypothesis so `pow`'s
+    /// ι-equation fires syntactically. The subtractive form of
+    /// [`totient_pow_succ_of_prime`](Self::totient_pow_succ_of_prime), via
+    /// [`add_sub_cancel_left`](Self::add_sub_cancel_left) (the right-handed
+    /// `add_sub_cancel` does not exist here, hence an `add_comm` first).
+    /// FALSE at composite bases — 42 composite `(c,k)` pairs, smallest
+    /// `c = 4, k = 1` where `φ(4) = 2` and not `3`.
+    pub totient_prime_pow: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4584,6 +4645,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             crt_self_map_maps_into: kernel.name_str(nat, "crtSelfMap_mapsInto"),
             crt_self_map_injective_on: kernel.name_str(nat, "crtSelfMap_injectiveOn"),
             totient_mul_of_coprime: kernel.name_str(nat, "totient_mul_of_coprime"),
+            count_range_const_true: kernel.name_str(nat, "countRange_const_true"),
+            coprime_mul_iff_of_dvd: kernel.name_str(nat, "coprime_mul_iff_of_dvd"),
+            totient_mul_of_dvd: kernel.name_str(nat, "totient_mul_of_dvd"),
+            totient_pow_succ_of_prime: kernel.name_str(nat, "totient_pow_succ_of_prime"),
+            totient_prime_pow: kernel.name_str(nat, "totient_prime_pow"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -5545,6 +5611,20 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // and the `beq` bridges `eq_of_beq_eq_true`/`beq_eq_true_of_eq`/
         // `beq_eq_false_of_ne`. Nothing needs it, so it goes last.
         declare_totient_mul_all(&mut d, &p)?;
+        // `Nat.totient_prime_pow` and the counting law under it
+        // (`totient_prime_pow.rs`). Needs `Nat.totient_mul_of_dvd`'s own
+        // ingredients, all far above: `Nat.countRange_congr`/
+        // `countRange_product`/`countRange_succ_of_true`/`countRange_zero`
+        // (`declare_totient_all` and `count_range_permute.rs`),
+        // `Nat.div_mod_block`, `Nat.gcd_mod_left_eq_gcd`/`Nat.coprime_mul_iff`
+        // (`totient_mul_coprime.rs`), `Nat.coprime_of_dvd_right`,
+        // `Nat.totient_prime` (`declare_totient_all`), `Nat.dvd_mul_left`,
+        // `Nat.pow_succ`/`mul_assoc`/`mul_comm`/`add_comm`/`one_mul`/
+        // `mul_one`/`sub_succ`/`sub_zero`/`add_sub_cancel_left`, and the
+        // `beq` bridges. It does NOT need `declare_totient_mul_all`, but is
+        // placed after it because both are last and this one is the newer.
+        // Nothing needs it, so it goes last.
+        declare_totient_prime_pow_all(&mut d, &p)?;
         // Needs only `Nat.log` (`declare_log_all`, far above). Nothing needs
         // it, so it goes last.
         declare_log2_all(&mut d, &p)?;
