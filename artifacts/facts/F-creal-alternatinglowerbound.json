@@ -26,7 +26,9 @@
     "F:nat-add-comm",
     "F:nat-add-right-comm",
     "F:nat-even-or-odd",
-    "F:nat-succ-add"
+    "F:nat-succ-add",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "axiom_footprint": [],
   "evidence": [

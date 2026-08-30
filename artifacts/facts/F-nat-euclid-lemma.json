@@ -32,7 +32,9 @@
     "F:nat-mul-assoc",
     "F:nat-mul-comm",
     "F:nat-one-mul",
-    "F:nat-right-distrib"
+    "F:nat-right-distrib",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "evidence": [
     {

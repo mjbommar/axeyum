@@ -12,7 +12,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-add-comm"],
+  "depends_on": ["F:nat-add-comm", "F:ml430-nat-add-comm-56a2d614"],
   "evidence": [
     {
       "id": "kernel-Int.add_comm",

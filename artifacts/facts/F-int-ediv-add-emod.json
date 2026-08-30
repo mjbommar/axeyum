@@ -24,7 +24,9 @@
     "F:nat-div-mod-exec",
     "F:nat-mod-zero",
     "F:nat-zero-add",
-    "F:nat-zero-mul"
+    "F:nat-zero-mul",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "axiom_footprint": [],
   "evidence": [

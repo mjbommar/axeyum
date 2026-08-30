@@ -28,7 +28,9 @@
     "F:nat-add-zero",
     "F:nat-zero-add",
     "F:nat-mod-zero",
-    "F:nat-zero-lt-succ"
+    "F:nat-zero-lt-succ",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "evidence": [
     {

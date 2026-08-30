@@ -19,7 +19,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-add-comm",
-    "F:nat-le-of-add-le-add-left"
+    "F:nat-le-of-add-le-add-left",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "axiom_footprint": [],
   "evidence": [

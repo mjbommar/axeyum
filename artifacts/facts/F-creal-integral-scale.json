@@ -37,7 +37,9 @@
     "F:rat-neg-le-neg",
     "F:rat-neg-sub",
     "F:rat-sub-add-sub",
-    "F:rat-zero-le-natdivsucc"
+    "F:rat-zero-le-natdivsucc",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
   ],
   "axiom_footprint": [],
   "evidence": [

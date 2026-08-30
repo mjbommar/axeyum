@@ -128,6 +128,7 @@ use crate::PreludeValue;
 use crate::build_logic_prelude;
 use crate::name::NameId;
 
+mod add_basics;
 mod algebra;
 mod asc_factorial;
 mod base_induction;
@@ -206,6 +207,7 @@ mod xor_trichotomy;
 
 pub use ops::{NatDev, NatOps, NatState};
 
+use add_basics::declare_add_basics;
 use algebra::{
     declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
     declare_mul_no_zero_divisors, declare_multiplicative_theorems, declare_subtraction_theorems,
@@ -595,6 +597,34 @@ pub struct NatPrelude {
     pub add_right_cancel: NameId,
     /// `add_left_cancel : ∀ a b c, a + b = a + c → b = c`.
     pub add_left_cancel: NameId,
+    /// `add_add_add_comm : ∀ a b c d, add (add a b) (add c d) = add (add a c)
+    /// (add b d)`. `F:ml430-nat-add-add-add-comm-74d2c151`.
+    pub add_add_add_comm: NameId,
+    /// `add_eq : ∀ x y, add x y = add x y` — this prelude has no separate `+`
+    /// notation distinct from `Nat.add`, so Mathlib's `Nat.add_eq` (which
+    /// bridges `Nat.add x y` and `x + y`) closes here by `Eq.refl` on the one
+    /// function we have. `F:ml430-nat-add-eq-ab0eab69`.
+    pub add_eq: NameId,
+    /// `add_eq_left : ∀ a b, add a b = a ↔ b = 0`. `F:ml430-nat-add-eq-left-8e12789f`.
+    pub add_eq_left: NameId,
+    /// `add_eq_right : ∀ a b, add a b = b ↔ a = 0`. `F:ml430-nat-add-eq-right-9067eb1a`.
+    pub add_eq_right: NameId,
+    /// `add_eq_zero_iff : ∀ m n, add m n = 0 ↔ m = 0 ∧ n = 0` — the `Iff` form
+    /// Mathlib states (`Nat.add_eq_zero_iff`); [`Self::add_eq_zero`] is the
+    /// weaker mp-only arrow already declared for a different consumer, so this
+    /// is a distinct name rather than a replacement.
+    /// `F:ml430-nat-add-eq-64233539` (formal statement is the `Iff`).
+    pub add_eq_zero_iff: NameId,
+    /// `add_eq_one_iff : ∀ m n, add m n = 1 ↔ (m=0∧n=1) ∨ (m=1∧n=0)`.
+    /// `F:ml430-nat-add-eq-one-iff-f8463abc`.
+    pub add_eq_one_iff: NameId,
+    /// `add_eq_two_iff : ∀ m n, add m n = 2 ↔ (m=0∧n=2)∨(m=1∧n=1)∨(m=2∧n=0)`.
+    /// `F:ml430-nat-add-eq-two-iff-25385c65`.
+    pub add_eq_two_iff: NameId,
+    /// `add_eq_three_iff : ∀ m n, add m n = 3 ↔
+    /// (m=0∧n=3)∨(m=1∧n=2)∨(m=2∧n=1)∨(m=3∧n=0)`.
+    /// `F:ml430-nat-add-eq-three-iff-799a0a8f`.
+    pub add_eq_three_iff: NameId,
 
     // --- multiplicative theorems --------------------------------------------
     /// `zero_mul : ∀ (n : Nat), Eq Nat (mul zero n) zero`.
@@ -3690,6 +3720,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             succ_injective: kernel.name_str(nat, "succ_injective"),
             add_right_cancel: kernel.name_str(nat, "add_right_cancel"),
             add_left_cancel: kernel.name_str(nat, "add_left_cancel"),
+            add_add_add_comm: kernel.name_str(nat, "add_add_add_comm"),
+            add_eq: kernel.name_str(nat, "add_eq"),
+            add_eq_left: kernel.name_str(nat, "add_eq_left"),
+            add_eq_right: kernel.name_str(nat, "add_eq_right"),
+            add_eq_zero_iff: kernel.name_str(nat, "add_eq_zero_iff"),
+            add_eq_one_iff: kernel.name_str(nat, "add_eq_one_iff"),
+            add_eq_two_iff: kernel.name_str(nat, "add_eq_two_iff"),
+            add_eq_three_iff: kernel.name_str(nat, "add_eq_three_iff"),
             zero_mul: kernel.name_str(nat, "zero_mul"),
             succ_mul: kernel.name_str(nat, "succ_mul"),
             mul_comm: kernel.name_str(nat, "mul_comm"),
@@ -4304,6 +4342,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_zero_or_succ(&mut d, &p)?;
         declare_order_extra(&mut d, &p)?;
         declare_order_more(&mut d, &p)?;
+        declare_add_basics(&mut d, &p)?;
         declare_boolean_le(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
