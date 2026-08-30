@@ -500,6 +500,34 @@ print(f"carrier-asymmetry: {len(classes)} identity classes scanned")
 raise SystemExit(1 if problems else 0)
 PY
 
+# The carrier control needs the REAL environment. Capture it once here when the
+# caller has not supplied one, so `bash scripts/tests/test-trust-closure.sh`
+# with no setup still runs it; a capture that fails is reported as a SKIP, never
+# absorbed into a pass. `kernel_declaration_projection` is `--release` by its
+# own doc comment -- it builds `creal`/`complex`/`cpoint`, which overflow a
+# debug build's per-frame budget.
+if [ -z "${AXEYUM_TRUST_CLOSURE_PROJECTION:-}" ]; then
+  cat > "$WORK/capture_projection.py" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+spec = importlib.util.spec_from_file_location("tc", sys.argv[1])
+tc = importlib.util.module_from_spec(spec)
+sys.modules["tc"] = tc
+spec.loader.exec_module(tc)
+pathlib.Path(sys.argv[2]).write_text(tc.projection_rows(None), encoding="utf-8")
+PY
+  if python3 "$WORK/capture_projection.py" "$SUBJECT" "$WORK/projection.tsv" \
+      > "$WORK/capture.log" 2>&1; then
+    export AXEYUM_TRUST_CLOSURE_PROJECTION="$WORK/projection.tsv"
+  else
+    note "  NOTE could not capture a kernel_declaration_projection; the"
+    note "       carrier-asymmetry control will SKIP. Last lines:"
+    tail -5 "$WORK/capture.log" | sed 's/^/         /'
+  fi
+fi
+
 note "== baseline =="
 run_all_cases base
 BASE_PASS=$PASS
