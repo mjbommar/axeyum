@@ -1,0 +1,1659 @@
+{
+  "constants": {
+    "Int.ModEq.add_left": [
+      "HAdd.hAdd",
+      "Int",
+      "Int.ModEq",
+      "Int.instAdd",
+      "instHAdd"
+    ],
+    "Int.ModEq.add_left_cancel'": [
+      "HAdd.hAdd",
+      "Int",
+      "Int.ModEq",
+      "Int.instAdd",
+      "instHAdd"
+    ],
+    "Int.ModEq.dvd_iff": [
+      "Dvd.dvd",
+      "Iff",
+      "Int",
+      "Int.ModEq",
+      "Int.instDvd"
+    ],
+    "Int.ModEq.neg": [
+      "Int",
+      "Int.ModEq",
+      "Int.instNegInt",
+      "Neg.neg"
+    ],
+    "Int.ModEq.of_dvd": [
+      "Dvd.dvd",
+      "Int",
+      "Int.ModEq",
+      "Int.instDvd"
+    ],
+    "Int.ModEq.of_mul_left": [
+      "HMul.hMul",
+      "Int",
+      "Int.ModEq",
+      "Int.instMul",
+      "instHMul"
+    ],
+    "Int.ModEq.of_mul_right": [
+      "HMul.hMul",
+      "Int",
+      "Int.ModEq",
+      "Int.instMul",
+      "instHMul"
+    ],
+    "Int.ModEq.refl": [
+      "Int",
+      "Int.ModEq"
+    ],
+    "Int.ModEq.symm": [
+      "Int",
+      "Int.ModEq"
+    ],
+    "Int.ModEq.trans": [
+      "Int",
+      "Int.ModEq"
+    ],
+    "Int.add_modEq_left": [
+      "HAdd.hAdd",
+      "Int",
+      "Int.ModEq",
+      "Int.instAdd",
+      "instHAdd"
+    ],
+    "Int.add_modEq_right": [
+      "HAdd.hAdd",
+      "Int",
+      "Int.ModEq",
+      "Int.instAdd",
+      "instHAdd"
+    ],
+    "Int.dvd_of_dvd_mul_left_of_gcd_one": [
+      "Dvd.dvd",
+      "Eq",
+      "HMul.hMul",
+      "Int",
+      "Int.gcd",
+      "Int.instDvd",
+      "Int.instMul",
+      "Nat",
+      "OfNat.ofNat",
+      "instHMul",
+      "instOfNatNat"
+    ],
+    "Int.dvd_of_dvd_mul_right_of_gcd_one": [
+      "Dvd.dvd",
+      "Eq",
+      "HMul.hMul",
+      "Int",
+      "Int.gcd",
+      "Int.instDvd",
+      "Int.instMul",
+      "Nat",
+      "OfNat.ofNat",
+      "instHMul",
+      "instOfNatNat"
+    ],
+    "Int.fib_add": [
+      "Eq",
+      "HAdd.hAdd",
+      "HMul.hMul",
+      "HSub.hSub",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "Int.instMul",
+      "Int.instSub",
+      "OfNat.ofNat",
+      "instHAdd",
+      "instHMul",
+      "instHSub",
+      "instOfNat"
+    ],
+    "Int.fib_add_one": [
+      "Eq",
+      "HAdd.hAdd",
+      "HSub.hSub",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "Int.instSub",
+      "OfNat.ofNat",
+      "instHAdd",
+      "instHSub",
+      "instOfNat"
+    ],
+    "Int.fib_add_two": [
+      "Eq",
+      "HAdd.hAdd",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "OfNat.ofNat",
+      "instHAdd",
+      "instOfNat"
+    ],
+    "Int.fib_dvd": [
+      "Dvd.dvd",
+      "Int",
+      "Int.fib",
+      "Int.instDvd"
+    ],
+    "Int.fib_eq_fib_add_two_sub_fib_add_one": [
+      "Eq",
+      "HAdd.hAdd",
+      "HSub.hSub",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "Int.instSub",
+      "OfNat.ofNat",
+      "instHAdd",
+      "instHSub",
+      "instOfNat"
+    ],
+    "Int.fib_eq_zero": [
+      "Eq",
+      "Iff",
+      "Int",
+      "Int.fib",
+      "OfNat.ofNat",
+      "instOfNat"
+    ],
+    "Int.fib_gcd": [
+      "Eq",
+      "Int",
+      "Int.fib",
+      "Int.gcd",
+      "Nat.cast",
+      "instNatCastInt"
+    ],
+    "Int.fib_natCast": [
+      "Eq",
+      "Int",
+      "Int.fib",
+      "Nat",
+      "Nat.cast",
+      "Nat.fib",
+      "instNatCastInt"
+    ],
+    "Int.fib_neg": [
+      "Eq",
+      "Even",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "Int.instDecidablePredEven",
+      "Int.instNegInt",
+      "Neg.neg",
+      "ite"
+    ],
+    "Int.fib_of_nonneg": [
+      "Eq",
+      "Int",
+      "Int.fib",
+      "Int.instLEInt",
+      "Int.toNat",
+      "LE.le",
+      "Nat.cast",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instNatCastInt",
+      "instOfNat"
+    ],
+    "Int.fib_of_odd": [
+      "Eq",
+      "Int",
+      "Int.fib",
+      "Int.instSemiring",
+      "Int.natAbs",
+      "Nat.cast",
+      "Nat.fib",
+      "Odd",
+      "instNatCastInt"
+    ],
+    "Int.fib_two_mul": [
+      "Eq",
+      "HAdd.hAdd",
+      "HMul.hMul",
+      "HSub.hSub",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "Int.instMul",
+      "Int.instSub",
+      "OfNat.ofNat",
+      "instHAdd",
+      "instHMul",
+      "instHSub",
+      "instOfNat"
+    ],
+    "Int.fib_two_mul_add_one_pos": [
+      "HAdd.hAdd",
+      "HMul.hMul",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "Int.instLTInt",
+      "Int.instMul",
+      "LT.lt",
+      "OfNat.ofNat",
+      "instHAdd",
+      "instHMul",
+      "instOfNat"
+    ],
+    "Int.fib_two_mul_add_two": [
+      "Eq",
+      "HAdd.hAdd",
+      "HMul.hMul",
+      "Int",
+      "Int.fib",
+      "Int.instAdd",
+      "Int.instMul",
+      "OfNat.ofNat",
+      "instHAdd",
+      "instHMul",
+      "instOfNat"
+    ],
+    "Int.gcd_div": [
+      "Dvd.dvd",
+      "Eq",
+      "HDiv.hDiv",
+      "Int",
+      "Int.gcd",
+      "Int.instDiv",
+      "Int.instDvd",
+      "Int.natAbs",
+      "Nat",
+      "Nat.instDiv",
+      "instHDiv"
+    ],
+    "Int.gcd_div_gcd_div_gcd": [
+      "Eq",
+      "HDiv.hDiv",
+      "Int",
+      "Int.gcd",
+      "Int.instDiv",
+      "LT.lt",
+      "Nat",
+      "Nat.cast",
+      "OfNat.ofNat",
+      "instHDiv",
+      "instLTNat",
+      "instNatCastInt",
+      "instOfNatNat"
+    ],
+    "Int.gcd_eq_gcd_ab": [
+      "Eq",
+      "HAdd.hAdd",
+      "HMul.hMul",
+      "Int",
+      "Int.gcd",
+      "Int.gcdA",
+      "Int.gcdB",
+      "Int.instAdd",
+      "Int.instMul",
+      "Nat.cast",
+      "instHAdd",
+      "instHMul",
+      "instNatCastInt"
+    ],
+    "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left": [
+      "Eq",
+      "HMul.hMul",
+      "Int",
+      "Int.gcd",
+      "Int.instMul",
+      "Nat",
+      "Nat.cast",
+      "OfNat.ofNat",
+      "instHMul",
+      "instNatCastInt",
+      "instOfNatNat"
+    ],
+    "Int.gcd_eq_one_of_gcd_mul_right_eq_one_right": [
+      "Eq",
+      "HMul.hMul",
+      "Int",
+      "Int.gcd",
+      "Int.instMul",
+      "Nat",
+      "Nat.cast",
+      "OfNat.ofNat",
+      "instHMul",
+      "instNatCastInt",
+      "instOfNatNat"
+    ],
+    "Int.gcd_fib": [
+      "Eq",
+      "Int",
+      "Int.fib",
+      "Int.gcd",
+      "Nat",
+      "Nat.fib"
+    ],
+    "Int.gcd_greatest": [
+      "Dvd.dvd",
+      "Eq",
+      "Int",
+      "Int.gcd",
+      "Int.instDvd",
+      "Int.instLEInt",
+      "LE.le",
+      "Nat.cast",
+      "OfNat.ofNat",
+      "instNatCastInt",
+      "instOfNat"
+    ],
+    "Int.modEq_comm": [
+      "Iff",
+      "Int",
+      "Int.ModEq"
+    ],
+    "Int.modEq_neg": [
+      "Iff",
+      "Int",
+      "Int.ModEq",
+      "Int.instNegInt",
+      "Neg.neg"
+    ],
+    "Int.modEq_one": [
+      "Int",
+      "Int.ModEq",
+      "OfNat.ofNat",
+      "instOfNat"
+    ],
+    "Int.modEq_sub": [
+      "HSub.hSub",
+      "Int",
+      "Int.ModEq",
+      "Int.instSub",
+      "instHSub"
+    ],
+    "Int.mod_modEq": [
+      "HMod.hMod",
+      "Int",
+      "Int.ModEq",
+      "Int.instMod",
+      "instHMod"
+    ],
+    "Int.modulus_modEq_zero": [
+      "Int",
+      "Int.ModEq",
+      "OfNat.ofNat",
+      "instOfNat"
+    ],
+    "Int.ne_zero_of_gcd": [
+      "Int",
+      "Int.gcd",
+      "Nat",
+      "Ne",
+      "OfNat.ofNat",
+      "Or",
+      "instOfNat",
+      "instOfNatNat"
+    ],
+    "Int.neg_modEq_neg": [
+      "Iff",
+      "Int",
+      "Int.ModEq",
+      "Int.instNegInt",
+      "Neg.neg"
+    ],
+    "Nat.Coprime.odd_of_left": [
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instSemiring",
+      "Odd",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.Coprime.odd_of_right": [
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instSemiring",
+      "Odd",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.Coprime.of_dvd": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instDvd"
+    ],
+    "Nat.Coprime.of_dvd_left": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instDvd"
+    ],
+    "Nat.Coprime.of_dvd_right": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instDvd"
+    ],
+    "Nat.Coprime.symmetric": [
+      "Nat",
+      "Nat.Coprime",
+      "Symmetric"
+    ],
+    "Nat.ModEq.add_left": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.ModEq",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.ModEq.add_left_cancel'": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.ModEq",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.ModEq.add_right": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.ModEq",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.ModEq.add_right_cancel'": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.ModEq",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.ModEq.comm": [
+      "Iff",
+      "Nat",
+      "Nat.ModEq"
+    ],
+    "Nat.ModEq.dvd_iff": [
+      "Dvd.dvd",
+      "Iff",
+      "Nat",
+      "Nat.ModEq",
+      "Nat.instDvd"
+    ],
+    "Nat.ModEq.gcd_eq": [
+      "Eq",
+      "Nat",
+      "Nat.ModEq",
+      "Nat.gcd"
+    ],
+    "Nat.ModEq.of_dvd": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.ModEq",
+      "Nat.instDvd"
+    ],
+    "Nat.ModEq.of_mul_left": [
+      "HMul.hMul",
+      "Nat",
+      "Nat.ModEq",
+      "instHMul",
+      "instMulNat"
+    ],
+    "Nat.ModEq.of_mul_right": [
+      "HMul.hMul",
+      "Nat",
+      "Nat.ModEq",
+      "instHMul",
+      "instMulNat"
+    ],
+    "Nat.ModEq.refl": [
+      "Nat",
+      "Nat.ModEq"
+    ],
+    "Nat.ModEq.symm": [
+      "Nat",
+      "Nat.ModEq"
+    ],
+    "Nat.ModEq.trans": [
+      "Nat",
+      "Nat.ModEq"
+    ],
+    "Nat.Prime.dvd_iff_not_coprime": [
+      "Dvd.dvd",
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "Not"
+    ],
+    "Nat.Prime.dvd_mul_of_dvd_ne": [
+      "Dvd.dvd",
+      "HMul.hMul",
+      "Nat",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "Ne",
+      "instHMul",
+      "instMulNat"
+    ],
+    "Nat.Prime.dvd_of_dvd_pow": [
+      "Dvd.dvd",
+      "HPow.hPow",
+      "Monoid.toPow",
+      "Nat",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "Nat.instMonoid",
+      "instHPow"
+    ],
+    "Nat.Prime.even_iff": [
+      "Eq",
+      "Even",
+      "Iff",
+      "Nat",
+      "Nat.Prime",
+      "OfNat.ofNat",
+      "instAddNat",
+      "instOfNatNat"
+    ],
+    "Nat.Prime.five_le_of_ne_two_of_ne_three": [
+      "LE.le",
+      "Nat",
+      "Nat.Prime",
+      "Ne",
+      "OfNat.ofNat",
+      "instLENat",
+      "instOfNatNat"
+    ],
+    "Nat.Prime.not_dvd_mul": [
+      "Dvd.dvd",
+      "HMul.hMul",
+      "Nat",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "Not",
+      "instHMul",
+      "instMulNat"
+    ],
+    "Nat.Prime.odd_of_ne_two": [
+      "Nat",
+      "Nat.Prime",
+      "Nat.instSemiring",
+      "Ne",
+      "Odd",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.Prime.pred_pos": [
+      "LT.lt",
+      "Nat",
+      "Nat.Prime",
+      "Nat.pred",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.add_modEq_left": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.ModEq",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.add_modEq_right": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.ModEq",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.ascFactorial_zero": [
+      "Eq",
+      "Nat",
+      "Nat.ascFactorial",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.bitwise_bit'": [
+      "Bool",
+      "Bool.true",
+      "Eq",
+      "Nat",
+      "Nat.bit",
+      "Nat.bitwise",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.bitwise_comm": [
+      "Bool",
+      "Eq",
+      "Nat",
+      "Nat.bitwise"
+    ],
+    "Nat.bitwise_swap": [
+      "Bool",
+      "Eq",
+      "Function.swap",
+      "Nat",
+      "Nat.bitwise"
+    ],
+    "Nat.choose_eq_zero_of_lt": [
+      "Eq",
+      "LT.lt",
+      "Nat",
+      "Nat.choose",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.choose_le_add": [
+      "HAdd.hAdd",
+      "LE.le",
+      "Nat",
+      "Nat.choose",
+      "instAddNat",
+      "instHAdd",
+      "instLENat"
+    ],
+    "Nat.choose_le_choose": [
+      "LE.le",
+      "Nat",
+      "Nat.choose",
+      "instLENat"
+    ],
+    "Nat.choose_le_succ": [
+      "LE.le",
+      "Nat",
+      "Nat.choose",
+      "Nat.succ",
+      "instLENat"
+    ],
+    "Nat.choose_mono": [
+      "Monotone",
+      "Nat",
+      "Nat.choose",
+      "Nat.instPreorder"
+    ],
+    "Nat.choose_ne_zero": [
+      "LE.le",
+      "Nat",
+      "Nat.choose",
+      "Ne",
+      "OfNat.ofNat",
+      "instLENat",
+      "instOfNatNat"
+    ],
+    "Nat.choose_one_right": [
+      "Eq",
+      "Nat",
+      "Nat.choose",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.choose_self": [
+      "Eq",
+      "Nat",
+      "Nat.choose",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.choose_succ_self": [
+      "Eq",
+      "Nat",
+      "Nat.choose",
+      "Nat.succ",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.choose_succ_succ": [
+      "Eq",
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.choose",
+      "Nat.succ",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.choose_symm_add": [
+      "Eq",
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.choose",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.choose_symm_of_eq_add": [
+      "Eq",
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.choose",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.choose_zero_right": [
+      "Eq",
+      "Nat",
+      "Nat.choose",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.choose_zero_succ": [
+      "Eq",
+      "Nat",
+      "Nat.choose",
+      "Nat.succ",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.clog_antitone_left": [
+      "AntitoneOn",
+      "Nat",
+      "Nat.clog",
+      "Nat.instPreorder",
+      "OfNat.ofNat",
+      "Set.Ioi",
+      "instOfNatNat"
+    ],
+    "Nat.clog_mono_right": [
+      "LE.le",
+      "Nat",
+      "Nat.clog",
+      "instLENat"
+    ],
+    "Nat.clog_monotone": [
+      "Monotone",
+      "Nat",
+      "Nat.clog",
+      "Nat.instPreorder"
+    ],
+    "Nat.clog_one_left": [
+      "Eq",
+      "Nat",
+      "Nat.clog",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.clog_one_right": [
+      "Eq",
+      "Nat",
+      "Nat.clog",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.clog_pos": [
+      "LT.lt",
+      "Nat",
+      "Nat.clog",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.clog_zero_left": [
+      "Eq",
+      "Nat",
+      "Nat.clog",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.clog_zero_right": [
+      "Eq",
+      "Nat",
+      "Nat.clog",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.coprime_add_self_left": [
+      "HAdd.hAdd",
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.coprime_add_self_right": [
+      "HAdd.hAdd",
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.coprime_iff_isRelPrime": [
+      "Iff",
+      "IsRelPrime",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instMonoid"
+    ],
+    "Nat.coprime_of_dvd'": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.coprime_of_lt_minFac": [
+      "LT.lt",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.minFac",
+      "Ne",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.coprime_of_lt_prime": [
+      "LT.lt",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.Prime",
+      "Ne",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.coprime_one_left_iff": [
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "OfNat.ofNat",
+      "True",
+      "instOfNatNat"
+    ],
+    "Nat.coprime_one_right_iff": [
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "OfNat.ofNat",
+      "True",
+      "instOfNatNat"
+    ],
+    "Nat.coprime_or_dvd_of_prime": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "Or"
+    ],
+    "Nat.coprime_primes": [
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.Prime",
+      "Ne"
+    ],
+    "Nat.coprime_self_add_left": [
+      "HAdd.hAdd",
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.coprime_self_add_right": [
+      "HAdd.hAdd",
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.coprime_two_left": [
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instSemiring",
+      "Odd",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.coprime_two_right": [
+      "Iff",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.instSemiring",
+      "Odd",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.descFactorial_le": [
+      "LE.le",
+      "Nat",
+      "Nat.descFactorial",
+      "instLENat"
+    ],
+    "Nat.descFactorial_of_lt": [
+      "Eq",
+      "LT.lt",
+      "Nat",
+      "Nat.descFactorial",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.descFactorial_one": [
+      "Eq",
+      "Nat",
+      "Nat.descFactorial",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.descFactorial_self": [
+      "Eq",
+      "Nat",
+      "Nat.descFactorial",
+      "Nat.factorial"
+    ],
+    "Nat.descFactorial_zero": [
+      "Eq",
+      "Nat",
+      "Nat.descFactorial",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.div_dvd_div_left": [
+      "Dvd.dvd",
+      "HDiv.hDiv",
+      "Nat",
+      "Nat.instDiv",
+      "Nat.instDvd",
+      "instHDiv"
+    ],
+    "Nat.dvd_lcm_of_dvd_left": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.instDvd",
+      "Nat.lcm"
+    ],
+    "Nat.dvd_lcm_of_dvd_right": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.instDvd",
+      "Nat.lcm"
+    ],
+    "Nat.dvd_of_forall_prime_mul_dvd": [
+      "Dvd.dvd",
+      "HMul.hMul",
+      "Nat",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "instHMul",
+      "instMulNat"
+    ],
+    "Nat.dvd_of_lcm_left_dvd": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.instDvd",
+      "Nat.lcm"
+    ],
+    "Nat.dvd_of_lcm_right_dvd": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.instDvd",
+      "Nat.lcm"
+    ],
+    "Nat.even_xor": [
+      "Even",
+      "HXor.hXor",
+      "Iff",
+      "Nat",
+      "Nat.instXorOp",
+      "instAddNat",
+      "instHXorOfXorOp"
+    ],
+    "Nat.exists_mul_mod_eq_gcd": [
+      "And",
+      "Eq",
+      "Exists",
+      "HMod.hMod",
+      "HMul.hMul",
+      "LT.lt",
+      "Nat",
+      "Nat.gcd",
+      "Nat.instMod",
+      "instHMod",
+      "instHMul",
+      "instLTNat",
+      "instMulNat"
+    ],
+    "Nat.exists_mul_self": [
+      "Eq",
+      "Exists",
+      "HMul.hMul",
+      "Iff",
+      "Nat",
+      "Nat.sqrt",
+      "instHMul",
+      "instMulNat"
+    ],
+    "Nat.factorial_dvd_ascFactorial": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.ascFactorial",
+      "Nat.factorial",
+      "Nat.instDvd"
+    ],
+    "Nat.factorial_dvd_descFactorial": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.descFactorial",
+      "Nat.factorial",
+      "Nat.instDvd"
+    ],
+    "Nat.factorial_dvd_factorial": [
+      "Dvd.dvd",
+      "LE.le",
+      "Nat",
+      "Nat.factorial",
+      "Nat.instDvd",
+      "instLENat"
+    ],
+    "Nat.factorial_le": [
+      "LE.le",
+      "Nat",
+      "Nat.factorial",
+      "instLENat"
+    ],
+    "Nat.factorial_lt_of_lt": [
+      "LT.lt",
+      "Nat",
+      "Nat.factorial",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.factorial_ne_zero": [
+      "Nat",
+      "Nat.factorial",
+      "Ne",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.factorial_pos": [
+      "LT.lt",
+      "Nat",
+      "Nat.factorial",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.fastFib_eq": [
+      "Eq",
+      "Nat",
+      "Nat.fastFib",
+      "Nat.fib"
+    ],
+    "Nat.fib_add_two": [
+      "Eq",
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instAddNat",
+      "instHAdd",
+      "instOfNatNat"
+    ],
+    "Nat.fib_add_two_strictMono": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.fib",
+      "Nat.instPreorder",
+      "OfNat.ofNat",
+      "StrictMono",
+      "instAddNat",
+      "instHAdd",
+      "instOfNatNat"
+    ],
+    "Nat.fib_coprime_fib_succ": [
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.Coprime",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instAddNat",
+      "instHAdd",
+      "instOfNatNat"
+    ],
+    "Nat.fib_dvd": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.fib",
+      "Nat.instDvd"
+    ],
+    "Nat.fib_eq_zero": [
+      "Eq",
+      "Iff",
+      "Nat",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.fib_gcd": [
+      "Eq",
+      "Nat",
+      "Nat.fib",
+      "Nat.gcd"
+    ],
+    "Nat.fib_le_fib_succ": [
+      "HAdd.hAdd",
+      "LE.le",
+      "Nat",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instAddNat",
+      "instHAdd",
+      "instLENat",
+      "instOfNatNat"
+    ],
+    "Nat.fib_lt_fib": [
+      "Iff",
+      "LE.le",
+      "LT.lt",
+      "Nat",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instLENat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.fib_mono": [
+      "Monotone",
+      "Nat",
+      "Nat.fib",
+      "Nat.instPreorder"
+    ],
+    "Nat.fib_pos": [
+      "Iff",
+      "LT.lt",
+      "Nat",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.fib_strictMonoOn": [
+      "Nat",
+      "Nat.fib",
+      "Nat.instPreorder",
+      "OfNat.ofNat",
+      "Set.Ici",
+      "StrictMonoOn",
+      "instOfNatNat"
+    ],
+    "Nat.gcd_fib_add_self": [
+      "Eq",
+      "HAdd.hAdd",
+      "Nat",
+      "Nat.fib",
+      "Nat.gcd",
+      "instAddNat",
+      "instHAdd"
+    ],
+    "Nat.gcd_greatest": [
+      "Dvd.dvd",
+      "Eq",
+      "Nat",
+      "Nat.gcd",
+      "Nat.instDvd"
+    ],
+    "Nat.land_assoc": [
+      "Eq",
+      "HAnd.hAnd",
+      "Nat",
+      "Nat.instAndOp",
+      "instHAndOfAndOp"
+    ],
+    "Nat.land_bit": [
+      "Bool",
+      "Bool.and",
+      "Eq",
+      "HAnd.hAnd",
+      "Nat",
+      "Nat.bit",
+      "Nat.instAndOp",
+      "instHAndOfAndOp"
+    ],
+    "Nat.land_comm": [
+      "Eq",
+      "HAnd.hAnd",
+      "Nat",
+      "Nat.instAndOp",
+      "instHAndOfAndOp"
+    ],
+    "Nat.ldiff_bit": [
+      "Bool",
+      "Bool.and",
+      "Bool.not",
+      "Eq",
+      "Nat",
+      "Nat.bit",
+      "Nat.ldiff"
+    ],
+    "Nat.le_fib_add_one": [
+      "HAdd.hAdd",
+      "LE.le",
+      "Nat",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instAddNat",
+      "instHAdd",
+      "instLENat",
+      "instOfNatNat"
+    ],
+    "Nat.le_fib_self": [
+      "LE.le",
+      "Nat",
+      "Nat.fib",
+      "OfNat.ofNat",
+      "instLENat",
+      "instOfNatNat"
+    ],
+    "Nat.le_sqrt": [
+      "HMul.hMul",
+      "Iff",
+      "LE.le",
+      "Nat",
+      "Nat.sqrt",
+      "instHMul",
+      "instLENat",
+      "instMulNat"
+    ],
+    "Nat.le_sqrt_of_eq_mul": [
+      "Eq",
+      "HMul.hMul",
+      "LE.le",
+      "Nat",
+      "Nat.sqrt",
+      "Or",
+      "instHMul",
+      "instLENat",
+      "instMulNat"
+    ],
+    "Nat.le_three_of_sqrt_eq_one": [
+      "Eq",
+      "LE.le",
+      "Nat",
+      "Nat.sqrt",
+      "OfNat.ofNat",
+      "instLENat",
+      "instOfNatNat"
+    ],
+    "Nat.log2_eq_log_two": [
+      "Eq",
+      "Nat",
+      "Nat.log",
+      "Nat.log2",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.log_antitone_left": [
+      "AntitoneOn",
+      "Nat",
+      "Nat.instPreorder",
+      "Nat.log",
+      "OfNat.ofNat",
+      "Set.Ioi",
+      "instOfNatNat"
+    ],
+    "Nat.log_le_clog": [
+      "LE.le",
+      "Nat",
+      "Nat.clog",
+      "Nat.log",
+      "instLENat"
+    ],
+    "Nat.log_le_self": [
+      "LE.le",
+      "Nat",
+      "Nat.log",
+      "instLENat"
+    ],
+    "Nat.log_lt_self": [
+      "LT.lt",
+      "Nat",
+      "Nat.log",
+      "Ne",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.log_mono_right": [
+      "LE.le",
+      "Nat",
+      "Nat.log",
+      "instLENat"
+    ],
+    "Nat.log_monotone": [
+      "Monotone",
+      "Nat",
+      "Nat.instPreorder",
+      "Nat.log"
+    ],
+    "Nat.log_of_lt": [
+      "Eq",
+      "LT.lt",
+      "Nat",
+      "Nat.log",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.log_one_left": [
+      "Eq",
+      "Nat",
+      "Nat.log",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.log_one_right": [
+      "Eq",
+      "Nat",
+      "Nat.log",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.log_zero_left": [
+      "Eq",
+      "Nat",
+      "Nat.log",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.log_zero_right": [
+      "Eq",
+      "Nat",
+      "Nat.log",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.lor_assoc": [
+      "Eq",
+      "HOr.hOr",
+      "Nat",
+      "Nat.instOrOp",
+      "instHOrOfOrOp"
+    ],
+    "Nat.lor_bit": [
+      "Bool",
+      "Bool.or",
+      "Eq",
+      "HOr.hOr",
+      "Nat",
+      "Nat.bit",
+      "Nat.instOrOp",
+      "instHOrOfOrOp"
+    ],
+    "Nat.lor_comm": [
+      "Eq",
+      "HOr.hOr",
+      "Nat",
+      "Nat.instOrOp",
+      "instHOrOfOrOp"
+    ],
+    "Nat.lt_of_testBit": [
+      "Bool",
+      "Bool.false",
+      "Bool.true",
+      "Eq",
+      "LT.lt",
+      "Nat",
+      "Nat.testBit",
+      "instLTNat"
+    ],
+    "Nat.lt_succ_sqrt": [
+      "HMul.hMul",
+      "LT.lt",
+      "Nat",
+      "Nat.sqrt",
+      "Nat.succ",
+      "instHMul",
+      "instLTNat",
+      "instMulNat"
+    ],
+    "Nat.lt_xor_cases": [
+      "HXor.hXor",
+      "LT.lt",
+      "Nat",
+      "Nat.instXorOp",
+      "Or",
+      "instHXorOfXorOp",
+      "instLTNat"
+    ],
+    "Nat.modEq_one": [
+      "Nat",
+      "Nat.ModEq",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.mod_lcm": [
+      "Nat",
+      "Nat.ModEq",
+      "Nat.lcm"
+    ],
+    "Nat.mod_modEq": [
+      "HMod.hMod",
+      "Nat",
+      "Nat.ModEq",
+      "Nat.instMod",
+      "instHMod"
+    ],
+    "Nat.modulus_modEq_zero": [
+      "Nat",
+      "Nat.ModEq",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.multichoose_one": [
+      "Eq",
+      "Nat",
+      "Nat.multichoose",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.multichoose_one_right": [
+      "Eq",
+      "Nat",
+      "Nat.multichoose",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.multichoose_zero_right": [
+      "Eq",
+      "Nat",
+      "Nat.multichoose",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.not_coprime_zero_zero": [
+      "Nat",
+      "Nat.Coprime",
+      "Not",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.not_prime_of_dvd_of_ne": [
+      "Dvd.dvd",
+      "Nat",
+      "Nat.Prime",
+      "Nat.instDvd",
+      "Ne",
+      "Not",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.one_ascFactorial": [
+      "Eq",
+      "Nat",
+      "Nat.ascFactorial",
+      "Nat.factorial",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.self_le_factorial": [
+      "LE.le",
+      "Nat",
+      "Nat.factorial",
+      "instLENat"
+    ],
+    "Nat.sqrt_eq": [
+      "Eq",
+      "HMul.hMul",
+      "Nat",
+      "Nat.sqrt",
+      "instHMul",
+      "instMulNat"
+    ],
+    "Nat.sqrt_eq'": [
+      "Eq",
+      "HPow.hPow",
+      "Nat",
+      "Nat.sqrt",
+      "OfNat.ofNat",
+      "instHPow",
+      "instNatPowNat",
+      "instOfNatNat",
+      "instPowNat"
+    ],
+    "Nat.sqrt_eq_zero": [
+      "Eq",
+      "Iff",
+      "Nat",
+      "Nat.sqrt",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.sqrt_le": [
+      "HMul.hMul",
+      "LE.le",
+      "Nat",
+      "Nat.sqrt",
+      "instHMul",
+      "instLENat",
+      "instMulNat"
+    ],
+    "Nat.sqrt_le_self": [
+      "LE.le",
+      "Nat",
+      "Nat.sqrt",
+      "instLENat"
+    ],
+    "Nat.sqrt_le_sqrt": [
+      "LE.le",
+      "Nat",
+      "Nat.sqrt",
+      "instLENat"
+    ],
+    "Nat.sqrt_lt": [
+      "HMul.hMul",
+      "Iff",
+      "LT.lt",
+      "Nat",
+      "Nat.sqrt",
+      "instHMul",
+      "instLTNat",
+      "instMulNat"
+    ],
+    "Nat.sqrt_lt_self": [
+      "LT.lt",
+      "Nat",
+      "Nat.sqrt",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.sqrt_pos": [
+      "Iff",
+      "LT.lt",
+      "Nat",
+      "Nat.sqrt",
+      "OfNat.ofNat",
+      "instLTNat",
+      "instOfNatNat"
+    ],
+    "Nat.sqrt_succ_le_succ_sqrt": [
+      "LE.le",
+      "Nat",
+      "Nat.sqrt",
+      "Nat.succ",
+      "instLENat"
+    ],
+    "Nat.succ_pred_prime": [
+      "Eq",
+      "Nat",
+      "Nat.Prime",
+      "Nat.pred",
+      "Nat.succ"
+    ],
+    "Nat.testBit_eq_inth": [
+      "Bool",
+      "Eq",
+      "List.getI",
+      "Nat",
+      "Nat.bits",
+      "Nat.testBit",
+      "instInhabitedBool"
+    ],
+    "Nat.testBit_land": [
+      "Bool",
+      "Bool.and",
+      "Eq",
+      "HAnd.hAnd",
+      "Nat",
+      "Nat.instAndOp",
+      "Nat.testBit",
+      "instHAndOfAndOp"
+    ],
+    "Nat.testBit_ldiff": [
+      "Bool",
+      "Bool.and",
+      "Bool.not",
+      "Eq",
+      "Nat",
+      "Nat.ldiff",
+      "Nat.testBit"
+    ],
+    "Nat.testBit_lor": [
+      "Bool",
+      "Bool.or",
+      "Eq",
+      "HOr.hOr",
+      "Nat",
+      "Nat.instOrOp",
+      "Nat.testBit",
+      "instHOrOfOrOp"
+    ],
+    "Nat.zero_ascFactorial": [
+      "Eq",
+      "Nat",
+      "Nat.ascFactorial",
+      "Nat.succ",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ],
+    "Nat.zero_of_testBit_eq_false": [
+      "Bool",
+      "Bool.false",
+      "Eq",
+      "Nat",
+      "Nat.testBit",
+      "OfNat.ofNat",
+      "instOfNatNat"
+    ]
+  },
+  "derivation": "Lean.Expr.const occurrences in the pinned type_repr of every CATALOGUED ml430 proposition, settled and open alike. Cached so that regenerating the statable vocabulary after a mirror closes needs no /nas3.",
+  "kind": "axeyum-autogenesis-statement-constants",
+  "schema_version": 1,
+  "source": {
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "mathlib_tag": "v4.30.0",
+    "statement_inventory_sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc"
+  }
+}

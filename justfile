@@ -183,6 +183,13 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-holdout-contamination.py
     bash scripts/tests/test-dispatchable-frontier.sh
     python3 scripts/check-dispatchable-frontier.py
+    # ...and the artifact S2/S3/S4 constrain. Those three pin every field of the
+    # statable vocabulary to one value, so it is DERIVED (`--write`) rather than
+    # maintained. This checks what no other gate reads: the row digest, which is
+    # what makes the generator the only way a row gets in, plus the coverage
+    # block, the source pin, and the environment-snapshot pointer.
+    bash scripts/tests/test-gen-autogenesis-statable-vocabulary.sh
+    python3 scripts/gen-autogenesis-statable-vocabulary.py
     # Can the queue be REFILLED? The frontier says how deep it is; a draw is a
     # hand edit to gen-autogenesis-nursery-refill.py, so re-running that adds
     # nothing and nobody was computing whether the pool still has families.

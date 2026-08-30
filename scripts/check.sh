@@ -387,6 +387,18 @@ step autogenesis-nursery-refill python3 scripts/gen-autogenesis-nursery-refill.p
 # construction-level divergences before they are preregistered.
 step dispatchable-frontier-tests bash scripts/tests/test-dispatchable-frontier.sh
 step dispatchable-frontier python3 scripts/check-dispatchable-frontier.py
+# ...and the artifact S2/S3/S4 constrain. Those three pin EVERY field of the
+# statable vocabulary to one value -- S2 bounds `bridge` from below, S3 from
+# above, S4 pins the row set to the ledger both ways -- so nothing in it was
+# ever a free choice, and it was hand-maintained anyway. It drifted the first
+# time a batch of mirrors closed (9 settled clog/log rows absent, S4 red). It is
+# DERIVED now: `gen-autogenesis-statable-vocabulary.py --write`.
+# This step checks what no other gate reads -- the row digest, which is what
+# makes the generator the only way a row gets in (a hand-appended row passes
+# S2/S3/S4 whenever its constants are redundantly witnessed), plus the coverage
+# block, the source pin, and the environment-snapshot pointer.
+step statable-vocabulary-tests bash scripts/tests/test-gen-autogenesis-statable-vocabulary.sh
+step statable-vocabulary python3 scripts/gen-autogenesis-statable-vocabulary.py
 # ...and the question that comes NEXT, which the frontier cannot answer: can the
 # queue be refilled at all? Measured 2026-08-30, a "draw" is a hand edit to
 # gen-autogenesis-nursery-refill.py's FAMILY_MODULES/FAMILY_ROUTES, so
