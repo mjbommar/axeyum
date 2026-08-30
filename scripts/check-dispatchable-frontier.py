@@ -165,11 +165,26 @@ SETTLED = {"proved", "refuted", "computed"}
 CODOMAIN = "codomain"
 CLASSES = {CODOMAIN, "definitional", "algorithmic", "recursion-principle"}
 
-# When the dispatchable set gets this small the queue is about to empty. Not a
-# failure -- a failure at this point would fire on a healthy-but-narrow queue --
-# but it must be said out loud, because the whole point of this script is that
-# nobody noticed the number falling.
-NARROW = 3
+# G7's floor. Below this many dispatchable rows the queue is about to empty and
+# the run FAILS.
+#
+# This was `NARROW = 3` and a WARNING at exit 0 until 2026-08-30, on the
+# reasoning that "a failure at this point would fire on a healthy-but-narrow
+# queue". That reasoning is wrong in the direction this repository cares about.
+# A gate that fires only at ZERO has told you after the fact: the queue is
+# already empty, every lane is already blocked, and the refill -- which is a
+# hand-authored source edit to `gen-autogenesis-nursery-refill.py`'s
+# `FAMILY_MODULES`, not a script anyone can just re-run -- has not started.
+# Measured 2026-08-30: the warning had been printing at 3 while the queue was
+# hand-refilled four separate times, and all three remaining rows needed the
+# same missing keystone, so the effective depth was ONE. Nobody was watching a
+# line that exits 0.
+#
+# Ten is chosen against the measured drain rate, not picked for roundness: draw
+# 4 put 110 non-held-out rows into the population and 107 of them were settled
+# within a day, so the flywheel consumes non-held-out population far faster than
+# a human authors draws. Ten is roughly the notice a draw needs.
+FLOOR = 10
 
 
 def die(message: str) -> None:
@@ -605,8 +620,28 @@ def main() -> int:
     ap.add_argument("--statable", type=pathlib.Path,
                     help="screen candidates against BOTH the divergence "
                          "registry and the statable-here vocabulary")
+    ap.add_argument("--floor", type=int, default=FLOOR,
+                    help=f"G7's dispatchable floor (default {FLOOR}). May only "
+                         f"RAISE the floor: a flag that could lower it would be "
+                         f"a knob for silencing the gate, which is the failure "
+                         f"mode this whole script exists to prevent.")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()
+
+    # The one-way ratchet on --floor. Checked before any work so a caller that
+    # tried to relax the gate learns it here rather than from a green run.
+    floor = args.floor
+    if floor < FLOOR:
+        # The wording deliberately avoids the token sequence the controls use
+        # to detect that a named guard FIRED (`G7 <word>`): this is a rejected
+        # INPUT, not a guard hit, and a message that reads as a hit makes the
+        # "exactly one guard fired" assertion unusable for this case. The
+        # controls caught exactly that on the first draft.
+        die(f"--floor {floor} is below the built-in floor {FLOOR}. This flag "
+            f"may only raise the floor. Lowering it silences the "
+            f"queue-below-floor guard without adding a single dispatchable "
+            f"row; if the floor is genuinely wrong, change FLOOR and say why "
+            f"in the commit.")
 
     registry = load_registry(args.registry)
     if args.screen is not None:
@@ -643,6 +678,34 @@ def main() -> int:
     dispatchable = buckets["dispatchable"]
     total_open = sum(len(v) for v in buckets.values())
 
+    # The queue verdict is decided BEFORE any output is emitted, so that
+    # `guard_failures` in --json mode carries it. It did not until 2026-08-30:
+    # G4 was appended to `fails` AFTER the json.dumps, so a caller parsing the
+    # JSON to decide whether the queue was healthy read `guard_failures: []`
+    # while the process exited 1 with an EMPTY dispatchable set. The one
+    # consumer shape this mode exists for was the one shape it lied to.
+    queue_fail = None
+    if not dispatchable:
+        queue_fail = (
+            "G4 empty-dispatchable-set: every open ml430 mirror is held-out, a "
+            "mutation control, or structurally blocked. The flywheel's input "
+            "queue is EMPTY -- the concept DAG and the fact ledger have nothing "
+            "left to say to prove next. Refill the population (screening "
+            "candidates with --screen first); do not dispatch at held-out rows "
+            "and do not relax this check.")
+    elif len(dispatchable) < floor:
+        queue_fail = (
+            f"G7 queue-below-floor: {len(dispatchable)} dispatchable mirror(s), "
+            f"floor {floor}. The queue is not empty yet, which is the entire "
+            f"point of failing here: a refill is a hand-authored edit to "
+            f"gen-autogenesis-nursery-refill.py's FAMILY_MODULES and "
+            f"FAMILY_ROUTES, so it needs lead time that a gate firing at zero "
+            f"does not give. Run `python3 scripts/propose-nursery-refill.py` "
+            f"for the families that are ready to draw from, then author the "
+            f"draw. Do not lower the floor -- --floor may only raise it.")
+    if queue_fail is not None:
+        fails.append(queue_fail.split(":", 1)[0])
+
     if args.json:
         print(json.dumps({
             "open_mirrors": total_open,
@@ -652,6 +715,8 @@ def main() -> int:
                 {"construction": c, "class": k} for c, k in b]}
                 for i, b in buckets["blocked"]],
             "dispatchable": sorted(dispatchable),
+            "dispatchable_floor": floor,
+            "queue_below_floor": len(dispatchable) < floor,
             "guard_failures": fails,
         }, indent=2, sort_keys=True))
     else:
@@ -673,27 +738,13 @@ def main() -> int:
     for line in fails:
         print(f"FAIL: {line}", file=sys.stderr)
 
-    # G4 -- the alarm this script exists for. There is no floor to lower: the
-    # only way through is to add population that can actually be worked.
     # `--json` must emit JSON and nothing else on stdout: a caller that pipes
     # it into a parser is the whole point of the mode, and a trailing WARNING
     # line broke exactly that on the first draft.
     chatter = sys.stderr if args.json else sys.stdout
 
-    if not dispatchable:
-        print(
-            "\nFAIL: G4 empty-dispatchable-set: every open ml430 mirror is "
-            "held-out, a mutation control, or structurally blocked. The "
-            "flywheel's input queue is EMPTY -- the concept DAG and the fact "
-            "ledger have nothing left to say to prove next. Refill the "
-            "population (screening candidates with --screen first); do not "
-            "dispatch at held-out rows and do not relax this check.",
-            file=sys.stderr)
-        fails.append("G4 empty-dispatchable-set")
-    elif len(dispatchable) <= NARROW:
-        print(f"\nWARNING: only {len(dispatchable)} dispatchable mirror(s) "
-              f"remain. The queue is about to empty; refill it before it does.",
-              file=chatter)
+    if queue_fail is not None:
+        print(f"\nFAIL: {queue_fail}", file=sys.stderr)
 
     if fails:
         return 1
