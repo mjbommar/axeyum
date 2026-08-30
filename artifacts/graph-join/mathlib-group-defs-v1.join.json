@@ -1,0 +1,3549 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-graph-join",
+  "generated_by": "scripts/gen-graph-join.py",
+  "population_id": "mathlib-group-defs-v1",
+  "population_authority": "artifacts/declaration-graph/populations/mathlib-group-defs-v1.json",
+  "expected_roots": [
+    "CommMagma",
+    "Monoid",
+    "Nat.add_comm",
+    "Semigroup",
+    "mul_assoc",
+    "mul_comm",
+    "mul_left_cancel"
+  ],
+  "declaration_population_count": 446,
+  "dimensions": {
+    "fact_ids": {
+      "population_source": "declaration-graph",
+      "population_count": 446,
+      "resolved_count": 9,
+      "unresolved_count": 437,
+      "resolved": {
+        "Nat.add_comm": {
+          "fact_id": "F:ml430-nat-add-comm-56a2d614",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.add_pos_right": {
+          "fact_id": "F:ml430-nat-add-pos-right-e43374dc",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.ble_eq_true_of_le": {
+          "fact_id": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.ble_self_eq_true": {
+          "fact_id": "F:ml430-nat-ble-self-eq-true-839df126",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.ble_succ_eq_true": {
+          "fact_id": "F:ml430-nat-ble-succ-eq-true-000a69f4",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.le_of_ble_eq_true": {
+          "fact_id": "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.le_of_lt_succ": {
+          "fact_id": "F:ml430-nat-le-of-lt-succ-120bd6db",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.le_of_succ_le_succ": {
+          "fact_id": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+          "basis": "ml430-mirror-title-exact"
+        },
+        "Nat.le_refl": {
+          "fact_id": "F:ml430-nat-le-refl-fd7d9e15",
+          "basis": "ml430-mirror-title-exact"
+        }
+      },
+      "unresolved": {
+        "Add": {
+          "reason": "no-mirror-fact"
+        },
+        "Add.add": {
+          "reason": "no-mirror-fact"
+        },
+        "Add.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Add.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "And": {
+          "reason": "no-mirror-fact"
+        },
+        "And.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "And.intro": {
+          "reason": "no-mirror-fact"
+        },
+        "And.left": {
+          "reason": "no-mirror-fact"
+        },
+        "And.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "And.right": {
+          "reason": "no-mirror-fact"
+        },
+        "Array": {
+          "reason": "no-mirror-fact"
+        },
+        "Array.empty": {
+          "reason": "no-mirror-fact"
+        },
+        "Array.emptyWithCapacity": {
+          "reason": "no-mirror-fact"
+        },
+        "Array.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Array.push": {
+          "reason": "no-mirror-fact"
+        },
+        "Array.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Array.toList": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec.ofFin": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec.ofNat": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec.ofNat._proof_1": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec.ofNatLT": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec.toFin": {
+          "reason": "no-mirror-fact"
+        },
+        "BitVec.toNat": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.ctorIdx": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.decEq": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.decEq.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.false": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.noConfusion": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.noConfusionType": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Bool.true": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.IsValidUTF8": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.IsValidUTF8.intro": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.IsValidUTF8.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.empty": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.emptyWithCapacity": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.push": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.push.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "ByteArray.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Char": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.ofNat": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.ofNat._proof_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.ofNat._proof_2": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.ofNatAux": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.ofNatAux._private_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Char.val": {
+          "reason": "no-mirror-fact"
+        },
+        "CommMagma": {
+          "reason": "no-mirror-fact"
+        },
+        "CommMagma.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "CommMagma.mul_comm": {
+          "reason": "no-mirror-fact"
+        },
+        "CommMagma.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "CommMagma.toMul": {
+          "reason": "no-mirror-fact"
+        },
+        "Decidable": {
+          "reason": "no-mirror-fact"
+        },
+        "Decidable.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Decidable.decide": {
+          "reason": "no-mirror-fact"
+        },
+        "Decidable.isFalse": {
+          "reason": "no-mirror-fact"
+        },
+        "Decidable.isTrue": {
+          "reason": "no-mirror-fact"
+        },
+        "Decidable.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "DecidableEq": {
+          "reason": "no-mirror-fact"
+        },
+        "Div": {
+          "reason": "no-mirror-fact"
+        },
+        "Div.div": {
+          "reason": "no-mirror-fact"
+        },
+        "Div.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Div.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Eq": {
+          "reason": "no-mirror-fact"
+        },
+        "Eq.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Eq.mpr": {
+          "reason": "no-mirror-fact"
+        },
+        "Eq.ndrec": {
+          "reason": "no-mirror-fact"
+        },
+        "Eq.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Eq.refl": {
+          "reason": "no-mirror-fact"
+        },
+        "Eq.symm": {
+          "reason": "no-mirror-fact"
+        },
+        "False": {
+          "reason": "no-mirror-fact"
+        },
+        "False.elim": {
+          "reason": "no-mirror-fact"
+        },
+        "False.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Fin": {
+          "reason": "no-mirror-fact"
+        },
+        "Fin.Internal.ofNat": {
+          "reason": "no-mirror-fact"
+        },
+        "Fin.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Fin.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Fin.val": {
+          "reason": "no-mirror-fact"
+        },
+        "Function.Injective": {
+          "reason": "no-mirror-fact"
+        },
+        "GE.ge": {
+          "reason": "no-mirror-fact"
+        },
+        "HAdd": {
+          "reason": "no-mirror-fact"
+        },
+        "HAdd.hAdd": {
+          "reason": "no-mirror-fact"
+        },
+        "HAdd.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "HAdd.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "HDiv": {
+          "reason": "no-mirror-fact"
+        },
+        "HDiv.hDiv": {
+          "reason": "no-mirror-fact"
+        },
+        "HDiv.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "HDiv.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "HEq": {
+          "reason": "no-mirror-fact"
+        },
+        "HEq.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "HEq.refl": {
+          "reason": "no-mirror-fact"
+        },
+        "HMod": {
+          "reason": "no-mirror-fact"
+        },
+        "HMod.hMod": {
+          "reason": "no-mirror-fact"
+        },
+        "HMod.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "HMod.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "HMul": {
+          "reason": "no-mirror-fact"
+        },
+        "HMul.hMul": {
+          "reason": "no-mirror-fact"
+        },
+        "HMul.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "HMul.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "HPow": {
+          "reason": "no-mirror-fact"
+        },
+        "HPow.hPow": {
+          "reason": "no-mirror-fact"
+        },
+        "HPow.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "HPow.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "HSub": {
+          "reason": "no-mirror-fact"
+        },
+        "HSub.hSub": {
+          "reason": "no-mirror-fact"
+        },
+        "HSub.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "HSub.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "IsLeftCancelMul": {
+          "reason": "no-mirror-fact"
+        },
+        "IsLeftCancelMul.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "IsLeftCancelMul.mul_left_cancel": {
+          "reason": "no-mirror-fact"
+        },
+        "IsLeftCancelMul.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "IsLeftRegular": {
+          "reason": "no-mirror-fact"
+        },
+        "LE": {
+          "reason": "no-mirror-fact"
+        },
+        "LE.le": {
+          "reason": "no-mirror-fact"
+        },
+        "LE.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "LE.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "LT": {
+          "reason": "no-mirror-fact"
+        },
+        "LT.lt": {
+          "reason": "no-mirror-fact"
+        },
+        "LT.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "LT.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Name": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Name.anonymous": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Name.mkStr1": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Name.mkStr4": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Name.num": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Name.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Name.str": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.SourceInfo": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.SourceInfo.none": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.SourceInfo.original": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.SourceInfo.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.SourceInfo.synthetic": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.Preresolved": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.Preresolved.decl": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.Preresolved.namespace": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.Preresolved.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.atom": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.ident": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.missing": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.node": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.rec_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.Syntax.rec_2": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.SyntaxNodeKind": {
+          "reason": "no-mirror-fact"
+        },
+        "Lean.mkAtom": {
+          "reason": "no-mirror-fact"
+        },
+        "List": {
+          "reason": "no-mirror-fact"
+        },
+        "List.append": {
+          "reason": "no-mirror-fact"
+        },
+        "List.append._f": {
+          "reason": "no-mirror-fact"
+        },
+        "List.append.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "List.below": {
+          "reason": "no-mirror-fact"
+        },
+        "List.brecOn": {
+          "reason": "no-mirror-fact"
+        },
+        "List.brecOn.go": {
+          "reason": "no-mirror-fact"
+        },
+        "List.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "List.concat": {
+          "reason": "no-mirror-fact"
+        },
+        "List.concat._f": {
+          "reason": "no-mirror-fact"
+        },
+        "List.concat.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "List.cons": {
+          "reason": "no-mirror-fact"
+        },
+        "List.flatMap": {
+          "reason": "no-mirror-fact"
+        },
+        "List.flatten": {
+          "reason": "no-mirror-fact"
+        },
+        "List.flatten._f": {
+          "reason": "no-mirror-fact"
+        },
+        "List.flatten.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "List.map": {
+          "reason": "no-mirror-fact"
+        },
+        "List.map._f": {
+          "reason": "no-mirror-fact"
+        },
+        "List.nil": {
+          "reason": "no-mirror-fact"
+        },
+        "List.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "List.toByteArray": {
+          "reason": "no-mirror-fact"
+        },
+        "List.toByteArray.loop": {
+          "reason": "no-mirror-fact"
+        },
+        "List.toByteArray.loop._f": {
+          "reason": "no-mirror-fact"
+        },
+        "List.toByteArray.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "List.utf8Encode": {
+          "reason": "no-mirror-fact"
+        },
+        "Mod": {
+          "reason": "no-mirror-fact"
+        },
+        "Mod.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Mod.mod": {
+          "reason": "no-mirror-fact"
+        },
+        "Mod.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Monoid": {
+          "reason": "no-mirror-fact"
+        },
+        "Monoid.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Monoid.npow_succ._autoParam": {
+          "reason": "no-mirror-fact"
+        },
+        "Monoid.npow_zero._autoParam": {
+          "reason": "no-mirror-fact"
+        },
+        "Monoid.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Mul": {
+          "reason": "no-mirror-fact"
+        },
+        "Mul.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Mul.mul": {
+          "reason": "no-mirror-fact"
+        },
+        "Mul.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.add": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.add._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.add.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.add_comm._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.below": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.beq": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.beq._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.beq.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.ble": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.ble._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.ble.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.ble_self_eq_true._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.ble_succ_eq_true._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.brecOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.brecOn.go": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.ctorIdx": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.decLe": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.decLt": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.div": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.div.go": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.div.go._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.div.go.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.div_rec_fuel_lemma": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.div_rec_lemma": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.eq_or_lt_of_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.eq_or_lt_of_le._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.eq_or_lt_of_le.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.eq_or_lt_of_le.match_3": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.instDiv": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.instMod": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.isValidChar": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.below": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.below.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.below.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.below.refl": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.below.step": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.brecOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.refl": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le.step": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le_of_ble_eq_true._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le_succ": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le_succ_of_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.le_trans": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_add_one": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_irrefl": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_of_lt_of_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_of_not_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_or_ge": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_or_ge._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_succ_of_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_succ_self": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.lt_trans": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.mod": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.mod.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.modCore": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.modCore.go": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.modCore.go._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.modCoreGo_lt": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.modCore_lt": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.mod_lt": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.mul": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.mul._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.mul.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.mul_pos": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.noConfusion": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.noConfusionType": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.not_le_of_not_ble_eq_true": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.not_lt_zero": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.not_succ_le_self": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.not_succ_le_self._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.not_succ_le_zero": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pow": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pow._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pow.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pow_pos": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pow_pos._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pred": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pred_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.pred_le_pred": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.sub": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.sub._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.sub_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.sub_lt": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.succ": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.succ_add": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.succ_add._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.succ_le_succ": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.succ_sub_succ_eq_sub": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.zero": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.zero_add": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.zero_add._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.zero_le": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.zero_le._f": {
+          "reason": "no-mirror-fact"
+        },
+        "Nat.zero_lt_succ": {
+          "reason": "no-mirror-fact"
+        },
+        "NatPow": {
+          "reason": "no-mirror-fact"
+        },
+        "NatPow.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "NatPow.pow": {
+          "reason": "no-mirror-fact"
+        },
+        "NatPow.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Not": {
+          "reason": "no-mirror-fact"
+        },
+        "OfNat": {
+          "reason": "no-mirror-fact"
+        },
+        "OfNat.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "OfNat.ofNat": {
+          "reason": "no-mirror-fact"
+        },
+        "OfNat.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "One": {
+          "reason": "no-mirror-fact"
+        },
+        "One.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "One.one": {
+          "reason": "no-mirror-fact"
+        },
+        "One.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "One.toOfNat1": {
+          "reason": "no-mirror-fact"
+        },
+        "Or": {
+          "reason": "no-mirror-fact"
+        },
+        "Or.casesOn": {
+          "reason": "no-mirror-fact"
+        },
+        "Or.elim": {
+          "reason": "no-mirror-fact"
+        },
+        "Or.inl": {
+          "reason": "no-mirror-fact"
+        },
+        "Or.inr": {
+          "reason": "no-mirror-fact"
+        },
+        "Or.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Or.resolve_right": {
+          "reason": "no-mirror-fact"
+        },
+        "PProd": {
+          "reason": "no-mirror-fact"
+        },
+        "PProd.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "PProd.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "PUnit": {
+          "reason": "no-mirror-fact"
+        },
+        "PUnit.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "PUnit.unit": {
+          "reason": "no-mirror-fact"
+        },
+        "Pow": {
+          "reason": "no-mirror-fact"
+        },
+        "Pow.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Pow.pow": {
+          "reason": "no-mirror-fact"
+        },
+        "Pow.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Semigroup": {
+          "reason": "no-mirror-fact"
+        },
+        "Semigroup.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Semigroup.mul_assoc": {
+          "reason": "no-mirror-fact"
+        },
+        "Semigroup.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Semigroup.toMul": {
+          "reason": "no-mirror-fact"
+        },
+        "String": {
+          "reason": "no-mirror-fact"
+        },
+        "String.Pos.Raw": {
+          "reason": "no-mirror-fact"
+        },
+        "String.Pos.Raw.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "String.Pos.Raw.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "String.ofByteArray": {
+          "reason": "no-mirror-fact"
+        },
+        "String.ofList": {
+          "reason": "no-mirror-fact"
+        },
+        "String.ofList._proof_1": {
+          "reason": "no-mirror-fact"
+        },
+        "String.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "String.utf8EncodeChar": {
+          "reason": "no-mirror-fact"
+        },
+        "Sub": {
+          "reason": "no-mirror-fact"
+        },
+        "Sub.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Sub.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Sub.sub": {
+          "reason": "no-mirror-fact"
+        },
+        "Substring.Raw": {
+          "reason": "no-mirror-fact"
+        },
+        "Substring.Raw.mk": {
+          "reason": "no-mirror-fact"
+        },
+        "Substring.Raw.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "True": {
+          "reason": "no-mirror-fact"
+        },
+        "True.intro": {
+          "reason": "no-mirror-fact"
+        },
+        "True.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt32": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt32.isValidChar": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt32.ofBitVec": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt32.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt32.size": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt32.toBitVec": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt32.toNat": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt8": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt8.ofBitVec": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt8.ofNat": {
+          "reason": "no-mirror-fact"
+        },
+        "UInt8.rec": {
+          "reason": "no-mirror-fact"
+        },
+        "Unit": {
+          "reason": "no-mirror-fact"
+        },
+        "Unit.unit": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Data.Nat.Basic.#0.Nat.add_comm.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Data.Nat.Basic.#0.Nat.succ_add.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Data.Nat.Basic.#0.Nat.zero_add.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.add_pos_right.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.ble_eq_true_of_le.match_1_7": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.ble_self_eq_true.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.ble_succ_eq_true.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.div_rec_lemma.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.le_of_ble_eq_true.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.le_trans.match_1_10": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.lt_or_ge.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.lt_or_ge.match_1_3": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.lt_or_ge.match_1_5": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.modCoreGo_lt.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.modCore_lt.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.mod_lt.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.mod_lt.match_1_3": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.mul_pos.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.not_succ_le_self.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.pow_pos.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.pred_le.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.pred_le_pred.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.sub_lt.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.succ_le_succ.match_1_7": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Nat.zero_le.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.Or.elim.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.decide_eq_false.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.isValidChar_UInt32": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.isValidChar_UInt32.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.ne_true_of_eq_false.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.noConfusion_of_Nat.aux": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.noConfusion_of_Nat.aux._f": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.noConfusion_of_Nat.aux.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "_private.Init.Prelude.#0.of_decide_eq_true.match_1_1": {
+          "reason": "no-mirror-fact"
+        },
+        "absurd": {
+          "reason": "no-mirror-fact"
+        },
+        "autoParam": {
+          "reason": "no-mirror-fact"
+        },
+        "cast": {
+          "reason": "no-mirror-fact"
+        },
+        "congrArg": {
+          "reason": "no-mirror-fact"
+        },
+        "decide_eq_false": {
+          "reason": "no-mirror-fact"
+        },
+        "dite": {
+          "reason": "no-mirror-fact"
+        },
+        "eq_of_heq": {
+          "reason": "no-mirror-fact"
+        },
+        "id": {
+          "reason": "no-mirror-fact"
+        },
+        "instAddNat": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableAnd": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableAnd._proof_1": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableAnd._proof_2": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableAnd.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableEqBool": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableEqList.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableOr": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableOr._proof_1": {
+          "reason": "no-mirror-fact"
+        },
+        "instDecidableOr.match_1": {
+          "reason": "no-mirror-fact"
+        },
+        "instHAdd": {
+          "reason": "no-mirror-fact"
+        },
+        "instHDiv": {
+          "reason": "no-mirror-fact"
+        },
+        "instHMod": {
+          "reason": "no-mirror-fact"
+        },
+        "instHMul": {
+          "reason": "no-mirror-fact"
+        },
+        "instHPow": {
+          "reason": "no-mirror-fact"
+        },
+        "instHSub": {
+          "reason": "no-mirror-fact"
+        },
+        "instLENat": {
+          "reason": "no-mirror-fact"
+        },
+        "instLTNat": {
+          "reason": "no-mirror-fact"
+        },
+        "instMulNat": {
+          "reason": "no-mirror-fact"
+        },
+        "instNatPowNat": {
+          "reason": "no-mirror-fact"
+        },
+        "instOfNatNat": {
+          "reason": "no-mirror-fact"
+        },
+        "instPowNat": {
+          "reason": "no-mirror-fact"
+        },
+        "instSubNat": {
+          "reason": "no-mirror-fact"
+        },
+        "ite": {
+          "reason": "no-mirror-fact"
+        },
+        "mul_assoc": {
+          "reason": "no-mirror-fact"
+        },
+        "mul_comm": {
+          "reason": "no-mirror-fact"
+        },
+        "mul_left_cancel": {
+          "reason": "no-mirror-fact"
+        },
+        "namedPattern": {
+          "reason": "no-mirror-fact"
+        },
+        "ne_true_of_eq_false": {
+          "reason": "no-mirror-fact"
+        },
+        "noConfusion_of_Nat": {
+          "reason": "no-mirror-fact"
+        },
+        "of_decide_eq_true": {
+          "reason": "no-mirror-fact"
+        },
+        "optParam": {
+          "reason": "no-mirror-fact"
+        },
+        "outParam": {
+          "reason": "no-mirror-fact"
+        },
+        "rfl": {
+          "reason": "no-mirror-fact"
+        }
+      }
+    },
+    "kernel_declarations": {
+      "population_source": "fact_ids.resolved",
+      "population_count": 9,
+      "resolved_count": 9,
+      "unresolved_count": 0,
+      "resolved": {
+        "Nat.add_comm": {
+          "fact_id": "F:ml430-nat-add-comm-56a2d614",
+          "kernel_theorem": "Nat.add_comm",
+          "basis": "checker-command-regex-fallback"
+        },
+        "Nat.add_pos_right": {
+          "fact_id": "F:ml430-nat-add-pos-right-e43374dc",
+          "kernel_theorem": "Nat.add_pos_right",
+          "basis": "checker-command-regex-fallback"
+        },
+        "Nat.ble_eq_true_of_le": {
+          "fact_id": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+          "kernel_theorem": "Nat.ble_eq_true_of_le",
+          "basis": "kernel_theorem-field-explicit"
+        },
+        "Nat.ble_self_eq_true": {
+          "fact_id": "F:ml430-nat-ble-self-eq-true-839df126",
+          "kernel_theorem": "Nat.ble_self_eq_true",
+          "basis": "kernel_theorem-field-explicit"
+        },
+        "Nat.ble_succ_eq_true": {
+          "fact_id": "F:ml430-nat-ble-succ-eq-true-000a69f4",
+          "kernel_theorem": "Nat.ble_succ_eq_true",
+          "basis": "kernel_theorem-field-explicit"
+        },
+        "Nat.le_of_ble_eq_true": {
+          "fact_id": "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+          "kernel_theorem": "Nat.le_of_ble_eq_true",
+          "basis": "kernel_theorem-field-explicit"
+        },
+        "Nat.le_of_lt_succ": {
+          "fact_id": "F:ml430-nat-le-of-lt-succ-120bd6db",
+          "kernel_theorem": "Nat.le_of_lt_succ",
+          "basis": "kernel_theorem-field-explicit"
+        },
+        "Nat.le_of_succ_le_succ": {
+          "fact_id": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+          "kernel_theorem": "Nat.le_of_succ_le_succ",
+          "basis": "kernel_theorem-field-explicit"
+        },
+        "Nat.le_refl": {
+          "fact_id": "F:ml430-nat-le-refl-fd7d9e15",
+          "kernel_theorem": "Nat.le_refl",
+          "basis": "kernel_theorem-field-explicit"
+        }
+      },
+      "unresolved": {}
+    },
+    "statement_vocabulary": {
+      "population_source": "declaration-graph",
+      "population_count": 446,
+      "resolved_count": 161,
+      "unresolved_count": 285,
+      "resolved": {
+        "And": {
+          "root": "And",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "And.casesOn": {
+          "root": "And",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "And.intro": {
+          "root": "And",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "And.left": {
+          "root": "And",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "And.rec": {
+          "root": "And",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "And.right": {
+          "root": "And",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.casesOn": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.ctorIdx": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.decEq": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.decEq.match_1": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.false": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.noConfusion": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.noConfusionType": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.rec": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Bool.true": {
+          "root": "Bool",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.mk": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.ofNat": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.ofNat._proof_1": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.ofNat._proof_2": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.ofNatAux": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.ofNatAux._private_1": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.rec": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Char.val": {
+          "root": "Char",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Decidable": {
+          "root": "Decidable",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Decidable.casesOn": {
+          "root": "Decidable",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Decidable.decide": {
+          "root": "Decidable",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Decidable.isFalse": {
+          "root": "Decidable",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Decidable.isTrue": {
+          "root": "Decidable",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Decidable.rec": {
+          "root": "Decidable",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Eq": {
+          "root": "Eq",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Eq.casesOn": {
+          "root": "Eq",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Eq.mpr": {
+          "root": "Eq",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Eq.ndrec": {
+          "root": "Eq",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Eq.rec": {
+          "root": "Eq",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Eq.refl": {
+          "root": "Eq",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Eq.symm": {
+          "root": "Eq",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "False": {
+          "root": "False",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "False.elim": {
+          "root": "False",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "False.rec": {
+          "root": "False",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.add": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.add._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.add.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.add_comm": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.add_comm._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.add_pos_right": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.below": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.beq": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.beq._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.beq.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble_eq_true_of_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble_self_eq_true": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble_self_eq_true._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble_succ_eq_true": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ble_succ_eq_true._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.brecOn": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.brecOn.go": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.casesOn": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.ctorIdx": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.decLe": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.decLt": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.div": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.div.go": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.div.go._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.div.go.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.div_rec_fuel_lemma": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.div_rec_lemma": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.eq_or_lt_of_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.eq_or_lt_of_le._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.eq_or_lt_of_le.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.eq_or_lt_of_le.match_3": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.instDiv": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.instMod": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.isValidChar": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.below": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.below.casesOn": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.below.rec": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.below.refl": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.below.step": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.brecOn": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.casesOn": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.rec": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.refl": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le.step": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_of_ble_eq_true": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_of_ble_eq_true._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_of_lt_succ": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_of_succ_le_succ": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_refl": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_succ": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_succ_of_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.le_trans": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_add_one": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_irrefl": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_of_lt_of_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_of_not_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_or_ge": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_or_ge._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_succ_of_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_succ_self": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.lt_trans": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.mod": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.mod.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.modCore": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.modCore.go": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.modCore.go._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.modCoreGo_lt": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.modCore_lt": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.mod_lt": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.mul": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.mul._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.mul.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.mul_pos": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.noConfusion": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.noConfusionType": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.not_le_of_not_ble_eq_true": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.not_lt_zero": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.not_succ_le_self": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.not_succ_le_self._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.not_succ_le_zero": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pow": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pow._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pow.match_1": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pow_pos": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pow_pos._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pred": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pred_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.pred_le_pred": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.rec": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.sub": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.sub._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.sub_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.sub_lt": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.succ": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.succ_add": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.succ_add._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.succ_le_succ": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.succ_sub_succ_eq_sub": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.zero": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.zero_add": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.zero_add._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.zero_le": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.zero_le._f": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Nat.zero_lt_succ": {
+          "root": "Nat",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Or": {
+          "root": "Or",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Or.casesOn": {
+          "root": "Or",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Or.elim": {
+          "root": "Or",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Or.inl": {
+          "root": "Or",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Or.inr": {
+          "root": "Or",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Or.rec": {
+          "root": "Or",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "Or.resolve_right": {
+          "root": "Or",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "True": {
+          "root": "True",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "True.intro": {
+          "root": "True",
+          "basis": "kernel-inductive-type-name-exact-match"
+        },
+        "True.rec": {
+          "root": "True",
+          "basis": "kernel-inductive-type-name-exact-match"
+        }
+      },
+      "unresolved": {
+        "Add": {
+          "root": "Add",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Add.add": {
+          "root": "Add",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Add.mk": {
+          "root": "Add",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Add.rec": {
+          "root": "Add",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Array": {
+          "root": "Array",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Array.empty": {
+          "root": "Array",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Array.emptyWithCapacity": {
+          "root": "Array",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Array.mk": {
+          "root": "Array",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Array.push": {
+          "root": "Array",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Array.rec": {
+          "root": "Array",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Array.toList": {
+          "root": "Array",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec.ofFin": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec.ofNat": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec.ofNat._proof_1": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec.ofNatLT": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec.rec": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec.toFin": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "BitVec.toNat": {
+          "root": "BitVec",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.IsValidUTF8": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.IsValidUTF8.intro": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.IsValidUTF8.rec": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.casesOn": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.empty": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.emptyWithCapacity": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.mk": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.push": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.push.match_1": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ByteArray.rec": {
+          "root": "ByteArray",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "CommMagma": {
+          "root": "CommMagma",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "CommMagma.mk": {
+          "root": "CommMagma",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "CommMagma.mul_comm": {
+          "root": "CommMagma",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "CommMagma.rec": {
+          "root": "CommMagma",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "CommMagma.toMul": {
+          "root": "CommMagma",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "DecidableEq": {
+          "root": "DecidableEq",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Div": {
+          "root": "Div",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Div.div": {
+          "root": "Div",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Div.mk": {
+          "root": "Div",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Div.rec": {
+          "root": "Div",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Fin": {
+          "root": "Fin",
+          "reason": "root-not-in-kernel-inductive-type-list",
+          "note": "Mathlib's standalone Fin n is a different construction from Axeyum's Nat.Fin; deliberately NOT matched"
+        },
+        "Fin.Internal.ofNat": {
+          "root": "Fin",
+          "reason": "root-not-in-kernel-inductive-type-list",
+          "note": "Mathlib's standalone Fin n is a different construction from Axeyum's Nat.Fin; deliberately NOT matched"
+        },
+        "Fin.mk": {
+          "root": "Fin",
+          "reason": "root-not-in-kernel-inductive-type-list",
+          "note": "Mathlib's standalone Fin n is a different construction from Axeyum's Nat.Fin; deliberately NOT matched"
+        },
+        "Fin.rec": {
+          "root": "Fin",
+          "reason": "root-not-in-kernel-inductive-type-list",
+          "note": "Mathlib's standalone Fin n is a different construction from Axeyum's Nat.Fin; deliberately NOT matched"
+        },
+        "Fin.val": {
+          "root": "Fin",
+          "reason": "root-not-in-kernel-inductive-type-list",
+          "note": "Mathlib's standalone Fin n is a different construction from Axeyum's Nat.Fin; deliberately NOT matched"
+        },
+        "Function.Injective": {
+          "root": "Function",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "GE.ge": {
+          "root": "GE",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HAdd": {
+          "root": "HAdd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HAdd.hAdd": {
+          "root": "HAdd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HAdd.mk": {
+          "root": "HAdd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HAdd.rec": {
+          "root": "HAdd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HDiv": {
+          "root": "HDiv",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HDiv.hDiv": {
+          "root": "HDiv",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HDiv.mk": {
+          "root": "HDiv",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HDiv.rec": {
+          "root": "HDiv",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HEq": {
+          "root": "HEq",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HEq.rec": {
+          "root": "HEq",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HEq.refl": {
+          "root": "HEq",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMod": {
+          "root": "HMod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMod.hMod": {
+          "root": "HMod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMod.mk": {
+          "root": "HMod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMod.rec": {
+          "root": "HMod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMul": {
+          "root": "HMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMul.hMul": {
+          "root": "HMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMul.mk": {
+          "root": "HMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HMul.rec": {
+          "root": "HMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HPow": {
+          "root": "HPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HPow.hPow": {
+          "root": "HPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HPow.mk": {
+          "root": "HPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HPow.rec": {
+          "root": "HPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HSub": {
+          "root": "HSub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HSub.hSub": {
+          "root": "HSub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HSub.mk": {
+          "root": "HSub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "HSub.rec": {
+          "root": "HSub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "IsLeftCancelMul": {
+          "root": "IsLeftCancelMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "IsLeftCancelMul.mk": {
+          "root": "IsLeftCancelMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "IsLeftCancelMul.mul_left_cancel": {
+          "root": "IsLeftCancelMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "IsLeftCancelMul.rec": {
+          "root": "IsLeftCancelMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "IsLeftRegular": {
+          "root": "IsLeftRegular",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LE": {
+          "root": "LE",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LE.le": {
+          "root": "LE",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LE.mk": {
+          "root": "LE",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LE.rec": {
+          "root": "LE",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LT": {
+          "root": "LT",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LT.lt": {
+          "root": "LT",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LT.mk": {
+          "root": "LT",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "LT.rec": {
+          "root": "LT",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Name": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Name.anonymous": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Name.mkStr1": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Name.mkStr4": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Name.num": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Name.rec": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Name.str": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.SourceInfo": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.SourceInfo.none": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.SourceInfo.original": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.SourceInfo.rec": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.SourceInfo.synthetic": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.Preresolved": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.Preresolved.decl": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.Preresolved.namespace": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.Preresolved.rec": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.atom": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.ident": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.missing": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.node": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.rec": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.rec_1": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.Syntax.rec_2": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.SyntaxNodeKind": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Lean.mkAtom": {
+          "root": "Lean",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.append": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.append._f": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.append.match_1": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.below": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.brecOn": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.brecOn.go": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.casesOn": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.concat": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.concat._f": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.concat.match_1": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.cons": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.flatMap": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.flatten": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.flatten._f": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.flatten.match_1": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.map": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.map._f": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.nil": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.rec": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.toByteArray": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.toByteArray.loop": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.toByteArray.loop._f": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.toByteArray.match_1": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "List.utf8Encode": {
+          "root": "List",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mod": {
+          "root": "Mod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mod.mk": {
+          "root": "Mod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mod.mod": {
+          "root": "Mod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mod.rec": {
+          "root": "Mod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Monoid": {
+          "root": "Monoid",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Monoid.mk": {
+          "root": "Monoid",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Monoid.npow_succ._autoParam": {
+          "root": "Monoid",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Monoid.npow_zero._autoParam": {
+          "root": "Monoid",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Monoid.rec": {
+          "root": "Monoid",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mul": {
+          "root": "Mul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mul.mk": {
+          "root": "Mul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mul.mul": {
+          "root": "Mul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Mul.rec": {
+          "root": "Mul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "NatPow": {
+          "root": "NatPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "NatPow.mk": {
+          "root": "NatPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "NatPow.pow": {
+          "root": "NatPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "NatPow.rec": {
+          "root": "NatPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Not": {
+          "root": "Not",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "OfNat": {
+          "root": "OfNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "OfNat.mk": {
+          "root": "OfNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "OfNat.ofNat": {
+          "root": "OfNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "OfNat.rec": {
+          "root": "OfNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "One": {
+          "root": "One",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "One.mk": {
+          "root": "One",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "One.one": {
+          "root": "One",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "One.rec": {
+          "root": "One",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "One.toOfNat1": {
+          "root": "One",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "PProd": {
+          "root": "PProd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "PProd.mk": {
+          "root": "PProd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "PProd.rec": {
+          "root": "PProd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "PUnit": {
+          "root": "PUnit",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "PUnit.rec": {
+          "root": "PUnit",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "PUnit.unit": {
+          "root": "PUnit",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Pow": {
+          "root": "Pow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Pow.mk": {
+          "root": "Pow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Pow.pow": {
+          "root": "Pow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Pow.rec": {
+          "root": "Pow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Semigroup": {
+          "root": "Semigroup",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Semigroup.mk": {
+          "root": "Semigroup",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Semigroup.mul_assoc": {
+          "root": "Semigroup",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Semigroup.rec": {
+          "root": "Semigroup",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Semigroup.toMul": {
+          "root": "Semigroup",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.Pos.Raw": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.Pos.Raw.mk": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.Pos.Raw.rec": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.ofByteArray": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.ofList": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.ofList._proof_1": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.rec": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "String.utf8EncodeChar": {
+          "root": "String",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Sub": {
+          "root": "Sub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Sub.mk": {
+          "root": "Sub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Sub.rec": {
+          "root": "Sub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Sub.sub": {
+          "root": "Sub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Substring.Raw": {
+          "root": "Substring",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Substring.Raw.mk": {
+          "root": "Substring",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Substring.Raw.rec": {
+          "root": "Substring",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt32": {
+          "root": "UInt32",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt32.isValidChar": {
+          "root": "UInt32",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt32.ofBitVec": {
+          "root": "UInt32",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt32.rec": {
+          "root": "UInt32",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt32.size": {
+          "root": "UInt32",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt32.toBitVec": {
+          "root": "UInt32",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt32.toNat": {
+          "root": "UInt32",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt8": {
+          "root": "UInt8",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt8.ofBitVec": {
+          "root": "UInt8",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt8.ofNat": {
+          "root": "UInt8",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "UInt8.rec": {
+          "root": "UInt8",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Unit": {
+          "root": "Unit",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "Unit.unit": {
+          "root": "Unit",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Data.Nat.Basic.#0.Nat.add_comm.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Data.Nat.Basic.#0.Nat.succ_add.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Data.Nat.Basic.#0.Nat.zero_add.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.add_pos_right.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.ble_eq_true_of_le.match_1_7": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.ble_self_eq_true.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.ble_succ_eq_true.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.div_rec_lemma.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.le_of_ble_eq_true.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.le_trans.match_1_10": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.lt_or_ge.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.lt_or_ge.match_1_3": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.lt_or_ge.match_1_5": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.modCoreGo_lt.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.modCore_lt.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.mod_lt.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.mod_lt.match_1_3": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.mul_pos.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.not_succ_le_self.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.pow_pos.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.pred_le.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.pred_le_pred.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.sub_lt.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.succ_le_succ.match_1_7": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Nat.zero_le.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.Or.elim.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.decide_eq_false.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.isValidChar_UInt32": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.isValidChar_UInt32.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.ne_true_of_eq_false.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.noConfusion_of_Nat.aux": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.noConfusion_of_Nat.aux._f": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.noConfusion_of_Nat.aux.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "_private.Init.Prelude.#0.of_decide_eq_true.match_1_1": {
+          "root": "_private",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "absurd": {
+          "root": "absurd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "autoParam": {
+          "root": "autoParam",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "cast": {
+          "root": "cast",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "congrArg": {
+          "root": "congrArg",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "decide_eq_false": {
+          "root": "decide_eq_false",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "dite": {
+          "root": "dite",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "eq_of_heq": {
+          "root": "eq_of_heq",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "id": {
+          "root": "id",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instAddNat": {
+          "root": "instAddNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableAnd": {
+          "root": "instDecidableAnd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableAnd._proof_1": {
+          "root": "instDecidableAnd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableAnd._proof_2": {
+          "root": "instDecidableAnd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableAnd.match_1": {
+          "root": "instDecidableAnd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableEqBool": {
+          "root": "instDecidableEqBool",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableEqList.match_1": {
+          "root": "instDecidableEqList",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableOr": {
+          "root": "instDecidableOr",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableOr._proof_1": {
+          "root": "instDecidableOr",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instDecidableOr.match_1": {
+          "root": "instDecidableOr",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instHAdd": {
+          "root": "instHAdd",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instHDiv": {
+          "root": "instHDiv",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instHMod": {
+          "root": "instHMod",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instHMul": {
+          "root": "instHMul",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instHPow": {
+          "root": "instHPow",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instHSub": {
+          "root": "instHSub",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instLENat": {
+          "root": "instLENat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instLTNat": {
+          "root": "instLTNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instMulNat": {
+          "root": "instMulNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instNatPowNat": {
+          "root": "instNatPowNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instOfNatNat": {
+          "root": "instOfNatNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instPowNat": {
+          "root": "instPowNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "instSubNat": {
+          "root": "instSubNat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ite": {
+          "root": "ite",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "mul_assoc": {
+          "root": "mul_assoc",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "mul_comm": {
+          "root": "mul_comm",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "mul_left_cancel": {
+          "root": "mul_left_cancel",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "namedPattern": {
+          "root": "namedPattern",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "ne_true_of_eq_false": {
+          "root": "ne_true_of_eq_false",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "noConfusion_of_Nat": {
+          "root": "noConfusion_of_Nat",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "of_decide_eq_true": {
+          "root": "of_decide_eq_true",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "optParam": {
+          "root": "optParam",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "outParam": {
+          "root": "outParam",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        },
+        "rfl": {
+          "root": "rfl",
+          "reason": "root-not-in-kernel-inductive-type-list"
+        }
+      }
+    },
+    "destination_nodes": {
+      "population_source": "declaration-graph-populations",
+      "population_count": 1,
+      "resolved_count": 1,
+      "unresolved_count": 0,
+      "resolved": {
+        "mathlib-group-defs-v1": {
+          "destination_id": "curriculum_groups",
+          "curriculum_node": "groups",
+          "curriculum_status": "covered",
+          "lean_status": "planned",
+          "basis": "population-id-and-module-name-match-curriculum-row-content"
+        }
+      },
+      "unresolved": {}
+    },
+    "producers": {
+      "population_source": "fact_ids.resolved",
+      "population_count": 9,
+      "resolved_count": 0,
+      "unresolved_count": 9,
+      "resolved": {},
+      "unresolved": {
+        "F:ml430-nat-add-comm-56a2d614": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-add-pos-right-e43374dc": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-ble-self-eq-true-839df126": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-ble-succ-eq-true-000a69f4": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-le-of-ble-eq-true-646f4e10": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-le-of-lt-succ-120bd6db": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-le-of-succ-le-succ-a180a72c": {
+          "reason": "no-registered-operation-names-this-fact"
+        },
+        "F:ml430-nat-le-refl-fd7d9e15": {
+          "reason": "no-registered-operation-names-this-fact"
+        }
+      }
+    },
+    "declines": {
+      "population_source": "fact_ids.resolved",
+      "population_count": 9,
+      "resolved_count": 0,
+      "unresolved_count": 9,
+      "resolved": {},
+      "unresolved": {
+        "F:ml430-nat-add-comm-56a2d614": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-add-pos-right-e43374dc": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-ble-self-eq-true-839df126": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-ble-succ-eq-true-000a69f4": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-le-of-ble-eq-true-646f4e10": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-le-of-lt-succ-120bd6db": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-le-of-succ-le-succ-a180a72c": {
+          "reason": "no-recorded-decline-names-this-fact"
+        },
+        "F:ml430-nat-le-refl-fd7d9e15": {
+          "reason": "no-recorded-decline-names-this-fact"
+        }
+      }
+    },
+    "trust_footprints": {
+      "population_source": "kernel_declarations.resolved",
+      "population_count": 9,
+      "resolved_count": 9,
+      "unresolved_count": 0,
+      "resolved": {
+        "Nat.add_comm": {
+          "fact_id": "F:ml430-nat-add-comm-56a2d614",
+          "kernel_theorem": "Nat.add_comm",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.add_pos_right": {
+          "fact_id": "F:ml430-nat-add-pos-right-e43374dc",
+          "kernel_theorem": "Nat.add_pos_right",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.ble_eq_true_of_le": {
+          "fact_id": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+          "kernel_theorem": "Nat.ble_eq_true_of_le",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.ble_self_eq_true": {
+          "fact_id": "F:ml430-nat-ble-self-eq-true-839df126",
+          "kernel_theorem": "Nat.ble_self_eq_true",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.ble_succ_eq_true": {
+          "fact_id": "F:ml430-nat-ble-succ-eq-true-000a69f4",
+          "kernel_theorem": "Nat.ble_succ_eq_true",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.le_of_ble_eq_true": {
+          "fact_id": "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+          "kernel_theorem": "Nat.le_of_ble_eq_true",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.le_of_lt_succ": {
+          "fact_id": "F:ml430-nat-le-of-lt-succ-120bd6db",
+          "kernel_theorem": "Nat.le_of_lt_succ",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.le_of_succ_le_succ": {
+          "fact_id": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+          "kernel_theorem": "Nat.le_of_succ_le_succ",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        },
+        "Nat.le_refl": {
+          "fact_id": "F:ml430-nat-le-refl-fd7d9e15",
+          "kernel_theorem": "Nat.le_refl",
+          "axiom_footprint": [],
+          "in_identity_class": false
+        }
+      },
+      "unresolved": {}
+    }
+  },
+  "name_coincidence_candidates": {
+    "Eq.symm": {
+      "coincident_fact_ids": [
+        "F:eq-symm"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.le_succ_of_le": {
+      "coincident_fact_ids": [
+        "F:nat-le-succ-of-le"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.le_trans": {
+      "coincident_fact_ids": [
+        "F:nat-le-trans"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.lt_add_one": {
+      "coincident_fact_ids": [
+        "F:nat-lt-add-one"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.lt_irrefl": {
+      "coincident_fact_ids": [
+        "F:nat-lt-irrefl"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.lt_of_lt_of_le": {
+      "coincident_fact_ids": [
+        "F:nat-lt-of-lt-of-le"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.lt_of_not_le": {
+      "coincident_fact_ids": [
+        "F:nat-lt-of-not-le"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.lt_or_ge": {
+      "coincident_fact_ids": [
+        "F:nat-lt-or-ge"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.lt_succ_of_le": {
+      "coincident_fact_ids": [
+        "F:nat-lt-succ-of-le"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.lt_succ_self": {
+      "coincident_fact_ids": [
+        "F:nat-lt-succ-self"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.mod_lt": {
+      "coincident_fact_ids": [
+        "F:nat-mod-lt"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.not_le_of_not_ble_eq_true": {
+      "coincident_fact_ids": [
+        "F:nat-not-le-of-not-ble-eq-true"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.not_lt_zero": {
+      "coincident_fact_ids": [
+        "F:nat-not-lt-zero"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.not_succ_le_self": {
+      "coincident_fact_ids": [
+        "F:nat-not-succ-le-self"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.not_succ_le_zero": {
+      "coincident_fact_ids": [
+        "F:nat-not-succ-le-zero"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.pow_pos": {
+      "coincident_fact_ids": [
+        "F:nat-pow-pos"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.pred_le": {
+      "coincident_fact_ids": [
+        "F:nat-pred-le"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.pred_le_pred": {
+      "coincident_fact_ids": [
+        "F:nat-pred-le-pred"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.sub_le": {
+      "coincident_fact_ids": [
+        "F:nat-sub-le"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.sub_lt": {
+      "coincident_fact_ids": [
+        "F:nat-sub-lt"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.succ_add": {
+      "coincident_fact_ids": [
+        "F:nat-succ-add"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.succ_le_succ": {
+      "coincident_fact_ids": [
+        "F:nat-succ-le-succ"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.succ_sub_succ_eq_sub": {
+      "coincident_fact_ids": [
+        "F:nat-succ-sub-succ-eq-sub"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.zero_add": {
+      "coincident_fact_ids": [
+        "F:nat-zero-add"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.zero_le": {
+      "coincident_fact_ids": [
+        "F:nat-zero-le"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Nat.zero_lt_succ": {
+      "coincident_fact_ids": [
+        "F:nat-zero-lt-succ"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    },
+    "Or.resolve_right": {
+      "coincident_fact_ids": [
+        "F:or-resolve-right"
+      ],
+      "note": "name coincides with an existing kernel declaration named in an UNRELATED fact's evidence; no mirror fact links this Mathlib declaration to that fact, so NO identity is asserted here"
+    }
+  },
+  "notes": {
+    "bounded": "This join covers exactly the 446 declarations of population 'mathlib-group-defs-v1' (7 real roots, ADR-0820); it says nothing about Mathlib declarations outside this bounded extraction.",
+    "adr_0790_limit_inherited": "fact_ids/kernel_declarations resolution depends transitively on the ml430 mirror facts' own evidence, not on check-proposition-duplication.py (ADR-0790) directly -- this join does not call that script. Where this join DOES reuse ADR-0790/S2 machinery (trust_footprints.in_identity_class, via artifacts/trust-closure/identity-map.tsv) it inherits that computation's own stated limit verbatim: identity classes are found only by BYTE-IDENTICAL Kernel::render_lean canonical types, so a duplicate proposition rendered even slightly differently (e.g. a reordered hypothesis) would not be detected by that layer, and this join does not attempt to detect it either.",
+    "no_name_similarity_creates_identity": "fact_ids and kernel_declarations are resolved ONLY through an existing ledger fact's own title/evidence (see module docstring); name_coincidence_candidates records every case where a bare string match existed and was NOT treated as identity, so the prevention is visible rather than assumed."
+  }
+}

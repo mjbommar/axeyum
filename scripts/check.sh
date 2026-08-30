@@ -1485,6 +1485,18 @@ step declaration-graph           python3 scripts/check-declaration-graph.py
 step declaration-graph-tests     python3 scripts/tests/test-declaration-graph.py
 step declaration-graph-mutations bash scripts/tests/test-declaration-graph-mutations.sh
 
+# L1 phase G2 -- join the Mathlib declaration graph (ADR-0820) to Axeyum's own
+# state (docs/plan/graph-directed-library-roadmap-2026-08-30.md section G2,
+# ADR-0835). Needs no Lean toolchain and no cargo run: every input is
+# already-committed JSON. fact_ids/kernel_declarations resolve ONLY through
+# an exact match on an existing ledger fact's own title/evidence, never a
+# bare name match. Six guards (EMPTY_POPULATION, EMPTY_FACTS, ACCOUNTING,
+# STALE_ARTIFACT, POSITIVE_CONTROL, BARE_NAME_BASIS), all mutation-verified
+# 1:1 by the third step below.
+step graph-join           python3 scripts/check-graph-join.py
+step graph-join-tests     python3 scripts/tests/test-graph-join.py
+step graph-join-mutations bash scripts/tests/test-graph-join-mutations.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
