@@ -3693,6 +3693,74 @@ SUITES["nursery-refill-ceiling"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `nursery-refill-amendment` — ADR-0542 / ADR-0617. R10 ties a moved partition
+# in `nursery-v2-extension.json` to a recorded breach in the amendment ledger.
+#
+# Before it, `frozen_partitions` froze `family_partitions`, so the manifest was
+# its own authority: a hand edit that moved a family AND recomputed
+# `extension_sha256` regenerated perfectly clean with no amendment anywhere.
+# The digest catches a careless edit, never a deliberate one. Found 2026-08-30
+# while making the `natural-divisibility` amendment the holdout-isolation gate
+# demands — there was nothing to record it against.
+#
+# Every mutant below reverts a check that had NO predecessor, so each kills
+# exactly one case and none is shadowed by R6 or R8. Two earlier drafts of R10
+# are NOT registered here because they could not be killed at all: comparing
+# `assign_partitions()` against `preregistered_assignment()` makes the
+# no-amendment and destination branches unreachable (the ledger is applied
+# last, so the two agree by construction), and re-aiming R8 at
+# `preregistered_assignment()` compares a function against the dict it derives
+# from. Both are recorded in the source comments as measured dead ends.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-refill-amendment"] = (
+    "scripts/gen-autogenesis-nursery-refill.py",
+    Unittest("scripts.tests.test_gen_autogenesis_nursery_refill"),
+    [
+        (
+            "a moved partition with NO amendment is refused",
+            "        if amendment is None:\n"
+            "            if now != was:",
+            "        if amendment is None:\n"
+            "            if False:",
+        ),
+        (
+            "an amendment whose `from` is not the preregistered partition",
+            '        if amendment.get("from") != was:',
+            "        if False:",
+        ),
+        (
+            "an amendment whose `to` is not the manifest's partition",
+            '        if amendment.get("to") != now:',
+            "        if False:",
+        ),
+        (
+            "an amended family may not be recycled into held-out",
+            '        if now == "held-out":',
+            "        if False:",
+        ),
+        (
+            "a manifest with no preregistered freeze has nothing to check",
+            '    partitions = manifest.get("preregistered_family_partitions")\n'
+            "    if not isinstance(partitions, dict) or not partitions:",
+            '    partitions = manifest.get("preregistered_family_partitions")\n'
+            "    if False:",
+        ),
+        (
+            "a missing amendment ledger is an error, not a quiet pass",
+            "    if not SPLIT_POLICY.is_file():",
+            "    if False:",
+        ),
+        (
+            "a family amended twice has no defined origin",
+            "        if family in by_family:",
+            "        if False:",
+        ),
+    ],
+)
+
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()

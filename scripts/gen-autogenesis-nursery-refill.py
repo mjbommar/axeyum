@@ -481,25 +481,35 @@ def frozen_partitions() -> dict[str, str]:
         raise RefillError(
             f"{EXTENSION.name} does not match its own extension_sha256, so its "
             f"recorded partitions cannot be trusted as the freeze")
-    # Fall back to `family_partitions` only for a manifest written before the
-    # split existed: there, by construction, nothing had been amended yet.
-    partitions = manifest.get("preregistered_family_partitions")
-    if partitions is None:
-        partitions = manifest.get("family_partitions")
+    partitions = manifest.get("family_partitions")
     if not isinstance(partitions, dict) or not partitions:
         raise RefillError(
-            f"{EXTENSION.name} carries no preregistered_family_partitions to "
-            f"freeze")
-    effective = manifest.get("family_partitions")
-    if not isinstance(effective, dict) or not effective:
-        raise RefillError(
-            f"{EXTENSION.name} carries no family_partitions")
+            f"{EXTENSION.name} carries no family_partitions to freeze")
     for entry in manifest.get("entries", []):
-        if effective.get(entry["family"]) != entry["partition"]:
+        if partitions.get(entry["family"]) != entry["partition"]:
             raise RefillError(
                 f"{EXTENSION.name} entry {entry['fact_id']} carries partition "
                 f"{entry['partition']!r}, disagreeing with its own "
                 f"family_partitions")
+    return dict(partitions)
+
+
+def preregistered_freeze() -> dict[str, str]:
+    """What each earlier draw PREREGISTERED, before any ADR-0542 amendment.
+
+    REQUIRED once the manifest exists, with no fall back to
+    `family_partitions`: falling back would let a manifest that dropped the key
+    make its own amended partitions the preregistered truth, which is exactly
+    the hole R10 closes.
+    """
+    if not EXTENSION.is_file():
+        return {}
+    manifest = load_json(EXTENSION)
+    partitions = manifest.get("preregistered_family_partitions")
+    if not isinstance(partitions, dict) or not partitions:
+        raise RefillError(
+            f"{EXTENSION.name} carries no preregistered_family_partitions, so "
+            f"there is nothing to check its effective partitions against")
     return dict(partitions)
 
 
@@ -532,18 +542,13 @@ def amendments() -> dict[str, dict[str, Any]]:
     return by_family
 
 
-def preregistered_assignment() -> dict[str, str]:
+def _with_cycle(frozen: dict[str, str]) -> dict[str, str]:
     """Frozen families keep their partition; the cycle runs over the NEW ones.
 
     The cycle restarts at `held-out` for each draw's new family set, which is
     what makes R5's "at least two new held-out families" reachable at four
     families. Continuing one global cycle across draws would not.
-
-    This is the PREREGISTERED assignment and no amendment touches it: what a
-    draw preregistered is a historical fact, and R10 checks the effective
-    assignment against it.
     """
-    frozen = frozen_partitions()
     assignment = {f: p for f, p in frozen.items() if f in FAMILY_MODULES}
     fresh = sorted((f for f in FAMILY_MODULES if f not in assignment),
                    key=lambda f: FAMILY_MODULES[f][0])
@@ -552,9 +557,28 @@ def preregistered_assignment() -> dict[str, str]:
     return assignment
 
 
+def preregistered_assignment() -> dict[str, str]:
+    """What each draw preregistered, plus the cycle for this draw's new rows.
+
+    No amendment touches this: what a draw preregistered is a historical fact,
+    and it is the immovable reference R10 checks the effective assignment
+    against.
+    """
+    return _with_cycle(preregistered_freeze())
+
+
 def assign_partitions() -> dict[str, str]:
-    """The EFFECTIVE assignment: preregistered, then ADR-0542 amendments."""
-    assignment = preregistered_assignment()
+    """The EFFECTIVE assignment: the manifest's own, plus ADR-0542 amendments.
+
+    The ledger is applied here so that recording an amendment and regenerating
+    is enough to move the family -- and applying one twice is a no-op, because
+    the regenerated manifest already carries `to`. It is applied ON TOP of the
+    manifest rather than on top of `preregistered_assignment()`, which matters:
+    the latter would make R10's no-amendment branch unreachable, since the only
+    way for the two assignments to differ would be a ledger row. R10 has to be
+    able to see a manifest someone moved by hand.
+    """
+    assignment = _with_cycle(frozen_partitions())
     for family, amendment in amendments().items():
         if family in assignment:
             assignment[family] = amendment["to"]
@@ -785,6 +809,62 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
     """
     partitions = assign_partitions()
     frozen = frozen_partitions()
+
+    # R10 -- an effective partition that differs from the preregistered one is
+    # a SPEND, and it is legible only if the ADR-0542 ledger records it.
+    #
+    # Before this rule the extension manifest was its own authority: R8 froze
+    # against `family_partitions`, so a hand edit that moved a family AND
+    # recomputed `extension_sha256` regenerated perfectly clean, with no
+    # amendment anywhere. The digest catches a careless edit, never a
+    # deliberate one. Measured 2026-08-30 while amending `natural-divisibility`
+    # -- the move the gate's own message demands -- which is when it became
+    # clear the ledger and this manifest had no link at all.
+    #
+    # It reads the two dicts the MANIFEST records, not the two this module
+    # recomputes. That is not a detail: `assign_partitions()` applies the ledger
+    # last, so a recomputed comparison would make both the no-amendment branch
+    # and the destination branch unreachable -- the assignment could differ from
+    # the preregistered one only BY a ledger row, and would then agree with it
+    # by construction. A guard that cannot fail is worse than no guard, and two
+    # drafts of this rule had that shape before it was measured.
+    #
+    # It also runs BEFORE R6. R6 compares entries against the effective
+    # assignment; if the assignment itself is illegitimate, saying so is the
+    # more informative failure, and otherwise a bogus ledger row is reported as
+    # an entry disagreement.
+    ledger = amendments()
+    preregistered = preregistered_freeze()
+    for family, now in sorted(frozen.items()):
+        was = preregistered.get(family)
+        if was is None:
+            raise RefillError(
+                f"R10 {family!r} has an effective partition {now!r} and no "
+                f"preregistered one, so nothing can say whether it moved")
+        amendment = ledger.get(family)
+        if amendment is None:
+            if now != was:
+                raise RefillError(
+                    f"R10 {family!r} was preregistered {was!r} and the manifest "
+                    f"assigns {now!r}, with no ADR-0542 amendment recording the "
+                    f"spend; record the breach in {SPLIT_POLICY.name} or restore "
+                    f"the preregistered partition")
+            continue
+        if amendment.get("from") != was:
+            raise RefillError(
+                f"R10 the {family!r} amendment records from="
+                f"{amendment.get('from')!r} but the family was preregistered "
+                f"{was!r}; the ledger does not describe this manifest")
+        if amendment.get("to") != now:
+            raise RefillError(
+                f"R10 the {family!r} amendment records to="
+                f"{amendment.get('to')!r} but the manifest assigns {now!r}")
+        if now == "held-out":
+            raise RefillError(
+                f"R10 amended family {family!r} is assigned to held-out; a "
+                f"family whose blind-evaluation value was spent cannot be "
+                f"recycled into the blind population")
+
     # R4 and R5 ask what THIS draw adds. Once a second draw exists, every
     # earlier family is still in `entries` (the manifest is regenerated whole),
     # so counting over all of them would make both rules pass on draw-1's rows
@@ -869,22 +949,17 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
         if list(routes) != sorted(set(routes)):
             raise RefillError(f"R7 route hypotheses for {family} are not sorted/unique")
 
-    # R8 -- a family an earlier draw preregistered keeps its partition, and
-    # keeps existing. R6 above cannot see either failure: it re-derives the
-    # assignment from the same function the emitter used, so a cycle that
-    # shifted agrees with itself.
+    # R8 -- a family an earlier draw preregistered keeps EXISTING.
     #
-    # This compares the PREREGISTERED assignment, because that is what a draw
-    # is forbidden to move. An amended family's EFFECTIVE partition legitimately
-    # differs from its preregistered one; R10 is what governs that.
-    preregistered = preregistered_assignment()
-    for family, was in frozen.items():
-        if family in preregistered and preregistered[family] != was:
-            raise RefillError(
-                f"R8 {family!r} was preregistered as {was!r} and this draw "
-                f"assigns {preregistered[family]!r}; a preregistered partition "
-                f"may only move through the ADR-0542 amendment ledger, never "
-                f"by regeneration")
+    # R8 used to also refuse a MOVED partition, by comparing each entry against
+    # `frozen`. That check is now R10's, and the split is not cosmetic: an
+    # amended family's effective partition legitimately differs from its
+    # preregistered one, so the old comparison would have refused exactly the
+    # repair ADR-0542 prescribes. Re-aiming R8 at `preregistered_assignment()`
+    # instead was tried and is WORSE THAN USELESS -- that function derives from
+    # `frozen` itself, so the two can never disagree and the guard cannot fail.
+    # R6 ties each entry to the effective assignment; R10 ties the effective
+    # assignment to the preregistered one; together they cover what R8 covered.
     dropped = sorted(set(frozen) - set(FAMILY_MODULES))
     if dropped:
         raise RefillError(
@@ -905,49 +980,6 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
             f"R9 {len(contaminated)} held-out candidate(s) already have a "
             f"declaration of the same Mathlib name in the kernel environment, "
             f"so they are not blind: {contaminated[:5]}")
-
-    # R10 -- an effective partition that differs from the preregistered one is
-    # a SPEND, and it is legible only if the ADR-0542 ledger records it.
-    #
-    # Before this rule the extension manifest was its own authority: R8 froze
-    # against `family_partitions`, so a hand edit that moved a family AND
-    # recomputed `extension_sha256` regenerated perfectly clean, with no
-    # amendment anywhere. The digest catches a careless edit, never a
-    # deliberate one. Measured 2026-08-30 while amending `natural-divisibility`
-    # -- the move the gate's own message demands -- which is when it became
-    # clear the ledger and this manifest had no link at all.
-    #
-    # This is why `frozen_partitions` freezes `preregistered_family_partitions`
-    # instead: it gives the effective assignment an immovable thing to be
-    # checked against.
-    ledger = amendments()
-    for family in sorted(FAMILY_MODULES):
-        was = preregistered[family]
-        now = partitions[family]
-        amendment = ledger.get(family)
-        if amendment is None:
-            if now != was:
-                raise RefillError(
-                    f"R10 {family!r} was preregistered {was!r} and is assigned "
-                    f"{now!r}, with no ADR-0542 amendment recording the spend; "
-                    f"record the breach in {SPLIT_POLICY.name} or restore the "
-                    f"preregistered partition")
-            continue
-        if amendment.get("from") != was:
-            raise RefillError(
-                f"R10 the {family!r} amendment records from="
-                f"{amendment.get('from')!r} but the family was preregistered "
-                f"{was!r}; the ledger does not describe this manifest")
-        if amendment.get("to") != now:
-            raise RefillError(
-                f"R10 the {family!r} amendment records to="
-                f"{amendment.get('to')!r} but the family is assigned {now!r}")
-        if now == "held-out":
-            raise RefillError(
-                f"R10 amended family {family!r} is assigned to held-out; a "
-                f"family whose blind-evaluation value was spent cannot be "
-                f"recycled into the blind population")
-
 
 def stored_surface_validation() -> dict[str, Any]:
     """What the manifest already records about its own surface grade."""
