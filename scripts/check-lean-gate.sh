@@ -86,6 +86,20 @@ cd "$(dirname "$0")/.." || exit 2
 # headroom so ordinary churn does not trip it; RAISING it as suites grow is the
 # ratchet working, LOWERING it needs a reason in the commit message.
 #
+# Raised 223 -> 229 on 2026-08-30 by lane `l0-s4-independent-replay` (S4 of the
+# ADR-0717 safety roadmap): `real_lean_replay_census` adds SIX real-Lean
+# invocations. It is the first check that grades independent replay PER
+# DECLARATION rather than per carrier count -- `replay-lean4export.lean
+# --emit-names` reads back the constant names Lean's own kernel ended holding,
+# so a subject is graded by membership of its own name and cannot inherit a
+# grade from a sampled sibling. Measured that day: population 2,045,
+# representable 1,972, `checked=1972 expected=1972 missing=0 extra=0`, and 73
+# declarations non-representable with a typed reason (48 `Theorem`s whose type
+# is not a `Prop`, which Lean's kernel refuses outright, and 25 blocked by
+# depending on one). Its six invocations are: the census slice, the earned
+# typed reason, the sampled-family inheritance guard, and a clean/wrong-proof/
+# wrong-goal triple on `CReal.ivt_approx`.
+#
 # Raised 105 -> 107 on 2026-08-15 by lane `import-scale`:
 # `real_lean_nat_arithmetic_crosscheck` adds two invocations, handing official
 # Lean 24 literal-arithmetic answers THIS kernel computed (plus a negative
@@ -182,7 +196,7 @@ cd "$(dirname "$0")/.." || exit 2
 # run manually against all five (this suite included) before landing: flipping
 # the theorem's stated type from `False` to `True` makes Lean reject every one
 # with a type mismatch, exit 1 -- so this check can fail.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-223}"
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-229}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -244,6 +258,7 @@ axeyum-lean-kernel||real_lean_compact_share_crosscheck
 axeyum-lean-kernel||real_lean_shared_prelude_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay
 axeyum-lean-kernel||real_lean_creal_carrier_kernel_replay
+axeyum-lean-kernel||real_lean_replay_census
 axeyum-lean-kernel||real_lean_wellfounded_elaborator_divergence
 axeyum-lean-import||real_lean_wire_differential
 axeyum-solver|full|int_inequality_lean_reconstruct

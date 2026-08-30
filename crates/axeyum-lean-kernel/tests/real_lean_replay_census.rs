@@ -46,11 +46,14 @@
 //!    own family member in the same module, grades `NotReplayed`. Lean itself
 //!    attests that a sampled sibling confers nothing.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use axeyum_lean_kernel::{Kernel, Lean4ExportMetadata, NameId, build_creal_prelude};
+use axeyum_lean_kernel::{
+    Declaration, ExprId, ExprNode, Kernel, Lean4ExportMetadata, LevelNode, NameId,
+    build_creal_prelude, on_a_deep_stack,
+};
 
 #[path = "support/lean_probe.rs"]
 mod lean_probe;
@@ -66,9 +69,15 @@ const CENSUS_MARKER: &str = "AXEYUM-REPLAY-CENSUS";
 ///
 /// Set below the measured value with headroom, and it may only RISE. It is a
 /// ratchet against silent shrinkage of the census, not a target: the suite
-/// separately requires `missing == 0` against the environment, which is the
+/// separately requires `missing == 0` over the representable set, which is the
 /// check that cannot be satisfied by admitting fewer things.
-const REPLAY_FLOOR: usize = 400;
+///
+/// Measured 2026-08-30 on pinned Lean 4.30.0 (`d024af09`), whole `creal`
+/// carrier: population 2,045, representable 1,972, `checked=1972 expected=1972
+/// missing=0 extra=0`. Floor set at 1,900 -- 72 below the measurement, so
+/// ordinary churn does not trip it. RAISING it as the carrier grows is the
+/// ratchet working; LOWERING it needs a reason in the commit message.
+const REPLAY_FLOOR: usize = 1_900;
 
 /// Coverage pin. These are the theorems this suite was built to grade; if the
 /// census stops carrying one, that must fail loudly rather than read as a
@@ -215,26 +224,6 @@ fn first_monomorphic_theorem(stream: &str) -> Option<(u64, u64)> {
     Some((field("type")?, field("value")?))
 }
 
-/// The count the replay script reports it ended with.
-fn reported_constants(report: &str) -> Option<usize> {
-    let tail = report.split_once("environment now holds ")?.1;
-    let digits: String = tail.chars().take_while(char::is_ascii_digit).collect();
-    digits.parse().ok()
-}
-
-/// Every declaration name in the checked environment, as the exporter spells
-/// it. The wire format carries the kernel's own name components (there is no
-/// `AxNat` remap on this route — that is a `lean_pp` module-rendering rule, and
-/// the replay starts from `mkEmptyEnvironment` so there is no builtin `Nat` to
-/// shadow), so these are exactly the names Lean should end up holding.
-fn declared_names(kernel: &Kernel) -> BTreeSet<String> {
-    kernel
-        .environment()
-        .iter()
-        .map(|(name, _)| kernel.display_name(*name).to_string())
-        .collect()
-}
-
 /// Resolve a display name to its `NameId` in the checked environment.
 fn name_of(kernel: &Kernel, display: &str) -> Option<NameId> {
     kernel
@@ -281,105 +270,334 @@ fn grading_consults_only_the_subject_and_never_its_family() {
 }
 
 // ---------------------------------------------------------------------------
+// Representability: the typed reasons, decided in THIS kernel, then earned
+// against Lean's.
+// ---------------------------------------------------------------------------
+
+/// Why a declaration this kernel admitted cannot be handed to Lean's kernel as
+/// what this kernel calls it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Representability {
+    /// The wire format carries it and Lean's kernel will accept its kind.
+    Representable,
+    /// **This kernel admits `Theorem`s whose type is not a proposition; Lean's
+    /// kernel does not.** `Lean.Environment.addDeclCore` refuses a `theorem`
+    /// whose type does not live in `Prop` — such a thing must be a `def`.
+    ///
+    /// This is not a wire-format limitation and not a bug in the export. It is
+    /// a measured disagreement between two kernels about what may be called a
+    /// theorem, and the affected declarations are deliberate: see
+    /// `creal/uniform_convergence.rs`'s module documentation, which explains
+    /// why `CReal.UniformConvergesOn` is `Type`-valued (`Exists.rec` cannot
+    /// eliminate into `Type`, so the convergence *rate* must be data).
+    TheoremTypeNotProp,
+    /// Its dependency closure contains a non-representable declaration, so it
+    /// cannot be exported either — naming the blocker rather than repeating
+    /// the reason, because the two are different findings.
+    BlockedBy(String),
+}
+
+/// Does `ty` live in `Prop`?
+///
+/// Read from the kernel by inference, never from a name or a doc comment.
+fn is_a_proposition(kernel: &mut Kernel, ty: ExprId) -> bool {
+    let Ok(sort) = kernel.infer(ty) else {
+        return false;
+    };
+    let sort = kernel.whnf(sort);
+    let level = match kernel.expr_node(sort) {
+        ExprNode::Sort(level) => *level,
+        _ => return false,
+    };
+    matches!(kernel.level_node(level), LevelNode::Zero)
+}
+
+/// Classify every declaration in the checked environment.
+///
+/// The population is `kernel.environment()`, so this is a complete census and
+/// not a sample; nothing here reads a list.
+fn classify(kernel: &mut Kernel) -> BTreeMap<String, Representability> {
+    let declarations: Vec<(NameId, String, Option<ExprId>)> = kernel
+        .environment()
+        .iter()
+        .map(|(name, decl)| {
+            let theorem_type = match decl {
+                Declaration::Theorem { ty, .. } => Some(*ty),
+                _ => None,
+            };
+            (*name, kernel.display_name(*name).to_string(), theorem_type)
+        })
+        .collect();
+
+    // Pass 1: the declarations that are themselves non-representable.
+    let mut verdicts: BTreeMap<String, Representability> = BTreeMap::new();
+    let mut bad_ids: Vec<NameId> = Vec::new();
+    for (id, display, theorem_type) in &declarations {
+        if let Some(ty) = *theorem_type
+            && !is_a_proposition(kernel, ty)
+        {
+            verdicts.insert(display.clone(), Representability::TheoremTypeNotProp);
+            bad_ids.push(*id);
+        }
+    }
+
+    // Pass 2: everything whose closure reaches one of those.
+    let bad_names: BTreeSet<String> = bad_ids
+        .iter()
+        .map(|id| kernel.display_name(*id).to_string())
+        .collect();
+    for (id, display, _) in &declarations {
+        if verdicts.contains_key(display) {
+            continue;
+        }
+        let blocker = kernel
+            .declaration_dependency_closure(*id)
+            .into_iter()
+            .map(|dep| kernel.display_name(dep).to_string())
+            .find(|dep| bad_names.contains(dep));
+        verdicts.insert(
+            display.clone(),
+            match blocker {
+                Some(name) => Representability::BlockedBy(name),
+                None => Representability::Representable,
+            },
+        );
+    }
+    verdicts
+}
+
+// ---------------------------------------------------------------------------
 // The census.
 // ---------------------------------------------------------------------------
 
 #[test]
-fn pinned_lean_independently_admits_every_constructed_real_declaration_by_name() {
-    let mut kernel = Kernel::new();
-    build_creal_prelude(&mut kernel).expect("the CReal development must build");
+fn pinned_lean_independently_admits_every_representable_constructed_real_declaration_by_name() {
+    // `creal` needs 16 MiB in debug (`artifacts/kernel-stack-envelope.tsv`) and
+    // a `#[test]` thread has 2 MiB, so the prelude build aborts with a SIGABRT
+    // that looks exactly like a broken tool. The stack is carried explicitly
+    // rather than inherited from an ambient `RUST_MIN_STACK`, which is a gate
+    // on one shell.
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        build_creal_prelude(&mut kernel).expect("the CReal development must build");
 
-    let expected = declared_names(&kernel);
-    assert!(
-        expected.len() > REPLAY_FLOOR,
-        "the census population is the whole carrier, not a slice: {} declarations",
-        expected.len()
-    );
-
-    // Coverage, asserted BEFORE any Lean runs: an empty answer from a tool that
-    // was never pointed at the subject is indistinguishable from a strong
-    // negative result.
-    for pin in FLAGSHIP {
+        let verdicts = classify(&mut kernel);
         assert!(
-            expected.contains(pin),
-            "the census no longer covers `{pin}`, so a green run here would say \
-             nothing about the theorems this suite exists to grade"
+            verdicts.len() > REPLAY_FLOOR,
+            "the census population is the whole carrier, not a slice: {}",
+            verdicts.len()
         );
-    }
 
-    let stream = kernel
-        .render_lean4export_ndjson(&Lean4ExportMetadata::axeyum("4.30.0"))
-        .expect("the checked carrier must export");
+        // Coverage, asserted BEFORE any Lean runs: an empty answer from a tool
+        // that was never pointed at the subject is indistinguishable from a
+        // strong negative result.
+        for pin in FLAGSHIP {
+            assert!(
+                verdicts.contains_key(pin),
+                "the census no longer covers `{pin}`, so a green run here would \
+                 say nothing about the theorems it exists to grade"
+            );
+        }
 
-    let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 4) else {
-        return;
-    };
-
-    let (accepted, report, admitted) = replay(&lean, &stream, "census_carrier");
-    assert!(
-        accepted,
-        "pinned Lean's kernel rejected the carrier this kernel admitted:\n{report}"
-    );
-
-    // Zero executed subjects is always a failure, never a pass.
-    assert!(
-        !admitted.is_empty(),
-        "pinned Lean reported no constant names at all, so nothing was graded. A \
-         green run over zero subjects is the failure this census exists to make \
-         impossible:\n{report}"
-    );
-
-    let missing: Vec<&String> = expected.difference(&admitted).collect();
-    let extra: Vec<&String> = admitted.difference(&expected).collect();
-    let checked = expected.intersection(&admitted).count();
-
-    println!(
-        "{CENSUS_MARKER} checked={checked} expected={} missing={} extra={}",
-        expected.len(),
-        missing.len(),
-        extra.len()
-    );
-
-    assert!(
-        missing.is_empty(),
-        "missing={} -- pinned Lean's kernel never admitted a constant of these \
-         names, so they hold NO independent-replay grade however many siblings \
-         did: {:?}\n{report}",
-        missing.len(),
-        &missing[..missing.len().min(20)]
-    );
-    assert!(
-        extra.is_empty(),
-        "extra={} -- Lean's kernel holds constants this kernel does not declare, \
-         so the two environments are not the same subject: {:?}\n{report}",
-        extra.len(),
-        &extra[..extra.len().min(20)]
-    );
-
-    // The count check the carrier suite makes, kept because it and the name
-    // check fail on different defects: a count catches a stream that stopped
-    // early, a name set catches one that substituted.
-    let held = reported_constants(&report)
-        .unwrap_or_else(|| panic!("the replay must report its final constant count:\n{report}"));
-    assert_eq!(held, expected.len(), "count disagreement:\n{report}");
-
-    // Now grade each pinned subject INDIVIDUALLY, by its own name.
-    for pin in FLAGSHIP {
+        // The classifier must DISCRIMINATE. Without both halves, a classifier
+        // that had started saying `Representable` to everything -- or nothing
+        // -- would pass this suite silently.
         assert_eq!(
-            grade(pin, &admitted),
-            Grade::Replayed,
-            "`{pin}` was not admitted by pinned Lean under its own name"
+            verdicts.get("CReal.weierstrassMTest"),
+            Some(&Representability::TheoremTypeNotProp),
+            "`CReal.weierstrassMTest` concludes in `CReal.UniformConvergesOn`, \
+             which `creal/uniform_convergence.rs` deliberately makes \
+             `Type`-valued. If this now classifies as representable, either the \
+             declaration changed or `is_a_proposition` stopped discriminating"
         );
-        println!("{CENSUS_MARKER} grade subject={pin} lean=replayed");
-    }
+        assert_eq!(
+            verdicts.get("CReal.ivt_approx"),
+            Some(&Representability::Representable),
+            "`CReal.ivt_approx` is an ordinary `Prop`-valued theorem; if it \
+             classifies as non-representable the classifier is over-rejecting"
+        );
 
-    assert!(
-        checked >= REPLAY_FLOOR,
-        "independent-replay floor: {checked} < {REPLAY_FLOOR}. This ratchet may \
-         only RISE; lowering it needs a reason in the commit message."
-    );
+        let representable: BTreeSet<String> = verdicts
+            .iter()
+            .filter(|(_, verdict)| **verdict == Representability::Representable)
+            .map(|(name, _)| name.clone())
+            .collect();
+        let not_prop: Vec<&String> = verdicts
+            .iter()
+            .filter(|(_, v)| **v == Representability::TheoremTypeNotProp)
+            .map(|(name, _)| name)
+            .collect();
+        let blocked: Vec<&String> = verdicts
+            .iter()
+            .filter(|(_, v)| matches!(v, Representability::BlockedBy(_)))
+            .map(|(name, _)| name)
+            .collect();
 
-    lean_probe::report_checked(TAG, 1);
+        println!(
+            "{CENSUS_MARKER} population={} representable={} theorem_type_not_prop={} \
+             blocked_by_dependency={}",
+            verdicts.len(),
+            representable.len(),
+            not_prop.len(),
+            blocked.len()
+        );
+        for name in &not_prop {
+            println!("{CENSUS_MARKER} non-representable reason=theorem-type-not-prop name={name}");
+        }
+        for name in &blocked {
+            let Some(Representability::BlockedBy(blocker)) = verdicts.get(*name) else {
+                unreachable!("filtered above")
+            };
+            println!(
+                "{CENSUS_MARKER} non-representable reason=blocked-by-dependency \
+                 name={name} blocker={blocker}"
+            );
+        }
+
+        let roots: Vec<NameId> = kernel
+            .environment()
+            .iter()
+            .filter(|(name, _)| representable.contains(&kernel.display_name(**name).to_string()))
+            .map(|(name, _)| *name)
+            .collect();
+        assert!(!roots.is_empty(), "zero representable roots is a failure");
+
+        let stream = kernel
+            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &roots)
+            .expect("the representable slice must export");
+
+        let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 2) else {
+            return;
+        };
+
+        let (accepted, report, admitted) = replay(&lean, &stream, "census_representable");
+        assert!(
+            accepted,
+            "pinned Lean's kernel rejected a declaration this census classified as \
+             REPRESENTABLE. That is either a new non-representability class the \
+             classifier does not know, or a genuine disagreement between the two \
+             kernels; either way it must fail here rather than be skipped:\n{report}"
+        );
+
+        // Zero executed subjects is always a failure, never a pass.
+        assert!(
+            !admitted.is_empty(),
+            "pinned Lean reported no constant names, so nothing was graded:\n{report}"
+        );
+
+        let missing: Vec<&String> = representable.difference(&admitted).collect();
+        let extra: Vec<&String> = admitted.difference(&representable).collect();
+        let checked = representable.intersection(&admitted).count();
+        println!(
+            "{CENSUS_MARKER} checked={checked} expected={} missing={} extra={}",
+            representable.len(),
+            missing.len(),
+            extra.len()
+        );
+        assert!(
+            missing.is_empty(),
+            "missing={} -- pinned Lean's kernel never admitted a constant of these \
+             names, so they hold NO independent-replay grade however many siblings \
+             did: {:?}\n{report}",
+            missing.len(),
+            &missing[..missing.len().min(20)]
+        );
+        assert!(
+            extra.is_empty(),
+            "extra={} -- Lean holds constants this slice did not name: {:?}\n{report}",
+            extra.len(),
+            &extra[..extra.len().min(20)]
+        );
+
+        // Grade each pinned subject INDIVIDUALLY, by its own name.
+        for pin in FLAGSHIP {
+            let verdict = verdicts.get(pin).expect("pinned above");
+            match verdict {
+                Representability::Representable => {
+                    assert_eq!(
+                        grade(pin, &admitted),
+                        Grade::Replayed,
+                        "`{pin}` is representable but pinned Lean did not admit it \
+                         under its own name"
+                    );
+                    println!("{CENSUS_MARKER} grade subject={pin} axeyum=accepted lean=replayed");
+                }
+                other => println!(
+                    "{CENSUS_MARKER} grade subject={pin} axeyum=accepted \
+                     lean=not-representable reason={other:?}"
+                ),
+            }
+        }
+
+        assert!(
+            checked >= REPLAY_FLOOR,
+            "independent-replay floor: {checked} < {REPLAY_FLOOR}. This ratchet may \
+             only RISE; lowering it needs a reason in the commit message."
+        );
+
+        lean_probe::report_checked(TAG, 1);
+    });
+}
+
+/// **The typed reason, earned rather than asserted.**
+///
+/// `Representability::TheoremTypeNotProp` is a claim about what Lean's kernel
+/// will refuse. This checks it: hand Lean the same carrier slice with one
+/// not-a-proposition theorem added back, and require the rejection to name that
+/// declaration. Without this, the classifier could exclude anything it liked
+/// and the census would still be green.
+#[test]
+fn lean_really_does_refuse_a_theorem_whose_type_is_not_a_proposition() {
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        build_creal_prelude(&mut kernel).expect("the CReal development must build");
+        let verdicts = classify(&mut kernel);
+
+        let subject = "CReal.weierstrassMTest";
+        assert_eq!(
+            verdicts.get(subject),
+            Some(&Representability::TheoremTypeNotProp),
+            "this control is aimed at a declaration the classifier excludes for \
+             THIS reason; if it no longer does, re-aim it"
+        );
+        let root = name_of(&kernel, subject).expect("the subject must be declared");
+
+        let stream = kernel
+            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[root])
+            .expect("the wire format carries it -- the refusal is Lean's, not ours");
+
+        let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 1) else {
+            return;
+        };
+
+        let (accepted, report, _) = replay(&lean, &stream, "census_not_prop");
+        assert!(
+            !accepted,
+            "pinned Lean ACCEPTED `{subject}` as a theorem. The census excludes it \
+             on the stated ground that Lean refuses it, so if Lean does not, the \
+             exclusion is unjustified and the census is understating what \
+             replays:\n{report}"
+        );
+        assert!(
+            report.contains("REAL LEAN KERNEL REJECTED"),
+            "the refusal must come from Lean's kernel, not a parse error:\n{report}"
+        );
+        assert!(
+            report.contains("is not a proposition"),
+            "the refusal must be for the REASON the census records, not some other \
+             failure that happens to also reject:\n{report}"
+        );
+        assert!(
+            report.contains(subject),
+            "the refusal must name `{subject}`:\n{report}"
+        );
+        println!(
+            "{CENSUS_MARKER} typed-reason-earned subject={subject} \
+             reason=theorem-type-not-prop lean=rejected"
+        );
+
+        lean_probe::report_checked(TAG, 1);
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -388,69 +606,102 @@ fn pinned_lean_independently_admits_every_constructed_real_declaration_by_name()
 
 #[test]
 fn pinned_lean_rejects_a_wrong_proof_and_a_wrong_goal_for_the_flagship_theorem() {
-    let mut kernel = Kernel::new();
-    build_creal_prelude(&mut kernel).expect("the CReal development must build");
-    let stream = kernel
-        .render_lean4export_ndjson(&Lean4ExportMetadata::axeyum("4.30.0"))
-        .expect("the checked carrier must export");
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        build_creal_prelude(&mut kernel).expect("the CReal development must build");
+        let root = name_of(&kernel, "CReal.ivt_approx").expect("`CReal.ivt_approx` must exist");
+        let stream = kernel
+            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[root])
+            .expect("the flagship closure must export");
 
-    // Resolved before any Lean runs, so a stream that stopped carrying the
-    // subject fails here rather than passing as "nothing to check".
-    let subject = name_index(&stream, "ivt_approx")
-        .expect("the export must carry `ivt_approx`, or these controls check nothing");
-    let (record, goal, proof) =
-        theorem_record(&stream, subject).expect("`ivt_approx` must be a theorem record");
-    let (other_goal, other_proof) = first_monomorphic_theorem(&stream)
-        .expect("the carrier must hold a universe-monomorphic theorem");
-    assert_ne!(proof, other_proof, "the control must substitute a DIFFERENT proof");
-    assert_ne!(goal, other_goal, "the control must substitute a DIFFERENT goal");
+        // Resolved before any Lean runs, so a stream that stopped carrying the
+        // subject fails here rather than passing as "nothing to check".
+        let subject = name_index(&stream, "ivt_approx")
+            .expect("the export must carry `ivt_approx`, or these controls check nothing");
+        let (record, goal, proof) =
+            theorem_record(&stream, subject).expect("`ivt_approx` must be a theorem record");
+        let (other_goal, other_proof) = first_monomorphic_theorem(&stream)
+            .expect("the closure must hold a universe-monomorphic theorem");
+        assert_ne!(
+            proof, other_proof,
+            "the control must substitute a DIFFERENT proof"
+        );
+        assert_ne!(
+            goal, other_goal,
+            "the control must substitute a DIFFERENT goal"
+        );
 
-    let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 2) else {
-        return;
-    };
+        let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 3) else {
+            return;
+        };
 
-    // (1) wrong proof: the flagship's own statement, someone else's proof term.
-    let wrong_proof = stream.replace(
-        &record,
-        &record.replace(
-            &format!("\"value\":{proof}"),
-            &format!("\"value\":{other_proof}"),
-        ),
-    );
-    assert_ne!(wrong_proof, stream, "the wrong-proof control must change bytes");
-    let (accepted, report, _) = replay(&lean, &wrong_proof, "census_wrong_proof");
-    assert!(
-        !accepted,
-        "pinned Lean's kernel ACCEPTED a wrong proof for `CReal.ivt_approx`; every \
-         positive verdict in this file is worthless:\n{report}"
-    );
-    assert!(
-        report.contains("REAL LEAN KERNEL REJECTED"),
-        "the rejection must come from the kernel, not from a parse error:\n{report}"
-    );
+        // Positive control first: the UNMODIFIED closure must be accepted, or
+        // the two rejections below are consistent with a stream Lean refuses
+        // for some unrelated reason.
+        let (accepted, report, admitted) = replay(&lean, &stream, "census_flagship_clean");
+        assert!(
+            accepted,
+            "pinned Lean must accept the unmodified flagship closure:\n{report}"
+        );
+        assert_eq!(
+            grade("CReal.ivt_approx", &admitted),
+            Grade::Replayed,
+            "the flagship must be admitted under its own name:\n{report}"
+        );
 
-    // (2) wrong goal: the flagship's own proof term, someone else's statement.
-    let wrong_goal = stream.replace(
-        &record,
-        &record.replace(&format!("\"type\":{goal}"), &format!("\"type\":{other_goal}")),
-    );
-    assert_ne!(wrong_goal, stream, "the wrong-goal control must change bytes");
-    assert_ne!(
-        wrong_goal, wrong_proof,
-        "the two controls must be different streams, or only one was ever tested"
-    );
-    let (accepted, report, _) = replay(&lean, &wrong_goal, "census_wrong_goal");
-    assert!(
-        !accepted,
-        "pinned Lean's kernel ACCEPTED `CReal.ivt_approx`'s proof against a \
-         DIFFERENT goal, so the replay does not check what the theorem says:\n{report}"
-    );
-    assert!(
-        report.contains("REAL LEAN KERNEL REJECTED"),
-        "the rejection must come from the kernel, not from a parse error:\n{report}"
-    );
+        // (1) wrong proof: the flagship's own statement, someone else's proof.
+        let wrong_proof = stream.replace(
+            &record,
+            &record.replace(
+                &format!("\"value\":{proof}"),
+                &format!("\"value\":{other_proof}"),
+            ),
+        );
+        assert_ne!(
+            wrong_proof, stream,
+            "the wrong-proof control must change bytes"
+        );
+        let (accepted, report, _) = replay(&lean, &wrong_proof, "census_wrong_proof");
+        assert!(
+            !accepted,
+            "pinned Lean's kernel ACCEPTED a wrong proof for `CReal.ivt_approx`; \
+             every positive verdict in this file is worthless:\n{report}"
+        );
+        assert!(
+            report.contains("REAL LEAN KERNEL REJECTED"),
+            "the rejection must come from the kernel, not a parse error:\n{report}"
+        );
 
-    lean_probe::report_checked(TAG, 2);
+        // (2) wrong goal: the flagship's own proof, someone else's statement.
+        let wrong_goal = stream.replace(
+            &record,
+            &record.replace(
+                &format!("\"type\":{goal}"),
+                &format!("\"type\":{other_goal}"),
+            ),
+        );
+        assert_ne!(
+            wrong_goal, stream,
+            "the wrong-goal control must change bytes"
+        );
+        assert_ne!(
+            wrong_goal, wrong_proof,
+            "the two controls must be different streams, or only one was tested"
+        );
+        let (accepted, report, _) = replay(&lean, &wrong_goal, "census_wrong_goal");
+        assert!(
+            !accepted,
+            "pinned Lean's kernel ACCEPTED `CReal.ivt_approx`'s proof against a \
+             DIFFERENT goal, so the replay does not check what the theorem \
+             says:\n{report}"
+        );
+        assert!(
+            report.contains("REAL LEAN KERNEL REJECTED"),
+            "the rejection must come from the kernel, not a parse error:\n{report}"
+        );
+
+        lean_probe::report_checked(TAG, 3);
+    });
 }
 
 /// **The S4 exit clause, attested by Lean rather than by a unit test.**
@@ -461,56 +712,59 @@ fn pinned_lean_rejects_a_wrong_proof_and_a_wrong_goal_for_the_flagship_theorem()
 /// Lean's environment simply does not contain `CReal.ivt_approx`.
 #[test]
 fn a_family_sibling_lean_never_saw_is_graded_notreplayed() {
-    let mut kernel = Kernel::new();
-    build_creal_prelude(&mut kernel).expect("the CReal development must build");
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        build_creal_prelude(&mut kernel).expect("the CReal development must build");
 
-    let sampled = name_of(&kernel, "CReal.ivt_step").expect("`CReal.ivt_step` must be declared");
-    let sibling = "CReal.ivt_approx";
-    assert!(
-        name_of(&kernel, sibling).is_some(),
-        "the sibling must be a real declaration THIS kernel accepted, or the \
-         guard compares against nothing: the point is that Axeyum acceptance and \
-         Lean acceptance are separate grades"
-    );
+        let sampled =
+            name_of(&kernel, "CReal.ivt_step").expect("`CReal.ivt_step` must be declared");
+        let sibling = "CReal.ivt_approx";
+        assert!(
+            name_of(&kernel, sibling).is_some(),
+            "the sibling must be a real declaration THIS kernel accepted, or the \
+             guard compares against nothing: the point is that Axeyum acceptance \
+             and Lean acceptance are separate grades"
+        );
 
-    let stream = kernel
-        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[sampled])
-        .expect("the sampled root must export");
+        let stream = kernel
+            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[sampled])
+            .expect("the sampled root must export");
 
-    let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 1) else {
-        return;
-    };
+        let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 1) else {
+            return;
+        };
 
-    let (accepted, report, admitted) = replay(&lean, &stream, "census_sampled_family");
-    assert!(
-        accepted,
-        "pinned Lean must accept the sampled closure, or this guard proves \
-         nothing about grading:\n{report}"
-    );
+        let (accepted, report, admitted) = replay(&lean, &stream, "census_sampled_family");
+        assert!(
+            accepted,
+            "pinned Lean must accept the sampled closure, or this guard proves \
+             nothing about grading:\n{report}"
+        );
 
-    // Positive half: the sampled member really was checked. Without this the
-    // negative half below is satisfied by a replay that checked nothing.
-    assert_eq!(
-        grade("CReal.ivt_step", &admitted),
-        Grade::Replayed,
-        "the sampled root itself must be admitted:\n{report}"
-    );
+        // Positive half: the sampled member really was checked. Without this the
+        // negative half is satisfied by a replay that checked nothing.
+        assert_eq!(
+            grade("CReal.ivt_step", &admitted),
+            Grade::Replayed,
+            "the sampled root itself must be admitted:\n{report}"
+        );
 
-    // Negative half: its family member is NOT graded, though every heuristic a
-    // convenience might use — same prefix, same module, same family, same
-    // source file, reachable in one step — would say it should be.
-    assert_eq!(
-        grade(sibling, &admitted),
-        Grade::NotReplayed,
-        "`{sibling}` inherited a replay grade from a sampled sibling. Lean's \
-         environment holds {} constants and this is not one of them:\n{report}",
-        admitted.len()
-    );
-    println!(
-        "{CENSUS_MARKER} inheritance-guard sampled=CReal.ivt_step admitted={} \
-         sibling={sibling} grade=not-replayed",
-        admitted.len()
-    );
+        // Negative half: its family member is NOT graded, though every heuristic
+        // a convenience might use -- same prefix, same module, same family, same
+        // source file, reachable in one step -- would say it should be.
+        assert_eq!(
+            grade(sibling, &admitted),
+            Grade::NotReplayed,
+            "`{sibling}` inherited a replay grade from a sampled sibling. Lean's \
+             environment holds {} constants and this is not one of them:\n{report}",
+            admitted.len()
+        );
+        println!(
+            "{CENSUS_MARKER} inheritance-guard sampled=CReal.ivt_step admitted={} \
+             sibling={sibling} grade=not-replayed",
+            admitted.len()
+        );
 
-    lean_probe::report_checked(TAG, 1);
+        lean_probe::report_checked(TAG, 1);
+    });
 }
