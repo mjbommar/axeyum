@@ -7029,8 +7029,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
         ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
         cauchy_of_abs_diff_le: kernel.name_str(creal, "cauchy_of_abs_diff_le"),
-        scaled_cauchy_of_abs_diff_le: kernel
-            .name_str(creal, "scaledCauchy_of_abs_diff_le"),
+        scaled_cauchy_of_abs_diff_le: kernel.name_str(creal, "scaledCauchy_of_abs_diff_le"),
         converges_of_abs_diff_le: kernel.name_str(creal, "converges_of_abs_diff_le"),
         ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
         ivt_exact_root: kernel.name_str(creal, "ivt_exact_root"),
@@ -7187,8 +7186,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_level_count_zero: kernel.name_str(creal, "meshLevelCount_zero"),
         mesh_level_count_succ: kernel.name_str(creal, "meshLevelCount_succ"),
         mesh_level_count_pow: kernel.name_str(creal, "meshLevelCount_pow"),
-        mesh_level_count_ge_of_size: kernel
-            .name_str(creal, "meshLevelCount_ge_of_size"),
+        mesh_level_count_ge_of_size: kernel.name_str(creal, "meshLevelCount_ge_of_size"),
         mesh_max: kernel.name_str(creal, "meshMax"),
         mesh_max_step_le: kernel.name_str(creal, "meshMax_step_le"),
         mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
@@ -7203,8 +7201,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_point_near_coarse: kernel.name_str(creal, "meshPoint_near_coarse"),
         max_range_le_add_of_exists: kernel.name_str(creal, "maxRange_le_add_of_exists"),
         mesh_max_le_add_of_step_close: kernel.name_str(creal, "meshMax_le_add_of_step_close"),
-        mesh_max_le_add_of_modulus: kernel
-            .name_str(creal, "meshMax_le_add_of_modulus"),
+        mesh_max_le_add_of_modulus: kernel.name_str(creal, "meshMax_le_add_of_modulus"),
         sup_level: kernel.name_str(creal, "supLevel"),
         sup_level_mono: kernel.name_str(creal, "supLevel_mono"),
         sup_seq: kernel.name_str(creal, "supSeq"),
@@ -7214,8 +7211,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sup_seq_abs_diff_le: kernel.name_str(creal, "supSeq_abs_diff_le"),
         sup_seq_cauchy: kernel.name_str(creal, "supSeq_cauchy"),
         sup_on: kernel.name_str(creal, "supOn"),
-        sup_seq_converges_sup_on: kernel
-            .name_str(creal, "supSeq_converges_supOn"),
+        sup_seq_converges_sup_on: kernel.name_str(creal, "supSeq_converges_supOn"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),

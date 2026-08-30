@@ -29,6 +29,12 @@
 //!
 //! ## What this file lands, and what it does not
 //!
+//! **STALE BELOW THIS LINE.** `CReal.supOn` landed on 2026-08-30; every
+//! paragraph between here and the "`CReal.supOn` LANDED" section is the
+//! incident history of getting there, kept because its diagnoses are correct
+//! and reusable, but its account of what REMAINS is superseded. Read that
+//! section first.
+//!
 //! **Landed**: `CReal.maxRange`, a `Nat.rec`-structured finite-mesh-maximum
 //! fold over an arbitrary `Nat → CReal` sequence — the `max`-lattice analogue
 //! of [`CReal.sumRange`](super::CRealPrelude::sum_range) — plus its defining
@@ -389,6 +395,130 @@
 //! waiting; the gap bound it would sum is not built yet, and is the actual
 //! remaining mathematics). Not attempted against the kernel this session —
 //! see that section for the two candidate routes and why neither is small.
+//!
+//! ### `CReal.supOn` LANDED (2026-08-30). Everything above is history; read
+//! this section first.
+//!
+//! `CReal.supOn : ∀ F a b, le a b → UniformlyContinuousOn F a b → CReal` is
+//! in the prelude, derived and axiom-free, together with
+//! `CReal.supSeq_converges_supOn` tying it to the sequence it is built from.
+//! Thirteen declarations closed the gap, in four rungs; twelve were
+//! first-attempt kernel accepts and the thirteenth failed once on a
+//! `pi_fv`/`arrow` binder.
+//!
+//! **What the plan above got right.** Route 2 (nested refinement) was the
+//! right route and route 1 (`bucketIndex`) was correctly rejected —
+//! `uniform_continuity.rs`'s open `crossingClose` side condition is never
+//! touched by anything here. Rung 5's accuracy schedule composed EXACTLY as
+//! designed: `expOfModulus m k` is literally `Nat.size (m (meshLevelCount k))`,
+//! which is definitionally the `Nat.size (modulus n)` at `n := meshLevelCount
+//! k` that the width bound needs, so `expOfModulus_le_trueExpOfModulus` slots
+//! in under one `Nat.add_le_add_left` with nothing recomputed. The
+//! "Rung 6 re-verified" section's diagnosis — that the blocker was the
+//! per-level gap bound and that it needed a nearest-coarse-point fact at
+//! ARBITRARY depth — was correct, and its own correction (make the coarse
+//! index an `Exists` witness, since the conclusion is `Prop`) is what made the
+//! rest cheap.
+//!
+//! **Three things the plan got wrong, all in the same direction: it
+//! oversized what remained.**
+//!
+//! 1. **No telescope is needed, and neither is the double telescope.** The
+//!    plan sizes rung 6b as "sum the per-level gaps", and worries that
+//!    `trueExpOfModulus` can jump the mesh level by arbitrarily many
+//!    doublings within one `k`-to-`k+1` block, so that an inner geometric
+//!    series across intermediate levels might be required. It is not.
+//!    [`CRealPrelude::mesh_max_le_add_of_step_close`] is already
+//!    DEPTH-UNIFORM — it takes an arbitrary depth `d` and uses the same
+//!    epsilon at every depth — so the estimate at `k' ≥ k` is ONE
+//!    application, and how many doublings separate them never enters.
+//!    `Nat.le_dest` supplies the `add j d` shape. The double telescope would
+//!    have been machinery for a difficulty the previous rung had already
+//!    removed.
+//! 2. **The schedule was missing the interval WIDTH, and nothing above says
+//!    so.** `expOfModulus` schedules only the modulus. The mesh width is
+//!    `(b − a)/2^j`, so the level must also absorb `b − a`; without that the
+//!    construction is correct only on intervals of width at most one.
+//!    [`CRealPrelude::sup_level`] is `Nat.size (CReal.bound (b − a)) +
+//!    trueExpOfModulus m k` — one summand per factor of
+//!    [`CRealPrelude::mesh_le_of_ge`]'s threshold. The width term is constant
+//!    in `k`, so monotonicity is undisturbed.
+//! 3. **`CReal.mesh_le_of_ge` already existed and is exactly the Archimedean
+//!    rescaling this file needed.** It is in `creal/integral.rs`, filed under
+//!    the consumer that first needed it, and its left-hand side is
+//!    SYNTACTICALLY this file's own `mesh_delta a b m`. It reads its
+//!    threshold off `CReal.bound`, a total computable projection — never off
+//!    `CReal.archimedean`'s `Exists` — which is what keeps the whole route
+//!    clear of kernel fact 1. This is hiding place 1 from CLAUDE.md's
+//!    retrieval section, exactly: general infrastructure filed under its first
+//!    consumer's module. `examples/shape_search` found it in one query.
+//!
+//! **The rungs, as landed.**
+//!
+//! - **6c** [`CRealPrelude::mesh_level_count_ge_of_size`]. At which mesh LEVEL
+//!   does the doubling schedule reach `mesh_le_of_ge`'s threshold? Via
+//!   `meshLevelCount_pow` the question is `2^j ≥ (c+1)·(outer+1)`, and
+//!   `Nat.lt_pow_size` answers it one factor at a time, with `Nat.pow_add`
+//!   turning a SUM in the exponent into the PRODUCT of the two bounds — so the
+//!   schedule stays additive. The last step is two `Eq.refl`s, and they are
+//!   refl only because `Nat.mul` and `Nat.add` both recurse on their RIGHT
+//!   argument.
+//! - **6d** [`CRealPrelude::mesh_max_le_add_of_modulus`]. `hclose` instantiated
+//!   from `uc_spec` — the one obligation `mesh_max_le_add_of_step_close`'s own
+//!   documentation said a `supOn` assembly still owed. No mesh geometry
+//!   survives into the hypothesis; it is a `Nat` bit-count inequality. Note
+//!   `uc_spec` is applied at SWAPPED arguments, since its conclusion puts the
+//!   first argument on the left of `|F x − F y|` and `hclose` wants `F y`
+//!   there.
+//! - **6e** [`CRealPrelude::sup_level`], [`CRealPrelude::sup_seq`] and their
+//!   order facts, including [`CRealPrelude::sup_seq_le_add`] — the whole of
+//!   point 1 above.
+//! - **6f** [`CRealPrelude::sup_seq_cauchy`], at `K = 1`. `K = 1` is what the
+//!   geometric schedule buys, not a tuning choice.
+//! - **7** [`CRealPrelude::sup_on`] and
+//!   [`CRealPrelude::sup_seq_converges_sup_on`].
+//!
+//! **Note the two readings of the rate, which coexist only because rung 6 is
+//! depth-uniform.** The schedule REQUESTS the summable `1/2^k` — requesting
+//! `1/(k+1)` directly is the harmonic trap rung 5 exists to avoid — and then
+//! WEAKENS it to `1/(k+1)` for the Cauchy modulus, where `1/(k+1)` is fine
+//! precisely because nothing is being summed.
+//!
+//! **One refactor outside this file.** `cauchy_of_abs_diff_le` built the raw
+//! `(K+2, per-pair)` pair and immediately closed an `Exists` over it. That
+//! pair is what `regular_of_scaled_cauchy` needs as DATA, and kernel fact 2
+//! means `Cauchy f` can never give it back, so the declaration was split at
+//! that point into [`CRealPrelude::scaled_cauchy_of_abs_diff_le`] plus a
+//! one-line `cexists_intro`. No proof content moved. The "Rung 6 re-verified"
+//! section anticipated needing this body and suggested reproducing it here;
+//! extracting is better, because two copies of one 300-line seven-term bound
+//! would have to stay in sync while the kernel verifies both.
+//!
+//! ### What `supOn` does NOT yet give, stated precisely
+//!
+//! `supOn` is a VALUE with a `Converges` law, and that is all. It is not yet
+//! characterized as a supremum. Two declarations are missing, and they are
+//! the difference between "a real exists" and "EVT":
+//!
+//! - **The upper-bound law**, `∀ x, le a x → le x b → le (F x) (supOn F a b
+//!   hab u)`. An arbitrary `x` is not a mesh point, so this needs `x` placed
+//!   within one cell of some mesh point (available: the same
+//!   `riemann_sample_in_bounds`/`uc_spec` pairing rung 6d already uses), then
+//!   [`CRealPrelude::max_range_ub`] at that index, then a limit passage
+//!   through `supSeq_converges_supOn`. The mesh index for `x` is where a
+//!   `bucketIndex`-style lookup DOES seem to be needed — but the conclusion is
+//!   `Prop`, so rung 6's own trick (make the index an `Exists` witness)
+//!   should apply again, and `meshPoint_near_coarse` is the wrong shape only
+//!   because it relates two MESHES rather than a point to a mesh.
+//! - **The least-upper-bound law**, in its constructive form: for every
+//!   `eps > 0` there is a point of `[a, b]` at which `F` exceeds `supOn −
+//!   eps`. Note this is an APPROXIMATE statement and must stay one —
+//!   [`super::CRealPrelude::evt_attained_max_decides_sign`] rules out the
+//!   exact version, which is precisely why EVT's row 2 exists.
+//!
+//! Until the upper-bound law lands, `supOn` is honestly described as "the
+//! limit of the mesh maxima, which is the supremum", with the second clause
+//! not yet machine-checked.
 
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
@@ -399,9 +529,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{
-    nat_rewrite_prop, radd, rat_eq_rewrite, req, rle, rtrans, rzero,
-};
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, req, rle, rtrans, rzero};
 
 /// Reducibility height for [`declare_max_range`]'s `Definition`. Deliberately
 /// far above [`super::DERIVED_HEIGHT`] plus every other derived-operation
@@ -3611,10 +3739,7 @@ fn declare_mesh_level_count_ge_of_size_thm(
     // step1 : (c+1)·(outer+1) ≤ (c+1)·2^(size outer).
     let h2 = d.lemma(nat_p.lt_pow_size, &[outer]);
     let mid = NatOps::mul(d, succ_c, pow_so);
-    let step1 = d.lemma(
-        nat_p.mul_le_mul_left,
-        &[succ_c, succ_outer, pow_so, h2],
-    );
+    let step1 = d.lemma(nat_p.mul_le_mul_left, &[succ_c, succ_outer, pow_so, h2]);
 
     // step2 : (c+1)·2^(size outer) ≤ 2^(size c)·2^(size outer), via the
     // commuted form (this kernel states `mul_le_mul_left` only).
@@ -4180,10 +4305,7 @@ fn declare_sup_seq_mono_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     let lvl_k = d.const_app(p.sup_level, &[f, a, b, u, k]);
     let lvl_kp = d.const_app(p.sup_level, &[f, a, b, u, kp]);
     let hlevel = d.lemma(p.sup_level_mono, &[f, a, b, u, k, kp, h]);
-    let proof = d.lemma(
-        p.mesh_max_mono,
-        &[f, a, b, u, hab, lvl_k, lvl_kp, hlevel],
-    );
+    let proof = d.lemma(p.mesh_max_mono, &[f, a, b, u, hab, lvl_k, lvl_kp, hlevel]);
 
     let seq_k = d.const_app(p.sup_seq, &[f, a, b, u, k]);
     let seq_kp = d.const_app(p.sup_seq, &[f, a, b, u, kp]);
@@ -4394,10 +4516,7 @@ pub(super) fn declare_sup_seq(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
 /// `Lt m (pow 2 m)`, which is `Nat.le (succ m) (pow 2 m)` after `Nat.lt`'s
 /// unfold; [`CRealPrelude::mesh_level_count_pow`] rewrites `pow 2 m` to
 /// `succ (meshLevelCount m)` and `le_of_succ_le_succ` strips the successor.
-fn declare_le_mesh_level_count_thm(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+fn declare_le_mesh_level_count_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let nat_p = p.rat.int.nat;
     let two = d.num(2);
@@ -4479,10 +4598,7 @@ fn rat_le_add_left(
 ///
 /// `K = 1` is not a tuning choice — it is what the geometric schedule buys.
 /// A per-level rate that only summed to `O(1/k)` would need `K` to grow.
-fn declare_sup_seq_abs_diff_le_thm(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+fn declare_sup_seq_abs_diff_le_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let nat = d.nat_ty();
     let func_ty = d.arrow(carrier, carrier);
@@ -4590,7 +4706,10 @@ fn declare_sup_seq_abs_diff_le_thm(
         // `m ≤ n`: `supSeq m` is the coarse one.
         let side_m = easy(d, m, n, h);
         let side_n = working(d, m, n, h, frac_m, pick_m);
-        let body = d.lemma(p.abs_le_of_two_sided, &[seq_m, seq_n, q_rat, side_m, side_n]);
+        let body = d.lemma(
+            p.abs_le_of_two_sided,
+            &[seq_m, seq_n, q_rat, side_m, side_n],
+        );
         d.lam_fv(h_fv, le_mn_ty, body)
     };
     let minor_nm = {
@@ -4599,7 +4718,10 @@ fn declare_sup_seq_abs_diff_le_thm(
         // `n ≤ m`: `supSeq n` is the coarse one, so the roles flip.
         let side_m = working(d, n, m, h, frac_n, pick_n);
         let side_n = easy(d, n, m, h);
-        let body = d.lemma(p.abs_le_of_two_sided, &[seq_m, seq_n, q_rat, side_m, side_n]);
+        let body = d.lemma(
+            p.abs_le_of_two_sided,
+            &[seq_m, seq_n, q_rat, side_m, side_n],
+        );
         d.lam_fv(h_fv, le_nm_ty, body)
     };
     let proof = d.lemma(
@@ -4853,10 +4975,7 @@ fn sup_on_body(
 /// cauchy f K h)` — the same term [`sup_on_body`] builds, from the same
 /// arguments, so the two are the identical `ExprId` and the kernel never
 /// unfolds `supOn`'s `Definition` to compare them.
-fn declare_sup_seq_converges_thm(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+fn declare_sup_seq_converges_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let nat = d.nat_ty();
     let func_ty = d.arrow(carrier, carrier);

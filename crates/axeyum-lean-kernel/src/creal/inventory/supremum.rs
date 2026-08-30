@@ -98,11 +98,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.supSeq_mono", p.sup_seq_mono, "theorem"),
         ("CReal.supSeq_le_add", p.sup_seq_le_add, "theorem"),
         ("CReal.le_meshLevelCount", p.le_mesh_level_count, "theorem"),
-        (
-            "CReal.supSeq_abs_diff_le",
-            p.sup_seq_abs_diff_le,
-            "theorem",
-        ),
+        ("CReal.supSeq_abs_diff_le", p.sup_seq_abs_diff_le, "theorem"),
         ("CReal.supSeq_cauchy", p.sup_seq_cauchy, "theorem"),
         ("CReal.supOn", p.sup_on, "definition"),
         (
