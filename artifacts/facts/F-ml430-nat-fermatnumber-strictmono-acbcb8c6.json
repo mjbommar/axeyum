@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "StrictMono Nat.fermatNumber",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fermatNumber_strictMono",
+    "kernel_statement": "theorem Nat.fermatNumber_strictMono : (((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x0 x1) -> AxNat.lt (AxNat.fermatNumber x0) (AxNat.fermatNumber x1)))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-pow-lt-pow-of-lt", "F:nat-add-lt-add-left", "F:nat-add-comm", "F:ml430-nat-add-comm-56a2d614"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.fermatNumber_strictMono",
+      "kind": "kernel-term",
+      "supports": "`Nat.fermatNumber_strictMono` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.fermatNumber_strictMono\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x0 x1) -> AxNat.lt (AxNat.fermatNumber x0) (AxNat.fermatNumber x1))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.fermatNumber_strictMono"
+    },
+    {
+      "id": "footprint-Nat.fermatNumber_strictMono",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.fermatNumber_strictMono`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.fermatNumber_strictMono`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction (lane fermat-easy). `StrictMono f` is Mathlib's own `def StrictMono (f : a -> b) := forall a b, a < b -> f a < f b`, so this is the core-rendered `forall x y, Lt x y -> Lt (fermatNumber x) (fermatNumber y)`. `pow_lt_pow_of_lt` climbs both `pow 2 .` layers directly from the `Lt x y` hypothesis (no case-split needed, unlike the `Le`-strength `fermatNumber_mono`), and a new `add_lt_add_right_local` helper (built from `add_comm` + `add_lt_add_left`, since only the `Le`-strength `add_le_add_right` exists directly) closes the final `+1` layer. Entirely symbolic: `x`, `y` stay free throughout, largest formed numeral is the base `2`. `crates/axeyum-lean-kernel/src/nat_prelude/fermat_number_mirrors.rs::declare_fermatnumber_strictmono`. Verified symbolically (admitted over genuinely free `x`, `y`) and at a concrete instance (`nat_prelude_tests.rs::fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_negative_controls`, `fermatNumber 0 = 3 < fermatNumber 1 = 5`), with TWO negative controls: the argument-swapped conclusion is not defeq to what is proven, and a reflexive `Le` witness at `m = n` is rejected outright (the theorem does not hold vacuously at equal arguments). This is a genuine kernel construction, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "Nat.fermatNumber 0 = 3",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fermatNumber_zero",
+    "kernel_statement": "theorem Nat.fermatNumber_zero : (Eq.{1} AxNat (AxNat.fermatNumber AxNat.zero) (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.fermatNumber_zero",
+      "kind": "kernel-term",
+      "supports": "`Nat.fermatNumber_zero` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.fermatNumber_zero\" && $3 == \"Eq.{1} AxNat (AxNat.fermatNumber AxNat.zero) (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.fermatNumber_zero"
+    },
+    {
+      "id": "footprint-Nat.fermatNumber_zero",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.fermatNumber_zero`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.fermatNumber_zero`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction (lane fermat-easy). Decided the instant `Nat.fermatNumber` was declared (`docs/research/09-decisions/adr-0695-...`): `fermatNumber 0 = add (pow 2 (pow 2 0)) 1 = add (pow 2 1) 1 = add 2 1 = 3`, all fully concrete (largest formed magnitude 3), closed by `refl` alone. `crates/axeyum-lean-kernel/src/nat_prelude/fermat_number_mirrors.rs::declare_fermatnumber_zero`. Checked by `nat_prelude_tests.rs::fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_negative_controls`. This is a genuine kernel construction, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
