@@ -6479,6 +6479,28 @@ pub struct CRealPrelude {
     /// would decide the sign of an arbitrary real. That is why this statement
     /// is approximate and must stay so. See `creal/sup_laws.rs`.
     pub sup_on_approx_lub: NameId,
+    /// `CReal.supSeq_le_supOn : ∀ F a b (hab : le a b) u k,
+    /// le (supSeq F a b u k) (supOn F a b hab u)` — every mesh maximum is
+    /// below the supremum, EXACTLY, with no epsilon.
+    ///
+    /// [`Self::sup_seq_mono`] under [`Self::converges_lower_bound_shift`] at
+    /// shift `k`: the unshifted `converges_lower_bound` wants the bound at
+    /// every index including those below `k`, where it is false. See
+    /// `creal/sup_laws.rs`.
+    pub sup_seq_le_sup_on: NameId,
+    /// `CReal.supOn_ub_at_supSeq_point : ∀ F a b (hab : le a b) u k i,
+    /// Nat.le i (meshLevelCount (supLevel F a b u k)) →
+    /// le (F (meshSamplePoint a (meshDelta a b (meshLevelCount (supLevel F a b
+    /// u k))) i)) (supOn F a b hab u)` — **the upper-bound law at every point
+    /// the construction samples.**
+    ///
+    /// [`Self::max_range_ub`] then [`Self::sup_seq_le_sup_on`]. NOT stated at
+    /// an arbitrary mesh level: nothing proves `supLevel`'s schedule is
+    /// cofinal in the levels (`trueExpOfModulus` accumulates `expOfModulus`,
+    /// which is `0` whenever the modulus is). Pairs with
+    /// [`Self::sup_on_approx_lub`], whose witness is a point of exactly this
+    /// family. See `creal/sup_laws.rs`.
+    pub sup_on_ub_at_sup_seq_point: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7246,6 +7268,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         max_range_attained_approx: kernel.name_str(creal, "maxRange_attained_approx"),
         sup_seq_le_shift: kernel.name_str(creal, "supSeq_le_shift"),
         sup_on_approx_lub: kernel.name_str(creal, "supOn_approx_lub"),
+        sup_seq_le_sup_on: kernel.name_str(creal, "supSeq_le_supOn"),
+        sup_on_ub_at_sup_seq_point: kernel.name_str(creal, "supOn_ub_at_supSeq_point"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -13028,6 +13052,26 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.sup_on_approx_lub],
         run: sup_laws::declare_sup_on_approx_lub,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_ub_at_sup_seq_point",
+        requires: &[
+            |p: CRealPrelude| p.converges_lower_bound_shift,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_range_ub,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_converges_sup_on,
+            |p: CRealPrelude| p.sup_seq_mono,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.sup_seq_le_sup_on,
+            |p: CRealPrelude| p.sup_on_ub_at_sup_seq_point,
+        ],
+        run: sup_laws::declare_sup_on_ub_at_sup_seq_point,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",

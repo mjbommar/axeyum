@@ -85,7 +85,7 @@ use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rtrans};
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rtrans};
 
 /// `CReal.mul x y`.
 fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
@@ -774,4 +774,220 @@ pub(super) fn declare_sup_on_approx_lub(
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
     declare_sup_on_approx_lub_thm(d, p)
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.supSeq_le_supOn` and `CReal.supOn_ub_at_supSeq_point`
+// ---------------------------------------------------------------------------
+
+/// `CReal.supSeq_le_supOn : ∀ F a b (hab : le a b) u k,
+/// le (supSeq F a b u k) (supOn F a b hab u)` — every mesh maximum is below
+/// the supremum, EXACTLY, with no epsilon.
+///
+/// This is the upper-bound law's first half, and it is free. The sup sequence
+/// is monotone
+/// ([`CRealPrelude::sup_seq_mono`](super::CRealPrelude::sup_seq_mono)) and
+/// converges to `supOn`, so its `k`-th term bounds the limit below — but
+/// `converges_lower_bound` wants the bound at literally EVERY index including
+/// those below `k`, where it is false.
+/// [`CRealPrelude::converges_lower_bound_shift`](super::CRealPrelude::converges_lower_bound_shift)
+/// is exactly the eventual form that exists for this situation: at shift
+/// `s := k` the hypothesis is `∀ n, supSeq k ≤ supSeq (n + k)`, which is
+/// monotonicity and nothing else.
+///
+/// `Nat.le_add_right` states `Le n (add n k)` — the operands the other way
+/// round from what the shift needs — so one `Nat.add_comm` rewrite stands
+/// between them. That is the only non-mechanical step.
+fn declare_sup_seq_le_sup_on_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat_p = p.rat.int.nat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let seq_k = d.const_app(p.sup_seq, &[f, a, b, u, k]);
+    let target_real = d.const_app(p.sup_on, &[f, a, b, hab, u]);
+    let seq_lambda = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let body = d.const_app(p.sup_seq, &[f, a, b, u, m]);
+        d.lam_fv(m_fv, nat, body)
+    };
+    let conv = d.lemma(p.sup_seq_converges_sup_on, &[f, a, b, hab, u]);
+
+    let forall_bound = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        // `Nat.le k (Nat.add n k)`, from `le_add_right k n : Le k (add k n)`
+        // rewritten along `Nat.add_comm k n`.
+        let shifted = NatOps::add(d, k, n);
+        let flipped = NatOps::add(d, n, k);
+        let raw = d.lemma(nat_p.le_add_right, &[k, n]);
+        let comm = d.lemma(nat_p.add_comm, &[k, n]);
+        let hle = nat_rewrite_prop(d, shifted, flipped, comm, raw, &|d, t| d.le(k, t));
+        let body = d.lemma(p.sup_seq_mono, &[f, a, b, u, hab, k, flipped, hle]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let proof = d.lemma(
+        p.converges_lower_bound_shift,
+        &[k, seq_k, seq_lambda, target_real, forall_bound, conv],
+    );
+    let concl = cle(d, p, seq_k, target_real);
+
+    let ty = {
+        let out = d.pi_fv(k_fv, nat, concl);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(hab_fv, hab_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(k_fv, nat, proof);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sup_seq_le_sup_on,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.supOn_ub_at_supSeq_point : ∀ F a b (hab : le a b) u k i,
+/// Nat.le i (meshLevelCount (supLevel F a b u k)) →
+/// le (F (meshSamplePoint a (meshDelta a b (meshLevelCount (supLevel F a b u
+/// k))) i)) (supOn F a b hab u)` — **the upper-bound law at every point the
+/// construction samples.**
+///
+/// [`CRealPrelude::max_range_ub`](super::CRealPrelude::max_range_ub) says the
+/// fold dominates each of its samples, and `maxRange sampler count` IS
+/// `supSeq F a b u k` definitionally (through `supSeq` and `meshMax`, both
+/// small `Definition`s with no embedded proof term); then
+/// [`declare_sup_seq_le_sup_on_thm`]. Two steps.
+///
+/// **This is deliberately NOT stated at an arbitrary mesh level `j`**, and the
+/// restriction is real rather than laziness. `supSeq` samples only the levels
+/// `supLevel F a b u k`, and nothing here proves that schedule is cofinal in
+/// the levels: `supLevel` is `Nat.size (bound (b−a)) + trueExpOfModulus m k`,
+/// and `trueExpOfModulus` accumulates `expOfModulus`, which is `0` whenever
+/// the modulus is. A modulus that is eventually `0` — legitimate for a
+/// locally constant `F` — leaves the schedule bounded. So
+/// `meshMax F a b j ≤ supOn` at an arbitrary `j` needs a cofinality argument
+/// this file does not have, and asserting it would be the stronger claim
+/// rather than the honest one.
+///
+/// It pairs exactly with
+/// [`CRealPrelude::sup_on_approx_lub`](super::CRealPrelude::sup_on_approx_lub),
+/// whose witness is a point of precisely this family: together they say
+/// `supOn` is the supremum of `F` over the sampled set. Extending the upper
+/// bound to an ARBITRARY `x ∈ [a, b]` is the remaining step — see this
+/// module's header for why that one needs cell location.
+fn declare_sup_on_ub_at_sup_seq_point_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let level = d.const_app(p.sup_level, &[f, a, b, u, k]);
+    let count = d.const_app(p.mesh_level_count, &[level]);
+    let delta = mesh_delta(d, p, a, b, count);
+    let sampler = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sp = mesh_sample_point(d, p, a, delta, j);
+        let fx = d.apply(f, &[sp]);
+        d.lam_fv(j_fv, nat, fx)
+    };
+    let point = mesh_sample_point(d, p, a, delta, i);
+    let f_point = d.apply(f, &[point]);
+    let seq_k = d.const_app(p.sup_seq, &[f, a, b, u, k]);
+    let target_real = d.const_app(p.sup_on, &[f, a, b, hab, u]);
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let h_ty = d.le(i, count);
+
+    let ub = d.lemma(p.max_range_ub, &[sampler, count, i, h]);
+    let top = d.lemma(p.sup_seq_le_sup_on, &[f, a, b, hab, u, k]);
+    let body = d.lemma(p.le_trans, &[f_point, seq_k, target_real, ub, top]);
+    let concl = cle(d, p, f_point, target_real);
+
+    let ty = {
+        let out = d.arrow(h_ty, concl);
+        let out = d.pi_fv(i_fv, nat, out);
+        let out = d.pi_fv(k_fv, nat, out);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(hab_fv, hab_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(h_fv, h_ty, body);
+        let out = d.lam_fv(i_fv, nat, out);
+        let out = d.lam_fv(k_fv, nat, out);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sup_on_ub_at_sup_seq_point,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.supSeq_le_supOn` and `CReal.supOn_ub_at_supSeq_point`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sup_on_ub_at_sup_seq_point(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_sup_seq_le_sup_on_thm(d, p)?;
+    declare_sup_on_ub_at_sup_seq_point_thm(d, p)
 }

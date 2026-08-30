@@ -35,5 +35,11 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ),
         ("CReal.supSeq_le_shift", p.sup_seq_le_shift, "theorem"),
         ("CReal.supOn_approx_lub", p.sup_on_approx_lub, "theorem"),
+        ("CReal.supSeq_le_supOn", p.sup_seq_le_sup_on, "theorem"),
+        (
+            "CReal.supOn_ub_at_supSeq_point",
+            p.sup_on_ub_at_sup_seq_point,
+            "theorem",
+        ),
     ]
 }
