@@ -40,6 +40,7 @@
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
 use crate::KernelError;
+use crate::expr::ExprId;
 
 /// `Nat.gcd_comm : ∀ a b, Eq (gcd a b) (gcd b a)`. See the module doc for the
 /// mutual-divisibility-then-antisymmetry route, identical in shape to
@@ -68,6 +69,121 @@ pub(super) fn declare_gcd_comm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
 
         let proof = d.lemma(p.dvd_antisymm, &[gcd_ab, gcd_ba, forward, backward]);
         (d.eq(gcd_ab, gcd_ba), proof)
+    })?;
+    Ok(())
+}
+
+/// `2 ≤ x ∧ ∀ c, c ∣ x → c = 1 ∨ c = x` — primality, spelled inline. Local
+/// copy of `primes.rs`'s private helper of the same name and construction,
+/// per this file's own local-copies-per-file convention (`primes.rs` is not
+/// this task's file to edit).
+fn prime_condition(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let two = d.num(2);
+    let unit = d.num(1);
+    let lower = d.le(two, x);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let hypothesis = d.dvd(c, x);
+    let trivial = d.eq(c, unit);
+    let whole = d.eq(c, x);
+    let disjunction = d.const_app(p.logic.or, &[trivial, whole]);
+    let body = d.arrow(hypothesis, disjunction);
+    let divisors = d.pi_fv(c_fv, nat, body);
+    d.const_app(p.logic.and, &[lower, divisors])
+}
+
+/// `Nat.coprime_mul_of_coprime : ∀ x m n, Eq (gcd x m) one → Eq (gcd x n)
+/// one → Eq (gcd x (mul m n)) one` (Mathlib's `Nat.Coprime.mul_right`). See
+/// the field doc / module doc for the route: `coprime_of_forall_prime_dvd`
+/// fed a hypothesis built from `euclid_lemma` plus `dvd_gcd`, transported
+/// along each of the two coprimality hypotheses in turn.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_mul_of_coprime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    d.theorem(p.coprime_mul_of_coprime, 3, &|d, v| {
+        let x = v[0];
+        let m = v[1];
+        let n = v[2];
+        let one = d.num(1);
+
+        let gcd_x_m = d.gcd(x, m);
+        let gcd_x_n = d.gcd(x, n);
+        let h_xm_ty = d.eq(gcd_x_m, one);
+        let h_xn_ty = d.eq(gcd_x_n, one);
+        let mul_mn = d.mul(m, n);
+        let gcd_x_mn = d.gcd(x, mul_mn);
+        let target = d.eq(gcd_x_mn, one);
+
+        let h_xm_fv = d.fresh_fvar();
+        let h_xm = d.kernel().fvar(h_xm_fv);
+        let h_xn_fv = d.fresh_fvar();
+        let h_xn = d.kernel().fvar(h_xn_fv);
+
+        // `hyp : ∀ k, prime_condition k → dvd k x → dvd k (mul m n) → dvd k
+        // one`, the argument `coprime_of_forall_prime_dvd` needs at `(x, mul
+        // m n)`.
+        let hyp_for_call = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let prime_k_ty = prime_condition(d, &p, k);
+            let dvd_k_x_ty = d.dvd(k, x);
+            let dvd_k_mn_ty = d.dvd(k, mul_mn);
+            let dvd_k_one_ty = d.dvd(k, one);
+
+            let prime_fv = d.fresh_fvar();
+            let prime_k = d.kernel().fvar(prime_fv);
+            let hkx_fv = d.fresh_fvar();
+            let hkx = d.kernel().fvar(hkx_fv);
+            let hkmn_fv = d.fresh_fvar();
+            let hkmn = d.kernel().fvar(hkmn_fv);
+
+            let disj = d.lemma(p.euclid_lemma, &[k, m, n, prime_k, hkmn]); // Or (dvd k m) (dvd k n)
+            let dvd_k_m_ty = d.dvd(k, m);
+            let dvd_k_n_ty = d.dvd(k, n);
+
+            let on_m = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv); // dvd k m
+                let dvd_k_gcdxm = d.lemma(p.dvd_gcd, &[k, x, m, hkx, h2]); // dvd k (gcd x m)
+                let motive = d.eq_motive(gcd_x_m, &|d, z| d.dvd(k, z));
+                let result = d.transport(gcd_x_m, motive, dvd_k_gcdxm, one, h_xm); // dvd k one
+                d.lam_fv(h2_fv, dvd_k_m_ty, result)
+            };
+            let on_n = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv); // dvd k n
+                let dvd_k_gcdxn = d.lemma(p.dvd_gcd, &[k, x, n, hkx, h2]); // dvd k (gcd x n)
+                let motive = d.eq_motive(gcd_x_n, &|d, z| d.dvd(k, z));
+                let result = d.transport(gcd_x_n, motive, dvd_k_gcdxn, one, h_xn); // dvd k one
+                d.lam_fv(h2_fv, dvd_k_n_ty, result)
+            };
+            let body = d.const_app(
+                p.logic.or_elim,
+                &[dvd_k_m_ty, dvd_k_n_ty, dvd_k_one_ty, disj, on_m, on_n],
+            );
+
+            let with_hkmn = d.lam_fv(hkmn_fv, dvd_k_mn_ty, body);
+            let with_hkx = d.lam_fv(hkx_fv, dvd_k_x_ty, with_hkmn);
+            let with_prime = d.lam_fv(prime_fv, prime_k_ty, with_hkx);
+            d.lam_fv(k_fv, nat, with_prime)
+        };
+
+        let proof_inner = d.lemma(p.coprime_of_forall_prime_dvd, &[x, mul_mn, hyp_for_call]);
+
+        let inner_stmt = d.arrow(h_xn_ty, target);
+        let stmt = d.arrow(h_xm_ty, inner_stmt);
+        let inner_proof = d.lam_fv(h_xn_fv, h_xn_ty, proof_inner);
+        let proof = d.lam_fv(h_xm_fv, h_xm_ty, inner_proof);
+        (stmt, proof)
     })?;
     Ok(())
 }

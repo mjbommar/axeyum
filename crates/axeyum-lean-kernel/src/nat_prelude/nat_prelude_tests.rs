@@ -724,6 +724,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_div_right,
         p.coprime_div_left,
         p.gcd_comm,
+        p.coprime_mul_of_coprime,
         p.coprime_of_forall_prime_dvd,
         p.dvd_of_forall_prime_mul_dvd,
         p.coprime_iff_is_rel_prime,
@@ -7834,7 +7835,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 572,
+        93 + 573,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8290,6 +8291,102 @@ fn gcd_comm_applies_at_a_concrete_pair_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.gcd_comm).is_empty(),
         "gcd_comm rests on a trusted declaration"
+    );
+}
+
+/// `Nat.coprime_mul_of_coprime` at a concrete instance (`x=5, m=2, n=3`:
+/// `gcd 5 2 = gcd 5 3 = 1`, so the conclusion `gcd 5 6 = 1` must hold too)
+/// and at a genuinely free `(x, m, n)` with free hypotheses pushed into an
+/// explicit `LocalContext`.
+#[test]
+fn coprime_mul_of_coprime_applies_at_a_concrete_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+
+    // Concrete: x = 5, m = 2, n = 3.
+    let five = f.num(5);
+    let two = f.num(2);
+    let three = f.num(3);
+    let six = f.num(6);
+    let gcd_5_2 = f.gcd(five, two);
+    let gcd_5_3 = f.gcd(five, three);
+    assert!(f.k.def_eq(gcd_5_2, one), "gcd 5 2 must reduce to 1");
+    assert!(f.k.def_eq(gcd_5_3, one), "gcd 5 3 must reduce to 1");
+    let h_xm = f.refl(one); // Eq (gcd 5 2) one, up to the defeq just checked
+    let h_xn = f.refl(one); // Eq (gcd 5 3) one, up to the defeq just checked
+    let applied = f.lemma(p.coprime_mul_of_coprime, &[five, two, three, h_xm, h_xn]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("coprime_mul_of_coprime must type-check at (5,2,3)");
+    let gcd_5_6 = f.gcd(five, six);
+    assert!(f.k.def_eq(gcd_5_6, one), "gcd 5 6 must reduce to 1 too");
+    let expected = f.eq(gcd_5_6, one);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "coprime_mul_of_coprime must conclude Eq (gcd 5 6) one"
+    );
+
+    // Symbolic: genuinely free x, m, n with free hypotheses.
+    let x_fv = f.fresh_fvar();
+    let m_fv = f.fresh_fvar();
+    let n_fv = f.fresh_fvar();
+    let x = f.k.fvar(x_fv);
+    let m = f.k.fvar(m_fv);
+    let n = f.k.fvar(n_fv);
+    let gcd_xm = f.gcd(x, m);
+    let gcd_xn = f.gcd(x, n);
+    let h_xm_ty = f.eq(gcd_xm, one);
+    let h_xn_ty = f.eq(gcd_xn, one);
+    let hxm_fv = f.fresh_fvar();
+    let hxn_fv = f.fresh_fvar();
+    let hxm = f.k.fvar(hxm_fv);
+    let hxn = f.k.fvar(hxn_fv);
+    let applied_sym = f.lemma(p.coprime_mul_of_coprime, &[x, m, n, hxm, hxn]);
+    let mn = f.mul(m, n);
+    let gcd_x_mn = f.gcd(x, mn);
+    let expected_sym = f.eq(gcd_x_mn, one);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: x_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: hxm_fv,
+        name: anon,
+        ty: h_xm_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: hxn_fv,
+        name: anon,
+        ty: h_xn_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(applied_sym, &mut ctx)
+            .expect("coprime_mul_of_coprime must apply at free variables");
+    assert!(f.k.def_eq(inferred_sym, expected_sym));
+
+    assert!(
+        f.k.axiom_footprint(p.coprime_mul_of_coprime).is_empty(),
+        "coprime_mul_of_coprime rests on a trusted declaration"
     );
 }
 

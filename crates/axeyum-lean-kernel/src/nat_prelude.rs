@@ -323,7 +323,7 @@ use totient_lemmas::{
     declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_coprime_totient_iff,
     declare_totient_even, declare_totient_lemmas_all,
 };
-use totient_multiplicative::declare_gcd_comm;
+use totient_multiplicative::{declare_coprime_mul_of_coprime, declare_gcd_comm};
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
     declare_transposition_injective, declare_transposition_involutive,
@@ -988,6 +988,19 @@ pub struct NatPrelude {
     /// Filed in `totient_multiplicative.rs` rather than beside `lcm_comm`
     /// here — see that file's module doc for why.
     pub gcd_comm: NameId,
+    /// `Nat.coprime_mul_of_coprime : ∀ x m n, Eq (gcd x m) one → Eq (gcd x n)
+    /// one → Eq (gcd x (mul m n)) one` (Mathlib's `Nat.Coprime.mul_right`) —
+    /// the coprimality-combine step `docs/plan/status/301-totient-
+    /// multiplicative.md` flagged as one of the two weakest steps toward
+    /// `totient(m*n) = totient(m)*totient(n)`. Route (b) from that doc:
+    /// `coprime_of_forall_prime_dvd(x, mul m n, hyp)`, where `hyp` takes a
+    /// prime `k` dividing both `x` and `mul m n` and derives `dvd k one` —
+    /// `euclid_lemma` splits `dvd k (mul m n)` into `dvd k m ∨ dvd k n`, and
+    /// each side combines with `dvd k x` via `dvd_gcd` into `dvd k (gcd x
+    /// m)`/`dvd k (gcd x n)`, transported along the corresponding hypothesis
+    /// to `dvd k one`. No Bézout-coefficient algebra (route (a) in that doc)
+    /// was needed.
+    pub coprime_mul_of_coprime: NameId,
     /// `Nat.coprime_lcm_eq_mul : ∀ a b, gcd a b = 1 → lcm a b = a * b`. From
     /// the unconditional `gcd_mul_lcm`, substituting the coprimality
     /// hypothesis and cancelling the leading `1` with `one_mul`.
@@ -3898,6 +3911,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
             lcm_comm: kernel.name_str(nat, "lcm_comm"),
             gcd_comm: kernel.name_str(nat, "gcd_comm"),
+            coprime_mul_of_coprime: kernel.name_str(nat, "coprime_mul_of_coprime"),
             coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
             gcd_dvd_mul: kernel.name_str(nat, "gcd_dvd_mul"),
             gcd_le_mul: kernel.name_str(nat, "gcd_le_mul"),
@@ -4506,6 +4520,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Needs `succ_pred_of_pos`, just declared above: `prime_two`
         // (`two_divisor_dichotomy`) is not available before this point.
         declare_coprime_of_forall_prime_dvd(&mut d, &p)?;
+        // Needs `coprime_of_forall_prime_dvd` (just above) and `euclid_lemma`
+        // (`declare_euclid_lemma`, far above).
+        declare_coprime_mul_of_coprime(&mut d, &p)?;
         declare_dvd_of_forall_prime_mul_dvd(&mut d, &p)?;
         // `IsRelPrime` only needs `dvd_gcd`/`gcd_dvd_left`/`gcd_dvd_right`/
         // `eq_one_of_dvd_one`, all declared long before this point; placed
