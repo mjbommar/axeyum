@@ -3693,3 +3693,234 @@ pub(super) fn declare_mesh_level_count_ge_of_size(
 ) -> Result<(), KernelError> {
     declare_mesh_level_count_ge_of_size_thm(d, p)
 }
+
+/// `CReal.meshMax_le_add_of_modulus : ∀ F a b (u : UniformlyContinuousOn F a
+/// b) (n j d : Nat), le a b → Nat.le (Nat.add (Nat.size (CReal.bound (add b
+/// (neg a)))) (Nat.size (UniformlyContinuousOn.modulus F a b u n))) j → le
+/// (meshMax F a b (Nat.add j d)) (add (meshMax F a b j) (ofRat (natDivSucc 1
+/// n)))` — **rung 6's remaining owe, discharged.**
+///
+/// [`CRealPrelude::mesh_max_le_add_of_step_close`] left exactly one
+/// obligation behind, and its own field documentation names it: "what a
+/// `supOn` assembly still owes is only the instantiation of `hclose` from
+/// `uc_spec` at the accuracy `expOfModulus` selects". This is that
+/// instantiation. No mesh geometry survives into the hypothesis — the only
+/// condition is a `Nat` bit-count inequality on the level `j`.
+///
+/// The chain, all of it existing machinery:
+///
+/// - `hstep : le y (add x Δⱼ)` plus [`CRealPrelude::mesh_le_of_ge`] (through
+///   [`CRealPrelude::mesh_level_count_ge_of_size`], which converts the level
+///   `j` into that lemma's Archimedean threshold) gives `le y (add x (ofRat
+///   (1/(modulus n + 1))))`.
+/// - `hxy : le x y` plus [`CRealPrelude::le_add_of_nonneg`] gives the other
+///   side, and [`CRealPrelude::abs_le_of_two_sided`] folds the pair into the
+///   `close_within` shape [`CRealPrelude::uc_spec`] consumes.
+/// - `uc_spec` is applied at `(x := y, y := x)` — its conclusion bounds
+///   `|F x − F y|` with the FIRST argument on the left, and `hclose` wants
+///   `F y` on the left — and [`CRealPrelude::le_add_of_abs_sub_le`] turns that
+///   back into the one-sided form.
+///
+/// **`eps` is `ofRat (natDivSucc 1 n)`, i.e. `1/(n+1)`, at a FREELY CHOSEN
+/// `n`.** That is what makes this summable later: a caller takes `n :=
+/// meshLevelCount k`, so `eps = 1/2^k` (the doubling schedule reused as the
+/// requested ACCURACY index, rung 5's whole point), and the harmonic trap the
+/// module documentation warns about never arises. Nothing here forces that
+/// choice, so the lemma stays usable at any accuracy.
+fn declare_mesh_max_le_add_of_modulus_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+    let nat_p = p.rat.int.nat;
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+
+    // `outer := UniformlyContinuousOn.modulus F a b u n`, the accuracy the
+    // witness itself demands; `c := CReal.bound (b − a)`, read straight off
+    // the total projection rather than out of `CReal.archimedean`'s `Exists`.
+    let outer = d.const_app(p.uc_modulus, &[f, a, b, u, n]);
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na);
+    let c = d.const_app(p.bound, &[width]);
+
+    let size_c = d.const_app(nat_p.size, &[c]);
+    let size_outer = d.const_app(nat_p.size, &[outer]);
+    let size_sum = NatOps::add(d, size_c, size_outer);
+    let hsize_fv = d.fresh_fvar();
+    let hsize = d.kernel().fvar(hsize_fv);
+    let hsize_ty = d.le(size_sum, j);
+
+    let one_nat = d.num(1);
+    let q_rat = d.const_app(rat.nat_div_succ, &[one_nat, outer]);
+    let q_real = embed(d, p, q_rat);
+    let eps_rat = d.const_app(rat.nat_div_succ, &[one_nat, n]);
+    let eps = embed(d, p, eps_rat);
+
+    let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+    let delta_j = mesh_delta(d, p, a, b, mlc_j);
+
+    // `Δⱼ ≤ 1/(outer + 1)`: the level clears `mesh_le_of_ge`'s threshold.
+    let threshold_ok = d.lemma(p.mesh_level_count_ge_of_size, &[c, outer, j, hsize]);
+    let delta_le_q = d.lemma(p.mesh_le_of_ge, &[a, b, outer, mlc_j, hab, threshold_ok]);
+
+    let hclose_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax = cle(d, p, a, x);
+        let hxb = cle(d, p, x, b);
+        let hay = cle(d, p, a, y);
+        let hyb = cle(d, p, y, b);
+        let hxy = cle(d, p, x, y);
+        let shifted = cadd(d, p, x, delta_j);
+        let hstep = cle(d, p, y, shifted);
+        let fx = d.apply(f, &[x]);
+        let fy = d.apply(f, &[y]);
+        let padded = cadd(d, p, fx, eps);
+        let concl = cle(d, p, fy, padded);
+        let out = d.arrow(hstep, concl);
+        let out = d.arrow(hxy, out);
+        let out = d.arrow(hyb, out);
+        let out = d.arrow(hay, out);
+        let out = d.arrow(hxb, out);
+        let out = d.arrow(hax, out);
+        let over_y = d.pi_fv(y_fv, carrier, out);
+        d.pi_fv(x_fv, carrier, over_y)
+    };
+
+    let hclose = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hax_ty = cle(d, p, a, x);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+        let hxb_ty = cle(d, p, x, b);
+        let hay_fv = d.fresh_fvar();
+        let hay = d.kernel().fvar(hay_fv);
+        let hay_ty = cle(d, p, a, y);
+        let hyb_fv = d.fresh_fvar();
+        let hyb = d.kernel().fvar(hyb_fv);
+        let hyb_ty = cle(d, p, y, b);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hxy_ty = cle(d, p, x, y);
+        let hstep_fv = d.fresh_fvar();
+        let hstep = d.kernel().fvar(hstep_fv);
+        let shifted_delta = cadd(d, p, x, delta_j);
+        let hstep_ty = cle(d, p, y, shifted_delta);
+
+        // `y ≤ x + Δⱼ ≤ x + 1/(outer+1)`.
+        let shifted_q = cadd(d, p, x, q_real);
+        let refl_x = d.lemma(p.le_refl, &[x]);
+        let widen = d.lemma(p.add_le_add, &[x, x, delta_j, q_real, refl_x, delta_le_q]);
+        let y_le = d.lemma(p.le_trans, &[y, shifted_delta, shifted_q, hstep, widen]);
+
+        // `x ≤ y ≤ y + 1/(outer+1)`.
+        let q_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, outer]);
+        let y_grow = d.lemma(p.le_add_of_nonneg, &[y, q_rat, q_nonneg]);
+        let shifted_y = cadd(d, p, y, q_real);
+        let x_le = d.lemma(p.le_trans, &[x, y, shifted_y, hxy, y_grow]);
+
+        // Fold the pair into `close_within y x (1/(outer+1))`, which is the
+        // shape `uc_spec` consumes, at `(x := y, y := x)`.
+        let closeness = d.lemma(p.abs_le_of_two_sided, &[y, x, q_rat, y_le, x_le]);
+        let spec = d.const_app(
+            p.uc_spec,
+            &[f, a, b, u, n, y, x, hay, hyb, hax, hxb, closeness],
+        );
+        let fx = d.apply(f, &[x]);
+        let fy = d.apply(f, &[y]);
+        let body = d.lemma(p.le_add_of_abs_sub_le, &[fy, fx, eps_rat, spec]);
+
+        let out = d.lam_fv(hstep_fv, hstep_ty, body);
+        let out = d.lam_fv(hxy_fv, hxy_ty, out);
+        let out = d.lam_fv(hyb_fv, hyb_ty, out);
+        let out = d.lam_fv(hay_fv, hay_ty, out);
+        let out = d.lam_fv(hxb_fv, hxb_ty, out);
+        let out = d.lam_fv(hax_fv, hax_ty, out);
+        let over_y = d.lam_fv(y_fv, carrier, out);
+        d.lam_fv(x_fv, carrier, over_y)
+    };
+    let _ = hclose_ty;
+
+    let proof = d.lemma(
+        p.mesh_max_le_add_of_step_close,
+        &[f, a, b, j, dd, eps, hab, hclose],
+    );
+
+    let level = NatOps::add(d, j, dd);
+    let mesh_l = d.const_app(p.mesh_max, &[f, a, b, level]);
+    let mesh_j = d.const_app(p.mesh_max, &[f, a, b, j]);
+    let rhs = cadd(d, p, mesh_j, eps);
+    let conclusion = cle(d, p, mesh_l, rhs);
+
+    let ty = {
+        let out = d.arrow(hsize_ty, conclusion);
+        let out = d.arrow(hab_ty, out);
+        let out = d.pi_fv(dd_fv, nat, out);
+        let out = d.pi_fv(j_fv, nat, out);
+        let out = d.pi_fv(n_fv, nat, out);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(hsize_fv, hsize_ty, proof);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(dd_fv, nat, out);
+        let out = d.lam_fv(j_fv, nat, out);
+        let out = d.lam_fv(n_fv, nat, out);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_max_le_add_of_modulus,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshMax_le_add_of_modulus` alone (a one-declaration
+/// `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_max_le_add_of_modulus(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_max_le_add_of_modulus_thm(d, p)
+}

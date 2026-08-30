@@ -6302,6 +6302,27 @@ pub struct CRealPrelude {
     /// rightward step of at most one level-`j` cell): the other direction is
     /// [`Self::mesh_max_mono`]. See `creal/supremum.rs`.
     pub mesh_max_le_add_of_step_close: NameId,
+    /// `CReal.meshMax_le_add_of_modulus : ∀ F a b (u : UniformlyContinuousOn
+    /// F a b) (n j d : Nat), le a b → Nat.le (Nat.add (Nat.size (CReal.bound
+    /// (add b (neg a)))) (Nat.size (UniformlyContinuousOn.modulus F a b u
+    /// n))) j → le (meshMax F a b (Nat.add j d)) (add (meshMax F a b j)
+    /// (ofRat (Rat.natDivSucc 1 n)))` — **the obligation
+    /// [`Self::mesh_max_le_add_of_step_close`]'s own documentation names as
+    /// all a `supOn` assembly still owes, discharged.**
+    ///
+    /// `hclose` instantiated from [`Self::uc_spec`]. No mesh geometry
+    /// survives into the hypothesis: the sole condition is a `Nat` bit-count
+    /// inequality on the level `j`, routed through
+    /// [`Self::mesh_level_count_ge_of_size`] into
+    /// [`Self::mesh_le_of_ge`]'s Archimedean threshold, so the interval width
+    /// is handled by `CReal.bound` and never by an existential.
+    ///
+    /// `eps` is `1/(n+1)` at a FREELY CHOSEN `n`, which is what makes the
+    /// telescope summable: a caller takes `n := meshLevelCount k`, giving
+    /// `eps = 1/2^k` (rung 5's doubling schedule reused as the requested
+    /// ACCURACY index), so the harmonic-series trap never arises. Nothing
+    /// here forces that choice. See `creal/supremum.rs`.
+    pub mesh_max_le_add_of_modulus: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7055,6 +7076,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_point_near_coarse: kernel.name_str(creal, "meshPoint_near_coarse"),
         max_range_le_add_of_exists: kernel.name_str(creal, "maxRange_le_add_of_exists"),
         mesh_max_le_add_of_step_close: kernel.name_str(creal, "meshMax_le_add_of_step_close"),
+        mesh_max_le_add_of_modulus: kernel
+            .name_str(creal, "meshMax_le_add_of_modulus"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12683,6 +12706,28 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.mesh_max_le_add_of_step_close],
         run: supremum::declare_mesh_max_le_add_of_step_close,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_max_le_add_of_modulus",
+        requires: &[
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.le_add_of_abs_sub_le,
+            |p: CRealPrelude| p.le_add_of_nonneg,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mesh_le_of_ge,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_level_count_ge_of_size,
+            |p: CRealPrelude| p.mesh_max,
+            |p: CRealPrelude| p.mesh_max_le_add_of_step_close,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uc_spec,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_max_le_add_of_modulus],
+        run: supremum::declare_mesh_max_le_add_of_modulus,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
