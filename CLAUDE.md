@@ -1918,6 +1918,42 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   definition only as far as the theorem's own content reaches, which for an
   existence statement is often not at all.
 
+- **"NEEDS A FACTORIZATION PRODUCT" IS NOT "NEEDS MULTISET UNIQUENESS", AND
+  CONFLATING THEM DECLARES A WHOLE AREA UNREACHABLE THAT IS NOT.** Measured
+  2026-08-30, correcting a sizing I had propagated into a brief.
+
+  `nat_prelude/factorization.rs` proves factorizations EXIST and its module doc
+  correctly says uniqueness is not attempted and **cannot be** — this kernel has
+  no `List`/`Finset`/product type in which to state multiset equality. That is
+  true and it stays true. What does not follow is the conclusion drawn from it:
+  that the three remaining totient mirrors were blocked.
+
+  The distinction: the classical **Euler-product route** evaluates a closed form
+  `φ(n) = n·∏(1−1/p)`, and evaluating a product over "the" prime factors does
+  need them to be canonical. But each of those targets is instead **PRESERVED
+  ALONG A CHAIN of prime steps** — the chain is built from *some* factorization
+  of the cofactor, and nothing in the argument ever compares two factorizations.
+  Uniqueness is only needed to evaluate; it is not needed to induct.
+
+  The whole input set turned out to be `exists_prime_dvd` (far weaker than
+  unique factorization), `euclid_lemma`, `gcd_mul_right`, and the prime step
+  `φ(q^(j+1)) = q^(j+1) − q^j` — which needs no factorization at all, being a
+  direct `countRange` argument. Six theorems landed, every one admitted on the
+  first attempt.
+
+  **The general test, when a documented impossibility seems to block a target:
+  ask whether the argument EVALUATES the unavailable object or merely INDUCTS
+  past it.** An existence lemma plus an induction reaches a great deal that a
+  closed form cannot.
+
+  One control worth copying from that lane, because it nearly wrote the opposite:
+  a composite control on `φ(x) ∣ φ(x·q)` is **vacuous** — that statement holds
+  at composite `q` too, so it fails at zero of them, and the composite control
+  that genuinely discriminates the prime-power *formula* would have produced a
+  check that cannot fail. Its suite now MEASURES that (0 failures) and uses
+  transposed divisibility instead (142 failures). When reusing a control across
+  two statements in one family, re-derive that it still separates.
+
 - **IF THE GOAL ONLY CONSTRAINS A BOUNDED PROJECTION OF A RECURSIVE VALUE, YOU
   DO NOT HAVE TO REASON ABOUT THE RECURSION AT ALL — AND THIS REFUTES THE
   "NEEDS A DEEP INDUCTION" SIZING INSTINCT.** Measured 2026-08-29 closing
