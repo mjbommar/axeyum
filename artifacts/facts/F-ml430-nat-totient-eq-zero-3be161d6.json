@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "F:ml430-nat-totient-eq-zero-3be161d6",
   "title": "Mathlib v4.30 source proposition Nat.totient_eq_zero",
-  "statement": "\u2200 {n : \u2115}, n.totient = 0 \u2194 n = 0",
+  "statement": "The proposition declared as `Nat.totient_eq_zero` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
     "statement": "\u2200 {n : \u2115}, n.totient = 0 \u2194 n = 0",
