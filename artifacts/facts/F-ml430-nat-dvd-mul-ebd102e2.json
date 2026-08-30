@@ -8,10 +8,33 @@
     "statement": "∀ {k m n : ℕ}, k ∣ m * n ↔ ∃ k₁ k₂, k₁ ∣ m ∧ k₂ ∣ n ∧ k₁ * k₂ = k",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-dvd-gcd", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-mul-comm", "F:ml430-nat-dvd-gcd-e5184fc5", "F:ml430-nat-dvd-mul-right-a87a83c4", "F:nat-dvd-refl", "F:nat-le-succ-succ", "F:nat-mul-assoc", "F:nat-mul-eq-zero", "F:nat-mul-left-cancel-of-pos", "F:nat-mul-zero", "F:nat-one-le-of-dvd-pos", "F:nat-zero-le", "F:nat-zero-mul"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_mul_split 2>/dev/null | /usr/bin/grep -cE '^Nat\\.dvd_mul_split[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.dvd_mul_split",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.dvd_mul_split` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. New proof, lane dvd-mul-split: `nat_prelude/dvd_mul_split.rs`, wired in via one `declare_dvd_mul_split` call after `declare_gcd_mul_right_mirrors`/`declare_dvd_add_iff_left`. NOT named `Nat.dvd_mul`: that kernel name is already taken by the unrelated trivial lemma `∀ a q, dvd a (a*q)` (`nat_prelude.rs`'s pre-existing `dvd_mul` field) -- declaring under Mathlib's literal name would hit `DeclarationExists`. Route: forward direction sets k1 := gcd(k,m), k2 := k/gcd(k,m) via `gcd_dvd_left`/`gcd_dvd_right`/`dvd_gcd`/`Nat.gcd_mul_right` (the distributive law landed by lane gcd-mul-right the same day) plus a positive-factor cancellation (`one_le_of_dvd_pos`, `mul_left_cancel_of_pos`); the k=0 case is handled by a DIRECT case split on `m=0 ∨ n=0` (`mul_eq_zero`), not by the general gcd formula, which does not reproduce a valid witness pair there (`gcd(0,m)=m`, `0/m=0`, forcing `k2=0` and needing `0∣n`, false in general). Reverse direction is uniform four-factor regrouping, no case split. `nat_theorem_inventory`'s rendered type is `(x0:AxNat)->(x1:AxNat)->(x2:AxNat)->Iff (dvd x0 (mul x1 x2)) (Exists x3, Exists x4, And (dvd x3 x1) (And (dvd x4 x2) (Eq (mul x3 x4) x0)))`, matching this fact's `formal.statement` exactly (x0/x1/x2/x3/x4 = k/m/n/k1/k2). `nat_theorem_inventory` exits non-zero for a name that does not exist (verified: `dvd_mul_split_bogus_xyz` -> exit 1, `0 theorems` printed, `error: no Nat theorem matches ... -- an absent theorem is a failed check, not an empty report`), and the anchored `grep -cE` (tested `-ge 1`, not piped through `grep -q`) requires the exact name followed by whitespace.",
+      "supports": "∀ {k m n : ℕ}, k ∣ m * n ↔ ∃ k₁ k₂, k₁ ∣ m ∧ k₂ ∣ n ∧ k₁ * k₂ = k"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, exit 0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.dvd_mul_split`'s own footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names` (it is listed there), and a dedicated test `dvd_mul_split_applies_at_a_concrete_discriminating_instance_and_a_free_degenerate_one` applies it at a concrete discriminating triple (k,m,n)=(6,4,9) via `Iff.mpr` with the algorithm's own witnesses (k1,k2)=(2,3) -- checking both the statement shape and the logical content, since the mpr application actually produces a real proof of `dvd 6 36` -- and at the degenerate `k=0,m=0` case with a genuinely FREE `n` (pushed into an explicit `LocalContext`) via `Iff.mp`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.dvd_mul_split"
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +49,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "The external theorem declaration is prior art, not what was reconstructed here; the ledger's own proof is new. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type, and `nat_theorem_inventory`'s rendered type matches it exactly -- see evidence notes. New proof, lane dvd-mul-split (2026-08-30): two prior lanes had called this a factorization-existence statement with no short route, but both sized it before `Nat.gcd_mul_right` existed (lane gcd-mul-right, same day) and neither tried the gcd construction. With `gcd_mul_right` in hand, the forward direction (`k1 := gcd(k,m)`, `k2 := k/gcd(k,m)`) needed only `dvd_gcd`/`gcd_dvd_left`/`gcd_dvd_right`/`one_le_of_dvd_pos`/`mul_left_cancel_of_pos` on top, plus a direct case split at `k=0` (see the `kernel-Nat.dvd_mul_split` evidence note for why the general formula breaks there). Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: train), which carries the partition; that manifest, not this file, is the split authority."
 }

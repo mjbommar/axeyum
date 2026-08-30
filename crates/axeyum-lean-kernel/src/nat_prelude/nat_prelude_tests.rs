@@ -1152,6 +1152,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_gcd_pos_of_pos_left,
         p.div_gcd_pos_of_pos_right,
         p.dvd_add_iff_left,
+        p.dvd_mul_split,
     ]
 }
 
@@ -16764,5 +16765,215 @@ fn gcd_mul_right_mirrors_apply_at_concrete_and_symbolic_instances() {
         f.k.axiom_footprint(p.dvd_gcd_mul_gcd_iff_dvd_mul)
             .is_empty(),
         "dvd_gcd_mul_gcd_iff_dvd_mul must rest on zero axioms"
+    );
+}
+
+/// Test-only duplicate of `dvd_mul_split.rs`'s private `And` body type
+/// builder (`pub(super)` to `nat_prelude`, not exported to the test
+/// module) -- this development's per-file-copy convention.
+fn dvd_mul_split_body_ty(
+    f: &mut Fixture,
+    k1: ExprId,
+    k2: ExprId,
+    m: ExprId,
+    n: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let p = f.p;
+    let dvd_k1_m = f.dvd(k1, m);
+    let dvd_k2_n = f.dvd(k2, n);
+    let k1k2 = f.mul(k1, k2);
+    let eq_k1k2_k = f.eq(k1k2, k);
+    let inner = f.const_app(p.logic.and, &[dvd_k2_n, eq_k1k2_k]);
+    f.const_app(p.logic.and, &[dvd_k1_m, inner])
+}
+
+/// Test-only duplicate of `dvd_mul_split.rs`'s private
+/// `∃ k1 k2, And (dvd k1 m) (And (dvd k2 n) (Eq (mul k1 k2) k))` type
+/// builder.
+fn dvd_mul_split_exists_ty(f: &mut Fixture, m: ExprId, n: ExprId, k: ExprId) -> ExprId {
+    let nat = f.nat_ty();
+    let one = f.level_one();
+    let exists_name = f.p.logic.exists_;
+    let k1_fv = f.fresh_fvar();
+    let k1 = f.k.fvar(k1_fv);
+    let inner_predicate = {
+        let k2_fv = f.fresh_fvar();
+        let k2 = f.k.fvar(k2_fv);
+        let body = dvd_mul_split_body_ty(f, k1, k2, m, n, k);
+        f.lam_fv(k2_fv, nat, body)
+    };
+    let exists = f.k.const_(exists_name, vec![one]);
+    let inner_exists = f.apply(exists, &[nat, inner_predicate]);
+    let outer_predicate = f.lam_fv(k1_fv, nat, inner_exists);
+    let exists = f.k.const_(exists_name, vec![one]);
+    f.apply(exists, &[nat, outer_predicate])
+}
+
+/// Test-only duplicate of `dvd_mul_split.rs`'s private `split_exists_intro`.
+#[allow(clippy::too_many_arguments)]
+fn dvd_mul_split_intro(
+    f: &mut Fixture,
+    m: ExprId,
+    n: ExprId,
+    k: ExprId,
+    k1: ExprId,
+    k2: ExprId,
+    body_proof: ExprId,
+) -> ExprId {
+    let nat = f.nat_ty();
+    let one = f.level_one();
+    let intro_name = f.p.logic.exists_intro;
+    let exists_name = f.p.logic.exists_;
+    let k2_predicate = {
+        let k2_fv = f.fresh_fvar();
+        let k2_var = f.k.fvar(k2_fv);
+        let body = dvd_mul_split_body_ty(f, k1, k2_var, m, n, k);
+        f.lam_fv(k2_fv, nat, body)
+    };
+    let intro = f.k.const_(intro_name, vec![one]);
+    let k2_exists_proof = f.apply(intro, &[nat, k2_predicate, k2, body_proof]);
+    let k1_predicate = {
+        let k1_fv = f.fresh_fvar();
+        let k1_var = f.k.fvar(k1_fv);
+        let k1_body = {
+            let k2_fv2 = f.fresh_fvar();
+            let k2_var2 = f.k.fvar(k2_fv2);
+            let body = dvd_mul_split_body_ty(f, k1_var, k2_var2, m, n, k);
+            let k2_predicate2 = f.lam_fv(k2_fv2, nat, body);
+            let exists = f.k.const_(exists_name, vec![one]);
+            f.apply(exists, &[nat, k2_predicate2])
+        };
+        f.lam_fv(k1_fv, nat, k1_body)
+    };
+    let intro = f.k.const_(intro_name, vec![one]);
+    f.apply(intro, &[nat, k1_predicate, k1, k2_exists_proof])
+}
+
+/// `Nat.dvd_mul_split : k ∣ m*n ↔ ∃ k1 k2, k1∣m ∧ k2∣n ∧ k1*k2=k` --
+/// Mathlib's `Nat.dvd_mul` (`F:ml430-nat-dvd-mul-ebd102e2`). The theorem
+/// itself is proved for a genuinely universally-quantified `(k, m, n)`
+/// (kernel-checked at declaration time, including the `k=0` case split and
+/// the `k=succ pred` gcd construction), so admission already exercises the
+/// free-variable case. This test adds: a concrete, mutually-discriminating
+/// instance (`k=6, m=4, n=9`, distinct so a transposed argument fails
+/// loudly) exercised via `Iff.mpr` with the algorithm's own witnesses
+/// `(k1,k2)=(2,3)`; and the `k=0` degenerate branch applied at a genuinely
+/// free `n` via `Iff.mp`.
+#[test]
+fn dvd_mul_split_applies_at_a_concrete_discriminating_instance_and_a_free_degenerate_one() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete, discriminating instance.
+    {
+        let k = f.num(6);
+        let m = f.num(4);
+        let n = f.num(9);
+        let mn = f.mul(m, n);
+        let dvd_k_mn = f.dvd(k, mn);
+        let applied = f.lemma(p.dvd_mul_split, &[k, m, n]);
+        let exists_ty = dvd_mul_split_exists_ty(&mut f, m, n, k);
+        let want = f.const_app(p.logic.iff, &[dvd_k_mn, exists_ty]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_mul_split must apply at (k=6, m=4, n=9): {shown}")
+        });
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dvd_mul_split(6,4,9) must state Iff (dvd 6 (4*9)) (exists ...)"
+        );
+
+        let k1 = f.num(2);
+        let k2 = f.num(3);
+        let dvd_k1_m = f.lemma(p.dvd_mul, &[k1, k1]); // dvd 2 (2*2) = dvd 2 4
+        let dvd_k2_n = f.lemma(p.dvd_mul, &[k2, k2]); // dvd 3 (3*3) = dvd 3 9
+        let k1k2 = f.mul(k1, k2);
+        let eq_k1k2_k = f.refl(k1k2); // Eq (2*3) (2*3), defeq Eq (2*3) 6
+        let dvd_k1_m_ty = f.dvd(k1, m);
+        let dvd_k2_n_ty = f.dvd(k2, n);
+        let eq_ty = f.eq(k1k2, k);
+        let inner_ty = f.const_app(p.logic.and, &[dvd_k2_n_ty, eq_ty]);
+        let inner_and = f.const_app(
+            p.logic.and_intro,
+            &[dvd_k2_n_ty, eq_ty, dvd_k2_n, eq_k1k2_k],
+        );
+        let full_and = f.const_app(
+            p.logic.and_intro,
+            &[dvd_k1_m_ty, inner_ty, dvd_k1_m, inner_and],
+        );
+        let witness = dvd_mul_split_intro(&mut f, m, n, k, k1, k2, full_and);
+
+        let mpr_fn = f.const_app(p.logic.iff_mpr, &[dvd_k_mn, exists_ty, applied]);
+        let mpr_result = f.apply(mpr_fn, &[witness]);
+        let mpr_inferred = f.k.infer(mpr_result).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_mul_split(6,4,9).mpr(2,3) must type-check: {shown}")
+        });
+        assert!(
+            f.k.def_eq(mpr_inferred, dvd_k_mn),
+            "dvd_mul_split(6,4,9).mpr(2,3) must produce a proof of dvd 6 36"
+        );
+        let thirty_six = f.num(36);
+        assert!(f.k.def_eq(mn, thirty_six), "4*9 must compute to 36");
+    }
+
+    // Degenerate: k = 0, m = 0, n genuinely FREE. Forces the `m=0`
+    // case-split witness branch `(k1,k2) := (0,n)`, not the gcd
+    // construction (which would need `gcd(0,0)` and division by it). `n`
+    // is pushed into an explicit `LocalContext` so `infer_in` can look up
+    // its type -- a bare unregistered `FVar` is `UnboundFVar` to the
+    // checker, not merely "unknown".
+    {
+        let zero = f.zero();
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+        let anon = f.anon_name();
+        let nat_ty = f.nat_ty();
+        let mut ctx = LocalContext::new();
+        ctx.push(LocalDecl {
+            fvar: n_fv,
+            name: anon,
+            ty: nat_ty,
+            info: BinderInfo::Default,
+        });
+
+        let zero_n = f.mul(zero, n);
+        let dvd0_0n_ty = f.dvd(zero, zero_n);
+        let applied = f.lemma(p.dvd_mul_split, &[zero, zero, n]);
+        let exists_ty = dvd_mul_split_exists_ty(&mut f, zero, n, zero);
+        let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_mul_split must apply at (k=0, m=0, n free): {shown}")
+        });
+        let want = f.const_app(p.logic.iff, &[dvd0_0n_ty, exists_ty]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dvd_mul_split(0,0,n) must state Iff (dvd 0 (0*n)) (exists ...)"
+        );
+
+        // h : dvd 0 (0*n), via witness n and Eq.refl (0*n = 0*n).
+        let h_pred = {
+            let q_fv = f.fresh_fvar();
+            let q = f.k.fvar(q_fv);
+            let zero_q = f.mul(zero, q);
+            let body = f.eq(zero_n, zero_q);
+            f.lam_fv(q_fv, nat_ty, body)
+        };
+        let one = f.level_one();
+        let intro = f.k.const_(p.logic.exists_intro, vec![one]);
+        let refl_zero_n = f.refl(zero_n);
+        let h = f.apply(intro, &[nat_ty, h_pred, n, refl_zero_n]);
+        let mp_fn = f.const_app(p.logic.iff_mp, &[dvd0_0n_ty, exists_ty, applied]);
+        let mp_result = f.apply(mp_fn, &[h]);
+        f.k.infer_in(mp_result, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_mul_split(0,0,n free).mp(h) must type-check: {shown}")
+        });
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.dvd_mul_split).is_empty(),
+        "dvd_mul_split must rest on zero axioms"
     );
 }
