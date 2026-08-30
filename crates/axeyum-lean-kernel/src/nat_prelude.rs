@@ -362,7 +362,7 @@ use primes::{
 };
 use rec_agreement::{
     declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
-    declare_land_le_left_all, declare_land_zero_propagation_all,
+    declare_land_le_left_all, declare_land_le_right_all, declare_land_zero_propagation_all,
     declare_ldiff_fuel_irrelevance_all, declare_lor_assoc_all,
     declare_lor_aux_ne_zero_of_right_ne_zero_all, declare_lor_comm,
     declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
@@ -4067,6 +4067,13 @@ pub struct NatPrelude {
     /// at `fuel := a`, `m := a` (`land a b` and `landAux a a b` are the SAME
     /// term by definition).
     pub land_le_left: NameId,
+    /// `Nat.land_le_right : ∀ a b, Le (land a b) b` — the mirror of
+    /// [`Self::land_le_left`], via [`Self::land_comm`] transporting
+    /// `land_le_left b a : Le (land b a) b` along `Eq (land b a) (land a b)`.
+    /// Needed only for `Nat.and_le_right`'s `ml430` mirror (Mathlib's
+    /// `&&&` is our `Nat.land`, so this is a genuinely new lemma about an
+    /// already-proved function, not fresh bitwise machinery).
+    pub land_le_right: NameId,
     /// `Nat.bit_div_two : ∀ test n, Eq (div (bit test n) 2) n` — one half of
     /// the `Nat.bit` decode bridge (`nat_prelude::bit_decode`), via
     /// `div_mod_unique` against the executable `div_mod_exec` projections.
@@ -5307,6 +5314,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lor_comm: kernel.name_str(nat, "lor_comm"),
             land_aux_le_left: kernel.name_str(nat, "land_aux_le_left"),
             land_le_left: kernel.name_str(nat, "land_le_left"),
+            land_le_right: kernel.name_str(nat, "land_le_right"),
             bit_div_two: kernel.name_str(nat, "bit_div_two"),
             bit_mod_two: kernel.name_str(nat, "bit_mod_two"),
             land_bit: kernel.name_str(nat, "land_bit"),
@@ -5812,6 +5820,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mod_lt`, `le_of_lt_succ`, all far above); nothing needs it, so it
         // goes right after `land_comm`.
         declare_land_le_left_all(&mut d, &p)?;
+        // `Nat.land_le_right`: needs only `Nat.land_le_left` (just above)
+        // and `Nat.land_comm` (`declare_land_comm`, above) -- a transport,
+        // no new `landAux` machinery. Needed for `Nat.and_le_right`'s
+        // `ml430` mirror (draw 9, `natural-bitwise-basics`).
+        declare_land_le_right_all(&mut d, &p)?;
         // `Nat.bit_div_two`/`Nat.bit_mod_two`/`Nat.land_bit`: needs `Nat.bit`
         // (`declare_bit_all`, far above), `Nat.div_mod_exec`/
         // `Nat.div_mod_unique` (`declare_euclidean_division`/

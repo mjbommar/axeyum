@@ -1168,6 +1168,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bitwise_bit,
         p.land_aux_le_left,
         p.land_le_left,
+        p.land_le_right,
         p.bit_div_two,
         p.bit_mod_two,
         p.land_bit,
@@ -16862,6 +16863,90 @@ fn land_le_left_applies_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.land_le_left).is_empty(),
         "land_le_left must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_le_right` -- the mirror of `land_le_left`, transported through
+/// `land_comm`. Same `(a, b) = (5, 6)` pair as `land_le_left`'s own test
+/// (`land 5 6 = 4`), checked at a genuinely free pair AND at this concrete
+/// instance, with a NEGATIVE control that the inferred type is NOT the
+/// `land_le_left`-shaped statement `Le (land a b) a` -- `Le 4 6` and
+/// `Le 4 5` are different terms (5 != 6 as numerals), so this catches the
+/// bound landing on the wrong operand even though both bounds happen to be
+/// true numerically.
+#[test]
+fn land_le_right_applies_at_free_variables_and_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: free `(a, b)` pushed into an explicit LocalContext.
+    {
+        let anon = f.anon_name();
+        let nat = f.nat_ty();
+        let a_fv = f.fresh_fvar();
+        let b_fv = f.fresh_fvar();
+        let a = f.k.fvar(a_fv);
+        let b = f.k.fvar(b_fv);
+        let mut ctx = LocalContext::new();
+        ctx.push(LocalDecl {
+            fvar: a_fv,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+        ctx.push(LocalDecl {
+            fvar: b_fv,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+        let applied = f.const_app(p.land_le_right, &[a, b]);
+        let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_le_right must type-check at free variables: {shown}")
+        });
+        let land_ab = f.const_app(p.land, &[a, b]);
+        let want = f.le(land_ab, b);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_le_right must state Le (land a b) b symbolically"
+        );
+        let swapped = f.le(land_ab, a);
+        assert!(
+            !f.k.def_eq(inferred, swapped),
+            "negative control: land_le_right must not ALSO state \
+             Le (land a b) a (that is land_le_left's statement)"
+        );
+    }
+
+    // Concrete: `land 5 6 = 4`, strictly less than `6`.
+    {
+        let five = f.num(5);
+        let six = f.num(6);
+        let four = f.num(4);
+        let lhs = f.const_app(p.land, &[five, six]);
+        let applied = f.lemma(p.land_le_right, &[five, six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_le_right must apply at (a=5, b=6): {shown}")
+        });
+        let want = f.le(lhs, six);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_le_right 5 6 must state Le (land 5 6) 6"
+        );
+        let swapped = f.le(lhs, five);
+        assert!(
+            !f.k.def_eq(inferred, swapped),
+            "negative control: land_le_right 5 6 must not ALSO state \
+             Le (land 5 6) 5 (land_le_left's statement, a different term)"
+        );
+        assert!(f.k.def_eq(lhs, four), "land 5 6 must compute to 4");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_le_right).is_empty(),
+        "land_le_right must rest on zero axioms"
     );
 }
 
