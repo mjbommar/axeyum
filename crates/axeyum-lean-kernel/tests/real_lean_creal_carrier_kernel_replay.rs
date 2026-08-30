@@ -62,7 +62,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use axeyum_lean_kernel::{Kernel, Lean4ExportMetadata, build_creal_prelude};
+use axeyum_lean_kernel::{Kernel, Lean4ExportMetadata, build_creal_prelude, on_a_deep_stack};
 
 #[path = "support/lean_probe.rs"]
 mod lean_probe;
@@ -175,92 +175,102 @@ fn reported_constants(report: &str) -> Option<usize> {
 
 #[test]
 fn the_real_lean_kernel_accepts_every_declaration_of_the_constructed_real_carrier() {
-    let mut kernel = Kernel::new();
-    build_creal_prelude(&mut kernel).expect("the CReal development must build");
-    let declared = kernel.environment().iter().count();
-    assert!(
-        declared > 400,
-        "the constructed-real carrier must be the whole development, not a slice: {declared}"
-    );
+    // `creal` needs 16 MiB of stack in debug (`artifacts/kernel-stack-envelope.tsv`
+    // row `debug creal 16777216`) and a `#[test]` thread has 2 MiB, so
+    // `build_creal_prelude` aborted here with a SIGABRT before a single Lean
+    // ran. Measured 2026-08-30 in a shell with `RUST_MIN_STACK` unset: this
+    // suite is registered in `scripts/check-lean-gate.sh` and was failing on
+    // the stack, not on any verdict. Carried explicitly rather than inherited
+    // from an ambient variable, which is a gate on one shell.
+    on_a_deep_stack(|| {
+        let mut kernel = Kernel::new();
+        build_creal_prelude(&mut kernel).expect("the CReal development must build");
+        let declared = kernel.environment().iter().count();
+        assert!(
+            declared > 400,
+            "the constructed-real carrier must be the whole development, not a slice: {declared}"
+        );
 
-    let stream = kernel
-        .render_lean4export_ndjson(&Lean4ExportMetadata::axeyum("4.30.0"))
-        .expect("the checked carrier must export");
+        let stream = kernel
+            .render_lean4export_ndjson(&Lean4ExportMetadata::axeyum("4.30.0"))
+            .expect("the checked carrier must export");
 
-    // Coverage, asserted before any Lean runs: an empty answer from a tool that
-    // was never pointed at the subject is indistinguishable from a strong
-    // negative result.
-    let residue: Vec<(&str, u64)> = ELABORATOR_RESIDUE
-        .iter()
-        .map(|component| {
-            let index = name_index(&stream, component).unwrap_or_else(|| {
-                panic!(
-                    "the export no longer carries `{component}`, so this suite covers \
-                     neither declaration the source route cannot take"
-                )
-            });
-            (*component, index)
-        })
-        .collect();
+        // Coverage, asserted before any Lean runs: an empty answer from a tool that
+        // was never pointed at the subject is indistinguishable from a strong
+        // negative result.
+        let residue: Vec<(&str, u64)> = ELABORATOR_RESIDUE
+            .iter()
+            .map(|component| {
+                let index = name_index(&stream, component).unwrap_or_else(|| {
+                    panic!(
+                        "the export no longer carries `{component}`, so this suite covers \
+                         neither declaration the source route cannot take"
+                    )
+                });
+                (*component, index)
+            })
+            .collect();
 
-    let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 2) else {
-        return;
-    };
+        let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 2) else {
+            return;
+        };
 
-    let (accepted, report) = replay(&lean, &stream, "creal_carrier");
-    assert!(
-        accepted,
-        "the REAL LEAN KERNEL rejected the constructed-real carrier this kernel \
-         admitted:\n{report}"
-    );
-    let held = reported_constants(&report)
-        .unwrap_or_else(|| panic!("the replay must report its final constant count:\n{report}"));
-    assert_eq!(
-        held, declared,
-        "Lean's kernel ended with {held} constants where this kernel holds {declared}. \
-         A replay that admits a SUBSET is exactly the reachability hole this suite \
-         exists to close:\n{report}"
-    );
-    // Printed so the number is READ OUT of the run rather than transcribed into
-    // a document: `artifacts/facts/` pins this line by value.
-    println!("{CARRIER_MARKER} declared={declared} lean_kernel_constants={held}");
+        let (accepted, report) = replay(&lean, &stream, "creal_carrier");
+        assert!(
+            accepted,
+            "the REAL LEAN KERNEL rejected the constructed-real carrier this kernel \
+             admitted:\n{report}"
+        );
+        let held = reported_constants(&report).unwrap_or_else(|| {
+            panic!("the replay must report its final constant count:\n{report}")
+        });
+        assert_eq!(
+            held, declared,
+            "Lean's kernel ended with {held} constants where this kernel holds {declared}. \
+             A replay that admits a SUBSET is exactly the reachability hole this suite \
+             exists to close:\n{report}"
+        );
+        // Printed so the number is READ OUT of the run rather than transcribed into
+        // a document: `artifacts/facts/` pins this line by value.
+        println!("{CARRIER_MARKER} declared={declared} lean_kernel_constants={held}");
 
-    // The negative control, aimed at the declaration the source route refuses.
-    // Anything weaker would leave "Lean accepted the carrier" consistent with
-    // Lean having checked nothing in particular about THAT theorem.
-    let (component, name) = residue[0];
-    let (record, value) =
-        theorem_record(&stream, name).expect("`not_zero_one` must be a theorem record");
-    let substitute = first_monomorphic_theorem_value(&stream)
-        .expect("the carrier must hold a universe-monomorphic theorem");
-    assert_ne!(
-        value, substitute,
-        "the negative control must substitute a DIFFERENT proof"
-    );
-    let tampered = stream.replace(
-        &record,
-        &record.replace(
-            &format!("\"value\":{value}"),
-            &format!("\"value\":{substitute}"),
-        ),
-    );
-    assert_ne!(tampered, stream, "the negative control must change bytes");
+        // The negative control, aimed at the declaration the source route refuses.
+        // Anything weaker would leave "Lean accepted the carrier" consistent with
+        // Lean having checked nothing in particular about THAT theorem.
+        let (component, name) = residue[0];
+        let (record, value) =
+            theorem_record(&stream, name).expect("`not_zero_one` must be a theorem record");
+        let substitute = first_monomorphic_theorem_value(&stream)
+            .expect("the carrier must hold a universe-monomorphic theorem");
+        assert_ne!(
+            value, substitute,
+            "the negative control must substitute a DIFFERENT proof"
+        );
+        let tampered = stream.replace(
+            &record,
+            &record.replace(
+                &format!("\"value\":{value}"),
+                &format!("\"value\":{substitute}"),
+            ),
+        );
+        assert_ne!(tampered, stream, "the negative control must change bytes");
 
-    let (accepted, report) = replay(&lean, &tampered, "creal_carrier_tampered");
-    assert!(
-        !accepted,
-        "the real Lean kernel accepted a mismatched proof for `{component}`; the \
-         positive result above is worthless:\n{report}"
-    );
-    assert!(
-        report.contains("REAL LEAN KERNEL REJECTED"),
-        "the rejection must come from the kernel: {report}"
-    );
-    assert!(
-        report.contains("CReal.Equiv"),
-        "the rejection must name the TYPE it was checking, or it could be any \
-         unrelated failure downstream:\n{report}"
-    );
+        let (accepted, report) = replay(&lean, &tampered, "creal_carrier_tampered");
+        assert!(
+            !accepted,
+            "the real Lean kernel accepted a mismatched proof for `{component}`; the \
+             positive result above is worthless:\n{report}"
+        );
+        assert!(
+            report.contains("REAL LEAN KERNEL REJECTED"),
+            "the rejection must come from the kernel: {report}"
+        );
+        assert!(
+            report.contains("CReal.Equiv"),
+            "the rejection must name the TYPE it was checking, or it could be any \
+             unrelated failure downstream:\n{report}"
+        );
 
-    lean_probe::report_checked(TAG, 2);
+        lean_probe::report_checked(TAG, 2);
+    });
 }
