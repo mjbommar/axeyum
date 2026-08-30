@@ -426,6 +426,16 @@ step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-iso
 # draw 7 preregistered it blind. Needs no cargo, so it costs seconds.
 step holdout-closed-evaluation-tests python3 -m unittest scripts.tests.test_check_holdout_closed_evaluation
 step holdout-closed-evaluation python3 scripts/check-holdout-closed-evaluation.py
+# ADR-0763. The ADJACENCY rule (ADR-0653) that was prose until 2026-08-30.
+# `guard()`'s R9 is a NAME screen, and ADR-0762 measured a draw putting
+# `Init.Data.Nat.Bitwise.Lemmas` and `Mathlib.Data.Nat.GCD.Basic` into
+# HELD-OUT -- beside `natural-bitwise` and `natural-gcd`, both development
+# -- returning GUARD PASSED. Needs no cargo. `--self-test` runs first and
+# carries ACCEPTING cases, because today's held-out population is clean
+# and the gate would otherwise pass vacuously.
+step holdout-adjacency-tests python3 -m unittest scripts.tests.test_check_holdout_adjacency
+step holdout-adjacency-self-test python3 scripts/check-holdout-adjacency.py --self-test
+step holdout-adjacency python3 scripts/check-holdout-adjacency.py
 # ADR-0652. One producer per generated artifact. The statable vocabulary had
 # two writers and the poorer one silently deleted `bridge_provenance` and
 # `row_digest` at exit 0, so this runs each non-owner producer in a sandboxed

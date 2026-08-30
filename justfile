@@ -181,6 +181,16 @@ autogenesis-nursery:
     # because today's population is clean and would otherwise pass vacuously.
     python3 -m unittest scripts.tests.test_check_holdout_closed_evaluation
     python3 scripts/check-holdout-closed-evaluation.py
+    # ADR-0763. ADR-0653's ADJACENCY rule, which no code enforced until
+    # 2026-08-30: R9 compares a candidate's Mathlib NAME against the
+    # environment, so a draw holding out `Init.Data.Nat.Bitwise.Lemmas`
+    # beside the development family `natural-bitwise` returned GUARD
+    # PASSED. `--self-test` carries accepting cases as well as refusals;
+    # the population is clean today, so refusal-only tests would pass
+    # vacuously and a screen that refuses everything would look correct.
+    python3 -m unittest scripts.tests.test_check_holdout_adjacency
+    python3 scripts/check-holdout-adjacency.py --self-test
+    python3 scripts/check-holdout-adjacency.py
     # ADR-0652. One producer per generated artifact: the statable vocabulary
     # had two writers and the poorer one deleted `bridge_provenance` and
     # `row_digest` at exit 0. Runs each non-owner producer in a sandboxed copy

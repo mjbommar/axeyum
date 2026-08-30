@@ -4424,5 +4424,147 @@ def main(argv: list[str]) -> int:
         failed |= status
     return failed
 
+
+# --------------------------------------------------------------------------
+# holdout-adjacency (ADR-0763): ADR-0653's adjacency rule, as R11.
+#
+# The defect is the one this whole harness exists for, one arrow upstream.
+# `guard()` carried ten rules and R9, the blindness screen, compares a
+# candidate's Mathlib NAME against the kernel environment. ADR-0762 measured
+# that a draw putting `Init.Data.Nat.Bitwise.Lemmas` and
+# `Mathlib.Data.Nat.GCD.Basic` into HELD-OUT -- beside `natural-bitwise` and
+# `natural-gcd`, both development -- is R9-clean 0/10 on each and returns
+# `GUARD PASSED`. So a lane could author the ADR-0542 breach on purpose and
+# see green.
+#
+# Two of the mutations below are aimed at the OPPOSITE failure, because it is
+# the live risk: three consecutive draws have been declined, and a screen that
+# refuses everything is indistinguishable from a broken flywheel. Dropping the
+# library-root rule, the syntax filter or the plumbing rule each makes the
+# screen refuse more, and each kills a false-positive control rather than a
+# refusal test.
+# --------------------------------------------------------------------------
+
+SUITES["holdout-adjacency"] = (
+    "scripts/check-holdout-adjacency.py",
+    Unittest("scripts.tests.test_check_holdout_adjacency"),
+    [
+        (
+            "the topic signal -- a shared module topic segment",
+            "    if topic_hits:\n",
+            "    if False:\n",
+        ),
+        (
+            "the vocabulary signal -- rows about a published subject",
+            "    if hit_rows > allowance:\n",
+            "    if False:\n",
+        ),
+        (
+            "the vocabulary allowance is a STRICT threshold",
+            "    if hit_rows > allowance:\n",
+            "    if hit_rows >= allowance:\n",
+        ),
+        (
+            "a family may not be scored against itself",
+            "    if family in published_rows:\n",
+            "    if False:\n",
+        ),
+        (
+            "a recorded review must still describe the environment",
+            "        if recorded != env_hits:\n",
+            "        if False:\n",
+        ),
+        (
+            "a new held-out family with a non-empty sweep needs a review",
+            "    elif require_disclosure and env_hits:\n",
+            "    elif False:\n",
+        ),
+        (
+            "the review DEMAND is scoped to draw time",
+            "    elif require_disclosure and env_hits:\n",
+            "    elif env_hits:\n",
+        ),
+        (
+            "an acceptance that no longer matches the measurement",
+            "    if accepted is not None and accepted.get(\"vocabulary_rows\") "
+            "not in (None, hit_rows):\n",
+            "    if False:\n",
+        ),
+        (
+            "syntax is not mathematics",
+            "    return any(p.search(constant) for p in SYNTAX_PATTERNS)\n",
+            "    return False\n",
+        ),
+        (
+            "a constant characteristic of many families is plumbing",
+            "    return {c for c, k in seen.items() if k > ambient_families}\n",
+            "    return set()\n",
+        ),
+        (
+            "the leading module component is the library, not a topic",
+            '    segments = module.split(".")[1:]\n',
+            '    segments = module.split(".")\n',
+        ),
+        (
+            "the environment sweep is deterministic over an unordered set",
+            "    lowered = sorted((name, name.lower()) for name in env)\n",
+            "    lowered = sorted(((name, name.lower()) for name in env), "
+            "reverse=True)\n",
+        ),
+        (
+            "a manifest contributing zero rows is an error, not a clean screen",
+            '    if not counts["v1"] or not counts["extension"]:\n',
+            "    if False:\n",
+        ),
+        (
+            "an unreadable review file is not 'nothing to disclose'",
+            "    if not isinstance(reviews, dict):\n",
+            "    if False:\n",
+        ),
+        (
+            "a same-draw development family counts as published",
+            '        if new_partition.get(fam) in ("development", "train"):\n',
+            "        if False:\n",
+        ),
+        (
+            "only held-out families are screened",
+            '        if new_partition.get(fam) != "held-out":\n',
+            "        if False:\n",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# nursery-refill-adjacency (ADR-0763): R11's CALL SITE, not the screen.
+#
+# Deleting the call leaves every test in the suite above green: the screen
+# stays correct and never runs. That is exactly the state ADR-0762 found the
+# repository in, with the rule written down and nothing invoking it, so the
+# call site needs its own control.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-refill-adjacency"] = (
+    "scripts/gen-autogenesis-nursery-refill.py",
+    Unittest("scripts.tests.test_check_holdout_adjacency"),
+    [
+        (
+            "R11 runs at all",
+            "        _adjacency_screen(new_entries, env)\n",
+            "        pass\n",
+        ),
+        (
+            "a failure to LOAD the screen is a refusal, not a skip",
+            '        raise RefillError(\n'
+            '            "R11 the adjacency screen '
+            '(scripts/check-holdout-adjacency.py) "\n',
+            "        return  # noqa\n"
+            '        raise RefillError(\n'
+            '            "R11 the adjacency screen '
+            '(scripts/check-holdout-adjacency.py) "\n',
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
