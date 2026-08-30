@@ -1,0 +1,311 @@
+{
+  "pack_version": 1,
+  "generator": "scripts/check-semantic-control-fixtures.py",
+  "note": "Generated. Do not hand-edit; run the generator with --write.",
+  "fixtures": [
+    {
+      "id": "totient-multiplicativity-without-coprimality",
+      "family": "natural-totient",
+      "expect": "false",
+      "fact_ids": [],
+      "executed": 26,
+      "discriminating": 26,
+      "counterexamples": 26,
+      "killed": 0,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": []
+    },
+    {
+      "id": "totient-multiplicativity-coprime",
+      "family": "natural-totient",
+      "expect": "valid",
+      "fact_ids": [
+        "F:nat-totient-mul-of-coprime"
+      ],
+      "executed": 55,
+      "discriminating": 38,
+      "counterexamples": 0,
+      "killed": 3,
+      "also_true": 1,
+      "survived": 0,
+      "mutations": [
+        {
+          "id": "drop-coprimality",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        },
+        {
+          "id": "weaken-coprimality-to-gcd-le-2",
+          "kind": "hypothesis-weakening",
+          "status": "killed"
+        },
+        {
+          "id": "eq-to-le",
+          "kind": "relation",
+          "status": "also-true"
+        },
+        {
+          "id": "product-to-sum",
+          "kind": "operand",
+          "status": "killed"
+        }
+      ]
+    },
+    {
+      "id": "totient-dvd-chain-composite-control",
+      "family": "natural-totient",
+      "expect": "vacuous",
+      "fact_ids": [],
+      "executed": 624,
+      "discriminating": 0,
+      "counterexamples": 0,
+      "killed": 0,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": []
+    },
+    {
+      "id": "totient-prime-power-formula",
+      "family": "natural-totient",
+      "expect": "valid",
+      "fact_ids": [
+        "F:nat-totient-prime-pow"
+      ],
+      "executed": 26,
+      "discriminating": 44,
+      "counterexamples": 0,
+      "killed": 2,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": [
+        {
+          "id": "drop-primality",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        },
+        {
+          "id": "subtract-one-more",
+          "kind": "constant",
+          "status": "killed"
+        }
+      ]
+    },
+    {
+      "id": "least-number-principle-constant-predicate",
+      "family": "natural-order",
+      "expect": "vacuous",
+      "fact_ids": [],
+      "executed": 2,
+      "discriminating": 0,
+      "counterexamples": 0,
+      "killed": 0,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": []
+    },
+    {
+      "id": "least-number-principle-general",
+      "family": "natural-order",
+      "expect": "valid",
+      "fact_ids": [],
+      "executed": 256,
+      "discriminating": 127,
+      "counterexamples": 0,
+      "killed": 4,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": [
+        {
+          "id": "min-to-max",
+          "kind": "operand",
+          "status": "killed"
+        },
+        {
+          "id": "lt-to-le",
+          "kind": "relation",
+          "status": "killed"
+        },
+        {
+          "id": "drop-nonemptiness",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        },
+        {
+          "id": "exists-to-forall",
+          "kind": "quantifier",
+          "status": "killed"
+        }
+      ]
+    },
+    {
+      "id": "pratt-certificate-91-incomplete-factorization",
+      "family": "number-theory-certificate",
+      "expect": "false",
+      "fact_ids": [],
+      "executed": 2,
+      "discriminating": 1,
+      "counterexamples": 1,
+      "killed": 0,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": []
+    },
+    {
+      "id": "pratt-certificate-complete",
+      "family": "number-theory-certificate",
+      "expect": "valid",
+      "fact_ids": [],
+      "executed": 811,
+      "discriminating": 383,
+      "counterexamples": 0,
+      "killed": 2,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": [
+        {
+          "id": "drop-completeness",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        },
+        {
+          "id": "drop-order-condition",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        }
+      ]
+    },
+    {
+      "id": "crt-certificate-nonleast-modulus",
+      "family": "number-theory-certificate",
+      "expect": "false",
+      "fact_ids": [],
+      "executed": 2,
+      "discriminating": 1,
+      "counterexamples": 1,
+      "killed": 0,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": []
+    },
+    {
+      "id": "crt-certificate-least-modulus",
+      "family": "number-theory-certificate",
+      "expect": "valid",
+      "fact_ids": [],
+      "executed": 1174,
+      "discriminating": 1174,
+      "counterexamples": 0,
+      "killed": 2,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": [
+        {
+          "id": "drop-leastness",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        },
+        {
+          "id": "drop-congruence-check",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        }
+      ]
+    },
+    {
+      "id": "nra-monomial-bound-strictness-unrecorded",
+      "family": "nra-certificate",
+      "expect": "false",
+      "fact_ids": [],
+      "executed": 48,
+      "discriminating": 48,
+      "counterexamples": 3,
+      "killed": 0,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": []
+    },
+    {
+      "id": "nra-monomial-bound-strictness-recorded",
+      "family": "nra-certificate",
+      "expect": "valid",
+      "fact_ids": [],
+      "executed": 96,
+      "discriminating": 55,
+      "counterexamples": 0,
+      "killed": 2,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": [
+        {
+          "id": "forget-strictness",
+          "kind": "operand",
+          "status": "killed"
+        },
+        {
+          "id": "gt-to-ge",
+          "kind": "relation",
+          "status": "killed"
+        }
+      ]
+    },
+    {
+      "id": "crt-selfmap-permutes-range",
+      "family": "natural-counting",
+      "expect": "valid",
+      "fact_ids": [
+        "F:nat-crt-self-map-injective-on"
+      ],
+      "executed": 55,
+      "discriminating": 38,
+      "counterexamples": 0,
+      "killed": 3,
+      "also_true": 0,
+      "survived": 0,
+      "mutations": [
+        {
+          "id": "drop-coprimality",
+          "kind": "hypothesis-removal",
+          "status": "killed"
+        },
+        {
+          "id": "off-by-one",
+          "kind": "constant",
+          "status": "killed"
+        },
+        {
+          "id": "swap-moduli",
+          "kind": "operand",
+          "status": "killed"
+        }
+      ]
+    }
+  ],
+  "numerics": [
+    {
+      "script": "scripts/tests/check-countrange-bijection-numerics.py",
+      "exit": 0,
+      "negative_controls": 17
+    },
+    {
+      "script": "scripts/tests/check-totient-mul-coprime-numerics.py",
+      "exit": 0,
+      "negative_controls": 16
+    },
+    {
+      "script": "scripts/tests/check-totient-prime-power-numerics.py",
+      "exit": 0,
+      "negative_controls": 14
+    },
+    {
+      "script": "scripts/tests/check-totient-dvd-chain-numerics.py",
+      "exit": 0,
+      "negative_controls": 6
+    }
+  ],
+  "census": {
+    "proved_facts": 2117,
+    "semantic_falsification_facts": 91,
+    "load_bearing_facts": 8
+  }
+}

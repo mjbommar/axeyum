@@ -33461,6 +33461,168 @@ subject.
 - `euler_phi` from a `FactorizationCertificate` — the certificate already
   carries everything the formula needs.
 
+**Your lane's block (`DONE`, rat-matrix-layer, 2026-08-30).** See the detail below.
+
+**Track:** Mathematics 2026-08 — linear algebra, the general-dimension layer
+**Phase:** ADR-0761 landed; product, associativity, bilinearity, identity and
+both unit laws in the kernel, axiom-free
+**Date:** 2026-08-30
+
+## Summary
+
+`Rat.dotN` gave this kernel an inner product at arbitrary dimension over ℚ,
+Cauchy–Schwarz included. One index up there was nothing: every determinant
+declaration was fixed-size with entries passed as separate scalar arguments,
+and `F-determinant-multiplicative-over-constructed-rationals` states
+`det(AB) = det A · det B` by writing out all eight entries.
+
+This lane built the matrix layer on the encoding `sumRange` and `dotN` already
+sit on. A matrix is a function `Nat -> Nat -> Rat` with dimensions as ordinary
+arguments; `Rat.matMul A B k` is itself such a function, so
+`matMul (matMul A B k) C m` is well-typed with no coercion.
+
+## Delivered
+
+`crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs` — thirteen
+declarations, all axiom-free:
+
+| declaration | statement |
+|---|---|
+| `Rat.matMul` | `A B k i j := sumRange (fun t => A i t * B t j) k` |
+| `Rat.matMul_zero` | `matMul A B 0 i j = 0` (`Eq.refl`) |
+| `Rat.matMul_succ` | `matMul A B (succ k) i j = matMul A B k i j + A i k * B k j` (`Eq.refl`) |
+| `Rat.matMul_assoc` | `matMul (matMul A B k) C m i j = matMul A (matMul B C m) k i j` |
+| `Rat.matMul_add_left` | `matMul (fun r t => A1 r t + A2 r t) B k i j = matMul A1 B k i j + matMul A2 B k i j` |
+| `Rat.matMul_add_right` | the mirror, via `left_distrib` |
+| `Rat.matMul_smul_left` | `matMul (fun r t => c * A r t) B k i j = c * matMul A B k i j` |
+| `Rat.sumRange_delta` | `(∀ t, t ≠ i → f t = 0) → Lt i n → sumRange f n = f i` |
+| `Rat.matId` | `i j := if Nat.beq i j then 1 else 0` |
+| `Rat.matId_diag` | `matId i i = 1` |
+| `Rat.matId_off_diag` | `¬(i = j) → matId i j = 0` |
+| `Rat.matMul_id_left` | `Lt i n → matMul matId A n i j = A i j` |
+| `Rat.matMul_id_right` | `Lt j n → matMul A matId n i j = A i j` |
+
+Every statement is **pointwise** (`… i j = … i j`), and that is forced:
+`funext` is absent from this kernel (control of the same kind, present:
+`congrFun'`), so an `Eq` between two `Nat -> Nat -> Rat` values is not
+available. Pinned by `the_matrix_associativity_statement_is_pointwise`, which
+asserts the rendered type verbatim.
+
+Also:
+
+- `docs/research/09-decisions/adr-0761-the-matrix-layer-is-pointwise-and-carries-no-dimension.md`
+- Facts `F:rat-matmul-assoc`, `F:rat-matmul-id-left`, `F:rat-matmul-id-right`
+- Six evaluation tests in `rat_prelude_tests.rs`
+- A doc-comment correction to `RatPrelude::sum_range_swap` (see below)
+
+## Measured
+
+| | |
+|---|---|
+| `rat_prelude_builds`, before | 10.07 s |
+| `rat_prelude_builds`, after (13 declarations) | 9.70 s |
+| full `rat_prelude::` sweep | 138 passed, 0 failed, 154 s |
+| `matMul_assoc` direct dependencies | 5 edges, **no induction on any dimension** |
+| axiom footprint, all 13 | 0 (`rat: axiom=0 opaque=0 quotient=0`) |
+| clippy `-D warnings`, this crate | clean |
+| `validate-facts.py` | 2276 facts, exit 0 |
+
+**The curriculum note's sizing held.** It predicted `Rat.sumRange_swap` would
+make associativity assembly rather than new mathematics.
+`theorem_dependency_inventory` reports `matMul_assoc`'s direct dependencies as
+exactly `Rat.mul_assoc`, `Rat.mul_comm`, `Rat.mul_sumRange`,
+`Rat.sumRange_congr`, `Rat.sumRange_swap`. Four rewrites around the Fubini
+interchange, no new induction. `sumRange_delta` is the only genuinely new
+induction in the file, and it is on the summation bound, not a dimension.
+
+## Two rejections, both worth recording
+
+1. **`sum_range_swap`'s binder order.** Its doc comment read `∀ f m n` with `m`
+   the outer bound; the declaration (`rat_prelude/sum.rs:977`) allocates `n_fv`
+   before `m_fv`, so the order is `f`, then the **inner** bound, then the outer.
+   Both arguments are `Nat`, so the transposition is invisible at the call site
+   and the kernel's message names the two bounds rather than the lemma. Doc
+   corrected.
+2. **`ne_of_lt` and `ne_of_lt_symm` are not interchangeable.** The right branch
+   of the delta induction needs `¬(t = i)` from `Lt t i`; the left branch needs
+   `¬(m = i)` from `Lt i m`. Using one for the other gives
+   `expected Eq t i / got Eq i t` and names neither call site. Both helpers now
+   exist with a doc comment saying they are not interchangeable.
+
+## The evaluation tests, and why these fixtures
+
+`Kernel::add_declaration` type-checks a `Definition` and admits it once it is
+well-formed. A product that transposes an index has exactly the same type, so
+nothing in the trusted gate can catch it.
+
+    A i j = (i + i + j + 1) / 1      A = [[1,2],[3,4]]
+    B i j = (i + j + j) / 1          B = [[0,2],[1,3]]
+    A*B = [[2,8],[4,18]]
+
+All four cells checked against the hand computation. The fixtures
+**discriminate**: neither matrix is symmetric, they are not equal, the four
+cells are pairwise distinct (asserted, so a wrong product cannot pass by landing
+on a neighbour's value), and at cell (0,0) the three transposition bugs give
+3 (`AᵀB`), 4 (`ABᵀ`) and 6 (`BA`) against the correct 2. `B*A` is the explicit
+negative control, taken at **(0,0)** because `A*B` and `B*A` happen to agree at
+(0,1) — both 8 — and a control placed there would have been vacuous.
+
+A companion test repeats it with a `1/2` entry; cell (0,1) is load-bearing there
+because `(1/2)*2` must reduce to `1`, which no integer-only reading of `Rat.mul`
+produces. Every magnitude stays under 20: `Rat` numerals ride on unary `Nat` and
+`Rat.normalize`'s gcd runs by unary recursion.
+
+**The bound in the unit laws is measured, not asserted.**
+`rat_mat_mul_id_left_needs_its_bound` evaluates at the out-of-range row `i = 2`:
+`matId 2 0 * A 0 0 + matId 2 1 * A 1 0 = 0`, while `A 2 0 = 5`. Both pinned,
+asserted to differ. That is evidence a footprint check cannot carry — an
+axiom-free theorem with a superfluous hypothesis has the same footprint as one
+whose hypothesis is necessary.
+
+## What determinant multiplicativity at general `n` now needs
+
+The product layer is the prerequisite and it is done. What remains, in order:
+
+1. **A minor / row-and-column deletion on `Nat -> Nat -> Rat`.** This is an
+   index shift, not a new type: `minor A p q := fun i j => A (skip p i)
+   (skip q j)` with `skip p i := if i < p then i else i + 1`. `Nat.lt` is
+   decidable here (`Nat.lt_or_ge` is a proved theorem) so the shift is
+   definable, and its evaluation test is the same shape as `matId`'s.
+2. **A recursive determinant by cofactor expansion.** `det A 0 := 1`,
+   `det A (succ n) := sumRange (fun j => (-1)^j * A 0 j * det (minor A 0 j) n)`.
+   The curriculum note calls this the natural constructive definition and
+   `Rat.det3_cofactor_row1` is the existing base case to check it against —
+   which is also the discriminating evaluation test, since `det3` was built
+   independently.
+3. **Multiplicativity itself.** The `n = 2` proof (`Rat.det2_mul`,
+   `rat_prelude/matrix.rs`) deliberately avoids expanding into eight monomials:
+   it proves `det2` is linear in each row, then gets the product formula from
+   linearity plus a repeated-row-is-zero lemma plus row swap. That is the
+   textbook Cauchy argument and it generalises; the general-`n` version needs
+   row linearity and alternation for the recursive `det`, both of which are
+   inductions over the cofactor expansion.
+
+**A caution for whoever takes this.** Step 3 will want to say "`det` of a
+matrix with two equal rows is zero", and *equal rows* is a pointwise statement
+here, not an `Eq` between two `Nat -> Rat` values. Stating it as
+`(∀ j, A p j = A q j) → det A n = 0` keeps it inside what this kernel can
+express; stating it with a function equality does not, and `funext` will not
+arrive to rescue it.
+
+Two other things this layer does not have and did not need: a **transpose**
+(`(AB)ᵀ = BᵀAᵀ` is expressible pointwise) and any **inverse**.
+
+## Files
+
+- `crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs`
+- `crates/axeyum-lean-kernel/src/rat_prelude.rs` (13 `NameId` fields, the
+  module wiring, the `sum_range_swap` doc correction)
+- `crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs`
+- `crates/axeyum-lean-kernel/src/rat_prelude/probability.rs` (`bool_select_rat`
+  and its two branch lemmas promoted to `pub(super)` rather than copied)
+- `artifacts/facts/F-rat-matmul-{assoc,id-left,id-right}.json`
+- `docs/research/09-decisions/adr-0761-the-matrix-layer-is-pointwise-and-carries-no-dimension.md`
+
 Lane: `l0-safety-matrix`
 Phase: ADR-0717 L0, roadmap phase **S0** — complete.
 Decision: [ADR-0746](docs/research/09-decisions/adr-0746-the-safety-matrix-is-generated-and-gated.md)
@@ -33703,6 +33865,108 @@ Recorded as **did not run** rather than skipped silently.
 | `8994636c2` | regenerate PLAN.md |
 | `a8d81257e` | merge `main` (the 382 safety-matrix lane landed mid-run); both conflicts were in GENERATED files and were resolved by regenerating, never by hand |
 | _this_ | record the byte-identity control and the `check-fast.sh` gap |
+
+Lane: `l0-s3-semantic-controls`
+Phase: ADR-0717 L0, roadmap phase **S3** — complete.
+Decision: [ADR-0752](docs/research/09-decisions/adr-0752-semantic-controls-are-a-retained-fixture-pack-not-a-review-step.md)
+
+## Status
+
+S3's exit is met and gated. `scripts/check-semantic-control-fixtures.py`
+executes the retained fixture pack in
+`scripts/semantic_control_fixtures.py`, pins its shape in
+`artifacts/semantic-controls/fixture-pack.json`, and is registered in **both**
+`scripts/check.sh` and the justfile.
+
+    fixtures=13|executed=9742|mutations=19|killed=18|also_true=1|survived=0
+    load_bearing=8|semantic_falsification=91|proved=2117
+    AUTOGENESIS_HOLDOUT_ISOLATION|held_out=116|files_scanned=1109|
+      settled=0|references=0|verdict=PASS
+
+**No fact was edited.** Not `epistemic_status`, not `proof_route`, not
+`axiom_footprint`, not `formal.statement`.
+
+## The pack
+
+13 fixtures, each a real defect this session produced and caught, or the valid
+control one line away from it: the coprimality-independence claim false at
+26/26 non-coprime pairs; the composite totient control vacuous by mathematics;
+the least-number-principle control that passed on a sort mismatch; the Pratt
+certificate for 91 that only completeness rejects; the CRT certificate (9, 24)
+that only leastness rejects; the NRA bound recording a constant but not
+strictness, over a satisfiable query.
+
+Three classes. `false` must be refuted. `vacuous` must produce **zero**
+discriminating instances — the fixture asserts the zero, not its own
+greenness. `valid` must be accepted, must discriminate, and must kill at least
+one mutation. **Zero executed cases is failure** per fixture, for the pack, and
+for an empty pack.
+
+An unfalsified mutation declared `also_true` is classified for review, never
+failed. One such: `eq-to-le` on the totient identity, where the weakened
+statement is true.
+
+## The honest count
+
+**8 of 2,117** proved facts have a control this gate demonstrated would fail if
+the property failed. 91 is the upper bound — S0's `semantic_falsification`
+column, which counts facts carrying a semantic evidence row whether or not it
+discriminates. 1,992 is what `kind` would give, and the census never reads
+`kind`: it reads S0's generated column, which classifies from `supports`.
+
+The 84-fact difference between 91 and 8 is **not** 84 vacuous controls. It is
+84 controls not demonstrated either way, and the summary keeps those apart.
+
+## Mutation kill sets
+
+21 mutations through `scripts/tests/mutation_controls.py
+semantic-control-fixtures`, against 28 controls. **Every one `killed 1`,
+naming a distinct test. No survivors, nothing unmeasured.**
+
+## Three defects found in the tools, not the subject
+
+1. The numerics detector matched the literal `NEGATIVE CONTROL` and reported
+   two in-tree scripts as carrying none. Both carry several, spelled
+   `GENUINELY FAILS`. 0 → 14 and 0 → 6 once fixed. A gate manufacturing a
+   finding about its own subject.
+2. `drop-congruence-check` reported `survived` because it never removed the
+   guard it names. Now killed at 1,174 instances. A survivor is as easily a
+   broken mutation as a weak guard.
+3. `test_a_fixture_that_executed_nothing_is_refused` needed a second fixture
+   with a nonzero count, or the pack-total clause covers for a deleted
+   per-fixture clause and the mutation survives.
+
+## Handoff — what I did NOT do, and what is a hypothesis
+
+Everything below is what my route did not reach, not a claim that it is hard.
+
+- **I did not audit the 84 undemonstrated controls one by one.** I sampled
+  them (34 `cas-certificate`, 17 `smt-term-level`, 16 `kernel-lean`, 10
+  `smt-clausal`, 7 `search-certificate`) and read a handful. Whether any is
+  vacuous is open; treating the 84 as a vacuity count would be exactly the
+  crude-classifier error this phase exists to name.
+- **I found no fact I can demonstrate is vacuous.** The one I expected to be —
+  `F:nat-totient-dvd-totient-mul-prime`, whose family produced the vacuous
+  composite control — turns out to be honest: its evidence explicitly names the
+  **transposed** direction, failing at 142 pairs, as the control that
+  discriminates. The repair had already landed there. That is a real answer,
+  not an absence of looking, but it is one fact.
+- **The pack does not reach a proof term.** These are semantic checks over
+  small domains. S4's Lean replay and S5's kernel differential are the checks
+  that reach the term, and nothing here substitutes for them.
+- **The `vacuous` class is judgement.** Both vacuous fixtures are controls that
+  really shipped here; nothing asserts they are the only two.
+- **I did not run `scripts/check-fast.sh` or any cargo gate.** The gate I added
+  is pure Python and runs in about two seconds; the aggregate re-run is the
+  coordinator's.
+
+## Paths owned by this lane
+
+`scripts/semantic_control_fixtures.py`,
+`scripts/check-semantic-control-fixtures.py`,
+`scripts/tests/test_semantic_control_fixtures.py`,
+`artifacts/semantic-controls/`, ADR-0752, this file. One registration line each
+in `scripts/check.sh`, the `justfile`, and `scripts/tests/mutation_controls.py`.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

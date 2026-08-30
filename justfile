@@ -350,6 +350,13 @@ facts:
     # that has stopped discriminating, which would otherwise report a
     # cheerful zero for a whole protection column.
     python3 scripts/gen-safety-matrix.py --check
+    # S3 of the same roadmap (ADR-0752): the retained semantic-control
+    # fixture pack -- known-false, known-vacuous and known-valid statements,
+    # each a real defect this repository produced or the valid control one
+    # line away from it, plus statement mutations and the in-tree numerics
+    # scripts. ZERO EXECUTED CASES IS ALWAYS FAILURE. A mutation that is not
+    # falsified because it is also true is classified, never failed.
+    python3 scripts/check-semantic-control-fixtures.py --check
     # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so
     # the Mathlib proposition lives only in `formal.statement`. Nineteen had it
     # overwritten with our own `render_lean` output, and the mirror claim -- "we

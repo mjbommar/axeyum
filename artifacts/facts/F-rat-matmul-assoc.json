@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-matmul-assoc",
+  "title": "Matrix multiplication over the constructed rationals is associative at symbolic dimension, stated pointwise",
+  "statement": "For matrices A, B, C over the constructed rationals -- each a function Nat -> Nat -> Rat -- and inner dimensions k and m, the (i, j) entry of (A*B)*C equals the (i, j) entry of A*(B*C), for every i and j. The dimensions are UNIVERSALLY QUANTIFIED variables, not fixed at 2 or 3: this is the first matrix content in this kernel that does not write its entries out as separate scalar arguments. The statement is POINTWISE and that is forced rather than chosen -- `funext` is absent from this kernel (positive control of the same kind, present: `congrFun'`), so an Eq between two `Nat -> Nat -> Rat` values is not available and a matrix equation must conclude at a scalar entry. Rat.matMul A B k i j is defined as sumRange (fun t => A i t * B t j) k, one index up from Rat.dotN.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matMul_assoc : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> Eq.{1} Rat (Rat.matMul (Rat.matMul x0 x1 x3) x2 x4 x5 x6) (Rat.matMul x0 (Rat.matMul x1 x2 x4) x3 x5 x6))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm",
+    "F:rat-mul-sumrange",
+    "F:rat-sumrange-congr",
+    "F:rat-sumrange-swap"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matMul_assoc",
+      "kind": "kernel-term",
+      "supports": "Rat.matMul_assoc is admitted by the trusted kernel gate with the type recorded in formal.statement. The proof is ASSEMBLY around one existing lemma: `theorem_dependency_inventory` reports its direct dependencies as exactly Rat.mul_assoc, Rat.mul_comm, Rat.mul_sumRange, Rat.sumRange_congr and Rat.sumRange_swap -- five edges, no induction on any dimension. `sumRange_swap` (the Fubini interchange over a rational double sum) is the one that carries the content; the other four move the outer factors in and out of the inner sum.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err)",
+        "theorem_dependency_inventory (independent re-derivation of the whole rational prelude, reporting the admitted name and its dependency edges)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.matMul_assoc 2>/dev/null | grep -cE '^Rat\\.matMul_assoc[[:space:]]'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs",
+      "notes": "Verified BOTH directions on this tree. Real name: prints 1, exit 0. Fabricated name `Rat.matMul_assoc_fabricated`: prints 0, exit 1 -- the tool exits non-zero for a filter matching nothing, and `grep -c` (never `-q`, which SIGPIPEs its producer under pipefail) independently asserts the count. `--release` is MANDATORY: this tool builds creal/complex/cpoint, which recurse deep enough in a debug build to overflow the default thread stack. The pattern uses `[[:space:]]` and NOT `\\t`: on this host an interactive `grep` is a ugrep wrapper that reads `\\t` as a tab while /usr/bin/grep reads it as a literal `t`, which silently broke 68 checker commands in this ledger on 2026-08-25."
+    },
+    {
+      "id": "statement-pin-Rat.matMul_assoc",
+      "kind": "kernel-term",
+      "supports": "The statement is POINTWISE and stays pointwise. `the_matrix_associativity_statement_is_pointwise` asserts the kernel-rendered type verbatim with assert_eq!, so a later edit cannot quietly restate the theorem as an Eq between two `Nat -> Nat -> Rat` values -- which is what the absent `funext` makes unprovable, and what would make this file's whole argument describe something no longer true.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_matrix_associativity_statement_is_pointwise (asserts the rendered type verbatim)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_matrix_associativity_statement_is_pointwise -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "A footprint check cannot carry this claim: a theorem stating something weaker, or associating the products the same way on both sides, has exactly the same empty footprint. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "evaluation-Rat.matMul",
+      "kind": "instance-pin",
+      "supports": "The DEFINITION `Rat.matMul` computes the matrix product and not something else with the same type. Kernel::add_declaration type-checks a Definition and admits it once it is well-formed; a product that transposes an index has exactly the same type, so nothing in the trusted gate can catch it. `rat_mat_mul_computes_a_two_by_two_product` reduces the product at A = [[1,2],[3,4]], B = [[0,2],[1,3]] and compares all four cells against the hand computation A*B = [[2,8],[4,18]]. The choice discriminates: neither matrix is symmetric, they are not equal, the four cells are pairwise distinct (asserted), and at cell (0,0) the three transposition bugs give 3 (A^T B), 4 (A B^T) and 6 (B A) against the correct 2. B*A is pinned as an explicit negative control, taken at (0,0) because A*B and B*A AGREE at (0,1) (both 8) and a control there would have been vacuous. A companion test repeats it with a 1/2 entry so the check reaches beyond an integer sub-ring.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::rat_mat_mul_computes_a_two_by_two_product",
+        "rat_prelude_tests::rat_mat_mul_computes_over_fractional_entries",
+        "rat_prelude_tests::rat_mat_mul_assoc_holds_at_a_concrete_instance (the theorem APPLIED, not merely declared)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::rat_mat_mul_computes 2>&1 | grep -Ec 'test result: ok\\. 2 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "The count `2 passed` is the discriminator: a filter that matched nothing prints `0 passed` and would fail this test, and a third computation test added later without updating this line fails loudly rather than silently going unchecked. Every magnitude in the fixtures is under 20 on purpose -- Rat numerals ride on unary Nat and Rat.normalize's gcd runs by unary recursion, so a large constant costs out of all proportion to its size."
+    },
+    {
+      "id": "footprint-Rat.matMul_assoc",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty, so no theorem in it can rest on anything asserted.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "notes": "Re-measured on this tree: `rat: axiom=0 opaque=0 quotient=0 total_trusted=0`, exit 0 with `ok: rat trusted surface = 0`. The enumeration covers Axiom, Opaque AND Quotient, not just Declaration::Axiom, because Opaque has no proof body and Quotient admits Quot.sound. `--require-axiom-free <name>` is an error rather than a silent zero for a prelude the run never built, which is what makes `rat` here a claim rather than an absence."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane rat-matrix-layer, Rat.matMul_assoc in crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Arthur Cayley",
+        "what": "matrix multiplication and its associativity, as composition of linear substitutions",
+        "year": 1858,
+        "where": "A Memoir on the Theory of Matrices, Phil. Trans. R. Soc. 148",
+        "attribution": "standard attribution; this lane did not consult the primary source."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) There is no Eq between matrices anywhere here, and there cannot be on this route: `funext` is absent, so `(A*B)*C = A*(B*C)` as functions is not statable. Every consumer must go through the pointwise form. (2) No dimension CONSISTENCY is enforced by the types -- a matrix is a total function on all of Nat x Nat and the bounds are ordinary arguments, so `matMul A B k i j` is defined for every i and j and simply sums over t < k. That is why the identity's unit laws (F:rat-matmul-id-left, F:rat-matmul-id-right) carry an explicit Lt hypothesis; associativity does not need one, because both sides sum over the same two ranges whatever i and j are. (3) Determinant multiplicativity at general n is NOT proved. The kernel has it only at n = 2 (Rat.det2_mul) and the cofactor expansion at n = 3 (Rat.det3_cofactor_row1); a recursive determinant over this encoding is the next step and this fact is a prerequisite for it, not a substitute.\n\nWhat the associativity proof shows about cost is worth recording: the curriculum note predicted that Rat.sumRange_swap would make this assembly rather than new mathematics, and the dependency inventory bears that out at five edges with no new induction. The one rejection the proof took was an argument-ORDER bug -- sum_range_swap's doc comment lists its binders as `f m n` with m the outer bound, while the declaration (rat_prelude/sum.rs:977) binds f, then the INNER bound, then the outer. The doc comment has been corrected."
+}
