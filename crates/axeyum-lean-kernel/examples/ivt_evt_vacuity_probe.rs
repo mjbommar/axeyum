@@ -46,8 +46,8 @@
 #![allow(clippy::similar_names, clippy::too_many_lines)]
 
 use axeyum_lean_kernel::{
-    BinderInfo, CRealPrelude, Declaration, ExprId, ExprNode, Kernel, NameId, build_creal_prelude,
-    on_a_deep_stack,
+    BinderInfo, CRealPrelude, Declaration, ExprId, ExprNode, Kernel, LevelNode, NameId,
+    build_creal_prelude, on_a_deep_stack,
 };
 
 /// Left-to-right application spine.
@@ -66,7 +66,12 @@ fn capp(k: &mut Kernel, name: NameId, args: &[ExprId]) -> ExprId {
 }
 
 /// `c.{lvl} args…`.
-fn capp_u(k: &mut Kernel, name: NameId, lvl: axeyum_lean_kernel::LevelId, args: &[ExprId]) -> ExprId {
+fn capp_u(
+    k: &mut Kernel,
+    name: NameId,
+    lvl: axeyum_lean_kernel::LevelId,
+    args: &[ExprId],
+) -> ExprId {
     let c = k.const_(name, vec![lvl]);
     app_n(k, c, args)
 }
@@ -109,7 +114,9 @@ fn decl_ty(k: &Kernel, name: NameId) -> ExprId {
 /// Instantiate a Pi-telescope at `args`, returning the residual type.
 fn apply_ty(k: &mut Kernel, mut ty: ExprId, args: &[ExprId]) -> ExprId {
     for &a in args {
-        let body = k.pi_body(ty).expect("telescope is shorter than the argument list");
+        let body = k
+            .pi_body(ty)
+            .expect("telescope is shorter than the argument list");
         ty = k.instantiate(body, &[a]);
     }
     ty
@@ -247,8 +254,20 @@ fn run() -> i32 {
     // ================================================================
     build_modulus_independence(&mut s);
 
+    // ================================================================
+    // Part 5 -- does official Lean's own kernel cover these? The
+    //           `F:lean-kernel-accepts-the-whole-constructed-real-carrier`
+    //           replay covers exactly the REPRESENTABLE declarations, and
+    //           73 of the carrier's 2,058 are excluded. Classify the IVT
+    //           and EVT subjects by that fact's own predicate, so the
+    //           answer is not inherited from a headline count.
+    // ================================================================
+    report_representability(&mut s);
+
     if s.failures.is_empty() {
-        println!("\nPROBE PASSED -- every declaration admitted, axiom-free; the exact control was refused");
+        println!(
+            "\nPROBE PASSED -- every declaration admitted, axiom-free; the exact control was refused"
+        );
         0
     } else {
         println!("\nPROBE FAILED");
@@ -299,7 +318,10 @@ fn build_evt_approx_max(s: &mut Probe) -> (NameId, ExprId) {
     // --- Exists.rec's intro branch: open the witness ---------------------
     let x_id = s.fresh();
     let x = s.kernel.fvar(x_id);
-    let pred_body = s.kernel.lam_body(pred).expect("the predicate must be a lambda");
+    let pred_body = s
+        .kernel
+        .lam_body(pred)
+        .expect("the predicate must be a lambda");
     let px = s.kernel.instantiate(pred_body, &[x]);
     // px = And (le a x) (And (le x b) (le sup (add (F x) eps)))
     let (a1, r1) = args2(&s.kernel, px);
@@ -355,15 +377,18 @@ fn build_evt_approx_max(s: &mut Probe) -> (NameId, ExprId) {
         s.kernel.lam(anon, creal_ty, body, BinderInfo::Default)
     };
     let target = capp_u(&mut s.kernel, s.exists_, s.lvl1, &[creal_ty, q]);
-    let h_ex = capp_u(&mut s.kernel, s.exists_intro, s.lvl1, &[creal_ty, q, x, h_tgt_x]);
+    let h_ex = capp_u(
+        &mut s.kernel,
+        s.exists_intro,
+        s.lvl1,
+        &[creal_ty, q, x, h_tgt_x],
+    );
 
     let intro_branch = {
         let l2 = lam1(&mut s.kernel, anon, px, hx_id, h_ex);
         lam1(&mut s.kernel, anon, creal_ty, x_id, l2)
     };
-    let motive = s
-        .kernel
-        .lam(anon, lub_ty, target, BinderInfo::Default);
+    let motive = s.kernel.lam(anon, lub_ty, target, BinderInfo::Default);
     let proof = capp_u(
         &mut s.kernel,
         s.exists_rec,
@@ -428,7 +453,10 @@ fn build_exact_control(s: &mut Probe) {
 
     let x_id = s.fresh();
     let x = s.kernel.fvar(x_id);
-    let pred_body = s.kernel.lam_body(pred).expect("the predicate must be a lambda");
+    let pred_body = s
+        .kernel
+        .lam_body(pred)
+        .expect("the predicate must be a lambda");
     let px = s.kernel.instantiate(pred_body, &[x]);
     let (a1, r1) = args2(&s.kernel, px);
     let (a2, a3) = args2(&s.kernel, r1);
@@ -482,7 +510,12 @@ fn build_exact_control(s: &mut Probe) {
         s.kernel.lam(anon, creal_ty, body, BinderInfo::Default)
     };
     let target = capp_u(&mut s.kernel, s.exists_, s.lvl1, &[creal_ty, q]);
-    let h_ex = capp_u(&mut s.kernel, s.exists_intro, s.lvl1, &[creal_ty, q, x, h_tgt_x]);
+    let h_ex = capp_u(
+        &mut s.kernel,
+        s.exists_intro,
+        s.lvl1,
+        &[creal_ty, q, x, h_tgt_x],
+    );
     let intro_branch = {
         let l2 = lam1(&mut s.kernel, anon, px, hx_id, h_ex);
         lam1(&mut s.kernel, anon, creal_ty, x_id, l2)
@@ -675,7 +708,11 @@ fn build_modulus_independence(s: &mut Probe) {
         let hsup = capp(&mut s.kernel, s.and_right, &[a2, a3, hr]);
 
         // `F x ≤ sup_b` from the OTHER witness's upper-bound law.
-        let hub = capp(&mut s.kernel, p.sup_on_ub, &[f, a, b, hab, ub_w, x, ha, hxb]);
+        let hub = capp(
+            &mut s.kernel,
+            p.sup_on_ub,
+            &[f, a, b, hab, ub_w, x, ha, hxb],
+        );
         let eps_refl = capp(&mut s.kernel, p.le_refl, &[eps]);
         let step = capp(
             &mut s.kernel,
@@ -738,7 +775,9 @@ fn build_modulus_independence(s: &mut Probe) {
 
     let half_value = close_value(s, fwd);
     let half_ty = close_ty(s, fwd_ty);
-    let half_name = s.kernel.name_str(s.audit_ns, "supOn_le_supOn_of_two_moduli");
+    let half_name = s
+        .kernel
+        .name_str(s.audit_ns, "supOn_le_supOn_of_two_moduli");
     s.admit(
         half_name,
         half_ty,
@@ -755,6 +794,90 @@ fn build_modulus_independence(s: &mut Probe) {
         eq_value,
         "EvtAudit.supOn_modulus_independent",
     );
+}
+
+/// Does `ty` live in `Prop`? Read by inference, never from a name.
+///
+/// Mirrors `tests/support/creal_representability.rs::is_a_proposition`, which
+/// is what `F:lean-kernel-accepts-the-whole-constructed-real-carrier` uses to
+/// decide which declarations its Lean replay covers.
+fn is_a_proposition(kernel: &mut Kernel, ty: ExprId) -> bool {
+    let Ok(sort) = kernel.infer(ty) else {
+        return false;
+    };
+    let sort = kernel.whnf(sort);
+    let ExprNode::Sort(level) = *kernel.expr_node(sort) else {
+        return false;
+    };
+    matches!(kernel.level_node(level), LevelNode::Zero)
+}
+
+/// Classify each IVT/EVT subject as REPRESENTABLE (covered by the Lean-kernel
+/// replay), NOT-PROP, or BLOCKED-BY a non-`Prop` `Theorem` in its closure.
+fn report_representability(s: &mut Probe) {
+    let p = s.p;
+    let subjects: Vec<(&str, NameId)> = vec![
+        ("CReal.ivt_approx", p.ivt_approx),
+        ("CReal.ivt_exact_root", p.ivt_exact_root),
+        (
+            "CReal.ivt_exact_root_decides_sign",
+            p.ivt_exact_root_decides_sign,
+        ),
+        (
+            "CReal.evt_attained_max_decides_sign",
+            p.evt_attained_max_decides_sign,
+        ),
+        ("CReal.supOn", p.sup_on),
+        ("CReal.supOn_ub", p.sup_on_ub),
+        ("CReal.supOn_approx_lub", p.sup_on_approx_lub),
+        // Positive control of the OPPOSITE verdict: the fact names this one as
+        // residue, so a run in which everything is representable is broken.
+        ("CReal.weierstrassMTest", p.weierstrass_m_test),
+    ];
+
+    println!("\nLean-kernel replay coverage (the fact's own representability predicate):");
+    let mut any_residue = false;
+    for (label, name) in subjects {
+        let Some(decl) = s.kernel.environment().get(name).cloned() else {
+            s.failures
+                .push(format!("{label}: absent from the environment"));
+            continue;
+        };
+        let mut verdict = String::from("representable");
+        if let Declaration::Theorem { ty, .. } = decl {
+            if !is_a_proposition(&mut s.kernel, ty) {
+                verdict = String::from("NOT-PROP (outside the replay)");
+            }
+        }
+        if verdict == "representable" {
+            let closure = s.kernel.declaration_dependency_closure(name);
+            for dep in closure {
+                let Some(d) = s.kernel.environment().get(dep).cloned() else {
+                    continue;
+                };
+                if let Declaration::Theorem { ty, .. } = d
+                    && !is_a_proposition(&mut s.kernel, ty)
+                {
+                    verdict = format!(
+                        "BLOCKED-BY {} (outside the replay)",
+                        s.kernel.display_name(dep)
+                    );
+                    break;
+                }
+            }
+        }
+        if verdict != "representable" {
+            any_residue = true;
+        }
+        println!("  {label:38}  {verdict}");
+    }
+    if !any_residue {
+        s.failures.push(String::from(
+            "representability: EVERY subject came back representable, including the \
+             control CReal.weierstrassMTest, which the carrier fact names as residue -- \
+             the classifier is not discriminating",
+        ));
+    }
 }
 
 fn main() {
