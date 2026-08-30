@@ -650,6 +650,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_gcd,
         p.dvd_gcd_iff,
         p.gcd_mul_right,
+        p.dvd_gcd_mul_iff_dvd_mul,
+        p.dvd_mul_gcd_iff_dvd_mul,
+        p.dvd_gcd_mul_gcd_iff_dvd_mul,
         p.lcm_zero_left,
         p.dvd_lcm_left,
         p.dvd_lcm_right,
@@ -7861,7 +7864,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 599,
+        93 + 602,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -16545,5 +16548,195 @@ fn gcd_mul_right_holds_at_concrete_and_symbolic_instances() {
     assert!(
         f.k.axiom_footprint(p.gcd_mul_right).is_empty(),
         "gcd_mul_right must rest on zero axioms"
+    );
+}
+
+/// The three `ml430` mirrors built from `Nat.gcd_mul_right`
+/// (`gcd_mul_right_mirrors.rs`): `dvd_gcd_mul_iff_dvd_mul`,
+/// `dvd_mul_gcd_iff_dvd_mul`, `dvd_gcd_mul_gcd_iff_dvd_mul`. Each is checked
+/// at a concrete triple -- both the STATEMENT shape (`def_eq` against an
+/// independently-built expected `Iff`, which catches a swapped argument in
+/// the hand-built proof term) and the LOGICAL CONTENT (applying `Iff.mp` to
+/// a real proof witness and confirming the target type comes out right) --
+/// and symbolically at a genuinely free `(k, n, m)` via a fresh restating
+/// theorem, since numerals reduce and hide a definitional-equality gap a
+/// symbolic check exposes.
+#[test]
+fn gcd_mul_right_mirrors_apply_at_concrete_and_symbolic_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // dvd_gcd_mul_iff_dvd_mul at (k, n, m) = (6, 4, 3):
+    // gcd(6,4) = 2, so gcd(k,n)*m = 6 (dvd 6 6, trivially via dvd_refl);
+    // n*m = 12 = 6*2 (dvd 6 12, via dvd_mul).
+    {
+        let k = f.num(6);
+        let n = f.num(4);
+        let m = f.num(3);
+        let applied = f.lemma(p.dvd_gcd_mul_iff_dvd_mul, &[k, n, m]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_gcd_mul_iff_dvd_mul must apply at (k=6, n=4, m=3): {shown}")
+        });
+        let gkn = f.gcd(k, n);
+        let gkn_m = f.mul(gkn, m);
+        let nm = f.mul(n, m);
+        let lhs = f.dvd(k, gkn_m);
+        let rhs = f.dvd(k, nm);
+        let want = f.const_app(p.logic.iff, &[lhs, rhs]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dvd_gcd_mul_iff_dvd_mul(6,4,3) must state Iff (dvd 6 (gcd(6,4)*3)) (dvd 6 (4*3))"
+        );
+
+        let mp_fn = f.const_app(p.logic.iff_mp, &[lhs, rhs, applied]);
+        let refl_k = f.lemma(p.dvd_refl, &[k]); // dvd k k, defeq dvd k gkn_m (gkn_m computes to 6)
+        let mp_result = f.apply(mp_fn, &[refl_k]);
+        let mp_inferred = f.k.infer(mp_result).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!(
+                "dvd_gcd_mul_iff_dvd_mul(6,4,3).mp applied to dvd_refl(6) must type-check: {shown}"
+            )
+        });
+        assert!(
+            f.k.def_eq(mp_inferred, rhs),
+            "dvd_gcd_mul_iff_dvd_mul(6,4,3).mp(dvd_refl 6) must produce a proof of dvd 6 12"
+        );
+    }
+
+    // dvd_mul_gcd_iff_dvd_mul at (k, n, m) = (6, 3, 4):
+    // gcd(6,4) = 2, so n*gcd(k,m) = 6 (dvd 6 6); n*m = 12 (dvd 6 12).
+    {
+        let k = f.num(6);
+        let n = f.num(3);
+        let m = f.num(4);
+        let applied = f.lemma(p.dvd_mul_gcd_iff_dvd_mul, &[k, n, m]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_mul_gcd_iff_dvd_mul must apply at (k=6, n=3, m=4): {shown}")
+        });
+        let gkm = f.gcd(k, m);
+        let n_gkm = f.mul(n, gkm);
+        let nm = f.mul(n, m);
+        let lhs = f.dvd(k, n_gkm);
+        let rhs = f.dvd(k, nm);
+        let want = f.const_app(p.logic.iff, &[lhs, rhs]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dvd_mul_gcd_iff_dvd_mul(6,3,4) must state Iff (dvd 6 (3*gcd(6,4))) (dvd 6 (3*4))"
+        );
+
+        let mp_fn = f.const_app(p.logic.iff_mp, &[lhs, rhs, applied]);
+        let refl_k = f.lemma(p.dvd_refl, &[k]); // dvd k k, defeq dvd k n_gkm (n_gkm computes to 6)
+        let mp_result = f.apply(mp_fn, &[refl_k]);
+        let mp_inferred = f.k.infer(mp_result).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!(
+                "dvd_mul_gcd_iff_dvd_mul(6,3,4).mp applied to dvd_refl(6) must type-check: {shown}"
+            )
+        });
+        assert!(
+            f.k.def_eq(mp_inferred, rhs),
+            "dvd_mul_gcd_iff_dvd_mul(6,3,4).mp(dvd_refl 6) must produce a proof of dvd 6 12"
+        );
+    }
+
+    // dvd_gcd_mul_gcd_iff_dvd_mul at (k, n, m) = (6, 4, 9):
+    // gcd(6,4) = 2, gcd(6,9) = 3, so gcd(k,n)*gcd(k,m) = 6 (dvd 6 6);
+    // n*m = 36 = 6*6 (dvd 6 36, via dvd_mul).
+    {
+        let k = f.num(6);
+        let n = f.num(4);
+        let m = f.num(9);
+        let applied = f.lemma(p.dvd_gcd_mul_gcd_iff_dvd_mul, &[k, n, m]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_gcd_mul_gcd_iff_dvd_mul must apply at (k=6, n=4, m=9): {shown}")
+        });
+        let gkn = f.gcd(k, n);
+        let gkm = f.gcd(k, m);
+        let gkn_gkm = f.mul(gkn, gkm);
+        let nm = f.mul(n, m);
+        let lhs = f.dvd(k, gkn_gkm);
+        let rhs = f.dvd(k, nm);
+        let want = f.const_app(p.logic.iff, &[lhs, rhs]);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dvd_gcd_mul_gcd_iff_dvd_mul(6,4,9) must state Iff (dvd 6 (gcd(6,4)*gcd(6,9))) (dvd 6 36)"
+        );
+
+        let mp_fn = f.const_app(p.logic.iff_mp, &[lhs, rhs, applied]);
+        let refl_k = f.lemma(p.dvd_refl, &[k]); // dvd k k, defeq dvd k gkn_gkm (gkn_gkm computes to 6)
+        let mp_result = f.apply(mp_fn, &[refl_k]);
+        let mp_inferred = f.k.infer(mp_result).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dvd_gcd_mul_gcd_iff_dvd_mul(6,4,9).mp applied to dvd_refl(6) must type-check: {shown}")
+        });
+        assert!(
+            f.k.def_eq(mp_inferred, rhs),
+            "dvd_gcd_mul_gcd_iff_dvd_mul(6,4,9).mp(dvd_refl 6) must produce a proof of dvd 6 36"
+        );
+    }
+
+    // Symbolic: each applies at a genuinely FREE (k, n, m) triple.
+    {
+        let name = f.name("dvd_gcd_mul_iff_dvd_mul_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (k, n, m) = (values[0], values[1], values[2]);
+            let gkn = d.gcd(k, n);
+            let gkn_m = d.mul(gkn, m);
+            let nm = d.mul(n, m);
+            let lhs = d.dvd(k, gkn_m);
+            let rhs = d.dvd(k, nm);
+            let stmt = d.const_app(p.logic.iff, &[lhs, rhs]);
+            let proof = d.lemma(p.dvd_gcd_mul_iff_dvd_mul, &[k, n, m]);
+            (stmt, proof)
+        })
+        .expect("dvd_gcd_mul_iff_dvd_mul must apply at symbolic k, n, m");
+    }
+    {
+        let name = f.name("dvd_mul_gcd_iff_dvd_mul_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (k, n, m) = (values[0], values[1], values[2]);
+            let gkm = d.gcd(k, m);
+            let n_gkm = d.mul(n, gkm);
+            let nm = d.mul(n, m);
+            let lhs = d.dvd(k, n_gkm);
+            let rhs = d.dvd(k, nm);
+            let stmt = d.const_app(p.logic.iff, &[lhs, rhs]);
+            let proof = d.lemma(p.dvd_mul_gcd_iff_dvd_mul, &[k, n, m]);
+            (stmt, proof)
+        })
+        .expect("dvd_mul_gcd_iff_dvd_mul must apply at symbolic k, n, m");
+    }
+    {
+        let name = f.name("dvd_gcd_mul_gcd_iff_dvd_mul_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (k, n, m) = (values[0], values[1], values[2]);
+            let gkn = d.gcd(k, n);
+            let gkm = d.gcd(k, m);
+            let gkn_gkm = d.mul(gkn, gkm);
+            let nm = d.mul(n, m);
+            let lhs = d.dvd(k, gkn_gkm);
+            let rhs = d.dvd(k, nm);
+            let stmt = d.const_app(p.logic.iff, &[lhs, rhs]);
+            let proof = d.lemma(p.dvd_gcd_mul_gcd_iff_dvd_mul, &[k, n, m]);
+            (stmt, proof)
+        })
+        .expect("dvd_gcd_mul_gcd_iff_dvd_mul must apply at symbolic k, n, m");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.dvd_gcd_mul_iff_dvd_mul).is_empty(),
+        "dvd_gcd_mul_iff_dvd_mul must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.dvd_mul_gcd_iff_dvd_mul).is_empty(),
+        "dvd_mul_gcd_iff_dvd_mul must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.dvd_gcd_mul_gcd_iff_dvd_mul)
+            .is_empty(),
+        "dvd_gcd_mul_gcd_iff_dvd_mul must rest on zero axioms"
     );
 }

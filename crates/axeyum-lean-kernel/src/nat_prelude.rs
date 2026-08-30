@@ -165,6 +165,7 @@ mod finite_set;
 mod gcd;
 mod gcd_dvd_mirrors;
 mod gcd_mul_right;
+mod gcd_mul_right_mirrors;
 mod group;
 mod helpers;
 mod irrational;
@@ -266,6 +267,7 @@ use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use gcd_mul_right::declare_gcd_mul_right;
+use gcd_mul_right_mirrors::declare_gcd_mul_right_mirrors;
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
@@ -936,6 +938,18 @@ pub struct NatPrelude {
     /// the scaling lemma `(n*c) % (m*c) = (n%m)*c` as the bridge between the
     /// unscaled and scaled Euclidean steps.
     pub gcd_mul_right: NameId,
+    /// `Nat.dvd_gcd_mul_iff_dvd_mul : ∀ k n m, k ∣ gcd k n * m ↔ k ∣ n * m` —
+    /// `F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a`
+    /// (`gcd_mul_right_mirrors.rs`).
+    pub dvd_gcd_mul_iff_dvd_mul: NameId,
+    /// `Nat.dvd_gcd_mul_gcd_iff_dvd_mul : ∀ k n m, k ∣ (gcd k n) * (gcd k m)
+    /// ↔ k ∣ n * m` — `F:ml430-nat-dvd-gcd-mul-gcd-iff-dvd-mul-07fec722`
+    /// (`gcd_mul_right_mirrors.rs`).
+    pub dvd_gcd_mul_gcd_iff_dvd_mul: NameId,
+    /// `Nat.dvd_mul_gcd_iff_dvd_mul : ∀ k n m, k ∣ n * gcd k m ↔ k ∣ n * m` —
+    /// `F:ml430-nat-dvd-mul-gcd-iff-dvd-mul-f9517e6b`
+    /// (`gcd_mul_right_mirrors.rs`).
+    pub dvd_mul_gcd_iff_dvd_mul: NameId,
     /// `Nat.lcm a b := div (mul a b) (gcd a b)` — the least common multiple.
     /// `lcm 0 0 = 0` matches Mathlib's convention: at that one degenerate point
     /// `gcd a b = 0` too, and `div _ 0 = 0`, so `lcm 0 0` computes to `0` and
@@ -4072,6 +4086,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_gcd: kernel.name_str(nat, "dvd_gcd"),
             dvd_gcd_iff: kernel.name_str(nat, "dvd_gcd_iff"),
             gcd_mul_right: kernel.name_str(nat, "gcd_mul_right"),
+            dvd_gcd_mul_iff_dvd_mul: kernel.name_str(nat, "dvd_gcd_mul_iff_dvd_mul"),
+            dvd_gcd_mul_gcd_iff_dvd_mul: kernel.name_str(nat, "dvd_gcd_mul_gcd_iff_dvd_mul"),
+            dvd_mul_gcd_iff_dvd_mul: kernel.name_str(nat, "dvd_mul_gcd_iff_dvd_mul"),
             lcm: kernel.name_str(nat, "lcm"),
             lcm_zero_left: kernel.name_str(nat, "lcm_zero_left"),
             dvd_lcm_left: kernel.name_str(nat, "dvd_lcm_left"),
@@ -5120,6 +5137,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_multiplicative_theorems`, far above). Nothing later
         // needs it, so it goes last.
         declare_gcd_mul_right(&mut d, &p)?;
+        // Needs `Nat.gcd_mul_right` (just above), `Nat.dvd_gcd_iff`/
+        // `Nat.dvd_mul`/`Nat.mul_comm` (`declare_divisibility`/
+        // `declare_gcd_semantics`/`declare_multiplicative_theorems`, far
+        // above). Nothing needs it, so it goes last.
+        declare_gcd_mul_right_mirrors(&mut d, &p)?;
         Ok(p)
     })();
     match built {
