@@ -246,7 +246,16 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
       echo "pre-push: FAILED — $label" >&2
       return 1
     fi
-    if ! printf '%s\n' "$out" | grep -qE '^running [1-9]'; then
+    # `grep -c`, not `grep -q`. This is THE nonzero-test-count guard -- the one
+    # CLAUDE.md leans on hardest, because a feature-gated suite prints
+    # "running 0 tests ... ok" and exits 0 -- and it was built from the idiom
+    # that reads a SIGPIPE as "no match": `-q` exits at the first match,
+    # SIGPIPEs the `printf`, and `pipefail` (set above) turns 141 into a
+    # non-match, so the negation fires and a passing step is reported as inert.
+    # Fail-closed, so it cost a spurious push block rather than an admitted bad
+    # push -- but it went unscanned until `check-shell-antipatterns.sh` learned
+    # to read `hooks/` on 2026-08-30. `grep -c` consumes all input.
+    if [ "$(printf '%s\n' "$out" | grep -cE '^running [1-9]')" -eq 0 ]; then
       printf '%s\n' "$out" >&2
       echo "pre-push: FAILED — $label ran ZERO tests (a feature gate has emptied" \
            "it; this step is inert, not passing)" >&2

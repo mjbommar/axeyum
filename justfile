@@ -623,6 +623,10 @@ gate-controls:
     # it read the second bar of `||` as a pipe. 12 cases; each of the two
     # mutations kills a disjoint set.
     scripts/tests/test-check-shell-antipatterns.sh
+    # ...and its SCOPE controls, a separate question that had none. The gate
+    # scanned `git ls-files '*.sh'`, so neither hook was read and both violated.
+    # Nine hermetic scenarios; every guard mutation-verified.
+    python3 -m unittest scripts.tests.test_check_shell_antipatterns_scope
     # DOMINANCE.md is generated; without a --check it sat six audits stale
     # while reading as current.
     python3 -m unittest scripts.tests.test_gen_dominance_scoreboard

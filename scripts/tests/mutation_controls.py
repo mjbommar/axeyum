@@ -4104,6 +4104,66 @@ SUITES["merge-hygiene"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# `shell-antipatterns-scope` -- the SCAN SET of `check-shell-antipatterns.sh`.
+#
+# The 2026-08-30 session audit's fifth survivor. The gate's DETECTOR was
+# verified in both directions by `scripts/tests/test-check-shell-antipatterns.sh`
+# and is not re-tested here; what had no control at all was the gate's SCOPE.
+# `git ls-files '*.sh'` never reached `hooks/pre-push` or `hooks/commit-msg`,
+# and both violated -- including the nonzero-test-count guard this repository
+# leans on hardest.
+#
+# Scope is the thing that reverts silently: narrowing the enumeration back to
+# `*.sh` leaves every number in the summary line unchanged and every detector
+# control green. So the first mutation is exactly that revert.
+#
+# Kill sets are reported as measured, survivors included.
+# --------------------------------------------------------------------------
+
+SUITES["shell-antipatterns-scope"] = (
+    "scripts/check-shell-antipatterns.sh",
+    Unittest("scripts.tests.test_check_shell_antipatterns_scope"),
+    [
+        (
+            "S1 the scan set is derived, not the `*.sh` glob",
+            'git ls-files -s | python3 -c',
+            "git ls-files -s -- '*.sh' | python3 -c",
+        ),
+        (
+            "S2 an executable file with a shell shebang is scanned",
+            'if not head.startswith(b"100755 "):',
+            "if True:",
+        ),
+        (
+            "S2b a NON-executable file is not probed at all",
+            'if not head.startswith(b"100755 "):',
+            "if False:",
+        ),
+        (
+            "S2c the first line must be a shell shebang",
+            '    if SHEBANG.match(first.rstrip(b"\\r\\n") + b"\\n") or SHEBANG.match(first):',
+            "    if True:",
+        ),
+        (
+            "S3 `*.sh` files are scanned whatever their mode",
+            'if path.endswith(".sh"):',
+            "if False:",
+        ),
+        (
+            "S4 a collapsed scan set is refused",
+            'if [ "$scan_count" -lt "$MIN_SCAN" ]; then',
+            "if false; then",
+        ),
+        (
+            "S5 a required file absent from the scan set is refused",
+            'if [ "$(grep -cxF "$required" "$scanned")" -eq 0 ]; then',
+            "if false; then",
+        ),
+    ],
+)
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()

@@ -33,7 +33,16 @@ msg_file="$1"
 
 # Merges, squashes, fixups and reverts are mechanical — git composes their
 # messages and a lane stamp on them says nothing useful.
-head -1 "$msg_file" | grep -qiE '^(merge|revert|fixup!|squash!|amend!)' && exit 0
+# `grep -c`, not `grep -q`: `-q` exits at the first match and SIGPIPEs `head`,
+# and under the `pipefail` set two lines up that reads as status 141 -- which is
+# "no match". The hook would then demand an `Agent:` trailer on a merge commit
+# git composed. Fail-closed, so it costs a refused commit rather than an
+# unstamped one, but it is the banned idiom and it is now scanned for
+# (`scripts/check-shell-antipatterns.sh`, which did not read `hooks/` until
+# 2026-08-30). The count test cannot SIGPIPE.
+if [ "$(head -1 "$msg_file" | grep -ciE '^(merge|revert|fixup!|squash!|amend!)')" -gt 0 ]; then
+  exit 0
+fi
 
 # Already stamped (including by a template or a previous --amend): leave it.
 grep -qiE '^Agent:[[:space:]]*\S' "$msg_file" && exit 0

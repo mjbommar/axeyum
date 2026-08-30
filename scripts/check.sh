@@ -758,6 +758,12 @@ step shell-antipatterns ./scripts/check-shell-antipatterns.sh
 # as the banned idiom. 12 cases, 4 real pipelines that must stay caught and 6
 # shapes that must not be flagged.
 step shell-antipatterns-controls ./scripts/tests/test-check-shell-antipatterns.sh
+# ...and its SCOPE controls, which are a separate question and had none. The
+# gate scanned `git ls-files '*.sh'`, so `hooks/pre-push` and `hooks/commit-msg`
+# were never read and BOTH violated -- including the nonzero-test-count guard.
+# Scope reverts silently: every number in the summary line is unchanged when it
+# does. Nine hermetic scenarios; every guard mutation-verified.
+step shell-antipatterns-scope python3 -m unittest scripts.tests.test_check_shell_antipatterns_scope
 # `bench-results/DOMINANCE.md` is generated and had NO `--check` and no gate,
 # so it sat SIX AUDITS behind its own inputs -- its QF_S row claimed 87
 # decided against an artifact recording 93 -- while reading as current.

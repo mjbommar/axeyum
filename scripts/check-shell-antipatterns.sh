@@ -29,16 +29,119 @@
 # matched the ` -eq` in `[ "$(… | grep -c …)" -eq 0 ]`, flagging a line that had
 # just been FIXED to use `grep -c`. The `q` must be a grep flag, so it is
 # anchored to `grep` with only flag characters between.
+#
+# # What is SCANNED, and why `git ls-files '*.sh'` was not it
+#
+# Until 2026-08-30 the scan set was `git ls-files '*.sh'`, so the two tracked
+# shell scripts WITHOUT that extension were never read -- and both violated:
+#
+#   hooks/commit-msg:36  head -1 "$f" | grep -qiE '^(merge|revert|…)'
+#   hooks/pre-push:249   printf '%s\n' "$out" | grep -qE '^running [1-9]'
+#
+# The second is the nonzero-test-count guard this repository leans on hardest,
+# built from the exact idiom that reads a SIGPIPE as "no match". Both were
+# fail-closed -- a spurious refusal, not an admitted bad commit or push -- and
+# both are now fixed. `hooks/` is executable shell that gates every push, so
+# "out of scope" was a defect in the scope, not a design decision.
+#
+# The set is now DERIVED: every tracked file whose first line is a `sh`/`bash`
+# shebang, plus every `*.sh` (a sourced fragment may have no shebang). Deriving
+# it is the rule CLAUDE.md states for any check named "every X" -- ask the
+# authority, do not maintain a literal -- and it is why a third extensionless
+# hook added tomorrow is scanned without anyone remembering to list it.
 set -uo pipefail
-cd "$(dirname "$0")/.." || exit 2
+# `AXEYUM_SHELL_ANTIPATTERN_ROOT` points the SHIPPED script at a throwaway git
+# repository, so `scripts/tests/test_check_shell_antipatterns_scope.py` can drive
+# each scope guard to failure without re-implementing the enumeration. Same
+# device as `AXEYUM_KERNEL_SUITES_ROOT`; unset in every real run.
+cd "${AXEYUM_SHELL_ANTIPATTERN_ROOT:-$(dirname "$0")/..}" || exit 2
 
 BASELINE="scripts/check-shell-antipatterns.baseline"
 fail=0
-tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
+tmp=$(mktemp); trap 'rm -f "$tmp" "$scanned"' EXIT
+
+# `--list-scanned` prints the derived scan set and exits. It exists so a control
+# can assert WHICH files are scanned rather than only how many -- a widening
+# that silently reverts leaves every count in the summary unchanged.
+list_only=0
+[ "${1:-}" = "--list-scanned" ] && list_only=1
+
+# Both thresholds are overridable ONLY so the controls can drive each guard to
+# failure on a tree where it would otherwise never fire. Nothing in the
+# repository sets them; the defaults are the gate.
+MIN_SCAN="${AXEYUM_SHELL_ANTIPATTERN_MIN_SCAN:-100}"
+REQUIRED="${AXEYUM_SHELL_ANTIPATTERN_REQUIRED:-hooks/pre-push hooks/commit-msg}"
+
+# The derived scan set, computed once, in ONE python process.
+#
+# The first draft shelled out per tracked file. That is 14,342 files and two
+# subprocesses each, and the gate went from ~2 s to over two minutes -- which
+# matters because the controls run it seven times. Reading the first line of
+# each candidate in-process is the same measurement at a thousandth of the cost.
+#
+# `git ls-files -s` carries the index MODE, so the shebang probe only has to
+# consider files git records as executable (688 here, against 14,342). A
+# non-executable shell fragment is still scanned when it ends in `*.sh`, which
+# is every sourced fragment in this tree.
+scanned=$(mktemp)
+git ls-files -s | python3 -c '
+import re, sys, pathlib
+
+# `#!/bin/sh`, `#!/usr/bin/env bash`, `#!/bin/bash -e`, `#!/usr/bin/zsh`.
+SHEBANG = re.compile(rb"^#!.*[ /](ba|da|k|z)?sh( |$)")
+
+out = set()
+for raw in sys.stdin.buffer:
+    # <mode> <sha> <stage>\t<path>
+    head, _, path = raw.partition(b"\t")
+    path = path.rstrip(b"\n").decode("utf-8", "surrogateescape")
+    if not path:
+        continue
+    if path.endswith(".sh"):
+        out.add(path)
+        continue
+    if not head.startswith(b"100755 "):
+        continue
+    try:
+        with open(path, "rb") as fh:
+            first = fh.readline(200)
+    except OSError:
+        # Tracked but absent from the worktree (a lane mid-rebase).
+        continue
+    if SHEBANG.match(first.rstrip(b"\r\n") + b"\n") or SHEBANG.match(first):
+        out.add(path)
+
+for path in sorted(out):
+    print(path)
+' > "$scanned"
+
+scan_count=$(wc -l < "$scanned")
+if [ "$list_only" -eq 1 ]; then
+  cat "$scanned"
+  exit 0
+fi
+# A scan set that has collapsed means the enumeration broke, not that the tree
+# became clean -- the failure mode every count-based gate in this repository has
+# had at least once. There have been >200 tracked shell scripts since this gate
+# was written.
+if [ "$scan_count" -lt "$MIN_SCAN" ]; then
+  echo "SHELL_ANTIPATTERN_ERROR|the scan set collapsed to $scan_count file(s);" \
+       "the enumeration is broken, not the tree" >&2
+  exit 1
+fi
+# The two extensionless hooks are the reason this gate's scope changed, so their
+# presence is asserted rather than hoped for: if the shebang probe stops finding
+# them, the widening has silently reverted and nobody would see it in the count.
+for required in $REQUIRED; do
+  if [ "$(grep -cxF "$required" "$scanned")" -eq 0 ]; then
+    echo "SHELL_ANTIPATTERN_ERROR|$required is tracked shell and is NOT in the" \
+         "scan set; the shebang probe has regressed" >&2
+    exit 1
+  fi
+done
 
 # --- pattern 1: `grep -q` piped, in a script that sets pipefail --------------
-for f in $(git ls-files '*.sh'); do
-  [ -e "$f" ] || continue
+while IFS= read -r f; do
   # THIS FILE IS EXCLUDED, and not to spare itself: its own detection regexes
   # and its own error messages contain the literal patterns, so scanning itself
   # reports 2 `grep -q` uses and a `$?`-after-pipeline that do not exist as code.
@@ -76,13 +179,12 @@ for f in $(git ls-files '*.sh'); do
   # `grep -q ... "$SCRIPT" || ! grep -q ... "$SCRIPT"`.
   n=$(grep -vE '^[[:space:]]*#' "$f" | sed 's/||/ __OR__ /g' | grep -cE '\|[^|]*grep[[:space:]]+(-[a-zA-Z]*q|--quiet)')
   [ "$n" -gt 0 ] && printf '%s %s\n' "$f" "$n"
-done | LC_ALL=C sort > "$tmp"
+done < "$scanned" | LC_ALL=C sort > "$tmp"
 
 # --- pattern 2: `$?` after a pipeline on one line ----------------------------
 # Zero today, so this one IS enforced at zero.
 pipe_status=0
-for f in $(git ls-files '*.sh'); do
-  [ -e "$f" ] || continue
+while IFS= read -r f; do
   [ "$f" = "scripts/check-shell-antipatterns.sh" ] && continue
   # ITS CONTROLS ARE EXCLUDED FOR THE SAME REASON, and it is the reason one line
   # above: a suite proving this detector catches `cmd | grep -q x` has to
@@ -101,7 +203,7 @@ for f in $(git ls-files '*.sh'); do
          "that is the LAST stage's status, not the command you meant" >&2
     pipe_status=$((pipe_status + n))
   fi
-done
+done < "$scanned"
 [ "$pipe_status" -gt 0 ] && fail=1
 
 if [ ! -f "$BASELINE" ]; then
@@ -136,5 +238,7 @@ while read -r file count; do
 done < "$tmp"
 
 total=$(awk '{s+=$2} END{print s+0}' "$tmp")
-echo "SHELL_ANTIPATTERNS|files=$(wc -l < "$tmp")|grep_q_in_pipeline=$total|pipeline_status_reads=$pipe_status"
+# `scanned` is in the summary because the scope is the thing that silently
+# regressed: a widening that reverts leaves every other number unchanged.
+echo "SHELL_ANTIPATTERNS|scanned=$scan_count|files=$(wc -l < "$tmp")|grep_q_in_pipeline=$total|pipeline_status_reads=$pipe_status"
 exit "$fail"
