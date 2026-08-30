@@ -494,6 +494,11 @@ gate-controls:
     # The registration gate's OWN controls -- it had none, which is the joke
     # this file exists to stop being. 15 cases, each mutation-verified.
     scripts/tests/test-check-control-registration.sh
+    # Controls for `scripts/check-fast.sh`, tier-0 of this gate. Five guards,
+    # each mutation-verified to kill exactly one control, plus a false-positive
+    # control that survives all five. The load-bearing guard: an over-budget
+    # step is DEFERRED, a third outcome, and never folds into `ok`.
+    scripts/tests/test-check-fast.sh
     # ...and the catch-all that makes registration DERIVED rather than
     # remembered. 188 of 382 python control suites were named by no caller at
     # all on 2026-08-27 -- 49%, pinned as a floor nobody had chosen. This runs
