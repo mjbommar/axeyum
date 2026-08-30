@@ -487,7 +487,7 @@ register(
         expect="valid",
         provenance="the non-vacuous form of the sort-mismatched control",
         run=_lnp_general_valid,
-        fact_ids=["F:nat-least-number-principle"],
+        fact_ids=[],
         mutations=[
             Mutation("min-to-max", "operand", _mut_lnp_max_instead_of_min),
             Mutation("lt-to-le", "relation", _mut_lnp_strict_to_nonstrict),
@@ -652,9 +652,11 @@ register(
 CRT_SYSTEM = [(1, 4), (0, 3)]
 
 
-def _crt_guards(residue: int, modulus: int, system, *, leastness: bool) -> list[str]:
+def _crt_guards(
+    residue: int, modulus: int, system, *, leastness: bool, congruences: bool = True
+) -> list[str]:
     rejects = []
-    if any(residue % m != r % m for (r, m) in system):
+    if congruences and any(residue % m != r % m for (r, m) in system):
         rejects.append("congruences")
     if any(modulus % m != 0 for (_, m) in system):
         rejects.append("common-multiple")
@@ -767,7 +769,11 @@ def _mut_crt_drop_congruences() -> Outcome:
                     good = next(x for x in range(lcm) if x % m1 == r1 and x % m2 == r2)
                     wrong = (good + 1) % lcm
                     executed += 1
-                    if not _crt_guards(wrong, lcm, system, leastness=True):
+                    # the MUTANT: the congruence guard is removed, so a residue
+                    # that satisfies neither congruence is accepted.
+                    if not _crt_guards(
+                        wrong, lcm, system, leastness=True, congruences=False
+                    ):
                         ces.append(f"wrong residue {wrong} accepted for {system}")
     return Outcome(executed, executed, ces)
 
@@ -994,7 +1000,7 @@ register(
             "the central claim of scripts/tests/check-countrange-bijection-numerics.py "
             "and check-totient-mul-coprime-numerics.py, retained here"
         ),
-        fact_ids=["F:nat-countrange-product"],
+        fact_ids=["F:nat-crt-self-map-injective-on"],
         run=_crt_selfmap_permutes_valid,
         mutations=[
             Mutation("drop-coprimality", "hypothesis-removal", _mut_crt_selfmap_noncoprime),
