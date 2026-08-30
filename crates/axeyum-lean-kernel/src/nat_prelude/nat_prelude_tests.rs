@@ -1046,6 +1046,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_add_one,
         p.even_add,
         p.even_add_prime,
+        p.even_div,
         p.coprime_two_left,
         p.coprime_two_right,
         p.coprime_odd_of_left,
@@ -12961,6 +12962,125 @@ fn even_add_and_even_add_prime_apply_at_concrete_pairs_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.even_add_prime).is_empty(),
         "even_add' must rest on zero axioms"
+    );
+}
+
+/// `Nat.even_div` (`F:ml430-nat-even-div-395c6b5e`), lane `parity-finish`
+/// (2026-08-30): `(m, n) := (7, 3)` -- `q := 7/3 = 2` is `Even`, `7 % 6 = 1`,
+/// `1/3 = 0`, so both directions of the `Iff` are demonstrated with REAL
+/// witnesses (a genuine `Even 2` on the `mp` side, `Eq 0 0` by `refl` on the
+/// `mpr` side, both confirmed by `def_eq` against the computed reduct, not
+/// merely by type-checking). Plus the truncation control the CLAUDE.md brief
+/// requires: at `(m, n) := (9, 3)`, `q := 9/3 = 3` is `Odd`, and `9 % 6 = 3`,
+/// `3/3 = 1` -- the RHS genuinely computes to `1`, NOT `0`, so the `Iff` is
+/// not vacuously true on the `Odd` side either; a formula that mis-handled
+/// `Nat.div`'s truncation (e.g. off by the scaling factor) would compute a
+/// different, wrong residue here. Plus a symbolic restatement over
+/// genuinely free `m`, `n`.
+#[test]
+fn even_div_applies_at_concrete_pairs_and_rejects_a_wrong_residue_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let seven = f.num(7);
+    let nine = f.num(9);
+    let one = f.num(1);
+    let zero = f.zero();
+
+    // Even 2, witnessed by 1.
+    let even2 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(two, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(two);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, one, proof])
+    };
+    let even2_ty = f.lemma(p.even, &[two]);
+
+    // even_div(7,3) : Iff (Even (div 7 3)) (Eq (div (mod 7 (mul 2 3)) 3) 0).
+    let iff_7_3 = f.lemma(p.even_div, &[seven, three]);
+    let q_7_3 = f.div(seven, three);
+    let even_q_ty = f.lemma(p.even, &[q_7_3]);
+    let two_times_three = f.mul(two, three);
+    let mod_7_6 = f.modulo(seven, two_times_three);
+    let div_mod_7_6_3 = f.div(mod_7_6, three);
+    let rhs_ty = f.eq(div_mod_7_6_3, zero);
+
+    // mp(Even 2) : Eq (div (mod 7 6) 3) 0 -- must compute to Eq 0 0.
+    let mp_fn = f.const_app(p.logic.iff_mp, &[even_q_ty, rhs_ty, iff_7_3]);
+    let mp_result = f.apply(mp_fn, &[even2]);
+    let mp_result_ty = f.k.infer(mp_result).unwrap_or_else(|e| {
+        panic!(
+            "even_div(7,3).mp(Even 2) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    let zero_eq_zero = f.eq(zero, zero);
+    assert!(
+        f.k.def_eq(mp_result_ty, zero_eq_zero),
+        "even_div(7,3).mp(Even 2) must compute to Eq 0 0"
+    );
+
+    // mpr(Eq 0 0) : Even (div 7 3) -- must be defeq to Even 2.
+    let refl_zero = f.refl(zero);
+    let mpr_fn = f.const_app(p.logic.iff_mpr, &[even_q_ty, rhs_ty, iff_7_3]);
+    let mpr_result = f.apply(mpr_fn, &[refl_zero]);
+    let mpr_result_ty = f.k.infer(mpr_result).unwrap_or_else(|e| {
+        panic!(
+            "even_div(7,3).mpr(Eq 0 0) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(mpr_result_ty, even2_ty),
+        "even_div(7,3).mpr(Eq 0 0) must land on Even 2 (i.e. Even (div 7 3))"
+    );
+
+    // Truncation control at (9, 3): q := 3 is Odd, and the RHS residue
+    // genuinely computes to 1, not 0.
+    let two_times_three_b = f.mul(two, three);
+    let mod_9_6 = f.modulo(nine, two_times_three_b);
+    let div_mod_9_6_3 = f.div(mod_9_6, three);
+    assert!(
+        f.k.def_eq(div_mod_9_6_3, one),
+        "9 % (2*3) / 3 must compute to 1 (Nat.div truncates and the residue \
+         crosses n at an Odd quotient)"
+    );
+    assert!(
+        !f.k.def_eq(div_mod_9_6_3, zero),
+        "negative control: 9 % (2*3) / 3 must NOT be defeq to 0 -- this is \
+         exactly the residue even_div's RHS must distinguish from the Even \
+         case"
+    );
+
+    // Symbolic restatement over genuinely free m, n.
+    let restated = f.name("even_div_restated");
+    f.theorem(restated, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let q = d.div(m, n);
+        let even_q_ty = d.lemma(p.even, &[q]);
+        let two = d.num(2);
+        let zero = d.zero();
+        let two_n = d.mul(two, n);
+        let mod_2n = d.modulo(m, two_n);
+        let div_mod_2n_n = d.div(mod_2n, n);
+        let rhs_ty = d.eq(div_mod_2n_n, zero);
+        let stmt = d.const_app(p.logic.iff, &[even_q_ty, rhs_ty]);
+        let proof = d.lemma(p.even_div, &[m, n]);
+        (stmt, proof)
+    })
+    .expect("even_div must apply at genuinely free m, n");
+
+    assert!(
+        f.k.axiom_footprint(p.even_div).is_empty(),
+        "even_div must rest on zero axioms"
     );
 }
 

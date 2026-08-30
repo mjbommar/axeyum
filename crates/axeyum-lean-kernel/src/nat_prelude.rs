@@ -162,6 +162,7 @@ mod dvd_add_iff_left;
 mod dvd_mul_split;
 mod euler;
 mod even_add_family;
+mod even_div;
 mod factorization;
 mod fermat;
 mod fermat_number;
@@ -285,6 +286,7 @@ use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
 use euler::declare_mod_eq_cancel;
 use even_add_family::declare_even_add_family_all;
+use even_div::declare_even_div;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
 use fermat_number::declare_fermat_number_all;
@@ -3309,6 +3311,9 @@ pub struct NatPrelude {
     /// `Nat.even_add' : ∀ m n, Iff (Even (add m n)) (Iff (Odd m) (Odd n))`
     /// (`even_add_family.rs`). `F:ml430-nat-even-add-39e3bc07`.
     pub even_add_prime: NameId,
+    /// `Nat.even_div : ∀ m n, Iff (Even (div m n)) (Eq (div (mod m (mul 2
+    /// n)) n) 0)` (`even_div.rs`). `F:ml430-nat-even-div-395c6b5e`.
+    pub even_div: NameId,
 
     // --- the floor logarithm (`log.rs`) -------------------------------------
     /// `Nat.logAux : Nat → Nat → Nat → Nat` — `logAux b f n`, the floor base-`b`
@@ -5137,6 +5142,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_add_one: kernel.name_str(nat, "even_add_one"),
             even_add: kernel.name_str(nat, "even_add"),
             even_add_prime: kernel.name_str(nat, "even_add'"),
+            even_div: kernel.name_str(nat, "even_div"),
             log_aux: kernel.name_str(nat, "logAux"),
             log: kernel.name_str(nat, "log"),
             log_zero_right: kernel.name_str(nat, "log_zero_right"),
@@ -5569,6 +5575,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_add_basics`, far above)/`succ_add` (additive theorems,
         // far above).
         declare_even_add_family_all(&mut d, &p)?;
+        // `Nat.even_div` (`even_div.rs`, lane parity-finish, 2026-08-30).
+        // Needs `Nat.even_iff_mod_two_eq_zero` (`declare_parity_all`, just
+        // above), `Nat.mod_mul_right_div_self` (`declare_mod_mul_family`,
+        // far above) and `mul_comm` (additive/multiplicative theorems, far
+        // above).
+        declare_even_div(&mut d, &p)?;
         // `Nat.countRange_reversal_even`: general, `totient`-independent.
         // Needs `count_range`/`count_range_split` (`declare_totient_all`,
         // far above), `Nat.Even` (`declare_parity_all`, just above),
