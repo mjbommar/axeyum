@@ -26,7 +26,11 @@ PREREGISTERED_STATES = {
     "preregistered-before-target-outcomes",
     "preregistered-before-target-outcomes-with-recorded-amendments",
 }
-PARTITION_COUNTS = {"train": 78, "development": 99, "held-out": 37}
+# Held-out shrinks only, and only through the ADR-0542 amendment ledger. The
+# arithmetic is the audit trail: 76 at preregistration, -19 natural-gcd
+# (2026-08-22), -20 natural-binomial (2026-08-25), -21 natural-logarithm
+# (2026-08-30) = 16, the natural-square-root family alone.
+PARTITION_COUNTS = {"train": 78, "development": 120, "held-out": 16}
 AMENDMENT_KEYS = {
     "date", "family", "from", "to", "reason", "breach", "authority", "irreversible",
 }
