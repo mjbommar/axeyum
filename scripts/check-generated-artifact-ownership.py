@@ -327,17 +327,23 @@ def key_delta(before: str, after: str) -> str:
 SECOND_WRITER = '''#!/usr/bin/env python3
 """Planted by check-generated-artifact-ownership.py --- CTRL arm.
 
-A synthetic second writer that reproduces the ADR-0646 defect exactly:
-rewrite the guarded artifact minus the two keys only its owner derives,
-and exit 0. The RUNS arm must reject it. If it does not, RUNS is inert.
+A synthetic second writer reproducing the ADR-0646 defect exactly: rewrite
+the guarded artifact minus a key only its owner derives, and exit 0. The
+RUNS arm must reject it. If it does not, RUNS is inert.
+
+The dropped key is the artifact's OWN, taken from `required_keys`, not the
+vocabulary's `bridge_provenance` hardcoded here. A control that names a key
+the artifact does not carry writes the file back BYTE-IDENTICAL and is
+accepted -- so the arm meant to prove RUNS can fail would itself have been
+the thing that cannot. Found by this gate's own control suite, on the first
+run, against a second guarded artifact that was purely hypothetical.
 """
 import json, pathlib, sys
 p = pathlib.Path(__file__).resolve().parents[1] / "%s"
 d = json.loads(p.read_text())
-d.pop("bridge_provenance", None)
-d.pop("row_digest", None)
+d.pop("%s", None)
 p.write_text(json.dumps(d, indent=2, sort_keys=True, ensure_ascii=False) + "\\n")
-print("planted second writer: dropped bridge_provenance and row_digest")
+print("planted second writer: dropped %s")
 sys.exit(0)
 '''
 
@@ -465,15 +471,19 @@ def ctrl_arm(root: pathlib.Path, artifact: Artifact,
     which is the exact defect this repository says is worse than no check.
     """
     planted = pathlib.PurePath("scripts") / "_ownership_control.py"
-    (root / planted).write_text(SECOND_WRITER % artifact.path)
+    # The LAST required key, so the planted writer drops something this
+    # artifact really carries. See SECOND_WRITER's docstring for why a
+    # hardcoded key name makes this control vacuous.
+    victim = artifact.required_keys[-1]
+    (root / planted).write_text(
+        SECOND_WRITER % (artifact.path, victim, victim))
     verdict = compare_after_run(
         root, artifact, Producer(str(planted), (), "synthetic"))
     (root / planted).unlink()
     if verdict is None:
         return [f"CTRL {artifact.path}: the RUNS arm ACCEPTED a planted "
-                f"second writer that deletes bridge_provenance and "
-                f"row_digest. The arm is inert; nothing it reported above is "
-                f"evidence."]
+                f"second writer that deletes `{victim}`. The arm is inert; "
+                f"nothing it reported above is evidence."]
     if verbose:
         print(f"CTRL ok   planted second writer rejected: "
               f"{verdict.split(': ', 1)[-1]}")

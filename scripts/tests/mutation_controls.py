@@ -3979,6 +3979,76 @@ SUITES["cas-substance-derivation"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# `artifact-ownership` -- ADR-0646. One producer per generated artifact.
+#
+# Two of these mutants deliberately kill more than one case, and that is the
+# structure of the gate rather than a weak suite: CTRL is DEFINED as "the RUNS
+# machinery must reject a planted second writer", so blinding the RUNS
+# comparison necessarily blinds CTRL as well. A suite in which those two died
+# separately would be testing two comparisons, and there is only one.
+#
+# Kill sets are reported as measured, survivors included.
+# --------------------------------------------------------------------------
+
+SUITES["artifact-ownership"] = (
+    "scripts/check-generated-artifact-ownership.py",
+    Unittest("scripts.tests.test_check_generated_artifact_ownership"),
+    [
+        (
+            "KEYS names a dropped top-level key",
+            "missing = [k for k in artifact.required_keys if k not in doc]",
+            "missing = []",
+        ),
+        (
+            "KEYS names a dropped nested tier count",
+            "gone = [k for k in keys if k not in block]",
+            "gone = []",
+        ),
+        (
+            "KEYS refuses a top level that is not an object",
+            "    if not isinstance(doc, dict):",
+            "    if False:",
+        ),
+        (
+            "KNOWN names a script that is not classified",
+            "for path in sorted(found - classified):",
+            "for path in sorted(set()):",
+        ),
+        (
+            "KNOWN names a classification that has gone stale",
+            "for path in sorted(classified - found):",
+            "for path in sorted(frozenset()):",
+        ),
+        (
+            "READS rejects a declared reader that can write",
+            "        if calls:",
+            "        if False:",
+        ),
+        (
+            "RUNS compares the artifact before and after each producer",
+            "    if after != before:",
+            "    if False:",
+        ),
+        (
+            "RUNS catches a producer that DELETES the artifact",
+            "    if not target.is_file():",
+            "    if False:",
+        ),
+        (
+            "CTRL reports an inert RUNS arm",
+            "    if verdict is None:",
+            "    if False:",
+        ),
+        (
+            "OWNER requires byte-for-byte restoration from a perturbed copy",
+            "    if restored != good:",
+            "    if False:",
+        ),
+    ],
+)
+
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()
