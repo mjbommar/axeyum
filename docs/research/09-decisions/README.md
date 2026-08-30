@@ -727,3 +727,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0805](adr-0805-the-module-baseline-receipt-is-a-hash-and-a-parser-not-a-vendored-checkout.md) | G0's receipt (`artifacts/module-baseline/receipt.json`) pins | accepted |
 | [0810](adr-0810-wire-the-credit-transaction-into-the-real-fact-ledger.md) | L0 S6 follow-on. `scripts/credit-transaction-ledger.py` wires | accepted |
 | [0820](adr-0820-the-declaration-graph-reuses-the-artifact-contracts-type-proof-separation.md) | L1 phase C1/G1 builds a real (not hand-authored) declaration | accepted |
+| [0835](adr-0835-the-graph-join-resolves-identity-only-through-an-existing-ledger-mirror.md) | L1 phase G2 joins the Mathlib declaration graph (ADR-0820, | accepted |
