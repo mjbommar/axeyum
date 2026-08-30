@@ -88,6 +88,7 @@ pub mod mvt;
 mod normalforms;
 pub mod ntheory;
 pub mod ntheory_advanced;
+pub mod ntheory_certify;
 pub mod ntheory_more;
 pub mod orthopoly;
 pub mod partial_fractions;
