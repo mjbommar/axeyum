@@ -65,6 +65,7 @@ pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
 mod matrix;
+mod matrix_n;
 mod model;
 pub(crate) mod ops;
 mod polynomial;
@@ -1179,6 +1180,38 @@ pub struct RatPrelude {
     /// [`Self::covariance_sq_le_variance_mul`] uses, unweighted.
     pub dot_n_cauchy_schwarz: NameId,
 
+    // --- matrices at symbolic dimension (rat_prelude::matrix_n) ------------
+    /// `Rat.matMul : (Nat → Nat → Rat) → (Nat → Nat → Rat) → Nat → Nat → Nat
+    /// → Rat`, `matMul A B k i j := sumRange (fun t => A i t * B t j) k` —
+    /// matrix multiplication at **symbolic** dimension, one index up from
+    /// [`Self::dot_n`]. `matMul A B k` is itself a `Nat → Nat → Rat`, so
+    /// `matMul (matMul A B k) C m` is well-typed with no coercion. Every
+    /// theorem about it is stated POINTWISE (`… i j = … i j`): `funext` is
+    /// absent from this kernel, so an `Eq` between two matrices is not
+    /// available (`rat_prelude::matrix_n`'s module doc).
+    pub mat_mul: NameId,
+    /// `Rat.matMul_zero : ∀ A B i j, matMul A B zero i j = zero` — `Eq.refl`.
+    pub mat_mul_zero: NameId,
+    /// `Rat.matMul_succ : ∀ A B k i j, matMul A B (succ k) i j = matMul A B k
+    /// i j + A i k * B k j` — `Eq.refl`.
+    pub mat_mul_succ: NameId,
+    /// `Rat.matMul_assoc : ∀ A B C k m i j, matMul (matMul A B k) C m i j =
+    /// matMul A (matMul B C m) k i j` — associativity of matrix
+    /// multiplication at symbolic inner dimensions `k` and `m`, stated
+    /// pointwise. Proved from [`Self::sum_range_swap`] (the Fubini
+    /// interchange) plus [`Self::mul_sum_range`] and `mul_assoc`; **no new
+    /// induction** on any dimension.
+    pub mat_mul_assoc: NameId,
+    /// `Rat.matMul_add_left : ∀ A1 A2 B k i j, matMul (fun r t => A1 r t + A2
+    /// r t) B k i j = matMul A1 B k i j + matMul A2 B k i j`.
+    pub mat_mul_add_left: NameId,
+    /// `Rat.matMul_add_right : ∀ A B1 B2 k i j, matMul A (fun t r => B1 t r +
+    /// B2 t r) k i j = matMul A B1 k i j + matMul A B2 k i j`.
+    pub mat_mul_add_right: NameId,
+    /// `Rat.matMul_smul_left : ∀ c A B k i j, matMul (fun r t => c * A r t) B
+    /// k i j = c * matMul A B k i j`.
+    pub mat_mul_smul_left: NameId,
+
     // --- finite probability distributions (rat_prelude::probability) -------
     /// `Rat.IsDistribution p n := (∀ k, Lt k n → le zero (p k)) ∧ sumRange p
     /// n = one`.
@@ -1957,6 +1990,13 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         dot_n_self_nonneg: child(kernel, "dotN_self_nonneg"),
         dot_n_two: child(kernel, "dotN_two"),
         dot_n_cauchy_schwarz: child(kernel, "dotN_cauchy_schwarz"),
+        mat_mul: child(kernel, "matMul"),
+        mat_mul_zero: child(kernel, "matMul_zero"),
+        mat_mul_succ: child(kernel, "matMul_succ"),
+        mat_mul_assoc: child(kernel, "matMul_assoc"),
+        mat_mul_add_left: child(kernel, "matMul_add_left"),
+        mat_mul_add_right: child(kernel, "matMul_add_right"),
+        mat_mul_smul_left: child(kernel, "matMul_smul_left"),
         is_distribution: child(kernel, "IsDistribution"),
         prob_le_one: child(kernel, "prob_le_one"),
         prob_complement: child(kernel, "prob_complement"),
@@ -2090,6 +2130,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         pow_bridge::declare_pow_bridge(&mut d, prelude)?;
         bernoulli::declare_bernoulli(&mut d, prelude)?;
         vector::declare_vector(&mut d, prelude)?;
+        matrix_n::declare_matrix_n(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
