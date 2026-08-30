@@ -2133,7 +2133,15 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
             let le_shifted = d.lemma(p.le_refl, &[shifted]);
             let body = d.lemma(
                 p.le_congr,
-                &[shifted, psi, shifted, shifted, back, refl_shifted, le_shifted],
+                &[
+                    shifted,
+                    psi,
+                    shifted,
+                    shifted,
+                    back,
+                    refl_shifted,
+                    le_shifted,
+                ],
             );
             d.lam_fv(i_fv, nat, body)
         };
@@ -2232,17 +2240,17 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
                     cequiv(d, p, sum_real, emb)
                 })
             };
-            let ww_to_q = d.lemma(p.equiv_trans, &[ww, sum_real, q_real, sum_embed, rewrite_sum]);
+            let ww_to_q = d.lemma(
+                p.equiv_trans,
+                &[ww, sum_real, q_real, sum_embed, rewrite_sum],
+            );
             let refl_point_eq = d.lemma(p.equiv_refl, &[point]);
             let tail = d.lemma(
                 p.add_congr,
                 &[point, point, ww, q_real, refl_point_eq, ww_to_q],
             );
             let point_q = cadd(d, p, point, q_real);
-            let whole_eq = d.lemma(
-                p.equiv_trans,
-                &[point_w_w, point_ww, point_q, assoc, tail],
-            );
+            let whole_eq = d.lemma(p.equiv_trans, &[point_w_w, point_ww, point_q, assoc, tail]);
             let refl_x_eq = d.lemma(p.equiv_refl, &[x]);
             let up = d.lemma(
                 p.le_congr,
@@ -2254,10 +2262,7 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
             let w_le_q = d.lemma(rat.nat_div_succ_antitone, &[outer, outer2, houter_le]);
             let lift = d.lemma(p.of_rat_le, &[w_rat, q_rat, w_le_q]);
             let refl_x_le = d.lemma(p.le_refl, &[x]);
-            let widen = d.lemma(
-                p.add_le_add,
-                &[x, x, w_real, q_real, refl_x_le, lift],
-            );
+            let widen = d.lemma(p.add_le_add, &[x, x, w_real, q_real, refl_x_le, lift]);
             let x_q = cadd(d, p, x, q_real);
             let down = d.lemma(p.le_trans, &[point, x_eps, x_q, hlo, widen]);
 
@@ -2314,13 +2319,17 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
             let refl_half = d.lemma(p.le_refl, &[half_real]);
             let grow = d.lemma(
                 p.add_le_add,
-                &[f_point, target_half, half_real, half_real, fine_half, refl_half],
+                &[
+                    f_point,
+                    target_half,
+                    half_real,
+                    half_real,
+                    fine_half,
+                    refl_half,
+                ],
             );
             let doubled = cadd(d, p, target_half, half_real);
-            let stacked = d.lemma(
-                p.le_trans,
-                &[fx, f_point_half, doubled, transfer, grow],
-            );
+            let stacked = d.lemma(p.le_trans, &[fx, f_point_half, doubled, transfer, grow]);
 
             // `(supOn + h) + h ~ supOn + (h + h) ~ supOn + 1/(e+1)`.
             let assoc2 = d.lemma(p.add_assoc, &[target_real, half_real, half_real]);
@@ -2331,10 +2340,17 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
             let sum2_embed = d.lemma(p.of_rat_add, &[half_rat, half_rat]);
             let rewrite_sum2 = {
                 let start = d.lemma(p.equiv_refl, &[sum2_real]);
-                rat_eq_rewrite(d, sum2_rat, eps_rat, half_plus_half_eq_eps, start, &|d, t| {
-                    let emb = embed(d, p, t);
-                    cequiv(d, p, sum2_real, emb)
-                })
+                rat_eq_rewrite(
+                    d,
+                    sum2_rat,
+                    eps_rat,
+                    half_plus_half_eq_eps,
+                    start,
+                    &|d, t| {
+                        let emb = embed(d, p, t);
+                        cequiv(d, p, sum2_real, emb)
+                    },
+                )
             };
             let hh_to_eps = d.lemma(
                 p.equiv_trans,
@@ -2343,7 +2359,14 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
             let refl_target_eq = d.lemma(p.equiv_refl, &[target_real]);
             let tail2 = d.lemma(
                 p.add_congr,
-                &[target_real, target_real, hh, eps_real, refl_target_eq, hh_to_eps],
+                &[
+                    target_real,
+                    target_real,
+                    hh,
+                    eps_real,
+                    refl_target_eq,
+                    hh_to_eps,
+                ],
             );
             let target_eps = cadd(d, p, target_real, eps_real);
             let whole_eq2 = d.lemma(
@@ -2364,7 +2387,10 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
         d.lam_fv(e_fv, nat, per_e)
     };
 
-    let body = d.lemma(p.le_of_forall_le_add_rate, &[one_nat, fx, target_real, rate]);
+    let body = d.lemma(
+        p.le_of_forall_le_add_rate,
+        &[one_nat, fx, target_real, rate],
+    );
     let concl = cle(d, p, fx, target_real);
 
     let ty = {
@@ -2401,13 +2427,9 @@ fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-pub(super) fn declare_sup_on_ub(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_sup_on_ub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_sup_on_ub_thm(d, p)
 }
-
 
 #[cfg(test)]
 mod sup_laws_tests {
@@ -2640,6 +2662,120 @@ mod sup_laws_tests {
             "negative control must be REJECTED: the same proof term cannot \
              prove the transposed estimate `0 + 1 <= maxRange f 0`, i.e. \
              `1 <= 0`"
+        );
+    }
+
+    /// **The statement `CReal.supOn_ub` actually shipped is the one its
+    /// documentation claims**, checked through the trusted gate rather than by
+    /// reading source text, with a negative control that varies ONE small
+    /// term.
+    ///
+    /// `supOn_ub` is deliberately not instantiated at concrete arguments, for
+    /// the reason the module doc above gives for every `supOn`-mentioning
+    /// statement in this file: `CReal.supOn`'s `Definition` embeds a
+    /// `regular_of_scaled_cauchy` construction, so a concrete instance is the
+    /// pathological shape `CLAUDE.md` records, and a control that runs for
+    /// minutes is worse than no control. What that reasoning does NOT cover is
+    /// whether the declared TYPE says what we say it says -- a theorem can be
+    /// admitted, axiom-free, and still state something weaker than advertised.
+    /// This closes that gap: the expected `Pi` type is rebuilt here from
+    /// `CRealPrelude` fields independently of [`declare_sup_on_ub_thm`], and
+    /// `Kernel::add_declaration` is asked to accept the declared constant at
+    /// it.
+    ///
+    /// The control transposes the SECOND hypothesis, `le x b` to `le b x` --
+    /// one swap of two free variables, not two large terms. That matters for
+    /// cost as well as for discrimination: the rejected comparison bottoms out
+    /// immediately at two distinct locals under the `Pi`, so it cannot become
+    /// the unbounded failing-defeq that a transposition of two whole
+    /// `riemannSum`s turned into. It is also genuinely FALSE rather than
+    /// merely unproved: `F` is only assumed uniformly continuous ON `[a, b]`,
+    /// so a point beyond `b` has no reason to be dominated by the supremum
+    /// over `[a, b]`.
+    #[test]
+    fn sup_on_ub_states_the_arbitrary_point_law() {
+        crate::on_a_deep_stack(sup_on_ub_states_the_arbitrary_point_law_body);
+    }
+
+    fn sup_on_ub_states_the_arbitrary_point_law_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let anon = d.kernel().anon();
+        let carrier = creal_ty(&mut d, p);
+        let func_ty = d.arrow(carrier, carrier);
+
+        // `forall F a b (hab : le a b) u x, le a x -> le <flip> -> le (F x)
+        // (supOn F a b hab u)`, rebuilt from the prelude fields alone.
+        let expected = |d: &mut IntDev<'_>, flip: bool| -> ExprId {
+            let f_fv = d.fresh_fvar();
+            let f = d.kernel().fvar(f_fv);
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let hab_fv = d.fresh_fvar();
+            let hab = d.kernel().fvar(hab_fv);
+            let hab_ty = cle(d, p, a, b);
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hax_ty = cle(d, p, a, x);
+            let hxb_ty = if flip {
+                cle(d, p, b, x)
+            } else {
+                cle(d, p, x, b)
+            };
+            let fx = d.apply(f, &[x]);
+            let target = d.const_app(p.sup_on, &[f, a, b, hab, u]);
+            let concl = cle(d, p, fx, target);
+            let out = d.arrow(hxb_ty, concl);
+            let out = d.arrow(hax_ty, out);
+            let out = d.pi_fv(x_fv, carrier, out);
+            let out = d.pi_fv(u_fv, u_ty, out);
+            let out = d.pi_fv(hab_fv, hab_ty, out);
+            let out = d.pi_fv(b_fv, carrier, out);
+            let out = d.pi_fv(a_fv, carrier, out);
+            d.pi_fv(f_fv, func_ty, out)
+        };
+
+        let ty_ok = expected(&mut d, false);
+        let ty_bad = expected(&mut d, true);
+        assert!(
+            !d.kernel().def_eq(ty_ok, ty_bad),
+            "negative control must not be vacuous: transposing `le x b` to \
+             `le b x` must change the statement"
+        );
+
+        let shipped = d.kernel().const_(p.sup_on_ub, vec![]);
+
+        let name_ok = d.kernel().name_str(anon, "__supOnUbStatementOk");
+        let res_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: ty_ok,
+            value: shipped,
+        });
+        assert!(
+            res_ok.is_ok(),
+            "CReal.supOn_ub must state the upper-bound law at an ARBITRARY \
+             point of [a, b]: {:?}",
+            res_ok.err()
+        );
+
+        let name_bad = d.kernel().name_str(anon, "__supOnUbStatementBad");
+        let res_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: ty_bad,
+            value: shipped,
+        });
+        assert!(
+            res_bad.is_err(),
+            "negative control must be REJECTED: CReal.supOn_ub bounds F at \
+             points BELOW b, and says nothing about a point beyond it"
         );
     }
 }

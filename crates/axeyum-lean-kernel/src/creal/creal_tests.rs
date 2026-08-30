@@ -10257,6 +10257,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "sup_laws::declare_sup_on_ub_at_sup_seq_point",
     "sup_laws::declare_step_family_locate",
     "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
+    "sup_laws::declare_sup_on_ub",
     "cos_sign::declare_cos_wide_tail_nonneg",
     "cos_sign::declare_cos_wide_tail_antitone",
     "cos_sign::declare_cos_wide_series_converges",
