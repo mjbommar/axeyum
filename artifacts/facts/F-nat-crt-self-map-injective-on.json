@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-crt-self-map-injective-on",
+  "title": "The CRT residue-pairing self-map is injective on a block of coprime dimensions",
+  "statement": "For naturals mp, np, write m = mp+1 and n = np+1. If gcd(m, n) = 1 then the map g(x) = n*(x mod m) + (x mod n) is injective on [0, n*m). The statement is sharp: measured over every pair with 1 <= m,n <= 9, g is injective at every coprime pair and at NONE of the 26 non-coprime pairs, the smallest collision being m = n = 2 where g(0) = g(2) = 0. Both moduli are written as successors so their positivity is syntactic rather than hypothetical.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.crtSelfMap_injectiveOn : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd (AxNat.succ x0) (AxNat.succ x1)) (AxNat.succ AxNat.zero)) -> AxNat.injectiveOn (fun (x3 : AxNat) => AxNat.add (AxNat.mul (AxNat.succ x1) (AxNat.mod x3 (AxNat.succ x0))) (AxNat.mod x3 (AxNat.succ x1))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x0)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.crtSelfMap_injectiveOn",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-crt-unique",
+    "F:nat-mod-eq-iff-div-mod-remainder-eq",
+    "F:nat-mod-eq-self-of-lt",
+    "F:nat-div-mod-exec",
+    "F:nat-le-succ-succ",
+    "F:nat-mod-lt",
+    "F:nat-mul-comm",
+    "F:nat-zero-le"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.crtSelfMap_injectiveOn",
+      "kind": "kernel-term",
+      "supports": "The coprimality-hypothesised injectivity of the residue-pairing self-map on [0, n*m), with the whole rendered type pinned.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- crtSelfMap_injectiveOn 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.crtSelfMap_injectiveOn 3 ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd (AxNat.succ x0) (AxNat.succ x1)) (AxNat.succ AxNat.zero)) -> AxNat.injectiveOn (fun (x3 : AxNat) => AxNat.add (AxNat.mul (AxNat.succ x1) (AxNat.mod x3 (AxNat.succ x0))) (AxNat.mod x3 (AxNat.succ x1))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x0)))))')\" -ge 1",
+      "notes": "The grep pins the WHOLE rendered type rather than the name, and here that is load-bearing rather than tidy. The kernel refuses a false theorem, but it cannot notice a statement that is weaker than intended, and this one has two ways to be weak that both still type-check: the map could be written with the two moduli swapped (`mod x (succ x1)` in the quotient slot), which is a DIFFERENT map, and the bound could be written `mul (succ x0) (succ x1)`, which is the same number by commutativity but a different term and not what `countRange_product` factors. Both are pinned by quoting the lambda and the bound verbatim. `nat_theorem_inventory` additionally exits non-zero for a name that does not exist, and `grep -Fc` consumes the whole pipe (so it cannot SIGPIPE the producer the way `grep -q` would) with the count tested by `test -ge 1`. NOTE, measured 2026-08-30: `nat_theorem_inventory` consumes only ONE name argument -- given two names in either order it reports on the LAST one only -- so this command deliberately passes exactly one.",
+      "kernel_declaration": "Nat.crtSelfMap_injectiveOn"
+    },
+    {
+      "id": "sharpness-Nat.crtSelfMap_injectiveOn",
+      "kind": "exhaustive-enumeration",
+      "supports": "The coprimality hypothesis is necessary, not merely convenient: the map is injective at NO non-coprime pair with 1 <= m,n <= 9.",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/tests/check-totient-mul-coprime-numerics.py",
+      "checker_seconds": 2,
+      "notes": "Twenty checks over the exact map this theorem is about, each paired with a negative control the script asserts must GENUINELY fail; any failure exits 1 naming the check. The two rows that bear on this fact are `InjectiveOn: g is injective on [0,n*m) at EVERY coprime pair` and its control `g is injective at NO non-coprime pair (0 of 26)`, plus a witness assertion that the m = n = 2 collision is real (g 0 = g 2 = 0 with 0 != 2). The Rust side checks the same collision through the kernel, by EVALUATION rather than type-checking, in `the_crt_self_map_permutes_a_coprime_block_and_collides_on_a_non_coprime_one` -- necessary because the map is a bare lambda and no `Declaration::Definition` gate constrains what it computes."
+    },
+    {
+      "id": "footprint-Nat.crtSelfMap_injectiveOn",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`--require-axiom-free` exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient, not `Axiom` alone -- `Opaque` has no proof body and `Quotient` admits `Quot.sound`) is non-empty, and errors rather than passing silently for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:chinese-remainder-theorem",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:eulers-totient-function",
+      "relation": "key-lemma-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel nat_prelude::totient_mul (totient-mul-finish lane)",
+    "source": "the remaining piece named by docs/plan/status/344-countrange-bijection.md; statement authored here",
+    "prior_art": [
+      {
+        "who": "Sun Tzu / Qin Jiushao",
+        "what": "the Chinese Remainder Theorem's uniqueness half, of which this is the bijectivity reading",
+        "year": 1247,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "This is the ONLY place the coprimality hypothesis is used anywhere under `F:nat-totient-mul-of-coprime`, and separating it out is the point of the file rather than a stylistic choice. Three of the four steps in that theorem's chain -- `Nat.crtSelfMap_mapsInto`, the pointwise predicate identity, and the Fubini factorization through `Nat.countRange_product` -- were measured to hold at ALL 26 non-coprime pairs with 1 <= m,n <= 9 before any Rust was written. A single fused lemma would have made the hypothesis look load-bearing everywhere and would have hidden which obligation actually pays for it. NO BEZOUT WITNESS AND NO CRT EXISTENCE OVER THE NATURALS IS USED: `nat_prelude/crt.rs` declines existence deliberately (the classical witness needs signed coefficients) and injectivity never asks for it, contrary to three prior triages that sized this as blocked on the Int-side machinery -- those triages read `int_prelude/crt.rs` and did not notice that `nat_prelude/crt.rs` also exists. Route: `Nat.div_mod_block` twice reads the two residues back off the block form, `Nat.mod_eq_iff_div_mod_remainder_eq` in REVERSE turns each residue equality into a `modEq`, `Nat.crt_unique` combines them, and the same iff FORWARD at the product modulus plus `Nat.mod_eq_self_of_lt` collapses the result to `x = y`. The successor form is not cosmetic: `Nat.div_mod_exec` takes the divisor's PREDECESSOR, and `mul (succ np) (succ mp)` is definitionally `succ (add (mul (succ np) mp) np)` by two iota steps, so `div_mod_exec` applies at the PRODUCT modulus with no arithmetic lemma at all. DEPENDENCY EDGES OMITTED: `Nat.div_mod_block` is a direct dependency that this ledger does not register, and `depends_on` may only name facts that exist; it is an unregistered nat-prelude theorem, not an axiom -- the prelude's trusted surface is 0, per the footprint evidence above. Every other direct dependency is named, including the five `scripts/check-fact-depends-derived.py --fix` derived from the proof term rather than from this lane's reading of its own source."
+}

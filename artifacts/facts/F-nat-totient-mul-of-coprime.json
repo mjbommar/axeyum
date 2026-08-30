@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-totient-mul-of-coprime",
+  "title": "Euler's totient is multiplicative on coprime arguments",
+  "statement": "For all naturals m and n with gcd(m, n) = 1, totient(m*n) = totient(m) * totient(n). The hypothesis is necessary: the identity fails at all 26 non-coprime pairs with 1 <= m,n <= 9, the smallest counterexample being m = n = 2, where totient(4) = 2 while totient(2)*totient(2) = 1.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.totient_mul_of_coprime : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) -> Eq.{1} AxNat (AxNat.totient (AxNat.mul x0 x1)) (AxNat.mul (AxNat.totient x0) (AxNat.totient x1)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.totient_mul_of_coprime",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-crt-self-map-injective-on",
+    "F:nat-countrange-congr",
+    "F:nat-crt-unique",
+    "F:nat-mod-eq-iff-div-mod-remainder-eq",
+    "F:nat-mod-eq-self-of-lt",
+    "F:nat-mul-succ-add-lt-of-le-of-lt",
+    "F:nat-le-of-lt-succ",
+    "F:nat-eq-of-beq-eq-true",
+    "F:nat-beq-eq-true-of-eq",
+    "F:nat-beq-eq-false-of-ne",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:nat-le-succ-succ",
+    "F:nat-mod-lt",
+    "F:nat-mul-comm",
+    "F:nat-zero-le",
+    "F:nat-zero-mul"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.totient_mul_of_coprime",
+      "kind": "kernel-term",
+      "supports": "totient(m*n) = totient(m)*totient(n) under gcd(m,n) = 1, with the whole rendered type pinned.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_mul_of_coprime 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.totient_mul_of_coprime 3 ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) -> Eq.{1} AxNat (AxNat.totient (AxNat.mul x0 x1)) (AxNat.mul (AxNat.totient x0) (AxNat.totient x1)))))')\" -ge 1",
+      "notes": "The grep pins the WHOLE rendered type, not the name. That matters here in a specific way: the kernel re-derives the type from the proof term and so refuses a FALSE theorem, but it cannot notice a statement that is weaker or transposed, and this one has two such neighbours that both type-check. Weakening the hypothesis from `Eq (gcd x0 x1) 1` to anything satisfiable-by-more-pairs would make the theorem unsound and is pinned by quoting the hypothesis verbatim; transposing the conclusion to `mul (totient x1) (totient x0)` is a genuinely different theorem (the Rust test asserts `!def_eq` between the two at free variables) and is pinned by quoting the factor order. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Fc` consumes the whole pipe with the count then tested, rather than `grep -q`, which would SIGPIPE the producer under pipefail. Measured 2026-08-30: `nat_theorem_inventory` consumes only ONE name argument -- given two names in either order it reports on the LAST one only -- so exactly one is passed here.",
+      "kernel_declaration": "Nat.totient_mul_of_coprime"
+    },
+    {
+      "id": "instances-Nat.totient_mul_of_coprime",
+      "kind": "exhaustive-enumeration",
+      "supports": "The identity holds at every coprime pair with 1 <= m,n <= 9 and FAILS at all 26 non-coprime ones, so the hypothesis is necessary rather than convenient.",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/tests/check-totient-mul-coprime-numerics.py",
+      "checker_seconds": 2,
+      "notes": "Twenty checks, each paired with a negative control the script asserts must GENUINELY fail; any failure exits 1 naming the check. The script separates the four steps of this theorem's proof and reports which of them need the hypothesis: `MapsInto`, the pointwise predicate identity and the Fubini factorization hold at all 26 non-coprime pairs, while the permutation step fails at 26 of 26. Written and run BEFORE any of the Rust, because an earlier traced plan for this same argument asserted the row-major identity was coprimality-independent and 'verified numerically', and it is false at every one of those 26 pairs. Numeric claims in a plan are re-derived here, never inherited. The kernel-side instantiation is `totient_mul_of_coprime_computes_at_coprime_pairs_with_a_non_coprime_control` (nat_prelude_tests.rs), which requires every count to COMPUTE at (2,3) and (3,4) and asserts `!def_eq` for the two sides at m = n = 2.",
+      "checkers": [
+        "scripts/tests/check-totient-mul-coprime-numerics.py",
+        "cargo test -p axeyum-lean-kernel --lib nat_prelude::totient_mul_of_coprime"
+      ]
+    },
+    {
+      "id": "footprint-Nat.totient_mul_of_coprime",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`--require-axiom-free` exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient -- counting `Axiom` alone would not suffice, since `Opaque` has no proof body and `Quotient` admits `Quot.sound`) is non-empty, and errors rather than passing silently for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it, including this one. This is a whole-prelude bound, not a per-declaration measurement."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:eulers-totient-function",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:chinese-remainder-theorem",
+      "relation": "uses",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:multiplicative-function",
+      "relation": "instance-of",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel nat_prelude::totient_mul (totient-mul-finish lane)",
+    "source": "the final assembly named by docs/plan/status/344-countrange-bijection.md, on top of that lane's countRange_permute / countRange_product / div_mod_block; statement authored here",
+    "prior_art": [
+      {
+        "who": "Leonhard Euler",
+        "what": "the multiplicativity of the totient function",
+        "year": 1763,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Proved by counting, with NO prime factorization and NO Euler product anywhere. The chain, with `N = mul n m` (n the block WIDTH, m the block COUNT, matching what `Nat.countRange_product` factors) and `g x = n*(x mod m) + (x mod n)`: `totient (m*n)` is `countRange P (mul m n)` by delta; `Nat.mul_comm` rewrites the BOUND only, leaving the predicate naming `mul m n`; `Nat.countRange_congr` -- the UNCONDITIONAL pointwise form -- replaces P by `V . g` where `V y = band (beq (gcd (div y n) m) 1) (beq (gcd (mod y n) n) 1)`; `Nat.countRange_permute` run BACKWARDS strips the `. g`; and `Nat.countRange_product` factors `countRange V N` into `countRange S n * countRange R m`, which is defeq `totient n * totient m` because R and S are built by the same recipe as `totient`'s own predicate. One final `mul_comm` lands on the stated factor order. WHERE THE HYPOTHESIS GOES: exactly one step, the permutation, through `F:nat-crt-self-map-injective-on`. Measured before any Rust, the other three hold at all 26 non-coprime pairs with 1 <= m,n <= 9. Keeping them apart is what lets this fact state honestly that the identity is a counting argument whose only arithmetic input is CRT uniqueness. FOUR THINGS THE TERM AVOIDS, each of which cost a previous attempt: no `Bool`-valued conjunction exists in this prelude (`finite_set.rs`'s `bool_select_bool` is private), so `band` is a local `Bool.rec` selector deliberately strict in its FIRST argument, which is what discharges `countRange_product`'s two per-block hypotheses by iota with no lemma; no new `Declaration::Definition` is introduced, so nothing here owes an evaluation test, because the kernel cannot tell a definition it is wrong; both moduli are carried as PREDECESSORS so `Nat.div_mod_exec` (which takes the divisor's predecessor) and `Nat.mul_succ_add_lt_of_le_of_lt` apply syntactically; and the `n = 0` boundary is `Eq.refl zero` for free because `Nat.mul` recurses on its RIGHT argument, while `m = 0` is NOT free and needs `Nat.zero_mul` twice. DEPENDENCY EDGES OMITTED: `Nat.countRange_permute`, `Nat.countRange_product`, `Nat.div_mod_block`, `Nat.gcd_mod_left_eq_gcd` and `Nat.coprime_mul_iff` are direct dependencies that this ledger does not register, and `depends_on` may only name facts that exist; all five are unregistered nat-prelude theorems, not axioms -- the prelude's trusted surface is 0, per the footprint evidence above. Every OTHER direct dependency is named, including the six `scripts/check-fact-depends-derived.py --fix` derived from the proof term itself rather than from this lane's reading of its own source. NOT DONE HERE: the two Mathlib mirrors `F:ml430-nat-totient-dvd-of-dvd-9622e44a` and `F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7` both need the NON-coprime formula, which needs a prime-power totient value and a factorization product -- and `nat_prelude/factorization.rs` mentions `totient` zero times, against a control of seven totient names that do exist. That is a separate framework, not an extension of this."
+}

@@ -160,6 +160,7 @@ fn bool_congr_bool(
 }
 
 /// Non-dependent `Or.rec` into a goal.
+#[allow(clippy::too_many_arguments)]
 fn or_elim(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
