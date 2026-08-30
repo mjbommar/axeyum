@@ -1,0 +1,235 @@
+{
+  "pack_version": 1,
+  "generator": "scripts/check-falsification-screen.py",
+  "note": "Generated. Do not hand-edit; run with --write.",
+  "items": [
+    {
+      "id": "Nat.land",
+      "kind": "definition",
+      "domain_note": "m, n in [0, 12) -- unary Nat numerals, small magnitudes only",
+      "provenance": "CLAUDE.md: 'land has an absorbing zero (m = 0 => result 0 regardless of n)'",
+      "reference_note": "Python's native `&` -- a wholly different (non-recursive, machine-word) implementation",
+      "witnesses": [
+        {
+          "args": [
+            0,
+            7
+          ],
+          "reason": "m=0 discriminates the absorbing-zero base case from any pass-through variant"
+        },
+        {
+          "args": [
+            5,
+            3
+          ],
+          "reason": "a case with no zero operand exercises the per-bit combine, not just the base"
+        }
+      ],
+      "executed": 144,
+      "mismatches": 0,
+      "first_mismatch": "",
+      "mutations": [
+        {
+          "id": "land-passthrough-base",
+          "description": "fuel-exhaustion base returns n instead of the absorbing 0",
+          "executed": 2,
+          "moved": true,
+          "first_divergence": "args=(0, 1): mutant=1 reference=0"
+        }
+      ],
+      "mutations_moved": 1,
+      "mutations_vacuous": 0,
+      "seconds": 0.0
+    },
+    {
+      "id": "Nat.lor",
+      "kind": "definition",
+      "domain_note": "m, n in [0, 12)",
+      "provenance": "CLAUDE.md: 'Nat.lor would have silently dropped every bit of n when m = 0, because land's absorbing-zero shortcut was copied to an operator with no absorbing element. Type-correct, admitted, wrong.'",
+      "reference_note": "Python's native `|`",
+      "witnesses": [
+        {
+          "args": [
+            0,
+            7
+          ],
+          "reason": "m=0, n!=0: the exact shape of the shipped defect -- correct answer is 7, buggy answer is 0"
+        }
+      ],
+      "executed": 144,
+      "mismatches": 0,
+      "first_mismatch": "",
+      "mutations": [
+        {
+          "id": "lor-absorbing-base",
+          "description": "fuel-exhaustion base returns 0 instead of the pass-through n (the real shipped bug)",
+          "executed": 2,
+          "moved": true,
+          "first_divergence": "args=(0, 1): mutant=0 reference=1"
+        }
+      ],
+      "mutations_moved": 1,
+      "mutations_vacuous": 0,
+      "seconds": 0.0
+    },
+    {
+      "id": "Nat.ldiff",
+      "kind": "definition",
+      "domain_note": "m, n in [0, 12)",
+      "provenance": "CLAUDE.md: 'ldiff is the instructive one: it takes land's base case but its inner succ-row guard is a hybrid' and gives the asymmetry witness 'ldiff 3 5 = 2 against ldiff 5 3 = 4'",
+      "reference_note": "Python's native `m & ~n`",
+      "witnesses": [
+        {
+          "args": [
+            3,
+            5
+          ],
+          "reason": "CLAUDE.md's own asymmetry witness: ldiff(3,5)=2"
+        },
+        {
+          "args": [
+            5,
+            3
+          ],
+          "reason": "swapped operands give a DIFFERENT value (4) -- proves ldiff is not commutative, so a commutativity mutation would be vacuous here and is correctly not attempted"
+        },
+        {
+          "args": [
+            0,
+            7
+          ],
+          "reason": "m=0 discriminates the absorbing-zero base from lor's pass-through"
+        }
+      ],
+      "executed": 144,
+      "mismatches": 0,
+      "first_mismatch": "",
+      "mutations": [
+        {
+          "id": "ldiff-passthrough-base",
+          "description": "fuel-exhaustion base returns n instead of the absorbing 0 (copying lor's shape onto an operator that needs land's)",
+          "executed": 2,
+          "moved": true,
+          "first_divergence": "args=(0, 1): mutant=1 reference=0"
+        }
+      ],
+      "mutations_moved": 1,
+      "mutations_vacuous": 0,
+      "seconds": 0.0
+    },
+    {
+      "id": "Nat.dist",
+      "kind": "definition",
+      "domain_note": "m, n in [0, 12)",
+      "provenance": "ADR-0645 names Nat.dist_comm / Nat.dist_self directly; the general hazard is CLAUDE.md's 'Nat.sub's silent truncation' theme",
+      "reference_note": "Python's native abs(m - n)",
+      "witnesses": [
+        {
+          "args": [
+            2,
+            5
+          ],
+          "reason": "m < n: exercises the branch a one-directional subtraction drops entirely"
+        },
+        {
+          "args": [
+            5,
+            2
+          ],
+          "reason": "m > n: the mutant is accidentally correct here -- included to show the mutation is NOT symmetric-safe, only order-dependent"
+        }
+      ],
+      "executed": 144,
+      "mismatches": 0,
+      "first_mismatch": "",
+      "mutations": [
+        {
+          "id": "dist-one-directional-sub",
+          "description": "m - n truncated at 0, missing the n > m branch entirely",
+          "executed": 2,
+          "moved": true,
+          "first_divergence": "args=(0, 1): mutant=0 reference=1"
+        }
+      ],
+      "mutations_moved": 1,
+      "mutations_vacuous": 0,
+      "seconds": 0.0
+    },
+    {
+      "id": "Nat.descFactorial",
+      "kind": "definition",
+      "domain_note": "n, k in [0, 8) -- small enough that factorial(n) never dominates cost",
+      "provenance": "CLAUDE.md: 'only evaluation past the base exercises Nat.sub's silent truncation'",
+      "reference_note": "math.factorial(n) // math.factorial(n - k) for k <= n, else 0 (independent, non-recursive)",
+      "witnesses": [
+        {
+          "args": [
+            3,
+            1
+          ],
+          "reason": "smallest case where the off-by-one term index changes the very first factor: correct=3, mutant=2"
+        },
+        {
+          "args": [
+            5,
+            3
+          ],
+          "reason": "a multi-step case so the discrepancy is not an artifact of a single-term product"
+        }
+      ],
+      "executed": 64,
+      "mismatches": 0,
+      "first_mismatch": "",
+      "mutations": [
+        {
+          "id": "descfactorial-off-by-one-term",
+          "description": "each factor uses n - (j+1) instead of n - j",
+          "executed": 10,
+          "moved": true,
+          "first_divergence": "args=(1, 1): mutant=0 reference=1"
+        }
+      ],
+      "mutations_moved": 1,
+      "mutations_vacuous": 0,
+      "seconds": 0.0
+    },
+    {
+      "id": "Int.bezout_witnesses",
+      "kind": "definition",
+      "domain_note": "a, b same-sign pairs, |a|,|b| <= 18 -- see the vacuous-witness note below",
+      "provenance": "CLAUDE.md: Bezout witnesses caught a wrong hand-computation via evaluation across sign branches",
+      "reference_note": "the Bezout identity a*x + b*y = g, checked directly (an equation reference, not a second full algorithm) plus a differently-structured iterative implementation as the candidate",
+      "witnesses": [
+        {
+          "args": [
+            12,
+            18
+          ],
+          "reason": "same-sign, gcd != min(a,b): the sign-flip mutation breaks the identity here"
+        },
+        {
+          "args": [
+            7,
+            5
+          ],
+          "reason": "coprime same-sign pair: g=1, a tight identity check"
+        }
+      ],
+      "executed": 4,
+      "mismatches": 0,
+      "first_mismatch": "",
+      "mutations": [
+        {
+          "id": "bezout-coefficient-sign-flip",
+          "description": "coefficient update uses + instead of - for old_s (a hand-computation-shaped sign error)",
+          "executed": 1,
+          "moved": true,
+          "first_divergence": "a=12 b=18: identity fails under the sign-flip mutation"
+        }
+      ],
+      "mutations_moved": 1,
+      "mutations_vacuous": 0,
+      "seconds": 0.0
+    }
+  ]
+}
