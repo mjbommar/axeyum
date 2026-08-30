@@ -836,6 +836,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_sum_range_of_forall_lt,
         p.add_pow_modeq_prime,
         p.pow_prime_modeq_self,
+        p.mod_eq_iff_mod_eq,
+        p.not_prime_of_pow_mod_ne,
         p.count_range_zero,
         p.count_range_succ,
         p.count_range_le,
