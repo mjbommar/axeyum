@@ -538,6 +538,18 @@ gate-controls:
     # ...and its controls, each mutation-verified, including the false-positive
     # case (multi-line `#[allow]`) that the gate's first draft failed.
     scripts/tests/test-check-test-attribute-integrity.sh
+    # The creal prelude-build ratio gate's controls. Registered in
+    # `scripts/check.sh` only until 2026-08-30, so the PREFERRED gate did not
+    # run them -- found by `check-aggregate-scope.sh` once its normalizer
+    # stopped manufacturing phantom divergences that buried the real one.
+    scripts/tests/test-creal-prelude-build-ratio.sh
+    # Controls for `check-aggregate-scope.sh`'s own step normalizer, which
+    # reported ONE script as TWO divergences (`python3 ./scripts/x.py` vs
+    # `python3 scripts/x.py`) because its `./` strip was anchored at line
+    # start. 4 of 13 reported divergences were that artifact. Five guards,
+    # each mutation-verified to kill exactly one control, plus two negative
+    # controls so a normalizer returning "" cannot satisfy the suite.
+    scripts/tests/test-check-aggregate-scope.sh
     # The registration gate's OWN controls -- it had none, which is the joke
     # this file exists to stop being. 15 cases, each mutation-verified.
     scripts/tests/test-check-control-registration.sh

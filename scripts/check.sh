@@ -415,6 +415,13 @@ step test-attribute-integrity-controls ./scripts/tests/test-check-test-attribute
 # session as the gate and never registered -- caught by check-control-
 # registration.sh, which is exactly the failure that script exists for.
 step creal-prelude-build-ratio-controls ./scripts/tests/test-creal-prelude-build-ratio.sh
+# Controls for THIS gate's own step normalizer. Its `./` strip was anchored at
+# line start, so `python3 ./scripts/x.py` (check.sh's form) and `python3
+# scripts/x.py` (the justfile's) normalized differently and one script was
+# reported as two divergences -- 4 of 13 on 2026-08-30, burying the one real
+# check.sh-only step. A gate that manufactures divergences is a gate nobody
+# can act on, which is how this one came to sit red.
+step aggregate-scope-controls ./scripts/tests/test-check-aggregate-scope.sh
 # The registration gate's OWN controls. It had none until 2026-08-27 -- the gate
 # whose subject is "a check nobody invokes cannot fail" was itself unverified,
 # and its python half then pinned an unexplained floor of 188 unnamed suites.
@@ -803,7 +810,16 @@ step adr-remote-collisions python3 scripts/gen-adr-index.py --check-remote
 #
 # TMPDIR off /tmp: `maturin develop` writes a wheel there per rebuild and /tmp
 # on this fleet is a 62 G RAM tmpfs already implicated in OOM kills.
-if command -v uv >/dev/null 2>&1 && [ -d .venv ]; then
+# LIST MODE IGNORES HOST STATE, DELIBERATELY. `AXEYUM_CHECK_LIST=1` answers
+# "what does this gate examine?", not "what would it examine on this host right
+# now" -- and `scripts/check-aggregate-scope.sh` compares that listing against
+# the justfile's. Measured 2026-08-30: `.venv` was absent from this checkout, so
+# the enumeration dropped all eight Python steps and the scope gate reported
+# them as `just-only` divergences. They are not divergences; `just py-check` and
+# this block run the same eight commands. Gating the LISTING on host state made
+# the comparison non-reproducible -- a different developer would get a different
+# divergence set from an identical tree.
+if [ "$list_only" = "1" ] || { command -v uv >/dev/null 2>&1 && [ -d .venv ]; }; then
   export TMPDIR="${TMPDIR:-/data0/axeyum/scratch/py-tmp-$USER}"
   [ "$list_only" = "1" ] || mkdir -p "$TMPDIR"
   step py-maturin-develop uv run --no-sync maturin develop

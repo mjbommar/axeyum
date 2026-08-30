@@ -63,7 +63,14 @@ def strip_wrappers(line):
     line = line.strip()
     while re.match(r"^[A-Za-z_][A-Za-z0-9_]*=(\"[^\"]*\"|\S+)\s", line):
         line = line.split(" ", 1)[1].strip()
-    line = re.sub(r"^\./", "", line)
+    # `./` is a path prefix wherever it appears, not only at line start:
+    # `scripts/check.sh` writes `python3 ./scripts/x.py` while the justfile
+    # writes `python3 scripts/x.py`. An anchored `^\./` sees those as two
+    # different steps and reports ONE script as TWO divergences, once on each
+    # side -- which is what it did for `check-autogenesis-already-proved` and
+    # `check-test-attribute-integrity` after both were correctly added to the
+    # justfile. `(^|\s)` keeps `../` safe (its second char is `.`, not `/`).
+    line = re.sub(r"(^|\s)\./", r"\1", line)
     line = re.sub(r"^scripts/mem-run\.sh\s+", "", line)
     line = re.sub(r"^[A-Za-z_][A-Za-z0-9_]*=(\"[^\"]*\"|\S+)\s+", "", line)
     line = re.sub(r"^\./", "", line)
