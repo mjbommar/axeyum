@@ -269,8 +269,28 @@ some time. See §4.
 | **3** | Modular exponentiation at fixed `p` ships in `axeyum-scenarios::number_theory` as a BitVec scenario validated by `self_check()`; it is a self-check, not a producer/verifier pair (§2.8). |
 | **4** | Not attempted. |
 
-**Highest-yield NT target.** Euler's theorem is one theorem away, with both
-halves of the residue-permutation argument already landed and axiom-free.
+**Highest-yield NT target — but NOT one theorem away. Corrected 2026-08-30.**
+Both halves of the residue-permutation argument are landed and axiom-free, and
+that is what made "one theorem away" look right. It is wrong: the lane that
+actually built the cheap half recorded three remaining pieces, all real work,
+in [`docs/plan/status/374-euler-theorem.md`](../plan/status/374-euler-theorem.md)
+and in `int_prelude/euler_theorem.rs`'s own module doc.
+
+1. `Int.euler_unit_injective`'s hypotheses are about `Int`-sorted indices, while
+   `Int.prodRangeIf_permute` quantifies over a `Nat -> Nat` self-map. Bridging
+   them needs an `ofNat`/`natAbs` round trip and `InjectiveOn`/`MapsInto`
+   re-derived in the other shape.
+2. The predicate-preservation hypothesis is an **iff** and only one direction is
+   proved. The converse needs `a`'s modular inverse applied a second time, and
+   that inverse exists only *inside* `euler_unit_coprime`'s own proof.
+3. The final assembly `prodRangeIf pred (fun _ => a) n = pow a (countRange pred n)`
+   is a new induction pairing `Int.pow` with `Nat.countRange`.
+
+That lane's own words: this is "a good deal more than 'wire it up'". The general
+rule it illustrates is the one this repository keeps relearning — **a handoff's
+report of what it LANDED is reliable; its report of what REMAINS is a
+hypothesis**, and a sizing written before the hard half was attempted is a
+sizing of the easy half.
 
 ### 2.3 Family: Euler's totient — *the strongest row 1 in the subject*
 
