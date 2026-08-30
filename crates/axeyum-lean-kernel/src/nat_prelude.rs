@@ -3273,11 +3273,12 @@ pub struct NatPrelude {
     /// `Nat.div_two_mul_two_of_even : ∀ n, Even n → Eq (mul (div n 2) 2) n`.
     /// `F:ml430-nat-div-two-mul-two-of-even-9ccc5340`.
     pub div_two_mul_two_of_even: NameId,
-    /// `Nat.div_two_mul_two_add_one_of_odd : ∀ n, Odd n → Eq (add (mul (div n
-    /// 2) 2) 1) n`. `F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82`.
+    /// `Nat.div_two_mul_two_add_one_of_odd : ∀ n, Odd n → Eq
+    /// (add (mul (div n 2) 2) 1) n`.
+    /// `F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82`.
     pub div_two_mul_two_add_one_of_odd: NameId,
-    /// `Nat.add_one_lt_of_even : ∀ n m, Even n → Even m → Lt n m → Lt (add n
-    /// 1) m`. `F:ml430-nat-add-one-lt-of-even-3464b374`.
+    /// `Nat.add_one_lt_of_even : ∀ n m, Even n → Even m → Lt n m → Lt
+    /// (add n 1) m`. `F:ml430-nat-add-one-lt-of-even-3464b374`.
     pub add_one_lt_of_even: NameId,
     /// `Nat.even_mul_of_even_left : ∀ m n, Even m → Even (mul m n)` — the
     /// load-bearing step under [`Self::odd_of_mul_left`]/
@@ -5052,8 +5053,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_iff_mod_two_eq_zero: kernel.name_str(nat, "even_iff_mod_two_eq_zero"),
             odd_iff_mod_two_eq_one: kernel.name_str(nat, "odd_iff_mod_two_eq_one"),
             div_two_mul_two_of_even: kernel.name_str(nat, "div_two_mul_two_of_even"),
-            div_two_mul_two_add_one_of_odd: kernel
-                .name_str(nat, "div_two_mul_two_add_one_of_odd"),
+            div_two_mul_two_add_one_of_odd: kernel.name_str(nat, "div_two_mul_two_add_one_of_odd"),
             add_one_lt_of_even: kernel.name_str(nat, "add_one_lt_of_even"),
             even_mul_of_even_left: kernel.name_str(nat, "even_mul_of_even_left"),
             odd_of_mul_left: kernel.name_str(nat, "odd_of_mul_left"),

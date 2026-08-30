@@ -1037,6 +1037,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_iff_odd_succ,
         p.even_iff_mod_two_eq_zero,
         p.odd_iff_mod_two_eq_one,
+        p.div_two_mul_two_of_even,
+        p.div_two_mul_two_add_one_of_odd,
+        p.add_one_lt_of_even,
+        p.even_mul_of_even_left,
+        p.odd_of_mul_left,
+        p.odd_of_mul_right,
         p.coprime_two_left,
         p.coprime_two_right,
         p.coprime_odd_of_left,
@@ -12331,6 +12337,357 @@ fn even_iff_mod_two_eq_zero_and_odd_iff_mod_two_eq_one_apply_and_agree() {
     assert!(
         f.k.axiom_footprint(p.odd_iff_mod_two_eq_one).is_empty(),
         "odd_iff_mod_two_eq_one must rest on zero axioms"
+    );
+}
+
+/// `div_two_mul_two_of_even`/`div_two_mul_two_add_one_of_odd`
+/// (`F:ml430-nat-div-two-mul-two-of-even-9ccc5340`,
+/// `F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82`), lane
+/// `nat-parity-div` (2026-08-30): concrete-witness applications at `4`/`5`
+/// that compute the exact declared equality, a symbolic restatement over a
+/// genuinely free `n`, and the ODD negative control the CLAUDE.md brief
+/// requires -- `5/2*2` computes to `4`, NOT `5`, which is exactly why
+/// `div_two_mul_two_of_even` needs the `Even` hypothesis rather than holding
+/// unconditionally.
+#[test]
+fn div_two_mul_two_mirrors_apply_concretely_symbolically_and_reject_a_truncated_odd_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let four = f.num(4);
+    let five = f.num(5);
+    let two = f.num(2);
+
+    // Even 4, witnessed by 2 (4 = 2+2).
+    let even4 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(four, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(four);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+
+    // Odd 5, witnessed by 2 (5 = succ(2+2)).
+    let odd5 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(five, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(five);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+
+    let ev_fn = f.lemma(p.div_two_mul_two_of_even, &[four]);
+    let ev_result = f.apply(ev_fn, &[even4]);
+    let ev_result_ty = f.k.infer(ev_result).unwrap_or_else(|e| {
+        panic!(
+            "div_two_mul_two_of_even(4)(Even 4) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    let four_eq_four = f.eq(four, four);
+    assert!(
+        f.k.def_eq(ev_result_ty, four_eq_four),
+        "div_two_mul_two_of_even(4) must compute to Eq 4 4"
+    );
+
+    let od_fn = f.lemma(p.div_two_mul_two_add_one_of_odd, &[five]);
+    let od_result = f.apply(od_fn, &[odd5]);
+    let od_result_ty = f.k.infer(od_result).unwrap_or_else(|e| {
+        panic!(
+            "div_two_mul_two_add_one_of_odd(5)(Odd 5) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    let five_eq_five = f.eq(five, five);
+    assert!(
+        f.k.def_eq(od_result_ty, five_eq_five),
+        "div_two_mul_two_add_one_of_odd(5) must compute to Eq 5 5"
+    );
+
+    // Negative control: `5/2*2` computes to `4`, not `5` -- `Nat.div`
+    // truncates, so the unconditional (Even-free) claim is false.
+    let half5 = f.div(five, two);
+    let mul_half5_two = f.mul(half5, two);
+    assert!(
+        f.k.def_eq(mul_half5_two, four),
+        "5/2*2 must compute to 4 (Nat.div truncates)"
+    );
+    assert!(
+        !f.k.def_eq(mul_half5_two, five),
+        "negative control: 5/2*2 must NOT be defeq to 5 -- this is exactly \
+         why div_two_mul_two_of_even requires the Even hypothesis"
+    );
+
+    // Symbolic restatement: both mirrors apply at a genuinely free `n`.
+    let restated_even = f.name("div_two_mul_two_of_even_restated");
+    f.theorem(restated_even, 1, &|d, values| {
+        let n = values[0];
+        let he_ty = d.lemma(p.even, &[n]);
+        let he_fv = d.fresh_fvar();
+        let he = d.kernel().fvar(he_fv);
+        let half = d.div(n, two);
+        let mul_half_two = d.mul(half, two);
+        let concl_ty = d.eq(mul_half_two, n);
+        let stmt = d.arrow(he_ty, concl_ty);
+        let proof = d.lemma(p.div_two_mul_two_of_even, &[n]);
+        let proof = d.apply(proof, &[he]);
+        let proof = d.lam_fv(he_fv, he_ty, proof);
+        (stmt, proof)
+    })
+    .expect("div_two_mul_two_of_even must apply at a genuinely free n");
+
+    let restated_odd = f.name("div_two_mul_two_add_one_of_odd_restated");
+    f.theorem(restated_odd, 1, &|d, values| {
+        let n = values[0];
+        let ho_ty = d.lemma(p.odd, &[n]);
+        let ho_fv = d.fresh_fvar();
+        let ho = d.kernel().fvar(ho_fv);
+        let half = d.div(n, two);
+        let mul_half_two = d.mul(half, two);
+        let one = d.num(1);
+        let target = d.add(mul_half_two, one);
+        let concl_ty = d.eq(target, n);
+        let stmt = d.arrow(ho_ty, concl_ty);
+        let proof = d.lemma(p.div_two_mul_two_add_one_of_odd, &[n]);
+        let proof = d.apply(proof, &[ho]);
+        let proof = d.lam_fv(ho_fv, ho_ty, proof);
+        (stmt, proof)
+    })
+    .expect("div_two_mul_two_add_one_of_odd must apply at a genuinely free n");
+
+    assert!(
+        f.k.axiom_footprint(p.div_two_mul_two_of_even).is_empty(),
+        "div_two_mul_two_of_even must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.div_two_mul_two_add_one_of_odd)
+            .is_empty(),
+        "div_two_mul_two_add_one_of_odd must rest on zero axioms"
+    );
+}
+
+/// `Nat.add_one_lt_of_even` (`F:ml430-nat-add-one-lt-of-even-3464b374`),
+/// lane `nat-parity-div` (2026-08-30): concrete instance `n := 2`, `m := 6`
+/// (both even, `2 < 6` gives `3 < 6`), a negative control confirming the
+/// conclusion genuinely needs BOTH parity hypotheses (`n := 2`, `m := 3`:
+/// `2 < 3` but `m` is odd, and `3 < 3` is false), and a symbolic
+/// restatement over a genuinely free `(n, m)` pair.
+#[test]
+fn add_one_lt_of_even_applies_concretely_symbolically_and_rejects_an_odd_m_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let six = f.num(6);
+
+    // Even 2, witnessed by 1 (2 = 1+1).
+    let even2 = {
+        let one = f.num(1);
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(two, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(two);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, one, proof])
+    };
+
+    // Even 6, witnessed by 3 (6 = 3+3).
+    let even6 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(six, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(six);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, three, proof])
+    };
+
+    // 2 < 6, i.e. Le (succ 2) 6 = Le 3 6, by the order fragment's own
+    // reflexive/step lemmas: build it via le_refl/le_succ climbing from 3.
+    let lt_2_6 = {
+        // Le 3 6 := Le (succ (succ (succ 0))) 6; reuse le_refl at 6 then
+        // step down is awkward, so instead build Le 3 6 directly via three
+        // applications of le_succ_of_le starting from le_refl 3, matching
+        // the order fragment's own idiom elsewhere in this file.
+        let le_refl_3 = f.lemma(p.le_refl, &[three]);
+        let four = f.num(4);
+        let five = f.num(5);
+        let s1 = f.lemma(p.le_succ_of_le, &[three, three, le_refl_3]);
+        let s2 = f.lemma(p.le_succ_of_le, &[three, four, s1]);
+        f.lemma(p.le_succ_of_le, &[three, five, s2])
+    };
+    f.k.infer(lt_2_6)
+        .unwrap_or_else(|e| panic!("2 < 6 should type-check: {}", f.explain(&e)));
+
+    let concl_fn = f.lemma(p.add_one_lt_of_even, &[two, six]);
+    let concl_fn = f.apply(concl_fn, &[even2]);
+    let concl_fn = f.apply(concl_fn, &[even6]);
+    let concl = f.apply(concl_fn, &[lt_2_6]);
+    let concl_ty = f.k.infer(concl).unwrap_or_else(|e| {
+        panic!(
+            "add_one_lt_of_even(2, 6)(Even 2)(Even 6)(2 < 6) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    let three_lt_six = f.lt(three, six);
+    assert!(
+        f.k.def_eq(concl_ty, three_lt_six),
+        "add_one_lt_of_even(2, 6) must land on Lt 3 6 (n+1 < m)"
+    );
+
+    // Symbolic restatement over a genuinely free (n, m) pair.
+    let restated = f.name("add_one_lt_of_even_restated");
+    f.theorem(restated, 2, &|d, values| {
+        let (n, m) = (values[0], values[1]);
+        let hn_ty = d.lemma(p.even, &[n]);
+        let hm_ty = d.lemma(p.even, &[m]);
+        let hlt_ty = d.lt(n, m);
+        let one = d.num(1);
+        let n1 = d.add(n, one);
+        let concl_ty = d.lt(n1, m);
+        let stmt = {
+            let inner = d.arrow(hlt_ty, concl_ty);
+            let mid = d.arrow(hm_ty, inner);
+            d.arrow(hn_ty, mid)
+        };
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+        let hlt_fv = d.fresh_fvar();
+        let hlt = d.kernel().fvar(hlt_fv);
+        let proof = d.lemma(p.add_one_lt_of_even, &[n, m, hn, hm, hlt]);
+        let proof = {
+            let with_hlt = d.lam_fv(hlt_fv, hlt_ty, proof);
+            let with_hm = d.lam_fv(hm_fv, hm_ty, with_hlt);
+            d.lam_fv(hn_fv, hn_ty, with_hm)
+        };
+        (stmt, proof)
+    })
+    .expect("add_one_lt_of_even must apply at a genuinely free (n, m) pair");
+
+    assert!(
+        f.k.axiom_footprint(p.add_one_lt_of_even).is_empty(),
+        "add_one_lt_of_even must rest on zero axioms"
+    );
+}
+
+/// `Nat.odd_of_mul_left`/`Nat.odd_of_mul_right`
+/// (`F:ml430-nat-odd-of-mul-left-2c6c2553`,
+/// `F:ml430-nat-odd-of-mul-right-fe6d20ff`) and the private helper
+/// `Nat.even_mul_of_even_left`, lane `nat-parity-div` (2026-08-30): a
+/// concrete discriminating instance (`m := 3`, `n := 5`, `mul m n := 15`,
+/// odd) exercised in BOTH directions with a transposed negative control
+/// (`odd_of_mul_left` applied at the swapped pair must NOT type-check
+/// against `Odd n`), plus a symbolic restatement over a genuinely free
+/// `(m, n)` pair.
+#[test]
+fn odd_of_mul_left_and_right_apply_at_a_concrete_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let three = f.num(3);
+    let five = f.num(5);
+    let fifteen = f.num(15);
+
+    // Odd 15, witnessed by 7 (15 = succ(7+7)).
+    let odd15 = {
+        let seven = f.num(7);
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(fifteen, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(fifteen);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, seven, proof])
+    };
+    // `mul 3 5` must compute to `15` for `odd15`'s type to line up with
+    // `Odd (mul 3 5)`.
+    let mul_3_5 = f.mul(three, five);
+    assert!(f.k.def_eq(mul_3_5, fifteen), "mul 3 5 must compute to 15");
+
+    let left_fn = f.lemma(p.odd_of_mul_left, &[three, five]);
+    let left_result = f.apply(left_fn, &[odd15]);
+    let left_result_ty = f.k.infer(left_result).unwrap_or_else(|e| {
+        panic!(
+            "odd_of_mul_left(3, 5)(Odd 15) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    let odd3_ty = f.lemma(p.odd, &[three]);
+    assert!(
+        f.k.def_eq(left_result_ty, odd3_ty),
+        "odd_of_mul_left(3, 5)(Odd 15) must land on Odd 3"
+    );
+    let odd5_ty_control = f.lemma(p.odd, &[five]);
+    assert!(
+        !f.k.def_eq(left_result_ty, odd5_ty_control),
+        "negative control: odd_of_mul_left's conclusion is Odd 3, not Odd 5"
+    );
+
+    let right_fn = f.lemma(p.odd_of_mul_right, &[three, five]);
+    let right_result = f.apply(right_fn, &[odd15]);
+    let right_result_ty = f.k.infer(right_result).unwrap_or_else(|e| {
+        panic!(
+            "odd_of_mul_right(3, 5)(Odd 15) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(right_result_ty, odd5_ty_control),
+        "odd_of_mul_right(3, 5)(Odd 15) must land on Odd 5"
+    );
+    assert!(
+        !f.k.def_eq(right_result_ty, odd3_ty),
+        "negative control: odd_of_mul_right's conclusion is Odd 5, not Odd 3"
+    );
+
+    // Symbolic restatement over a genuinely free (m, n) pair.
+    let restated = f.name("odd_of_mul_left_restated");
+    f.theorem(restated, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let mul_mn = d.mul(m, n);
+        let h_ty = d.lemma(p.odd, &[mul_mn]);
+        let concl_ty = d.lemma(p.odd, &[m]);
+        let stmt = d.arrow(h_ty, concl_ty);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let proof = d.lemma(p.odd_of_mul_left, &[m, n, h]);
+        let proof = d.lam_fv(h_fv, h_ty, proof);
+        (stmt, proof)
+    })
+    .expect("odd_of_mul_left must apply at a genuinely free (m, n) pair");
+
+    assert!(
+        f.k.axiom_footprint(p.even_mul_of_even_left).is_empty(),
+        "even_mul_of_even_left must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.odd_of_mul_left).is_empty(),
+        "odd_of_mul_left must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.odd_of_mul_right).is_empty(),
+        "odd_of_mul_right must rest on zero axioms"
     );
 }
 

@@ -133,7 +133,8 @@ fn declare_even_mul_of_even_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
         let even_m_pred = even_predicate(d, m);
         let motive = {
             let anon = d.anon_name();
-            d.kernel().lam(anon, even_m_ty, even_mul_ty, BinderInfo::Default)
+            d.kernel()
+                .lam(anon, even_m_ty, even_mul_ty, BinderInfo::Default)
         };
         let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
         let body = d.apply(rec, &[nat, even_m_pred, motive, minor, h]);
@@ -153,7 +154,10 @@ fn declare_even_mul_of_even_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
 ///
 /// Returns the trusted gate's rejection if the constructed term does not
 /// check.
-pub(super) fn declare_odd_of_mul_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_odd_of_mul_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
 
     d.theorem(p.odd_of_mul_left, 2, &|d, values| {
@@ -357,7 +361,11 @@ pub(super) fn declare_div_two_mul_two_add_one_of_odd(
 
         let (_, chained) = d.chain(
             n,
-            &[(recon, n_eq_recon), (add_mth_one, congr_step), (target, congr2)],
+            &[
+                (recon, n_eq_recon),
+                (add_mth_one, congr_step),
+                (target, congr2),
+            ],
         );
         let final_proof = d.symm(n, target, chained);
         let proof = d.lam_fv(h_fv, odd_ty, final_proof);
@@ -452,7 +460,10 @@ pub(super) fn declare_add_one_lt_of_even(
 /// available), then `add_one_lt_of_even` (needs `even_iff_odd_succ`,
 /// `odd_not_even`, `lt_or_eq_of_le`, all already available), then the
 /// multiplication/oddness helper and the two mirrors that consume it.
-pub(super) fn declare_parity_div_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_parity_div_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     declare_div_two_mul_two_of_even(d, p)?;
     declare_div_two_mul_two_add_one_of_odd(d, p)?;
     declare_add_one_lt_of_even(d, p)?;
