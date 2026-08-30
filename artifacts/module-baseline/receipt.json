@@ -1,0 +1,124 @@
+{
+  "generated_by": "scripts/gen-module-baseline.py",
+  "parser": {
+    "path": "scripts/lib/module_baseline.py",
+    "sha256": "f1401196d525295083bd1b3a01f1fd4a158f16ca2e39cc2153d649aebfe6684c"
+  },
+  "schema_version": 1,
+  "source": {
+    "commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "file_count": 8094,
+    "kind": "mathlib4",
+    "tree_hash_sha256": "d1a251201368bff97791adb8ecb07c30a19fc7cadfd184fe1310af927f6e5de9"
+  },
+  "top_indegree": [
+    {
+      "indegree": 193,
+      "module": "Mathlib.Init"
+    },
+    {
+      "indegree": 69,
+      "module": "Mathlib.Tactic.Common"
+    },
+    {
+      "indegree": 43,
+      "module": "Mathlib.Algebra.Ring.Defs"
+    },
+    {
+      "indegree": 41,
+      "module": "Mathlib.Algebra.BigOperators.Group.Finset.Basic"
+    },
+    {
+      "indegree": 41,
+      "module": "Mathlib.Util.CompileInductive"
+    },
+    {
+      "indegree": 38,
+      "module": "Mathlib.Algebra.Field.Defs"
+    },
+    {
+      "indegree": 38,
+      "module": "Mathlib.Algebra.Group.Basic"
+    },
+    {
+      "indegree": 38,
+      "module": "Mathlib.Algebra.Order.Group.Nat"
+    },
+    {
+      "indegree": 37,
+      "module": "Mathlib.Tactic.Ring"
+    },
+    {
+      "indegree": 35,
+      "module": "Mathlib.Algebra.Algebra.Defs"
+    },
+    {
+      "indegree": 35,
+      "module": "Mathlib.Analysis.Normed.Group.Basic"
+    },
+    {
+      "indegree": 32,
+      "module": "Mathlib.Algebra.Polynomial.AlgebraMap"
+    },
+    {
+      "indegree": 32,
+      "module": "Mathlib.Data.Set.Finite.Basic"
+    },
+    {
+      "indegree": 31,
+      "module": "Mathlib.RingTheory.Ideal.Maps"
+    },
+    {
+      "indegree": 30,
+      "module": "Mathlib.Order.Hom.Basic"
+    }
+  ],
+  "top_outdegree": [
+    {
+      "module": "Mathlib.Tactic",
+      "outdegree": 336
+    },
+    {
+      "module": "Mathlib.Tactic.Common",
+      "outdegree": 85
+    },
+    {
+      "module": "Mathlib.Init",
+      "outdegree": 26
+    },
+    {
+      "module": "Mathlib.Tactic.FunProp",
+      "outdegree": 15
+    },
+    {
+      "module": "Mathlib.Analysis.Normed.Module.FiniteDimension",
+      "outdegree": 14
+    },
+    {
+      "module": "Mathlib.Algebra.Order.GroupWithZero.Canonical",
+      "outdegree": 13
+    },
+    {
+      "module": "Mathlib.Analysis.SpecificLimits.Normed",
+      "outdegree": 13
+    },
+    {
+      "module": "Mathlib.GroupTheory.OrderOfElement",
+      "outdegree": 13
+    },
+    {
+      "module": "Mathlib.GroupTheory.Perm.Sign",
+      "outdegree": 13
+    },
+    {
+      "module": "Mathlib.LinearAlgebra.Dual.Lemmas",
+      "outdegree": 13
+    }
+  ],
+  "totals": {
+    "external_edges": 607,
+    "internal_edges": 25495,
+    "modules": 8094,
+    "no_importer_sink_count": 1476
+  }
+}

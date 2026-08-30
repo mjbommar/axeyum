@@ -742,6 +742,12 @@ step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.s
 # project's history and nothing went red. This is the gate that reds.
 step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
+# L1 phase G0 (docs/plan/graph-directed-library-roadmap-2026-08-30.md): the
+# Mathlib module-import baseline receipt reproduces, and source/parser drift
+# each fail independently -- see scripts/check-module-baseline.py's header.
+step module-baseline ./scripts/check-module-baseline.py
+step module-baseline-controls ./scripts/tests/test-module-baseline.py
+step module-baseline-mutations ./scripts/tests/test-module-baseline-mutations.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
 step lane-merge-resolve-controls ./scripts/tests/test-lane-merge-resolve.sh
