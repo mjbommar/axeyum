@@ -359,7 +359,7 @@ fn prove_poly_mul_rat(
 /// poly_expr_rat(Sigma_i numerator_i . cofactor_i)` for POLYNOMIAL
 /// numerators and cofactors, the `Rational`-coefficient generalisation of
 /// [`super::cas_geometry_mul_bridge_tests::prove_poly_combination`].
-fn prove_poly_combination_rat(
+pub(super) fn prove_poly_combination_rat(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,
