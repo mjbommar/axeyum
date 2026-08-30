@@ -82,5 +82,33 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.mesh_max_le_add_of_step_close,
             "theorem",
         ),
+        (
+            "CReal.meshLevelCount_ge_of_size",
+            p.mesh_level_count_ge_of_size,
+            "theorem",
+        ),
+        (
+            "CReal.meshMax_le_add_of_modulus",
+            p.mesh_max_le_add_of_modulus,
+            "theorem",
+        ),
+        ("CReal.supLevel", p.sup_level, "definition"),
+        ("CReal.supLevel_mono", p.sup_level_mono, "theorem"),
+        ("CReal.supSeq", p.sup_seq, "definition"),
+        ("CReal.supSeq_mono", p.sup_seq_mono, "theorem"),
+        ("CReal.supSeq_le_add", p.sup_seq_le_add, "theorem"),
+        ("CReal.le_meshLevelCount", p.le_mesh_level_count, "theorem"),
+        (
+            "CReal.supSeq_abs_diff_le",
+            p.sup_seq_abs_diff_le,
+            "theorem",
+        ),
+        ("CReal.supSeq_cauchy", p.sup_seq_cauchy, "theorem"),
+        ("CReal.supOn", p.sup_on, "definition"),
+        (
+            "CReal.supSeq_converges_supOn",
+            p.sup_seq_converges_sup_on,
+            "theorem",
+        ),
     ]
 }
