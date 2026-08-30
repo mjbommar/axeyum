@@ -174,6 +174,7 @@ now. Nothing was deleted.
 | 2026-08-30 | parity-finish | 3 axiom-free Nat kernel theorems closing the parity/division-by-two cluster's last blockers (`Nat.even_add`, `Nat.even_add'`, `Nat.even_div`); all 3 dispatched facts proved; two of three handoff sizings were wrong (one undersold, one — `even_div` — badly oversold: an existing unconditional lemma closed it in ~75 lines) |
 | 2026-08-30 | fermat-easy | 5 axiom-free Nat kernel theorems: the three closed `fermatNumber` reductions (0/1/2 = 3/5/17), `Nat.odd_fermatNumber`, and `Nat.fermatNumber_strictMono`; all fully symbolic except the three closed equalities (largest formed numeral 17) |
 | 2026-08-30 | pow-add-prime-finish | `Nat.pow_two_or_has_odd_factor` (odd-factor extraction, ordinary fuel-bounded `Nat.rec`, NOT `WellFounded.fix` — the prior handoff's sizing was wrong) and `Nat.pow_of_pow_add_prime` — closes `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3` (open → proved, axiom-free); 222/222 `nat_prelude::` |
+| 2026-08-30 | l0-s5-kernel-differential | ADR-0717 S5: 32-case kernel differential vs pinned Lean 4.30.0 (0 P0, 1 registered incompleteness), gated in justfile/check.sh, 8-mutation kernel-source kill table (4 killed / 4 survived), ADR-0780 |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
@@ -34290,6 +34291,55 @@ not a claim that it is hard.
 file. Registration lines only in `scripts/check.sh` and `justfile`. One
 surgical change in `scripts/validate-facts.py` (the multi-checker counter and
 its print), which no other lane holds.
+
+**Your lane's block (`DONE for this slice`, l0-s5-kernel-differential,
+2026-08-30).** S5's exit criteria are met for a first, real slice: a
+32-case (4 per subsystem × 8 named subsystems) Axeyum-vs-pinned-Lean
+differential corpus, gated, and an 8-mutation kernel-source kill table.
+Full writeup: ADR-0780.
+
+What landed:
+- `crates/axeyum-lean-kernel/tests/kernel_differential.rs`: 32 cases, each
+  authored twice independently (kernel term-builder API + plain Lean
+  syntax). Classification is three-way (agree / P0 / registered
+  incompleteness); `EXPLAINED_INCOMPLETENESS` has exactly one entry
+  (`quotient::quot_sound_absent`, ADR-0456).
+- `scripts/check-kernel-differential.py`: the gate, six independently
+  mutation-verified guards (`scripts/tests/test-kernel-differential-gate.sh`).
+- `artifacts/kernel-differential/mutant-kill-table.json` +
+  `scripts/check-kernel-differential-mutants.py`: 8 hand-run kernel-source
+  mutations (one per subsystem), 4 killed / 4 survived. The ratchet checks
+  the artifact's internal consistency, not a live re-mutation (that needs
+  ~8 kernel rebuilds mutating tracked source, which is a by-hand act, not a
+  CI-suitable one -- see ADR-0780's alternatives section).
+- Registered in `justfile` (`kernel-differential` recipe, added to `check`)
+  and `scripts/check.sh` (three `step`s); `scripts/check-lean-gate.sh`'s
+  suites table and `CHECK_FLOOR` (229 -> 261) updated -- `check-kernel-
+  suites.sh --list`'s auto-discovery had correctly flagged the new suite as
+  unregistered before this.
+
+Full run against pinned Lean 4.30.0: 32/32 cases, zero P0, zero unexplained
+incompleteness. Two real construction bugs were caught and fixed while
+building the corpus itself (a de Bruijn depth error in a parametric
+inductive; a `close_pi`-for-a-value confusion in a quotient case) -- see
+ADR-0780's evidence section.
+
+**Known open item, not closed by this slice:** the `inductives` mutant
+(disabling the non-positive-occurrence check) SURVIVED unexplained -- the
+targeted negative case did not flip, and the true rejecting mechanism was
+not identified in the time available. `literals` and `quotient` also
+survived their mutants, but for NAMED reasons (no case in this corpus
+presents a malformed Nat bootstrap or a second quotient package) rather
+than a mystery. The next lane on this phase should either root-cause the
+`inductives` survival or explicitly reclassify it as an explained gap.
+
+**What this does NOT cover** (stated in the test file's own doc comment,
+repeated in ADR-0780): 4 cases per subsystem is not exhaustive. Missing:
+mutual/nested inductive families, indexed families beyond 0-index, `Prop`-
+restricted large elimination, structure eta beyond plain projection, string
+literals, zeta reduction, well-founded recursion, longer reduction chains,
+and malformed-package/malformed-bootstrap shapes for quotient/literals
+specifically (exactly the gap the two "explained" survivals trace to).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
