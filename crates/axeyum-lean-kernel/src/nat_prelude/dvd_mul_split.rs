@@ -32,6 +32,7 @@
 //!   - `m = 0`: witnesses `(k1, k2) := (0, n)`. `dvd 0 m` from `m=0`;
 //!     `dvd n n` (`dvd_refl`); `0*n = 0 = k`.
 //!   - `n = 0`: witnesses `(k1, k2) := (m, 0)`, symmetric.
+//!
 //!   Neither branch touches the gcd construction below -- this is exactly
 //!   the corner the task's own working notes warned "a slick argument
 //!   silently breaks" on: the general formula's `k2 := k/gcd(k,m)` would
