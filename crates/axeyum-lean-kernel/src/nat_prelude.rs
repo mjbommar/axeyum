@@ -322,6 +322,7 @@ use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
 use parity::declare_parity_all;
+use parity_div::declare_even_add_one;
 use parity_div::declare_parity_div_all;
 use perfect::declare_perfect_all;
 use perfect::declare_sum_divisors_two_pow;
@@ -3291,6 +3292,9 @@ pub struct NatPrelude {
     /// [`Self::odd_of_mul_left`] and `mul_comm`.
     /// `F:ml430-nat-odd-of-mul-right-fe6d20ff`.
     pub odd_of_mul_right: NameId,
+    /// `Nat.even_add_one : ∀ n, Iff (Even (add n 1)) (Not (Even n))`.
+    /// `F:ml430-nat-even-add-one-15b5cb18`.
+    pub even_add_one: NameId,
 
     // --- the floor logarithm (`log.rs`) -------------------------------------
     /// `Nat.logAux : Nat → Nat → Nat → Nat` — `logAux b f n`, the floor base-`b`
@@ -5058,6 +5062,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_mul_of_even_left: kernel.name_str(nat, "even_mul_of_even_left"),
             odd_of_mul_left: kernel.name_str(nat, "odd_of_mul_left"),
             odd_of_mul_right: kernel.name_str(nat, "odd_of_mul_right"),
+            even_add_one: kernel.name_str(nat, "even_add_one"),
             log_aux: kernel.name_str(nat, "logAux"),
             log: kernel.name_str(nat, "log"),
             log_zero_right: kernel.name_str(nat, "log_zero_right"),
@@ -5587,6 +5592,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `zero_le`, `le_antisymm`). Nothing needs these agreement theorems,
         // so they go after everything they relate.
         declare_rec_agreement_all(&mut d, &p)?;
+        // Needs `Nat.mod_two_eq_zero_or_one`, just declared above by
+        // `declare_rec_agreement_all` (`parity_div.rs`, lane nat-parity-div,
+        // 2026-08-30 -- see that file's `declare_parity_div_all` doc for why
+        // this one call is separate from the rest of its cluster).
+        declare_even_add_one(&mut d, &p)?;
         // Needs `Nat.landAux`/`Nat.land` (`declare_land_all`, far above) and
         // the order/division lemmas `half_le_predecessor_of_succ` composes
         // (`le_of_succ_le_succ`, `lt_of_lt_of_le`, `div_mod_lt_mul_iff`,

@@ -1043,6 +1043,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_mul_of_even_left,
         p.odd_of_mul_left,
         p.odd_of_mul_right,
+        p.even_add_one,
         p.coprime_two_left,
         p.coprime_two_right,
         p.coprime_odd_of_left,
@@ -12688,6 +12689,105 @@ fn odd_of_mul_left_and_right_apply_at_a_concrete_instance_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.odd_of_mul_right).is_empty(),
         "odd_of_mul_right must rest on zero axioms"
+    );
+}
+
+/// `Nat.even_add_one` (`F:ml430-nat-even-add-one-15b5cb18`), lane
+/// `nat-parity-div` (2026-08-30): at a concrete odd `n := 3`, `mp` applied
+/// to a hand-built `Even 4` must land on a type accepting a hand-built
+/// `Not (Even 3)`-shaped argument (checked by applying the result to an
+/// independently built `Even 3` witness and confirming that combination
+/// type-checks to `False`), and `mpr` applied to `odd_not_even(3)` must
+/// land on a type defeq to `Even 4`. Plus a symbolic restatement over a
+/// genuinely free `n`.
+#[test]
+fn even_add_one_applies_at_a_concrete_odd_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let three = f.num(3);
+    let four = f.num(4);
+    let two = f.num(2);
+
+    // Even 4, witnessed by 2 (4 = 2+2).
+    let even4 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(four, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(four);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+
+    // Odd 3, witnessed by 1 (3 = succ(1+1)).
+    let odd3 = {
+        let one = f.num(1);
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(three, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(three);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, one, proof])
+    };
+
+    let even3_ty = f.lemma(p.even, &[three]);
+    let not_even3_ty = f.const_app(p.logic.not, &[even3_ty]);
+    let even4_ty = f.lemma(p.even, &[four]);
+
+    let iff_at_3 = f.lemma(p.even_add_one, &[three]);
+    // mp(even4) : Not(Even 3); apply to odd3-derived Not(Even 3) argument
+    // slot -- i.e. apply the RESULT to a hand-built Even 3 to confirm it
+    // lands on False, which distinguishes it from a swapped mp/mpr.
+    let mp_fn = f.const_app(p.logic.iff_mp, &[even4_ty, not_even3_ty, iff_at_3]);
+    let not_even3_from_mp = f.apply(mp_fn, &[even4]);
+    f.k.infer(not_even3_from_mp).unwrap_or_else(|e| {
+        panic!(
+            "even_add_one(3).mp(Even 4) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+
+    // mpr(odd_not_even(3)(odd3)) : Even 4.
+    let onen = f.lemma(p.odd_not_even, &[three]);
+    let not_even3 = f.apply(onen, &[odd3]);
+    let mpr_fn = f.const_app(p.logic.iff_mpr, &[even4_ty, not_even3_ty, iff_at_3]);
+    let even4_from_mpr = f.apply(mpr_fn, &[not_even3]);
+    let even4_from_mpr_ty = f.k.infer(even4_from_mpr).unwrap_or_else(|e| {
+        panic!(
+            "even_add_one(3).mpr(Not(Even 3)) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(even4_from_mpr_ty, even4_ty),
+        "even_add_one(3).mpr(Not(Even 3)) must land on Even 4 (i.e. Even (3+1))"
+    );
+
+    // Symbolic restatement over a genuinely free n.
+    let restated = f.name("even_add_one_restated");
+    f.theorem(restated, 1, &|d, values| {
+        let n = values[0];
+        let one = d.num(1);
+        let n1 = d.add(n, one);
+        let even_n_ty = d.lemma(p.even, &[n]);
+        let not_even_n_ty = d.const_app(p.logic.not, &[even_n_ty]);
+        let even_n1_ty = d.lemma(p.even, &[n1]);
+        let stmt = d.const_app(p.logic.iff, &[even_n1_ty, not_even_n_ty]);
+        let proof = d.lemma(p.even_add_one, &[n]);
+        (stmt, proof)
+    })
+    .expect("even_add_one must apply at a genuinely free n");
+
+    assert!(
+        f.k.axiom_footprint(p.even_add_one).is_empty(),
+        "even_add_one must rest on zero axioms"
     );
 }
 

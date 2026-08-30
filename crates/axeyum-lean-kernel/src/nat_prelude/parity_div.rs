@@ -52,6 +52,7 @@ use super::NatPrelude;
 use super::helpers::and_left;
 use super::ops::{NatDev, NatOps};
 use super::parity::even_predicate;
+use super::parity::odd_predicate;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -455,11 +456,179 @@ pub(super) fn declare_add_one_lt_of_even(
     Ok(())
 }
 
+/// `Nat.even_add_one : ∀ n, Iff (Even (add n 1)) (Not (Even n))` —
+/// `F:ml430-nat-even-add-one-15b5cb18`. Case-splits on
+/// `Nat.mod_two_eq_zero_or_one` rather than `Nat.even_or_odd_exists`,
+/// because in EACH branch one side of the `Iff` is already fully decided
+/// independent of the other's hypothesis, so both `mp` and `mpr` are
+/// constant functions that ignore their argument:
+///
+/// - `n % 2 = 0`: `Even n` holds, so `Even (n+1)` is false (via
+///   `even_iff_odd_succ` + `odd_not_even`) and `Not (Even n)` is false (we
+///   HAVE `Even n`). Both sides refute their own hypothesis.
+/// - `n % 2 = 1`: `Odd n` holds, so `Not (Even n)` holds directly
+///   (`odd_not_even`), and `Even (n+1)` is built explicitly: eliminate
+///   `Odd n`'s witness `j` (`n = succ (j+j)`) and use `succ j` as the
+///   `Even (n+1)` witness, via `Nat.succ_add` plus the definitional
+///   reduction `add a (succ b) ≡ succ (add a b)`.
+pub(super) fn declare_even_add_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let one_lvl = d.level_one();
+
+    d.theorem(p.even_add_one, 1, &|d, values| {
+        let n = values[0];
+        let one = d.num(1);
+        let n1 = d.add(n, one);
+        let even_n_ty = d.lemma(p.even, &[n]);
+        let not_even_n_ty = d.const_app(p.logic.not, &[even_n_ty]);
+        let even_n1_ty = d.lemma(p.even, &[n1]);
+        let stmt = d.const_app(p.logic.iff, &[even_n1_ty, not_even_n_ty]);
+
+        let two = d.num(2);
+        let zero = d.zero();
+        let rem = d.modulo(n, two);
+        let case_a_ty = d.eq(rem, zero);
+        let case_b_ty = d.eq(rem, one);
+        let or_proof = d.lemma(p.mod_two_eq_zero_or_one, &[n]);
+
+        // Case n % 2 = 0: Even n holds; Even(n+1) and Not(Even n) are both
+        // false, so mp/mpr are each constant functions producing the other
+        // side from a proof of False.
+        let case_a = {
+            let ha_fv = d.fresh_fvar();
+            let ha = d.kernel().fvar(ha_fv);
+
+            let even_iff = d.lemma(p.even_iff_mod_two_eq_zero, &[n]);
+            let mpr_ei = d.const_app(p.logic.iff_mpr, &[even_n_ty, case_a_ty, even_iff]);
+            let even_n = d.apply(mpr_ei, &[ha]);
+
+            let succ_n = d.succ(n);
+            let odd_succ_n_ty = d.lemma(p.odd, &[succ_n]);
+            let even_iff_odd = d.lemma(p.even_iff_odd_succ, &[n]);
+            let mp_eio = d.const_app(p.logic.iff_mp, &[even_n_ty, odd_succ_n_ty, even_iff_odd]);
+            let odd_succ_n = d.apply(mp_eio, &[even_n]);
+
+            let onem = d.lemma(p.odd_not_even, &[succ_n]);
+            let not_even_n1 = d.apply(onem, &[odd_succ_n]);
+
+            let mp_fn = {
+                let hn1_fv = d.fresh_fvar();
+                let hn1 = d.kernel().fvar(hn1_fv);
+                let false_proof = d.apply(not_even_n1, &[hn1]);
+                let he_fv = d.fresh_fvar();
+                let inner = d.lam_fv(he_fv, even_n_ty, false_proof);
+                d.lam_fv(hn1_fv, even_n1_ty, inner)
+            };
+
+            let mpr_fn = {
+                let hne_fv = d.fresh_fvar();
+                let hne = d.kernel().fvar(hne_fv);
+                let false_proof = d.apply(hne, &[even_n]);
+                let en1_from_false = absurd(d, &p, even_n1_ty, false_proof);
+                d.lam_fv(hne_fv, not_even_n_ty, en1_from_false)
+            };
+
+            let iff_proof = d.const_app(
+                p.logic.iff_intro,
+                &[even_n1_ty, not_even_n_ty, mp_fn, mpr_fn],
+            );
+            d.lam_fv(ha_fv, case_a_ty, iff_proof)
+        };
+
+        // Case n % 2 = 1: Odd n holds; Not(Even n) holds directly, and
+        // Even(n+1) is built from the Odd witness.
+        let case_b = {
+            let hb_fv = d.fresh_fvar();
+            let hb = d.kernel().fvar(hb_fv);
+
+            let odd_n_ty = d.lemma(p.odd, &[n]);
+            let odd_iff = d.lemma(p.odd_iff_mod_two_eq_one, &[n]);
+            let mpr_oi = d.const_app(p.logic.iff_mpr, &[odd_n_ty, case_b_ty, odd_iff]);
+            let odd_n = d.apply(mpr_oi, &[hb]);
+
+            let onen = d.lemma(p.odd_not_even, &[n]);
+            let not_even_n = d.apply(onen, &[odd_n]);
+
+            // Eliminate Odd n's witness j (n = succ (j+j)) to build Even(n+1).
+            let odd_pred = odd_predicate(d, n);
+            let even_n1_from_witness = {
+                let j_fv = d.fresh_fvar();
+                let j = d.kernel().fvar(j_fv);
+                let hj_fv = d.fresh_fvar();
+                let hj = d.kernel().fvar(hj_fv);
+                let jj = d.add(j, j);
+                let succ_jj = d.succ(jj);
+                let succ_succ_jj = d.succ(succ_jj);
+                let hj_ty = d.eq(n, succ_jj);
+
+                let succ_j = d.succ(j);
+                let add_sj_j = d.add(succ_j, j);
+                let add_sj_sj = d.add(succ_j, succ_j);
+
+                // add(succ j, j) = succ (add j j), via succ_add.
+                let h1 = d.lemma(p.succ_add, &[j, j]);
+                // add(succ j, succ j) ≡ succ(add(succ j, j)) definitionally
+                // (add's right argument is the concrete `succ j`), so this
+                // congr's LHS (succ(add_sj_j)) is usable as add_sj_sj by
+                // defeq -- giving Eq(add_sj_sj, succ_succ_jj).
+                let h_congr = d.congr(add_sj_j, succ_jj, h1, &|d, x| d.succ(x));
+                let h3 = d.symm(add_sj_sj, succ_succ_jj, h_congr);
+
+                // n+1 ≡ succ n definitionally; relate succ n to
+                // succ(succ_jj) via congr on hj.
+                let h2 = d.congr(n, succ_jj, hj, &|d, x| d.succ(x));
+
+                let (_, n1_eq_witness) = d.chain(n1, &[(succ_succ_jj, h2), (add_sj_sj, h3)]);
+
+                let even_n1_pred = even_predicate(d, n1);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one_lvl]);
+                let ev_proof = d.apply(intro, &[nat, even_n1_pred, succ_j, n1_eq_witness]);
+
+                let minor = d.lam_fv(hj_fv, hj_ty, ev_proof);
+                d.lam_fv(j_fv, nat, minor)
+            };
+            let motive = {
+                let anon = d.anon_name();
+                d.kernel()
+                    .lam(anon, odd_n_ty, even_n1_ty, BinderInfo::Default)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+            let even_n1 = d.apply(rec, &[nat, odd_pred, motive, even_n1_from_witness, odd_n]);
+
+            let mp_fn = {
+                let hn1_fv = d.fresh_fvar();
+                d.lam_fv(hn1_fv, even_n1_ty, not_even_n)
+            };
+            let mpr_fn = {
+                let hne_fv = d.fresh_fvar();
+                d.lam_fv(hne_fv, not_even_n_ty, even_n1)
+            };
+
+            let iff_proof = d.const_app(
+                p.logic.iff_intro,
+                &[even_n1_ty, not_even_n_ty, mp_fn, mpr_fn],
+            );
+            d.lam_fv(hb_fv, case_b_ty, iff_proof)
+        };
+
+        let proof = or_elim(d, &p, case_a_ty, case_b_ty, stmt, case_a, case_b, or_proof);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declaration order: the two division reconstructions first (need only
 /// `Nat.Even`/`Nat.Odd`'s low-bit bridges and `div_mod_exec`, both already
 /// available), then `add_one_lt_of_even` (needs `even_iff_odd_succ`,
 /// `odd_not_even`, `lt_or_eq_of_le`, all already available), then the
 /// multiplication/oddness helper and the two mirrors that consume it.
+///
+/// [`declare_even_add_one`] is deliberately NOT in this list: it needs
+/// `Nat.mod_two_eq_zero_or_one`, which `rec_agreement.rs` declares AFTER
+/// this whole cluster's call site in `nat_prelude.rs`'s build order. It is
+/// called separately, later, from `nat_prelude.rs` directly (see the call
+/// site next to `declare_rec_agreement_all`).
 pub(super) fn declare_parity_div_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,

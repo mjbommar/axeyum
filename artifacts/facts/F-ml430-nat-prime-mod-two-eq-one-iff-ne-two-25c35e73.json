@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-prime-even-iff-d068ec82", "F:nat-succ-ne-zero"],
+  "depends_on": ["F:ml430-nat-prime-even-iff-d068ec82", "F:nat-succ-ne-zero", "F:ml430-nat-even-iff-024826e9"],
   "evidence": [
     {
       "check_status": "checked",

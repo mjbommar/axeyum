@@ -6,15 +6,55 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, Even n ↔ n % 2 = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.even_iff_mod_two_eq_zero",
+    "kernel_statement": "((x0 : AxNat) -> Iff (AxNat.Even x0) (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) AxNat.zero))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-add-zero", "F:nat-div-mod-exec", "F:nat-div-mod-unique", "F:nat-le-succ-succ", "F:nat-one-mul", "F:nat-succ-mul", "F:nat-zero-le"],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/parity.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory even_iff_mod_two_eq_zero 2>/dev/null | awk -F'\\t' '$1 == \"Nat.even_iff_mod_two_eq_zero\" && $3 == \"((x0 : AxNat) -> Iff (AxNat.Even x0) (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) AxNat.zero))\"' | wc -l)\" -ge 1",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "id": "kernel-Nat.even_iff_mod_two_eq_zero",
+      "kind": "kernel-term",
+      "supports": "`Nat.even_iff_mod_two_eq_zero` is admitted as a Theorem with EXACTLY the mirror's shape (`Even n <-> n % 2 = 0`), pinned verbatim via the kernel's own renderer. Pre-existing in this prelude before this lane started -- `nat_prelude/parity.rs`'s `declare_even_iff_mod_two_eq_zero` -- and is the SAME proposition as Mathlib's `Nat.even_iff` under a different internal name: this prelude builds `Nat.Even`/`Nat.Odd` from the same `∃k, n = k+k` definition Mathlib uses, so flipping this mirror onto the pre-existing theorem is honest under the mirror-flip criterion (same definition, not a different one Mathlib merely proves a theorem about)."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free nat",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free (reads Kernel::axiom_footprint for every listed Nat declaration and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free nat (independently sums the whole nat prelude's trusted surface and fails nonzero)"
+      ],
+      "id": "footprint-Nat.even_iff_mod_two_eq_zero",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Nat.even_iff_mod_two_eq_zero`. The `nat` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "id": "coverage-Nat.even_iff_mod_two_eq_zero",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Nat.even_iff_mod_two_eq_zero` derived from `kernel.environment()` directly, not from an inventory list -- a Nat-namespace declaration missing from `theorem_names` fails this test by name."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane nat-parity-div (2026-08-30): NOT newly proved by this lane -- flipped onto a PRE-EXISTING kernel theorem, `Nat.even_iff_mod_two_eq_zero` (`nat_prelude/parity.rs`, landed before this lane's session, over `Nat.Even n := ∃k, n = k+k`, Mathlib's own definition). Verified the fact's formal.statement (`Even n <-> n % 2 = 0`) matches the kernel-rendered type of that theorem exactly via `nat_theorem_inventory`, and that Mathlib's `Nat.even_iff` is the same proposition about the same `Even`/`Odd` definition (checked at Mathlib v4.30.0 commit c5ea00351c28e24afc9f0f84379aa41082b1188f) -- so flipping is honest under the mirror-flip criterion (same definition, not a different one Mathlib merely proves a theorem about).",
     "source": "statement-only extraction of `Nat.even_iff` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +66,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established in Axeyum by flipping onto a pre-existing kernel theorem -- not newly proved by this lane. formal.statement is UNCHANGED and remains a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type (Mathlib's `Nat.even_iff`); do not edit it. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. That acceptance was syntax/type evidence about the statement; the evidence above is proof evidence about the claim, from a genuinely re-derivable kernel term. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
 }
