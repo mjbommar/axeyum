@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-partial-fractions-mixed-general-case-kernel-checked",
+  "title": "The mixed_general_case partial-fraction certificate's coefficient-matching identity is kernel-reconstructed over Rat, needing a NEW Rational-coefficient poly x poly bridge that did not exist before this fact",
+  "statement": "For F:cas-partial-fractions-mixed-general-case's certificate (p(x) = x+1, q(x) = (x-1)^2(x^2+1)), the checker's own coefficient-matching identity p = whole*q + leading*sum(numerator_i * cofactor_i) -- specialised to this instance's whole = 0 and leading = 1, both asserted rather than assumed -- is reconstructed through crate::Kernel::add_declaration at a symbolic universally quantified Rat variable x: x + 1 = (-1/2)*((x-1)*(x^2+1)) + 1*(x^2+1) + ((1/2)*x + (-1/2))*((x-1)*(x-1)). Unlike the geometry cofactor-identity siblings this fact's proof machinery is modelled on, PartialFractionCertificate is not a GeometryCertificate: no existing translator read this shape before this fact, and the quadratic-factor term's numerator (Cx+D) is genuinely non-constant, so the fractional-literal cast alone (which a prior lane's handoff mis-sized this fact against) is not sufficient -- a Rational-coefficient generalisation of the existing i128-only polynomial-times-polynomial machinery is also required and is built here.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (forall ((x Rat))\n  (= (+ x 1)\n     (+ (* (/ -1 2) (* (- x 1) (+ (^ x 2) 1)))\n        (* 1 (+ (^ x 2) 1))\n        (* (+ (* (/ 1 2) x) (/ -1 2)) (* (- x 1) (- x 1)))))))",
+    "fragment": "exact-rational-partial-fractions-coefficient-matching-identity",
+    "free_symbols": [
+      "x"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cas-partial-fractions-mixed-general-case"
+  ],
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a Kernel::add_declaration acceptance whose axiom_footprint is asserted EMPTY in the test itself, built from rat_prelude/int_prelude/nat_prelude constants that are all measured axiom-free -- but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "cas.rational-function-equality-not-reconstructed: the fact this depends on states existence of A,B,C,D and the rational-function equality p(x)/q(x) = A/(x-1) + B/(x-1)^2 + (Cx+D)/(x^2+1), conditioned on q(x) != 0. This fact proves only the CLEARED-DENOMINATOR polynomial identity at the certificate's own CONCRETE A=-1/2, B=1, C=1/2, D=-1/2, unconditionally over all x (clearing denominators removes the q(x)!=0 restriction) -- the same relocation the geometry siblings make for their 'implication' disclaimer.",
+    "cas.structural-guards-not-reconstructed: none of the checker's four structural guards are reconstructed here -- the power-set guard (powers are exactly {1,..,mult} per factor group), the numerator-degree-below-factor-degree guard, the pairwise-coprimality guard (needs a GCD computation, not an identity), and the q-reconstruction identity (q = leading * product(factor^mult)). This fact proves only the coefficient-matching identity.",
+    "cas.whole-and-leading-only-at-trivial-values: this instance has whole = 0 (deg p < deg q) and leading = 1 (q is monic), both asserted in the reconstruction rather than assumed. Nothing here exercises a non-trivial whole*q term or a leading != 1 scale.",
+    "cas.characteristic-zero-specialisation: a rational-coefficient identity holds in every Q-algebra; this reconstruction is over Rat, not CReal, so nothing here says x ranges over the real numbers.",
+    "cas.translator-checked-by-evaluation-only: dense_to_rat_poly (Vec<Rational> LSB-first -> this kernel's sparse RatPoly over the single variable x) is checked against numbers (translator_agrees_with_the_dense_evaluator_at_a_point), never by the trusted gate -- the kernel never sees a Vec<Rational>."
+  ],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-partial-fractions-mixed-general-case-identity",
+      "kind": "kernel-term",
+      "supports": "x + 1 = (-1/2)*((x-1)*(x^2+1)) + 1*(x^2+1) + ((1/2)*x + (-1/2))*((x-1)*(x-1)) at a universally quantified Rat variable x, admitted by crate::Kernel::add_declaration as Check.cas_partial_fractions_mixed_general_case. The certificate is NOT hand-copied: the test calls axeyum_cas::partial_fractions::partial_fractions(&p, &q) directly on p = x+1, q = (x-1)^2(x^2+1) (built via axeyum_ir::poly::ratpoly_mul from its two factors, matching partial_fractions::tests::mixed_general_case exactly), and separately confirms axeyum_cas::partial_fractions::verify_partial_fraction_certificate accepts it (Some(true)) before any kernel term is built. The (numerator, cofactor) pairs are re-derived on the Rust side from the certificate's own terms by grouping factors and recomputing each cofactor as product_excluding(i) * factor_i^(mult_i - power) -- transcribed from the checker's own documented recipe (partial_fractions.rs:426-442), not the producer's -- and the Rust-side sum is asserted to equal cert.p EXACTLY (not merely at a sample point) before the kernel is ever invoked. The proof is emitted by NEW code this fact required: prove_head_product_rat / prove_term_mul_rat / prove_poly_mul_rat / prove_poly_combination_rat, the Rational-coefficient generalisation of cas_geometry_mul_bridge_tests's i128-only prove_head_product/prove_term_mul/prove_poly_mul/prove_poly_combination -- needed because the quadratic-factor term's numerator (Cx+D) is genuinely non-constant, so the constant-cofactor-only prove_scale_rat/prove_merge_rat/prove_const_combination_rat the fractional-cast lane built is not by itself sufficient. Every coefficient-collapse step is either a Rat ring lemma the kernel re-derives (left_distrib, right_distrib, mul_assoc, mul_comm, mul_zero, add_zero) or a single Eq.refl ascription the kernel's OWN Rat.mul/Rat.add computation checks. The declaration's axiom_footprint is asserted EMPTY and its kind asserted Declaration::Theorem in the same test.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::partial_fractions::partial_fractions (untrusted producer: exact polynomial division, Berlekamp-Zassenhaus factorization with multiplicities, exact-rational Gauss-Jordan linear solve)",
+        "axeyum_cas::partial_fractions::verify_partial_fraction_certificate (independent CAS-internal checker, re-asserted accepting this exact certificate before the kernel step)",
+        "rat_prelude::cas_partial_fractions_bridge_tests::prove_poly_combination_rat and its three layers (the proof-emitting normalizer, entirely Rust-side and entirely untrusted -- it only proposes a term)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated one-variable Eq Rat from the supplied proof term, and supplies the axiom_footprint the test asserts empty)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_partial_fractions_bridge_tests::tests::cas_partial_fractions_mixed_general_case_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_partial_fractions_bridge_tests::tests::cas_partial_fractions_mixed_general_case_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 12,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_partial_fractions_bridge_tests.rs",
+      "notes": "Measured wall-clock 8.03s for this test alone (debug, uncontended, scripts/cargo-serialized.sh) -- comparable to the medians-concurrent sibling's 8.14s despite needing genuine poly x poly multiplication, because both polynomials involved are small (the largest product is a 2-term numerator times a 3-term cofactor). MUTATION-VERIFIED both halves through DIFFERENT guards, each reverted after checking: (a) STATEMENT guard -- `remaining_power = mult - term.power + 1` (an off-by-one in the cofactor exponent, in the Rust-side numerator_cofactor_pairs helper) kills BOTH the standalone coefficient_matching_reconstruction_equals_p_exactly test (a Rust-level assert_eq! against cert.p) and this test's own `merged == p_for_build` assertion, before add_declaration is ever called -- pinning the statement to the certificate rather than to whatever the emitter produced. (b) KERNEL GATE guard -- swapping mul_assoc's argument order in the NEW prove_head_product_rat (`&[a_rat, a_mono, b_e]` -> `&[b_e, a_mono, a_rat]`, same arity, wrong instantiation) leaves the Rust-side statement UNCHANGED (merged == p_for_build still holds) and makes add_declaration reject with TypeMismatch, showing the PROOF is genuinely re-derived by the trust anchor rather than merely restating a Rust-side computation."
+    },
+    {
+      "id": "translator-and-reconstruction-checked-against-numbers",
+      "kind": "instance-pin",
+      "supports": "That dense_to_rat_poly (the new Vec<Rational> -> RatPoly translator this fact required) reads values consistently with axeyum_ir::poly's own dense evaluator, and that the Rust-side numerator/cofactor reconstruction recipe genuinely reproduces cert.p exactly -- neither of which the kernel can see, since it never sees a Vec<Rational>. Includes a negative control: perturbing one pair's numerator by +1 and confirming the reconstruction no longer equals p.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::partial_fractions::partial_fractions (produces the certificate being read)",
+        "axeyum_ir::poly::eval_rat_poly (independent dense evaluation, used only in tests)",
+        "rat_prelude::cas_partial_fractions_bridge_tests::eval_rat_poly (independent sparse evaluation, used only in tests)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_partial_fractions_bridge_tests::tests:: 2>/dev/null | grep -cE '^test result: ok\\. 4 passed; 0 failed'",
+      "checker_seconds": 12,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_partial_fractions_bridge_tests.rs",
+      "notes": "Evaluation point (x=3) is single-digit on purpose (unary Nat numerals make cost superlinear in the largest value formed)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane cas-partial-fractions: rat_prelude::cas_partial_fractions_bridge_tests (crates/axeyum-lean-kernel/src/rat_prelude/cas_partial_fractions_bridge_tests.rs)",
+    "source": "the coefficient-matching identity of axeyum_cas::partial_fractions's mixed_general_case test, produced by axeyum_cas::partial_fractions::partial_fractions on p = x+1, q = (x-1)^2(x^2+1)",
+    "prior_art": [
+      {
+        "who": "classical algebra (undetermined coefficients method)",
+        "what": "the partial-fraction decomposition theorem for rational functions, specialised to a mixed repeated-linear/irreducible-quadratic denominator",
+        "year": 1702,
+        "where": "classical algebra/calculus",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:cas-partial-fractions-mixed-general-case, not an edit to it, for the same reason the geometry cofactor-identity bridges are siblings of their parent certificates: folding this evidence into the parent would make scripts/validate-facts.py's classify_cas_certificate_fact label the WHOLE certificate -- including the structural guards and the rational-function-equality form -- as kernel-reconstructed, overclaiming exactly what this fact's axiom_footprint disclaims. CORRECTING THE PRIOR HANDOFF: docs/plan/status/317-cas-fractional-cast.md named F:cas-partial-fractions-mixed-general-case 'the cast only -- next lane's cheapest target', in a table whose other rows were all GeometryCertificate facts. That characterisation does not survive reading the fact: PartialFractionCertificate is a completely different CAS module (axeyum_cas::partial_fractions, not geometry_certify) with no existing translator and no reconstruction of any kind in this kernel before this lane. What was actually needed, beyond the landed fractional cast: (1) a brand-new translator (dense_to_rat_poly) for this certificate's Vec<Rational>-dense/single-variable shape, since no GeometryCertificate-shaped translator applies; (2) a Rational-coefficient generalisation of cas_geometry_mul_bridge_tests's i128-only polynomial x polynomial machinery (prove_head_product_rat/prove_term_mul_rat/prove_poly_mul_rat/prove_poly_combination_rat), because the quadratic factor's numerator (Cx+D) is genuinely non-constant and the constant-cofactor-only cast lane's prove_scale_rat/prove_merge_rat cannot express that multiplication. Both pieces are net-new work by this lane, not the reuse the prior handoff implied. cas-certificate ledger count after this fact: kernel-reconstructed 11, cas-internal 28 (up from 10/28 before this lane; F:cas-partial-fractions-mixed-general-case itself stays cas-internal, unmodified, per the sibling-fact convention -- the new count reflects this new fact joining the ledger, not a reclassification of the old one)."
+}
