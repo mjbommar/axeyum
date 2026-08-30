@@ -13,3 +13,4 @@ interfaces as implemented until those routes run and their controls fire.
 <!-- plan-section: landed-changes -->
 
 | 2026-08-30 | `9b0ba431c` | ADR-0811 and the first `axeyum-machine` A0 word/state/memory/decode/step/run slice. Seventeen direct tests cover every opcode family and branch predicate, exhaustive 8-bit arithmetic flags, modular code wrap, traps, byte order, terminal stuttering, and negative controls. |
+| 2026-08-30 | `5e8f4dabb` | `axeyum-machine-evidence` binds the compiled A0 semantic-source digest and emits/recomputes the first finite computation report: all 65,792 8- and 16-bit byte round trips. Reversed byte order and source-digest mutation controls fire with categorized mismatches. |
