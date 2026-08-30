@@ -58,7 +58,7 @@ use crate::KernelError;
 use crate::expr::ExprId;
 
 /// `succ (mul 2 t)` — the `t`-th odd number, `2t+1`.
-fn exponent_of(d: &mut NatDev<'_>, t: ExprId) -> ExprId {
+pub(super) fn exponent_of(d: &mut NatDev<'_>, t: ExprId) -> ExprId {
     let two = d.num(2);
     let e = d.mul(two, t);
     d.succ(e)
@@ -432,7 +432,7 @@ pub(super) fn declare_dvd_pow_add_one_of_odd_mul_exp(
 // ============================================================================
 
 /// `Ne x zero`, i.e. `Eq x zero → False`.
-fn ne_zero_ty(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+pub(super) fn ne_zero_ty(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let eq_ty = d.eq(x, zero);
@@ -452,7 +452,7 @@ fn pow2_pred(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
 }
 
 /// `∃ m, Eq n (pow 2 m)`.
-fn pow2_disjunct(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+pub(super) fn pow2_disjunct(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
     let one = d.level_one();
@@ -489,7 +489,7 @@ fn odd_pred(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
 }
 
 /// `∃ e t, Eq n (mul e (exponent_of t)) ∧ Ne t zero`.
-fn odd_disjunct(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+pub(super) fn odd_disjunct(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
     let one = d.level_one();
@@ -499,7 +499,7 @@ fn odd_disjunct(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
 }
 
 /// `Or (pow2_disjunct n) (odd_disjunct n)`.
-fn disj_stmt(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+pub(super) fn disj_stmt(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
     let p = *p;
     let a = pow2_disjunct(d, &p, n);
     let b = odd_disjunct(d, &p, n);
@@ -507,7 +507,13 @@ fn disj_stmt(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
 }
 
 /// `Exists.intro` at domain `Nat`.
-fn intro_exists_nat(d: &mut NatDev<'_>, p: &NatPrelude, pred: ExprId, witness: ExprId, proof: ExprId) -> ExprId {
+fn intro_exists_nat(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pred: ExprId,
+    witness: ExprId,
+    proof: ExprId,
+) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
     let one = d.level_one();
@@ -631,6 +637,7 @@ fn even_base(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, hne: ExprId, goal: E
 
 /// EVEN case, `half = succ hp`: bound `half ≤ f` and recurse via `ih`, then
 /// re-assemble the answer at `n` from the answer at `half` (`n = 2*half`).
+#[allow(clippy::too_many_arguments)]
 fn even_succ(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -678,7 +685,8 @@ fn even_succ(
     let pow2_ty_half = pow2_disjunct(d, &p, half_s);
     let odd_ty_half = odd_disjunct(d, &p, half_s);
 
-    let pow2_minor = exists_elim_arrow_nat(d, &p, pow2_pred(d, half_s), goal, &|d, m, hm| {
+    let pow2_pred_half = pow2_pred(d, half_s);
+    let pow2_minor = exists_elim_arrow_nat(d, &p, pow2_pred_half, goal, &|d, m, hm| {
         // hm : Eq half_s (pow 2 m)
         let two = d.num(2);
         let pow2m = d.pow(two, m);
@@ -713,7 +721,8 @@ fn even_succ(
         d.const_app(p.logic.or_inl, &[pow2_ty_n, odd_ty_n, ex_proof])
     });
 
-    let odd_minor = exists_elim_arrow_nat(d, &p, odd_pred(d, &p, half_s), goal, &|d, e2, he_outer| {
+    let odd_pred_half = odd_pred(d, &p, half_s);
+    let odd_minor = exists_elim_arrow_nat(d, &p, odd_pred_half, goal, &|d, e2, he_outer| {
         let inner_pred = odd_inner_pred(d, &p, half_s, e2);
         elim_exists_nat(d, &p, inner_pred, goal, he_outer, &|d, t2, hand| {
             let dexp2 = exponent_of(d, t2);
@@ -726,7 +735,10 @@ fn even_succ(
             let two = d.num(2);
             let mul_2_half_s = d.mul(two, half_s);
             let mul_2_prod2 = d.mul(two, prod2);
-            let mul_2e2_dexp2 = { let m2e2 = d.mul(two, e2); d.mul(m2e2, dexp2) };
+            let mul_2e2_dexp2 = {
+                let m2e2 = d.mul(two, e2);
+                d.mul(m2e2, dexp2)
+            };
 
             let two_mul_eq3 = two_mul_eq_add_self(d, &p, half_s); // Eq(mul_2_half_s, hh)
             let eq_hh_mul2halfs = d.symm(mul_2_half_s, hh, two_mul_eq3); // Eq(hh, mul_2_half_s)
@@ -747,7 +759,8 @@ fn even_succ(
 
             let net_ty2 = ne_zero_ty(d, &p, t2);
             let eqn_ty2 = d.eq(n, mul_2e2_dexp2);
-            let and_proof = d.const_app(p.logic.and_intro, &[eqn_ty2, net_ty2, witness_eq2, hne_t2]);
+            let and_proof =
+                d.const_app(p.logic.and_intro, &[eqn_ty2, net_ty2, witness_eq2, hne_t2]);
 
             let pred_t_final = odd_inner_pred(d, &p, n, mul_2e2);
             let ex_t_final = intro_exists_nat(d, &p, pred_t_final, t2, and_proof);
@@ -760,12 +773,21 @@ fn even_succ(
         })
     });
 
-    let result = or_cases(d, &p, pow2_ty_half, odd_ty_half, goal, pow2_minor, odd_minor, ih_result);
+    let result = or_cases(
+        d,
+        &p,
+        pow2_ty_half,
+        odd_ty_half,
+        goal,
+        pow2_minor,
+        odd_minor,
+        ih_result,
+    );
     d.lam_fv(heq_fv, heq_ty, result)
 }
 
 /// ODD case, `half = 0`: `n = succ(half+half) = 1 = 2^0`.
-fn odd_base(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, goal: ExprId) -> ExprId {
+fn odd_base(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, _goal: ExprId) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let zz = d.add(zero, zero);
@@ -797,7 +819,7 @@ fn odd_base(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, goal: ExprId) -> Expr
 
 /// ODD case, `half = succ hp`: answer directly with `e := 1`, `t := half`
 /// (`half ≠ 0` for free).
-fn odd_succ(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, goal: ExprId, hp: ExprId) -> ExprId {
+fn odd_succ(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, _goal: ExprId, hp: ExprId) -> ExprId {
     let p = *p;
     let half_s = d.succ(hp);
     let hh = d.add(half_s, half_s);
@@ -819,7 +841,14 @@ fn odd_succ(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, goal: ExprId, hp: Exp
     let one_mul_eq = d.lemma(p.one_mul, &[dexp3]); // Eq(mul_one_dexp3, dexp3)
     let symm_one_mul = d.symm(mul_one_dexp3, dexp3, one_mul_eq); // Eq(dexp3, mul_one_dexp3)
 
-    let (_, final_eq) = d.chain(n, &[(shh, heqv), (dexp3, congr_succ), (mul_one_dexp3, symm_one_mul)]);
+    let (_, final_eq) = d.chain(
+        n,
+        &[
+            (shh, heqv),
+            (dexp3, congr_succ),
+            (mul_one_dexp3, symm_one_mul),
+        ],
+    );
 
     let ne_half_s = {
         let h_fv = d.fresh_fvar();
@@ -957,6 +986,7 @@ pub(super) fn declare_pow_two_or_has_odd_factor(
 /// The two dead-end contradictions in [`pow_of_pow_add_prime_contradiction`]:
 /// the exhibited divisor `a^e+1` is `1` (impossible, `a^e+1 ≥ 2` since
 /// `a > 1`) or is `a^n+1` (impossible, `e < n` forces `a^e ≠ a^n`).
+#[allow(clippy::too_many_arguments)]
 fn derive_e_lt_n(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -1130,7 +1160,16 @@ fn pow_of_pow_add_prime_contradiction(
         d.lam_fv(h2_fv, eq_base_prime_ty, body)
     };
 
-    or_cases(d, &p, eq_base_one_ty, eq_base_prime_ty, goal, minor_a, minor_b, case_result)
+    or_cases(
+        d,
+        &p,
+        eq_base_one_ty,
+        eq_base_prime_ty,
+        goal,
+        minor_a,
+        minor_b,
+        case_result,
+    )
 }
 
 /// The proof body of `Nat.pow_of_pow_add_prime`, given `a`, `n` and the
@@ -1158,14 +1197,24 @@ fn pow_of_pow_add_prime_body(
         let hex = d.kernel().fvar(hex_fv);
         d.lam_fv(hex_fv, pow2_ty, hex)
     };
-    let right_minor = exists_elim_arrow_nat(d, &p, odd_pred(d, &p, n), goal, &|d, e, he| {
+    let odd_pred_n = odd_pred(d, &p, n);
+    let right_minor = exists_elim_arrow_nat(d, &p, odd_pred_n, goal, &|d, e, he| {
         let inner_pred = odd_inner_pred(d, &p, n, e);
         elim_exists_nat(d, &p, inner_pred, goal, he, &|d, t, hand| {
             pow_of_pow_add_prime_contradiction(d, &p, a, n, e, t, ha, hn, hp, hand, goal)
         })
     });
 
-    or_cases(d, &p, pow2_ty, odd_ty, goal, left_minor, right_minor, disj_applied)
+    or_cases(
+        d,
+        &p,
+        pow2_ty,
+        odd_ty,
+        goal,
+        left_minor,
+        right_minor,
+        disj_applied,
+    )
 }
 
 /// `Nat.pow_of_pow_add_prime : ∀ a n, Lt one a → Ne n zero → PrimeCond
