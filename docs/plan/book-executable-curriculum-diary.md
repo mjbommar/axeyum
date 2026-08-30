@@ -352,3 +352,39 @@ domains. Larger widths have named boundary coverage. The compiled source digest
 binds the report to the implementation, and the semantic package advances to
 version 7; it does not independently prove the Rust compiler or integer
 oracles.
+
+## 2026-08-30 — canonical complete-state artifact boundary
+
+The next book audit found that `OP.a0.state-memory` mixed three different
+claims. Concrete state, observation, finite memory, range checking, and trapped
+effects already execute. Canonical serialization of arbitrary complete states
+did not exist, while the universal memory-frame theorem is a separate symbolic
+claim and must not be inferred from either implementation tests or a codec.
+
+Added a dependency-free canonical binary codec to `axeyum-machine`. The format
+fixes magic, version, architectural width, full finite-memory length and bytes,
+register order, fixed-width little-endian integers, condition-bit positions,
+outcome tags, and all four trap payloads. Encoding rejects register or PC width
+drift, out-of-width trap locations, and a data-range trap whose recorded memory
+length differs from the complete state. Decoding rejects bad magic or version,
+unsupported widths, truncated fields, out-of-width register/PC/trap values,
+reserved condition bits, unknown outcome and trap tags, inconsistent trap
+memory length, and trailing bytes.
+
+Direct tests round-trip and byte-for-byte re-encode running, halted, and all
+four trapped states. A second test checks ten independent malformed encodings
+and malformed in-memory states. The source-bound report expands this to all
+eight supported widths and all six outcome forms: 48 complete canonical state
+round trips plus ten malformed encodings. Its load-bearing mutation accepts one
+trailing byte. Recomputed evidence then changes from ten rejected mutations to
+nine and exits with `semantic-mismatch`.
+
+The positive producer and checker pass directly. `axeyum-machine` has 24
+integration tests, the evidence crate has twelve route/control tests across its
+test binaries, and strict all-target Clippy passes. The semantic package moves
+to version 8 and declares `canonical-state-codec`.
+
+This route establishes a canonical artifact representation for the named test
+population and rejects the declared malformed classes. It is not exhaustive
+over all possible states, and it does not establish the still-separate
+universal memory-frame theorem or a Python projection.
