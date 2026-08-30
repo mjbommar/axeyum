@@ -1289,6 +1289,41 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   is a snapshot of the day it was written, and this entry is the second one to
   go stale in the direction that says "impossible" about something cheap.
 
+- **A LANE SENT TO UNBLOCK A HELD-OUT FAMILY DECLARES THE CONSTRUCTION AND
+  NOTHING ELSE — declaring the ordinary supporting theorems alongside it SPENDS
+  the family it was opening.** Measured 2026-08-30, and it was the coordinator's
+  brief that caused it.
+
+  ADR-0645 measured that no held-out-safe family remained and named the exact
+  unblock: declare `Nat.dist` and `Nat.nth`. Its screen said Dist was clean,
+  **0 of 18** — measured before `Nat.dist` existed. The lane declared the
+  definition and, as good practice everywhere else in this repository, **seven
+  supporting theorems**. Five carry exact Mathlib mirror names in the Dist pool,
+  and `dist_comm`/`dist_self` sort into the alphabetically-first ten a draw
+  takes. R9 then correctly refused the family:
+
+      GUARD REFUSED: R9 2 held-out candidate(s) ... not blind:
+        [('natural-distance','Nat.dist_comm'), ('natural-distance','Nat.dist_self')]
+
+  Control, with Dist moved to development: `GUARD PASSED -- 300 entries, 120
+  held-out`. So that one screen is the single mechanical blocker, and the
+  contamination is real rather than incidental.
+
+  The sibling lane's `Nat.nth` declared **the construction only** (`Nat.nth`,
+  `Nat.nthAux`, both `Definition`s) and its family survived at 0 of 11. Same
+  brief, same session, opposite outcome, and the difference is exactly the extra
+  theorems.
+
+  This is ADR-0542's contamination shape arriving through the door marked
+  "helpful", and R9 caught it at the door rather than after a draw. Two rules:
+
+  - **Brief it explicitly.** "Declare the definition and its evaluation test.
+    Do NOT declare theorems ABOUT it" — the useful proofs can land the day after
+    the draw, from development, where they cost nothing.
+  - **Re-screen after declaring, before drawing.** A readiness figure measured
+    before the unblock existed is a figure about a different tree; ADR-0645's
+    `0 of 18` was honest when written and false by the time it mattered.
+
 - **A BLIND EVALUATION POPULATION IS A SHARED RESOURCE WITH NO OWNER, AND
   TOUCHING ONE MEMBER SPENDS THE WHOLE FAMILY.** `artifacts/autogenesis/nursery-v1.json`
   preregisters 214 Mathlib propositions into train / development / **held-out**,
