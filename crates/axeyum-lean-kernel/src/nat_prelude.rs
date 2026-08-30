@@ -163,6 +163,7 @@ mod dvd_mul_split;
 mod euler;
 mod factorization;
 mod fermat;
+mod fermat_number;
 mod fibonacci;
 mod finite;
 mod finite_set;
@@ -275,6 +276,7 @@ use dvd_mul_split::declare_dvd_mul_split;
 use euler::declare_mod_eq_cancel;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
+use fermat_number::declare_fermat_number_all;
 use fibonacci::declare_fib_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
@@ -4133,6 +4135,14 @@ pub struct NatPrelude {
     /// 0 n`. Type differs from Mathlib's `(ℕ → Prop) → ℕ → ℕ`; any `ml430`
     /// mirror against `Nat.nth` stays `open` (see `nth.rs`).
     pub nth: NameId,
+
+    // -- `nat-fermat-number` lane: `fermat_number.rs` —
+    // `docs/research/09-decisions/adr-0653-declaring-the-unblocking-constant-contaminated-the-family-it-opened.md`.
+    /// `Nat.fermatNumber n := add (pow 2 (pow 2 n)) 1` — Mathlib's own
+    /// definition (`Mathlib.NumberTheory.Fermat`), over our `pow`/`add`.
+    /// **Definition only, deliberately** — see `fermat_number.rs`'s module
+    /// doc for why no theorem about it is declared here.
+    pub fermat_number: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4939,6 +4949,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dist_succ_succ: kernel.name_str(nat, "dist_succ_succ"),
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
+            fermat_number: kernel.name_str(nat, "fermatNumber"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -5537,6 +5548,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Needs only `Nat.log` (`declare_log_all`, far above). Nothing needs
         // it, so it goes last.
         declare_log2_all(&mut d, &p)?;
+        // `Nat.fermatNumber`: needs only `Nat.pow`/`Nat.add`
+        // (`declare_arithmetic`, far above). Nothing needs it, so it goes
+        // last — `docs/research/09-decisions/adr-0653-…`.
+        declare_fermat_number_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

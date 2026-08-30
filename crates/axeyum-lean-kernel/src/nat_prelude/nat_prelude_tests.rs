@@ -529,6 +529,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.dist,
         p.nth_aux,
         p.nth,
+        // `nat-fermat-number` lane (`docs/research/09-decisions/
+        // adr-0653-declaring-the-unblocking-constant-contaminated-the-
+        // family-it-opened.md`). Definition only, deliberately.
+        p.fermat_number,
     ]
 }
 
@@ -18536,5 +18540,78 @@ fn the_crt_self_map_permutes_a_coprime_block_and_collides_on_a_non_coprime_one()
     assert!(
         f.k.def_eq(got_2_4, want_2_4),
         "the second colliding input must be proved below the bound"
+    );
+}
+
+/// `Nat.fermatNumber n = 2^(2^n) + 1` at concrete, hand-computed values —
+/// `docs/research/09-decisions/adr-0653-declaring-the-unblocking-constant-contaminated-the-family-it-opened.md`.
+/// The kernel's admission of the `Definition` only confirms it type-checks
+/// (`Nat -> Nat`), not that it computes the right thing (`CLAUDE.md`'s "THE
+/// TRUSTED GATE CANNOT TELL YOU A `Definition` IS WRONG" entry), so this test
+/// is the only thing standing between a type-correct `Nat -> Nat` function and
+/// the actual Fermat numbers.
+///
+/// Hand-computed:
+///   fermatNumber 0 = 2^(2^0) + 1 = 2^1 + 1 = 3
+///   fermatNumber 1 = 2^(2^1) + 1 = 2^2 + 1 = 5
+///   fermatNumber 2 = 2^(2^2) + 1 = 2^4 + 1 = 17
+/// matching Mathlib's own `fermatNumber_zero`/`fermatNumber_one`/
+/// `fermatNumber_two` (`Mathlib/NumberTheory/Fermat.lean`, pinned commit
+/// `c5ea0035…`, each `:= rfl`).
+///
+/// Deliberately stops at `n = 2`: every numeral here is a unary `succ`-tower,
+/// and `fermatNumber` grows doubly exponentially, so `n = 3` (`257`, formed
+/// magnitude `2^8 = 256`) is the next step and `n = 4` (`65537`) would be
+/// catastrophic (`CLAUDE.md`'s "EVERY `Nat` NUMERAL THIS PRELUDE BUILDS IS
+/// UNARY" entry).
+///
+/// Negative controls discriminate against the most likely construction bugs:
+/// dropping the trailing `+ 1`, and computing `n + 1` in place of the nested
+/// exponent (`2^n + 1` instead of `2^(2^n) + 1`).
+#[test]
+fn fermat_number_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let sixteen = f.num(16);
+    let seventeen = f.num(17);
+
+    let f0 = f.const_app(p.fermat_number, &[zero]);
+    assert!(f.k.def_eq(f0, three), "fermatNumber 0 must reduce to 3");
+    assert!(
+        !f.k.def_eq(f0, two),
+        "negative control: fermatNumber 0 must NOT be def-eq to 2 (the \
+         value a dropped `+ 1` would give: 2^(2^0) = 2)"
+    );
+
+    let f1 = f.const_app(p.fermat_number, &[one]);
+    assert!(f.k.def_eq(f1, five), "fermatNumber 1 must reduce to 5");
+    assert!(
+        !f.k.def_eq(f1, four),
+        "negative control: fermatNumber 1 must NOT be def-eq to 4 (the \
+         value a dropped `+ 1` would give: 2^(2^1) = 4)"
+    );
+
+    let f2 = f.const_app(p.fermat_number, &[two]);
+    assert!(
+        f.k.def_eq(f2, seventeen),
+        "fermatNumber 2 must reduce to 17"
+    );
+    assert!(
+        !f.k.def_eq(f2, sixteen),
+        "negative control: fermatNumber 2 must NOT be def-eq to 16 (a \
+         dropped `+ 1`)"
+    );
+    assert!(
+        !f.k.def_eq(f2, five),
+        "negative control: fermatNumber 2 must NOT be def-eq to 5 (the \
+         value computing 2^n + 1 instead of 2^(2^n) + 1 would give at n=2: \
+         2^2 + 1 = 5, catching a missing nested-exponent bug)"
     );
 }
