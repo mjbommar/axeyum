@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-parallelogram-diagonals-bisect-kernel-checked",
+  "title": "the parallelogram-diagonals-bisect certificate's two cofactor identities (midpoint x and y agreement) are kernel-reconstructed over Rat, needing both the fractional cast and the Rational poly x poly bridge",
+  "statement": "For F:geometry-parallelogram-diagonals-bisect's certificate (A, B, C, D coordinates, saturation variable Zinv0 witnessing 1/collinear(A,B,D)), both of the certificate's cofactor identities -- conclusion = sum_i cofactor_i * generator_i, for the midpoint-x agreement ((A.x+C.x)/2 = (B.x+D.x)/2) and midpoint-y agreement separately -- are reconstructed through crate::Kernel::add_declaration at symbolic universally quantified Rat variables (ax, ay, bx, by, cx, cy, dx, dy, Zinv0). Here (unlike centroid-divides-medians) the two parallelism generators are integer-coefficient; the genuine +-1/2 fractions (needing the fractional-literal cast) and a genuinely non-constant, multi-term cofactor (needing the Rational poly x poly bridge) sit in the COFACTORS and the CONCLUSION instead.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (forall ((ax Rat) (ay Rat) (bx Rat) (by Rat) (cx Rat) (cy Rat) (dx Rat) (dy Rat) (Zinv0 Rat))\n  (and (= (- (* (/ 1 2) (+ ax cx)) (* (/ 1 2) (+ bx dx)))\n          (+ (* c0x g0) (* c1x g1) (* c2x g2)))\n       (= (- (* (/ 1 2) (+ ay cy)) (* (/ 1 2) (+ by dy)))\n          (+ (* c0y g0) (* c1y g1) (* c2y g2))))))",
+    "fragment": "exact-rational-geometry-cofactor-identity",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "dx",
+      "dy",
+      "Zinv0"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:geometry-parallelogram-diagonals-bisect"
+  ],
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a Kernel::add_declaration acceptance whose axiom_footprint is asserted EMPTY in the test itself -- but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "cas.does-not-prove-the-geometry: the kernel sees nine Rat variables and one algebraic identity per conclusion; that ax/ay/... are point coordinates and that the generators are 'AB parallel to DC' / 'BC parallel to AD' / the non-degeneracy saturation is a modelling choice made in axeyum_cas::geometry_corpus and reproduced by the translator, not discharged by the kernel.",
+    "cas.geometric-conditional-not-established: the identity conclusion = sum cofactor_i*generator_i is proved for both conclusions; the implication (for all i, generator_i = 0) -> conclusion = 0 is one Rat rewrite away and is NOT taken -- no hypothesis is discharged.",
+    "cas.zinv0-uninterpreted: Zinv0 is an uninterpreted universally quantified Rat variable in the reconstructed statement. The reading that it witnesses the inverse of a nonzero collinearity determinant (i.e. that A, B, D are not collinear, so the parallelogram is not flat), and hence that the theorem is vacuous on degenerate configurations, is entirely outside what the kernel term expresses -- the certificate's OWN statement field says the geometric claim is FALSE without that reading, but the kernel term does not know it.",
+    "cas.characteristic-zero-specialisation: a rational-coefficient identity holds in every Q-algebra; this reconstruction is over Rat, not CReal, so nothing here says the coordinates range over the real numbers.",
+    "cas.two-conclusions-proved-separately: the midpoint-x and midpoint-y cofactor identities are admitted as TWO SEPARATE kernel theorems (Check.geometry_parallelogram_cofactor_identity_x and _y), each over its own copy of the shared coordinate variables. Nothing here establishes as a single kernel-checked statement that one parallelogram's diagonals simultaneously satisfy both.",
+    "cas.translator-checked-by-evaluation-only: axeyum_cas::mvpoly::MvPoly -> this kernel's sparse RatPoly (rat_prelude::cas_geometry_frac_bridge_tests::rat_poly) is checked against numbers (tests::parallelogram_certificate_identity_holds_at_integer_points, at the certificate's own unit-square generic witness), never by the trusted gate -- the kernel never sees an MvPoly or a Rational directly."
+  ],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-parallelogram-diagonals-bisect-cofactor-identities",
+      "kind": "kernel-term",
+      "supports": "midpoint(A,C).x = midpoint(B,D).x = sum_i cofactor_i*generator_i and the y-coordinate analogue, each at symbolic universally quantified Rat variables, admitted by crate::Kernel::add_declaration as Check.geometry_parallelogram_cofactor_identity_x and Check.geometry_parallelogram_cofactor_identity_y. The certificate is NOT hand-copied: it is fetched from axeyum_cas::geometry_corpus::corpus() and re-certified by axeyum_cas::geometry_certify::certify, the same call path F:geometry-parallelogram-diagonals-bisect's own evidence exercises. The reconstruction reuses rat_prelude::cas_partial_fractions_bridge_tests::prove_poly_combination_rat (built by an earlier lane for a different certificate, widened here from module-private to pub(super)) unchanged: the certificate's own (cofactor, generator) lists are passed to it directly, with no new proof-emitting code needed -- confirming this lane's brief that the machinery was 'already generic enough'. Each emitted normal form is asserted equal to the certificate's own conclusion polynomial BEFORE the kernel is invoked (assert_eq!(merged, concl_for_build)), and each declaration's axiom_footprint is asserted EMPTY and its kind asserted Declaration::Theorem in the same test.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (untrusted cofactor-tracked Buchberger search, the SAME producer F:geometry-parallelogram-diagonals-bisect cites)",
+        "rat_prelude::cas_partial_fractions_bridge_tests::prove_poly_combination_rat and its layers (the proof-emitting normalizer, entirely Rust-side and entirely untrusted -- it only proposes a term)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives each stated Eq Rat from the supplied proof term, and supplies the axiom_footprint each test asserts empty)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_pair_bridge_tests::tests::geometry_parallelogram_cofactor_identity 2>/dev/null | /usr/bin/grep -cE '^test result: ok\\. 2 passed; 0 failed'",
+      "checker_seconds": 20,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_pair_bridge_tests.rs",
+      "notes": "Verified both directions with /usr/bin/grep -cE explicitly (not the interactive ugrep): the real filter (matching both _x_kernel_checked and _y_kernel_checked, 'test result: ok. 2 passed') prints 1, exit 0; a fabricated test-name suffix prints 0, exit 1. Measured wall-clock, debug, uncontended: 12.27s (x alone), 11.83s (y alone). Comparable to medians-concurrent's 8.14s and noticeably cheaper than rhombus's 152.79s: although this certificate (unlike rhombus) needs the fractional cast for its cofactors and conclusion, its maximum cofactor is only 4 terms against rhombus's 12."
+    },
+    {
+      "id": "translator-checked-against-numbers-parallelogram",
+      "kind": "instance-pin",
+      "supports": "That rat_poly (the MvPoly -> RatPoly translator, built by an earlier lane and reused here unchanged) reads this certificate's fractional and non-constant coefficients consistently with independent evaluation, for BOTH conclusions, at the certificate's own generic witness (the unit square).",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (produces the certificate being read)",
+        "rat_prelude::cas_geometry_frac_bridge_tests::eval_rat_poly (independent sparse evaluation, used only in tests)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_pair_bridge_tests::tests::parallelogram_certificate_identity_holds_at_integer_points -- --exact 2>/dev/null | /usr/bin/grep -cE '^test rat_prelude::cas_geometry_pair_bridge_tests::tests::parallelogram_certificate_identity_holds_at_integer_points \\.\\.\\. ok$'",
+      "checker_seconds": 8,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_pair_bridge_tests.rs",
+      "notes": "This certificate's fractional/non-constant coefficients sit in the COFACTORS and CONCLUSION rather than the generators -- the opposite of centroid-divides-medians -- so the module's shared identity_holds_at_point helper checks all three locations (generators, cofactors, conclusion) rather than assuming one, after the first version of this assertion (checking only the generators) failed here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane cas-geometry-pair: rat_prelude::cas_geometry_pair_bridge_tests (crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_pair_bridge_tests.rs)",
+    "source": "F:geometry-parallelogram-diagonals-bisect's own certificate, artifacts/geometry-certificates/parallelogram-diagonals-bisect.json, re-fetched live from axeyum_cas::geometry_corpus rather than read from the JSON directly",
+    "prior_art": [
+      {
+        "who": "Euclid",
+        "what": "in a parallelogram the diameters bisect one another",
+        "where": "Elements I.34 (and its corollary)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:geometry-parallelogram-diagonals-bisect, not an edit to it, for the same reason the rhombus/orthocentre/medians-concurrent/partial-fractions/centroid cofactor-identity bridges are siblings of their parents. docs/plan/status/314-cas-prove-mul.md and 317-cas-fractional-cast.md both named this certificate as needing 'prove_mul AND fractional cast' -- that sizing HELD, but neither handoff mentioned this certificate has TWO conclusions (midpoint-x and midpoint-y agreement), which needed two separate kernel theorems. cas-certificate ledger count after this fact: kernel-reconstructed 13, cas-internal 28 (up from 12/28 after the sibling F:geometry-centroid-divides-medians-kernel-checked fact landed in the same session; F:geometry-parallelogram-diagonals-bisect itself stays cas-internal, unmodified, per the sibling-fact convention)."
+}

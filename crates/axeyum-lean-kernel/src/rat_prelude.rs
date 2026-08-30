@@ -2131,3 +2131,6 @@ mod cas_geometry_frac_bridge_tests;
 
 #[cfg(test)]
 mod cas_partial_fractions_bridge_tests;
+
+#[cfg(test)]
+mod cas_geometry_pair_bridge_tests;
