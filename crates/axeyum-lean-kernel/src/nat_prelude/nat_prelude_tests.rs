@@ -1079,6 +1079,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.binary_rec_succ,
         p.binary_rec_rebuilds_thirteen,
         p.binary_rec_rebuilds_six,
+        p.lt_of_mul_lt_mul_left,
+        p.lt_of_mul_lt_mul_right,
+        p.mul_lt_mul_left,
+        p.mul_lt_mul_right,
+        p.div_lt_of_lt_mul,
     ]
 }
 
@@ -5352,6 +5357,143 @@ fn positive_successor_multiplication_reflects_order() {
     });
 }
 
+/// The five `Nat` ordering-under-multiplication/division mirrors
+/// (`mul_order_lemmas.rs`), each applied at concrete numerals -- including,
+/// for the two positivity-hypothesis lemmas, the SMALLEST value satisfying
+/// the hypothesis (`a = 1`), which is exactly where an off-by-one in the
+/// side condition would show.
+#[test]
+fn mul_order_lemmas_apply_at_concrete_and_boundary_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // `Lt n m` for concrete numerals is `Le (succ n) m`, witnessed via
+    // `le_intro (succ n) m k proof` with `k := m - n - 1` (mirrors
+    // `mod_eq_self_of_lt_applies_at_concrete_points`, above).
+    let lt_witness = |f: &mut Fixture, n_val: u32, m_val: u32| -> ExprId {
+        let n = f.num(n_val);
+        let m = f.num(m_val);
+        let sn = f.succ(n);
+        let k = f.num(m_val - n_val - 1);
+        let sn_plus_k = f.add(sn, k);
+        let witness = f.refl(sn_plus_k);
+        f.lemma(p.le_intro, &[sn, m, k, witness])
+    };
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+
+    // `lt_of_mul_lt_mul_left`/`_right`: NO positivity hypothesis. Discriminating
+    // numerals 2*3=6 < 2*5=10 -> 3 < 5.
+    let hyp_6_lt_10 = lt_witness(&mut f, 6, 10);
+    let left_cancel = f.lemma(p.lt_of_mul_lt_mul_left, &[two, three, five, hyp_6_lt_10]);
+    let left_cancel_ty =
+        f.k.infer(left_cancel)
+            .unwrap_or_else(|e| panic!("lt_of_mul_lt_mul_left should infer: {}", f.explain(&e)));
+    let expect_3_lt_5 = f.lt(three, five);
+    assert!(
+        f.k.def_eq(left_cancel_ty, expect_3_lt_5),
+        "lt_of_mul_lt_mul_left(2,3,5) must conclude 3 < 5"
+    );
+
+    let hyp_6_lt_10_right = lt_witness(&mut f, 6, 10);
+    let right_cancel = f.lemma(
+        p.lt_of_mul_lt_mul_right,
+        &[two, three, five, hyp_6_lt_10_right],
+    );
+    let right_cancel_ty =
+        f.k.infer(right_cancel)
+            .unwrap_or_else(|e| panic!("lt_of_mul_lt_mul_right should infer: {}", f.explain(&e)));
+    assert!(
+        f.k.def_eq(right_cancel_ty, expect_3_lt_5),
+        "lt_of_mul_lt_mul_right(2,3,5) must conclude 3 < 5"
+    );
+
+    // `mul_lt_mul_left`/`_right` at the BOUNDARY `a = 1` (the smallest value
+    // satisfying `0 < a`): both directions of the `Iff`.
+    let one = f.num(1);
+    let zero = f.zero();
+    let pos_one = f.zero_lt_succ(zero); // Lt zero one, since one = succ zero
+
+    let one_three = f.mul(one, three);
+    let one_five = f.mul(one, five);
+    let left_ty = f.lt(one_three, one_five);
+    let right_ty = f.lt(three, five);
+
+    let iff_left = f.lemma(p.mul_lt_mul_left, &[one, three, five, pos_one]);
+    let mp_left = f.const_app(p.logic.iff_mp, &[left_ty, right_ty, iff_left]);
+    let hyp_3_lt_5 = lt_witness(&mut f, 3, 5);
+    let mp_left_applied = f.apply(mp_left, &[hyp_3_lt_5]);
+    f.k.infer(mp_left_applied).unwrap_or_else(|e| {
+        panic!(
+            "mul_lt_mul_left(1,3,5).mp should infer at 1*3 < 1*5: {}",
+            f.explain(&e)
+        )
+    });
+
+    let iff_left_2 = f.lemma(p.mul_lt_mul_left, &[one, three, five, pos_one]);
+    let mpr_left = f.const_app(p.logic.iff_mpr, &[left_ty, right_ty, iff_left_2]);
+    let hyp_3_lt_5_b = lt_witness(&mut f, 3, 5);
+    let mpr_left_applied = f.apply(mpr_left, &[hyp_3_lt_5_b]);
+    let mpr_left_ty = f.k.infer(mpr_left_applied).unwrap_or_else(|e| {
+        panic!(
+            "mul_lt_mul_left(1,3,5).mpr should infer from 3 < 5: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(mpr_left_ty, left_ty),
+        "mul_lt_mul_left(1,3,5).mpr must conclude 1*3 < 1*5"
+    );
+
+    let three_one = f.mul(three, one);
+    let five_one = f.mul(five, one);
+    let left_ty_r = f.lt(three_one, five_one);
+    let pos_one_r = f.zero_lt_succ(zero);
+    let iff_right = f.lemma(p.mul_lt_mul_right, &[one, three, five, pos_one_r]);
+    let mpr_right = f.const_app(p.logic.iff_mpr, &[left_ty_r, right_ty, iff_right]);
+    let hyp_3_lt_5_c = lt_witness(&mut f, 3, 5);
+    let mpr_right_applied = f.apply(mpr_right, &[hyp_3_lt_5_c]);
+    f.k.infer(mpr_right_applied).unwrap_or_else(|e| {
+        panic!(
+            "mul_lt_mul_right(1,3,5).mpr should infer from 3 < 5: {}",
+            f.explain(&e)
+        )
+    });
+
+    // `div_lt_of_lt_mul`: at the BOUNDARY `m = n*k - 1` (7 = 2*4 - 1), and at
+    // the smallest divisor that takes the `succ` case-split branch (`n = 1`).
+    let four = f.num(4);
+    let seven = f.num(7);
+    let hyp_7_lt_8 = lt_witness(&mut f, 7, 8);
+    let div_result = f.lemma(p.div_lt_of_lt_mul, &[seven, two, four, hyp_7_lt_8]);
+    let div_result_ty =
+        f.k.infer(div_result)
+            .unwrap_or_else(|e| panic!("div_lt_of_lt_mul(7,2,4) should infer: {}", f.explain(&e)));
+    let div_7_2 = f.div(seven, two);
+    assert!(f.k.def_eq(div_7_2, three), "7 / 2 must compute to 3");
+    let expect_div_lt_four = f.lt(div_7_2, four);
+    assert!(
+        f.k.def_eq(div_result_ty, expect_div_lt_four),
+        "div_lt_of_lt_mul(7,2,4) must conclude div(7,2) < 4"
+    );
+    let expect_3_lt_4 = f.lt(three, four);
+    assert!(
+        f.k.def_eq(expect_div_lt_four, expect_3_lt_4),
+        "the concluded bound must itself compute to 3 < 4"
+    );
+
+    let hyp_3_lt_4 = lt_witness(&mut f, 3, 4);
+    let div_result_n1 = f.lemma(p.div_lt_of_lt_mul, &[three, one, four, hyp_3_lt_4]);
+    f.k.infer(div_result_n1).unwrap_or_else(|e| {
+        panic!(
+            "div_lt_of_lt_mul(3,1,4) should infer at the smallest succ-branch divisor: {}",
+            f.explain(&e)
+        )
+    });
+}
+
 /// Divisibility is a real prelude definition, not a test-only proposition:
 /// witness introduction proves `2 ∣ 6`, and `dvd_add` composes proofs of
 /// `2 ∣ 4` and `2 ∣ 6` into a checked proof of `2 ∣ 10`.
@@ -7262,7 +7404,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 538,
+        93 + 543,
         "every promised definition and theorem must be rendered"
     );
 }
