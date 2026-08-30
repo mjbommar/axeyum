@@ -20924,10 +20924,9 @@ fn totient_gcd_mul_totient_mul_applies_at_free_variables_and_a_non_coprime_insta
     }
 
     let applied = f.const_app(p.totient_gcd_mul_totient_mul, &[a, b]);
-    let applied_ty = f
-        .k
-        .infer_in(applied, &mut ctx)
-        .expect("totient_gcd_mul_totient_mul must apply at free a, b");
+    let applied_ty =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("totient_gcd_mul_totient_mul must apply at free a, b");
 
     let gcd_ab = f.gcd(a, b);
     let tot_gcd = f.const_app(p.totient, &[gcd_ab]);

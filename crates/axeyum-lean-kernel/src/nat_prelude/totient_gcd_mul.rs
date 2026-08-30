@@ -232,7 +232,14 @@ fn dvd_elim(
 /// `Eq (mul (mul a b) (mul c dd)) (mul (mul a c) (mul b dd))` — the
 /// four-factor regrouping this file's final assembly needs twice. Copied
 /// from `dvd_mul_split.rs`'s private helper of the same name.
-fn mul_mul_mul_comm(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId, dd: ExprId) -> ExprId {
+fn mul_mul_mul_comm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+) -> ExprId {
     let p = *p;
     let ab = d.mul(a, b);
     let cd = d.mul(c, dd);
@@ -253,7 +260,10 @@ fn mul_mul_mul_comm(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c:
     let step3 = d.lemma(p.mul_assoc, &[a, c, bd]);
     let step3_rev = d.symm(target, a_cbd, step3);
 
-    let (_, proof) = d.chain(start, &[(a_bcd, step1), (a_cbd, congr2), (target, step3_rev)]);
+    let (_, proof) = d.chain(
+        start,
+        &[(a_bcd, step1), (a_cbd, congr2), (target, step3_rev)],
+    );
     proof
 }
 
@@ -282,12 +292,19 @@ fn mul_right_comm(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: E
     proof
 }
 
-/// `Eq (gcd a b1) one` from `Eq (gcd a b2) one` and `Dvd b1 b2`, flipped to
-/// the `Eq (gcd b1 a) one` shape `Nat.totient_mul_of_coprime` wants (`m := b1
-/// - n := a`, i.e. the SMALL coprime witness on the left). `q`/`y` naming
-/// matches this file's call sites: `y_coprime_step(d, p, q, y, hcop_q_y)`
-/// returns `Eq (gcd y q) one`.
-fn flip_coprime(d: &mut NatDev<'_>, p: &NatPrelude, q: ExprId, y: ExprId, hcop_q_y: ExprId) -> ExprId {
+/// Given `hcop_q_y : Eq (gcd q y) one`, derive `Eq (gcd y q) one` — the
+/// `Nat.totient_mul_of_coprime` call sites in this file all want the
+/// coprimality witness with the multiplicative "left" argument first, while
+/// `Nat.coprime_or_dvd_of_prime` hands back the witness with `q` first.
+/// Verbatim copy of `totient_dvd_totient_mul_prime`'s own flip (`gcd_comm`
+/// plus `symm`/`trans`).
+fn flip_coprime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    q: ExprId,
+    y: ExprId,
+    hcop_q_y: ExprId,
+) -> ExprId {
     let p = *p;
     let one = d.num(1);
     let gcd_qy = d.gcd(q, y);
@@ -314,10 +331,10 @@ struct StepContext {
     a: ExprId,
     b: ExprId,
     kx: ExprId,
-    heq_a: ExprId,       // Eq a (mul q a1)
-    heq_b: ExprId,       // Eq b (mul q b1)
-    kx_eq_q_g1: ExprId,  // Eq kx (mul q g1)
-    ih_at: ExprId,       // Eq (mul (totient g1) (totient z)) (mul (mul (totient a1) (totient b1)) g1)
+    heq_a: ExprId,      // Eq a (mul q a1)
+    heq_b: ExprId,      // Eq b (mul q b1)
+    kx_eq_q_g1: ExprId, // Eq kx (mul q g1)
+    ih_at: ExprId, // Eq (mul (totient g1) (totient z)) (mul (mul (totient a1) (totient b1)) g1)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -329,10 +346,10 @@ fn assemble_gcd_mul_step(
     ma: ExprId,
     mb: ExprId,
     minner: ExprId,
-    eq_g1_step: ExprId, // Eq (totient (mul g1 q)) (mul (totient g1) mg)
-    eq_a1_step: ExprId, // Eq (totient (mul a1 q)) (mul (totient a1) ma)
-    eq_b1_step: ExprId, // Eq (totient (mul b1 q)) (mul (totient b1) mb)
-    eq_z_step: ExprId,  // Eq (totient (mul z q)) (mul (totient z) minner)
+    eq_g1_step: ExprId,   // Eq (totient (mul g1 q)) (mul (totient g1) mg)
+    eq_a1_step: ExprId,   // Eq (totient (mul a1 q)) (mul (totient a1) ma)
+    eq_b1_step: ExprId,   // Eq (totient (mul b1 q)) (mul (totient b1) mb)
+    eq_z_step: ExprId,    // Eq (totient (mul z q)) (mul (totient z) minner)
     eps_identity: ExprId, // Eq (mul mg minner) (mul ma mb)
 ) -> ExprId {
     let p = *p;
@@ -366,7 +383,9 @@ fn assemble_gcd_mul_step(
     let mul_g1_q = d.mul(g1, q);
     let mul_q_g1 = d.mul(q, g1);
     let kx_eq_g1q = d.trans(kx, mul_q_g1, mul_g1_q, kx_eq_q_g1, mul_comm_qg1);
-    let tot_kx_eq1 = d.congr(kx, mul_g1_q, kx_eq_g1q, &|d, t| d.const_app(p.totient, &[t]));
+    let tot_kx_eq1 = d.congr(kx, mul_g1_q, kx_eq_g1q, &|d, t| {
+        d.const_app(p.totient, &[t])
+    });
     let mg_tg1 = d.mul(tot_g1, mg);
     let tot_mul_g1_q = d.const_app(p.totient, &[mul_g1_q]);
     let tot_kx_final = d.trans(tot_kx, tot_mul_g1_q, mg_tg1, tot_kx_eq1, eq_g1_step);
@@ -376,7 +395,9 @@ fn assemble_gcd_mul_step(
     let mul_a1_q = d.mul(a1, q);
     let mul_q_a1 = d.mul(q, a1);
     let heq_a_comm = d.trans(a, mul_q_a1, mul_a1_q, heq_a, mul_comm_qa1);
-    let tot_a_eq1 = d.congr(a, mul_a1_q, heq_a_comm, &|d, t| d.const_app(p.totient, &[t]));
+    let tot_a_eq1 = d.congr(a, mul_a1_q, heq_a_comm, &|d, t| {
+        d.const_app(p.totient, &[t])
+    });
     let ma_ta1 = d.mul(tot_a1, ma);
     let tot_mul_a1_q = d.const_app(p.totient, &[mul_a1_q]);
     let tot_a_final = d.trans(tot_a, tot_mul_a1_q, ma_ta1, tot_a_eq1, eq_a1_step);
@@ -386,7 +407,9 @@ fn assemble_gcd_mul_step(
     let mul_b1_q = d.mul(b1, q);
     let mul_q_b1 = d.mul(q, b1);
     let heq_b_comm = d.trans(b, mul_q_b1, mul_b1_q, heq_b, mul_comm_qb1);
-    let tot_b_eq1 = d.congr(b, mul_b1_q, heq_b_comm, &|d, t| d.const_app(p.totient, &[t]));
+    let tot_b_eq1 = d.congr(b, mul_b1_q, heq_b_comm, &|d, t| {
+        d.const_app(p.totient, &[t])
+    });
     let mb_tb1 = d.mul(tot_b1, mb);
     let tot_mul_b1_q = d.const_app(p.totient, &[mul_b1_q]);
     let tot_b_final = d.trans(tot_b, tot_mul_b1_q, mb_tb1, tot_b_eq1, eq_b1_step);
@@ -409,11 +432,15 @@ fn assemble_gcd_mul_step(
     let mul_q_qz = d.mul(q, mul_q_z);
     let ab_eq3 = d.trans(mul_a_b, mul_qq_z, mul_q_qz, ab_eq2, assoc_qqz);
 
-    let tot_ab_eq_qy = d.congr(mul_a_b, mul_q_qz, ab_eq3, &|d, t| d.const_app(p.totient, &[t]));
+    let tot_ab_eq_qy = d.congr(mul_a_b, mul_q_qz, ab_eq3, &|d, t| {
+        d.const_app(p.totient, &[t])
+    });
 
     let commute_qy = d.lemma(p.mul_comm, &[q, mul_q_z]); // mul q Y = mul Y q
     let mul_yq = d.mul(mul_q_z, q);
-    let tot_qy_eq_yq = d.congr(mul_q_qz, mul_yq, commute_qy, &|d, t| d.const_app(p.totient, &[t]));
+    let tot_qy_eq_yq = d.congr(mul_q_qz, mul_yq, commute_qy, &|d, t| {
+        d.const_app(p.totient, &[t])
+    });
 
     let dvd_q_y = d.lemma(p.dvd_mul, &[q, z]); // Dvd q (mul q z) = Dvd q Y
     let step_outer = {
@@ -426,26 +453,48 @@ fn assemble_gcd_mul_step(
     let tot_ab_eq_qy_to_yq = d.trans(tot_ab, tot_mul_q_qz, tot_mul_yq, tot_ab_eq_qy, tot_qy_eq_yq);
     let tot_y = d.const_app(p.totient, &[mul_q_z]);
     let mul_toty_q = d.mul(tot_y, q);
-    let tot_ab_eq_tyq = d.trans(tot_ab, tot_mul_yq, mul_toty_q, tot_ab_eq_qy_to_yq, step_outer);
+    let tot_ab_eq_tyq = d.trans(
+        tot_ab,
+        tot_mul_yq,
+        mul_toty_q,
+        tot_ab_eq_qy_to_yq,
+        step_outer,
+    );
 
     let commute_qz = d.lemma(p.mul_comm, &[q, z]); // mul q z = mul z q
     let mul_zq = d.mul(z, q);
-    let tot_y_eq = d.congr(mul_q_z, mul_zq, commute_qz, &|d, t| d.const_app(p.totient, &[t]));
+    let tot_y_eq = d.congr(mul_q_z, mul_zq, commute_qz, &|d, t| {
+        d.const_app(p.totient, &[t])
+    });
     let mb_minner_tz = d.mul(tot_z, minner);
     let tot_mul_zq = d.const_app(p.totient, &[mul_zq]);
     let tot_y_final = d.trans(tot_y, tot_mul_zq, mb_minner_tz, tot_y_eq, eq_z_step);
 
     let cong_final = d.congr(tot_y, mb_minner_tz, tot_y_final, &|d, t| d.mul(t, q));
     let mul_tzminner_q = d.mul(mb_minner_tz, q);
-    let tot_ab_final = d.trans(tot_ab, mul_toty_q, mul_tzminner_q, tot_ab_eq_tyq, cong_final);
+    let tot_ab_final = d.trans(
+        tot_ab,
+        mul_toty_q,
+        mul_tzminner_q,
+        tot_ab_eq_tyq,
+        cong_final,
+    );
 
     // --- LEFT: totient(kx) * totient(a*b) -----------------------------------
     let target_lhs = d.mul(tot_kx, tot_ab);
     let lhs_step1 = d.congr(tot_kx, mg_tg1, tot_kx_final, &|d, t| d.mul(t, tot_ab));
     let mg_tg1_tot_ab = d.mul(mg_tg1, tot_ab);
-    let lhs_step2 = d.congr(tot_ab, mul_tzminner_q, tot_ab_final, &|d, t| d.mul(mg_tg1, t));
+    let lhs_step2 = d.congr(tot_ab, mul_tzminner_q, tot_ab_final, &|d, t| {
+        d.mul(mg_tg1, t)
+    });
     let mg_tg1_mtzminner_q = d.mul(mg_tg1, mul_tzminner_q);
-    let lhs_combined = d.trans(target_lhs, mg_tg1_tot_ab, mg_tg1_mtzminner_q, lhs_step1, lhs_step2);
+    let lhs_combined = d.trans(
+        target_lhs,
+        mg_tg1_tot_ab,
+        mg_tg1_mtzminner_q,
+        lhs_step1,
+        lhs_step2,
+    );
 
     // LEFT_EXPANDED = mul (mul tot_g1 mg) (mul (mul tot_z minner) q)
     // -> ((tot_g1 * tot_z) * (mg * minner)) * q   [mul_assoc_symm; mul_mul_mul_comm]
@@ -495,7 +544,9 @@ fn assemble_gcd_mul_step(
     let ih_rhs_ma = d.mul(ih_rhs, ma);
     let ih_rhs_ma_mb = d.mul(ih_rhs_ma, mb);
     let assoc_final_rev = d.symm(ih_rhs_ma_mb, ih_rhs_ma_mb0, assoc_final);
-    let cong_assoc_final = d.congr(ih_rhs_ma_mb0, ih_rhs_ma_mb, assoc_final_rev, &|d, t| d.mul(t, q));
+    let cong_assoc_final = d.congr(ih_rhs_ma_mb0, ih_rhs_ma_mb, assoc_final_rev, &|d, t| {
+        d.mul(t, q)
+    });
     let normal_form = d.mul(ih_rhs_ma_mb, q);
     let left_step4 = d.trans(x_wq, mid3, normal_form, left_step3, cong_assoc_final);
 
@@ -508,9 +559,17 @@ fn assemble_gcd_mul_step(
     let ma_ta1_tot_b = d.mul(ma_ta1, tot_b);
     let rhs_step2 = d.congr(tot_b, mb_tb1, tot_b_final, &|d, t| d.mul(ma_ta1, t));
     let ma_ta1_mb_tb1 = d.mul(ma_ta1, mb_tb1);
-    let rhs_combined1 = d.trans(tot_a_tot_b, ma_ta1_tot_b, ma_ta1_mb_tb1, rhs_step1, rhs_step2);
+    let rhs_combined1 = d.trans(
+        tot_a_tot_b,
+        ma_ta1_tot_b,
+        ma_ta1_mb_tb1,
+        rhs_step1,
+        rhs_step2,
+    );
 
-    let rhs_step1_full = d.congr(tot_a_tot_b, ma_ta1_mb_tb1, rhs_combined1, &|d, t| d.mul(t, kx));
+    let rhs_step1_full = d.congr(tot_a_tot_b, ma_ta1_mb_tb1, rhs_combined1, &|d, t| {
+        d.mul(t, kx)
+    });
     let r1 = d.mul(ma_ta1_mb_tb1, kx);
     let rhs_step2_full = d.congr(kx, mul_q_g1, kx_eq_q_g1, &|d, t| d.mul(ma_ta1_mb_tb1, t));
     let r2 = d.mul(ma_ta1_mb_tb1, mul_q_g1);
@@ -528,7 +587,9 @@ fn assemble_gcd_mul_step(
     let right_step1 = d.trans(target_rhs, r2, r3, right_combined, cong_mmc3);
 
     let mul_comm_qg1_2 = d.lemma(p.mul_comm, &[q, g1]); // mul q g1 = mul g1 q
-    let cong_qg1 = d.congr(mul_q_g1, mul_g1_q, mul_comm_qg1_2, &|d, t| d.mul(ta1tb1_mamb, t));
+    let cong_qg1 = d.congr(mul_q_g1, mul_g1_q, mul_comm_qg1_2, &|d, t| {
+        d.mul(ta1tb1_mamb, t)
+    });
     let r4 = d.mul(ta1tb1_mamb, mul_g1_q);
     let right_step2 = d.trans(target_rhs, r3, r4, right_step1, cong_qg1);
 
@@ -552,9 +613,17 @@ fn assemble_gcd_mul_step(
     let ta1tb1_g1_ma = d.mul(ta1tb1_g1, ma);
     let ta1tb1_g1_ma_mb = d.mul(ta1tb1_g1_ma, mb);
     let assoc_r2_rev = d.symm(ta1tb1_g1_ma_mb, ta1tb1_g1_mamb, assoc_r2);
-    let cong_assoc_r2 = d.congr(ta1tb1_g1_mamb, ta1tb1_g1_ma_mb, assoc_r2_rev, &|d, t| d.mul(t, q));
+    let cong_assoc_r2 = d.congr(ta1tb1_g1_mamb, ta1tb1_g1_ma_mb, assoc_r2_rev, &|d, t| {
+        d.mul(t, q)
+    });
     let right_normal_form = d.mul(ta1tb1_g1_ma_mb, q);
-    let right_step5 = d.trans(target_rhs, r5, right_normal_form, right_step4, cong_assoc_r2);
+    let right_step5 = d.trans(
+        target_rhs,
+        r5,
+        right_normal_form,
+        right_step4,
+        cong_assoc_r2,
+    );
 
     // Confirm both normal forms are literally the same ExprId (ih_rhs_ma_mb
     // vs ta1tb1_g1_ma_mb): ih_rhs = mul (mul tot_a1 tot_b1) g1 = ta1tb1_g1
@@ -567,7 +636,13 @@ fn assemble_gcd_mul_step(
     let right_to_normal = right_step5;
 
     let normal_to_right = d.symm(target_rhs, normal_form, right_to_normal);
-    d.trans(target_lhs, normal_form, target_rhs, left_to_normal, normal_to_right)
+    d.trans(
+        target_lhs,
+        normal_form,
+        target_rhs,
+        left_to_normal,
+        normal_to_right,
+    )
 }
 
 // ============================================================================
@@ -586,7 +661,10 @@ fn assemble_gcd_mul_step(
 /// Returns the trusted gate's rejection if the constructed term does not
 /// type-check.
 #[allow(clippy::too_many_lines)]
-pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_totient_gcd_mul_aux(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
     let one_lvl = d.level_one();
@@ -743,7 +821,8 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                         let mul_tatb_one = d.mul(tot_a_tot_b, one);
                         let mo_sym = d.symm(mul_tatb_one, tot_a_tot_b, mo);
 
-                        let final_eq = d.trans(mul_one_tot_ab, tot_a_tot_b, mul_tatb_one, lhs_eq, mo_sym);
+                        let final_eq =
+                            d.trans(mul_one_tot_ab, tot_a_tot_b, mul_tatb_one, lhs_eq, mo_sym);
                         let body = d.lam_fv(hgcd_fv, hgcd1_ty, final_eq);
                         let with_b = d.lam_fv(b_fv, nat, body);
                         d.lam_fv(a_fv, nat, with_b)
@@ -841,18 +920,34 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                 let full_b_eq = d.trans(b, mul_q_b1, mul_b1_q, heq_b, mul_comm_qb1);
 
                                 let gcd_a_b_inner = d.gcd(a, b);
-                                let cong_gab_1 = d.congr(a, mul_a1_q, full_a_eq, &|d, t| d.gcd(t, b));
+                                let cong_gab_1 =
+                                    d.congr(a, mul_a1_q, full_a_eq, &|d, t| d.gcd(t, b));
                                 let gcd_a1q_b = d.gcd(mul_a1_q, b);
-                                let cong_gab_2 = d.congr(b, mul_b1_q, full_b_eq, &|d, t| d.gcd(mul_a1_q, t));
+                                let cong_gab_2 =
+                                    d.congr(b, mul_b1_q, full_b_eq, &|d, t| d.gcd(mul_a1_q, t));
                                 let gcd_a1q_b1q = d.gcd(mul_a1_q, mul_b1_q);
-                                let gab_eq1 = d.trans(gcd_a_b_inner, gcd_a1q_b, gcd_a1q_b1q, cong_gab_1, cong_gab_2);
+                                let gab_eq1 = d.trans(
+                                    gcd_a_b_inner,
+                                    gcd_a1q_b,
+                                    gcd_a1q_b1q,
+                                    cong_gab_1,
+                                    cong_gab_2,
+                                );
                                 let mul_g1_q = d.mul(g1, q);
-                                let gab_eq2 = d.trans(gcd_a_b_inner, gcd_a1q_b1q, mul_g1_q, gab_eq1, gcd_scaled);
+                                let gab_eq2 = d.trans(
+                                    gcd_a_b_inner,
+                                    gcd_a1q_b1q,
+                                    mul_g1_q,
+                                    gab_eq1,
+                                    gcd_scaled,
+                                );
                                 let hgcd_sym = d.symm(gcd_a_b_inner, kx, hgcd);
-                                let kx_eq_g1q = d.trans(kx, gcd_a_b_inner, mul_g1_q, hgcd_sym, gab_eq2);
+                                let kx_eq_g1q =
+                                    d.trans(kx, gcd_a_b_inner, mul_g1_q, hgcd_sym, gab_eq2);
                                 let mul_comm_g1q = d.lemma(p.mul_comm, &[g1, q]);
                                 let mul_q_g1 = d.mul(q, g1);
-                                let kx_eq_q_g1 = d.trans(kx, mul_g1_q, mul_q_g1, kx_eq_g1q, mul_comm_g1q);
+                                let kx_eq_q_g1 =
+                                    d.trans(kx, mul_g1_q, mul_q_g1, kx_eq_g1q, mul_comm_g1q);
 
                                 // g1 < kx
                                 let one = d.num(1);
@@ -861,9 +956,11 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                 let le_one_two = d.lemma(p.le_step, &[one, one, le_refl_one]);
                                 let h1_kx = d.lemma(p.le_trans, &[one, two, kx, le_one_two, h2]);
                                 let motive_h1 = d.eq_motive(kx, &|d, t| d.le(one, t));
-                                let h1_mul = d.transport(kx, motive_h1, h1_kx, mul_q_g1, kx_eq_q_g1);
+                                let h1_mul =
+                                    d.transport(kx, motive_h1, h1_kx, mul_q_g1, kx_eq_q_g1);
                                 let hq1 = d.lemma(p.one_le_right_of_mul, &[q, g1, h1_mul]);
-                                let lt_g1_kx = derive_cofactor_lt(d, &p, q, kx, g1, kx_eq_q_g1, hp2, hq1);
+                                let lt_g1_kx =
+                                    derive_cofactor_lt(d, &p, q, kx, g1, kx_eq_q_g1, hp2, hq1);
 
                                 // `ih`'s type is stated in terms of the outer
                                 // fix's own bound variable `x`, not `kx` --
@@ -893,7 +990,8 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                     ih_at,
                                 };
 
-                                let decided_a1 = d.lemma(p.coprime_or_dvd_of_prime, &[q, a1, prime_q]);
+                                let decided_a1 =
+                                    d.lemma(p.coprime_or_dvd_of_prime, &[q, a1, prime_q]);
                                 let gcd_q_a1 = d.gcd(q, a1);
                                 let coprime_ty_a1 = d.eq(gcd_q_a1, one);
                                 let dvd_ty_a1 = d.dvd(q, a1);
@@ -904,15 +1002,21 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                     let hcop_a1 = d.kernel().fvar(hcop_a1_fv);
                                     let ma = d.const_app(p.totient, &[q]);
                                     let hcop_a1_flip = flip_coprime(d, &p, q, a1, hcop_a1);
-                                    let eq_a1_step = d.lemma(p.totient_mul_of_coprime, &[a1, q, hcop_a1_flip]);
+                                    let eq_a1_step =
+                                        d.lemma(p.totient_mul_of_coprime, &[a1, q, hcop_a1_flip]);
 
                                     let dvd_g1_a1 = d.lemma(p.gcd_dvd_left, &[a1, b1]);
-                                    let hcop_g1 = d.lemma(p.coprime_of_dvd_right, &[q, g1, a1, dvd_g1_a1, hcop_a1]);
+                                    let hcop_g1 = d.lemma(
+                                        p.coprime_of_dvd_right,
+                                        &[q, g1, a1, dvd_g1_a1, hcop_a1],
+                                    );
                                     let hcop_g1_flip = flip_coprime(d, &p, q, g1, hcop_g1);
                                     let mg = d.const_app(p.totient, &[q]);
-                                    let eq_g1_step = d.lemma(p.totient_mul_of_coprime, &[g1, q, hcop_g1_flip]);
+                                    let eq_g1_step =
+                                        d.lemma(p.totient_mul_of_coprime, &[g1, q, hcop_g1_flip]);
 
-                                    let decided_b1 = d.lemma(p.coprime_or_dvd_of_prime, &[q, b1, prime_q]);
+                                    let decided_b1 =
+                                        d.lemma(p.coprime_or_dvd_of_prime, &[q, b1, prime_q]);
                                     let gcd_q_b1 = d.gcd(q, b1);
                                     let coprime_ty_b1 = d.eq(gcd_q_b1, one);
                                     let dvd_ty_b1 = d.dvd(q, b1);
@@ -923,18 +1027,35 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                         let hcop_b1 = d.kernel().fvar(hcop_b1_fv);
                                         let mb = d.const_app(p.totient, &[q]);
                                         let hcop_b1_flip = flip_coprime(d, &p, q, b1, hcop_b1);
-                                        let eq_b1_step = d.lemma(p.totient_mul_of_coprime, &[b1, q, hcop_b1_flip]);
+                                        let eq_b1_step = d.lemma(
+                                            p.totient_mul_of_coprime,
+                                            &[b1, q, hcop_b1_flip],
+                                        );
 
-                                        let hcop_z = d.lemma(p.coprime_mul_of_coprime, &[q, a1, b1, hcop_a1, hcop_b1]);
+                                        let hcop_z = d.lemma(
+                                            p.coprime_mul_of_coprime,
+                                            &[q, a1, b1, hcop_a1, hcop_b1],
+                                        );
                                         let hcop_z_flip = flip_coprime(d, &p, q, z, hcop_z);
                                         let minner = d.const_app(p.totient, &[q]);
-                                        let eq_z_step = d.lemma(p.totient_mul_of_coprime, &[z, q, hcop_z_flip]);
+                                        let eq_z_step =
+                                            d.lemma(p.totient_mul_of_coprime, &[z, q, hcop_z_flip]);
 
                                         let mg_minner_d = d.mul(mg, minner);
                                         let eps_identity = d.refl(mg_minner_d);
                                         let proof = assemble_gcd_mul_step(
-                                            d, &p, &ctx, mg, ma, mb, minner, eq_g1_step, eq_a1_step, eq_b1_step,
-                                            eq_z_step, eps_identity,
+                                            d,
+                                            &p,
+                                            &ctx,
+                                            mg,
+                                            ma,
+                                            mb,
+                                            minner,
+                                            eq_g1_step,
+                                            eq_a1_step,
+                                            eq_b1_step,
+                                            eq_z_step,
+                                            eps_identity,
                                         );
                                         d.lam_fv(hcop_b1_fv, coprime_ty_b1, proof)
                                     };
@@ -956,13 +1077,32 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                         let mg_minner_c = d.mul(mg, minner);
                                         let eps_identity = d.refl(mg_minner_c);
                                         let proof = assemble_gcd_mul_step(
-                                            d, &p, &ctx, mg, ma, mb, minner, eq_g1_step, eq_a1_step, eq_b1_step,
-                                            eq_z_step, eps_identity,
+                                            d,
+                                            &p,
+                                            &ctx,
+                                            mg,
+                                            ma,
+                                            mb,
+                                            minner,
+                                            eq_g1_step,
+                                            eq_a1_step,
+                                            eq_b1_step,
+                                            eq_z_step,
+                                            eps_identity,
                                         );
                                         d.lam_fv(hdvd_b1_fv, dvd_ty_b1, proof)
                                     };
 
-                                    let inner = or_cases(d, &p, coprime_ty_b1, dvd_ty_b1, final_goal, leaf_d, leaf_c, decided_b1);
+                                    let inner = or_cases(
+                                        d,
+                                        &p,
+                                        coprime_ty_b1,
+                                        dvd_ty_b1,
+                                        final_goal,
+                                        leaf_d,
+                                        leaf_c,
+                                        decided_b1,
+                                    );
                                     d.lam_fv(hcop_a1_fv, coprime_ty_a1, inner)
                                 };
 
@@ -980,7 +1120,8 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                     let tmd_z2 = d.lemma(p.totient_mul_of_dvd, &[z, q]);
                                     let eq_z_step = d.apply(tmd_z2, &[dvd_q_z]);
 
-                                    let decided_b1 = d.lemma(p.coprime_or_dvd_of_prime, &[q, b1, prime_q]);
+                                    let decided_b1 =
+                                        d.lemma(p.coprime_or_dvd_of_prime, &[q, b1, prime_q]);
                                     let gcd_q_b1_2 = d.gcd(q, b1);
                                     let coprime_ty_b1 = d.eq(gcd_q_b1_2, one);
                                     let dvd_ty_b1 = d.dvd(q, b1);
@@ -991,19 +1132,38 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                         let hcop_b1 = d.kernel().fvar(hcop_b1_fv);
                                         let mb = d.const_app(p.totient, &[q]);
                                         let hcop_b1_flip = flip_coprime(d, &p, q, b1, hcop_b1);
-                                        let eq_b1_step = d.lemma(p.totient_mul_of_coprime, &[b1, q, hcop_b1_flip]);
+                                        let eq_b1_step = d.lemma(
+                                            p.totient_mul_of_coprime,
+                                            &[b1, q, hcop_b1_flip],
+                                        );
 
                                         let dvd_g1_b1 = d.lemma(p.gcd_dvd_right, &[a1, b1]);
-                                        let hcop_g1 = d.lemma(p.coprime_of_dvd_right, &[q, g1, b1, dvd_g1_b1, hcop_b1]);
+                                        let hcop_g1 = d.lemma(
+                                            p.coprime_of_dvd_right,
+                                            &[q, g1, b1, dvd_g1_b1, hcop_b1],
+                                        );
                                         let hcop_g1_flip = flip_coprime(d, &p, q, g1, hcop_g1);
                                         let mg = d.const_app(p.totient, &[q]);
-                                        let eq_g1_step = d.lemma(p.totient_mul_of_coprime, &[g1, q, hcop_g1_flip]);
+                                        let eq_g1_step = d.lemma(
+                                            p.totient_mul_of_coprime,
+                                            &[g1, q, hcop_g1_flip],
+                                        );
 
                                         // Eq (mul mg minner) (mul ma mb) = Eq (mul Tq q) (mul q Tq)
                                         let eps_identity = d.lemma(p.mul_comm, &[mg, minner]);
                                         let proof = assemble_gcd_mul_step(
-                                            d, &p, &ctx, mg, ma, mb, minner, eq_g1_step, eq_a1_step, eq_b1_step,
-                                            eq_z_step, eps_identity,
+                                            d,
+                                            &p,
+                                            &ctx,
+                                            mg,
+                                            ma,
+                                            mb,
+                                            minner,
+                                            eq_g1_step,
+                                            eq_a1_step,
+                                            eq_b1_step,
+                                            eq_z_step,
+                                            eps_identity,
                                         );
                                         d.lam_fv(hcop_b1_fv, coprime_ty_b1, proof)
                                     };
@@ -1016,7 +1176,8 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                         let tmd_b1_2 = d.lemma(p.totient_mul_of_dvd, &[b1, q]);
                                         let eq_b1_step = d.apply(tmd_b1_2, &[hdvd_b1]);
 
-                                        let dvd_q_g1 = d.lemma(p.dvd_gcd, &[q, a1, b1, hdvd_a1, hdvd_b1]);
+                                        let dvd_q_g1 =
+                                            d.lemma(p.dvd_gcd, &[q, a1, b1, hdvd_a1, hdvd_b1]);
                                         let mg = q;
                                         let tmd_g1 = d.lemma(p.totient_mul_of_dvd, &[g1, q]);
                                         let eq_g1_step = d.apply(tmd_g1, &[dvd_q_g1]);
@@ -1024,17 +1185,45 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                         let mg_minner_a = d.mul(mg, minner);
                                         let eps_identity = d.refl(mg_minner_a);
                                         let proof = assemble_gcd_mul_step(
-                                            d, &p, &ctx, mg, ma, mb, minner, eq_g1_step, eq_a1_step, eq_b1_step,
-                                            eq_z_step, eps_identity,
+                                            d,
+                                            &p,
+                                            &ctx,
+                                            mg,
+                                            ma,
+                                            mb,
+                                            minner,
+                                            eq_g1_step,
+                                            eq_a1_step,
+                                            eq_b1_step,
+                                            eq_z_step,
+                                            eps_identity,
                                         );
                                         d.lam_fv(hdvd_b1_fv, dvd_ty_b1, proof)
                                     };
 
-                                    let inner = or_cases(d, &p, coprime_ty_b1, dvd_ty_b1, final_goal, leaf_b, leaf_a, decided_b1);
+                                    let inner = or_cases(
+                                        d,
+                                        &p,
+                                        coprime_ty_b1,
+                                        dvd_ty_b1,
+                                        final_goal,
+                                        leaf_b,
+                                        leaf_a,
+                                        decided_b1,
+                                    );
                                     d.lam_fv(hdvd_a1_fv, dvd_ty_a1, inner)
                                 };
 
-                                or_cases(d, &p, coprime_ty_a1, dvd_ty_a1, final_goal, on_a1_coprime, on_a1_dvd, decided_a1)
+                                or_cases(
+                                    d,
+                                    &p,
+                                    coprime_ty_a1,
+                                    dvd_ty_a1,
+                                    final_goal,
+                                    on_a1_coprime,
+                                    on_a1_dvd,
+                                    decided_a1,
+                                )
                             })
                         });
 
@@ -1054,7 +1243,14 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                 };
 
                 let proof_at_kx = or_cases(
-                    d, &p, two_le_ty, eq_one_ty, goal_kx, left_minor, right_minor, disj_kx,
+                    d,
+                    &p,
+                    two_le_ty,
+                    eq_one_ty,
+                    goal_kx,
+                    left_minor,
+                    right_minor,
+                    disj_kx,
                 );
 
                 let heq_sym = d.symm(x, kx, heq);
@@ -1069,7 +1265,9 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
             d.lam_fv(hex_fv, succ_ex_ty, body)
         };
 
-        let body = or_cases(d, &p, eq_zero_ty, succ_ex_ty, goal, case_zero, case_succ, disj);
+        let body = or_cases(
+            d, &p, eq_zero_ty, succ_ex_ty, goal, case_zero, case_succ, disj,
+        );
         let with_ih = d.lam_fv(ih_fv, ih_ty, body);
         d.lam_fv(x_fv, nat, with_ih)
     };
@@ -1103,7 +1301,10 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
 ///
 /// Returns the trusted gate's rejection if the constructed term does not
 /// type-check.
-pub(super) fn declare_totient_gcd_mul_totient_mul(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_totient_gcd_mul_totient_mul(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     d.theorem(p.totient_gcd_mul_totient_mul, 2, &|d, v| {
         let (a, b) = (v[0], v[1]);
@@ -1131,7 +1332,10 @@ pub(super) fn declare_totient_gcd_mul_totient_mul(d: &mut NatDev<'_>, p: &NatPre
 /// # Errors
 ///
 /// Returns the trusted gate's rejection.
-pub(super) fn declare_totient_gcd_mul_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_totient_gcd_mul_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     declare_totient_gcd_mul_aux(d, p)?;
     declare_totient_gcd_mul_totient_mul(d, p)?;
     Ok(())
