@@ -83,6 +83,65 @@ impl Word {
         Self::new(width, value)
     }
 
+    /// Extends this word with zero high bits to `new_width`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`A0Error::InvalidWordWidth`] when `new_width` is not a
+    /// supported A0 width, and [`A0Error::InvalidWidthConversion`] when it is
+    /// narrower than the source word.
+    pub fn zero_extend(self, new_width: u8) -> Result<Self, A0Error> {
+        validate_width(new_width)?;
+        if new_width < self.width {
+            return Err(A0Error::InvalidWidthConversion {
+                from: self.width,
+                to: new_width,
+            });
+        }
+        Self::new(new_width, self.value)
+    }
+
+    /// Extends this word by repeating its sign bit to `new_width`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`A0Error::InvalidWordWidth`] when `new_width` is not a
+    /// supported A0 width, and [`A0Error::InvalidWidthConversion`] when it is
+    /// narrower than the source word.
+    pub fn sign_extend(self, new_width: u8) -> Result<Self, A0Error> {
+        validate_width(new_width)?;
+        if new_width < self.width {
+            return Err(A0Error::InvalidWidthConversion {
+                from: self.width,
+                to: new_width,
+            });
+        }
+        let value = if self.high_bit() {
+            self.value | (mask(new_width) & !mask(self.width))
+        } else {
+            self.value
+        };
+        Self::new(new_width, value)
+    }
+
+    /// Truncates this word to its `new_width` least-significant bits.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`A0Error::InvalidWordWidth`] when `new_width` is not a
+    /// supported A0 width, and [`A0Error::InvalidWidthConversion`] when it is
+    /// wider than the source word.
+    pub fn truncate(self, new_width: u8) -> Result<Self, A0Error> {
+        validate_width(new_width)?;
+        if new_width > self.width {
+            return Err(A0Error::InvalidWidthConversion {
+                from: self.width,
+                to: new_width,
+            });
+        }
+        Self::new(new_width, self.value)
+    }
+
     fn wrapping_add(self, rhs: Self) -> Self {
         debug_assert_eq!(self.width, rhs.width);
         Self {
@@ -1188,6 +1247,8 @@ fn run_with_running_stop(
 pub enum A0Error {
     /// Width is not 8, 16, ..., or 64.
     InvalidWordWidth(u8),
+    /// A widening operation was asked to narrow, or truncation to widen.
+    InvalidWidthConversion { from: u8, to: u8 },
     /// Two values that must share a width do not.
     WidthMismatch { expected: u8, actual: u8 },
     /// An encoder input named a register outside r0 through r7.
