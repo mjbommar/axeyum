@@ -76,8 +76,8 @@
   "bridge_provenance": {
     "AntitoneOn": {
       "class": "elided",
-      "rendered_witnesses": 1,
-      "witnesses": 1
+      "rendered_witnesses": 2,
+      "witnesses": 2
     },
     "Bool.and": {
       "class": "unrendered",
@@ -291,8 +291,8 @@
     },
     "Nat.instPreorder": {
       "class": "elaboration",
-      "rendered_witnesses": 3,
-      "witnesses": 7
+      "rendered_witnesses": 4,
+      "witnesses": 8
     },
     "Nat.instSemiring": {
       "class": "elaboration",
@@ -321,8 +321,8 @@
     },
     "OfNat.ofNat": {
       "class": "elaboration",
-      "rendered_witnesses": 15,
-      "witnesses": 73
+      "rendered_witnesses": 17,
+      "witnesses": 75
     },
     "Set.Ici": {
       "class": "unrendered",
@@ -331,8 +331,8 @@
     },
     "Set.Ioi": {
       "class": "elided",
-      "rendered_witnesses": 1,
-      "witnesses": 1
+      "rendered_witnesses": 2,
+      "witnesses": 2
     },
     "StrictMono": {
       "class": "unrendered",
@@ -426,8 +426,8 @@
     },
     "instOfNatNat": {
       "class": "elaboration",
-      "rendered_witnesses": 15,
-      "witnesses": 61
+      "rendered_witnesses": 17,
+      "witnesses": 63
     },
     "ite": {
       "class": "unrendered",
@@ -442,15 +442,15 @@
     "bridge_expressed": 2,
     "bridge_unrendered": 12,
     "catalogued_propositions": 202,
-    "distinct_constants": 103,
-    "open_propositions": 28,
-    "settled_propositions": 174
+    "distinct_constants": 104,
+    "open_propositions": 26,
+    "settled_propositions": 176
   },
   "derivation": "bridge = {Lean constants in the pinned type_repr of every SETTLED ml430 mirror} \\ kernel-environment-snapshot-v1.declarations. Derived, never asserted: an entry exists only because a mirror stated with that constant has already been closed here. Regenerate with scripts/gen-autogenesis-statable-vocabulary.py --write; the per-row constants come from mathlib-statement-constants-v1.json, which is itself derived from the pinned inventory by --refresh-cache.",
   "environment_snapshot": "artifacts/autogenesis/kernel-environment-snapshot-v1.json",
   "keyed_by": "Mathlib source_name, NOT fact_id. Naming a fact id here would put held-out ids in a non-population artifact -- check-autogenesis-holdout-isolation.py caught exactly that on the first draft of this file, 35 references. The checker resolves source_name to a fact through the catalog, which IS a population file and may name them.",
   "kind": "axeyum-autogenesis-statable-vocabulary",
-  "row_digest": "47e59f3488eae10c624cafc110f3a311ce0d490a4e0c53d55350c72b0f1732b9",
+  "row_digest": "fff3dce77894b287203b10608a6c92b4112fd40543220e445259ad5f5cda3ee4",
   "schema_version": 1,
   "settled": [
     {
@@ -1475,6 +1475,18 @@
     },
     {
       "constants": [
+        "AntitoneOn",
+        "Nat",
+        "Nat.clog",
+        "Nat.instPreorder",
+        "OfNat.ofNat",
+        "Set.Ioi",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.clog_antitone_left"
+    },
+    {
+      "constants": [
         "LE.le",
         "Nat",
         "Nat.clog",
@@ -2120,6 +2132,17 @@
         "instOfNatNat"
       ],
       "source_name": "Nat.le_fib_self"
+    },
+    {
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.log",
+        "Nat.log2",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log2_eq_log_two"
     },
     {
       "constants": [
