@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Controls for `scripts/brief-step0.py`. One case per guard, and each case was
-# mutation-verified to be the ONLY one that dies when its guard is deleted --
-# see the table at the bottom of this file.
+# Controls for `scripts/brief-step0.py`. One case per guard, each guard deleted
+# in a scratch copy and the kill set recorded -- see the two tables at the
+# bottom of this file. The kill sets are reported AS MEASURED: most rows kill
+# exactly one case, two rows in the held-out family kill more, and the tables
+# say which and why rather than rounding to the tidier claim.
 #
 # The subject is driven against FIXTURE snapshots through
 # `AXEYUM_BRIEF_STEP0_CACHE`, and against a FIXTURE projection binary through
@@ -128,15 +130,111 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# GUARD 5 (held-out): dispatching a blind-evaluation row spends the whole
-# statement-shape family, not one row -- 19 of 76 propositions for one theorem
-# on 2026-08-21 (ADR-0542). The brief must say so before a lane is aimed at it.
+# GUARD 5 (held-out is REFUSED, not merely annotated): dispatching a
+# blind-evaluation row spends the whole statement-shape family, not one row --
+# 19 of 76 propositions for one theorem on 2026-08-21 (ADR-0542). This used to
+# be an annotation in section 4, printed AFTER section 1's already-proved
+# verdict, and on 2026-08-29 a sweep read that verdict and closed ten
+# preregistered held-out rows (92a61164e). The warning arrived after the leak.
+#
+# The fixture is a `natural-square-root` row deliberately: `natural-logarithm`
+# was this case's fixture until 2026-08-30 and is no longer held-out, which is
+# exactly the kind of silent fixture rot that makes a control stop discriminating.
 C="$WORK/c5"; write_snapshot "$C" "$TREE" "$TREE" no yes
-out="$(run "$C" F:ml430-nat-clog-antitone-left-44a87771 --no-shape-search)"; st=$?
-if [ "$st" -eq 0 ] && [[ "$out" == *"HELD-OUT"* ]]; then
-  ok "a held-out fact is reported as blind-evaluation population"
+out="$(run "$C" F:ml430-nat-sqrt-le-self-1ed5eb85 --no-shape-search)"; st=$?
+if [ "$st" -eq 5 ] && [[ "$out" == *"REFUSED: HELD-OUT"* ]]; then
+  ok "a held-out fact is REFUSED with exit 5, not annotated and answered"
 else
-  bad "held-out fact must be flagged, got exit $st"; note "$out"
+  bad "held-out fact must be refused with exit 5, got exit $st"; note "$out"
+fi
+
+# --------------------------------------------------------------------------
+# GUARD 5b (the refusal WITHHOLDS the proof route): the exit status is not the
+# protection -- the withheld sections are. Naming the declaration whose rendered
+# type matches a blind proposition IS the proof route, and so is a shape near
+# miss and so is "read these modules". A refusal that still printed section 1
+# would spend the row exactly as before while looking careful.
+C="$WORK/c5b"; write_snapshot "$C" "$TREE" "$TREE" no yes
+out="$(run "$C" F:ml430-nat-sqrt-le-self-1ed5eb85 --no-shape-search)"
+if [[ "$out" != *"1. ALREADY IN THE ENVIRONMENT"* ]] \
+   && [[ "$out" != *"2. NEAR MISSES"* ]] \
+   && [[ "$out" != *"3. MODULES TO READ"* ]] \
+   && [[ "$out" != *"formal.statement:"* ]]; then
+  ok "a refused target prints no retrieval section and no formal.statement"
+else
+  bad "refusal must withhold sections 1-3"; note "$out"
+fi
+
+# --------------------------------------------------------------------------
+# GUARD 5c (the refusal is not "refuse everything"): a row in a family the
+# ADR-0542 ledger has amended OUT of held-out must be answered in full. Without
+# this case, GUARD 5 and 5b are both satisfied by a tool that refuses every
+# target, which would be useless and would look rigorous.
+#
+# `natural-divisibility` was amended on 2026-08-30 -- its rows were never blind
+# (preregistered 2026-08-29 against theorems admitted 2026-08-13..24).
+C="$WORK/c5c"; write_snapshot "$C" "$TREE" "$TREE" no yes
+out="$(run "$C" F:ml430-nat-dvd-mod-iff-2d082f10 --no-shape-search --allow-stale)"; st=$?
+if [ "$st" -eq 0 ] && [[ "$out" == *"1. ALREADY IN THE ENVIRONMENT"* ]] \
+   && [[ "$out" != *"REFUSED"* ]]; then
+  ok "an amended-out-of-held-out row is answered in full, not refused"
+else
+  bad "amended row must be answered, got exit $st"; note "$out"
+fi
+
+# --------------------------------------------------------------------------
+# GUARD 5d (fail-closed): `blocked_report` degrades to UNANSWERABLE and keeps
+# going, which is right for a section that only annotates. It is wrong for the
+# check that decides whether the retrieval sections run at all -- a frontier
+# module that failed to import would read as "not held-out" and publish a proof
+# route for a blind row. An unreadable partition is not a licence to report.
+C="$WORK/c5d"; write_snapshot "$C" "$TREE" "$TREE" no yes
+out="$(AXEYUM_BRIEF_STEP0_CACHE="$C" python3 - "$SUBJECT" \
+        F:ml430-nat-sqrt-le-self-1ed5eb85 --no-shape-search 2>&1 <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("b0", sys.argv[1])
+b0 = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(b0)
+b0.load_frontier_module = lambda root: None
+sys.argv = [sys.argv[1]] + sys.argv[2:]
+sys.exit(b0.main())
+PY
+)"; st=$?
+if [ "$st" -eq 5 ] && [[ "$out" == *"REFUSED: UNANSWERABLE"* ]] \
+   && [[ "$out" != *"1. ALREADY IN THE ENVIRONMENT"* ]]; then
+  ok "an unreadable partition refuses rather than reporting a proof route"
+else
+  bad "unreadable partition must fail closed, got exit $st"; note "$out"
+fi
+
+# --------------------------------------------------------------------------
+# GUARD 5e (an EMPTY held-out population is a broken query, not a clean bill):
+# if the manifests parse but contribute no held-out ids, `fact_id in held` is
+# False for every target and the refusal never fires -- the guard reports
+# "nothing is blind" with exactly the output it produces when it works. The
+# holdout-isolation gate fails closed on this for the same reason.
+C="$WORK/c5e"; write_snapshot "$C" "$TREE" "$TREE" no yes
+out="$(AXEYUM_BRIEF_STEP0_CACHE="$C" python3 - "$SUBJECT" \
+        F:ml430-nat-sqrt-le-self-1ed5eb85 --no-shape-search 2>&1 <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("b0", sys.argv[1])
+b0 = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(b0)
+real = b0.load_frontier_module
+def empty(root):
+    module = real(root)
+    module.load_partitions = lambda *a, **k: (set(), set())
+    return module
+b0.load_frontier_module = empty
+sys.argv = [sys.argv[1]] + sys.argv[2:]
+sys.exit(b0.main())
+PY
+)"; st=$?
+if [ "$st" -eq 5 ] && [[ "$out" == *"pass vacuously"* ]] \
+   && [[ "$out" != *"1. ALREADY IN THE ENVIRONMENT"* ]]; then
+  ok "an empty held-out population is UNANSWERABLE, not everything-dispatchable"
+else
+  bad "empty held-out population must fail closed, got exit $st"; note "$out"
 fi
 
 # --------------------------------------------------------------------------
@@ -238,7 +336,29 @@ echo "brief-step0 controls: pass=$pass fail=$fail"
 #   the `state == "STALE" -> exit 4` branch               | GUARD 2
 #   the `if not resolved: return 1` branch                | GUARD 3
 #   the `len(paths) > 1` SHARED BASENAME flag             | GUARD 4
-#   the `fact_id in held` verdict                         | GUARD 5
 #   the `-mutation-` / `fact_id in mutation` verdict      | GUARD 6
 #   the `binary_stale and not allow_stale_binary` raise   | GUARD 7
 #   the `sha = f"stale-binary-{…}"` restamp               | GUARD 8
+#
+# HELD-OUT REFUSAL (GUARDs 5, 5b, 5c, 5d, 5e), measured 2026-08-30 in a
+# `copytree`'d scratch root with `__pycache__` cleared between iterations.
+# Baseline 14 cases green; NO mutant survived. Kill sets are reported as
+# measured rather than rounded to "exactly one", because two of them are not:
+#
+#   guard deleted                                | controls that die
+#   ---------------------------------------------|------------------------
+#   `is_held_out` -> `return False`              | GUARD 5, GUARD 5b
+#   the `module is None` raise                   | GUARD 5d   (only)
+#   the empty-population raise                   | GUARD 5e   (only)
+#   the `if refused: return 5` branch            | GUARD 5, 5d, 5e
+#
+# Row 1 kills two because refusing and withholding are one branch: 5 asserts
+# the refusal, 5b asserts that sections 1-3 are gone, and no code change can
+# separate them. Row 4 kills three because the exit status is one guard with
+# three independent witnesses -- which is the point, not a shared-rejection
+# defect: rows 2 and 3 each kill ONLY their own case, so the two fail-closed
+# guards are demonstrably not rejecting through the held-out test.
+#
+# GUARD 5c is the false-positive control for this family and dies under NONE of
+# the four: without it, a tool that refused every target would satisfy 5, 5b,
+# 5d and 5e and be useless.

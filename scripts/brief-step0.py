@@ -93,6 +93,27 @@ Exit status:
        run would have meant anything
     4  report produced, but from a STALE snapshot; ABSENT verdicts are
        provisional
+    5  a target is HELD-OUT and was refused; sections 1-3 were withheld for it
+
+# A held-out target is refused, and only sections 1-3 are withheld
+
+On 2026-08-29 an already-proved sweep ran this tool over all 181 open facts and
+closed ten preregistered blind-evaluation rows. The sibling that answers the
+narrower name-only question, `check-autogenesis-already-proved.py`, refuses a
+held-out id even when it is named explicitly; this one did not, and the
+unguarded one is the one that got used.
+
+The guard here is not a copy of the sibling's. This tool's consumer is the
+DISPATCHER, so "this target is held-out, do not dispatch it" is the most useful
+sentence it can produce, and a tool that goes silent on exactly that target
+sends the dispatcher to a less careful method. So the BLOCK is reported first
+and loudly -- it used to be section 4, printed after the already-proved verdict,
+which is the warning arriving after the leak -- and sections 1, 2 and 3 are
+withheld, because naming the declaration that already proves a blind
+proposition, or the near miss, or the module to read, IS the proof route.
+
+There is no override flag: the legitimate route to working a held-out row is an
+ADR-0542 amendment, which leaves a breach record where a flag leaves nothing.
 """
 
 from __future__ import annotations
@@ -545,6 +566,35 @@ def load_frontier_module(root: pathlib.Path):
     return module
 
 
+class HeldOutUnanswerable(RuntimeError):
+    """The partition data could not be read, so blindness cannot be checked."""
+
+
+def is_held_out(module, fact_id: str) -> bool:
+    """FAIL-CLOSED. An unreadable partition is not a licence to report.
+
+    `blocked_report` degrades to an UNANSWERABLE line and keeps going, which is
+    right for a section that only annotates. It is wrong here: this answer gates
+    whether the retrieval sections run at all, and a frontier module that failed
+    to import would otherwise read as "not held-out" and publish a proof route
+    for a blind row.
+    """
+    if module is None:
+        raise HeldOutUnanswerable(
+            "check-dispatchable-frontier.py did not load, so no target's "
+            "partition can be read")
+    try:
+        held, _mutation = module.load_partitions(module.DEFAULT_NURSERY,
+                                                 module.DEFAULT_EXTENSION)
+    except SystemExit as exc:
+        raise HeldOutUnanswerable(f"the nursery manifests are unreadable: {exc}")
+    if not held:
+        raise HeldOutUnanswerable(
+            "the held-out population is empty; this check would pass vacuously "
+            "for every target")
+    return fact_id in held
+
+
 def blocked_report(module, fact_id: str, statement: str) -> list[str]:
     if module is None:
         return ["blocked: UNANSWERABLE -- check-dispatchable-frontier.py did not load"]
@@ -799,21 +849,36 @@ def control_probe(declarations: list[dict[str, Any]]) -> tuple[bool, str]:
 
 def report_target(root: pathlib.Path, fact: dict[str, Any], snapshot: dict[str, Any],
                   fresh: dict[str, Any], modules: dict[str, list[str]],
-                  frontier, args) -> None:
+                  frontier, args) -> bool:
+    """Report on one target. Returns True if it was refused as held-out.
+
+    A held-out target gets the BLOCK and nothing else -- see `refuse_held_out`.
+    """
     ident = fact.get("id", "?")
     formal = fact.get("formal") or {}
     statement = formal.get("statement") or ""
     declarations = snapshot["declarations"]
 
-    out = ["", "=" * 78,
-           f"TARGET  {ident}",
-           f"        {fact.get('title', '')}",
-           f"        status={fact.get('epistemic_status', '?')}/"
-           f"{fact.get('external_status', '?')}  fragment="
-           f"{formal.get('fragment', '?')}  file={fact.get('_path', '?')}",
-           f"        formal.statement: {statement or '(none)'}",
-           "-" * 78,
-           "1. ALREADY IN THE ENVIRONMENT?  (rendered types, never names)"]
+    head = ["", "=" * 78,
+            f"TARGET  {ident}",
+            f"        {fact.get('title', '')}",
+            f"        status={fact.get('epistemic_status', '?')}/"
+            f"{fact.get('external_status', '?')}  fragment="
+            f"{formal.get('fragment', '?')}  file={fact.get('_path', '?')}"]
+
+    try:
+        held = is_held_out(frontier, ident)
+    except HeldOutUnanswerable as exc:
+        emit(head + ["-" * 78] + refuse_held_out(ident, unanswerable=str(exc)))
+        return True
+    if held:
+        emit(head + ["-" * 78] + refuse_held_out(ident))
+        return True
+
+    out = head + [
+        f"        formal.statement: {statement or '(none)'}",
+        "-" * 78,
+        "1. ALREADY IN THE ENVIRONMENT?  (rendered types, never names)"]
 
     if not statement:
         out.append("   UNANSWERABLE -- this fact carries no `formal.statement`, "
@@ -884,6 +949,65 @@ def report_target(root: pathlib.Path, fact: dict[str, Any], snapshot: dict[str, 
     out += ["-" * 78, "4. IS THE TARGET BLOCKED?"]
     out += [f"   {line}" for line in blocked_report(frontier, ident, statement)]
     emit(out)
+    return False
+
+
+def refuse_held_out(fact_id: str, unanswerable: str | None = None) -> list[str]:
+    """What a brief about a held-out target should say, and nothing more.
+
+    WHY THIS REFUSES SECTIONS 1-3 BUT NOT THE VERDICT ITSELF
+    --------------------------------------------------------
+    `check-autogenesis-already-proved.py` refuses a held-out id outright, even
+    when named explicitly, and says so in its docstring. This tool was written
+    hours later for the same question and had no such guard, and on 2026-08-29
+    an already-proved sweep used THIS one and closed ten preregistered
+    blind-evaluation rows (`92a61164e`). Two implementations of "is this already
+    proved", one with the guard and one without, and the unguarded one got used.
+
+    Copying the sibling's blanket refusal would be the wrong repair, because the
+    two tools have different consumers. The sibling screens a SET and its output
+    is a report; going quiet costs a row's line. This one is run by the
+    DISPATCHER on a specific target, and its whole output is what a brief should
+    contain -- so "this is held-out, do not dispatch it" is the single most
+    valuable thing it can say, and a tool that exits silently on the one target
+    where the dispatcher most needs an answer just sends them to a less careful
+    method. That is how the sweep happened.
+
+    So the split is by SECTION, not by target:
+
+      * The BLOCK is reported, loudly and first. It was previously section 4,
+        printed AFTER the already-proved verdict -- the warning arrived after
+        the leak.
+      * Sections 1-3 are withheld. Naming the kernel declaration whose rendered
+        type matches a blind proposition IS the proof route; so is a
+        shape-indexed near miss, and so is "read these modules". Those three are
+        what spends the row, and they are the only three withheld.
+
+    There is deliberately NO override flag. An escape hatch a lane can pass is
+    how a guard stops being one, and the legitimate way to work a held-out row
+    already exists: record an ADR-0542 amendment, after which the row is not
+    held-out and this tool answers it normally. The amendment IS the flag, and
+    it leaves a breach record behind where a flag leaves nothing.
+    """
+    if unanswerable is not None:
+        return [
+            "REFUSED: UNANSWERABLE -- blindness could not be checked",
+            f"   {unanswerable}",
+            "   Sections 1-3 are withheld: an unreadable partition is not a "
+            "licence to publish a proof route.",
+        ]
+    return [
+        "REFUSED: HELD-OUT -- blind evaluation population (ADR-0542)",
+        f"   {fact_id} is preregistered held-out. Dispatching it spends the "
+        f"whole statement-shape family, not one row.",
+        "   Sections 1-3 (already-in-the-environment, near misses, modules) are "
+        "WITHHELD: naming the declaration that already proves a blind "
+        "proposition is itself the leak.",
+        "   This is not a tool limitation to work around. If the family's blind "
+        "value is genuinely already spent, record an ADR-0542 amendment in "
+        "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json; the row is "
+        "then no longer held-out and this tool reports on it normally.",
+    ]
 
 
 # Ledger bookkeeping that is not a mathematical topic. A fact id is
@@ -1032,11 +1156,20 @@ def main() -> int:
         print("\nnothing to report: no target resolved to a fact.", file=sys.stderr)
         return 1
 
+    refused = 0
     for ident in resolved:
-        report_target(root, facts[ident], snapshot, fresh, modules, frontier, args)
+        if report_target(root, facts[ident], snapshot, fresh, modules,
+                         frontier, args):
+            refused += 1
 
     print("")
     print("=" * 78)
+    # Refusal outranks staleness: a stale ABSENT is a caveat on a verdict that
+    # was printed, and this is a verdict that deliberately was not.
+    if refused:
+        print(f"{refused} of {len(resolved)} target(s) REFUSED as held-out; "
+              f"nothing was reported for them (exit 5).")
+        return 5
     if fresh["state"] == "STALE" and not args.allow_stale:
         print("SNAPSHOT WAS STALE -- ABSENT verdicts above are PROVISIONAL "
               "(exit 4).")
