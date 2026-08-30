@@ -195,6 +195,7 @@ mod multichoose;
 mod no_confusion;
 mod nth;
 mod ops;
+mod even_add_family;
 mod order;
 mod order_extra;
 mod order_more;
@@ -323,6 +324,7 @@ use mul_order_lemmas::{
 use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
 use nth::declare_nth_all;
+use even_add_family::declare_even_add_family_all;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
@@ -3301,6 +3303,12 @@ pub struct NatPrelude {
     /// `Nat.even_add_one : ∀ n, Iff (Even (add n 1)) (Not (Even n))`.
     /// `F:ml430-nat-even-add-one-15b5cb18`.
     pub even_add_one: NameId,
+    /// `Nat.even_add : ∀ m n, Iff (Even (add m n)) (Iff (Even m) (Even n))`
+    /// (`even_add_family.rs`). `F:ml430-nat-even-add-31386639`.
+    pub even_add: NameId,
+    /// `Nat.even_add' : ∀ m n, Iff (Even (add m n)) (Iff (Odd m) (Odd n))`
+    /// (`even_add_family.rs`). `F:ml430-nat-even-add-39e3bc07`.
+    pub even_add_prime: NameId,
 
     // --- the floor logarithm (`log.rs`) -------------------------------------
     /// `Nat.logAux : Nat → Nat → Nat → Nat` — `logAux b f n`, the floor base-`b`
@@ -5127,6 +5135,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             odd_of_mul_left: kernel.name_str(nat, "odd_of_mul_left"),
             odd_of_mul_right: kernel.name_str(nat, "odd_of_mul_right"),
             even_add_one: kernel.name_str(nat, "even_add_one"),
+            even_add: kernel.name_str(nat, "even_add"),
+            even_add_prime: kernel.name_str(nat, "even_add'"),
             log_aux: kernel.name_str(nat, "logAux"),
             log: kernel.name_str(nat, "log"),
             log_zero_right: kernel.name_str(nat, "log_zero_right"),
@@ -5552,6 +5562,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `lt_or_eq_of_le` (order lemmas, far above) and `right_distrib`/
         // `mul_comm`/`add_zero` (basic arithmetic, far above).
         declare_parity_div_all(&mut d, &p)?;
+        // `Nat.even_add`/`Nat.even_add'` (`even_add_family.rs`, lane
+        // parity-finish, 2026-08-30). Needs `Nat.Even`/`Nat.Odd`,
+        // `even_or_odd_exists`/`even_not_odd`/`odd_not_even`
+        // (`declare_parity_all`, just above) and `add_add_add_comm`
+        // (`declare_add_basics`, far above)/`succ_add` (additive theorems,
+        // far above).
+        declare_even_add_family_all(&mut d, &p)?;
         // `Nat.countRange_reversal_even`: general, `totient`-independent.
         // Needs `count_range`/`count_range_split` (`declare_totient_all`,
         // far above), `Nat.Even` (`declare_parity_all`, just above),
