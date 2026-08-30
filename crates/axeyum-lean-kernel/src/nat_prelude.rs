@@ -3276,6 +3276,27 @@ pub struct NatPrelude {
     /// [`log_aux_antitone_base`](Self::log_aux_antitone_base)'s diagonal `f
     /// := n`.
     pub log_antitone_left: NameId,
+    /// `Nat.clog_aux_antitone_base : ∀ f n a b, Le a b → Lt 1 a → Lt 1 b →
+    /// Le (clogAux b f n) (clogAux a f n)` — [`log_aux_antitone_base`](Self::log_aux_antitone_base)'s
+    /// counterpart, with the two guard cuts' roles swapped: `clogAux`'s
+    /// outer cut (`2 ≤ base`) is a pure base cut, individually known true
+    /// from the statement's own `1 < a`/`1 < b` hypotheses (no case split);
+    /// its inner cut (`2 ≤ n`) is the SAME expression on both sides (the
+    /// value is fixed), so it needs exactly one case split. The recursive
+    /// step compares two different CEILING quotients at different bases —
+    /// not covered by [`div_le_div_left`](Self::div_le_div_left) directly,
+    /// which is about a shared numerator — so each side's quotient is first
+    /// rewritten to `(n-1)/base + 1` (a bridging identity between `(n +
+    /// base) - 1` and `(n - 1) + base`, valid given `1 ≤ n`, plus
+    /// `Nat.add_div_right`), turning the comparison into a floor comparison
+    /// at the shared numerator `n - 1`.
+    pub clog_aux_antitone_base: NameId,
+    /// `Nat.clog_antitone_left : ∀ {n}, AntitoneOn (fun b => clog b n)
+    /// (Set.Ioi 1)` (`Mathlib`: `Nat.clog_antitone_left`) — the
+    /// core-rendered unfolding at
+    /// [`clog_aux_antitone_base`](Self::clog_aux_antitone_base)'s diagonal
+    /// `f := n`.
+    pub clog_antitone_left: NameId,
     /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
     /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
     /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
@@ -4690,6 +4711,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_le_div_left: kernel.name_str(nat, "div_le_div_left"),
             log_aux_antitone_base: kernel.name_str(nat, "log_aux_antitone_base"),
             log_antitone_left: kernel.name_str(nat, "log_antitone_left"),
+            clog_aux_antitone_base: kernel.name_str(nat, "clog_aux_antitone_base"),
+            clog_antitone_left: kernel.name_str(nat, "clog_antitone_left"),
             bit: kernel.name_str(nat, "bit"),
             bit_false: kernel.name_str(nat, "bit_false"),
             bit_true: kernel.name_str(nat, "bit_true"),
