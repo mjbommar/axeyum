@@ -2,10 +2,10 @@
   "schema_version": 1,
   "id": "F:ml430-nat-totient-eq-zero-3be161d6",
   "title": "Mathlib v4.30 source proposition Nat.totient_eq_zero",
-  "statement": "The proposition declared as `Nat.totient_eq_zero` in the pinned Mathlib v4.30 source.",
+  "statement": "\u2200 {n : \u2115}, n.totient = 0 \u2194 n = 0",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.totient_eq_zero : ((x0 : AxNat) -> Iff (Eq.{1} AxNat (AxNat.totient x0) AxNat.zero) (Eq.{1} AxNat x0 AxNat.zero))",
+    "language": "lean4-surface",
+    "statement": "\u2200 {n : \u2115}, n.totient = 0 \u2194 n = 0",
     "fragment": "Nat",
     "free_symbols": [
       "x0"
