@@ -86,6 +86,15 @@ fn eval_at(kernel: &mut Kernel, p: &IpcSoundnessPrelude, f: ExprId, v: ExprId) -
     apply(kernel, c, &[f, v])
 }
 
+/// The full `LogicPrelude`. `IpcHeytingPrelude`'s `NatPreludeHandle` carries
+/// only the eleven names that file needed; `build_nat_prelude` is cached, so
+/// re-asking for the whole thing costs nothing.
+fn logic(kernel: &mut Kernel) -> crate::LogicPrelude {
+    crate::build_nat_prelude(kernel)
+        .expect("the nat prelude is already built at this point")
+        .logic
+}
+
 fn build() -> (Kernel, IpcSoundnessPrelude) {
     let mut kernel = Kernel::new();
     let prelude = build_ipc_soundness_prelude(&mut kernel).expect("slice-4 prelude must build");
@@ -177,9 +186,7 @@ fn everything_this_slice_declares_is_axiom_free() {
         p.sat_not_vacuous,
         p.pem_not_provable,
     ] {
-        let footprint = kernel
-            .axiom_footprint(name)
-            .expect("axiom_footprint must succeed for a declared name");
+        let footprint = kernel.axiom_footprint(name);
         assert!(
             footprint.is_empty(),
             "slice 4 must be axiom-free; {name:?} depends on {footprint:?}"
@@ -198,7 +205,7 @@ fn ctx_meet_of_nil_is_the_chain_top() {
     let lhs = ctx_meet(&mut kernel, &p, l, v);
     let two = num(&mut kernel, &p, 2);
     assert!(
-        kernel.def_eq(lhs, two).expect("def_eq must not error"),
+        kernel.def_eq(lhs, two),
         "ipc_ctx_meet nil v must reduce to 2"
     );
 }
@@ -215,7 +222,7 @@ fn ctx_meet_of_a_singleton_is_that_formulas_value() {
     let lhs = ctx_meet(&mut kernel, &p, l, v);
     let one = num(&mut kernel, &p, 1);
     assert!(
-        kernel.def_eq(lhs, one).expect("def_eq must not error"),
+        kernel.def_eq(lhs, one),
         "ipc_ctx_meet [var 0] (const 1) must reduce to 1"
     );
 
@@ -223,7 +230,7 @@ fn ctx_meet_of_a_singleton_is_that_formulas_value() {
     // the failing def_eq stays tiny: it must NOT also be 0.
     let zero = num(&mut kernel, &p, 0);
     assert!(
-        !kernel.def_eq(lhs, zero).expect("def_eq must not error"),
+        !kernel.def_eq(lhs, zero),
         "ipc_ctx_meet [var 0] (const 1) must not be 0 -- the check would be vacuous"
     );
 }
@@ -243,7 +250,7 @@ fn ctx_meet_reads_the_head_formula_not_a_fixed_slot() {
     let m0 = ctx_meet(&mut kernel, &p, l0, v);
     let zero = num(&mut kernel, &p, 0);
     assert!(
-        kernel.def_eq(m0, zero).expect("def_eq must not error"),
+        kernel.def_eq(m0, zero),
         "ipc_ctx_meet [var 0] id must reduce to 0"
     );
 
@@ -252,7 +259,7 @@ fn ctx_meet_reads_the_head_formula_not_a_fixed_slot() {
     let m1 = ctx_meet(&mut kernel, &p, l1, v);
     let one = num(&mut kernel, &p, 1);
     assert!(
-        kernel.def_eq(m1, one).expect("def_eq must not error"),
+        kernel.def_eq(m1, one),
         "ipc_ctx_meet [var 1] id must reduce to 1"
     );
 }
@@ -273,12 +280,12 @@ fn ctx_meet_takes_the_meet_over_the_whole_list() {
     let lhs = ctx_meet(&mut kernel, &p, l, v);
     let zero = num(&mut kernel, &p, 0);
     assert!(
-        kernel.def_eq(lhs, zero).expect("def_eq must not error"),
+        kernel.def_eq(lhs, zero),
         "ipc_ctx_meet [var 1, var 0] id must reduce to 0"
     );
     let one = num(&mut kernel, &p, 1);
     assert!(
-        !kernel.def_eq(lhs, one).expect("def_eq must not error"),
+        !kernel.def_eq(lhs, one),
         "it must NOT be 1 -- that is the answer a tail-ignoring definition gives"
     );
 }
@@ -294,7 +301,7 @@ fn ctx_meet_of_bot_is_the_chain_bottom() {
     let lhs = ctx_meet(&mut kernel, &p, l, v);
     let zero = num(&mut kernel, &p, 0);
     assert!(
-        kernel.def_eq(lhs, zero).expect("def_eq must not error"),
+        kernel.def_eq(lhs, zero),
         "ipc_ctx_meet [bot] v must reduce to 0"
     );
 }
@@ -308,9 +315,10 @@ fn sat_of_nil_is_true() {
     let l = nil(&mut kernel, &p);
     let sat_const = kernel.const_(p.sat, vec![]);
     let lhs = apply(&mut kernel, sat_const, &[l, v]);
-    let true_ = kernel.const_(p.provable.heyting.nat.logic.true_, vec![]);
+    let true_name = logic(&mut kernel).true_;
+    let true_ = kernel.const_(true_name, vec![]);
     assert!(
-        kernel.def_eq(lhs, true_).expect("def_eq must not error"),
+        kernel.def_eq(lhs, true_),
         "ipc_sat nil v must reduce to True"
     );
 }
@@ -328,7 +336,7 @@ fn sat_is_satisfied_by_a_valuation_that_sends_the_context_to_top() {
     let sat_const = kernel.const_(p.sat, vec![]);
     let stated = apply(&mut kernel, sat_const, &[l, v]);
 
-    let logic = p.provable.heyting.nat.logic;
+    let logic = logic(&mut kernel);
     let ev = eval_at(&mut kernel, &p, x, v);
     let two = num(&mut kernel, &p, 2);
     let nat_ty = kernel.const_(p.provable.heyting.nat.nat, vec![]);
@@ -395,12 +403,12 @@ fn pem_evaluates_to_one_and_a_tautology_evaluates_to_top_at_the_same_valuation()
     let pem_value = eval_at(&mut kernel, &p, pem, v);
     let one = num(&mut kernel, &p, 1);
     assert!(
-        kernel.def_eq(pem_value, one).expect("def_eq must not error"),
+        kernel.def_eq(pem_value, one),
         "eval (p or not p) (const 1) must be 1"
     );
     let two = num(&mut kernel, &p, 2);
     assert!(
-        !kernel.def_eq(pem_value, two).expect("def_eq must not error"),
+        !kernel.def_eq(pem_value, two),
         "eval (p or not p) (const 1) must NOT be the top 2"
     );
 
@@ -409,7 +417,7 @@ fn pem_evaluates_to_one_and_a_tautology_evaluates_to_top_at_the_same_valuation()
     let taut_value = eval_at(&mut kernel, &p, self_imp, v);
     let two = num(&mut kernel, &p, 2);
     assert!(
-        kernel.def_eq(taut_value, two).expect("def_eq must not error"),
+        kernel.def_eq(taut_value, two),
         "eval (p -> p) (const 1) must be the top 2 -- otherwise the algebra \
          refutes everything and the countermodel means nothing"
     );
@@ -426,7 +434,7 @@ fn the_excluded_middle_is_not_intuitionistically_derivable() {
     let base = nil(&mut kernel, &p);
     let provable_const = kernel.const_(p.provable.provable, vec![]);
     let derivation = apply(&mut kernel, provable_const, &[base, pem]);
-    let not_const = kernel.const_(p.provable.heyting.nat.logic.not, vec![]);
+    let not_const = kernel.const_(p.provable.heyting.nat.not, vec![]);
     let expected = kernel.app(not_const, derivation);
 
     let Some(crate::Declaration::Theorem { ty, .. }) =
@@ -435,7 +443,7 @@ fn the_excluded_middle_is_not_intuitionistically_derivable() {
         panic!("ipc_excluded_middle_not_provable must be an admitted Theorem");
     };
     assert!(
-        kernel.def_eq(ty, expected).expect("def_eq must not error"),
+        kernel.def_eq(ty, expected),
         "the admitted theorem's type must be Not (Provable nil (p or not p))"
     );
 }

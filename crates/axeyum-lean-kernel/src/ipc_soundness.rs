@@ -92,6 +92,13 @@
 //! direct route. `Nat.not_succ_le_self 1` refutes it, so the assumed
 //! derivation yields `False`.
 #![allow(clippy::similar_names)]
+// The chain lemmas and the eleven soundness minors are stated over the
+// mathematical variables they are stated over in the literature -- `a`/`b`/`c`
+// for chain elements, `m` for the context meet, `v` for a valuation, `p`/`q`/`r`
+// for formulas. Renaming them to satisfy the lint would make every proof harder
+// to check against the semantics it encodes, which is the only thing that
+// matters here.
+#![allow(clippy::many_single_char_names)]
 
 use crate::{
     BinderInfo, Declaration, ExprId, IpcProvablePrelude, KernelError, NameId, NatPrelude,
@@ -485,7 +492,11 @@ impl Dev<'_> {
         refutes: ExprId,
     ) -> ExprId {
         let zero = self.k.level_zero();
-        self.capp_lvl(self.nat.logic.absurd, vec![zero], &[contra, goal, h_contra, refutes])
+        self.capp_lvl(
+            self.nat.logic.absurd,
+            vec![zero],
+            &[contra, goal, h_contra, refutes],
+        )
     }
 
     /// From `h_true : Eq Bool (ble a b) Bool.true` and
@@ -580,11 +591,7 @@ fn declare_ctx_meet(d: &mut Dev<'_>) -> Result<NameId, KernelError> {
     };
 
     let (l_id, l) = d.fv();
-    let applied = d.capp_lvl(
-        d.p.formula_list_rec,
-        vec![one],
-        &[motive, m_nil, m_cons, l],
-    );
+    let applied = d.capp_lvl(d.p.formula_list_rec, vec![one], &[motive, m_nil, m_cons, l]);
     let value = d.lam_fv(l_id, flist, applied);
     let ty = d.arrow(flist, codomain);
     d.definition("ipc_ctx_meet", ty, value)
@@ -622,11 +629,7 @@ fn declare_sat(d: &mut Dev<'_>) -> Result<NameId, KernelError> {
     };
 
     let (l_id, l) = d.fv();
-    let applied = d.capp_lvl(
-        d.p.formula_list_rec,
-        vec![one],
-        &[motive, m_nil, m_cons, l],
-    );
+    let applied = d.capp_lvl(d.p.formula_list_rec, vec![one], &[motive, m_nil, m_cons, l]);
     let value = d.lam_fv(l_id, flist, applied);
     let ty = d.arrow(flist, codomain);
     d.definition("ipc_sat", ty, value)
@@ -962,10 +965,7 @@ fn declare_meet_absorb_le(d: &mut Dev<'_>) -> Result<NameId, KernelError> {
 /// **linearity** is used: `join3 a b` is one of its two arguments outright, so
 /// `Le m (join3 a b)` already gives `Le m a` or `Le m b`, and
 /// [`declare_meet_absorb_le`] finishes from the matching branch hypothesis.
-fn declare_or_elim_chain(
-    d: &mut Dev<'_>,
-    meet_absorb_le: NameId,
-) -> Result<NameId, KernelError> {
+fn declare_or_elim_chain(d: &mut Dev<'_>, meet_absorb_le: NameId) -> Result<NameId, KernelError> {
     let zero = d.k.level_zero();
     let nat = d.nat_ty();
     let bool_ty = d.bool_ty();
@@ -1175,10 +1175,7 @@ fn declare_himp3_elim(d: &mut Dev<'_>) -> Result<NameId, KernelError> {
 /// `ipc_ctx_meet_le_top : ∀ l v, Le (ipc_ctx_meet l v) 2`, by `FormulaList.rec`
 /// — `nil` is `2` itself and every `cons` takes a meet, which can only go
 /// down. Discharges [`declare_himp3_intro`]'s side condition.
-fn declare_ctx_meet_le_top(
-    d: &mut Dev<'_>,
-    meet3_le_right: NameId,
-) -> Result<NameId, KernelError> {
+fn declare_ctx_meet_le_top(d: &mut Dev<'_>, meet3_le_right: NameId) -> Result<NameId, KernelError> {
     let zero = d.k.level_zero();
     let flist = d.flist_ty();
     let formula = d.formula_ty();
@@ -1348,7 +1345,7 @@ fn declare_soundness(d: &mut Dev<'_>, lemmas: &ChainLemmas) -> Result<NameId, Ke
     };
 
     // 4/5. and_elim1/2 : Π c p q, Provable c (and_ p q) -> Provable c p (resp. q)
-    let mut and_elim = |d: &mut Dev<'_>, first: bool| -> ExprId {
+    let and_elim = |d: &mut Dev<'_>, first: bool| -> ExprId {
         let (c_id, c) = d.fv();
         let (p_id, p) = d.fv();
         let (q_id, q) = d.fv();
@@ -1382,7 +1379,7 @@ fn declare_soundness(d: &mut Dev<'_>, lemmas: &ChainLemmas) -> Result<NameId, Ke
     let m_and_elim2 = and_elim(d, false);
 
     // 6/7. or_intro1/2 : Π c p q, Provable c p (resp. q) -> Provable c (or_ p q)
-    let mut or_intro = |d: &mut Dev<'_>, first: bool| -> ExprId {
+    let or_intro = |d: &mut Dev<'_>, first: bool| -> ExprId {
         let (c_id, c) = d.fv();
         let (p_id, p) = d.fv();
         let (q_id, q) = d.fv();
