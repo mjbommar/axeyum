@@ -70,6 +70,7 @@
 //! on `Provable`'s own generated recursor. This file supplies the `eval`
 //! half of that statement; it does not attempt soundness itself. See
 //! `ipc_provable.rs`'s module docs for the full remaining shape.
+#![allow(clippy::similar_names)]
 
 use crate::{BinderInfo, Declaration, ExprId, IpcHeytingPrelude, KernelError, NameId};
 use crate::{ReducibilityHint, build_ipc_heyting_prelude};
@@ -115,9 +116,16 @@ fn lam_fv(kernel: &mut crate::Kernel, id: u64, ty: ExprId, body: ExprId) -> Expr
 
 /// Build the shared minor-premise shape for `and_`/`or_`/`imp`: each takes
 /// two recursive fields `(a, b) : Formula` (field order), then their two
-/// induction hypotheses `(ih_a, ih_b) : (Nat -> Nat) -> Nat` (appended after
-/// the field binders, in field order, per `inductive.rs`'s recursor schema),
-/// and returns `fun v => op (ih_a v) (ih_b v)`.
+/// induction hypotheses `(ih_a, ih_b) : motive_codomain` (i.e.
+/// `(Nat -> Nat) -> Nat`, since the motive is constant in `Formula` —
+/// appended after the field binders, in field order, per `inductive.rs`'s
+/// recursor schema: "for `f_j : Pi xs, I p… indices`, that binder has type
+/// `Pi xs, motive indices (f_j xs)`", which for our non-dependent motive and
+/// direct (telescope-free) recursive field is simply `motive_codomain`, NOT
+/// `val_ty` — a bare `Nat -> Nat` binder here was this function's first
+/// draft's bug, caught by `debug_probe_eval_recursor_steps` inferring `m_and`
+/// on its own and reporting a sort-shaped `TypeMismatch`), and returns
+/// `fun v => op (ih_a v) (ih_b v)`.
 ///
 /// `base_id` and the next four `u64`s after it must not collide with any
 /// other fvar id live at the same time; each call site uses a distinct
@@ -125,6 +133,7 @@ fn lam_fv(kernel: &mut crate::Kernel, id: u64, ty: ExprId, body: ExprId) -> Expr
 fn binop_minor(
     kernel: &mut crate::Kernel,
     val_ty: ExprId,
+    motive_codomain: ExprId,
     formula_ty: ExprId,
     op: NameId,
     base_id: u64,
@@ -144,8 +153,8 @@ fn binop_minor(
     let combined = apply_all(kernel, op_const, &[iha_v, ihb_v]);
 
     let body = lam_fv(kernel, v_id, val_ty, combined);
-    let body = lam_fv(kernel, ihb_id, val_ty, body);
-    let body = lam_fv(kernel, iha_id, val_ty, body);
+    let body = lam_fv(kernel, ihb_id, motive_codomain, body);
+    let body = lam_fv(kernel, iha_id, motive_codomain, body);
     let body = lam_fv(kernel, b_id, formula_ty, body);
     lam_fv(kernel, a_id, formula_ty, body)
 }
@@ -182,9 +191,30 @@ fn declare_eval(kernel: &mut crate::Kernel, p: &IpcHeytingPrelude) -> Result<Nam
     let zero_const = kernel.const_(p.nat.zero, vec![]);
     let m_bot = lam_fv(kernel, v_bot_id, val_ty, zero_const);
 
-    let m_and = binop_minor(kernel, val_ty, formula_ty, p.meet3, 961_301_u64);
-    let m_or = binop_minor(kernel, val_ty, formula_ty, p.join3, 961_401_u64);
-    let m_imp = binop_minor(kernel, val_ty, formula_ty, p.himp3, 961_501_u64);
+    let m_and = binop_minor(
+        kernel,
+        val_ty,
+        motive_codomain,
+        formula_ty,
+        p.meet3,
+        961_301_u64,
+    );
+    let m_or = binop_minor(
+        kernel,
+        val_ty,
+        motive_codomain,
+        formula_ty,
+        p.join3,
+        961_401_u64,
+    );
+    let m_imp = binop_minor(
+        kernel,
+        val_ty,
+        motive_codomain,
+        formula_ty,
+        p.himp3,
+        961_501_u64,
+    );
 
     let rec_const = kernel.const_(p.formula_rec, vec![one_lvl]);
     let applied = apply_all(
