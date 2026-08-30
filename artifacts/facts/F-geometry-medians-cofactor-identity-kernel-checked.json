@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-medians-cofactor-identity-kernel-checked",
+  "title": "The medians-concurrent certificate's cofactor identity is kernel-reconstructed with FRACTIONAL generator coefficients -- the first CAS->kernel bridge to embed a genuinely non-integer Rat literal",
+  "statement": "For the eight-variable polynomial identity F:geometry-medians-concurrent's certificate states -- conclusion = sum over i of cofactor_i * generator_i over the coordinates ax, ay, bx, by, cx, cy, px, py, with both cofactors the constant integer -1 and 8 of each 10-term generator/conclusion polynomial carrying a genuinely fractional (+-1/2) coefficient -- the identity itself is reconstructed through crate::Kernel::add_declaration at SYMBOLIC coordinates (eight universally quantified Rat variables). Its predecessors F:geometry-orthocentre-cofactor-identity-kernel-checked and F:geometry-rhombus-cofactor-identity-kernel-checked both restricted the translator to integer coefficients (rational_to_int declines any fraction); this fact lifts that restriction with a general Rat.ofRat-style literal cast (Rat.normalize applied directly to a Rational's own numerator/denominator pair) rather than a new kernel declaration. It is deliberately WEAKER than the geometry fact it is a sibling of, in six ways spelled out in axiom_footprint.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (forall ((ax Rat) (ay Rat) (bx Rat) (by Rat) (cx Rat) (cy Rat) (px Rat) (py Rat))\n  (= conclusion_P_on_median_from_C\n     (+ (* (- 1) generator_P_on_median_from_A)\n        (* (- 1) generator_P_on_median_from_B))))))",
+    "fragment": "nra-geometry-cofactor-identity",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "px",
+      "py"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:geometry-medians-concurrent",
+    "F:geometry-orthocentre-cofactor-identity-kernel-checked"
+  ],
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a Kernel::add_declaration acceptance whose axiom_footprint is asserted EMPTY in the test itself, built from rat_prelude/int_prelude/nat_prelude constants that are all measured axiom-free -- but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane: RELOCATED, NOT DISCHARGED. The kernel sees eight Rat variables and one algebraic identity. That ax is the abscissa of a point A, that the two generators are 'P collinear with A and the midpoint of BC' and 'P collinear with B and the midpoint of CA', and that the conclusion is 'P collinear with C and the midpoint of AB', are modelling choices made in axeyum_cas::geometry_corpus and reproduced verbatim by this bridge's translator. Reconstruction moves that assumption from a CAS-internal convention into a kernel definition choice; it does not remove it.",
+    "geometry.implication-not-discharged: this fact states the polynomial IDENTITY conclusion = (-1)*generator_0 + (-1)*generator_1, which is what the certificate carries. It does NOT state the implication (both generators = 0) implies conclusion = 0. That step is one Rat rewrite away and is not taken here: no Rat hypothesis is discharged and no implication is declared.",
+    "geometry.no-non-degeneracy-condition: this certificate's saturations list is empty (unlike rhombus-diagonals-perpendicular, which needed an uninterpreted inverse-witness variable), so there is nothing to relocate on that front -- the identity holds unconditionally over all eight coordinates, which is also why medians-concurrent's OWN incidence form needs no non-degeneracy hypothesis (see F:geometry-medians-concurrent's statement; locating the meeting point, F:geometry-centroid-divides-medians, is the one that does).",
+    "geometry.characteristic-zero-specialisation: inherited unchanged from F:geometry-medians-concurrent. A rational-coefficient cofactor identity holds in every Q-algebra, so the theorem is one of every characteristic-zero field, not specifically of the real plane; and this reconstruction is over Rat, not over CReal, so nothing here says the coordinates are real numbers.",
+    "cas.fractional-cast-untested-at-large-denominators: rat_lit (Rat.normalize applied to a Rational's own numerator/denominator) is exercised here only at denominators 1 and 2, the largest this certificate needs. Nothing in this fact measures whether the def_eq renormalisation the proof leans on (Rat.add/Rat.mul of two Rat.normalize literals collapsing to a third by the kernel's own computation, with no new lemma) stays cheap at the larger denominators euler-line's cofactors would need -- CLAUDE.md's numeral-magnitude gotcha (this kernel's Nat arithmetic is unary, so cost is superlinear in the largest magnitude FORMED) applies directly to a cross-multiplied denominator product."
+  ],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-medians-cofactor-identity",
+      "kind": "kernel-term",
+      "supports": "conclusion = (-1)*generator_0 + (-1)*generator_1 at eight universally quantified Rat variables, admitted by crate::Kernel::add_declaration as Check.geometry_medians_cofactor_identity. The polynomials are NOT hand-copied: the test calls axeyum_cas::geometry_corpus::corpus() for the medians-concurrent problem, runs axeyum_cas::geometry_certify::certify on it, and translates cert.generators / cert.conclusions[0].poly / cert.conclusions[0].cofactors through rat_poly (the Rational-coefficient generalisation of the parent bridge's int_poly, which never declines) -- asserting first that both cofactors are the constant Rational::integer(-1) and that the variable ORDER is the certificate's own. The proof is emitted by prove_scale_rat / prove_merge_rat / prove_const_combination_rat, generalising the constant-cofactor orthocentre bridge's prove_scale/prove_merge to Rational coefficients: every coefficient combination step is either a Rat ring lemma the kernel re-derives (left_distrib, right_distrib, mul_assoc, add_assoc, mul_comm, mul_zero, zero_add, add_zero) or a single Eq.refl ascription that the kernel's OWN Rat.add/Rat.mul computation checks (the same def_eq renormalisation int_prelude_tests.rs's rat_add_renormalises/rat_mul_renormalises tests already establish for concrete literals, needing no lemma). The declaration's axiom_footprint is asserted EMPTY and its kind asserted Declaration::Theorem in the same test.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (untrusted producer: cofactor-tracked Buchberger reduction that finds the two cofactors; this bridge never recomputes them)",
+        "rat_prelude::cas_geometry_frac_bridge_tests::prove_const_combination_rat and its two layers (the proof-emitting normalizer, entirely Rust-side and entirely untrusted -- it only proposes a term)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated eight-variable Eq Rat from the supplied proof term, and supplies the axiom_footprint the test asserts empty)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_frac_bridge_tests::tests::geometry_medians_cofactor_identity_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_geometry_frac_bridge_tests::tests::geometry_medians_cofactor_identity_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 15,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_frac_bridge_tests.rs",
+      "notes": "Measured wall-clock 8.14s for this test alone (debug, uncontended) -- far cheaper than the rhombus sibling's 152.79s, because medians-concurrent's cofactors are constant (no prove_mul/polynomial-times-polynomial needed) and its 10-term polynomials are far smaller than rhombus's 79-term ones. MUTATION-VERIFIED both halves separately, each killing this test alone and leaving the other two frac-bridge tests green: (a) perturbing the merge's combined coefficient (a_head.1 + b_head.1 -> a_head.1 + b_head.1 + 1) kills it at the merged == concl_for_build assertion, printing an 11-term wrong normal form against the certificate's 10-term conclusion, which pins the STATEMENT to the certificate rather than to whatever the emitter produced; (b) swapping the zero-drop path's closing lemma (Rat.zero_add -> Rat.add_zero, same arity, wrong side) leaves that assertion PASSING -- the normal form is unchanged, only the proof is wrong -- and kills it with TypeMismatch out of add_declaration, showing the PROOF is genuinely re-derived by the trust anchor. The two mutations therefore die through different guards, which is the discrimination that matters."
+    },
+    {
+      "id": "rat-poly-arithmetic-and-the-certificate-identity-checked-against-numbers",
+      "kind": "instance-pin",
+      "supports": "That the RatPoly Rust arithmetic (add_poly_rat/scale_poly_rat) computes the right answer and that the translator read the certificate the CAS actually produced -- neither of which the kernel can see, because it never sees an MvPoly or a Rational. Two separate numeric controls: (1) the certificate's own generator/conclusion polynomials evaluated at a point discriminating all three from each other and from zero, with the cofactor identity conclusion = -g0-g1 checked numerically; (2) -g0-g1 recomputed independently through add_poly_rat/scale_poly_rat and asserted equal to the certificate's own conclusion polynomial term-for-term (12 unique monomials across g0/g1, two of which -- ax*by and ay*bx -- cancel exactly, leaving the conclusion's 10), with a negative control (+g0-g1, one sign flip) asserted NOT equal to the conclusion.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (produces the MvPoly/Rational values being read)",
+        "rat_prelude::cas_geometry_frac_bridge_tests::eval_rat_poly (independent Rational evaluation, used only in tests and never in a proof)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_frac_bridge_tests::tests:: 2>/dev/null | grep -cE '^test result: ok\\. 3 passed; 0 failed'",
+      "checker_seconds": 15,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_frac_bridge_tests.rs",
+      "notes": "The evaluation point's magnitudes are single-digit on purpose (unary Nat numerals in this prelude make cost superlinear in the largest value formed), and the point is chosen off both medians so all three polynomials are nonzero and pairwise distinct there."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane cas-fractional-cast: rat_prelude::cas_geometry_frac_bridge_tests (crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_frac_bridge_tests.rs), continuing lane cas-prove-mul, which named the fractional-literal cast as the highest-leverage next piece for row 3 (unblocking four facts across three clusters for one build)",
+    "source": "the cofactor identity of axeyum_cas::geometry_corpus's medians-concurrent problem, produced by axeyum_cas::geometry_certify::certify and committed at artifacts/geometry-certificates/medians-concurrent.json",
+    "prior_art": [
+      {
+        "who": "Hilbert; Wu Wen-Tsun; Buchberger",
+        "what": "the Nullstellensatz cofactor form of a geometry theorem, and its mechanisation by characteristic sets / Groebner bases",
+        "year": 1978,
+        "where": "Wu, 'On the decision problem and the mechanization of theorem-proving in elementary geometry', Sci. Sinica 21 (1978)",
+        "attribution": "standard attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:geometry-medians-concurrent, not an edit to it, for the same reason the orthocentre and rhombus bridges are siblings: folding this evidence into the parent would make scripts/validate-facts.py's classify_cas_certificate_fact label the WHOLE certificate -- the coordinatisation and the implication included -- as kernel-reconstructed, which would overclaim exactly what the design review says must not be overclaimed. THE CAST, in one sentence: Rat.normalize already existed (it takes an Int numerator, a Nat denominator and a proof 1<=den, and reduces to lowest terms internally) and needed no new kernel declaration -- rat_lit is a one-line builder applying it directly to a Rational's own canonical numerator/denominator pair. THE PROOF COST, in one sentence: because int_prelude_tests.rs already establishes (rat_add_renormalises_and_neg_is_an_involution, rat_mul_renormalises_two_thirds_times_three_halves_to_one) that Rat.add/Rat.mul of two concrete Rat.normalize literals fully renormalise via def_eq with no lemma needed, prove_scale_rat/prove_merge_rat need one FEWER proof step than their integer-coefficient predecessors: the Rat.ofInt_mul/Rat.ofInt_add-then-Eq.refl collapse becomes a single Eq.refl ascription straight to the canonical rat_lit, and the kernel's own Rat.mul/Rat.add computation is what checks it. Sizing correction inherited from docs/plan/status/314-cas-prove-mul.md, re-verified before this lane started: parallelogram-diagonals-bisect (lane 277's originally-named 'cheapest' target) still needs BOTH this cast AND prove_mul, since every one of its cofactors and both of its conclusions carry +-1/2 -- it is NOT reachable by this fact's route alone. Remaining work using this cast: centroid-divides-medians and parallelogram-diagonals-bisect (cast + prove_mul), euler-line (cast + prove_mul, plus a simson-class term-count cost question), and F:cas-partial-fractions-mixed-general-case (cast only, untouched by this lane -- 'landing the cast plus one reconstruction is a full result' was the brief's explicit scope, so a second cast-only fact was left for the next lane rather than batch-converted here)."
+}
