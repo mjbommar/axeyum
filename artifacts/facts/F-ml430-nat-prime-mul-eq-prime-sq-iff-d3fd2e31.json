@@ -10,7 +10,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb", "F:nat-euclid-lemma", "F:nat-le-trans", "F:nat-mul-assoc", "F:nat-mul-comm", "F:nat-mul-left-cancel-of-pos", "F:nat-mul-one", "F:nat-one-mul", "F:nat-pow-succ", "F:nat-pow-zero"],
+  "depends_on": ["F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb", "F:nat-euclid-lemma", "F:nat-le-trans", "F:nat-mul-assoc", "F:nat-mul-comm", "F:nat-mul-left-cancel-of-pos", "F:nat-mul-one", "F:nat-one-mul", "F:nat-pow-succ", "F:nat-pow-zero", "F:ml430-nat-prime-dvd-or-dvd-4ae88221"],
   "axiom_footprint": [],
   "evidence": [
     {

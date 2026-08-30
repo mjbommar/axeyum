@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-euclid-lemma", "F:nat-le-of-dvd", "F:nat-le-of-succ-le-succ", "F:nat-le-trans", "F:nat-not-succ-le-zero", "F:nat-pow-succ", "F:nat-pow-zero", "F:ml430-nat-le-of-succ-le-succ-a180a72c", "F:ml430-nat-le-refl-fd7d9e15"],
+  "depends_on": ["F:nat-euclid-lemma", "F:nat-le-of-dvd", "F:nat-le-of-succ-le-succ", "F:nat-le-trans", "F:nat-not-succ-le-zero", "F:nat-pow-succ", "F:nat-pow-zero", "F:ml430-nat-le-of-succ-le-succ-a180a72c", "F:ml430-nat-le-refl-fd7d9e15", "F:ml430-nat-prime-dvd-or-dvd-4ae88221"],
   "evidence": [
     {
       "check_status": "checked",

@@ -809,6 +809,23 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // it is unmeasured, and the two look identical in a green run.
         p.euclid_lemma,
         p.prime_dvd_choose,
+        // `prime_dvd_mirrors.rs`: the small consequences of `prime_condition`'s
+        // own clause, plus the `Coprime <-> not dvd` bridge and its `p^m`
+        // corollary.
+        p.prime_one_lt,
+        p.prime_one_le,
+        p.prime_pos,
+        p.prime_ne_one,
+        p.prime_ne_zero,
+        p.prime_not_dvd_one,
+        p.prime_eq_one_or_self_of_dvd,
+        p.prime_dvd_iff_eq,
+        p.prime_dvd_mul_iff,
+        p.prime_coprime_iff_not_dvd,
+        p.prime_eq_two_or_odd,
+        p.prime_eq_two_or_mod_two_eq_one,
+        p.prime_mod_two_eq_one_iff_ne_two,
+        p.prime_coprime_pow_of_not_dvd,
         p.mod_eq_pow,
         p.dvd_sum_range_of_forall_lt,
         p.add_pow_modeq_prime,
@@ -1029,16 +1046,6 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.five_le_of_ne_two_of_ne_three,
         p.prime_pred_pos,
         p.succ_pred_prime,
-        p.prime_one_le,
-        p.prime_pos,
-        p.prime_one_lt,
-        p.prime_ne_zero,
-        p.prime_ne_one,
-        p.prime_not_dvd_one,
-        p.prime_eq_one_or_self_of_dvd,
-        p.prime_eq_two_or_odd,
-        p.prime_eq_two_or_odd_mod,
-        p.prime_mod_two_eq_one_iff_ne_two,
         p.prime_not_prime_pow_two_le,
         p.prime_not_prime_pow_ne_one,
         p.prime_eq_one_of_pow,
@@ -10116,6 +10123,337 @@ fn prime_dvd_choose_matches_its_statement_at_a_concrete_point() {
         "{} must rest on zero axioms",
         f.k.display_name(p.prime_dvd_choose)
     );
+}
+
+/// Every `prime_dvd_mirrors.rs` theorem's DECLARED type, checked against an
+/// INDEPENDENTLY built type at a free `p` (and `m`, `n`, `a` where needed) --
+/// never against the same `prime_condition` helper the theorem was built
+/// with, so a swapped `Iff` side or a transposed hypothesis order would show
+/// up here even though the kernel already accepted the proof term against
+/// whatever type this file's proof-builder actually asked for.
+#[test]
+fn prime_dvd_mirrors_state_exactly_what_they_claim() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one = f.num(1);
+    let two = f.num(2);
+    let zero = f.zero();
+
+    let prime_ty_of = |f: &mut Fixture, pp: ExprId| -> ExprId {
+        let lower = f.le(two, pp);
+        let c_fv = f.fresh_fvar();
+        let c = f.k.fvar(c_fv);
+        let hyp = f.dvd(c, pp);
+        let is_one = f.eq(c, one);
+        let is_pp = f.eq(c, pp);
+        let disjunction = f.const_app(p.logic.or, &[is_one, is_pp]);
+        let body = f.arrow(hyp, disjunction);
+        let divisors = f.pi_fv(c_fv, nat, body);
+        f.const_app(p.logic.and, &[lower, divisors])
+    };
+
+    macro_rules! check {
+        ($name:expr, $expected:expr, $label:expr) => {{
+            let theorem = f.k.const_($name, vec![]);
+            let declared = f.k.infer(theorem).unwrap_or_else(|e| {
+                panic!("{} must be in the environment: {}", $label, f.explain(&e))
+            });
+            let expected = $expected;
+            assert!(
+                f.k.def_eq(declared, expected),
+                "{} does not state what it claims to",
+                $label
+            );
+        }};
+    }
+
+    // one Nat var: p
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let lt_ty = f.lt(one, pv);
+        let inner = f.arrow(prime_ty, lt_ty);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(p.prime_one_lt, expected, "prime_one_lt");
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let le_ty = f.le(one, pv);
+        let inner = f.arrow(prime_ty, le_ty);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(p.prime_one_le, expected, "prime_one_le");
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let lt_ty = f.lt(zero, pv);
+        let inner = f.arrow(prime_ty, lt_ty);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(p.prime_pos, expected, "prime_pos");
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let eq_p1 = f.eq(pv, one);
+        let ne_ty = f.const_app(p.logic.not, &[eq_p1]);
+        let inner = f.arrow(prime_ty, ne_ty);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(p.prime_ne_one, expected, "prime_ne_one");
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let eq_p0 = f.eq(pv, zero);
+        let ne_ty = f.const_app(p.logic.not, &[eq_p0]);
+        let inner = f.arrow(prime_ty, ne_ty);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(p.prime_ne_zero, expected, "prime_ne_zero");
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let dvd_p1 = f.dvd(pv, one);
+        let not_ty = f.const_app(p.logic.not, &[dvd_p1]);
+        let inner = f.arrow(prime_ty, not_ty);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(p.prime_not_dvd_one, expected, "prime_not_dvd_one");
+    }
+
+    // two Nat vars: p, m
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let m_fv = f.fresh_fvar();
+        let mv = f.k.fvar(m_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let dvd_ty = f.dvd(mv, pv);
+        let is_one = f.eq(mv, one);
+        let is_p = f.eq(mv, pv);
+        let disj = f.const_app(p.logic.or, &[is_one, is_p]);
+        let inner = f.arrow(dvd_ty, disj);
+        let with_prime = f.arrow(prime_ty, inner);
+        let with_m = f.pi_fv(m_fv, nat, with_prime);
+        let expected = f.pi_fv(p_fv, nat, with_m);
+        check!(
+            p.prime_eq_one_or_self_of_dvd,
+            expected,
+            "prime_eq_one_or_self_of_dvd"
+        );
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let a_fv = f.fresh_fvar();
+        let av = f.k.fvar(a_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let eq_a1 = f.eq(av, one);
+        let ne_ty = f.const_app(p.logic.not, &[eq_a1]);
+        let dvd_ap = f.dvd(av, pv);
+        let eq_pa = f.eq(pv, av);
+        let iff_ty = f.const_app(p.logic.iff, &[dvd_ap, eq_pa]);
+        let with_ne = f.arrow(ne_ty, iff_ty);
+        let inner = f.arrow(prime_ty, with_ne);
+        let with_a = f.pi_fv(a_fv, nat, inner);
+        let expected = f.pi_fv(p_fv, nat, with_a);
+        check!(p.prime_dvd_iff_eq, expected, "prime_dvd_iff_eq");
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let n_fv = f.fresh_fvar();
+        let nv = f.k.fvar(n_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let gcd_pn = f.gcd(pv, nv);
+        let cop_ty = f.eq(gcd_pn, one);
+        let dvd_pn = f.dvd(pv, nv);
+        let not_dvd_ty = f.const_app(p.logic.not, &[dvd_pn]);
+        let iff_ty = f.const_app(p.logic.iff, &[cop_ty, not_dvd_ty]);
+        let inner = f.arrow(prime_ty, iff_ty);
+        let with_n = f.pi_fv(n_fv, nat, inner);
+        let expected = f.pi_fv(p_fv, nat, with_n);
+        check!(
+            p.prime_coprime_iff_not_dvd,
+            expected,
+            "prime_coprime_iff_not_dvd"
+        );
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let odd_ty = f.lemma(p.odd, &[pv]);
+        let eq_p2 = f.eq(pv, two);
+        let goal = f.const_app(p.logic.or, &[eq_p2, odd_ty]);
+        let inner = f.arrow(prime_ty, goal);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(p.prime_eq_two_or_odd, expected, "prime_eq_two_or_odd");
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let mod_p2 = f.modulo(pv, two);
+        let mod_eq_ty = f.eq(mod_p2, one);
+        let eq_p2 = f.eq(pv, two);
+        let goal = f.const_app(p.logic.or, &[eq_p2, mod_eq_ty]);
+        let inner = f.arrow(prime_ty, goal);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(
+            p.prime_eq_two_or_mod_two_eq_one,
+            expected,
+            "prime_eq_two_or_mod_two_eq_one"
+        );
+    }
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let mod_p2 = f.modulo(pv, two);
+        let mod_eq_ty = f.eq(mod_p2, one);
+        let eq_p2 = f.eq(pv, two);
+        let ne_ty = f.const_app(p.logic.not, &[eq_p2]);
+        let iff_ty = f.const_app(p.logic.iff, &[mod_eq_ty, ne_ty]);
+        let inner = f.arrow(prime_ty, iff_ty);
+        let expected = f.pi_fv(p_fv, nat, inner);
+        check!(
+            p.prime_mod_two_eq_one_iff_ne_two,
+            expected,
+            "prime_mod_two_eq_one_iff_ne_two"
+        );
+    }
+
+    // three Nat vars: p, m, n
+    {
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let m_fv = f.fresh_fvar();
+        let mv = f.k.fvar(m_fv);
+        let n_fv = f.fresh_fvar();
+        let nv = f.k.fvar(n_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let mn = f.mul(mv, nv);
+        let dvd_mn = f.dvd(pv, mn);
+        let dvd_pm = f.dvd(pv, mv);
+        let dvd_pn = f.dvd(pv, nv);
+        let disj = f.const_app(p.logic.or, &[dvd_pm, dvd_pn]);
+        let iff_ty = f.const_app(p.logic.iff, &[dvd_mn, disj]);
+        let with_prime = f.arrow(prime_ty, iff_ty);
+        let with_n = f.pi_fv(n_fv, nat, with_prime);
+        let with_m = f.pi_fv(m_fv, nat, with_n);
+        let expected = f.pi_fv(p_fv, nat, with_m);
+        check!(p.prime_dvd_mul_iff, expected, "prime_dvd_mul_iff");
+    }
+    {
+        // p, m, a -- prime_coprime_pow_of_not_dvd
+        let p_fv = f.fresh_fvar();
+        let pv = f.k.fvar(p_fv);
+        let m_fv = f.fresh_fvar();
+        let mv = f.k.fvar(m_fv);
+        let a_fv = f.fresh_fvar();
+        let av = f.k.fvar(a_fv);
+        let prime_ty = prime_ty_of(&mut f, pv);
+        let dvd_pa = f.dvd(pv, av);
+        let not_dvd_ty = f.const_app(p.logic.not, &[dvd_pa]);
+        let pow_pm = f.pow(pv, mv);
+        let gcd_a_pow = f.gcd(av, pow_pm);
+        let goal = f.eq(gcd_a_pow, one);
+        let with_not_dvd = f.arrow(not_dvd_ty, goal);
+        let with_prime = f.arrow(prime_ty, with_not_dvd);
+        let with_a = f.pi_fv(a_fv, nat, with_prime);
+        let with_m = f.pi_fv(m_fv, nat, with_a);
+        let expected = f.pi_fv(p_fv, nat, with_m);
+        check!(
+            p.prime_coprime_pow_of_not_dvd,
+            expected,
+            "prime_coprime_pow_of_not_dvd"
+        );
+    }
+
+    // --- concrete discriminating instance: p=3, m=2, a=5 --------------------
+    // gcd(5, 3^2) = gcd(5,9) = 1 -- and the CONTROL, gcd(6, 9) = 3 != 1,
+    // confirms `not (3 | a)` is load-bearing (`3 | 6`, and indeed
+    // `gcd(6,9) != 1`).
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let six = f.num(6);
+        let m2 = f.num(2);
+        let pow_3_2 = f.pow(three, m2);
+        let nine = f.num(9);
+        assert!(f.k.def_eq(pow_3_2, nine), "3^2 must reduce to 9");
+
+        let theorem = f.k.const_(p.prime_coprime_pow_of_not_dvd, vec![]);
+        let at_p = f.k.app(theorem, three);
+        let at_m = f.k.app(at_p, m2);
+        let partial = f.k.app(at_m, five);
+        let partial_ty = f.k.infer(partial).unwrap_or_else(|e| {
+            panic!(
+                "prime_coprime_pow_of_not_dvd(3,2,5) should apply: {}",
+                f.explain(&e)
+            )
+        });
+        let prime_ty = prime_ty_of(&mut f, three);
+        let dvd_35 = f.dvd(three, five);
+        let not_dvd_ty = f.const_app(p.logic.not, &[dvd_35]);
+        let gcd_5_9 = f.gcd(five, nine);
+        let goal = f.eq(gcd_5_9, one);
+        let with_not_dvd = f.arrow(not_dvd_ty, goal);
+        let expected_partial = f.arrow(prime_ty, with_not_dvd);
+        assert!(
+            f.k.def_eq(partial_ty, expected_partial),
+            "prime_coprime_pow_of_not_dvd(3,2,5) should await prime(3) -> not(3|5) -> gcd(5,9)=1"
+        );
+
+        // the composite-dependency control: the CONCLUSION at a=6 is FALSE
+        // (gcd(6,9) = 3), which is exactly why `not (3 | a)` cannot be
+        // dropped -- `3 | 6` holds, so this instance is excluded by the
+        // hypothesis rather than by the conclusion happening to hold anyway.
+        let gcd_6_9 = f.gcd(six, nine);
+        let three_again = f.num(3);
+        assert!(
+            f.k.def_eq(gcd_6_9, three_again),
+            "gcd(6,9) must reduce to 3, not 1 -- the a=6 control must be a genuine composite failure"
+        );
+        assert!(
+            !f.k.def_eq(gcd_6_9, one),
+            "gcd(6,9) must NOT reduce to 1 (the hypothesis `not (3|a)` is load-bearing)"
+        );
+        // `3 | 6` really holds: 6 = 3 * 2.
+        let two_c = f.num(2);
+        let three_mul_two = f.mul(three, two_c);
+        assert!(f.k.def_eq(three_mul_two, six), "3*2 must reduce to 6");
+    }
+
+    for name in [
+        p.prime_one_lt,
+        p.prime_one_le,
+        p.prime_pos,
+        p.prime_ne_one,
+        p.prime_ne_zero,
+        p.prime_not_dvd_one,
+        p.prime_eq_one_or_self_of_dvd,
+        p.prime_dvd_iff_eq,
+        p.prime_dvd_mul_iff,
+        p.prime_coprime_iff_not_dvd,
+        p.prime_eq_two_or_odd,
+        p.prime_eq_two_or_mod_two_eq_one,
+        p.prime_mod_two_eq_one_iff_ne_two,
+        p.prime_coprime_pow_of_not_dvd,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
 
 /// **Fermat's little theorem says what the ledger says it says.**

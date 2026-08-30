@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "axiom_footprint": [],
   "id": "F:ml430-nat-prime-pos-85eeeeea",
   "title": "Mathlib v4.30 source proposition Nat.Prime.pos",
   "statement": "The proposition declared as `Nat.Prime.pos` in the pinned Mathlib v4.30 source.",
@@ -10,14 +11,14 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-le-trans"],
+  "depends_on": ["F:nat-le-add-right", "F:nat-le-trans"],
   "evidence": [
     {
       "check_status": "checked",
-      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_pos 2>/dev/null | /usr/bin/grep -Ec '^Nat\\.prime_pos[[:space:]]')\" -ge 1",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_pos 2>/dev/null | grep -Ec '^Nat\\.prime_pos[[:space:]]')\" -ge 1",
       "id": "kernel-Nat.prime_pos",
       "kind": "kernel-term",
-      "notes": "`build_nat_prelude` admits `Nat.prime_pos` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against a fabricated name), and the anchored `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed under its own name -- `nat_theorem_inventory` matches by substring, so the anchor `^Nat\\.prime_pos[[:space:]]` is required to avoid matching a sibling name that has this one as a prefix. Primality is spelled inline (`2 ≤ p ∧ ∀ c, c ∣ p → c = 1 ∨ c = p`, matching `prime_even_iff`/`euclid_lemma`'s own convention) rather than through a named `Nat.Prime` predicate, since this prelude has none -- this repository's established precedent for flipping a Mathlib `Nat.Prime` mirror (`prime_even_iff`, `prime_odd_of_ne_two`, `prime_dvd_of_dvd_pow`, `prime_not_dvd_mul`, `prime_pred_pos` all already do the same substitution).",
+      "notes": "`Lt 0 p` is defeq to `Le 1 p`, built exactly as `prime_one_le`'s witness: `le_trans` from `Le 1 2` and `Le 2 p`.",
       "supports": "∀ {p : ℕ}, Nat.Prime p → 0 < p"
     },
     {
@@ -29,13 +30,13 @@
       ],
       "id": "footprint-Nat.prime_pos",
       "kind": "exhaustive-enumeration",
-      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.prime_pos`'s footprint by [].",
       "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
     }
   ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane prime-dvd-mirrors",
     "source": "statement-only extraction of `Nat.Prime.pos` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -47,7 +48,6 @@
       }
     ]
   },
-  "notes": "Proved in Axeyum via `declare_prime_char_all` (`nat_prelude/prime_char.rs`), which builds this mirror's inline primality hypothesis (`2 ≤ p ∧ ∀ c, c ∣ p → c = 1 ∨ c = p`) in place of Mathlib's `Nat.Prime` predicate, following this repository's established convention for this family (`prime_even_iff`, `prime_odd_of_ne_two`, `prime_dvd_of_dvd_pow` already do the same substitution). formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority. Mathlib's `Nat.Prime.pos` is prior art for the statement only; no Mathlib proof term or tactic trace was consulted.",
-  "axiom_footprint": [],
-  "proof_route": "kernel-lean"
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_prime_pos` (`nat_prelude/prime_dvd_mirrors.rs`). `Lt 0 p` is defeq to `Le 1 p`, built exactly as `prime_one_le`'s witness: `le_trans` from `Le 1 2` and `Le 2 p`. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }

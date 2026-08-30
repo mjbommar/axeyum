@@ -1,33 +1,58 @@
 //! Characterizations of primality itself — the `Mathlib.Data.Nat.Prime.Defs`
-//! mirrors (`Nat.Prime.one_le`, `.pos`, `.ne_zero`, `.eq_two_or_odd`,
-//! `.not_prime_pow`, …), as opposed to the divisibility cluster
-//! (`Nat.Prime.dvd_mul`, `.dvd_or_dvd`, `.dvd_iff_eq`, `.coprime_iff_not_dvd`,
-//! `.coprime_pow_of_not_dvd`) declared in `primes.rs`/`bezout.rs`.
+//! mirrors this repository split across TWO lanes dispatched at the same
+//! nursery draw: the sibling `prime-dvd-mirrors` lane's `prime_dvd_mirrors.rs`
+//! (the divisibility cluster proper, plus the six trivial numeric-bound
+//! facts and the parity/`eq_one_or_self_of_dvd` facts it landed first — see
+//! that file), and this one (the "no prime is a proper power" family, the
+//! `Coprime`/prime-divisor bridge, and the `x*y = p^2` structure theorem —
+//! genuinely nobody else's work).
+//!
+//! **This file used to also declare the six numeric-bound facts, the three
+//! parity facts, and `prime_eq_one_or_self_of_dvd` — those were REMOVED**
+//! after `prime_dvd_mirrors.rs` landed on `main` first and declared the same
+//! `NameId`s (nine exact collisions, `DeclarationExists` on merge; a tenth
+//! fact, `F:ml430-nat-prime-eq-two-or-odd-44a91651`, was a duplicate PROOF
+//! under a *different* name, `prime_eq_two_or_mod_two_eq_one`, so it was
+//! dropped too even though it never collided). Do not re-add a
+//! `declare_prime_numeric_bounds`/`declare_prime_parity_facts`/
+//! `declare_prime_eq_one_or_self_of_dvd` here — check `prime_dvd_mirrors.rs`
+//! first. The lesson this cost: dispatching two lanes at "everything in a
+//! family except these N named facts" needs the coordinator to enumerate
+//! the WHOLE family up front, not assume the excluded slice stays small.
 //!
 //! This prelude has no `Prime` predicate — primality is spelled inline as
 //! `2 ≤ x ∧ ∀ c, dvd c x → c = 1 ∨ c = x` (`primes.rs`'s own convention,
-//! `factorization.rs`'s `PrimeCond`). Every mirror below states its Mathlib
-//! source's `Nat.Prime` hypothesis with that inline predicate; this file has
-//! established precedent in this repository (`prime_even_iff`,
-//! `prime_odd_of_ne_two`, `prime_dvd_of_dvd_pow`, `prime_not_dvd_mul`,
-//! `prime_pred_pos`, `five_le_of_ne_two_of_ne_three` all already flip
-//! Mathlib's `Nat.Prime` this way), which is honest because every one of
-//! these facts is itself an equivalence/characterization of primality, not a
-//! theorem about a *different* structure Mathlib built `Nat.Prime` from.
+//! `factorization.rs`'s `PrimeCond`; also re-exported `pub(super)` from
+//! `primes.rs` as `prime_condition`/`prime_parts` now, though this file
+//! keeps its own private copy below rather than switching import sources
+//! mid-lane). Every mirror below states its Mathlib source's `Nat.Prime`
+//! hypothesis with that inline predicate; this file has established
+//! precedent in this repository (`prime_even_iff`, `prime_odd_of_ne_two`,
+//! `prime_dvd_of_dvd_pow`, `prime_not_dvd_mul`, `prime_pred_pos`,
+//! `five_le_of_ne_two_of_ne_three` all already flip Mathlib's `Nat.Prime`
+//! this way), which is honest because every one of these facts is itself an
+//! equivalence/characterization of primality, not a theorem about a
+//! *different* structure Mathlib built `Nat.Prime` from.
 //!
 //! `prime_condition`/`prime_parts` here are a private per-file copy of
 //! `primes.rs`'s (this repository's convention for `dvd_intro`/`dvd_elim` —
-//! see that file's own comment — applies equally to this pair: every module
-//! that needs the primality predicate builds its own copy rather than
-//! exporting one, so two concurrent lanes touching `primes.rs` and this file
-//! never collide). Because the predicate is built identically everywhere, two
-//! independent constructions intern to the SAME `ExprId` (`axeyum-ir`'s
-//! arena), so a proof built here composes seamlessly with a `prime_condition`
-//! hypothesis built in `primes.rs`.
+//! see that file's own comment — applies equally to this pair). Because the
+//! predicate is built identically everywhere, two independent constructions
+//! intern to the SAME `ExprId` (`axeyum-ir`'s arena), so a proof built here
+//! composes seamlessly with a `prime_condition` hypothesis built in
+//! `primes.rs` or `prime_dvd_mirrors.rs` — **but a THEOREM's calling
+//! convention still depends on which `arity` its declarer chose**, and that
+//! is not visible from the `NameId` alone. This file's own
+//! `prime_sq_factor_case` calls `prime_dvd_mirrors.rs`'s
+//! `prime_eq_one_or_self_of_dvd` (arity 2: `p_var` then `m_var` both
+//! auto-bound, hypotheses threaded after) — an arity-1 call written against
+//! this file's OWN now-deleted version would silently apply the wrong
+//! argument to the wrong slot. Confirmed correct only by re-reading the
+//! surviving declaration's actual `d.theorem(name, arity, …)` call, not by
+//! trusting the name.
 
 use super::NatPrelude;
-use super::finite::{ne_of_lt, ne_symm};
-use super::helpers::{and_left, and_right, iff_forward, transport_dvd_left, transport_dvd_right};
+use super::helpers::{and_left, and_right, transport_dvd_left, transport_dvd_right};
 use super::ops::{NatDev, NatOps, cases_zero_succ, two_divisor_dichotomy};
 use super::primes::{absurd, or_cases};
 use crate::BinderInfo;
@@ -193,305 +218,6 @@ fn prime_pow_ge2_contradiction(
     };
 
     or_cases(d, &p, eq_x1_ty, eq_xxn_ty, false_ty, on_x1, on_xxn, disj_x)
-}
-
-/// `Nat.Prime.one_le`, `.pos`, `.one_lt`, `.ne_zero`, `.ne_one`, and
-/// `.not_dvd_one` — the six trivial numeric-bound characterizations, all
-/// direct consequences of the `2 ≤ p` lower bound via the standing
-/// `Lt a b ≡ Le (succ a) b` defeq.
-///
-/// # Errors
-///
-/// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_prime_numeric_bounds(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
-    let p = *p;
-
-    d.theorem(p.prime_one_le, 1, &|d, v| {
-        let p_var = v[0];
-        let one = d.num(1);
-        let two = d.num(2);
-        let prime_ty = prime_condition(d, &p, p_var);
-        let goal = d.le(one, p_var);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
-        let lower_pf = and_left(d, lower_ty, divisors_ty, prime_hyp);
-        let le_succ_one = d.lemma(p.le_succ, &[one]);
-        let one_le_p = d.lemma(p.le_trans, &[one, two, p_var, le_succ_one, lower_pf]);
-        let proof = d.lam_fv(prime_fv, prime_ty, one_le_p);
-        (stmt, proof)
-    })?;
-
-    d.theorem(p.prime_pos, 1, &|d, v| {
-        let p_var = v[0];
-        let one = d.num(1);
-        let two = d.num(2);
-        let zero = d.zero();
-        let prime_ty = prime_condition(d, &p, p_var);
-        let goal = d.lt(zero, p_var);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
-        let lower_pf = and_left(d, lower_ty, divisors_ty, prime_hyp);
-        let le_succ_one = d.lemma(p.le_succ, &[one]);
-        let one_le_p = d.lemma(p.le_trans, &[one, two, p_var, le_succ_one, lower_pf]);
-        // `Lt zero p_var` is definitionally `Le (succ zero) p_var` = `Le one p_var`.
-        let proof = d.lam_fv(prime_fv, prime_ty, one_le_p);
-        (stmt, proof)
-    })?;
-
-    d.theorem(p.prime_one_lt, 1, &|d, v| {
-        let p_var = v[0];
-        let one = d.num(1);
-        let prime_ty = prime_condition(d, &p, p_var);
-        let goal = d.lt(one, p_var);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
-        let lower_pf = and_left(d, lower_ty, divisors_ty, prime_hyp);
-        // `Lt one p_var` is definitionally `Le (succ one) p_var` = `Le two
-        // p_var`, exactly `lower_pf`'s type.
-        let proof = d.lam_fv(prime_fv, prime_ty, lower_pf);
-        (stmt, proof)
-    })?;
-
-    d.theorem(p.prime_ne_zero, 1, &|d, v| {
-        let p_var = v[0];
-        let one = d.num(1);
-        let two = d.num(2);
-        let zero = d.zero();
-        let prime_ty = prime_condition(d, &p, p_var);
-        let eq_ty = d.eq(p_var, zero);
-        let goal = d.const_app(p.logic.not, &[eq_ty]);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
-        let lower_pf = and_left(d, lower_ty, divisors_ty, prime_hyp);
-        let le_succ_one = d.lemma(p.le_succ, &[one]);
-        let one_le_p = d.lemma(p.le_trans, &[one, two, p_var, le_succ_one, lower_pf]);
-        // `one_le_p : Le one p_var`, definitionally `Lt zero p_var`.
-        let zero_ne_p = ne_of_lt(d, &p, zero, p_var, one_le_p);
-        let p_ne_zero = ne_symm(d, zero, p_var, zero_ne_p);
-        let proof = d.lam_fv(prime_fv, prime_ty, p_ne_zero);
-        (stmt, proof)
-    })?;
-
-    d.theorem(p.prime_ne_one, 1, &|d, v| {
-        let p_var = v[0];
-        let one = d.num(1);
-        let prime_ty = prime_condition(d, &p, p_var);
-        let eq_ty = d.eq(p_var, one);
-        let goal = d.const_app(p.logic.not, &[eq_ty]);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
-        let lower_pf = and_left(d, lower_ty, divisors_ty, prime_hyp);
-        // `lower_pf : Le two p_var`, definitionally `Lt one p_var`.
-        let one_ne_p = ne_of_lt(d, &p, one, p_var, lower_pf);
-        let p_ne_one = ne_symm(d, one, p_var, one_ne_p);
-        let proof = d.lam_fv(prime_fv, prime_ty, p_ne_one);
-        (stmt, proof)
-    })?;
-
-    d.theorem(p.prime_not_dvd_one, 1, &|d, v| {
-        let p_var = v[0];
-        let one = d.num(1);
-        let prime_ty = prime_condition(d, &p, p_var);
-        let dvd_ty = d.dvd(p_var, one);
-        let goal = d.const_app(p.logic.not, &[dvd_ty]);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
-        let lower_pf = and_left(d, lower_ty, divisors_ty, prime_hyp);
-        let refuted = d.lemma(p.not_dvd_one_of_two_le, &[p_var, lower_pf]);
-        let proof = d.lam_fv(prime_fv, prime_ty, refuted);
-        (stmt, proof)
-    })?;
-
-    Ok(())
-}
-
-/// `Nat.Prime.eq_one_or_self_of_dvd` — exactly `prime_condition`'s divisor
-/// clause, read out with `and_right`; no further proof content.
-///
-/// # Errors
-///
-/// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_prime_eq_one_or_self_of_dvd(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
-    let p = *p;
-    d.theorem(p.prime_eq_one_or_self_of_dvd, 1, &|d, v| {
-        let p_var = v[0];
-        let prime_ty = prime_condition(d, &p, p_var);
-        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
-        let stmt = d.arrow(prime_ty, divisors_ty);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let divisors_pf = and_right(d, lower_ty, divisors_ty, prime_hyp);
-        let proof = d.lam_fv(prime_fv, prime_ty, divisors_pf);
-        (stmt, proof)
-    })?;
-    Ok(())
-}
-
-/// `Nat.Prime.eq_two_or_odd'`, `.eq_two_or_odd`, and
-/// `.mod_two_eq_one_iff_ne_two` — the parity characterizations, built from
-/// the already-proved `prime_even_iff`/`prime_odd_of_ne_two`
-/// (`primes.rs`) and `even_or_odd_exists`/`odd_iff_mod_two_eq_one`
-/// (`parity.rs`).
-///
-/// # Errors
-///
-/// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_prime_parity_facts(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
-    let p = *p;
-
-    d.theorem(p.prime_eq_two_or_odd, 1, &|d, v| {
-        let p_var = v[0];
-        let two = d.num(2);
-        let prime_ty = prime_condition(d, &p, p_var);
-        let even_ty = d.lemma(p.even, &[p_var]);
-        let odd_ty = d.lemma(p.odd, &[p_var]);
-        let eq2_ty = d.eq(p_var, two);
-        let goal = d.const_app(p.logic.or, &[eq2_ty, odd_ty]);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let eo = d.lemma(p.even_or_odd_exists, &[p_var]);
-        let iff_pf = d.lemma(p.prime_even_iff, &[p_var, prime_hyp]);
-        let mp_fn = iff_forward(d, even_ty, eq2_ty, iff_pf);
-
-        let on_even = {
-            let h_fv = d.fresh_fvar();
-            let h = d.kernel().fvar(h_fv);
-            let eq2_pf = d.apply(mp_fn, &[h]);
-            let inl = d.const_app(p.logic.or_inl, &[eq2_ty, odd_ty, eq2_pf]);
-            d.lam_fv(h_fv, even_ty, inl)
-        };
-        let on_odd = {
-            let h_fv = d.fresh_fvar();
-            let h = d.kernel().fvar(h_fv);
-            let inr = d.const_app(p.logic.or_inr, &[eq2_ty, odd_ty, h]);
-            d.lam_fv(h_fv, odd_ty, inr)
-        };
-        let body = or_cases(d, &p, even_ty, odd_ty, goal, on_even, on_odd, eo);
-        let proof = d.lam_fv(prime_fv, prime_ty, body);
-        (stmt, proof)
-    })?;
-
-    d.theorem(p.prime_eq_two_or_odd_mod, 1, &|d, v| {
-        let p_var = v[0];
-        let two = d.num(2);
-        let one = d.num(1);
-        let prime_ty = prime_condition(d, &p, p_var);
-        let odd_ty = d.lemma(p.odd, &[p_var]);
-        let eq2_ty = d.eq(p_var, two);
-        let mod_pv = d.modulo(p_var, two);
-        let mod1_ty = d.eq(mod_pv, one);
-        let goal = d.const_app(p.logic.or, &[eq2_ty, mod1_ty]);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-        let prev = d.lemma(p.prime_eq_two_or_odd, &[p_var, prime_hyp]);
-        let odd_iff = d.lemma(p.odd_iff_mod_two_eq_one, &[p_var]);
-        let odd_mp = iff_forward(d, odd_ty, mod1_ty, odd_iff);
-
-        let on_eq2 = {
-            let h_fv = d.fresh_fvar();
-            let h = d.kernel().fvar(h_fv);
-            let inl = d.const_app(p.logic.or_inl, &[eq2_ty, mod1_ty, h]);
-            d.lam_fv(h_fv, eq2_ty, inl)
-        };
-        let on_odd = {
-            let h_fv = d.fresh_fvar();
-            let h = d.kernel().fvar(h_fv);
-            let mod1_pf = d.apply(odd_mp, &[h]);
-            let inr = d.const_app(p.logic.or_inr, &[eq2_ty, mod1_ty, mod1_pf]);
-            d.lam_fv(h_fv, odd_ty, inr)
-        };
-        let body = or_cases(d, &p, eq2_ty, odd_ty, goal, on_eq2, on_odd, prev);
-        let proof = d.lam_fv(prime_fv, prime_ty, body);
-        (stmt, proof)
-    })?;
-
-    d.theorem(p.prime_mod_two_eq_one_iff_ne_two, 1, &|d, v| {
-        let p_var = v[0];
-        let two = d.num(2);
-        let one = d.num(1);
-        let zero = d.zero();
-        let prime_ty = prime_condition(d, &p, p_var);
-        let mod_pv = d.modulo(p_var, two);
-        let mod1_ty = d.eq(mod_pv, one);
-        let eq2_ty = d.eq(p_var, two);
-        let ne2_ty = d.const_app(p.logic.not, &[eq2_ty]);
-        let goal = d.const_app(p.logic.iff, &[mod1_ty, ne2_ty]);
-        let stmt = d.arrow(prime_ty, goal);
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-
-        // mp : mod p 2 = 1 -> Not (p = 2)
-        let mp = {
-            let h_fv = d.fresh_fvar();
-            let h = d.kernel().fvar(h_fv);
-            let h2_fv = d.fresh_fvar();
-            let h2 = d.kernel().fvar(h2_fv);
-            let motive = d.eq_motive(p_var, &|d, xx| {
-                let m = d.modulo(xx, two);
-                d.eq(m, one)
-            });
-            let mod22_eq1 = d.transport(p_var, motive, h, two, h2);
-            let mod22_val = d.modulo(two, two);
-            let zero_eq_mod22 = d.refl(zero);
-            let zero_eq_one = d.trans(zero, mod22_val, one, zero_eq_mod22, mod22_eq1);
-            let one_ne_zero = d.lemma(p.succ_ne_zero, &[zero]);
-            let zero_ne_one = ne_symm(d, one, zero, one_ne_zero);
-            let false_val = d.apply(zero_ne_one, &[zero_eq_one]);
-            let inner = d.lam_fv(h2_fv, eq2_ty, false_val);
-            d.lam_fv(h_fv, mod1_ty, inner)
-        };
-
-        // mpr : Not (p = 2) -> mod p 2 = 1
-        let mpr = {
-            let h_fv = d.fresh_fvar();
-            let h = d.kernel().fvar(h_fv);
-            let odd_pf = d.lemma(p.prime_odd_of_ne_two, &[p_var, prime_hyp, h]);
-            let odd_ty = d.lemma(p.odd, &[p_var]);
-            let odd_iff = d.lemma(p.odd_iff_mod_two_eq_one, &[p_var]);
-            let odd_mp = iff_forward(d, odd_ty, mod1_ty, odd_iff);
-            let mod1_pf = d.apply(odd_mp, &[odd_pf]);
-            d.lam_fv(h_fv, ne2_ty, mod1_pf)
-        };
-
-        let iff_proof = d.const_app(p.logic.iff_intro, &[mod1_ty, ne2_ty, mp, mpr]);
-        let proof = d.lam_fv(prime_fv, prime_ty, iff_proof);
-        (stmt, proof)
-    })?;
-
-    Ok(())
 }
 
 /// `Nat.Prime.not_prime_pow` (`2 ≤ n` form), `.not_prime_pow'` (`n ≠ 1`
@@ -1194,7 +920,7 @@ fn prime_sq_factor_case(
         let dvd_k_p = dvd_intro(d, k, p_var, b, p_eq_kb);
         let k_or = d.lemma(
             p.prime_eq_one_or_self_of_dvd,
-            &[p_var, prime_hyp, k, dvd_k_p],
+            &[p_var, k, prime_hyp, dvd_k_p],
         );
         let eq_k1_ty = d.eq(k, one);
         let eq_kp_ty = d.eq(k, p_var);

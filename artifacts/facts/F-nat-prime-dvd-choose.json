@@ -25,7 +25,8 @@
     "F:nat-succ-mul-choose-eq",
     "F:nat-zero-add",
     "F:nat-zero-le",
-    "F:ml430-nat-dvd-mul-right-a87a83c4"
+    "F:ml430-nat-dvd-mul-right-a87a83c4",
+    "F:ml430-nat-prime-dvd-or-dvd-4ae88221"
   ],
   "axiom_footprint": [],
   "evidence": [

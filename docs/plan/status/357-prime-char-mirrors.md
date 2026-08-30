@@ -2,125 +2,106 @@
 
 <!-- plan-section: lane-status -->
 
-**DONE (`prime-char-mirrors`, 2026-08-30).** All 15 dispatchable
-`ml430-nat-prime-*` facts NOT assigned to the sibling `prime-dvd-mirrors`
-lane (which took the divisibility cluster: `prime_dvd_mul`,
-`prime_dvd_or_dvd`, `prime_dvd_iff_eq`, `prime_coprime_iff_not_dvd`,
-`prime_coprime_pow_of_not_dvd`) are now **proved**, in a new file
-`nat_prelude/prime_char.rs`. Three commits (`d2063aec5`, `712b584cf`,
-`a895b9b4c`).
+**DONE (`prime-char-mirrors`, 2026-08-30), CORRECTED AFTER A DISPATCH
+COLLISION.** This lane was scoped as "everything in the
+`Mathlib.Data.Nat.Prime.Defs` characterization family except five named
+facts", which the sibling `prime-dvd-mirrors` lane was assigned. That
+sibling went on to declare **fourteen** facts, not five, and landed on
+`main` first. Nine of this lane's fifteen original declarations were
+exact `NameId` collisions (`DeclarationExists` on merge); a tenth,
+`F:ml430-nat-prime-eq-two-or-odd-44a91651`, was a duplicate PROOF of the
+same fact under a different Rust name
+(`prime_eq_two_or_mod_two_eq_one` vs this lane's
+`prime_eq_two_or_odd_mod`) — no compile collision, but pointless
+duplication once the sibling's version was already on `main`.
+
+**Surviving from this lane, in `nat_prelude/prime_char.rs`: 5 facts.**
 
 ```text
-Nat.prime_one_le                      Prime p -> 1 <= p
-Nat.prime_pos                         Prime p -> 0 < p
-Nat.prime_one_lt                      Prime p -> 1 < p
-Nat.prime_ne_zero                     Prime p -> p != 0
-Nat.prime_ne_one                      Prime p -> p != 1
-Nat.prime_not_dvd_one                 Prime p -> ~(p | 1)
-Nat.prime_eq_one_or_self_of_dvd       Prime p -> forall m, m|p -> m=1 \/ m=p
-Nat.prime_eq_two_or_odd               Prime p -> p=2 \/ Odd p
-Nat.prime_eq_two_or_odd_mod           Prime p -> p=2 \/ p%2=1
-Nat.prime_mod_two_eq_one_iff_ne_two   Prime p -> (p%2=1 <-> p!=2)
-Nat.prime_not_prime_pow_two_le        2<=n -> ~Prime(x^n)
-Nat.prime_not_prime_pow_ne_one        n!=1 -> ~Prime(x^n)
-Nat.prime_eq_one_of_pow               Prime(x^n) -> n=1
-Nat.prime_not_coprime_iff_dvd         ~Coprime m n <-> exists p, Prime p /\ p|m /\ p|n
-Nat.prime_mul_eq_prime_sq_iff         Prime p -> x!=1 -> y!=1 -> (x*y=p^2 <-> x=p /\ y=p)
+Nat.prime_not_prime_pow_two_le   2<=n -> ~Prime(x^n)
+Nat.prime_not_prime_pow_ne_one   n!=1 -> ~Prime(x^n)
+Nat.prime_eq_one_of_pow          Prime(x^n) -> n=1
+Nat.prime_not_coprime_iff_dvd    ~Coprime m n <-> exists p, Prime p /\ p|m /\ p|n
+Nat.prime_mul_eq_prime_sq_iff    Prime p -> x!=1 -> y!=1 -> (x*y=p^2 <-> x=p /\ y=p)
 ```
 
-`nat_prelude::` **202 passed, 0 failed** (the documented 202 baseline,
-grown from 909 filtered-in tests as the 15 new theorem names were added
-to `theorem_names` along the way — every intermediate commit was
-re-verified at 202 after each addition). `cargo clippy -p
+The other ten (`prime_one_le`, `prime_pos`, `prime_one_lt`,
+`prime_ne_zero`, `prime_ne_one`, `prime_not_dvd_one`,
+`prime_eq_one_or_self_of_dvd`, `prime_eq_two_or_odd`,
+`prime_eq_two_or_odd_mod`/`prime_eq_two_or_mod_two_eq_one`,
+`prime_mod_two_eq_one_iff_ne_two`) are the sibling's, in
+`nat_prelude/prime_dvd_mirrors.rs` — untouched, fact files left exactly
+as `main` had them (`git checkout --theirs`), never re-flipped.
+
+`nat_prelude::` **203 passed, 0 failed** (`main`'s post-collision
+baseline, unchanged in count since nothing here adds a new theorem name
+`main` doesn't already have — the surviving 5 were already counted).
+`every_nat_declaration_is_checked_and_axiom_free` and
+`the_nat_prelude_declares_no_axioms` both pass. `cargo clippy -p
 axeyum-lean-kernel --all-targets --all-features -- -D warnings` and
-`cargo fmt --all --check` both clean throughout. `validate-facts.py`:
-**2265 facts, 0 errors** after the final commit, via
-`check-fact-depends-derived.py --fix` each time.
+`cargo fmt --all --check` both clean. `validate-facts.py`: **2265
+facts, 0 errors** after `check-fact-depends-derived.py --fix`.
 
-## Mirror-flip determination
+## What the merge actually required (for whoever reads this next)
 
-Every `Nat.Prime p` hypothesis is spelled with this prelude's own inline
-primality predicate, `2 ≤ p ∧ ∀ c, c ∣ p → c = 1 ∨ c = p`
-(`primes.rs`'s `PrimeCond` convention) — this prelude has no `Prime`
-predicate at all. That substitution is honest here specifically because
-**every one of these 15 facts is itself a characterization of what
-primality IS or entails**, not a theorem about some other structure
-Mathlib happened to build `Nat.Prime` from. This is the same substitution
-already established by prior lanes for `prime_even_iff`,
-`prime_odd_of_ne_two`, `prime_dvd_of_dvd_pow`, `prime_not_dvd_mul`,
-`prime_pred_pos`, `five_le_of_ne_two_of_ne_three` — all already-proved
-facts in this ledger that flip Mathlib's `Nat.Prime` the same way. Every
-statement was compared against the landed lemma's RENDERED TYPE
-(`nat_theorem_inventory`), never a doc comment, before being trusted.
+1. Deleted three whole functions from `prime_char.rs` —
+   `declare_prime_numeric_bounds` (6 theorems), `declare_prime_parity_facts`
+   (3 theorems, including the `_mod` duplicate), and
+   `declare_prime_eq_one_or_self_of_dvd` — plus their `NatPrelude` struct
+   fields, `name_str` initializers, and their 10 lines in
+   `nat_prelude_tests.rs`'s `theorem_names`. None of these were git merge
+   CONFLICTS in the field/name_str sections — the two lanes inserted at
+   different line numbers, so git merged both blocks in additively,
+   leaving duplicate Rust struct field names that only `cargo check` would
+   catch. **A clean 3-way merge is not evidence of no collision** when the
+   collision is at the semantic level (same field name, different
+   insertion point) rather than the line level.
+2. **One real call-site bug**, exactly the risk flagged going in: this
+   lane's `prime_sq_factor_case` called the survivor
+   `prime_eq_one_or_self_of_dvd` with the OLD arity-1 argument order
+   (`[p_var, prime_hyp, k, dvd_k_p]`, written against this lane's own
+   now-deleted arity-1 declaration). The sibling's surviving version is
+   arity-2 (`p_var` then `m_var` both auto-bound before the hypotheses),
+   so the correct call is `[p_var, k, prime_hyp, dvd_k_p]`. Caught by
+   reading the sibling's actual `d.theorem(name, arity, …)` call before
+   trusting the shared name — NOT by the type checker, which would have
+   rejected it anyway, but only after burning a compile cycle.
+3. **Build-order fix**: `declare_prime_mul_eq_prime_sq_iff` needs
+   `prime_eq_one_or_self_of_dvd`, which now lives in
+   `declare_prime_dvd_mirrors_all` — called much later in the build
+   sequence than this lane's original call site. Moved the call to
+   immediately after `declare_prime_dvd_mirrors_all(&mut d, &p)?;`.
+4. Ten fact files (`F-ml430-nat-prime-{eq-one-or-self-of-dvd,
+   eq-two-or-odd (both), mod-two-eq-one-iff-ne-two, ne-one, ne-zero,
+   not-dvd-one, one-le, one-lt, pos}`) were `git checkout --theirs`'d
+   entirely — confirmed byte-identical to `main` afterward — and never
+   re-flipped, per instruction.
 
-No target in this batch routes through `Nat.minFac` (the structurally
-blocked algorithm), so nothing here hit that wall.
-
-## What each closed fact needed (for the next lane reading this)
-
-- **Six trivial numeric bounds** (`one_le`/`pos`/`one_lt`/`ne_zero`/
-  `ne_one`/`not_dvd_one`) are direct consequences of the `2 ≤ p` lower
-  bound via the standing `Lt a b` defeq `Le (succ a) b` trick —
-  `prime_one_lt`'s proof term IS the lower-bound projection, literally no
-  computation.
-- **`prime_eq_one_or_self_of_dvd`** is exactly `prime_condition`'s
-  divisor clause read out with `and_right` — no proof content at all.
-- **The three parity facts** compose the already-proved
-  `prime_even_iff`/`prime_odd_of_ne_two` (`primes.rs`) with
-  `even_or_odd_exists`/`odd_iff_mod_two_eq_one` (`parity.rs`).
-- **The three pow facts** (`not_prime_pow` ×2, `eq_one_of_pow`) share one
-  new helper, `prime_pow_ge2_contradiction`: `x` divides `x^n` (witness
-  `x^(n-1)`), so the divisor clause forces `x=1` (collapses `x^n` to `1`
-  via `one_pow`, contradicts the `2 ≤ x^n` lower bound) or `x=x^n`
-  (cancels the shared factor `x` via `mul_left_cancel_of_pos` to force
-  `x^(n-2)=1`, hence `x∣1`, refuted by `not_dvd_one_of_two_le`). All three
-  theorems are literally the same 3-way case split on `n` (`0`, `1`,
-  `succ(succ _)`) read three different ways.
-- **`prime_not_coprime_iff_dvd`** needed a genuinely new piece: this
-  prelude has no exported "`2` is prime" constant, so a private
-  `prime_two` (built from the existing `ops::two_divisor_dichotomy`, not
-  re-derived arithmetic) had to be built locally, plus the same
-  `lt_or_ge`-twice trichotomy on `gcd m n` the already-proved
-  `coprime_of_forall_prime_dvd` uses.
-- **`prime_mul_eq_prime_sq_iff`** was the hardest — a real
-  structure-of-divisors argument. New private helper
-  `prime_sq_factor_case(p, a, b, prime_hyp, ne_b, heq: a*b=p*p, dvd_p_a)`:
-  the divisor witness `k` (`a = p*k`) substitutes into `heq` to give
-  `k*b = p` (`mul_assoc` + `mul_left_cancel_of_pos`), and `k`'s own
-  primality clause forces `k=1` (both factors equal `p`) or `k=p` (forces
-  the other factor to `1`, contradicting the caller's `≠1` hypothesis).
-  `euclid_lemma`'s two branches both route through this one helper — the
-  `p∣y` branch swaps `x`/`y` via `mul_comm` and swaps the resulting `And`
-  back, so no arithmetic is duplicated.
-
-## A live gotcha this lane hit and fixed
-
-`d.trans(a, b, c, h1, d.symm(...))` — a nested `d.` call inside another
-`d.` call's argument list — is a `E0499` "cannot borrow `*d` as mutable
-more than once" compile error, exactly the trap `factorization.rs`'s
-module doc already warns about (hoist every sub-expression into its own
-`let` first). Caught by `cargo check` on the first attempt at
-`prime_mul_eq_prime_sq_iff`; fixed by hoisting the `d.symm(...)` call
-into its own `let` binding. Left as a reminder in this file because the
-existing warning is easy to read as "applies to deeply nested proof
-scripts" when it just as easily bites a single one-line fix.
+Mirror-flip determination, and everything about WHY each surviving fact's
+`Nat.Prime` hypothesis is spelled with this prelude's inline primality
+predicate rather than a named `Prime`, is unchanged from before the
+merge — see the surviving facts' own evidence `notes` fields and
+`prime_char.rs`'s module doc.
 
 ## Not attempted / not in scope
 
-- The five `prime_dvd_*`/`prime_coprime_*` facts are the sibling
-  `prime-dvd-mirrors` lane's targets — not touched.
-- `F:nat-totient-*` facts that appeared in the same nursery draw were
-  explicitly out of scope per the task brief (only `ml430-nat-prime-*`
-  rows were this lane's).
-- Nothing in this family was held out (`fermat-numbers` and
-  `natural-nth-selector`, this draw's held-out additions, share no
-  target with this family).
+- Everything in `prime_dvd_mirrors.rs` is the sibling's — not touched
+  beyond reading it to fix the call-site bug above.
+- `F:nat-totient-*` facts from the same nursery draw were out of scope.
+- Nothing in this family was held out.
 
 ## Working files
 
-- New: `crates/axeyum-lean-kernel/src/nat_prelude/prime_char.rs`
-- Touched (field/name-string additions and one `theorem_names` addition
-  per commit): `crates/axeyum-lean-kernel/src/nat_prelude.rs`,
-  `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs`
-- 15 fact files under `artifacts/facts/F-ml430-nat-prime-*.json` flipped
-  `open` → `proved` with kernel-term + axiom-footprint evidence pairs.
+- `crates/axeyum-lean-kernel/src/nat_prelude/prime_char.rs` — now 5
+  theorems plus their shared private helpers
+  (`prime_pow_ge2_contradiction`, `prime_sq_factor_case`, `prime_two`,
+  local `prime_condition`/`prime_parts`/`dvd_intro`/`dvd_elim`/etc.
+  copies — see the file's own module doc for why these stay
+  per-file-private).
+- `crates/axeyum-lean-kernel/src/nat_prelude.rs`,
+  `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs` —
+  the duplicate field/name_str/`theorem_names` entries removed.
+- 10 fact files reset to `main`'s content (untouched otherwise); 5 fact
+  files under `artifacts/facts/F-ml430-nat-prime-{not-prime-pow (both),
+  eq-one-of-pow, not-coprime-iff-dvd, mul-eq-prime-sq-iff}.json` remain
+  `proved`, owned by this lane.
