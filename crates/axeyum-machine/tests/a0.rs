@@ -2,7 +2,8 @@
 
 use axeyum_machine::a0::{
     A0Error, Conditions, Instruction, Memory, MemorySpan, Observation, ObservationError, Outcome,
-    Program, State, StateComponent, StopReason, Trap, Word, decode, encode, run, run_prefix, step,
+    Program, State, StateComponent, StopReason, Trap, Word, decode, decode_state, encode,
+    encode_state, run, run_prefix, step,
 };
 
 fn word(width: u8, value: u64) -> Word {
@@ -48,6 +49,116 @@ fn word_extension_and_truncation_are_explicit() {
         Err(A0Error::InvalidWidthConversion { from: 8, to: 16 })
     );
     assert_eq!(negative.sign_extend(12), Err(A0Error::InvalidWordWidth(12)));
+}
+
+#[test]
+fn canonical_state_encoding_roundtrips_every_outcome() {
+    let mut base = State::new(
+        16,
+        Memory::from_bytes(vec![0x10, 0x20, 0x30, 0x40]),
+        word(16, 0x1234),
+    )
+    .unwrap();
+    for (index, register) in base.registers.iter_mut().enumerate() {
+        *register = word(16, u64::try_from(index).unwrap() * 0x1111);
+    }
+    base.conditions = Conditions {
+        zero: true,
+        negative: false,
+        carry: true,
+        overflow: true,
+    };
+    let outcomes = [
+        Outcome::Running,
+        Outcome::Halted,
+        Outcome::Trapped(Trap::MisalignedProgramCounter { pc: 2 }),
+        Outcome::Trapped(Trap::IncompleteCodeFetch { pc: 0xfffc }),
+        Outcome::Trapped(Trap::IllegalEncoding {
+            pc: 4,
+            bytes: [0x99, 1, 2, 3],
+        }),
+        Outcome::Trapped(Trap::DataRange {
+            address: 3,
+            bytes: 2,
+            memory_len: 4,
+        }),
+    ];
+    for outcome in outcomes {
+        let mut state = base.clone();
+        state.outcome = outcome;
+        let encoded = encode_state(&state).unwrap();
+        let decoded = decode_state(&encoded).unwrap();
+        assert_eq!(decoded, state);
+        assert_eq!(encode_state(&decoded).unwrap(), encoded);
+    }
+}
+
+#[test]
+fn canonical_state_decoder_rejects_noncanonical_mutations() {
+    let mut state = State::new(
+        16,
+        Memory::from_bytes(vec![0x10, 0x20, 0x30, 0x40]),
+        word(16, 0x1234),
+    )
+    .unwrap();
+    state.outcome = Outcome::Trapped(Trap::DataRange {
+        address: 3,
+        bytes: 2,
+        memory_len: 4,
+    });
+    let encoded = encode_state(&state).unwrap();
+    let mut mutations = Vec::new();
+
+    let mut bad_magic = encoded.clone();
+    bad_magic[0] ^= 1;
+    mutations.push(bad_magic);
+    let mut bad_version = encoded.clone();
+    bad_version[4] = 2;
+    mutations.push(bad_version);
+    let mut bad_width = encoded.clone();
+    bad_width[5] = 7;
+    mutations.push(bad_width);
+    let mut high_register = encoded.clone();
+    high_register[16] = 1;
+    mutations.push(high_register);
+    let mut reserved_condition = encoded.clone();
+    reserved_condition[90] = 0x80;
+    mutations.push(reserved_condition);
+    let mut unknown_outcome = encoded.clone();
+    unknown_outcome[91] = 0xff;
+    mutations.push(unknown_outcome);
+    let mut unknown_trap = encoded.clone();
+    unknown_trap[92] = 0xff;
+    mutations.push(unknown_trap);
+    let mut wrong_trap_memory = encoded.clone();
+    let last = wrong_trap_memory.len() - 8;
+    wrong_trap_memory[last..].copy_from_slice(&5_u64.to_le_bytes());
+    mutations.push(wrong_trap_memory);
+    let mut trailing = encoded.clone();
+    trailing.push(0);
+    mutations.push(trailing);
+    mutations.push(encoded[..encoded.len() - 1].to_vec());
+
+    for mutation in mutations {
+        assert!(decode_state(&mutation).is_err());
+    }
+
+    let mut wrong_register_width = state.clone();
+    wrong_register_width.registers[0] = word(8, 0);
+    assert!(matches!(
+        encode_state(&wrong_register_width),
+        Err(A0Error::StateWidthMismatch { .. })
+    ));
+    let mut wrong_trap_length = state;
+    wrong_trap_length.outcome = Outcome::Trapped(Trap::DataRange {
+        address: 3,
+        bytes: 2,
+        memory_len: 5,
+    });
+    assert!(matches!(
+        encode_state(&wrong_trap_length),
+        Err(A0Error::InvalidStateEncoding(_))
+    ));
 }
 
 #[test]

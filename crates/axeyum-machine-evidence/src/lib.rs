@@ -8,7 +8,8 @@ use std::{collections::BTreeSet, fs, path::Path};
 
 use axeyum_machine::a0::{
     BranchCondition, Instruction, Memory, MemorySpan, Observation, Outcome, Program, State,
-    StateComponent, StopReason, Trap, Word, decode, encode, run, run_prefix, step,
+    StateComponent, StopReason, Trap, Word, decode, decode_state, encode, encode_state, run,
+    run_prefix, step,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -22,9 +23,10 @@ pub use symbolic_addition::{
 };
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v7";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v8";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
 const WORD_PACKAGE_SCHEMA: &str = "axeyum.a0.word-package.v1";
+const STATE_CODEC_SCHEMA: &str = "axeyum.a0.state-codec.v1";
 const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
 const ADD_SCHEMA: &str = "axeyum.a0.add-step-exhaustive.v1";
 const MEMORY_SCHEMA: &str = "axeyum.a0.memory-trace.v1";
@@ -89,6 +91,27 @@ pub struct WordPackageReport {
     /// Whether every operation matched its independent integer oracle.
     pub passed: bool,
     /// SHA-256 over every input and observed result.
+    pub result_sha256: String,
+}
+
+/// Source-bound audit of the canonical complete-state artifact codec.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StateCodecReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the canonical semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Architectural widths exercised.
+    pub widths: Vec<u8>,
+    /// Complete states encoded, decoded, and re-encoded.
+    pub states_checked: u64,
+    /// Distinct malformed encodings rejected.
+    pub malformed_encodings_rejected: u64,
+    /// Whether every outcome and trap form was represented.
+    pub all_outcomes_checked: bool,
+    /// Whether every canonical round trip and malformed-input check passed.
+    pub passed: bool,
+    /// SHA-256 over canonical bytes and mutation outcomes.
     pub result_sha256: String,
 }
 
@@ -293,7 +316,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "7".to_owned(),
+        version: "8".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -304,6 +327,7 @@ pub fn semantic_package() -> A0SemanticPackage {
             "word-extension-truncation",
             "finite-memory",
             "state",
+            "canonical-state-codec",
             "observations",
             "decode",
             "encode",
@@ -434,6 +458,48 @@ pub fn check_word_package_signed_zero_extension_control(
         package_path,
         report_path,
         WordPackageControl::SignedZeroExtension,
+    )
+}
+
+/// Produces the canonical complete-state codec audit.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn state_codec_report(package_path: &Path) -> Result<StateCodecReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_state_codec(
+        sha256_hex(&package_bytes),
+        StateCodecControl::Declared,
+    ))
+}
+
+/// Recomputes and checks a canonical-state codec report.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_state_codec(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<StateCodecReport, EvidenceError> {
+    check_state_codec_with_control(package_path, report_path, StateCodecControl::Declared)
+}
+
+/// Recomputes while deliberately accepting one trailing byte.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the trailing-byte control fires.
+pub fn check_state_codec_trailing_byte_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<StateCodecReport, EvidenceError> {
+    check_state_codec_with_control(
+        package_path,
+        report_path,
+        StateCodecControl::AcceptTrailingByte,
     )
 }
 
@@ -757,6 +823,12 @@ enum WordPackageControl {
 }
 
 #[derive(Clone, Copy)]
+enum StateCodecControl {
+    Declared,
+    AcceptTrailingByte,
+}
+
+#[derive(Clone, Copy)]
 enum ObservationControl {
     Declared,
     OmitSeparatingRegister,
@@ -1041,6 +1113,173 @@ fn compute_word_package(
         exhaustive_source_widths: vec![8, 16],
         source_words_checked,
         operation_checks,
+        passed,
+        result_sha256: hex_digest(digest.finalize()),
+    }
+}
+
+fn check_state_codec_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: StateCodecControl,
+) -> Result<StateCodecReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: StateCodecReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_state_codec(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed state-codec report does not equal recomputation (claimed result {}, recomputed {})",
+            claimed.result_sha256, recomputed.result_sha256
+        )));
+    }
+    Ok(claimed)
+}
+
+fn codec_state(width: u8, outcome: Outcome) -> State {
+    let mut state = State::new(
+        width,
+        Memory::from_bytes(vec![0x00, 0x11, 0x80, 0xfe, 0xff]),
+        Word::new(width, word_mask(width).wrapping_sub(3)).expect("codec width is supported"),
+    )
+    .expect("codec state is valid");
+    let values = [
+        0,
+        1,
+        (1_u64 << (width - 1)) - 1,
+        1_u64 << (width - 1),
+        word_mask(width),
+        0x55 & word_mask(width),
+        0xaa & word_mask(width),
+        3,
+    ];
+    for (register, value) in state.registers.iter_mut().zip(values) {
+        *register = Word::new(width, value).expect("codec register is valid");
+    }
+    state.conditions.zero = true;
+    state.conditions.carry = true;
+    state.outcome = outcome;
+    state
+}
+
+fn codec_outcomes(width: u8) -> [Outcome; 6] {
+    [
+        Outcome::Running,
+        Outcome::Halted,
+        Outcome::Trapped(Trap::MisalignedProgramCounter { pc: 2 }),
+        Outcome::Trapped(Trap::IncompleteCodeFetch {
+            pc: word_mask(width).wrapping_sub(3),
+        }),
+        Outcome::Trapped(Trap::IllegalEncoding {
+            pc: 4,
+            bytes: [0x99, 1, 2, 3],
+        }),
+        Outcome::Trapped(Trap::DataRange {
+            address: 4,
+            bytes: usize::from(width / 8),
+            memory_len: 5,
+        }),
+    ]
+}
+
+fn malformed_state_encodings() -> Vec<Vec<u8>> {
+    let state = codec_state(
+        16,
+        Outcome::Trapped(Trap::DataRange {
+            address: 4,
+            bytes: 2,
+            memory_len: 5,
+        }),
+    );
+    let encoded = encode_state(&state).expect("fixture state encodes");
+    let mut mutations = Vec::new();
+    let mut bad_magic = encoded.clone();
+    bad_magic[0] ^= 1;
+    mutations.push(bad_magic);
+    let mut bad_version = encoded.clone();
+    bad_version[4] = 2;
+    mutations.push(bad_version);
+    let mut bad_width = encoded.clone();
+    bad_width[5] = 7;
+    mutations.push(bad_width);
+    let mut high_register = encoded.clone();
+    high_register[16] = 1;
+    mutations.push(high_register);
+    let mut reserved_condition = encoded.clone();
+    reserved_condition[91] = 0x80;
+    mutations.push(reserved_condition);
+    let mut unknown_outcome = encoded.clone();
+    unknown_outcome[92] = 0xff;
+    mutations.push(unknown_outcome);
+    let mut unknown_trap = encoded.clone();
+    unknown_trap[93] = 0xff;
+    mutations.push(unknown_trap);
+    let mut wrong_trap_memory = encoded.clone();
+    let last = wrong_trap_memory.len() - 8;
+    wrong_trap_memory[last..].copy_from_slice(&6_u64.to_le_bytes());
+    mutations.push(wrong_trap_memory);
+    let mut trailing = encoded.clone();
+    trailing.push(0);
+    mutations.push(trailing);
+    mutations.push(encoded[..encoded.len() - 1].to_vec());
+    mutations
+}
+
+fn compute_state_codec(
+    semantic_package_sha256: String,
+    control: StateCodecControl,
+) -> StateCodecReport {
+    let widths = vec![8, 16, 24, 32, 40, 48, 56, 64];
+    let mut digest = Sha256::new();
+    let mut states_checked = 0_u64;
+    let mut passed = true;
+    for width in &widths {
+        for outcome in codec_outcomes(*width) {
+            let state = codec_state(*width, outcome);
+            let encoded = encode_state(&state).expect("well-formed state encodes");
+            let decoded = decode_state(&encoded);
+            passed &= decoded.as_ref() == Ok(&state);
+            let reencoded = decoded.and_then(|decoded| encode_state(&decoded));
+            passed &= reencoded.as_ref() == Ok(&encoded);
+            digest.update([*width]);
+            digest.update(
+                u64::try_from(encoded.len())
+                    .expect("encoding length fits")
+                    .to_le_bytes(),
+            );
+            digest.update(&encoded);
+            states_checked += 1;
+        }
+    }
+
+    let mutations = malformed_state_encodings();
+    let trailing_index = mutations.len() - 2;
+    let mut malformed_encodings_rejected = 0_u64;
+    for (index, mutation) in mutations.iter().enumerate() {
+        let rejected = if matches!(control, StateCodecControl::AcceptTrailingByte)
+            && index == trailing_index
+        {
+            false
+        } else {
+            decode_state(mutation).is_err()
+        };
+        malformed_encodings_rejected += u64::from(rejected);
+        passed &= rejected;
+        digest.update(
+            u64::try_from(index)
+                .expect("mutation index fits")
+                .to_le_bytes(),
+        );
+        digest.update([u8::from(rejected)]);
+        digest.update(Sha256::digest(mutation));
+    }
+    StateCodecReport {
+        schema: STATE_CODEC_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        widths,
+        states_checked,
+        malformed_encodings_rejected,
+        all_outcomes_checked: states_checked == 48,
         passed,
         result_sha256: hex_digest(digest.finalize()),
     }

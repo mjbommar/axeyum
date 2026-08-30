@@ -7,12 +7,12 @@ use axeyum_machine_evidence::{
     check_branch_target_control, check_branch_trace, check_decoder_reserved_bit_control,
     check_decoder_roundtrip, check_memory_byte_order_control, check_memory_trace,
     check_observation_omission_control, check_observation_separation, check_run_classification,
-    check_run_false_halt_control, check_step_coverage, check_step_hidden_write_control,
-    check_step_mutation_suite_control, check_symbolic_addition,
-    check_symbolic_addition_inverted_carry_control, check_word_package,
+    check_run_false_halt_control, check_state_codec, check_state_codec_trailing_byte_control,
+    check_step_coverage, check_step_hidden_write_control, check_step_mutation_suite_control,
+    check_symbolic_addition, check_symbolic_addition_inverted_carry_control, check_word_package,
     check_word_package_signed_zero_extension_control, check_word_roundtrip,
     check_word_roundtrip_reversed_control, decoder_roundtrip_report, memory_trace_report,
-    observation_separation_report, run_classification_report, semantic_package,
+    observation_separation_report, run_classification_report, semantic_package, state_codec_report,
     step_coverage_report, symbolic_addition_report, word_package_report, word_roundtrip_report,
     write_json,
 };
@@ -72,6 +72,25 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 Path::new(report),
             )?;
             return Err("control-failure: signed zero extension was accepted".into());
+        }
+        [command, package, output] if command == "emit-state-codec" => {
+            let report = state_codec_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "state-codec: PASS: states={} malformed-rejected={} outcomes=all result_sha256={}",
+                report.states_checked, report.malformed_encodings_rejected, report.result_sha256
+            );
+        }
+        [command, package, report] if command == "check-state-codec" => {
+            let checked = check_state_codec(Path::new(package), Path::new(report))?;
+            println!(
+                "state-codec: PASS: states={} malformed-rejected={} outcomes=all result_sha256={}",
+                checked.states_checked, checked.malformed_encodings_rejected, checked.result_sha256
+            );
+        }
+        [command, package, report] if command == "control-state-codec-trailing-byte" => {
+            check_state_codec_trailing_byte_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: trailing state byte was accepted".into());
         }
         [command, package, output] if command == "emit-observation-separation" => {
             let report = observation_separation_report(Path::new(package))?;
@@ -269,6 +288,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  control-word-roundtrip-reversed PACKAGE REPORT | \
                  emit-word-package PACKAGE OUTPUT | check-word-package PACKAGE REPORT | \
                  control-word-package-signed-zero-extension PACKAGE REPORT | \
+                 emit-state-codec PACKAGE OUTPUT | check-state-codec PACKAGE REPORT | \
+                 control-state-codec-trailing-byte PACKAGE REPORT | \
                  emit-observation-separation PACKAGE OUTPUT | \
                  check-observation-separation PACKAGE REPORT | \
                  control-observation-omission PACKAGE REPORT | \

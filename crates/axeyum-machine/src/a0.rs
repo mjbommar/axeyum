@@ -435,6 +435,272 @@ impl State {
     }
 }
 
+const STATE_MAGIC: [u8; 4] = *b"A0ST";
+const STATE_ENCODING_VERSION: u8 = 1;
+
+/// Encodes one well-formed A0 state in the canonical binary artifact format.
+///
+/// The format fixes field order, integer width and byte order. It includes the
+/// complete finite memory domain and rejects a state containing a register,
+/// program counter, or trap address outside the state's declared word width.
+///
+/// # Errors
+///
+/// Returns a categorized [`A0Error`] when the state is not well formed or its
+/// memory length cannot be represented by the format.
+pub fn encode_state(state: &State) -> Result<Vec<u8>, A0Error> {
+    validate_width(state.width)?;
+    for register in state.registers {
+        if register.width() != state.width {
+            return Err(A0Error::StateWidthMismatch {
+                component: "register",
+                expected: state.width,
+                actual: register.width(),
+            });
+        }
+    }
+    if state.pc.width() != state.width {
+        return Err(A0Error::StateWidthMismatch {
+            component: "program-counter",
+            expected: state.width,
+            actual: state.pc.width(),
+        });
+    }
+    let memory_len = u64::try_from(state.memory.len())
+        .map_err(|_| A0Error::InvalidStateEncoding("memory length exceeds u64"))?;
+    let mut encoded = Vec::with_capacity(90_usize.saturating_add(state.memory.len()));
+    encoded.extend_from_slice(&STATE_MAGIC);
+    encoded.push(STATE_ENCODING_VERSION);
+    encoded.push(state.width);
+    encoded.extend_from_slice(&memory_len.to_le_bytes());
+    for register in state.registers {
+        encoded.extend_from_slice(&register.unsigned().to_le_bytes());
+    }
+    encoded.extend_from_slice(&state.memory.bytes);
+    encoded.extend_from_slice(&state.pc.unsigned().to_le_bytes());
+    encoded.push(
+        u8::from(state.conditions.zero)
+            | (u8::from(state.conditions.negative) << 1)
+            | (u8::from(state.conditions.carry) << 2)
+            | (u8::from(state.conditions.overflow) << 3),
+    );
+    encode_outcome(
+        &mut encoded,
+        state.width,
+        state.memory.len(),
+        &state.outcome,
+    )?;
+    Ok(encoded)
+}
+
+fn encode_outcome(
+    encoded: &mut Vec<u8>,
+    width: u8,
+    memory_len: usize,
+    outcome: &Outcome,
+) -> Result<(), A0Error> {
+    match outcome {
+        Outcome::Running => encoded.push(0),
+        Outcome::Halted => encoded.push(1),
+        Outcome::Trapped(trap) => {
+            encoded.push(2);
+            match trap {
+                Trap::MisalignedProgramCounter { pc } => {
+                    validate_state_value(width, *pc, "trap program-counter")?;
+                    encoded.push(0);
+                    encoded.extend_from_slice(&pc.to_le_bytes());
+                }
+                Trap::IncompleteCodeFetch { pc } => {
+                    validate_state_value(width, *pc, "trap program-counter")?;
+                    encoded.push(1);
+                    encoded.extend_from_slice(&pc.to_le_bytes());
+                }
+                Trap::IllegalEncoding { pc, bytes } => {
+                    validate_state_value(width, *pc, "trap program-counter")?;
+                    encoded.push(2);
+                    encoded.extend_from_slice(&pc.to_le_bytes());
+                    encoded.extend_from_slice(bytes);
+                }
+                Trap::DataRange {
+                    address,
+                    bytes,
+                    memory_len: trapped_memory_len,
+                } => {
+                    validate_state_value(width, *address, "trap data address")?;
+                    if *trapped_memory_len != memory_len {
+                        return Err(A0Error::InvalidStateEncoding(
+                            "data-range trap memory length differs from state memory",
+                        ));
+                    }
+                    encoded.push(3);
+                    encoded.extend_from_slice(&address.to_le_bytes());
+                    encoded.extend_from_slice(
+                        &u64::try_from(*bytes)
+                            .map_err(|_| {
+                                A0Error::InvalidStateEncoding("trap byte count exceeds u64")
+                            })?
+                            .to_le_bytes(),
+                    );
+                    encoded.extend_from_slice(
+                        &u64::try_from(*trapped_memory_len)
+                            .map_err(|_| {
+                                A0Error::InvalidStateEncoding("trap memory length exceeds u64")
+                            })?
+                            .to_le_bytes(),
+                    );
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_state_value(width: u8, value: u64, component: &'static str) -> Result<(), A0Error> {
+    if value & !mask(width) != 0 {
+        Err(A0Error::InvalidStateEncoding(component))
+    } else {
+        Ok(())
+    }
+}
+
+struct StateDecoder<'a> {
+    remaining: &'a [u8],
+}
+
+impl<'a> StateDecoder<'a> {
+    fn take(&mut self, len: usize) -> Result<&'a [u8], A0Error> {
+        if self.remaining.len() < len {
+            return Err(A0Error::InvalidStateEncoding("truncated state encoding"));
+        }
+        let (taken, remaining) = self.remaining.split_at(len);
+        self.remaining = remaining;
+        Ok(taken)
+    }
+
+    fn byte(&mut self) -> Result<u8, A0Error> {
+        Ok(self.take(1)?[0])
+    }
+
+    fn u64(&mut self) -> Result<u64, A0Error> {
+        let bytes: [u8; 8] = self
+            .take(8)?
+            .try_into()
+            .map_err(|_| A0Error::InvalidStateEncoding("invalid u64 field"))?;
+        Ok(u64::from_le_bytes(bytes))
+    }
+}
+
+/// Decodes one canonical binary A0 state encoding.
+///
+/// # Errors
+///
+/// Rejects bad magic or version, unsupported widths, out-of-width values,
+/// reserved condition bits, unknown outcome or trap tags, inconsistent trap
+/// memory lengths, truncation, and trailing bytes.
+pub fn decode_state(encoded: &[u8]) -> Result<State, A0Error> {
+    let mut decoder = StateDecoder { remaining: encoded };
+    if decoder.take(4)? != STATE_MAGIC {
+        return Err(A0Error::InvalidStateEncoding("bad state magic"));
+    }
+    if decoder.byte()? != STATE_ENCODING_VERSION {
+        return Err(A0Error::InvalidStateEncoding(
+            "unsupported state encoding version",
+        ));
+    }
+    let width = decoder.byte()?;
+    validate_width(width)?;
+    let memory_len = usize::try_from(decoder.u64()?)
+        .map_err(|_| A0Error::InvalidStateEncoding("memory length exceeds usize"))?;
+    let mut register_values = [0_u64; REGISTER_COUNT];
+    for value in &mut register_values {
+        *value = decoder.u64()?;
+        validate_state_value(width, *value, "register exceeds state width")?;
+    }
+    let memory = Memory::from_bytes(decoder.take(memory_len)?.to_vec());
+    let pc_value = decoder.u64()?;
+    validate_state_value(width, pc_value, "program-counter exceeds state width")?;
+    let condition_bits = decoder.byte()?;
+    if condition_bits & !0x0f != 0 {
+        return Err(A0Error::InvalidStateEncoding(
+            "reserved condition bits are nonzero",
+        ));
+    }
+    let outcome_tag = decoder.byte()?;
+    let outcome = match outcome_tag {
+        0 => Outcome::Running,
+        1 => Outcome::Halted,
+        2 => Outcome::Trapped(decode_trap(&mut decoder, width, memory_len)?),
+        _ => return Err(A0Error::InvalidStateEncoding("unknown outcome tag")),
+    };
+    if !decoder.remaining.is_empty() {
+        return Err(A0Error::InvalidStateEncoding("trailing state bytes"));
+    }
+    let zero = Word::new(width, 0)?;
+    let mut registers = [zero; REGISTER_COUNT];
+    for (register, value) in registers.iter_mut().zip(register_values) {
+        *register = Word::new(width, value)?;
+    }
+    Ok(State {
+        width,
+        registers,
+        memory,
+        pc: Word::new(width, pc_value)?,
+        conditions: Conditions {
+            zero: condition_bits & 1 != 0,
+            negative: condition_bits & 2 != 0,
+            carry: condition_bits & 4 != 0,
+            overflow: condition_bits & 8 != 0,
+        },
+        outcome,
+    })
+}
+
+fn decode_trap(
+    decoder: &mut StateDecoder<'_>,
+    width: u8,
+    state_memory_len: usize,
+) -> Result<Trap, A0Error> {
+    let tag = decoder.byte()?;
+    let first = decoder.u64()?;
+    validate_state_value(
+        width,
+        first,
+        if tag == 3 {
+            "trap data address exceeds state width"
+        } else {
+            "trap program-counter exceeds state width"
+        },
+    )?;
+    match tag {
+        0 => Ok(Trap::MisalignedProgramCounter { pc: first }),
+        1 => Ok(Trap::IncompleteCodeFetch { pc: first }),
+        2 => Ok(Trap::IllegalEncoding {
+            pc: first,
+            bytes: decoder
+                .take(4)?
+                .try_into()
+                .map_err(|_| A0Error::InvalidStateEncoding("invalid instruction bytes"))?,
+        }),
+        3 => {
+            let bytes = usize::try_from(decoder.u64()?)
+                .map_err(|_| A0Error::InvalidStateEncoding("trap byte count exceeds usize"))?;
+            let memory_len = usize::try_from(decoder.u64()?)
+                .map_err(|_| A0Error::InvalidStateEncoding("trap memory length exceeds usize"))?;
+            if memory_len != state_memory_len {
+                return Err(A0Error::InvalidStateEncoding(
+                    "data-range trap memory length differs from state memory",
+                ));
+            }
+            Ok(Trap::DataRange {
+                address: first,
+                bytes,
+                memory_len,
+            })
+        }
+        _ => Err(A0Error::InvalidStateEncoding("unknown trap tag")),
+    }
+}
+
 /// One finite half-open byte range selected by an observation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemorySpan {
@@ -1249,6 +1515,14 @@ pub enum A0Error {
     InvalidWordWidth(u8),
     /// A widening operation was asked to narrow, or truncation to widen.
     InvalidWidthConversion { from: u8, to: u8 },
+    /// A complete state contains a word of another architectural width.
+    StateWidthMismatch {
+        component: &'static str,
+        expected: u8,
+        actual: u8,
+    },
+    /// A state or its canonical binary encoding violates the format contract.
+    InvalidStateEncoding(&'static str),
     /// Two values that must share a width do not.
     WidthMismatch { expected: u8, actual: u8 },
     /// An encoder input named a register outside r0 through r7.
