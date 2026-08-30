@@ -187,6 +187,10 @@ now. Nothing was deleted.
 | 2026-08-30 | `41cd92f5e` | A0 concrete addition now instantiates a domain-parametric semantic definition that can also construct symbolic terms; primitive mappings remain an explicit trust boundary. |
 | 2026-08-30 | `9cf18324f` | A0 addition emits term-bound DRAT/LRAT for all eight supported fixed widths. Replay rebuilds source terms and certificates; an inverted-carry SAT witness is exhaustively found at width 8 and replayed through encoded concrete execution. |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
+| 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
+| 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
+| 2026-08-30 | `094e80a21` | Lean-replay coverage per subject, with a control of the opposite verdict |
+| 2026-08-30 | `d0cc13942` | ADR-0875; four corrections to `08-ivt-and-evt-measured-against-mathlib.md`; this status file |
 | 2026-08-30 | l0-s6-credit-transaction | Crash-safe two-phase-commit engine (`scripts/credit-transaction.py`) + gate (`scripts/check-credit-transaction.py`) + 27-test suite + 9-guard mutation table (`scripts/tests/test-credit-transaction*`), registered in justfile and check.sh; ADR-0785. |
 | 2026-08-30 | l1-c0-artifact-contract | Library-artifact pack contract (`artifacts/library-artifact/`: README spec, JSON Schema doc, 9-declaration positive pack + type-only projection + external population registry) + two independent readers (`scripts/check-library-artifact-contract{,-reader-b}.py`) + 14-test suite + 5-guard 1:1 mutation table (`scripts/tests/test-library-artifact-contract*`), registered in justfile and check.sh; ADR-0800. |
 | 2026-08-30 | `1ec34c8e1` | Initial module-import parser + receipt generator/checker, verified against the full pinned Mathlib checkout (8,094 modules, 25,495 internal edges, 1,476 sinks, matching the roadmap's evidence baseline exactly); two runs byte-identical. |
@@ -36487,6 +36491,66 @@ rule, confirmed complete before this report). `validate-facts.py` — 805
 facts, 0 errors. `validate-autogenesis-operations.py` — unchanged, 27.
 `validate-producer-contract-declines.py` — unchanged, 27.
 `check-autogenesis-holdout-isolation.py` — PASS, held_out=37 unchanged.
+
+**IVT dominates with three named caveats; EVT does not, and the standing reason
+for that is stale** (`DONE`, ivt-evt-dominance-audit, 2026-08-30). Verdict in
+[ADR-0875](docs/research/09-decisions/adr-0875-the-ivt-evt-dominance-claim-audited-independently.md),
+with `08-ivt-and-evt-measured-against-mathlib.md` corrected in four places.
+
+`08-…` and ADR-0692 both say EVT has no statement on which the two-axis
+comparison can be run. That was true when written and is not true now.
+`CReal.supOn_ub` and `CReal.supOn_approx_lub` landed since, and they compose —
+`le_trans` under `Exists.rec` — into exactly the `CReal.evt_approx_max` §5
+item 2 names as missing. `examples/ivt_evt_vacuity_probe` builds the term and
+`Kernel::add_declaration` accepts it, axiom-free, with a negative control (the
+same term with the `1/(n+1)` slack removed) refused in the same run. ADR-0692's
+absence probe looked for `CReal.supOn_upper_bound`, a name that never existed.
+
+**EVT's real blocker is bookkeeping.** No declaration names the composed
+statement, and the ledger has **zero** facts for `CReal.supOn` or any of its
+laws while eight `mesh*` rungs *below* the supremum do have facts. A dominance
+claim a referee cannot check in the ledger is worth nothing.
+
+**Vacuity — the risk the brief called most likely to be live — is now
+machine-checked for both theorems, and was checked by nothing before.** The
+probe instantiates `ivt_approx` at `CReal.ivtPlateau` and the composed
+`evt_approx_max` at `CReal.evtLinear`, discharging every hypothesis with a
+kernel theorem, at an **arbitrary** `v`; both instantiations are admitted
+axiom-free. Those are precisely the families whose EXACT versions are proved to
+imply analytic LLPO, so the approximate statements are non-trivial exactly where
+the constructive difficulty lives.
+
+**Two measurements that were previously inferred are now measured.** Mathlib's
+footprints, via `lake env lean` + `#print axioms` at the pinned commit:
+`[propext, Classical.choice, Quot.sound]` for `intermediate_value_Icc` and
+`IsCompact.exists_isMaxOn`, with `IsMaxOn` as a control that comes back empty.
+And `real_lean_creal_carrier_kernel_replay` re-run under `AXEYUM_REQUIRE_LEAN=1`
+(4 passed, 136.8 s, `representable=1989 lean_kernel_constants=1989`): **18 of
+the 21 IVT/EVT-family declarations are checked by official Lean's own kernel.**
+The three that are not are `CReal.ivt_exact_root_at` (blocked by
+`hasDerivative_add`) and the two hypothesis-class witnesses
+`ivtPlateau_uniformly_continuous` / `evtLinear_uniformly_continuous`, which are
+Type-valued because `CReal.UniformlyContinuousOn` is `Sort 1` and carries a
+modulus.
+
+That same `Sort 1` fact has a consequence nobody had recorded: **`CReal.supOn`
+is indexed by the modulus**, so "the supremum of `F` on `[a,b]`" was not a
+function of `F`. It is answerable — the probe derives
+`Equiv (supOn … u1) (supOn … u2)` axiom-free from the two characterizing laws
+plus `le_of_forall_le_add_small` — but nothing in the environment says so.
+
+**Re-measurement of the earlier 0/20:** over the 17-fact IVT/EVT family selected
+by content, `per_theorem_footprint`, `circularity`, `mutation_control` and
+`independent_replay` are **still 0 of 17**. What changed is above the fact
+level: S0 now measures them, S1 pins every statement, and the Lean replay covers
+18 of 21 declarations by NAME while publishing no fact ids.
+
+**Next, for a lane that is not this one** (an audit that lands what it audits is
+a lane grading its own work): declare `CReal.evt_approx_max`; declare
+`CReal.supOn_modulus_independent`; register facts for the supremum family. All
+three proof terms are in `crates/axeyum-lean-kernel/examples/ivt_evt_vacuity_probe.rs`.
+Also open, reported and not amended: the six `F:cas-*` IVT/EVT rows score **0 on
+every** safety-matrix protection.
 
 **Status:** COMPLETE — all four ADR-0780 mutant survivors closed. Kill table is
 8 killed / 0 survived over a 35-case corpus. No P0 in the unmutated kernel.

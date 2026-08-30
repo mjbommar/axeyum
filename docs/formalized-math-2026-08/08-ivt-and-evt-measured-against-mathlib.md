@@ -22,6 +22,35 @@ ineligible for the claim, for the reason ADR-0675 and ADR-0691 already give.
 See ADR-0692 for the full adjudication and a fresh re-derivation against the
 post-`CReal.supOn` kernel.
 
+**Correction, 2026-08-30 (lane `ivt-evt-dominance-audit`, the first INDEPENDENT
+audit of this claim — see
+[ADR-0875](../research/09-decisions/adr-0875-the-ivt-evt-dominance-claim-audited-independently.md)).**
+Four things below are now measured differently, and one of them is a
+substantive error rather than a refinement:
+
+1. **§2's "EVT row 1 — there is none" is stale in substance.** `CReal.supOn_ub`
+   and `CReal.supOn_approx_lub` have both landed since. They compose — through
+   `le_trans`, eliminated with `Exists.rec` — into exactly the
+   `CReal.evt_approx_max` §5 item 2 names as missing, and the kernel admits the
+   term axiom-free (`examples/ivt_evt_vacuity_probe`). What EVT lacks is a
+   declaration that NAMES the statement, and **any ledger fact at all for the
+   supremum family**: filtering the whole ledger to a `CReal.sup*` kernel
+   theorem returns zero rows, while eight `mesh*` rungs below it do have facts.
+   ADR-0692's re-derivation probed `CReal.supOn_upper_bound`, a name that never
+   existed; the law landed as `CReal.supOn_ub`.
+2. **Mathlib's axiom footprints are measured now**, not inferred — see §3.
+   Both theorems: `[propext, Classical.choice, Quot.sound]`.
+3. **Vacuity is machine-checked for both**, at concrete families whose
+   hypotheses are kernel theorems — see §3a. Nothing checked it before.
+4. **`CReal.UniformlyContinuousOn` is `Sort 1`, not `Prop`**, so `CReal.supOn`
+   is indexed by the *modulus* and "the supremum of `F` on `[a,b]`" was not a
+   function of `F`. That is answerable and the audit answers it; it had not
+   been stated anywhere.
+
+The audit's verdict is **IVT dominant with three named caveats; EVT not
+dominant, for a bookkeeping reason rather than the structural one this document
+gives.**
+
 ## Summary
 
 The standing goal is: *confirm that the architecture makes results like IVT and
@@ -250,7 +279,27 @@ facts carry `proof_route = "imported-kernel-lean"`; none is analytic.
 
 ### Row 1 — there is none
 
-This is the audit's main finding. Filtering the fresh inventory to
+**SUPERSEDED 2026-08-30 by ADR-0875, and the correction matters: the CONTENT
+of row 1 exists today.** `CReal.supOn_ub` (`F y ≤ supOn` for `y ∈ [a,b]`) and
+`CReal.supOn_approx_lub` (`∀ n, ∃ x ∈ [a,b], supOn ≤ F x + 1/(n+1)`) are both
+landed, axiom-free, and accepted by official Lean's own kernel. `le_trans`
+composes them into the exact statement §5 item 2 names, and
+`examples/ivt_evt_vacuity_probe` has `Kernel::add_declaration` accept the term:
+
+```text
+ADMITTED  EvtAudit.evt_approx_max  axioms=0
+  ∀ F a b (hab : le a b) (huc : UC F a b) (n : Nat),
+    ∃ x, le a x ∧ le x b ∧ ∀ y, le a y → le y b → le (F y) (add (F x) (1/(n+1)))
+```
+
+So the paragraph below — "EVT currently consists of a refutation with no
+positive content behind it" — is no longer true. Read the rest of this section
+as the history of how the gap was measured before those two laws landed, not as
+the current state. What is STILL true, and is now the real blocker, is that no
+declaration names that statement and **no ledger fact exists for `CReal.supOn`
+or any of its laws.**
+
+Filtering the fresh inventory to
 `prelude = creal`, the complete set of `evt`-named theorems is **two**:
 
 ```
@@ -447,6 +496,59 @@ hypothesis gap cannot even be *stated* here, let alone bridged — which means i
 is not a defect to be fixed but a boundary of the formalization. It should be
 named in any comparison rather than elided.
 
+**And it is stronger than "a different notion", because it changes the TYPE of
+the theorem.** Read from the kernel, with its control:
+
+```text
+inductive CReal.UniformlyContinuousOn : (CReal → CReal) → CReal → CReal → Sort (1)
+definition CReal.le                   : CReal → CReal → Prop        (control)
+```
+
+`Sort 1` is `Type 0`. The witness carries the modulus, so it is **data**, and
+`hab : le a b` beside it is a proof-irrelevant `Prop`. Two consequences neither
+this document nor ADR-0692 recorded:
+
+- `CReal.supOn F a b hab huc` is indexed by the modulus, so two moduli for the
+  same `F` give two `supOn` terms the kernel does not identify. None of the
+  seven declarations mentioning `supOn` relates two instances. It is
+  answerable — `EvtAudit.supOn_modulus_independent` in the probe derives
+  `Equiv (supOn … u1) (supOn … u2)` from the two characterizing laws plus
+  `CReal.le_of_forall_le_add_small`, axiom-free — but nothing in the
+  environment says so.
+- Lean's kernel refuses a `Theorem` whose type is not a `Prop`, so
+  `CReal.ivtPlateau_uniformly_continuous` and
+  `CReal.evtLinear_uniformly_continuous` sit in the 73-declaration residue of
+  `F:lean-kernel-accepts-the-whole-constructed-real-carrier`. Those are the two
+  hypothesis-class witnesses that make row 2 meaningful. 18 of the 21
+  IVT/EVT-family declarations are Lean-checked; those two and
+  `CReal.ivt_exact_root_at` (blocked by `CReal.hasDerivative_add`) are not.
+
+### 3a. Vacuity, and Mathlib's footprints — both measured 2026-08-30 (ADR-0875)
+
+**Mathlib's axioms**, from `lake env lean` with `#print axioms` against the
+cached oleans at the pinned commit, with `IsMaxOn` as the control that must
+come back empty:
+
+```text
+'intermediate_value_Icc'      depends on axioms: [propext, Classical.choice, Quot.sound]
+'IsCompact.exists_isMaxOn'    depends on axioms: [propext, Classical.choice, Quot.sound]
+'IsMaxOn'                     does not depend on any axioms      (control)
+```
+
+**Vacuity.** An empty axiom footprint cannot see an unsatisfiable hypothesis.
+`examples/ivt_evt_vacuity_probe` instantiates both families at concrete
+families whose hypotheses are themselves kernel theorems, and admits each
+instantiation, so the instantiated statement is what the kernel prints:
+
+```text
+ADMITTED  EvtAudit.ivt_approx_at_ivtPlateau      axioms=0
+ADMITTED  EvtAudit.evt_approx_max_at_evtLinear   axioms=0
+```
+
+Both hold for an **arbitrary** `v`, and both families are exactly the ones
+whose exact versions are proved to imply analytic LLPO — so the approximate
+statements are non-trivial precisely where the constructive difficulty is.
+
 ## 4. The axes, with evidence
 
 **Revised 2026-08-30 (ADR-0692) — the test, stated once, before either table.**
@@ -503,6 +605,21 @@ states, by design and by kernel limitation, and that narrowing is reported
 above rather than hidden."* — not the unqualified "IVT is Pareto-dominant
 over Mathlib."
 
+**Amended 2026-08-30 (ADR-0875) — the continuity row must move out of "not
+comparable".** Filing the hypothesis gap under *not comparable* is the one
+place this section still lets a Mathlib-win disappear. It is the axis on which
+Mathlib's theorem is unambiguously stronger, and "this kernel cannot state
+`ContinuousOn`" is a fact about our kernel, not a reason to drop the axis. It
+belongs where "generality of structure" sits: a named asymmetry reported inside
+the claim. The claim that survives an adversarial reading is the long one:
+*dominates on trusted base (0 against a measured 3) and on computational
+content, while assuming strictly more (uniform continuity with an explicit
+modulus, carried as DATA in `Sort 1`), concluding strictly less (an approximate
+root, fixed target, one orientation), over a vastly narrower ambient
+structure.* Anything shorter is not the claim. Five-risk coverage per theorem
+is in ADR-0875 §7; the four fact-level protections it names are still **0 of
+17**.
+
 ### EVT
 
 **Dominance axes:**
@@ -521,7 +638,23 @@ sink the verdict):
 | Boundary statement (row 2) | **we have one; Mathlib has no counterpart** | `evt_attained_max_decides_sign`. The theorem is genuine; the *ledger evidence* for its non-vacuity is missing (§2). Same status as IVT's boundary row: informative, not part of the two-axis test. |
 | Generality of structure | **Mathlib is more general, not reachable here** | as for IVT, and more so: Mathlib's is over compact subsets of arbitrary topological spaces. |
 
-**Net for EVT: the two-axis test cannot currently be run, so it is not met.**
+**SUPERSEDED 2026-08-30 (ADR-0875): the two EVT rows above are now WRONG, and
+so is the "Net" line that follows them.** The comparison *can* be run.
+`CReal.supOn_ub` and `CReal.supOn_approx_lub` compose into `evt_approx_max`,
+which the kernel admits axiom-free, so there is comparable content; on trusted
+base it reads `0` against Mathlib's measured `[propext, Classical.choice,
+Quot.sound]`, and on computational content `supOn` is a definition the kernel
+reduces against a `noncomputable` existence. EVT is nonetheless **not** eligible
+to be cited as a dominance example, for a different and simpler reason: **no
+declaration names the composed statement, and the ledger has no fact for
+`CReal.supOn` or any of its laws** — so a referee has nothing to check. The
+corrected Net line is: *the content exists and wins both axes; the bookkeeping
+that would let anyone verify that does not exist.* Three items close it, none
+of them research: declare `CReal.evt_approx_max`, declare
+`CReal.supOn_modulus_independent`, and register facts for the supremum family.
+The proof terms are in `examples/ivt_evt_vacuity_probe.rs`.
+
+**Superseded original — Net for EVT: the two-axis test cannot currently be run, so it is not met.**
 This is not "we lose the vote" — it is that Mathlib's comparable content
 (`IsCompact.exists_isMaxOn`, a positive attained maximum) has no counterpart on
 our side to measure trusted base or computational content against.
@@ -579,12 +712,20 @@ And one item for the cost-model document itself:
   anywhere, and cannot be by a kernel that only accepts proofs. Row 2's
   strength is exactly "the classical conclusion implies a principle absent from
   this environment," and that is the strongest formal statement available.
-- **Mathlib's axiom footprints were not measured**, only inferred from the fact
-  that `intermediate_value_Icc` routes through `IsPreconnected` and
-  `exists_isMaxOn` through `exists_isLeast`/`by_contra`. A `#print axioms` run
-  would pin it; it needs a Mathlib build, which this lane did not do.
+- ~~**Mathlib's axiom footprints were not measured**~~ — **done 2026-08-30**
+  (ADR-0875, §3a): `[propext, Classical.choice, Quot.sound]` for both, with
+  `IsMaxOn` as a control that comes back empty.
 - **`cargo test` was not run.** Per the lane's brief, targeted runs only; the
   three tests cited (`ivt_row_two_derives_a_principle_absent_from_the_environment`,
   `ivt_plateau_is_the_clamp_the_row_two_theorem_uses`,
   `evt_attained_max_hypothesis_is_satisfiable_at_*`) were **read, not
   executed**. Their existence and content are reported; their passing is not.
+  (Still true of those three. The 2026-08-30 audit did run
+  `real_lean_creal_carrier_kernel_replay` under `AXEYUM_REQUIRE_LEAN=1` —
+  4 passed, 136.8 s, `population=2062 representable=1989
+  lean_kernel_constants=1989`.)
+- **The nine `generated-unreviewed` claim is stale.** Re-read 2026-08-30:
+  10 of the 11 `CReal` IVT/EVT facts are `provenance.curation = "curated"`,
+  and `F:creal-ivt-exact-root-decides-sign` carries no `curation` field at all
+  rather than `generated-unreviewed`. The authority is still `formal.statement`,
+  but the reason given for distrusting the prose no longer holds.
