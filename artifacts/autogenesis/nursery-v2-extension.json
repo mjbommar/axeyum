@@ -1,18 +1,20 @@
 {
   "coverage": {
-    "combined_evaluation_entries": 294,
-    "entries": 80,
-    "evaluation_ceiling": 300,
-    "families": 8,
+    "attested_cohort_entries": 214,
+    "ceiling_authority": "ADR-0615. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. This QUOTED cohort carries its own ceiling, equal to the ATTESTED cohort, so an unattested population can never outweigh an attested one. When it binds, re-attest (scripts/provision-lean-import-toolchain.sh) rather than raise it.",
+    "combined_evaluation_entries": 334,
+    "entries": 120,
+    "families": 12,
     "partition_counts": {
-      "development": 30,
-      "held-out": 30,
-      "train": 20
+      "development": 40,
+      "held-out": 50,
+      "train": 30
     },
     "per_family": 10,
+    "quoted_cohort_ceiling": 214,
     "screen_rejections": {
-      "hygienic-or-generated": 191,
-      "not-statable-here": 495
+      "hygienic-or-generated": 249,
+      "not-statable-here": 556
     },
     "v1_evaluation_entries": 214
   },
@@ -342,6 +344,321 @@
       "source_statement_sha256": "7026a0ff49efdeb891aaaa2f8591c78f4c2e88bd85f9a1e5f4d43adfdc754f2b",
       "statement": "∀ (a b : ℤ) {c : ℤ}, c ≠ 0 → (a + b * c) / c = a / c + b",
       "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "0270a7b28031c6bba85aa256f85cc7cd83763328c655376d120d6eabd05d8df1",
+      "constants": [
+        "Eq",
+        "Iff",
+        "Int",
+        "Int.instLEInt",
+        "Int.toNat",
+        "LE.le",
+        "Nat.cast",
+        "OfNat.ofNat",
+        "instNatCastInt",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-eq-natcast-tonat-0270a7b2",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.eq_natCast_toNat",
+      "source_statement_sha256": "777a689815c91f7856fd1aa0e2819efd2835e2f76bd7a249713aa5c56911801e",
+      "statement": "∀ {a : ℤ}, a = ↑a.toNat ↔ 0 ≤ a",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "0b04114fc5c8f5cfca2cc882787f76bef6d65cb2ccd438cb926208d2e2ca68bc",
+      "constants": [
+        "Int",
+        "Int.instLTInt",
+        "Int.toNat",
+        "LT.lt",
+        "Nat",
+        "instLTNat"
+      ],
+      "fact_id": "F:ml430-int-lt-of-tonat-lt-0b04114f",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.lt_of_toNat_lt",
+      "source_statement_sha256": "dc0080544d94f5e01856d3564dd648a9cf1bcf82b391340bfe1cd1029f180f6a",
+      "statement": "∀ {a b : ℤ}, a.toNat < b.toNat → a < b",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "18a1016336741be0ba51e46947dfc6f18d2ae96da3447f3bbcb384606ba854be",
+      "constants": [
+        "Iff",
+        "Int",
+        "Int.instLTInt",
+        "Int.toNat",
+        "LT.lt",
+        "Nat",
+        "Nat.cast",
+        "instLTNat",
+        "instNatCastInt"
+      ],
+      "fact_id": "F:ml430-int-lt-tonat-18a10163",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.lt_toNat",
+      "source_statement_sha256": "3524e0973e6d8ff9e6ee98e5502d5c149098877a59c0dc021a53f4d54f328399",
+      "statement": "∀ {m : ℕ} {n : ℤ}, m < n.toNat ↔ ↑m < n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "5d7e65e586b86603ccf6aa70d790d295c98398db21430c8bc18c28a15f6ee214",
+      "constants": [
+        "HMul.hMul",
+        "Int",
+        "Int.instLEInt",
+        "Int.instMul",
+        "LE.le",
+        "OfNat.ofNat",
+        "instHMul",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-mul-le-mul-of-le-of-le-of-nonneg-of-nonneg-5d7e65e5",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.mul_le_mul_of_le_of_le_of_nonneg_of_nonneg",
+      "source_statement_sha256": "def9c123d1f21194f0e10568b3a23e23f012a30c6ba1a68a11d0562152106409",
+      "statement": "∀ {a b c d : ℤ}, a ≤ c → b ≤ d → 0 ≤ b → 0 ≤ c → a * b ≤ c * d",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "7e223ee0809cd39c6cb31d563f65b5349bb74a5bf8fac5bc0dfbd440dd8d91bf",
+      "constants": [
+        "HMul.hMul",
+        "Int",
+        "Int.instLEInt",
+        "Int.instMul",
+        "LE.le",
+        "OfNat.ofNat",
+        "instHMul",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-mul-le-mul-of-le-of-le-of-nonneg-of-nonpos-7e223ee0",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.mul_le_mul_of_le_of_le_of_nonneg_of_nonpos",
+      "source_statement_sha256": "a4e0ec10c73cbd5c682bbbc7adb619002c515a68d1f4c72a6aa9590c08ddf400",
+      "statement": "∀ {a b c d : ℤ}, a ≤ c → d ≤ b → 0 ≤ b → c ≤ 0 → a * b ≤ c * d",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a449a2a6ffd90184464601cfd6e2e388ebdfd375ada5e62cbdd960a5b8f46f4b",
+      "constants": [
+        "HMul.hMul",
+        "Int",
+        "Int.instLEInt",
+        "Int.instMul",
+        "LE.le",
+        "OfNat.ofNat",
+        "instHMul",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-mul-le-mul-of-le-of-le-of-nonpos-of-nonneg-a449a2a6",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.mul_le_mul_of_le_of_le_of_nonpos_of_nonneg",
+      "source_statement_sha256": "e323c844b44a007c1720821eb095b8858da6f4d9b728687c5d8225a75aa84ec6",
+      "statement": "∀ {a b c d : ℤ}, c ≤ a → b ≤ d → b ≤ 0 → 0 ≤ c → a * b ≤ c * d",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "7980025bfe6f26046df5ab99ddd2fa0d9cf9a2609b2f6fb94d041ab9c7c0f024",
+      "constants": [
+        "HMul.hMul",
+        "Int",
+        "Int.instLEInt",
+        "Int.instMul",
+        "LE.le",
+        "OfNat.ofNat",
+        "instHMul",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-mul-le-mul-of-le-of-le-of-nonpos-of-nonpos-7980025b",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.mul_le_mul_of_le_of_le_of_nonpos_of_nonpos",
+      "source_statement_sha256": "bd4ddd2eba49d3cafb7cf95a420bb133b7e8226d3d81072ac88f1154a0fef07c",
+      "statement": "∀ {a b c d : ℤ}, c ≤ a → d ≤ b → b ≤ 0 → c ≤ 0 → a * b ≤ c * d",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "e87cd800ff683eacadc690930b5e0c42ecc993860f8de8a294c21aaa97d8cd06",
+      "constants": [
+        "HMul.hMul",
+        "Int",
+        "Int.instLEInt",
+        "Int.instMul",
+        "Int.natAbs",
+        "LE.le",
+        "Nat",
+        "Nat.cast",
+        "instHMul",
+        "instLENat",
+        "instNatCastInt"
+      ],
+      "fact_id": "F:ml430-int-mul-le-mul-of-natabs-le-e87cd800",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.mul_le_mul_of_natAbs_le",
+      "source_statement_sha256": "c3a113882df720830361949629d8c62a19ef03886976ff262839e35615f2f953",
+      "statement": "∀ {x y : ℤ} {s t : ℕ}, x.natAbs ≤ s → y.natAbs ≤ t → x * y ≤ ↑s * ↑t",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "9dc3b9c200cd0a178899733a31831b81e5b3ee7926101b2ef53fec75c7bed85b",
+      "constants": [
+        "Eq",
+        "Iff",
+        "Int",
+        "Nat",
+        "Nat.cast",
+        "instNatCastInt"
+      ],
+      "fact_id": "F:ml430-int-natcast-inj-9dc3b9c2",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.natCast_inj",
+      "source_statement_sha256": "f7480039da059eed1b3a2f89105fc91d0b0b9ab9c3ae4b0775e56337426865e5",
+      "statement": "∀ {m n : ℕ}, ↑m = ↑n ↔ m = n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "bfce410a02c28afe52fd73ba434193b67ba1179188a893f3b07155b518a58c40",
+      "constants": [
+        "Eq",
+        "Iff",
+        "Int",
+        "Int.instLEInt",
+        "LE.le",
+        "Nat",
+        "Nat.cast",
+        "OfNat.ofNat",
+        "instNatCastInt",
+        "instOfNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-int-natcast-le-zero-bfce410a",
+      "family": "integer-natcast",
+      "fragment": "Int",
+      "module": "Init.Data.Int.LemmasAux",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "integer-natcast:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Int.LemmasAux",
+      "source_name": "Int.natCast_le_zero",
+      "source_statement_sha256": "6b7df082b0ef041d39f63d95ac1716f689c1cf8391a83fe268c8e65e1a6cc553",
+      "statement": "∀ {n : ℕ}, ↑n ≤ 0 ↔ n = 0",
+      "statement_shape": "biconditional"
     },
     {
       "answer_access": "withheld-during-episode",
@@ -971,6 +1288,292 @@
       "source_statement_sha256": "22de44f1ad18ea4cfa40278d822e30f6a69debecd8e780a746804063bbfe1446",
       "statement": "∀ {n : ℤ}, Even (n + 1) ↔ ¬Even n",
       "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "6f7082bd53678ff75d3b55009921bcbe26c1593f0a92382907624afb145bd3f8",
+      "constants": [
+        "Dvd.dvd",
+        "HDiv.hDiv",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDiv",
+        "Nat.instDvd",
+        "instHDiv"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-div-left-6f7082bd",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_div_left",
+      "source_statement_sha256": "62316237aa962e86aee2f118aa7e841e074e95cf052343c6b09e1dd38d1b76dc",
+      "statement": "∀ {m n a : ℕ}, m.Coprime n → a ∣ m → (m / a).Coprime n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "7a8ce438aea5a82c4cda12e5b270252511268dadc583b3b119baac9bace38f82",
+      "constants": [
+        "Dvd.dvd",
+        "HDiv.hDiv",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDiv",
+        "Nat.instDvd",
+        "instHDiv"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-div-right-7a8ce438",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_div_right",
+      "source_statement_sha256": "0008c4fd4374db68a81856200eb674cdcdc587f1537df9891765f642e43fe1e5",
+      "statement": "∀ {m n a : ℕ}, m.Coprime n → a ∣ n → m.Coprime (n / a)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2ce391d29eec201e65bf3013713e64e07d989372ef073b88a407609c7f744a45",
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDvd"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-dvd-left-2ce391d2",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_dvd_left",
+      "source_statement_sha256": "47075c8f1f33ce1923b5a9017316e2afa50af85fbf65960449c669575d0ad853",
+      "statement": "∀ {m k n : ℕ}, m ∣ k → k.Coprime n → m.Coprime n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "4a2670ae2387ff5bd6d1232eee94f13a432b5b676af256d3619f08de726495c3",
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDvd"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-dvd-right-4a2670ae",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_dvd_right",
+      "source_statement_sha256": "5d7f9bfe19b2ff079c86a47f5ecdbfca6ae25ebf2333255276c272bb6895e1bf",
+      "statement": "∀ {n m k : ℕ}, n ∣ m → k.Coprime m → k.Coprime n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "fb5bd11a692a61173e7445e2e6cbad467ff5f60403bef8c9eed7a4cd78de9635",
+      "constants": [
+        "HMul.hMul",
+        "Nat",
+        "Nat.Coprime",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-mul-left-fb5bd11a",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_mul_left",
+      "source_statement_sha256": "c63f650092f9af68471ecfb0e7a8c4f2c42b0bfce9af7e1666eab9c78721beca",
+      "statement": "∀ {k m n : ℕ}, (k * m).Coprime n → m.Coprime n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "910d7d8fc10115a2825031664bf41b7f031cf5c396be28e008db141931cd7c6b",
+      "constants": [
+        "HMul.hMul",
+        "Nat",
+        "Nat.Coprime",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-mul-left-right-910d7d8f",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_mul_left_right",
+      "source_statement_sha256": "bd7c45358779ad0291f862342e24bf55a9ff3e18cfc2c5247c63cbe11278ac7e",
+      "statement": "∀ {m k n : ℕ}, m.Coprime (k * n) → m.Coprime n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "70e4e9461c6b5e2831c8116ae4bc478e2cce6740e674da47c3a48b08ea86808e",
+      "constants": [
+        "HMul.hMul",
+        "Nat",
+        "Nat.Coprime",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-mul-right-70e4e946",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_mul_right",
+      "source_statement_sha256": "af646d9596655cb265a44089f6c05f4fee8256ae61350c9564afa07f841641af",
+      "statement": "∀ {m k n : ℕ}, (m * k).Coprime n → m.Coprime n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "9599ecd3e1c3dc1f5750ec7ee8f6f9c488a2c5b31b1ba45e67d3bf3891b5cefe",
+      "constants": [
+        "HMul.hMul",
+        "Nat",
+        "Nat.Coprime",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-coprime-coprime-mul-right-right-9599ecd3",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.coprime_mul_right_right",
+      "source_statement_sha256": "969bff3b6d54f36ddd90e4f6aa9472b7f82384b39124a4e4dd080e9d309f3cdb",
+      "statement": "∀ {m n k : ℕ}, m.Coprime (n * k) → m.Coprime n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b0608cb9e6bc897ae206d15d63dc8c89fbfdfa2e01898f3123c7b3e532464919",
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDvd",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-coprime-dvd-of-dvd-mul-left-b0608cb9",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.dvd_of_dvd_mul_left",
+      "source_statement_sha256": "399b0787d63bff0ce03eadbdb57c4e07f0ab67d87bb24c6debf50dfc8a2271eb",
+      "statement": "∀ {k m n : ℕ}, k.Coprime m → k ∣ m * n → k ∣ n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "efc3a4ec554f4c1e911a55e4f83c2162c916d35e143b79d0f2ad514950640bbe",
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.instDvd",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-coprime-dvd-of-dvd-mul-right-efc3a4ec",
+      "family": "natural-coprimality",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Coprime",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-coprimality:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Init.Data.Nat.Coprime",
+      "source_name": "Nat.Coprime.dvd_of_dvd_mul_right",
+      "source_statement_sha256": "2eb96376f754c23f454aa932ef61599d4f173ba50be75ad8d8940bdfe41fcaa6",
+      "statement": "∀ {k n m : ℕ}, k.Coprime n → k ∣ m * n → k ∣ m",
+      "statement_shape": "conditional-proposition"
     },
     {
       "answer_access": "withheld-during-episode",
@@ -1618,6 +2221,326 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "0ec18022808d6e79e75e47cfff585f613375c60bda23c375964ce0879a9564fd",
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-case-strong-induction-on-0ec18022",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.case_strong_induction_on",
+      "source_statement_sha256": "62cdccbde5c3f5ee0e094d151cf7ac7b415206bd4a9fe7b4f14ea9a5c0743748",
+      "statement": "∀ {p : ℕ → Prop} (a : ℕ), p 0 → (∀ (n : ℕ), (∀ m ≤ n, p m) → p (n + 1)) → p a",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "12c954e848011dbbc609378057d107ed44f6340e55c8c4625adc99abd847bbb4",
+      "constants": [
+        "HAdd.hAdd",
+        "LT.lt",
+        "Nat",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-diag-induction-12c954e8",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.diag_induction",
+      "source_statement_sha256": "225150cd141bd158461f30a8fe27556498f6256a816d58d45c7b9d7b68f2ad52",
+      "statement": "∀ (P : ℕ → ℕ → Prop),\n  (∀ (a : ℕ), P (a + 1) (a + 1)) →\n    (∀ (b : ℕ), P 0 (b + 1)) →\n      (∀ (a b : ℕ), a < b → P (a + 1) b → P a (b + 1) → P (a + 1) (b + 1)) → ∀ (a b : ℕ), a < b → P a b",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "4c19ff1c7c8d3b6651cfd9973e7ccc6bf86f3ba9c06b21f5387490110fa72f97",
+      "constants": [
+        "HAdd.hAdd",
+        "HDiv.hDiv",
+        "LT.lt",
+        "Nat",
+        "Nat.instDiv",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instHDiv",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-div-lt-self-4c19ff1c",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.div_lt_self'",
+      "source_statement_sha256": "a02f9bc79c5ff3947b1ebd80861a1b2c0b1c638119ccaea24c8081248dd9184a",
+      "statement": "∀ (a b : ℕ), (a + 1) / (b + 2) < a + 1",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "5568ca798fbf0eeb49ab90e17377a6333c3d9cd0aa203976477ce56ca08ed37f",
+      "constants": [
+        "Dvd.dvd",
+        "HAdd.hAdd",
+        "Iff",
+        "Nat",
+        "Nat.instDvd",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "fact_id": "F:ml430-nat-dvd-add-self-left-5568ca79",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.dvd_add_self_left",
+      "source_statement_sha256": "e2a19c691b17304070ba3fc7f2d20aa80a2b926d7e1da7282348b5bb40852173",
+      "statement": "∀ {m n : ℕ}, m ∣ m + n ↔ m ∣ n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "5220f8829a55bef309db109de32f034c0cfc95b9174f14dbc87b9d89cc105963",
+      "constants": [
+        "Dvd.dvd",
+        "HAdd.hAdd",
+        "Iff",
+        "Nat",
+        "Nat.instDvd",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "fact_id": "F:ml430-nat-dvd-add-self-right-5220f882",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.dvd_add_self_right",
+      "source_statement_sha256": "770143f14e7e86e121ae95f4fe903fb518252a707a6231f068773b57a6ee6bb4",
+      "statement": "∀ {m n : ℕ}, m ∣ n + m ↔ m ∣ n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b9d7bb6d28f45b3e1b83c955edf3790bb7ff4f8b97e5325cab5317c590b9c65f",
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "Iff",
+        "Nat",
+        "Nat.instDvd"
+      ],
+      "fact_id": "F:ml430-nat-dvd-left-iff-eq-b9d7bb6d",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.dvd_left_iff_eq",
+      "source_statement_sha256": "814ff92206324b949704975de9af4cfc969ba0dc36fe2ef640030ec3b8d35345",
+      "statement": "∀ {m n : ℕ}, (∀ (a : ℕ), a ∣ m ↔ a ∣ n) ↔ m = n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "4ce70bc6d1edf4b54ae1b7448b7cab94cfb9cabbcd20a9d26d31dfeb58b43bef",
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "Iff",
+        "Nat",
+        "Nat.instDvd"
+      ],
+      "fact_id": "F:ml430-nat-dvd-right-iff-eq-4ce70bc6",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.dvd_right_iff_eq",
+      "source_statement_sha256": "c2de76c02b3bae48991d0a1c74c9baa49797d308d0b334c4f0cc9ba68658edc8",
+      "statement": "∀ {m n : ℕ}, (∀ (a : ℕ), m ∣ a ↔ n ∣ a) ↔ m = n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "28da1d505a5356b3b64ab8fea75f57510cea65e7353143b99e1ab01e033adf03",
+      "constants": [
+        "HDiv.hDiv",
+        "HMul.hMul",
+        "Iff",
+        "Int",
+        "Int.instLEInt",
+        "Int.instMul",
+        "LE.le",
+        "Nat",
+        "Nat.cast",
+        "Nat.instDiv",
+        "OfNat.ofNat",
+        "instHDiv",
+        "instHMul",
+        "instLENat",
+        "instNatCastInt",
+        "instOfNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-le-div-two-iff-mul-two-le-28da1d50",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.le_div_two_iff_mul_two_le",
+      "source_statement_sha256": "a242cd9e72305365200a91affed188674bd36062b75d28060e72f3bdc2ebf7fc",
+      "statement": "∀ {n m : ℕ}, m ≤ n / 2 ↔ ↑m * 2 ≤ ↑n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2f088ac3803c81631b5265197777f63229eabb7c6e002b9fafe7e25d02c3e269",
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "Nat.le_refl",
+        "Nat.le_succ_of_le",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-le-induction-2f088ac3",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.le_induction",
+      "source_statement_sha256": "46d98b9aa430fb60530c660e64b6982f3faad8df397d8e8802a6ab8de69bb692",
+      "statement": "∀ {m : ℕ} {P : (n : ℕ) → m ≤ n → Prop},\n  P m ⋯ → (∀ (n : ℕ) (hmn : m ≤ n), P n hmn → P (n + 1) ⋯) → ∀ (n : ℕ) (hmn : m ≤ n), P n hmn",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "d5b4bf00d99fbee88b99866bf27381c29bf7db463a605669d116624849acf6ca",
+      "constants": [
+        "Dvd.dvd",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.instDvd",
+        "Not",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instHMul",
+        "instMulNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-not-two-dvd-bit1-d5b4bf00",
+      "family": "natural-induction-and-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Init",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-induction-and-divisibility:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Init",
+      "source_name": "Nat.not_two_dvd_bit1",
+      "source_statement_sha256": "1858f1139d7464f1c774f9b3576727ef849480af607c4de2a826218d1ce01aac",
+      "statement": "∀ (n : ℕ), ¬2 ∣ 2 * n + 1",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "c83bcebcbcf0c0217abd00cb400bd60f0720bee0315c3abdf85365c7892b1182",
       "constants": [
         "Dvd.dvd",
@@ -1902,6 +2825,327 @@
       "source_statement_sha256": "7c993e1ac5785815d2c76870f0cd53596dbf278727a8864a06118371a1819fd8",
       "statement": "∀ {m n k : ℕ}, m ∣ k → n ∣ k → m.lcm n ∣ k",
       "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "818dc4c749d0cf2c6f9993afc3fa2bbeeb01c283f421c50ca1d044e7ee52b0d0",
+      "constants": [
+        "HDiv.hDiv",
+        "HMul.hMul",
+        "LT.lt",
+        "Nat",
+        "Nat.instDiv",
+        "instHDiv",
+        "instHMul",
+        "instLTNat",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-div-lt-of-lt-mul-818dc4c7",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.div_lt_of_lt_mul",
+      "source_statement_sha256": "f8325e5d8b623fc55bc1f38164e030835d7108decebed6382a19789d266ce753",
+      "statement": "∀ {m n k : ℕ}, m < n * k → m / n < k",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "234e85309f1163b6fbebd225e45d84926474b26e21f0f015f0660a8f3d52df9a",
+      "constants": [
+        "HMul.hMul",
+        "LT.lt",
+        "Nat",
+        "instHMul",
+        "instLTNat",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-lt-of-mul-lt-mul-left-234e8530",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.lt_of_mul_lt_mul_left",
+      "source_statement_sha256": "2daf3bce95ea4348b079266653178c6d86f938bb516335feab11dab1ac5ea45c",
+      "statement": "∀ {a b c : ℕ}, a * b < a * c → b < c",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "54c1120be91e5547748cddfa53833884dfd536661d89e77269e425e98147a25c",
+      "constants": [
+        "HMul.hMul",
+        "LT.lt",
+        "Nat",
+        "instHMul",
+        "instLTNat",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-lt-of-mul-lt-mul-right-54c1120b",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.lt_of_mul_lt_mul_right",
+      "source_statement_sha256": "cd26776deb420b3229c59a3368101d8cdec29fe10c243835b2cbfce7ad162911",
+      "statement": "∀ {a b c : ℕ}, b * a < c * a → b < c",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "beaccbad798aa7f6c539e7519e3783a58f63f2d05ae698fd0b30cbfea3260284",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HDiv.hDiv",
+        "HMod.hMod",
+        "HMul.hMul",
+        "Nat",
+        "Nat.instDiv",
+        "Nat.instMod",
+        "instAddNat",
+        "instHAdd",
+        "instHDiv",
+        "instHMod",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-mod-mul-beaccbad",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.mod_mul",
+      "source_statement_sha256": "3eac16d560eed03f751478c98668a959ef356a90da7d79308a4eee6a628d2a21",
+      "statement": "∀ {a b x : ℕ}, x % (a * b) = x % a + a * (x / a % b)",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "0aca6c6ede5c4cdab0417c1a95fa9dff5521f8ccb32abd37dd9137ba870331e7",
+      "constants": [
+        "Eq",
+        "HDiv.hDiv",
+        "HMod.hMod",
+        "HMul.hMul",
+        "Nat",
+        "Nat.instDiv",
+        "Nat.instMod",
+        "instHDiv",
+        "instHMod",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-mod-mul-left-div-self-0aca6c6e",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.mod_mul_left_div_self",
+      "source_statement_sha256": "2ae9e47951b0c8275e2d71304f9b807acb8c60d394431d51a998372f0774d08d",
+      "statement": "∀ (m n k : ℕ), m % (k * n) / n = m / n % k",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "9b785abc7f0521609b6effe5e1d302f0e0ea9115371f241cbf26ad405ed78b25",
+      "constants": [
+        "Eq",
+        "HMod.hMod",
+        "HMul.hMul",
+        "Nat",
+        "Nat.instMod",
+        "instHMod",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-mod-mul-left-mod-9b785abc",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.mod_mul_left_mod",
+      "source_statement_sha256": "72c56d3e33c7897c6a37a6f7e2fb16efce9fd8b44e9bd882dbd6569c391c16ea",
+      "statement": "∀ (a b c : ℕ), a % (b * c) % c = a % c",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "900e0b013a5e3cfa209ba07116a3150682f746efcc99ca4f68bf8908b1c4101a",
+      "constants": [
+        "Eq",
+        "HDiv.hDiv",
+        "HMod.hMod",
+        "HMul.hMul",
+        "Nat",
+        "Nat.instDiv",
+        "Nat.instMod",
+        "instHDiv",
+        "instHMod",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-mod-mul-right-div-self-900e0b01",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.mod_mul_right_div_self",
+      "source_statement_sha256": "01dea88f32cef73200ad4915fa827ab17d6764975fa9f209719f0eb8fcab36e1",
+      "statement": "∀ (m n k : ℕ), m % (n * k) / n = m / n % k",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a481eff8a4ae802fbc4f65b03fc4d630344ddfd0ae5dceb5e80d2263e19ab1e2",
+      "constants": [
+        "Eq",
+        "HMod.hMod",
+        "HMul.hMul",
+        "Nat",
+        "Nat.instMod",
+        "instHMod",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-mod-mul-right-mod-a481eff8",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.mod_mul_right_mod",
+      "source_statement_sha256": "071debc781a236168c685b127440e25990d673e33e81f79258621a8a083d7743",
+      "statement": "∀ (a b c : ℕ), a % (b * c) % b = a % b",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "af33301ed385437430a83e1ddc8a180487802db9be3d54ca55ab283b521f1920",
+      "constants": [
+        "HMul.hMul",
+        "Iff",
+        "LT.lt",
+        "Nat",
+        "OfNat.ofNat",
+        "instHMul",
+        "instLTNat",
+        "instMulNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-mul-lt-mul-left-af33301e",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.mul_lt_mul_left",
+      "source_statement_sha256": "b7c65b0da6351c9f900015c67719991c935fa18c8c59733d7863b3ac280b223b",
+      "statement": "∀ {a b c : ℕ}, 0 < a → (a * b < a * c ↔ b < c)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "de5b60463680b2de6d78faecf5bbbb9c6bee87220903d2aac9ea83f899b394f4",
+      "constants": [
+        "HMul.hMul",
+        "Iff",
+        "LT.lt",
+        "Nat",
+        "OfNat.ofNat",
+        "instHMul",
+        "instLTNat",
+        "instMulNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-mul-lt-mul-right-de5b6046",
+      "family": "natural-modulus",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Mod",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-modulus:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Mod",
+      "source_name": "Nat.mul_lt_mul_right",
+      "source_statement_sha256": "e172349ae95c216b6318c3c6c8ec5a679ff86d882c69b5a6eb4df0e2c0880644",
+      "statement": "∀ {a b c : ℕ}, 0 < a → (b * a < c * a ↔ b < c)",
+      "statement_shape": "biconditional"
     },
     {
       "answer_access": "withheld-during-episode",
@@ -2540,11 +3784,14 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "11919c171918ce79b51e1fa1ca5a8f62895e934566a36097b733864b9a5ad4c3",
+  "extension_sha256": "1f0f33306d1af80615993c8ad8c285269a7bad31450d982588f9393377539113",
   "family_modules": {
     "integer-division": [
       "Init.Data.Int.DivMod.Lemmas",
       "Init.Data.Int.DivMod.Bootstrap"
+    ],
+    "integer-natcast": [
+      "Init.Data.Int.LemmasAux"
     ],
     "integer-order": [
       "Init.Data.Int.Order"
@@ -2553,6 +3800,9 @@
       "Mathlib.Algebra.Group.Int.Even",
       "Mathlib.Algebra.Ring.Int.Parity"
     ],
+    "natural-coprimality": [
+      "Init.Data.Nat.Coprime"
+    ],
     "natural-divisibility": [
       "Init.Data.Nat.Dvd"
     ],
@@ -2560,8 +3810,14 @@
       "Init.Data.Nat.Div.Basic",
       "Init.Data.Nat.Div.Lemmas"
     ],
+    "natural-induction-and-divisibility": [
+      "Mathlib.Data.Nat.Init"
+    ],
     "natural-lcm": [
       "Init.Data.Nat.Lcm"
+    ],
+    "natural-modulus": [
+      "Init.Data.Nat.Mod"
     ],
     "natural-parity": [
       "Mathlib.Algebra.Group.Nat.Even",
@@ -2573,11 +3829,15 @@
   },
   "family_partitions": {
     "integer-division": "held-out",
+    "integer-natcast": "held-out",
     "integer-order": "development",
     "integer-parity": "train",
+    "natural-coprimality": "development",
     "natural-divisibility": "held-out",
     "natural-division": "train",
+    "natural-induction-and-divisibility": "held-out",
     "natural-lcm": "development",
+    "natural-modulus": "train",
     "natural-parity": "held-out",
     "natural-totient": "development"
   },
@@ -2588,11 +3848,15 @@
     "depends_on is empty: no dependency-component analysis was run for these rows, so source_group is the Mathlib defining module rather than a declared weak component.",
     "Mathlib declarations remain external prior art and every Axeyum fact here remains open."
   ],
-  "partition_assignment_rule": "New families are ordered by the lexicographic path of their primary Mathlib defining module -- a property of the external source, not of our capability -- and partitions are assigned by the repeating cycle held-out, development, train. The cycle starts at held-out because the measured deficiency is held-out breadth: of twelve v1 families exactly two are still open and blind. No target outcome was consulted; the rule is re-derived by --check, so the assignment cannot be hand-edited.",
+  "partition_assignment_rule": "New families are ordered by the lexicographic path of their primary Mathlib defining module -- a property of the external source, not of our capability -- and partitions are assigned by the repeating cycle held-out, development, train. The cycle starts at held-out because the measured deficiency is held-out breadth: of twelve v1 families exactly two are still open and blind. No target outcome was consulted; the rule is re-derived by --check, so the assignment cannot be hand-edited. ADR-0615: a family an earlier draw preregistered is FROZEN and the cycle runs over the new families only. Without that freeze, adding four families shifted the cycle index of seven of the first eight -- moving natural-division, 8 of whose 10 mirrors are proved, into held-out.",
   "route_hypotheses": {
     "integer-division": [
       "kernel-library-application",
       "modular-arithmetic-reconstruction"
+    ],
+    "integer-natcast": [
+      "kernel-induction",
+      "kernel-library-application"
     ],
     "integer-order": [
       "kernel-induction",
@@ -2602,6 +3866,10 @@
       "kernel-library-application",
       "modular-arithmetic-reconstruction"
     ],
+    "natural-coprimality": [
+      "divisibility-library-application",
+      "kernel-induction"
+    ],
     "natural-divisibility": [
       "divisibility-library-application",
       "kernel-induction"
@@ -2610,9 +3878,17 @@
       "kernel-induction",
       "kernel-library-application"
     ],
+    "natural-induction-and-divisibility": [
+      "divisibility-library-application",
+      "kernel-induction"
+    ],
     "natural-lcm": [
       "divisibility-library-application",
       "kernel-induction"
+    ],
+    "natural-modulus": [
+      "kernel-induction",
+      "kernel-library-application"
     ],
     "natural-parity": [
       "kernel-induction",
