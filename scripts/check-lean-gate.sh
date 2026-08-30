@@ -157,6 +157,13 @@ cd "$(dirname "$0")/.." || exit 2
 # `Environment.addDeclCore` -- Lean's KERNEL -- which accepts all 470 in 1.4 s,
 # and its exit status depends on Lean's reported constant count EQUALLING the
 # count read out of our kernel, so "accepted" cannot mean "accepted a subset".
+# CORRECTED 2026-08-30 (see the 229 -> 230 entry below and ADR-0775): "accepts
+# all 470" is FALSE and was never re-derivable -- the suite SIGABRTed before
+# reaching Lean from the day after this paragraph was written. Lean's kernel
+# refuses a `theorem` whose type is not a `Prop`, and 73 of the carrier's 2,058
+# declarations are of that shape or depend on one. The count equality is now
+# against the REPRESENTABLE population, and Lean is required to reject the
+# unfiltered stream.
 # `real_lean_wellfounded_elaborator_divergence` adds FOUR and names the residue
 # the source route leaves: Lean's ELABORATOR does not unfold a `theorem` while
 # reducing, so `Nat.gcd 2 4 = 2` is refused where the structurally recursive
@@ -196,7 +203,28 @@ cd "$(dirname "$0")/.." || exit 2
 # run manually against all five (this suite included) before landing: flipping
 # the theorem's stated type from `False` to `True` makes Lean reject every one
 # with a type mismatch, exit 1 -- so this check can fail.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-229}"
+# Raised 229 -> 230 on 2026-08-30 by lane `carrier-replay-overclaim`:
+# `real_lean_creal_carrier_kernel_replay` goes from TWO real-Lean checks to
+# THREE. Its whole-carrier claim was FALSE -- Lean's kernel refuses a `theorem`
+# whose type is not a `Prop`, and this kernel admits 48 of them plus 25 that
+# depend on one, so 73 of 2,058 declarations were never independently replayed
+# and nothing said so. The suite now hands Lean the representable population
+# (1,985, count equality enforced), the TAMPERED representable stream, and --
+# the new third invocation -- the UNFILTERED export, which Lean must REJECT
+# naming a declaration this kernel independently classified as
+# not-a-proposition. That third run is what makes the narrowing a rule of
+# Lean's rather than a convenience of ours, and it is the superseded claim kept
+# executable (ADR-0775).
+#
+# The suite reached no verdict at all between 2026-08-18 and 2026-08-30: it
+# SIGABRTed on a 2 MiB `#[test]` stack before a single Lean ran. Measured while
+# fixing this, by reproducing the crash: zero `AXEYUM-LEAN-TOOLCHAIN` banners
+# and zero `AXEYUM-LEAN-CHECKED` markers, so THIS gate fails it three ways
+# (nonzero cargo status, `unnamed-toolchain`, `0-lean-checks`) and the fact's
+# own `checker_command` exits 101. The guards were fail-closed; nobody ran
+# them. `AXEYUM_REQUIRE_LEAN=1` does NOT catch it -- it fires only when a
+# toolchain cannot be resolved, and the abort happens before the probe.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-230}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s

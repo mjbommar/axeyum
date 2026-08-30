@@ -27,6 +27,14 @@
       "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
       "recorded_by": "coordinator",
       "recorded_in": "da61dcef9"
+  "note": "SHA-256 of formal.statement for every settled fact. A settled fact's statement is what the ledger CLAIMS; changing it silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row below.",
+  "amendments": [
+    {
+      "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
+      "date": "2026-08-30",
+      "from_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2",
+      "to_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25",
+      "reason": "OVERCLAIM CORRECTED, NOT A ROUTE UPGRADE. The statement claimed pinned Lean's kernel accepts EVERY declaration of the constructed-real carrier. It does not: `Lean.Environment.addDeclCore` refuses a `theorem` whose type is not a proposition, and this kernel admits 48 of them (plus 25 declarations that depend on one), because `CReal.UniformConvergesOn` is deliberately `Type`-valued. Measured 2026-08-30 by L0/S4's `real_lean_replay_census` and re-measured here: population 2,058, representable 1,985, residue 73. The statement is narrowed to the representable population, with the residue typed, counted and named; nothing was proved that was not proved before, and the claim is strictly weaker. The superseded statement is preserved verbatim in the fact's `notes` AND kept executable as `the_superseded_whole_carrier_claim_is_refuted_by_the_same_binary`, which fails if pinned Lean ever accepts the unfiltered export. The part that is no longer claimed is now the OPEN row `F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier`. ADR-0775; lane `carrier-replay-overclaim`."
     }
   ],
   "pins": [
@@ -6701,6 +6709,7 @@
           "statement_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2"
         }
       ]
+      "statement_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25"
     },
     {
       "fact_id": "F:lean-query-module-shrinks-by-a-shared-import",
