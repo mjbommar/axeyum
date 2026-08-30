@@ -174,6 +174,8 @@ now. Nothing was deleted.
 | 2026-08-30 | parity-finish | 3 axiom-free Nat kernel theorems closing the parity/division-by-two cluster's last blockers (`Nat.even_add`, `Nat.even_add'`, `Nat.even_div`); all 3 dispatched facts proved; two of three handoff sizings were wrong (one undersold, one — `even_div` — badly oversold: an existing unconditional lemma closed it in ~75 lines) |
 | 2026-08-30 | fermat-easy | 5 axiom-free Nat kernel theorems: the three closed `fermatNumber` reductions (0/1/2 = 3/5/17), `Nat.odd_fermatNumber`, and `Nat.fermatNumber_strictMono`; all fully symbolic except the three closed equalities (largest formed numeral 17) |
 | 2026-08-30 | pow-add-prime-finish | `Nat.pow_two_or_has_odd_factor` (odd-factor extraction, ordinary fuel-bounded `Nat.rec`, NOT `WellFounded.fix` — the prior handoff's sizing was wrong) and `Nat.pow_of_pow_add_prime` — closes `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3` (open → proved, axiom-free); 222/222 `nat_prelude::` |
+| 2026-08-30 | 6174be234 | Add `equivalent_to` to `fact.schema.json` and mark all 15 non-canonical duplicate facts with it (surgical text-append edits, `statement`/`formal.statement` untouched); land `scripts/check-proposition-duplication.py` v1 (still failing at 15 unlabeled pairs at this commit, by design -- see report). |
+| 2026-08-30 | (this session, later commits) | ADR-0790; `scripts/validate-facts.py` prints the FACTS SETTLED / DISTINCT PROPOSITIONS ESTABLISHED split; `scripts/tests/test-proposition-duplication.sh` (9 cases, 8 guard mutations, each killing exactly one); gate registered in `justfile` and `scripts/check.sh` as `proposition-duplication` / `proposition-duplication-controls`. |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
@@ -35793,6 +35795,35 @@ it stays fresh) —
 `multi_target_operations=4` (was 3). `python3 scripts/gen-adr-index.py
 --check` — unchanged (ADR-0602's front matter was not touched, only its
 body).
+
+**DONE (`ledger-duplicate-propositions`, 2026-08-30).** ADR-0771 (S2 trust-closure)
+measured 15 identity classes (theorem pairs sharing a byte-identical
+`Kernel::render_lean` canonical type), all 15 with both members registered as
+ledger facts -- 15 propositions counted as 2,121 proved facts twice. This lane
+verified all 15 by hand against `formal.statement` and each proof closure;
+**all 15 survived scrutiny as genuine duplicates**, none rejected as "proved
+from but strictly stronger." See ADR-0790 for the full breakdown, including
+the two pairs (`CPoint.apollonius_from_stewart`/`_median`,
+`Int.add_mul`/`Rat.int_right_distrib`) proved **independently** rather than
+via one reusing the other's closure.
+
+Facts are never deleted (ADR-0542, restated for facts here as ADR-0790): one
+member of each pair now carries a new `equivalent_to: ["F:..."]` field
+(`artifacts/ontology/fact.schema.json`), pointing at a canonical survivor.
+Both members stay `proved`. `scripts/check-proposition-duplication.py` gates
+any NEW unlabeled duplicate pair from entering, and
+`scripts/validate-facts.py`'s summary now prints DISTINCT PROPOSITIONS
+ESTABLISHED beside FACTS SETTLED so the two numbers cannot be quoted apart
+again.
+
+Corrected numbers: **2,123 facts settled** (`proved` 2,121 + `computed` 2),
+**15 restate a sibling**, **2,108 distinct propositions established**
+overall -- or, matching the original headline's own scope, **2,106 distinct
+propositions** among the 2,121 `proved` facts alone.
+
+Nothing else in this repository changed status: no fact's `epistemic_status`
+flipped, no held-out nursery row was touched, `scripts/check-trust-closure.py`
+(S2's own file) was not edited.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was

@@ -389,6 +389,15 @@ step trust-closure python3 scripts/check-trust-closure.py --quiet
 # kill EXACTLY ONE. A mutation killing two would mean the cases do not separate
 # what they claim to; killing none would mean the guard is unreachable.
 step trust-closure-controls bash scripts/tests/test-trust-closure.sh
+# ADR-0790: 15 of the identity classes above have BOTH members registered as
+# ledger facts -- 15 propositions counted as 2,121 proved facts twice. Facts
+# are never deleted (ADR-0542); one member of each pair carries a new
+# `equivalent_to` edge to a canonical survivor. This gate rejects any NEW
+# byte-identically-typed pair that enters the ledger unlabeled.
+step proposition-duplication python3 scripts/check-proposition-duplication.py
+# ...and its controls: 9 cases, then 8 guard deletions each required to kill
+# EXACTLY ONE.
+step proposition-duplication-controls bash scripts/tests/test-proposition-duplication.sh
 # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so the
 # Mathlib proposition lives only in `formal.statement`. Nineteen had it
 # overwritten with our own `render_lean` output, and the mirror claim -- "we

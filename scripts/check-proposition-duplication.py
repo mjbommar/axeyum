@@ -260,7 +260,8 @@ def guard_equivalent_to_target_absent(
             continue
         scanned += 1
         target = eq[0]
-        if target not in facts:
+        target_is_absent = target not in facts
+        if target_is_absent:
             hits += 1
             failures.append(
                 f"EQUIVALENT-TO-TARGET-ABSENT {fid} names `{target}`, which is "
@@ -283,12 +284,12 @@ def guard_equivalent_to_target_unsettled(
         if target not in facts:
             continue
         scanned += 1
-        status = facts[target].get("epistemic_status")
-        if status not in SETTLED:
+        target_status = facts[target].get("epistemic_status")
+        if target_status not in SETTLED:
             hits += 1
             failures.append(
                 f"EQUIVALENT-TO-TARGET-UNSETTLED {fid} points at `{target}`, "
-                f"whose epistemic_status is {status!r}, not in {sorted(SETTLED)}"
+                f"whose epistemic_status is {target_status!r}, not in {sorted(SETTLED)}"
             )
     return GuardResult("equivalent_to_target_unsettled", scanned, hits, failures)
 
@@ -368,11 +369,15 @@ def main(argv: list[str]) -> int:
     pinned: dict[str, Any] = {}
     if args.population.exists():
         pinned = json.loads(args.population.read_text(encoding="utf-8"))
-    floor = int(pinned.get("min_identity_classes", 0)) or FLOOR_DEFAULT
+    # `pinned_floor` is 0 when no pin exists yet -- deliberately NOT
+    # FLOOR_DEFAULT here, or `--update` on a fresh (small) fixture would
+    # immediately fail its own just-written pin. FLOOR_DEFAULT only guards
+    # the CHECK path when a pin is genuinely missing.
+    pinned_floor = int(pinned.get("min_identity_classes", 0))
 
     if args.update:
         args.population.parent.mkdir(parents=True, exist_ok=True)
-        new_floor = max(floor, len(classes))
+        new_floor = max(pinned_floor, len(classes))
         args.population.write_text(
             json.dumps(
                 {
@@ -386,6 +391,8 @@ def main(argv: list[str]) -> int:
             encoding="utf-8",
         )
         floor = new_floor
+    else:
+        floor = pinned_floor or FLOOR_DEFAULT
 
     # Build per-class fact membership: canonical type -> [(fact_id, decl_name, marked)]
     member_type = class_membership(classes)
