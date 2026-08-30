@@ -8,10 +8,33 @@
     "statement": "∀ {k n m : ℤ}, k ∣ ↑(k.gcd n) * m ↔ k ∣ n * m",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:int-dvd-of-nat-abs-dvd", "F:int-nat-abs-dvd-nat-abs-of-dvd", "F:int-nat-abs-mul", "F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- dvd_gcd_mul_iff_dvd_mul 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.dvd_gcd_mul_iff_dvd_mul[[:space:]]')\" -ge 1",
+      "id": "kernel-Int.dvd_gcd_mul_iff_dvd_mul",
+      "kind": "kernel-term",
+      "notes": "build_int_prelude admits Int.dvd_gcd_mul_iff_dvd_mul through the trusted Kernel::add_declaration gate, so producing this row at all is a machine-checked proof. New proof, lane int-gcd-mul-transport: int_prelude/gcd_scaled_mirrors.rs, transporting the already-proved Nat-level Nat.dvd_gcd_mul_iff_dvd_mul (nat_prelude/gcd_mul_right_mirrors.rs, built on Nat.gcd_mul_right, nat_prelude/gcd_mul_right.rs) across Int.gcd's natAbs bridge (nat_abs_dvd_nat_abs_of_dvd/dvd_of_nat_abs_dvd/nat_abs_mul, int_prelude/gcd.rs). No new base algebra or Int.rec/Nat.rec case split. int_theorem_inventory's rendered type is `(x0:Int)->(x1:Int)->(x2:Int)->Iff (Int.dvd x0 (Int.mul (Int.ofNat (Int.gcd x0 x1)) x2)) (Int.dvd x0 (Int.mul x1 x2))`, matching this fact's formal.statement character for character (x0/x1/x2 = k/n/m). int_theorem_inventory exits non-zero for a name that does not exist (verified: dvd_gcd_mul_iff_dvd_mul_bogus_xyz -> exit 1, \"no Int declaration matches\"), and the anchored grep -c (tested -ge 1, not piped through grep -q) requires the exact name followed by whitespace, so it does not also match the substring-overlapping sibling Int.dvd_gcd_mul_gcd_iff_dvd_mul.",
+      "supports": "∀ {k n m : ℤ}, k ∣ ↑(k.gcd n) * m ↔ k ∣ n * m"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "prelude_axiom_inventory --require-axiom-free integer enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: integer axiom=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. int_prelude_tests::every_int_declaration_is_checked_and_axiom_free and derived_laws_have_no_axiom_footprint (both re-run on every int_prelude:: sweep) additionally confirm this theorem's own Kernel::axiom_footprint directly.",
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "id": "footprint-Int.dvd_gcd_mul_iff_dvd_mul"
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +49,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "The external theorem declaration is prior art, not what was reconstructed here; the ledger's own proof is new. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type, and int_theorem_inventory's rendered type matches it exactly -- see evidence notes. Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: development), which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. New proof, lane int-gcd-mul-transport: see evidence notes for the construction."
 }

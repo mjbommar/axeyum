@@ -8,10 +8,33 @@
     "statement": "∀ {k m n : ℕ}, k ∣ n → (k ∣ m ↔ k ∣ m + n)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-dvd-add-iff-right-bf79c0cd"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_add_iff_left 2>/dev/null | /usr/bin/grep -cE '^Nat\\.dvd_add_iff_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.dvd_add_iff_left",
+      "kind": "kernel-term",
+      "notes": "build_nat_prelude admits Nat.dvd_add_iff_left through the trusted Kernel::add_declaration gate, so producing this row at all is a machine-checked proof. New proof, lane int-gcd-mul-transport: nat_prelude/dvd_add_iff_left.rs. Pure composition of the already-proved dvd_add_iff_right (divisibility.rs) -- instantiated with the two summands swapped, dvd_add_iff_right(k,n,m,h) : Iff (dvd k m) (dvd k (n+m)) -- and add_comm (n+m = m+n); no new case split or induction. nat_theorem_inventory's rendered type is `(x0:AxNat)->(x1:AxNat)->(x2:AxNat)->(x3:AxNat.dvd x0 x2)->Iff (AxNat.dvd x0 x1) (AxNat.dvd x0 (AxNat.add x1 x2))`, matching this fact's formal.statement character for character (x0/x1/x2 = k/m/n). nat_theorem_inventory exits non-zero for a name that does not exist (verified: dvd_add_iff_left_bogus_xyz -> exit 1, \"no Nat theorem matches\"), and the anchored grep -c (tested -ge 1, not piped through grep -q) requires the exact name followed by whitespace, so it does not also match the pre-existing sibling Nat.dvd_add_iff_right.",
+      "supports": "∀ {k m n : ℕ}, k ∣ n → (k ∣ m ↔ k ∣ m + n)"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "nat_axiom_inventory --require-axiom-free nat enumerates the built Nat environment (and the shared logic prelude) and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: nat axiom=0 opaque=0 quotient=0 total_trusted=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free (re-run on every nat_prelude:: sweep) additionally confirms this theorem's own Kernel::axiom_footprint directly.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.dvd_add_iff_left"
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +49,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "The external theorem declaration is prior art, not what was reconstructed here; the ledger's own proof is new. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Also re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED, confirming the statement re-parses. Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: development), which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. New proof, lane int-gcd-mul-transport: see evidence notes for the construction."
 }

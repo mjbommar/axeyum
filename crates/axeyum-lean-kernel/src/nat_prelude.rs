@@ -156,6 +156,7 @@ mod diagonal;
 mod div_mod_lemmas;
 mod divisibility;
 mod division;
+mod dvd_add_iff_left;
 mod euler;
 mod factorization;
 mod fermat;
@@ -255,6 +256,7 @@ use div_mod_lemmas::{declare_add_div_mod_shift_family, declare_add_div_of_dvd_ad
 use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
+use dvd_add_iff_left::declare_dvd_add_iff_left;
 use euler::declare_mod_eq_cancel;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
@@ -3835,6 +3837,14 @@ pub struct NatPrelude {
     /// (gcd a b))` — `F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c`, the
     /// mirror of [`Self::div_gcd_pos_of_pos_left`] via `gcd_dvd_right`.
     pub div_gcd_pos_of_pos_right: NameId,
+
+    // -- `int-gcd-mul-transport` lane: `dvd_add_iff_left.rs`.
+    /// `Nat.dvd_add_iff_left : ∀ k m n, k ∣ n → (k ∣ m ↔ k ∣ (m+n))` —
+    /// `F:ml430-nat-dvd-add-iff-left-332cbe04`. The mirror of the existing
+    /// `dvd_add_iff_right` (`divisibility.rs`) with the two summands swapped:
+    /// `dvd_add_iff_right(k,n,m,h) : Iff (dvd k m) (dvd k (n+m))`, transported
+    /// along `add_comm n m : Eq (n+m) (m+n)`.
+    pub dvd_add_iff_left: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4605,6 +4615,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_iff_mod_eq_zero: kernel.name_str(nat, "dvd_iff_mod_eq_zero"),
             div_gcd_pos_of_pos_left: kernel.name_str(nat, "div_gcd_pos_of_pos_left"),
             div_gcd_pos_of_pos_right: kernel.name_str(nat, "div_gcd_pos_of_pos_right"),
+            dvd_add_iff_left: kernel.name_str(nat, "dvd_add_iff_left"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -5142,6 +5153,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `declare_gcd_semantics`/`declare_multiplicative_theorems`, far
         // above). Nothing needs it, so it goes last.
         declare_gcd_mul_right_mirrors(&mut d, &p)?;
+        // Needs only `Nat.dvd_add_iff_right`/`Nat.add_comm`
+        // (`declare_divisibility`/`declare_arithmetic`, far above). Nothing
+        // needs it, so it goes last.
+        declare_dvd_add_iff_left(&mut d, &p)?;
         Ok(p)
     })();
     match built {

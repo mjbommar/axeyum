@@ -316,9 +316,8 @@ pub(super) fn declare_all(d: &mut IntDev<'_>) -> Result<(), KernelError> {
         // left_iff_rev : Iff (idvd k n_ofgkm) (idvd k ofgkm_n)
 
         let comm_right = d.const_app(p.mul_comm, &[m, n]); // Eq Int mn nm
-        let right_iff = pred_iff_of_eq_int(d, &p, mn, nm, comm_right, &|d, v| {
-            super::dvd::idvd(d, k, v)
-        });
+        let right_iff =
+            pred_iff_of_eq_int(d, &p, mn, nm, comm_right, &|d, v| super::dvd::idvd(d, k, v));
         // right_iff : Iff (idvd k mn) (idvd k nm)
 
         let dvd_mn = super::dvd::idvd(d, k, mn);
