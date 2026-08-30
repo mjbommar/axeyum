@@ -257,7 +257,9 @@ use defs::{
 };
 use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
-use div_mod_lemmas::{declare_add_div_mod_shift_family, declare_add_div_of_dvd_add_add_one};
+use div_mod_lemmas::{
+    declare_add_div_mod_shift_family, declare_add_div_of_dvd_add_add_one, declare_div_mod_block,
+};
 use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
@@ -1877,6 +1879,15 @@ pub struct NatPrelude {
     /// `301`'s false `count_range_row_major` claim. No `Lt 0 n` needed: at
     /// `n = 0` both sides are `zero` and both hypotheses are vacuous.
     pub count_range_product: NameId,
+    /// `Nat.div_mod_block : ∀ n a b, Lt b n →
+    /// And (Eq (div (add (mul n a) b) n) a) (Eq (mod (add (mul n a) b) n) b)`
+    /// — the block decomposition read back (`div_mod_lemmas.rs`). Both halves
+    /// at once, because they come from one `Nat.div_mod_unique`. This is the
+    /// bridge [`count_range_product`](Self::count_range_product)'s consumer
+    /// needs: that lemma's per-block hypotheses live at the index
+    /// `add (mul n a) b`, and a predicate written in `div y n` / `mod y n`
+    /// reduces there only once these two equations are in hand.
+    pub div_mod_block: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4421,6 +4432,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_point_change: kernel.name_str(nat, "countRange_point_change"),
             count_range_permute: kernel.name_str(nat, "countRange_permute"),
             count_range_product: kernel.name_str(nat, "countRange_product"),
+            div_mod_block: kernel.name_str(nat, "div_mod_block"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -4954,6 +4966,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_count_range_point_change(&mut d, &p)?;
         declare_count_range_permute(&mut d, &p)?;
         declare_count_range_product(&mut d, &p)?;
+        declare_div_mod_block(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
         declare_transposition_involutive(&mut d, &p)?;
         declare_transposition_injective(&mut d, &p)?;

@@ -536,6 +536,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_point_change,
         p.count_range_permute,
         p.count_range_product,
+        p.div_mod_block,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -17302,5 +17303,102 @@ fn count_range_product_computes_at_a_factoring_predicate_with_a_non_factoring_co
     assert!(
         f.k.axiom_footprint(p.count_range_product).is_empty(),
         "countRange_product must rest on zero axioms"
+    );
+}
+
+/// `Nat.div_mod_block` at a CLOSED concrete instance — `n = 3`, `a = 2`,
+/// `b = 1`, with the `Lt 1 3` side condition supplied as a real proof — plus
+/// a genuinely free `(n, a, b)`, and a negative control at `b = n` where the
+/// readback is false and the theorem correspondingly cannot be applied.
+#[test]
+fn div_mod_block_reads_a_concrete_block_back_and_needs_its_side_condition() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let seven = f.num(7);
+
+    // `Lt 1 3` is `Le 2 3`, which is `le_succ 2`.
+    let lt_1_3 = f.lemma(p.le_succ, &[two]);
+    let applied = f.const_app(p.div_mod_block, &[three, two, one, lt_1_3]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("div_mod_block must apply at (n, a, b) = (3, 2, 1)");
+
+    let na = f.mul(three, two);
+    let value = f.add(na, one);
+    assert!(f.k.def_eq(value, seven), "3*2 + 1 must compute to 7");
+    let quotient = f.div(value, three);
+    let remainder = f.modulo(value, three);
+    let left = f.eq(quotient, two);
+    let right = f.eq(remainder, one);
+    let expected = f.const_app(p.logic.and, &[left, right]);
+    assert!(f.k.def_eq(inferred, expected));
+    assert!(f.k.def_eq(quotient, two), "7 / 3 must compute to 2");
+    assert!(f.k.def_eq(remainder, one), "7 % 3 must compute to 1");
+
+    // NEGATIVE CONTROL: at `b = n` the readback is false, so the `Lt b n`
+    // side condition is load-bearing rather than decorative. The theorem
+    // cannot be applied here at all (there is no `Lt 3 3`), and the values
+    // it would have claimed are wrong both ways.
+    let bad_value = f.add(na, three);
+    let bad_quotient = f.div(bad_value, three);
+    let bad_remainder = f.modulo(bad_value, three);
+    assert!(
+        !f.k.def_eq(bad_quotient, two),
+        "at b = n the quotient is 3, not the claimed 2"
+    );
+    assert!(
+        !f.k.def_eq(bad_remainder, three),
+        "at b = n the remainder is 0, not the claimed 3"
+    );
+
+    // Symbolic: a genuinely free `(n, a, b)` with a free side-condition proof.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [n_fv, a_fv, b_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let hb_ty = f.lt(b, n);
+    let hb_fv = f.fresh_fvar();
+    let hb = f.k.fvar(hb_fv);
+    ctx.push(LocalDecl {
+        fvar: hb_fv,
+        name: anon,
+        ty: hb_ty,
+        info: BinderInfo::Default,
+    });
+    let sym = f.const_app(p.div_mod_block, &[n, a, b, hb]);
+    let sym_ty =
+        f.k.infer_in(sym, &mut ctx)
+            .expect("div_mod_block must apply at free (n, a, b)");
+    let sym_na = f.mul(n, a);
+    let sym_value = f.add(sym_na, b);
+    let sym_q = f.div(sym_value, n);
+    let sym_r = f.modulo(sym_value, n);
+    let sym_left = f.eq(sym_q, a);
+    let sym_right = f.eq(sym_r, b);
+    let sym_expected = f.const_app(p.logic.and, &[sym_left, sym_right]);
+    assert!(
+        f.k.def_eq(sym_ty, sym_expected),
+        "the symbolic statement must read back BOTH the quotient and the remainder"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.div_mod_block).is_empty(),
+        "div_mod_block must rest on zero axioms"
     );
 }

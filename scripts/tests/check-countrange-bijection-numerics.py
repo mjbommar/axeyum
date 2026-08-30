@@ -260,6 +260,26 @@ check(
     count_range(P8, 0 * 5) == count_range(S8, 0) * count_range(R8, 5) == 0,
 )
 
+# ---------------------------------------------------------------------------
+# 9. `div_mod_block`: an index written n*a + b with b < n reads back as
+#    quotient a, remainder b -- and the `b < n` side condition is essential.
+# ---------------------------------------------------------------------------
+ok = all(
+    (n * a + b) // n == a and (n * a + b) % n == b
+    for n in range(1, 10)
+    for a in range(0, 10)
+    for b in range(0, n)
+)
+check("div_mod_block: (n*a + b)//n == a and %n == b for every b < n <= 9, a <= 9", ok)
+check(
+    "NEGATIVE CONTROL: at b = n the readback fails -- n=3,a=2,b=3 gives 9//3=3, 9%3=0",
+    (3 * 2 + 3) // 3 == 3 and (3 * 2 + 3) % 3 == 0,
+)
+check(
+    "the concrete instance the Rust test certifies: 3*2+1 = 7, 7//3 = 2, 7%3 = 1",
+    3 * 2 + 1 == 7 and 7 // 3 == 2 and 7 % 3 == 1,
+)
+
 print()
 if FAIL:
     print(f"{len(FAIL)} CHECK(S) FAILED: {FAIL}")
