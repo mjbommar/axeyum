@@ -414,6 +414,22 @@ step credit-transaction python3 scripts/check-credit-transaction.py
 # kill EXACTLY its own designated canary from a disjoint set of nine.
 step credit-transaction-tests python3 scripts/tests/test-credit-transaction.py
 step credit-transaction-mutations bash scripts/tests/test-credit-transaction-mutations.sh
+# ADR-0810: the same engine wired into the REAL write set -- measured by
+# instrumenting an actual flip, not assumed from the ADR-0785 fixture:
+# artifacts/facts/<id>.json, the settled-fact-statement pins manifest, and
+# the safety-matrix TSV/MD, all full rebuilds via validate-facts.py's
+# validate_one / check-settled-fact-statements.py's rewrite() /
+# gen-safety-matrix.py's classify+render+run_controls, reused UNMODIFIED
+# (never reimplemented, so this wrapper cannot drift from what those gates
+# actually enforce). Crash sweep over the real 23 write ops, four staleness
+# dimensions against the real paths (receipt pointer, fact source, settled-
+# id-set + pins snapshot, checker source hash), idempotent replay. Every
+# check runs against a scratch copy it builds itself -- never the live ledger.
+step credit-transaction-ledger python3 scripts/check-credit-transaction-ledger.py
+# ...its own test suite plus mutation table: 22 tests, then 9 guard deletions
+# this wrapper owns, each required to kill EXACTLY its own canary.
+step credit-transaction-ledger-tests python3 scripts/tests/test-credit-transaction-ledger.py
+step credit-transaction-ledger-mutations bash scripts/tests/test-credit-transaction-ledger-mutations.sh
 # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so the
 # Mathlib proposition lives only in `formal.statement`. Nineteen had it
 # overwritten with our own `render_lean` output, and the mirror claim -- "we
