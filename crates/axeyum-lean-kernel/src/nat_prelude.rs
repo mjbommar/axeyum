@@ -4760,12 +4760,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Needs `Nat.add`/`Nat.sub`/`Nat.div`/`Nat.ble`, all far above, and
         // nothing needs `Nat.clog`, so it goes last too.
         declare_clog_all(&mut d, &p)?;
-        // Needs `Nat.log`/`Nat.clog` (both just above), `Nat.div_mod_exec`/
-        // `Nat.div_mod_lt_mul_iff`/`Nat.div_lt_of_lt_mul`
-        // (`declare_executable_division_spec`/`declare_multiplicative_theorems`,
-        // far above); nothing needs these order mirrors, so it goes right
-        // after both.
-        declare_log_clog_order_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`), `Nat.le_succ`
         // (`order_extra`) and the `zero_lt_succ` term-builder, all far above;
         // nothing needs `Nat.bit`, so it goes last too.
@@ -5006,6 +5000,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lt_of_mul_lt_mul(&mut d, &p)?;
         declare_mul_lt_mul_iff(&mut d, &p)?;
         declare_div_lt_of_lt_mul(&mut d, &p)?;
+        // Needs `Nat.log`/`Nat.clog` (`declare_log_all`/`declare_clog_all`,
+        // far above) and `Nat.div_mod_exec`/`Nat.div_mod_lt_mul_iff`/
+        // `Nat.div_lt_of_lt_mul` (`declare_executable_division_spec`/
+        // `declare_multiplicative_theorems`/just above -- `div_lt_of_lt_mul`
+        // specifically is declared immediately above and nothing else in
+        // this builder needs it, which is why it was last until now).
+        // Nothing needs these order mirrors, so they go last.
+        declare_log_clog_order_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
