@@ -140,8 +140,8 @@ Import stays, in a supporting role we are uniquely placed to fill:
 - We have an **independent Lean kernel** (`axeyum-lean-kernel`, 37,987 lines)
   that is not Lean, written in a different language, by different people.
 - We have a **fail-closed importer** for the official `lean4export` NDJSON
-  format, with 24 test suites — and, since 2026-08-15, six SHA-256-pinned
-  streams produced by a real exporter that back five facts in the ledger. All
+  format, with 25 test suites — and, since 2026-08-15, six SHA-256-pinned
+  streams produced by a real exporter that back six facts in the ledger. All
   six import clean today with `axioms=none`.
 - On 2026-08-14 the **reverse** direction closed too: Lean's own kernel accepted
   an axeyum development from an empty environment, with a tamper control.
@@ -177,10 +177,10 @@ already been done in this strand's own diaries.
 **Verified on this host, by running it:**
 
 ```
-axeyum-lean-import      24 test suites, 69 examples, fail-closed reader
+axeyum-lean-import      25 test suites, 81 examples, fail-closed reader
 artifacts/lean-imports  6 pinned streams, 6,057 records, 340 KB, sha256-pinned
                         ALL SIX import clean today, `axioms=none`
-artifacts/facts         5 facts on proof_route `imported-kernel-lean`
+artifacts/facts         6 facts on proof_route `imported-kernel-lean`
 Nat prelude             128 theorems, 23 of them divisibility
 references/             EMPTY — nothing cloned on this host
 ```
