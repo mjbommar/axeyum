@@ -52,7 +52,11 @@ fn and_intro(d: &mut IntDev<'_>, left: ExprId, right: ExprId, lp: ExprId, rp: Ex
 }
 
 /// `fun (h : ty) => body(h)`.
-fn with_hyp(d: &mut IntDev<'_>, ty: ExprId, body: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId) -> ExprId {
+fn with_hyp(
+    d: &mut IntDev<'_>,
+    ty: ExprId,
+    body: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
     let fv = d.fresh_fvar();
     let h = d.kernel().fvar(fv);
     let result = body(d, h);
@@ -209,7 +213,13 @@ fn mul_nonneg_of_nonpos_of_nonpos(
 }
 
 /// From `ha : lt a zero`, `hb : lt b zero`, derive `lt zero (mul a b)`.
-fn mul_pos_of_neg_of_neg(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, hb: ExprId) -> ExprId {
+fn mul_pos_of_neg_of_neg(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    hb: ExprId,
+) -> ExprId {
     let p = d.int();
     let neg_a = d.ineg(a);
     let neg_b = d.ineg(b);
@@ -262,7 +272,13 @@ fn mul_nonpos_of_nonpos_of_nonneg(
 }
 
 /// From `ha : lt zero a`, `hb : lt b zero`, derive `lt (mul a b) zero`.
-fn mul_neg_of_pos_of_neg(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, hb: ExprId) -> ExprId {
+fn mul_neg_of_pos_of_neg(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    hb: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let neg_b = d.ineg(b);
@@ -281,7 +297,13 @@ fn mul_neg_of_pos_of_neg(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, h
 
 /// From `ha : lt a zero`, `hb : lt zero b`, derive `lt (mul a b) zero`, by
 /// commuting into [`mul_neg_of_pos_of_neg`].
-fn mul_neg_of_neg_of_pos(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, hb: ExprId) -> ExprId {
+fn mul_neg_of_neg_of_pos(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    hb: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let swapped = mul_neg_of_pos_of_neg(d, b, a, hb, ha); // lt (mul b a) zero
@@ -299,7 +321,13 @@ fn mul_neg_of_neg_of_pos(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, h
 
 /// `0<a*b`, `0≤a` ⊢ `0<a` — if `a=0` the product is `0`, contradicting
 /// strict positivity; otherwise `Int.lt_of_le_of_ne` upgrades directly.
-fn strict_pos_from_nonneg_left(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, h: ExprId) -> ExprId {
+fn strict_pos_from_nonneg_left(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let goal = d.ilt(zero, a);
@@ -353,7 +381,13 @@ fn strict_pos_from_nonneg_right(
 }
 
 /// `0<a*b`, `a≤0` ⊢ `a<0`.
-fn strict_neg_from_nonpos_left(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, h: ExprId) -> ExprId {
+fn strict_neg_from_nonpos_left(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let goal = d.ilt(a, zero);
@@ -416,7 +450,13 @@ fn strict_neg_from_nonpos_right(
 // ---------------------------------------------------------------------------
 
 /// `a*b<0`, `0≤a` ⊢ `0<a`.
-fn pos_from_nonneg_left_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, h: ExprId) -> ExprId {
+fn pos_from_nonneg_left_lt(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let goal = d.ilt(zero, a);
@@ -440,7 +480,13 @@ fn pos_from_nonneg_left_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId,
 }
 
 /// `a*b<0`, `b≤0` ⊢ `b<0`.
-fn neg_from_nonpos_right_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hb: ExprId, h: ExprId) -> ExprId {
+fn neg_from_nonpos_right_lt(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    hb: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let goal = d.ilt(b, zero);
@@ -465,7 +511,13 @@ fn neg_from_nonpos_right_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hb: ExprId
 }
 
 /// `a*b<0`, `a≤0` ⊢ `a<0`.
-fn neg_from_nonpos_left_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId, h: ExprId) -> ExprId {
+fn neg_from_nonpos_left_lt(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let goal = d.ilt(a, zero);
@@ -490,7 +542,13 @@ fn neg_from_nonpos_left_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, ha: ExprId,
 }
 
 /// `a*b<0`, `0≤b` ⊢ `0<b`.
-fn pos_from_nonneg_right_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hb: ExprId, h: ExprId) -> ExprId {
+fn pos_from_nonneg_right_lt(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    hb: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let goal = d.ilt(zero, b);
