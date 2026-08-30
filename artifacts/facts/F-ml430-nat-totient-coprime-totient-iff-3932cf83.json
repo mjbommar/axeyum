@@ -6,16 +6,59 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (m n : ℕ), m.totient.Coprime n.totient ↔ (m = 1 ∨ m = 2) ∨ n = 1 ∨ n = 2",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.totient_coprime_totient_iff",
+    "kernel_statement": "theorem Nat.totient_coprime_totient_iff : ((x0 : AxNat) -> ((x1 : AxNat) -> Iff (Eq.{1} AxNat (AxNat.gcd (AxNat.totient x0) (AxNat.totient x1)) (AxNat.succ AxNat.zero)) (Or (Or (Eq.{1} AxNat x0 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x0 (AxNat.succ (AxNat.succ AxNat.zero)))) (Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 (AxNat.succ (AxNat.succ AxNat.zero)))))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:ml430-nat-totient-eq-one-iff-68d883a0",
+    "F:ml430-nat-totient-even-28e0415f",
+    "F:nat-le-of-succ-le-succ",
+    "F:nat-le-refl",
+    "F:nat-zero-le",
+    "F:nat-gcd-zero-left",
+    "F:nat-eq-one-of-dvd-one",
+    "F:nat-not-succ-le-zero",
+    "F:nat-dvd-gcd",
+    "F:ml430-nat-coprime-one-left-iff-45945e80",
+    "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:nat-le-total",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-one-mul",
+    "F:nat-succ-mul"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.totient_coprime_totient_iff",
+      "kind": "kernel-term",
+      "supports": "Iff (gcd (totient m) (totient n) = 1) ((m=1 or m=2) or (n=1 or n=2))",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_coprime_totient_iff 2>/dev/null | grep -Ec '^Nat\\.totient_coprime_totient_iff[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the constructed proof term against the stated type. Route (`nat_prelude/totient_lemmas.rs::declare_totient_coprime_totient_iff`): `mpr` is unconditional composition -- whichever disjunct holds forces one side's totient to `one` (`totient_eq_one_iff`), and `gcd 1 x = 1` / `gcd x 1 = 1` regardless of the other argument (`coprime_one_left_iff`/`coprime_one_right_iff`, unconditional). `mp` splits `m` via `trichotomy(two, m)`: `m<2` splits again into `m=0` (rewrites the hypothesis to `gcd zero (totient n) = 1`, giving `totient n = 1` via `gcd_zero_left`, then `totient_eq_one_iff.mp`) and `m=1` (immediate); `m=2` is immediate; `2<m` gives `Even (totient m)` via `totient_even`, then splits `n` the same way, with `n=0` bridging through `gcd_comm`+`gcd_zero_left` (this prelude has no named `gcd_zero_right`) to `totient m = 1`, contradicting `Even (totient m)` via `even_not_odd`; the hard case `2<m, 2<n` gives `Even (totient m)`, `Even (totient n)`, and derives `False`: each is divisible by 2 (`succ_mul`/`one_mul` turn the `Even` witness `k+k` into `mul two k`), `dvd_gcd` forces `2 | gcd (totient m)(totient n) = 1`, `eq_one_of_dvd_one` gives `Eq two one`, refuted by transporting `le_refl two` along it and peeling one `succ` to `not_succ_le_zero`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed (confirmed 1 for the real name, 0 for a fabricated one)."
+    },
+    {
+      "id": "footprint-Nat.totient_coprime_totient_iff",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.totient_coprime_totient_iff` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane totient-mult-finish (building on totient-even-finish)",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.totient_coprime_totient_iff` and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +69,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Honest flip -- same `Nat.totient` construction as `F:ml430-nat-totient-eq-zero-3be161d6`'s own mirror-flip check. `formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output. `depends_on` restricts to entries that already carry a fact ledger entry (re-derived by `scripts/check-fact-depends-derived.py --fix` against the actual proof term's direct dependencies); the route also composes several unregistered nat-prelude helpers (`even_dvd_two`, `refute_eq_two_one`, `close_via_gcd_left_one`/`close_via_gcd_right_one`, `totient_n_eq_one_from_m_zero`, `totient_m_even_n_zero_contradiction`, all local to `totient_lemmas.rs`), none of which carry a fact entry of their own -- not axioms, per the empty-footprint evidence above."
 }
