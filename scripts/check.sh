@@ -711,6 +711,11 @@ step creal-prelude-build-ratio-controls ./scripts/tests/test-creal-prelude-build
 # check.sh-only step. A gate that manufactures divergences is a gate nobody
 # can act on, which is how this one came to sit red.
 step aggregate-scope-controls ./scripts/tests/test-check-aggregate-scope.sh
+# ...and its FAILURE-PATH controls, which it had none of: replacing
+# `if [ -s "$new" ]` with `if false` left all five registered controls green,
+# because every one of them tests the NORMALIZER. 13 scenarios driving the gate
+# end to end on a synthetic tree; every guard mutation-verified.
+step aggregate-scope-failure python3 -m unittest scripts.tests.test_check_aggregate_scope
 # The registration gate's OWN controls. It had none until 2026-08-27 -- the gate
 # whose subject is "a check nobody invokes cannot fail" was itself unverified,
 # and its python half then pinned an unexplained floor of 188 unnamed suites.

@@ -28,7 +28,12 @@ set -uo pipefail
 # and warns to stderr where a piped gate never sees it.
 export LC_ALL=C
 
-cd "$(dirname "$0")/.." || exit 2
+# `AXEYUM_AGGREGATE_SCOPE_ROOT` points the SHIPPED script at a throwaway tree
+# whose `scripts/check.sh` and `justfile` are stubs, so
+# `scripts/tests/test_check_aggregate_scope.py` can drive the gate's own exit
+# paths -- including the zero-side refusal, which cannot be reached on the real
+# tree at all. Same device as `AXEYUM_KERNEL_SUITES_ROOT`; unset in real runs.
+cd "${AXEYUM_AGGREGATE_SCOPE_ROOT:-$(dirname "$0")/..}" || exit 2
 
 expected_file="scripts/check-aggregate-scope.expected"
 mode="check"
@@ -61,8 +66,18 @@ import re, sys
 
 def strip_wrappers(line):
     line = line.strip()
-    while re.match(r"^[A-Za-z_][A-Za-z0-9_]*=(\"[^\"]*\"|\S+)\s", line):
-        line = line.split(" ", 1)[1].strip()
+    # QUOTE-AWARE, and the obvious form is not. This loop TESTED with a
+    # quote-aware regex and STRIPPED with `line.split(" ", 1)`, which cuts at
+    # the first space -- inside the quotes. Measured 2026-08-30:
+    #   RUSTDOCFLAGS="-D warnings" cargo doc ...  ->  warnings" cargo doc ...
+    # so one `cargo doc` step appeared on both sides under two different
+    # spellings and was baselined as TWO accepted divergences that do not exist.
+    # Consume exactly what the regex matched.
+    while True:
+        assignment = re.match(r"^[A-Za-z_][A-Za-z0-9_]*=(\"[^\"]*\"|\S+)\s+", line)
+        if not assignment:
+            break
+        line = line[assignment.end():].strip()
     # `./` is a path prefix wherever it appears, not only at line start:
     # `scripts/check.sh` writes `python3 ./scripts/x.py` while the justfile
     # writes `python3 scripts/x.py`. An anchored `^\./` sees those as two

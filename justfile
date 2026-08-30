@@ -585,6 +585,10 @@ gate-controls:
     # each mutation-verified to kill exactly one control, plus two negative
     # controls so a normalizer returning "" cannot satisfy the suite.
     scripts/tests/test-check-aggregate-scope.sh
+    # ...and its FAILURE-PATH controls, which it had none of: the
+    # fail-on-new-divergence guard was deletable with all five green. 13
+    # scenarios on a synthetic tree; every guard mutation-verified.
+    python3 -m unittest scripts.tests.test_check_aggregate_scope
     # Post-merge hygiene: conflict markers in tracked files, duplicate ADR
     # numbers, stale generated files. ~2s. Each guard is a defect that reached a
     # commit because merges outnumber full-gate runs; positive-controlled, and a

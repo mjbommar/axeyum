@@ -4,7 +4,6 @@
 # two agree) is always fine; ADDING one is a new blind spot in whichever
 # gate a contributor happens to run, so the gate fails until it is recorded
 # here deliberately.
-check.sh-only: cargo doc --workspace --all-features --no-deps
 check.sh-only: python3 scripts/query-rules-as-code.py coverage --by domain --require-any
 check.sh-only: python3 scripts/query-rules-as-code.py coverage --by fragment --format json --require-any
 check.sh-only: python3 scripts/query-rules-as-code.py coverage --by validation --require-any
@@ -69,4 +68,3 @@ just-only:     python3 scripts/query-rules-as-code.py rows --pack workflow_reach
 just-only:     scripts/check-clippy-complete.sh --toolchain stable
 just-only:     scripts/check-glaurung-qfbv-regular.sh
 just-only:     scripts/check-qfbv-profile.sh
-just-only:     warnings" cargo doc --workspace --all-features --no-deps

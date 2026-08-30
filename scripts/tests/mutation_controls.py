@@ -4164,6 +4164,65 @@ SUITES["shell-antipatterns-scope"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# `aggregate-scope-failure` -- the FAILURE PATH of `check-aggregate-scope.sh`.
+#
+# The 2026-08-30 session audit's second survivor. Replacing
+# `if [ -s "$new" ]; then` with `if false; then` left the whole registered
+# suite green: all five registered controls test the NORMALIZER and none
+# tested the gate's own decision to fail.
+#
+# `scripts/tests/test-check-aggregate-scope.sh` keeps the normalizer job.
+# These scenarios drive the gate end to end on a synthetic tree via
+# `AXEYUM_AGGREGATE_SCOPE_ROOT` -- hermetic, because the real tree costs
+# 412 + 468 steps to enumerate and because the zero-side refusal cannot be
+# reached on it at all.
+#
+# A1 is the survivor itself. A5 is the live normalizer bug fixed in the same
+# change: `strip_wrappers` tested for a leading assignment with a quote-aware
+# regex and stripped it with `line.split(" ", 1)`, which cuts inside the quotes.
+#
+# Kill sets are reported as measured, survivors included.
+# --------------------------------------------------------------------------
+
+SUITES["aggregate-scope-failure"] = (
+    "scripts/check-aggregate-scope.sh",
+    Unittest("scripts.tests.test_check_aggregate_scope"),
+    [
+        (
+            "A1 an unrecorded divergence fails the gate",
+            'if [ -s "$new" ]; then',
+            "if false; then",
+        ),
+        (
+            "A2 a side enumerating ZERO steps is refused with exit 2",
+            'if [ "$sh_count" -eq 0 ] || [ "$just_count" -eq 0 ]; then',
+            "if false; then",
+        ),
+        (
+            "A3 a missing expectation file is refused",
+            'if [ ! -f "$expected_file" ]; then',
+            "if false; then",
+        ),
+        (
+            "A4 the just-only arm of the comparison is compared at all",
+            '  comm -13 "$sh_steps" "$just_steps" | sed \'s/^/just-only:     /\'',
+            "  true",
+        ),
+        (
+            "A5 a QUOTED environment assignment is stripped whole",
+            '        assignment = re.match(r"^[A-Za-z_][A-Za-z0-9_]*=(\\"[^\\"]*\\"|\\S+)\\s+", line)',
+            '        assignment = re.match(r"^[A-Za-z_][A-Za-z0-9_]*=\\S+\\s+", line)',
+        ),
+        (
+            "A6 the strip consumes exactly what the regex matched",
+            "        line = line[assignment.end():].strip()",
+            '        line = line.split(" ", 1)[1].strip()',
+        ),
+    ],
+)
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()
