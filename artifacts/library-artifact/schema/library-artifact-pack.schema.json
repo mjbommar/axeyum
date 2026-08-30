@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/schema/library-artifact-pack-0.1.0.json",
+  "title": "Library artifact pack (L1 phase C0)",
+  "description": "Reference documentation for the pack shape described in artifacts/library-artifact/README.md. This is documentation, not an enforced dependency: scripts/check-library-artifact-contract.py validates structurally in pure Python, following this repository's established convention (see scripts/validate-facts.py) of not requiring the `jsonschema` package for a gate every host must run.",
+  "type": "object",
+  "required": [
+    "contract_version", "lean_version", "lean_commit", "mathlib_version",
+    "mathlib_commit", "normalization_version", "renderer_version",
+    "source_population", "trusted_declaration_identities", "pack_digest",
+    "declarations"
+  ],
+  "properties": {
+    "contract_version": { "type": "string" },
+    "lean_version": { "type": "string" },
+    "lean_commit": { "type": "string" },
+    "mathlib_version": { "type": "string" },
+    "mathlib_commit": { "type": "string" },
+    "normalization_version": { "type": "integer", "minimum": 1 },
+    "renderer_version": { "type": "integer", "minimum": 1 },
+    "source_population": {
+      "type": "object",
+      "required": ["population_id", "requested_roots", "expected_declaration_count"],
+      "properties": {
+        "population_id": { "type": "string" },
+        "requested_roots": { "type": "array", "items": { "type": "string" } },
+        "expected_declaration_count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "trusted_declaration_identities": { "type": "array", "items": { "type": "string" } },
+    "pack_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "declarations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/declaration" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "declaration": {
+      "type": "object",
+      "required": [
+        "name", "kind", "universes", "type", "value", "type_digest",
+        "value_digest", "identity_digest", "direct_type_deps",
+        "direct_value_deps", "transitive_type_deps", "transitive_value_deps"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "kind": {
+          "enum": ["Inductive", "Constructor", "Recursor", "Axiom", "Opaque", "Quotient", "Definition", "Theorem"]
+        },
+        "universes": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": "string" },
+        "value": { "type": ["string", "null"] },
+        "type_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "value_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+        "identity_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "direct_type_deps": { "type": "array", "items": { "type": "string" } },
+        "direct_value_deps": { "type": "array", "items": { "type": "string" } },
+        "transitive_type_deps": { "type": "array", "items": { "type": "string" } },
+        "transitive_value_deps": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "typeproj_declaration": {
+      "description": "The ONLY shape a producer-facing projection file's declaration records may have -- see check_typeproj_no_value_leak. No value-bearing key may appear here under any circumstance.",
+      "type": "object",
+      "required": ["name", "kind", "universes", "type", "type_digest", "direct_type_deps", "transitive_type_deps"],
+      "properties": {
+        "name": { "type": "string" },
+        "kind": { "enum": ["Inductive", "Constructor", "Recursor", "Axiom", "Opaque", "Quotient", "Definition", "Theorem"] },
+        "universes": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": "string" },
+        "type_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "direct_type_deps": { "type": "array", "items": { "type": "string" } },
+        "transitive_type_deps": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "population_id": "nat-add-comm-v1",
+  "description": "Bounded C0 positive pack: Nat.add_comm and id as roots, plus their full closure over Lean-core Nat/Eq primitives.",
+  "expected_roots": ["Nat.add_comm", "id"],
+  "expected_declaration_count": 9
+}

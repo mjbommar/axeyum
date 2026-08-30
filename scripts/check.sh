@@ -1425,6 +1425,19 @@ step shared-index      ./scripts/check-shared-index.sh
 step sos-negative-controls ./scripts/check-sos-negative-controls.sh
 step evidence-portability  ./scripts/check-evidence-portability.sh
 
+# L1 phase C0 -- the library-artifact record contract
+# (docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md section C0,
+# ADR-0800). Two independently-coded readers (different digest assembly,
+# different traversal, different data structures) each recompute every digest
+# and both transitive closures from a pack's own recorded fields; five guards
+# (MISSING against an external population registry, DUPLICATE, REORDERED,
+# TRUNCATED, VALUE_EXPOSED against the type-only producer projection) are
+# mutation-verified 1:1 in a scratch copy by the fourth step.
+step library-artifact-contract          python3 scripts/check-library-artifact-contract.py
+step library-artifact-contract-reader-b python3 scripts/check-library-artifact-contract-reader-b.py
+step library-artifact-contract-tests    python3 scripts/tests/test-library-artifact-contract.py
+step library-artifact-contract-mutations bash scripts/tests/test-library-artifact-contract-mutations.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
