@@ -13,6 +13,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
+NURSERY_V2 = ROOT / "artifacts/autogenesis/nursery-v2-extension.json"
 FACTS = ROOT / "artifacts/facts"
 RESULT = ROOT / "artifacts/autogenesis/autogenesis-1-result.json"
 
@@ -200,6 +201,7 @@ def describe_leak(
     keys: list[str],
     members_by_key: dict[str, list[str]],
     by_partition: dict[str, str],
+    origin_of: dict[str, str] | None = None,
 ) -> str:
     """Render one violation as a header plus every member's fact id and partition.
 
@@ -211,6 +213,11 @@ def describe_leak(
     member of the weakly connected component, not only the ones that
     triggered the cross-partition check, so a reader can see WHY a
     longitudinal or non-evaluation fact pulled two partitions together.
+
+    `origin_of`, when given, additionally names which manifest file (`v1` or
+    `v2`) declared each fact -- load-bearing for the cross-population check,
+    where a crossing component's whole point is that its members did not all
+    come from the same file.
     """
     lines = [header]
     for key in keys:
@@ -219,7 +226,8 @@ def describe_leak(
         display_key = key if len(key) <= 16 else f"{key[:12]}…"
         lines.append(f"  {key_label}={display_key} partitions={partitions_seen}")
         for fact_id in member_ids:
-            lines.append(f"    {fact_id} -> {by_partition.get(fact_id, 'unknown')}")
+            suffix = f" [{origin_of[fact_id]}]" if origin_of and fact_id in origin_of else ""
+            lines.append(f"    {fact_id} -> {by_partition.get(fact_id, 'unknown')}{suffix}")
     return "\n".join(lines)
 
 
@@ -535,23 +543,209 @@ def build_report(
     return report
 
 
+def build_cross_population_report(
+    v1_nursery: dict[str, Any],
+    v2_extension: dict[str, Any],
+    facts: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Check declared-dependency component crossings over the UNION of
+    nursery-v1's entries and nursery-v2-extension's entries.
+
+    `build_report` above only ever sees `nursery-v1.json`. A weakly-connected
+    declared-dependency component does not respect which manifest file its
+    members happen to be listed in: a nursery-v2-extension entry can depend on
+    a nursery-v1 entry (or vice versa) through a real fact-ledger `depends_on`
+    edge, or two v2-only entries can already form a crossing component on
+    their own, and NEITHER case is visible to a check that reads one file.
+    Measured 2026-08-30 (see docs/plan/status/nursery-v2-component-coverage.md
+    and ADR-0855): computing components over the union surfaces 3 crossings —
+    one entirely within v2, one where v1's three ADR-0850-exempted components
+    merge with two v2-internal ones via real cross-file dependency edges, and
+    one visible ONLY in the union (invisible to either file alone).
+
+    This performs the identical weak-component-vs-evaluation-partition check
+    as `build_report`'s `component_split_leaks` / longitudinal-overlap checks,
+    over entries drawn from BOTH files, with its own self-invalidating
+    exemption list (`cross_population_component_split_exemptions`, read from
+    `nursery-v2-extension.json` — see ADR-0850 for the mechanism this reuses
+    verbatim via `validate_exemptions`). An exemption here names the exact
+    closed fact-id set of a UNION component; if the live union graph later
+    enlarges that component (a new dependency edge, from either file, pulls in
+    another fact), the recomputed digest no longer matches and the gate goes
+    red again on the enlarged, unreviewed component — the same fail-closed
+    property ADR-0850 established, not a second mechanism.
+
+    Does NOT touch `build_report`'s readiness/policy computation, which stays
+    scoped to nursery-v1 alone (its `evaluation_fact_count` policy floor and
+    friends govern v1's own 214-entry population, not this extension — see
+    nursery-v2-extension.json's own `coverage.ceiling_authority`).
+    """
+    if v2_extension.get("kind") != "axeyum-autogenesis-nursery-extension":
+        raise NurseryError("nursery-v2-extension schema identity is invalid")
+    if v2_extension.get("extends") != "artifacts/autogenesis/nursery-v1.json":
+        raise NurseryError("nursery-v2-extension no longer declares nursery-v1 as its base")
+
+    v1_entries = validate_entries(v1_nursery.get("entries"), facts)
+    v2_entries = validate_entries(v2_extension.get("entries"), facts)
+
+    v1_ids = {entry["fact_id"] for entry in v1_entries}
+    v2_ids = {entry["fact_id"] for entry in v2_entries}
+    overlap = sorted(v1_ids & v2_ids)
+    if overlap:
+        raise NurseryError(
+            "nursery-v1 and nursery-v2-extension declare overlapping fact ids: "
+            + ", ".join(overlap)
+        )
+
+    entries = v1_entries + v2_entries
+    entries_by_id = {entry["fact_id"]: entry for entry in entries}
+    by_partition_lookup = {entry["fact_id"]: entry["partition"] for entry in entries}
+    origin_of = {entry["fact_id"]: "v1" for entry in v1_entries}
+    origin_of.update({entry["fact_id"]: "v2" for entry in v2_entries})
+
+    exemptions = validate_exemptions(
+        v2_extension.get("cross_population_component_split_exemptions"), entries_by_id
+    )
+    exempted_component_ids = {exemption["component_id"] for exemption in exemptions}
+
+    by_fact, component_members = components(entries, facts)
+    evaluation = [entry for entry in entries if entry["partition"] in EVALUATION_PARTITIONS]
+    component_partitions: dict[str, set[str]] = defaultdict(set)
+    for entry in evaluation:
+        component_partitions[by_fact[entry["fact_id"]]].add(entry["partition"])
+    all_leaking_components = sorted(
+        component_id
+        for component_id, partitions in component_partitions.items()
+        if len(partitions) > 1
+    )
+    leaks = [c for c in all_leaking_components if c not in exempted_component_ids]
+    leaks_exempted = [c for c in all_leaking_components if c in exempted_component_ids]
+
+    longitudinal_ids = sorted(
+        entry["fact_id"] for entry in v1_entries if entry["partition"] == "longitudinal"
+    )
+    longitudinal_components = {by_fact[fact_id] for fact_id in longitudinal_ids}
+    evaluation_components = {by_fact[entry["fact_id"]] for entry in evaluation}
+    all_longitudinal_overlap_components = sorted(longitudinal_components & evaluation_components)
+    longitudinal_overlap_components = [
+        c for c in all_longitudinal_overlap_components if c not in exempted_component_ids
+    ]
+    longitudinal_overlap_components_exempted = [
+        c for c in all_longitudinal_overlap_components if c in exempted_component_ids
+    ]
+    evaluation_longitudinal_overlap = sorted(
+        entry["fact_id"]
+        for entry in evaluation
+        if by_fact[entry["fact_id"]] in longitudinal_overlap_components
+    )
+    evaluation_longitudinal_overlap_exempted = sorted(
+        entry["fact_id"]
+        for entry in evaluation
+        if by_fact[entry["fact_id"]] in longitudinal_overlap_components_exempted
+    )
+
+    violation_blocks: list[str] = []
+    if leaks:
+        violation_blocks.append(
+            describe_leak(
+                "declared dependency component crosses evaluation partitions "
+                "(cross-population: nursery-v1 union nursery-v2-extension)",
+                "component",
+                leaks,
+                {c: component_members[c] for c in leaks},
+                by_partition_lookup,
+                origin_of=origin_of,
+            )
+        )
+    if longitudinal_overlap_components:
+        violation_blocks.append(
+            describe_leak(
+                "cross-population evaluation union shares a component with "
+                f"Autogenesis-1 (longitudinal={longitudinal_ids})",
+                "component",
+                longitudinal_overlap_components,
+                {c: component_members[c] for c in longitudinal_overlap_components},
+                by_partition_lookup,
+                origin_of=origin_of,
+            )
+        )
+    if violation_blocks:
+        raise NurseryError(
+            f"{len(violation_blocks)} cross-population partition-leak violation type(s) found:\n\n"
+            + "\n\n".join(violation_blocks)
+        )
+
+    report: dict[str, Any] = {
+        "schema_version": 1,
+        "kind": "axeyum-autogenesis-cross-population-report",
+        "population": {
+            "v1_entries": len(v1_entries),
+            "v2_entries": len(v2_entries),
+            "union_entries": len(entries),
+            "union_declared_components": len(component_members),
+        },
+        "controls": {
+            "component_split_leaks": leaks,
+            "evaluation_longitudinal_component_overlap": evaluation_longitudinal_overlap,
+            "component_split_leaks_exempted": [
+                {
+                    "component_id": component_id,
+                    "members": [
+                        {
+                            "fact_id": fact_id,
+                            "partition": by_partition_lookup[fact_id],
+                            "origin": origin_of[fact_id],
+                        }
+                        for fact_id in sorted(component_members[component_id])
+                    ],
+                }
+                for component_id in leaks_exempted
+            ],
+            "evaluation_longitudinal_component_overlap_exempted": (
+                evaluation_longitudinal_overlap_exempted
+            ),
+            "cross_population_component_split_exemptions": exemptions,
+            "cross_population_component_split_exemptions_unused": [
+                exemption
+                for exemption in exemptions
+                if exemption["component_id"]
+                not in set(leaks_exempted) | set(longitudinal_overlap_components_exempted)
+            ],
+        },
+    }
+    report["report_sha256"] = digest(report)
+    return report
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args()
     try:
-        report = build_report(load_object(NURSERY), load_facts(), load_object(RESULT))
+        facts = load_facts()
+        report = build_report(load_object(NURSERY), facts, load_object(RESULT))
+        cross_population_report = build_cross_population_report(
+            load_object(NURSERY), load_object(NURSERY_V2), facts
+        )
         if args.require_ready and not report["ready"]:
             raise NurseryError("nursery is not evaluation-ready: " + ", ".join(report["blockers"]))
         if args.json:
             print(json.dumps(report, indent=2, sort_keys=True))
+            print(json.dumps(cross_population_report, indent=2, sort_keys=True))
         else:
             print(
                 "AUTOGENESIS_NURSERY_OK|"
                 f"{report['report_sha256']}|ready={str(report['ready']).lower()}|"
                 f"evaluation={report['population']['evaluation_entries']}|"
                 f"blockers={len(report['blockers'])}"
+            )
+            print(
+                "AUTOGENESIS_NURSERY_CROSS_POPULATION_OK|"
+                f"{cross_population_report['report_sha256']}|"
+                f"v1={cross_population_report['population']['v1_entries']}|"
+                f"v2={cross_population_report['population']['v2_entries']}|"
+                f"components={cross_population_report['population']['union_declared_components']}"
             )
     except (OSError, json.JSONDecodeError, NurseryError) as error:
         print(f"autogenesis-nursery: {error}", file=__import__("sys").stderr)

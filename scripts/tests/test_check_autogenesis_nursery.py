@@ -352,5 +352,208 @@ class NurseryTests(unittest.TestCase):
         )
 
 
+def v2_extension(entries: list[dict]) -> dict:
+    return {
+        "kind": "axeyum-autogenesis-nursery-extension",
+        "extends": "artifacts/autogenesis/nursery-v1.json",
+        "entries": entries,
+    }
+
+
+class CrossPopulationTests(unittest.TestCase):
+    """`build_cross_population_report` -- the union-of-v1-and-v2 component
+    check. `check-autogenesis-nursery.py` used to only ever read
+    nursery-v1.json, so a crossing entirely within nursery-v2-extension, or
+    one formed only by a real dependency edge BETWEEN the two files, was
+    invisible to every gate. See docs/plan/status/nursery-v2-component-coverage.md
+    and ADR-0855.
+    """
+
+    def setUp(self) -> None:
+        self.facts: dict[str, dict] = {}
+        self.v1 = {"entries": []}
+        self.v2 = v2_extension([])
+
+    def test_wrong_extension_kind_is_rejected(self) -> None:
+        self.v2["kind"] = "something-else"
+        with self.assertRaisesRegex(MODULE.NurseryError, "schema identity is invalid"):
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+
+    def test_extension_must_still_declare_its_base(self) -> None:
+        self.v2["extends"] = "artifacts/autogenesis/nursery-v0.json"
+        with self.assertRaisesRegex(MODULE.NurseryError, "no longer declares nursery-v1"):
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+
+    def test_overlapping_fact_ids_across_files_are_rejected(self) -> None:
+        self.facts["F:shared"] = fact("F:shared")
+        self.v1["entries"] = [unshared_entry("F:shared", "train")]
+        self.v2["entries"] = [unshared_entry("F:shared", "development")]
+        with self.assertRaisesRegex(MODULE.NurseryError, "overlapping fact ids"):
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+
+    def test_v2_internal_component_leak_fails_closed(self) -> None:
+        # A crossing entirely WITHIN nursery-v2-extension -- invisible to
+        # build_report, which never reads this file at all.
+        self.facts.update(
+            {
+                "F:v1-unrelated": fact("F:v1-unrelated"),
+                "F:v2-train": fact("F:v2-train"),
+                "F:v2-dev": fact("F:v2-dev", ["F:v2-train"]),
+            }
+        )
+        self.v1["entries"] = [unshared_entry("F:v1-unrelated", "train")]
+        self.v2["entries"] = [
+            unshared_entry("F:v2-train", "train"),
+            unshared_entry("F:v2-dev", "development"),
+        ]
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "cross-population: nursery-v1 union nursery-v2-extension"
+        ):
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+
+    def test_cross_file_dependency_edge_creates_a_leak_invisible_to_either_file_alone(
+        self,
+    ) -> None:
+        # F:v1-train (v1, train) and F:v2-dev (v2, development) are each a
+        # singleton, non-leaking component within their OWN file. The
+        # dependency edge between them only exists once the files are
+        # unioned -- exactly the ADR-0855 finding.
+        self.facts.update(
+            {"F:v1-train": fact("F:v1-train"), "F:v2-dev": fact("F:v2-dev", ["F:v1-train"])}
+        )
+        self.v1["entries"] = [unshared_entry("F:v1-train", "train")]
+        self.v2["entries"] = [unshared_entry("F:v2-dev", "development")]
+        with self.assertRaises(MODULE.NurseryError) as ctx:
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+        message = str(ctx.exception)
+        self.assertIn("F:v1-train -> train [v1]", message)
+        self.assertIn("F:v2-dev -> development [v2]", message)
+
+    def test_exemption_suppresses_exactly_the_named_cross_population_component(self) -> None:
+        self.facts.update(
+            {"F:v1-train": fact("F:v1-train"), "F:v2-dev": fact("F:v2-dev", ["F:v1-train"])}
+        )
+        self.v1["entries"] = [unshared_entry("F:v1-train", "train")]
+        self.v2["entries"] = [unshared_entry("F:v2-dev", "development")]
+        self.v2["cross_population_component_split_exemptions"] = [
+            {
+                "component_fact_ids": sorted(["F:v1-train", "F:v2-dev"]),
+                "reason": "test exemption",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        report = MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        exempted = report["controls"]["component_split_leaks_exempted"]
+        self.assertEqual(len(exempted), 1)
+        origins = {m["fact_id"]: m["origin"] for m in exempted[0]["members"]}
+        self.assertEqual(origins, {"F:v1-train": "v1", "F:v2-dev": "v2"})
+        self.assertEqual(report["controls"]["cross_population_component_split_exemptions_unused"], [])
+
+    def test_exemption_stops_matching_once_the_cross_population_component_grows(self) -> None:
+        # The self-invalidating property ADR-0850 established, preserved here:
+        # an exemption names an EXACT fact-id set, and stops applying the
+        # moment the live union graph enlarges the component it names.
+        self.facts.update(
+            {"F:v1-train": fact("F:v1-train"), "F:v2-dev": fact("F:v2-dev", ["F:v1-train"])}
+        )
+        self.v1["entries"] = [unshared_entry("F:v1-train", "train")]
+        self.v2["entries"] = [unshared_entry("F:v2-dev", "development")]
+        self.v2["cross_population_component_split_exemptions"] = [
+            {
+                "component_fact_ids": sorted(["F:v1-train", "F:v2-dev"]),
+                "reason": "test exemption",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        report = MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+
+        # A new v2 fact starts depending on F:v1-train, joining the same
+        # weakly-connected component without being named in the exemption.
+        self.facts["F:v2-new"] = fact("F:v2-new", ["F:v1-train"])
+        self.v2["entries"].append(unshared_entry("F:v2-new", "development"))
+        with self.assertRaisesRegex(MODULE.NurseryError, "cross-population"):
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+
+    def test_cross_population_longitudinal_overlap_fails_closed_and_can_be_exempted(self) -> None:
+        self.facts.update(
+            {
+                "F:nat-zero-add": fact("F:nat-zero-add"),
+                "F:nat-mul-one": fact("F:nat-mul-one", ["F:nat-zero-add"]),
+                "F:v2-leak": fact("F:v2-leak", ["F:nat-mul-one"]),
+            }
+        )
+        self.v1["entries"] = [
+            entry("F:nat-zero-add", "longitudinal"),
+            entry("F:nat-mul-one", "longitudinal"),
+        ]
+        self.v2["entries"] = [unshared_entry("F:v2-leak", "development")]
+        with self.assertRaisesRegex(MODULE.NurseryError, "shares a component with Autogenesis-1"):
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+
+        longitudinal_component = sorted(["F:v2-leak", "F:nat-mul-one", "F:nat-zero-add"])
+        self.v2["cross_population_component_split_exemptions"] = [
+            {
+                "component_fact_ids": longitudinal_component,
+                "reason": "test exemption",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        report = MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+        self.assertEqual(report["controls"]["evaluation_longitudinal_component_overlap"], [])
+        self.assertEqual(
+            report["controls"]["evaluation_longitudinal_component_overlap_exempted"],
+            ["F:v2-leak"],
+        )
+
+    def test_clean_union_report_is_deterministic_and_addressed(self) -> None:
+        self.facts.update({"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a")})
+        self.v1["entries"] = [unshared_entry("F:v1-a", "train")]
+        self.v2["entries"] = [unshared_entry("F:v2-a", "development")]
+        first = MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+        second = MODULE.build_cross_population_report(
+            copy.deepcopy(self.v1), copy.deepcopy(self.v2), copy.deepcopy(self.facts)
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(first["population"]["v1_entries"], 1)
+        self.assertEqual(first["population"]["v2_entries"], 1)
+        self.assertEqual(first["population"]["union_entries"], 2)
+        unsigned = dict(first)
+        claimed = unsigned.pop("report_sha256")
+        self.assertEqual(claimed, MODULE.digest(unsigned))
+
+    def test_stale_exemption_matching_no_live_component_is_reported_as_unused(self) -> None:
+        # Regression guard: a first cut of this reporting field hardcoded []
+        # and NO test in this suite caught it, because every exemption test
+        # so far named an exemption that DOES match a live crossing. An
+        # exemption whose fact ids no longer form the component it once
+        # named (e.g. after an unrelated ledger edit severs the dependency
+        # edge) must show up here, not vanish silently.
+        self.facts.update({"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a")})
+        self.v1["entries"] = [unshared_entry("F:v1-a", "train")]
+        self.v2["entries"] = [unshared_entry("F:v2-a", "development")]
+        # F:v1-a and F:v2-a are NOT connected by any depends_on edge, so this
+        # named pair's digest never matches any live weakly-connected
+        # component (each is its own singleton component instead).
+        self.v2["cross_population_component_split_exemptions"] = [
+            {
+                "component_fact_ids": sorted(["F:v1-a", "F:v2-a"]),
+                "reason": "stale test exemption",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        report = MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        self.assertEqual(report["controls"]["component_split_leaks_exempted"], [])
+        unused = report["controls"]["cross_population_component_split_exemptions_unused"]
+        self.assertEqual(len(unused), 1)
+        self.assertEqual(unused[0]["component_fact_ids"], ["F:v1-a", "F:v2-a"])
+
+
 if __name__ == "__main__":
     unittest.main()
