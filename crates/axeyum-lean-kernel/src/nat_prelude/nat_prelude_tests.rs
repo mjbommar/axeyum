@@ -622,6 +622,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.add_mod_right,
         p.add_div_left,
         p.add_div_right,
+        p.add_div_of_dvd_add_add_one,
+        p.base_induction,
         p.div_mod_remainder_eq_zero_iff_dvd,
         p.div_mod_exact_exists,
         p.mod_self,
@@ -7092,7 +7094,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 534,
+        93 + 536,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -15006,4 +15008,154 @@ fn add_div_mod_shift_family_applies_at_concrete_discriminating_instances() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `Nat.add_div_of_dvd_add_add_one`, the ninth `ml430` add/div/mod mirror
+/// (`F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0`), applies at two
+/// discriminating instances: `(c,a,b) = (5,7,7)` (`a`,`b` equal, both
+/// quotients and both remainders nonzero and summing exactly to `c-1`) and
+/// `(c,a,b) = (5,3,11)` (`a < c <= b`, asymmetric, chosen to catch an `a`/`b`
+/// swap). Both need a concrete `dvd c (a+b+1)` witness (`concrete_dvd`).
+#[test]
+fn add_div_of_dvd_add_add_one_applies_at_concrete_discriminating_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let seven = f.num(7);
+    let eleven = f.num(11);
+    let fifteen = f.num(15);
+    let zero = f.zero();
+
+    // (5,7,7): 7+7+1 = 15 = 5*3. (7+7)/5 = 14/5 = 2. 7/5+7/5 = 1+1 = 2.
+    let dvd_15 = concrete_dvd(&mut f, five, fifteen, three);
+    let applied = f.lemma(p.add_div_of_dvd_add_add_one, &[five, seven, seven]);
+    let applied = f.apply(applied, &[dvd_15]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "add_div_of_dvd_add_add_one must apply at (5,7,7): {}",
+            f.explain(&e)
+        )
+    });
+    let seven_seven = f.add(seven, seven);
+    let ab_div_c = f.div(seven_seven, five);
+    let a_div_c = f.div(seven, five);
+    let rhs = f.add(a_div_c, a_div_c);
+    let want = f.eq(ab_div_c, rhs);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "add_div_of_dvd_add_add_one(5,7,7) must state (7+7)/5 = 7/5+7/5"
+    );
+    assert!(f.k.def_eq(ab_div_c, two), "14/5 must compute to 2");
+
+    // (5,3,11): 3+11+1 = 15 = 5*3. (3+11)/5 = 14/5 = 2. 3/5+11/5 = 0+2 = 2.
+    let dvd_15b = concrete_dvd(&mut f, five, fifteen, three);
+    let applied = f.lemma(p.add_div_of_dvd_add_add_one, &[five, three, eleven]);
+    let applied = f.apply(applied, &[dvd_15b]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "add_div_of_dvd_add_add_one must apply at (5,3,11): {}",
+            f.explain(&e)
+        )
+    });
+    let three_eleven = f.add(three, eleven);
+    let ab_div_c2 = f.div(three_eleven, five);
+    let a_div_c2 = f.div(three, five);
+    let b_div_c2 = f.div(eleven, five);
+    let rhs2 = f.add(a_div_c2, b_div_c2);
+    let want2 = f.eq(ab_div_c2, rhs2);
+    assert!(
+        f.k.def_eq(inferred, want2),
+        "add_div_of_dvd_add_add_one(5,3,11) must state (3+11)/5 = 3/5+11/5"
+    );
+    assert!(f.k.def_eq(ab_div_c2, two), "14/5 must compute to 2");
+    assert!(f.k.def_eq(a_div_c2, zero), "3/5 must compute to 0");
+    assert!(f.k.def_eq(b_div_c2, two), "11/5 must compute to 2");
+
+    assert!(
+        f.k.axiom_footprint(p.add_div_of_dvd_add_add_one).is_empty(),
+        "add_div_of_dvd_add_add_one must rest on zero axioms"
+    );
+}
+
+/// `Nat.base_induction` (`F:ml430-nat-base-induction-83561d4c`) applies at a
+/// concrete instance: `P := fun m => Le zero m`, `b := 2`, `n := 5`, `single`
+/// and `digit` both closed by `zero_le`. The generic theorem is already the
+/// strong check (the kernel re-verifies it for an ARBITRARY `P`); this test
+/// is the downstream-consumer check -- that a genuinely recursive
+/// instantiation (`n=5`, `b=2` forces the `Le b v` branch through several
+/// levels of `qv = v/2` before landing in the `Lt v b` branch) type-checks
+/// and does not get stuck.
+#[test]
+fn base_induction_applies_at_a_concrete_recursive_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let five = f.num(5);
+
+    // P := fun m => Le zero m.
+    let p_pred = {
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let body = f.le(zero, m);
+        f.lam_fv(m_fv, nat, body)
+    };
+
+    let hb = f.lemma(p.lt_succ_self, &[one]); // Lt one (succ one) = Lt 1 2
+
+    // single : ∀ m, Lt m 2 -> Le zero m.
+    let single_proof = {
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let h_fv = f.fresh_fvar();
+        let lt_m_two = f.lt(m, two);
+        let body = f.lemma(p.zero_le, &[m]);
+        let with_h = f.lam_fv(h_fv, lt_m_two, body);
+        f.lam_fv(m_fv, nat, with_h)
+    };
+
+    // digit : ∀ m k, Lt k 2 -> Lt zero m -> Le zero m -> Le zero (2*m+k).
+    let digit_proof = {
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let h1_fv = f.fresh_fvar();
+        let h2_fv = f.fresh_fvar();
+        let h3_fv = f.fresh_fvar();
+        let two_m = f.mul(two, m);
+        let two_m_k = f.add(two_m, k);
+        let body = f.lemma(p.zero_le, &[two_m_k]);
+        let h3_ty = f.le(zero, m);
+        let with_h3 = f.lam_fv(h3_fv, h3_ty, body);
+        let h2_ty = f.lt(zero, m);
+        let with_h2 = f.lam_fv(h2_fv, h2_ty, with_h3);
+        let h1_ty = f.lt(k, two);
+        let with_h1 = f.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_k = f.lam_fv(k_fv, nat, with_h1);
+        f.lam_fv(m_fv, nat, with_k)
+    };
+
+    let applied = f.lemma(p.base_induction, &[]);
+    let applied = f.apply(applied, &[p_pred, five, two, hb, single_proof, digit_proof]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        panic!(
+            "base_induction must apply at P=(Le zero .), n=5, b=2: {}",
+            f.explain(&e)
+        )
+    });
+    let want = f.le(zero, five);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "base_induction(P,5,2,...) must state Le zero 5"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.base_induction).is_empty(),
+        "base_induction must rest on zero axioms"
+    );
 }

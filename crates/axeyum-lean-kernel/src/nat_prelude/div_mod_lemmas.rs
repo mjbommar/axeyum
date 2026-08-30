@@ -34,12 +34,27 @@
 //!
 //! `add_div_of_dvd_add_add_one` (the ninth mirror in this family) needs a
 //! genuinely different argument -- the divisibility hypothesis pins the
-//! remainder of `a+b` at `dd-1`, which this module's machinery does not
-//! reach -- and is left open; see the handoff doc.
+//! remainder of `a+b` at `dd-1`, which this module's other machinery does not
+//! reach. [`declare_add_div_of_dvd_add_add_one`] builds it directly: decompose
+//! `a = c*qa+ra`, `b = c*qb+rb` (`div_mod_exec`), so `a+b+1 = c*(qa+qb) +
+//! (ra+rb+1)`. Case-split `ra+rb+1` against `c` (`lt_or_ge`): below `c` this
+//! is ALREADY a valid `divMod` decomposition of `a+b+1`, and comparing it
+//! against the one the `dvd` witness gives (remainder `0`) via
+//! `div_mod_unique` forces `ra+rb+1 = 0`, refuted by `succ_ne_zero` since it
+//! is a successor. At or above `c`, subtracting `c` once (`sub_add_cancel`)
+//! gives a remainder `r'` that is ALSO `< c` (bounded via `ra<c`, `rb<c` and
+//! `le_of_succ_le_succ`/`add_le_add_left`/`add_le_add_right`/`le_trans`), so
+//! `divMod c (a+b+1) (qa+qb+1) r'` is likewise valid; comparing it against the
+//! same `dvd`-witness relation forces `r' = 0`, i.e. `ra+rb+1 = c` exactly.
+//! That pins `ra+rb = c-1 < c`, so `(qa+qb, ra+rb)` is a valid `divMod`
+//! decomposition of `a+b` itself, and comparing it against `div_mod_exec`'s
+//! own decomposition of `a+b` via `div_mod_unique` one more time gives the
+//! goal directly: `(a+b)/c = qa+qb`.
 
 use super::NatPrelude;
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps, cases_zero_succ};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -457,6 +472,436 @@ pub(super) fn declare_add_div_mod_shift_family(
         let x_plus_zmulone_div_z = d.div(x_plus_zmulone, z);
         let (_, proof_body) = d.chain(lhs, &[(x_plus_zmulone_div_z, bridge), (rhs, div_eq)]);
         let proof = d.lam_fv(pos_fv, pos_ty, proof_body);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
+/// Eliminate `dvd_hyp : dvd divisor dividend`, continuing with the witness
+/// `q` and `eq_proof : Eq dividend (mul divisor q)` to build a proof of
+/// `goal` (which must not mention `q`). Per-file local copy of the
+/// `dvd_elim` convention used throughout `nat_prelude` (`lcm.rs`,
+/// `divisibility.rs`, `primes.rs`, `perfect.rs`, `irrational.rs`,
+/// `lcm_gcd_lemmas.rs`).
+fn dvd_elim(
+    d: &mut NatDev<'_>,
+    divisor: ExprId,
+    dividend: ExprId,
+    goal: ExprId,
+    dvd_hyp: ExprId,
+    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let anon = d.anon_name();
+    let predicate = d.dvd_predicate(divisor, dividend);
+    let dvd_ty = d.dvd(divisor, dividend);
+    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let divisor_q = d.mul(divisor, q);
+        let eq_ty = d.eq(dividend, divisor_q);
+        let eq_fv = d.fresh_fvar();
+        let eq_proof = d.kernel().fvar(eq_fv);
+        let body = continuation(d, q, eq_proof);
+        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
+        d.lam_fv(q_fv, nat, with_eq)
+    };
+    let exists_rec_name = d.prelude().logic.exists_rec;
+    let exists_rec = d.kernel().const_(exists_rec_name, vec![one]);
+    d.apply(exists_rec, &[nat, predicate, motive, minor, dvd_hyp])
+}
+
+/// `False.rec` into `goal` from a proof of `False`. Per-file local copy of
+/// the `absurd` convention used elsewhere in `nat_prelude` (`choose.rs`,
+/// `fibonacci.rs`).
+fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, contradiction])
+}
+
+/// `(a+b)+(c+d) = (a+c)+(b+d)`, returned as `Eq (add(add a b)(add c d))
+/// (add(add a c)(add b d))`. Per-file local copy of the `add_add_add_comm`
+/// convention (`binomial.rs`, `rec_agreement.rs`, `finite_set.rs`).
+fn add_add_add_comm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    dd: ExprId,
+) -> (ExprId, ExprId) {
+    let p = *p;
+    let cd = d.add(c, dd);
+    let bd = d.add(b, dd);
+    let ab = d.add(a, b);
+    let start = d.add(ab, cd);
+
+    // start = a + (b + (c+d))
+    let bcd = d.add(b, cd);
+    let s1 = d.add(a, bcd);
+    let h1 = d.lemma(p.add_assoc, &[a, b, cd]);
+
+    // b+(c+d) -> (b+c)+d
+    let bc = d.add(b, c);
+    let bc_d = d.add(bc, dd);
+    let s2 = d.add(a, bc_d);
+    let h_bcd = d.lemma(p.add_assoc, &[b, c, dd]); // (b+c)+d = b+(c+d)
+    let h2_inner = d.symm(bc_d, bcd, h_bcd); // b+(c+d) = (b+c)+d
+    let h2 = d.congr(bcd, bc_d, h2_inner, &|d, t| d.add(a, t));
+
+    // (b+c) -> (c+b)
+    let cb = d.add(c, b);
+    let cb_d = d.add(cb, dd);
+    let s3 = d.add(a, cb_d);
+    let h_comm = d.lemma(p.add_comm, &[b, c]); // b+c = c+b
+    let h3 = d.congr(bc, cb, h_comm, &|d, t| {
+        let t_d = d.add(t, dd);
+        d.add(a, t_d)
+    });
+
+    // a + ((c+b)+d) -> (a+c) + (b+d)
+    let ac = d.add(a, c);
+    let target = d.add(ac, bd);
+    let h4 = d.lemma(p.add_assoc, &[c, b, dd]); // (c+b)+d = c+(b+d)
+    let cbd = d.add(c, bd);
+    let s4 = d.add(a, cbd);
+    let h4c = d.congr(cb_d, cbd, h4, &|d, t| d.add(a, t));
+    let h5 = d.lemma(p.add_assoc, &[a, c, bd]); // (a+c)+(b+d) = a+(c+(b+d))
+    let h5_rev = d.symm(target, s4, h5);
+
+    let (_end, proof) = d.chain(
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4c), (target, h5_rev)],
+    );
+    (target, proof)
+}
+
+/// `Nat.add_div_of_dvd_add_add_one : ∀ {c a b}, c ∣ (a+b+1) → (a+b)/c =
+/// a/c + b/c`. See the module doc for the route.
+///
+/// Must run after `declare_euclidean_division` (`div_mod_unique`),
+/// `declare_divisibility` (`div_mod_exec` via `declare_executable_division_spec`),
+/// `declare_order`/`declare_order_more` (`lt_or_ge`, `sub_add_cancel`,
+/// `le_of_succ_le_succ`, `le_succ_succ`, `add_le_add_left`/`_right`,
+/// `le_trans`), and `declare_additive_theorems`/`declare_multiplicative_theorems`
+/// (`add_assoc`, `add_comm`, `succ_injective`, `left_distrib`, `zero_add`).
+///
+/// # Errors
+///
+/// Returns the kernel's rejection if a generated declaration does not
+/// type-check or a name is already taken.
+pub(super) fn declare_add_div_of_dvd_add_add_one(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.add_div_of_dvd_add_add_one, 3, &|d, v| {
+        let (c_outer, a, b) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let ab = d.add(a, b);
+        let ab1 = d.add(ab, one);
+
+        // motive(cc) : dvd cc ab1 -> (ab/cc) = (a/cc)+(b/cc)
+        let motive = |d: &mut NatDev<'_>, cc: ExprId| -> ExprId {
+            let dvd_ty = d.dvd(cc, ab1);
+            let ab_div_cc = d.div(ab, cc);
+            let a_div_cc = d.div(a, cc);
+            let b_div_cc = d.div(b, cc);
+            let rhs = d.add(a_div_cc, b_div_cc);
+            let concl = d.eq(ab_div_cc, rhs);
+            d.arrow(dvd_ty, concl)
+        };
+
+        // c = 0: dvd 0 ab1 gives ab1 = 0*q = 0, contradicting ab1 = succ(ab).
+        let at_zero = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let dvd_ty = d.dvd(zero, ab1);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+            let ab_div_z = d.div(ab, zero);
+            let a_div_z = d.div(a, zero);
+            let b_div_z = d.div(b, zero);
+            let sum_z = d.add(a_div_z, b_div_z);
+            let goal = d.eq(ab_div_z, sum_z);
+            let body = dvd_elim(d, zero, ab1, goal, hyp, &|d, q, eq_proof| {
+                // eq_proof : Eq ab1 (mul zero q)
+                let zero_mul_q = d.lemma(p.zero_mul, &[q]); // Eq (mul zero q) zero
+                let zero = d.zero();
+                let mul_zero_q = d.mul(zero, q);
+                let (_, ab1_eq_zero) = d.chain(ab1, &[(mul_zero_q, eq_proof), (zero, zero_mul_q)]);
+                let ne = d.lemma(p.succ_ne_zero, &[ab]);
+                let false_val = d.apply(ne, &[ab1_eq_zero]);
+                absurd(d, &p, goal, false_val)
+            });
+            d.lam_fv(hyp_fv, dvd_ty, body)
+        };
+
+        // c = succ cpred: the main route, described in the module doc.
+        let at_succ = |d: &mut NatDev<'_>, cpred: ExprId| -> ExprId {
+            let c = d.succ(cpred);
+            let dvd_ty = d.dvd(c, ab1);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            // Decompose a and b at divisor c.
+            let exec_a = d.lemma(p.div_mod_exec, &[cpred, a]);
+            let a_div_c = d.div(a, c);
+            let ra = d.modulo(a, c);
+            let mul_c_a = d.mul(c, a_div_c);
+            let mul_c_a_ra = d.add(mul_c_a, ra);
+            let eq_a_ty = d.eq(a, mul_c_a_ra);
+            let bound_a_ty = d.lt(ra, c);
+            let eq_a = and_left(d, eq_a_ty, bound_a_ty, exec_a);
+            let bound_a = and_right(d, eq_a_ty, bound_a_ty, exec_a);
+
+            let exec_b = d.lemma(p.div_mod_exec, &[cpred, b]);
+            let b_div_c = d.div(b, c);
+            let rb = d.modulo(b, c);
+            let mul_c_b = d.mul(c, b_div_c);
+            let mul_c_b_rb = d.add(mul_c_b, rb);
+            let eq_b_ty = d.eq(b, mul_c_b_rb);
+            let bound_b_ty = d.lt(rb, c);
+            let eq_b = and_left(d, eq_b_ty, bound_b_ty, exec_b);
+            let bound_b = and_right(d, eq_b_ty, bound_b_ty, exec_b);
+
+            let qsum = d.add(a_div_c, b_div_c);
+            let x_term = d.mul(c, qsum); // c*(a/c+b/c)
+            let ra_rb = d.add(ra, rb);
+            let final_target = d.add(x_term, ra_rb); // c*(a/c+b/c) + (ra+rb)
+
+            // ab = (c*a_div_c+ra) + (c*b_div_c+rb)
+            let mid1 = d.add(mul_c_a_ra, b);
+            let step1 = d.congr(a, mul_c_a_ra, eq_a, &|d, v| d.add(v, b));
+            let mid2 = d.add(mul_c_a_ra, mul_c_b_rb);
+            let step2 = d.congr(b, mul_c_b_rb, eq_b, &|d, v| d.add(mul_c_a_ra, v));
+            let (comm_target, comm_proof) = add_add_add_comm(d, &p, mul_c_a, ra, mul_c_b, rb);
+
+            let distrib = d.lemma(p.left_distrib, &[c, a_div_c, b_div_c]); // x_term = mul_c_a+mul_c_b
+            let sum_mul = d.add(mul_c_a, mul_c_b);
+            let symm_distrib = d.symm(x_term, sum_mul, distrib);
+            let distrib_step = d.congr(sum_mul, x_term, symm_distrib, &|d, v| d.add(v, ra_rb));
+
+            let (_, ab_eq2) = d.chain(
+                ab,
+                &[
+                    (mid1, step1),
+                    (mid2, step2),
+                    (comm_target, comm_proof),
+                    (final_target, distrib_step),
+                ],
+            );
+
+            // ab1 = ab+1 = c*(a_div_c+b_div_c) + (ra+rb+1)
+            let rr1 = d.add(ra_rb, one);
+            let mid3 = d.add(final_target, one);
+            let step_ab1 = d.congr(ab, final_target, ab_eq2, &|d, v| d.add(v, one));
+            let x_rr1 = d.add(x_term, rr1);
+            let assoc_step = d.lemma(p.add_assoc, &[x_term, ra_rb, one]);
+            let (_, ab1_eq2) = d.chain(ab1, &[(mid3, step_ab1), (x_rr1, assoc_step)]);
+
+            let ab_div_c = d.div(ab, c);
+            let goal = d.eq(ab_div_c, qsum);
+
+            let body = dvd_elim(d, c, ab1, goal, hyp, &|d, q, eq_q| {
+                let zero = d.zero();
+                let zero_lt_c = d.lemma(p.zero_lt_succ, &[cpred]); // Lt zero c
+                let mul_c_q = d.mul(c, q);
+                let mul_c_q_zero = d.add(mul_c_q, zero);
+                let padded_ty = d.eq(ab1, mul_c_q_zero);
+                let zero_lt_c_ty = d.lt(zero, c);
+                let divmod_from_dvd = d.const_app(
+                    p.logic.and_intro,
+                    &[padded_ty, zero_lt_c_ty, eq_q, zero_lt_c],
+                );
+
+                let lt_ty = d.lt(rr1, c);
+                let ge_ty = d.le(c, rr1);
+                let dichotomy = d.lemma(p.lt_or_ge, &[rr1, c]); // Or (Lt rr1 c) (Le c rr1)
+
+                // Case Lt rr1 c: (qsum, rr1) is already a valid divMod for
+                // ab1. Comparing it against the dvd-witness relation forces
+                // rr1 = 0, impossible since rr1 = succ(ra+rb).
+                let minor_lt = {
+                    let lt_fv = d.fresh_fvar();
+                    let rr1_lt_c = d.kernel().fvar(lt_fv);
+                    let ab1_eq2_ty = d.eq(ab1, x_rr1);
+                    let manufactured1 =
+                        d.const_app(p.logic.and_intro, &[ab1_eq2_ty, lt_ty, ab1_eq2, rr1_lt_c]);
+                    let both = d.lemma(
+                        p.div_mod_unique,
+                        &[c, ab1, qsum, rr1, q, zero, manufactured1, divmod_from_dvd],
+                    );
+                    let q1_ty = d.eq(qsum, q);
+                    let r1_ty = d.eq(rr1, zero);
+                    let rr1_eq_zero = and_right(d, q1_ty, r1_ty, both);
+                    let ne = d.lemma(p.succ_ne_zero, &[ra_rb]);
+                    let false_val = d.apply(ne, &[rr1_eq_zero]);
+                    let body = absurd(d, &p, goal, false_val);
+                    d.lam_fv(lt_fv, lt_ty, body)
+                };
+
+                // Case Le c rr1: subtract c once to get remainder r' < c,
+                // compare the shifted decomposition against the same
+                // dvd-witness relation to force r' = 0, i.e. rr1 = c exactly
+                // -- which pins ra+rb = c-1 < c, giving the goal.
+                let minor_ge = {
+                    let ge_fv = d.fresh_fvar();
+                    let c_le_rr1 = d.kernel().fvar(ge_fv);
+                    let r_prime = d.sub(rr1, c);
+                    let sac_eq = d.lemma(p.sub_add_cancel, &[c, rr1, c_le_rr1]); // Eq (add r' c) rr1
+
+                    let ra_le_cpred = d.lemma(p.le_of_succ_le_succ, &[ra, cpred, bound_a]);
+                    let rb_le_cpred = d.lemma(p.le_of_succ_le_succ, &[rb, cpred, bound_b]);
+                    let step_a = d.lemma(p.add_le_add_right, &[rb, ra, cpred, ra_le_cpred]);
+                    let step_b = d.lemma(p.add_le_add_left, &[cpred, rb, cpred, rb_le_cpred]);
+                    let cpred_cpred = d.add(cpred, cpred);
+                    let cpred_rb = d.add(cpred, rb);
+                    let combined =
+                        d.lemma(p.le_trans, &[ra_rb, cpred_rb, cpred_cpred, step_a, step_b]);
+
+                    // sac_eq, up to defeq (add r' c ≡ succ(add r' cpred);
+                    // rr1 ≡ succ ra_rb), types as Eq(succ(add r' cpred))(succ ra_rb).
+                    let r_prime_cpred = d.add(r_prime, cpred);
+                    let r_cpred_eq_rarb =
+                        d.lemma(p.succ_injective, &[r_prime_cpred, ra_rb, sac_eq]);
+                    let symm_r_cpred = d.symm(r_prime_cpred, ra_rb, r_cpred_eq_rarb);
+                    let combined_motive = d.eq_motive(ra_rb, &|d, x| d.le(x, cpred_cpred));
+                    let combined2 = d.transport(
+                        ra_rb,
+                        combined_motive,
+                        combined,
+                        r_prime_cpred,
+                        symm_r_cpred,
+                    );
+                    let final_le = d.lemma(
+                        p.le_of_add_le_add_right,
+                        &[cpred, r_prime, cpred, combined2],
+                    );
+                    let r_prime_lt_c = d.lemma(p.le_succ_succ, &[r_prime, cpred, final_le]); // Lt r' c
+
+                    // eqfinal : Eq ab1 (add (add x_term c) r')
+                    let r_prime_c = d.add(r_prime, c);
+                    let rr1_eq_r_prime_c = d.symm(r_prime_c, rr1, sac_eq);
+                    let step_a2 =
+                        d.congr(rr1, r_prime_c, rr1_eq_r_prime_c, &|d, v| d.add(x_term, v));
+                    let comm_rc = d.lemma(p.add_comm, &[r_prime, c]);
+                    let c_r_prime = d.add(c, r_prime);
+                    let step_b2 = d.congr(r_prime_c, c_r_prime, comm_rc, &|d, v| d.add(x_term, v));
+                    let assoc2 = d.lemma(p.add_assoc, &[x_term, c, r_prime]);
+                    let x_term_c = d.add(x_term, c);
+                    let final_shape = d.add(x_term_c, r_prime);
+                    let x_c_r_prime = d.add(x_term, c_r_prime);
+                    let step_c2 = d.symm(final_shape, x_c_r_prime, assoc2);
+                    let x_term_r_prime_c = d.add(x_term, r_prime_c);
+                    let (_, eqfinal) = d.chain(
+                        ab1,
+                        &[
+                            (x_rr1, ab1_eq2),
+                            (x_term_r_prime_c, step_a2),
+                            (x_c_r_prime, step_b2),
+                            (final_shape, step_c2),
+                        ],
+                    );
+
+                    let succ_qsum = d.succ(qsum);
+                    let mul_c_succ_qsum = d.mul(c, succ_qsum);
+                    let eq_ty2_rhs = d.add(mul_c_succ_qsum, r_prime);
+                    let eq_ty2 = d.eq(ab1, eq_ty2_rhs);
+                    let r_lt_c_ty = d.lt(r_prime, c);
+                    let manufactured2 = d.const_app(
+                        p.logic.and_intro,
+                        &[eq_ty2, r_lt_c_ty, eqfinal, r_prime_lt_c],
+                    );
+                    let both2 = d.lemma(
+                        p.div_mod_unique,
+                        &[
+                            c,
+                            ab1,
+                            succ_qsum,
+                            r_prime,
+                            q,
+                            zero,
+                            manufactured2,
+                            divmod_from_dvd,
+                        ],
+                    );
+                    let bq2_ty = d.eq(succ_qsum, q);
+                    let br2_ty = d.eq(r_prime, zero);
+                    let r_prime_eq_zero = and_right(d, bq2_ty, br2_ty, both2);
+
+                    // c = rr1, via r' + c = rr1 and r' = 0.
+                    let congr_rprime = d.congr(r_prime, zero, r_prime_eq_zero, &|d, v| d.add(v, c));
+                    let zero_c = d.add(zero, c);
+                    // congr_rprime : Eq (add r_prime c) (add zero c) = Eq r_prime_c zero_c
+                    let symm_congr = d.symm(r_prime_c, zero_c, congr_rprime);
+                    let (_, zero_c_eq_rr1) =
+                        d.chain(zero_c, &[(r_prime_c, symm_congr), (rr1, sac_eq)]);
+                    let zero_add_c = d.lemma(p.zero_add, &[c]); // Eq (add zero c) c
+                    let symm_zero_add_c = d.symm(zero_c, c, zero_add_c);
+                    let c_eq_rr1 = d.trans(c, zero_c, rr1, symm_zero_add_c, zero_c_eq_rr1);
+
+                    // c = succ cpred, rr1 ≡ succ ra_rb (defeq): cancel.
+                    let cpred_eq_rarb = d.lemma(p.succ_injective, &[cpred, ra_rb, c_eq_rr1]);
+                    let lt_succ_self_cpred = d.lemma(p.lt_succ_self, &[cpred]); // Lt cpred c
+                    let ra_rb_motive = d.eq_motive(cpred, &|d, x| d.lt(x, c));
+                    let ra_rb_lt_c = d.transport(
+                        cpred,
+                        ra_rb_motive,
+                        lt_succ_self_cpred,
+                        ra_rb,
+                        cpred_eq_rarb,
+                    );
+
+                    let ab_eq2_ty = d.eq(ab, final_target);
+                    let ra_rb_lt_c_ty = d.lt(ra_rb, c);
+                    let manufactured3 = d.const_app(
+                        p.logic.and_intro,
+                        &[ab_eq2_ty, ra_rb_lt_c_ty, ab_eq2, ra_rb_lt_c],
+                    );
+                    let exec_ab = d.lemma(p.div_mod_exec, &[cpred, ab]);
+                    let ab_mod_c = d.modulo(ab, c);
+                    let both3 = d.lemma(
+                        p.div_mod_unique,
+                        &[
+                            c,
+                            ab,
+                            qsum,
+                            ra_rb,
+                            ab_div_c,
+                            ab_mod_c,
+                            manufactured3,
+                            exec_ab,
+                        ],
+                    );
+                    let q3_ty = d.eq(qsum, ab_div_c);
+                    let r3_ty = d.eq(ra_rb, ab_mod_c);
+                    let qsum_eq_divabc = and_left(d, q3_ty, r3_ty, both3);
+                    let body = d.symm(qsum, ab_div_c, qsum_eq_divabc);
+                    d.lam_fv(ge_fv, ge_ty, body)
+                };
+
+                let anon = d.anon_name();
+                let or_ty = d.const_app(p.logic.or, &[lt_ty, ge_ty]);
+                let goal_motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+                let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                d.apply(
+                    or_rec,
+                    &[lt_ty, ge_ty, goal_motive, minor_lt, minor_ge, dichotomy],
+                )
+            });
+            d.lam_fv(hyp_fv, dvd_ty, body)
+        };
+
+        let stmt = motive(d, c_outer);
+        let proof = cases_zero_succ(d, c_outer, &motive, &at_zero, &at_succ);
         (stmt, proof)
     })?;
 

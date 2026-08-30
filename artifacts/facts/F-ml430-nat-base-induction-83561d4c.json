@@ -8,10 +8,46 @@
     "statement": "∀ {P : ℕ → Prop} {n : ℕ} (b : ℕ), 1 < b → (∀ m < b, P m) → (∀ (m k : ℕ), k < b → 0 < m → P m → P (b * m + k)) → P n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-div-mod-exec",
+    "F:nat-le-add-right",
+    "F:nat-le-succ-succ",
+    "F:nat-le-trans",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-le-of-lt",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-ge",
+    "F:nat-lt-succ-self",
+    "F:nat-mul-comm",
+    "F:nat-mul-le-mul-left",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-zero-add",
+    "F:nat-zero-lt-succ"
+  ],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- base_induction 2>/dev/null | grep -Ec '^Nat\\.base_induction[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.base_induction",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.base_induction` through the trusted `Kernel::add_declaration` gate (declared by hand in the new `nat_prelude/base_induction.rs`'s `declare_base_induction` -- `P : Nat -> Prop` is a genuine motive parameter, so `NatOps::theorem`'s `Nat`-only arity mechanism cannot express this statement, exactly as `Nat.dvd`/`Nat.modEq` in `divisibility.rs`/`modular.rs` are also hand-assembled `pi_fv`/`lam_fv` chains rather than `d.theorem` calls). CORRECTION TO PROVENANCE: the pinned source is Lean CORE (`~/.elan/toolchains/leanprover--lean4---v4.30.0/src/lean/Init/Data/Nat/Div/Lemmas.lean:256-267`), not Mathlib proper -- the nursery manifest's own `module`/`source_group` fields already name `Init.Data.Nat.Div.Lemmas`, and reading the actual source at that path confirms `theorem base_induction {P : Nat -> Prop} {n : Nat} (b : Nat) (hb : 1 < b) ... : P n := by induction n using Nat.strongRecOn ...`. This matters for the mirror-flip criterion: `P : Nat -> Prop` is fixed at `Prop`, never an arbitrary `Sort*`, and the declaration is a `theorem` (not a `def`), so this is NOT the fuel-cannot-be-a-dependent-recursor case that permanently blocks a mirror whose Mathlib/Lean-core definition is `WellFounded.fix` with a DEPENDENT motive (`Nat.binaryRec` et al.) -- proving `forall n, P n` for a fixed proposition-valued `P` needs no computational recursor at all, only ordinary well-founded strong induction, which this prelude already has as a primitive (`NatPrelude::lt_well_founded` + `WellFounded.fix`, used the same way by `declare_gcd_semantics`/`declare_gcd_bezout`/`declare_exists_prime_factorization`/`declare_irrational`). Route: `WellFounded.fix Nat Nat.lt P lt_well_founded step n`, where `step` (given `v` and `ih : forall y, y<v -> P y`) case-splits `lt_or_ge v b` -- `Lt v b` closes by `single v` directly; `Le b v` decomposes `v = b*qv+rv` (`div_mod_exec` via a local `div_mod_reconstructed`, this file's own per-file copy of `group.rs`'s helper), case-splits `qv` (`qv=0` contradicts `Le b v`, since it would force `v=rv<b`; `qv=succ qvpred` bounds `qv<v` via `mul_le_mul_left(qv,2,b,hb)` + `le_add_right`/`le_succ_succ` (`mul qv 2` is defeq `add qv qv`) + `mul_comm` + `le_add_right` again, three `lt_of_lt_of_le`-style chains), then closes by `digit qv rv (rv<b) (0<qv) (ih qv (qv<v))` transported along `v=b*qv+rv`. `nat_theorem_inventory`'s rendered type for `Nat.base_induction` is `(x0:(x0:AxNat)->Prop)->(x1:AxNat)->(x2:AxNat)->(x3:AxNat.lt(AxNat.succ AxNat.zero)x2)->(x4:(x4:AxNat)->(x5:AxNat.lt x4 x2)->x0 x4)->(x5:(x5:AxNat)->(x6:AxNat)->(x7:AxNat.lt x6 x2)->(x8:AxNat.lt AxNat.zero x5)->(x9:x0 x5)->x0(AxNat.add(AxNat.mul x2 x5)x6))->x0 x1`, matching this fact's `formal.statement` verbatim (`x0`=P, `x1`=n, `x2`=b, `x3`=hb, `x4`=single, `x5`=digit). `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against `base_induction_bogus`, count 0), and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ {P : ℕ → Prop} {n : ℕ} (b : ℕ), 1 < b → (∀ m < b, P m) → (∀ (m k : ℕ), k < b → 0 < m → P m → P (b * m + k)) → P n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.base_induction",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it), and the new `base_induction_applies_at_a_concrete_recursive_instance` test re-checks it at a concrete, genuinely recursive instance (`P := fun m => Le zero m`, `n=5`, `b=2`, forcing the `Le b v` branch through several `qv=v/2` levels before landing in the `Lt v b` branch) via `Kernel::infer` and `def_eq` against the independently-stated expected type.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +62,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-29 in this ledger: a fresh local construction, not a transcription of the source proof (`the proof term and tactic trace were not consulted`, per provenance -- though its EXISTENCE and shape were checked at the pinned toolchain path once the route needed confirming, see the kernel-term evidence row). CORRECTION: the pinned declaration is Lean CORE's `Init.Data.Nat.Div.Lemmas` (`~/.elan/toolchains/leanprover--lean4---v4.30.0/src/lean/Init/Data/Nat/Div/Lemmas.lean:256`), not Mathlib proper, as the nursery manifest's own `module`/`source_group` fields already record; `title`/`provenance.source` retain the ledger's generic `ml430`-family wording. The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison and the fuel-vs-Prop-motive distinction that makes this route available at all (unlike `Nat.binaryRec`-shaped mirrors, which stay open on this route permanently).",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -8,10 +8,51 @@
     "statement": "∀ {c a b : ℕ}, c ∣ a + b + 1 → (a + b) / c = a / c + b / c",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-add-le-add-left",
+    "F:nat-add-le-add-right",
+    "F:nat-div-mod-exec",
+    "F:nat-div-mod-unique",
+    "F:nat-le-of-add-le-add-right",
+    "F:nat-le-of-succ-le-succ",
+    "F:nat-le-succ-succ",
+    "F:nat-le-trans",
+    "F:nat-left-distrib",
+    "F:nat-lt-or-ge",
+    "F:nat-lt-succ-self",
+    "F:nat-sub-add-cancel",
+    "F:nat-succ-injective",
+    "F:nat-succ-ne-zero",
+    "F:nat-zero-add",
+    "F:nat-zero-lt-succ",
+    "F:nat-zero-mul"
+  ],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_div_of_dvd_add_add_one 2>/dev/null | grep -Ec '^Nat\\.add_div_of_dvd_add_add_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.add_div_of_dvd_add_add_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.add_div_of_dvd_add_add_one` through the trusted `Kernel::add_declaration` gate (declared in `nat_prelude/div_mod_lemmas.rs`'s `declare_add_div_of_dvd_add_add_one`, the ninth `ml430` add/div/mod mirror -- the eight in `declare_add_div_mod_shift_family` left this one open, per `docs/plan/status/283-nat-div-mod-family.md`). Route (see the module doc for the full derivation): decompose `a=c*qa+ra`, `b=c*qb+rb` via `div_mod_exec`; case-split `ra+rb+1` against `c` (`lt_or_ge`) -- below `c` this is already a valid `divMod` decomposition of `a+b+1` and comparing it against the `dvd`-witness relation (remainder `0`) via `div_mod_unique` forces `ra+rb+1=0`, refuted by `succ_ne_zero`; at or above `c`, subtracting `c` once (`sub_add_cancel`) gives a remainder `r'` bounded `<c` (via `ra<c`, `rb<c`, `le_of_succ_le_succ`/`add_le_add_left`/`add_le_add_right`/`le_trans`), and comparing THAT decomposition against the same `dvd`-witness relation forces `r'=0`, i.e. `ra+rb+1=c` exactly, pinning `ra+rb=c-1<c` -- which makes `(qa+qb, ra+rb)` a valid `divMod` decomposition of `a+b` itself, closed against `div_mod_exec`'s own decomposition of `a+b` via one more `div_mod_unique`. `nat_theorem_inventory`'s rendered type for `Nat.add_div_of_dvd_add_add_one` is `(x0:AxNat)->(x1:AxNat)->(x2:AxNat)->(x3:AxNat.dvd x0 (AxNat.add (AxNat.add x1 x2) (AxNat.succ AxNat.zero)))->Eq (AxNat.div (AxNat.add x1 x2) x0) (AxNat.add (AxNat.div x1 x0) (AxNat.div x2 x0))`, matching this fact's `formal.statement` verbatim (`x0`=c, `x1`=a, `x2`=b). `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against `add_div_of_dvd_add_add_one_bogus`, count 0), and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ {c a b : ℕ}, c ∣ a + b + 1 → (a + b) / c = a / c + b / c"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.add_div_of_dvd_add_add_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it), and the new `add_div_of_dvd_add_add_one_applies_at_concrete_discriminating_instances` test re-checks it plus two concrete instantiations chosen to discriminate: `(c,a,b)=(5,7,7)` (equal `a`,`b`, both quotients and both remainders nonzero, remainders summing exactly to `c-1`) and `(c,a,b)=(5,3,11)` (`a<c<=b`, asymmetric, to catch an `a`/`b` swap), both via `def_eq` against the independently-computed expected values.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +67,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-29 in this ledger: a fresh local construction, not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. This is the ninth and last of the `ml430` add/div/mod shift-family mirrors dispatched together (see `docs/plan/status/283-nat-div-mod-family.md`); the other eight route through `div_mod_shift` and this one does not (see the module doc in `nat_prelude/div_mod_lemmas.rs`), so `depends_on` is a distinct, larger set of prelude facts rather than the shift family's own theorems.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

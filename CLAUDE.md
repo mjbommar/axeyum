@@ -1878,12 +1878,26 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   is `motive 0`. So no amount of care makes a fuel encoding into Mathlib's
   construction.
 
-  The consequence is worth stating once, because it saves re-litigating it per
-  fact: **any `ml430` mirror whose Mathlib definition is `WellFounded.fix` with
-  a dependent motive stays open on this route, however much infrastructure gets
-  built.** `F:ml430-nat-fastfib-eq-cde11774` is the measured instance — the
-  keystone was built, and the mirror still cannot be honestly flipped, so the
-  content landed as local facts. This is the `multichoose`/`minFac` side of the
+  **CORRECTION, SAME DAY: I GENERALISED THIS TOO FAR AND IT IS FALSE.** I wrote
+  that "any `ml430` mirror whose Mathlib definition is `WellFounded.fix` with a
+  dependent motive stays open on this route, however much infrastructure gets
+  built." **This kernel HAS `WellFounded.fix.{u,v}`** — universe-polymorphic,
+  with a checked `WellFounded.fix_eq` unfolding theorem (`prelude.rs:215`) —
+  and it is already used by `gcd`, `bezout_witnesses`, `modeq` and `wilson`.
+  A lane closed `F:ml430-nat-base-induction` with it on 2026-08-29, against a
+  genuine `P : Nat → Prop` motive parameter.
+
+  What is true is only the narrow claim: **a FUEL encoding's non-dependence is
+  forced.** The `binaryRec` lane chose fuel; it was not obliged to. So
+  `F:ml430-nat-fastfib-eq-cde11774` is **not permanently blocked** — it is
+  blocked on a `binaryRec` built the well-founded way rather than the fuel way,
+  which is ordinary work, and the content landed as local facts in the
+  meantime.
+
+  This is the standing "do not generalise a lane's local finding" failure in
+  its purest form: the lane reported accurately on *its own construction*, and
+  I promoted that into a claim about the whole route. Before writing "cannot be
+  done here", check whether the kernel already has the primitive. This is the `multichoose`/`minFac` side of the
   mirror-flip criterion, arriving from the recursion principle rather than from
   the algorithm.
 
