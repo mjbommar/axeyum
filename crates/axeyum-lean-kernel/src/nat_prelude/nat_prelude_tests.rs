@@ -1232,6 +1232,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dist_zero_right,
         p.dist_zero_left,
         p.dist_succ_succ,
+        // `draw9-first-theorems` lane (ADR-0830, `natural-distance`).
+        p.dist_eq_zero,
+        p.add_sub_add_left,
+        p.dist_add_add_left,
+        p.dist_add_add_right,
+        p.dist_mul_left,
+        p.dist_mul_right,
         // `pow-add-prime` lane (toward
         // `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`), `pow_add_prime.rs`.
         p.pow_mul,
@@ -9706,6 +9713,193 @@ fn dist_theorems_apply_at_free_variables_and_concrete_instances() {
         p.dist_zero_right,
         p.dist_zero_left,
         p.dist_succ_succ,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// The draw-9 (ADR-0830, `natural-distance`) additions to `Nat.dist`:
+/// `dist_eq_zero`, `add_sub_add_left`, `dist_add_add_left`,
+/// `dist_add_add_right`, `dist_mul_left`, `dist_mul_right`. Each applied at
+/// a concrete, discriminating instance (never a pair where the two operand
+/// orders would coincide), plus `dist_eq_zero` at a genuinely free pair.
+#[test]
+fn dist_draw9_additions_apply_at_concrete_discriminating_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // dist_eq_zero: free `n`, concrete `m := n` via `Eq.refl`, and a
+    // concrete non-trivial instance `n = m = 5`.
+    {
+        let anon = f.anon_name();
+        let nat = f.nat_ty();
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+        let mut ctx = LocalContext::new();
+        ctx.push(LocalDecl {
+            fvar: n_fv,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+        let h_refl = f.refl(n);
+        let applied = f.const_app(p.dist_eq_zero, &[n, n]);
+        let applied = f.apply(applied, &[h_refl]);
+        let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_eq_zero must type-check at a free n with Eq.refl: {shown}")
+        });
+        let dist_nn = f.const_app(p.dist, &[n, n]);
+        let zero = f.zero();
+        let want = f.eq(dist_nn, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_eq_zero must state Eq (dist n n) 0 at n := n via Eq.refl"
+        );
+
+        let five = f.num(5);
+        let h_refl5 = f.refl(five);
+        let applied5 = f.const_app(p.dist_eq_zero, &[five, five]);
+        let applied5 = f.apply(applied5, &[h_refl5]);
+        let inferred5 = f.k.infer(applied5).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_eq_zero must apply at (5, 5): {shown}")
+        });
+        let dist_55 = f.const_app(p.dist, &[five, five]);
+        let want5 = f.eq(dist_55, zero);
+        assert!(
+            f.k.def_eq(inferred5, want5),
+            "dist_eq_zero must state Eq (dist 5 5) 0"
+        );
+    }
+
+    // add_sub_add_left at (k, n, m) = (3, 8, 5): sub(3+8, 3+5) = sub(11, 8) = 3 = sub(8, 5).
+    {
+        let three = f.num(3);
+        let eight = f.num(8);
+        let five = f.num(5);
+        let applied = f.lemma(p.add_sub_add_left, &[three, eight, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("add_sub_add_left must apply at (3, 8, 5): {shown}")
+        });
+        let add_38 = f.const_app(p.add, &[three, eight]);
+        let add_35 = f.const_app(p.add, &[three, five]);
+        let sub_lhs = f.const_app(p.sub, &[add_38, add_35]);
+        let sub_rhs = f.const_app(p.sub, &[eight, five]);
+        let want = f.eq(sub_lhs, sub_rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "add_sub_add_left 3 8 5 must state Eq (sub (add 3 8)(add 3 5)) (sub 8 5)"
+        );
+        assert!(f.k.def_eq(sub_rhs, three), "sub 8 5 must compute to 3");
+    }
+
+    // dist_add_add_left at (k, n, m) = (4, 9, 2): dist(4+9, 4+2) = dist(13, 6) = 7 = dist(9, 2).
+    {
+        let four = f.num(4);
+        let nine = f.num(9);
+        let two = f.num(2);
+        let seven = f.num(7);
+        let applied = f.lemma(p.dist_add_add_left, &[four, nine, two]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_add_add_left must apply at (4, 9, 2): {shown}")
+        });
+        let add_49 = f.const_app(p.add, &[four, nine]);
+        let add_42 = f.const_app(p.add, &[four, two]);
+        let dist_lhs = f.const_app(p.dist, &[add_49, add_42]);
+        let dist_rhs = f.const_app(p.dist, &[nine, two]);
+        let want = f.eq(dist_lhs, dist_rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_add_add_left 4 9 2 must state Eq (dist (add 4 9)(add 4 2)) (dist 9 2)"
+        );
+        assert!(f.k.def_eq(dist_rhs, seven), "dist 9 2 must compute to 7");
+    }
+
+    // dist_add_add_right at (n, k, m) = (9, 4, 2): dist(9+4, 2+4) = dist(13, 6) = 7 = dist(9, 2).
+    {
+        let nine = f.num(9);
+        let four = f.num(4);
+        let two = f.num(2);
+        let seven = f.num(7);
+        let applied = f.lemma(p.dist_add_add_right, &[nine, four, two]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_add_add_right must apply at (9, 4, 2): {shown}")
+        });
+        let add_94 = f.const_app(p.add, &[nine, four]);
+        let add_24 = f.const_app(p.add, &[two, four]);
+        let dist_lhs = f.const_app(p.dist, &[add_94, add_24]);
+        let dist_rhs = f.const_app(p.dist, &[nine, two]);
+        let want = f.eq(dist_lhs, dist_rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_add_add_right 9 4 2 must state Eq (dist (add 9 4)(add 2 4)) (dist 9 2)"
+        );
+        assert!(f.k.def_eq(dist_rhs, seven), "dist 9 2 must compute to 7");
+    }
+
+    // dist_mul_left at (k, n, m) = (3, 7, 2): dist(21, 6) = 15 = 3 * dist(7, 2) = 3 * 5.
+    {
+        let three = f.num(3);
+        let seven = f.num(7);
+        let two = f.num(2);
+        let fifteen = f.num(15);
+        let applied = f.lemma(p.dist_mul_left, &[three, seven, two]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_mul_left must apply at (3, 7, 2): {shown}")
+        });
+        let mul_37 = f.const_app(p.mul, &[three, seven]);
+        let mul_32 = f.const_app(p.mul, &[three, two]);
+        let dist_lhs = f.const_app(p.dist, &[mul_37, mul_32]);
+        let dist_72 = f.const_app(p.dist, &[seven, two]);
+        let mul_3_dist = f.const_app(p.mul, &[three, dist_72]);
+        let want = f.eq(dist_lhs, mul_3_dist);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_mul_left 3 7 2 must state Eq (dist (mul 3 7)(mul 3 2)) (mul 3 (dist 7 2))"
+        );
+        assert!(f.k.def_eq(mul_3_dist, fifteen), "3 * dist 7 2 must compute to 15");
+    }
+
+    // dist_mul_right at (n, k, m) = (7, 3, 2): dist(21, 6) = 15 = dist(7, 2) * 3 = 5 * 3.
+    {
+        let seven = f.num(7);
+        let three = f.num(3);
+        let two = f.num(2);
+        let fifteen = f.num(15);
+        let applied = f.lemma(p.dist_mul_right, &[seven, three, two]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_mul_right must apply at (7, 3, 2): {shown}")
+        });
+        let mul_73 = f.const_app(p.mul, &[seven, three]);
+        let mul_23 = f.const_app(p.mul, &[two, three]);
+        let dist_lhs = f.const_app(p.dist, &[mul_73, mul_23]);
+        let dist_72 = f.const_app(p.dist, &[seven, two]);
+        let dist_mul_3 = f.const_app(p.mul, &[dist_72, three]);
+        let want = f.eq(dist_lhs, dist_mul_3);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_mul_right 7 3 2 must state Eq (dist (mul 7 3)(mul 2 3)) (mul (dist 7 2) 3)"
+        );
+        assert!(f.k.def_eq(dist_mul_3, fifteen), "dist 7 2 * 3 must compute to 15");
+    }
+
+    for name in [
+        p.dist_eq_zero,
+        p.add_sub_add_left,
+        p.dist_add_add_left,
+        p.dist_add_add_right,
+        p.dist_mul_left,
+        p.dist_mul_right,
     ] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),

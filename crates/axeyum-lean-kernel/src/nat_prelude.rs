@@ -277,7 +277,7 @@ use defs::{
 };
 use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
-use dist::declare_dist_all;
+use dist::{declare_dist_all, declare_dist_more_all};
 use div_mod_lemmas::{
     declare_add_div_mod_shift_family, declare_add_div_of_dvd_add_add_one, declare_div_mod_block,
 };
@@ -4434,6 +4434,34 @@ pub struct NatPrelude {
     pub dist_zero_left: NameId,
     /// `dist_succ_succ : ∀ n m, Eq (dist (succ n) (succ m)) (dist n m)`.
     pub dist_succ_succ: NameId,
+    /// `dist_eq_zero : ∀ n m, Eq n m → Eq (dist n m) zero` — `Eq.rec`
+    /// transport of [`Self::dist_self`] along the hypothesis. Draw 9
+    /// (`natural-distance`, ADR-0830).
+    pub dist_eq_zero: NameId,
+    /// `add_sub_add_left : ∀ k n m, Eq (sub (add k n) (add k m)) (sub n m)`
+    /// — by induction on `k`, base via `zero_add` on both sides, step via
+    /// `succ_add` congruence then `succ_sub_succ`. Pure arithmetic helper
+    /// for [`Self::dist_add_add_left`]; not itself an `ml430` mirror.
+    pub add_sub_add_left: NameId,
+    /// `dist_add_add_left : ∀ k n m, Eq (dist (add k n) (add k m)) (dist n m)`
+    /// — via [`Self::add_sub_add_left`] on both truncated subtractions
+    /// `dist` sums. Draw 9 (`natural-distance`, ADR-0830).
+    pub dist_add_add_left: NameId,
+    /// `dist_add_add_right : ∀ n k m, Eq (dist (add n k) (add m k)) (dist n m)`
+    /// — via [`Self::add_comm`] rewriting both operands to
+    /// [`Self::dist_add_add_left`]'s shape (no new arithmetic beyond that).
+    /// Draw 9 (`natural-distance`, ADR-0830).
+    pub dist_add_add_right: NameId,
+    /// `dist_mul_left : ∀ k n m, Eq (dist (mul k n) (mul k m)) (mul k (dist n m))`
+    /// — via [`Self::mul_sub_left_distrib_total`] on both truncated
+    /// subtractions and [`Self::left_distrib`] to recombine. Draw 9
+    /// (`natural-distance`, ADR-0830).
+    pub dist_mul_left: NameId,
+    /// `dist_mul_right : ∀ n k m, Eq (dist (mul n k) (mul m k)) (mul (dist n m) k)`
+    /// — via [`Self::mul_comm`] rewriting both operands to
+    /// [`Self::dist_mul_left`]'s shape, then `mul_comm` again on the
+    /// conclusion. Draw 9 (`natural-distance`, ADR-0830).
+    pub dist_mul_right: NameId,
     /// `Nat.nthAux (dec : Nat → Bool) (fuel k n : Nat) : Nat` — fuel-bounded
     /// search for the `n`-th (0-indexed) candidate `≥ k` satisfying `dec`,
     /// `0` if fewer than `n+1` are found within `fuel` steps. See `nth.rs`'s
@@ -5381,6 +5409,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dist_zero_right: kernel.name_str(nat, "dist_zero_right"),
             dist_zero_left: kernel.name_str(nat, "dist_zero_left"),
             dist_succ_succ: kernel.name_str(nat, "dist_succ_succ"),
+            dist_eq_zero: kernel.name_str(nat, "dist_eq_zero"),
+            add_sub_add_left: kernel.name_str(nat, "add_sub_add_left"),
+            dist_add_add_left: kernel.name_str(nat, "dist_add_add_left"),
+            dist_add_add_right: kernel.name_str(nat, "dist_add_add_right"),
+            dist_mul_left: kernel.name_str(nat, "dist_mul_left"),
+            dist_mul_right: kernel.name_str(nat, "dist_mul_right"),
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
             fermat_number: kernel.name_str(nat, "fermatNumber"),
@@ -6026,6 +6060,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // theorems`, all far above). Nothing needs it, so it goes last —
         // `docs/plan/status/348-nat-dist-nth.md`.
         declare_dist_all(&mut d, &p)?;
+        // `Nat.dist_eq_zero`/`Nat.add_sub_add_left`/`Nat.dist_add_add_left`/
+        // `Nat.dist_add_add_right`/`Nat.dist_mul_left`/`Nat.dist_mul_right`:
+        // needs `Nat.dist`/`Nat.dist_self` (just above),
+        // `Nat.succ_add`/`Nat.succ_sub_succ`/`Nat.zero_add`/`Nat.add_comm`
+        // (`declare_additive_theorems`/`declare_subtraction_theorems`, far
+        // above), and `Nat.mul_sub_left_distrib_total`/`Nat.left_distrib`/
+        // `Nat.mul_comm` (`declare_order`/`declare_multiplicative_
+        // theorems`, far above). Draw 9 (`natural-distance`, ADR-0830).
+        declare_dist_more_all(&mut d, &p)?;
         // `Nat.nthAux`/`Nat.nth`: needs only `Nat.beq`/`Nat.pred`/`Nat.succ`
         // (`declare_boolean_equality`/`declare_defining_equations`, far
         // above) and `bool_select_nat` (an inlined `Bool.rec` application,
