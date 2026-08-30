@@ -325,8 +325,8 @@ use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
 use prime_char::{
-    declare_prime_eq_one_or_self_of_dvd, declare_prime_not_prime_pow_all,
-    declare_prime_numeric_bounds, declare_prime_parity_facts,
+    declare_prime_eq_one_or_self_of_dvd, declare_prime_not_coprime_iff_dvd,
+    declare_prime_not_prime_pow_all, declare_prime_numeric_bounds, declare_prime_parity_facts,
 };
 use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
@@ -1792,6 +1792,20 @@ pub struct NatPrelude {
     /// leaving `n = 1` as the only reachable case, which **is** the goal.
     /// Closes `F:ml430-nat-prime-eq-one-of-pow-846d2949`.
     pub prime_eq_one_of_pow: NameId,
+    /// `Nat.Prime.not_coprime_iff_dvd : ∀ m n, Iff (Not (Eq (gcd m n) one))
+    /// (∃ p, prime_condition p ∧ (dvd p m ∧ dvd p n))` — `mpr` builds `p ∣
+    /// gcd m n` (`dvd_gcd`) and transports a hypothesised `gcd m n = one`
+    /// into `p ∣ one`, refuted by `not_dvd_one_of_two_le`. `mp` trichotomizes
+    /// `g := gcd m n` (`lt_or_ge` twice, matching
+    /// `coprime_of_forall_prime_dvd`'s own split): `g = 0` forces `m = n =
+    /// 0` (`gcd_dvd_left`/`_right` transported, then `dvd_elim` against
+    /// `zero_mul`), and `2` (this file's own `prime_two`, built from
+    /// `ops::two_divisor_dichotomy`) divides both trivially (`dvd_zero`);
+    /// `g = 1` contradicts the hypothesis directly; `2 ≤ g` supplies a prime
+    /// `pw ∣ g` (`exists_prime_dvd`), and `dvd_trans` through
+    /// `gcd_dvd_left`/`_right` gives `pw ∣ m` and `pw ∣ n`. Closes
+    /// `F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca`.
+    pub prime_not_coprime_iff_dvd: NameId,
     /// `Nat.Prime.dvd_mul_of_dvd_ne : ∀ p1 p2 n, Not (Eq p1 p2) →
     /// prime_condition p1 → prime_condition p2 → dvd p1 n → dvd p2 n → dvd
     /// (mul p1 p2) n` — [`coprime_primes`](Self::coprime_primes)'s `mpr`
@@ -4718,6 +4732,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_not_prime_pow_two_le: kernel.name_str(nat, "prime_not_prime_pow_two_le"),
             prime_not_prime_pow_ne_one: kernel.name_str(nat, "prime_not_prime_pow_ne_one"),
             prime_eq_one_of_pow: kernel.name_str(nat, "prime_eq_one_of_pow"),
+            prime_not_coprime_iff_dvd: kernel.name_str(nat, "prime_not_coprime_iff_dvd"),
             prime_dvd_mul_of_dvd_ne: kernel.name_str(nat, "prime_dvd_mul_of_dvd_ne"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
@@ -5420,6 +5435,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_eq_one_or_self_of_dvd(&mut d, &p)?;
         declare_prime_parity_facts(&mut d, &p)?;
         declare_prime_not_prime_pow_all(&mut d, &p)?;
+        // Needs `dvd_gcd`/`gcd_dvd_left`/`gcd_dvd_right`/`exists_prime_dvd`/
+        // `lt_or_ge` (all far above) and this file's own `prime_two`
+        // (`ops::two_divisor_dichotomy`, also far above).
+        declare_prime_not_coprime_iff_dvd(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;
