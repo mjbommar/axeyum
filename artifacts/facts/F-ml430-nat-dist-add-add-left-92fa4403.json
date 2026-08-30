@@ -5,16 +5,50 @@
   "statement": "The proposition declared as `Nat.dist_add_add_left` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "∀ (k n m : ℕ), (k + n).dist (k + m) = n.dist m",
+    "statement": "\u2200 (k n m : \u2115), (k + n).dist (k + m) = n.dist m",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.dist_add_add_left",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_add_add_left",
+      "supports": "\u2200 (k n m : \u2115), (k + n).dist (k + m) = n.dist m",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dist_add_add_left 2>/dev/null | grep -Ec '^Nat\\.dist_add_add_left[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.dist_add_add_left` through the trusted `Kernel::add_declaration` gate (`nat_prelude/dist.rs`, `declare_dist_more_all`, lane draw9-first-theorems). `nat_theorem_inventory`'s rendered type matches this fact's `formal.statement`. Anchored with `^Nat\\.dist_add_add_left[[:space:]]` so a sibling name cannot satisfy this row; `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.dist_add_add_left",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_add_add_left",
+      "supports": "dist_add_add_left at (k,n,m) = (4,9,2): dist(13,6) = 7 = dist(9,2).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::dist_draw9_additions_apply_at_concrete_discriminating_instances",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ]
+    },
+    {
+      "id": "footprint-Nat.dist_add_add_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0)."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane draw9-first-theorems",
     "source": "statement-only extraction of `Nat.dist_add_add_left` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +60,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum: `Nat.dist_add_add_left` (`nat_prelude/dist.rs`), a new theorem built by this lane via a new arithmetic helper `Nat.add_sub_add_left` (induction on the shared summand). Same function/definition as Mathlib's `Nat.dist`, so this mirror flip is honest under CLAUDE.md's criterion.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

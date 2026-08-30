@@ -5,16 +5,55 @@
   "statement": "The proposition declared as `Nat.and_comm` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "∀ (x y : ℕ), x &&& y = y &&& x",
+    "statement": "\u2200 (x y : \u2115), x &&& y = y &&& x",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:ml430-nat-land-comm-7e6ad72e",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-le-add-right"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.land_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_comm",
+      "supports": "\u2200 (x y : \u2115), x &&& y = y &&& x",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- land_comm 2>/dev/null | grep -Ec '^Nat\\.land_comm[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.land_comm` through the trusted `Kernel::add_declaration` gate. `nat_theorem_inventory`'s rendered type matches this fact's `formal.statement` up to variable naming. Anchored with `^Nat\\.land_comm[[:space:]]` so a sibling name cannot satisfy this row; `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof). Mathlib's `&&&` (`HAnd`) for `Nat` is the SAME function as `Nat.land` -- `Init.Data.Nat.Bitwise.Lemmas`'s `Nat.and_*` family and Mathlib's own `Nat.land_*` family (already reconciled: F:ml430-nat-land-comm-7e6ad72e, F:ml430-nat-land-assoc-ad4775b8) state the identical proposition over that one function under two different pinned declaration names -- reconciling this `and_*` mirror to our `Nat.land_*` theorem is honest under the mirror-flip criterion in CLAUDE.md: Mathlib's `def` (`Nat.land`, reached via the `&&&` notation) is the same function ours proves the property about."
+    },
+    {
+      "id": "compute-Nat.land_comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_comm",
+      "supports": "land(3, 6) = land(6, 3) = 2, a DISCRIMINATING instance (a symmetric pair like (5,5) cannot catch a transposed argument).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_comm_applies_at_a_concrete_discriminating_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::infer_in",
+        "Kernel::def_eq"
+      ]
+    },
+    {
+      "id": "footprint-Nat.land_comm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.land_comm`'s footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane draw9-first-theorems",
     "source": "statement-only extraction of `Nat.and_comm` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +65,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum by reconciliation with the already-proved `Nat.land_comm` (`nat_prelude/rec_agreement.rs`), which this ledger already reconciled to Mathlib's OWN `Nat.land_comm` (F:ml430-nat-land-comm-7e6ad72e). This lane additionally reconciles Mathlib's `Init.Data.Nat.Bitwise.Lemmas` `Nat.and_comm` -- a second pinned declaration name for the identical `&&&`-headed proposition -- to the SAME kernel theorem. No new proof was written; formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module, not kernel-core render_lean output.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

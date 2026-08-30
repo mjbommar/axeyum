@@ -5,16 +5,50 @@
   "statement": "The proposition declared as `Nat.dist_eq_zero` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "∀ {n m : ℕ}, n = m → n.dist m = 0",
+    "statement": "\u2200 {n m : \u2115}, n = m \u2192 n.dist m = 0",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-dist-self-0cfa5426"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.dist_eq_zero",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_eq_zero",
+      "supports": "\u2200 {n m : \u2115}, n = m \u2192 n.dist m = 0",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dist_eq_zero 2>/dev/null | grep -Ec '^Nat\\.dist_eq_zero[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.dist_eq_zero` through the trusted `Kernel::add_declaration` gate (`nat_prelude/dist.rs`, `declare_dist_more_all`, lane draw9-first-theorems). `nat_theorem_inventory`'s rendered type matches this fact's `formal.statement`. Anchored with `^Nat\\.dist_eq_zero[[:space:]]` so a sibling name cannot satisfy this row; `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.dist_eq_zero",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_eq_zero",
+      "supports": "dist_eq_zero applied at a free n (via Eq.refl) and at the concrete instance n=m=5 (dist 5 5 = 0).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::dist_draw9_additions_apply_at_concrete_discriminating_instances",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ]
+    },
+    {
+      "id": "footprint-Nat.dist_eq_zero",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0)."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane draw9-first-theorems",
     "source": "statement-only extraction of `Nat.dist_eq_zero` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +60,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum: `Nat.dist_eq_zero` (`nat_prelude/dist.rs`), a new theorem built by this lane -- Eq.rec transport of `dist_self` along the hypothesis. Same function/definition as Mathlib's `Nat.dist`, so this mirror flip is honest under CLAUDE.md's criterion.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

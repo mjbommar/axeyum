@@ -1907,6 +1907,41 @@ pub(super) fn declare_land_le_left_all(
     Ok(())
 }
 
+/// `land_le_right : ∀ a b, Le (land a b) b` — the mirror of `land_le_left`,
+/// via `land_comm` (`Eq (land a b) (land b a)`) transporting
+/// `land_le_left b a : Le (land b a) b` backwards along that equality.
+/// Needs no new `landAux` machinery: `land_le_left` already gives the bound
+/// on the OTHER operand order, and `land_comm` is already proved.
+fn declare_land_le_right(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.land_le_right, 2, &|d, values| {
+        let a = values[0];
+        let b = values[1];
+        let land_ab = d.const_app(p.land, &[a, b]);
+        let land_ba = d.const_app(p.land, &[b, a]);
+        let h_comm = d.lemma(p.land_comm, &[a, b]); // Eq (land a b) (land b a)
+        let h_comm_rev = d.symm(land_ab, land_ba, h_comm); // Eq (land b a) (land a b)
+        let h_le_ba = d.lemma(p.land_le_left, &[b, a]); // Le (land b a) b
+        let motive = d.eq_motive(land_ba, &|d, x| d.le(x, b));
+        let proof = d.transport(land_ba, motive, h_le_ba, land_ab, h_comm_rev);
+        (d.le(land_ab, b), proof)
+    })?;
+    Ok(())
+}
+
+/// Declare [`declare_land_le_right`].
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_land_le_right_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_land_le_right(d, p)?;
+    Ok(())
+}
+
 fn lor_bit_comm(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId) -> ExprId {
     let p = *p;
     let two = d.num(2);
