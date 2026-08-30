@@ -1,0 +1,23 @@
+{
+  "population_id": "mathlib-group-defs-v1",
+  "description": "L1 phase G1 bounded population: six real roots from Mathlib.Algebra.Group.Defs (three structures, three theorems) plus core Nat.add_comm, exported through the pinned lean4export toolchain (mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f, lean4export commit a3e35a584f59b390667db7269cd37fca8575e4bf) and merged by declaration name. This population is committed BEFORE extraction runs: coverage is measured against these expected_roots, not against whatever a run happened to produce.",
+  "requested_roots": [
+    {"name": "Semigroup", "module": "Mathlib.Algebra.Group.Defs"},
+    {"name": "CommMagma", "module": "Mathlib.Algebra.Group.Defs"},
+    {"name": "Monoid", "module": "Mathlib.Algebra.Group.Defs"},
+    {"name": "mul_left_cancel", "module": "Mathlib.Algebra.Group.Defs"},
+    {"name": "mul_comm", "module": "Mathlib.Algebra.Group.Defs"},
+    {"name": "mul_assoc", "module": "Mathlib.Algebra.Group.Defs"},
+    {"name": "Nat.add_comm", "module": "Init"}
+  ],
+  "expected_roots": [
+    "Semigroup", "CommMagma", "Monoid", "mul_left_cancel", "mul_comm",
+    "mul_assoc", "Nat.add_comm"
+  ],
+  "lean_version": "4.30.0",
+  "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+  "mathlib_version": "v4.30.0",
+  "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+  "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+  "note": "expected_declaration_count is filled in by gen-declaration-graph.py's --write-population-count flag AFTER a run, but expected_roots above is the authority the checker reads and never edits automatically -- see scripts/check-declaration-graph.py's MISSING_ROOT guard."
+}
