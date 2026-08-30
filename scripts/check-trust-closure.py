@@ -683,7 +683,7 @@ def main(argv: list[str]) -> int:
         guard_forbidden_trust(subjects, decls, reach),
     ]
     failures = [f for r in results for f in r.failures]
-    if disclosure_failure:
+    if disclosure_failure is not None:
         failures.append(disclosure_failure)
 
     # A guard that scanned nothing has measured nothing. Reported per guard so
@@ -696,7 +696,13 @@ def main(argv: list[str]) -> int:
                 f"result is not a negative result"
             )
 
-    if args.identity_map.exists():
+    # Two separate rejections, written as two `if`s rather than an if/else so
+    # that each can be deleted independently by the control suite. An `else:`
+    # branch cannot be mutated away without also removing the branch above it,
+    # which would make one mutation kill two cases and hide whether the two
+    # guards are really distinct.
+    identity_map_present = args.identity_map.exists()
+    if identity_map_present:
         want = render_identity_map(classes)
         have = args.identity_map.read_text(encoding="utf-8")
         if want != have:
@@ -706,7 +712,7 @@ def main(argv: list[str]) -> int:
                 "A new or vanished equivalence class is a review event: re-run with "
                 "--update after confirming the pair really does state one proposition"
             )
-    else:
+    if not identity_map_present:
         failures.append(
             f"IDENTITY-MAP-MISSING: {args.identity_map} does not exist; run --update"
         )
