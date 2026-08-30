@@ -6448,6 +6448,118 @@ pub struct CRealPrelude {
     /// kernel never unfolds the `Definition` to compare the two sides.
     /// See `creal/supremum.rs`.
     pub sup_seq_converges_sup_on: NameId,
+    /// `CReal.maxRange_attained_approx : ∀ (f : Nat → CReal) (n e : Nat),
+    /// ∃ i, Nat.le i n ∧ le (maxRange f n) (add (f i) (ofRat (Rat.natDivSucc
+    /// 1 e)))` — a finite maximum is APPROXIMATELY attained at one of its
+    /// samples.
+    ///
+    /// The exact form is not available and must not be attempted: choosing
+    /// which sample attains the maximum decides `le x y ∨ le y x` for
+    /// arbitrary reals. The `1/(e+1)` slack buys the decision back through
+    /// [`Self::lt_cotrans`]. See `creal/sup_laws.rs`.
+    pub max_range_attained_approx: NameId,
+    /// `CReal.supSeq_le_shift : ∀ F a b u, le a b → ∀ k n, le (supSeq F a b u
+    /// n) (add (supSeq F a b u k) (ofRat (Rat.natDivSucc 1 (meshLevelCount
+    /// k))))` — every term of the sup sequence is within `1/2^k` of the `k`-th
+    /// term, in WHICHEVER direction.
+    ///
+    /// [`Self::sup_seq_le_add`] is the `n ≥ k` half; the other half is free
+    /// from [`Self::sup_seq_mono`]. Needed because `converges_upper_bound`
+    /// asks for a bound at every index. See `creal/sup_laws.rs`.
+    pub sup_seq_le_shift: NameId,
+    /// `CReal.supOn_approx_lub : ∀ F a b (hab : le a b) (u :
+    /// UniformlyContinuousOn F a b) (e : Nat), ∃ x, le a x ∧ (le x b ∧
+    /// le (supOn F a b hab u) (add (F x) (ofRat (Rat.natDivSucc 1 e))))` —
+    /// **the constructive least-upper-bound law**, EVT's row 1 second half.
+    ///
+    /// `supOn` is approached by values of `F` on `[a, b]` to any requested
+    /// accuracy, at a point the proof exhibits. It is NOT attained, and the
+    /// exact form is REFUTED rather than unproved —
+    /// [`Self::evt_attained_max_decides_sign`] shows an attaining maximiser
+    /// would decide the sign of an arbitrary real. That is why this statement
+    /// is approximate and must stay so. See `creal/sup_laws.rs`.
+    pub sup_on_approx_lub: NameId,
+    /// `CReal.supSeq_le_supOn : ∀ F a b (hab : le a b) u k,
+    /// le (supSeq F a b u k) (supOn F a b hab u)` — every mesh maximum is
+    /// below the supremum, EXACTLY, with no epsilon.
+    ///
+    /// [`Self::sup_seq_mono`] under [`Self::converges_lower_bound_shift`] at
+    /// shift `k`: the unshifted `converges_lower_bound` wants the bound at
+    /// every index including those below `k`, where it is false. See
+    /// `creal/sup_laws.rs`.
+    pub sup_seq_le_sup_on: NameId,
+    /// `CReal.supOn_ub_at_supSeq_point : ∀ F a b (hab : le a b) u k i,
+    /// Nat.le i (meshLevelCount (supLevel F a b u k)) →
+    /// le (F (meshSamplePoint a (meshDelta a b (meshLevelCount (supLevel F a b
+    /// u k))) i)) (supOn F a b hab u)` — **the upper-bound law at every point
+    /// the construction samples.**
+    ///
+    /// [`Self::max_range_ub`] then [`Self::sup_seq_le_sup_on`]. NOT stated at
+    /// an arbitrary mesh level: nothing proves `supLevel`'s schedule is
+    /// cofinal in the levels (`trueExpOfModulus` accumulates `expOfModulus`,
+    /// which is `0` whenever the modulus is). Pairs with
+    /// [`Self::sup_on_approx_lub`], whose witness is a point of exactly this
+    /// family. See `creal/sup_laws.rs`.
+    pub sup_on_ub_at_sup_seq_point: NameId,
+    /// `CReal.stepFamily_locate : ∀ (P : Nat → CReal) (w eps : CReal),
+    /// le zero w → lt zero eps → (∀ i, le (P (Nat.succ i)) (add (P i) w)) →
+    /// ∀ (n : Nat) (t : CReal), le (P Nat.zero) t →
+    /// le t (add (add (P n) w) eps) →
+    /// ∃ i, Nat.le i n ∧ (le (P i) (add t eps) ∧ le t (add (add (P i) w) eps))`
+    /// — **cell location**: a real lying under a finite increasing family is
+    /// located, to within one step plus `eps`, at one member of it.
+    ///
+    /// Locating a real EXACTLY in a cell would decide `le x y ∨ le y x`;
+    /// locating it to within `eps` is constructive, by [`Self::lt_cotrans`],
+    /// and `eps` is absorbed by uniform continuity at the caller. Stated over
+    /// the ORDER alone — no `meshDelta`, no `CReal.mul`, no `CReal.ofNat` —
+    /// so the mesh version is an instantiation with three interface
+    /// identities and the induction carries no ring algebra. See
+    /// `creal/sup_laws.rs`.
+    pub step_family_locate: NameId,
+    /// `CReal.meshMax_le_supOn_add : ∀ F a b (hab : le a b) u k dd,
+    /// le (meshMax F a b (Nat.add (supLevel F a b u k) dd))
+    ///    (add (supOn F a b hab u) (ofRat (Rat.natDivSucc 1 (meshLevelCount
+    /// k))))` — **`supOn` dominates the mesh maximum at EVERY level above the
+    /// schedule, to within `1/2^k`.**
+    ///
+    /// The way around the cofinality gap
+    /// [`Self::sup_on_ub_at_sup_seq_point`] documents:
+    /// [`Self::mesh_max_le_add_of_modulus`] is depth-uniform, so an arbitrary
+    /// level ABOVE one scheduled level costs one epsilon however deep the
+    /// refinement goes. See `creal/sup_laws.rs`.
+    pub mesh_max_le_sup_on_add: NameId,
+    /// `CReal.supOn_ub_at_fine_mesh_point : ∀ F a b (hab : le a b) u k dd i,
+    /// Nat.le i (meshLevelCount (Nat.add (supLevel F a b u k) dd)) →
+    /// le (F (meshSamplePoint a (meshDelta a b (meshLevelCount (Nat.add
+    /// (supLevel F a b u k) dd))) i)) (add (supOn F a b hab u) (ofRat
+    /// (Rat.natDivSucc 1 (meshLevelCount k))))` — **the upper-bound law on a
+    /// family of points that can be made as fine as wanted, at an epsilon
+    /// chosen independently of the fineness.**
+    ///
+    /// [`Self::max_range_ub`] then [`Self::mesh_max_le_sup_on_add`]. Strictly
+    /// stronger than [`Self::sup_on_ub_at_sup_seq_point`], which is the
+    /// `dd = 0` case with the epsilon dropped. See `creal/sup_laws.rs`.
+    pub sup_on_ub_at_fine_mesh_point: NameId,
+    /// `CReal.supOn_ub : ∀ F a b (hab : le a b) (u : UniformlyContinuousOn F
+    /// a b) (x : CReal), le a x → le x b → le (F x) (supOn F a b hab u)` —
+    /// **the upper-bound law at an ARBITRARY point of `[a, b]`, which is what
+    /// makes `supOn` a supremum rather than a limit of mesh maxima.**
+    ///
+    /// With [`Self::sup_on_approx_lub`] this is the pair that characterizes
+    /// `supOn`: it dominates every value of `F` on `[a, b]`, and it is
+    /// approached by them to any requested accuracy. Neither produces an
+    /// argmax and neither may — [`Self::evt_attained_max_decides_sign`] proves
+    /// an attaining maximiser would decide the sign of an arbitrary real.
+    ///
+    /// [`Self::step_family_locate`] places `x` within one mesh cell plus an
+    /// `eps` of a sampled point; the margin `supLevel`'s zero-slack schedule
+    /// does not have is bought in two independent places (an arbitrary level
+    /// above a scheduled one, and asking the mesh for one HALVING more
+    /// accuracy than the modulus demands), then
+    /// [`Self::sup_on_ub_at_fine_mesh_point`] bounds the sampled value. See
+    /// `creal/sup_laws.rs`.
+    pub sup_on_ub: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7212,6 +7324,15 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sup_seq_cauchy: kernel.name_str(creal, "supSeq_cauchy"),
         sup_on: kernel.name_str(creal, "supOn"),
         sup_seq_converges_sup_on: kernel.name_str(creal, "supSeq_converges_supOn"),
+        max_range_attained_approx: kernel.name_str(creal, "maxRange_attained_approx"),
+        sup_seq_le_shift: kernel.name_str(creal, "supSeq_le_shift"),
+        sup_on_approx_lub: kernel.name_str(creal, "supOn_approx_lub"),
+        sup_seq_le_sup_on: kernel.name_str(creal, "supSeq_le_supOn"),
+        sup_on_ub_at_sup_seq_point: kernel.name_str(creal, "supOn_ub_at_supSeq_point"),
+        step_family_locate: kernel.name_str(creal, "stepFamily_locate"),
+        mesh_max_le_sup_on_add: kernel.name_str(creal, "meshMax_le_supOn_add"),
+        sup_on_ub_at_fine_mesh_point: kernel.name_str(creal, "supOn_ub_at_fine_mesh_point"),
+        sup_on_ub: kernel.name_str(creal, "supOn_ub"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12935,6 +13056,172 @@ const STEPS: &[BuildStep] = &[
         run: supremum::declare_sup_on,
     },
     BuildStep {
+        label: "sup_laws::declare_max_range_attained_approx",
+        requires: &[
+            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.le_add_of_nonneg,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.lt_congr,
+            |p: CRealPrelude| p.lt_cotrans,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.pos_of_pos_bound,
+        ],
+        provides: &[|p: CRealPrelude| p.max_range_attained_approx],
+        run: sup_laws::declare_max_range_attained_approx,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_seq_le_shift",
+        requires: &[
+            |p: CRealPrelude| p.le_add_of_nonneg,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_le_add,
+            |p: CRealPrelude| p.sup_seq_mono,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.sup_seq_le_shift],
+        run: sup_laws::declare_sup_seq_le_shift,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_approx_lub",
+        requires: &[
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.converges_upper_bound,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_mesh_level_count,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.max_range_attained_approx,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_converges_sup_on,
+            |p: CRealPrelude| p.sup_seq_le_shift,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.sup_on_approx_lub],
+        run: sup_laws::declare_sup_on_approx_lub,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_ub_at_sup_seq_point",
+        requires: &[
+            |p: CRealPrelude| p.converges_lower_bound_shift,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_range_ub,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_converges_sup_on,
+            |p: CRealPrelude| p.sup_seq_mono,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.sup_seq_le_sup_on,
+            |p: CRealPrelude| p.sup_on_ub_at_sup_seq_point,
+        ],
+        run: sup_laws::declare_sup_on_ub_at_sup_seq_point,
+    },
+    BuildStep {
+        label: "sup_laws::declare_step_family_locate",
+        requires: &[
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.lt_congr,
+            |p: CRealPrelude| p.lt_cotrans,
+            |p: CRealPrelude| p.lt,
+        ],
+        provides: &[|p: CRealPrelude| p.step_family_locate],
+        run: sup_laws::declare_step_family_locate,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
+        requires: &[
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.exp_of_modulus,
+            |p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_range_ub,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_max,
+            |p: CRealPrelude| p.mesh_max_le_add_of_modulus,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_le_sup_on,
+            |p: CRealPrelude| p.true_exp_of_modulus,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.mesh_max_le_sup_on_add,
+            |p: CRealPrelude| p.sup_on_ub_at_fine_mesh_point,
+        ],
+        run: sup_laws::declare_sup_on_ub_at_fine_mesh_point,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_ub",
+        requires: &[
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.le_add_of_abs_sub_le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_mesh_level_count,
+            |p: CRealPrelude| p.le_of_forall_le_add_rate,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mesh_count_width,
+            |p: CRealPrelude| p.mesh_le_of_ge,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_level_count_ge_of_size,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_pos,
+            |p: CRealPrelude| p.rat_unit_eq_one,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.step_family_locate,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_on_ub_at_fine_mesh_point,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uc_spec,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.sup_on_ub],
+        run: sup_laws::declare_sup_on_ub,
+    },
+    BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
         requires: &[
             |p: CRealPrelude| p.exp_term,
@@ -14092,6 +14379,7 @@ mod rolle;
 mod series;
 mod speedup;
 mod sqrt;
+mod sup_laws;
 mod supremum;
 mod trig;
 mod trig_fn;
