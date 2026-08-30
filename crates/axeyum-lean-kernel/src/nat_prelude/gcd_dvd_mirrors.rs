@@ -359,5 +359,112 @@ pub(super) fn declare_gcd_dvd_mirrors(
         (stmt, proof)
     })?;
 
+    // `dvd n m -> lt zero m -> lt zero (div m n)`: if `div m n` were `0`,
+    // `div_mul_cancel` would force `m = mul 0 n = 0`, contradicting `lt zero
+    // m`; `Nat.zero_or_succ` on `div m n` leaves only the successor case,
+    // where `zero_lt_succ` closes directly.
+    let pos_of_dvd_and_pos_numerator =
+        |d: &mut NatDev<'_>, n: ExprId, m: ExprId, dvd_n_m: ExprId, pos_m: ExprId| -> ExprId {
+            let zero = d.zero();
+            let quotient = d.div(m, n);
+            let cancel = d.lemma(p.div_mul_cancel, &[n, m, dvd_n_m]); // eq(mul(quotient,n), m)
+            let goal = d.lt(zero, quotient);
+            let disj = d.lemma(p.zero_or_succ, &[quotient]);
+            let eq_q0_ty = d.eq(quotient, zero);
+            let case_zero = {
+                let heq_fv = d.fresh_fvar();
+                let heq = d.kernel().fvar(heq_fv);
+                let product = d.mul(quotient, n);
+                let zero_product = d.mul(zero, n);
+                let congr_q = d.congr(quotient, zero, heq, &|d, x| d.mul(x, n));
+                let zero_mul_n = d.lemma(p.zero_mul, &[n]); // eq(zero_product, zero)
+                let cancel_symm = d.symm(product, m, cancel); // eq(m, product)
+                let (_, m_eq_zero) = d.chain(m, &[(product, cancel_symm), (zero_product, congr_q), (zero, zero_mul_n)]);
+                let motive = d.eq_motive(m, &|d, x| d.lt(zero, x));
+                let lt_zero_zero = d.transport(m, motive, pos_m, zero, m_eq_zero);
+                let contra = d.lemma(p.not_lt_zero, &[zero]); // Not (lt zero zero)
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let absurd = d.apply(contra, &[lt_zero_zero]);
+                let anon = d.anon_name();
+                let motive_false = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+                let level = d.kernel().level_zero();
+                let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+                let result = d.apply(rec, &[motive_false, absurd]);
+                d.lam_fv(heq_fv, eq_q0_ty, result)
+            };
+            let nat = d.nat_ty();
+            let one = d.level_one();
+            let pred_ty = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = d.succ(k);
+                let body = d.eq(quotient, sk);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let exists_c = d.kernel().const_(p.logic.exists_, vec![one]);
+            let ex_ty = d.apply(exists_c, &[nat, pred_ty]);
+            let case_succ = {
+                let hex_fv = d.fresh_fvar();
+                let hex = d.kernel().fvar(hex_fv);
+                let anon = d.anon_name();
+                let motive_ex = d.kernel().lam(anon, ex_ty, goal, BinderInfo::Default);
+                let minor = {
+                    let k_fv = d.fresh_fvar();
+                    let k = d.kernel().fvar(k_fv);
+                    let sk = d.succ(k);
+                    let heq1_ty = d.eq(quotient, sk);
+                    let heq1_fv = d.fresh_fvar();
+                    let heq1 = d.kernel().fvar(heq1_fv);
+                    let zls = d.lemma(p.zero_lt_succ, &[k]); // lt(zero, succ k)
+                    let motive_v = d.eq_motive(sk, &|d, x| d.lt(zero, x));
+                    let symm_heq1 = d.symm(quotient, sk, heq1);
+                    let result = d.transport(sk, motive_v, zls, quotient, symm_heq1);
+                    let with_heq1 = d.lam_fv(heq1_fv, heq1_ty, result);
+                    d.lam_fv(k_fv, nat, with_heq1)
+                };
+                let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+                let body = d.apply(exists_rec, &[nat, pred_ty, motive_ex, minor, hex]);
+                d.lam_fv(hex_fv, ex_ty, body)
+            };
+            d.const_app(
+                p.logic.or_elim,
+                &[eq_q0_ty, ex_ty, goal, disj, case_zero, case_succ],
+            )
+        };
+
+    // `Nat.div_gcd_pos_of_pos_left : ∀ a b, lt zero a -> lt zero (div a (gcd a b))`
+    // — `F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f`.
+    d.theorem(p.div_gcd_pos_of_pos_left, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let g = d.gcd(a, b);
+        let zero = d.zero();
+        let pos_ty = d.lt(zero, a);
+        let pos_fv = d.fresh_fvar();
+        let pos = d.kernel().fvar(pos_fv);
+        let gdl = d.lemma(p.gcd_dvd_left, &[a, b]); // dvd(g, a)
+        let result = pos_of_dvd_and_pos_numerator(d, g, a, gdl, pos);
+        let quotient = d.div(a, g);
+        let concl = d.lt(zero, quotient);
+        let proof = d.lam_fv(pos_fv, pos_ty, result);
+        (d.arrow(pos_ty, concl), proof)
+    })?;
+
+    // `Nat.div_gcd_pos_of_pos_right : ∀ a b, lt zero b -> lt zero (div b (gcd a b))`
+    // — `F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c`, mirror via `gcd_dvd_right`.
+    d.theorem(p.div_gcd_pos_of_pos_right, 2, &|d, values| {
+        let (a, b) = (values[0], values[1]);
+        let g = d.gcd(a, b);
+        let zero = d.zero();
+        let pos_ty = d.lt(zero, b);
+        let pos_fv = d.fresh_fvar();
+        let pos = d.kernel().fvar(pos_fv);
+        let gdr = d.lemma(p.gcd_dvd_right, &[a, b]); // dvd(g, b)
+        let result = pos_of_dvd_and_pos_numerator(d, g, b, gdr, pos);
+        let quotient = d.div(b, g);
+        let concl = d.lt(zero, quotient);
+        let proof = d.lam_fv(pos_fv, pos_ty, result);
+        (d.arrow(pos_ty, concl), proof)
+    })?;
+
     Ok(())
 }

@@ -3712,6 +3712,17 @@ pub struct NatPrelude {
     /// `div_mod_remainder_eq_zero_iff_dvd` at the executable witness
     /// (`div_mod_exec`) and flips the `Iff` order.
     pub dvd_iff_mod_eq_zero: NameId,
+    /// `Nat.div_gcd_pos_of_pos_left : ∀ a b, Lt zero a → Lt zero (div a
+    /// (gcd a b))` — `F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f`.
+    /// `gcd_dvd_left` plus `div_mul_cancel` give `(a/g)*g = a`; if `a/g`
+    /// were `0` that forces `a = 0` (`zero_mul`), contradicting the
+    /// hypothesis, so `Nat.zero_or_succ` on `a/g` leaves only the
+    /// successor case.
+    pub div_gcd_pos_of_pos_left: NameId,
+    /// `Nat.div_gcd_pos_of_pos_right : ∀ a b, Lt zero b → Lt zero (div b
+    /// (gcd a b))` — `F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c`, the
+    /// mirror of [`Self::div_gcd_pos_of_pos_left`] via `gcd_dvd_right`.
+    pub div_gcd_pos_of_pos_right: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4463,6 +4474,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_mod_iff_gen: kernel.name_str(nat, "dvd_mod_iff_gen"),
             div_mul_cancel: kernel.name_str(nat, "div_mul_cancel"),
             dvd_iff_mod_eq_zero: kernel.name_str(nat, "dvd_iff_mod_eq_zero"),
+            div_gcd_pos_of_pos_left: kernel.name_str(nat, "div_gcd_pos_of_pos_left"),
+            div_gcd_pos_of_pos_right: kernel.name_str(nat, "div_gcd_pos_of_pos_right"),
         };
 
         let mut d = NatDev::new(kernel, p);
