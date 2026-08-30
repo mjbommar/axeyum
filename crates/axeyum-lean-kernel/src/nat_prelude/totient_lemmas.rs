@@ -1419,8 +1419,9 @@ fn reflection_pieces(
 pub(super) fn declare_totient_even(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
-    d.theorem(p.totient_even, 1, &|d, v| {
-        let n = v[0];
+    let n_fv = d.fresh_fvar();
+    let (ty, value) = {
+        let n = d.kernel().fvar(n_fv);
         let hn_fv = d.fresh_fvar();
         let hn = d.kernel().fvar(hn_fv);
         let two = d.num(2);
@@ -1429,7 +1430,11 @@ pub(super) fn declare_totient_even(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         let hn_ty = d.lt(two, n);
 
         // `n = succ Lrng`, `Lrng > 0` (so `Lrng = succ pm`).
-        let eq_n_succ_lrng = pos_implies_succ_pred(d, &p, n);
+        let hpos_n = zero_lt_via_c(d, &p, two, n, hn); // Lt zero n
+        let eq_n_succ_lrng = {
+            let f = pos_implies_succ_pred(d, &p, n); // Lt zero n -> Eq n (succ (pred n))
+            d.apply(f, &[hpos_n])
+        };
         let lrng = d.pred(n);
         let succ_lrng = d.succ(lrng);
 
@@ -1446,8 +1451,10 @@ pub(super) fn declare_totient_even(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
             let le_one_two = d.lemma(p.le_step, &[one, one, r]); // Le one two
             d.lemma(p.le_trans, &[one, two, lrng, le_one_two, le_two_lrng])
         };
-        let _ = le_one_lrng; // established solely to justify `Lrng > 0` below
-        let eq_lrng_succ_pm = pos_implies_succ_pred(d, &p, lrng);
+        let eq_lrng_succ_pm = {
+            let f = pos_implies_succ_pred(d, &p, lrng); // Lt zero Lrng -> Eq Lrng (succ (pred Lrng))
+            d.apply(f, &[le_one_lrng]) // `le_one_lrng : Le one Lrng` IS `Lt zero Lrng`.
+        };
         let pm = d.pred(lrng);
 
         // `f := totient_predicate(n)`; `h(k) := f(add one k)`.
@@ -1673,8 +1680,11 @@ pub(super) fn declare_totient_even(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
 
         let full_stmt = d.arrow(hn_ty, even_totient_ty);
         let full_proof = d.lam_fv(hn_fv, hn_ty, even_totient);
-        (full_stmt, full_proof)
-    })?;
+        let ty = d.pi_fv(n_fv, nat, full_stmt);
+        let value = d.lam_fv(n_fv, nat, full_proof);
+        (ty, value)
+    };
+    d.declare_theorem(p.totient_even, ty, value)?;
     Ok(())
 }
 
