@@ -118,6 +118,38 @@
 //!    geometry certificates, nor non-integer coefficients, which is what
 //!    `medians-concurrent`'s `±1/2` needs (the same `Rat.ofRat`-style cast
 //!    `F:cas-partial-fractions-mixed-general-case` is blocked on).
+//!
+//! # Thales, added 2026-08-30, and Varignon, deliberately NOT added
+//!
+//! `thales-right-angle-in-semicircle` reuses this module's machinery
+//! unchanged: one generator, one conclusion, cofactor the constant `1` — the
+//! conclusion polynomial IS the hypothesis polynomial, term for term, so
+//! [`prove_const_combination`] with a one-element `parts` list needs only
+//! [`prove_scale`] at `k=1` and never reaches [`add_poly`]/`prove_merge`'s
+//! cancellation branch at all. No new proof-emitting code, same as
+//! orthocentre.
+//!
+//! `varignon-midpoint-parallelogram` is deliberately **not** reconstructed
+//! here, or anywhere. Read directly from
+//! `artifacts/geometry-certificates/varignon-midpoint-parallelogram.json`:
+//! `coordinates: []`, `generators: []`, and both conclusions' `poly` is
+//! already `{"terms": []}` — the CAS's own empty `MvPoly`. The actual
+//! content (that the four midpoint differences algebraically cancel) is
+//! computed entirely inside `axeyum_cas::mvpoly`'s untrusted ring arithmetic
+//! *before* a `GeometryCertificate` ever reaches this bridge; by the time it
+//! does, there is no coordinate left to quantify over and no hypothesis or
+//! cofactor to combine. The only statement this module's machinery could
+//! build from that certificate is `Rat.zero = Rat.zero` over zero free
+//! variables — well-formed, admissible, and content-free. It would still
+//! satisfy `scripts/validate-facts.py`'s `classify_cas_certificate_fact`
+//! (ADR-0601 §2 only asks whether some evidence row's `cargo test` names
+//! `-p axeyum-lean-kernel`, never what the test checked), so registering a
+//! sibling fact for it would move the `cas-certificate` ledger's
+//! kernel-reconstructed count without adding one bit of kernel-checked
+//! content — the exact failure this repository's own standing rule warns
+//! against. See `docs/plan/status/332-cas-thales-varignon.md` for the full
+//! argument. No `F:varignon-midpoint-parallelogram-kernel-checked` fact
+//! exists, and none should be added on this route.
 
 use std::collections::BTreeMap;
 
@@ -686,6 +718,20 @@ fn orthocentre_certificate() -> GeometryCertificate {
     }
 }
 
+/// Produce `thales-right-angle-in-semicircle`'s certificate from the CAS's
+/// own corpus and certifier — the SAME artifact
+/// `F:geometry-thales-right-angle-in-semicircle` cites, not a hand-copy.
+fn thales_certificate() -> GeometryCertificate {
+    let problem = geometry_corpus::corpus()
+        .into_iter()
+        .find(|p| p.id == "thales-right-angle-in-semicircle")
+        .expect("the CAS corpus must carry thales-right-angle-in-semicircle");
+    match certify(&problem, geometry_limits()) {
+        ProofOutcome::Certified(cert) => *cert,
+        other => panic!("the CAS must certify thales-right-angle-in-semicircle: {other:?}"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -885,6 +931,195 @@ mod tests {
         result.expect("the kernel must admit the cofactor identity");
 
         // The trusted gate's own record: a Theorem, and axiom-free.
+        let env = kernel.environment();
+        let decl = env
+            .get(name)
+            .expect("the declaration must be in the environment");
+        assert!(
+            matches!(decl, Decl::Theorem { .. }),
+            "must be admitted as a Theorem, not an Axiom or an Opaque"
+        );
+        let footprint = kernel.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "the identity must be axiom-free; footprint was {footprint:?}"
+        );
+    }
+
+    /// The translator, checked against NUMBERS -- see
+    /// `translator_reads_the_certificate_the_cas_produced` above for the same
+    /// discipline applied to orthocentre.
+    ///
+    /// Thales has only ONE generator and ONE conclusion, and — unlike
+    /// orthocentre's two DIFFERENT hypothesis polynomials that must be
+    /// combined and partly cancel — the certificate's conclusion polynomial
+    /// is BYTE-IDENTICAL to its generator (same 8 terms, same coefficients);
+    /// the cofactor is the constant `1`. So there is no cross-wiring to
+    /// control for (there is only one thing to wire), and no `add_poly`
+    /// cancellation to exercise. The discriminator instead is a point OFF
+    /// the circle, where the shared polynomial is a nonzero value
+    /// independently hand-computed from the certificate's own coefficient
+    /// list — a translator bug that silently produced the empty
+    /// (always-zero) polynomial, or that dropped/mis-signed a term, cannot
+    /// pass this.
+    #[test]
+    fn translator_reads_the_thales_certificate_the_cas_produced() {
+        let cert = thales_certificate();
+        assert_eq!(cert.coordinates.len(), 6, "six coordinates");
+        assert!(
+            cert.saturations.is_empty(),
+            "thales needs no non-degeneracy condition"
+        );
+        assert_eq!(cert.generators.len(), 1, "one hypothesis: C lies on the circle");
+        assert_eq!(cert.conclusions.len(), 1, "one conclusion: CA is perpendicular to CB");
+
+        let hyp = int_poly(&cert.generators[0]).expect("integer coefficients");
+        let concl = int_poly(&cert.conclusions[0].poly).expect("integer coefficients");
+        assert_eq!((hyp.len(), concl.len()), (8, 8));
+        assert_eq!(
+            hyp, concl,
+            "the conclusion polynomial IS the hypothesis polynomial, term for term -- \
+             that coincidence is exactly Thales' theorem's algebraic content, and it is \
+             checked HERE, at the Rust level, never by the kernel (see the reconstruction \
+             test's doc comment)"
+        );
+
+        let cofactors: Vec<IntPoly> = cert.conclusions[0]
+            .cofactors
+            .iter()
+            .map(|c| int_poly(c).expect("integer cofactor"))
+            .collect();
+        assert_eq!(
+            cofactors,
+            vec![vec![(Vec::new(), 1)]],
+            "the single cofactor is the constant 1"
+        );
+
+        // The certificate's own generic witness: the unit semicircle
+        // A = (-1,0), B = (1,0), C = (0,1). C is ON the circle, so both
+        // polynomials vanish.
+        let generic: BTreeMap<&str, i128> = [
+            ("ax", -1),
+            ("ay", 0),
+            ("bx", 1),
+            ("by", 0),
+            ("cx", 0),
+            ("cy", 1),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            eval_int_poly(&hyp, &generic),
+            0,
+            "C is on the circle with diameter AB at the witness"
+        );
+        assert_eq!(
+            eval_int_poly(&concl, &generic),
+            0,
+            "CA is perpendicular to CB at the witness"
+        );
+
+        // Off the circle -- C = (0,2), so |OC| = 2 != |OA| = 1 -- both
+        // polynomials take the SAME nonzero value, hand-computed independently
+        // from the certificate's own coefficient list:
+        // ax*bx - ax*cx + ay*by - ay*cy - bx*cx - by*cy + cx^2 + cy^2
+        //   = (-1)(1) - (-1)(0) + (0)(0) - (0)(2) - (1)(0) - (0)(2) + 0 + 4 = 3
+        let off: BTreeMap<&str, i128> = [
+            ("ax", -1),
+            ("ay", 0),
+            ("bx", 1),
+            ("by", 0),
+            ("cx", 0),
+            ("cy", 2),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(eval_int_poly(&hyp, &off), 3, "hand-computed value off the circle");
+        assert_eq!(
+            eval_int_poly(&concl, &off),
+            3,
+            "conclusion matches the hypothesis exactly, even off the witness"
+        );
+    }
+
+    /// The reconstruction: `Check.geometry_thales_cofactor_identity`, admitted
+    /// through [`Kernel::add_declaration`].
+    ///
+    /// **This identity is weaker than orthocentre's, and the difference is
+    /// disclosed rather than hidden.** Orthocentre's kernel obligation
+    /// genuinely combines two DIFFERENT polynomials additively, with real
+    /// cancellation (16 terms in, 8 out). Thales's single cofactor is the
+    /// constant `1` and its one generator is byte-identical to its
+    /// conclusion, so `prove_const_combination`'s obligation degenerates to
+    /// `poly_expr(concl) = Rat.ofInt 1 * poly_expr(hyp)` where `concl` and
+    /// `hyp` are THE SAME `IntPoly`, hence THE SAME `ExprId` — a `mul_one`
+    /// shaped fact true of ANY polynomial whatsoever, not one specific to
+    /// this geometry. The substantive claim — that the CAS's independently
+    /// derived polynomial forms of "C lies on the circle with diameter AB"
+    /// and "CA ⟂ CB" coincide exactly — is checked ONLY by the Rust-level
+    /// `assert_eq!(hyp, concl, ...)` in
+    /// `translator_reads_the_thales_certificate_the_cas_produced`, never by
+    /// `add_declaration`. What the kernel DOES independently confirm: that
+    /// the translator's 8-term, 6-variable transcription of the certificate
+    /// is a well-typed `Rat` expression obeying `left_distrib`/`mul_assoc`/
+    /// `Rat.ofInt_mul` — the same assurance floor every other bridge in this
+    /// family rests on, just without orthocentre's additional additive-
+    /// combination content. See the module doc and this fact's own
+    /// `axiom_footprint` for the full disclosure.
+    #[test]
+    fn geometry_thales_cofactor_identity_kernel_checked() {
+        on_a_deep_stack(geometry_thales_cofactor_identity_body);
+    }
+
+    fn geometry_thales_cofactor_identity_body() {
+        let cert = thales_certificate();
+        let hyp = int_poly(&cert.generators[0]).expect("integer coefficients");
+        let concl = int_poly(&cert.conclusions[0].poly).expect("integer coefficients");
+        let cofactors: Vec<i128> = cert.conclusions[0]
+            .cofactors
+            .iter()
+            .map(|c| {
+                let terms = int_poly(c).expect("integer cofactor");
+                assert_eq!(terms.len(), 1, "cofactor must be a single constant term");
+                assert!(terms[0].0.is_empty(), "cofactor must be CONSTANT");
+                terms[0].1
+            })
+            .collect();
+
+        let names: Vec<String> = cert.coordinates.clone();
+        assert_eq!(
+            names,
+            vec!["ax", "ay", "bx", "by", "cx", "cy"],
+            "the coordinate ORDER is the certificate's, not this test's"
+        );
+
+        let (mut kernel, prelude) = built();
+        let anon = kernel.anon();
+        let mut d = IntDev::new(&mut kernel, prelude.int);
+        let p = prelude;
+
+        let name = d
+            .kernel()
+            .name_str(anon, "Check.geometry_thales_cofactor_identity");
+
+        let parts: Vec<(i128, IntPoly)> = vec![(cofactors[0], hyp.clone())];
+        let concl_for_build = concl.clone();
+
+        let result = rat_theorem(&mut d, name, names.len(), &|d, fvars| {
+            let vars: BTreeMap<String, ExprId> =
+                names.iter().cloned().zip(fvars.iter().copied()).collect();
+            let (rhs, merged, proof) = prove_const_combination(d, p, &vars, &parts);
+            assert_eq!(
+                merged, concl_for_build,
+                "the emitted normal form must BE the certificate's conclusion"
+            );
+            let lhs = poly_expr(d, p, &vars, &concl_for_build);
+            let stmt = crate::rat_prelude::ops::req(d, lhs, rhs);
+            let flipped = rsymm(d, rhs, lhs, proof);
+            (stmt, flipped)
+        });
+        result.expect("the kernel must admit the cofactor identity");
+
         let env = kernel.environment();
         let decl = env
             .get(name)
