@@ -1,82 +1,109 @@
-# Lane: kernel-mutant-survivors
+# Lane: kernel-mutant-survivors — closing the ADR-0780 mutant survivors
 
-**Status:** IN PROGRESS — `inductives` survivor EXPLAINED and re-aimed; the
-three named-reason survivors are next.
+<!-- plan-section: lane-status -->
 
-## Charter
+**Status:** COMPLETE — all four ADR-0780 mutant survivors closed. Kill table is
+8 killed / 0 survived over a 35-case corpus. No P0 in the unmutated kernel.
 
-Close the four SURVIVED entries in
-`artifacts/kernel-differential/mutant-kill-table.json` (ADR-0780, ADR-0717 S5).
+Decision: [ADR-0815](../../research/09-decisions/adr-0815-a-mutation-aimed-at-a-call-site-cannot-see-a-shared-predicate.md)
 
-## Finding 1 — the `inductives` survivor is explained (outcome 1, plus more)
+## What this lane was for
 
-**Outcome: a different real guard rejects the case. The mutation was aimed at
-one of TWO redundant implementations of the same predicate.**
+ADR-0780's kernel differential found zero Axeyum-accepts/Lean-rejects
+disagreements, which is the result we wanted, and then mutation-tested the
+kernel itself and had **four of eight mutants survive**. A survivor means a
+soundness guard was removed and the differential did not notice. The
+`inductives` one was unexplained, which made it the most important open item
+in L0 — ADR-0717's risk 1 is exactly "our own kernel could have a shared
+semantic defect", and this was a place where we removed a check and the
+detector shrugged.
 
-Measured in this worktree with `tests/kernel_differential_probe.rs`, a
-diagnostic that prints the concrete `KernelError` the kernel returns for the
-exact construction behind `inductives::non_positive_occurrence_negative`
-(`Bad.mk : (Bad -> Codomain) -> Bad`). Five runs, one kernel rebuild each,
-all `--release`:
+## Headline
 
-| # | kernel state | `add_inductive(Bad, ...)` returns |
+**All four had one cause between them, and it is not a corpus weakness.**
+Three of the four (`inductives`, `projections`, `quotient`) were killed by a
+SECOND guard implementing the same predicate at a different call site; only
+`literals` was a genuine missing case. A mutation aimed at a call site cannot
+be killed when a redundant implementation still rejects — and the fix is to aim
+at the predicate, not to write more cases.
+
+### `inductives` — outcome 1: a different real guard rejects
+
+Five measured rebuilds, `--release`, in this worktree.
+
+| # | kernel state | `add_inductive(Bad, …)` |
 |---|---|---|
-| E1 | unmutated | `Err(NonPositiveInductiveOccurrence { field_index: 0 })` |
-| E2 | positivity `Err` off (`inductive.rs:1933`) — **ADR-0780's mutation** | `Err(ReflexiveOrNestedNotSupported)` |
+| E1 | unmutated | `Err(NonPositiveInductiveOccurrence)` |
+| E2 | positivity `Err` off (`inductive.rs:1933`) — ADR-0780's mutation | `Err(ReflexiveOrNestedNotSupported)` |
 | E3 | field-shape classification off (`inductive.rs:2076`) | `Err(NonPositiveInductiveOccurrence)` |
-| E4 | **both off** | **`Ok(())`** — Axeyum accepts, Lean rejects: P0 |
-| E5 | shared predicate `mentions_group_family`'s `Const` arm forced `false` | **`Ok(())`** — P0 |
+| E4 | **both off** | **`Ok(())`** — P0 |
+| E5 | shared predicate `mentions_group_family` `Const` arm → `false` | **`Ok(())`** — P0 |
 
-E1 settles the first question ADR-0780 left open: the case *does* reach the
-guard the mutation targeted. E2 names the guard that takes over —
-`classify_bad_group_recursive_field` (`inductive.rs:2225`), reached from
-`check_group_ctor`'s `else if self.mentions_group_family(domain, group)`
-at `inductive.rs:2076`.
+E1 rules out the possibility ADR-0780 could not: the case does reach the
+targeted guard. E2 names the taker-over. E3 shows symmetry. **E4** proves the
+pair is jointly load-bearing rather than both being decoration. E5 is the
+correctly-aimed single mutation and it KILLS.
 
-E3 shows the redundancy is **symmetric**: removing either one leaves the
-other rejecting. E4 shows the pair is **jointly load-bearing** — remove both
-and the kernel admits a non-positive inductive, which is exactly the P0
-signal the mutation was supposed to produce.
+`check_group_positive_occurrence` and `open_group_recursive_field_shape` are
+the same algorithm written twice; one returns `Some` exactly where the other
+returns `Ok`. **No case can separate them** — that impossibility is the
+finding, not a corpus gap.
 
-### Why they are redundant: the same algorithm, written twice
+### Survivors closed, and the mutant each new case kills
 
-`check_group_positive_occurrence` (`inductive.rs:1917`) and
-`open_group_recursive_field_shape` (`inductive.rs:2125`) implement the same
-predicate over a constructor field type, by the same walk:
+| case | mutant it kills | cases flipped |
+|---|---|---|
+| `projections::two_constructor_projection_negative` | `projection_inference_data`'s `constructor_count != 1` | 1, to P0 |
+| `literals::malformed_nat_bootstrap_negative` | `nat_literal_bootstrap`'s shape validation (the SAME mutation ADR-0780 ran) | 1, to P0 |
+| `quotient::lift_without_respectfulness_negative` | `validate_quotient_package`'s per-declaration type contract | 1, to P0 |
 
-- whnf; walk Pi binders; stop as soon as a binder **domain** mentions a family
-  in the group;
-- accept iff the remaining head is a `valid_group_family_application` with the
-  right parameter values and family-free indices.
+Every one flips exactly one case. No case added by this lane kills nothing.
 
-`open_group_recursive_field_shape` returns `Some` on exactly the field types
-`check_group_positive_occurrence` returns `Ok` on, and `None` on exactly those
-it returns `Err` on. They differ only in the `KernelError` variant they name
-(`NonPositiveInductiveOccurrence` / `InvalidInductiveOccurrence` versus
-`ReflexiveOrNestedNotSupported` / `RecursiveInductiveNotSupported`).
+### One case was written, measured, and replaced
 
-**No corpus case can separate them**, because the separation does not exist:
-they agree on every field type by construction. Adding "a case that genuinely
-needs positivity" is therefore impossible for a single-site mutation — that is
-the finding, not a corpus gap.
+The first quotient case exchanged `Quot`'s and `Quot.mk`'s types. Measured
+under the mutation it stayed `AgreeReject` — the exchanged package is not
+well-typed at all, so the transaction's own `check_declaration` rejects it. The
+redundancy trap catches you twice if you are not looking for it. Replaced with
+a package that is fully well-typed and simply not Lean's.
 
-### The generalizable lesson
+### `quotient`'s named reason was stronger than ADR-0780 stated
 
-Mutation at the **call site** cannot see a defect in a **shared predicate**.
-Both call sites were individually removable with the corpus still green; the
-predicate they share was not. E5 is the correctly-aimed mutation: one edit,
-one subsystem, KILLED, with a real P0 kill signal.
+`reduce_quotient`'s `mk` name sub-check is **unkillable by construction**, not
+merely uncovered: `add_quotient_package` is the only route to a
+`Declaration::Quotient` and it hard-codes the four names, so a rival
+`mk`-shaped constructor cannot exist. Recorded as `redundancy_findings[2]` (R3)
+rather than papered over with a case that could not discriminate.
 
-So the `inductives` entry in the kill table is re-aimed from
-`check_group_positive_occurrence`'s `Err` branch to `mentions_group_family`'s
-`Const` arm, and moves SURVIVED -> KILLED. The old aim is retained in the
-artifact as a recorded redundancy finding rather than deleted.
+## No P0
 
-**No P0 disagreement exists in the unmutated kernel.** Every P0 above is an
-artefact of a deliberately mutated kernel, and the source was restored
-byte-identical to its backup (`diff -q` exit 0) before this commit.
+The unmutated kernel agrees with pinned Lean 4.30.0 (`d024af09`) on all 35
+cases; the only disagreement is the pre-registered `quotient::quot_sound_absent`
+incompleteness. Every P0 above is an artefact of a deliberately mutated kernel.
+`crates/axeyum-lean-kernel/src/` was restored byte-identical after every
+mutation (`diff -q` exit 0, `git status` over `src/` empty) before each commit.
 
-## Next
+## What the differential still cannot see
 
-- `projections`, `literals`, `quotient` survivors — corpus gaps with named
-  shapes.
+It compares accept/reject on a whole declaration, so it is blind to a kernel
+that accepts the right things for the wrong reason — in particular to a defect
+in a predicate both positivity implementations share and that this corpus does
+not exercise: `mentions_group_family`'s `Proj`, `Let` and `App` arms are
+reached by nothing here.
+
+## Landed changes
+
+| what | where |
+|---|---|
+| ADR-0815 | `docs/research/09-decisions/adr-0815-a-mutation-aimed-at-a-call-site-cannot-see-a-shared-predicate.md` |
+| three corpus cases + `build_quotient_declarations` seam | `crates/axeyum-lean-kernel/tests/kernel_differential.rs` |
+| `KernelError` diagnostic probe | `crates/axeyum-lean-kernel/tests/kernel_differential_probe.rs` |
+| kill table: 8/0, `superseded_mutation` blocks, `redundancy_findings` R1–R3 | `artifacts/kernel-differential/mutant-kill-table.json` |
+
+## Not attempted, deliberately
+
+ADR-0780's uncovered list (mutual/nested inductives, indexed families beyond
+0-index, Prop-restricted large elimination, structure eta, string literals,
+zeta reduction, well-founded recursion, longer reduction chains) is unchanged.
+Three cases were added and no more: a case that does not change a mutant's
+outcome is decoration, and each of these three is shown to change one.

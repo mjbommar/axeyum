@@ -1193,13 +1193,7 @@ fn projections_cases() -> Vec<CaseResult> {
         let left = kernel.name_str(choice, "left");
         let right = kernel.name_str(choice, "right");
         kernel
-            .add_inductive(
-                choice,
-                &[],
-                0,
-                sort_1,
-                &[(left, ctor_ty), (right, ctor_ty)],
-            )
+            .add_inductive(choice, &[], 0, sort_1, &[(left, ctor_ty), (right, ctor_ty)])
             .expect("Choice must admit");
         let (_, s_val) = declare_axiom(&mut kernel, "s", choice_c);
         let proj0 = kernel.proj(choice, 0, s_val);
@@ -2009,53 +2003,99 @@ fn quotient_cases() -> Vec<CaseResult> {
     //
     // What IS reachable is the package validator, and within it exactly one
     // guard that nothing downstream reproduces: the per-declaration type
-    // contract. The corruption here is minimal and surgical -- the four
-    // declarations keep their names, their kinds, their order and their
-    // universe arities, and only the TYPES of `Quot` and `Quot.mk` are
-    // exchanged. Every other guard in `validate_quotient_package` therefore
-    // passes (length, name, kind, arity), leaving `QuotientTypeMismatch` as
-    // the sole rejection, which is what makes this case discriminating.
+    // contract, `quotient_type_matches` -> `QuotientTypeMismatch`.
     //
-    // It is also the soundness-critical guard: the whole trust argument for
-    // admitting quotients as primitives rather than axioms is that the kernel
-    // re-derives Lean's four types itself and compares. Remove that comparison
-    // and a caller supplies its own eliminator.
+    // Isolating it takes care, and the first attempt at this case did NOT.
+    // Merely exchanging `Quot`'s and `Quot.mk`'s types produces a candidate
+    // that is not well-typed AT ALL (`Quot.mk`'s type mentions `Quot`, which
+    // is not yet in the environment when declaration 0 is checked), so the
+    // transaction's own `check_declaration` rejects it and the case survives
+    // the mutation. Measured: with the type contract gated off, that version
+    // stayed `AgreeReject`.
+    //
+    // So the corruption here is a package that is **completely well-typed and
+    // internally consistent, and simply is not Lean's**: `Quot.lift` with its
+    // respectfulness hypothesis deleted. Names, kinds, order and universe
+    // arities are untouched, every declaration type-checks on its own, and
+    // the surrounding three declarations are the canonical ones. Nothing but
+    // the type contract stands between this package and admission.
+    //
+    // It is the guard the entire trust argument for quotients rests on. This
+    // kernel admits `Quot`/`Quot.mk`/`Quot.lift`/`Quot.ind` as primitives
+    // rather than axioms precisely because it re-derives Lean's four types
+    // itself and compares; a lift that does not demand its function respect
+    // the relation is the canonical unsound eliminator.
     //
     // Lean's mirror is that its quotient package is the compiler primitive
     // `init_quot` and no user declaration may occupy those names; it rejects
-    // with "`Quot` has already been declared".
+    // with "`Quot.lift` has already been declared".
     {
         let mut kernel = Kernel::new();
-        let (_pkg, mut declarations) = build_quotient_declarations(&mut kernel);
-        assert_eq!(declarations.len(), 4, "canonical package is four declarations");
-        let quot_ty = match &declarations[0] {
-            Declaration::Quotient { ty, .. } => *ty,
-            other => panic!("declaration 0 must be Quot: {other:?}"),
-        };
-        let quot_mk_ty = match &declarations[1] {
-            Declaration::Quotient { ty, .. } => *ty,
-            other => panic!("declaration 1 must be Quot.mk: {other:?}"),
-        };
-        assert_ne!(
-            quot_ty, quot_mk_ty,
-            "swapping two identical types would make this case vacuous"
+        let (pkg, mut declarations) = build_quotient_declarations(&mut kernel);
+        assert_eq!(
+            declarations.len(),
+            4,
+            "the canonical package is four declarations"
         );
-        match &mut declarations[0] {
-            Declaration::Quotient { ty, .. } => *ty = quot_mk_ty,
-            other => panic!("declaration 0 must be Quot: {other:?}"),
-        }
-        match &mut declarations[1] {
-            Declaration::Quotient { ty, .. } => *ty = quot_ty,
-            other => panic!("declaration 1 must be Quot.mk: {other:?}"),
+        let anon = kernel.anon();
+        let u_name = kernel.name_str(anon, "quot_u");
+        let v_name = kernel.name_str(anon, "quot_v");
+        let lu = kernel.level_param(u_name);
+        let lv = kernel.level_param(v_name);
+        let sort_u = kernel.sort(lu);
+        let sort_v = kernel.sort(lv);
+        let alpha_name = kernel.name_str(anon, "alpha");
+        let r_name = kernel.name_str(anon, "r");
+        let beta_name = kernel.name_str(anon, "beta");
+        let f_name = kernel.name_str(anon, "f");
+        let q_name = kernel.name_str(anon, "q");
+
+        // `{alpha} -> {r} -> {beta} -> (f : alpha -> beta) -> Quot alpha r -> beta`,
+        // i.e. the canonical `Quot.lift` with the `sanity` binder
+        // (`forall a b, r a b -> f a = f b`) removed and nothing else changed.
+        let unsound_lift_ty = {
+            let alpha_fv = fresh_fvar();
+            let r_fv = fresh_fvar();
+            let beta_fv = fresh_fvar();
+            let f_fv = fresh_fvar();
+            let q_fv = fresh_fvar();
+            let alpha = kernel.fvar(alpha_fv);
+            let r = kernel.fvar(r_fv);
+            let beta = kernel.fvar(beta_fv);
+            let function_ty = arrow(&mut kernel, alpha, beta);
+            let relation = relation_type(&mut kernel, alpha);
+            let quot_c = kernel.const_(pkg.quot, vec![lu]);
+            let quot_alpha_r = apps(&mut kernel, quot_c, &[alpha, r]);
+            close_pi(
+                &mut kernel,
+                &[
+                    (alpha_name, alpha_fv, sort_u, BinderInfo::Implicit),
+                    (r_name, r_fv, relation, BinderInfo::Implicit),
+                    (beta_name, beta_fv, sort_v, BinderInfo::Implicit),
+                    (f_name, f_fv, function_ty, BinderInfo::Default),
+                    (q_name, q_fv, quot_alpha_r, BinderInfo::Default),
+                ],
+                beta,
+            )
+        };
+        match &mut declarations[2] {
+            Declaration::Quotient { name, ty, .. } => {
+                assert_eq!(*name, pkg.quot_lift, "declaration 2 must be Quot.lift");
+                assert_ne!(
+                    *ty, unsound_lift_ty,
+                    "a corruption equal to the canonical type would be vacuous"
+                );
+                *ty = unsound_lift_ty;
+            }
+            other => panic!("declaration 2 must be Quot.lift: {other:?}"),
         }
         let accept = kernel.add_quotient_package(&declarations).is_ok();
         out.push(CaseResult {
             subsystem: "quotient",
-            name: "quotient::malformed_package_swapped_types_negative",
+            name: "quotient::lift_without_respectfulness_negative",
             axeyum_accept: accept,
             lean_source: "set_option autoImplicit false\n\
-                axiom Quot : Type\n\
-                axiom Quot.mk : True\n"
+                axiom Quot.lift : True\n"
                 .to_string(),
         });
     }
