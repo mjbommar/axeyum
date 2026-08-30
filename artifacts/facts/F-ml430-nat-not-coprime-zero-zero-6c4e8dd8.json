@@ -4,11 +4,11 @@
   "title": "Mathlib v4.30 source proposition Nat.not_coprime_zero_zero",
   "statement": "The proposition declared as `Nat.not_coprime_zero_zero` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.not_coprime_zero_zero : Not (Eq.{1} AxNat (AxNat.gcd AxNat.zero AxNat.zero) (AxNat.succ AxNat.zero))",
+    "language": "lean4-surface",
+    "statement": "¬Nat.Coprime 0 0",
     "fragment": "Nat",
-    "free_symbols": [],
-    "kernel_theorem": "Nat.not_coprime_zero_zero"
+    "kernel_theorem": "Nat.not_coprime_zero_zero",
+    "kernel_statement": "theorem Nat.not_coprime_zero_zero : Not (Eq.{1} AxNat (AxNat.gcd AxNat.zero AxNat.zero) (AxNat.succ AxNat.zero))"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
@@ -52,7 +52,7 @@
       }
     ]
   },
-  "notes": "`Nat.Coprime` has no separate name in this kernel's Nat prelude (matching `Nat.coprime_of_lt_prime`'s established convention); it is spelled inline as `gcd _ _ = 1`, so `formal.statement` is the actual kernel-core `render_lean` output for `Nat.not_coprime_zero_zero`, not the Mathlib surface form named in `title`. `depends_on` restricts to entries that already carry a fact ledger entry.",
+  "notes": "`Nat.Coprime` has no separate name in this kernel's Nat prelude (matching `Nat.coprime_of_lt_prime`'s established convention); it is spelled inline as `gcd _ _ = 1`, so `formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output for `Nat.not_coprime_zero_zero`, which spells the same proposition in the prelude's own vocabulary. `depends_on` restricts to entries that already carry a fact ledger entry.",
   "proof_route": "kernel-lean",
   "axiom_footprint": []
 }

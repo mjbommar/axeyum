@@ -4,11 +4,11 @@
   "title": "Mathlib v4.30 source proposition Nat.mod_lcm",
   "statement": "The proposition declared as `Nat.mod_lcm` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.mod_lcm : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x2 x3) -> ((x5 : AxNat.modEq x1 x2 x3) -> AxNat.modEq (AxNat.lcm x0 x1) x2 x3))))))",
+    "language": "lean4-surface",
+    "statement": "∀ {m n a b : ℕ}, a ≡ b [MOD n] → a ≡ b [MOD m] → a ≡ b [MOD n.lcm m]",
     "fragment": "Nat",
-    "free_symbols": ["x0", "x1", "x2", "x3", "x4", "x5"],
-    "kernel_theorem": "Nat.mod_lcm"
+    "kernel_theorem": "Nat.mod_lcm",
+    "kernel_statement": "theorem Nat.mod_lcm : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x2 x3) -> ((x5 : AxNat.modEq x1 x2 x3) -> AxNat.modEq (AxNat.lcm x0 x1) x2 x3))))))"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
@@ -87,5 +87,5 @@
       }
     ]
   },
-  "notes": "formal.statement is the actual kernel-core `render_lean` output for `Nat.mod_lcm`, not transcribed by hand. `depends_on` is `theorem_dependency_inventory`'s reported direct theorem dependencies, restricted to the ones that already carry a fact ledger entry (all eleven do here). The proof reuses `crt.rs`'s private `gap_dvd`/`modeq_of_dvd_gap` helpers (widened to `pub(super)` for this purpose, since the gap-extraction/repackaging steps do not depend on how the two divisibility facts were combined) rather than duplicating that construction."
+  "notes": "`formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output for `Nat.mod_lcm`, which spells the same proposition in the prelude's own vocabulary. `depends_on` is `theorem_dependency_inventory`'s reported direct theorem dependencies, restricted to the ones that already carry a fact ledger entry (all eleven do here). The proof reuses `crt.rs`'s private `gap_dvd`/`modeq_of_dvd_gap` helpers (widened to `pub(super)` for this purpose, since the gap-extraction/repackaging steps do not depend on how the two divisibility facts were combined) rather than duplicating that construction."
 }

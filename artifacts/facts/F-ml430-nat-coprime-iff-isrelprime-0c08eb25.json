@@ -4,11 +4,11 @@
   "title": "Mathlib v4.30 source proposition Nat.coprime_iff_isRelPrime",
   "statement": "The proposition declared as `Nat.coprime_iff_isRelPrime` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.coprime_iff_isRelPrime : ((x0 : AxNat) -> ((x1 : AxNat) -> Iff (Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) (AxNat.IsRelPrime x0 x1)))",
+    "language": "lean4-surface",
+    "statement": "∀ {m n : ℕ}, m.Coprime n ↔ IsRelPrime m n",
     "fragment": "Nat",
-    "free_symbols": ["x0", "x1"],
-    "kernel_theorem": "Nat.coprime_iff_isRelPrime"
+    "kernel_theorem": "Nat.coprime_iff_isRelPrime",
+    "kernel_statement": "theorem Nat.coprime_iff_isRelPrime : ((x0 : AxNat) -> ((x1 : AxNat) -> Iff (Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) (AxNat.IsRelPrime x0 x1)))"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
@@ -82,5 +82,5 @@
       }
     ]
   },
-  "notes": "formal.statement is the actual kernel-core `render_lean` output for `Nat.coprime_iff_isRelPrime`, not transcribed by hand. `depends_on` is restricted to the direct divisibility/gcd lemmas the proof actually uses, all of which already carry a fact ledger entry. `Nat.IsRelPrime` is a genuinely new predicate in this prelude -- unlike `Coprime`, which has no separate name here and is always spelled `gcd m n = 1` inline -- because this fact is literally the statement that the two spellings agree, so both sides need a name to state. The mirror flip from `open` to `proved` is honest per the established criterion (Mathlib DEFINES `IsRelPrime` the same way we do, specialized to Nat; see prior_art), not merely a theorem Mathlib proves about a structurally different definition."
+  "notes": "`formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output for `Nat.coprime_iff_isRelPrime`, which spells the same proposition in the prelude's own vocabulary. `depends_on` is restricted to the direct divisibility/gcd lemmas the proof actually uses, all of which already carry a fact ledger entry. `Nat.IsRelPrime` is a genuinely new predicate in this prelude -- unlike `Coprime`, which has no separate name here and is always spelled `gcd m n = 1` inline -- because this fact is literally the statement that the two spellings agree, so both sides need a name to state. The mirror flip from `open` to `proved` is honest per the established criterion (Mathlib DEFINES `IsRelPrime` the same way we do, specialized to Nat; see prior_art), not merely a theorem Mathlib proves about a structurally different definition."
 }

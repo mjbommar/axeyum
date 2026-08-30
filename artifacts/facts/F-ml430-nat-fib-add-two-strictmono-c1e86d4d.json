@@ -5,7 +5,7 @@
   "statement": "The proposition declared as `Nat.fib_add_two_strictMono` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "StrictMono (fun n : ℕ => Nat.fib (n + 2))",
+    "statement": "StrictMono fun n => Nat.fib (n + 2)",
     "fragment": "Nat"
   },
   "epistemic_status": "proved",
