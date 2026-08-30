@@ -35,6 +35,17 @@ cd "$(dirname "$0")/.."
 
 TIMEOUT="${1:-120}"
 
+# THE WHOLE-SWEEP DEADLINE. The per-row bound above stops any ONE bad checker;
+# it does not stop 4,122 of them each burning a full budget. If every row timed
+# out and retried, the per-row budgets sum to 993,952 s -- 11.5 days -- so
+# "one bad row cannot take the gate down" is true and not sufficient.
+#
+# 9,900 s is deliberately just UNDER `scripts/check.sh`'s 10,800 s cap for this
+# step, so when a sweep does run long the INFORMATIVE stop wins the race: this
+# script reports which facts it never reached, by name, instead of the gate
+# killing it mid-fact with nothing to read.
+MAX_SECONDS="${AXEYUM_FACT_REPLAY_MAX_SECONDS:-9900}"
+
 # Checkers write scratch to ${TMPDIR:-/tmp} -- the sorting-network ones write a
 # cube directory of DRAT proofs, which runs to gigabytes. That default is correct
 # and portable; it is this machine that is unusual, because /tmp here is a 62 G
@@ -62,14 +73,40 @@ fi
 # A gate that cannot produce a trustworthy answer must say so rather than produce
 # an untrustworthy one, so this refuses to run rather than reporting numbers a
 # reader would misread. `--force` runs anyway, with the caveat printed.
+# The build probe's OWN cap, and its own per-lane log.
+#
+# Until 2026-08-30 this `cargo check` had no timeout of any kind, and cargo's
+# wait on the build-directory lock is UNBOUNDED -- it prints "Blocking waiting
+# for file lock" and waits forever. So the gate's very first action could hang
+# the whole aggregate gate before a single checker ran, with nothing on stdout
+# to say so.
+#
+# `/tmp/fact-replay-build.log` was also a FIXED-NAME file in a directory every
+# lane shares, which is on CLAUDE.md's banned list for exactly the reason it
+# looks harmless: two concurrent sweeps silently overwrite each other's
+# diagnosis, so the error you read may belong to another lane's tree.
+BUILD_PROBE_TIMEOUT="${AXEYUM_FACT_REPLAY_BUILD_TIMEOUT:-1800}"
+BUILD_LOG="${TMPDIR:-/tmp}/fact-replay-build-${AXEYUM_AGENT:-$$}.log"
+
 if [ "${2:-}" != "--force" ]; then
-  if ! cargo check -q --workspace --all-features >/tmp/fact-replay-build.log 2>&1; then
+  timeout --kill-after=30 "$BUILD_PROBE_TIMEOUT" \
+    cargo check -q --workspace --all-features > "$BUILD_LOG" 2>&1
+  probe_status=$?
+  if [ "$probe_status" -eq 124 ] || [ "$probe_status" -eq 137 ]; then
+    echo "fact-evidence-replay: REFUSING TO RUN -- the build probe did not finish" >&2
+    echo "  within ${BUILD_PROBE_TIMEOUT}s. cargo's wait on the build-directory lock is" >&2
+    echo "  unbounded, so this usually means another cargo is holding it (possibly an" >&2
+    echo "  orphan from an earlier capped run). Check for one before re-running:" >&2
+    echo "    ps -eo pid,ppid,etimes,args --sort=-etimes | awk '\$2==1' | grep cargo" >&2
+    exit 3
+  fi
+  if [ "$probe_status" -ne 0 ]; then
     echo "fact-evidence-replay: REFUSING TO RUN -- the worktree does not compile." >&2
     echo "  This gate runs every checker against the worktree, so a build failure" >&2
     echo "  makes unrelated facts look rotted. In a shared checkout that is usually" >&2
     echo "  another lane's in-flight work, not a defect in any fact." >&2
     echo "" >&2
-    grep -m3 -E '^error' /tmp/fact-replay-build.log | sed 's/^/  /' >&2
+    grep -m3 -E '^error' "$BUILD_LOG" | sed 's/^/  /' >&2
     echo "" >&2
     echo "  Verify against committed state instead:" >&2
     echo "    W=\$(scripts/lane-snapshot.sh HEAD) && (cd \"\$W\" && ./scripts/check-fact-evidence-replay.sh)" >&2
@@ -81,8 +118,8 @@ if [ "${2:-}" != "--force" ]; then
   fi
 fi
 
-python3 - "$TIMEOUT" <<'PY'
-import json, glob, re, subprocess, sys, time
+python3 - "$TIMEOUT" "$MAX_SECONDS" <<'PY'
+import json, glob, os, re, signal, subprocess, sys, time
 from collections import Counter
 
 timeout = int(sys.argv[1])
@@ -95,20 +132,99 @@ for path in sorted(glob.glob("artifacts/facts/*.json")):
         facts.append(d)
 
 ran = failed = skipped = 0
+max_seconds = int(sys.argv[2])
+not_run = []
 extended = []
 timeouts = []
 timed_out_facts = set()
 
 
+KILL_GRACE = 10
+
+
+def _bounded(cmd, timeout):
+    """Run one shell command under a HARD bound, killing its whole process tree.
+
+    `subprocess.run(cmd, shell=True, timeout=N)` KILLS ONLY THE DIRECT CHILD.
+    Measured at three command shapes -- bare, pipeline, and backgrounded --
+    `TimeoutExpired` fires on schedule in all three and the grandchild survives
+    in all three:
+
+        cmd            TimeoutExpired 2.00s   grandchild survives: yes
+        cmd | cat      TimeoutExpired 2.00s   grandchild survives: yes
+        cmd & wait     TimeoutExpired 2.00s   grandchild survives: yes
+
+    That orphan is not untidiness, it is the nine-hour hang. 4,064 of this
+    ledger's 4,122 `checker_command`s invoke cargo, and cargo's wait on the
+    build-directory lock is UNBOUNDED. One orphaned cargo therefore blocks every
+    later cargo checker in the sweep, each of which then burns its own full
+    budget twice (timeout, retry, timeout) at 0% CPU -- which is exactly what a
+    reaped run looked like: hours of no output, no CPU, and a `python3` waiting
+    on a `cargo run`.
+
+    `start_new_session=True` puts the shell in its own session and process
+    group, so `killpg` reaches everything it spawned. Returns
+    (returncode, stdout, stderr, timed_out).
+    """
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True,
+                         start_new_session=True)
+    try:
+        out, err = p.communicate(timeout=timeout)
+        return p.returncode, out, err, False
+    except subprocess.TimeoutExpired:
+        try:
+            pgid = os.getpgid(p.pid)
+        except ProcessLookupError:
+            pgid = None
+        if pgid is not None:
+            # TERM first so a checker with an EXIT trap can clean up its scratch
+            # (the sorting-network ones write gigabytes of DRAT cubes), then
+            # KILL unconditionally, because an ignored TERM disposition is
+            # inherited across exec and a wedged tree will not go on its own.
+            #
+            # THE PROGRESS TEST IS THE GROUP, NOT THE DIRECT CHILD, and getting
+            # that wrong is what the first version of this did. It waited on
+            # `p` after the TERM and broke out of the loop when `p` was reaped
+            # -- so SIGKILL was never sent. Measured:
+            #
+            #   /bin/sh -c ./bad.sh   did NOT exec; it forked `bash ./bad.sh`
+            #   killpg(SIGTERM)       killed the sh, not the TERM-ignoring bash
+            #   p.wait() succeeded    -> break -> no SIGKILL
+            #   FINAL survivors = 1   (the bash, holding everything it held)
+            #
+            # The direct child dying says nothing about the rest of the group,
+            # which is the entire population this exists to reap.
+            try:
+                os.killpg(pgid, signal.SIGTERM)
+            except ProcessLookupError:
+                pgid = None
+            if pgid is not None:
+                deadline = time.time() + KILL_GRACE
+                while time.time() < deadline:
+                    try:
+                        os.killpg(pgid, 0)   # does the GROUP still have members?
+                    except ProcessLookupError:
+                        break
+                    time.sleep(0.2)
+                try:
+                    os.killpg(pgid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        try:
+            out, err = p.communicate(timeout=KILL_GRACE)
+        except subprocess.TimeoutExpired:
+            out, err = "", ""
+        return 124, out, err, True
+
+
 def run_checker(cmd, timeout):
     """Run one checker. Returns (exit code, last output line, timed_out)."""
-    try:
-        p = subprocess.run(cmd, shell=True, capture_output=True, text=True,
-                           timeout=timeout)
-        tail = (p.stdout or p.stderr or "").strip().splitlines()
-        return p.returncode, (tail[-1][:90] if tail else f"exit {p.returncode}"), False
-    except subprocess.TimeoutExpired:
-        return 124, f"TIMED OUT after {timeout}s (twice)", True
+    rc, out, err, timed_out = _bounded(cmd, timeout)
+    if timed_out:
+        return 124, f"TIMED OUT after {timeout}s", True
+    tail = (out or err or "").strip().splitlines()
+    return rc, (tail[-1][:90] if tail else f"exit {rc}"), False
 
 
 def diagnose(cmd, timeout):
@@ -131,12 +247,10 @@ def diagnose(cmd, timeout):
     restored = re.sub(r"\s*2>\s*/dev/null", "", cmd)
     if restored == cmd:
         return ""
-    try:
-        p = subprocess.run(restored, shell=True, capture_output=True, text=True,
-                           timeout=timeout)
-    except subprocess.TimeoutExpired:
+    _, _, stderr_text, timed_out = _bounded(restored, timeout)
+    if timed_out:
         return "    (stderr re-run timed out)"
-    err = (p.stderr or "").strip().splitlines()
+    err = (stderr_text or "").strip().splitlines()
     if not err:
         return ""
     hint = ""
@@ -155,6 +269,14 @@ started = time.time()
 
 for fact in facts:
     route = fact.get("proof_route") or "<none>"
+    if time.time() - started > max_seconds:
+        # OUT OF BUDGET. A fact we never reached is NOT a passing fact and NOT a
+        # failing one -- it is a fourth outcome, the same discipline
+        # `scripts/check-fast.sh` applies to a deferred step. It is named, it is
+        # counted, and it makes the exit status non-zero.
+        not_run.append(fact["id"])
+        by_route_total[route] += 1
+        continue
     rows = [e for e in fact.get("evidence", []) if e.get("checker_command")]
     if not rows:
         # A settled fact whose evidence names no runnable checker. Not a failure
@@ -222,8 +344,16 @@ if extended:
 ok_facts = sum(by_route_ok.values())
 print(f"\nfact-evidence-replay: {len(facts)} settled fact(s), {ran} checker run(s), "
       f"{ok_facts} re-derived, {failed} failed, {len(timed_out_facts)} timed out, "
-      f"{skipped} uncovered, {elapsed:.1f}s")
-assert ok_facts + failed + len(timed_out_facts) + skipped == len(facts), (
+      f"{skipped} uncovered, {len(not_run)} NOT RUN, {elapsed:.1f}s")
+if not_run:
+    print(f"  NOT RUN: the {max_seconds}s sweep budget ran out with "
+          f"{len(not_run)} fact(s) unreached. These are UNCHECKED -- neither "
+          f"re-derived nor failed:", file=sys.stderr)
+    for fid in not_run[:20]:
+        print(f"    {fid}", file=sys.stderr)
+    if len(not_run) > 20:
+        print(f"    ... and {len(not_run) - 20} more", file=sys.stderr)
+assert ok_facts + failed + len(timed_out_facts) + skipped + len(not_run) == len(facts), (
     "the per-fact outcome counts must partition the facts; if this fires the "
     "summary is double-counting and cannot be read")
 if timeouts:
@@ -247,5 +377,5 @@ if ran == 0:
     print("fact-evidence-replay: ran ZERO checkers — the gate examined nothing",
           file=sys.stderr)
     sys.exit(1)
-sys.exit(1 if (failed or timed_out_facts) else 0)
+sys.exit(1 if (failed or timed_out_facts or not_run) else 0)
 PY

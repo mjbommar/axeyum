@@ -36,7 +36,7 @@
 # `step_cap_for`, exercised against steps this script controls.
 #
 # Usage:
-#   scripts/check-gate-step-timeout.sh            # all cases
+#   scripts/check-gate-step-timeout.sh            # all 8 cases
 #   scripts/check-gate-step-timeout.sh --self-check  # only the TERM-ignoring probe
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -242,8 +242,72 @@ case "$nt_out" in
   *) note_fail "it refused without explaining itself" ;;
 esac
 
+echo "=== case 8: the LEDGER SWEEP bounds one bad checker_command ==="
+# `scripts/check-fact-evidence-replay.sh` executes `checker_command` strings
+# taken from 2,220 JSON files. As far as termination goes those are UNTRUSTED
+# input, and one of them must not be able to take the aggregate gate down.
+#
+# It used `subprocess.run(shell=True, timeout=N)`, which kills only the DIRECT
+# child -- so a timed-out checker left its cargo running, that orphan held the
+# build-directory lock (an unbounded wait), and every later cargo checker in the
+# sweep blocked on it. 4,064 of the 4,122 checker rows invoke cargo.
+#
+# Run the REAL script against a synthetic one-fact ledger: it does
+# `cd "$(dirname "$0")/.."`, so a copy under `$tmp/scripts/` reads
+# `$tmp/artifacts/facts/`. `--force` skips the build probe.
+led="$work/ledger"
+mkdir -p "$led/scripts" "$led/artifacts/facts"
+cp "$repo/scripts/check-fact-evidence-replay.sh" "$led/scripts/"
+LEDMARK="AXLEDGER$$"
+cat > "$led/bad-checker.sh" <<EOF
+#!/usr/bin/env bash
+trap '' TERM
+sleep 45 &
+wait \$!
+EOF
+chmod +x "$led/bad-checker.sh"
+cat > "$led/artifacts/facts/F-synthetic.json" <<EOF
+{"id": "F:synthetic-hanging-checker",
+ "epistemic_status": "proved",
+ "proof_route": "synthetic",
+ "evidence": [{"checker_command": "$led/bad-checker.sh $LEDMARK"}]}
+EOF
+
+t0=$SECONDS
+led_out="$(cd "$led" && AXEYUM_FACT_REPLAY_MAX_SECONDS=600 \
+  bash scripts/check-fact-evidence-replay.sh 2 --force 2>&1)"
+led_st=$?
+led_el=$(( SECONDS - t0 ))
+sleep 1
+pgrep -af "$LEDMARK" > "$work/ledger-survivors.txt" 2>/dev/null
+led_surv=$(/usr/bin/grep -c . "$work/ledger-survivors.txt" || true)
+[ "$led_surv" -eq 0 ] || { echo "    survivor command lines:"; sed 's/^/      /' "$work/ledger-survivors.txt"; }
+for lp in $(pgrep -f "$LEDMARK"); do kill -9 "$lp" 2>/dev/null; done
+
+# 2s budget, retried once, plus a 10s kill grace each -- ~24s worst case. The
+# unbounded shape takes the sleeper's full 45s twice.
+if [ "$led_el" -le 40 ]; then
+  note_pass "one hanging checker_command bounded in ${led_el}s (2s budget, one retry)"
+else
+  note_fail "one hanging checker_command took ${led_el}s -- the per-row bound does not bind"
+fi
+if [ "$led_surv" -eq 0 ]; then
+  note_pass "and it left no orphan behind"
+else
+  note_fail "it left ${led_surv} orphan(s) -- these hold cargo's build lock for the rest of the sweep"
+fi
+if [ "$led_st" -ne 0 ]; then
+  note_pass "the sweep exits non-zero on a timed-out checker"
+else
+  note_fail "the sweep exited 0 with a checker that never completed"
+fi
+case "$led_out" in
+  *"F:synthetic-hanging-checker"*) note_pass "and the failure NAMES the fact" ;;
+  *) note_fail "the failure does not name the fact" ;;
+esac
+
 echo
-echo "GATE_STEP_TIMEOUT|cases=7|pass=${pass}|fail=${fail}"
+echo "GATE_STEP_TIMEOUT|cases=8|pass=${pass}|fail=${fail}"
 if [ "$fail" -ne 0 ]; then
   echo "check-gate-step-timeout: FAILED -- the gate's per-step cap is not doing what it claims" >&2
   exit 1
