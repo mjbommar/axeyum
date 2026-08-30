@@ -175,6 +175,7 @@ now. Nothing was deleted.
 | 2026-08-30 | fermat-easy | 5 axiom-free Nat kernel theorems: the three closed `fermatNumber` reductions (0/1/2 = 3/5/17), `Nat.odd_fermatNumber`, and `Nat.fermatNumber_strictMono`; all fully symbolic except the three closed equalities (largest formed numeral 17) |
 | 2026-08-30 | pow-add-prime-finish | `Nat.pow_two_or_has_odd_factor` (odd-factor extraction, ordinary fuel-bounded `Nat.rec`, NOT `WellFounded.fix` — the prior handoff's sizing was wrong) and `Nat.pow_of_pow_add_prime` — closes `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3` (open → proved, axiom-free); 222/222 `nat_prelude::` |
 | 2026-08-30 | l0-s5-kernel-differential | ADR-0717 S5: 32-case kernel differential vs pinned Lean 4.30.0 (0 P0, 1 registered incompleteness), gated in justfile/check.sh, 8-mutation kernel-source kill table (4 killed / 4 survived), ADR-0780 |
+| 2026-08-30 | `9b0ba431c` | ADR-0811 and the first `axeyum-machine` A0 word/state/memory/decode/step/run slice. Seventeen direct tests cover every opcode family and branch predicate, exhaustive 8-bit arithmetic flags, modular code wrap, traps, byte order, terminal stuttering, and negative controls. |
 | 2026-08-30 | l0-s6-credit-transaction | Crash-safe two-phase-commit engine (`scripts/credit-transaction.py`) + gate (`scripts/check-credit-transaction.py`) + 27-test suite + 9-guard mutation table (`scripts/tests/test-credit-transaction*`), registered in justfile and check.sh; ADR-0785. |
 | 2026-08-30 | l1-c0-artifact-contract | Library-artifact pack contract (`artifacts/library-artifact/`: README spec, JSON Schema doc, 9-declaration positive pack + type-only projection + external population registry) + two independent readers (`scripts/check-library-artifact-contract{,-reader-b}.py`) + 14-test suite + 5-guard 1:1 mutation table (`scripts/tests/test-library-artifact-contract*`), registered in justfile and check.sh; ADR-0800. |
 | 2026-08-30 | `1ec34c8e1` | Initial module-import parser + receipt generator/checker, verified against the full pinned Mathlib checkout (8,094 modules, 25,495 internal edges, 1,476 sinks, matching the roadmap's evidence baseline exactly); two runs byte-identical. |
@@ -34676,6 +34677,14 @@ restricted large elimination, structure eta beyond plain projection, string
 literals, zeta reduction, well-founded recursion, longer reduction chains,
 and malformed-package/malformed-bootstrap shapes for quotient/literals
 specifically (exactly the gap the two "explained" survivals trace to).
+
+**Executable curriculum (`WIP`, book-executable-curriculum, 2026-08-30).**
+Build the semantic and evidence layers required by *Instruction Sets,
+Programs, and Proofs*. The first slice adds the `axeyum-machine` boundary and
+complete A0 concrete execution. Next: independently pinned RV64I and x86-64
+teaching slices, semantic relations, formula generation, manifests, Python
+projection, and clean-checkout book gates. Do not describe the book's future
+interfaces as implemented until those routes run and their controls fire.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
