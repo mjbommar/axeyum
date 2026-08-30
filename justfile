@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls
 
 fmt:
     cargo fmt --all --check
@@ -1040,6 +1040,17 @@ test-guarded:
 # proportional to the change (a Python-only or one-crate edit gates in seconds).
 check-scope base="main":
     ./scripts/check-scope.sh {{base}}
+
+# The number-theory certificate checkers: Pratt primality, compositeness,
+# factorization and CRT (ADR-0745). Runs the adversarial fixture suite and
+# asserts a RATCHETED NONZERO count -- a bare `cargo test --lib <filter>` exits
+# 0 when the filter matches nothing, so the count is the discriminator.
+#
+# The mutation sweep that measures whether each guard is load-bearing is
+# `scripts/tests/test-ntheory-certificate-guards.sh` (~23 incremental builds),
+# deliberately NOT in this chain; run it when a guard changes.
+ntheory-certificates:
+    ./scripts/check-ntheory-certificates.sh
 
 # The order-255 certified-moment proofs (squared_binomial_{,falling_}moment_...),
 # kept OFF the per-iteration hot path via #[ignore] (~15 min each). The `check`
