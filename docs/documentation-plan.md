@@ -12,7 +12,7 @@ and benchmark artifacts. The internals sequence now documents the live IR,
 evaluation, rewriting, lowering, SAT, dispatch, evidence, and Lean boundaries.
 Every workspace crate now has a README, and the core public crates have
 compile-tested rustdoc examples. The stable reference section routes public
-API/configuration questions, catalogs all 202 checked-in Cargo examples with
+API/configuration questions, catalogs all 203 checked-in Cargo examples with
 their feature/tool and mutation boundaries, and indexes golden-tested/generated
 logic, support, trust, and SMT-LIB protocol authorities without copying their
 volatile tables. The short public project-state page now copies the latest weak
