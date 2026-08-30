@@ -165,6 +165,31 @@ fn arrow(kernel: &mut Kernel, domain: ExprId, codomain: ExprId) -> ExprId {
     kernel.pi(anon, domain, codomain, BinderInfo::Default)
 }
 
+/// `Eq.{level} a_ty x y`, given the raw `Eq` name.
+fn eq_ty_raw(
+    kernel: &mut Kernel,
+    eq_name: NameId,
+    level: axeyum_lean_kernel::LevelId,
+    a_ty: ExprId,
+    x: ExprId,
+    y: ExprId,
+) -> ExprId {
+    let eq_c = kernel.const_(eq_name, vec![level]);
+    apps(kernel, eq_c, &[a_ty, x, y])
+}
+
+/// `Eq.refl.{level} a_ty x : Eq a_ty x x`, given the raw `Eq.refl` name.
+fn eq_refl_raw(
+    kernel: &mut Kernel,
+    eq_refl_name: NameId,
+    level: axeyum_lean_kernel::LevelId,
+    a_ty: ExprId,
+    x: ExprId,
+) -> ExprId {
+    let r = kernel.const_(eq_refl_name, vec![level]);
+    apps(kernel, r, &[a_ty, x])
+}
+
 /// `Eq.{level} a_ty x y`.
 fn eq_ty(
     kernel: &mut Kernel,
@@ -174,8 +199,7 @@ fn eq_ty(
     x: ExprId,
     y: ExprId,
 ) -> ExprId {
-    let eq_c = kernel.const_(logic.eq, vec![level]);
-    apps(kernel, eq_c, &[a_ty, x, y])
+    eq_ty_raw(kernel, logic.eq, level, a_ty, x, y)
 }
 
 /// `Eq.refl.{level} a_ty x : Eq a_ty x x`.
@@ -186,8 +210,7 @@ fn eq_refl(
     a_ty: ExprId,
     x: ExprId,
 ) -> ExprId {
-    let r = kernel.const_(logic.eq_refl, vec![level]);
-    apps(kernel, r, &[a_ty, x])
+    eq_refl_raw(kernel, logic.eq_refl, level, a_ty, x)
 }
 
 /// Declares a fresh `axiom name : Sort level` and returns its `Const`.
@@ -221,32 +244,6 @@ fn declare_axiom(kernel: &mut Kernel, label: &str, ty: ExprId) -> (NameId, ExprI
     (name, c)
 }
 
-/// Declares a minimal `Nat`-shaped inductive (`zero`/`succ`, no params/
-/// indices) matching exactly the reserved-declaration shape this kernel's
-/// `Lit::Nat` bootstrap requires (`tc.rs::nat_literal_bootstrap`), without
-/// pulling in the full `nat_prelude` (hundreds of unrelated theorems).
-/// Returns `(nat_name, zero_name, succ_name, nat_const, zero_const, succ_const)`.
-#[allow(clippy::type_complexity)]
-fn declare_minimal_nat(
-    kernel: &mut Kernel,
-) -> (NameId, NameId, NameId, ExprId, ExprId, ExprId) {
-    let anon = kernel.anon();
-    let nat = kernel.name_str(anon, "Nat");
-    let zero = kernel.name_str(nat, "zero");
-    let succ = kernel.name_str(nat, "succ");
-    let nat_const = kernel.const_(nat, vec![]);
-    let zero_lvl = kernel.level_zero();
-    let one_lvl = kernel.level_succ(zero_lvl);
-    let nat_ty = kernel.sort(one_lvl);
-    let succ_ty = arrow(kernel, nat_const, nat_const);
-    kernel
-        .add_inductive(nat, &[], 0, nat_ty, &[(zero, nat_const), (succ, succ_ty)])
-        .expect("minimal Nat must admit");
-    let zero_const = kernel.const_(zero, vec![]);
-    let succ_const = kernel.const_(succ, vec![]);
-    (nat, zero, succ, nat_const, zero_const, succ_const)
-}
-
 /// `close_pi`: given a body built against a set of free variables, abstract
 /// each one out (innermost first) and wrap with a `Pi` of the given binder
 /// name/type/info. Mirrors `quotient.rs`'s private `close_pi` exactly, using
@@ -260,6 +257,24 @@ fn close_pi(
     for &(name, fv, ty, info) in binders.iter().rev() {
         body = kernel.abstract_fvars(body, &[fv]);
         body = kernel.pi(name, ty, body, info);
+    }
+    body
+}
+
+/// Like [`close_pi`], but wraps with `Lam` instead of `Pi` -- for closing a
+/// VALUE (`fun a b h => ...`) rather than a TYPE. Using `close_pi` on a value
+/// produces a `Pi` whose "codomain" is a proof term rather than a type,
+/// which the kernel rejects with `NotASort` on the INNERMOST binder (a real
+/// mistake made and fixed while building this corpus: `quotient::
+/// lift_computation_positive`'s `h_val` needs this, not `close_pi`).
+fn close_lam(
+    kernel: &mut Kernel,
+    binders: &[(NameId, u64, ExprId, BinderInfo)],
+    mut body: ExprId,
+) -> ExprId {
+    for &(name, fv, ty, info) in binders.iter().rev() {
+        body = kernel.abstract_fvars(body, &[fv]);
+        body = kernel.lam(name, ty, body, info);
     }
     body
 }
@@ -753,13 +768,10 @@ fn inductives_cases() -> Vec<CaseResult> {
         let bad = kernel.name_str(anon, "Bad");
         let bad_c = kernel.const_(bad, vec![]);
         let ty = kernel.sort(one_lvl);
-        let (_, nat_c) = {
-            // Reuse a minimal Nat purely as the codomain; positivity does not
-            // care what it is, only that Bad occurs in a function argument.
-            let (_, _, _, nat_const, _, _) = declare_minimal_nat(&mut kernel);
-            ((), nat_const)
-        };
-        let field_ty = arrow(&mut kernel, bad_c, nat_c);
+        // An arbitrary codomain; positivity does not care what it is, only
+        // that `Bad` occurs in a function argument.
+        let (_, codomain) = declare_axiom_type(&mut kernel, "Codomain", one_lvl);
+        let field_ty = arrow(&mut kernel, bad_c, codomain);
         let mk_ty = arrow(&mut kernel, field_ty, bad_c);
         let mk = kernel.name_str(bad, "mk");
         let accept = kernel.add_inductive(bad, &[], 0, ty, &[(mk, mk_ty)]).is_ok();
@@ -788,9 +800,9 @@ fn inductives_cases() -> Vec<CaseResult> {
         kernel
             .add_inductive(two, &[], 0, sort_1, &[(ff, two_c), (tt, two_c)])
             .expect("TwoVals must admit");
-        let (_, _, _, nat_c, _, _) = declare_minimal_nat(&mut kernel);
+        let (_, domain) = declare_axiom_type(&mut kernel, "Dom", one_lvl);
         let bad2 = kernel.name_str(anon, "Bad2");
-        let mk_ty = arrow(&mut kernel, nat_c, two_c);
+        let mk_ty = arrow(&mut kernel, domain, two_c);
         let mk = kernel.name_str(bad2, "mk");
         let accept = kernel
             .add_inductive(bad2, &[], 0, sort_1, &[(mk, mk_ty)])
@@ -818,14 +830,24 @@ fn recursors_cases() -> Vec<CaseResult> {
 
     /// Builds a fresh minimal Nat plus its generated recursor applied to a
     /// `pred`-shaped motive/zero-case/succ-case, missing only the final `n`
-    /// argument. Returns `(kernel, nat_const, zero_const, succ_const,
-    /// pred_partial)`.
-    fn setup() -> (Kernel, ExprId, ExprId, ExprId, ExprId) {
+    /// argument. `build_logic_prelude` MUST run first on a fresh `Kernel`
+    /// (its process-wide template cache, ADR-0464, assumes it is the first
+    /// thing declared and collides otherwise). It already declares a
+    /// minimal computational `Nat` (`LogicPrelude::{nat,nat_zero,nat_succ,
+    /// nat_rec}`, for literal-semantics support), which this reuses rather
+    /// than declaring a second, colliding `Nat` under the same name -- see
+    /// the commit history of this file for the `DeclarationExists` this
+    /// collision produced. Returns `(kernel, logic, nat_const, zero_const,
+    /// succ_const, pred_partial)`.
+    #[allow(clippy::type_complexity)]
+    fn setup() -> (Kernel, LogicPrelude, ExprId, ExprId, ExprId, ExprId) {
         let mut kernel = Kernel::new();
-        let (nat, _zero, succ, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
+        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let nat_c = kernel.const_(logic.nat, vec![]);
+        let zero_c = kernel.const_(logic.nat_zero, vec![]);
+        let succ_c = kernel.const_(logic.nat_succ, vec![]);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
-        let rec_name = kernel.name_str(nat, "rec");
         let anon = kernel.anon();
         let motive = kernel.lam(anon, nat_c, nat_c, BinderInfo::Default);
         let succ_case = {
@@ -833,16 +855,14 @@ fn recursors_cases() -> Vec<CaseResult> {
             let inner_lam = kernel.lam(anon, nat_c, inner, BinderInfo::Default);
             kernel.lam(anon, nat_c, inner_lam, BinderInfo::Default)
         };
-        let rec_c = kernel.const_(rec_name, vec![one_lvl]);
+        let rec_c = kernel.const_(logic.nat_rec, vec![one_lvl]);
         let pred_partial = apps(&mut kernel, rec_c, &[motive, zero_c, succ_case]);
-        let _ = succ; // silence unused (used only through succ_c)
-        (kernel, nat_c, zero_c, succ_c, pred_partial)
+        (kernel, logic, nat_c, zero_c, succ_c, pred_partial)
     }
 
     // P1: succ-case iota (`pred (succ (succ zero)) = succ zero`).
     {
-        let (mut kernel, nat_c, zero_c, succ_c, pred_partial) = setup();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let (mut kernel, logic, nat_c, zero_c, succ_c, pred_partial) = setup();
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let one_v_tmp = apps(&mut kernel, succ_c, &[zero_c]);
@@ -875,8 +895,7 @@ fn recursors_cases() -> Vec<CaseResult> {
 
     // P2: zero-case iota (`pred zero = zero`).
     {
-        let (mut kernel, nat_c, zero_c, _succ_c, pred_partial) = setup();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let (mut kernel, logic, nat_c, zero_c, _succ_c, pred_partial) = setup();
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let pred_zero = kernel.app(pred_partial, zero_c);
@@ -909,10 +928,12 @@ fn recursors_cases() -> Vec<CaseResult> {
     // application itself, checked via bare `infer`.
     {
         let mut kernel = Kernel::new();
-        let (nat, _zero, _succ, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
+        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let nat_c = kernel.const_(logic.nat, vec![]);
+        let zero_c = kernel.const_(logic.nat_zero, vec![]);
+        let succ_c = kernel.const_(logic.nat_succ, vec![]);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
-        let rec_name = kernel.name_str(nat, "rec");
         let anon = kernel.anon();
         let motive = kernel.lam(anon, nat_c, nat_c, BinderInfo::Default);
         let succ_case = {
@@ -920,7 +941,7 @@ fn recursors_cases() -> Vec<CaseResult> {
             let inner_lam = kernel.lam(anon, nat_c, inner, BinderInfo::Default);
             kernel.lam(anon, nat_c, inner_lam, BinderInfo::Default)
         };
-        let rec_c = kernel.const_(rec_name, vec![one_lvl]);
+        let rec_c = kernel.const_(logic.nat_rec, vec![one_lvl]);
         // Zero-case slot given `succ_case` (a function), succ-case slot
         // given `zero_c` (a bare value): both wrong, deliberately swapped.
         let bad = apps(&mut kernel, rec_c, &[motive, succ_case, zero_c]);
@@ -940,8 +961,7 @@ fn recursors_cases() -> Vec<CaseResult> {
     // N2: recursor computes correctly, but the claimed equality is wrong
     // (`pred (succ zero) = succ zero`, actually `zero`).
     {
-        let (mut kernel, nat_c, zero_c, succ_c, pred_partial) = setup();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let (mut kernel, logic, nat_c, zero_c, succ_c, pred_partial) = setup();
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let one_v = kernel.app(succ_c, zero_c);
@@ -980,8 +1000,10 @@ fn recursors_cases() -> Vec<CaseResult> {
 fn projections_cases() -> Vec<CaseResult> {
     let mut out = Vec::new();
 
-    fn setup() -> (Kernel, NameId, ExprId, ExprId, ExprId, ExprId) {
+    #[allow(clippy::type_complexity)]
+    fn setup() -> (Kernel, LogicPrelude, NameId, ExprId, ExprId, ExprId, ExprId) {
         let mut kernel = Kernel::new();
+        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
         let anon = kernel.anon();
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
@@ -1001,13 +1023,12 @@ fn projections_cases() -> Vec<CaseResult> {
             .expect("Pair must admit");
         let mk_c = kernel.const_(mk, vec![]);
         let mk_val = apps(&mut kernel, mk_c, &[a_val, b_val]);
-        (kernel, pair, a_ty, a_val, b_val, mk_val)
+        (kernel, logic, pair, a_ty, a_val, b_val, mk_val)
     }
 
     // P1: field 0 (`.fst`) reduces to `a`.
     {
-        let (mut kernel, pair, a_ty, a_val, _b_val, mk_val) = setup();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let (mut kernel, logic, pair, a_ty, a_val, _b_val, mk_val) = setup();
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let proj0 = kernel.proj(pair, 0, mk_val);
@@ -1037,8 +1058,7 @@ fn projections_cases() -> Vec<CaseResult> {
 
     // P2: field 1 (`.snd`) reduces to `b`.
     {
-        let (mut kernel, pair, a_ty, _a_val, b_val, mk_val) = setup();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let (mut kernel, logic, pair, a_ty, _a_val, b_val, mk_val) = setup();
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let proj1 = kernel.proj(pair, 1, mk_val);
@@ -1068,8 +1088,7 @@ fn projections_cases() -> Vec<CaseResult> {
 
     // N1: wrong field claimed (`.fst` claimed equal to `b`, actually `a`).
     {
-        let (mut kernel, pair, a_ty, _a_val, b_val, mk_val) = setup();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let (mut kernel, logic, pair, a_ty, _a_val, b_val, mk_val) = setup();
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let proj0 = kernel.proj(pair, 0, mk_val);
@@ -1099,7 +1118,7 @@ fn projections_cases() -> Vec<CaseResult> {
 
     // N2: out-of-range field index (only 2 fields, index 2 requested).
     {
-        let (mut kernel, pair, _a_ty, _a_val, _b_val, mk_val) = setup();
+        let (mut kernel, _logic, pair, _a_ty, _a_val, _b_val, mk_val) = setup();
         let proj2 = kernel.proj(pair, 2, mk_val);
         let accept = kernel.infer(proj2).is_ok();
         out.push(CaseResult {
@@ -1127,8 +1146,10 @@ fn literals_cases() -> Vec<CaseResult> {
     // P1: `3 = succ (succ (succ zero))`.
     {
         let mut kernel = Kernel::new();
-        let (_, _, _, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let nat_c = kernel.const_(logic.nat, vec![]);
+        let zero_c = kernel.const_(logic.nat_zero, vec![]);
+        let succ_c = kernel.const_(logic.nat_succ, vec![]);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let three_lit = kernel.lit(Lit::nat(3u64));
@@ -1162,8 +1183,9 @@ fn literals_cases() -> Vec<CaseResult> {
     // P2: `0 = zero`.
     {
         let mut kernel = Kernel::new();
-        let (_, _, _, nat_c, zero_c, _succ_c) = declare_minimal_nat(&mut kernel);
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let nat_c = kernel.const_(logic.nat, vec![]);
+        let zero_c = kernel.const_(logic.nat_zero, vec![]);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let zero_lit = kernel.lit(Lit::nat(0u64));
@@ -1192,8 +1214,10 @@ fn literals_cases() -> Vec<CaseResult> {
     // N1: `3 = succ (succ zero)` -- literal claimed equal to unary 2.
     {
         let mut kernel = Kernel::new();
-        let (_, _, _, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let nat_c = kernel.const_(logic.nat, vec![]);
+        let zero_c = kernel.const_(logic.nat_zero, vec![]);
+        let succ_c = kernel.const_(logic.nat_succ, vec![]);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let three_lit = kernel.lit(Lit::nat(3u64));
@@ -1226,7 +1250,7 @@ fn literals_cases() -> Vec<CaseResult> {
     // N2: literal placed at an unrelated declared type.
     {
         let mut kernel = Kernel::new();
-        let (_, _, _, _nat_c, _zero_c, _succ_c) = declare_minimal_nat(&mut kernel);
+        let _logic = build_logic_prelude(&mut kernel).expect("logic prelude");
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let (_, not_nat) = declare_axiom_type(&mut kernel, "NotNat", one_lvl);
@@ -1264,8 +1288,63 @@ struct QuotPkg {
     quot_mk: NameId,
     quot_lift: NameId,
     _quot_ind: NameId,
-    u: NameId,
-    v: NameId,
+    eq: NameId,
+    eq_refl: NameId,
+}
+
+/// Declares a canonical `Eq` matching EXACTLY the shape
+/// `Kernel::add_quotient_package`'s bootstrap validator requires
+/// (`quotient.rs`'s private `expected_eq_type`/`expected_eq_refl_type`):
+/// `{alpha : Sort u} -> alpha -> alpha -> Prop` with `alpha` IMPLICIT.
+///
+/// This is deliberately NOT [`LogicPrelude::eq`]: that `Eq` is declared with
+/// an EXPLICIT `alpha` binder (`prelude.rs`'s own construction), which
+/// `validate_quotient_eq`'s structural binder-info check rejects with
+/// `QuotientEqBootstrapMismatch` -- measured while building this corpus.
+/// Building a canonical `Eq` here means the quotient cases cannot also call
+/// `build_logic_prelude` on the same kernel (both declare "Eq"), which is
+/// why the quotient cases hand-declare their own tiny `True`-shaped carrier
+/// instead of using [`LogicPrelude::true_`].
+fn declare_canonical_quotient_eq(kernel: &mut Kernel) -> (NameId, NameId) {
+    let anon = kernel.anon();
+    let eq = kernel.name_str(anon, "Eq");
+    let eq_refl = kernel.name_str(eq, "refl");
+    let u_name = kernel.name_str(anon, "eq_u");
+    let lu = kernel.level_param(u_name);
+    let sort_u = kernel.sort(lu);
+    let alpha_name = kernel.name_str(anon, "alpha");
+    let a_name = kernel.name_str(anon, "a");
+
+    let eq_ty = {
+        let alpha_fv = fresh_fvar();
+        let alpha = kernel.fvar(alpha_fv);
+        let relation = relation_type(kernel, alpha);
+        close_pi(
+            kernel,
+            &[(alpha_name, alpha_fv, sort_u, BinderInfo::Implicit)],
+            relation,
+        )
+    };
+    let refl_ty = {
+        let alpha_fv = fresh_fvar();
+        let a_fv = fresh_fvar();
+        let alpha = kernel.fvar(alpha_fv);
+        let a = kernel.fvar(a_fv);
+        let eq_c = kernel.const_(eq, vec![lu]);
+        let result = apps(kernel, eq_c, &[alpha, a, a]);
+        close_pi(
+            kernel,
+            &[
+                (alpha_name, alpha_fv, sort_u, BinderInfo::Implicit),
+                (a_name, a_fv, alpha, BinderInfo::Default),
+            ],
+            result,
+        )
+    };
+    kernel
+        .add_inductive(eq, &[u_name], 2, eq_ty, &[(eq_refl, refl_ty)])
+        .expect("canonical Eq for the quotient bootstrap must admit");
+    (eq, eq_refl)
 }
 
 /// Builds and admits Lean's exact four-declaration quotient package
@@ -1273,8 +1352,10 @@ struct QuotPkg {
 /// `quotient.rs`'s private `expected_quot_*_type`/`canonical_quotient_package`
 /// recipe using only this crate's PUBLIC term-builder API (that recipe is
 /// read from source, not called: those helpers are private to the crate and
-/// unreachable from an external integration test).
-fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg {
+/// unreachable from an external integration test). Declares its own
+/// canonical `Eq` first (see [`declare_canonical_quotient_eq`]).
+fn build_quotient_package(kernel: &mut Kernel) -> QuotPkg {
+    let (eq, eq_refl) = declare_canonical_quotient_eq(kernel);
     let anon = kernel.anon();
     let quot = kernel.name_str(anon, "Quot");
     let quot_mk = kernel.name_str(quot, "mk");
@@ -1312,14 +1393,12 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
             sort_u,
         )
     };
-    kernel
-        .add_declaration(Declaration::Quotient {
-            name: quot,
-            uparams: vec![u_name],
-            ty: quot_ty,
-            kind: axeyum_lean_kernel::QuotKind::Type,
-        })
-        .unwrap_or_else(|e| panic!("Quot must admit: {e:?}"));
+    let mut declarations = vec![Declaration::Quotient {
+        name: quot,
+        uparams: vec![u_name],
+        ty: quot_ty,
+        kind: axeyum_lean_kernel::QuotKind::Type,
+    }];
 
     // `Quot.mk.{u} : {alpha} -> (r : alpha -> alpha -> Prop) -> (a : alpha) -> Quot.{u} alpha r`.
     let quot_mk_ty = {
@@ -1341,14 +1420,12 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
             result,
         )
     };
-    kernel
-        .add_declaration(Declaration::Quotient {
-            name: quot_mk,
-            uparams: vec![u_name],
-            ty: quot_mk_ty,
-            kind: axeyum_lean_kernel::QuotKind::Ctor,
-        })
-        .unwrap_or_else(|e| panic!("Quot.mk must admit: {e:?}"));
+    declarations.push(Declaration::Quotient {
+        name: quot_mk,
+        uparams: vec![u_name],
+        ty: quot_mk_ty,
+        kind: axeyum_lean_kernel::QuotKind::Ctor,
+    });
 
     // `Quot.lift.{u,v} : {alpha} -> {r} -> {beta : Sort v} -> (f : alpha -> beta)
     //   -> (h : forall a b, r a b -> Eq beta (f a) (f b)) -> Quot.{u} alpha r -> beta`.
@@ -1370,7 +1447,7 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
         let r_ab = apps(kernel, r, &[a, b]);
         let f_a = kernel.app(f, a);
         let f_b = kernel.app(f, b);
-        let equality = eq_ty(kernel, logic, lv, beta, f_a, f_b);
+        let equality = eq_ty_raw(kernel, eq, lv, beta, f_a, f_b);
         let proof_ty = arrow(kernel, r_ab, equality);
         let sanity_ty = close_pi(
             kernel,
@@ -1397,14 +1474,12 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
             beta,
         )
     };
-    kernel
-        .add_declaration(Declaration::Quotient {
-            name: quot_lift,
-            uparams: vec![u_name, v_name],
-            ty: quot_lift_ty,
-            kind: axeyum_lean_kernel::QuotKind::Lift,
-        })
-        .unwrap_or_else(|e| panic!("Quot.lift must admit: {e:?}"));
+    declarations.push(Declaration::Quotient {
+        name: quot_lift,
+        uparams: vec![u_name, v_name],
+        ty: quot_lift_ty,
+        kind: axeyum_lean_kernel::QuotKind::Lift,
+    });
 
     // `Quot.ind.{u} : {alpha} -> {r} -> {beta : Quot alpha r -> Prop}
     //   -> (forall a, beta (Quot.mk r a)) -> forall q, beta q`.
@@ -1445,22 +1520,24 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
             result,
         )
     };
+    declarations.push(Declaration::Quotient {
+        name: quot_ind,
+        uparams: vec![u_name],
+        ty: quot_ind_ty,
+        kind: axeyum_lean_kernel::QuotKind::Ind,
+    });
+
     kernel
-        .add_declaration(Declaration::Quotient {
-            name: quot_ind,
-            uparams: vec![u_name],
-            ty: quot_ind_ty,
-            kind: axeyum_lean_kernel::QuotKind::Ind,
-        })
-        .unwrap_or_else(|e| panic!("Quot.ind must admit: {e:?}"));
+        .add_quotient_package(&declarations)
+        .unwrap_or_else(|e| panic!("quotient package must admit: {e:?}"));
 
     QuotPkg {
         quot,
         quot_mk,
         quot_lift,
         _quot_ind: quot_ind,
-        u: u_name,
-        v: v_name,
+        eq,
+        eq_refl,
     }
 }
 
@@ -1470,12 +1547,11 @@ fn quotient_cases() -> Vec<CaseResult> {
     // P1: Quot.lift computation rule, constant function.
     {
         let mut kernel = Kernel::new();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let pkg = build_quotient_package(&mut kernel);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
-        let pkg = build_quotient_package(&mut kernel, &logic);
-        let lu = kernel.level_param(pkg.u);
-        let lv = kernel.level_param(pkg.v);
+        let lu = one_lvl;
+        let lv = one_lvl;
         let (_, carrier) = declare_axiom_type(&mut kernel, "Carrier", one_lvl);
         let (_, a0) = declare_axiom(&mut kernel, "a0", carrier);
         let anon = kernel.anon();
@@ -1488,7 +1564,7 @@ fn quotient_cases() -> Vec<CaseResult> {
         let bool_c = kernel.const_(bool_name, vec![]);
         let btrue = kernel.name_str(bool_name, "true");
         let bfalse = kernel.name_str(bool_name, "false");
-        let bool_sort = kernel.sort_zero();
+        let bool_sort = kernel.sort(one_lvl);
         kernel
             .add_inductive(
                 bool_name,
@@ -1523,8 +1599,7 @@ fn quotient_cases() -> Vec<CaseResult> {
             let r_ab = apps(&mut kernel, r, &[a, b]);
             let f_a = kernel.app(f_c, a);
             let f_b = kernel.app(f_c, b);
-            let zero_lvl_h = kernel.level_zero();
-            let eq_ab = eq_ty(&mut kernel, &logic, zero_lvl_h, bool_c, f_a, f_b);
+            let eq_ab = eq_ty_raw(&mut kernel, pkg.eq, one_lvl, bool_c, f_a, f_b);
             let arrow_ty = arrow(&mut kernel, r_ab, eq_ab);
             close_pi(
                 &mut kernel,
@@ -1545,14 +1620,13 @@ fn quotient_cases() -> Vec<CaseResult> {
             let f_c2 = kernel.const_(f_name, vec![]);
             let a_ref = kernel.fvar(a_fv);
             let f_a = kernel.app(f_c2, a_ref);
-            let zero_lvl_h = kernel.level_zero();
-            let refl_body = eq_refl(&mut kernel, &logic, zero_lvl_h, bool_c, f_a);
+            let refl_body = eq_refl_raw(&mut kernel, pkg.eq_refl, one_lvl, bool_c, f_a);
             let r_ab_ty = {
                 let a = kernel.fvar(a_fv);
                 let b = kernel.fvar(b_fv);
                 apps(&mut kernel, r, &[a, b])
             };
-            close_pi(
+            close_lam(
                 &mut kernel,
                 &[
                     (a_name, a_fv, carrier, BinderInfo::Default),
@@ -1577,9 +1651,8 @@ fn quotient_cases() -> Vec<CaseResult> {
         let mk_a0 = apps(&mut kernel, mk_c, &[carrier, r, a0]);
         let lifted = apps(&mut kernel, lift_c, &[carrier, r, bool_c, f_c, h_c, mk_a0]);
         let f_a0 = kernel.app(f_c, a0);
-        let zero_lvl_g = kernel.level_zero();
-        let goal = eq_ty(&mut kernel, &logic, zero_lvl_g, bool_c, lifted, f_a0);
-        let proof = eq_refl(&mut kernel, &logic, zero_lvl_g, bool_c, f_a0);
+        let goal = eq_ty_raw(&mut kernel, pkg.eq, one_lvl, bool_c, lifted, f_a0);
+        let proof = eq_refl_raw(&mut kernel, pkg.eq_refl, one_lvl, bool_c, f_a0);
         let thm = kernel.name_str(anon, "case");
         let accept = kernel
             .add_declaration(Declaration::Theorem {
@@ -1606,18 +1679,26 @@ fn quotient_cases() -> Vec<CaseResult> {
     // P2: Quot.ind.
     {
         let mut kernel = Kernel::new();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let pkg = build_quotient_package(&mut kernel);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
-        let pkg = build_quotient_package(&mut kernel, &logic);
-        let lu = kernel.level_param(pkg.u);
+        let lu = one_lvl;
         let (_, carrier) = declare_axiom_type(&mut kernel, "Carrier", one_lvl);
         let (_, a0) = declare_axiom(&mut kernel, "a0", carrier);
         let anon = kernel.anon();
         let r_ty = relation_type(&mut kernel, carrier);
         let (_, r) = declare_axiom(&mut kernel, "r", r_ty);
-        let true_c = kernel.const_(logic.true_, vec![]);
-        let true_intro_c = kernel.const_(logic.true_intro, vec![]);
+        // A minimal `True`-shaped carrier (own name; the quotient cases do
+        // not call `build_logic_prelude`, see `declare_canonical_quotient_eq`).
+        let qtrue = kernel.name_str(anon, "QTrue");
+        let qtrue_c = kernel.const_(qtrue, vec![]);
+        let qtrue_intro = kernel.name_str(qtrue, "intro");
+        let prop = kernel.sort_zero();
+        kernel
+            .add_inductive(qtrue, &[], 0, prop, &[(qtrue_intro, qtrue_c)])
+            .expect("QTrue must admit");
+        let true_c = qtrue_c;
+        let true_intro_c = kernel.const_(qtrue_intro, vec![]);
         // beta := fun _ => True; minor := fun _ => True.intro.
         let quot_alpha_r = {
             let quot_c = kernel.const_(pkg.quot, vec![lu]);
@@ -1655,11 +1736,10 @@ fn quotient_cases() -> Vec<CaseResult> {
     // N1: `Quot.sound` is absent by design (ADR-0456). EXPLAINED incompleteness.
     {
         let mut kernel = Kernel::new();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let pkg = build_quotient_package(&mut kernel);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
-        let pkg = build_quotient_package(&mut kernel, &logic);
-        let lu = kernel.level_param(pkg.u);
+        let lu = one_lvl;
         let _ = lu;
         let (_, carrier) = declare_axiom_type(&mut kernel, "Carrier", one_lvl);
         let anon = kernel.anon();
@@ -1685,12 +1765,11 @@ fn quotient_cases() -> Vec<CaseResult> {
     // N2: Quot.lift misapplied with a wrong-typed sanity hypothesis.
     {
         let mut kernel = Kernel::new();
-        let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
+        let pkg = build_quotient_package(&mut kernel);
         let zero_lvl_tmp = kernel.level_zero();
         let one_lvl = kernel.level_succ(zero_lvl_tmp);
-        let pkg = build_quotient_package(&mut kernel, &logic);
-        let lu = kernel.level_param(pkg.u);
-        let lv = kernel.level_param(pkg.v);
+        let lu = one_lvl;
+        let lv = one_lvl;
         let (_, carrier) = declare_axiom_type(&mut kernel, "Carrier", one_lvl);
         let (_, a0) = declare_axiom(&mut kernel, "a0", carrier);
         let anon = kernel.anon();
@@ -1700,7 +1779,7 @@ fn quotient_cases() -> Vec<CaseResult> {
         let bool_c = kernel.const_(bool_name, vec![]);
         let btrue = kernel.name_str(bool_name, "true");
         let bfalse = kernel.name_str(bool_name, "false");
-        let bool_sort = kernel.sort_zero();
+        let bool_sort = kernel.sort(one_lvl);
         kernel
             .add_inductive(
                 bool_name,
@@ -1725,8 +1804,12 @@ fn quotient_cases() -> Vec<CaseResult> {
             .expect("fconst must admit");
         let f_c = kernel.const_(f_name, vec![]);
         // wrong_proof : True, used where `forall a b, r a b -> ...` is needed.
-        let true_c = kernel.const_(logic.true_, vec![]);
-        let (_, wrong_proof) = declare_axiom(&mut kernel, "wrongProof", true_c);
+        // (A hand-declared `Prop` stands in for Lean's `True` here; the
+        // quotient cases do not call `build_logic_prelude`, see
+        // `declare_canonical_quotient_eq`.)
+        let wrong_lvl = kernel.level_zero();
+        let (_, wrong_ty) = declare_axiom_type(&mut kernel, "WrongProofType", wrong_lvl);
+        let (_, wrong_proof) = declare_axiom(&mut kernel, "wrongProof", wrong_ty);
         let lift_c = kernel.const_(pkg.quot_lift, vec![lu, lv]);
         let mk_c = kernel.const_(pkg.quot_mk, vec![lu]);
         let mk_a0 = apps(&mut kernel, mk_c, &[carrier, r, a0]);
