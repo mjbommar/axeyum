@@ -35,6 +35,10 @@
     "cas.translator-checked-by-evaluation-only: axeyum_cas::mvpoly::MvPoly -> this kernel's sparse RatPoly (rat_prelude::cas_geometry_frac_bridge_tests::rat_poly) is checked against numbers (tests::centroid_certificate_identity_holds_at_integer_points, including a cross-wired negative control), never by the trusted gate -- the kernel never sees an MvPoly or a Rational directly."
   ],
   "proof_route": "cas-certificate",
+  "cas_substance": {
+    "shape": "combination",
+    "certificate": "artifacts/geometry-certificates/centroid-divides-medians.json"
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-centroid-divides-medians-cofactor-identities",

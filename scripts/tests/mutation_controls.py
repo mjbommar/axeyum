@@ -3857,6 +3857,128 @@ SUITES["nursery-refill-amendment"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# cas-substance (ADR-0622).
+#
+# The defect being guarded against is one level up from a weak checker: the
+# `kernel-reconstructed` counter moved for a reconstruction whose kernel
+# obligation was `poly_expr(X) = 1 * poly_expr(X)`, because the classifier read
+# a PACKAGE NAME out of a checker_command and never looked at what the kernel
+# was asked to check. So the controls here are aimed less at "does the guard
+# reject" and more at "does the gate still DISTINGUISH the two kinds" -- three
+# positive controls assert that an honest `combination`, a DISCLOSED `refl`,
+# and an ordinary cas-internal fact are all accepted, because a gate that
+# refused everything would satisfy every refusal test below and be useless.
+# --------------------------------------------------------------------------
+
+SUITES["cas-substance"] = (
+    "scripts/check-cas-substance.py",
+    Unittest("scripts.tests.test_check_cas_substance"),
+    [
+        (
+            "G1 a kernel-reconstructed fact with no cas_substance block",
+            "    if not isinstance(substance, dict):",
+            "    if False:",
+        ),
+        (
+            "G2 a shape outside the enumeration",
+            "    if declared_shape not in SHAPES:",
+            "    if False:",
+        ),
+        (
+            "G3 no `certificate` key at all",
+            '    if "certificate" not in substance:',
+            "    if False:",
+        ),
+        (
+            "G4 a certificate path that does not resolve",
+            "            if not resolved.is_file():",
+            "            if False:",
+        ),
+        (
+            "G5 a declared shape disagreeing with the certificate's derived one",
+            '                if derived["shape"] != declared_shape:',
+            "                if False:",
+        ),
+        (
+            "G6 a null certificate with no derivation_declined_reason",
+            "            if not reason:",
+            "            if False:",
+        ),
+        (
+            "G7 a non-discriminating shape with no disclosure",
+            '        if not (substance.get("disclosure") or "").strip():',
+            "        if False:",
+        ),
+        (
+            "G8 a non-discriminating shape with no disclosure_axiom_key",
+            "        if not key:",
+            "        if False:",
+        ),
+        (
+            "G9 a disclosure key naming no axiom_footprint entry",
+            "        elif key not in axiom_footprint_keys(fact):",
+            "        elif False:",
+        ),
+        (
+            "G10 shape `empty` registered at all",
+            '    if declared_shape == "empty":',
+            "    if False:",
+        ),
+        (
+            "G11 a text-refl formal.statement declared as something else",
+            '    if text_refl is True and declared_shape != "refl":',
+            "    if False:",
+        ),
+        (
+            "G12 a cas_substance block on a fact that is not kernel-reconstructed",
+            '            if isinstance(fact.get("cas_substance"), dict):',
+            "            if False:",
+        ),
+    ],
+)
+
+
+# The derivation core is registered separately because it is a different
+# subject FILE, and because its guards fail in the opposite direction from the
+# gate's: a broken derivation does not refuse a good fact, it silently reports a
+# refl-shaped obligation as a combination and the gate then agrees with it.
+# Note D1 in particular -- no committed certificate has a zero cofactor today
+# (measured 2026-08-30: 0 of 45 across all ten), so the real ledger cannot
+# exercise that rule and only this control does.
+
+SUITES["cas-substance-derivation"] = (
+    "scripts/cas_substance.py",
+    Unittest("scripts.tests.test_check_cas_substance"),
+    [
+        (
+            "D1 a zero cofactor must not count as an active generator",
+            "        i for i, cofactor in enumerate(cofactors) if not is_zero_poly(cofactor)",
+            "        i for i, cofactor in enumerate(cofactors) if not False",
+        ),
+        (
+            "D2 the cofactor must be the constant ONE, not merely a constant",
+            "    return den != 0 and num == den",
+            "    return den != 0",
+        ),
+        (
+            "D3 the generator must be identical to the conclusion for `refl`",
+            "        if is_constant_one_poly(cofactors[i]) and generator == concl_poly:",
+            "        if is_constant_one_poly(cofactors[i]):",
+        ),
+        (
+            "D4 a certificate is only as strong as its WEAKEST conclusion",
+            "        weakest = min(",
+            "        weakest = max(",
+        ),
+        (
+            "D5 an unparseable statement yields no signal, never `clean`",
+            "    return top if len(stack) == 1 else None",
+            "    return top if len(stack) >= 1 else None",
+        ),
+    ],
+)
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()

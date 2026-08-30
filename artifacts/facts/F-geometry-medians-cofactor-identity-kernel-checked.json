@@ -34,6 +34,10 @@
     "cas.fractional-cast-untested-at-large-denominators: rat_lit (Rat.normalize applied to a Rational's own numerator/denominator) is exercised here only at denominators 1 and 2, the largest this certificate needs. Nothing in this fact measures whether the def_eq renormalisation the proof leans on (Rat.add/Rat.mul of two Rat.normalize literals collapsing to a third by the kernel's own computation, with no new lemma) stays cheap at the larger denominators euler-line's cofactors would need -- CLAUDE.md's numeral-magnitude gotcha (this kernel's Nat arithmetic is unary, so cost is superlinear in the largest magnitude FORMED) applies directly to a cross-multiplied denominator product."
   ],
   "proof_route": "cas-certificate",
+  "cas_substance": {
+    "shape": "combination",
+    "certificate": "artifacts/geometry-certificates/medians-concurrent.json"
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-medians-cofactor-identity",

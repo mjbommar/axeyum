@@ -35,6 +35,10 @@
     "cas.translator-checked-by-evaluation-only: axeyum_cas::mvpoly::MvPoly -> this kernel's sparse RatPoly (rat_prelude::cas_geometry_frac_bridge_tests::rat_poly) is checked against numbers (tests::parallelogram_certificate_identity_holds_at_integer_points, at the certificate's own unit-square generic witness), never by the trusted gate -- the kernel never sees an MvPoly or a Rational directly."
   ],
   "proof_route": "cas-certificate",
+  "cas_substance": {
+    "shape": "combination",
+    "certificate": "artifacts/geometry-certificates/parallelogram-diagonals-bisect.json"
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-parallelogram-diagonals-bisect-cofactor-identities",

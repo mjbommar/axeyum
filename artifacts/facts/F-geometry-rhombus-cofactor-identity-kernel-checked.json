@@ -35,6 +35,10 @@
     "cas.prove-mul-covers-integer-coefficients-only: prove_mul lifts the constant-cofactor restriction but not the integer-coefficient one. The translator inherits rational_to_int from cas_ivt_bridge_tests and declines any coefficient whose denominator is not 1, so of the eight geometry certificates with non-constant cofactors it reaches only rhombus-diagonals-perpendicular, pappus-hexagon and simson-line -- parallelogram-diagonals-bisect (24 non-integer terms), centroid-divides-medians (16) and euler-line (272) still need the same Rat.ofRat-style cast F:cas-partial-fractions-mixed-general-case and F:geometry-medians-concurrent are blocked on."
   ],
   "proof_route": "cas-certificate",
+  "cas_substance": {
+    "shape": "combination",
+    "certificate": "artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json"
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-rhombus-cofactor-identity",
