@@ -42,7 +42,8 @@ TRUSTED_KINDS = {"Inductive", "Constructor", "Recursor", "Axiom", "Opaque", "Quo
 ALL_KINDS = TRUSTED_KINDS | {"Definition", "Theorem"}
 
 REQUIRED_PACK_KEYS = {
-    "contract_version", "lean_version", "lean_commit", "mathlib_version",
+    "contract_version", "text_provenance",
+    "lean_version", "lean_commit", "mathlib_version",
     "mathlib_commit", "normalization_version", "renderer_version",
     "source_population", "trusted_declaration_identities", "pack_digest",
     "declarations",
@@ -149,6 +150,29 @@ def check_basic_shape(pack: dict, path: Path) -> list[str]:
 
 
 # GUARD:MISSING begin
+# `lean_commit` and `mathlib_commit` are real pins, so a pack READS as extracted
+# output whatever its text actually is. C0's pack is hand-authored: the README
+# says so four times and the pack said so nowhere, which is a disclosure that a
+# consumer parsing JSON never sees. Naming it IN the pack makes C1's switch to
+# real `lean4export` bytes an explicit edit rather than a silent upgrade.
+TEXT_PROVENANCE = {
+    "hand-authored": "written by this contract, NOT extracted -- shape only",
+    "lean4export": "raw bytes from the pinned extractor",
+}
+
+
+def check_text_provenance(pack: dict, pack_path) -> list[str]:
+    got = pack.get("text_provenance")
+    if got not in TEXT_PROVENANCE:
+        return [
+            f"{pack_path}: text_provenance {got!r} is not one of "
+            f"{sorted(TEXT_PROVENANCE)} -- a pack must say whether its type and "
+            "value text was EXTRACTED or hand-authored, because the version pins "
+            "beside it look identical either way"
+        ]
+    return []
+
+
 def check_missing_roots(pack: dict, population_dir: Path) -> list[str]:
     """The pack's declared `source_population.population_id` selects an
     external registry file this validator loads from `population_dir` -- a
@@ -311,6 +335,7 @@ def validate_pack(pack_path: Path, population_dir: Path) -> list[str]:
         # missing `declarations` key), so stop here rather than cascading.
         return errors
 
+    errors += check_text_provenance(pack, pack_path)
     errors += [f"{pack_path}: {e}" for e in check_missing_roots(pack, population_dir)]
     errors += [f"{pack_path}: {e}" for e in check_no_duplicate_names(pack)]
     errors += [f"{pack_path}: {e}" for e in check_pack_digest(pack)]

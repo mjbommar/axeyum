@@ -1,5 +1,6 @@
 {
   "contract_version": "0.1.0",
+  "text_provenance": "hand-authored",
   "lean_version": "4.30.0",
   "lean_commit": "d024af09",
   "mathlib_version": "v4.30.0",
