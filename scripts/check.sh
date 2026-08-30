@@ -784,6 +784,12 @@ step prelude-reuse  ./scripts/check-prelude-reuse-equivalence.sh
 # steps on 2026-08-14 while both documents claimed they were the same gate. This
 # does not sync them; it pins the divergence so it cannot GROW unnoticed.
 step aggregate-scope ./scripts/check-aggregate-scope.sh
+# Post-merge hygiene, ~2s: conflict markers in tracked files, duplicate ADR
+# numbers, and stale generated files. Each corresponds to a defect that reached
+# a commit here because the coordinator merges lane branches far more often than
+# it runs this gate -- markers committed into ten fact JSONs and later into the
+# ADR index, and 0617/0618 each allocated by two concurrent lanes on one day.
+step merge-hygiene ./scripts/check-merge-hygiene.sh
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
 # ADR numbers are a shared append point ACROSS CHECKOUTS, which `adr-index`

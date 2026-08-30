@@ -555,6 +555,12 @@ gate-controls:
     # each mutation-verified to kill exactly one control, plus two negative
     # controls so a normalizer returning "" cannot satisfy the suite.
     scripts/tests/test-check-aggregate-scope.sh
+    # Post-merge hygiene: conflict markers in tracked files, duplicate ADR
+    # numbers, stale generated files. ~2s. Each guard is a defect that reached a
+    # commit because merges outnumber full-gate runs; positive-controlled, and a
+    # fourth guard was RETIRED rather than shipped after it matched a pin
+    # declaration quoted in a doc comment.
+    scripts/check-merge-hygiene.sh
     # The registration gate's OWN controls -- it had none, which is the joke
     # this file exists to stop being. 15 cases, each mutation-verified.
     scripts/tests/test-check-control-registration.sh
