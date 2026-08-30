@@ -774,6 +774,33 @@ def main() -> int:
             line += (f", unrecognized {unrec} (FLAGGED -- validate_one should have "
                       f"rejected this)")
         print(line)
+        # ADR-0622: `kernel-reconstructed` is not one thing. This classifier asks
+        # which PACKAGE a checker_command runs and never what the kernel was
+        # asked to check, so a reconstruction whose obligation is
+        # `poly_expr(X) = 1 * poly_expr(X)` -- true of every polynomial -- moves
+        # the counter above by exactly as much as one with real cross-generator
+        # cancellation. The sub-line below reads each fact's `cas_substance`
+        # block, which scripts/check-cas-substance.py derives from the CAS's own
+        # certificate and refuses to let disagree with it. Quote BOTH lines: the
+        # first is how many reconstructions exist, the second is what they
+        # establish.
+        shapes: dict[str, int] = {}
+        for f in cas_certificate_facts:
+            if classify_cas_certificate_fact(f) != "kernel-reconstructed":
+                continue
+            substance = f.get("cas_substance")
+            shape = substance.get("shape") if isinstance(substance, dict) else None
+            shapes[shape or "undeclared"] = shapes.get(shape or "undeclared", 0) + 1
+        if shapes:
+            nondiscriminating = shapes.get("refl", 0) + shapes.get("empty", 0)
+            summary = ", ".join(f"{k} {v}" for k, v in sorted(shapes.items()))
+            print(f"    of those {kr} kernel-reconstructed, by what the kernel "
+                  f"obligation establishes: {summary}")
+            if nondiscriminating:
+                print(f"    {nondiscriminating} of the {kr} are NON-DISCRIMINATING "
+                      f"(the obligation holds of every polynomial in place of the "
+                      f"certificate's) and are disclosed as such -- do not quote "
+                      f"{kr} as reconstructions with geometric content")
     # Constructed here vs. checked here but authored elsewhere. Reported apart
     # because the project's headline claim is about the first number, and an
     # ingestion pipeline can move the second one arbitrarily far.
