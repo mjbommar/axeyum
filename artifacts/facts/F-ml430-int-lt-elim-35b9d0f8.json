@@ -8,13 +8,51 @@
     "statement": "∀ {a b : ℤ}, a < b → ∀ {P : Prop}, (∀ (n : ℕ), a + ↑n.succ = b → P) → P",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:int-lt-dest"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Int.lt.elim",
+      "kind": "kernel-term",
+      "supports": "`Int.lt.elim` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt x0 x1) -> ((x3 : Prop) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Int (Int.add x0 (Int.ofNat (AxNat.succ x4))) x1) -> x3))) -> x3)))))`. Same construction as `Int.le.elim`'s sibling, built by `Exists.elim` over `Int.lt_dest`'s `Exists` witness (`b = a + ofNat (succ i)`) with the equation flipped by `isymm` to match Mathlib's `a + ofNat n.succ = b` direction. Only the Exists-flavoured cousin (`Int.lt_dest`) existed under any name before this. Built in a new file, int_prelude/order_coercion.rs.",
+      "check_status": "checked",
+      "checkers": [
+        "int_theorem_inventory (renders the kernel type of every Theorem; matched on the exact kind/name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"theorem\" && $2 == \"Int.lt.elim\" && $4 == \"((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt x0 x1) -> ((x3 : Prop) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Int (Int.add x0 (Int.ofNat (AxNat.succ x4))) x1) -> x3))) -> x3)))))\"' | wc -l)\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/order_coercion.rs"
+    },
+    {
+      "id": "footprint-Int.lt.elim",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Int.lt.elim`. The `integer` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for Int.lt.elim among the 191 derived laws and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free integer (independently sums the whole integer prelude's trusted surface and fails nonzero)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs"
+    },
+    {
+      "id": "coverage-Int.lt.elim",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Int.lt.elim` derived from `kernel.environment()` directly, not from an inventory list -- an Int-namespace declaration missing from `derived_laws` fails this test by name.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::every_int_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane int-order-coercion (2026-08-30): built directly as a kernel declaration in the new file int_prelude/order_coercion.rs, as Exists.elim applied to the already-proved F:int-lt-dest with the witness equation flipped by isymm.",
     "source": "statement-only extraction of `Int.lt.elim` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +64,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established in Axeyum, not merely matched against Mathlib's prior statement. This is genuinely new construction, not a rename: checked hours before this lane started, the CPS elimination form `Int.lt.elim` did not exist in the kernel under any name -- only the Exists-flavoured `Int.lt_dest` did. Confirmed against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that `Int.lt.elim` is the standard CPS-style destructor of `Int.lt` about the SAME `Int.lt`/`Int.add`/`Int.ofNat` this kernel already has (no new definition introduced), so mirroring it is honest under the mirror-flip criterion. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

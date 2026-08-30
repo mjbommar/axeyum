@@ -8,13 +8,49 @@
     "statement": "∀ {b : ℕ} (a : ℕ), 0 < b → 0 < a + b",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-le-succ-succ", "F:nat-not-lt-zero", "F:nat-zero-le"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.add_pos_right",
+      "kind": "kernel-term",
+      "supports": "`Nat.add_pos_right` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `Nat.add_pos_right\\t3\\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero x0) -> AxNat.lt AxNat.zero (AxNat.add x1 x0))))` (binders `b a` -- Mathlib's `{b}`-implicit then explicit `a`; content-identical, argument order not observable in a Prop). A case split on `b` (NatOps::induct, ih unused): at `zero` the hypothesis `Lt zero zero` is impossible, discharged by `Nat.not_lt_zero` at `zero`; at `succ k`, `add a (succ k)` is definitionally `succ (add a k)` (`Nat.add` recurses on its RIGHT argument), so the conclusion is exactly `NatOps::zero_lt_succ` applied to `add a k`, independent of the hypothesis. Built in a new file, nat_prelude/add_pos.rs.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/arity/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- add_pos_right 2>/dev/null | grep -xFc $'Nat.add_pos_right\\t3\\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero x0) -> AxNat.lt AxNat.zero (AxNat.add x1 x0))))')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/add_pos.rs"
+    },
+    {
+      "id": "footprint-Nat.add_pos_right",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.add_pos_right`. The `nat` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "theorem_axiom_footprint -- Nat.add_pos_right (per-declaration Kernel::axiom_footprint)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free nat (independently sums the whole nat prelude's trusted surface and fails nonzero)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example theorem_axiom_footprint -- Nat.add_pos_right 2>/dev/null | grep -xFc $'nat\\tNat.add_pos_right\\t0\\t')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs"
+    },
+    {
+      "id": "coverage-Nat.add_pos_right",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Nat.add_pos_right` derived from `kernel.environment()` directly, not from an inventory list -- a Nat-namespace declaration missing from `theorem_names` fails this test by name.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane int-order-coercion (2026-08-30): built directly as a kernel declaration in a new file, nat_prelude/add_pos.rs. Same shape as nat_prelude/order_more.rs's zero_lt_of_ne_zero (a case split via NatOps::induct with the ih unused); no dependency on any other derived law.",
     "source": "statement-only extraction of `Nat.add_pos_right` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +62,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established in Axeyum, not merely matched against Mathlib's prior statement. Confirmed against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that `Nat.add_pos_right` is a standard elementary order lemma about the SAME `Nat.add`/`Nat.lt` this kernel already has (no new definition introduced), so mirroring it is honest under the mirror-flip criterion. depends_on was auto-derived by scripts/check-fact-depends-derived.py --fix from the proof term's direct uses (Nat.not_lt_zero, Nat.zero_le, Nat.le_succ_succ, the last two underlying NatOps::zero_lt_succ). Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
