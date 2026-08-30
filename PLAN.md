@@ -200,6 +200,7 @@ now. Nothing was deleted.
 | 2026-08-29 | nat-mod-mul | `99c59c0c1` register the five names in `theorem_names`, bump `the_build_is_deterministic`'s pin 93+538 -> 93+543, fix rustfmt mod/use order, fix a clippy too-many-arguments miss. `cargo test --lib nat_prelude::` 169 passed. |
 | 2026-08-29 | nat-mod-mul | `46ddfaf3e` flip all five `F:ml430-nat-mod-mul-*` facts to `proved` with kernel-term + axiom-footprint evidence; `validate-facts.py` 0 errors. |
 | 2026-08-29 | totient-multiplicative | `Nat.coprime_div_left` (1 of the family's remaining mirrors, closed) and `Nat.gcd_comm` (new, zero-induction, unblocks both this family's `totient_even` plan and the multiplicative-formula plan below) landed and verified. The multiplicative formula `totient(mn) = totient(m)*totient(n)` itself: fully traced and numerically checked (bijection, mod-gcd invariance, pointwise coprimality iff, Bézout-multiplication algebra, the row-major double-counting target statement), with the two genuinely novel pieces identified and marked (`coprime_mul_of_coprime`, the coprimality-combine number theory; `count_range_row_major`, the totient-independent double-counting induction) — NOT built in Rust, per this task's own sizing guidance. `nat_prelude/crt.rs` (Nat-native, not the `int_prelude` one) was found to transport directly for the injectivity/pigeonhole half, correcting all three prior triages, which did not find it. |
+| 2026-08-29 | int-add-basics | Nine `ml430-int-add-*` mirrors closed: `add_comm`/`add_neg_cancel_right` already existed (evidence only); `add_left_neg`/`add_neg_eq_sub`/`add_left_comm`/`add_mul`/`add_neg_cancel_left`/`add_left_cancel`/`add_left_inj` newly built in `int_prelude/add_basics.rs`, all axiom-free, no `Int.rec` case split. |
 | 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
 | 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
 | 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
@@ -23127,6 +23128,104 @@ Not run, deliberately: the aggregate gate (`just check` / `scripts/check.sh`).
   mutation.
 - **Isolating fixtures are the price of "exactly one test dies".** The natural
   fixture is the real defect, and the real defect trips four guards at once.
+
+**DONE for this dispatch (`int-add-basics`, 2026-08-29).**
+
+## Task
+
+Close nine `ml430` mirror facts for basic `Int` addition algebra:
+`add_comm`, `add_left_cancel`, `add_left_comm`, `add_left_inj`, `add_left_neg`,
+`add_mul`, `add_neg_cancel_left`, `add_neg_cancel_right`, `add_neg_eq_sub`.
+
+## What already existed vs. what was built
+
+Checked the full `Int` inventory first (`int_theorem_inventory`, no filter —
+this example builds the whole `Int` prelude by default, no
+`--include-constructed` flag needed or supported): 201 theorems, 0 asserted,
+before this lane touched anything.
+
+**Two of the nine already existed**, matched by rendered kernel type against
+each fact's `formal.statement`, not by name:
+
+- `Int.add_comm` — `algebra.rs`, exact match for `a + b = b + a`.
+- `Int.add_neg_cancel_right` — `algebra.rs`, exact match for
+  `a + b + -b = a`.
+
+**The other seven did not exist** (confirmed absent by grepping the full
+inventory for `add_left_*`, `add_mul`, `neg_eq_sub`, `neg_cancel_left` — none
+present under any name), and were built in a new file,
+`crates/axeyum-lean-kernel/src/int_prelude/add_basics.rs`:
+
+| theorem | proof shape |
+| --- | --- |
+| `add_left_neg : -a + a = 0` | `add_comm` + `add_neg`, one `itrans` |
+| `add_neg_eq_sub : a + -b = a - b` | `Eq.refl` — `Int.sub` is `sub.rs`'s plain non-recursive `Definition (fun a b => add a (neg b))`, so the declared type's RHS unfolds to the LHS by defeq alone |
+| `add_left_comm : a+(b+c) = b+(a+c)` | `add_assoc` twice + `add_comm` once (congruence on the shared `+c`) |
+| `add_mul : (a+b)*c = a*c+b*c` | `mul_comm` (thrice) + `left_distrib` once — this kernel only has LEFT distributivity, so right-distributivity is entirely a `mul_comm` rotation |
+| `add_neg_cancel_left : a+(-a+b) = b` | mirror-image of `modeq.rs`'s private `cancel_neg_add_left(c,x) : Eq(neg_c+(c+x), x)` — could NOT reuse that helper directly, because here the OUTER term is the positive `a` and the inner negation is `neg a` (the helper would need `neg(neg a)`, not `a`, on the outside); wrote a new function with the assoc/neg/comm/zero steps in the mirrored order |
+| `add_left_cancel : a+b=a+c -> b=c` | DOES reuse `modeq.rs`'s `cancel_neg_add_left(a,b)`/`cancel_neg_add_left(a,c)` (each `Eq(neg_a+(a+x), x)`), bridged by congruence on the hypothesis |
+| `add_left_inj : i+k=j+k <-> i=j` | `mpr` is congruence on `i=j`; `mp` rotates both sides through `add_comm` (`i+k=j+k -> k+i=k+j`) and closes with `add_left_cancel` — so `add_left_cancel` had to be declared BEFORE `add_left_inj` in dispatch order (it references `p.add_left_cancel` inside its proof term) |
+
+No `Int.rec` case split anywhere in the new file — every proof is pure
+algebra on top of already-derived laws (`add_comm`, `add_assoc`, `add_zero`,
+`add_neg`, `mul_comm`, `left_distrib` from `algebra.rs`; `Int.sub`'s
+definition from `sub.rs`; `cancel_neg_add_left` from `modeq.rs`, already
+`pub(super)` for `order_add.rs`'s prior reuse).
+
+Dispatched in `build_int_prelude_uncached` right after
+`sub::declare_mul_sub` (so `Int.sub` exists in the environment for
+`add_neg_eq_sub` — referencing an undeclared constant gives `UnknownConst`,
+which `cargo check` cannot see) and before `order::declare_difference_lemmas`.
+
+`derived_laws`'s pin recounted `180 -> 187` via
+`scripts/recount-pinned-inventory.py` (never hand-incremented).
+
+## Fact ledger
+
+All nine facts flipped `open -> proved`, `proof_route: kernel-lean`,
+`axiom_footprint: []`. Each carries three evidence rows (kernel type match
+via `int_theorem_inventory`, empty footprint via
+`derived_laws_have_no_axiom_footprint` + `nat_axiom_inventory
+--require-axiom-free integer`, environment-derived coverage via
+`every_int_declaration_is_checked_and_axiom_free`) — every `checker_command`
+spot-checked to return count 1 on the real name and count 0 on a fabricated
+one.
+
+`formal.kernel_theorem`/`formal.kernel_statement` set per the
+`nineteen-mirrors-lost-their-statement` convention; `formal.statement` (the
+pinned Mathlib quotation) was left untouched.
+
+`depends_on` set from the local (non-`ml430`) fact IDs for each theorem's
+direct kernel-level dependencies (`F:int-add-comm`, `F:int-add-assoc`,
+`F:int-add-neg`, `F:int-add-zero`, `F:int-mul-comm`, `F:int-left-distrib`,
+and — for `add_left_inj` — this lane's own `F:ml430-int-add-left-cancel`).
+`add_neg_eq_sub` has none (its proof is `Eq.refl`, no theorem dependency).
+
+`scripts/check-fact-depends-derived.py --fix` added one missing edge
+(`F:nat-add-comm` under `F:ml430-int-add-comm`, since `Int.add_comm`'s proof
+term uses `Nat.add_comm` directly) that my hand-written `depends_on` list
+missed — this is exactly the tool's job (derive from the proof term, not from
+memory).
+
+## Verification (this session)
+
+- `cargo test -p axeyum-lean-kernel --lib int_prelude::` — **49 passed, 0
+  failed** (confirmed nonzero, includes
+  `every_int_declaration_is_checked_and_axiom_free` and
+  `derived_laws_have_no_axiom_footprint`, both green after the seven new
+  names were added to `derived_laws`).
+- `cargo fmt` (per-file `rustfmt --edition 2024`, both touched files) — no
+  diff.
+- `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` — clean.
+- `python3 scripts/validate-facts.py` — **2114 facts, 0 errors** (after the
+  `depends_on` fix above).
+- `python3 scripts/check-mirror-statement-fidelity.py` —
+  `facts=2114|mirrors=374|hash_verified=362|unpinned=12|violations=0|verdict=PASS`.
+
+**Commits** (not pushed, this worktree/branch
+`worktree-agent-a30ed05ed441d7a8b`):
+`a4b46e7e1` (`add_basics.rs` + prelude wiring + pin recount, verified before
+committing), `a130aa969` (the nine-fact ledger flip).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

@@ -74,6 +74,7 @@ use crate::name::NameId;
 use crate::nat_prelude::{NatPrelude, build_nat_prelude};
 use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
 
+mod add_basics;
 mod algebra;
 mod bezout_witnesses;
 mod crt;
@@ -255,6 +256,25 @@ pub struct IntPrelude {
     /// `add_neg_cancel_right : ∀ (a b : Int),
     /// Eq Int (add (add a b) (neg b)) a`.
     pub add_neg_cancel_right: NameId,
+    /// `add_left_neg : ∀ (a : Int), Eq Int (add (neg a) a) zero`.
+    pub add_left_neg: NameId,
+    /// `add_neg_eq_sub : ∀ (a b : Int), Eq Int (add a (neg b)) (sub a b)`.
+    pub add_neg_eq_sub: NameId,
+    /// `add_left_comm : ∀ (a b c : Int),
+    /// Eq Int (add a (add b c)) (add b (add a c))`.
+    pub add_left_comm: NameId,
+    /// `add_mul : ∀ (a b c : Int),
+    /// Eq Int (mul (add a b) c) (add (mul a c) (mul b c))`.
+    pub add_mul: NameId,
+    /// `add_neg_cancel_left : ∀ (a b : Int),
+    /// Eq Int (add a (add (neg a) b)) b`.
+    pub add_neg_cancel_left: NameId,
+    /// `add_left_cancel : ∀ (a b c : Int),
+    /// Eq Int (add a b) (add a c) → Eq Int b c`.
+    pub add_left_cancel: NameId,
+    /// `add_left_inj : ∀ (i j k : Int),
+    /// Iff (Eq Int (add i k) (add j k)) (Eq Int i j)`.
+    pub add_left_inj: NameId,
     /// `add_lt_add_of_le_of_lt :
     /// ∀ (a b c d : Int), le a b → lt c d → lt (add a c) (add b d)`.
     pub add_lt_add_of_le_of_lt: NameId,
@@ -1330,6 +1350,13 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         add_zero: child(kernel, "add_zero"),
         add_neg: child(kernel, "add_neg"),
         add_neg_cancel_right: child(kernel, "add_neg_cancel_right"),
+        add_left_neg: child(kernel, "add_left_neg"),
+        add_neg_eq_sub: child(kernel, "add_neg_eq_sub"),
+        add_left_comm: child(kernel, "add_left_comm"),
+        add_mul: child(kernel, "add_mul"),
+        add_neg_cancel_left: child(kernel, "add_neg_cancel_left"),
+        add_left_cancel: child(kernel, "add_left_cancel"),
+        add_left_inj: child(kernel, "add_left_inj"),
         add_lt_add_of_le_of_lt: child(kernel, "add_lt_add_of_le_of_lt"),
         add_le_add_left: child(kernel, "add_le_add_left"),
         add_le_add_right: child(kernel, "add_le_add_right"),
@@ -1604,6 +1631,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sub::declare_sub_definition(&mut d)?;
         sub::declare_mul_neg(&mut d)?;
         sub::declare_mul_sub(&mut d)?;
+        add_basics::declare_add_basics(&mut d)?;
         order::declare_difference_lemmas(&mut d)?;
         order::declare_additive_order(&mut d)?;
         order_add::declare_add_le_add_left_right(&mut d)?;
