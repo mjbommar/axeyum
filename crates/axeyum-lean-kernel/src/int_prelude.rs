@@ -82,6 +82,7 @@ mod decide;
 mod defs;
 mod division;
 mod dvd;
+mod dvd_gcd_mirrors;
 mod euclid;
 mod euler;
 mod euler_totient;
@@ -1328,6 +1329,57 @@ pub struct IntPrelude {
     /// `fib_two_mul`, one index up (`fib_add (n+1) (n+1)` plus `fib_rec`);
     /// see `fibonacci.rs`'s `declare_fib_two_mul_add_two` doc.
     pub fib_two_mul_add_two: NameId,
+
+    // -- `int-dvd-mirrors` lane: `ml430` divisibility/gcd/`ModEq` mirrors
+    // `gcd.rs`/`dvd.rs`/`modeq.rs`/`modeq_family.rs` did not already close
+    // (`int_prelude/dvd_gcd_mirrors.rs`). Appended here, not interleaved with
+    // the existing fields above, to keep this a pure-addition diff in a
+    // struct many lanes touch.
+    /// `dvd_gcd_nat : ∀ (a b : Int) (c : Nat), ofNat c ∣ a → ofNat c ∣ b →
+    /// c ∣ gcd a b` -- Mathlib's `Int.dvd_gcd` (the `Nat`-typed-divisor form;
+    /// [`Self::dvd_gcd`] above is the *coe* form, Mathlib's
+    /// `Int.dvd_coe_gcd`).
+    pub dvd_gcd_nat: NameId,
+    /// `dvd_gcd_nat_iff : ∀ (a b : Int) (c : Nat),
+    /// Iff (c ∣ gcd a b) (And (ofNat c ∣ a) (ofNat c ∣ b))` -- Mathlib's
+    /// `Int.dvd_gcd_iff`.
+    pub dvd_gcd_nat_iff: NameId,
+    /// `dvd_coe_gcd_iff : ∀ (a b c : Int),
+    /// Iff (c ∣ ofNat (gcd a b)) (And (c ∣ a) (c ∣ b))` -- Mathlib's
+    /// `Int.dvd_coe_gcd_iff`.
+    pub dvd_coe_gcd_iff: NameId,
+    /// `ediv_gcd_ne_zero_of_ne_zero_left : ∀ a b, a ≠ 0 →
+    /// a.ediv (ofNat (gcd a b)) ≠ 0` -- Mathlib's
+    /// `Int.ediv_gcd_ne_zero_of_ne_zero_left`.
+    pub ediv_gcd_ne_zero_of_ne_zero_left: NameId,
+    /// `ediv_gcd_ne_zero_if_ne_zero_right : ∀ a b, b ≠ 0 →
+    /// b.ediv (ofNat (gcd a b)) ≠ 0` -- Mathlib's
+    /// `Int.ediv_gcd_ne_zero_if_ne_zero_right`.
+    pub ediv_gcd_ne_zero_if_ne_zero_right: NameId,
+    /// `mod_eq_add : ∀ n a b c e, ModEq n a b → ModEq n c e →
+    /// ModEq n (a+c) (b+e)` -- Mathlib's `Int.ModEq.add`, UNCONDITIONAL in
+    /// `n`.
+    pub mod_eq_add: NameId,
+    /// `mod_eq_add_right_cancel : ∀ n a b c, ModEq n (a+c) (b+c) →
+    /// ModEq n a b` -- Mathlib's `Int.ModEq.add_right_cancel'` (the
+    /// single-`c` cancellation), UNCONDITIONAL in `n`. Not to be confused
+    /// with [`Self::mod_eq_add_right_cancel_general`], the 4-variable form.
+    pub mod_eq_add_right_cancel: NameId,
+    /// `mod_eq_add_left_cancel_general : ∀ n a b c e, ModEq n a b →
+    /// ModEq n (a+c) (b+e) → ModEq n c e` -- Mathlib's 4-variable
+    /// `Int.ModEq.add_left_cancel`, UNCONDITIONAL in `n`. Not to be confused
+    /// with [`Self::mod_eq_add_left_cancel`], the single-`c` form.
+    pub mod_eq_add_left_cancel_general: NameId,
+    /// `mod_eq_add_right_cancel_general : ∀ n a b c e, ModEq n c e →
+    /// ModEq n (a+c) (b+e) → ModEq n a b` -- Mathlib's 4-variable
+    /// `Int.ModEq.add_right_cancel`, UNCONDITIONAL in `n`.
+    pub mod_eq_add_right_cancel_general: NameId,
+    /// `mod_eq_dvd : ∀ n a b, ModEq n a b → n ∣ (b - a)` -- Mathlib's
+    /// `Int.ModEq.dvd`, UNCONDITIONAL in `n`.
+    pub mod_eq_dvd: NameId,
+    /// `mod_eq_emod_eq : ∀ n a b, ModEq n a b → Eq Int (emod a n) (emod b n)`
+    /// -- Mathlib's `Int.ModEq.eq`, UNCONDITIONAL in `n`.
+    pub mod_eq_emod_eq: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1626,6 +1678,19 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         fib_add: child(kernel, "fib_add"),
         fib_two_mul: child(kernel, "fib_two_mul"),
         fib_two_mul_add_two: child(kernel, "fib_two_mul_add_two"),
+
+        // `int-dvd-mirrors` lane -- see the matching struct-field block above.
+        dvd_gcd_nat: child(kernel, "dvd_gcd_nat"),
+        dvd_gcd_nat_iff: child(kernel, "dvd_gcd_nat_iff"),
+        dvd_coe_gcd_iff: child(kernel, "dvd_coe_gcd_iff"),
+        ediv_gcd_ne_zero_of_ne_zero_left: child(kernel, "ediv_gcd_ne_zero_of_ne_zero_left"),
+        ediv_gcd_ne_zero_if_ne_zero_right: child(kernel, "ediv_gcd_ne_zero_if_ne_zero_right"),
+        mod_eq_add: child(kernel, "mod_eq_add"),
+        mod_eq_add_right_cancel: child(kernel, "mod_eq_add_right_cancel"),
+        mod_eq_add_left_cancel_general: child(kernel, "mod_eq_add_left_cancel_general"),
+        mod_eq_add_right_cancel_general: child(kernel, "mod_eq_add_right_cancel_general"),
+        mod_eq_dvd: child(kernel, "mod_eq_dvd"),
+        mod_eq_emod_eq: child(kernel, "mod_eq_emod_eq"),
     }
 }
 
@@ -1879,6 +1944,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // resolve a mixed-sign quadrant to "the product is exactly zero" and
         // then decide which factor vanishes.
         sign_product::declare_sign_product_theorems(&mut d)?;
+        // `int-dvd-mirrors` lane: `ml430` divisibility/gcd/`ModEq` mirrors.
+        // Placed last so every lemma it composes (gcd/dvd/modeq family) is
+        // already declared.
+        dvd_gcd_mirrors::declare_all(&mut d)?;
         Ok(prelude)
     })();
     match built {
