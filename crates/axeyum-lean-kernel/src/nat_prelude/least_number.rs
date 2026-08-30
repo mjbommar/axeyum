@@ -467,10 +467,7 @@ fn search_step(
                     let res = d.transport(j, motive, hnq, k, h_jk);
                     d.lam_fv(h_fv, eq_kj, res)
                 };
-                let sel = d.const_app(
-                    p.logic.or_elim,
-                    &[lt_kj, eq_kj, nqk, hsplit, at_lt, at_eq],
-                );
+                let sel = d.const_app(p.logic.or_elim, &[lt_kj, eq_kj, nqk, hsplit, at_lt, at_eq]);
                 let with_hk = d.lam_fv(hk_fv, lt_ks_ty, sel);
                 d.lam_fv(k_fv, nat, with_hk)
             };
@@ -478,10 +475,7 @@ fn search_step(
             d.lam_fv(hnq_fv, nqj, res)
         };
 
-        let sel = d.const_app(
-            p.logic.or_elim,
-            &[qj, nqj, target, dec_j, at_qj, at_nqj],
-        );
+        let sel = d.const_app(p.logic.or_elim, &[qj, nqj, target, dec_j, at_qj, at_nqj]);
         d.lam_fv(hnone_fv, none_j, sel)
     };
 
@@ -733,10 +727,7 @@ fn bool_false_of_not_true(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId) -> Expr
 /// at `Q := fun i => Eq Bool (dec i) true`, whose decision is
 /// [`bool_decides`] (a `Bool.rec` split), then [`bool_false_of_not_true`] under
 /// the minimality binder to reach the computational `= false` conclusion.
-pub(super) fn declare_lnp_decidable(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_lnp_decidable(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
     let one = d.level_one();
@@ -847,10 +838,7 @@ pub(super) fn declare_lnp_decidable(
             let imp = d.arrow(lt, is_false);
             d.pi_fv(k_fv, nat, imp)
         };
-        let pair = d.const_app(
-            p.logic.and_intro,
-            &[head_ty, new_min_ty, h_head, new_min],
-        );
+        let pair = d.const_app(p.logic.and_intro, &[head_ty, new_min_ty, h_head, new_min]);
         let intro2 = d.kernel().const_(p.logic.exists_intro, vec![one]);
         let witness = d.apply(intro2, &[nat, target_pred, m, pair]);
         let with_hm = d.lam_fv(hm_fv, hm_ty, witness);
@@ -1076,12 +1064,8 @@ pub(super) fn declare_lnp_unrestricted_implies_em(
                 let zero_is_zero = d.eq(z, z);
                 let right_ty = d.const_app(p.logic.and, &[zero_is_zero, prop_var]);
                 let refl_zero = d.refl(z);
-                let pair = d.const_app(
-                    p.logic.and_intro,
-                    &[zero_is_zero, prop_var, refl_zero, hp],
-                );
-                let q0_proof =
-                    d.const_app(p.logic.or_inr, &[zero_is_one, right_ty, pair]);
+                let pair = d.const_app(p.logic.and_intro, &[zero_is_zero, prop_var, refl_zero, hp]);
+                let q0_proof = d.const_app(p.logic.or_inr, &[zero_is_one, right_ty, pair]);
                 let contradiction = d.apply(not_q0, &[q0_proof]);
                 d.lam_fv(hp_fv, prop_var, contradiction)
             };

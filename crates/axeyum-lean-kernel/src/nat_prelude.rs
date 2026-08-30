@@ -177,8 +177,8 @@ mod irrational;
 mod land;
 mod lcm;
 mod lcm_gcd_lemmas;
-mod least_number;
 mod ldiff;
+mod least_number;
 mod log;
 mod log2;
 mod log_clog_order;
@@ -303,6 +303,7 @@ use lcm::{
 };
 use lcm_gcd_lemmas::declare_lcm_gcd_lemmas;
 use ldiff::declare_ldiff_all;
+use least_number::declare_least_number_all;
 use log::declare_log_all;
 use log_clog_order::declare_log_clog_order_all;
 use log2::declare_log2_all;
@@ -327,7 +328,6 @@ use perfect::declare_perfect_all;
 use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
-use least_number::declare_least_number_all;
 use pow_add_prime::declare_pow_add_prime_all;
 use powsq::declare_powsq_all;
 use prime_char::{
@@ -5263,8 +5263,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lnp_of_pointwise_decision: kernel.name_str(nat, "lnp_of_pointwise_decision"),
             lnp_decidable: kernel.name_str(nat, "lnp_decidable"),
             em_implies_lnp: kernel.name_str(nat, "em_implies_lnp"),
-            lnp_unrestricted_implies_em: kernel
-                .name_str(nat, "lnp_unrestricted_implies_em"),
+            lnp_unrestricted_implies_em: kernel.name_str(nat, "lnp_unrestricted_implies_em"),
         };
 
         let mut d = NatDev::new(kernel, p);
