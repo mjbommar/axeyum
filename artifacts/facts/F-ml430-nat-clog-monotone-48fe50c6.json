@@ -56,5 +56,8 @@
   },
   "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction (The same `Monotone`-unfolds-to-pointwise core rendering as `Nat.log_monotone`, specializing `Nat.clog_mono_right`. `crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs`.) This is a genuine library-composition increment, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
   "proof_route": "kernel-lean",
-  "axiom_footprint": []
+  "axiom_footprint": [],
+  "equivalent_to": [
+    "F:ml430-nat-clog-mono-right-8d87a410"
+  ]
 }

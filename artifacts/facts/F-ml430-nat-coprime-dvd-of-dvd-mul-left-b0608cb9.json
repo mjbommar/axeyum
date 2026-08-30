@@ -55,5 +55,8 @@
   },
   "notes": "CLOSED via the `nat-coprime-family` lane, 2026-08-29, as `Nat.dvd_of_dvd_mul_left` -- axiom-free, confirmed against Mathlib v4.30's `Init.Data.Nat.Coprime` (Lean core, not mathlib4 itself) read directly from the pinned toolchain source at `~/.elan/toolchains/leanprover--lean4---v4.30.0/src/lean/Init/Data/Nat/Coprime.lean`.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
   "axiom_footprint": [],
-  "proof_route": "kernel-lean"
+  "proof_route": "kernel-lean",
+  "equivalent_to": [
+    "F:nat-gauss-lemma"
+  ]
 }
