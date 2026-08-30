@@ -2,7 +2,7 @@
 """Blast radius, read from the committed bridge_provenance block."""
 import json, pathlib, collections
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 A = ROOT / "artifacts" / "autogenesis"
 CAT = json.loads((A / "mathlib-nat-int-fact-catalog-v1.json").read_text())
 CACHE = json.loads((A / "mathlib-statement-constants-v1.json").read_text())["constants"]

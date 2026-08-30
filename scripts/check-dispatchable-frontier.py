@@ -322,8 +322,7 @@ def classify_bridge(bridge: list[str], rows: list[dict[str, Any]],
             kind = "elaboration"
         elif not rendered:
             kind = "unrendered"
-        elif any(const in tokens[n] or const.rsplit(".", 1)[-1] in tokens[n]
-                 for n in rendered):
+        elif any(const in tokens[n] for n in rendered):
             kind = "expressed"
         else:
             kind = "elided"

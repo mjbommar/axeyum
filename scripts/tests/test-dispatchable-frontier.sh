@@ -719,6 +719,39 @@ run "statable-screen-passes-clean-candidates" 0 NONE -- \
     --vocabulary "$BASE/vocab.json" \
     --statable "$WORK/candidates-statable.json"
 
+# ---- case 0c2: the elision-backed split is REPORTED, and discriminates ------
+# The fixture is built for this: `Test.fine` needs `Test.bridgeThing`, whose
+# provenance class is `unrendered`, while `Test.also_fine` needs only kernel
+# declarations. So a correct run reports exactly ONE elision-backed admission
+# and tags exactly that candidate. Without this case the whole
+# `suspect_bridge` filter can be emptied with every guard still green --
+# measured, it survived as a mutant until this was added.
+CASES=$((CASES + 1))
+S7R="$(python3 "$SCRIPT" --registry "$BASE/registry.json" \
+        --env-snapshot "$BASE/env.json" --vocabulary "$BASE/vocab.json" \
+        --statable "$WORK/candidates-statable.json" 2>&1)"
+S7R_BAD=0
+if [ "$(printf '%s\n' "$S7R" | /usr/bin/grep -c '^of the statable ones, 1 are admitted only via')" -ne 1 ]; then
+  echo "FAIL [statable-screen-reports-the-elision-backed-split]: no '1 are admitted only via' line"
+  S7R_BAD=1
+fi
+if [ "$(printf '%s\n' "$S7R" | /usr/bin/grep -c 'statable-ok Test.fine  \[elision-backed: Test.bridgeThing\]')" -ne 1 ]; then
+  echo "FAIL [statable-screen-reports-the-elision-backed-split]: Test.fine not tagged"
+  S7R_BAD=1
+fi
+# ...and the NEGATIVE half, so the tag cannot be applied to everything.
+if [ "$(printf '%s\n' "$S7R" | /usr/bin/grep -c 'statable-ok Test.also_fine$')" -ne 1 ]; then
+  echo "FAIL [statable-screen-reports-the-elision-backed-split]: Test.also_fine was tagged, or is absent"
+  S7R_BAD=1
+fi
+if [ "$S7R_BAD" -ne 0 ]; then
+  FAILURES=$((FAILURES + 1))
+  echo "--- output [statable-screen-reports-the-elision-backed-split] ---"
+  printf '%s\n' "$S7R" | sed 's/^/    /'
+else
+  echo "ok   [statable-screen-reports-the-elision-backed-split]"
+fi
+
 # ---- case 0d: and it re-screens the REAL preregistered population -----------
 # Not a fixture: `nursery-v2-extension.json` carries every entry's constants, so
 # the preregistered rows are re-screened on every run rather than only at the
