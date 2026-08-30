@@ -5,9 +5,10 @@
 **Executable curriculum (`WIP`, book-executable-curriculum, 2026-08-30).**
 Build the semantic and evidence layers required by *Instruction Sets,
 Programs, and Proofs*. The first slice adds the `axeyum-machine` boundary and
-complete A0 concrete execution. Next: independently pinned RV64I and x86-64
-teaching slices, broader semantic relations, manifests, Python projection, and
-clean-checkout book gates. A0 addition now has fixed-width symbolic certificates;
+complete A0 concrete execution. The reusable word layer now also exposes and
+audits explicit extension and truncation. Next: independently pinned RV64I and
+x86-64 teaching slices, broader semantic relations, manifests, Python
+projection, and clean-checkout book gates. A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
 
@@ -24,3 +25,4 @@ interfaces as implemented until those routes run and their controls fire.
 | 2026-08-30 | `e2ce56353` | The step control now independently requires rejection of a hidden write, missing condition update, and wrong sequential PC; unexpected acceptance has a distinct control-failure category. |
 | 2026-08-30 | `41cd92f5e` | A0 concrete addition now instantiates a domain-parametric semantic definition that can also construct symbolic terms; primitive mappings remain an explicit trust boundary. |
 | 2026-08-30 | `9cf18324f` | A0 addition emits term-bound DRAT/LRAT for all eight supported fixed widths. Replay rebuilds source terms and certificates; an inverted-carry SAT witness is exhaustively found at width 8 and replayed through encoded concrete execution. |
+| 2026-08-30 | `63fbf51d7` | Explicit A0 zero/sign extension and truncation plus a source-bound report over 65,822 words and 2,106,910 operation checks. A signed-zero-extension mutation fires; the semantic package advances to v7. |

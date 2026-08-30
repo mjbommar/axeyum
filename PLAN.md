@@ -186,6 +186,7 @@ now. Nothing was deleted.
 | 2026-08-30 | `e2ce56353` | The step control now independently requires rejection of a hidden write, missing condition update, and wrong sequential PC; unexpected acceptance has a distinct control-failure category. |
 | 2026-08-30 | `41cd92f5e` | A0 concrete addition now instantiates a domain-parametric semantic definition that can also construct symbolic terms; primitive mappings remain an explicit trust boundary. |
 | 2026-08-30 | `9cf18324f` | A0 addition emits term-bound DRAT/LRAT for all eight supported fixed widths. Replay rebuilds source terms and certificates; an inverted-carry SAT witness is exhaustively found at width 8 and replayed through encoded concrete execution. |
+| 2026-08-30 | `63fbf51d7` | Explicit A0 zero/sign extension and truncation plus a source-bound report over 65,822 words and 2,106,910 operation checks. A signed-zero-extension mutation fires; the semantic package advances to v7. |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | l0-s6-credit-transaction | Crash-safe two-phase-commit engine (`scripts/credit-transaction.py`) + gate (`scripts/check-credit-transaction.py`) + 27-test suite + 9-guard mutation table (`scripts/tests/test-credit-transaction*`), registered in justfile and check.sh; ADR-0785. |
 | 2026-08-30 | l1-c0-artifact-contract | Library-artifact pack contract (`artifacts/library-artifact/`: README spec, JSON Schema doc, 9-declaration positive pack + type-only projection + external population registry) + two independent readers (`scripts/check-library-artifact-contract{,-reader-b}.py`) + 14-test suite + 5-guard 1:1 mutation table (`scripts/tests/test-library-artifact-contract*`), registered in justfile and check.sh; ADR-0800. |
@@ -34698,9 +34699,10 @@ specifically (exactly the gap the two "explained" survivals trace to).
 **Executable curriculum (`WIP`, book-executable-curriculum, 2026-08-30).**
 Build the semantic and evidence layers required by *Instruction Sets,
 Programs, and Proofs*. The first slice adds the `axeyum-machine` boundary and
-complete A0 concrete execution. Next: independently pinned RV64I and x86-64
-teaching slices, broader semantic relations, manifests, Python projection, and
-clean-checkout book gates. A0 addition now has fixed-width symbolic certificates;
+complete A0 concrete execution. The reusable word layer now also exposes and
+audits explicit extension and truncation. Next: independently pinned RV64I and
+x86-64 teaching slices, broader semantic relations, manifests, Python
+projection, and clean-checkout book gates. A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
 

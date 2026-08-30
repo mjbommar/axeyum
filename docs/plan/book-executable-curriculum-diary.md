@@ -314,3 +314,41 @@ facade now exports the progress-aware function from both its canonical proof
 namespace and crate-root compatibility surface, removing the downstream
 dead-code failure instead of suppressing it. The semantic package is version 6
 and declares `domain-parametric-addition`.
+
+## 2026-08-30 — complete the reusable A0 word-operation contract
+
+Auditing the book's still-open `OP.a0.word-package` obligation against the
+compiled crate found a real partial implementation. `Word` already supplied
+construction, modular reduction, unsigned and signed readings, high-bit
+inspection, and little-endian split/join. It did not supply the explicit zero
+extension, sign extension, or truncation operations that Chapters 1 and 3
+promise to use as reusable semantic primitives.
+
+Added `Word::zero_extend`, `Word::sign_extend`, and `Word::truncate`. Each
+accepts only the eight supported byte-multiple widths. Widening operations
+reject narrowing; truncation rejects widening; identity conversions are legal.
+The error retains both source and target widths. Direct tests cover positive
+and negative extension, low-bit truncation, identity cases, invalid direction,
+and an unsupported target width.
+
+The new source-bound word-package report checks 65,822 source words and
+2,106,910 individual operation results. It exhaustively enumerates all 8- and
+16-bit words, applies every legal widening target, truncates each extension
+back to its source width, and checks signed and unsigned readings plus byte
+split/join against independent integer oracles. Five boundary vectors at each
+larger supported width cover zero, one, the largest positive signed value, the
+smallest negative signed value, and the all-ones word. Invalid-direction
+controls are included in the report.
+
+The load-bearing mutation implements zero extension by calling sign extension.
+It changes the report digest and the checker exits nonzero with
+`semantic-mismatch`. The positive CLI producer and checker pass directly.
+`axeyum-machine` now has 22 integration tests; the evidence crate adds a tenth
+route/control test; strict all-target Clippy passes for both crates.
+
+This is a finite implementation audit, not an induction theorem over arbitrary
+widths. Exhaustiveness applies only to the complete 8- and 16-bit value
+domains. Larger widths have named boundary coverage. The compiled source digest
+binds the report to the implementation, and the semantic package advances to
+version 7; it does not independently prove the Rust compiler or integer
+oracles.
