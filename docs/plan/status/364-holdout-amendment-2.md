@@ -142,6 +142,40 @@ held-out ids appear outside the gate's scan set, not eight.
   unscanned. A producer contract is prospective dispatch, which is exactly the
   breach. `rglob`; `files_scanned` 1107 → 1109.
 
+## `check-fast.sh`, against a measured baseline
+
+Run at the merge base (`fab966b4c`, in a detached worktree) and in this lane,
+and the failure SETS diffed — not my own diff read for plausibility.
+
+| run | failed steps |
+| --- | --- |
+| merge base | 28 |
+| this lane, first run | 29 |
+| this lane, final | **27 — baseline minus `dispatchable-frontier`** |
+
+Two failures were mine and are fixed. Neither was visible from the diff:
+
+- `autogenesis-mathlib-nursery-split` — `nursery-v1.json` carries a copy of the
+  ADR-0542 ledger, so two new amendments made it stale. Regenerated.
+- `aggregate-scope` — the new gate was in the `justfile` only, so `check.sh`
+  would not have run it. Added to both rather than recorded as an accepted
+  divergence.
+
+Then a *third* set appeared that was failing in neither earlier run —
+`autogenesis-concept-coverage{,-content,-fresh}` — because the `nursery-v1.json`
+regeneration moved a digest the concept-coverage projection pins. **A
+propagation fix creates the next stale artifact one hop downstream**, so the
+comparison has to be repeated after each fix rather than reasoned about. One
+line, `nursery_sha256`.
+
+And one baseline failure this lane REMOVED, which is worth more than either
+fix: **`check-dispatchable-frontier.py` is green at 21 dispatchable.** ADR-0653
+said that gate "stays RED at 6 against a floor of 10, and no draw can clear
+it", because R5 refuses any family set that does not add two held-out families.
+It was cleared by an *amendment* instead — the 20 released rows are ordinary
+development work now, which is precisely ADR-0542's argument for moving a
+family rather than deleting it.
+
 ## Pre-existing red on `main`, not from this lane
 
 Each measured by restoring my files to HEAD and re-running.
@@ -169,6 +203,8 @@ Each measured by restoring my files to HEAD and re-running.
 | `c07c40928` | mutation fix (one unkillable guard) + `just check` registration |
 | `e489a2539` | ADR-0695 |
 | `0f6207a91` | `rglob` for artifact subdirectories; the wider scan refused |
+| `3e8771650` | propagate into `nursery-v1.json` and `check.sh` |
+| `e49b4c315` | re-pin the concept-coverage projection |
 
 ## Not done
 
