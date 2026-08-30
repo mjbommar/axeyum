@@ -22,7 +22,15 @@ trap 'rm -rf "$WORK"' EXIT
 FAILURES=0
 CASES=0
 
-ALL_GUARDS=(G1 G2 G3 G4 G5 G6 S1 S2 S3 S4 S5 S6)
+ALL_GUARDS=(G1 G2 G3 G4 G5 G6 G7 S1 S2 S3 S4 S5 S6)
+
+# The guards that are properties of the ARTIFACTS (a stale registry row, an
+# unwitnessed bridge constant, a screen that rejects something we proved).
+# G4/G7 are not in this list: they are properties of how much WORK is left,
+# which legitimately changes every time a lane closes a fact. Case 0's real-tree
+# half asserts over exactly this set, so it stays a meaningful false-positive
+# control whether the queue is full or empty.
+ARTIFACT_GUARDS=(G1 G2 G3 G5 S1 S2 S3 S4)
 
 # run <label> <expected-exit> <expected-guard-or-NONE> -- <args...>
 run() {
@@ -84,13 +92,25 @@ def fact(ident, status, statement):
                        "source": "fixture"},
     }
 
+# The fixture carries TEN dispatchable rows, not one, because G7's floor is 10
+# and a healthy fixture must be healthy by the gate's own standard. A fixture
+# sitting one row above zero was "healthy" only against a gate that fired at
+# zero; carrying it forward would have forced G7's floor to be overridable from
+# the controls, which is precisely the silencing knob G7 refuses to have.
+# TWELVE, not exactly ten. Sitting the shared base fixture ON the floor makes
+# every case in the suite sensitive to G7's comparison: mutating `<` to `<=` was
+# measured killing SIXTEEN cases, because each one then fired G7 alongside its
+# own guard and tripped the "exactly one guard" assertion. Sixteen deaths from
+# one mutant does not mean sixteen strong cases -- it means they were not
+# independent. The boundary is pinned by two dedicated fixtures below instead.
+DISPATCHABLE = [f"F:ml430-fix-dispatchable-{i:02d}" for i in range(1, 13)]
+
 facts = [
     fact("F:ml430-fix-blocked", "open", "forall n, n.divergesHere = 1"),
     fact("F:ml430-fix-codomain", "open", "forall n i, n.boolishHere i = false"),
     fact("F:ml430-fix-settled", "proved", "forall n, n.plain = 1"),
-    fact("F:ml430-fix-dispatchable", "open", "forall n, n.plain n = n"),
     fact("F:ml430-mutation-fix", "open", "forall n, n.plain = 2"),
-]
+] + [fact(i, "open", "forall n, n.plain n = n") for i in DISPATCHABLE]
 for f in facts:
     (d / "facts" / (f["id"].replace(":", "-").replace("F-", "F-") + ".json")
      ).write_text(json.dumps(f, indent=1))
@@ -99,11 +119,10 @@ nursery = {"entries": [
     {"fact_id": "F:ml430-fix-blocked", "partition": "train", "mutation_of": None},
     {"fact_id": "F:ml430-fix-codomain", "partition": "train", "mutation_of": None},
     {"fact_id": "F:ml430-fix-settled", "partition": "train", "mutation_of": None},
-    {"fact_id": "F:ml430-fix-dispatchable", "partition": "development",
-     "mutation_of": None},
     {"fact_id": "F:ml430-mutation-fix", "partition": "train",
      "mutation_of": "F:ml430-fix-settled"},
-]}
+] + [{"fact_id": i, "partition": "development", "mutation_of": None}
+     for i in DISPATCHABLE]}
 (d / "nursery.json").write_text(json.dumps(nursery, indent=1))
 
 registry = {"schema_version": 1,
@@ -150,9 +169,8 @@ catalog = {"facts": [
      "fact_id": "F:ml430-fix-codomain"},
     {"kind": "external-source", "source_name": "Test.settled",
      "fact_id": "F:ml430-fix-settled"},
-    {"kind": "external-source", "source_name": "Test.dispatchable",
-     "fact_id": "F:ml430-fix-dispatchable"},
-]}
+] + [{"kind": "external-source", "source_name": f"Test.dispatchable{n}",
+      "fact_id": i} for n, i in enumerate(DISPATCHABLE)]}
 (d / "catalog.json").write_text(json.dumps(catalog, indent=1))
 
 # An extension manifest with no held-out rows of its own: the fixture's split
@@ -185,7 +203,42 @@ mapfile -t ARGS_BASE < <(fixargs "$BASE")
 
 # ---- case 0: FALSE-POSITIVE controls -- healthy input must be silent -------
 run "healthy-fixture-passes" 0 NONE -- "${ARGS_BASE[@]}"
-run "healthy-real-tree-passes" 0 NONE --
+
+# The real-tree half asserts over ARTIFACT_GUARDS only. It used to demand exit
+# 0, which made it a control over the SIZE OF THE QUEUE -- so the day the queue
+# fell below G7's floor (2026-08-30, at 3 dispatchable) this case failed for a
+# reason that has nothing to do with a false positive. Asserting the artifact
+# guards keeps it a genuine control: those must never fire on the real tree, and
+# they are the ones that would silently reclassify real population.
+run_artifact_guards_only() {
+  local label="$1"; shift
+  [ "${1:-}" = "--" ] && shift
+  CASES=$((CASES + 1))
+  local out g hits bad=0
+  out="$(python3 "$SCRIPT" "$@" 2>&1)"
+  for g in "${ARTIFACT_GUARDS[@]}"; do
+    hits="$(printf '%s\n' "$out" | /usr/bin/grep -cE "\b${g} [a-z-]+" || true)"
+    if [ "$hits" -ne 0 ]; then
+      echo "FAIL [$label]: artifact guard $g fired on the real tree ($hits line(s))"
+      bad=1
+    fi
+  done
+  # Positive control in the SAME invocation: an empty output would satisfy every
+  # assertion above, so require the report the guards are read out of.
+  hits="$(printf '%s\n' "$out" | /usr/bin/grep -cE '^  DISPATCHABLE:' || true)"
+  if [ "$hits" -ne 1 ]; then
+    echo "FAIL [$label]: no DISPATCHABLE line; the run produced no report, so"
+    echo "               the absence of guard hits is not evidence of anything"
+    bad=1
+  fi
+  if [ "$bad" -ne 0 ]; then
+    FAILURES=$((FAILURES + 1))
+    echo "--- output [$label] ---"; printf '%s\n' "$out" | sed 's/^/    /'; echo "--- end ---"
+  else
+    echo "ok   [$label]"
+  fi
+}
+run_artifact_guards_only "real-tree-fires-no-artifact-guard" --
 
 # ---- case G1: a registry entry that matches no proposition ------------------
 G1="$WORK/g1"; cp -r "$BASE" "$G1"
@@ -260,12 +313,113 @@ python3 - "$G4/nursery.json" <<'PY'
 import json, sys, pathlib
 p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
 for e in d["entries"]:
-    if e["fact_id"] == "F:ml430-fix-dispatchable":
+    if e["fact_id"].startswith("F:ml430-fix-dispatchable-"):
         e["partition"] = "held-out"
 p.write_text(json.dumps(d, indent=1))
 PY
 mapfile -t A < <(fixargs "$G4")
 run "G4-empty-dispatchable-set" 1 G4 -- "${A[@]}"
+
+# ---- case G7: the queue is below the floor but NOT empty --------------------
+# The distinction from G4 is the entire point of G7: one dispatchable row is not
+# an empty queue, and a gate that only fires at zero says nothing here. This
+# fixture leaves exactly ONE row dispatchable, so G4 must stay silent and G7
+# must fire -- if the two ever collapse into one condition, this case and the
+# G4 case cannot both pass.
+G7="$WORK/g7"; cp -r "$BASE" "$G7"
+python3 - "$G7/nursery.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+for e in d["entries"]:
+    if e["fact_id"].startswith("F:ml430-fix-dispatchable-") \
+            and e["fact_id"] != "F:ml430-fix-dispatchable-01":
+        e["partition"] = "held-out"
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$G7")
+run "G7-queue-below-floor" 1 G7 -- "${A[@]}"
+
+# G7's boundary, pinned by two fixtures that differ by ONE dispatchable row.
+# `holdout_all_but N` leaves exactly N rows dispatchable. At the floor the run
+# must pass; one below it must fire. A check written `<=` instead of `<` passes
+# the failing side and fails the at-floor side, so the pair pins the comparison
+# itself rather than merely its direction -- and because these are dedicated
+# fixtures, that mutation kills these two cases and no others.
+holdout_all_but() {
+  # holdout_all_but <fixture-dir> <how-many-to-leave-dispatchable>
+  python3 - "$1/nursery.json" "$2" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); keep = int(sys.argv[2])
+d = json.loads(p.read_text())
+seen = 0
+for e in d["entries"]:
+    if e["fact_id"].startswith("F:ml430-fix-dispatchable-"):
+        seen += 1
+        if seen > keep:
+            e["partition"] = "held-out"
+if seen < keep:
+    raise SystemExit(f"fixture has {seen} dispatchable rows, cannot keep {keep}")
+p.write_text(json.dumps(d, indent=1))
+PY
+}
+
+AT="$WORK/at-floor"; cp -r "$BASE" "$AT"; holdout_all_but "$AT" 10
+mapfile -t A < <(fixargs "$AT")
+run "G7-exactly-at-the-floor-passes" 0 NONE -- "${A[@]}"
+
+BELOW="$WORK/below-floor"; cp -r "$BASE" "$BELOW"; holdout_all_but "$BELOW" 9
+mapfile -t A < <(fixargs "$BELOW")
+run "G7-one-below-the-floor-fires" 1 G7 -- "${A[@]}"
+
+# --floor RAISES: the base fixture is healthy at the built-in floor and must
+# fail when the caller demands more headroom than it has.
+run "G7-raised-floor-fires-on-a-healthy-fixture" 1 G7 -- "${ARGS_BASE[@]}" --floor 13
+
+# --json is the mode a caller PARSES, and until 2026-08-30 its `guard_failures`
+# was assembled before the queue verdict was computed -- so an empty queue
+# emitted `guard_failures: []` alongside exit 1. Nothing tested it: blanking the
+# `queue_below_floor` field was measured SURVIVING the whole suite. These two
+# cases read the JSON itself, both ways, and each must see the verdict.
+run_json_case() {
+  # run_json_case <label> <fixture-dir-or-empty> <expected-queue_below_floor>
+  local label="$1" dir="$2" want="$3"
+  CASES=$((CASES + 1))
+  local args=() out bad=0
+  [ -n "$dir" ] && mapfile -t args < <(fixargs "$dir")
+  out="$(python3 "$SCRIPT" "${args[@]+"${args[@]}"}" --json 2>/dev/null)"
+  local got
+  got="$(printf '%s' "$out" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception as exc:
+    print(f"NOT-JSON: {exc}"); raise SystemExit
+below = d.get("queue_below_floor")
+named = any(g.startswith("G7 ") or g.startswith("G4 ")
+            for g in d.get("guard_failures", []))
+# A verdict is only reported if BOTH channels agree; a field set without the
+# guard_failures entry is the exact half-fix this case exists to reject.
+print("true" if (below and named) else ("false" if not below and not named
+      else f"SPLIT below={below} named={named}"))')"
+  if [ "$got" != "$want" ]; then
+    echo "FAIL [$label]: json queue verdict is '$got', expected '$want'"
+    bad=1
+  fi
+  if [ "$bad" -ne 0 ]; then
+    FAILURES=$((FAILURES + 1))
+    echo "--- output [$label] ---"; printf '%s\n' "$out" | sed 's/^/    /'; echo "--- end ---"
+  else
+    echo "ok   [$label]"
+  fi
+}
+run_json_case "G7-json-reports-a-healthy-queue" "$BASE" false
+run_json_case "G7-json-reports-a-starved-queue" "$BELOW" true
+
+# G7's floor is a one-way ratchet. `--floor` exists so a caller can demand MORE
+# headroom; a caller that could demand less would have a knob for turning the
+# gate off without adding a single row of work, which is this repository's most
+# common defect wearing a command-line flag. Exit 2 (bad input), not 1.
+run "G7-floor-may-not-be-lowered" 2 NONE -- "${ARGS_BASE[@]}" --floor 1
 
 # ---- case G5: a non-re-derivable class with no recorded reading -------------
 G5="$WORK/g5"; cp -r "$BASE" "$G5"
