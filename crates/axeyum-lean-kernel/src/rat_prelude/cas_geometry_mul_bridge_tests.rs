@@ -116,6 +116,7 @@ use super::cas_ivt_bridge_tests::{int_lit, of_int};
 use super::ops::{radd, rat_theorem, rchain, rcongr, req, rmul, rone, rrefl, rsymm, rzero};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::nat_prelude::NatOps;
 use crate::on_a_deep_stack;
 
 // ---------------------------------------------------------------------------
