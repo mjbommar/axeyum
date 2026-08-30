@@ -143,12 +143,55 @@ def check_row_evidence_complete(frontier: dict) -> list[str]:
             pm = row.get("preregistered_metric") or {}
             if not pm.get("command"):
                 failures.append(f"ROW_EVIDENCE_COMPLETE: {rid} has no preregistered_metric.command")
+            if "baseline" not in pm:
+                failures.append(f"ROW_EVIDENCE_COMPLETE: {rid} has no preregistered_metric.baseline")
             if not row.get("destination_paths") and not row.get("destination_note"):
                 failures.append(
                     f"ROW_EVIDENCE_COMPLETE: {rid} has empty destination_paths and no destination_note"
                 )
     return failures
 # GUARD:ROW_EVIDENCE_COMPLETE end
+
+
+# A baseline says WHAT to measure and where it stands. It does not say what is
+# supposed to HAPPEN, so a row carrying only a baseline cannot be wrong -- and
+# G3's exit is "preregisters the metric EXPECTED TO MOVE". The direction is the
+# falsifiable half: a lane that lands the increment and finds the number unmoved
+# has REFUTED the row, which is the outcome a frontier queue exists to surface.
+#
+# It is also the half that quietly goes missing, because a baseline looks like a
+# prediction and is not one.
+EXPECTED_CHANGES = {"increases", "decreases", "becomes_true"}
+
+
+# GUARD:METRIC_EXPECTATION begin
+def check_metric_expectation(frontier: dict) -> list[str]:
+    failures = []
+    for _q, qd in frontier["queues"].items():
+        for row in qd["rows"]:
+            rid = row["row_id"]
+            pm = row.get("preregistered_metric") or {}
+            change = pm.get("expected_change")
+            if change not in EXPECTED_CHANGES:
+                failures.append(
+                    f"METRIC_EXPECTATION: {rid} has expected_change {change!r}, not one of "
+                    f"{sorted(EXPECTED_CHANGES)} -- a baseline without a direction is not a "
+                    "prediction and cannot be refuted"
+                )
+                continue
+            base = pm.get("baseline")
+            if change == "becomes_true" and base is not False:
+                failures.append(
+                    f"METRIC_EXPECTATION: {rid} expects becomes_true but its baseline is "
+                    f"{base!r}, so it is already satisfied at generation time"
+                )
+            if change == "increases" and isinstance(base, bool):
+                failures.append(
+                    f"METRIC_EXPECTATION: {rid} expects a count to increase but its baseline "
+                    "is a bool -- use becomes_true"
+                )
+    return failures
+# GUARD:METRIC_EXPECTATION end
 
 
 # GUARD:CROSS_CHECK_PRESENT begin
@@ -172,6 +215,7 @@ def run_all_guards(frontier: dict, join_path: Path, committed_json: str, fresh_j
     failures += check_row_id_purity(frontier)
     failures += check_empty_queue_reason(frontier)
     failures += check_row_evidence_complete(frontier)
+    failures += check_metric_expectation(frontier)
     failures += check_cross_check_present(frontier)
     return failures
 

@@ -155,6 +155,7 @@
           "preregistered_metric": {
             "description": "A generic (carrier-polymorphic) commutativity helper should exist that is not specific to one carrier's *_comm theorem.",
             "command": "/usr/bin/grep -rlE 'IsCommutative|is_commutative|generic_comm' crates/axeyum-lean-kernel/src | wc -l",
+            "expected_change": "increases",
             "baseline": 0
           },
           "confidence": "high",
@@ -198,6 +199,7 @@
           "preregistered_metric": {
             "description": "Count of distinct per-carrier 'congr_X_to_Y'-shaped dev helpers in crates/axeyum-lean-kernel/src should stop growing (ideally shrink) once a generic congrArg exists; baseline count of the three CLAUDE.md names it directly.",
             "command": "/usr/bin/grep -rlE 'congr_nat_to|congr_bool_to_nat' crates/axeyum-lean-kernel/src | wc -l",
+            "expected_change": "increases",
             "baseline": 1
           },
           "confidence": "medium",
@@ -265,6 +267,7 @@
           "preregistered_metric": {
             "description": "artifacts/graph-join/mathlib-group-defs-v1.join.json name_coincidence_candidates must still NOT contain 'mul_left_cancel' after this lands (a hit there would mean an unrelated fact happens to share this name and needs identity resolution, not fresh work).",
             "command": "python3 -c \"import json; d=json.load(open('artifacts/graph-join/mathlib-group-defs-v1.join.json')); print('mul_left_cancel' in d['name_coincidence_candidates'])\"",
+            "expected_change": "becomes_true",
             "baseline": false
           },
           "confidence": "medium",
@@ -322,6 +325,7 @@
           "preregistered_metric": {
             "description": "A generic (carrier-polymorphic) associativity helper should exist in crates/axeyum-lean-kernel/src that is NOT specific to one carrier's *_assoc theorem.",
             "command": "/usr/bin/grep -rlE 'IsAssociative|is_associative|generic_assoc' crates/axeyum-lean-kernel/src | wc -l",
+            "expected_change": "increases",
             "baseline": 0
           },
           "confidence": "high",
@@ -374,6 +378,7 @@
           "preregistered_metric": {
             "description": "Existence of an explicit written comparison (a fact, a code comment, or a doc note) between the Mathlib 'of_decide_eq_true' statement and Kernel::Prelude::of_decide_eq_true's rendered type. Baseline: no such comparison exists anywhere in the repo.",
             "command": "/usr/bin/grep -rlE 'of_decide_eq_true' docs/ artifacts/facts | wc -l",
+            "expected_change": "increases",
             "baseline": 0
           },
           "confidence": "low",

@@ -24,7 +24,7 @@ cp "$REPO_ROOT/scripts/gen-infrastructure-frontier.py" "$SCRATCH/scripts/gen-inf
 cp "$REPO_ROOT/scripts/lib/infrastructure_frontier.py" "$SCRATCH/scripts/lib/infrastructure_frontier.py"
 cp "$REPO_ROOT/scripts/tests/infrastructure_frontier_mutations.py" "$SCRATCH/scripts/tests/infrastructure_frontier_mutations.py"
 
-GUARDS=(MISSING_JOIN STALE_ARTIFACT ROW_ID_UNIQUE ROW_ID_PURITY EMPTY_QUEUE_REASON ROW_EVIDENCE_COMPLETE CROSS_CHECK_PRESENT)
+GUARDS=(MISSING_JOIN STALE_ARTIFACT ROW_ID_UNIQUE ROW_ID_PURITY EMPTY_QUEUE_REASON ROW_EVIDENCE_COMPLETE METRIC_EXPECTATION CROSS_CHECK_PRESENT)
 declare -A STUB=(
   [MISSING_JOIN]='def check_missing_join(join_path):\n    return []\n'
   [STALE_ARTIFACT]='def check_stale_artifact(committed_json, fresh_json, committed_md, fresh_md):\n    return []\n'
@@ -32,6 +32,7 @@ declare -A STUB=(
   [ROW_ID_PURITY]='def check_row_id_purity(frontier):\n    return []\n'
   [EMPTY_QUEUE_REASON]='def check_empty_queue_reason(frontier):\n    return []\n'
   [ROW_EVIDENCE_COMPLETE]='def check_row_evidence_complete(frontier):\n    return []\n'
+  [METRIC_EXPECTATION]='def check_metric_expectation(frontier):\n    return []\n'
   [CROSS_CHECK_PRESENT]='def check_cross_check_present(frontier):\n    return []\n'
 )
 
@@ -82,6 +83,7 @@ results["good"] = (
     + cif.check_row_id_purity(fx.good_frontier())
     + cif.check_empty_queue_reason(fx.good_frontier())
     + cif.check_row_evidence_complete(fx.good_frontier())
+    + cif.check_metric_expectation(fx.good_frontier())
     + cif.check_cross_check_present(fx.good_frontier())
 )
 
@@ -92,6 +94,7 @@ results["bad_ROW_ID_UNIQUE"] = cif.check_row_id_unique(fx.bad_row_id_unique_fron
 results["bad_ROW_ID_PURITY"] = cif.check_row_id_purity(fx.bad_row_id_purity_frontier())
 results["bad_EMPTY_QUEUE_REASON"] = cif.check_empty_queue_reason(fx.bad_empty_queue_reason_frontier())
 results["bad_ROW_EVIDENCE_COMPLETE"] = cif.check_row_evidence_complete(fx.bad_row_evidence_incomplete_frontier())
+results["bad_METRIC_EXPECTATION"] = cif.check_metric_expectation(fx.bad_metric_expectation_frontier())
 results["bad_CROSS_CHECK_PRESENT"] = cif.check_cross_check_present(fx.bad_cross_check_missing_frontier())
 
 for name, failures in results.items():
@@ -116,7 +119,7 @@ for guard in "${GUARDS[@]}"; do
     exit 1
   fi
 done
-echo "baseline OK: good passes, all seven bad fixtures fail"
+echo "baseline OK: good passes, all ${#GUARDS[@]} bad fixtures fail"
 echo
 
 overall_pass=1

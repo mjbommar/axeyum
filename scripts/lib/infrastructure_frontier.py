@@ -167,7 +167,16 @@ def grep_presence(pattern: str, src_dir: pathlib.Path | None = None, timeout: in
 #   destination_note  required when destination_paths is []
 #   estimated_cost    {"tier": "S"|"M"|"L"|"XL", "rationale": str}
 #   preregistered_metric:
-#       {"description": str, "command": str, "baseline": <int|str>}
+#       {"description": str, "command": str,
+#        "expected_change": "increases"|"decreases"|"becomes_true",
+#        "baseline": <int|str>}
+#
+#     `baseline` alone says WHAT to measure and where it stands; it does not
+#     say what is supposed to HAPPEN, so a row carrying only a baseline cannot
+#     be wrong. G3's exit is "preregisters the metric EXPECTED TO MOVE", and
+#     the direction is the falsifiable half: a lane that lands the increment
+#     and sees the number sit still has refuted the row, which is exactly the
+#     outcome a frontier queue exists to make visible.
 #     `command` must be re-runnable verbatim later to check whether the
 #     metric moved; `baseline` is the value it returns NOW (measured at
 #     generation time and asserted, not merely recorded -- see
@@ -233,6 +242,7 @@ ROW_CANDIDATES: list[dict] = [
                 "/usr/bin/grep -rlE 'IsAssociative|is_associative|"
                 "generic_assoc' crates/axeyum-lean-kernel/src | wc -l"
             ),
+            "expected_change": "increases",
             "baseline": 0,
         },
         "confidence": "high",
@@ -281,6 +291,7 @@ ROW_CANDIDATES: list[dict] = [
                 "/usr/bin/grep -rlE 'IsCommutative|is_commutative|"
                 "generic_comm' crates/axeyum-lean-kernel/src | wc -l"
             ),
+            "expected_change": "increases",
             "baseline": 0,
         },
         "confidence": "high",
@@ -333,6 +344,7 @@ ROW_CANDIDATES: list[dict] = [
                 "'artifacts/graph-join/mathlib-group-defs-v1.join.json')); "
                 "print('mul_left_cancel' in d['name_coincidence_candidates'])\""
             ),
+            "expected_change": "becomes_true",
             "baseline": False,
         },
         "confidence": "medium",
@@ -394,6 +406,7 @@ ROW_CANDIDATES: list[dict] = [
                 "/usr/bin/grep -rlE 'congr_nat_to|congr_bool_to_nat' "
                 "crates/axeyum-lean-kernel/src | wc -l"
             ),
+            "expected_change": "increases",
             "baseline": 1,
         },
         "confidence": "medium",
@@ -459,6 +472,7 @@ ROW_CANDIDATES: list[dict] = [
                 "/usr/bin/grep -rlE 'of_decide_eq_true' "
                 "docs/ artifacts/facts | wc -l"
             ),
+            "expected_change": "increases",
             "baseline": 0,
         },
         "confidence": "low",

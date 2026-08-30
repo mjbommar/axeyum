@@ -40,6 +40,7 @@ def _row(row_id: str, queue: str, subject: list[str], gain_kind: str) -> dict:
         "preregistered_metric": {
             "description": "fixture metric description",
             "command": "/usr/bin/grep -c fixture /dev/null",
+            "expected_change": "increases",
             "baseline": 0,
         },
         "confidence": "high",
@@ -148,6 +149,19 @@ def bad_empty_queue_reason_frontier() -> dict:
 def bad_row_evidence_incomplete_frontier() -> dict:
     fx = copy.deepcopy(good_frontier())
     fx["queues"]["language-infrastructure"]["rows"][0]["current_blockers"] = []
+    return fx
+
+
+def bad_metric_expectation_frontier() -> dict:
+    """A row carrying a baseline but no direction.
+
+    This is the shape that looks complete and is not: `baseline` says what to
+    measure and where it stands, so the row reads like a prediction while
+    being unfalsifiable. G3's exit is "preregisters the metric EXPECTED TO
+    MOVE", and the direction is the half that carries the expectation.
+    """
+    fx = copy.deepcopy(good_frontier())
+    del fx["queues"]["language-infrastructure"]["rows"][0]["preregistered_metric"]["expected_change"]
     return fx
 
 
