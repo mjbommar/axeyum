@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lnp-decidable",
+  "title": "Nat.lnp_decidable: the least-number principle holds constructively for a Bool-valued predicate over the naturals",
+  "statement": "ADR-0603's decidable-fragment exact form for the least-number principle, and the non-vacuity anchor for F:nat-lnp-unrestricted-implies-em. For any dec : Nat -> Bool and any n with dec n = true, there is an m with dec m = true and dec k = false for every k < m. Proved constructively, axiom-free, by ordinary induction on a bound: Nat.lnp_bounded_search shows that for every n, either nothing below n satisfies the predicate or there is a LEAST witness strictly below n; Nat.lnp_of_pointwise_decision runs that search at the bound succ n supplied by the given witness and discards the impossible branch. The decision at each index is a Bool.rec case split -- two constructors, not omniscience. WHY THIS FACT MATTERS BEYOND ITS OWN CONTENT: it is what makes F:nat-lnp-unrestricted-implies-em a boundary rather than a gap. That row says the UNRESTRICTED least-number principle -- the same statement with Q : Nat -> Prop in place of a Bool-valued predicate -- is interderivable with excluded middle. Read alone, such a claim could mean 'we have not proved the least-number principle'. This fact rules that reading out: the decidable form is a theorem, in the same file, and the two rendered types differ by exactly one hypothesis. An older, predicate-specific instance of the same shape has shipped for a long time -- Nat.least_divisor_search (nat_prelude/min_fac.rs), which is Nat.lnp_bounded_search's shape specialised to divisibility and which minFac's whole minimality argument already runs on.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.lnp_decidable : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (x0 x1) Bool.true) -> Exists.{1} AxNat (fun (x3 : AxNat) => And (Eq.{1} Bool (x0 x3) Bool.true) (((x4 : AxNat) -> ((x5 : AxNat.lt x4 x3) -> Eq.{1} Bool (x0 x4) Bool.false)))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "kernel_theorem": "Nat.lnp_decidable"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:logic-bool-false-ne-true"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lnp_decidable",
+      "kind": "kernel-term",
+      "supports": "Nat.lnp_decidable is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.lnp_decidable 2>/dev/null | grep -cE '^Nat\\.lnp_decidable[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.lnp_decidable",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Verified BOTH ways on 2026-08-30: the real name exits 0 printing 1; a fabricated name exits 1.",
+      "verified_at": "2026-08-30"
+    },
+    {
+      "id": "footprint-Nat.lnp_decidable",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the nat prelude's trusted surface is empty, which bounds Nat.lnp_decidable. In particular the pointwise decision it consumes is built by Bool.rec, not assumed.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it."
+    },
+    {
+      "id": "instantiation-Nat.lnp_decidable",
+      "kind": "instance-pin",
+      "supports": "Nat.lnp_decidable applies at a concrete decidable predicate and is REJECTED at an instance where its hypothesis is false, so the hypothesis is load-bearing rather than decorative.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test -p axeyum-lean-kernel --lib",
+        "Kernel::infer at a concrete predicate, with a discriminating negative"
+      ],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib lnp_decidable_accepts_a_true_instance_and_rejects_a_false_one 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The test instantiates dec := fun i => Nat.ble 2 i, accepts at n := 3 where ble 2 3 reduces to true, and requires Kernel::infer to REJECT the identical application at n := 1 where ble 2 1 reduces to false. Mutation-verified on 2026-08-30: changing the negative control's n from 1 to 3 kills exactly this test and no other. The grep -c count is what makes the command discriminating -- a fabricated filter makes cargo print `test result: ok. 0 passed` and exit 0, and the anchored pattern then matches nothing, so grep -c prints 0 and exits 1."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/least_number.rs)",
+    "source": "formal.statement is the verbatim `Kernel::render_lean` of the declaration's type, read from `cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory lnp_decidable`. depends_on was derived by `scripts/check-fact-depends-derived.py --fix` from the proof term's own direct-theorem edges, not hand-listed: the run reports And.left, And.right, Bool.false_ne_true and Nat.lnp_of_pointwise_decision, of which Bool.false_ne_true is registered here as F:logic-bool-false-ne-true. Prose is hand-written."
+  },
+  "notes": "The companion boundary is F:nat-lnp-unrestricted-implies-em. The two rendered types are the same statement with Q n replaced by Eq Bool (dec n) true, and the intermediate Nat.lnp_of_pointwise_decision makes the difference explicit as a single extra hypothesis `∀ n, Or (Q n) (Not (Q n))`. Nothing here claims a NEW mathematical result: bounded search for a decidable predicate is elementary. What is new is that the pair is stated over one carrier in one file so that the price of dropping the decidability hypothesis is a checkable number rather than a remark. Source: crates/axeyum-lean-kernel/src/nat_prelude/least_number.rs."
+}

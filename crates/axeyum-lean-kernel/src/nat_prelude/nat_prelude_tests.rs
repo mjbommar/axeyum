@@ -1233,6 +1233,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fermatnumber_ne_one,
         p.fermatnumber_mono,
         p.coprime_fermatnumber_fermatnumber,
+        // `lnp-implies-em` lane, `least_number.rs` -- ADR-0603 row 2 for the
+        // least-number principle over the naturals.
+        p.lnp_bounded_search,
+        p.lnp_of_pointwise_decision,
+        p.lnp_decidable,
+        p.em_implies_lnp,
+        p.lnp_unrestricted_implies_em,
     ]
 }
 
@@ -20678,5 +20685,429 @@ fn dvd_pow_add_one_of_odd_mul_exp_applies_at_a_concrete_instance_and_symbolicall
         5 % 3,
         0,
         "3 must NOT divide 2^2+1=5 -- the odd hypothesis is load-bearing"
+    );
+}
+
+// --- `least_number.rs` — ADR-0603 row 2 for the least-number principle ------
+
+/// Rebuild `∀ (P : Prop), Or P (Not P)` exactly the way `least_number.rs`
+/// builds it. Kept in the test file (rather than exported) so the row-2
+/// controls below check a term this file constructed independently.
+fn excluded_middle_type(f: &mut Fixture) -> ExprId {
+    let p = f.p;
+    let prop = f.k.sort_zero();
+    let x_fv = f.fresh_fvar();
+    let x = f.k.fvar(x_fv);
+    let nx = f.const_app(p.logic.not, &[x]);
+    let body = f.const_app(p.logic.or, &[x, nx]);
+    f.pi_fv(x_fv, prop, body)
+}
+
+/// `∀ k, Lt k n → Not (Q k)`.
+fn none_below_type(f: &mut Fixture, q: ExprId, n: ExprId) -> ExprId {
+    let p = f.p;
+    let nat = f.nat_ty();
+    let k_fv = f.fresh_fvar();
+    let k = f.k.fvar(k_fv);
+    let lt = f.lt(k, n);
+    let qk = f.apply(q, &[k]);
+    let nqk = f.const_app(p.logic.not, &[qk]);
+    let imp = f.arrow(lt, nqk);
+    f.pi_fv(k_fv, nat, imp)
+}
+
+/// Rebuild the unrestricted least-number principle,
+/// `∀ (Q : Nat → Prop), (∃ n, Q n) → ∃ m, And (Q m) (∀ k, Lt k m → Not (Q k))`.
+fn unrestricted_lnp_type(f: &mut Fixture) -> ExprId {
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one = f.level_one();
+    let prop = f.k.sort_zero();
+    let pty = f.arrow(nat, prop);
+
+    let q_fv = f.fresh_fvar();
+    let q = f.k.fvar(q_fv);
+
+    let inh = {
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+        let body = f.apply(q, &[n]);
+        let pred = f.lam_fv(n_fv, nat, body);
+        let ex = f.k.const_(p.logic.exists_, vec![one]);
+        f.apply(ex, &[nat, pred])
+    };
+    let concl = {
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+        let qm = f.apply(q, &[m]);
+        let nb = none_below_type(f, q, m);
+        let body = f.const_app(p.logic.and, &[qm, nb]);
+        let pred = f.lam_fv(m_fv, nat, body);
+        let ex = f.k.const_(p.logic.exists_, vec![one]);
+        f.apply(ex, &[nat, pred])
+    };
+    let body = f.arrow(inh, concl);
+    f.pi_fv(q_fv, pty, body)
+}
+
+/// **The row-2 statement, checked against genuinely FREE variables.**
+///
+/// Numerals reduce and hide definitional-equality gaps, so a concrete
+/// instantiation is not enough (`CLAUDE.md`, "a concrete instantiation can hide
+/// the bug a symbolic one exposes"). Here `P` is a free variable of sort `Prop`
+/// and `hlnp` is a free variable of the full unrestricted-LNP type, both pushed
+/// into an explicit `LocalContext`: nothing reduces, and the inferred type must
+/// be `Or P (Not P)` on the nose.
+#[test]
+fn lnp_unrestricted_implies_em_applies_at_a_free_hypothesis_and_a_free_proposition() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let anon = f.k.anon();
+    let prop = f.k.sort_zero();
+
+    let lnp_ty = unrestricted_lnp_type(&mut f);
+    let h_fv = f.fresh_fvar();
+    let h = f.k.fvar(h_fv);
+    let p_fv = f.fresh_fvar();
+    let prop_var = f.k.fvar(p_fv);
+
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: h_fv,
+        name: anon,
+        ty: lnp_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: p_fv,
+        name: anon,
+        ty: prop,
+        info: BinderInfo::Default,
+    });
+
+    let applied = f.const_app(p.lnp_unrestricted_implies_em, &[h, prop_var]);
+    let inferred =
+        f.k.infer_in(applied, &mut ctx)
+            .unwrap_or_else(|err| panic!("LNP -> EM must apply at free P: {}", f.explain(&err)));
+
+    let np = f.const_app(p.logic.not, &[prop_var]);
+    let expected = f.const_app(p.logic.or, &[prop_var, np]);
+    assert!(
+        f.k.def_eq_in(inferred, expected, &mut ctx),
+        "conclusion must be `Or P (Not P)` at a FREE P, found {}",
+        f.k.render_lean(inferred)
+    );
+
+    // NEGATIVE CONTROL, and it is the one that matters: the hypothesis is
+    // load-bearing, and the theorem this prelude ACTUALLY has cannot discharge
+    // it. `Nat.lnp_of_pointwise_decision` is the unrestricted principle plus one
+    // decidability argument, so plugging it into the hypothesis slot must be
+    // REJECTED. Without this the test would pass for a "row 2" whose hypothesis
+    // is something already proved -- i.e. for a proof of excluded middle.
+    //
+    // Note this is a genuine discrimination, not a sort mismatch: substituting
+    // the free `h` (which IS the unrestricted principle) for `decidable` below
+    // makes the application type-check and kills this assertion.
+    let decidable = f.k.const_(p.lnp_of_pointwise_decision, vec![]);
+    let bogus = f.const_app(p.lnp_unrestricted_implies_em, &[decidable, prop_var]);
+    assert!(
+        f.k.infer_in(bogus, &mut ctx).is_err(),
+        "the decidable form must NOT discharge the unrestricted hypothesis -- if \
+         it does, the two statements are the same and this row proves nothing"
+    );
+}
+
+/// **Non-vacuity, part 1: excluded middle is not already available.**
+///
+/// A reduction to excluded middle is worthless if excluded middle is lying
+/// around. Nothing in the environment may have `∀ (P : Prop), Or P (Not P)` as
+/// its type. The POSITIVE CONTROL runs the identical scan for
+/// `Nat.lnp_unrestricted_implies_em`'s own type and requires exactly one hit —
+/// so a scan that has stopped matching anything (the failure mode this repo
+/// cares about most) fails the test rather than reporting a clean zero.
+#[test]
+fn excluded_middle_is_not_itself_a_declaration_anywhere_in_the_environment() {
+    let mut f = Fixture::new();
+
+    let em_ty = excluded_middle_type(&mut f);
+    let lnp_ty = unrestricted_lnp_type(&mut f);
+    let implies_em_ty = {
+        let em = excluded_middle_type(&mut f);
+        f.arrow(lnp_ty, em)
+    };
+
+    let declared: Vec<(NameId, Declaration)> =
+        f.k.environment()
+            .iter()
+            .map(|(name, decl)| (*name, decl.clone()))
+            .collect();
+
+    let ty_of = |decl: &Declaration| -> Option<ExprId> {
+        match decl {
+            Declaration::Theorem { ty, .. }
+            | Declaration::Definition { ty, .. }
+            | Declaration::Axiom { ty, .. }
+            | Declaration::Opaque { ty, .. } => Some(*ty),
+            _ => None,
+        }
+    };
+
+    let em_holders: Vec<String> = declared
+        .iter()
+        .filter(|(_, decl)| ty_of(decl) == Some(em_ty))
+        .map(|(name, _)| f.k.display_name(*name).to_string())
+        .collect();
+    let control: Vec<String> = declared
+        .iter()
+        .filter(|(_, decl)| ty_of(decl) == Some(implies_em_ty))
+        .map(|(name, _)| f.k.display_name(*name).to_string())
+        .collect();
+
+    assert_eq!(
+        control.len(),
+        1,
+        "POSITIVE CONTROL: the scan must find exactly `Nat.lnp_unrestricted_implies_em` \
+         by its type; found {control:?}. A zero here means the scan is broken, not that \
+         excluded middle is absent."
+    );
+    assert!(
+        em_holders.is_empty(),
+        "excluded middle is already declared as {em_holders:?} -- the row-2 \
+         reduction in `least_number.rs` would then be vacuous"
+    );
+}
+
+/// **Non-vacuity, part 2: the DECIDABLE least-number principle is a theorem.**
+///
+/// The row-2 claim is "the unrestricted form costs excluded middle", not "we
+/// have not proved a least-number principle". Both of the anchors
+/// `least_number.rs`'s module doc names are checked here to be live, `Theorem`-
+/// kind and axiom-free: the general [`NatPrelude::lnp_decidable`] proved in that
+/// file, and the older, predicate-specific
+/// [`NatPrelude::least_divisor_search`] that `minFac`'s minimality already runs
+/// on.
+#[test]
+fn the_decidable_least_number_principle_is_a_landed_axiom_free_theorem() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    for (name, label) in [
+        (p.lnp_decidable, "Nat.lnp_decidable"),
+        (p.lnp_bounded_search, "Nat.lnp_bounded_search"),
+        (p.lnp_of_pointwise_decision, "Nat.lnp_of_pointwise_decision"),
+        (p.least_divisor_search, "Nat.least_divisor_search"),
+        (p.em_implies_lnp, "Nat.em_implies_lnp"),
+        (
+            p.lnp_unrestricted_implies_em,
+            "Nat.lnp_unrestricted_implies_em",
+        ),
+    ] {
+        let decl = k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{label} must be declared"))
+            .clone();
+        assert!(
+            matches!(decl, Declaration::Theorem { .. }),
+            "{label} must be a Theorem, not {decl:?}"
+        );
+        let footprint = k.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "{label} must be axiom-free, found {:?}",
+            footprint
+                .iter()
+                .map(|n| k.display_name(*n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// `Nat.lnp_decidable` at a CONCRETE decidable predicate, with a discriminating
+/// negative: `ble 2 n` is true at `n = 3` and false at `n = 1`, so the same
+/// application with the false instance must be REJECTED. Magnitudes stay tiny
+/// (`CLAUDE.md`: every `Nat` numeral this prelude builds is unary).
+#[test]
+fn lnp_decidable_accepts_a_true_instance_and_rejects_a_false_one() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    // `dec := fun i => Nat.ble 2 i`.
+    let dec = {
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let two = f.num(2);
+        let body = f.const_app(p.ble, &[two, i]);
+        f.lam_fv(i_fv, nat, body)
+    };
+
+    let three = f.num(3);
+    let true_ = f.bool_true();
+    let hit = f.bool_refl(true_);
+    let applied = f.const_app(p.lnp_decidable, &[dec, three, hit]);
+    f.k.infer(applied).unwrap_or_else(|err| {
+        panic!(
+            "lnp_decidable must apply at `ble 2 .` and n := 3: {}",
+            f.explain(&err)
+        )
+    });
+
+    // NEGATIVE CONTROL: `ble 2 1` reduces to `false`, so the identical proof
+    // shape is not a proof of the hypothesis and the kernel must refuse it.
+    let one = f.num(1);
+    let bogus = f.const_app(p.lnp_decidable, &[dec, one, hit]);
+    assert!(
+        f.k.infer(bogus).is_err(),
+        "lnp_decidable must REJECT n := 1, where `ble 2 1` is false"
+    );
+}
+
+/// `Nat.em_implies_lnp` closes the loop: excluded middle buys the unrestricted
+/// least-number principle back, so the price named by
+/// `Nat.lnp_unrestricted_implies_em` is EXACTLY excluded middle, not merely at
+/// least excluded middle. Checked symbolically — `em` is a free variable of the
+/// excluded-middle type and `Q` a free variable of `Nat → Prop`.
+#[test]
+fn em_implies_lnp_makes_the_two_principles_interderivable() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let anon = f.k.anon();
+    let nat = f.nat_ty();
+    let prop = f.k.sort_zero();
+    let pty = f.arrow(nat, prop);
+
+    let em_ty = excluded_middle_type(&mut f);
+    let em_fv = f.fresh_fvar();
+    let em = f.k.fvar(em_fv);
+    let q_fv = f.fresh_fvar();
+    let q = f.k.fvar(q_fv);
+
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: em_fv,
+        name: anon,
+        ty: em_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: q_fv,
+        name: anon,
+        ty: pty,
+        info: BinderInfo::Default,
+    });
+
+    let applied = f.const_app(p.em_implies_lnp, &[em, q]);
+    let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|err| {
+        panic!(
+            "em_implies_lnp must apply at a free `em` and a free `Q`: {}",
+            f.explain(&err)
+        )
+    });
+
+    // The result is `(∃ n, Q n) → ∃ m, And (Q m) (∀ k, Lt k m → Not (Q k))`,
+    // i.e. the unrestricted principle's body at this `Q`.
+    let expected = {
+        let one = f.level_one();
+        let inh = {
+            let n_fv = f.fresh_fvar();
+            let n = f.k.fvar(n_fv);
+            let body = f.apply(q, &[n]);
+            let pred = f.lam_fv(n_fv, nat, body);
+            let ex = f.k.const_(p.logic.exists_, vec![one]);
+            f.apply(ex, &[nat, pred])
+        };
+        let concl = {
+            let m_fv = f.fresh_fvar();
+            let m = f.k.fvar(m_fv);
+            let qm = f.apply(q, &[m]);
+            let nb = none_below_type(&mut f, q, m);
+            let body = f.const_app(p.logic.and, &[qm, nb]);
+            let pred = f.lam_fv(m_fv, nat, body);
+            let ex = f.k.const_(p.logic.exists_, vec![one]);
+            f.apply(ex, &[nat, pred])
+        };
+        f.arrow(inh, concl)
+    };
+    assert!(
+        f.k.def_eq_in(inferred, expected, &mut ctx),
+        "em_implies_lnp's conclusion must be the unrestricted principle at Q, found {}",
+        f.k.render_lean(inferred)
+    );
+}
+
+/// **The equivalence, pinned structurally rather than narrated.**
+///
+/// Build the unrestricted least-number principle `L` and excluded middle `E`
+/// once, and require the two declared types to be *exactly* `L → E` and
+/// `E → L` — same `ExprId`s, not merely defeq, not merely "the same up to how
+/// I described them". That is the whole row-2 claim in two `assert_eq!`s: the
+/// price of dropping the decidability hypothesis is excluded middle, and it is
+/// neither more nor less.
+///
+/// The third assertion is what keeps this from being a tautology: the landed
+/// [`NatPrelude::lnp_of_pointwise_decision`] is NOT `L` — it carries one extra
+/// hypothesis, `∀ n, Or (Q n) (Not (Q n))` — so `L` genuinely is not something
+/// this prelude proves.
+#[test]
+fn the_unrestricted_lnp_and_excluded_middle_are_pinned_as_an_exact_equivalence() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let lnp_ty = unrestricted_lnp_type(&mut f);
+    let em_ty = excluded_middle_type(&mut f);
+    let forward = f.arrow(lnp_ty, em_ty);
+    let backward = f.arrow(em_ty, lnp_ty);
+
+    let ty_of = |f: &mut Fixture, name: NameId| -> ExprId {
+        match f
+            .k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{} must be declared", f.k.display_name(name)))
+        {
+            Declaration::Theorem { ty, .. } => *ty,
+            other => panic!("expected a Theorem, found {other:?}"),
+        }
+    };
+
+    let implies_em = ty_of(&mut f, p.lnp_unrestricted_implies_em);
+    assert_eq!(
+        implies_em,
+        forward,
+        "Nat.lnp_unrestricted_implies_em must be exactly `L -> E`, found {}",
+        f.k.render_lean(implies_em)
+    );
+
+    let em_implies = ty_of(&mut f, p.em_implies_lnp);
+    assert_eq!(
+        em_implies,
+        backward,
+        "Nat.em_implies_lnp must be exactly `E -> L`, found {}",
+        f.k.render_lean(em_implies)
+    );
+
+    // NON-VACUITY: `L` is not itself a landed theorem, and the theorem that
+    // comes closest -- `lnp_of_pointwise_decision` -- differs precisely by the
+    // decidability hypothesis. If these two ever coincide, the row is empty.
+    let decidable_form = ty_of(&mut f, p.lnp_of_pointwise_decision);
+    assert_ne!(
+        decidable_form, lnp_ty,
+        "the decidable least-number principle must NOT be the unrestricted one"
+    );
+    let holders: Vec<String> =
+        f.k.environment()
+            .iter()
+            .filter(|(_, decl)| matches!(decl, Declaration::Theorem { ty, .. } if *ty == lnp_ty))
+            .map(|(name, _)| name)
+            .copied()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|name| f.k.display_name(name).to_string())
+            .collect();
+    assert!(
+        holders.is_empty(),
+        "the unrestricted least-number principle is already proved as {holders:?} -- \
+         `Nat.lnp_unrestricted_implies_em` would then prove excluded middle outright"
     );
 }
