@@ -524,6 +524,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.pair_snd,
         p.binary_rec_aux,
         p.binary_rec,
+        // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
+        p.dist,
+        p.nth_aux,
+        p.nth,
     ]
 }
 
@@ -1161,6 +1165,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_gcd_pos_of_pos_right,
         p.dvd_add_iff_left,
         p.dvd_mul_split,
+        // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
+        p.dist_comm,
+        p.dist_self,
+        p.dist_eq_sub_of_le,
+        p.dist_eq_sub_of_le_right,
+        p.dist_zero_right,
+        p.dist_zero_left,
+        p.dist_succ_succ,
     ]
 }
 
@@ -9242,6 +9254,360 @@ fn asc_factorial_evaluates_correctly() {
         !f.k.def_eq(at_two, descending_at_two),
         "3.ascFactorial 2 must NOT be def-eq to 3.descFactorial 2"
     );
+}
+
+/// `Nat.dist` computes the two-sided truncated distance —
+/// `dist n m := add (sub n m) (sub m n)`, where `Nat.sub` truncates.
+/// `dist(3,5)` and `dist(5,3)` share the value `2` precisely BECAUSE `dist`
+/// sums both directions: a broken definition that returned only `sub n m`
+/// (dropping the reverse subtraction) would give `0` for `dist(3,5)`, since
+/// `sub 3 5` truncates to `0` — the exact asymmetry this negative control is
+/// built to catch. `dist(0,7)`/`dist(7,0)` cover the other zero boundary, and
+/// `dist(4,4) = 0` covers self-distance.
+#[test]
+fn dist_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let seven = f.num(7);
+    let nine = f.num(9);
+    let zero = f.zero();
+
+    let dist_3_5 = f.const_app(p.dist, &[three, five]);
+    assert!(f.k.def_eq(dist_3_5, two), "dist 3 5 must reduce to 2");
+    let dist_5_3 = f.const_app(p.dist, &[five, three]);
+    assert!(f.k.def_eq(dist_5_3, two), "dist 5 3 must reduce to 2");
+    assert!(
+        !f.k.def_eq(dist_3_5, zero),
+        "negative control: dist 3 5 must NOT be def-eq to 0 (the value a \
+         dropped-reverse-subtraction bug would give, since sub 3 5 = 0)"
+    );
+
+    let dist_0_7 = f.const_app(p.dist, &[zero, seven]);
+    assert!(f.k.def_eq(dist_0_7, seven), "dist 0 7 must reduce to 7");
+    let dist_7_0 = f.const_app(p.dist, &[seven, zero]);
+    assert!(f.k.def_eq(dist_7_0, seven), "dist 7 0 must reduce to 7");
+
+    let dist_4_4 = f.const_app(p.dist, &[four, four]);
+    assert!(f.k.def_eq(dist_4_4, zero), "dist 4 4 must reduce to 0");
+
+    let dist_2_9 = f.const_app(p.dist, &[two, nine]);
+    assert!(f.k.def_eq(dist_2_9, seven), "dist 2 9 must reduce to 7");
+    assert!(
+        !f.k.def_eq(dist_2_9, zero),
+        "negative control: dist 2 9 must NOT be def-eq to 0 (the value sub \
+         2 9 alone gives)"
+    );
+}
+
+/// The seven `Nat.dist` theorems apply at their stated shape — in particular
+/// that `dist_eq_sub_of_le`/`dist_eq_sub_of_le_right` were not transposed
+/// (CLAUDE.md's most-common bug family in this development: getting the two
+/// operands or the hypothesis's orientation backwards). Each theorem's PROOF
+/// was already checked against a fully general statement at admission
+/// (`try_theorem` builds the universally quantified goal before the kernel
+/// ever sees it), so what a test can still catch is applying the theorem
+/// with an argument or hypothesis in the wrong slot — checked here both at
+/// free variables (`dist_comm`/`dist_self`/`dist_succ_succ`) and at concrete,
+/// discriminating numerals (the two `sub`-orientation lemmas, the two zero
+/// boundaries).
+#[test]
+fn dist_theorems_apply_at_free_variables_and_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // A genuinely free pair `n`, `m`, pushed into an explicit `LocalContext`
+    // so `infer_in` can look up their type (a bare unregistered `FVar` is
+    // `UnboundFVar` to the checker, not merely "unknown").
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let n_fv = f.fresh_fvar();
+    let m_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let m = f.k.fvar(m_fv);
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+
+    // dist_comm at the free pair.
+    {
+        let applied = f.const_app(p.dist_comm, &[n, m]);
+        let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_comm must type-check at free variables: {shown}")
+        });
+        let dist_nm = f.const_app(p.dist, &[n, m]);
+        let dist_mn = f.const_app(p.dist, &[m, n]);
+        let want = f.eq(dist_nm, dist_mn);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_comm must state Eq (dist n m) (dist m n)"
+        );
+    }
+
+    // dist_self at the free `n`.
+    {
+        let applied = f.const_app(p.dist_self, &[n]);
+        let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_self must type-check at a free variable: {shown}")
+        });
+        let dist_nn = f.const_app(p.dist, &[n, n]);
+        let zero = f.zero();
+        let want = f.eq(dist_nn, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_self must state Eq (dist n n) 0"
+        );
+    }
+
+    // dist_succ_succ at the free pair.
+    {
+        let applied = f.const_app(p.dist_succ_succ, &[n, m]);
+        let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_succ_succ must type-check at free variables: {shown}")
+        });
+        let sn = f.succ(n);
+        let sm = f.succ(m);
+        let dist_ss = f.const_app(p.dist, &[sn, sm]);
+        let dist_nm = f.const_app(p.dist, &[n, m]);
+        let want = f.eq(dist_ss, dist_nm);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_succ_succ must state Eq (dist (succ n) (succ m)) (dist n m)"
+        );
+    }
+
+    // A concrete `Le 2 5` witness, built from `le_refl`/`le_step`, shared by
+    // both directional checks below.
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let zero = f.zero();
+    let le_2_5 = {
+        let h0 = f.lemma(p.le_refl, &[two]); // Le 2 2
+        let h1 = f.lemma(p.le_step, &[two, two, h0]); // Le 2 3
+        let h2 = f.lemma(p.le_step, &[two, three, h1]); // Le 2 4
+        f.lemma(p.le_step, &[two, four, h2]) // Le 2 5
+    };
+
+    // dist_eq_sub_of_le(2,5,h) : Eq (dist 2 5) (sub 5 2) = 3 — NOT sub 2 5 = 0.
+    {
+        let applied = f.const_app(p.dist_eq_sub_of_le, &[two, five, le_2_5]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_eq_sub_of_le must type-check: {shown}")
+        });
+        let dist_2_5 = f.const_app(p.dist, &[two, five]);
+        let want = f.eq(dist_2_5, three);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_eq_sub_of_le must state Eq (dist 2 5) (sub 5 2) = 3"
+        );
+        let bad = f.eq(dist_2_5, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad),
+            "negative control: dist_eq_sub_of_le must not ALSO state Eq \
+             (dist 2 5) 0 (the value sub 2 5 alone gives)"
+        );
+    }
+
+    // dist_eq_sub_of_le_right(5,2,h) : Eq (dist 5 2) (sub 5 2) = 3.
+    {
+        let applied = f.const_app(p.dist_eq_sub_of_le_right, &[five, two, le_2_5]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_eq_sub_of_le_right must type-check: {shown}")
+        });
+        let dist_5_2 = f.const_app(p.dist, &[five, two]);
+        let want = f.eq(dist_5_2, three);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "dist_eq_sub_of_le_right must state Eq (dist 5 2) (sub 5 2) = 3"
+        );
+        let bad = f.eq(dist_5_2, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad),
+            "negative control: dist_eq_sub_of_le_right must not ALSO state \
+             Eq (dist 5 2) 0"
+        );
+    }
+
+    // dist_zero_right / dist_zero_left at a concrete instance.
+    {
+        let seven = f.num(7);
+        let applied_r = f.const_app(p.dist_zero_right, &[seven]);
+        let inferred_r = f.k.infer(applied_r).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_zero_right must type-check: {shown}")
+        });
+        let dist_7_0 = f.const_app(p.dist, &[seven, zero]);
+        let want_r = f.eq(dist_7_0, seven);
+        assert!(
+            f.k.def_eq(inferred_r, want_r),
+            "dist_zero_right must state Eq (dist 7 0) 7"
+        );
+
+        let applied_l = f.const_app(p.dist_zero_left, &[seven]);
+        let inferred_l = f.k.infer(applied_l).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_zero_left must type-check: {shown}")
+        });
+        let dist_0_7 = f.const_app(p.dist, &[zero, seven]);
+        let want_l = f.eq(dist_0_7, seven);
+        assert!(
+            f.k.def_eq(inferred_l, want_l),
+            "dist_zero_left must state Eq (dist 0 7) 7"
+        );
+    }
+
+    // NEGATIVE control for `dist_zero_right` vs `dist_zero_left`, at the free
+    // `n` rather than a concrete numeral: `dist n 0` and `dist 0 n` are NOT
+    // def-eq for symbolic `n` (only a concrete numeral's full reduction makes
+    // them coincide), so this is where a transposed-argument bug would
+    // actually be caught.
+    {
+        let applied_r = f.const_app(p.dist_zero_right, &[n]);
+        let inferred_r = f.k.infer_in(applied_r, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_zero_right must type-check at a free variable: {shown}")
+        });
+        let dist_n_0 = f.const_app(p.dist, &[n, zero]);
+        let want_r = f.eq(dist_n_0, n);
+        assert!(
+            f.k.def_eq(inferred_r, want_r),
+            "dist_zero_right must state Eq (dist n 0) n symbolically"
+        );
+        let dist_0_n = f.const_app(p.dist, &[zero, n]);
+        let bad_r = f.eq(dist_0_n, n);
+        assert!(
+            !f.k.def_eq(inferred_r, bad_r),
+            "negative control: dist_zero_right must not ALSO state Eq \
+             (dist 0 n) n at a free variable"
+        );
+    }
+
+    for name in [
+        p.dist_comm,
+        p.dist_self,
+        p.dist_eq_sub_of_le,
+        p.dist_eq_sub_of_le_right,
+        p.dist_zero_right,
+        p.dist_zero_left,
+        p.dist_succ_succ,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// `Nat.nth` computes the fuel-bounded search (see `nth.rs`'s module doc for
+/// why this is NOT Mathlib's construction). `dec1 := fun k => ble 3 k` is
+/// true for every `k >= 3`: `nth dec1 10 0/1/2` must give `3/4/5` — the
+/// n-th (0-indexed) match found by walking candidates upward. The negative
+/// controls catch both an "always return the FIRST match" bug (which would
+/// give `3` for every index) and an off-by-one.
+///
+/// `dec2 := fun k => beq k 5` has exactly ONE witness in range: `nth dec2 10
+/// 0` must give `5`, and `nth dec2 10 1` (a SECOND witness that does not
+/// exist) must give the sentinel `0` — Mathlib's own convention for "fewer
+/// than n+1 witnesses" (`nth_of_card_le`), reached here by fuel exhaustion
+/// rather than a classical cardinality case split.
+#[test]
+fn nth_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let ten = f.num(10);
+
+    let dec1 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.ble(three, k); // true iff k >= 3
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let nth_dec1_0 = f.const_app(p.nth, &[dec1, ten, zero]);
+    assert!(
+        f.k.def_eq(nth_dec1_0, three),
+        "nth (>=3) bound 10 index 0 must be 3"
+    );
+    let nth_dec1_1 = f.const_app(p.nth, &[dec1, ten, one]);
+    assert!(
+        f.k.def_eq(nth_dec1_1, four),
+        "nth (>=3) bound 10 index 1 must be 4"
+    );
+    let nth_dec1_2 = f.const_app(p.nth, &[dec1, ten, two]);
+    assert!(
+        f.k.def_eq(nth_dec1_2, five),
+        "nth (>=3) bound 10 index 2 must be 5"
+    );
+    assert!(
+        !f.k.def_eq(nth_dec1_1, three),
+        "negative control: index 1 must NOT collapse to the first match \
+         (the value an 'always return the first match' bug would give)"
+    );
+    assert!(
+        !f.k.def_eq(nth_dec1_0, four),
+        "negative control: index 0 must NOT be off-by-one"
+    );
+
+    let dec2 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.beq(k, five); // true only at k = 5
+        f.lam_fv(k_fv, nat, body)
+    };
+    let nth_dec2_0 = f.const_app(p.nth, &[dec2, ten, zero]);
+    assert!(
+        f.k.def_eq(nth_dec2_0, five),
+        "nth (=5) bound 10 index 0 must be 5 (the only witness)"
+    );
+    let nth_dec2_1 = f.const_app(p.nth, &[dec2, ten, one]);
+    assert!(
+        f.k.def_eq(nth_dec2_1, zero),
+        "nth (=5) bound 10 index 1 must be the sentinel 0 (no second \
+         witness within bound)"
+    );
+    assert!(
+        !f.k.def_eq(nth_dec2_1, five),
+        "negative control: the sentinel case must NOT collapse to the \
+         found value"
+    );
+
+    for name in [p.nth_aux, p.nth] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
 
 /// `Nat.multichoose` computes the right VALUES at concrete instances —
