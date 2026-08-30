@@ -733,16 +733,25 @@ fn inductives_cases() -> Vec<CaseResult> {
         let sort_1 = kernel.sort(one_lvl);
         // ty : (A : Type) -> Type
         let ty = kernel.pi(a_name, sort_1, sort_1, BinderInfo::Default);
-        let box_a = {
-            // Box A, where A is bvar(0) inside the ctor's own telescope.
-            let box_c = kernel.const_(box_name, vec![]);
-            let a_ref = kernel.bvar(0);
-            kernel.app(box_c, a_ref)
-        };
         // mk : (A : Type) -> A -> Box A
+        //
+        // `Box A`'s `A` reference is built INSIDE the field binder (two
+        // enclosing binders: the outer `A` and the field itself), so it
+        // needs `bvar(1)`, not `bvar(0)` -- a de Bruijn depth bug caught by
+        // this corpus: reusing an ExprId built at one nesting depth ("A" as
+        // `bvar(0)` for the field's own domain) inside a term placed ONE
+        // binder deeper does not auto-shift; the same raw index then points
+        // at the nearer (field) binder instead of `A`. Axeyum's kernel
+        // correctly rejected the shifted-wrong version (real Lean's surface
+        // elaborator never has this class of bug, since it never manipulates
+        // raw de Bruijn indices), which is why this positive case briefly
+        // reported `AxeyumRejectsLeanAccepts` before the fix.
         let mk_ty = {
-            let a_ref = kernel.bvar(0);
-            let inner = kernel.pi(anon, a_ref, box_a, BinderInfo::Default);
+            let a_ref_domain = kernel.bvar(0);
+            let box_c = kernel.const_(box_name, vec![]);
+            let a_ref_result = kernel.bvar(1);
+            let box_a = kernel.app(box_c, a_ref_result);
+            let inner = kernel.pi(anon, a_ref_domain, box_a, BinderInfo::Default);
             kernel.pi(a_name, sort_1, inner, BinderInfo::Default)
         };
         let mk = kernel.name_str(box_name, "mk");
