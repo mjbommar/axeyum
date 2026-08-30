@@ -6501,6 +6501,22 @@ pub struct CRealPrelude {
     /// [`Self::sup_on_approx_lub`], whose witness is a point of exactly this
     /// family. See `creal/sup_laws.rs`.
     pub sup_on_ub_at_sup_seq_point: NameId,
+    /// `CReal.stepFamily_locate : ∀ (P : Nat → CReal) (w eps : CReal),
+    /// le zero w → lt zero eps → (∀ i, le (P (Nat.succ i)) (add (P i) w)) →
+    /// ∀ (n : Nat) (t : CReal), le (P Nat.zero) t →
+    /// le t (add (add (P n) w) eps) →
+    /// ∃ i, Nat.le i n ∧ (le (P i) (add t eps) ∧ le t (add (add (P i) w) eps))`
+    /// — **cell location**: a real lying under a finite increasing family is
+    /// located, to within one step plus `eps`, at one member of it.
+    ///
+    /// Locating a real EXACTLY in a cell would decide `le x y ∨ le y x`;
+    /// locating it to within `eps` is constructive, by [`Self::lt_cotrans`],
+    /// and `eps` is absorbed by uniform continuity at the caller. Stated over
+    /// the ORDER alone — no `meshDelta`, no `CReal.mul`, no `CReal.ofNat` —
+    /// so the mesh version is an instantiation with three interface
+    /// identities and the induction carries no ring algebra. See
+    /// `creal/sup_laws.rs`.
+    pub step_family_locate: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7270,6 +7286,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sup_on_approx_lub: kernel.name_str(creal, "supOn_approx_lub"),
         sup_seq_le_sup_on: kernel.name_str(creal, "supSeq_le_supOn"),
         sup_on_ub_at_sup_seq_point: kernel.name_str(creal, "supOn_ub_at_supSeq_point"),
+        step_family_locate: kernel.name_str(creal, "stepFamily_locate"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -13072,6 +13089,24 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.sup_on_ub_at_sup_seq_point,
         ],
         run: sup_laws::declare_sup_on_ub_at_sup_seq_point,
+    },
+    BuildStep {
+        label: "sup_laws::declare_step_family_locate",
+        requires: &[
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.lt_congr,
+            |p: CRealPrelude| p.lt_cotrans,
+            |p: CRealPrelude| p.lt,
+        ],
+        provides: &[|p: CRealPrelude| p.step_family_locate],
+        run: sup_laws::declare_step_family_locate,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",

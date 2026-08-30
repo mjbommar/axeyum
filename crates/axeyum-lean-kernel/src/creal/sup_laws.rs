@@ -991,3 +991,353 @@ pub(super) fn declare_sup_on_ub_at_sup_seq_point(
     declare_sup_seq_le_sup_on_thm(d, p)?;
     declare_sup_on_ub_at_sup_seq_point_thm(d, p)
 }
+
+// ---------------------------------------------------------------------------
+// `CReal.stepFamily_locate` -- cell location, stated over the ORDER alone
+// ---------------------------------------------------------------------------
+
+/// `le x (add x w)` from `le zero w` -- re-derived from
+/// `creal/supremum.rs`'s private `shift_le_of_nonneg_local`, per this
+/// development's convention. (`CReal.le_add_of_nonneg` is the same fact but
+/// takes its shift as a `Rat`; here the shift is a `CReal` parameter.)
+fn shift_le_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    w: ExprId,
+    hw: ExprId,
+) -> ExprId {
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let refl_x = d.lemma(p.le_refl, &[x]);
+    let grown = d.lemma(p.add_le_add, &[x, x, zero_c, w, refl_x, hw]);
+    let padded = cadd(d, p, x, zero_c);
+    let target = cadd(d, p, x, w);
+    let trim = d.lemma(p.add_zero, &[x]);
+    let refl_target = d.lemma(p.equiv_refl, &[target]);
+    d.lemma(
+        p.le_congr,
+        &[padded, x, target, target, trim, refl_target, grown],
+    )
+}
+
+/// `lt x (add x eps)` from `lt zero eps`.
+fn lt_add_pos(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    eps: ExprId,
+    eps_pos: ExprId,
+) -> ExprId {
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let refl = d.lemma(p.le_refl, &[x]);
+    let raw = d.lemma(
+        p.add_lt_add_of_le_of_lt,
+        &[x, x, zero_c, eps, refl, eps_pos],
+    );
+    let padded_zero = cadd(d, p, x, zero_c);
+    let padded_eps = cadd(d, p, x, eps);
+    let trim = d.lemma(p.add_zero, &[x]);
+    let refl_rhs = d.lemma(p.equiv_refl, &[padded_eps]);
+    d.lemma(
+        p.lt_congr,
+        &[padded_zero, x, padded_eps, padded_eps, trim, refl_rhs, raw],
+    )
+}
+
+/// `CReal.stepFamily_locate : forall (P : Nat -> CReal) (w eps : CReal),
+/// le zero w -> lt zero eps -> (forall i, le (P (Nat.succ i)) (add (P i) w)) ->
+/// forall (n : Nat) (t : CReal), le (P Nat.zero) t ->
+/// le t (add (add (P n) w) eps) ->
+/// exists i, Nat.le i n /\ (le (P i) (add t eps) /\ le t (add (add (P i) w) eps))`
+/// -- **cell location: a real lying under a finite increasing family is
+/// located, to within one step plus `eps`, at one member of it.**
+///
+/// This is the piece the upper-bound law needs and the approximate
+/// least-upper-bound law does not (see this module's header). An arbitrary
+/// `x` in `[a, b]` is not a mesh point and no computed index finds it:
+/// locating it EXACTLY would decide `le x y` or `le y x` for arbitrary reals.
+/// Locating it to within `eps` is constructive, by
+/// [`CRealPrelude::lt_cotrans`](super::CRealPrelude::lt_cotrans), and `eps` is
+/// then absorbed by uniform continuity at the caller.
+///
+/// **Stated over the ORDER alone, deliberately.** Nothing here mentions
+/// `meshDelta`, `meshSamplePoint`, `CReal.mul` or `CReal.ofNat` -- the family
+/// `P` is an arbitrary `Nat -> CReal` whose consecutive gaps are bounded by
+/// `w`. The mesh-specific version is an instantiation (`P i :=
+/// meshSamplePoint a delta i`, `w := delta`) whose only content is the three
+/// interface identities `P 0 ~ a`, `P (i+1) ~ P i + delta` and
+/// `P N + delta ~ b`. A first draft that carried the mesh through the
+/// induction had to re-prove `ofNat (succ i) * delta ~ ofNat i * delta +
+/// delta` inside every branch; this version has no ring algebra in it at all,
+/// which is most of why it was cheap.
+///
+/// The induction is on the family's own bound, with `t` quantified INSIDE the
+/// motive so that the inductive hypothesis is available at the SHIFTED upper
+/// bound the cotransitive split produces:
+///
+/// - `n = 0`: the witness is `0` and the second conjunct IS the hypothesis.
+/// - `n = j+1`: split on `P (j+1) < t` versus `t < P (j+1) + eps`
+///   ([`lt_add_pos`] supplies the strict gap). The FIRST branch takes the
+///   witness `j+1` and, again, the second conjunct is the hypothesis
+///   unchanged. The SECOND branch feeds the inductive hypothesis, and this is
+///   the only step that uses `hstep`: `t <= P (j+1) + eps <= (P j + w) + eps`
+///   is exactly the shape the motive asks for at `j`.
+///
+/// Note which index each branch tests. Splitting at `P j` instead of at
+/// `P (j+1)` -- the first thing to try -- makes the winning branch's own bound
+/// come out at `2w` rather than `w`, because the hypothesis is stated one step
+/// above the index being tested. The split has to be at the TOP of the range
+/// under consideration, not at the point the inductive hypothesis will be
+/// applied to.
+fn declare_step_family_locate_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fam_ty = d.arrow(nat, carrier);
+    let nat_p = p.rat.int.nat;
+    let logic = p.rat.int.logic;
+    let one_level = d.level_one();
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+    let hw_fv = d.fresh_fvar();
+    let hw_ty = cle(d, p, zero_c, w);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+    let hpos_ty = d.const_app(p.lt, &[zero_c, eps]);
+
+    // `forall i, le (P (succ i)) (add (P i) w)`.
+    let hstep_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let si = d.succ(i);
+        let psi = d.apply(pp, &[si]);
+        let pi = d.apply(pp, &[i]);
+        let shifted = cadd(d, p, pi, w);
+        let body = cle(d, p, psi, shifted);
+        d.pi_fv(i_fv, nat, body)
+    };
+    let hstep_fv = d.fresh_fvar();
+    let hstep = d.kernel().fvar(hstep_fv);
+
+    let eps_nonneg = d.lemma(p.le_of_lt, &[zero_c, eps, hpos]);
+
+    // `fun i => And (Nat.le i n) (And (le (P i) (t + eps)) (le t ((P i + w) + eps)))`.
+    let goal_pred = |d: &mut IntDev<'_>, n: ExprId, t: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let pi = d.apply(pp, &[i]);
+        let bound = d.le(i, n);
+        let t_eps = cadd(d, p, t, eps);
+        let lower = cle(d, p, pi, t_eps);
+        let pi_w = cadd(d, p, pi, w);
+        let pi_w_eps = cadd(d, p, pi_w, eps);
+        let upper = cle(d, p, t, pi_w_eps);
+        let inner = d.and(lower, upper);
+        let body = d.and(bound, inner);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let goal_at = |d: &mut IntDev<'_>, n: ExprId, t: ExprId| -> ExprId {
+        let pr = goal_pred(d, n, t);
+        let ex = d.kernel().const_(logic.exists_, vec![one_level]);
+        d.apply(ex, &[nat, pr])
+    };
+    let intro_at =
+        |d: &mut IntDev<'_>, n: ExprId, t: ExprId, witness: ExprId, proof: ExprId| -> ExprId {
+            let pr = goal_pred(d, n, t);
+            let ctor = d.kernel().const_(logic.exists_intro, vec![one_level]);
+            d.apply(ctor, &[nat, pr, witness, proof])
+        };
+
+    // `forall t, le (P 0) t -> le t ((P n + w) + eps) -> exists i, ...`.
+    let motive = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let zero_n = d.zero();
+        let p0 = d.apply(pp, &[zero_n]);
+        let h0_ty = cle(d, p, p0, t);
+        let pn = d.apply(pp, &[n]);
+        let pn_w = cadd(d, p, pn, w);
+        let pn_w_eps = cadd(d, p, pn_w, eps);
+        let hn_ty = cle(d, p, t, pn_w_eps);
+        let ex = goal_at(d, n, t);
+        let inner = d.arrow(hn_ty, ex);
+        let inner = d.arrow(h0_ty, inner);
+        d.pi_fv(t_fv, carrier, inner)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let zero_n = d.zero();
+        let p0 = d.apply(pp, &[zero_n]);
+        let h0_fv = d.fresh_fvar();
+        let h0 = d.kernel().fvar(h0_fv);
+        let h0_ty = cle(d, p, p0, t);
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+        let p0_w = cadd(d, p, p0, w);
+        let p0_w_eps = cadd(d, p, p0_w, eps);
+        let hn_ty = cle(d, p, t, p0_w_eps);
+
+        let bound_ty = d.le(zero_n, zero_n);
+        let hb = d.lemma(nat_p.le_refl, &[zero_n]);
+        let t_eps = cadd(d, p, t, eps);
+        let grow = shift_le_of_nonneg(d, p, t, eps, eps_nonneg);
+        let lower = d.lemma(p.le_trans, &[p0, t, t_eps, h0, grow]);
+        let lower_ty = cle(d, p, p0, t_eps);
+        let inner = and_intro(d, p, lower_ty, hn_ty, lower, hn);
+        let inner_ty = d.and(lower_ty, hn_ty);
+        let whole = and_intro(d, p, bound_ty, inner_ty, hb, inner);
+        let witnessed = intro_at(d, zero_n, t, zero_n, whole);
+        let with_hn = d.lam_fv(hn_fv, hn_ty, witnessed);
+        let with_h0 = d.lam_fv(h0_fv, h0_ty, with_hn);
+        d.lam_fv(t_fv, carrier, with_h0)
+    };
+
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let sj = d.succ(j);
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let zero_n = d.zero();
+        let p0 = d.apply(pp, &[zero_n]);
+        let h0_fv = d.fresh_fvar();
+        let h0 = d.kernel().fvar(h0_fv);
+        let h0_ty = cle(d, p, p0, t);
+        let hn_fv = d.fresh_fvar();
+        let hn = d.kernel().fvar(hn_fv);
+        let psj = d.apply(pp, &[sj]);
+        let psj_w = cadd(d, p, psj, w);
+        let psj_w_eps = cadd(d, p, psj_w, eps);
+        let hn_ty = cle(d, p, t, psj_w_eps);
+
+        let target = goal_at(d, sj, t);
+        let hlt = lt_add_pos(d, p, psj, eps, hpos);
+        let psj_eps = cadd(d, p, psj, eps);
+        let split = d.lemma(p.lt_cotrans, &[psj, psj_eps, hlt, t]);
+        let left_ty = d.const_app(p.lt, &[psj, t]);
+        let right_ty = d.const_app(p.lt, &[t, psj_eps]);
+
+        // `P (succ j) < t`: the top of the range wins, witness `succ j`, and
+        // the second conjunct is `hn` unchanged.
+        let left_branch = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let bound_ty = d.le(sj, sj);
+            let hb = d.lemma(nat_p.le_refl, &[sj]);
+            let hle = d.lemma(p.le_of_lt, &[psj, t, h]);
+            let t_eps = cadd(d, p, t, eps);
+            let grow = shift_le_of_nonneg(d, p, t, eps, eps_nonneg);
+            let lower = d.lemma(p.le_trans, &[psj, t, t_eps, hle, grow]);
+            let lower_ty = cle(d, p, psj, t_eps);
+            let inner = and_intro(d, p, lower_ty, hn_ty, lower, hn);
+            let inner_ty = d.and(lower_ty, hn_ty);
+            let whole = and_intro(d, p, bound_ty, inner_ty, hb, inner);
+            let witnessed = intro_at(d, sj, t, sj, whole);
+            d.lam_fv(h_fv, left_ty, witnessed)
+        };
+
+        // `t < P (succ j) + eps`: step down. `hstep` is used HERE and nowhere
+        // else -- `t <= P (succ j) + eps <= (P j + w) + eps` is exactly the
+        // motive's hypothesis at `j`.
+        let right_branch = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let hle = d.lemma(p.le_of_lt, &[t, psj_eps, h]);
+            let pj = d.apply(pp, &[j]);
+            let pj_w = cadd(d, p, pj, w);
+            let pj_w_eps = cadd(d, p, pj_w, eps);
+            let hs = d.apply(hstep, &[j]);
+            let refl_eps = d.lemma(p.le_refl, &[eps]);
+            let widen = d.lemma(p.add_le_add, &[psj, pj_w, eps, eps, hs, refl_eps]);
+            let hyp = d.lemma(p.le_trans, &[t, psj_eps, pj_w_eps, hle, widen]);
+            let ih_res = d.apply(ih, &[t, h0, hyp]);
+            let pred_j = goal_pred(d, j, t);
+
+            let minor = {
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let hp_fv = d.fresh_fvar();
+                let hp = d.kernel().fvar(hp_fv);
+                let pi = d.apply(pp, &[i]);
+                let bound_j_ty = d.le(i, j);
+                let t_eps = cadd(d, p, t, eps);
+                let lower_ty = cle(d, p, pi, t_eps);
+                let pi_w = cadd(d, p, pi, w);
+                let pi_w_eps = cadd(d, p, pi_w, eps);
+                let upper_ty = cle(d, p, t, pi_w_eps);
+                let inner_ty = d.and(lower_ty, upper_ty);
+                let hp_ty = d.and(bound_j_ty, inner_ty);
+                let hb = d.and_left(bound_j_ty, inner_ty, hp);
+                let rest = d.and_right(bound_j_ty, inner_ty, hp);
+                let le_succ_j = d.lemma(nat_p.le_succ, &[j]);
+                let bound_sj = d.lemma(nat_p.le_trans, &[i, j, sj, hb, le_succ_j]);
+                let bound_sj_ty = d.le(i, sj);
+                let whole = and_intro(d, p, bound_sj_ty, inner_ty, bound_sj, rest);
+                let witnessed = intro_at(d, sj, t, i, whole);
+                let inner = d.lam_fv(hp_fv, hp_ty, witnessed);
+                d.lam_fv(i_fv, nat, inner)
+            };
+            let elim = exists_elim(d, pred_j, target, ih_res, minor);
+            d.lam_fv(h_fv, right_ty, elim)
+        };
+
+        let body = d.lemma(
+            logic.or_elim,
+            &[left_ty, right_ty, target, split, left_branch, right_branch],
+        );
+        let with_hn = d.lam_fv(hn_fv, hn_ty, body);
+        let with_h0 = d.lam_fv(h0_fv, h0_ty, with_hn);
+        d.lam_fv(t_fv, carrier, with_h0)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let proof = d.induct(&motive, &base, &step, n);
+    let concl = motive(d, n);
+
+    let ty = {
+        let out = d.pi_fv(n_fv, nat, concl);
+        let out = d.pi_fv(hstep_fv, hstep_ty, out);
+        let out = d.arrow(hpos_ty, out);
+        let out = d.arrow(hw_ty, out);
+        let out = d.pi_fv(eps_fv, carrier, out);
+        let out = d.pi_fv(w_fv, carrier, out);
+        d.pi_fv(pp_fv, fam_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(n_fv, nat, proof);
+        let out = d.lam_fv(hstep_fv, hstep_ty, out);
+        let out = d.lam_fv(hpos_fv, hpos_ty, out);
+        let out = d.lam_fv(hw_fv, hw_ty, out);
+        let out = d.lam_fv(eps_fv, carrier, out);
+        let out = d.lam_fv(w_fv, carrier, out);
+        d.lam_fv(pp_fv, fam_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.step_family_locate,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.stepFamily_locate` alone (a one-declaration `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_step_family_locate(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_step_family_locate_thm(d, p)
+}

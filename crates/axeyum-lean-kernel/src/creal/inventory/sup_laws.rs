@@ -41,5 +41,6 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.sup_on_ub_at_sup_seq_point,
             "theorem",
         ),
+        ("CReal.stepFamily_locate", p.step_family_locate, "theorem"),
     ]
 }
