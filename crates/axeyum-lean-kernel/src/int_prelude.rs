@@ -83,6 +83,7 @@ mod defs;
 mod division;
 mod dvd;
 mod dvd_gcd_mirrors;
+mod dvd_mul_split;
 mod euclid;
 mod euler;
 mod euler_totient;
@@ -816,6 +817,12 @@ pub struct IntPrelude {
     /// `Nat.dvd_mul` gives `n ∣ n*m`, transported to `n ∣ m*n` by
     /// `Nat.mul_comm`, then `Nat.coprime_of_dvd_right` closes it.
     pub gcd_eq_one_of_gcd_mul_right_eq_one_right: NameId,
+    /// `dvd_mul_split : ∀ c a b, Iff (dvd c (mul a b)) (∃ c1 c2, And (dvd c1
+    /// a) (And (dvd c2 b) (Eq Int (mul c1 c2) c)))` — Mathlib's `Int.dvd_mul`
+    /// (`F:ml430-int-dvd-mul-3a7b94cd`), the ℤ sibling of
+    /// `Nat.dvd_mul_split`. Not named `Int.dvd_mul` for the same reason the
+    /// `Nat` mirror isn't (`dvd_mul_split.rs`).
+    pub dvd_mul_split: NameId,
     /// `gcd_eq_gcd_ab : ∀ a b, ∃ u v, ofNat (gcd a b) = a*u + b*v` — Bézout's
     /// identity over `ℤ` (Elements VII.2, strong form), transported from
     /// `Nat.gcd_bezout` through `natAbs`.
@@ -1607,6 +1614,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
             kernel,
             "gcd_eq_one_of_gcd_mul_right_eq_one_right",
         ),
+        dvd_mul_split: child(kernel, "dvd_mul_split"),
         gcd_eq_gcd_ab: child(kernel, "gcd_eq_gcd_ab"),
         xgcd_aux: kernel.name_str(nat_root, "xgcdAux"),
         nat_gcd_a: kernel.name_str(nat_root, "gcdA"),
@@ -1983,6 +1991,13 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // prelude is a dependency of `Int`'s). Placed last for the same
         // reason as `dvd_gcd_mirrors` just above.
         gcd_scaled_mirrors::declare_all(&mut d)?;
+        // `int-dvd-mul-split` lane: `ml430`'s `Int.dvd_mul`. Needs `gcd.rs`
+        // (`Int.gcd`, `gcd_dvd_left`/`gcd_dvd_right`, the `natAbs`/`dvd`
+        // bridges), `ring.rs` (`Int.mul_eq_zero`), and the `Nat` prelude's
+        // `dvd_gcd`/`gcd_mul_right`/`eq_zero_of_gcd_eq_zero_left`/
+        // `zero_lt_of_ne_zero` (always already built). Placed last for the
+        // same reason as the two mirror modules just above.
+        dvd_mul_split::declare_dvd_mul_split(&mut d)?;
         Ok(prelude)
     })();
     match built {
