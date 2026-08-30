@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
@@ -24620,6 +24621,27 @@ the brief.
   cascade (see #4) -- flagged for the next lane that touches it.
 - The 7 facts scoring 0.75-0.999 in the re-run were not investigated; they
   are near-misses by the tool's own definition, not candidates for closure.
+
+**DONE (`int-sign-product`, 2026-08-30).** Closed all five assigned facts:
+`Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`,
+`Int.mul_nonneg_of_nonneg_or_nonpos`. New file
+`crates/axeyum-lean-kernel/src/int_prelude/sign_product.rs`: one shared sign
+case-split (`Int.le_total zero a` / `Int.le_total zero b`) plus six quadrant
+facts (two already existed as `Int.mul_nonneg`/`Int.mul_pos`; the other four
+built from a sign-flip helper, `neg_mul_neg` reusing `gcd.rs`'s
+`neg_mul`/`neg_neg`, and `mul_le_mul_of_nonneg_left` at `c := 0`). All five
+are `Theorem`s with empty `axiom_footprint`; `integer` prelude trusted surface
+stays 0. `int_prelude::` sweep: 49 passed, 0 failed (was 44 before this lane's
+5 additions). `derived_laws` pin recounted 187 -> 192 via
+`scripts/recount-pinned-inventory.py`. `clippy -D warnings` clean,
+`rustfmt --edition 2024` applied. Facts flipped `open` -> `proved`,
+`depends_on` populated by `check-fact-depends-derived.py --fix` (66 edges),
+`validate-facts.py` 0 errors, `check-mirror-statement-fidelity.py` PASS. Did
+not run the full workspace gate (`just check`/`./scripts/check.sh`) —
+scoped to the `int_prelude::` sweep, clippy, fmt and the fact-ledger
+validators per the task brief.
+
+Nothing blocked. No follow-up known for this specific family.
 
 **Closed all five dispatched facts** (`DONE`, int-order-coercion, 2026-08-30).
 

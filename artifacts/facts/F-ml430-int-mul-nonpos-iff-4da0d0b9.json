@@ -6,15 +6,53 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b : ℤ}, a * b ≤ 0 ↔ 0 ≤ a ∧ b ≤ 0 ∨ a ≤ 0 ∧ 0 ≤ b",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.mul_nonpos_iff",
+    "kernel_statement": "theorem Int.mul_nonpos_iff : ((x0 : Int) -> ((x1 : Int) -> Iff (Int.le (Int.mul x0 x1) Int.zero) (Or (And (Int.le Int.zero x0) (Int.le x1 Int.zero)) (And (Int.le x0 Int.zero) (Int.le Int.zero x1)))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:int-add-zero", "F:int-le-antisymm", "F:int-le-refl", "F:int-le-total", "F:int-mul-assoc", "F:int-mul-comm", "F:int-mul-eq-zero", "F:int-mul-le-mul-of-nonneg-left", "F:int-mul-neg", "F:int-mul-nonneg", "F:int-mul-zero", "F:int-neg-one-mul", "F:int-one-mul", "F:ml430-int-add-le-add-left-4a766697", "F:ml430-int-add-left-neg-c1bf80e1"],
+  "evidence": [
+    {
+      "id": "kernel-Int.mul_nonpos_iff",
+      "kind": "kernel-term",
+      "supports": "`Int.mul_nonpos_iff` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : Int) -> ((x1 : Int) -> Iff (Int.le (Int.mul x0 x1) Int.zero) (Or (And (Int.le Int.zero x0) (Int.le x1 Int.zero)) (And (Int.le x0 Int.zero) (Int.le Int.zero x1)))))`.",
+      "check_status": "checked",
+      "checkers": [
+        "int_theorem_inventory (renders the kernel type of every Theorem; matched on the exact kind/name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"theorem\" && $2 == \"Int.mul_nonpos_iff\" && $4 == \"((x0 : Int) -> ((x1 : Int) -> Iff (Int.le (Int.mul x0 x1) Int.zero) (Or (And (Int.le Int.zero x0) (Int.le x1 Int.zero)) (And (Int.le x0 Int.zero) (Int.le Int.zero x1)))))\"' | wc -l)\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/sign_product.rs"
+    },
+    {
+      "id": "footprint-Int.mul_nonpos_iff",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Int.mul_nonpos_iff`. The `integer` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for Int.mul_nonpos_iff among the derived laws and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free integer (independently sums the whole integer prelude's trusted surface and fails nonzero)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs"
+    },
+    {
+      "id": "coverage-Int.mul_nonpos_iff",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Int.mul_nonpos_iff` derived from `kernel.environment()` directly, not from an inventory list -- an Int-namespace declaration missing from `derived_laws` fails this test by name.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::every_int_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane int-sign-product (2026-08-29/30): built in the new file int_prelude/sign_product.rs. All five reduce to one shared sign case-split (Int.le_total zero a / Int.le_total zero b) plus six quadrant facts: Int.mul_nonneg and Int.mul_pos already existed; mul_nonneg_of_nonpos_of_nonpos and mul_pos_of_neg_of_neg go through a sign flip (x<=0 -> 0<=-x, built from add_le_add_left/add_lt_add_of_le_of_lt + add_left_neg + add_zero, no Int.rec case split) and (-a)*(-b)=a*b (neg_mul_neg, from gcd.rs's already-derived neg_mul/neg_neg); the two mixed-sign nonstrict quadrant facts (mul_nonpos_of_nonneg_of_nonpos, mul_nonpos_of_nonpos_of_nonneg) fall out of mul_le_mul_of_nonneg_left at c:=0 with no neg reasoning; the two mixed-sign strict quadrant facts (mul_neg_of_pos_of_neg, mul_neg_of_neg_of_pos) shift by mul_pos/Int.mul_neg. A same-sign quadrant satisfying the opposite strictness from the hypothesis combines via Int.le_antisymm to force the product to zero, decided by Int.mul_eq_zero; a same-sign quadrant matching the hypothesis's direction but needing strictness upgrades via Int.eq_em + Int.lt_of_le_of_ne.",
     "source": "statement-only extraction of `Int.mul_nonpos_iff` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +64,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Confirmed against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that this is the same Int.mul/Int.le/Int.lt this kernel already has (no new definition introduced -- the generic ordered-ring forms live in Mathlib/Algebra/Order/Ring/Unbundled/Basic.lean, and the Int-specific restatements, including Int.mul_nonneg_of_nonneg_or_nonpos verbatim, live in Mathlib/Data/Int/Order/Basic.lean), so mirroring it is honest under the mirror-flip criterion. depends_on projects only direct upstream theorem uses whose endpoints both survived review; it grants no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

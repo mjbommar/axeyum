@@ -100,6 +100,7 @@ mod prod;
 mod rat;
 mod ring;
 mod sign;
+mod sign_product;
 mod statements;
 mod sub;
 mod sub_nat_nat;
@@ -360,6 +361,28 @@ pub struct IntPrelude {
     /// which needs both factors nonnegative). This is the nonnegativity
     /// primitive a sum-of-squares certificate rests on.
     pub sq_nonneg: NameId,
+    /// `mul_nonneg_of_nonneg_or_nonpos :
+    /// ∀ (a b : Int), (le zero a ∧ le zero b) ∨ (le a zero ∧ le b zero) →
+    /// le zero (mul a b)` — `Mathlib` `Int.mul_nonneg_of_nonneg_or_nonpos`,
+    /// the direct implication `mul_nonneg_iff`'s backward direction is built
+    /// from.
+    pub mul_nonneg_of_nonneg_or_nonpos: NameId,
+    /// `mul_nonneg_iff :
+    /// Iff (le zero (mul a b)) ((le zero a ∧ le zero b) ∨ (le a zero ∧ le b
+    /// zero))` — `Mathlib` `Int.mul_nonneg_iff`.
+    pub mul_nonneg_iff: NameId,
+    /// `mul_pos_iff :
+    /// Iff (lt zero (mul a b)) ((lt zero a ∧ lt zero b) ∨ (lt a zero ∧ lt b
+    /// zero))` — `Mathlib` `Int.mul_pos_iff`.
+    pub mul_pos_iff: NameId,
+    /// `mul_neg_iff :
+    /// Iff (lt (mul a b) zero) ((lt zero a ∧ lt b zero) ∨ (lt a zero ∧ lt
+    /// zero b))` — `Mathlib` `Int.mul_neg_iff`.
+    pub mul_neg_iff: NameId,
+    /// `mul_nonpos_iff :
+    /// Iff (le (mul a b) zero) ((le zero a ∧ le b zero) ∨ (le a zero ∧ le
+    /// zero b))` — `Mathlib` `Int.mul_nonpos_iff`.
+    pub mul_nonpos_iff: NameId,
 
     // --- `Int.pow : Int → Nat → Int` -----------------------------------------
     /// `Int.pow : Int → Nat → Int` — structural recursion on the natural
@@ -1411,6 +1434,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mul_nonneg: child(kernel, "mul_nonneg"),
         mul_pos: child(kernel, "mul_pos"),
         sq_nonneg: child(kernel, "sq_nonneg"),
+        mul_nonneg_of_nonneg_or_nonpos: child(kernel, "mul_nonneg_of_nonneg_or_nonpos"),
+        mul_nonneg_iff: child(kernel, "mul_nonneg_iff"),
+        mul_pos_iff: child(kernel, "mul_pos_iff"),
+        mul_neg_iff: child(kernel, "mul_neg_iff"),
+        mul_nonpos_iff: child(kernel, "mul_nonpos_iff"),
         pow: child(kernel, "pow"),
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
@@ -1846,6 +1874,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         rat::declare_arithmetic(&mut d)?;
         rat::declare_more_arithmetic(&mut d)?;
         ring::declare_ring_all(&mut d, &prelude)?;
+        // Needs `Int.mul_eq_zero`, declared inside `declare_ring_all` just
+        // above -- the sign-of-a-product family's `Iff` forward directions
+        // resolve a mixed-sign quadrant to "the product is exactly zero" and
+        // then decide which factor vanishes.
+        sign_product::declare_sign_product_theorems(&mut d)?;
         Ok(prelude)
     })();
     match built {
