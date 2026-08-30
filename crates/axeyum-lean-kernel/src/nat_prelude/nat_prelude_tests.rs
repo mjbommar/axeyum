@@ -793,6 +793,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient_even,
         p.odd_totient_iff_eq_one,
         p.odd_totient_iff,
+        p.totient_coprime_totient_iff,
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
@@ -2320,6 +2321,103 @@ fn odd_totient_iff_applies_at_small_numerals_and_symbolically() {
     let inferred_n =
         f.k.infer_in(iff_n, &mut ctx)
             .expect("odd_totient_iff must apply at a free variable");
+    assert!(f.k.def_eq(inferred_n, expected_n));
+}
+
+/// Shared by [`totient_coprime_totient_iff_applies_at_small_numerals_and_symbolically`]:
+/// checks that `Nat.totient_coprime_totient_iff` applied at `(m, n)` infers
+/// to `Iff (gcd (totient m) (totient n) = one) ((m=1 or m=2) or (n=1 or
+/// n=2))`.
+fn assert_totient_coprime_totient_iff_at(f: &mut Fixture, m: ExprId, n: ExprId) {
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+    let totient_m = f.const_app(p.totient, &[m]);
+    let totient_n = f.const_app(p.totient, &[n]);
+    let gcd_mn = f.gcd(totient_m, totient_n);
+    let lhs = f.eq(gcd_mn, one);
+    let eq_m1 = f.eq(m, one);
+    let eq_m2 = f.eq(m, two);
+    let or_m = f.const_app(p.logic.or, &[eq_m1, eq_m2]);
+    let eq_n1 = f.eq(n, one);
+    let eq_n2 = f.eq(n, two);
+    let or_n = f.const_app(p.logic.or, &[eq_n1, eq_n2]);
+    let rhs = f.const_app(p.logic.or, &[or_m, or_n]);
+    let expected = f.const_app(p.logic.iff, &[lhs, rhs]);
+    let iff_mn = f.const_app(p.totient_coprime_totient_iff, &[m, n]);
+    let inferred =
+        f.k.infer(iff_mn)
+            .expect("totient_coprime_totient_iff must type-check");
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "totient_coprime_totient_iff must state Iff (gcd (totient m) \
+         (totient n) = one) ((m=1 or m=2) or (n=1 or n=2))"
+    );
+}
+
+/// `Nat.totient_coprime_totient_iff` at `(m, n) = (1, 9)` (left disjunct
+/// holds), `(6, 2)` (right disjunct holds), `(6, 9)` (discriminating:
+/// `totient 6 = 2`, `totient 9 = 6`, `gcd 2 6 = 2 != 1`, neither disjunct
+/// holds), and a genuinely free `(m, n)`.
+#[test]
+fn totient_coprime_totient_iff_applies_at_small_numerals_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+
+    let nine = f.num(9);
+    assert_totient_coprime_totient_iff_at(&mut f, one, nine);
+    let six = f.num(6);
+    assert_totient_coprime_totient_iff_at(&mut f, six, two);
+
+    // Discriminating: totient 6 = 2, totient 9 = 6, gcd 2 6 = 2 != 1, so
+    // neither disjunct holds and the `Coprime` side is genuinely false too.
+    let totient_6 = f.const_app(p.totient, &[six]);
+    let totient_9 = f.const_app(p.totient, &[nine]);
+    let gcd_6_9 = f.gcd(totient_6, totient_9);
+    assert!(
+        !f.k.def_eq(gcd_6_9, one),
+        "gcd (totient 6) (totient 9) must NOT reduce to one (it is two)"
+    );
+    assert_totient_coprime_totient_iff_at(&mut f, six, nine);
+
+    // Symbolic: a genuinely free `(m, n)`.
+    let m_fv = f.fresh_fvar();
+    let n_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let n = f.k.fvar(n_fv);
+    let totient_m = f.const_app(p.totient, &[m]);
+    let totient_n = f.const_app(p.totient, &[n]);
+    let gcd_mn = f.gcd(totient_m, totient_n);
+    let lhs_n = f.eq(gcd_mn, one);
+    let eq_m1 = f.eq(m, one);
+    let eq_m2 = f.eq(m, two);
+    let or_m = f.const_app(p.logic.or, &[eq_m1, eq_m2]);
+    let eq_n1 = f.eq(n, one);
+    let eq_n2 = f.eq(n, two);
+    let or_n = f.const_app(p.logic.or, &[eq_n1, eq_n2]);
+    let rhs_n = f.const_app(p.logic.or, &[or_m, or_n]);
+    let expected_n = f.const_app(p.logic.iff, &[lhs_n, rhs_n]);
+    let iff_mn = f.const_app(p.totient_coprime_totient_iff, &[m, n]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_n =
+        f.k.infer_in(iff_mn, &mut ctx)
+            .expect("totient_coprime_totient_iff must apply at free variables");
     assert!(f.k.def_eq(inferred_n, expected_n));
 }
 
@@ -7736,7 +7834,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 571,
+        93 + 572,
         "every promised definition and theorem must be rendered"
     );
 }

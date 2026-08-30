@@ -2361,8 +2361,7 @@ pub(super) fn declare_totient_coprime_totient_iff(
                     let body = close_via_gcd_left_one(d, &p, totient_m, totient_n, tm_eq_one);
                     d.lam_fv(h2_fv, eq_m2, body)
                 };
-                let body =
-                    d.const_app(p.logic.or_elim, &[eq_m1, eq_m2, lhs_ty, hm, on_m1, on_m2]);
+                let body = d.const_app(p.logic.or_elim, &[eq_m1, eq_m2, lhs_ty, hm, on_m1, on_m2]);
                 d.lam_fv(hm_fv, or_m, body)
             };
             let on_n = {
@@ -2390,8 +2389,7 @@ pub(super) fn declare_totient_coprime_totient_iff(
                     let body = close_via_gcd_right_one(d, &p, totient_m, totient_n, tn_eq_one);
                     d.lam_fv(h2_fv, eq_n2, body)
                 };
-                let body =
-                    d.const_app(p.logic.or_elim, &[eq_n1, eq_n2, lhs_ty, hn, on_n1, on_n2]);
+                let body = d.const_app(p.logic.or_elim, &[eq_n1, eq_n2, lhs_ty, hn, on_n1, on_n2]);
                 d.lam_fv(hn_fv, or_n, body)
             };
             let body = d.const_app(p.logic.or_elim, &[or_m, or_n, lhs_ty, h, on_m, on_n]);
