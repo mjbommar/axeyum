@@ -49,7 +49,21 @@ for f in $(git ls-files '*.sh'); do
   [ "$(grep -cE 'set -[a-z]*o pipefail' "$f")" -gt 0 ] || continue
   # Whole-line comments are prose, not code: a commented-out example must not
   # count, the same rule `check-control-registration.sh` needed.
-  n=$(grep -vE '^[[:space:]]*#' "$f" | grep -cE '\|[^|]*grep[[:space:]]+(-[a-zA-Z]*q|--quiet)')
+  # `||` IS NOT A PIPE, and the first version of this detector could not tell.
+  # `a || grep -q x file` contains a `|` followed by a non-`|`, so the pattern
+  # `\|[^|]*grep -q` matched the SECOND bar of a logical OR. Measured
+  # 2026-08-30: two false positives, and one of them was this gate's only
+  # ERROR -- `test-creal-prelude-build-ratio.sh:178`,
+  # `|| /usr/bin/grep -q "..." "$TMP/out"`, which reads a FILE and cannot
+  # SIGPIPE anything. The gate had been red on it.
+  #
+  # Neutralize `||` first, then look for a real pipe. Verified surgical: of the
+  # eight files with any hit, six counts are byte-identical before and after,
+  # `test-creal-prelude-build-ratio.sh` goes 1 -> 0 and `test-local-ci-record.sh`
+  # 2 -> 1 -- and that file's surviving hit is the genuine one
+  # (`printf ... | grep -qxF`), while the removed one was
+  # `grep -q ... "$SCRIPT" || ! grep -q ... "$SCRIPT"`.
+  n=$(grep -vE '^[[:space:]]*#' "$f" | sed 's/||/ __OR__ /g' | grep -cE '\|[^|]*grep[[:space:]]+(-[a-zA-Z]*q|--quiet)')
   [ "$n" -gt 0 ] && printf '%s %s\n' "$f" "$n"
 done | LC_ALL=C sort > "$tmp"
 

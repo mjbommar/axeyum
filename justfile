@@ -587,6 +587,10 @@ gate-controls:
     # `grep -q` in a pipeline under pipefail, and `$?` read after a pipeline:
     # both print a wrong answer while exiting 0, and both shipped here.
     scripts/check-shell-antipatterns.sh
+    # ...and its controls. The gate had none and was RED on a false positive:
+    # it read the second bar of `||` as a pipe. 12 cases; each of the two
+    # mutations kills a disjoint set.
+    scripts/tests/test-check-shell-antipatterns.sh
     # DOMINANCE.md is generated; without a --check it sat six audits stale
     # while reading as current.
     python3 -m unittest scripts.tests.test_gen_dominance_scoreboard

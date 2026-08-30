@@ -489,6 +489,12 @@ step python-controls ./scripts/run-python-controls.py
 # made the SAME tree report 7 orphans then 3, and `$?` after a pipeline
 # reported exit=0 for a script that exits 1.
 step shell-antipatterns ./scripts/check-shell-antipatterns.sh
+# ...and its controls. The gate had none and was RED on a FALSE POSITIVE: its
+# pattern matched the second bar of a logical `||` as though it were a pipe, so
+# `a || grep -q x file` -- reading a FILE, incapable of SIGPIPE -- was reported
+# as the banned idiom. 12 cases, 4 real pipelines that must stay caught and 6
+# shapes that must not be flagged.
+step shell-antipatterns-controls ./scripts/tests/test-check-shell-antipatterns.sh
 # `bench-results/DOMINANCE.md` is generated and had NO `--check` and no gate,
 # so it sat SIX AUDITS behind its own inputs -- its QF_S row claimed 87
 # decided against an artifact recording 93 -- while reading as current.

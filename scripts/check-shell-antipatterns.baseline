@@ -4,4 +4,4 @@ scripts/check-scope.sh 5
 scripts/install-pinned-lean.sh 1
 scripts/run-qfbv-independent-oracle-rounds.sh 1
 scripts/tests/test-check-local-ci-freshness.sh 3
-scripts/tests/test-local-ci-record.sh 2
+scripts/tests/test-local-ci-record.sh 1
