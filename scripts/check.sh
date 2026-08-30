@@ -78,6 +78,32 @@ list_only="${AXEYUM_CHECK_LIST:-0}"
 # here?" -- and the list has to answer both.
 step_prefix=""
 
+# Is the maturin-built `axeyum._native` extension actually importable here?
+#
+# `[ -d .venv ]` is the test the py-check block below uses and it is WEAKER THAN
+# IT LOOKS. Measured 2026-08-30 in a lane worktree: `.venv/` existed, created
+# minutes earlier, and its `site-packages` held exactly `_virtualenv.pth` and
+# `_virtualenv.py` -- no `axeyum`. So the directory test passed, the step ran,
+# and `from axeyum import producers` raised ModuleNotFoundError. A guard that
+# cannot tell "provisioned" from "directory exists" is not a guard.
+#
+# The discriminator is whether the PACKAGE is installed, which is a provisioning
+# fact and not a correctness fact: a broken `axeyum` still leaves the directory
+# on disk, so this skips an unprovisioned host without ever hiding a real defect
+# in the module. That distinction is the whole reason this tests for the
+# installed package rather than for a successful `import axeyum`, which would
+# have gone quiet on exactly the failure worth seeing.
+#
+# Controls: scripts/tests/test-check-sh-py-native-guard.sh, both directions.
+py_native_installed() {
+  command -v uv >/dev/null 2>&1 || return 1
+  local d
+  for d in .venv/lib/python*/site-packages/axeyum; do
+    [ -d "$d" ] && return 0
+  done
+  return 1
+}
+
 # ---------------------------------------------------------------------------
 # THE PER-STEP TIME CAP (ADR-0623). Until 2026-08-30 this gate had ZERO
 # timeout-guarded steps, so ONE hung step hung the whole aggregate gate forever.
@@ -574,6 +600,11 @@ step facts-replay ./scripts/check-fact-evidence-replay.sh
 # `scripts/tests/test-gate-scope-controls.sh`.
 step clippy ./scripts/check-clippy-complete.sh
 step gate-controls ./scripts/tests/test-gate-scope-controls.sh
+# Controls for this file's own `py_native_installed` host guard, and for the
+# listing invariant `scripts/check-aggregate-scope.sh` depends on. Both
+# directions are pinned: a guard that always declines is the failure mode that
+# would silently drop two real steps on every host.
+step check-sh-py-native-guard ./scripts/tests/test-check-sh-py-native-guard.sh
 # Controls for two gates that check OTHER gates, which is where an agreeable
 # checker does the most damage: the local-ci run recorder (a step that exits 0
 # having run zero tests must record `vacuous`, and that guard was unreachable
@@ -962,8 +993,30 @@ step autogenesis-authoritative-comparison-tests python3 -m unittest scripts.test
 step autogenesis-result python3 scripts/check-autogenesis-1-result.py
 step autogenesis-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_1_result
 step autogenesis-authoritative-fact-tests python3 -m unittest scripts.tests.test_run_autogenesis_authoritative_fact
-step autogenesis-binomial-arrow-tests uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_binomial_arrow_capability
-step autogenesis-binomial-arrow-capability uv run --no-sync python scripts/gen-autogenesis-binomial-arrow-capability.py --check
+# HOST-CONDITIONAL. `scripts/gen-autogenesis-binomial-arrow-capability.py` is the
+# only script in this group that does `from axeyum import producers`, and
+# `python/axeyum/__init__.py` imports `._native`, so it needs the maturin-built
+# Rust extension. Its unit suite imports it too, hence both lines. That is a
+# cargo-class cost wearing a `uv` command line, so it belongs in the same
+# deferred class as the 24 cargo steps `scripts/check-fast.sh` declines by
+# declaration -- provisioning it would put a Rust compile inside the gate whose
+# entire premise is that it does not build anything.
+#
+# The other two `uv run` lines below are NOT in this block on purpose: neither
+# imports `axeyum` (`connective-ranking` passes here today, and
+# `arrow-measurement` is stdlib-only and fails for a ledger reason, not a
+# toolchain one). Guarding them would have made two steps unrunnable to hide a
+# problem that is not theirs.
+if [ "$list_only" = "1" ] || py_native_installed; then
+  step_prefix="optional:"
+  step autogenesis-binomial-arrow-tests uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_binomial_arrow_capability
+  step autogenesis-binomial-arrow-capability uv run --no-sync python scripts/gen-autogenesis-binomial-arrow-capability.py --check
+  step_prefix=""
+elif [ "$list_only" != "1" ]; then
+  # SKIPPED, not passed -- named on stdout so a reader of the log sees which
+  # steps did not run and why, the same contract as the py-check block.
+  echo "autogenesis-binomial-arrow: SKIPPED (axeyum._native not installed -- run \`uv sync --dev && uv run maturin develop\`)"
+fi
 step autogenesis-binomial-connective-ranking uv run --no-sync python scripts/gen-autogenesis-binomial-connective-ranking.py --check
 step autogenesis-binomial-arrow-measurement uv run --no-sync python scripts/check-autogenesis-binomial-arrow-measurement.py
 step autogenesis-next-reusable-family-tests python3 -m unittest scripts.tests.test_gen_autogenesis_next_reusable_family_queue
