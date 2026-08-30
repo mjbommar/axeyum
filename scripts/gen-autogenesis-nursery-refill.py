@@ -190,6 +190,60 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
     "natural-coprimality": ("Init.Data.Nat.Coprime",),
     "natural-induction-and-divisibility": ("Mathlib.Data.Nat.Init",),
     "natural-modulus": ("Init.Data.Nat.Mod",),
+    # --- draw 3, 2026-08-29 (ADR-0615) ---------------------------------------
+    # Re-measured: 18 modules now carry >= 10 fully screened, unused
+    # candidates (down from draw 2's 22 -- four consumed by draw 2). The same
+    # judgement rule applies ("every adjacency lands in the same partition"),
+    # but this draw needed a SECOND screen the first two draws did not:
+    # `*.Gcd`, `*.ModEq`, `*.Prime.*`, `*.Factorial.*`, `*.Choose.*`,
+    # `*.Bitwise.*` are all adjacent to a v1 family that is development or
+    # train (published, SEEN math), and putting a new family over the same
+    # mathematics into held-out is the natural-division violation ADR-0615
+    # documents -- so all six are excluded, exactly as draw 2 excluded them.
+    #
+    # That leaves three modules with NO existing-family adjacency at all:
+    # `Init.Data.Nat.Basic`/`Init.Data.Nat.Lemmas` (plain Nat add/order
+    # algebra), `Init.Data.Int.Lemmas` (the Int analogue). These are safe for
+    # ANY partition on the adjacency test -- but R9 caught what adjacency
+    # cannot: running the actual selection, natural-basic-arithmetic's first
+    # 10 include `Nat.add_assoc`/`Nat.add_comm`, and integer-basic-arithmetic's
+    # include `Int.add_assoc`/`Int.add_comm`/`Int.add_neg_cancel_right` --
+    # ALREADY DECLARED in this kernel's own prelude, caught by R9's contaminated-
+    # held-out check on the first attempt at this draw. "No nursery family
+    # covers this math" and "this kernel has never proved it" are DIFFERENT
+    # claims; basic algebra satisfies the first and fails the second, because
+    # our own nat_prelude/int_prelude already cover it exhaustively. So these
+    # two are fine for development/train (contamination there is a FEATURE --
+    # fast closure -- not a defect) but cannot be the held-out slots.
+    #
+    # For held-out, two modules thread BOTH needles (checked, not assumed):
+    # `Mathlib.Data.Int.Init`'s first 10 screened candidates alphabetically are
+    # ALL `Int.div_*`/`Int.dvd_*` inequality lemmas, and combining
+    # `Init.Data.Int.DivMod.Basic` (7, ediv/emod boundary cases) with
+    # `Mathlib.Data.Int.Basic` (8, dvd/natCast/one gcd_emod lemma) reaches 15
+    # screened, first 10 overwhelmingly div/dvd/ediv-boundary-and-natCast. Both
+    # are PURELY the same mathematics as `integer-division`, which is ALREADY
+    # held-out (v2) -- blind beside blind, the natural-induction-and-divisibility
+    # precedent from draw 2 -- and R9-clean: zero of either family's first 10
+    # collide with a kernel declaration.
+    #
+    # Module-path sort places these four as
+    #   Init.Data.Int.DivMod.Basic  (integer-division-boundary-cases)
+    #   Init.Data.Int.Lemmas        (integer-basic-arithmetic)
+    #   Init.Data.Nat.Basic         (natural-basic-arithmetic)
+    #   Mathlib.Data.Int.Init       (integer-division-inequalities)
+    # so the mechanical cycle assigns held-out, development, train, held-out --
+    # two NEW held-out families (R5), both R9-clean and matching their one
+    # adjacency exactly (blind beside blind); the two development/train slots
+    # are unconstrained novel math that happens to be mostly already-proved
+    # (a `check-autogenesis-already-proved.py` finding, not a selection
+    # criterion). No target outcome was consulted; this is the SET a lane
+    # chose, the assignment is still the mechanical rule above.
+    "integer-division-boundary-cases": (
+        "Init.Data.Int.DivMod.Basic", "Mathlib.Data.Int.Basic"),
+    "integer-basic-arithmetic": ("Init.Data.Int.Lemmas",),
+    "natural-basic-arithmetic": ("Init.Data.Nat.Basic", "Init.Data.Nat.Lemmas"),
+    "integer-division-inequalities": ("Mathlib.Data.Int.Init",),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -206,6 +260,12 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
     "natural-induction-and-divisibility": (
         "divisibility-library-application", "kernel-induction"),
     "natural-modulus": ("kernel-induction", "kernel-library-application"),
+    "integer-basic-arithmetic": ("kernel-induction", "kernel-library-application"),
+    "natural-basic-arithmetic": ("kernel-induction", "kernel-library-application"),
+    "integer-division-inequalities": (
+        "kernel-library-application", "modular-arithmetic-reconstruction"),
+    "integer-division-boundary-cases": (
+        "kernel-library-application", "modular-arithmetic-reconstruction"),
 }
 
 PER_FAMILY = 10
