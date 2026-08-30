@@ -8,13 +8,13 @@ use std::{collections::BTreeSet, fs, path::Path};
 
 use axeyum_machine::a0::{
     BranchCondition, Instruction, Memory, MemorySpan, Observation, Outcome, Program, State,
-    StopReason, Trap, Word, decode, encode, run, run_prefix, step,
+    StateComponent, StopReason, Trap, Word, decode, encode, run, run_prefix, step,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v4";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v5";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
 const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
 const ADD_SCHEMA: &str = "axeyum.a0.add-step-exhaustive.v1";
@@ -22,6 +22,7 @@ const MEMORY_SCHEMA: &str = "axeyum.a0.memory-trace.v1";
 const BRANCH_SCHEMA: &str = "axeyum.a0.branch-trace.v1";
 const RUN_SCHEMA: &str = "axeyum.a0.run-classification.v1";
 const DECODER_SCHEMA: &str = "axeyum.a0.decoder-roundtrip.v1";
+const STEP_SCHEMA: &str = "axeyum.a0.step-coverage.v1";
 
 /// Stable metadata that binds evidence to the concrete A0 semantic authority.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -191,6 +192,29 @@ pub struct DecoderRoundtripReport {
     pub result_sha256: String,
 }
 
+/// Finite coverage report for every A0 step family, effects, and trap class.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StepCoverageReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Number of instruction families executed.
+    pub families_executed: u8,
+    /// Number of exact read/write footprint rows checked.
+    pub effect_rows_checked: u8,
+    /// Number of distinct trap controls reached.
+    pub trap_controls_checked: u8,
+    /// Whether halt and trap both stutter under another step request.
+    pub terminal_stutter_checked: bool,
+    /// Whether every successor changed only declared writable components.
+    pub frame_checks_passed: bool,
+    /// Whether every expected effect row matched exactly.
+    pub effects_passed: bool,
+    /// SHA-256 over encodings, effects, and complete successor states.
+    pub result_sha256: String,
+}
+
 /// Why an evidence package or report was rejected.
 #[derive(Debug)]
 pub enum EvidenceError {
@@ -236,7 +260,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "4".to_owned(),
+        version: "5".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -574,6 +598,44 @@ pub fn check_decoder_reserved_bit_control(
     check_decoder_roundtrip_with_control(package_path, report_path, DecoderControl::AcceptReserved)
 }
 
+/// Produces finite coverage of every A0 step family, effect row, and trap class.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn step_coverage_report(package_path: &Path) -> Result<StepCoverageReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_step_coverage(
+        sha256_hex(&package_bytes),
+        StepControl::Declared,
+    ))
+}
+
+/// Recomputes and checks A0 step and effect coverage.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_step_coverage(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<StepCoverageReport, EvidenceError> {
+    check_step_coverage_with_control(package_path, report_path, StepControl::Declared)
+}
+
+/// Adds one undeclared register write and requires report rejection.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing control fires.
+pub fn check_step_hidden_write_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<StepCoverageReport, EvidenceError> {
+    check_step_coverage_with_control(package_path, report_path, StepControl::HiddenWrite)
+}
+
 #[derive(Clone, Copy)]
 enum ByteOrderControl {
     Declared,
@@ -614,6 +676,12 @@ enum RunControl {
 enum DecoderControl {
     Declared,
     AcceptReserved,
+}
+
+#[derive(Clone, Copy)]
+enum StepControl {
+    Declared,
+    HiddenWrite,
 }
 
 fn check_word_roundtrip_with_control(
@@ -973,6 +1041,274 @@ fn check_decoder_roundtrip_with_control(
         )));
     }
     Ok(claimed)
+}
+
+fn check_step_coverage_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: StepControl,
+) -> Result<StepCoverageReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: StepCoverageReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_step_coverage(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed step report does not equal recomputation (claimed frame {}, recomputed {})",
+            claimed.frame_checks_passed, recomputed.frame_checks_passed
+        )));
+    }
+    Ok(claimed)
+}
+
+#[allow(clippy::too_many_lines)]
+fn step_cases() -> Vec<(Instruction, Vec<StateComponent>, Vec<StateComponent>)> {
+    use StateComponent::{
+        Conditions as C, Memory as M, Outcome as O, ProgramCounter as P, Register as R,
+    };
+    let memory = |address| M {
+        address: word(address),
+        bytes: 1,
+    };
+    let binary_reads = vec![P, O, R(1), R(2)];
+    let arithmetic_writes = vec![P, R(3), C];
+    vec![
+        (
+            Instruction::Mov { rd: 3, rs1: 1 },
+            vec![P, O, R(1)],
+            vec![P, R(3)],
+        ),
+        (
+            Instruction::MovImmediate {
+                rd: 3,
+                immediate: -1,
+            },
+            vec![P, O],
+            vec![P, R(3)],
+        ),
+        (
+            Instruction::Load {
+                rd: 3,
+                base: 1,
+                offset: 0,
+            },
+            vec![P, O, R(1), memory(4)],
+            vec![P, R(3), O],
+        ),
+        (
+            Instruction::Store {
+                base: 1,
+                source: 2,
+                offset: 1,
+            },
+            vec![P, O, R(1), R(2)],
+            vec![P, memory(5), O],
+        ),
+        (
+            Instruction::Add {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::Sub {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::And {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::Or {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::Xor {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::Not { rd: 3, rs1: 1 },
+            vec![P, O, R(1)],
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::ShiftLeft {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::ShiftRight {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::ArithmeticShiftRight {
+                rd: 3,
+                rs1: 1,
+                rs2: 2,
+            },
+            binary_reads.clone(),
+            arithmetic_writes.clone(),
+        ),
+        (
+            Instruction::Compare { rs1: 1, rs2: 2 },
+            binary_reads,
+            vec![P, C],
+        ),
+        (
+            Instruction::Branch {
+                condition: BranchCondition::Eq,
+                offset: 1,
+            },
+            vec![P, O, C],
+            vec![P],
+        ),
+        (Instruction::Jump { offset: 1 }, vec![P, O], vec![P]),
+        (Instruction::Halt, vec![O], vec![O]),
+    ]
+}
+
+fn changes_within_writes(before: &State, after: &State, writes: &[StateComponent]) -> bool {
+    for index in 0_u8..8 {
+        if before.registers[usize::from(index)] != after.registers[usize::from(index)]
+            && !writes.contains(&StateComponent::Register(index))
+        {
+            return false;
+        }
+    }
+    for address in 0..before.memory.len() {
+        if before.memory.byte(address) != after.memory.byte(address)
+            && !writes.iter().any(|component| match component {
+                StateComponent::Memory {
+                    address: start,
+                    bytes,
+                } => {
+                    let start = usize::try_from(start.unsigned()).ok();
+                    start.is_some_and(|start| address >= start && address < start + bytes)
+                }
+                _ => false,
+            })
+        {
+            return false;
+        }
+    }
+    (before.pc == after.pc || writes.contains(&StateComponent::ProgramCounter))
+        && (before.conditions == after.conditions || writes.contains(&StateComponent::Conditions))
+        && (before.outcome == after.outcome || writes.contains(&StateComponent::Outcome))
+}
+
+fn digest_state(digest: &mut Sha256, state: &State) {
+    digest.update([state.width()]);
+    for register in state.registers {
+        digest.update(register.unsigned().to_le_bytes());
+    }
+    for address in 0..state.memory.len() {
+        digest.update([state.memory.byte(address).expect("address is valid")]);
+    }
+    digest.update(state.pc.unsigned().to_le_bytes());
+    digest.update([
+        u8::from(state.conditions.zero),
+        u8::from(state.conditions.negative),
+        u8::from(state.conditions.carry),
+        u8::from(state.conditions.overflow),
+    ]);
+    digest.update(format!("{:?}", state.outcome));
+}
+
+fn compute_step_coverage(
+    semantic_package_sha256: String,
+    control: StepControl,
+) -> StepCoverageReport {
+    let mut initial = State::new(8, Memory::zeroed(16), word(0)).expect("fixed state is valid");
+    initial.registers[1] = word(4);
+    initial.registers[2] = word(1);
+    initial.conditions.zero = true;
+    let cases = step_cases();
+    let mut effects_passed = true;
+    let mut frame_checks_passed = true;
+    let mut result_digest = Sha256::new();
+    for (index, (instruction, expected_reads, expected_writes)) in cases.iter().cloned().enumerate()
+    {
+        let bytes = encode(instruction).expect("coverage instruction is legal");
+        let program = Program::new(8, word(0), bytes.to_vec()).expect("fixed program is valid");
+        let effects = instruction.effects(&initial);
+        effects_passed &= effects.reads == expected_reads && effects.writes == expected_writes;
+        let mut after = step(&program, &initial);
+        if matches!(control, StepControl::HiddenWrite) && index == 0 {
+            after.registers[7] = word(0x55);
+        }
+        frame_checks_passed &= changes_within_writes(&initial, &after, &effects.writes);
+        result_digest.update(bytes);
+        result_digest.update(format!("{effects:?}"));
+        digest_state(&mut result_digest, &after);
+    }
+
+    let illegal = Program::new(8, word(0), vec![0x99, 0, 0, 0]).expect("program is valid");
+    let incomplete = Program::new(8, word(0), vec![0]).expect("program is valid");
+    let valid = Program::new(8, word(0), vec![0xff, 0, 0, 0]).expect("program is valid");
+    let mut misaligned_state = initial.clone();
+    misaligned_state.pc = word(2);
+    let data = Program::new(8, word(0), vec![0x02, 0x0b, 0, 0]).expect("program is valid");
+    let mut data_state = initial.clone();
+    data_state.registers[1] = word(16);
+    let trapped = [
+        step(&illegal, &initial),
+        step(&incomplete, &initial),
+        step(&valid, &misaligned_state),
+        step(&data, &data_state),
+    ];
+    let trap_controls_checked = u8::try_from(
+        trapped
+            .iter()
+            .filter(|state| matches!(state.outcome, Outcome::Trapped(_)))
+            .count(),
+    )
+    .expect("trap count fits u8");
+    let halted = step(&valid, &initial);
+    let terminal_stutter_checked = step(&valid, &halted) == halted
+        && trapped.iter().all(|state| step(&valid, state) == *state);
+    StepCoverageReport {
+        schema: STEP_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        families_executed: u8::try_from(cases.len()).expect("family count fits u8"),
+        effect_rows_checked: u8::try_from(cases.len()).expect("effect count fits u8"),
+        trap_controls_checked,
+        terminal_stutter_checked,
+        frame_checks_passed,
+        effects_passed,
+        result_sha256: hex_digest(result_digest.finalize()),
+    }
 }
 
 #[allow(clippy::too_many_lines)]

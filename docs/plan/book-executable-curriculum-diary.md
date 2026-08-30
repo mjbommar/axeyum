@@ -236,3 +236,25 @@ passes; the machine crate has 21 integration tests and the evidence crate has
 eight route/control tests. The result is an exhaustive finite computation over
 the structured legal instruction domain. It does not enumerate all 2^32 byte
 strings or prove a symbolic decoder theorem.
+
+## 2026-08-30 — complete A0 step-family and footprint coverage
+
+Added a source-bound coverage route for the remainder of `OP.a0.step`. It
+executes one deliberately nondegenerate instance of each of the seventeen
+instruction families from encoded bytes, compares every dynamic read and write
+footprint with an independent expected row, and checks that the complete
+successor changes only declared writable components. Four controls reach the
+misaligned-PC, incomplete-fetch, illegal-encoding, and data-range traps. Halted
+and every trapped state are checked for terminal stuttering.
+
+The load-bearing mutation adds an undeclared write to r7 after a move. The
+frame result changes from true to false, and the recorded report is rejected
+with `semantic-mismatch`. Direct CLI production and replay pass with seventeen
+families, seventeen exact effect rows, four trap classes, terminal stuttering,
+and frame checks. The evidence crate now has nine route/control tests under
+strict Clippy.
+
+This route establishes implementation coverage, not universal semantic
+correctness for every possible input state. The exhaustive decoder and
+width-eight addition routes provide stronger finite claims in their stated
+domains; symbolic and kernel routes remain separate work.

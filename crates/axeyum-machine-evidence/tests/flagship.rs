@@ -7,7 +7,8 @@ use axeyum_machine_evidence::{
     check_add_wrong_destination_control, check_branch_target_control, check_branch_trace,
     check_decoder_reserved_bit_control, check_decoder_roundtrip, check_memory_byte_order_control,
     check_memory_trace, check_run_classification, check_run_false_halt_control,
-    decoder_roundtrip_report, memory_trace_report, run_classification_report, semantic_package,
+    check_step_coverage, check_step_hidden_write_control, decoder_roundtrip_report,
+    memory_trace_report, run_classification_report, semantic_package, step_coverage_report,
     write_json,
 };
 
@@ -128,6 +129,31 @@ fn decoder_roundtrip_is_exhaustive_and_reserved_bit_fires() {
     );
     assert!(matches!(
         check_decoder_reserved_bit_control(&package_path, &report_path),
+        Err(EvidenceError::SemanticMismatch(_))
+    ));
+    fs::remove_file(package_path).unwrap();
+    fs::remove_file(report_path).unwrap();
+}
+
+#[test]
+fn step_coverage_recomputes_and_hidden_write_fires() {
+    let package_path = path("step-package.json");
+    let report_path = path("step-report.json");
+    write_json(&package_path, &semantic_package()).unwrap();
+    let report = step_coverage_report(&package_path).unwrap();
+    assert_eq!(report.families_executed, 17);
+    assert_eq!(report.effect_rows_checked, 17);
+    assert_eq!(report.trap_controls_checked, 4);
+    assert!(report.terminal_stutter_checked);
+    assert!(report.frame_checks_passed);
+    assert!(report.effects_passed);
+    write_json(&report_path, &report).unwrap();
+    assert_eq!(
+        check_step_coverage(&package_path, &report_path).unwrap(),
+        report
+    );
+    assert!(matches!(
+        check_step_hidden_write_control(&package_path, &report_path),
         Err(EvidenceError::SemanticMismatch(_))
     ));
     fs::remove_file(package_path).unwrap();

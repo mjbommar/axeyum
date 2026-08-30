@@ -7,9 +7,10 @@ use axeyum_machine_evidence::{
     check_branch_target_control, check_branch_trace, check_decoder_reserved_bit_control,
     check_decoder_roundtrip, check_memory_byte_order_control, check_memory_trace,
     check_observation_omission_control, check_observation_separation, check_run_classification,
-    check_run_false_halt_control, check_word_roundtrip, check_word_roundtrip_reversed_control,
-    decoder_roundtrip_report, memory_trace_report, observation_separation_report,
-    run_classification_report, semantic_package, word_roundtrip_report, write_json,
+    check_run_false_halt_control, check_step_coverage, check_step_hidden_write_control,
+    check_word_roundtrip, check_word_roundtrip_reversed_control, decoder_roundtrip_report,
+    memory_trace_report, observation_separation_report, run_classification_report,
+    semantic_package, step_coverage_report, word_roundtrip_report, write_json,
 };
 
 fn main() {
@@ -182,6 +183,33 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_decoder_reserved_bit_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: reserved-bit encoding was accepted".into());
         }
+        [command, package, output] if command == "emit-step-coverage" => {
+            let report = step_coverage_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "step-coverage: PASS: families={} effects={} traps={} stutter={} frame={}",
+                report.families_executed,
+                report.effect_rows_checked,
+                report.trap_controls_checked,
+                report.terminal_stutter_checked,
+                report.frame_checks_passed
+            );
+        }
+        [command, package, report] if command == "check-step-coverage" => {
+            let checked = check_step_coverage(Path::new(package), Path::new(report))?;
+            println!(
+                "step-coverage: PASS: families={} effects={} traps={} stutter={} frame={}",
+                checked.families_executed,
+                checked.effect_rows_checked,
+                checked.trap_controls_checked,
+                checked.terminal_stutter_checked,
+                checked.frame_checks_passed
+            );
+        }
+        [command, package, report] if command == "control-step-hidden-write" => {
+            check_step_hidden_write_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: undeclared register write was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -200,7 +228,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  control-run-false-halt PACKAGE REPORT | \
                  emit-decoder-roundtrip PACKAGE OUTPUT | \
                  check-decoder-roundtrip PACKAGE REPORT | \
-                 control-decoder-reserved-bit PACKAGE REPORT"
+                 control-decoder-reserved-bit PACKAGE REPORT | \
+                 emit-step-coverage PACKAGE OUTPUT | check-step-coverage PACKAGE REPORT | \
+                 control-step-hidden-write PACKAGE REPORT"
                 .into());
         }
     }
