@@ -440,7 +440,7 @@ fn poly_pow(base: &[Rational], exp: u32) -> Vec<Rational> {
     acc
 }
 
-/// `product over factors except index `skip`` of `factor^mult`. A local
+/// The product, over every factor except index `skip`, of `factor^mult`. A local
 /// re-derivation of `partial_fractions.rs`'s own private `product_excluding`,
 /// for the same reason as [`poly_pow`].
 fn product_excluding(factors: &[(Vec<Rational>, u32)], skip: usize) -> Vec<Rational> {
