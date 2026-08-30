@@ -8,10 +8,31 @@
     "statement": "∀ {m a b c : ℕ}, 0 < m → a * c ≡ b * c [MOD m] → a ≡ b [MOD m / m.gcd c]",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-modeq-cancel-left-div-gcd-57ef8287", "F:nat-mul-comm"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_eq_cancel_right_div_gcd 2>/dev/null | grep -Ec '^Nat\\.mod_eq_cancel_right_div_gcd[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.mod_eq_cancel_right_div_gcd",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.mod_eq_cancel_right_div_gcd` through the trusted `Kernel::add_declaration` gate. New proof, lane modeq-div-gcd, in `nat_prelude/modeq_cancel_div_gcd.rs`. This mirror is NOT re-derived from scratch: it commutes both sides (`a*c` to `c*a`, `b*c` to `c*b` via `Nat.mul_comm`) and applies `Nat.mod_eq_cancel_left_div_gcd` directly, exactly Mathlib's own proof (`apply cancel_left_div_gcd hm; simpa [mul_comm] using h`). `nat_theorem_inventory`'s rendered type matches this fact's `formal.statement` exactly. `nat_theorem_inventory` exits non-zero (0 rows) for a bogus name (measured).",
+      "supports": "∀ {m a b c : ℕ}, 0 < m → a * c ≡ b * c [MOD m] → a ≡ b [MOD m / m.gcd c]"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly, and `mod_eq_cancel_div_gcd_family_applies_at_a_discriminating_concrete_instance_and_symbolically` checks it applies at a concrete DISCRIMINATING instance (m,c)=(6,4), gcd=2>1 -- a coprime instance could not tell this family apart from the pre-existing `Nat.mod_eq_cancel` -- with a transposed negative control, and symbolically at a genuinely free (m,a,b,c) via a fresh restating theorem.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.mod_eq_cancel_right_div_gcd"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "New proof, lane modeq-div-gcd (2026-08-30): closed by commuting to `Nat.mod_eq_cancel_left_div_gcd` (`F:ml430-nat-modeq-cancel-left-div-gcd-57ef8287`, same lane), exactly Mathlib's own proof. New file `nat_prelude/modeq_cancel_div_gcd.rs`. Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: train), which carries the partition; that manifest, not this file, is the split authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
