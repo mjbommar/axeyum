@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "axiom_footprint": [],
   "id": "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",
   "title": "Mathlib v4.30 source proposition Nat.Prime.coprime_iff_not_dvd",
   "statement": "The proposition declared as `Nat.Prime.coprime_iff_not_dvd` in the pinned Mathlib v4.30 source.",
@@ -8,13 +9,34 @@
     "statement": "∀ {p n : ℕ}, Nat.Prime p → (p.Coprime n ↔ ¬p ∣ n)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-dvd-gcd-e5184fc5", "F:nat-dvd-refl", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-not-dvd-one-of-two-le"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_coprime_iff_not_dvd 2>/dev/null | grep -Ec '^Nat\\.prime_coprime_iff_not_dvd[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.prime_coprime_iff_not_dvd",
+      "kind": "kernel-term",
+      "notes": "`mp`: `gcd p n=1` and `p|n` give `p|gcd(p,n)` via `dvd_refl`+`dvd_gcd`, transported to `p|1` -- refuted by `not_dvd_one_of_two_le`. `mpr`: `g := gcd p n` divides `p` (`gcd_dvd_left`), so the divisor clause forces `g=1 or g=p`; `g=1` is the goal directly, `g=p` transports `g|n` (`gcd_dvd_right`) into `p|n`, contradicting the hypothesis.",
+      "supports": "∀ {p n : ℕ}, Nat.Prime p → (p.Coprime n ↔ ¬p ∣ n)"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.prime_coprime_iff_not_dvd",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.prime_coprime_iff_not_dvd`'s footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane prime-dvd-mirrors",
     "source": "statement-only extraction of `Nat.Prime.coprime_iff_not_dvd` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +48,6 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_prime_coprime_iff_not_dvd` (`nat_prelude/prime_dvd_mirrors.rs`). `mp`: `gcd p n=1` and `p|n` give `p|gcd(p,n)` via `dvd_refl`+`dvd_gcd`, transported to `p|1` -- refuted by `not_dvd_one_of_two_le`. `mpr`: `g := gcd p n` divides `p` (`gcd_dvd_left`), so the divisor clause forces `g=1 or g=p`; `g=1` is the goal directly, `g=p` transports `g|n` (`gcd_dvd_right`) into `p|n`, contradicting the hypothesis. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }
