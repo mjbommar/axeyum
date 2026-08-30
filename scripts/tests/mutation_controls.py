@@ -1042,6 +1042,117 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
+    "semantic-control-fixtures": (
+        "scripts/check-semantic-control-fixtures.py",
+        "scripts.tests.test_semantic_control_fixtures",
+        [
+            (
+                "zero executed cases, per fixture",
+                '    bad = [f"{r[\'id\']}: executed 0 cases" for r in results if r["executed"] == 0]',
+                "    bad = []",
+            ),
+            (
+                "zero executed cases, whole pack",
+                '    if results and sum(r["executed"] for r in results) == 0:',
+                "    if False:",
+            ),
+            (
+                "an empty pack is a failure",
+                "    if not results:",
+                "    if False:",
+            ),
+            (
+                "a known-FALSE statement must be refuted",
+                '        if r["expect"] == "false" and r["counterexamples"] == 0',
+                "        if False",
+            ),
+            (
+                "a known-VALID control must stay accepted",
+                '        if r["expect"] == "valid" and r["counterexamples"] > 0',
+                "        if False",
+            ),
+            (
+                "a VALID control must discriminate something",
+                '        if r["expect"] == "valid" and r["discriminating"] == 0',
+                "        if False",
+            ),
+            (
+                "a VALID control must kill a mutation (load-bearing)",
+                '        if r["expect"] == "valid" and r["killed"] == 0',
+                "        if False",
+            ),
+            (
+                "a VACUOUS pin must really discriminate nothing",
+                '        if r["discriminating"] != 0:',
+                "        if False:",
+            ),
+            (
+                "a VACUOUS pin must not actually be false",
+                '        if r["counterexamples"] != 0:',
+                "        if False:",
+            ),
+            (
+                "a failing numerics script is refused",
+                '        if n["exit"] != 0:',
+                "        if False:",
+            ),
+            (
+                "a numerics script with no negative control is refused",
+                '        if n["negative_controls"] == 0:',
+                "        if False:",
+            ),
+            (
+                "the negative-control detector covers both spellings",
+                'NEG_CONTROL = re.compile(r"negative control|genuinely fail", re.IGNORECASE)',
+                'NEG_CONTROL = re.compile(r"negative control", re.IGNORECASE)',
+            ),
+            (
+                "no fixture may name a held-out row",
+                "            if fid in held:",
+                "            if False:",
+            ),
+            (
+                "a fixture must name a fact that exists",
+                "            if not path.exists():",
+                "            if False:",
+            ),
+            (
+                "a fixture must name a PROVED fact",
+                '            if status != "proved":',
+                "            if False:",
+            ),
+            (
+                "a moved executed/killed count is drift",
+                "            if p.get(field) != r[field]:",
+                "            if False:",
+            ),
+            (
+                "a deleted fixture is refused",
+                "    for missing in sorted(pinned - seen):",
+                "    for missing in []:",
+            ),
+            (
+                "an unpinned fixture is refused",
+                "    for extra in sorted(seen - pinned):",
+                "    for extra in []:",
+            ),
+            (
+                "an unfalsified mutation declared also-true is classified, not failed",
+                "        elif mut.also_true:",
+                "        elif False:",
+            ),
+            (
+                "census: a numerics script with no negative control is not load-bearing",
+                '        n["script"] for n in numerics if n["exit"] == 0 and n["negative_controls"] > 0',
+                '        n["script"] for n in numerics',
+            ),
+            (
+                "census: a fixture with no killed mutation is not load-bearing",
+                '        if r["expect"] != "valid" or r["killed"] == 0:',
+                "        if False:",
+            ),
+        ],
+    ),
 }
 
 

@@ -363,6 +363,17 @@ step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 # sweep), and a classifier that has stopped discriminating -- which would
 # otherwise report a cheerful zero for a whole protection column.
 step safety-matrix python3 scripts/gen-safety-matrix.py --check
+# S3 of the same roadmap (ADR-0752): the retained semantic-control fixture
+# pack. Executes 13 fixtures of known-FALSE, known-VACUOUS and known-VALID
+# statements -- every one a real defect this repository produced, or the valid
+# control that sits one line away from it -- plus 19 statement mutations and
+# the four in-tree numerics scripts. Refuses when a false statement is not
+# refuted, a valid control finds a counterexample or discriminates nothing, a
+# vacuous pin turns out to discriminate, a valid control kills no mutation, or
+# a fixture names a nonexistent, unproved, or HELD-OUT fact. And ZERO EXECUTED
+# CASES IS ALWAYS FAILURE, per fixture and for the pack. A mutation that is
+# not falsified because it is also true is classified, never failed.
+step semantic-control-fixtures python3 scripts/check-semantic-control-fixtures.py --check
 # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so the
 # Mathlib proposition lives only in `formal.statement`. Nineteen had it
 # overwritten with our own `render_lean` output, and the mirror claim -- "we
