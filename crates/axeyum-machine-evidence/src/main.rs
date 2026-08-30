@@ -3,7 +3,8 @@
 use std::{env, path::Path};
 
 use axeyum_machine_evidence::{
-    check_word_roundtrip, check_word_roundtrip_reversed_control, semantic_package,
+    check_observation_omission_control, check_observation_separation, check_word_roundtrip,
+    check_word_roundtrip_reversed_control, observation_separation_report, semantic_package,
     word_roundtrip_report, write_json,
 };
 
@@ -40,10 +41,40 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_word_roundtrip_reversed_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: reversed byte order was accepted".into());
         }
+        [command, package, output] if command == "emit-observation-separation" => {
+            let report = observation_separation_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "observation-separation: PASS: narrow_equal={} broad_equal={} separator=r{}",
+                report.narrow_equal,
+                report.broad_equal,
+                report
+                    .separating_register
+                    .expect("declared witness separates")
+            );
+        }
+        [command, package, report] if command == "check-observation-separation" => {
+            let checked = check_observation_separation(Path::new(package), Path::new(report))?;
+            println!(
+                "observation-separation: PASS: narrow_equal={} broad_equal={} separator=r{}",
+                checked.narrow_equal,
+                checked.broad_equal,
+                checked
+                    .separating_register
+                    .expect("checked witness separates")
+            );
+        }
+        [command, package, report] if command == "control-observation-omission" => {
+            check_observation_omission_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: omitted requested register was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
-                 control-word-roundtrip-reversed PACKAGE REPORT"
+                 control-word-roundtrip-reversed PACKAGE REPORT | \
+                 emit-observation-separation PACKAGE OUTPUT | \
+                 check-observation-separation PACKAGE REPORT | \
+                 control-observation-omission PACKAGE REPORT"
                 .into());
         }
     }

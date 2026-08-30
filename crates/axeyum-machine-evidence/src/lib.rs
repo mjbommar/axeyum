@@ -6,13 +6,14 @@
 
 use std::{fs, path::Path};
 
-use axeyum_machine::a0::Word;
+use axeyum_machine::a0::{Memory, MemorySpan, Observation, State, Word};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v1";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v2";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
+const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
 
 /// Stable metadata that binds evidence to the concrete A0 semantic authority.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +32,8 @@ pub struct A0SemanticPackage {
     pub instruction_bytes: u8,
     /// Architectural byte order for data words.
     pub byte_order: String,
+    /// Implemented semantic surfaces bound by the source digest.
+    pub capabilities: Vec<String>,
 }
 
 /// Recomputed finite-domain report for A0 byte split/join.
@@ -48,6 +51,31 @@ pub struct WordRoundtripReport {
     pub passed: bool,
     /// SHA-256 of the canonical sequence of checked inputs and outputs.
     pub result_sha256: String,
+}
+
+/// Recomputed report for a narrow and broad observation of two complete states.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ObservationSeparationReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the canonical semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// SHA-256 of the two complete canonical input states.
+    pub witness_states_sha256: String,
+    /// Registers retained by the narrow observation.
+    pub narrow_registers: Vec<u8>,
+    /// Registers retained by the broad observation.
+    pub broad_registers: Vec<u8>,
+    /// Whether the two narrow observations agree.
+    pub narrow_equal: bool,
+    /// Whether the two broad observations agree.
+    pub broad_equal: bool,
+    /// First requested register that separates the broad observations.
+    pub separating_register: Option<u8>,
+    /// Separating value in the left state.
+    pub left_value: Option<u64>,
+    /// Separating value in the right state.
+    pub right_value: Option<u64>,
 }
 
 /// Why an evidence package or report was rejected.
@@ -95,12 +123,25 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "1".to_owned(),
+        version: "2".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
         instruction_bytes: 4,
         byte_order: "little-endian".to_owned(),
+        capabilities: [
+            "words",
+            "finite-memory",
+            "state",
+            "observations",
+            "decode",
+            "dynamic-effects",
+            "step",
+            "bounded-trace",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect(),
     }
 }
 
@@ -176,10 +217,64 @@ pub fn check_word_roundtrip_reversed_control(
     check_word_roundtrip_with_control(package_path, report_path, ByteOrderControl::Reversed)
 }
 
+/// Produces the canonical narrow-versus-broad observation report.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn observation_separation_report(
+    package_path: &Path,
+) -> Result<ObservationSeparationReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_observation_separation(
+        sha256_hex(&package_bytes),
+        ObservationControl::Declared,
+    ))
+}
+
+/// Recomputes and checks the observation-separation report.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_observation_separation(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<ObservationSeparationReport, EvidenceError> {
+    check_observation_separation_with_control(
+        package_path,
+        report_path,
+        ObservationControl::Declared,
+    )
+}
+
+/// Omits the requested separating register and requires report rejection.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing control fires.
+pub fn check_observation_omission_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<ObservationSeparationReport, EvidenceError> {
+    check_observation_separation_with_control(
+        package_path,
+        report_path,
+        ObservationControl::OmitSeparatingRegister,
+    )
+}
+
 #[derive(Clone, Copy)]
 enum ByteOrderControl {
     Declared,
     Reversed,
+}
+
+#[derive(Clone, Copy)]
+enum ObservationControl {
+    Declared,
+    OmitSeparatingRegister,
 }
 
 fn check_word_roundtrip_with_control(
@@ -234,6 +329,115 @@ fn compute_word_roundtrip(
         passed,
         result_sha256: hex_digest(result.finalize()),
     }
+}
+
+fn check_observation_separation_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: ObservationControl,
+) -> Result<ObservationSeparationReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: ObservationSeparationReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_observation_separation(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed observation report does not equal recomputation (claimed broad_equal={}, recomputed broad_equal={})",
+            claimed.broad_equal, recomputed.broad_equal
+        )));
+    }
+    Ok(claimed)
+}
+
+fn compute_observation_separation(
+    semantic_package_sha256: String,
+    control: ObservationControl,
+) -> ObservationSeparationReport {
+    let mut left = State::new(8, Memory::from_bytes(vec![0xaa, 0xbb, 0xcc, 0xdd]), word(0))
+        .expect("fixed observation state is valid");
+    left.registers[0] = word(7);
+    left.registers[3] = word(19);
+    let mut right = left.clone();
+    right.registers[3] = word(20);
+
+    let narrow_registers = vec![0];
+    let broad_registers = if matches!(control, ObservationControl::Declared) {
+        vec![0, 3]
+    } else {
+        vec![0]
+    };
+    let narrow = Observation::new(narrow_registers.clone(), vec![])
+        .expect("fixed narrow observation is valid")
+        .with_outcome();
+    let broad = Observation::new(
+        broad_registers.clone(),
+        vec![MemorySpan { start: 1, len: 2 }],
+    )
+    .expect("fixed broad observation is valid")
+    .with_program_counter()
+    .with_conditions()
+    .with_outcome();
+    let left_narrow = narrow
+        .apply(&left)
+        .expect("fixed narrow observation applies");
+    let right_narrow = narrow
+        .apply(&right)
+        .expect("fixed narrow observation applies");
+    let left_broad = broad.apply(&left).expect("fixed broad observation applies");
+    let right_broad = broad
+        .apply(&right)
+        .expect("fixed broad observation applies");
+    let separating_register = broad_registers
+        .iter()
+        .copied()
+        .find(|index| left.registers[usize::from(*index)] != right.registers[usize::from(*index)]);
+    let left_value = separating_register.map(|index| left.registers[usize::from(index)].unsigned());
+    let right_value =
+        separating_register.map(|index| right.registers[usize::from(index)].unsigned());
+
+    ObservationSeparationReport {
+        schema: OBSERVATION_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        witness_states_sha256: observation_witness_digest(&left, &right),
+        narrow_registers,
+        broad_registers,
+        narrow_equal: left_narrow == right_narrow,
+        broad_equal: left_broad == right_broad,
+        separating_register,
+        left_value,
+        right_value,
+    }
+}
+
+fn observation_witness_digest(left: &State, right: &State) -> String {
+    let mut digest = Sha256::new();
+    for state in [left, right] {
+        digest.update([state.width()]);
+        for register in state.registers {
+            digest.update(register.unsigned().to_le_bytes());
+        }
+        digest.update(
+            u64::try_from(state.memory.len())
+                .expect("memory length fits u64")
+                .to_le_bytes(),
+        );
+        for address in 0..state.memory.len() {
+            digest.update([state.memory.byte(address).expect("address is in range")]);
+        }
+        digest.update(state.pc.unsigned().to_le_bytes());
+        digest.update([
+            u8::from(state.conditions.zero),
+            u8::from(state.conditions.negative),
+            u8::from(state.conditions.carry),
+            u8::from(state.conditions.overflow),
+        ]);
+        digest.update([0]);
+    }
+    hex_digest(digest.finalize())
+}
+
+fn word(value: u64) -> Word {
+    Word::new(8, value).expect("fixed evidence word width is valid")
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {

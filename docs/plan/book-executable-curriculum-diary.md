@@ -143,3 +143,25 @@ Focused evidence is now 19 passing A0 integration tests under both `cargo test`
 and strict all-target Clippy. The new tests cover narrow versus broad
 observations, purity, canonical ordering, malformed selectors, every
 instruction footprint, operand aliasing, and the halt-PC regression.
+
+## 2026-08-30 — source-bound observation separation route
+
+Promoted the semantic package to schema/version 2 after observations and
+dynamic effects became part of the bound source. Its metadata now declares the
+implemented surfaces rather than making consumers infer them from a file hash.
+
+Added a replayable observation report over two complete states. Both retain
+`r0=7`, but `r3` is 19 on the left and 20 on the right. The narrow observation
+of r0 and outcome agrees. The broad observation includes r0, r3, a memory span,
+PC, conditions, and outcome; it separates the states at r3. The report binds a
+canonical digest of both full input states and the exact semantic package.
+
+The negative control removes requested r3 from the broad observation. Its
+recomputation changes `broad_equal=false` to `broad_equal=true`, so the checker
+exits nonzero with `semantic-mismatch`. The CLI producer, positive checker, and
+control all ran directly, and the evidence crate now has three passing route
+tests under strict all-target Clippy.
+
+This route earns only the `trace` class for the printed pair of states. It does
+not prove that one observation factors through another for every state, nor
+does it yet serialize arbitrary states for a public Python API.
