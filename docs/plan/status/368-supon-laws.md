@@ -67,9 +67,16 @@ point of the interval, and so must we before the statements are comparable.
 
 | | before | after |
 | --- | --- | --- |
-| `creal_prelude_builds` | 109.88 s | 127.45 s |
-| `cargo test -p axeyum-lean-kernel --lib creal::` | 199 passed / 399.23 s | see the final run below |
+| `creal_prelude_builds` | 109.88 s | 110.80 s |
+| `cargo test -p axeyum-lean-kernel --lib creal::` | 199 passed / 399.23 s | 200 passed / 425.32 s |
 | `shape_search --const CReal.supOn --kind theorem` | — | 6 (control: `CReal.integral` 18) |
+
+**The canary did not move**: eight declarations cost about a second, inside
+the noise. Intermediate readings of 118-127 s were taken under lane
+contention and are not the cost of this work -- the harness's own
+`finished in` is CPU-contended even though `cargo-serialized.sh` serializes
+the cargo jobs themselves. Read the number on a quiet box before attributing
+a regression to a declaration.
 
 Five of those six theorem types are new in this lane; `supSeq_converges_supOn`
 predates it. ADR-0691's "zero against 45" was a different instrument and the
