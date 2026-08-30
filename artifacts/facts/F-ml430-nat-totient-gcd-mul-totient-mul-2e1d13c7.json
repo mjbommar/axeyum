@@ -6,25 +6,88 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (a b : ℕ), (a.gcd b).totient * (a * b).totient = a.totient * b.totient * a.gcd b",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.totient_gcd_mul_totient_mul",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-totient-mul-of-coprime",
+    "F:nat-totient-mul-of-dvd"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.totient_gcd_mul_totient_mul",
+      "kind": "kernel-term",
+      "supports": "totient(gcd a b) * totient(a*b) = totient(a) * totient(b) * gcd(a,b), with the whole rendered type pinned.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_gcd_mul_totient_mul 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.totient_gcd_mul_totient_mul 2 ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.totient (AxNat.gcd x0 x1)) (AxNat.totient (AxNat.mul x0 x1))) (AxNat.mul (AxNat.mul (AxNat.totient x0) (AxNat.totient x1)) (AxNat.gcd x0 x1))))')\" -ge 1",
+      "notes": "The grep pins the WHOLE rendered type, not just the name. Verified both directions with /usr/bin/grep -Fc explicitly (not the interactive-shell ugrep): the real name gives count 1, and `totient_gcd_mul_totient_mul_nonexistent_xyz` makes `nat_theorem_inventory` exit 1 with `error: no Nat theorem matches ...` (an absent theorem is a failed check, not an empty report), so `test ... -ge 1` fails as required either way. `nat_theorem_inventory` keeps only the LAST of several name arguments if more than one is passed (measured 2026-08-30), so exactly one name is passed here.",
+      "kernel_declaration": "Nat.totient_gcd_mul_totient_mul"
+    },
+    {
+      "id": "engine-Nat.totient_gcd_mul_aux",
+      "kind": "kernel-term",
+      "supports": "The measure-generalized family this theorem is a one-line application of: forall d a b, gcd a b = d -> totient d * totient(a*b) = totient a * totient b * d, by strong (well-founded) induction on the gcd value d.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- totient_gcd_mul_aux 2>/dev/null | tr '\\t' ' ' | grep -Fc 'Nat.totient_gcd_mul_aux 4 ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.gcd x1 x2) x0) -> Eq.{1} AxNat (AxNat.mul (AxNat.totient x0) (AxNat.totient (AxNat.mul x1 x2))) (AxNat.mul (AxNat.mul (AxNat.totient x1) (AxNat.totient x2)) x0)))))')\" -ge 1",
+      "notes": "Peels one prime q | gcd(a,b) at a time via Nat.exists_prime_dvd, writing a = q*a1, b = q*b1 (Nat.dvd elimination); Nat.gcd_mul_right gives gcd(a,b) = q*gcd(a1,b1), a strictly smaller measure. The prime's status against a1 and b1 is decided INDEPENDENTLY by Nat.coprime_or_dvd_of_prime (not against gcd(a1,b1) or a1*b1 directly), so Nat.euclid_lemma is never consulted on this route -- narrower than ADR-0668's own sketch, which reduces to an eps-identity where Euclid's lemma is load-bearing. Each of the four resulting leaves (dvd/dvd, dvd/coprime, coprime/dvd, coprime/coprime) reduces via Nat.totient_mul_of_dvd / Nat.totient_mul_of_coprime, and the whole identity collapses to a fixed six-factor commutative-monoid rearrangement checked once in a shared helper.",
+      "kernel_declaration": "Nat.totient_gcd_mul_aux"
+    },
+    {
+      "id": "instances-Nat.totient_gcd_mul_totient_mul",
+      "kind": "exhaustive-enumeration",
+      "supports": "The identity holds over 0<=a,b<26 (check 8), collapses to the already-landed totient_mul_of_coprime at coprime pairs (check 8A), and is STRICTLY STRONGER than plain multiplicativity at 53 non-coprime pairs with 1<=a,b<=12 (check 8N).",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/tests/check-totient-prime-power-numerics.py",
+      "notes": "Checks 8, 8A, 8N, 8E, 8EN, 8G, 8R in the pre-existing suite (re-run, not inherited) cover this target's ADR-0668 sketch route (an eps-identity where Euclid IS load-bearing, check 8EN). The kernel proof landed on a NARROWER route that decides a1/b1 independently and never needs Euclid's lemma; both are correct, and the numeric checks bound the statement itself rather than either specific route.",
+      "checkers": [
+        "scripts/tests/check-totient-prime-power-numerics.py",
+        "cargo test -p axeyum-lean-kernel --lib nat_prelude::totient_gcd_mul_totient_mul_applies_at_free_variables_and_a_non_coprime_instance"
+      ]
+    },
+    {
+      "id": "footprint-nat-prelude",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`--require-axiom-free` exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is non-empty. Measured 2026-08-30: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, exit 0."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:eulers-totient-function",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:divisibility",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.totient_gcd_mul_totient_mul` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel nat_prelude::totient_gcd_mul (totient-gcd-mul lane)",
+    "source": "statement was extracted from Mathlib v4.30.0 (statement-only, no proof value exposed); the proof here is constructed independently in this kernel via a strong induction on gcd(a,b) that peels one prime at a time, per ADR-0668 -- it does NOT reconstruct Mathlib's Euler-product proof, which this kernel cannot state (no List/Finset/product type for unique factorisation).",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
         "what": "the theorem declaration `Nat.totient_gcd_mul_totient_mul`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
         "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted, and the proof actually built here uses a different route (a prime-peeling strong induction on the gcd value, not the Euler product)."
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed per ADR-0668 (docs/research/09-decisions/adr-0668-the-totient-mirrors-do-not-need-multiset-uniqueness.md), the last of the three totient mirrors that ADR names. Strong (well-founded) induction on d := gcd(a,b), generalized as Nat.totient_gcd_mul_aux : forall d a b, gcd a b = d -> ...: d=0 closes unconditionally (both sides reduce to 0 via Nat.zero_mul / mul-by-zero iota); d=1 is exactly gcd(a,b)=1, closing via Nat.totient_mul_of_coprime plus mul_one/one_mul (totient one reduces to one by pure computation); d>=2 peels a prime q | d via Nat.exists_prime_dvd, writes a=q*a1, b=q*b1, and applies the induction hypothesis at the strictly smaller measure gcd(a1,b1) -- found and fixed while building: the hypothesis is stated in terms of the WellFounded.fix's own bound variable, not the locally-bound successor value, so an extra transport step was needed before applying it (the kernel caught the omission as a TypeMismatch). The four-leaf case split on the prime's status against a1 and b1 (decided independently via Nat.coprime_or_dvd_of_prime, never against gcd(a1,b1) or a1*b1 directly) means Nat.euclid_lemma is NOT needed on this route, narrower than ADR-0668's own sketch. Re-checked partition before touching: `development` (nursery-v2-extension.json), not held-out."
 }
