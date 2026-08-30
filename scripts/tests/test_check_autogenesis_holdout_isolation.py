@@ -151,7 +151,15 @@ class HoldoutIsolationTests(unittest.TestCase):
         # four amendments are, which is what ADR-0542 requires instead of a
         # deletion. So a FALL here is not automatically a repair and a RISE is
         # not automatically a breach -- read the ledger before moving this.
-        self.assertIn("held_out=116", out)
+        #
+        # 116 -> 136 on 2026-08-30 (draw 7, ADR-0654): two NEW held-out
+        # families, `fermat-numbers` and `natural-nth-selector`, 10 rows each.
+        # A RISE from a draw is the ordinary case -- the composition is
+        # 16 in v1 + 120 in the v2 extension, and the extension's own
+        # generator line reports `held-out=120` independently. No v1 row moved:
+        # `nursery-v1.json` is byte-identical to the pre-draw tree, checked
+        # with `git hash-object`, and `settled=0 references=0` still hold.
+        self.assertIn("held_out=136", out)
 
     # --- guard 1: a held-out fact must not be settled ---------------------
     def test_a_settled_held_out_fact_is_a_violation(self) -> None:
