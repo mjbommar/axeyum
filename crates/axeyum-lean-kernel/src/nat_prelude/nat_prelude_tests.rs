@@ -700,6 +700,15 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_of_dvd_left,
         p.coprime_of_dvd_right,
         p.coprime_of_dvd,
+        p.coprime_dvd_left,
+        p.coprime_dvd_right,
+        p.coprime_mul_left,
+        p.coprime_mul_right,
+        p.coprime_mul_left_right,
+        p.coprime_mul_right_right,
+        p.dvd_of_dvd_mul_left,
+        p.dvd_of_dvd_mul_right,
+        p.coprime_div_right,
         p.coprime_of_forall_prime_dvd,
         p.dvd_of_forall_prime_mul_dvd,
         p.coprime_iff_is_rel_prime,
@@ -7262,7 +7271,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 538,
+        93 + 547,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -7476,6 +7485,95 @@ fn coprime_of_bezout_one_composes_with_the_executable_gcd() {
     assert!(
         k.infer(misapplied).is_err(),
         "a Bezout certificate for gcd 2 4 = 2 was accepted where 1 was required"
+    );
+}
+
+/// `Nat.coprime_div_right` at two concrete instances exercising BOTH branches
+/// of its case split on `a`: `a = 0` (forces `n = 0`, and `div _ 0 = 0`
+/// collapses `n` and `n/a` to the same value) and `a = succ a'` (the witness
+/// `q` from `dvd a n` recovers `div n a = q`).
+///
+/// Zero branch: `m = 1, n = 0, a = 0` — `dvd 0 0` (witness `0`), `Coprime 1 0`
+/// (`gcd 1 0` reduces to `1`), concluding `Coprime 1 (0/0)`.
+///
+/// Succ branch: `m = 3, n = 10, a = 2` — `dvd 2 10` (witness `5`),
+/// `Coprime 3 10` (`gcd 3 10` reduces to `1`), concluding `Coprime 3 (10/2)`,
+/// and the conclusion's SECOND argument is checked to be `div 10 2` (which
+/// reduces to `5`) rather than the original `10` — a wrong theorem that left
+/// `n` unchanged would still type-check against its own (differently shaped)
+/// conclusion, so this pins the actual residue.
+#[test]
+fn coprime_div_right_applies_at_both_branches_of_its_case_split() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+    let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+
+    // -- zero branch: m=1, n=0, a=0 --
+    let one = f.num(1);
+    let zero = f.num(0);
+
+    let gcd_1_0 = f.gcd(one, zero);
+    assert!(f.k.def_eq(gcd_1_0, one), "gcd 1 0 must reduce to 1");
+    let coprime_1_0 = f.refl(one);
+
+    let dvd_predicate_0 = f.dvd_predicate(zero, zero);
+    let mul_0_0 = f.mul(zero, zero);
+    assert!(f.k.def_eq(zero, mul_0_0), "0 must reduce to mul 0 0");
+    let eq_proof_0 = f.refl(zero);
+    let dvd_0_0 = f.apply(intro, &[nat, dvd_predicate_0, zero, eq_proof_0]);
+
+    let applied_zero = f.const_app(p.coprime_div_right, &[one, zero, zero]);
+    let applied_zero_full = f.apply(applied_zero, &[coprime_1_0, dvd_0_0]);
+    let inferred_zero =
+        f.k.infer(applied_zero_full)
+            .expect("coprime_div_right 1 0 0 (Coprime 1 0) (dvd 0 0) must type-check");
+    let rendered_zero = f.k.render_lean(inferred_zero);
+    assert!(
+        rendered_zero.contains("gcd"),
+        "unexpected conclusion type: {rendered_zero}"
+    );
+
+    // -- succ branch: m=3, n=10, a=2 --
+    let three = f.num(3);
+    let ten = f.num(10);
+    let two = f.num(2);
+    let five = f.num(5);
+
+    let gcd_3_10 = f.gcd(three, ten);
+    assert!(f.k.def_eq(gcd_3_10, one), "gcd 3 10 must reduce to 1");
+    let coprime_3_10 = f.refl(one);
+
+    let dvd_predicate_2 = f.dvd_predicate(two, ten);
+    let mul_2_5 = f.mul(two, five);
+    assert!(f.k.def_eq(ten, mul_2_5), "10 must reduce to mul 2 5");
+    let eq_proof_2 = f.refl(ten);
+    let dvd_2_10 = f.apply(intro, &[nat, dvd_predicate_2, five, eq_proof_2]);
+
+    let applied_succ = f.const_app(p.coprime_div_right, &[three, ten, two]);
+    let applied_succ_full = f.apply(applied_succ, &[coprime_3_10, dvd_2_10]);
+    let inferred_succ =
+        f.k.infer(applied_succ_full)
+            .expect("coprime_div_right 3 10 2 (Coprime 3 10) (dvd 2 10) must type-check");
+    let rendered_succ = f.k.render_lean(inferred_succ);
+    assert!(
+        rendered_succ.contains("gcd"),
+        "unexpected conclusion type: {rendered_succ}"
+    );
+
+    let div_10_2 = f.div(ten, two);
+    assert!(f.k.def_eq(div_10_2, five), "div 10 2 must reduce to 5");
+    let expected_concl = f.gcd(three, div_10_2);
+    let expected_ty = f.eq(expected_concl, one);
+    assert!(
+        f.k.def_eq(inferred_succ, expected_ty),
+        "coprime_div_right's conclusion must be Coprime 3 (div 10 2), got: {rendered_succ}"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.coprime_div_right).is_empty(),
+        "coprime_div_right rests on a trusted declaration"
     );
 }
 

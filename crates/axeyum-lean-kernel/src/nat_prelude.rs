@@ -145,6 +145,7 @@ mod cardinality;
 mod catalan;
 mod choose;
 mod clog;
+mod coprime_lemmas;
 mod crt;
 mod defs;
 mod desc_factorial;
@@ -227,6 +228,7 @@ use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use clog::declare_clog_all;
+use coprime_lemmas::declare_coprime_lemmas;
 use crt::declare_crt;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
@@ -1234,6 +1236,62 @@ pub struct NatPrelude {
     /// `coprime_of_dvd_right` (shrink `b2` to `b1`) then `coprime_of_dvd_left`
     /// (shrink `a2` to `a1`).
     pub coprime_of_dvd: NameId,
+    /// `Nat.Coprime.coprime_dvd_left : ∀ m k n, dvd m k → Coprime k n →
+    /// Coprime m n` — [`coprime_of_dvd_left`](Self::coprime_of_dvd_left)
+    /// under the Mathlib v4.30 name (`Init.Data.Nat.Coprime`), same
+    /// statement verbatim once `Coprime` unfolds to `gcd _ _ = one`. Closes
+    /// ledger fact `F:ml430-nat-coprime-coprime-dvd-left-2ce391d2`.
+    pub coprime_dvd_left: NameId,
+    /// `Nat.Coprime.coprime_dvd_right : ∀ n m k, dvd n m → Coprime k m →
+    /// Coprime k n` — [`coprime_of_dvd_right`](Self::coprime_of_dvd_right)
+    /// under the Mathlib v4.30 name, same statement verbatim. Closes ledger
+    /// fact `F:ml430-nat-coprime-coprime-dvd-right-4a2670ae`.
+    pub coprime_dvd_right: NameId,
+    /// `Nat.Coprime.coprime_mul_left : ∀ k m n, Coprime (mul k m) n →
+    /// Coprime m n`. `m ∣ (k*m)` (`dvd_mul` transported along `mul_comm`)
+    /// feeds [`coprime_of_dvd_left`](Self::coprime_of_dvd_left). Closes
+    /// ledger fact `F:ml430-nat-coprime-coprime-mul-left-fb5bd11a`.
+    pub coprime_mul_left: NameId,
+    /// `Nat.Coprime.coprime_mul_right : ∀ m k n, Coprime (mul m k) n →
+    /// Coprime m n`. `m ∣ (m*k)` is `dvd_mul` directly, no `mul_comm` needed,
+    /// feeding [`coprime_of_dvd_left`](Self::coprime_of_dvd_left). Closes
+    /// ledger fact `F:ml430-nat-coprime-coprime-mul-right-70e4e946`.
+    pub coprime_mul_right: NameId,
+    /// `Nat.Coprime.coprime_mul_left_right : ∀ m k n, Coprime m (mul k n) →
+    /// Coprime m n`. `n ∣ (k*n)` (`dvd_mul` transported along `mul_comm`)
+    /// feeds [`coprime_of_dvd_right`](Self::coprime_of_dvd_right). Closes
+    /// ledger fact `F:ml430-nat-coprime-coprime-mul-left-right-910d7d8f`.
+    pub coprime_mul_left_right: NameId,
+    /// `Nat.Coprime.coprime_mul_right_right : ∀ m n k, Coprime m (mul n k) →
+    /// Coprime m n`. `n ∣ (n*k)` is `dvd_mul` directly, feeding
+    /// [`coprime_of_dvd_right`](Self::coprime_of_dvd_right). Closes ledger
+    /// fact `F:ml430-nat-coprime-coprime-mul-right-right-9599ecd3`.
+    pub coprime_mul_right_right: NameId,
+    /// `Nat.Coprime.dvd_of_dvd_mul_left : ∀ k m n, Coprime k m →
+    /// dvd k (mul m n) → dvd k n` — [`gauss_lemma`](Self::gauss_lemma)
+    /// verbatim, argument names aside. Closes ledger fact
+    /// `F:ml430-nat-coprime-dvd-of-dvd-mul-left-b0608cb9`.
+    pub dvd_of_dvd_mul_left: NameId,
+    /// `Nat.Coprime.dvd_of_dvd_mul_right : ∀ k n m, Coprime k n →
+    /// dvd k (mul m n) → dvd k m` — [`gauss_lemma`](Self::gauss_lemma) at
+    /// `(k, n, m)`, with the hypothesis `dvd k (mul m n)` transported along
+    /// `mul_comm m n` to the `dvd k (mul n m)` shape `gauss_lemma` expects.
+    /// Closes ledger fact `F:ml430-nat-coprime-dvd-of-dvd-mul-right-efc3a4ec`.
+    pub dvd_of_dvd_mul_right: NameId,
+    /// `Nat.Coprime.coprime_div_right : ∀ m n a, Coprime m n → dvd a n →
+    /// Coprime m (div n a)`. Cases on `a`: at `a = 0`, `dvd 0 n` forces
+    /// `n = 0` (`zero_mul`), and `div _ 0 = 0` (`div_zero`) collapses both
+    /// `n` and `div n a` to the same value transported from the hypothesis.
+    /// At `a = succ a'`, the witness `q` from `dvd a n` (`n = a*q`) gives
+    /// `div n a = q` (`div_mul_cancel_of_dvd` at the positive `a`, the same
+    /// "exact factor divided back out" route `lcm_gcd_lemmas.rs`'s private
+    /// `div_eq_of_mul_eq` uses), and `Coprime m n` transported along
+    /// `n = a*q` is `Coprime m (a*q)`, which
+    /// [`coprime_of_dvd_right`](Self::coprime_of_dvd_right) shrinks to
+    /// `Coprime m q` via `q ∣ (a*q)` (`dvd_mul` transported along
+    /// `mul_comm`). Closes ledger fact
+    /// `F:ml430-nat-coprime-coprime-div-right-7a8ce438`.
+    pub coprime_div_right: NameId,
     /// `Nat.coprime_of_dvd' : ∀ m n, (∀ k, prime_condition k → dvd k m →
     /// dvd k n → dvd k one) → gcd m n = one`. Closes ledger fact
     /// `F:ml430-nat-coprime-of-dvd`.
@@ -3736,6 +3794,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_dvd_iff_not_coprime: kernel.name_str(nat, "prime_dvd_iff_not_coprime"),
             coprime_add_self_right: kernel.name_str(nat, "coprime_add_self_right"),
             coprime_of_dvd: kernel.name_str(nat, "coprime_of_dvd"),
+            coprime_dvd_left: kernel.name_str(nat, "coprime_dvd_left"),
+            coprime_dvd_right: kernel.name_str(nat, "coprime_dvd_right"),
+            coprime_mul_left: kernel.name_str(nat, "coprime_mul_left"),
+            coprime_mul_right: kernel.name_str(nat, "coprime_mul_right"),
+            coprime_mul_left_right: kernel.name_str(nat, "coprime_mul_left_right"),
+            coprime_mul_right_right: kernel.name_str(nat, "coprime_mul_right_right"),
+            dvd_of_dvd_mul_left: kernel.name_str(nat, "dvd_of_dvd_mul_left"),
+            dvd_of_dvd_mul_right: kernel.name_str(nat, "dvd_of_dvd_mul_right"),
+            coprime_div_right: kernel.name_str(nat, "coprime_div_right"),
             coprime_of_forall_prime_dvd: kernel.name_str(nat, "coprime_of_forall_prime_dvd"),
             dvd_of_forall_prime_mul_dvd: kernel.name_str(nat, "dvd_of_forall_prime_mul_dvd"),
             is_rel_prime: kernel.name_str(nat, "IsRelPrime"),
@@ -4169,6 +4236,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_coprime_of_lt_prime(&mut d, &p)?;
         declare_coprime_of_dvd(&mut d, &p)?;
         declare_coprime_of_dvd_both(&mut d, &p)?;
+        // Needs `coprime_of_dvd_left`/`coprime_of_dvd_right` (just declared
+        // above), `gauss_lemma` (`declare_gauss_lemma`, far above), and the
+        // basic arithmetic/divisibility lemmas (`dvd_mul`, `mul_comm`,
+        // `zero_mul`, `div_zero`, `div_mul_cancel_of_dvd`,
+        // `mul_left_cancel_of_pos`, `mul_assoc`, `zero_lt_succ`), all
+        // declared well before this point.
+        declare_coprime_lemmas(&mut d, &p)?;
         declare_prime_dvd_iff_not_coprime(&mut d, &p)?;
         declare_coprime_add_self_right(&mut d, &p)?;
         declare_coprime_self_add_right(&mut d, &p)?;
