@@ -5,7 +5,7 @@
   "statement": "The proposition declared as `Nat.choose_mono` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "∀ (b : ℕ), Monotone (fun a : ℕ => a.choose b)",
+    "statement": "∀ (b : ℕ), Monotone fun a => a.choose b",
     "fragment": "Nat"
   },
   "epistemic_status": "proved",

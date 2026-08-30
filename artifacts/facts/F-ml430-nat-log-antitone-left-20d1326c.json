@@ -5,7 +5,7 @@
   "statement": "The proposition declared as `Nat.log_antitone_left` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "∀ {n : ℕ}, AntitoneOn (fun b : ℕ => Nat.log b n) (Set.Ioi 1)",
+    "statement": "∀ {n : ℕ}, AntitoneOn (fun b => Nat.log b n) (Set.Ioi 1)",
     "fragment": "Nat"
   },
   "epistemic_status": "open",

@@ -4,14 +4,11 @@
   "title": "Mathlib v4.30 source proposition Int.fib_of_odd",
   "statement": "The proposition declared as `Int.fib_of_odd` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Int.fib_of_odd : ((x0 : Int) -> ((x1 : Int.Odd x0) -> Eq.{1} Int (Int.fib x0) (Int.ofNat (AxNat.fib (Int.natAbs x0)))))",
+    "language": "lean4-surface",
+    "statement": "∀ {n : ℤ}, Odd n → Int.fib n = ↑(Nat.fib n.natAbs)",
     "fragment": "Int",
-    "free_symbols": [
-      "x0",
-      "x1"
-    ],
-    "kernel_theorem": "Int.fib_of_odd"
+    "kernel_theorem": "Int.fib_of_odd",
+    "kernel_statement": "theorem Int.fib_of_odd : ((x0 : Int) -> ((x1 : Int.Odd x0) -> Eq.{1} Int (Int.fib x0) (Int.ofNat (AxNat.fib (Int.natAbs x0)))))"
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",

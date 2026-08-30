@@ -4,15 +4,11 @@
   "title": "Mathlib v4.30 source proposition Nat.dvd_two_of_totient_le_one",
   "statement": "The proposition declared as `Nat.dvd_two_of_totient_le_one` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.dvd_two_of_totient_le_one : ((x0 : AxNat) -> ((x1 : AxNat.lt AxNat.zero x0) -> ((x2 : AxNat.le (AxNat.totient x0) (AxNat.succ AxNat.zero)) -> AxNat.dvd x0 (AxNat.succ (AxNat.succ AxNat.zero)))))",
+    "language": "lean4-surface",
+    "statement": "∀ {a : ℕ}, 0 < a → a.totient ≤ 1 → a ∣ 2",
     "fragment": "Nat",
-    "free_symbols": [
-      "x0",
-      "x1",
-      "x2"
-    ],
-    "kernel_theorem": "Nat.dvd_two_of_totient_le_one"
+    "kernel_theorem": "Nat.dvd_two_of_totient_le_one",
+    "kernel_statement": "theorem Nat.dvd_two_of_totient_le_one : ((x0 : AxNat) -> ((x1 : AxNat.lt AxNat.zero x0) -> ((x2 : AxNat.le (AxNat.totient x0) (AxNat.succ AxNat.zero)) -> AxNat.dvd x0 (AxNat.succ (AxNat.succ AxNat.zero)))))"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
@@ -71,5 +67,5 @@
       }
     ]
   },
-  "notes": "Honest flip, confirmed against the pinned Mathlib v4.30 source per `F:ml430-nat-totient-eq-zero-3be161d6`'s own mirror-flip check (same `Nat.totient` construction, `nat_prelude/totient.rs`). `formal.statement` is the actual kernel-core `render_lean` output for `Nat.dvd_two_of_totient_le_one`, not the Mathlib surface form named in `title`. `depends_on` restricts to entries that already carry a fact ledger entry; the route also composes `Nat.coprime_succ_self`, `Nat.coprime_one_left_iff`, and the counting lemmas `Nat.countRange_succ_of_true`/`countRange_le_of_le`/`countRange_ge_two_of_two_witnesses` landed by the prior `totient-counting` lane, none of which carry a fact entry of their own -- unregistered nat-prelude theorems, not axioms, per the empty-footprint evidence above. This fact's partition in `artifacts/autogenesis/nursery-v2-extension.json` is `development`, not held-out."
+  "notes": "Honest flip, confirmed against the pinned Mathlib v4.30 source per `F:ml430-nat-totient-eq-zero-3be161d6`'s own mirror-flip check (same `Nat.totient` construction, `nat_prelude/totient.rs`). `formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output for `Nat.dvd_two_of_totient_le_one`, which spells the same proposition in the prelude's own vocabulary. `depends_on` restricts to entries that already carry a fact ledger entry; the route also composes `Nat.coprime_succ_self`, `Nat.coprime_one_left_iff`, and the counting lemmas `Nat.countRange_succ_of_true`/`countRange_le_of_le`/`countRange_ge_two_of_two_witnesses` landed by the prior `totient-counting` lane, none of which carry a fact entry of their own -- unregistered nat-prelude theorems, not axioms, per the empty-footprint evidence above. This fact's partition in `artifacts/autogenesis/nursery-v2-extension.json` is `development`, not held-out."
 }

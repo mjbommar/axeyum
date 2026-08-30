@@ -4,15 +4,11 @@
   "title": "Mathlib v4.30 source proposition Nat.dvd_lcm_of_dvd_right",
   "statement": "The proposition declared as `Nat.dvd_lcm_of_dvd_right` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.dvd_lcm_of_dvd_right : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.dvd x0 (AxNat.lcm x2 x1)))))",
+    "language": "lean4-surface",
+    "statement": "∀ {a b : ℕ}, a ∣ b → ∀ (c : ℕ), a ∣ c.lcm b",
     "fragment": "Nat",
-    "free_symbols": [
-      "x0",
-      "x1",
-      "x2"
-    ],
-    "kernel_theorem": "Nat.dvd_lcm_of_dvd_right"
+    "kernel_theorem": "Nat.dvd_lcm_of_dvd_right",
+    "kernel_statement": "theorem Nat.dvd_lcm_of_dvd_right : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.dvd x0 (AxNat.lcm x2 x1)))))"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
@@ -57,7 +53,7 @@
       }
     ]
   },
-  "notes": "`Nat.Coprime` has no separate name in this kernel's Nat prelude (matching `Nat.coprime_of_lt_prime`'s established convention); it is spelled inline as `gcd _ _ = 1`, so `formal.statement` is the actual kernel-core `render_lean` output for `Nat.dvd_lcm_of_dvd_right`, not the Mathlib surface form named in `title`. `depends_on` restricts to entries that already carry a fact ledger entry.",
+  "notes": "`Nat.Coprime` has no separate name in this kernel's Nat prelude (matching `Nat.coprime_of_lt_prime`'s established convention); it is spelled inline as `gcd _ _ = 1`, so `formal.statement` is the pinned Mathlib v4.30 proposition this fact mirrors; `formal.kernel_statement` is the actual kernel-core `render_lean` output for `Nat.dvd_lcm_of_dvd_right`, which spells the same proposition in the prelude's own vocabulary. `depends_on` restricts to entries that already carry a fact ledger entry.",
   "proof_route": "kernel-lean",
   "axiom_footprint": []
 }

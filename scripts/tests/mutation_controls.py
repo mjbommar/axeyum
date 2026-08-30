@@ -950,6 +950,57 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
+    "mirror-statement-fidelity": (
+        "scripts/check-mirror-statement-fidelity.py",
+        "scripts.tests.test_mirror_statement_fidelity",
+        [
+            (
+                "G1 a kernel declaration keyword is not a proposition",
+                "        if stmt.startswith(KERNEL_PREFIXES):",
+                "        if False:",
+            ),
+            (
+                "G2 a lean_pp carrier root cannot appear in Mathlib surface syntax",
+                "        hit = KERNEL_CARRIER_RE.search(stmt)",
+                "        hit = None",
+            ),
+            (
+                "G3 an explicit universe annotation is render_lean's, not Mathlib's",
+                "        hit = UNIVERSE_RE.search(stmt)",
+                "        hit = None",
+            ),
+            (
+                "G4 render_lean's generated binder names",
+                "        hit = KERNEL_BINDER_RE.search(stmt)",
+                "        hit = None",
+            ),
+            (
+                "G5 a mirror declares surface syntax, never kernel core",
+                '        if formal.get("language") != MIRROR_LANGUAGE:',
+                "        if False:",
+            ),
+            (
+                "G6 exact fidelity to the preregistered statement hash",
+                "            if _sha(stmt) not in claimed:",
+                "            if False:",
+            ),
+            (
+                "G7 kernel_statement is meaningless without kernel_theorem",
+                '        if "kernel_statement" in formal and not isinstance(formal.get("kernel_theorem"), str):',
+                "        if False:  # mutated",
+            ),
+            (
+                "G8 non-vacuity of the scope selector",
+                '    if stats["mirrors"] == 0:',
+                "    if False:",
+            ),
+            (
+                "G9 non-vacuity of the hash check specifically",
+                '    if stats["mirrors"] > 0 and stats["pinned"] == 0:',
+                "    if False:",
+            ),
+        ],
+    ),
 }
 
 
