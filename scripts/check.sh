@@ -97,6 +97,13 @@ step theorem-inventory-completeness-tests python3 -m unittest scripts.tests.test
 step absence-claims-tests python3 -m unittest scripts.tests.test_check_absence_claims
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
+# An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so the
+# Mathlib proposition lives only in `formal.statement`. Nineteen had it
+# overwritten with our own `render_lean` output, and the mirror claim -- "we
+# proved what Mathlib states" -- then could not be checked from the fact at all.
+# The check is exact, not a token screen: 362 of 374 mirrors are hash-pinned by
+# a preregistered catalog.
+step mirror-statement-fidelity python3 scripts/check-mirror-statement-fidelity.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
 # ADR-0584. The kernel type checker recurses over the term with no bound, so a

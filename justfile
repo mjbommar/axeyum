@@ -262,6 +262,13 @@ facts:
     python3 -m unittest scripts.tests.test_check_absence_claims
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 scripts/check-settled-fact-statements.py
+    # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so
+    # the Mathlib proposition lives only in `formal.statement`. Nineteen had it
+    # overwritten with our own `render_lean` output, and the mirror claim -- "we
+    # proved what Mathlib states" -- then could not be checked from the fact at
+    # all. Exact, not a token screen: 362 of 374 mirrors are hash-pinned by a
+    # preregistered catalog.
+    python3 scripts/check-mirror-statement-fidelity.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
     # "the DAG picks the next goal". 60% of facts are isolated, so proving one
     # usually unlocks nothing; the ratchet keeps that from getting worse.
