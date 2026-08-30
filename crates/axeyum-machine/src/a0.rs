@@ -122,6 +122,62 @@ pub struct Conditions {
     pub overflow: bool,
 }
 
+/// Result and condition bits produced by the shared A0 addition definition.
+///
+/// The type parameters allow evidence producers to instantiate the same
+/// orchestration with concrete words and Booleans or with symbolic terms.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Addition<W, B> {
+    /// Sum reduced to the architectural word width.
+    pub result: W,
+    /// Whether the reduced result is zero.
+    pub zero: B,
+    /// Most-significant bit of the reduced result.
+    pub negative: B,
+    /// Unsigned carry out of the architectural word width.
+    pub carry: B,
+    /// Signed two's-complement overflow.
+    pub overflow: B,
+}
+
+/// Primitive operations used by the shared A0 addition definition.
+///
+/// Implementations are the explicit trust boundary between the A0 operation
+/// structure and a concrete or symbolic word domain.
+pub trait AdditionDomain {
+    /// Domain representation of an architectural word.
+    type Word: Copy;
+    /// Domain representation of a condition bit.
+    type Bit: Copy;
+
+    /// Computes the reduced sum.
+    fn sum(&mut self, lhs: Self::Word, rhs: Self::Word) -> Self::Word;
+    /// Tests a word for zero.
+    fn is_zero(&mut self, word: Self::Word) -> Self::Bit;
+    /// Extracts the most-significant bit.
+    fn high_bit(&mut self, word: Self::Word) -> Self::Bit;
+    /// Computes unsigned carry out.
+    fn carry(&mut self, lhs: Self::Word, rhs: Self::Word, sum: Self::Word) -> Self::Bit;
+    /// Computes signed two's-complement overflow.
+    fn overflow(&mut self, lhs: Self::Word, rhs: Self::Word, sum: Self::Word) -> Self::Bit;
+}
+
+/// Applies the single A0 addition orchestration to a supplied word domain.
+pub fn addition<D: AdditionDomain>(
+    domain: &mut D,
+    lhs: D::Word,
+    rhs: D::Word,
+) -> Addition<D::Word, D::Bit> {
+    let result = domain.sum(lhs, rhs);
+    Addition {
+        result,
+        zero: domain.is_zero(result),
+        negative: domain.high_bit(result),
+        carry: domain.carry(lhs, rhs, result),
+        overflow: domain.overflow(lhs, rhs, result),
+    }
+}
+
 /// A reason that a running A0 machine trapped.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -997,17 +1053,42 @@ fn shift(state: &mut State, rd: u8, source: Word, count_word: Word, direction: S
 }
 
 fn add_flags(lhs: Word, rhs: Word) -> (Word, Conditions) {
-    let full = u128::from(lhs.unsigned()) + u128::from(rhs.unsigned());
-    let result = lhs.wrapping_add(rhs);
-    let carry = full >= (1_u128 << lhs.width());
-    let overflow = lhs.high_bit() == rhs.high_bit() && result.high_bit() != lhs.high_bit();
+    struct ConcreteAddition;
+
+    impl AdditionDomain for ConcreteAddition {
+        type Word = Word;
+        type Bit = bool;
+
+        fn sum(&mut self, lhs: Word, rhs: Word) -> Word {
+            lhs.wrapping_add(rhs)
+        }
+
+        fn is_zero(&mut self, word: Word) -> bool {
+            word.unsigned() == 0
+        }
+
+        fn high_bit(&mut self, word: Word) -> bool {
+            word.high_bit()
+        }
+
+        fn carry(&mut self, lhs: Word, rhs: Word, _sum: Word) -> bool {
+            let full = u128::from(lhs.unsigned()) + u128::from(rhs.unsigned());
+            full >= (1_u128 << lhs.width())
+        }
+
+        fn overflow(&mut self, lhs: Word, rhs: Word, sum: Word) -> bool {
+            lhs.high_bit() == rhs.high_bit() && sum.high_bit() != lhs.high_bit()
+        }
+    }
+
+    let result = addition(&mut ConcreteAddition, lhs, rhs);
     (
-        result,
+        result.result,
         Conditions {
-            zero: result.unsigned() == 0,
-            negative: result.high_bit(),
-            carry,
-            overflow,
+            zero: result.zero,
+            negative: result.negative,
+            carry: result.carry,
+            overflow: result.overflow,
         },
     )
 }

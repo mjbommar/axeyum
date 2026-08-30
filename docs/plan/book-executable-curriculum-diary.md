@@ -265,3 +265,22 @@ This route establishes implementation coverage, not universal semantic
 correctness for every possible input state. The exhaustive decoder and
 width-eight addition routes provide stronger finite claims in their stated
 domains; symbolic and kernel routes remain separate work.
+
+## 2026-08-30 — one addition definition for execution and symbolic evidence
+
+The symbolic-proof audit rejected a tempting but invalid shortcut: writing a
+separate bit-vector formula that merely resembles the Rust executor. Such a
+certificate would prove the formula, not the instruction semantics used by the
+book. A0 addition now calls a public, domain-parametric `addition` definition.
+The concrete executor instantiates its primitive word and condition operations
+with A0 `Word` and `bool`; the forthcoming evidence route will instantiate the
+same orchestration with Axeyum IR terms.
+
+The `AdditionDomain` implementation is an explicit trust boundary. Sharing the
+orchestration prevents drift in which result and which four conditions the
+operation produces, but it does not by itself prove that a symbolic primitive
+faithfully represents its concrete counterpart. The certificate route must
+therefore bind its Boolean terms to the saved DIMACS, recheck DRAT and LRAT,
+and replay a satisfiable mutated formula through concrete execution. The
+existing 21 machine tests and nine evidence route/control tests pass after the
+refactor, including exhaustive width-eight concrete flags.
