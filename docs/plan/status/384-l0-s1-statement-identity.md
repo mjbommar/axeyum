@@ -134,6 +134,42 @@ control that passes for a reason other than the guard it names:
 - Registered in BOTH `scripts/check.sh` and the justfile;
   `check-aggregate-scope.sh` still reports 64 recorded divergences.
 
+## Two gates this lane turned red, and what it did about them
+
+Measured against a snapshot of `main`, not assumed: main fails **65**
+`check-fast.sh` steps, this branch **29**, and exactly one step was ever new
+here. (The 37 main-only failures are main having advanced past this branch's
+merge base, not this lane fixing anything.)
+
+- **`adr-remote-collisions`.** `gen-adr-index.py --check-remote` found ADR-0752
+  claimed by both this checkout and `origin/main`, for different decisions —
+  the sibling semantic-controls lane had it. This lane picked 0752 *to avoid* a
+  collision on 0747 and collided anyway, because it checked the local tree and
+  the local tree does not know about origin. **Use `--check-remote`, not `ls`.**
+  Renumbered to 0763; now `collisions=0|next_free=0764`, flagged ADVISORY
+  because there is no `FETCH_HEAD` and the remote data is of unknown age.
+- **`safety-matrix`.** S0's census pinned
+  `F:nat-sumrange-add.exact_statement == False` so the column could not silently
+  start saying yes to everything. Pinning every settled fact made that
+  unsatisfiable — no census row can be the False side at 100% coverage — so the
+  census would have stayed red for a reason that is good news.
+
+  **S0's owner should review the repair.** Flipping the row to `True` alone
+  would have deleted the column's negative polarity, so the polarity moved
+  instead: `UNPINNABLE_PROBE` asserts `statement_pinned_ids()` does not contain
+  an id that is in no manifest and no ledger, catching the predicate's real
+  failure mode (reading the wrong field, or returning everything). Verified by
+  mutation — `poisoned -> FIRED`, `healthy -> silent`. It is a **smaller claim**
+  than a census-row negative; if a stronger one is wanted it belongs in
+  `gen-safety-matrix.py`, which is S0's file, not this lane's.
+
+`exact_statement` moved **142 / 2117 → 2118 / 2118 (100.0%)**: the thinnest
+column in the matrix is now the only complete one.
+
+Unrelated hygiene note, not this lane's to fix: `check-fast.sh`'s
+`gate-step-timeout` step leaves five untracked `tmp*/` directories in the
+worktree after every run.
+
 ## For the next lane
 
 - **Landing a settled fact now requires `--write` and committing the manifest.**
