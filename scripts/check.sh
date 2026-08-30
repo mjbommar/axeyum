@@ -422,9 +422,9 @@ step check-fast-controls ./scripts/tests/test-check-fast.sh
 # controls. Measured 2026-08-29 over 272 lane status documents: mutation
 # testing (harness + gate) is followed 46% of the time, `shape_search` (prose
 # only) 4.8%. Compliance tracks MECHANIZATION, not emphasis, so the "does it
-# already exist" step moved out of the lane and into the brief. Eight guards,
+# already exist" step moved out of the lane and into the brief. Nine guards,
 # each mutation-verified in a scratch copy to kill exactly one control, plus a
-# false-positive control that survives all eight. The load-bearing ones: a
+# false-positive control that survives all nine. The load-bearing ones: a
 # snapshot that cannot retrieve the built-in probe is UNANSWERABLE rather than
 # a source of ABSENT verdicts, and a snapshot from another kernel tree exits 4
 # instead of reading as current.

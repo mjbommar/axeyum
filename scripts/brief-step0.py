@@ -392,6 +392,33 @@ def rendered_bag(rendered: str) -> tuple[collections.Counter, set[str]]:
     return bag, carriers
 
 
+DECL_PREFIX = re.compile(r"^\s*(theorem|axiom|def|definition|lemma)\s+\S+\s*:\s*")
+RENDERED_TELL = re.compile(r"\(x\d+\s*:|Eq\.\{|Sort\s*\(")
+
+
+def strip_decl_prefix(statement: str) -> str:
+    return DECL_PREFIX.sub("", statement, count=1).strip()
+
+
+def is_rendered(statement: str) -> bool:
+    """Is this `formal.statement` a KERNEL rendered type rather than Lean surface?
+
+    The ledger carries both dialects. Some facts were written by pasting an
+    inventory row -- `theorem Int.gcd_comm : ((x0 : Int) -> …)` -- and running
+    those through the surface normalizer is not merely imprecise, it is WRONG in
+    a way that looks like a result: `->` becomes `sub` and `lt` (from `-` and
+    `>`), `x0`/`x1` become constants, and the target scores 0.18 against its own
+    declaration. Measured on `F:int-gcd-comm` before this dispatch existed.
+    """
+    return bool(RENDERED_TELL.search(statement))
+
+
+def statement_bag(statement: str) -> tuple[collections.Counter, set[str]]:
+    """The comparison multiset, from whichever dialect the ledger used."""
+    text = strip_decl_prefix(statement)
+    return rendered_bag(text) if is_rendered(text) else surface_bag(text)
+
+
 def surface_bag(statement: str) -> tuple[collections.Counter, set[str]]:
     """Same multiset, derived from a Lean-surface `formal.statement`.
 
@@ -413,7 +440,9 @@ def surface_bag(statement: str) -> tuple[collections.Counter, set[str]]:
         for token in IDENT.findall(sort) + re.findall(r"[ℕℤℚℝℂ]", sort):
             if token in CARRIERS:
                 carriers.add(CARRIERS[token])
-    body = statement
+    # ASCII `->` FIRST: otherwise `-` becomes `sub` and `>` becomes `lt`, and
+    # the target scores against its own declaration at 0.18.
+    body = statement.replace("->", " ")
     for symbol, constant in NOTATION.items():
         body = body.replace(symbol, f" {constant} ")
     for glyph in "ℕℤℚℝℂ":
@@ -449,7 +478,7 @@ def score(target: collections.Counter, candidate: collections.Counter) -> float:
 
 def rank(statement: str, declarations: list[dict[str, Any]], limit: int
          ) -> tuple[list[tuple[float, dict[str, Any]]], collections.Counter, set[str]]:
-    want, want_carriers = surface_bag(statement)
+    want, want_carriers = statement_bag(statement)
     scored: list[tuple[float, dict[str, Any]]] = []
     for row in declarations:
         got, got_carriers = rendered_bag(row["type"])
@@ -553,8 +582,48 @@ def blocked_report(module, fact_id: str, statement: str) -> list[str]:
 # near misses (item 2): delegated to examples/shape_search
 
 
+def rendered_heads(statement: str) -> tuple[str | None, list[str]]:
+    """`(conclusion head, hypothesis heads)` from a KERNEL rendered type.
+
+    Peels `(xN : T) ->` binders off the front. A binder whose type is a carrier
+    (`(x0 : AxNat)`) is a quantified VARIABLE, not a hypothesis, so only the
+    others contribute heads -- which is the same distinction `shape_index`
+    makes when it files `Nat -> Nat -> Nat.le -> …`.
+    """
+    text = statement.strip()
+    hyps: list[str] = []
+    binder = re.compile(r"^\(*\s*\(x\d+\s*:\s*")
+    while binder.match(text):
+        text = binder.sub("", text, count=1)
+        depth, index = 0, 0
+        while index < len(text):
+            char = text[index]
+            if char in "({[":
+                depth += 1
+            elif char in ")}]":
+                if depth == 0:
+                    break
+                depth -= 1
+            index += 1
+        head = head_of_rendered(text[:index])
+        if head and head not in CARRIERS:
+            hyps.append(head)
+        text = text[index + 1:].lstrip()
+        text = text[2:].lstrip() if text.startswith("->") else text
+    return head_of_rendered(text), hyps
+
+
+def head_of_rendered(chunk: str) -> str | None:
+    chunk = re.sub(r"\.\{[^}]*\}", "", chunk).strip().lstrip("(").strip()
+    match = IDENT.match(chunk)
+    return match.group(0) if match else None
+
+
 def surface_heads(statement: str) -> tuple[str | None, list[str]]:
     """`(conclusion head, hypothesis heads)` for a `shape_search` query."""
+    statement = strip_decl_prefix(statement)
+    if is_rendered(statement):
+        return rendered_heads(statement)
     body = statement
     body = re.sub(r"^\s*(∀|∃)[^,]*,", "", body).strip()
     depth = 0
@@ -751,6 +820,8 @@ def report_target(root: pathlib.Path, fact: dict[str, Any], snapshot: dict[str, 
                    "so there is nothing to compare a rendered type against.")
     else:
         ranked, want, carriers = rank(statement, declarations, args.limit)
+        out.append(f"   dialect: "
+                   f"{'kernel-rendered' if is_rendered(strip_decl_prefix(statement)) else 'lean-surface'}")
         out.append(f"   statement constants: "
                    f"{dict(sorted(want.items())) or '{}'}  carriers="
                    f"{sorted(carriers) or '[]'}")
@@ -784,7 +855,7 @@ def report_target(root: pathlib.Path, fact: dict[str, Any], snapshot: dict[str, 
             "2. NEAR MISSES BY SHAPE  (delegated to examples/shape_search)"]
     if statement and not args.no_shape_search:
         concl, hyps = surface_heads(statement)
-        _, carriers = surface_bag(statement)
+        _, carriers = statement_bag(statement)
         out.append(f"   derived heads: concl={concl!r} hyps={hyps!r}")
         out += [f"   {line}" for line in
                 run_shape_search(root, concl, hyps, carriers, args.shape_timeout)]

@@ -33,12 +33,16 @@ TREE="$(git rev-parse "HEAD:crates/axeyum-lean-kernel" 2>/dev/null || echo unkno
 # the vacuity guard is exercised.
 ADD_COMM_TYPE='((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.add x0 x1) (AxNat.add x1 x0)))'
 JUNK_TYPE='((x0 : AxNat) -> AxNat.Zzz x0)'
+# `Int.gcd_comm`'s real rendered type. `F:int-gcd-comm`'s `formal.statement` is
+# itself a KERNEL RENDERED TYPE rather than Lean surface -- the ledger carries
+# both dialects -- so this is the fixture for the dialect guard.
+GCD_COMM_TYPE='((x0 : Int) -> ((x1 : Int) -> Eq.{1} AxNat (Int.gcd x0 x1) (Int.gcd x1 x0)))'
 
 # write_snapshot <cache-dir> <tree-in-filename> <kernel_tree> <binary_stale> <with-add-comm>
 write_snapshot() {
   local dir="$1" fname="$2" tree="$3" stale="$4" withprobe="$5"
   mkdir -p "$dir"
-  ADD_COMM_TYPE="$ADD_COMM_TYPE" JUNK_TYPE="$JUNK_TYPE" \
+  ADD_COMM_TYPE="$ADD_COMM_TYPE" JUNK_TYPE="$JUNK_TYPE" GCD_COMM_TYPE="$GCD_COMM_TYPE" \
   python3 - "$dir/snapshot-$fname.json" "$tree" "$stale" "$withprobe" <<'PY'
 import json, os, sys
 path, tree, stale, withprobe = sys.argv[1:5]
@@ -47,6 +51,8 @@ decls = [{"name": "Nat.zzz_placeholder", "kind": "theorem",
 if withprobe == "yes":
     decls.append({"name": "Nat.add_comm", "kind": "theorem",
                   "type": os.environ["ADD_COMM_TYPE"], "groups": ["nat"]})
+    decls.append({"name": "Int.gcd_comm", "kind": "theorem",
+                  "type": os.environ["GCD_COMM_TYPE"], "groups": ["integer"]})
 json.dump({
     "schema_version": 1, "kind": "axeyum-brief-step0-snapshot",
     "kernel_tree": tree, "binary_stale": stale == "yes",
@@ -187,8 +193,8 @@ fi
 # --------------------------------------------------------------------------
 # FALSE-POSITIVE CONTROL. A healthy run -- fresh snapshot, resolvable target,
 # nothing blocked -- must exit 0 and must NOT print any of the alarm words.
-# This is what distinguishes the eight guards above from a subject that simply
-# refuses everything, and it must survive every one of the eight mutations.
+# This is what distinguishes the nine guards above from a subject that simply
+# refuses everything, and it must survive every one of the nine mutations.
 C="$WORK/fp"; write_snapshot "$C" "$TREE" "$TREE" no yes
 out="$(run "$C" F:ml430-nat-add-eq-zero-64233539 --no-shape-search)"; st=$?
 if [ "$st" -eq 0 ] && [[ "$out" == *"SNAPSHOT   EXACT"* ]] \
@@ -199,6 +205,24 @@ else
   bad "a healthy run must exit 0 with no alarm, got exit $st"; note "$out"
 fi
 
+# --------------------------------------------------------------------------
+# GUARD 9 (the ledger carries TWO statement dialects): some `formal.statement`s
+# are kernel rendered types, not Lean surface. Running one through the surface
+# normalizer is not merely imprecise -- `->` becomes `sub` and `lt` (from `-`
+# and `>`), `x0`/`x1` become constants -- and `F:int-gcd-comm` scored 0.18
+# against its OWN declaration, printing a confident ABSENT. That is a wrong
+# answer wearing a result's clothes, which is the failure this whole tool
+# exists to stop producing.
+C="$WORK/c9"; write_snapshot "$C" "$TREE" "$TREE" no yes
+out="$(run "$C" F:int-gcd-comm --no-shape-search)"; st=$?
+if [ "$st" -eq 0 ] && [[ "$out" == *"dialect: kernel-rendered"* ]] \
+   && [[ "$out" == *"[1.00] Int.gcd_comm"* ]]; then
+  ok "a kernel-rendered formal.statement retrieves its own declaration at 1.00"
+else
+  bad "rendered-dialect statement must retrieve its own declaration, got exit $st"
+  note "$out"
+fi
+
 echo "brief-step0 controls: pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]
 
@@ -206,7 +230,7 @@ echo "brief-step0 controls: pass=$pass fail=$fail"
 # MUTATION TABLE. Each guard was deleted in a `cp -r`'d scratch copy of the
 # repository -- never in the shared checkout, and never in a tracked source --
 # and this suite re-run. Every row killed EXACTLY the control named, and the
-# false-positive control survived all eight.
+# false-positive control survived all nine.
 #
 #   guard deleted                                        | control that dies
 #   -----------------------------------------------------|------------------

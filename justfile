@@ -105,6 +105,46 @@ next-chains:
 next-chains-json:
     python3 scripts/create-autogenesis-chain-catalog.py --json
 
+# `just next` picks the target; `just brief` is what you run BEFORE writing the
+# brief for it. Same reasoning as `next` above, one arrow further along: a
+# retrieval tool nobody reaches is prose, and prose is measured at 4.8%.
+#
+# Measured 2026-08-29 over 272 lane status documents -- mutation testing, which
+# has a harness and a gate, appears in 125 (46%); `shape_search`, which has only
+# instructions behind it, in 13 (4.8%). Compliance tracks MECHANIZATION, not
+# emphasis, and thirteen-plus recorded instances of a lane re-deriving something
+# that already existed are what the gap costs. So the step moves out of the lane
+# (where it competes with the task for attention at the moment the lane is most
+# eager to start) and into the dispatcher's hands, where it is one command.
+#
+# Prints, per target: whether a declaration with this statement's constants is
+# ALREADY in the kernel environment (by rendered type, never by name); the
+# `shape_search` near-miss query and its answer; every module basename the
+# target could mean, BOTH paths when a basename lives in two preludes; and
+# whether the target is held-out, a mutation control, or divergence-blocked.
+#
+# Sub-second against a warm snapshot. Non-zero exit means something is wrong
+# with the ANSWER, not with the target: 3 = the snapshot cannot even retrieve
+# the built-in control probe, so no negative in the run would have meant
+# anything; 4 = the snapshot is stale, so every ABSENT is provisional.
+#
+# Step 0 of a brief: does the target already exist, and is it even dispatchable?
+brief *targets:
+    python3 scripts/brief-step0.py {{targets}}
+
+# One 33 s read of `Kernel::environment()` into a snapshot addressed by the
+# kernel tree sha. Needed after any kernel change that lands a declaration;
+# `just brief` exits 4 and says so rather than answering from an old one.
+#
+# Re-read the kernel environment into the `just brief` snapshot (~2 min).
+brief-refresh:
+    python3 scripts/brief-step0.py --refresh --build
+
+# The controls, plus the snapshot's own self-check, with no target.
+brief-self-check:
+    python3 scripts/brief-step0.py --self-check
+    scripts/tests/test-brief-step0.sh
+
 autogenesis-operations:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
@@ -500,8 +540,8 @@ gate-controls:
     # step is DEFERRED, a third outcome, and never folds into `ok`.
     scripts/tests/test-check-fast.sh
     # Controls for `scripts/brief-step0.py`, the dispatcher-side retrieval
-    # step. Eight guards, each mutation-verified to kill exactly one control,
-    # plus a false-positive control that survives all eight. The load-bearing
+    # step. Nine guards, each mutation-verified to kill exactly one control,
+    # plus a false-positive control that survives all nine. The load-bearing
     # guard: a snapshot that cannot retrieve the built-in probe is
     # UNANSWERABLE, never a source of ABSENT verdicts.
     scripts/tests/test-brief-step0.sh
