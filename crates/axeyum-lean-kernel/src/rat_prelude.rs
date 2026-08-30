@@ -936,8 +936,15 @@ pub struct RatPrelude {
     /// are supplied for `i ≠ j` within a range, never universally, so
     /// [`Self::sum_range_congr`]'s UNRESTRICTED hypothesis cannot be used).
     pub sum_range_eq_zero_of_lt: NameId,
-    /// `Rat.sumRange_swap : ∀ f m n, sumRange (fun i => sumRange (fun j => f
+    /// `Rat.sumRange_swap : ∀ f n m, sumRange (fun i => sumRange (fun j => f
     /// i j) n) m = sumRange (fun j => sumRange (fun i => f i j) m) n` — the
+    /// **binder order is `f`, then the INNER bound, then the OUTER bound**
+    /// (`rat_prelude/sum.rs`'s `declare_sum_range_swap`, which allocates
+    /// `n_fv` before `m_fv`). This line read `∀ f m n` until 2026-08-30 and
+    /// the transposition is invisible at the call site — both arguments are
+    /// `Nat` — so it costs one kernel rejection whose message names the two
+    /// bounds and not the lemma. `rat_prelude/matrix_n.rs`'s associativity
+    /// proof took exactly that rejection.
     /// Fubini/rectangle-swap over a `ℚ`-valued double sum, `f`/`n` fixed and
     /// induction on `m` alone. Not `Nat`'s `rectangle`/`diagonal`
     /// triangle+corner decomposition — this is the plain order-of-summation

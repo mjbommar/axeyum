@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-matmul-id-right",
+  "title": "The rational identity matrix is a right unit for matrix multiplication, on its range",
+  "statement": "For a matrix A over the constructed rationals (a function Nat -> Nat -> Rat), a dimension n, and indices i and j WITH j < n, the (i, j) entry of A * matId equals A i j. The bound is on the COLUMN index j here, where the left unit law (F:rat-matmul-id-left) bounds the row index i: the summation runs over the shared inner index, so which of the two outer indices has to lie in range depends on which side the identity sits. Stated pointwise; `funext` is absent from this kernel so an Eq between matrices is not available.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matMul_id_right : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x1) -> Eq.{1} Rat (Rat.matMul x0 Rat.matId x1 x2 x3) (x0 x2 x3))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-matmul-id-left",
+    "F:rat-mul-one",
+    "F:rat-mul-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matMul_id_right",
+      "kind": "kernel-term",
+      "supports": "Rat.matMul_id_right is admitted by the trusted kernel gate with the type recorded in formal.statement. It shares Rat.sumRange_delta with the left unit law and is the shorter of the two: the delta's hypothesis wants `t != j`, which is exactly the shape Rat.matId_off_diag takes on this side, so no ne_symm is needed and the tail closes with mul_one without a mul_comm.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err)",
+        "theorem_dependency_inventory (independent re-derivation of the whole rational prelude, reporting the admitted name)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.matMul_id_right 2>/dev/null | grep -cE '^Rat\\.matMul_id_right[[:space:]]'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs",
+      "notes": "Verified BOTH directions on this tree. Real name: prints 1, exit 0. A fabricated name prints 0 and exits 1. Pass ONE name per invocation -- this tool consumes only its FIRST name argument and silently ignores the rest. `--release` is MANDATORY (debug SIGABRTs on a stack overflow). `[[:space:]]` and NOT `\\t`."
+    },
+    {
+      "id": "evaluation-right-unit",
+      "kind": "instance-pin",
+      "supports": "A * matId agrees with A at every in-range cell, computed rather than inferred from the left unit law: `rat_mat_mul_id_left_needs_its_bound` evaluates BOTH sides -- matId * A and A * matId -- at all four cells of A = [[1,2],[3,4]] with n = 2, and `rat_mat_mul_id_laws_hold_at_a_concrete_instance` applies this theorem with its bound discharged by Nat.lt_succ_self (`Lt 1 2`), deliberately NOT reusing the `Lt 0 2` proof the left law takes, since the two laws bound different indices.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::rat_mat_mul_id_laws_hold_at_a_concrete_instance",
+        "rat_prelude_tests::rat_mat_mul_id_left_needs_its_bound"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::rat_mat_mul_id_laws_hold_at_a_concrete_instance -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "That test also carries its own non-vacuity check: the inferred statement is asserted NOT defeq to the false equation `2 = 3`, so the positive comparison against `2 = 2` can fail. Anchored on the exact `1 passed; 0 failed` count so an unmatched filter cannot read as success."
+    },
+    {
+      "id": "footprint-Rat.matMul_id_right",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty, so no theorem in it can rest on anything asserted.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "notes": "Re-measured on this tree: `rat: axiom=0 opaque=0 quotient=0 total_trusted=0`, exit 0. Covers Axiom, Opaque AND Quotient."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane rat-matrix-layer, Rat.matMul_id_right in crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs",
+    "source": "classical"
+  },
+  "notes": "WHAT IS NOT PROVED. The two unit laws together do NOT give a monoid structure on matrices in any type-theoretic sense: there is no carrier of `n x n` matrices, no Eq on it, and no closure statement. What exists is a product operation, an associativity law and two unit laws, all pointwise, over the encoding `Nat -> Nat -> Rat` with dimensions as ordinary arguments. Nor is there an inverse for any matrix."
+}

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-matmul-id-left",
+  "title": "The rational identity matrix is a left unit for matrix multiplication, on its range",
+  "statement": "For a matrix A over the constructed rationals (a function Nat -> Nat -> Rat), a dimension n, and indices i and j WITH i < n, the (i, j) entry of matId * A equals A i j. Rat.matId i j is one when Nat.beq i j and zero otherwise; it carries no dimension argument, because the delta is defined at every index pair and the bound belongs in the theorem rather than in the object. The `i < n` hypothesis is LOAD-BEARING, not decoration: matMul matId A n i j sums matId i t * A t j over t < n, so at a row index outside that range the delta never fires and the entry is zero rather than A i j. Stated pointwise; `funext` is absent from this kernel so an Eq between matrices is not available.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matMul_id_left : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x2 x1) -> Eq.{1} Rat (Rat.matMul Rat.matId x0 x1 x2 x3) (x0 x2 x3))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-mul-comm",
+    "F:rat-mul-one",
+    "F:rat-mul-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matMul_id_left",
+      "kind": "kernel-term",
+      "supports": "Rat.matMul_id_left is admitted by the trusted kernel gate with the type recorded in formal.statement. It goes through Rat.sumRange_delta (a sum whose summand vanishes away from one index collapses to the value at that index), proved by induction on the bound with the strict inequality INSIDE the motive so the base case discharges by Nat.not_lt_zero.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err)",
+        "theorem_dependency_inventory (independent re-derivation of the whole rational prelude, reporting the admitted name)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.matMul_id_left 2>/dev/null | grep -cE '^Rat\\.matMul_id_left[[:space:]]'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs",
+      "notes": "Verified BOTH directions on this tree. Real name: prints 1, exit 0. A fabricated name prints 0 and exits 1 -- the tool exits non-zero for a filter matching nothing, and `grep -c` (never `-q`, which SIGPIPEs its producer under pipefail) independently asserts the count. Pass ONE name per invocation: this tool consumes only its FIRST name argument and silently ignores the rest, printing a plausible one-row result. `--release` is MANDATORY (debug SIGABRTs on a stack overflow building creal/complex/cpoint). `[[:space:]]` and NOT `\\t`, for the ugrep/GNU-grep disagreement documented in CLAUDE.md."
+    },
+    {
+      "id": "bound-is-load-bearing",
+      "kind": "instance-pin",
+      "supports": "The `i < n` hypothesis is necessary and the unbounded form of this statement is FALSE, demonstrated by computation rather than asserted in prose. `rat_mat_mul_id_left_needs_its_bound` takes A = [[1,2],[3,4]] (as A i j = (i+i+j+1)/1, defined at every index) and n = 2, checks matId * A agrees with A at all four in-range cells AND on the right, then evaluates at the OUT-of-range row i = 2: matId 2 0 * A 0 0 + matId 2 1 * A 1 0 = 0*1 + 0*3 = 0, while A 2 0 = 5. Both values are pinned and the test asserts they differ.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::rat_mat_mul_id_left_needs_its_bound",
+        "rat_prelude_tests::rat_mat_id_computes_the_delta (the Definition itself, on and off the diagonal in both index orders and past the 2x2 block)",
+        "rat_prelude_tests::rat_mat_mul_id_laws_hold_at_a_concrete_instance (both unit laws APPLIED, with the bound discharged by Nat.zero_lt_succ / Nat.lt_succ_self)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::rat_mat_mul_id_left_needs_its_bound -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "This is the evidence a footprint check cannot carry and a statement pin can only half carry. An axiom-free theorem with a superfluous hypothesis has the same footprint as one whose hypothesis is necessary; only the out-of-range evaluation separates them. The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success. `Rat.matId` is a Definition, so it is invisible to prelude_theorem_inventory (which lists Theorems only) and its correctness rests on this evaluation, not on any inventory row."
+    },
+    {
+      "id": "footprint-Rat.matMul_id_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Rat prelude's trusted surface is empty, so no theorem in it can rest on anything asserted.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "notes": "Re-measured on this tree: `rat: axiom=0 opaque=0 quotient=0 total_trusted=0`, exit 0. Covers Axiom, Opaque AND Quotient, since Opaque has no proof body and Quotient admits Quot.sound."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane rat-matrix-layer, Rat.matMul_id_left in crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs",
+    "source": "classical"
+  },
+  "notes": "WHAT IS NOT PROVED. There is no INVERSE here: nothing in this file constructs A^-1 or proves A * A^-1 = matId for any A. Nor is there an Eq between matId and any other matrix -- `funext` is absent, so `matId * A` and `A` are related only entry by entry. The dimension is not carried in any type; a matrix is a total function on Nat x Nat, which is exactly why this statement needs the `i < n` hypothesis while F:rat-matmul-assoc needs none."
+}
