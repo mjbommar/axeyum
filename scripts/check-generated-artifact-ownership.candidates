@@ -1,0 +1,41 @@
+# Tracked artifacts named by TWO OR MORE `scripts/gen-*.py` producers.
+#
+# Derived from the tree, never hand-listed: regenerate with
+#   python3 scripts/check-generated-artifact-ownership.py --update-candidates
+#
+# A basename here is a one-owner question this gate has NOT answered. Being
+# listed is not a guarantee; it is an acknowledgement, and the point is that the
+# list cannot GROW without someone noticing. Guarding one of them means adding
+# a `GUARDED` entry whose producers run in the sandbox (ADR-0652).
+binomial-arrow-export-capability-v1.json
+bitwise-clean-family-projection-v1.json
+claim.json
+concept-coverage-projection-v1.json
+expected.json
+family-concept-crosswalk-v1.json
+foundational-concepts.json
+imported-implementation-demand-v1.json
+kernel-dependency-projection-v1.json
+kernel-environment-snapshot-v1.json
+kernel-lemma-search-index-v1.json
+knowledge-overlay-v1.json
+mathlib-nat-int-candidates-v1.json
+mathlib-nat-int-fact-catalog-v1.json
+mathlib-statement-constants-v1.json
+mathlib-v4.30.0-v4.32.1-selected-statement-delta-v1.json
+metadata.json
+must-decline-mutations-v1.json
+nursery-v1.json
+obstruction-graph-v1.json
+obstruction-projection-v1.json
+open-lemma-candidate-ranking-v1.json
+open-lemma-rewrite-support-ranking-v1.json
+open-ranked-proposition-census-v1.json
+operations.json
+producer-evaluation-frontier-v1.json
+producer-outcome-observations-v1.json
+retrieved-induction-obstruction-projection-v1.json
+retrieved-induction-type-slice-replay-v1.json
+semantic-contract-demand-v1.json
+tactic-catalog-v1.json
+transport-projection-v1.json

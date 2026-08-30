@@ -523,9 +523,132 @@ def owner_arm(root: pathlib.Path, artifact: Artifact,
     return []
 
 
-def check(verbose: bool) -> int:
+# --------------------------------------------------------------------------
+# COVER -- the DENOMINATOR, which `GUARDED` alone cannot supply.
+#
+# The 2026-08-30 session audit's fourth finding, and it did not say this gate is
+# wrong. Every one of its eleven registered mutants dies, an owner naming a
+# nonexistent artifact is caught, and DISCOVERY (`referencing_scripts`) already
+# derives the writers of a guarded artifact FROM THE TREE rather than from a
+# list. What it could not answer is one level up: `GUARDED` is a hand-written
+# literal of length one, reported as `artifacts=1` against 82 tracked
+# `scripts/gen-*.py` and 3,889 tracked `artifacts/**/*.json`, so an artifact
+# with a second writer and NO entry here is structurally invisible.
+#
+# That is the "any check named every X must derive its X from the authority"
+# rule applied to the top of this gate rather than only inside it.
+#
+# What this arm does NOT do, stated plainly rather than implied. It does not
+# guard 33 artifacts. The RUNS arm's guarantee comes from EXECUTING each
+# candidate writer in a sandbox and comparing bytes, and that is the only
+# reliable writer test here -- a static "contains a write call" scan cannot tell
+# which file a script writes, and `nursery-v1.json` alone is named by 45
+# scripts. Expanding the guarded set is real work per artifact and it is not
+# what this change claims to have done.
+#
+# What it DOES is make the denominator visible and unable to grow in silence: a
+# tracked artifact named by two or more `scripts/gen-*.py` producers must appear
+# in `scripts/check-generated-artifact-ownership.candidates`, and a NEW one
+# fails the gate until it is recorded. The summary then reads
+# `guarded=1|multi_writer_candidates=33` instead of `artifacts=1`, which is the
+# honest shape of the claim.
+#
+# WHAT WOULD MAKE THE ONE-OWNER GUARANTEE REAL, since the audit asked: a second
+# artifact in `GUARDED` whose producers actually run in the sandbox. The CTRL
+# arm plants a second writer and requires the RUNS machinery to reject it, and
+# with one registry entry that is a test of one comparison against one file --
+# the registering lane itself found its planted writer was vacuous against any
+# other artifact. Two entries would exercise it twice over different producers,
+# which is the difference between "this comparison works" and "this comparison
+# works for artifacts in general". It needs a candidate whose producers are
+# sandbox-runnable without the kernel, and that selection is the work.
+CANDIDATES = ROOT / "scripts" / "check-generated-artifact-ownership.candidates"
+
+CANDIDATES_HEADER = """\
+# Tracked artifacts named by TWO OR MORE `scripts/gen-*.py` producers.
+#
+# Derived from the tree, never hand-listed: regenerate with
+#   python3 scripts/check-generated-artifact-ownership.py --update-candidates
+#
+# A basename here is a one-owner question this gate has NOT answered. Being
+# listed is not a guarantee; it is an acknowledgement, and the point is that the
+# list cannot GROW without someone noticing. Guarding one of them means adding
+# a `GUARDED` entry whose producers run in the sandbox (ADR-0652).
+"""
+
+
+def multi_writer_candidates() -> dict[str, list[str]]:
+    """`{artifact basename: [gen-*.py naming it]}` for basenames with >= 2.
+
+    `gen-*.py` is the producer naming convention in this tree and is the
+    population the audit measured (82 files). A basename rather than a full
+    path because that is what `referencing_scripts` matches on, and because a
+    script names an artifact by whichever spelling it happens to use.
+    """
+    # The FILESYSTEM, not `git ls-files`. The two agree here (3,889 either
+    # way, measured 2026-08-30), and the mutation harness copies the tree
+    # WITHOUT `.git`, so a git-backed enumeration makes this whole suite
+    # unmeasurable -- "BASELINE IS NOT GREEN", which is not a result.
+    basenames = {p.name for p in (ROOT / "artifacts").rglob("*.json")}
+
+    producers: list[tuple[str, str]] = []
+    for path in sorted((ROOT / "scripts").glob("gen-*.py")):
+        try:
+            producers.append((path.name, path.read_text(encoding="utf-8", errors="ignore")))
+        except OSError:
+            continue
+
+    out: dict[str, list[str]] = {}
+    for base in sorted(basenames):
+        naming = sorted(name for name, text in producers if base in text)
+        if len(naming) >= 2:
+            out[base] = naming
+    return out
+
+
+def read_candidates(path: pathlib.Path) -> set[str] | None:
+    if not path.is_file():
+        return None
+    return {
+        line.strip()
+        for line in path.read_text().splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+
+def cover_arm(recorded: set[str] | None, current: dict[str, list[str]],
+              guarded: set[str]) -> list[str]:
+    """COVER: every multi-writer artifact is guarded or acknowledged."""
+    if recorded is None:
+        return ["COVER: no candidate list. Without it `GUARDED` is a literal "
+                "with no denominator and a NEW multi-writer artifact is "
+                "invisible. Run --update-candidates."]
+    fails = []
+    for base in sorted(set(current) - recorded - guarded):
+        fails.append(
+            f"COVER {base}: named by {len(current[base])} `gen-*.py` producers "
+            f"({', '.join(current[base])}) and is neither GUARDED nor recorded "
+            f"as a known candidate. Two producers writing one artifact is the "
+            f"defect ADR-0652 exists for. Guard it, or record it deliberately "
+            f"with --update-candidates so the growth is visible.")
+    for base in sorted(recorded - set(current) - guarded):
+        fails.append(
+            f"COVER {base}: recorded as a multi-writer candidate and no longer "
+            f"has two `gen-*.py` producers. Good news; drop the stale entry "
+            f"with --update-candidates.")
+    return fails
+
+
+def check(verbose: bool, candidates_path: pathlib.Path) -> int:
     fails: list[str] = []
     producers_run = 0
+
+    current = multi_writer_candidates()
+    guarded_names = {pathlib.PurePath(a.path).name for a in GUARDED}
+    fails += cover_arm(read_candidates(candidates_path), current, guarded_names)
+    if verbose:
+        print(f"COVER ok  {len(current)} multi-writer candidate(s), "
+              f"{len(guarded_names)} guarded")
 
     with tempfile.TemporaryDirectory(prefix="artifact-ownership-") as tmp:
         root = build_sandbox(pathlib.Path(tmp))
@@ -567,7 +690,10 @@ def check(verbose: bool) -> int:
 
     for line in fails:
         print(f"FAIL {line}", file=sys.stderr)
-    print(f"GENERATED_ARTIFACT_OWNERSHIP|artifacts={len(GUARDED)}"
+    # `guarded` is named rather than `artifacts` because `artifacts=1` read as
+    # a coverage claim, and it never was one.
+    print(f"GENERATED_ARTIFACT_OWNERSHIP|guarded={len(GUARDED)}"
+          f"|multi_writer_candidates={len(current)}"
           f"|producers_run={producers_run}|fails={len(fails)}"
           f"|{'PASS' if not fails else 'FAIL'}")
     return 1 if fails else 0
@@ -577,8 +703,22 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("-v", "--verbose", action="store_true",
                     help="print a line per arm, including the ones that pass")
+    ap.add_argument("--candidates", default=str(CANDIDATES),
+                    help="multi-writer candidate list (the controls point this "
+                         "elsewhere)")
+    ap.add_argument("--update-candidates", action="store_true",
+                    help="rewrite the candidate list from the tree, then exit")
     args = ap.parse_args(argv)
-    return check(args.verbose)
+    path = pathlib.Path(args.candidates)
+    if args.update_candidates:
+        current = multi_writer_candidates()
+        guarded_names = {pathlib.PurePath(a.path).name for a in GUARDED}
+        rows = sorted(set(current) - guarded_names)
+        path.write_text(CANDIDATES_HEADER + "".join(r + "\n" for r in rows))
+        print(f"recorded {len(rows)} multi-writer candidate(s) in {path} "
+              f"({len(guarded_names)} guarded and therefore not listed)")
+        return 0
+    return check(args.verbose, path)
 
 
 if __name__ == "__main__":

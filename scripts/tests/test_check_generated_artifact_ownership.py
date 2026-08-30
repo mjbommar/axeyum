@@ -296,6 +296,106 @@ class KeyDelta(SandboxCase):
         self.assertIn("no longer valid JSON", own.key_delta(a, "{{{"))
 
 
+class CoverArm(unittest.TestCase):
+    """COVER: the DENOMINATOR, which the 2026-08-30 session audit named as the
+    gap. Every other arm here is correct and derives what it needs from the
+    tree; `GUARDED` itself was a hand-written literal of length one, reported
+    as `artifacts=1`, so an artifact with a second producer and no entry was
+    structurally invisible.
+
+    `cover_arm` is a pure function of (recorded, current, guarded), so these
+    need no sandbox and no tree.
+    """
+
+    CURRENT = {"a.json": ["gen-one.py", "gen-two.py"],
+               "b.json": ["gen-three.py", "gen-four.py"]}
+
+    def test_a_recorded_candidate_passes(self):
+        """The positive control. Without it every refusal below is consistent
+        with an arm that refuses everything."""
+        self.assertEqual(
+            own.cover_arm({"a.json", "b.json"}, self.CURRENT, set()), [])
+
+    def test_a_NEW_multi_writer_artifact_is_refused(self):
+        """The finding: a second `gen-*.py` producer appearing for an artifact
+        nobody guards used to change no number anywhere."""
+        fails = own.cover_arm({"a.json"}, self.CURRENT, set())
+        self.assertEqual(len(fails), 1, fails)
+        self.assertIn("b.json", fails[0])
+        self.assertIn("gen-three.py", fails[0])
+
+    def test_a_GUARDED_artifact_needs_no_candidate_row(self):
+        """Guarding is stronger than acknowledging, so it satisfies COVER on
+        its own -- and `--update-candidates` therefore omits it."""
+        self.assertEqual(
+            own.cover_arm(set(), {"a.json": ["gen-one.py", "gen-two.py"]},
+                          {"a.json"}), [])
+
+    def test_a_STALE_candidate_row_is_named(self):
+        """An artifact that stopped having two producers is good news and the
+        row should go, but silently keeping it makes the denominator wrong in
+        the flattering direction."""
+        fails = own.cover_arm({"a.json", "b.json", "gone.json"},
+                              self.CURRENT, set())
+        self.assertEqual(len(fails), 1, fails)
+        self.assertIn("gone.json", fails[0])
+
+    def test_a_MISSING_candidate_list_is_refused(self):
+        """Without the list there is no denominator at all, which is the state
+        the gate shipped in."""
+        fails = own.cover_arm(None, self.CURRENT, set())
+        self.assertEqual(len(fails), 1, fails)
+        self.assertIn("no candidate list", fails[0])
+
+
+class CoverDerivation(unittest.TestCase):
+    """The candidate set is DERIVED from the tree, not maintained by hand."""
+
+    def test_the_real_tree_yields_a_nonzero_candidate_set(self):
+        """A derivation that silently returns nothing is the coverage trap:
+        an empty answer and a broken query look identical."""
+        current = own.multi_writer_candidates()
+        self.assertGreater(len(current), 1, "the derivation found nothing")
+        for base, producers in current.items():
+            self.assertGreaterEqual(len(producers), 2, base)
+
+    def test_every_guarded_artifact_is_itself_a_candidate(self):
+        """The positive control for the derivation, and not a coincidence: the
+        registry exists because that artifact HAD a second writer, so a
+        derivation that cannot see it is not measuring what it claims.
+
+        The name is DERIVED from `GUARDED` rather than written out. Spelling it
+        makes this control file a script that names a guarded artifact, and the
+        KNOWN arm then correctly demands it be classified as a producer -- which
+        it is not. Caught by the gate's own arm on the first run."""
+        current = own.multi_writer_candidates()
+        for art in own.GUARDED:
+            with self.subTest(artifact=art.path):
+                self.assertIn(pathlib.PurePath(art.path).name, current)
+
+    def test_the_committed_candidate_list_matches_the_tree(self):
+        recorded = own.read_candidates(own.CANDIDATES)
+        self.assertIsNotNone(recorded, "no committed candidate list")
+        current = own.multi_writer_candidates()
+        guarded = {pathlib.PurePath(a.path).name for a in own.GUARDED}
+        self.assertEqual(own.cover_arm(recorded, current, guarded), [])
+
+    def test_comments_and_blank_lines_are_not_candidates(self):
+        tmp = tempfile.TemporaryDirectory(prefix="ownership-candidates-")
+        self.addCleanup(tmp.cleanup)
+        path = pathlib.Path(tmp.name) / "c"
+        path.write_text("# a comment\n\n  \nreal.json\n")
+        self.assertEqual(own.read_candidates(path), {"real.json"})
+
+    def test_an_absent_list_reads_as_None_not_as_empty(self):
+        """`None` and `set()` mean different things -- missing file versus a
+        list that names nothing -- and only the first is refused by COVER's
+        own message."""
+        tmp = tempfile.TemporaryDirectory(prefix="ownership-candidates-")
+        self.addCleanup(tmp.cleanup)
+        self.assertIsNone(own.read_candidates(pathlib.Path(tmp.name) / "absent"))
+
+
 class RealTree(SandboxCase):
     """The false-positive control, on the real registry rather than a fixture.
 

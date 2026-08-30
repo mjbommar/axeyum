@@ -4084,6 +4084,41 @@ SUITES["artifact-ownership"] = (
             "    if restored != good:",
             "    if False:",
         ),
+        # -- COVER, the DENOMINATOR. The audit's fourth finding: every arm
+        # above is correct and derives what it needs from the tree, while
+        # `GUARDED` itself was a hand-written literal of length one reported as
+        # `artifacts=1`, so an artifact with a second producer and no entry was
+        # structurally invisible.
+        (
+            "COVER a NEW multi-writer artifact must be guarded or recorded",
+            "    for base in sorted(set(current) - recorded - guarded):",
+            "    for base in sorted(set()):",
+        ),
+        (
+            "COVER a stale candidate row is named",
+            "    for base in sorted(recorded - set(current) - guarded):",
+            "    for base in sorted(frozenset()):",
+        ),
+        (
+            "COVER a missing candidate list is refused",
+            "    if recorded is None:",
+            "    if False:",
+        ),
+        (
+            "COVER guarding satisfies the arm without a candidate row",
+            "    for base in sorted(set(current) - recorded - guarded):",
+            "    for base in sorted(set(current) - recorded):",
+        ),
+        (
+            "COVER the candidate set needs TWO producers, not one",
+            "        if len(naming) >= 2:",
+            "        if len(naming) >= 1:",
+        ),
+        (
+            "COVER a comment line is not a candidate",
+            "        if line.strip() and not line.lstrip().startswith(\"#\")",
+            "        if line.strip()",
+        ),
     ],
 )
 
