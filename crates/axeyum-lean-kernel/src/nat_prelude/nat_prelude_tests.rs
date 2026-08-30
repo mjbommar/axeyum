@@ -1125,6 +1125,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_xor,
         p.xor_comm,
         p.test_bit_xor,
+        p.test_bit_land,
+        p.test_bit_lor,
         p.self_lt_two_pow,
         p.self_lt_two_pow_add,
         p.lt_of_test_bit,
@@ -14901,6 +14903,156 @@ fn test_bit_xor_applies_at_a_concrete_discriminating_instance_and_symbolically()
     assert!(
         f.k.axiom_footprint(p.test_bit_xor).is_empty(),
         "test_bit_xor must rest on zero axioms"
+    );
+}
+
+/// `Nat.testBit_land` -- the AND analogue of `Nat.testBit_xor`, transported
+/// to `landAux` (`testbit_bitwise.rs`). Checked at `(m, n) = (3, 5)`
+/// (binary `011`/`101`, `land 3 5 = 1` = `001`) across all three of its
+/// meaningfully differing bits (bit `0`: `1`/`1` -> AND `1`; bit `1`:
+/// `1`/`0` -> AND `0`; bit `2`: `0`/`1` -> AND `0`) -- a single bit position
+/// could not discriminate a swapped combine (e.g. an OR-shaped step) -- AND
+/// symbolically against a genuinely FREE `(m, n, i)` triple.
+#[test]
+fn test_bit_land_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: land 3 5 = 1 (011 & 101 = 001); check all three bits.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        for (i, expected_bit) in [(0u32, 1u32), (1, 0), (2, 0)] {
+            let idx = f.num(i);
+            let applied = f.lemma(p.test_bit_land, &[three, five, idx]);
+            let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+                let shown = f.explain(&e);
+                panic!("test_bit_land must apply at (m=3, n=5, i={i}): {shown}")
+            });
+            let land_35 = f.const_app(p.land, &[three, five]);
+            let lhs = f.const_app(p.test_bit, &[land_35, idx]);
+            let tb_m = f.const_app(p.test_bit, &[three, idx]);
+            let tb_n = f.const_app(p.test_bit, &[five, idx]);
+            let rhs = f.mul(tb_m, tb_n);
+            let want = f.eq(lhs, rhs);
+            assert!(
+                f.k.def_eq(inferred, want),
+                "test_bit_land must state Eq (testBit (land 3 5) {i}) \
+                 (mul (testBit 3 {i}) (testBit 5 {i}))"
+            );
+            let expected = f.num(expected_bit);
+            assert!(
+                f.k.def_eq(lhs, expected),
+                "testBit (land 3 5) {i} must compute to {expected_bit}"
+            );
+            // Negative control: the OTHER bit value must not also def_eq.
+            let other = f.num(1 - expected_bit);
+            let bad_want = f.eq(lhs, other);
+            assert!(
+                !f.k.def_eq(inferred, bad_want),
+                "negative control: bit {i} of land 3 5 must not ALSO be {}",
+                1 - expected_bit
+            );
+        }
+    }
+
+    // Symbolic: test_bit_land applies at a genuinely FREE (m, n, i) triple.
+    {
+        let name = f.name("test_bit_land_restated");
+        f.theorem(name, 3, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let i = values[2];
+            let land_mn = d.const_app(p.land, &[m, n]);
+            let lhs = d.const_app(p.test_bit, &[land_mn, i]);
+            let tb_m = d.const_app(p.test_bit, &[m, i]);
+            let tb_n = d.const_app(p.test_bit, &[n, i]);
+            let rhs = d.mul(tb_m, tb_n);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.test_bit_land, &[m, n, i]);
+            (stmt, proof)
+        })
+        .expect("test_bit_land must apply at symbolic m, n, i");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.test_bit_land).is_empty(),
+        "test_bit_land must rest on zero axioms"
+    );
+}
+
+/// `Nat.testBit_lor` -- the OR analogue of `Nat.testBit_xor`/
+/// `Nat.testBit_land`, transported to `lorAux` (`testbit_bitwise.rs`).
+/// Checked at `(m, n) = (3, 5)` (binary `011`/`101`, `lor 3 5 = 7` = `111`,
+/// matching `lor_three_five`'s own numeral pair) across all three bits
+/// (bit `0`: `1`/`1` -> OR `1`; bit `1`: `1`/`0` -> OR `1`; bit `2`:
+/// `0`/`1` -> OR `1`) -- AND symbolically against a genuinely FREE
+/// `(m, n, i)` triple.
+#[test]
+fn test_bit_lor_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: lor 3 5 = 7 (011 | 101 = 111); check all three bits.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        for (i, expected_bit) in [(0u32, 1u32), (1, 1), (2, 1)] {
+            let idx = f.num(i);
+            let applied = f.lemma(p.test_bit_lor, &[three, five, idx]);
+            let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+                let shown = f.explain(&e);
+                panic!("test_bit_lor must apply at (m=3, n=5, i={i}): {shown}")
+            });
+            let lor_35 = f.const_app(p.lor, &[three, five]);
+            let lhs = f.const_app(p.test_bit, &[lor_35, idx]);
+            let tb_m = f.const_app(p.test_bit, &[three, idx]);
+            let tb_n = f.const_app(p.test_bit, &[five, idx]);
+            let rhs = super::testbit_bitwise::lor_bit(&mut f, tb_m, tb_n);
+            let want = f.eq(lhs, rhs);
+            assert!(
+                f.k.def_eq(inferred, want),
+                "test_bit_lor must state Eq (testBit (lor 3 5) {i}) \
+                 (lor_bit (testBit 3 {i}) (testBit 5 {i}))"
+            );
+            let expected = f.num(expected_bit);
+            assert!(
+                f.k.def_eq(lhs, expected),
+                "testBit (lor 3 5) {i} must compute to {expected_bit}"
+            );
+            // Negative control: the OTHER bit value must not also def_eq.
+            let other = f.num(1 - expected_bit);
+            let bad_want = f.eq(lhs, other);
+            assert!(
+                !f.k.def_eq(inferred, bad_want),
+                "negative control: bit {i} of lor 3 5 must not ALSO be {}",
+                1 - expected_bit
+            );
+        }
+    }
+
+    // Symbolic: test_bit_lor applies at a genuinely FREE (m, n, i) triple.
+    {
+        let name = f.name("test_bit_lor_restated");
+        f.theorem(name, 3, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let i = values[2];
+            let lor_mn = d.const_app(p.lor, &[m, n]);
+            let lhs = d.const_app(p.test_bit, &[lor_mn, i]);
+            let tb_m = d.const_app(p.test_bit, &[m, i]);
+            let tb_n = d.const_app(p.test_bit, &[n, i]);
+            let rhs = super::testbit_bitwise::lor_bit(d, tb_m, tb_n);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.test_bit_lor, &[m, n, i]);
+            (stmt, proof)
+        })
+        .expect("test_bit_lor must apply at symbolic m, n, i");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.test_bit_lor).is_empty(),
+        "test_bit_lor must rest on zero axioms"
     );
 }
 

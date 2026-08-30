@@ -3833,6 +3833,20 @@ pub struct NatPrelude {
     /// `testBit` returns `Bool`), so this is a local fact, not an `ml430`
     /// mirror. See `nat_prelude::testbit_bitwise`.
     pub test_bit_xor: NameId,
+    /// `Nat.testBit_land : ∀ m n i, Eq (testBit (land m n) i)
+    /// (mul (testBit m i) (testBit n i))` -- the Nat-valued AND analogue
+    /// of `Nat.testBit_xor`, transported from `testbit_bitwise.rs`'s
+    /// technique. Mathlib's `Nat.testBit_land` is `Bool`-valued, so this
+    /// is a local fact, not an `ml430` mirror. See
+    /// `nat_prelude::testbit_bitwise`.
+    pub test_bit_land: NameId,
+    /// `Nat.testBit_lor : ∀ m n i, Eq (testBit (lor m n) i)
+    /// (bool_select_nat (ble (testBit m i) (testBit n i)) (testBit n i)
+    /// (testBit m i))` -- the Nat-valued OR analogue of
+    /// `Nat.testBit_xor`. Mathlib's `Nat.testBit_lor` is `Bool`-valued, so
+    /// this is a local fact, not an `ml430` mirror. See
+    /// `nat_prelude::testbit_bitwise`.
+    pub test_bit_lor: NameId,
     /// `Nat.self_lt_two_pow : ∀ n, Lt n (pow 2 n)` — induction on `n`. See
     /// `nat_prelude::bit_order`.
     pub self_lt_two_pow: NameId,
@@ -5260,6 +5274,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_xor: kernel.name_str(nat, "even_xor"),
             xor_comm: kernel.name_str(nat, "xor_comm"),
             test_bit_xor: kernel.name_str(nat, "testBit_xor"),
+            test_bit_land: kernel.name_str(nat, "testBit_land"),
+            test_bit_lor: kernel.name_str(nat, "testBit_lor"),
             self_lt_two_pow: kernel.name_str(nat, "self_lt_two_pow"),
             self_lt_two_pow_add: kernel.name_str(nat, "self_lt_two_pow_add"),
             lt_of_test_bit: kernel.name_str(nat, "lt_of_testBit"),
