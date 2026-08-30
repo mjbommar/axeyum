@@ -15,10 +15,10 @@ This snapshot measures committed evidence populations, static gate reachability,
 | Surface | Measured state | Honest interpretation |
 | --- | ---: | --- |
 | Kernel library | 1,287 theorems; 1,614/1,644 declarations axiom-free | Checked library scale, not autonomous yield |
-| Fact ledger | 698 facts; 513 proved; 176 open | Durable proposition state |
-| Exact lemma links | 397/1,287 (30.8%) | Remaining theorems are searchable but not exactly fact-linked |
+| Fact ledger | 2,220 facts; 2,052 proved; 159 open | Durable proposition state |
+| Exact lemma links | 1,284/1,287 (99.8%) | Remaining theorems are searchable but not exactly fact-linked |
 | Reviewed semantic coverage | 13 facts; 6 kernel anchors across 13 projected concepts | Qualified partial mappings, not automated classification |
-| Registered producers | 26 authoritative; 3 reusable multi-target | Registration breadth is not conversion rate |
+| Registered producers | 28 authoritative; 5 reusable multi-target | Registration breadth is not conversion rate |
 | Production episodes | 16; 4 fixtures excluded | Nonzero real evidence population |
 | General producer observations | 2/138 admissible | Current measured autonomous-search weakness |
 
@@ -26,8 +26,10 @@ This snapshot measures committed evidence populations, static gate reachability,
 
 | Operation | Registered facts |
 | --- | ---: |
+| `authoritative-kernel-int-modeq-shift-family-v1` | 6 |
 | `authoritative-mathlib-bounded-induction-factorial-family-v1` | 4 |
 | `authoritative-mathlib-modeq-family-v1` | 8 |
+| `authoritative-mathlib-nat-modeq-congruence-family-v1` | 10 |
 | `authoritative-mathlib-nat-modeq-remainder-family-v1` | 3 |
 
 ## Canonical gate reachability

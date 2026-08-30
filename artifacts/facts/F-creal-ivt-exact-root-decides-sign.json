@@ -103,7 +103,6 @@
   ],
   "provenance": {
     "date": "2026-08-29",
-    "curation": "curated",
     "established_by": "lane 249-ivt-row-two; crates/axeyum-lean-kernel/src/creal/ivt_boundary.rs",
     "source": "Authored. The reduction IVT => LLPO via a plateau family is standard constructive analysis (Bishop; Bridges); the family, the interval, the discharge of all three hypotheses and the two-branch cotransitivity proof are this repository's own, built on the model of CReal.evt_attained_max_decides_sign (creal/extreme_value.rs). formal.statement is the verbatim Kernel::render_lean type from kernel_declaration_projection, not hand-transcribed.",
     "prior_art": [

@@ -12,9 +12,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [
-    "F:ml430-nat-log-monotone-52fad774"
-  ],
+  "depends_on": [],
   "evidence": [
     {
       "id": "kernel-Nat.log_mono_right",

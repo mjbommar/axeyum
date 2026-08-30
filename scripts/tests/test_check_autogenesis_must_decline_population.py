@@ -145,12 +145,18 @@ class MustDeclinePopulationTests(unittest.TestCase):
         code, out, err = self.run_guard([])
         self.assertEqual(code, 0, err)
         self.assertIn("verdict=PASS", out)
-        # Pinned: 9 of the 12 generated-mutation rows are train/development.
+        # Pinned at 11, raised from 10 on 2026-08-30. The ADR-0542 amendment
+        # moved `natural-logarithm` out of held-out, which correctly brought
+        # its generated-mutation row into the population (`partition !=
+        # 'held-out'`) and left the ground truth behind; f74325fb5 supplied
+        # the missing witness. One mutation row remains held-out
+        # (`natural-square-root`, the only surviving v1 blind family) and is
+        # deliberately still absent.
         # A drop would mean a mutation row silently left the population; a
         # rise means a new one was added without extending the ground truth
         # (which would already fail via the set-mismatch guard).
-        self.assertIn("must_decline=10", out)
-        self.assertIn("ground_truth_verified=10", out)
+        self.assertIn("must_decline=11", out)
+        self.assertIn("ground_truth_verified=11", out)
 
     # --- guard: every input file must exist -------------------------------
     def test_a_missing_nursery_is_an_error(self) -> None:
@@ -379,7 +385,7 @@ class MustDeclineLedgerGuardTests(unittest.TestCase):
             e["fact_id"]
             for e in json.loads(guard.GROUND_TRUTH.read_text())["entries"]
         }
-        self.assertEqual(len(ids), 10)
+        self.assertEqual(len(ids), 11)
         self.assertEqual(guard.scan_ledger(ids, guard.FACTS), [])
 
 

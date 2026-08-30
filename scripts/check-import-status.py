@@ -77,18 +77,27 @@ def evaluate(text: str, values: dict[str, int]) -> list[str]:
     """Claims in `text` that disagree with `values`, or that stopped matching."""
     failures: list[str] = []
     for label, pattern, key in CLAIMS:
-        match = pattern.search(text)
-        if not match:
+        # EVERY occurrence, not the first. `search` stops at the first hit, so a
+        # claim repeated further down the document was invisible to this check.
+        # Measured 2026-08-30: the README states `test suites` TWICE -- once in
+        # the prose at "a fail-closed importer ... with N test suites" and again
+        # in the "Verified on this host" table -- and editing the table's copy to
+        # 99 left this gate exiting 0. Only the prose copy was ever gating, and
+        # nothing said so. A duplicated claim is exactly the drift this check
+        # exists to catch, so all of them are compared.
+        matches = list(pattern.finditer(text))
+        if not matches:
             failures.append(
                 f"no `{label}` claim found in the status block; this check has "
                 "stopped matching and is gating nothing"
             )
             continue
-        claimed = int(match.group(1).replace(",", ""))
-        if claimed != values[key]:
-            failures.append(
-                f"{label}: README claims {claimed}, tree has {values[key]}"
-            )
+        for match in matches:
+            claimed = int(match.group(1).replace(",", ""))
+            if claimed != values[key]:
+                failures.append(
+                    f"{label}: README claims {claimed}, tree has {values[key]}"
+                )
     return failures
 
 

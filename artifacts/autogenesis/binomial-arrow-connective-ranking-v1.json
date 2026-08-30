@@ -149,7 +149,7 @@
       "held-out identity or statement"
     ],
     "kernel_lemma_search_index": "artifacts/autogenesis/kernel-lemma-search-index-v1.json",
-    "kernel_lemma_search_index_sha256": "cfd3ccc95249a4085f13a4478faff30d3f270975793e9daa32c501084885fa74",
+    "kernel_lemma_search_index_sha256": "172fee1fe3d190ba8348f1be08bb2c9064817a0c47c64e39f46f4b3a605a820c",
     "max_candidates_per_goal": 3,
     "max_dependency_depth": 3,
     "selection_rule": "IDF-weighted visible identity seed, one equality simplifier for seed-introduced vocabulary, then one non-equality premise producer from the checked dependency graph"

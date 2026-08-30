@@ -478,6 +478,15 @@ aggregate-scope:
 # build -- it runs against a throwaway one-crate workspace.
 gate-controls:
     scripts/tests/test-gate-scope-controls.sh
+    # Controls for `check.sh`'s `py_native_installed` host guard: it must say
+    # "absent" for a `.venv` whose site-packages is empty (the shape that
+    # actually exists in a fresh lane worktree, and the one `[ -d .venv ]` gets
+    # wrong) AND "present" for an installed package -- a guard that always
+    # declines would silently drop two real steps on every host. Also pins the
+    # listing invariant: `AXEYUM_CHECK_LIST=1` must enumerate all four binomial
+    # steps regardless of host state, because check-aggregate-scope.sh compares
+    # that listing against this file.
+    scripts/tests/test-check-sh-py-native-guard.sh
     # Controls for the two gates that check other gates: the local-ci run
     # recorder (a step exiting 0 with zero tests must record `vacuous` -- that
     # guard was unreachable when written) and the fact scaffolder (a
