@@ -2179,7 +2179,7 @@ fn declare_variance_smul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kernel
 /// `Bool.rec.{1}` selecting between two `Rat` values — the `Rat` counterpart
 /// of `IntDev`'s own `bool_select_int` (`int_prelude/prod.rs`, private
 /// there) and `NatOps::bool_select_nat`.
-fn bool_select_rat(
+pub(super) fn bool_select_rat(
     d: &mut IntDev<'_>,
     condition: ExprId,
     on_true: ExprId,
@@ -2196,7 +2196,13 @@ fn bool_select_rat(
 }
 
 /// `heq : Eq Bool cond true ⊢ Eq Rat (bool_select_rat cond a b) a`.
-fn select_rat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_rat_true(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let true_val = d.bool_true();
     let symm_hb = d.bool_symm(cond, true_val, heq);
     let motive = d.bool_eq_motive(true_val, &|d, value| {
@@ -2208,7 +2214,13 @@ fn select_rat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: 
 }
 
 /// `heq : Eq Bool cond false ⊢ Eq Rat (bool_select_rat cond a b) b`.
-fn select_rat_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+pub(super) fn select_rat_false(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let false_val = d.bool_false();
     let symm_hb = d.bool_symm(cond, false_val, heq);
     let motive = d.bool_eq_motive(false_val, &|d, value| {
