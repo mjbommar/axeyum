@@ -6366,6 +6366,32 @@ pub struct CRealPrelude {
     /// shape, an `Exists.rec` into a `Prop` — permitted; the data restriction
     /// bites only at `supOn`'s own `CReal.mk`. See `creal/supremum.rs`.
     pub sup_seq_le_add: NameId,
+    /// `CReal.le_meshLevelCount : ∀ (m : Nat), Nat.le m (meshLevelCount m)` —
+    /// `m ≤ 2^m − 1`, the doubling schedule outrunning its own index. This is
+    /// the geometric-to-harmonic step: it is what lets the summable request
+    /// `1/2^k` be WEAKENED to the `1/(k+1)` a Cauchy modulus is stated in.
+    /// See `creal/supremum.rs`.
+    pub le_mesh_level_count: NameId,
+    /// `CReal.supSeq_abs_diff_le : ∀ F a b u, le a b → ∀ m n, le (abs (add
+    /// (supSeq F a b u m) (neg (supSeq F a b u n)))) (ofRat (Rat.add
+    /// (natDivSucc 1 m) (natDivSucc 1 n)))` — the two-sided estimate in
+    /// exactly [`Self::cauchy_of_abs_diff_le`]'s shape, at `K := 1`.
+    ///
+    /// `Nat.le_total` splits on which index is coarser. In each branch the
+    /// easy side is [`Self::sup_seq_mono`] and the working side is
+    /// [`Self::sup_seq_le_add`] weakened through
+    /// [`Self::le_mesh_level_count`]. `K = 1` is what the geometric schedule
+    /// buys, not a tuning choice. See `creal/supremum.rs`.
+    pub sup_seq_abs_diff_le: NameId,
+    /// `CReal.supSeq_cauchy : ∀ F a b u, le a b → Cauchy (supSeq F a b u)` —
+    /// **the mesh maxima of a uniformly continuous function on a compact
+    /// interval converge.**
+    ///
+    /// EVT's constructive content as a `Prop`. Producing the supremum itself
+    /// as DATA is the separate `CReal.mk`/[`Self::speedup`] step, which needs
+    /// the same estimate restated on canonical SAMPLES rather than as a
+    /// real-valued bound. See `creal/supremum.rs`.
+    pub sup_seq_cauchy: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7126,6 +7152,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sup_seq: kernel.name_str(creal, "supSeq"),
         sup_seq_mono: kernel.name_str(creal, "supSeq_mono"),
         sup_seq_le_add: kernel.name_str(creal, "supSeq_le_add"),
+        le_mesh_level_count: kernel.name_str(creal, "le_meshLevelCount"),
+        sup_seq_abs_diff_le: kernel.name_str(creal, "supSeq_abs_diff_le"),
+        sup_seq_cauchy: kernel.name_str(creal, "supSeq_cauchy"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12800,6 +12829,32 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.sup_seq_le_add,
         ],
         run: supremum::declare_sup_seq,
+    },
+    BuildStep {
+        label: "supremum::declare_sup_seq_cauchy",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.cauchy,
+            |p: CRealPrelude| p.cauchy_of_abs_diff_le,
+            |p: CRealPrelude| p.le_add_of_nonneg,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_level_count_pow,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_le_add,
+            |p: CRealPrelude| p.sup_seq_mono,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.le_mesh_level_count,
+            |p: CRealPrelude| p.sup_seq_abs_diff_le,
+            |p: CRealPrelude| p.sup_seq_cauchy,
+        ],
+        run: supremum::declare_sup_seq_cauchy,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",

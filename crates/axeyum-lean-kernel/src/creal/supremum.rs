@@ -399,7 +399,9 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, req, rtrans};
+use crate::rat_prelude::ops::{
+    nat_rewrite_prop, radd, rat_eq_rewrite, req, rle, rtrans, rzero,
+};
 
 /// Reducibility height for [`declare_max_range`]'s `Definition`. Deliberately
 /// far above [`super::DERIVED_HEIGHT`] plus every other derived-operation
@@ -4367,4 +4369,342 @@ pub(super) fn declare_sup_seq(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     declare_sup_level_mono_thm(d, p)?;
     declare_sup_seq_mono_thm(d, p)?;
     declare_sup_seq_le_add_thm(d, p)
+}
+
+// ---------------------------------------------------------------------------
+// Rung 6f: `Cauchy (supSeq F a b u)`.
+//
+// The two halves of rung 6e are already a two-sided estimate; all that stands
+// between them and `cauchy_of_abs_diff_le`'s hypothesis is turning the
+// geometric rate `1/2^k` into the harmonic `1/(k+1)` the criterion is stated
+// in. That is `Rat.natDivSucc_antitone` applied to `k <= meshLevelCount k`,
+// which is `Nat.self_lt_two_pow` read through `meshLevelCount_pow`.
+//
+// Note the direction: the schedule REQUESTS the summable `1/2^k` and then
+// WEAKENS it to `1/(k+1)` for the criterion. Requesting `1/(k+1)` directly is
+// the harmonic trap rung 5 exists to avoid -- it is fine as a Cauchy MODULUS
+// and fatal as a per-level GAP, because the gaps would have had to be summed.
+// Rung 6e's depth-uniformity is what lets both readings coexist.
+// ---------------------------------------------------------------------------
+
+/// `CReal.le_meshLevelCount : ∀ (m : Nat), Nat.le m (CReal.meshLevelCount m)`
+/// — `m ≤ 2^m − 1`, i.e. the doubling schedule outruns its own index.
+///
+/// [`NatPrelude::self_lt_two_pow`](crate::NatPrelude::self_lt_two_pow) states
+/// `Lt m (pow 2 m)`, which is `Nat.le (succ m) (pow 2 m)` after `Nat.lt`'s
+/// unfold; [`CRealPrelude::mesh_level_count_pow`] rewrites `pow 2 m` to
+/// `succ (meshLevelCount m)` and `le_of_succ_le_succ` strips the successor.
+fn declare_le_mesh_level_count_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+    let two = d.num(2);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let pow_m = d.const_app(nat_p.pow, &[two, m]);
+    let mlc = d.const_app(p.mesh_level_count, &[m]);
+    let succ_mlc = d.succ(mlc);
+    let succ_m = d.succ(m);
+
+    let strict = d.lemma(nat_p.self_lt_two_pow, &[m]);
+    let fwd = d.lemma(p.mesh_level_count_pow, &[m]);
+    let back = d.symm(succ_mlc, pow_m, fwd);
+    let moved = nat_rewrite_prop(d, pow_m, succ_mlc, back, strict, &|d, z| d.le(succ_m, z));
+    let proof = d.lemma(nat_p.le_of_succ_le_succ, &[m, mlc, moved]);
+
+    let concl = d.le(m, mlc);
+    let ty = d.pi_fv(m_fv, nat, concl);
+    let value = d.lam_fv(m_fv, nat, proof);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.le_mesh_level_count,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.le x (Rat.add x y)` from `hy : Rat.le Rat.zero y`.
+fn rat_le_add_right(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    hy: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let zero = rzero(d, rat);
+    let refl_x = d.lemma(rat.le_refl, &[x]);
+    let widened = d.lemma(rat.add_le_add, &[x, x, zero, y, refl_x, hy]);
+    let padded = radd(d, x, zero);
+    let sum = radd(d, x, y);
+    let trim = d.lemma(rat.add_zero, &[x]);
+    rat_eq_rewrite(d, padded, x, trim, widened, &|d, t| rle(d, rat, t, sum))
+}
+
+/// `Rat.le y (Rat.add x y)` from `hx : Rat.le Rat.zero x`.
+fn rat_le_add_left(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    hx: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let zero = rzero(d, rat);
+    let refl_y = d.lemma(rat.le_refl, &[y]);
+    let widened = d.lemma(rat.add_le_add, &[zero, x, y, y, hx, refl_y]);
+    let padded = radd(d, zero, y);
+    let sum = radd(d, x, y);
+    let trim = d.lemma(rat.zero_add, &[y]);
+    rat_eq_rewrite(d, padded, y, trim, widened, &|d, t| rle(d, rat, t, sum))
+}
+
+/// `CReal.supSeq_abs_diff_le : ∀ F a b u, le a b → ∀ m n,
+/// le (abs (add (supSeq F a b u m) (neg (supSeq F a b u n))))
+/// (ofRat (Rat.add (natDivSucc 1 m) (natDivSucc 1 n)))` — the two-sided
+/// estimate in exactly [`CRealPrelude::cauchy_of_abs_diff_le`]'s shape, at
+/// `K := 1`.
+///
+/// `Nat.le_total` splits on which index is coarser; the two branches are
+/// mirror images, and in each the EASY side is
+/// [`CRealPrelude::sup_seq_mono`] (the sequence increases, so one difference
+/// is already `≤ 0`) while the WORKING side is
+/// [`CRealPrelude::sup_seq_le_add`] weakened from `1/2^k` to `1/(k+1)` by
+/// [`CRealPrelude::le_mesh_level_count`] under `Rat.natDivSucc_antitone`, then
+/// padded to the full two-term bound.
+///
+/// `K = 1` is not a tuning choice — it is what the geometric schedule buys.
+/// A per-level rate that only summed to `O(1/k)` would need `K` to grow.
+fn declare_sup_seq_abs_diff_le_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+    let nat_p = p.rat.int.nat;
+    let rat = p.rat;
+    let logic = p.rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one_nat = d.num(1);
+    let frac_m = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let frac_n = d.const_app(rat.nat_div_succ, &[one_nat, n]);
+    let q_rat = radd(d, frac_m, frac_n);
+    let q_real = embed(d, p, q_rat);
+
+    let seq_m = d.const_app(p.sup_seq, &[f, a, b, u, m]);
+    let seq_n = d.const_app(p.sup_seq, &[f, a, b, u, n]);
+
+    let nonneg_m = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, m]);
+    let nonneg_n = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, n]);
+
+    // `1/2^k ≤ 1/(k+1)` for `k ∈ {m, n}` — the geometric-to-harmonic step.
+    let geom_le = |d: &mut IntDev<'_>, k: ExprId| -> (ExprId, ExprId) {
+        let mlc_k = d.const_app(p.mesh_level_count, &[k]);
+        let geom = d.const_app(rat.nat_div_succ, &[one_nat, mlc_k]);
+        let hk = d.lemma(p.le_mesh_level_count, &[k]);
+        let anti = d.lemma(rat.nat_div_succ_antitone, &[k, mlc_k, hk]);
+        (geom, anti)
+    };
+
+    // The "easy" direction at `(coarse, fine)`: `supSeq coarse ≤ supSeq fine
+    // ≤ supSeq fine + q`.
+    let easy = |d: &mut IntDev<'_>, coarse: ExprId, fine: ExprId, hle: ExprId| -> ExprId {
+        let sc = d.const_app(p.sup_seq, &[f, a, b, u, coarse]);
+        let sf = d.const_app(p.sup_seq, &[f, a, b, u, fine]);
+        let mono = d.lemma(p.sup_seq_mono, &[f, a, b, u, hab, coarse, fine, hle]);
+        // `0 ≤ 1/(m+1) ≤ 1/(m+1) + 1/(n+1)`.
+        let zero_le_q = {
+            let step = rat_le_add_right(d, p, frac_m, frac_n, nonneg_n);
+            let zero = rzero(d, rat);
+            d.lemma(rat.le_trans, &[zero, frac_m, q_rat, nonneg_m, step])
+        };
+        let grow = d.lemma(p.le_add_of_nonneg, &[sf, q_rat, zero_le_q]);
+        let padded = cadd(d, p, sf, q_real);
+        d.lemma(p.le_trans, &[sc, sf, padded, mono, grow])
+    };
+
+    // The "working" direction at `(coarse, fine)`: `supSeq fine ≤ supSeq
+    // coarse + 1/2^coarse ≤ supSeq coarse + q`, where `q` must dominate
+    // `1/(coarse+1)`; `pick` says which summand of `q` that is.
+    let working = |d: &mut IntDev<'_>,
+                   coarse: ExprId,
+                   fine: ExprId,
+                   hle: ExprId,
+                   frac_coarse: ExprId,
+                   pick: ExprId|
+     -> ExprId {
+        let sc = d.const_app(p.sup_seq, &[f, a, b, u, coarse]);
+        let sf = d.const_app(p.sup_seq, &[f, a, b, u, fine]);
+        let (geom, anti) = geom_le(d, coarse);
+        let geom_le_q = d.lemma(rat.le_trans, &[geom, frac_coarse, q_rat, anti, pick]);
+        let geom_real = embed(d, p, geom);
+        let lift = d.lemma(p.of_rat_le, &[geom, q_rat, geom_le_q]);
+        let step = d.lemma(p.sup_seq_le_add, &[f, a, b, u, hab, coarse, fine, hle]);
+        let refl_sc = d.lemma(p.le_refl, &[sc]);
+        let widen = d.lemma(p.add_le_add, &[sc, sc, geom_real, q_real, refl_sc, lift]);
+        let mid = cadd(d, p, sc, geom_real);
+        let padded = cadd(d, p, sc, q_real);
+        d.lemma(p.le_trans, &[sf, mid, padded, step, widen])
+    };
+
+    let diff = {
+        let neg_n = cneg(d, p, seq_n);
+        cadd(d, p, seq_m, neg_n)
+    };
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let concl = cle(d, p, abs_diff, q_real);
+
+    // `1/(m+1) ≤ q` and `1/(n+1) ≤ q`.
+    let pick_m = rat_le_add_right(d, p, frac_m, frac_n, nonneg_n);
+    let pick_n = rat_le_add_left(d, p, frac_m, frac_n, nonneg_m);
+
+    let le_mn_ty = d.le(m, n);
+    let le_nm_ty = d.le(n, m);
+    let split = d.lemma(nat_p.le_total, &[m, n]);
+
+    let minor_mn = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        // `m ≤ n`: `supSeq m` is the coarse one.
+        let side_m = easy(d, m, n, h);
+        let side_n = working(d, m, n, h, frac_m, pick_m);
+        let body = d.lemma(p.abs_le_of_two_sided, &[seq_m, seq_n, q_rat, side_m, side_n]);
+        d.lam_fv(h_fv, le_mn_ty, body)
+    };
+    let minor_nm = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        // `n ≤ m`: `supSeq n` is the coarse one, so the roles flip.
+        let side_m = working(d, n, m, h, frac_n, pick_n);
+        let side_n = easy(d, n, m, h);
+        let body = d.lemma(p.abs_le_of_two_sided, &[seq_m, seq_n, q_rat, side_m, side_n]);
+        d.lam_fv(h_fv, le_nm_ty, body)
+    };
+    let proof = d.lemma(
+        logic.or_elim,
+        &[le_mn_ty, le_nm_ty, concl, split, minor_mn, minor_nm],
+    );
+
+    let ty = {
+        let out = d.pi_fv(n_fv, nat, concl);
+        let out = d.pi_fv(m_fv, nat, out);
+        let out = d.arrow(hab_ty, out);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(n_fv, nat, proof);
+        let out = d.lam_fv(m_fv, nat, out);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sup_seq_abs_diff_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.supSeq_cauchy : ∀ F a b u, le a b → Cauchy (supSeq F a b u)` — **the
+/// mesh maxima of a uniformly continuous function on a compact interval
+/// converge.**
+///
+/// One application of [`CRealPrelude::cauchy_of_abs_diff_le`] at `K := 1`.
+/// This is EVT's constructive content as a `Prop`; turning it into the real
+/// itself is the separate, purely mechanical `CReal.mk`/`speedup` step, which
+/// needs the same estimate restated on canonical SAMPLES rather than as a
+/// real-valued bound.
+fn declare_sup_seq_cauchy_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+
+    let seq = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.const_app(p.sup_seq, &[f, a, b, u, k]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let one_nat = d.num(1);
+    let estimate = d.lemma(p.sup_seq_abs_diff_le, &[f, a, b, u, hab]);
+    let proof = d.lemma(p.cauchy_of_abs_diff_le, &[seq, one_nat, estimate]);
+    let concl = d.const_app(p.cauchy, &[seq]);
+
+    let ty = {
+        let out = d.arrow(hab_ty, concl);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(hab_fv, hab_ty, proof);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sup_seq_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.le_meshLevelCount`, `CReal.supSeq_abs_diff_le` and
+/// `CReal.supSeq_cauchy`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sup_seq_cauchy(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_le_mesh_level_count_thm(d, p)?;
+    declare_sup_seq_abs_diff_le_thm(d, p)?;
+    declare_sup_seq_cauchy_thm(d, p)
 }
