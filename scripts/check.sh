@@ -1520,6 +1520,17 @@ step effort-taxonomy-gen  python3 scripts/gen-effort-taxonomy.py --check
 step effort-taxonomy      python3 scripts/check-effort-taxonomy.py
 step effort-taxonomy-tests python3 scripts/tests/test-effort-taxonomy.py
 
+# L2 phase G5 -- graph selection as the ordinary dispatcher (docs/plan/
+# graph-directed-library-roadmap-2026-08-30.md section G5, ADR-0885).
+# Composes three read-only layers (curriculum.toml, infrastructure-frontier,
+# check-dispatchable-frontier.py) and is authoritative only for the exact
+# (population, queue) pair ADR-0865 measured. Ten guards, kill table in
+# docs/plan/status/l2-g5-graph-dispatcher.md.
+step graph-dispatcher-gen       python3 scripts/gen-graph-dispatcher.py --check
+step graph-dispatcher           python3 scripts/check-graph-dispatcher.py
+step graph-dispatcher-tests     python3 scripts/tests/test-graph-dispatcher.py
+step graph-dispatcher-mutations bash scripts/tests/test-graph-dispatcher-mutations.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
