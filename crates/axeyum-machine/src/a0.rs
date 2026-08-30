@@ -269,63 +269,120 @@ pub enum Outcome {
 /// Finite byte-addressed data memory.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Memory {
-    bytes: Vec<u8>,
+    entries: Vec<(u64, u8)>,
 }
 
 impl Memory {
     /// Constructs zero-filled memory of `len` bytes.
     #[must_use]
     pub fn zeroed(len: usize) -> Self {
-        Self {
-            bytes: vec![0; len],
-        }
+        Self::from_bytes(vec![0; len])
     }
 
     /// Constructs memory from its bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics only on a platform whose address-sized integer can represent a
+    /// vector index greater than `u64::MAX`.
     #[must_use]
     pub fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self { bytes }
+        let entries = bytes
+            .into_iter()
+            .enumerate()
+            .map(|(address, byte)| {
+                (
+                    u64::try_from(address).expect("allocated memory index fits u64"),
+                    byte,
+                )
+            })
+            .collect();
+        Self { entries }
+    }
+
+    /// Constructs memory from arbitrary address-byte pairs.
+    ///
+    /// Entries are sorted into canonical address order. Duplicate addresses
+    /// are rejected rather than silently choosing one stored byte.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`A0Error::DuplicateMemoryAddress`] for the first duplicate.
+    pub fn from_entries(mut entries: Vec<(u64, u8)>) -> Result<Self, A0Error> {
+        entries.sort_unstable_by_key(|(address, _)| *address);
+        if let Some(address) = entries
+            .windows(2)
+            .find_map(|pair| (pair[0].0 == pair[1].0).then_some(pair[0].0))
+        {
+            return Err(A0Error::DuplicateMemoryAddress(address));
+        }
+        Ok(Self { entries })
     }
 
     /// Returns the byte length.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.bytes.len()
+        self.entries.len()
     }
 
     /// Returns whether memory has no bytes.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
+        self.entries.is_empty()
     }
 
     /// Reads a byte.
     #[must_use]
     pub fn byte(&self, address: usize) -> Option<u8> {
-        self.bytes.get(address).copied()
+        u64::try_from(address)
+            .ok()
+            .and_then(|address| self.byte_at(address))
     }
 
-    fn checked_range(&self, address: Word, bytes: usize) -> Result<core::ops::Range<usize>, Trap> {
-        let start = usize::try_from(address.unsigned()).map_err(|_| Trap::DataRange {
-            address: address.unsigned(),
-            bytes,
-            memory_len: self.len(),
-        })?;
-        let end = start
-            .checked_add(bytes)
-            .filter(|end| *end <= self.len())
-            .ok_or(Trap::DataRange {
+    /// Reads one mapped byte by its complete word-valued address.
+    #[must_use]
+    pub fn byte_at(&self, address: u64) -> Option<u8> {
+        self.entries
+            .binary_search_by_key(&address, |(candidate, _)| *candidate)
+            .ok()
+            .map(|index| self.entries[index].1)
+    }
+
+    /// Iterates mapped address-byte pairs in canonical address order.
+    pub fn entries(&self) -> impl ExactSizeIterator<Item = (u64, u8)> + '_ {
+        self.entries.iter().copied()
+    }
+
+    fn checked_addresses(&self, address: Word, bytes: usize) -> Result<Vec<u64>, Trap> {
+        let addresses: Vec<u64> = (0..bytes)
+            .map(|offset| {
+                address
+                    .wrapping_add_signed(i128::try_from(offset).expect("word byte count fits i128"))
+                    .unsigned()
+            })
+            .collect();
+        if addresses
+            .iter()
+            .all(|candidate| self.byte_at(*candidate).is_some())
+        {
+            Ok(addresses)
+        } else {
+            Err(Trap::DataRange {
                 address: address.unsigned(),
                 bytes,
                 memory_len: self.len(),
-            })?;
-        Ok(start..end)
+            })
+        }
     }
 
     fn load(&self, address: Word) -> Result<Word, Trap> {
         let bytes = usize::from(address.width() / 8);
-        let range = self.checked_range(address, bytes)?;
-        Word::from_little_endian(&self.bytes[range]).map_err(|_| Trap::DataRange {
+        let addresses = self.checked_addresses(address, bytes)?;
+        let loaded: Vec<u8> = addresses
+            .into_iter()
+            .map(|candidate| self.byte_at(candidate).expect("checked address is present"))
+            .collect();
+        Word::from_little_endian(&loaded).map_err(|_| Trap::DataRange {
             address: address.unsigned(),
             bytes,
             memory_len: self.len(),
@@ -334,8 +391,14 @@ impl Memory {
 
     fn store(&mut self, address: Word, value: Word) -> Result<(), Trap> {
         let bytes = value.little_endian_bytes();
-        let range = self.checked_range(address, bytes.len())?;
-        self.bytes[range].copy_from_slice(&bytes);
+        let addresses = self.checked_addresses(address, bytes.len())?;
+        for (candidate, byte) in addresses.into_iter().zip(bytes) {
+            let index = self
+                .entries
+                .binary_search_by_key(&candidate, |(entry, _)| *entry)
+                .expect("checked address is present");
+            self.entries[index].1 = byte;
+        }
         Ok(())
     }
 }
@@ -417,6 +480,12 @@ impl State {
                 actual: pc.width(),
             });
         }
+        if let Some((address, _)) = memory
+            .entries()
+            .find(|(address, _)| *address & !mask(width) != 0)
+        {
+            return Err(A0Error::InvalidMemoryAddress { width, address });
+        }
         let zero = Word::new(width, 0)?;
         Ok(Self {
             width,
@@ -468,7 +537,8 @@ pub fn encode_state(state: &State) -> Result<Vec<u8>, A0Error> {
     }
     let memory_len = u64::try_from(state.memory.len())
         .map_err(|_| A0Error::InvalidStateEncoding("memory length exceeds u64"))?;
-    let mut encoded = Vec::with_capacity(90_usize.saturating_add(state.memory.len()));
+    let mut encoded =
+        Vec::with_capacity(90_usize.saturating_add(state.memory.len().saturating_mul(9)));
     encoded.extend_from_slice(&STATE_MAGIC);
     encoded.push(STATE_ENCODING_VERSION);
     encoded.push(state.width);
@@ -476,7 +546,11 @@ pub fn encode_state(state: &State) -> Result<Vec<u8>, A0Error> {
     for register in state.registers {
         encoded.extend_from_slice(&register.unsigned().to_le_bytes());
     }
-    encoded.extend_from_slice(&state.memory.bytes);
+    for (address, byte) in state.memory.entries() {
+        validate_state_value(state.width, address, "memory address")?;
+        encoded.extend_from_slice(&address.to_le_bytes());
+        encoded.push(byte);
+    }
     encoded.extend_from_slice(&state.pc.unsigned().to_le_bytes());
     encoded.push(
         u8::from(state.conditions.zero)
@@ -616,7 +690,13 @@ pub fn decode_state(encoded: &[u8]) -> Result<State, A0Error> {
         *value = decoder.u64()?;
         validate_state_value(width, *value, "register exceeds state width")?;
     }
-    let memory = Memory::from_bytes(decoder.take(memory_len)?.to_vec());
+    let mut memory_entries = Vec::with_capacity(memory_len);
+    for _ in 0..memory_len {
+        let address = decoder.u64()?;
+        validate_state_value(width, address, "memory address exceeds state width")?;
+        memory_entries.push((address, decoder.byte()?));
+    }
+    let memory = Memory::from_entries(memory_entries)?;
     let pc_value = decoder.u64()?;
     validate_state_value(width, pc_value, "program-counter exceeds state width")?;
     let condition_bits = decoder.byte()?;
@@ -812,18 +892,24 @@ impl Observation {
             .collect();
         let mut memory = Vec::with_capacity(self.memory.len());
         for span in &self.memory {
-            let end = span
-                .start
+            span.start
                 .checked_add(span.len)
-                .filter(|end| *end <= state.memory.bytes.len())
                 .ok_or(ObservationError::MemoryRange {
                     start: span.start,
                     len: span.len,
                     memory_len: state.memory.len(),
                 })?;
+            let bytes: Option<Vec<u8>> = (span.start..span.start + span.len)
+                .map(|address| state.memory.byte(address))
+                .collect();
+            let bytes = bytes.ok_or(ObservationError::MemoryRange {
+                start: span.start,
+                len: span.len,
+                memory_len: state.memory.len(),
+            })?;
             memory.push(MemoryObservation {
                 start: span.start,
-                bytes: state.memory.bytes[span.start..end].to_vec(),
+                bytes,
             });
         }
         Ok(ObservedState {
@@ -1523,6 +1609,10 @@ pub enum A0Error {
     },
     /// A state or its canonical binary encoding violates the format contract.
     InvalidStateEncoding(&'static str),
+    /// A finite memory map names the same address twice.
+    DuplicateMemoryAddress(u64),
+    /// A finite memory address does not fit the state's architectural width.
+    InvalidMemoryAddress { width: u8, address: u64 },
     /// Two values that must share a width do not.
     WidthMismatch { expected: u8, actual: u8 },
     /// An encoder input named a register outside r0 through r7.

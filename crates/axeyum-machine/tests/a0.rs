@@ -122,13 +122,13 @@ fn canonical_state_decoder_rejects_noncanonical_mutations() {
     high_register[16] = 1;
     mutations.push(high_register);
     let mut reserved_condition = encoded.clone();
-    reserved_condition[90] = 0x80;
+    reserved_condition[122] = 0x80;
     mutations.push(reserved_condition);
     let mut unknown_outcome = encoded.clone();
-    unknown_outcome[91] = 0xff;
+    unknown_outcome[123] = 0xff;
     mutations.push(unknown_outcome);
     let mut unknown_trap = encoded.clone();
-    unknown_trap[92] = 0xff;
+    unknown_trap[124] = 0xff;
     mutations.push(unknown_trap);
     let mut wrong_trap_memory = encoded.clone();
     let last = wrong_trap_memory.len() - 8;
@@ -562,6 +562,40 @@ fn sixteen_bit_memory_access_is_little_endian_and_may_be_unaligned() {
     assert_eq!(stored.memory.byte(2), Some(0xab));
     let loaded = step(&code, &stored);
     assert_eq!(loaded.registers[3].unsigned(), 0xabcd);
+}
+
+#[test]
+fn sparse_memory_checks_each_wrapped_word_address_atomically() {
+    let memory = Memory::from_entries(vec![(u64::from(u16::MAX), 0), (0, 0), (7, 0x77)]).unwrap();
+    let mut before = State::new(16, memory, word(16, 0)).unwrap();
+    before.registers[1] = word(16, u64::from(u16::MAX));
+    before.registers[2] = word(16, 0xabcd);
+    let store = Program::new(16, word(16, 0), vec![0x03, 0x08, 0x02, 0]).unwrap();
+    let stored = step(&store, &before);
+    assert_eq!(stored.memory.byte_at(u64::from(u16::MAX)), Some(0xcd));
+    assert_eq!(stored.memory.byte_at(0), Some(0xab));
+    assert_eq!(stored.memory.byte_at(7), Some(0x77));
+
+    let mut missing = before.clone();
+    missing.memory = Memory::from_entries(vec![(u64::from(u16::MAX), 0), (7, 0x77)]).unwrap();
+    let trapped = step(&store, &missing);
+    assert!(matches!(
+        trapped.outcome,
+        Outcome::Trapped(Trap::DataRange { .. })
+    ));
+    assert_eq!(trapped.memory, missing.memory);
+
+    assert_eq!(
+        Memory::from_entries(vec![(1, 0), (1, 1)]),
+        Err(A0Error::DuplicateMemoryAddress(1))
+    );
+    assert_eq!(
+        State::new(8, Memory::from_entries(vec![(256, 0)]).unwrap(), word(8, 0)),
+        Err(A0Error::InvalidMemoryAddress {
+            width: 8,
+            address: 256
+        })
+    );
 }
 
 #[test]

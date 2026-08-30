@@ -23,7 +23,7 @@ pub use symbolic_addition::{
 };
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v8";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v9";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
 const WORD_PACKAGE_SCHEMA: &str = "axeyum.a0.word-package.v1";
 const STATE_CODEC_SCHEMA: &str = "axeyum.a0.state-codec.v1";
@@ -316,7 +316,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "8".to_owned(),
+        version: "9".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -326,6 +326,7 @@ pub fn semantic_package() -> A0SemanticPackage {
             "words",
             "word-extension-truncation",
             "finite-memory",
+            "sparse-wrapping-memory",
             "state",
             "canonical-state-codec",
             "observations",
@@ -1754,16 +1755,32 @@ fn changes_within_writes(before: &State, after: &State, writes: &[StateComponent
             return false;
         }
     }
-    for address in 0..before.memory.len() {
-        if before.memory.byte(address) != after.memory.byte(address)
+    if before
+        .memory
+        .entries()
+        .map(|(address, _)| address)
+        .collect::<Vec<_>>()
+        != after
+            .memory
+            .entries()
+            .map(|(address, _)| address)
+            .collect::<Vec<_>>()
+    {
+        return false;
+    }
+    for (address, before_byte) in before.memory.entries() {
+        if Some(before_byte) != after.memory.byte_at(address)
             && !writes.iter().any(|component| match component {
                 StateComponent::Memory {
                     address: start,
                     bytes,
-                } => {
-                    let start = usize::try_from(start.unsigned()).ok();
-                    start.is_some_and(|start| address >= start && address < start + bytes)
-                }
+                } => (0..*bytes).any(|offset| {
+                    start
+                        .unsigned()
+                        .wrapping_add(u64::try_from(offset).expect("byte offset fits u64"))
+                        & word_mask(start.width())
+                        == address
+                }),
                 _ => false,
             })
         {
@@ -1780,8 +1797,9 @@ fn digest_state(digest: &mut Sha256, state: &State) {
     for register in state.registers {
         digest.update(register.unsigned().to_le_bytes());
     }
-    for address in 0..state.memory.len() {
-        digest.update([state.memory.byte(address).expect("address is valid")]);
+    for (address, byte) in state.memory.entries() {
+        digest.update(address.to_le_bytes());
+        digest.update([byte]);
     }
     digest.update(state.pc.unsigned().to_le_bytes());
     digest.update([
@@ -2064,8 +2082,9 @@ fn observation_witness_digest(left: &State, right: &State) -> String {
                 .expect("memory length fits u64")
                 .to_le_bytes(),
         );
-        for address in 0..state.memory.len() {
-            digest.update([state.memory.byte(address).expect("address is in range")]);
+        for (address, byte) in state.memory.entries() {
+            digest.update(address.to_le_bytes());
+            digest.update([byte]);
         }
         digest.update(state.pc.unsigned().to_le_bytes());
         digest.update([
