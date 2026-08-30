@@ -33553,7 +33553,7 @@ in `scripts/check.sh` and `justfile`.
 
 Lane: `l0-s1-statement-identity`
 Phase: S1 of the trusted-library safety roadmap (ADR-0717, selected by ADR-0746)
-Decision: [ADR-0752](docs/research/09-decisions/adr-0752-statement-identity-is-pinned-for-every-settled-fact-and-absence-is-a-violation.md)
+Decision: [ADR-0763](docs/research/09-decisions/adr-0763-statement-identity-is-pinned-for-every-settled-fact-and-absence-is-a-violation.md)
 Status: **COMPLETE.** S1's exit criterion holds and is executed on every merge.
 
 ## The gap S0 measured, re-measured from the ledger
