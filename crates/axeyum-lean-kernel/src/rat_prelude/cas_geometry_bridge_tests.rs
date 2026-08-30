@@ -148,7 +148,7 @@ pub(crate) fn built() -> (Kernel, RatPrelude) {
 /// canonical shape [`axeyum_cas::mvpoly::Monomial`] keeps, re-derived here
 /// rather than borrowed so the ORDER this module sorts by is entirely its own
 /// (see [`IntPoly`]).
-type Mono = Vec<(String, u32)>;
+pub(super) type Mono = Vec<(String, u32)>;
 
 /// A polynomial as `(monomial, integer coefficient)` pairs, sorted by
 /// monomial under `Mono`'s derived lexicographic order, with no zero
@@ -157,7 +157,7 @@ type Mono = Vec<(String, u32)>;
 /// The sort is this module's, not the CAS's: nothing here ever compares its
 /// order against `MvPoly`'s, only against itself, and internal consistency is
 /// what makes two equal polynomials build the identical `ExprId`.
-type IntPoly = Vec<(Mono, i128)>;
+pub(super) type IntPoly = Vec<(Mono, i128)>;
 
 /// `MvPoly` -> [`IntPoly`], declining (`None`) on any non-integer coefficient.
 ///
@@ -166,7 +166,7 @@ type IntPoly = Vec<(Mono, i128)>;
 /// `i128` (ADR-0038) and there is no general `Rat.ofRat` cast in this bridge
 /// layer. `medians-concurrent` is declined for exactly this reason and its
 /// `±1/2` coefficients are why.
-fn int_poly(poly: &MvPoly) -> Option<IntPoly> {
+pub(super) fn int_poly(poly: &MvPoly) -> Option<IntPoly> {
     let mut terms: IntPoly = Vec::new();
     for (mono, coeff) in poly.terms() {
         let value = rational_to_int(*coeff)?;
@@ -196,7 +196,7 @@ fn scale_poly(k: i128, poly: &[(Mono, i128)]) -> IntPoly {
 /// `a + b` on [`IntPoly`]s: a sorted merge dropping any monomial whose
 /// combined coefficient is zero. Mirrors [`prove_merge`]'s recursion exactly,
 /// so the two cannot disagree about the answer.
-fn add_poly(a: &[(Mono, i128)], b: &[(Mono, i128)]) -> IntPoly {
+pub(super) fn add_poly(a: &[(Mono, i128)], b: &[(Mono, i128)]) -> IntPoly {
     let (mut i, mut j) = (0usize, 0usize);
     let mut out: IntPoly = Vec::new();
     while i < a.len() && j < b.len() {
@@ -228,7 +228,7 @@ fn add_poly(a: &[(Mono, i128)], b: &[(Mono, i128)]) -> IntPoly {
 /// translator's own discrimination test — never in a proof — so that
 /// "`int_poly` produced the polynomial the certificate meant" is checked
 /// against numbers rather than asserted.
-fn eval_int_poly(poly: &[(Mono, i128)], point: &BTreeMap<&str, i128>) -> i128 {
+pub(super) fn eval_int_poly(poly: &[(Mono, i128)], point: &BTreeMap<&str, i128>) -> i128 {
     let mut total = 0i128;
     for (mono, coeff) in poly {
         let mut term = *coeff;
@@ -256,7 +256,7 @@ fn eval_int_poly(poly: &[(Mono, i128)], point: &BTreeMap<&str, i128>) -> i128 {
 /// normalisation problem: two equal monomials go through this function and
 /// come out as the SAME `ExprId`, so no `mul_comm`/`mul_assoc` step ever has
 /// to see inside one.
-fn mono_expr(
+pub(super) fn mono_expr(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,
@@ -282,7 +282,7 @@ fn mono_expr(
 }
 
 /// One term as `Rat.ofInt c * monomial`.
-fn term_expr(
+pub(super) fn term_expr(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,
@@ -301,7 +301,7 @@ fn term_expr(
 /// [`prove_scale`] a single base case each (`zero_add`/`add_zero`/`mul_zero`)
 /// instead of a separate singleton case, and it costs one `+ 0` per
 /// polynomial.
-fn poly_expr(
+pub(super) fn poly_expr(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,
@@ -451,7 +451,7 @@ fn prove_scale(
 /// `Rat.ofInt_add` (reversed) — then, when the sum is zero, DELETES the term
 /// via `mul_comm`/`mul_zero`/`zero_add`. That deletion is the case the
 /// orthocentre identity actually exercises four times.
-fn prove_merge(
+pub(super) fn prove_merge(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,

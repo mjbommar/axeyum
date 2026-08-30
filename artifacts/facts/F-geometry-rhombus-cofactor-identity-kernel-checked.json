@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-rhombus-cofactor-identity-kernel-checked",
+  "title": "The rhombus certificate's cofactor identity is kernel-reconstructed with POLYNOMIAL cofactors -- the first CAS->kernel bridge that multiplies two non-constant polynomials",
+  "statement": "For the nine-variable polynomial identity F:geometry-rhombus-diagonals-perpendicular's certificate states -- conclusion = sum over i of cofactor_i * generator_i over the coordinates ax, ay, bx, by, cx, cy, dx, dy and the saturation variable Zinv0, with cofactors of 12, 8, 6 and 8 terms -- the identity itself is reconstructed through crate::Kernel::add_declaration at SYMBOLIC coordinates (nine universally quantified Rat variables). Its predecessor F:geometry-orthocentre-cofactor-identity-kernel-checked handled CONSTANT cofactors only; this is the first one in the repository where two non-constant polynomials are multiplied, which needs a proof of monomial x monomial in canonical variable order (prove_mul). It is deliberately WEAKER than the geometry fact it is a sibling of, in five ways spelled out in axiom_footprint, and one of them is WORSE here than for the orthocentre sibling: this certificate SATURATES, so the non-degeneracy condition enters the kernel statement as an uninterpreted ninth Rat variable Zinv0 whose intended meaning -- that it inverts the collinearity determinant of A, B, D -- is nowhere expressed.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (forall ((ax Rat) (ay Rat) (bx Rat) (by Rat) (cx Rat) (cy Rat) (dx Rat) (dy Rat) (Zinv0 Rat))\n  (= conclusion_AC_perp_BD\n     (+ (* cofactor_0 generator_AB_parallel_DC)\n        (* cofactor_1 generator_BC_parallel_AD)\n        (* cofactor_2 generator_AB_eq_BC)\n        (* cofactor_3 generator_Zinv0_det_minus_one)))))",
+    "fragment": "nra-geometry-cofactor-identity",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "dx",
+      "dy",
+      "Zinv0"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:geometry-rhombus-diagonals-perpendicular",
+    "F:geometry-orthocentre-cofactor-identity-kernel-checked"
+  ],
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a Kernel::add_declaration acceptance whose axiom_footprint is asserted EMPTY in the test itself, built from rat_prelude/int_prelude/nat_prelude constants that are all measured axiom-free -- but ADR-0601 SS2's AXIOM_FREE_CAPABLE reserves the headline axiom-free tally to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support.",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane: RELOCATED, NOT DISCHARGED. The kernel sees nine Rat variables and one algebraic identity. That ax is the abscissa of a point A, that the four generators are AB parallel to DC, BC parallel to AD, |AB| = |BC| and the non-degeneracy saturation, and that the conclusion is AC perpendicular to BD, are modelling choices made in axeyum_cas::geometry_corpus and reproduced verbatim by this bridge's translator. Reconstruction moves that assumption from a CAS-internal convention into a kernel definition choice; it does not remove it. This is exactly the qualification docs/research/11-design-review/2026-08-28-ivt-evt-pareto-position-measured.md insists must survive when the kernel-reconstructed number moves.",
+    "geometry.implication-not-discharged: this fact states the polynomial IDENTITY conclusion = sum of cofactor_i * generator_i, which is what the certificate carries. It does NOT state the implication (every generator = 0) implies conclusion = 0. That step is one Rat rewrite away and is not taken here: no Rat hypothesis is discharged and no implication is declared, so the theorem admitted is an equation between nine-variable polynomials, not the geometric conditional.",
+    "geometry.non-degeneracy-is-an-uninterpreted-variable: WORSE HERE THAN FOR THE ORTHOCENTRE SIBLING, which had no saturation at all. This certificate saturates: generators[3] is Zinv0 * (the ABD collinearity determinant) - 1, and Zinv0 is a fresh variable. In the kernel that is one more universally quantified Rat with no interpretation whatsoever. The reading that Zinv0 WITNESSES invertibility of the determinant, and hence that the reconstructed identity is silent rather than false on degenerate configurations, lives entirely outside what is proved. The certificate's own statement field records that the geometric claim is FALSE without that condition -- four collinear points with |AB| = |BC| satisfy every hypothesis and have parallel diagonals -- and the kernel term knows nothing of that.",
+    "geometry.characteristic-zero-specialisation: inherited unchanged from F:geometry-rhombus-diagonals-perpendicular. A rational-coefficient cofactor identity holds in every Q-algebra, so the theorem is one of every characteristic-zero field, not specifically of the real plane; and this reconstruction is over Rat, not over CReal, so nothing here says the coordinates are real numbers.",
+    "cas.prove-mul-covers-integer-coefficients-only: prove_mul lifts the constant-cofactor restriction but not the integer-coefficient one. The translator inherits rational_to_int from cas_ivt_bridge_tests and declines any coefficient whose denominator is not 1, so of the eight geometry certificates with non-constant cofactors it reaches only rhombus-diagonals-perpendicular, pappus-hexagon and simson-line -- parallelogram-diagonals-bisect (24 non-integer terms), centroid-divides-medians (16) and euler-line (272) still need the same Rat.ofRat-style cast F:cas-partial-fractions-mixed-general-case and F:geometry-medians-concurrent are blocked on."
+  ],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-rhombus-cofactor-identity",
+      "kind": "kernel-term",
+      "supports": "conclusion = sum over i of cofactor_i * generator_i at nine universally quantified Rat variables, admitted by crate::Kernel::add_declaration as Check.geometry_rhombus_cofactor_identity. The polynomials are NOT hand-copied: the test calls axeyum_cas::geometry_corpus::corpus() for the rhombus-diagonals-perpendicular problem, runs axeyum_cas::geometry_certify::certify on it, and translates cert.generators / cert.conclusions[0].poly / cert.conclusions[0].cofactors -- asserting first that all four cofactors are NON-constant (so this certificate cannot be reached by the constant-cofactor predecessor) and that the variable ORDER is the certificate's own, coordinates then saturation variables. The proof is emitted by prove_mono_mul / prove_head_product / prove_term_mul / prove_poly_mul, whose every step is a Rat ring lemma (mul_assoc, mul_comm, mul_one, mul_zero, left_distrib, right_distrib, add_assoc, add_comm, add_zero, zero_add, Rat.ofInt_add, Rat.ofInt_mul); the kernel re-derives all of them. The declaration's axiom_footprint is asserted EMPTY and its kind asserted Declaration::Theorem in the same test.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (untrusted producer: cofactor-tracked Buchberger reduction that finds the four cofactors; this bridge never recomputes them)",
+        "rat_prelude::cas_geometry_mul_bridge_tests::prove_poly_mul and its three layers (the proof-emitting normalizer, entirely Rust-side and entirely untrusted -- it only proposes a term)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated nine-variable Eq Rat from the supplied proof term, and supplies the axiom_footprint the test asserts empty)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_mul_bridge_tests::tests::geometry_rhombus_cofactor_identity_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_geometry_mul_bridge_tests::tests::geometry_rhombus_cofactor_identity_kernel_checked \\.\\.\\. ok$'",
+      "checker_seconds": 160,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_mul_bridge_tests.rs",
+      "notes": "Measured wall-clock 152.79s for this test alone, of which about 120s is the CAS certify call that produces the certificate -- measured separately by rhombus_certificate_identity_holds_at_integer_points, which does no kernel work at all and still takes 120.04s. The kernel side is therefore roughly 33s, against 7.66s for the difference-of-squares smoke test that builds no certificate. MUTATION-VERIFIED both halves separately, each killing the two kernel-checked tests in the module and leaving the three non-kernel tests green: (a) perturbing the emitted product coefficient in prove_head_product (a.1 * b.1 -> a.1 * b.1 + 1) kills it at the merged == conclusion assertion, printing a 105-term wrong normal form against the certificate's 8-term conclusion, which pins the STATEMENT to the certificate rather than to whatever the emitter produced; (b) swapping the arguments of the single mul_comm in prove_mono_mul's right-head singleton branch (same lemma, same arity, wrong direction) leaves that assertion PASSING -- the normal form is unchanged, only the proof is wrong -- and kills it with TypeMismatch out of add_declaration, showing the PROOF is genuinely re-derived by the trust anchor. The two mutations therefore die through different guards, which is the discrimination that matters."
+    },
+    {
+      "id": "prove-mul-arithmetic-and-the-certificate-identity-checked-against-numbers",
+      "kind": "instance-pin",
+      "supports": "That mul_mono/mul_poly compute the right answer and that the translator read the certificate the CAS actually produced -- neither of which the kernel can see, because it never sees an MvPoly. Three separate numeric controls: (1) (2x^2*y - y*z)(x + 3z) evaluated at (x,y,z) = (2,3,1) is 105, equal to 21 * 5 computed from the factors independently, with a transposed-exponent variant (x^2*y -> x*y^2, value 33 not 21) asserted to change the product, so an exponent-blind builder cannot pass; (2) (x - y)(x + y) = x^2 - y^2, where the two xy terms must cancel and the term count falls 4 to 2, which is the zero-drop path inside prove_merge; (3) the rhombus cofactor identity itself evaluated at an integer point where NO generator vanishes (so the identity is doing work there rather than reducing to 0 = 0), both directly and re-derived through mul_poly/add_poly, with a negative control asserting that a three-generator combination does NOT equal the conclusion. A fourth test pins mono_factors + factors_expr to build the same ExprId as the parent module's mono_expr, which every step of prove_mono_mul assumes and which nothing else would notice drifting.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry_certify::certify (produces the MvPoly values being read)",
+        "rat_prelude::cas_geometry_bridge_tests::eval_int_poly (independent integer evaluation, used only in tests and never in a proof)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_geometry_mul_bridge_tests::tests:: 2>/dev/null | grep -cE '^test result: ok\\. 5 passed; 0 failed'",
+      "checker_seconds": 160,
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_mul_bridge_tests.rs",
+      "notes": "The evaluation magnitudes are single-digit on purpose: Nat numerals in this prelude are unary, so cost grows superlinearly with the largest value formed. The exponents are asymmetric on purpose too (x^2*y, not x^2*y^2) so that transposing two of them changes the value -- a symmetric monomial would make the negative control vacuous."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "lane cas-prove-mul: rat_prelude::cas_geometry_mul_bridge_tests (crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_mul_bridge_tests.rs), continuing lane cas-multivariate, which named prove_mul as the single highest-leverage next piece for row 3",
+    "source": "the cofactor identity of axeyum_cas::geometry_corpus's rhombus-diagonals-perpendicular problem, produced by axeyum_cas::geometry_certify::certify and committed at artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json",
+    "prior_art": [
+      {
+        "who": "Hilbert; Wu Wen-Tsun; Buchberger",
+        "what": "the Nullstellensatz cofactor form of a geometry theorem, and its mechanisation by characteristic sets / Groebner bases",
+        "year": 1978,
+        "where": "Wu, 'On the decision problem and the mechanization of theorem-proving in elementary geometry', Sci. Sinica 21 (1978)",
+        "attribution": "standard attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered as a SIBLING to F:geometry-rhombus-diagonals-perpendicular, not an edit to it, for the same reason the orthocentre bridge is a sibling: folding this evidence into the parent would make scripts/validate-facts.py's classify_cas_certificate_fact label the WHOLE certificate -- the coordinatisation, the implication, and the meaning of Zinv0 included -- as kernel-reconstructed, which would overclaim exactly what the design review says must not be overclaimed. THE SIZING CORRECTION THIS LANE MEASURED: docs/plan/status/277-cas-multivariate.md sized the non-constant-cofactor cluster at 8 certificates and listed the fractional-literal cast as a SEPARATE blocker on medians-concurrent. The two blockers overlap on five certificates. Counting per certificate the terms whose serialised coefficient denominator is not 1: parallelogram-diagonals-bisect 24, centroid-divides-medians 16, euler-line 272 -- all three also have non-constant cofactors, so prove_mul alone unblocks THREE (rhombus, pappus, simson), not eight. In particular parallelogram-diagonals-bisect, which lane 277 named as the cheapest next target on term count, is not reachable with prove_mul alone: every one of its cofactors and both of its conclusions carry +-1/2. THE DESIGN, in one sentence: a monomial is represented as a sorted LIST OF VARIABLE OCCURRENCES rather than as an exponent map, so monomial x monomial is the same sorted merge the addition already uses -- four cases, two of which are free (when the left list's head wins and its tail is empty the two sides are the same ExprId, and the mirrored case is a single mul_comm). The re-insertion of each product term through prove_merge is load-bearing and not an optimisation detail: multiplying by a fixed monomial does NOT preserve the monomial order (with m = x, x < y as monomials but x*y < x*x), so the image of a sorted term list is not sorted. Rat.one_mul and Rat.zero_mul do not exist in this prelude and are derived from mul_comm plus mul_one/mul_zero."
+}
