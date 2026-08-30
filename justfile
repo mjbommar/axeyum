@@ -409,6 +409,19 @@ facts:
     # ...and its controls: 9 cases, then 8 guard deletions each required to
     # kill EXACTLY ONE.
     bash scripts/tests/test-proposition-duplication.sh
+    # ADR-0810: the above engine wired into the REAL write set (measured, not
+    # assumed) -- artifacts/facts/<id>.json, the pins manifest, and the
+    # safety-matrix TSV/MD, all full rebuilds reusing validate-facts.py's
+    # validate_one, check-settled-fact-statements.py's rewrite(), and
+    # gen-safety-matrix.py's classify/render/run_controls UNMODIFIED. Crash
+    # sweep over the real 23 write ops, four staleness dimensions against real
+    # paths, idempotent replay. Never touches the live ledger -- every check
+    # runs against a scratch copy it builds itself.
+    python3 scripts/check-credit-transaction-ledger.py
+    # ...its own test suite (22 tests) and mutation table: 9 guards this
+    # wrapper owns, each required to kill EXACTLY its own canary.
+    python3 scripts/tests/test-credit-transaction-ledger.py
+    bash scripts/tests/test-credit-transaction-ledger-mutations.sh
     # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so
     # the Mathlib proposition lives only in `formal.statement`. Nineteen had it
     # overwritten with our own `render_lean` output, and the mirror claim -- "we
