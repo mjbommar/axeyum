@@ -129,6 +129,13 @@ REVISION_KEYS: dict[str, str] = {
     "fact_transition_commit": THIS_REPOSITORY,
     "git_commit": THIS_REPOSITORY,
     "head": THIS_REPOSITORY,
+    # `run.head_sha` in `artifacts/runtime/ci-latest-v1.json`, the GitHub
+    # Actions runtime receipt. The artifact names its own subject one key up
+    # (`"repository": "mjbommar/axeyum"`), and the value was checked to be a
+    # real commit here and an ancestor of HEAD -- `08b65942f`, "docs(plan):
+    # record imported ModEq bridge boundary" -- so this is our own CI pinning
+    # our own tested commit, not a foreign pin.
+    "head_sha": THIS_REPOSITORY,
     "historical_commit": THIS_REPOSITORY,
     "historical_prestate_commit": THIS_REPOSITORY,
     "implementation_commit": THIS_REPOSITORY,
@@ -145,6 +152,11 @@ REVISION_KEYS: dict[str, str] = {
     "required_head": THIS_REPOSITORY,
     "source_commit": THIS_REPOSITORY,
     "source_head": THIS_REPOSITORY,
+    # `runtime_gate_status.tested_commit` in `artifacts/product-health-v1.json`:
+    # the same value as `head_sha` above, carried from the CI receipt into the
+    # dashboard that summarises it. Verified to be the identical sha, so it
+    # names this repository for the same reason.
+    "tested_commit": THIS_REPOSITORY,
     "tooling_commit": THIS_REPOSITORY,
     # --- foreign, and sanctioned. Each is an IMPORT this project decided to
     # depend on deliberately, with an ADR behind it; that is the difference
