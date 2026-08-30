@@ -63,11 +63,26 @@ failed_steps=()
 # gate.
 list_only="${AXEYUM_CHECK_LIST:-0}"
 
+# Set to `optional:` around a block whose steps need a toolchain this script
+# does not require. List mode then emits `optional:<name>` in FIELD 1, which
+# `scripts/check-aggregate-scope.sh` never reads (it does `cut -f2-`, so the
+# scope comparison still sees the command and still counts the step) while
+# `scripts/check-fast.sh` CAN read it and decline to run what this host cannot.
+#
+# Measured 2026-08-30. Making list mode host-independent was right for the scope
+# question -- gating the LISTING on `.venv` made the comparison non-reproducible
+# across developers. But `check-fast.sh` enumerates through this same list and
+# RUNS every line with no toolchain guard of its own, so the same change turned
+# six correctly-skipped steps into six failures. The two consumers are asking
+# different questions -- "what does this gate cover?" versus "what can I run
+# here?" -- and the list has to answer both.
+step_prefix=""
+
 step() {
   local name="$1"; shift
   ran=$((ran + 1))
   if [ "$list_only" = "1" ]; then
-    printf '%s\t%s\n' "$name" "$*"
+    printf '%s\t%s\n' "${step_prefix}${name}" "$*"
     return 0
   fi
   echo "=== $name ==="
@@ -837,6 +852,7 @@ step adr-remote-collisions python3 scripts/gen-adr-index.py --check-remote
 # the comparison non-reproducible -- a different developer would get a different
 # divergence set from an identical tree.
 if [ "$list_only" = "1" ] || { command -v uv >/dev/null 2>&1 && [ -d .venv ]; }; then
+  step_prefix="optional:"
   export TMPDIR="${TMPDIR:-/data0/axeyum/scratch/py-tmp-$USER}"
   [ "$list_only" = "1" ] || mkdir -p "$TMPDIR"
   step py-maturin-develop uv run --no-sync maturin develop
@@ -856,6 +872,7 @@ if [ "$list_only" = "1" ] || { command -v uv >/dev/null 2>&1 && [ -d .venv ]; };
   step py-types           uv run --no-sync python tools/check_types.py
   step py-ruff-check      uv run --no-sync ruff check python/ tools/
   step py-ruff-format     uv run --no-sync ruff format --check python/ tools/
+step_prefix=""
 elif [ "$list_only" != "1" ]; then
   # SKIPPED, not passed. Named on stdout so a reader of the log can see which
   # half of the gate did not run, and why.

@@ -98,6 +98,23 @@ while IFS=$'\t' read -r name cmd; do
   # is explicit that `grep -q` consuming a pipeline under `set -o pipefail`
   # SIGPIPEs its producer, yielding status 141, which `pipefail` then reports as
   # "not found". Same tree, different answer on consecutive runs.
+  # HOST-CONDITIONAL steps, marked `optional:` in field 1 by `scripts/check.sh`.
+  # The full gate wraps these in a toolchain test (`command -v uv && [ -d .venv ]`)
+  # and skips them when the toolchain is absent; this sweep enumerates through the
+  # same list and would otherwise RUN them and count 8 host-setup failures as gate
+  # failures.
+  #
+  # They are counted and NAMED, never silently dropped -- an absent gate that
+  # prints nothing is indistinguishable from a gate that ran, which is the exact
+  # defect this script's three-outcome contract exists to prevent. They land in
+  # `deferred`, whose banner already says DEFERRED means UNCHECKED.
+  case "$name" in
+    optional:*)
+      deferred=$((deferred + 1))
+      deferred_names+=("${name#optional:}(host-conditional)")
+      continue
+      ;;
+  esac
   if [ "$with_cargo" -eq 0 ]; then
     case "$cmd" in
       *cargo*)
