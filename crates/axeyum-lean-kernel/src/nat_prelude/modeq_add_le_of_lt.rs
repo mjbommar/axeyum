@@ -96,7 +96,13 @@ pub(super) fn declare_mod_eq_add_le_of_lt(
             let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
             let body = d.apply(
                 rec,
-                &[nat, inner_predicate, inner_motive, inner_minor, inner_exists_proof],
+                &[
+                    nat,
+                    inner_predicate,
+                    inner_motive,
+                    inner_minor,
+                    inner_exists_proof,
+                ],
             );
             let with_inner = d.lam_fv(inner_exists_fv, inner_exists, body);
             d.lam_fv(u_fv, nat, with_inner)

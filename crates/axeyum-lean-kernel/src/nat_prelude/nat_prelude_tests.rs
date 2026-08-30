@@ -722,6 +722,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_add_iff_left,
         p.mod_eq_add_iff_right,
         p.mod_eq_cancel_left,
+        p.mod_eq_add_le_of_lt,
         p.dvd_mul,
         p.dvd_refl,
         p.dvd_zero,
@@ -5704,6 +5705,118 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
             f.explain(&e)
         )
     });
+}
+
+/// `Nat.mod_eq_add_le_of_lt : modEq m a b → a < b → a + m ≤ b`
+/// (`modeq_add_le_of_lt.rs`) at concrete boundary instances, at a genuinely
+/// free variable, and a reversed control confirming `a < b` is load-bearing.
+#[test]
+fn mod_eq_add_le_of_lt_applies_at_boundary_instances_free_variables_and_a_reversed_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // `Lt n m` for concrete numerals via `le_intro (succ n) m k proof`, `k :=
+    // m - n - 1` (mirrors `mul_order_lemmas_apply_at_concrete_and_boundary_instances`).
+    let lt_witness = |f: &mut Fixture, n_val: u32, m_val: u32| -> ExprId {
+        let n = f.num(n_val);
+        let m = f.num(m_val);
+        let sn = f.succ(n);
+        let k = f.num(m_val - n_val - 1);
+        let sn_plus_k = f.add(sn, k);
+        let witness = f.refl(sn_plus_k);
+        f.lemma(p.le_intro, &[sn, m, k, witness])
+    };
+
+    // --- Tight case: b - a == m exactly (3, 2, 5), catching an off-by-one --
+    let three = f.num(3);
+    let two = f.num(2);
+    let five = f.num(5);
+    let zero = f.num(0);
+    let one = f.num(1);
+    let modeq_tight = f.concrete_mod_eq(three, two, five, one, zero); // 2+3*1=5=5+3*0
+    let hlt_tight = lt_witness(&mut f, 2, 5);
+    let applied_tight = f.lemma(
+        p.mod_eq_add_le_of_lt,
+        &[three, two, five, modeq_tight, hlt_tight],
+    );
+    let inferred_tight = f
+        .k
+        .infer(applied_tight)
+        .unwrap_or_else(|e| panic!("mod_eq_add_le_of_lt(3,2,5) should infer: {}", f.explain(&e)));
+    let two_plus_three = f.add(two, three);
+    let expect_tight = f.le(two_plus_three, five); // Le(5,5), the tight boundary
+    assert!(
+        f.k.def_eq(inferred_tight, expect_tight),
+        "mod_eq_add_le_of_lt(3,2,5) must conclude 2+3 <= 5"
+    );
+
+    // --- Slack case: b - a == 2*m (3, 2, 8), so the bound isn't accidentally
+    // only tight-case-correct -----------------------------------------------
+    let eight = f.num(8);
+    let modeq_slack = f.concrete_mod_eq(three, two, eight, two, zero); // 2+3*2=8=8+3*0
+    let hlt_slack = lt_witness(&mut f, 2, 8);
+    let applied_slack = f.lemma(
+        p.mod_eq_add_le_of_lt,
+        &[three, two, eight, modeq_slack, hlt_slack],
+    );
+    let inferred_slack = f
+        .k
+        .infer(applied_slack)
+        .unwrap_or_else(|e| panic!("mod_eq_add_le_of_lt(3,2,8) should infer: {}", f.explain(&e)));
+    let two_plus_three_slack = f.add(two, three);
+    let expect_slack = f.le(two_plus_three_slack, eight); // Le(5,8)
+    assert!(
+        f.k.def_eq(inferred_slack, expect_slack),
+        "mod_eq_add_le_of_lt(3,2,8) must conclude 2+3 <= 8"
+    );
+
+    // --- Genuinely free variable: m, a, b as fresh fvars, hmod/hlt as fresh
+    // hypothesis fvars -- numerals reduce and can hide a defeq gap that only
+    // shows up symbolically. ------------------------------------------------
+    let nat = f.nat_ty();
+    let m_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    let hmod_ty = f.mod_eq(m, a, b);
+    let hmod_fv = f.fresh_fvar();
+    let hmod = f.k.fvar(hmod_fv);
+    let hlt_ty = f.lt(a, b);
+    let hlt_fv = f.fresh_fvar();
+    let hlt = f.k.fvar(hlt_fv);
+    let applied_free = f.lemma(p.mod_eq_add_le_of_lt, &[m, a, b, hmod, hlt]);
+    // Wrap in lambdas so `f.k.infer` sees `hmod`/`hlt` in a local context.
+    let wrapped = {
+        let with_hlt = f.lam_fv(hlt_fv, hlt_ty, applied_free);
+        let with_hmod = f.lam_fv(hmod_fv, hmod_ty, with_hlt);
+        let with_b = f.lam_fv(b_fv, nat, with_hmod);
+        let with_a = f.lam_fv(a_fv, nat, with_b);
+        f.lam_fv(m_fv, nat, with_a)
+    };
+    f.k.infer(wrapped).unwrap_or_else(|e| {
+        panic!(
+            "mod_eq_add_le_of_lt should infer at a genuinely free m,a,b: {}",
+            f.explain(&e)
+        )
+    });
+
+    // --- Reversed control: a ≡ b holds but a > b (3, 5, 2) -- confirms the
+    // `a < b` hypothesis is load-bearing, not decorative. The conclusion at
+    // these values (5+3=8 <= 2) is actually FALSE: `Nat.ble 8 2` computes to
+    // `false`, so had the theorem been provable without `a < b` it would be
+    // UNSOUND, not merely inapplicable. ---------------------------------
+    let modeq_reversed = f.concrete_mod_eq(three, five, two, zero, one); // 5+0=5=2+3*1
+    let _ = modeq_reversed; // demonstrates modEq alone does not license the bound
+    let a_plus_m_reversed = f.add(five, three); // 8
+    let ble_reversed = f.const_app(p.ble, &[a_plus_m_reversed, two]);
+    let bool_false = f.bool_false();
+    assert!(
+        f.k.def_eq(ble_reversed, bool_false),
+        "Nat.ble (5+3) 2 must compute to false: the conclusion is genuinely \
+         false when a > b, so a < b cannot be dropped"
+    );
 }
 
 /// `Nat.mod_eq_cancel` at a concrete instance: `gcd 3 5 = 1` and
