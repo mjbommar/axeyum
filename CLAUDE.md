@@ -1455,6 +1455,21 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   and the error surfaces far from the arithmetic, check the operand order before
   anything else.
 
+  **`Nat.mul` HAS THE SAME ASYMMETRY, AND IT DECIDES WHICH EQUATION IS `refl`.**
+  Measured 2026-08-29. `Nat.mul` also recurses on its RIGHT argument, so
+  `mul_succ : mul n (succ m) = add (mul n m) n` is refl-provable, while the
+  left-successor form `succ_mul : mul (succ n) m = add (mul n m) m` is a real
+  induction-proved THEOREM. A lane building `mul_lt_mul_right` copied the
+  left-hand core's `mul_succ` shortcut and assumed `mul (succ b) a` reduced the
+  same way. It does not: the assumption poisoned **all 169** `nat_prelude::`
+  tests with one `TypeMismatch`. Fixed with an explicit transport along
+  `succ_mul`.
+
+  So the rule generalises: **before assuming an arithmetic equation holds by
+  `Eq.refl`, check which argument the operation recurses on.** The mirrored form
+  is a theorem, not a reduction, and copying a sibling proof's shortcut across
+  the mirror is how you find out.
+
   **AND IT DECIDES WHICH VARIABLE A CASE TREE MUST SPLIT ON.** Measured
   2026-08-29 building the `Nat.bit` decode bridge. `bit test k` puts
   `cond test 1 0` in `Nat.add`'s SECOND position, so — because `add` eats the

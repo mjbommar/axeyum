@@ -172,6 +172,7 @@ mod lor;
 mod min_fac;
 mod mod_mul_lemmas;
 mod modular;
+mod mul_order_lemmas;
 mod multichoose;
 mod no_confusion;
 mod ops;
@@ -265,6 +266,9 @@ use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use mod_mul_lemmas::declare_mod_mul_family;
 use modular::declare_modular_congruence;
+use mul_order_lemmas::{
+    declare_div_lt_of_lt_mul, declare_lt_of_mul_lt_mul, declare_mul_lt_mul_iff,
+};
 use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -3488,6 +3492,30 @@ pub struct NatPrelude {
     /// is needed (`land_assoc` needs one, via `Nat.land_le_left`). See
     /// `nat_prelude::rec_agreement`.
     pub lor_assoc: NameId,
+
+    // --- `Nat` ordering under multiplication and division (mul_order_lemmas.rs) --
+    /// `Nat.lt_of_mul_lt_mul_left : ∀ a b c, Lt (mul a b) (mul a c) → Lt b c` —
+    /// `F:ml430-nat-lt-of-mul-lt-mul-left-234e8530`. NO positivity hypothesis:
+    /// true even at `a = 0`, since the hypothesis is then vacuous.
+    pub lt_of_mul_lt_mul_left: NameId,
+    /// `Nat.lt_of_mul_lt_mul_right : ∀ a b c, Lt (mul b a) (mul c a) → Lt b c`
+    /// — `F:ml430-nat-lt-of-mul-lt-mul-right-54c1120b`, the mirror of
+    /// [`Self::lt_of_mul_lt_mul_left`].
+    pub lt_of_mul_lt_mul_right: NameId,
+    /// `Nat.mul_lt_mul_left : ∀ a b c, Lt zero a → Iff (Lt (mul a b) (mul a
+    /// c)) (Lt b c)` — `F:ml430-nat-mul-lt-mul-left-af33301e`. `mp` is
+    /// [`Self::lt_of_mul_lt_mul_left`]; `mpr` is the positive-monotone core.
+    pub mul_lt_mul_left: NameId,
+    /// `Nat.mul_lt_mul_right : ∀ a b c, Lt zero a → Iff (Lt (mul b a) (mul c
+    /// a)) (Lt b c)` — `F:ml430-nat-mul-lt-mul-right-de5b6046`, the mirror of
+    /// [`Self::mul_lt_mul_left`].
+    pub mul_lt_mul_right: NameId,
+    /// `Nat.div_lt_of_lt_mul : ∀ m n k, Lt m (mul n k) → Lt (div m n) k` —
+    /// `F:ml430-nat-div-lt-of-lt-mul-818dc4c7`. Case split on `n`: at `zero`
+    /// the hypothesis is absurd (`zero_mul`/`not_lt_zero`); at `succ n'` this
+    /// is `Nat.div_mod_lt_mul_iff`'s forward direction fed the canonical
+    /// `Nat.div_mod_exec` witness.
+    pub div_lt_of_lt_mul: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4208,6 +4236,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lor_aux_assoc_of_fuel: kernel.name_str(nat, "lor_aux_assoc_of_fuel"),
             lor_aux_le_add: kernel.name_str(nat, "lor_aux_le_add"),
             lor_assoc: kernel.name_str(nat, "lor_assoc"),
+            lt_of_mul_lt_mul_left: kernel.name_str(nat, "lt_of_mul_lt_mul_left"),
+            lt_of_mul_lt_mul_right: kernel.name_str(nat, "lt_of_mul_lt_mul_right"),
+            mul_lt_mul_left: kernel.name_str(nat, "mul_lt_mul_left"),
+            mul_lt_mul_right: kernel.name_str(nat, "mul_lt_mul_right"),
+            div_lt_of_lt_mul: kernel.name_str(nat, "div_lt_of_lt_mul"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -4663,6 +4696,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_xor_algebra_all` just above / `declare_xor_order_all`,
         // far above). Nothing needs it, so it goes last.
         declare_xor_trichotomy_all(&mut d, &p)?;
+        // `Nat` ordering under multiplication/division: needs
+        // `Nat.mul_le_mul_left`/`Nat.mul_comm`/`Nat.add_le_add_left`/
+        // `Nat.le_trans`/`Nat.lt_or_ge`/`Nat.lt_irrefl` (`declare_order`/
+        // `declare_order_more`/`declare_multiplicative_theorems`, all far
+        // above) plus `Nat.zero_mul`/`Nat.not_lt_zero`/`Nat.div_mod_exec`/
+        // `Nat.div_mod_lt_mul_iff` (`declare_multiplicative_theorems`/
+        // `declare_no_confusion`/`declare_divisibility`/
+        // `declare_euclidean_division`, all far above). Nothing needs it,
+        // so it goes last.
+        declare_lt_of_mul_lt_mul(&mut d, &p)?;
+        declare_mul_lt_mul_iff(&mut d, &p)?;
+        declare_div_lt_of_lt_mul(&mut d, &p)?;
         Ok(p)
     })();
     match built {
