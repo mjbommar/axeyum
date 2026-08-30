@@ -109,5 +109,41 @@ class Screen(unittest.TestCase):
         self.assertEqual(result["screened"], 1)
 
 
+class HeldOutPopulationIsFailClosed(unittest.TestCase):
+    """`held_out_ids` must refuse an empty population.
+
+    The refusal in `screen` is `set(fact_ids) & held`, so an empty `held` makes
+    it unreachable and this tool would publish a per-fact already-proved verdict
+    for every blind row -- printing exactly what it prints when it works. The
+    tool always had the refusal and never had this check; added 2026-08-30
+    alongside the ADR-0617 refusal in `brief-step0.py`.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.dir = pathlib.Path(self._tmp.name)
+
+    def _manifest(self, name: str, partitions: list[str]) -> pathlib.Path:
+        path = self.dir / name
+        path.write_text(json.dumps({"entries": [
+            {"fact_id": f"F:row-{i}", "partition": p}
+            for i, p in enumerate(partitions)]}))
+        return path
+
+    def test_a_population_with_no_held_out_rows_is_refused(self) -> None:
+        a = self._manifest("a.json", ["train", "development"])
+        b = self._manifest("b.json", ["train"])
+        with self.assertRaises(SystemExit) as ctx:
+            _mod.held_out_ids(a, b)
+        self.assertEqual(ctx.exception.code, 2)
+
+    def test_positive_control_one_held_out_row_is_enough(self) -> None:
+        # Without this the guard above is satisfied by refusing every input.
+        a = self._manifest("a.json", ["train", "held-out"])
+        b = self._manifest("b.json", ["development"])
+        self.assertEqual(_mod.held_out_ids(a, b), {"F:row-1"})
+
+
 if __name__ == "__main__":
     unittest.main()
