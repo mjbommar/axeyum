@@ -397,6 +397,23 @@ step trust-closure python3 scripts/check-trust-closure.py --quiet
 # kill EXACTLY ONE. A mutation killing two would mean the cases do not separate
 # what they claim to; killing none would mean the guard is unreachable.
 step trust-closure-controls bash scripts/tests/test-trust-closure.sh
+# S6 of the same roadmap (ADR-0785): a fault-injectable two-phase-commit
+# transaction over a fixture ledger (facts/pins/graph/dashboards/receipts).
+# The gate runs a crash-boundary sweep -- one full transaction is executed to
+# count every low-level write op (26, currently), then re-run once per op
+# with a fault injected at that exact op, and the resulting recovered state
+# is required to match byte-for-byte OLD or NEW, never neither -- plus four
+# staleness fixtures (receipt pointer, source, graph, checker version), each
+# rejecting with its OWN exception class, a fresh-read demonstration (an
+# in-process cached journal and the on-disk one are made to disagree; commit()
+# is shown to act on disk), and an idempotent-replay check. Fails closed if
+# the sweep finds zero boundaries or the fixture set is empty.
+step credit-transaction python3 scripts/check-credit-transaction.py
+# ...and its own test suite plus mutation table: 27 tests, then 9 guard
+# deletions in a SCRATCH COPY (never the shared checkout), each required to
+# kill EXACTLY its own designated canary from a disjoint set of nine.
+step credit-transaction-tests python3 scripts/tests/test-credit-transaction.py
+step credit-transaction-mutations bash scripts/tests/test-credit-transaction-mutations.sh
 # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so the
 # Mathlib proposition lives only in `formal.statement`. Nineteen had it
 # overwritten with our own `render_lean` output, and the mirror claim -- "we
