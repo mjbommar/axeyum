@@ -148,6 +148,7 @@ mod catalan;
 mod choose;
 mod clog;
 mod coprime_lemmas;
+mod count_range_permute;
 mod count_range_reversal;
 mod crt;
 mod defs;
@@ -244,6 +245,9 @@ use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
+use count_range_permute::{
+    declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
+};
 use count_range_reversal::declare_count_range_reversal_even;
 use crt::declare_crt;
 use defs::{
@@ -1837,6 +1841,30 @@ pub struct NatPrelude {
     /// `countRange` analogue of `sumRange_split` (`rectangle.rs`), by
     /// induction on `j` alone (`f`, `m` held fixed).
     pub count_range_split: NameId,
+    /// `Nat.countRange_congr_lt : ∀ f g n, (∀ i, Lt i n → Eq Bool (f i) (g i))
+    /// → Eq Nat (countRange f n) (countRange g n)` — the BOUNDED pointwise
+    /// congruence (`count_range_permute.rs`), the form
+    /// [`count_range_congr`](Self::count_range_congr)'s own doc comment says to
+    /// add when a proof needs it.
+    pub count_range_congr_lt: NameId,
+    /// `Nat.countRange_point_change : ∀ a b i0 n, Lt i0 n →
+    /// (∀ k, Lt k i0 → Eq Bool (a k) (b k)) →
+    /// (∀ k, Lt i0 k → Lt k n → Eq Bool (a k) (b k)) →
+    /// Eq Nat (add (countRange a n) (sel (b i0)))
+    ///        (add (countRange b n) (sel (a i0)))` — two predicates agreeing on
+    /// `[0,n)` except possibly at the single index `i0` have counts that differ
+    /// exactly as their values at `i0` do (`count_range_permute.rs`). Stated
+    /// additively; `Nat.sub` is truncated. This is what lets `countRange` skip
+    /// the adjacent-transposition apparatus `Int.prodRange_permute` needed.
+    pub count_range_point_change: NameId,
+    /// `Nat.countRange_permute : ∀ f σ n, InjectiveOn σ n → MapsInto σ n →
+    /// Eq Nat (countRange f n) (countRange (fun k => f (σ k)) n)` — counting
+    /// over `[0,n)` is invariant under any injective self-map of `[0,n)`
+    /// (`count_range_permute.rs`), the exact `countRange` mirror of
+    /// `Int.prodRange_permute`. The primitive under `Nat.totient_mul_of_coprime`:
+    /// the CRT map `x ↦ (x mod m) * n + (x mod n)` is such a self-map of
+    /// `[0, m*n)` exactly when `m` and `n` are coprime.
+    pub count_range_permute: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4377,6 +4405,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_le: kernel.name_str(nat, "countRange_le"),
             count_range_congr: kernel.name_str(nat, "countRange_congr"),
             count_range_split: kernel.name_str(nat, "countRange_split"),
+            count_range_congr_lt: kernel.name_str(nat, "countRange_congr_lt"),
+            count_range_point_change: kernel.name_str(nat, "countRange_point_change"),
+            count_range_permute: kernel.name_str(nat, "countRange_permute"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -4902,6 +4933,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_nat_pigeonhole(&mut d, &p)?;
         declare_restrict_injective(&mut d, &p)?;
         declare_restrict_maps_into(&mut d, &p)?;
+        // `count_range_permute.rs`: needs `countRange`/`countRange_succ`
+        // (`declare_totient_all`, above), the pigeonhole
+        // (`declare_pigeonhole`) and BOTH restriction lemmas immediately
+        // above — its successor step is exactly their intended consumer.
+        declare_count_range_congr_lt(&mut d, &p)?;
+        declare_count_range_point_change(&mut d, &p)?;
+        declare_count_range_permute(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
         declare_transposition_involutive(&mut d, &p)?;
         declare_transposition_injective(&mut d, &p)?;
