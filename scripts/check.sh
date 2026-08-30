@@ -1497,6 +1497,17 @@ step graph-join           python3 scripts/check-graph-join.py
 step graph-join-tests     python3 scripts/tests/test-graph-join.py
 step graph-join-mutations bash scripts/tests/test-graph-join-mutations.sh
 
+# L2 phase G3 -- publish the infrastructure frontier (docs/plan/graph-
+# directed-library-roadmap-2026-08-30.md section G3, ADR-0845). Reads the L1
+# G2 graph join (read-only) plus a hand-curated candidate list, re-validated
+# live against the join at generation time. Two of the four queues are
+# empty over this population, each for a stated, machine-checkable reason.
+# Seven guards (MISSING_JOIN, STALE_ARTIFACT, ROW_ID_UNIQUE, ROW_ID_PURITY,
+# EMPTY_QUEUE_REASON, ROW_EVIDENCE_COMPLETE, CROSS_CHECK_PRESENT), all
+# mutation-verified 1:1 by the second step below.
+step infrastructure-frontier           python3 scripts/check-infrastructure-frontier.py
+step infrastructure-frontier-mutations bash scripts/tests/test-infrastructure-frontier-mutations.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
