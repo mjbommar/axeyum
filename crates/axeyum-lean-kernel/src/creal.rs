@@ -6448,6 +6448,37 @@ pub struct CRealPrelude {
     /// kernel never unfolds the `Definition` to compare the two sides.
     /// See `creal/supremum.rs`.
     pub sup_seq_converges_sup_on: NameId,
+    /// `CReal.maxRange_attained_approx : ∀ (f : Nat → CReal) (n e : Nat),
+    /// ∃ i, Nat.le i n ∧ le (maxRange f n) (add (f i) (ofRat (Rat.natDivSucc
+    /// 1 e)))` — a finite maximum is APPROXIMATELY attained at one of its
+    /// samples.
+    ///
+    /// The exact form is not available and must not be attempted: choosing
+    /// which sample attains the maximum decides `le x y ∨ le y x` for
+    /// arbitrary reals. The `1/(e+1)` slack buys the decision back through
+    /// [`Self::lt_cotrans`]. See `creal/sup_laws.rs`.
+    pub max_range_attained_approx: NameId,
+    /// `CReal.supSeq_le_shift : ∀ F a b u, le a b → ∀ k n, le (supSeq F a b u
+    /// n) (add (supSeq F a b u k) (ofRat (Rat.natDivSucc 1 (meshLevelCount
+    /// k))))` — every term of the sup sequence is within `1/2^k` of the `k`-th
+    /// term, in WHICHEVER direction.
+    ///
+    /// [`Self::sup_seq_le_add`] is the `n ≥ k` half; the other half is free
+    /// from [`Self::sup_seq_mono`]. Needed because `converges_upper_bound`
+    /// asks for a bound at every index. See `creal/sup_laws.rs`.
+    pub sup_seq_le_shift: NameId,
+    /// `CReal.supOn_approx_lub : ∀ F a b (hab : le a b) (u :
+    /// UniformlyContinuousOn F a b) (e : Nat), ∃ x, le a x ∧ (le x b ∧
+    /// le (supOn F a b hab u) (add (F x) (ofRat (Rat.natDivSucc 1 e))))` —
+    /// **the constructive least-upper-bound law**, EVT's row 1 second half.
+    ///
+    /// `supOn` is approached by values of `F` on `[a, b]` to any requested
+    /// accuracy, at a point the proof exhibits. It is NOT attained, and the
+    /// exact form is REFUTED rather than unproved —
+    /// [`Self::evt_attained_max_decides_sign`] shows an attaining maximiser
+    /// would decide the sign of an arbitrary real. That is why this statement
+    /// is approximate and must stay so. See `creal/sup_laws.rs`.
+    pub sup_on_approx_lub: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7212,6 +7243,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sup_seq_cauchy: kernel.name_str(creal, "supSeq_cauchy"),
         sup_on: kernel.name_str(creal, "supOn"),
         sup_seq_converges_sup_on: kernel.name_str(creal, "supSeq_converges_supOn"),
+        max_range_attained_approx: kernel.name_str(creal, "maxRange_attained_approx"),
+        sup_seq_le_shift: kernel.name_str(creal, "supSeq_le_shift"),
+        sup_on_approx_lub: kernel.name_str(creal, "supOn_approx_lub"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12935,6 +12969,67 @@ const STEPS: &[BuildStep] = &[
         run: supremum::declare_sup_on,
     },
     BuildStep {
+        label: "sup_laws::declare_max_range_attained_approx",
+        requires: &[
+            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.le_add_of_nonneg,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.lt_congr,
+            |p: CRealPrelude| p.lt_cotrans,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.pos_of_pos_bound,
+        ],
+        provides: &[|p: CRealPrelude| p.max_range_attained_approx],
+        run: sup_laws::declare_max_range_attained_approx,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_seq_le_shift",
+        requires: &[
+            |p: CRealPrelude| p.le_add_of_nonneg,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_le_add,
+            |p: CRealPrelude| p.sup_seq_mono,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.sup_seq_le_shift],
+        run: sup_laws::declare_sup_seq_le_shift,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_approx_lub",
+        requires: &[
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.converges_upper_bound,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_mesh_level_count,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.max_range_attained_approx,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_converges_sup_on,
+            |p: CRealPrelude| p.sup_seq_le_shift,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.sup_on_approx_lub],
+        run: sup_laws::declare_sup_on_approx_lub,
+    },
+    BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
         requires: &[
             |p: CRealPrelude| p.exp_term,
@@ -14092,6 +14187,7 @@ mod rolle;
 mod series;
 mod speedup;
 mod sqrt;
+mod sup_laws;
 mod supremum;
 mod trig;
 mod trig_fn;
