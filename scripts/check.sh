@@ -1508,6 +1508,18 @@ step graph-join-mutations bash scripts/tests/test-graph-join-mutations.sh
 step infrastructure-frontier           python3 scripts/check-infrastructure-frontier.py
 step infrastructure-frontier-mutations bash scripts/tests/test-infrastructure-frontier-mutations.sh
 
+# L3-D0 effort taxonomy (docs/plan/definition-discovery-efficiency-roadmap-
+# 2026-08-30.md, ADR-0870). 32 sampled completed/declined lane episodes
+# classified into a 9-category taxonomy (the D0 spec's 8 plus
+# infrastructure_maintenance); corroboration for each "corroborated" episode
+# is RE-VERIFIED (a cited commit must resolve in this repo's object store, a
+# cited ADR file must exist, a cited source file must exist) rather than
+# trusted from the episode's own JSON. Nine guards, kill table in
+# docs/plan/status/l3-d0-effort-taxonomy.md.
+step effort-taxonomy-gen  python3 scripts/gen-effort-taxonomy.py --check
+step effort-taxonomy      python3 scripts/check-effort-taxonomy.py
+step effort-taxonomy-tests python3 scripts/tests/test-effort-taxonomy.py
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
