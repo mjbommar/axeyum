@@ -376,6 +376,12 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.mat_mul_add_left,
         p.mat_mul_add_right,
         p.mat_mul_smul_left,
+        p.sum_range_delta,
+        p.mat_id,
+        p.mat_id_diag,
+        p.mat_id_off_diag,
+        p.mat_mul_id_left,
+        p.mat_mul_id_right,
         p.is_distribution,
         p.prob_le_one,
         p.prob_complement,
@@ -5860,6 +5866,12 @@ fn the_matrix_toolkit_is_axiom_free() {
         ("matMul_add_left", p.mat_mul_add_left, true),
         ("matMul_add_right", p.mat_mul_add_right, true),
         ("matMul_smul_left", p.mat_mul_smul_left, true),
+        ("sumRange_delta", p.sum_range_delta, true),
+        ("matId", p.mat_id, false),
+        ("matId_diag", p.mat_id_diag, true),
+        ("matId_off_diag", p.mat_id_off_diag, true),
+        ("matMul_id_left", p.mat_mul_id_left, true),
+        ("matMul_id_right", p.mat_mul_id_right, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -6250,5 +6262,236 @@ fn rat_mat_mul_assoc_holds_at_a_concrete_instance() {
     assert!(
         !d.kernel().def_eq(ten, eleven),
         "10 and 11 must not be defeq, or the value check above cannot fail"
+    );
+}
+
+/// **The mandatory concrete computation test for `Rat.matId`.** The identity
+/// matrix is a `Definition`, so the kernel admits it once it is well-formed
+/// and cannot say it selects the wrong branch.
+///
+/// `matId i j = if Nat.beq i j then 1 else 0`, checked on and off the
+/// diagonal, in both index orders, and past the `2 x 2` block the rest of
+/// this file uses — a delta that got its two branches the wrong way round
+/// would give `1` at `(0,1)` and `0` at `(0,0)`.
+#[test]
+fn rat_mat_id_computes_the_delta() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let one_r = {
+        let numerator = d.num(1);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+    let zero_r = {
+        let numerator = d.num(0);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+    assert!(
+        !d.kernel().def_eq(one_r, zero_r),
+        "1 and 0 must not be defeq, or nothing below can fail"
+    );
+
+    let mat_id = d.kernel().const_(p.mat_id, vec![]);
+    for (i, j, on_diagonal) in [
+        (0u32, 0u32, true),
+        (0, 1, false),
+        (1, 0, false),
+        (1, 1, true),
+        (2, 1, false),
+        (3, 3, true),
+    ] {
+        let iu = d.num(i);
+        let ju = d.num(j);
+        let got = d.apply(mat_id, &[iu, ju]);
+        let expected = if on_diagonal { one_r } else { zero_r };
+        assert!(
+            d.kernel().def_eq(got, expected),
+            "Rat.matId {i} {j} should be {}",
+            u32::from(on_diagonal)
+        );
+    }
+}
+
+/// The identity's unit law **computed**, and — the part that carries the
+/// argument — a demonstration that its `Lt i n` hypothesis is load-bearing
+/// rather than decoration.
+///
+/// With `A i j = (i + i + j + 1) / 1` as elsewhere in this file:
+///
+/// ```text
+///   A = [ 1  2 ]     matId(2x2) * A = A   at every (i, j) with i < 2
+///       [ 3  4 ]
+/// ```
+///
+/// but at `i = 2`, which is OUTSIDE the summation range, the delta never
+/// fires: `matId 2 0 * A 0 0 + matId 2 1 * A 1 0 = 0*1 + 0*3 = 0`, while
+/// `A 2 0 = 5`. So `matMul matId A 2 2 0` is `0` and not `A 2 0`, and a
+/// version of `matMul_id_left` stated without the bound would be FALSE.
+#[test]
+fn rat_mat_mul_id_left_needs_its_bound() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, n: u32| -> ExprId {
+        let numerator = d.num(n);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+    let a = {
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let two_i = d.add(i, i);
+        let plus_j = d.add(two_i, j);
+        let one = d.num(1);
+        let numerator = d.add(plus_j, one);
+        let idx = d.num(0);
+        let body = d.const_app(p.nat_div_succ, &[numerator, idx]);
+        let over_j = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, over_j)
+    };
+    let mat_id = d.kernel().const_(p.mat_id, vec![]);
+    let two_n = d.num(2);
+
+    // In range: `matId * A` agrees with `A` at every cell.
+    for (i, j, want) in [(0u32, 0u32, 1u32), (0, 1, 2), (1, 0, 3), (1, 1, 4)] {
+        let iu = d.num(i);
+        let ju = d.num(j);
+        let got = d.const_app(p.mat_mul, &[mat_id, a, two_n, iu, ju]);
+        let expected = literal(&mut d, want);
+        assert!(
+            d.kernel().def_eq(got, expected),
+            "Rat.matMul matId A 2 {i} {j} should reduce to A[{i}][{j}] = {want}"
+        );
+    }
+    // And on the right.
+    for (i, j, want) in [(0u32, 0u32, 1u32), (0, 1, 2), (1, 0, 3), (1, 1, 4)] {
+        let iu = d.num(i);
+        let ju = d.num(j);
+        let got = d.const_app(p.mat_mul, &[a, mat_id, two_n, iu, ju]);
+        let expected = literal(&mut d, want);
+        assert!(
+            d.kernel().def_eq(got, expected),
+            "Rat.matMul A matId 2 {i} {j} should reduce to A[{i}][{j}] = {want}"
+        );
+    }
+
+    // OUT of range: the bound in `matMul_id_left` is not decoration.
+    let two_idx = d.num(2);
+    let zero_idx = d.num(0);
+    let out_of_range = d.const_app(p.mat_mul, &[mat_id, a, two_n, two_idx, zero_idx]);
+    let zero_r = literal(&mut d, 0);
+    let a_20 = {
+        let iu = d.num(2);
+        let ju = d.num(0);
+        d.apply(a, &[iu, ju])
+    };
+    let five = literal(&mut d, 5);
+    assert!(
+        d.kernel().def_eq(a_20, five),
+        "the test matrix should have A[2][0] = 5"
+    );
+    assert!(
+        d.kernel().def_eq(out_of_range, zero_r),
+        "with i = 2 outside the summation range the delta never fires, so \
+         Rat.matMul matId A 2 2 0 is 0"
+    );
+    assert!(
+        !d.kernel().def_eq(out_of_range, a_20),
+        "0 and A[2][0] = 5 must differ -- if they agreed, `matMul_id_left` \
+         would hold without its `Lt i n` hypothesis and the hypothesis would \
+         be untested decoration"
+    );
+}
+
+/// `matMul_id_left` and `matMul_id_right` APPLIED, not merely declared: the
+/// bound is discharged by `Nat.zero_lt_succ` at `0 < 2` and the resulting
+/// proof's inferred type is compared against an independently built equation
+/// whose two sides both reduce to the hand-computed `A[0][1] = 2`.
+#[test]
+fn rat_mat_mul_id_laws_hold_at_a_concrete_instance() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::req;
+
+    let (mut kernel, p) = built();
+    let np = {
+        let mut d = IntDev::new(&mut kernel, p.int);
+        d.prelude()
+    };
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let a = {
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let two_i = d.add(i, i);
+        let plus_j = d.add(two_i, j);
+        let one = d.num(1);
+        let numerator = d.add(plus_j, one);
+        let idx = d.num(0);
+        let body = d.const_app(p.nat_div_succ, &[numerator, idx]);
+        let over_j = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, over_j)
+    };
+
+    let two_n = d.num(2);
+    let zero_idx = d.num(0);
+    let one_idx = d.num(1);
+    // `Lt 0 2` = `Lt zero (succ 1)`.
+    let hlt = d.lemma(np.zero_lt_succ, &[one_idx]);
+
+    let two_r = {
+        let numerator = d.num(2);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+    let expected = req(&mut d, two_r, two_r);
+
+    let left = d.lemma(p.mat_mul_id_left, &[a, two_n, zero_idx, one_idx, hlt]);
+    let inferred_left = d
+        .kernel()
+        .infer(left)
+        .unwrap_or_else(|e| panic!("Rat.matMul_id_left at A, n=2, i=0, j=1 should infer: {e:?}"));
+    assert!(
+        d.kernel().def_eq(inferred_left, expected),
+        "matId * A agrees with A at (0,1), where A[0][1] = 2"
+    );
+
+    // `matMul_id_right`'s bound is on `j`, and `j = 1 < 2` here, so the same
+    // `Lt 0 2` proof does NOT serve -- `Lt 1 2` is `Nat.lt_succ_self 1`.
+    let hlt_j = d.lemma(np.lt_succ_self, &[one_idx]);
+    let right = d.lemma(p.mat_mul_id_right, &[a, two_n, zero_idx, one_idx, hlt_j]);
+    let inferred_right = d
+        .kernel()
+        .infer(right)
+        .unwrap_or_else(|e| panic!("Rat.matMul_id_right at A, n=2, i=0, j=1 should infer: {e:?}"));
+    assert!(
+        d.kernel().def_eq(inferred_right, expected),
+        "A * matId agrees with A at (0,1), where A[0][1] = 2"
+    );
+
+    let three_r = {
+        let numerator = d.num(3);
+        let idx = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, idx])
+    };
+    let wrong = req(&mut d, two_r, three_r);
+    assert!(
+        !d.kernel().def_eq(inferred_left, wrong),
+        "the inferred statement must not be defeq to a false equation, or the \
+         two checks above cannot fail"
     );
 }

@@ -45,8 +45,9 @@
 
 use super::RatPrelude;
 use super::ops::{
-    radd, rat_ty, rchain, req, rmul, rrefl, rsum_range, rsymm, rzero,
+    nat_eq_to_rat, radd, rat_ty, rchain, rcongr, req, rmul, rone, rrefl, rsum_range, rsymm, rzero,
 };
+use super::probability::{bool_select_rat, select_rat_false, select_rat_true};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
@@ -71,7 +72,13 @@ pub(super) fn declare_matrix_n(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), 
     declare_mat_mul_assoc(d, p)?;
     declare_mat_mul_add_left(d, p)?;
     declare_mat_mul_add_right(d, p)?;
-    declare_mat_mul_smul_left(d, p)
+    declare_mat_mul_smul_left(d, p)?;
+    declare_sum_range_delta(d, p)?;
+    declare_mat_id(d, p)?;
+    declare_mat_id_diag(d, p)?;
+    declare_mat_id_off_diag(d, p)?;
+    declare_mat_mul_id_left(d, p)?;
+    declare_mat_mul_id_right(d, p)
 }
 
 /// `Nat → Nat → Rat`, the matrix type.
@@ -829,6 +836,529 @@ fn declare_mat_mul_smul_left(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mat_mul_smul_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Delta height for `Rat.matId`: one above [`MAT_MUL_HEIGHT`], following this
+/// prelude's convention of a monotone bump per new definition.
+const MAT_ID_HEIGHT: u16 = 47;
+
+/// `Rat.matId` as a bare constant — the identity matrix is a closed
+/// `Nat -> Nat -> Rat`, so it takes no arguments.
+fn rmat_id(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
+    d.kernel().const_(p.mat_id, vec![])
+}
+
+/// `Not (Eq Nat b a)` from `hne : Not (Eq Nat a b)`.
+///
+/// The `IntDev` counterpart of `nat_prelude::finite::ne_symm`, which is
+/// written against `NatDev` and cannot be called from this prelude.
+fn ne_symm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hne: ExprId) -> ExprId {
+    let eq_ba = d.eq(b, a);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let flipped = NatOps::symm(d, b, a, e);
+    let contra = d.apply(hne, &[flipped]);
+    d.lam_fv(e_fv, eq_ba, contra)
+}
+
+/// `Not (Eq Nat a b)` from `h : Lt a b`.
+///
+/// The `IntDev` counterpart of `nat_prelude::finite::ne_of_lt`. Both
+/// directions are needed and they are NOT interchangeable — see
+/// [`ne_of_lt_symm`].
+fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let np = d.prelude();
+    let eq_ab = d.eq(a, b);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let h_rev = NatOps::symm(d, a, b, e);
+    let motive = NatOps::eq_motive(d, b, &|d, x| d.lt(a, x));
+    let laa = NatOps::transport(d, b, motive, h, a, h_rev);
+    let contra = d.lemma(np.lt_irrefl, &[a, laa]);
+    d.lam_fv(e_fv, eq_ab, contra)
+}
+
+/// `Not (Eq Nat b a)` from `h : Lt a b` — assume the equality, transport `h`
+/// along it to `Lt a a`, and apply `Nat.lt_irrefl`.
+///
+/// The direction is deliberately the REVERSED one (`b != a`, not `a != b`):
+/// [`declare_sum_range_delta`] always needs "the index being summed differs
+/// from the distinguished point", and the strict inequality it has in hand
+/// points the other way.
+fn ne_of_lt_symm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let np = d.prelude();
+    let eq_ba = d.eq(b, a);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    // e : Eq Nat b a, so rewriting `b` to `a` in `Lt a b` gives `Lt a a`.
+    let motive = NatOps::eq_motive(d, b, &|d, x| d.lt(a, x));
+    let laa = NatOps::transport(d, b, motive, h, a, e);
+    let contra = d.lemma(np.lt_irrefl, &[a, laa]);
+    d.lam_fv(e_fv, eq_ba, contra)
+}
+
+/// `Rat.sumRange_delta : ∀ f i n, (∀ t, Not (Eq Nat t i) → f t = zero) →
+/// Lt i n → sumRange f n = f i` — a sum whose summand vanishes away from one
+/// index collapses to the value at that index.
+///
+/// The strict bound comes LAST because it lives inside the induction motive
+/// (`fun n => Lt i n → …`), which is what lets the base case discharge by
+/// `Nat.not_lt_zero` instead of needing a separate impossible-case lemma.
+///
+/// The hypothesis is deliberately UNRESTRICTED (`∀ t`, not `∀ t, Lt t n →`):
+/// the only consumer is [`declare_mat_mul_id_left`]/[`declare_mat_mul_id_right`],
+/// where `Rat.matId` vanishes off the diagonal at every index whatsoever, and
+/// the restricted form would force the induction to re-derive `Lt t m → Lt t
+/// (succ m)` at every step for nothing.
+///
+/// Induction on `n` with the strict bound INSIDE the motive (`fun n => Lt i n
+/// → …`), so the base case discharges by [`NatPrelude::not_lt_zero`] rather
+/// than needing a separate impossible-case lemma.
+fn declare_sum_range_delta(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let np = d.prelude();
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hz_fv = d.fresh_fvar();
+    let hz = d.kernel().fvar(hz_fv);
+
+    // hz : ∀ t, Not (Eq Nat t i) → f t = zero
+    let hz_ty = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let eq_ti = d.eq(t, i);
+        let ne_ti = d.not(eq_ti);
+        let ft = d.apply(f, &[t]);
+        let zero_r = rzero(d, p);
+        let concl = req(d, ft, zero_r);
+        let with_ne = d.arrow(ne_ti, concl);
+        d.pi_fv(t_fv, nat, with_ne)
+    };
+
+    let fi = d.apply(f, &[i]);
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sum_x = rsum_range(d, p, f, x);
+        let concl = req(d, sum_x, fi);
+        let bound = d.lt(i, x);
+        d.arrow(bound, concl)
+    };
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            let zero_n = d.zero();
+            let bound = d.lt(i, zero_n);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let sum_zero = rsum_range(d, p, f, zero_n);
+            let target = req(d, sum_zero, fi);
+            let not_lt = d.lemma(np.not_lt_zero, &[i]);
+            let contra = d.apply(not_lt, &[h]);
+            let body = d.absurd(target, contra);
+            d.lam_fv(h_fv, bound, body)
+        },
+        &|d, m, ih| {
+            let sm = d.succ(m);
+            let bound = d.lt(i, sm);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let sum_m = rsum_range(d, p, f, m);
+            let fm = d.apply(f, &[m]);
+            let start = radd(d, sum_m, fm);
+            let target = {
+                let sum_sm = rsum_range(d, p, f, sm);
+                req(d, sum_sm, fi)
+            };
+
+            let h_le = d.lemma(np.le_of_lt_succ, &[i, m, h]);
+            let disj = d.lemma(np.lt_or_eq_of_le, &[i, m, h_le]);
+            let lt_ty = d.lt(i, m);
+            let eq_ty = d.eq(i, m);
+
+            let body = d.or_elim(
+                lt_ty,
+                eq_ty,
+                target,
+                disj,
+                // i < m: the induction hypothesis applies, and `f m = 0`
+                // because `m != i`.
+                &|d, hlt| {
+                    let ih_applied = d.apply(ih, &[hlt]);
+                    let ne_mi = ne_of_lt_symm(d, i, m, hlt);
+                    let h_fm = d.apply(hz, &[m, ne_mi]);
+                    let zero_r = rzero(d, p);
+                    let with_zero = radd(d, sum_m, zero_r);
+                    let step_a = rcongr(d, fm, zero_r, h_fm, &|d, x| radd(d, sum_m, x));
+                    let step_b = d.lemma(p.add_zero, &[sum_m]);
+                    let (_end, proof) = rchain(
+                        d,
+                        start,
+                        &[(with_zero, step_a), (sum_m, step_b), (fi, ih_applied)],
+                    );
+                    proof
+                },
+                // i = m: everything below `m` is off the diagonal, so the
+                // prefix sum is zero and the last term IS `f i`.
+                &|d, heq| {
+                    let pointwise = {
+                        let t_fv = d.fresh_fvar();
+                        let t = d.kernel().fvar(t_fv);
+                        let t_lt_m = d.lt(t, m);
+                        let ht_fv = d.fresh_fvar();
+                        let ht = d.kernel().fvar(ht_fv);
+                        // Lt t m, i = m  ⊢  Lt t i  ⊢  t != i
+                        let heq_rev = NatOps::symm(d, i, m, heq);
+                        let motive_lt = NatOps::eq_motive(d, m, &|d, x| d.lt(t, x));
+                        let t_lt_i = NatOps::transport(d, m, motive_lt, ht, i, heq_rev);
+                        let ne_ti = ne_of_lt(d, t, i, t_lt_i);
+                        let inner = d.apply(hz, &[t, ne_ti]);
+                        let with_ht = d.lam_fv(ht_fv, t_lt_m, inner);
+                        d.lam_fv(t_fv, nat, with_ht)
+                    };
+                    let h_prefix = d.lemma(p.sum_range_eq_zero_of_lt, &[f, m, pointwise]);
+                    let zero_r = rzero(d, p);
+                    let zero_plus = radd(d, zero_r, fm);
+                    let step_a = rcongr(d, sum_m, zero_r, h_prefix, &|d, x| radd(d, x, fm));
+                    let step_b = d.lemma(p.zero_add, &[fm]);
+                    let heq_rev = NatOps::symm(d, i, m, heq);
+                    let step_c = nat_eq_to_rat(d, m, i, heq_rev, &|d, x| d.apply(f, &[x]));
+                    let (_end, proof) = rchain(
+                        d,
+                        start,
+                        &[(zero_plus, step_a), (fm, step_b), (fi, step_c)],
+                    );
+                    proof
+                },
+            );
+            d.lam_fv(h_fv, bound, body)
+        },
+        n,
+    );
+
+    let ty = {
+        let t = d.arrow(hz_ty, stmt_inner);
+        let t = d.pi_fv(n_fv, nat, t);
+        let t = d.pi_fv(i_fv, nat, t);
+        d.pi_fv(f_fv, fn_ty, t)
+    };
+    let value = {
+        let v = d.lam_fv(hz_fv, hz_ty, proof_inner);
+        let v = d.lam_fv(n_fv, nat, v);
+        let v = d.lam_fv(i_fv, nat, v);
+        d.lam_fv(f_fv, fn_ty, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_delta,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `Rat.matId : Nat → Nat → Rat := fun i j => if Nat.beq i j then
+/// Rat.one else Rat.zero` — the identity matrix, at every dimension at once.
+///
+/// It carries no dimension argument: the delta is defined at every index
+/// pair, and the bound enters only where it belongs, as the `Lt i n`
+/// hypothesis of the two unit laws.
+fn declare_mat_id(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let cond = NatOps::beq(d, i, j);
+    let one_r = rone(d, p);
+    let zero_r = rzero(d, p);
+    let body = bool_select_rat(d, cond, one_r, zero_r);
+
+    let value = {
+        let with_j = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+    let ty = {
+        let inner = d.arrow(nat, carrier);
+        d.arrow(nat, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.mat_id,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(MAT_ID_HEIGHT),
+    })
+}
+
+/// `Rat.matId_diag : ∀ i, matId i i = one`.
+fn declare_mat_id_diag(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let np = d.prelude();
+    let nat = d.nat_ty();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let mat_id = rmat_id(d, p);
+    let lhs = d.apply(mat_id, &[i, i]);
+    let one_r = rone(d, p);
+    let stmt = req(d, lhs, one_r);
+
+    let refl_i = NatOps::refl(d, i);
+    let h_true = d.lemma(np.beq_eq_true_of_eq, &[i, i, refl_i]);
+    let cond = NatOps::beq(d, i, i);
+    let zero_r = rzero(d, p);
+    let proof = select_rat_true(d, cond, one_r, zero_r, h_true);
+
+    let ty = d.pi_fv(i_fv, nat, stmt);
+    let value = d.lam_fv(i_fv, nat, proof);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mat_id_diag,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.matId_off_diag : ∀ i j, Not (Eq Nat i j) → matId i j = zero`.
+fn declare_mat_id_off_diag(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let np = d.prelude();
+    let nat = d.nat_ty();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let hne_fv = d.fresh_fvar();
+    let hne = d.kernel().fvar(hne_fv);
+
+    let eq_ij = d.eq(i, j);
+    let ne_ty = d.not(eq_ij);
+
+    let mat_id = rmat_id(d, p);
+    let lhs = d.apply(mat_id, &[i, j]);
+    let zero_r = rzero(d, p);
+    let stmt = req(d, lhs, zero_r);
+
+    let h_false = d.lemma(np.beq_eq_false_of_ne, &[i, j, hne]);
+    let cond = NatOps::beq(d, i, j);
+    let one_r = rone(d, p);
+    let proof = select_rat_false(d, cond, one_r, zero_r, h_false);
+
+    let ty = {
+        let t = d.arrow(ne_ty, stmt);
+        let t = d.pi_fv(j_fv, nat, t);
+        d.pi_fv(i_fv, nat, t)
+    };
+    let value = {
+        let v = d.lam_fv(hne_fv, ne_ty, proof);
+        let v = d.lam_fv(j_fv, nat, v);
+        d.lam_fv(i_fv, nat, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mat_id_off_diag,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.matMul_id_left : ∀ A n i j, Lt i n → matMul matId A n i j = A i j`.
+///
+/// The `Lt i n` hypothesis is not decoration: `matMul matId A n i j` sums
+/// `matId i t · A t j` over `t < n`, and if the row index `i` is outside that
+/// range the delta never fires and the whole sum is zero. It is the pointwise
+/// price of an identity matrix that carries no dimension of its own.
+fn declare_mat_mul_id_left(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+    let bound = d.lt(i, n);
+
+    let mat_id = rmat_id(d, p);
+    let lhs = rmat_mul(d, p, mat_id, a, n, i, j);
+    let aij = d.apply(a, &[i, j]);
+    let stmt = req(d, lhs, aij);
+
+    let g = mat_summand(d, mat_id, a, i, j);
+    let start = rsum_range(d, p, g, n);
+
+    let hz = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let eq_ti = d.eq(t, i);
+        let ne_ti = d.not(eq_ti);
+        let ht_fv = d.fresh_fvar();
+        let ht = d.kernel().fvar(ht_fv);
+
+        let ne_it = ne_symm(d, t, i, ht);
+        let h_zero = d.lemma(p.mat_id_off_diag, &[i, t, ne_it]);
+        let id_it = d.apply(mat_id, &[i, t]);
+        let atj = d.apply(a, &[t, j]);
+        let term = rmul(d, id_it, atj);
+        let zero_r = rzero(d, p);
+        let zero_times = rmul(d, zero_r, atj);
+        let step_a = rcongr(d, id_it, zero_r, h_zero, &|d, x| rmul(d, x, atj));
+        let flipped = rmul(d, atj, zero_r);
+        let step_b = d.lemma(p.mul_comm, &[zero_r, atj]);
+        let step_c = d.lemma(p.mul_zero, &[atj]);
+        let (_end, inner) = rchain(
+            d,
+            term,
+            &[(zero_times, step_a), (flipped, step_b), (zero_r, step_c)],
+        );
+        let with_ht = d.lam_fv(ht_fv, ne_ti, inner);
+        d.lam_fv(t_fv, nat, with_ht)
+    };
+
+    let delta = d.lemma(p.sum_range_delta, &[g, i, n, hz, hlt]);
+    let id_ii = d.apply(mat_id, &[i, i]);
+    let at_point = rmul(d, id_ii, aij);
+    let one_r = rone(d, p);
+    let one_times = rmul(d, one_r, aij);
+    let h_diag = d.lemma(p.mat_id_diag, &[i]);
+    let step_a = rcongr(d, id_ii, one_r, h_diag, &|d, x| rmul(d, x, aij));
+    let flipped = rmul(d, aij, one_r);
+    let step_b = d.lemma(p.mul_comm, &[one_r, aij]);
+    let step_c = d.lemma(p.mul_one, &[aij]);
+    let (_end, proof) = rchain(
+        d,
+        start,
+        &[
+            (at_point, delta),
+            (one_times, step_a),
+            (flipped, step_b),
+            (aij, step_c),
+        ],
+    );
+
+    let ty = {
+        let t = d.arrow(bound, stmt);
+        let t = d.pi_fv(j_fv, nat, t);
+        let t = d.pi_fv(i_fv, nat, t);
+        let t = d.pi_fv(n_fv, nat, t);
+        d.pi_fv(a_fv, mty, t)
+    };
+    let value = {
+        let v = d.lam_fv(hlt_fv, bound, proof);
+        let v = d.lam_fv(j_fv, nat, v);
+        let v = d.lam_fv(i_fv, nat, v);
+        let v = d.lam_fv(n_fv, nat, v);
+        d.lam_fv(a_fv, mty, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mat_mul_id_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.matMul_id_right : ∀ A n i j, Lt j n → matMul A matId n i j = A i j`.
+///
+/// The mirror of [`declare_mat_mul_id_left`], and shorter: the delta's
+/// hypothesis wants `t != j`, which is exactly the shape
+/// [`RatPrelude::mat_id_off_diag`] takes here, so no `ne_symm` is needed and
+/// the tail closes with `mul_one` without a `mul_comm`.
+fn declare_mat_mul_id_right(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+    let bound = d.lt(j, n);
+
+    let mat_id = rmat_id(d, p);
+    let lhs = rmat_mul(d, p, a, mat_id, n, i, j);
+    let aij = d.apply(a, &[i, j]);
+    let stmt = req(d, lhs, aij);
+
+    let g = mat_summand(d, a, mat_id, i, j);
+    let start = rsum_range(d, p, g, n);
+
+    let hz = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let eq_tj = d.eq(t, j);
+        let ne_tj = d.not(eq_tj);
+        let ht_fv = d.fresh_fvar();
+        let ht = d.kernel().fvar(ht_fv);
+
+        let h_zero = d.lemma(p.mat_id_off_diag, &[t, j, ht]);
+        let ait = d.apply(a, &[i, t]);
+        let id_tj = d.apply(mat_id, &[t, j]);
+        let term = rmul(d, ait, id_tj);
+        let zero_r = rzero(d, p);
+        let times_zero = rmul(d, ait, zero_r);
+        let step_a = rcongr(d, id_tj, zero_r, h_zero, &|d, x| rmul(d, ait, x));
+        let step_b = d.lemma(p.mul_zero, &[ait]);
+        let (_end, inner) = rchain(d, term, &[(times_zero, step_a), (zero_r, step_b)]);
+        let with_ht = d.lam_fv(ht_fv, ne_tj, inner);
+        d.lam_fv(t_fv, nat, with_ht)
+    };
+
+    let delta = d.lemma(p.sum_range_delta, &[g, j, n, hz, hlt]);
+    let id_jj = d.apply(mat_id, &[j, j]);
+    let at_point = rmul(d, aij, id_jj);
+    let one_r = rone(d, p);
+    let times_one = rmul(d, aij, one_r);
+    let h_diag = d.lemma(p.mat_id_diag, &[j]);
+    let step_a = rcongr(d, id_jj, one_r, h_diag, &|d, x| rmul(d, aij, x));
+    let step_b = d.lemma(p.mul_one, &[aij]);
+    let (_end, proof) = rchain(
+        d,
+        start,
+        &[(at_point, delta), (times_one, step_a), (aij, step_b)],
+    );
+
+    let ty = {
+        let t = d.arrow(bound, stmt);
+        let t = d.pi_fv(j_fv, nat, t);
+        let t = d.pi_fv(i_fv, nat, t);
+        let t = d.pi_fv(n_fv, nat, t);
+        d.pi_fv(a_fv, mty, t)
+    };
+    let value = {
+        let v = d.lam_fv(hlt_fv, bound, proof);
+        let v = d.lam_fv(j_fv, nat, v);
+        let v = d.lam_fv(i_fv, nat, v);
+        let v = d.lam_fv(n_fv, nat, v);
+        d.lam_fv(a_fv, mty, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mat_mul_id_right,
         uparams: vec![],
         ty,
         value,

@@ -1211,6 +1211,29 @@ pub struct RatPrelude {
     /// `Rat.matMul_smul_left : ∀ c A B k i j, matMul (fun r t => c * A r t) B
     /// k i j = c * matMul A B k i j`.
     pub mat_mul_smul_left: NameId,
+    /// `Rat.sumRange_delta : ∀ f i n, (∀ t, Not (Eq Nat t i) → f t = zero) →
+    /// Lt i n → sumRange f n = f i` — a sum whose summand vanishes away from
+    /// one index collapses to the value at that index. The hypothesis is
+    /// UNRESTRICTED (`∀ t`, not `∀ t, Lt t n →`) because its only consumers,
+    /// the two [`Self::mat_id`] unit laws, have a summand that vanishes off
+    /// the diagonal at every index whatsoever.
+    pub sum_range_delta: NameId,
+    /// `Rat.matId : Nat → Nat → Rat := fun i j => if Nat.beq i j then one
+    /// else zero` — the identity matrix, at every dimension at once. It
+    /// carries no dimension argument; the bound enters only as the `Lt i n`
+    /// hypothesis of [`Self::mat_mul_id_left`]/[`Self::mat_mul_id_right`].
+    pub mat_id: NameId,
+    /// `Rat.matId_diag : ∀ i, matId i i = one`.
+    pub mat_id_diag: NameId,
+    /// `Rat.matId_off_diag : ∀ i j, Not (Eq Nat i j) → matId i j = zero`.
+    pub mat_id_off_diag: NameId,
+    /// `Rat.matMul_id_left : ∀ A n i j, Lt i n → matMul matId A n i j = A i
+    /// j`. The `Lt i n` hypothesis is load-bearing: outside the summation
+    /// range the delta never fires and the product is zero, not `A i j`.
+    pub mat_mul_id_left: NameId,
+    /// `Rat.matMul_id_right : ∀ A n i j, Lt j n → matMul A matId n i j = A i
+    /// j`.
+    pub mat_mul_id_right: NameId,
 
     // --- finite probability distributions (rat_prelude::probability) -------
     /// `Rat.IsDistribution p n := (∀ k, Lt k n → le zero (p k)) ∧ sumRange p
@@ -1997,6 +2020,12 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mat_mul_add_left: child(kernel, "matMul_add_left"),
         mat_mul_add_right: child(kernel, "matMul_add_right"),
         mat_mul_smul_left: child(kernel, "matMul_smul_left"),
+        sum_range_delta: child(kernel, "sumRange_delta"),
+        mat_id: child(kernel, "matId"),
+        mat_id_diag: child(kernel, "matId_diag"),
+        mat_id_off_diag: child(kernel, "matId_off_diag"),
+        mat_mul_id_left: child(kernel, "matMul_id_left"),
+        mat_mul_id_right: child(kernel, "matMul_id_right"),
         is_distribution: child(kernel, "IsDistribution"),
         prob_le_one: child(kernel, "prob_le_one"),
         prob_complement: child(kernel, "prob_complement"),
