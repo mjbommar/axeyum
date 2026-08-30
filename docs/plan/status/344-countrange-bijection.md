@@ -1,12 +1,18 @@
-# Lane: countrange-bijection — the `countRange` permutation primitive is landed and certified
+# Lane: countrange-bijection — the `countRange` permutation primitive, its Fubini companion, and the block bridge
 
 <!-- plan-section: lane-status -->
 
 **DONE (`countrange-bijection`, 2026-08-30).** Built and kernel-checked the
 primitive `docs/plan/status/320-totient-bijection.md` named as the one
-genuinely missing piece under `Nat.totient_mul_of_coprime`. Three new
-theorems, no new `Definition`, all axiom-free, `nat_prelude::` **185 passed,
-0 failed** (183 baseline + 2 new tests).
+genuinely missing piece under `Nat.totient_mul_of_coprime`, plus both of the
+other two pieces that lane's step (3) called for. **Five new theorems, no new
+`Definition`, all axiom-free.** `nat_prelude::` **187 passed, 0 failed** (183
+baseline + 4 new tests).
+
+Of `320`'s three remaining steps toward `totient_mul_of_coprime`, step (2)
+and the counting half of step (3) are now closed. What is left is step (1),
+the CRT self-map's two hypotheses, and the final assembly — sized at the
+bottom, with every ingredient named.
 
 ## The primitive
 
@@ -29,17 +35,47 @@ the last step with the *unconditional* `Nat.countRange_congr` that already
 existed. No `P`/`Q` pair and no bounded pointwise agreement are needed in the
 statement, so neither is in it.
 
-Supporting, both also new and both reusable:
+## The other four
 
-- **`Nat.countRange_congr_lt`** — `(∀ i, Lt i n → f i = g i) → countRange f n
-  = countRange g n`. The BOUNDED pointwise congruence. `countRange_congr`
-  (`totient.rs`) is unconditional and its own doc comment says to add this
-  form when a proof needs it; this is that proof.
+- **`Nat.countRange_product`** — the block/Fubini factorization, and the one
+  step here that is **coprimality-INDEPENDENT**:
+
+  ```text
+  ∀ P R S n m,
+    (∀ a b, Lt b n → R a = true  → P (add (mul n a) b) = S b) →
+    (∀ a b, Lt b n → R a = false → P (add (mul n a) b) = false) →
+    countRange P (mul n m) = mul (countRange S n) (countRange R m)
+  ```
+
+  Stated over an arbitrary `P` with two hypotheses pinning `R a` to each
+  `Bool`, not over a fixed conjunction: this kernel exposes no `Bool`-valued
+  `and` (`finite_set.rs`'s `bool_select_bool` is private), and a caller
+  supplying its own combination discharges both by reduction. `Lt 0 n` is
+  deliberately **not** a hypothesis — at `n = 0` both sides are `zero`, both
+  hypotheses are vacuous, and the proof never divides.
+
+  Induction on `m`. `mul n (succ j) ≡ add (mul n j) n` is definitional
+  (`Nat.mul` recurses right), so `countRange_split` peels one block of width
+  `n` with no `Nat.sub` anywhere.
+
+- **`Nat.div_mod_block`** — `∀ n a b, Lt b n → div (n*a + b) n = a ∧
+  mod (n*a + b) n = b`. The bridge `countRange_product`'s consumer needs:
+  that lemma's hypotheses live at the index `add (mul n a) b`, and a predicate
+  written in `div y n` / `mod y n` reduces there only once these hold. One
+  line of content once `Nat.div_mod_unique` is used — the witness
+  `divMod n (n*a+b) a b` is `And.intro (Eq.refl _) hb` and costs nothing.
+  Filed in `div_mod_lemmas.rs` where it belongs, **not** beside its first
+  consumer.
+
+- **`Nat.countRange_congr_lt`** — the BOUNDED pointwise congruence.
+  `countRange_congr` (`totient.rs`) is unconditional and its own doc comment
+  says to add this form when a proof needs it; this is that proof.
+
 - **`Nat.countRange_point_change`** — `Lt i0 n → (agree below i0) →
   (agree above i0) → countRange a n + sel (b i0) = countRange b n + sel (a i0)`.
   Two predicates agreeing on `[0,n)` except possibly at one index have counts
   differing exactly as their two values there do. Stated additively (`Nat.sub`
-  is truncated); the two agreement hypotheses are split at `i0` rather than
+  is truncated); the agreement hypotheses are split at `i0` rather than
   written as one `k ≠ i0`, so nothing needs `Not`-elimination.
 
 ## What `320` looked for, and where it actually was
@@ -68,7 +104,7 @@ induction and an `add` rearrangement per branch.
 
 ## Verification
 
-- `python3 scripts/tests/check-countrange-bijection-numerics.py` — 19 checks,
+- `python3 scripts/tests/check-countrange-bijection-numerics.py` — 26 checks,
   each with a negative control that must genuinely fail. Run BEFORE any Rust.
   It **re-derives rather than inherits** the number `316`/`320` warn about: the
   totient product identity fails at **26 of 26** non-coprime pairs with
@@ -78,95 +114,112 @@ induction and an `add` rearrangement per branch.
   `[0,4)` with both hypotheses discharged by `transposition_injective` /
   `transposition_maps_into`. The predicate `2 ≤ x` is true on `{2,3}` and its
   composite on `{1,3}` — same count, DIFFERENT index sets, both checked, so
-  the equality cannot pass as a syntactic identity. Both sides are required to
+  the equality cannot pass as a syntactic identity. Both sides required to
   COMPUTE to `2`. Negative control: the constant-`0` map is `MapsInto` and not
   injective, and there the counts are 2 against 0 (`!def_eq`).
+- `count_range_product_computes_at_a_factoring_predicate_with_a_non_factoring_control`
+  — a CLOSED instance at `n = 0` (both hypotheses discharged from
+  `not_lt_zero`; degenerate but assumption-free, and the case that would be
+  unreachable had the lemma carried the `Lt 0 n` it does not); the statement
+  at `n = 2, m = 3` with all four counts required to compute; and a
+  non-factoring `P` where the sides are 2 against 1.
+- `div_mod_block_reads_a_concrete_block_back_and_needs_its_side_condition`
+  — a CLOSED instance at `(3, 2, 1)` with a real `Lt 1 3`, both projections
+  computing, and a control at `b = n` where the readback is wrong BOTH ways.
 - `the_count_range_permutation_family_applies_at_free_variables` — all three
-  laws at genuinely free `f`, `σ`, `n`, `i0` via `LocalContext`/`infer_in`,
-  each inferred type checked against an independently written statement.
-- `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — **185 passed, 0
+  `countRange` laws at genuinely free `f`, `σ`, `n`, `i0` via
+  `LocalContext`/`infer_in`, each inferred type checked against an
+  independently written statement.
+- `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — **187 passed, 0
   failed**. `clippy -p axeyum-lean-kernel --all-targets -- -D warnings` clean.
   `rustfmt --edition 2024 --check` clean on every touched file.
 
-Two defects this found, neither of which the kernel could:
+Three defects the tests found that the kernel could not:
 
 1. **A transposed `symm` in `add_swap_right`.** `add_assoc x s u` proves
    `(x+s)+u = x+(s+u)`, so reversing it is `symm(end, mid, h)`, not
-   `symm(mid, end, h)`. Bisected by toggling the three `declare_*` calls one
-   at a time against a single fast test — never by reading the failure list.
-2. **The binder order was `f, n, σ`, not `f, σ, n`.** The induction must bind
-   `n` (its target) outside `σ` (generalized in the motive), so the admitted
-   order disagreed with every doc comment. Both orders type-check; they are
-   just different theorems to apply. Found by the free-variable test, not by
-   the kernel. Fixed by re-abstracting — binders go in by free variable, so
-   their order is free and no proof changed.
+   `symm(mid, end, h)`. Bisected by toggling the `declare_*` calls one at a
+   time against a single fast test — never by reading the failure list.
+2. **The permutation lemma's binder order was `f, n, σ`, not `f, σ, n`.** The
+   induction must bind `n` (its target) outside `σ` (generalized in the
+   motive), so the admitted order disagreed with every doc comment. Both
+   orders type-check; they are just different theorems to apply. Found by the
+   free-variable test. Fixed by re-abstracting — binders go in by free
+   variable, so their order is free and no proof changed.
+3. **`transposition_injective` is `∀ i j, Lt i j → ∀ n, …`, not `∀ i j n,
+   Lt i j → …`.** Only the concrete test could catch this; the doc comment in
+   `nat_prelude.rs` reads in the other order.
 
 ## What remains for `Nat.totient_mul_of_coprime`
 
-Two pieces, both independent of each other and of anything above.
+One piece plus the assembly. Every ingredient below was checked to exist.
 
-**(A) The CRT self-map's two hypotheses.** With `g x := add (mul (mod x m) n)
-(mod x n)` on `[0, mul m n)`:
-- `MapsInto g (mul m n)` — needs only `mod x m < m` and `mod x n < n`
-  (`Nat.mod_lt`, `0 < m`, `0 < n`), no coprimality.
-- `InjectiveOn g (mul m n)` — **this is where `Coprime m n` enters and the
-  only place it does.** `Nat.crt_unique` (`nat_prelude/crt.rs`, Nat-native —
-  NOT `int_prelude/crt.rs`, which is what three prior triages checked). No
-  Bézout witness is needed: `Nat.injective_on_imp_surjective_on` supplies
-  surjectivity once injectivity and `MapsInto` are in hand.
+**(A) The CRT self-map's two hypotheses**, with `g x := add (mul (mod x m) n)
+(mod x n)` on `[0, mul m n)`. This is `320`'s step (1) and the only place
+coprimality enters.
 
-Numerically confirmed both ways in the script above: the map is injective on
-`[0,mn)` at every coprime pair `1 ≤ m,n ≤ 9`, and at **no** non-coprime pair.
+- `MapsInto g (mul m n)` — needs `0 < m`, `0 < n` and nothing else:
+  `mod x m < m` and `mod x n < n` (`Nat.mod_lt`), then
+  `(x mod m)*n + (x mod n) < ((x mod m)+1)*n ≤ m*n`.
+- `InjectiveOn g (mul m n)` — from `g x = g y`, apply
+  **`Nat.div_mod_block`** (landed here) twice, with `Nat.mod_lt` supplying
+  `x mod n < n`, to get `x mod m = y mod m` and `x mod n = y mod n`. Feed
+  those to `Nat.div_mod_same_remainder_mod_eq` for `modEq m x y` and
+  `modEq n x y`, then **`Nat.crt_unique`** (`nat_prelude/crt.rs` — the NAT
+  one, Nat-native; three prior triages checked only `int_prelude/crt.rs`) for
+  `modEq (m*n) x y`, then `Nat.div_mod_remainder_eq_of_mod_eq` plus
+  `Nat.mod_eq_self_of_lt` twice to turn that into `x = y` given `x, y < m*n`.
 
-**(B) A product/Fubini counting step**, coprimality-INDEPENDENT — and keeping
-that straight is the whole lesson of `301`'s false claim. Suggested statement,
-hypothesis-driven so it names no `Bool` combinator and the consumer supplies
-whatever conjunction it likes:
+  **No Bézout witness and no CRT existence is needed.** `nat_prelude/crt.rs`
+  declines existence over ℕ deliberately and at length — the classical witness
+  needs signed coefficients — and the injectivity argument never asks for it.
+  `Nat.injective_on_imp_surjective_on` supplies surjectivity for free once
+  injectivity and `MapsInto` are in hand, if a later step wants it.
 
-```text
-Nat.countRange_product :
-  ∀ (P R S : Nat → Bool) (n m : Nat),
-    Lt 0 n →
-    (∀ a b, Lt b n → Eq Bool (R a) true  → Eq Bool (P (add (mul n a) b)) (S b)) →
-    (∀ a b, Lt b n → Eq Bool (R a) false → Eq Bool (P (add (mul n a) b)) false) →
-    Eq Nat (countRange P (mul n m)) (mul (countRange S n) (countRange R m))
-```
+  Numerically confirmed both ways (check 4 of the script): the map is
+  injective on `[0,mn)` at every coprime pair `1 ≤ m,n ≤ 9`, and at **no**
+  non-coprime pair.
 
-Induction on `m`. `mul n (succ m) ≡ add (mul n m) n` is defeq (`Nat.mul`
-recurses right), so `countRange_split` peels one block of width `n` with no
-`Nat.sub` anywhere; the block's own count is `countRange S n` or `0` by
-`bool_true_or_false` on `R m` plus `countRange_congr_lt`. Every ingredient
-exists: `countRange_split`, `countRange_congr_lt` (new, above),
-`Nat.add_mul_div_right`, `Nat.add_mul_mod_self_right`, `Nat.mod_lt`,
-`Nat.mul_add`, `Nat.zero_add`, `ops::bool_true_or_false`,
-`finite::select_nat_true`/`select_nat_false`. The one genuinely new sub-piece
-is a `countRange f n = 0` when `f` is `false` below `n` — a short arrow-motive
-induction, the same shape as `countRange_congr_lt`.
+**(B) Assembly.** `totient (mul m n)` is
+`countRange (fun x => beq (gcd x (mul m n)) 1) (mul m n)`.
 
-Verified numerically at every `1 ≤ n ≤ 7`, `m ≤ 7` and every pair of
-predicates (check 6 in the script).
+1. Rewrite the predicate pointwise — for ALL `x`, no bound needed, so
+   *unconditional* `Nat.countRange_congr` suffices — into
+   `R (div (g x) n) ∧ S (mod (g x) n)` where `R a := beq (gcd a m) 1` and
+   `S b := beq (gcd b n) 1`, using `Nat.gcd_mod_left_eq_gcd` and
+   `Nat.coprime_mul_iff` (both landed by lane `320`) together with
+   `Nat.div_mod_block`.
+2. Reindex along `g` with **`Nat.countRange_permute`**, discharging its two
+   hypotheses from (A).
+3. Factor with **`Nat.countRange_product`**, discharging its two per-block
+   hypotheses from `Nat.div_mod_block` — `R a` is already pinned by each
+   hypothesis, so both reduce.
 
-**Assembly, once (A) and (B) exist.** `totient (mul m n)` is
-`countRange (fun x => beq (gcd x (mul m n)) 1) (mul m n)`. Rewrite the
-predicate pointwise — for ALL `x`, no bound needed — to
-`beq (gcd (mod x m) m) 1 ∧ beq (gcd (mod x n) n) 1` using
-`Nat.gcd_mod_left_eq_gcd` and `Nat.coprime_mul_iff` (both landed by lane
-`320`), reindex along `g` with `Nat.countRange_permute`, then factor with
-`Nat.countRange_product`. The two `ml430` totient mirrors need the full
-non-coprime formula on top of that, which `316` sizes as a separate
-prime-power-factorization framework this kernel does not have; nothing here
-changes that sizing.
+The two `ml430` totient mirrors (`F:ml430-nat-totient-dvd-of-dvd-9622e44a`,
+`F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7`) need the full non-coprime
+formula on top of that, which `316` sizes as a separate prime-power-
+factorization framework this kernel does not have. Nothing here changes that
+sizing, and `nat_prelude/factorization.rs` is explicit that uniqueness of
+factorization is not reachable without a multiset type.
 
 ## Files
 
 - `crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs` — new.
-- `crates/axeyum-lean-kernel/src/nat_prelude.rs` — `mod`/`use`, three
-  `NameId` fields and their `name_str` constructors, three dispatch calls
-  placed immediately after `declare_restrict_maps_into`.
+  `countRange_congr_lt`, `countRange_point_change`, `countRange_permute`,
+  `countRange_product`.
+- `crates/axeyum-lean-kernel/src/nat_prelude/div_mod_lemmas.rs` —
+  `declare_div_mod_block` appended; `div_mod_reconstructed` widened to
+  `pub(super)` rather than copied a third time.
+- `crates/axeyum-lean-kernel/src/nat_prelude.rs` — `mod`/`use`, five `NameId`
+  fields and their `name_str` constructors, five dispatch calls placed
+  immediately after `declare_restrict_maps_into`.
 - `crates/axeyum-lean-kernel/src/nat_prelude/finite.rs` — five private helpers
   (`po_inner`, `point_override`, `override_eq_lt`/`_gt`/`_at`) widened to
-  `pub(super)`. Visibility only; re-deriving them beside the originals would
-  leave two proofs of one fact.
-- `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs` — two
-  tests, three names added to `theorem_names`. No pin reintroduced.
-- `scripts/tests/check-countrange-bijection-numerics.py` — new.
+  `pub(super)`. Visibility only.
+- `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs` — four
+  tests, five names added to `theorem_names`. No pin reintroduced.
+- `scripts/tests/check-countrange-bijection-numerics.py` — new, 26 checks.
+
+No fact file was touched: like `gcd_comm` and `coprime_mul_of_coprime` before
+them, these are unregistered nat-prelude helper theorems. The facts they serve
+stay `open` until `totient_mul_of_coprime` itself lands.
