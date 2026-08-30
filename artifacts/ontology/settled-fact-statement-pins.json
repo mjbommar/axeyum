@@ -7759,6 +7759,30 @@
       "prose_sha256": "f92b40d1216004e5ea790f00384f98b4c34940c491e77f0be017d1f91b3b506a"
     },
     {
+      "fact_id": "F:ml430-nat-and-assoc-273b60d8",
+      "language": "lean4-surface",
+      "statement_sha256": "231f50904aa4a8f67ad59ed739544d5c484cad18e65bf6830450839a5506d198",
+      "prose_sha256": "9f6a1632ddecd270f37dc4b9afd973dc38d789aa9682aac7d2abee9982f532c9"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-comm-7525d05a",
+      "language": "lean4-surface",
+      "statement_sha256": "b3e83e4c9b0acddb8f7d096bb278a8ab8b2ae2d402db2074ab2f393ea570928d",
+      "prose_sha256": "e5074c4f15316feb5da0ef2aa3669ce907b062117bbf16188b84c46d8530eb0f"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-le-left-6d04acb7",
+      "language": "lean4-surface",
+      "statement_sha256": "2df607b9c5cc4b08a0a5e7fd036940da40edffe711663838ac1b08de9c89dc3d",
+      "prose_sha256": "2cfe10913015da07f52e41b3fbbfa7593f06e7ab0554655874f7a45c2abc4d33"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-le-right-a3f80076",
+      "language": "lean4-surface",
+      "statement_sha256": "e3ce74db59f1175d88bb2143e35ed28c7d0c7e46fc159e0cd2874221fcdb78cf",
+      "prose_sha256": "aa18112d91a563f9103179eb0b5ec36ad7ce876b2e871a289a3c8d576f941094"
+    },
+    {
       "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
       "language": "lean4-surface",
       "statement_sha256": "2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7",
