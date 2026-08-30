@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 214] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 217] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -264,6 +264,9 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 214] {
         p.prod_range_swap_adjacent,
         p.prod_range_swap,
         p.prod_range_permute,
+        p.prod_range_if_zero,
+        p.prod_range_if_succ,
+        p.prod_range_if_permute,
         p.nat_abs_pow,
         p.mod_eq_pow,
         p.mod_eq_prod_range,
@@ -455,7 +458,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 27] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 28] {
     [
         p.fib,
         p.even,
@@ -472,6 +475,7 @@ fn definition_names(p: &IntPrelude) -> [crate::NameId; 27] {
         p.lt,
         p.pow,
         p.prod_range,
+        p.prod_range_if,
         p.ediv,
         p.emod,
         p.dvd,
@@ -1021,6 +1025,93 @@ fn prod_range_computes_and_rejects_a_false_product() {
     assert!(
         result.is_err(),
         "the trusted gate accepted a false claim that prodRange (fun _ => 2) 3 = 7"
+    );
+}
+
+/// `Int.prodRangeIf` computes its normal form -- and, unlike a constant `f`
+/// or an always-true/always-false predicate, this one MIXES both branches of
+/// `bool_select_int` in one run, so a definition that dropped the predicate
+/// entirely (e.g. always folding `f`, `Nat.lor`'s absorbing-zero mistake in
+/// spirit) would not survive it. `pred i := Nat.beq i 2`, `f i := Int.ofNat
+/// (Nat.succ i)`, `n := 4`: `i=0,1,3` are excluded (contribute `1`), `i=2` is
+/// included and contributes `f 2 = 3`, so `prodRangeIf pred f 4` should
+/// reduce to `3`. The trusted gate must also REFUSE the false claim that the
+/// same product is `2` -- the same discriminating-negative-control pattern
+/// as [`prod_range_computes_and_rejects_a_false_product`], so this checker
+/// cannot pass vacuously.
+#[test]
+fn prod_range_if_computes_and_rejects_a_false_value() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+    let bool_ty = k.const_(p.logic.bool_, vec![]);
+
+    // pred := fun i => Nat.beq i 2.
+    let pred = {
+        let i_fv = 900_300;
+        let i = k.fvar(i_fv);
+        let two_nat = numeral_nat(&mut k, &p, 2);
+        let beq = k.const_(p.nat.beq, vec![]);
+        let applied = k.app(beq, i);
+        let body = k.app(applied, two_nat);
+        let abstracted = k.abstract_fvars(body, &[i_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+    // f := fun i => Int.ofNat (Nat.succ i).
+    let f = {
+        let i_fv = 900_301;
+        let i = k.fvar(i_fv);
+        let succ = k.const_(p.nat.succ, vec![]);
+        let succ_i = k.app(succ, i);
+        let of_nat = k.const_(p.of_nat, vec![]);
+        let body = k.app(of_nat, succ_i);
+        let abstracted = k.abstract_fvars(body, &[i_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+    let four = numeral_nat(&mut k, &p, 4);
+    let prod_range_if = k.const_(p.prod_range_if, vec![]);
+    let applied_pred = k.app(prod_range_if, pred);
+    let applied_f = k.app(applied_pred, f);
+    let lhs = k.app(applied_f, four);
+
+    let three = numeral(&mut k, &p, 3);
+    assert!(
+        k.def_eq(lhs, three),
+        "prodRangeIf (beq _ 2) (ofNat . succ) 4 should compute to 3"
+    );
+
+    let _ = bool_ty; // predicate's codomain, used only for documentation above
+
+    // Negative control: the trusted gate must REFUSE the false claim that
+    // the same product is `2`.
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let two_int = numeral(&mut k, &p, 2);
+    let int_ty = k.const_(p.z, vec![]);
+    let eq = k.const_(p.logic.eq, vec![level_one]);
+    let false_stmt = {
+        let e = k.app(eq, int_ty);
+        let e = k.app(e, lhs);
+        k.app(e, two_int)
+    };
+    let refl = k.const_(p.logic.eq_refl, vec![level_one]);
+    let false_proof = {
+        let r = k.app(refl, int_ty);
+        k.app(r, three)
+    };
+    let scratch_name = k.name_str(anon, "prod_range_if_false_claim_scratch");
+    let result = k.add_declaration(Declaration::Theorem {
+        name: scratch_name,
+        uparams: vec![],
+        ty: false_stmt,
+        value: false_proof,
+    });
+    assert!(
+        result.is_err(),
+        "the trusted gate accepted a false claim that prodRangeIf (beq _ 2) (ofNat . succ) 4 = 2"
     );
 }
 
