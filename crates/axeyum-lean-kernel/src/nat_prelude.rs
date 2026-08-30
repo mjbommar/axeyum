@@ -174,6 +174,7 @@ mod log;
 mod lor;
 mod min_fac;
 mod mod_mul_lemmas;
+mod modeq_add_cancel;
 mod modular;
 mod mul_order_lemmas;
 mod multichoose;
@@ -273,6 +274,7 @@ use log::declare_log_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use mod_mul_lemmas::declare_mod_mul_family;
+use modeq_add_cancel::declare_mod_eq_add_cancel;
 use modular::declare_modular_congruence;
 use mul_order_lemmas::{
     declare_div_lt_of_lt_mul, declare_lt_of_mul_lt_mul, declare_mul_lt_mul_iff,
@@ -1108,6 +1110,28 @@ pub struct NatPrelude {
     /// `Nat.ModEq.gcd_eq : ∀ m a b, modEq m a b → gcd a m = gcd b m`. Closes
     /// ledger fact `F:ml430-nat-modeq-gcd-eq`.
     pub mod_eq_gcd_eq: NameId,
+    /// `Nat.mod_eq_add_left_cancel : ∀ n a b c d, modEq n a b →
+    /// modEq n (a+c) (b+d) → modEq n c d`. Closes
+    /// `F:ml430-nat-modeq-add-left-cancel` (`modeq_add_cancel.rs`).
+    pub mod_eq_add_left_cancel: NameId,
+    /// `Nat.mod_eq_add_right_cancel : ∀ n a b c d, modEq n c d →
+    /// modEq n (a+c) (b+d) → modEq n a b`. Closes
+    /// `F:ml430-nat-modeq-add-right-cancel` (`modeq_add_cancel.rs`).
+    pub mod_eq_add_right_cancel: NameId,
+    /// `Nat.mod_eq_add_iff_left : ∀ n a b c d, modEq n a b →
+    /// (modEq n (a+c) (b+d) ↔ modEq n c d)`. Closes
+    /// `F:ml430-nat-modeq-add-iff-left` (`modeq_add_cancel.rs`).
+    pub mod_eq_add_iff_left: NameId,
+    /// `Nat.mod_eq_add_iff_right : ∀ n a b c d, modEq n c d →
+    /// (modEq n (a+c) (b+d) ↔ modEq n a b)`. Closes
+    /// `F:ml430-nat-modeq-add-iff-right` (`modeq_add_cancel.rs`).
+    pub mod_eq_add_iff_right: NameId,
+    /// `Nat.mod_eq_cancel_left : ∀ m a b c, gcd m c = 1 →
+    /// modEq m (c*a) (c*b) → modEq m a b`. Same content as `mod_eq_cancel`
+    /// with the coprimality hypothesis's `gcd` argument order flipped via
+    /// `gcd_comm`. Closes `F:ml430-nat-modeq-cancel-left-of-coprime`
+    /// (`modeq_add_cancel.rs`).
+    pub mod_eq_cancel_left: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -3969,6 +3993,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mod_eq_zero_iff_dvd: kernel.name_str(nat, "mod_eq_zero_iff_dvd"),
             mod_eq_cancel: kernel.name_str(nat, "mod_eq_cancel"),
             mod_eq_gcd_eq: kernel.name_str(nat, "mod_eq_gcd_eq"),
+            mod_eq_add_left_cancel: kernel.name_str(nat, "mod_eq_add_left_cancel"),
+            mod_eq_add_right_cancel: kernel.name_str(nat, "mod_eq_add_right_cancel"),
+            mod_eq_add_iff_left: kernel.name_str(nat, "mod_eq_add_iff_left"),
+            mod_eq_add_iff_right: kernel.name_str(nat, "mod_eq_add_iff_right"),
+            mod_eq_cancel_left: kernel.name_str(nat, "mod_eq_cancel_left"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_refl: kernel.name_str(nat, "dvd_refl"),
@@ -4463,6 +4492,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `declare_gcd_semantics`, far above) and `dvd_antisymm` (just
         // declared above) -- the identical shape `declare_lcm_comm` uses.
         declare_gcd_comm(&mut d, &p)?;
+        // Needs `gcd_comm` (just declared above) for `mod_eq_cancel_left`'s
+        // coprimality-order flip, and `mod_eq_cancel` (from
+        // `declare_mod_eq_cancel`, far above) for the same theorem.
+        declare_mod_eq_add_cancel(&mut d, &p)?;
         declare_coprime_lcm_eq_mul(&mut d, &p)?;
         // Needs `dvd_antisymm` (just declared above) for `lcm_assoc`/`lcm_div`,
         // and `le_of_dvd` (from `declare_primes`, already run above this

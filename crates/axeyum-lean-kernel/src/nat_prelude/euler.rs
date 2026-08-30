@@ -127,7 +127,7 @@ fn swap_tail(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, k: ExprId, m: ExprId
 /// `modEq d a b`, `Eq a a2`, `Eq b b2` → `modEq d a2 b2`, by transporting
 /// each endpoint of the congruence across the given equality.
 #[allow(clippy::too_many_arguments)]
-fn rewrite_mod_eq(
+pub(super) fn rewrite_mod_eq(
     d: &mut NatDev<'_>,
     modulus: ExprId,
     a: ExprId,
@@ -151,7 +151,7 @@ fn rewrite_mod_eq(
 /// equation `(a+k)+d*u = (b+k)+d*v` so `k` sits at the tail on both sides
 /// ([`swap_tail`]), and finishes with `Nat.add_right_cancel`. The surviving
 /// witnesses for `modEq d a b` are the SAME `u,v` the hypothesis carried.
-fn cancel_common_right_addend(
+pub(super) fn cancel_common_right_addend(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     modulus: ExprId,
