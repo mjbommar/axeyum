@@ -1341,3 +1341,238 @@ pub(super) fn declare_step_family_locate(
 ) -> Result<(), KernelError> {
     declare_step_family_locate_thm(d, p)
 }
+
+// ---------------------------------------------------------------------------
+// `CReal.meshMax_le_supOn_add` and `CReal.supOn_ub_at_fine_mesh_point`
+// ---------------------------------------------------------------------------
+
+/// `CReal.meshMax_le_supOn_add : forall F a b (hab : le a b) u k dd,
+/// le (meshMax F a b (Nat.add (supLevel F a b u k) dd))
+///    (add (supOn F a b hab u) (ofRat (Rat.natDivSucc 1 (meshLevelCount k))))`
+/// -- **`supOn` dominates the mesh maximum at EVERY level above the schedule,
+/// to within `1/2^k`.**
+///
+/// This is the way around the cofinality gap that
+/// [`declare_sup_on_ub_at_sup_seq_point_thm`] documents. `supSeq` samples only
+/// the levels `supLevel F a b u k`, and nothing proves that schedule is
+/// cofinal, so `meshMax F a b j <= supOn` at an arbitrary `j` is not
+/// available. But an arbitrary level ABOVE one scheduled level is, because
+/// [`CRealPrelude::mesh_max_le_add_of_modulus`](super::CRealPrelude::mesh_max_le_add_of_modulus)
+/// is depth-uniform: it takes the refinement depth `dd` as a free argument and
+/// spends one epsilon however deep the refinement goes.
+///
+/// The `hsize` obligation is discharged exactly as
+/// `supremum.rs`'s `declare_sup_seq_le_add_thm` discharges its own, and by the
+/// same three-line route: `expOfModulus_le_trueExpOfModulus` under
+/// `Nat.add_le_add_left`, with the width summand carried through untouched.
+/// That is what `supLevel`'s additive shape buys, and it is why the request
+/// index here must be `meshLevelCount k` and not `k` -- `expOfModulus m k` is
+/// literally `Nat.size (m (meshLevelCount k))`, so the two sides match by
+/// delta with nothing recomputed.
+///
+/// Then one [`declare_sup_seq_le_sup_on_thm`] under `add_le_add`.
+fn declare_mesh_max_le_sup_on_add_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat_p = p.rat.int.nat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+
+    // `size c + expOfModulus m k <= size c + trueExpOfModulus m k`, whose
+    // right-hand side IS `supLevel F a b u k` by delta.
+    let modulus = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na);
+    let c = d.const_app(p.bound, &[width]);
+    let size_c = d.const_app(nat_p.size, &[c]);
+    let exp_k = d.const_app(p.exp_of_modulus, &[modulus, k]);
+    let te_k = d.const_app(p.true_exp_of_modulus, &[modulus, k]);
+    let exp_le = d.lemma(p.exp_of_modulus_le_true_exp_of_modulus, &[modulus, k]);
+    let hsize = d.lemma(nat_p.add_le_add_left, &[size_c, exp_k, te_k, exp_le]);
+
+    let mlc_k = d.const_app(p.mesh_level_count, &[k]);
+    let (_eps_rat, eps) = unit_frac_real(d, p, mlc_k);
+    let level = d.const_app(p.sup_level, &[f, a, b, u, k]);
+    let deep = NatOps::add(d, level, dd);
+
+    let step = d.lemma(
+        p.mesh_max_le_add_of_modulus,
+        &[f, a, b, u, mlc_k, level, dd, hab, hsize],
+    );
+
+    let seq_k = d.const_app(p.sup_seq, &[f, a, b, u, k]);
+    let target_real = d.const_app(p.sup_on, &[f, a, b, hab, u]);
+    let top = d.lemma(p.sup_seq_le_sup_on, &[f, a, b, hab, u, k]);
+    let refl_eps = d.lemma(p.le_refl, &[eps]);
+    let widen = d.lemma(
+        p.add_le_add,
+        &[seq_k, target_real, eps, eps, top, refl_eps],
+    );
+
+    let lhs = d.const_app(p.mesh_max, &[f, a, b, deep]);
+    let mid = cadd(d, p, seq_k, eps);
+    let rhs = cadd(d, p, target_real, eps);
+    let body = d.lemma(p.le_trans, &[lhs, mid, rhs, step, widen]);
+    let concl = cle(d, p, lhs, rhs);
+
+    let ty = {
+        let out = d.pi_fv(dd_fv, nat, concl);
+        let out = d.pi_fv(k_fv, nat, out);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(hab_fv, hab_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(dd_fv, nat, body);
+        let out = d.lam_fv(k_fv, nat, out);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_max_le_sup_on_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.supOn_ub_at_fine_mesh_point : forall F a b (hab : le a b) u k dd i,
+/// Nat.le i (meshLevelCount (Nat.add (supLevel F a b u k) dd)) ->
+/// le (F (meshSamplePoint a (meshDelta a b (meshLevelCount (Nat.add (supLevel
+/// F a b u k) dd))) i)) (add (supOn F a b hab u) (ofRat (Rat.natDivSucc 1
+/// (meshLevelCount k))))` -- **the upper-bound law on a family of points that
+/// can be made as fine as wanted, at an epsilon chosen independently.**
+///
+/// [`CRealPrelude::max_range_ub`](super::CRealPrelude::max_range_ub) then
+/// [`declare_mesh_max_le_sup_on_add_thm`]. Strictly stronger than
+/// [`declare_sup_on_ub_at_sup_seq_point_thm`], which is the `dd = 0` case with
+/// the epsilon dropped: here the refinement depth `dd` is free, so the sampled
+/// points are not confined to the schedule's own levels, while `k` still
+/// controls the error independently of `dd`.
+///
+/// The remaining gap to the unrestricted law `forall x in [a, b], F x <= supOn`
+/// is exactly the arbitrary point: see this module's header, and
+/// [`declare_step_family_locate_thm`], which is the tool for it.
+fn declare_sup_on_ub_at_fine_mesh_point_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let level = d.const_app(p.sup_level, &[f, a, b, u, k]);
+    let deep = NatOps::add(d, level, dd);
+    let count = d.const_app(p.mesh_level_count, &[deep]);
+    let delta = mesh_delta(d, p, a, b, count);
+    let sampler = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sp = mesh_sample_point(d, p, a, delta, j);
+        let fx = d.apply(f, &[sp]);
+        d.lam_fv(j_fv, nat, fx)
+    };
+    let point = mesh_sample_point(d, p, a, delta, i);
+    let f_point = d.apply(f, &[point]);
+
+    let mlc_k = d.const_app(p.mesh_level_count, &[k]);
+    let (_eps_rat, eps) = unit_frac_real(d, p, mlc_k);
+    let mesh_deep = d.const_app(p.mesh_max, &[f, a, b, deep]);
+    let target_real = d.const_app(p.sup_on, &[f, a, b, hab, u]);
+    let rhs = cadd(d, p, target_real, eps);
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let h_ty = d.le(i, count);
+
+    let ub = d.lemma(p.max_range_ub, &[sampler, count, i, h]);
+    let dom = d.lemma(p.mesh_max_le_sup_on_add, &[f, a, b, hab, u, k, dd]);
+    let body = d.lemma(p.le_trans, &[f_point, mesh_deep, rhs, ub, dom]);
+    let concl = cle(d, p, f_point, rhs);
+
+    let ty = {
+        let out = d.arrow(h_ty, concl);
+        let out = d.pi_fv(i_fv, nat, out);
+        let out = d.pi_fv(dd_fv, nat, out);
+        let out = d.pi_fv(k_fv, nat, out);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(hab_fv, hab_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(h_fv, h_ty, body);
+        let out = d.lam_fv(i_fv, nat, out);
+        let out = d.lam_fv(dd_fv, nat, out);
+        let out = d.lam_fv(k_fv, nat, out);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sup_on_ub_at_fine_mesh_point,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshMax_le_supOn_add` and `CReal.supOn_ub_at_fine_mesh_point`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sup_on_ub_at_fine_mesh_point(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_max_le_sup_on_add_thm(d, p)?;
+    declare_sup_on_ub_at_fine_mesh_point_thm(d, p)
+}

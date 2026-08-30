@@ -42,5 +42,15 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             "theorem",
         ),
         ("CReal.stepFamily_locate", p.step_family_locate, "theorem"),
+        (
+            "CReal.meshMax_le_supOn_add",
+            p.mesh_max_le_sup_on_add,
+            "theorem",
+        ),
+        (
+            "CReal.supOn_ub_at_fine_mesh_point",
+            p.sup_on_ub_at_fine_mesh_point,
+            "theorem",
+        ),
     ]
 }

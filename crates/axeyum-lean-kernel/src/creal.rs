@@ -6517,6 +6517,30 @@ pub struct CRealPrelude {
     /// identities and the induction carries no ring algebra. See
     /// `creal/sup_laws.rs`.
     pub step_family_locate: NameId,
+    /// `CReal.meshMax_le_supOn_add : ∀ F a b (hab : le a b) u k dd,
+    /// le (meshMax F a b (Nat.add (supLevel F a b u k) dd))
+    ///    (add (supOn F a b hab u) (ofRat (Rat.natDivSucc 1 (meshLevelCount
+    /// k))))` — **`supOn` dominates the mesh maximum at EVERY level above the
+    /// schedule, to within `1/2^k`.**
+    ///
+    /// The way around the cofinality gap
+    /// [`Self::sup_on_ub_at_sup_seq_point`] documents:
+    /// [`Self::mesh_max_le_add_of_modulus`] is depth-uniform, so an arbitrary
+    /// level ABOVE one scheduled level costs one epsilon however deep the
+    /// refinement goes. See `creal/sup_laws.rs`.
+    pub mesh_max_le_sup_on_add: NameId,
+    /// `CReal.supOn_ub_at_fine_mesh_point : ∀ F a b (hab : le a b) u k dd i,
+    /// Nat.le i (meshLevelCount (Nat.add (supLevel F a b u k) dd)) →
+    /// le (F (meshSamplePoint a (meshDelta a b (meshLevelCount (Nat.add
+    /// (supLevel F a b u k) dd))) i)) (add (supOn F a b hab u) (ofRat
+    /// (Rat.natDivSucc 1 (meshLevelCount k))))` — **the upper-bound law on a
+    /// family of points that can be made as fine as wanted, at an epsilon
+    /// chosen independently of the fineness.**
+    ///
+    /// [`Self::max_range_ub`] then [`Self::mesh_max_le_sup_on_add`]. Strictly
+    /// stronger than [`Self::sup_on_ub_at_sup_seq_point`], which is the
+    /// `dd = 0` case with the epsilon dropped. See `creal/sup_laws.rs`.
+    pub sup_on_ub_at_fine_mesh_point: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7287,6 +7311,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sup_seq_le_sup_on: kernel.name_str(creal, "supSeq_le_supOn"),
         sup_on_ub_at_sup_seq_point: kernel.name_str(creal, "supOn_ub_at_supSeq_point"),
         step_family_locate: kernel.name_str(creal, "stepFamily_locate"),
+        mesh_max_le_sup_on_add: kernel.name_str(creal, "meshMax_le_supOn_add"),
+        sup_on_ub_at_fine_mesh_point: kernel
+            .name_str(creal, "supOn_ub_at_fine_mesh_point"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -13107,6 +13134,33 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.step_family_locate],
         run: sup_laws::declare_step_family_locate,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
+        requires: &[
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.exp_of_modulus,
+            |p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_range_ub,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_max,
+            |p: CRealPrelude| p.mesh_max_le_add_of_modulus,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_seq,
+            |p: CRealPrelude| p.sup_seq_le_sup_on,
+            |p: CRealPrelude| p.true_exp_of_modulus,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.mesh_max_le_sup_on_add,
+            |p: CRealPrelude| p.sup_on_ub_at_fine_mesh_point,
+        ],
+        run: sup_laws::declare_sup_on_ub_at_fine_mesh_point,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
