@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "graph-dispatcher-recommendation",
+  "generated_by": "scripts/gen-graph-dispatcher.py",
+  "adr_citations": [
+    "docs/research/09-decisions/adr-0865-two-of-three-g4-pilots-retain-the-graph-ranking-one-category-untested.md",
+    "docs/research/09-decisions/adr-0845-the-infrastructure-frontier-curates-candidates-and-validates-them-live.md",
+    "docs/plan/global/50-planning-rules.md"
+  ],
+  "advisory_notice": "This recommendation is authoritative ONLY where the 'authority' field on the capability and legal_target sections says 'authoritative' -- ADR-0865 bounds that to population 'mathlib-group-defs-v1', queues ['language-infrastructure', 'proof-producers'], and a genuinely linked legal target. Every other combination is advisory: visible, ranked, and overridable, never binding.",
+  "destination": {
+    "node_id": "groups",
+    "title": "Groups",
+    "layer": 2,
+    "path": "docs/curriculum/02-structures/groups.md",
+    "selection_reason": "3 published infrastructure-frontier row(s) name docs/curriculum/02-structures/groups.md in destination_paths; highest among 1 servable destination(s)",
+    "candidates_considered": [
+      {
+        "node_id": "groups",
+        "path": "docs/curriculum/02-structures/groups.md",
+        "layer": 2,
+        "title": "Groups",
+        "row_count": 3
+      }
+    ]
+  },
+  "capability": {
+    "population_id": "mathlib-group-defs-v1",
+    "queue": "language-infrastructure",
+    "row_id": "IF-LANG-4f071ea9a3",
+    "title": "Bundled commutative-magma structure + generic commutativity",
+    "subject_declarations": [
+      "CommMagma",
+      "mul_comm"
+    ],
+    "gain_kind": "statability",
+    "preregistered_metric": {
+      "description": "A generic (carrier-polymorphic) commutativity helper should exist that is not specific to one carrier's *_comm theorem.",
+      "command": "/usr/bin/grep -rlE 'IsCommutative|is_commutative|generic_comm' crates/axeyum-lean-kernel/src | wc -l",
+      "expected_change": "increases",
+      "baseline": 0
+    },
+    "authority": "authoritative",
+    "authority_reason": "ADR-0865 ran a pilot over population 'mathlib-group-defs-v1', queues ['language-infrastructure', 'proof-producers'], and retained the ranking there",
+    "candidates_considered": [
+      {
+        "population_id": "mathlib-group-defs-v1",
+        "queue": "language-infrastructure",
+        "row_id": "IF-LANG-4f071ea9a3"
+      },
+      {
+        "population_id": "mathlib-group-defs-v1",
+        "queue": "language-infrastructure",
+        "row_id": "IF-LANG-d629d21781"
+      },
+      {
+        "population_id": "mathlib-group-defs-v1",
+        "queue": "language-infrastructure",
+        "row_id": "IF-LANG-dce29ad3f7"
+      }
+    ]
+  },
+  "legal_target": {
+    "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
+    "match_kind": "fallback",
+    "matched_identifier": null,
+    "authority": "advisory",
+    "authority_reason": "no dispatchable fact links to this capability row's subject_declarations (the two populations are largely disjoint -- ADR-0845's own cross-check finding); this is the unlinked local-ready fallback, never authoritative"
+  },
+  "dispatchable_frontier_check": {
+    "exit_code": 0,
+    "guard_failures": [],
+    "open_mirrors": 168,
+    "held_out_count": 135,
+    "mutation_count": 12,
+    "blocked_count": 11,
+    "dispatchable_count": 10,
+    "dispatchable_floor": 10
+  },
+  "override": null
+}
