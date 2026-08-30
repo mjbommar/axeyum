@@ -223,7 +223,7 @@ fn add_swap_right(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, u: ExprId, s: E
     let comm = d.lemma(p.add_comm, &[u, s]);
     let step2 = d.congr(us, su, comm, &|d, t| d.add(x, t));
     let assoc2 = d.lemma(p.add_assoc, &[x, s, u]);
-    let step3 = d.symm(mid2, end_, assoc2);
+    let step3 = d.symm(end_, mid2, assoc2);
 
     let (_e, proof) = d.chain(start, &[(mid, step1), (mid2, step2), (end_, step3)]);
     proof
