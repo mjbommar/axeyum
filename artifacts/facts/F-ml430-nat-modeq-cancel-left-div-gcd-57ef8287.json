@@ -8,10 +8,31 @@
     "statement": "∀ {m a b c : ℕ}, 0 < m → c * a ≡ c * b [MOD m] → a ≡ b [MOD m / m.gcd c]",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-div-mul-cancel-of-dvd", "F:nat-gcd-cofactors-coprime", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:nat-left-distrib", "F:nat-mod-eq-cancel", "F:nat-mul-assoc", "F:nat-mul-left-cancel-of-pos", "F:nat-one-le-of-dvd-pos"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_eq_cancel_left_div_gcd 2>/dev/null | grep -Ec '^Nat\\.mod_eq_cancel_left_div_gcd[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.mod_eq_cancel_left_div_gcd",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.mod_eq_cancel_left_div_gcd` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. New proof, lane modeq-div-gcd, in `nat_prelude/modeq_cancel_div_gcd.rs`, wired in via `declare_modeq_cancel_div_gcd`. `Nat.gcd_mul_right` (landed for a sibling family within the hour before this lane started) turned out NOT to be what unlocks this family -- `Nat.gcd_cofactors_coprime` (`bezout.rs`, pre-existing) does: with `g := gcd(m,c)`, `Nat.div_mul_cancel_of_dvd` gives `g*(m/g)=m` and `g*(c/g)=c`, substituting those into `gcd c m = gcd m c = g` (`gcd_comm`) gives `gcd (g*(c/g)) (g*(m/g)) = g`, and `gcd_cofactors_coprime` turns that into `gcd (c/g) (m/g) = 1` directly. A local helper (`mod_eq_cancel_scale`) then cancels the shared factor `g` from both the modulus and both endpoints of the rewritten hypothesis (`left_distrib`/`mul_assoc`/`Nat.mul_left_cancel_of_pos`, peeling `ModEq`'s nested existential the same way `euler.rs`'s `cancel_common_right_addend` does, with the SAME witnesses surviving), and the pre-existing coprime `Nat.mod_eq_cancel` finishes. `nat_theorem_inventory`'s rendered type matches this fact's `formal.statement` exactly (mod carrier-name rewriting: `AxNat` for `ℕ`, `AxNat.modEq`/`[MOD]`, `AxNat.lt`/`<`, `AxNat.div`/`/`, `AxNat.gcd`/`.gcd`). `nat_theorem_inventory` exits non-zero (0 rows) for a bogus name (`mod_eq_cancel_left_div_gcd_bogus`, measured). Verified no substring overlap against the sibling fact `Nat.mod_eq_cancel_left_div_gcd_general` (this fact's third mirror, `F:ml430-nat-modeq-cancel-left-div-gcd-cfca1225`): the anchored pattern `^Nat\\.mod_eq_cancel_left_div_gcd[[:space:]]` matches exactly 1 row (its own), not the `_general` variant, in the combined inventory of all three new theorems.",
+      "supports": "∀ {m a b c : ℕ}, 0 < m → c * a ≡ c * b [MOD m] → a ≡ b [MOD m / m.gcd c]"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly, and `mod_eq_cancel_div_gcd_family_applies_at_a_discriminating_concrete_instance_and_symbolically` checks it applies at a concrete DISCRIMINATING instance (m,c)=(6,4), gcd=2>1 -- a coprime instance could not tell this family apart from the pre-existing `Nat.mod_eq_cancel` -- with a transposed negative control, and symbolically at a genuinely free (m,a,b,c) via a fresh restating theorem.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.mod_eq_cancel_left_div_gcd"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "New proof, lane modeq-div-gcd (2026-08-30): closed by finding `Nat.gcd_cofactors_coprime` (bezout.rs, pre-existing -- neither prior lane, `nat-modeq-mirrors` nor `int-dvd-mirrors`, had searched for it) together with `Nat.div_mul_cancel_of_dvd`, rather than the recently-landed `Nat.gcd_mul_right`, which turned out not to be needed for this family. New file `nat_prelude/modeq_cancel_div_gcd.rs`. Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: train), which carries the partition; that manifest, not this file, is the split authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

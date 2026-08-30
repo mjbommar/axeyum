@@ -184,7 +184,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 211] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 213] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -399,6 +399,8 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 211] {
         p.dvd_gcd_mul_iff_dvd_mul,
         p.dvd_mul_gcd_iff_dvd_mul,
         p.dvd_gcd_mul_gcd_iff_dvd_mul,
+        p.mod_eq_cancel_left_div_gcd,
+        p.mod_eq_cancel_right_div_gcd,
     ]
 }
 
@@ -4198,5 +4200,157 @@ fn gcd_div_applies_at_a_positive_a_negative_divisor_and_at_zero() {
         let wa = d.izero();
         let wb = d.izero();
         check_gcd_div(&mut d, a, b, cc, wa, wb, 0, "a=0,b=0,c=0 (degenerate)");
+    }
+}
+
+/// `Int.ModEq.cancel_left_div_gcd`/`cancel_right_div_gcd` at a
+/// DISCRIMINATING concrete instance (`gcd(6,4) = 2 > 1` -- this development
+/// has no Int-level "cancel a COPRIME factor" lemma at all, so a coprime
+/// instance would not even distinguish this family from a hypothetical one),
+/// with a wrong-modulus negative control (transposing `a`/`b` is NOT
+/// discriminating for this `Eq`-based `ModEq`, since both orderings reduce
+/// to the identical closed proposition once `emod` computes -- see the
+/// control's own comment below), plus a symbolic restatement at a genuinely
+/// free `(m,a,b,c)`.
+///
+/// `(m, c, a, b) = (6, 4, 1, 4)`: `c*a = 4`, `c*b = 16`, and
+/// `4 ≡ 16 [ZMOD 6]` since `emod 4 6 = emod 16 6 = 4` -- built by
+/// `Eq.refl (emod (c*a) m)` and accepted only because the kernel's own
+/// computation confirms both sides reduce to the same numeral. The
+/// conclusion `1 ≡ 4 [ZMOD 3]` similarly holds since `emod 1 3 = emod 4 3 = 1`.
+#[test]
+fn mod_eq_cancel_div_gcd_family_applies_at_a_discriminating_concrete_instance_and_symbolically() {
+    fn int_num(d: &mut IntDev<'_>, n: u32) -> ExprId {
+        let mut nat = d.zero();
+        for _ in 0..n {
+            nat = d.succ(nat);
+        }
+        d.of_nat(nat)
+    }
+    fn nat_num(d: &mut IntDev<'_>, n: u32) -> ExprId {
+        let mut nat = d.zero();
+        for _ in 0..n {
+            nat = d.succ(nat);
+        }
+        nat
+    }
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    let m = int_num(&mut d, 6);
+    let c = int_num(&mut d, 4);
+    let a = int_num(&mut d, 1);
+    let b = int_num(&mut d, 4);
+    let five_nat = nat_num(&mut d, 5);
+    let hm = d.zero_lt_succ(five_nat); // Nat.lt zero six, defeq Int.lt zero m
+
+    let g_nat = d.const_app(p.gcd, &[m, c]);
+    let g = d.of_nat(g_nat);
+    let qm = d.iediv(m, g);
+    let want_qm = int_num(&mut d, 3);
+    assert!(
+        d.kernel().def_eq(qm, want_qm),
+        "6 / gcd(6,4) should compute to 3"
+    );
+
+    // -- cancel_left_div_gcd --
+    {
+        let ca = d.imul(c, a);
+        let emod_ca_m = d.iemod(ca, m);
+        let h = d.irefl(emod_ca_m); // defeq to Eq(emod ca m)(emod cb m), i.e. ModEq m ca cb
+
+        let theorem = d.kernel().const_(p.mod_eq_cancel_left_div_gcd, vec![]);
+        let applied = d.apply(theorem, &[m, a, b, c, hm, h]);
+        let inferred = d.kernel().infer(applied).unwrap_or_else(|e| {
+            panic!("Int.mod_eq_cancel_left_div_gcd at (6,4,1,4) should type-check: {e:?}")
+        });
+        let want_ty = super::modeq::imodeq(&mut d, qm, a, b);
+        assert!(
+            d.kernel().def_eq(inferred, want_ty),
+            "Int.mod_eq_cancel_left_div_gcd(6,4,1,4) should conclude ModEq 3 1 4"
+        );
+        // Negative control: transposing `a`/`b` in the conclusion is NOT
+        // discriminating here -- `ModEq n a b := emod a n = emod b n`
+        // reduces both `ModEq 3 1 4` and `ModEq 3 4 1` to the identical
+        // closed proposition `Eq 1 1` once emod computes, so the transposed
+        // form is defeq to the original and is not a real negative control.
+        // Use a WRONG MODULUS instead: `1 mod 2 = 1` but `4 mod 2 = 0`, so
+        // `ModEq 2 1 4` reduces to the genuinely false-shaped `Eq 1 0`.
+        let wrong_modulus = int_num(&mut d, 2);
+        let wrong_ty = super::modeq::imodeq(&mut d, wrong_modulus, a, b);
+        let anon = d.kernel().anon();
+        let wrong_name = d
+            .kernel()
+            .name_str(anon, "nc_int_cancel_left_div_gcd_wrong_modulus");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name: wrong_name,
+            uparams: vec![],
+            ty: wrong_ty,
+            value: applied,
+        });
+        assert!(
+            result.is_err(),
+            "Int.mod_eq_cancel_left_div_gcd's proof must be rejected against the wrong-modulus conclusion"
+        );
+        assert!(
+            !d.kernel().environment().contains(wrong_name),
+            "a rejected declaration must not enter the environment"
+        );
+    }
+
+    // -- cancel_right_div_gcd --
+    {
+        let ac = d.imul(a, c);
+        let emod_ac_m = d.iemod(ac, m);
+        let h = d.irefl(emod_ac_m);
+
+        let theorem = d.kernel().const_(p.mod_eq_cancel_right_div_gcd, vec![]);
+        let applied = d.apply(theorem, &[m, a, b, c, hm, h]);
+        let inferred = d.kernel().infer(applied).unwrap_or_else(|e| {
+            panic!("Int.mod_eq_cancel_right_div_gcd at (6,4,1,4) should type-check: {e:?}")
+        });
+        let want_ty = super::modeq::imodeq(&mut d, qm, a, b);
+        assert!(
+            d.kernel().def_eq(inferred, want_ty),
+            "Int.mod_eq_cancel_right_div_gcd(6,4,1,4) should conclude ModEq 3 1 4"
+        );
+    }
+
+    // -- Symbolic restatement at a genuinely free `(m,a,b,c)`: re-applying
+    // `mod_eq_cancel_left_div_gcd` at fresh fvars, inside a NEW theorem,
+    // must still type-check. --
+    {
+        let anon = d.kernel().anon();
+        let stmt_name = d
+            .kernel()
+            .name_str(anon, "symbolic_int_cancel_left_div_gcd_restated");
+        d.int_theorem(stmt_name, 4, &|d, v| {
+            let (m, a, b, c) = (v[0], v[1], v[2], v[3]);
+            let zero_i = d.izero();
+            let hm_ty = d.ilt(zero_i, m);
+            let ca = d.imul(c, a);
+            let cb = d.imul(c, b);
+            let h_ty = super::modeq::imodeq(d, m, ca, cb);
+            let g_nat = d.const_app(p.gcd, &[m, c]);
+            let g = d.of_nat(g_nat);
+            let qm = d.iediv(m, g);
+            let concl = super::modeq::imodeq(d, qm, a, b);
+            let inner = d.arrow(h_ty, concl);
+            let stmt = d.arrow(hm_ty, inner);
+
+            let hm_fv = d.fresh_fvar();
+            let hm = d.kernel().fvar(hm_fv);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let applied = d.const_app(p.mod_eq_cancel_left_div_gcd, &[m, a, b, c, hm, h]);
+            let with_h = d.lam_fv(h_fv, h_ty, applied);
+            let proof = d.lam_fv(hm_fv, hm_ty, with_h);
+            (stmt, proof)
+        })
+        .unwrap_or_else(|e| {
+            panic!("Int.mod_eq_cancel_left_div_gcd must apply at a genuinely free (m,a,b,c): {e:?}")
+        });
     }
 }

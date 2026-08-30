@@ -90,6 +90,7 @@ mod fibonacci;
 mod gcd;
 mod gcd_scaled_mirrors;
 mod modeq;
+mod modeq_cancel_div_gcd;
 mod modeq_family;
 mod modinv;
 mod nat_abs;
@@ -1400,6 +1401,14 @@ pub struct IntPrelude {
     /// k ∣ (ofNat (gcd k n)) * (ofNat (gcd k m)) ↔ k ∣ n * m` -- Mathlib's
     /// `Int.dvd_gcd_mul_gcd_iff_dvd_mul`.
     pub dvd_gcd_mul_gcd_iff_dvd_mul: NameId,
+    /// `mod_eq_cancel_left_div_gcd : ∀ m a b c, 0 < m → ModEq m (c*a) (c*b)
+    /// → ModEq (m.ediv (ofNat (m.gcd c))) a b` -- Mathlib's
+    /// `Int.ModEq.cancel_left_div_gcd` (`modeq_cancel_div_gcd.rs`).
+    pub mod_eq_cancel_left_div_gcd: NameId,
+    /// `mod_eq_cancel_right_div_gcd : ∀ m a b c, 0 < m → ModEq m (a*c) (b*c)
+    /// → ModEq (m.ediv (ofNat (m.gcd c))) a b` -- Mathlib's
+    /// `Int.ModEq.cancel_right_div_gcd` (`modeq_cancel_div_gcd.rs`).
+    pub mod_eq_cancel_right_div_gcd: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1718,6 +1727,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_gcd_mul_iff_dvd_mul: child(kernel, "dvd_gcd_mul_iff_dvd_mul"),
         dvd_mul_gcd_iff_dvd_mul: child(kernel, "dvd_mul_gcd_iff_dvd_mul"),
         dvd_gcd_mul_gcd_iff_dvd_mul: child(kernel, "dvd_gcd_mul_gcd_iff_dvd_mul"),
+        mod_eq_cancel_left_div_gcd: child(kernel, "mod_eq_cancel_left_div_gcd"),
+        mod_eq_cancel_right_div_gcd: child(kernel, "mod_eq_cancel_right_div_gcd"),
     }
 }
 
@@ -1983,6 +1994,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // prelude is a dependency of `Int`'s). Placed last for the same
         // reason as `dvd_gcd_mirrors` just above.
         gcd_scaled_mirrors::declare_all(&mut d)?;
+        // `modeq-div-gcd` lane: the div-by-gcd `ModEq` cancellation mirrors.
+        // Needs `Int.gcd_div_gcd_div_gcd`/`Int.gauss_lemma`/`Int.mul_eq_zero`
+        // (all declared above) and `modeq.rs`'s `modeq_to_dvd`/`dvd_to_modeq`
+        // bridge. Placed last for the same reason `dvd_gcd_mirrors` is.
+        modeq_cancel_div_gcd::declare_all(&mut d)?;
         Ok(prelude)
     })();
     match built {

@@ -181,6 +181,7 @@ mod lor;
 mod min_fac;
 mod mod_mul_lemmas;
 mod modeq_add_cancel;
+mod modeq_cancel_div_gcd;
 mod modular;
 mod mul_order_lemmas;
 mod multichoose;
@@ -287,6 +288,7 @@ use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use mod_mul_lemmas::declare_mod_mul_family;
 use modeq_add_cancel::declare_mod_eq_add_cancel;
+use modeq_cancel_div_gcd::declare_modeq_cancel_div_gcd;
 use modular::declare_modular_congruence;
 use mul_order_lemmas::{
     declare_div_lt_of_lt_mul, declare_lt_of_mul_lt_mul, declare_mul_lt_mul_iff,
@@ -954,6 +956,20 @@ pub struct NatPrelude {
     /// `F:ml430-nat-dvd-mul-gcd-iff-dvd-mul-f9517e6b`
     /// (`gcd_mul_right_mirrors.rs`).
     pub dvd_mul_gcd_iff_dvd_mul: NameId,
+    /// `Nat.ModEq.cancel_left_div_gcd : ∀ m a b c, 0 < m → c*a ≡ c*b [MOD m]
+    /// → a ≡ b [MOD m / gcd m c]` — `F:ml430-nat-modeq-cancel-left-div-gcd-57ef8287`
+    /// (`modeq_cancel_div_gcd.rs`).
+    pub mod_eq_cancel_left_div_gcd: NameId,
+    /// `Nat.ModEq.cancel_right_div_gcd : ∀ m a b c, 0 < m → a*c ≡ b*c [MOD m]
+    /// → a ≡ b [MOD m / gcd m c]` — `F:ml430-nat-modeq-cancel-right-div-gcd-22a4f40d`
+    /// (`modeq_cancel_div_gcd.rs`).
+    pub mod_eq_cancel_right_div_gcd: NameId,
+    /// `Nat.ModEq.cancel_left_div_gcd' : ∀ m a b c d, 0 < m → c ≡ d [MOD m] →
+    /// c*a ≡ d*b [MOD m] → a ≡ b [MOD m / gcd m c]` —
+    /// `F:ml430-nat-modeq-cancel-left-div-gcd-cfca1225`
+    /// (`modeq_cancel_div_gcd.rs`). Rust name carries `_general` since
+    /// identifiers cannot carry `'`.
+    pub mod_eq_cancel_left_div_gcd_general: NameId,
     /// `Nat.lcm a b := div (mul a b) (gcd a b)` — the least common multiple.
     /// `lcm 0 0 = 0` matches Mathlib's convention: at that one degenerate point
     /// `gcd a b = 0` too, and `div _ 0 = 0`, so `lcm 0 0` computes to `0` and
@@ -4214,6 +4230,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_gcd_mul_iff_dvd_mul: kernel.name_str(nat, "dvd_gcd_mul_iff_dvd_mul"),
             dvd_gcd_mul_gcd_iff_dvd_mul: kernel.name_str(nat, "dvd_gcd_mul_gcd_iff_dvd_mul"),
             dvd_mul_gcd_iff_dvd_mul: kernel.name_str(nat, "dvd_mul_gcd_iff_dvd_mul"),
+            mod_eq_cancel_left_div_gcd: kernel.name_str(nat, "mod_eq_cancel_left_div_gcd"),
+            mod_eq_cancel_right_div_gcd: kernel.name_str(nat, "mod_eq_cancel_right_div_gcd"),
+            mod_eq_cancel_left_div_gcd_general: kernel
+                .name_str(nat, "mod_eq_cancel_left_div_gcd_general"),
             lcm: kernel.name_str(nat, "lcm"),
             lcm_zero_left: kernel.name_str(nat, "lcm_zero_left"),
             dvd_lcm_left: kernel.name_str(nat, "dvd_lcm_left"),
@@ -5290,6 +5310,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // above) and `mul_left_comm` (`binomial.rs`). Nothing needs it, so
         // it goes last.
         declare_dvd_mul_split(&mut d, &p)?;
+        // Needs `Nat.gcd_dvd_left`/`_right`/`Nat.gcd_comm` (`gcd.rs`),
+        // `Nat.div_mul_cancel_of_dvd`/`Nat.one_le_of_dvd_pos`
+        // (`divisibility.rs`), `Nat.gcd_cofactors_coprime` (`bezout.rs`,
+        // far above), `Nat.mul_assoc`/`Nat.mul_comm`/`Nat.left_distrib`/
+        // `Nat.mul_left_cancel_of_pos` (`declare_multiplicative_theorems`,
+        // far above), and `Nat.mod_eq_cancel`/`Nat.mod_eq_symm`/
+        // `Nat.mod_eq_trans`/`Nat.mod_eq_mul_right` (`euler.rs`/`modular.rs`,
+        // far above). Nothing needs it, so it goes last.
+        declare_modeq_cancel_div_gcd(&mut d, &p)?;
         Ok(p)
     })();
     match built {

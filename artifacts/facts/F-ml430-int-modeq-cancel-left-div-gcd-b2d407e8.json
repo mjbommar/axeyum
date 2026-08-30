@@ -8,10 +8,31 @@
     "statement": "∀ {m a b c : ℤ}, 0 < m → c * a ≡ c * b [ZMOD m] → a ≡ b [ZMOD m / ↑(m.gcd c)]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:int-add-assoc", "F:int-add-comm", "F:int-add-neg", "F:int-add-neg-cancel-right", "F:int-add-zero", "F:int-ediv-add-emod", "F:int-emod-eq-zero-iff-dvd", "F:int-gauss-lemma", "F:int-gcd-dvd-left", "F:int-gcd-dvd-right", "F:int-le-of-lt", "F:int-left-distrib", "F:int-modeq-add-mul-left", "F:int-modeq-symm", "F:int-mul-assoc", "F:int-mul-eq-zero", "F:int-mul-sub", "F:int-of-nat-nat-abs-of-nonneg", "F:ml430-int-add-left-neg-c1bf80e1", "F:ml430-int-add-neg-eq-sub-32f34729", "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc", "F:nat-gcd-dvd-left", "F:nat-not-succ-le-zero", "F:nat-one-le-of-dvd-pos"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- mod_eq_cancel_left_div_gcd 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.mod_eq_cancel_left_div_gcd[[:space:]]')\" -ge 1",
+      "id": "kernel-Int.mod_eq_cancel_left_div_gcd",
+      "kind": "kernel-term",
+      "notes": "build_int_prelude admits Int.mod_eq_cancel_left_div_gcd through the trusted Kernel::add_declaration gate. New proof, lane modeq-div-gcd, in int_prelude/modeq_cancel_div_gcd.rs. int-dvd-mirrors (docs/plan/status/335-int-dvd-mirrors.md) left this open, sized as needing new machinery built from Int.gcd_div_gcd_div_gcd -- that lemma already existed (gcd.rs) by the time this lane started; the actual missing piece was a way to cancel a shared nonzero factor from an Int.dvd statement, which this development had never built at the Int level (every prior use of mul_left_cancel_of_pos routed through the Nat version on natAbs quantities instead, e.g. Int.gcd_div_gcd_div_gcd's own proof). Route: with g := ofNat (gcd m c), qm := m.ediv g, qc := c.ediv g -- g's Nat-side positivity comes from natAbs m > 0 (from 0 < m) fed directly into Nat.gcd_dvd_left/Nat.one_le_of_dvd_pos on natAbs m/natAbs c (Int.gcd unfolds to exactly that Nat.gcd application by definition, no bridge lemma needed); m = g*qm and c = g*qc exactly (mirroring gcd.rs's private exact closure inside declare_gcd_div_gcd_div_gcd); gcd qm qc = 1 directly from Int.gcd_div_gcd_div_gcd(m,c,pos); the hypothesis ModEq m (c*a) (c*b) bridges to dvd m (c*(b-a)) via modeq_to_dvd + Int.mul_sub (both already unconditional), rewrites through m=g*qm, c=g*qc to dvd (g*qm) (g*(qc*(b-a))), and a new existential-unpacking scale-cancellation lemma (imul_left_cancel_of_ne, built from Int.mul_eq_zero -- ZZ has no zero divisors -- plus basic add/neg/sub algebra) cancels the shared g; Int.gauss_lemma (coprime qm qc, qm | qc*(b-a)) gives qm | (b-a), and dvd_to_modeq closes it as ModEq qm a b. int_theorem_inventory's rendered type matches this fact's formal.statement exactly (mod the same carrier-name rewriting as every other Int mirror: Int.ediv/Int.ofNat/Int.gcd for / .gcd/coercion). int_theorem_inventory exits non-zero (0 rows) for a bogus name (measured). No substring collision against the sibling Int.mod_eq_cancel_right_div_gcd under the anchored pattern (both queried and grepped independently).",
+      "supports": "∀ {m a b c : ℤ}, 0 < m → c * a ≡ c * b [ZMOD m] → a ≡ b [ZMOD m / ↑(m.gcd c)]"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "prelude_axiom_inventory --require-axiom-free integer enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: integer axiom=0). int_prelude_tests::every_int_declaration_is_checked_and_axiom_free and derived_laws_have_no_axiom_footprint additionally confirm this theorem's own Kernel::axiom_footprint directly, and mod_eq_cancel_div_gcd_family_applies_at_a_discriminating_concrete_instance_and_symbolically checks it applies at a concrete DISCRIMINATING instance (m,c)=(6,4), gcd=2 -- this development has no Int-level \"cancel a coprime factor\" lemma at all, so a coprime instance could not even be a control -- with a wrong-modulus negative control, and symbolically at a genuinely free (m,a,b,c) via a fresh restating theorem.",
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "id": "footprint-Int.mod_eq_cancel_left_div_gcd"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "New proof, lane modeq-div-gcd (2026-08-30): closed by building the first Int-level multiplicative cancellation-by-nonzero lemma in this development (Int.mul_eq_zero plus basic add/neg/sub algebra), composed with the already-existing Int.gcd_div_gcd_div_gcd and Int.gauss_lemma. int-dvd-mirrors (docs/plan/status/335-int-dvd-mirrors.md) sized this as needing gcd_div_gcd_div_gcd, which had already landed by the time this lane started; the real gap was the dvd-cancellation step. New file int_prelude/modeq_cancel_div_gcd.rs. Preregistered in artifacts/autogenesis/nursery-v2-extension.json (partition: development), which carries the partition; that manifest, not this file, is the split authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
