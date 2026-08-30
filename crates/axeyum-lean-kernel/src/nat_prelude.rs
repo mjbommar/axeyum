@@ -172,6 +172,7 @@ mod lcm;
 mod lcm_gcd_lemmas;
 mod ldiff;
 mod log;
+mod log_clog_order;
 mod lor;
 mod min_fac;
 mod mod_mul_lemmas;
@@ -273,6 +274,7 @@ use lcm::{
 use lcm_gcd_lemmas::declare_lcm_gcd_lemmas;
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
+use log_clog_order::declare_log_clog_order_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use mod_mul_lemmas::declare_mod_mul_family;
@@ -3014,6 +3016,69 @@ pub struct NatPrelude {
     /// — [`log_aux_le_fuel`](Self::log_aux_le_fuel) specialized at `f := n`,
     /// since `log b n := logAux b n n` definitionally.
     pub log_le_self: NameId,
+    // --- `log`/`clog` order mirrors (`log_clog_order.rs`) -------------------
+    /// `Nat.div_le_div_right : ∀ n m b, Le n m → Le (div n b) (div m b)` —
+    /// general infrastructure, not itself an `ml430` mirror target, filed
+    /// here under its first consumers ([`log_aux_mono`](Self::log_aux_mono),
+    /// [`clog_aux_mono`](Self::clog_aux_mono)). At `b = 0` both sides are
+    /// `0` (`div_zero`); at `b = succ bp`, `div_lt_of_lt_mul` applied to
+    /// `n ≤ m < b*(succ (div m b))` (`div_mod_lt_mul_iff`'s backward
+    /// direction fed `lt_succ_self`, via the canonical `div_mod_exec`
+    /// witness) gives `div n b < succ (div m b)`, hence `≤` by
+    /// `le_of_lt_succ`.
+    pub div_le_div_right: NameId,
+    /// `Nat.log_aux_mono : ∀ b f, ∀ g n m, Le f g → Le n m → Le (logAux b f n)
+    /// (logAux b g m)` — fuel- and value-monotonicity proved TOGETHER by a
+    /// single induction on `f` (with `g`, `n`, `m` generalized inside the
+    /// motive, the same technique [`log_aux_le_fuel`](Self::log_aux_le_fuel)
+    /// uses for `n`). The step case splits the outer fuel-comparison
+    /// hypothesis on `g`'s shape (`g = 0` is refuted by `not_succ_le_zero`)
+    /// and then reconciles `logAux`'s two guard cuts — `b ≤ n` OUTERMOST,
+    /// `2 ≤ b` inner — against the corresponding `m` guards: the `2 ≤ b` cut
+    /// is the SAME test on both sides (closed by the identity implication),
+    /// the `b ≤ n`/`b ≤ m` cut needs `b ≤ n ≤ m` (`le_of_ble_eq_true` +
+    /// `le_trans` + `ble_eq_true_of_le`), and the recursive quotients
+    /// `n / b ≤ m / b` come from [`div_le_div_right`](Self::div_le_div_right).
+    /// [`log_mono_right`](Self::log_mono_right) and
+    /// [`log_monotone`](Self::log_monotone) both specialize this at
+    /// `f := n, g := m` with the SAME hypothesis used for both the fuel and
+    /// value comparison, since `log b n := logAux b n n` is diagonal.
+    pub log_aux_mono: NameId,
+    /// `Nat.log_mono_right : ∀ b n m, Le n m → Le (log b n) (log b m)`
+    /// (`Mathlib`: `Nat.log_mono_right`) —
+    /// [`log_aux_mono`](Self::log_aux_mono) at `f := n, g := m`.
+    pub log_mono_right: NameId,
+    /// `Nat.log_monotone : ∀ b, Monotone (log b)` (`Mathlib`:
+    /// `Nat.log_monotone`) — `Monotone f` unfolds (Mathlib's own definition)
+    /// to `∀ x y, x ≤ y → f x ≤ f y`, exactly
+    /// [`log_mono_right`](Self::log_mono_right)'s core rendering with `b`
+    /// fixed first (the same "core-rendered unfolding" already used for
+    /// `Nat.choose_mono`).
+    pub log_monotone: NameId,
+    /// `Nat.clog_aux_mono` — [`log_aux_mono`](Self::log_aux_mono)'s
+    /// counterpart for `clogAux`. Same double induction; the guard order is
+    /// `clog.rs`'s opposite nesting (`2 ≤ b` OUTERMOST, same test both
+    /// sides via the identity implication; `2 ≤ n`/`2 ≤ m` inner, related by
+    /// `n ≤ m` the same Bool-bridge way), and the recursive argument
+    /// monotonicity is `(n + b - 1) / b ≤ (m + b - 1) / b`, from
+    /// `add_le_add_right` then [`div_le_div_right`](Self::div_le_div_right).
+    pub clog_aux_mono: NameId,
+    /// `Nat.clog_mono_right : ∀ b n m, Le n m → Le (clog b n) (clog b m)`
+    /// (`Mathlib`: `Nat.clog_mono_right`) —
+    /// [`clog_aux_mono`](Self::clog_aux_mono) at `f := n, g := m`.
+    pub clog_mono_right: NameId,
+    /// `Nat.clog_monotone : ∀ b, Monotone (clog b)` (`Mathlib`:
+    /// `Nat.clog_monotone`) — the same `Monotone`-unfolds-to-pointwise
+    /// rendering as [`log_monotone`](Self::log_monotone).
+    pub clog_monotone: NameId,
+    /// `Nat.clog_pos : ∀ b n, Lt 1 b → Lt 1 n → Lt 0 (clog b n)` (`Mathlib`:
+    /// `Nat.clog_pos`) — case-split on `n` (`n = 0` is refuted by `Lt 1 0`
+    /// via `not_succ_le_zero`); at `n = succ n'` the guard `2 ≤ b ∧ 2 ≤ n`
+    /// holds by hypothesis, so `clog b n` reduces (two direct
+    /// `bool_transport`s at the known-`true` evidence, no case split needed
+    /// since the evidence is already in hand) to a `succ`, positive by
+    /// `zero_lt_succ`.
+    pub clog_pos: NameId,
     /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
     /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
     /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
@@ -4381,6 +4446,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             clog_one_right: kernel.name_str(nat, "clog_one_right"),
             log_aux_le_fuel: kernel.name_str(nat, "logAux_le_fuel"),
             log_le_self: kernel.name_str(nat, "log_le_self"),
+            div_le_div_right: kernel.name_str(nat, "div_le_div_right"),
+            log_aux_mono: kernel.name_str(nat, "log_aux_mono"),
+            log_mono_right: kernel.name_str(nat, "log_mono_right"),
+            log_monotone: kernel.name_str(nat, "log_monotone"),
+            clog_aux_mono: kernel.name_str(nat, "clog_aux_mono"),
+            clog_mono_right: kernel.name_str(nat, "clog_mono_right"),
+            clog_monotone: kernel.name_str(nat, "clog_monotone"),
+            clog_pos: kernel.name_str(nat, "clog_pos"),
             bit: kernel.name_str(nat, "bit"),
             bit_false: kernel.name_str(nat, "bit_false"),
             bit_true: kernel.name_str(nat, "bit_true"),
@@ -5019,7 +5092,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lt_of_mul_lt_mul(&mut d, &p)?;
         declare_mul_lt_mul_iff(&mut d, &p)?;
         declare_div_lt_of_lt_mul(&mut d, &p)?;
+<<<<<<< HEAD
         declare_gcd_dvd_mirrors(&mut d, &p)?;
+=======
+        // Needs `Nat.log`/`Nat.clog` (`declare_log_all`/`declare_clog_all`,
+        // far above) and `Nat.div_mod_exec`/`Nat.div_mod_lt_mul_iff`/
+        // `Nat.div_lt_of_lt_mul` (`declare_executable_division_spec`/
+        // `declare_multiplicative_theorems`/just above -- `div_lt_of_lt_mul`
+        // specifically is declared immediately above and nothing else in
+        // this builder needs it, which is why it was last until now).
+        // Nothing needs these order mirrors, so they go last.
+        declare_log_clog_order_all(&mut d, &p)?;
+>>>>>>> worktree-agent-a95fd2d7220329cda
         Ok(p)
     })();
     match built {

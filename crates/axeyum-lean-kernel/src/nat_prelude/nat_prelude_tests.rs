@@ -1013,6 +1013,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.clog_one_right,
         p.log_aux_le_fuel,
         p.log_le_self,
+        p.div_le_div_right,
+        p.log_aux_mono,
+        p.log_mono_right,
+        p.log_monotone,
+        p.clog_aux_mono,
+        p.clog_mono_right,
+        p.clog_monotone,
+        p.clog_pos,
         p.bit_false,
         p.bit_true,
         p.bit_true_pos,
@@ -7853,10 +7861,14 @@ fn the_build_is_deterministic() {
     assert_eq!(
         first.len(),
 <<<<<<< HEAD
+<<<<<<< HEAD
         93 + 581,
 =======
         93 + 585,
 >>>>>>> worktree-agent-a1afbb72ee0ce06a8
+=======
+        93 + 584,
+>>>>>>> worktree-agent-a95fd2d7220329cda
         "every promised definition and theorem must be rendered"
     );
 }
