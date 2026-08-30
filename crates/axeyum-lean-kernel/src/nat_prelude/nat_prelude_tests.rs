@@ -715,6 +715,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_of_dvd_mul_right,
         p.coprime_div_right,
         p.coprime_div_left,
+        p.gcd_comm,
         p.coprime_of_forall_prime_dvd,
         p.dvd_of_forall_prime_mul_dvd,
         p.coprime_iff_is_rel_prime,
@@ -7419,7 +7420,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 558,
+        93 + 559,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -7811,6 +7812,70 @@ fn coprime_div_left_applies_at_both_branches_of_its_case_split() {
     assert!(
         f.k.axiom_footprint(p.coprime_div_left).is_empty(),
         "coprime_div_left rests on a trusted declaration"
+    );
+}
+
+/// `Nat.gcd_comm` at a concrete discriminating pair (`gcd 6 4` vs `gcd 4 6`
+/// -- both reduce to `2`, but the STATEMENT relates the two differently-
+/// ordered applications, not two identical terms) and at a genuinely free
+/// `(a, b)` pushed into an explicit `LocalContext`.
+#[test]
+fn gcd_comm_applies_at_a_concrete_pair_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: a = 6, b = 4. gcd 6 4 = gcd 4 6 = 2, but the applied
+    // conclusion is pinned as the UNREDUCED pair `Eq (gcd 6 4) (gcd 4 6)`,
+    // not merely `Eq 2 2` -- a theorem with the arguments left unswapped
+    // would still type-check against a def_eq-equal-but-differently-shaped
+    // conclusion, so this confirms the actual residue.
+    let six = f.num(6);
+    let four = f.num(4);
+    let applied = f.const_app(p.gcd_comm, &[six, four]);
+    let inferred = f.k.infer(applied).expect("gcd_comm 6 4 must type-check");
+    let gcd_64 = f.gcd(six, four);
+    let gcd_46 = f.gcd(four, six);
+    let two = f.num(2);
+    assert!(f.k.def_eq(gcd_64, two), "gcd 6 4 must reduce to 2");
+    assert!(f.k.def_eq(gcd_46, two), "gcd 4 6 must reduce to 2");
+    let expected = f.eq(gcd_64, gcd_46);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "gcd_comm's conclusion must be Eq (gcd 6 4) (gcd 4 6)"
+    );
+
+    // Symbolic: genuinely free a, b.
+    let a_fv = f.fresh_fvar();
+    let b_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b = f.k.fvar(b_fv);
+    let applied_sym = f.const_app(p.gcd_comm, &[a, b]);
+    let gcd_ab_sym = f.gcd(a, b);
+    let gcd_ba_sym = f.gcd(b, a);
+    let expected_sym = f.eq(gcd_ab_sym, gcd_ba_sym);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: a_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: b_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(applied_sym, &mut ctx)
+            .expect("gcd_comm must apply at free variables");
+    assert!(f.k.def_eq(inferred_sym, expected_sym));
+
+    assert!(
+        f.k.axiom_footprint(p.gcd_comm).is_empty(),
+        "gcd_comm rests on a trusted declaration"
     );
 }
 

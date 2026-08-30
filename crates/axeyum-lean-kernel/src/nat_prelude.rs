@@ -194,6 +194,7 @@ mod subset_product;
 mod testbit_bitwise;
 mod totient;
 mod totient_lemmas;
+mod totient_multiplicative;
 pub(crate) mod transposition;
 mod vandermonde;
 mod xor;
@@ -315,6 +316,7 @@ use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
 use totient_lemmas::declare_totient_lemmas_all;
+use totient_multiplicative::declare_gcd_comm;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
     declare_transposition_injective, declare_transposition_involutive,
@@ -944,6 +946,13 @@ pub struct NatPrelude {
     /// fed the two `lcm_dvd` applications (each built from
     /// `dvd_lcm_left`/`dvd_lcm_right` with the endpoints swapped).
     pub lcm_comm: NameId,
+    /// `Nat.gcd_comm : ∀ a b, gcd a b = gcd b a`. Direct from `dvd_antisymm`,
+    /// the identical shape to [`lcm_comm`](Self::lcm_comm): each of
+    /// `gcd a b`/`gcd b a` divides the other via `dvd_gcd`, fed the matching
+    /// `gcd_dvd_left`/`gcd_dvd_right` witnesses with the endpoints swapped.
+    /// Filed in `totient_multiplicative.rs` rather than beside `lcm_comm`
+    /// here — see that file's module doc for why.
+    pub gcd_comm: NameId,
     /// `Nat.coprime_lcm_eq_mul : ∀ a b, gcd a b = 1 → lcm a b = a * b`. From
     /// the unconditional `gcd_mul_lcm`, substituting the coprimality
     /// hypothesis and cancelling the leading `1` with `one_mul`.
@@ -3787,6 +3796,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             catalan: kernel.name_str(nat, "catalan"),
             catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
             lcm_comm: kernel.name_str(nat, "lcm_comm"),
+            gcd_comm: kernel.name_str(nat, "gcd_comm"),
             coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
             gcd_dvd_mul: kernel.name_str(nat, "gcd_dvd_mul"),
             gcd_le_mul: kernel.name_str(nat, "gcd_le_mul"),
@@ -4297,6 +4307,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_dvd_antisymm(&mut d, &p)?;
         declare_modeq_gcd_eq(&mut d, &p)?;
         declare_lcm_comm(&mut d, &p)?;
+        // Needs `gcd_dvd_left`/`gcd_dvd_right`/`dvd_gcd` (from
+        // `declare_gcd_semantics`, far above) and `dvd_antisymm` (just
+        // declared above) -- the identical shape `declare_lcm_comm` uses.
+        declare_gcd_comm(&mut d, &p)?;
         declare_coprime_lcm_eq_mul(&mut d, &p)?;
         // Needs `dvd_antisymm` (just declared above) for `lcm_assoc`/`lcm_div`,
         // and `le_of_dvd` (from `declare_primes`, already run above this
