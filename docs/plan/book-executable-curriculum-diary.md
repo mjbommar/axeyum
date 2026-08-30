@@ -388,3 +388,38 @@ This route establishes a canonical artifact representation for the named test
 population and rejects the declared malformed classes. It is not exhaustive
 over all possible states, and it does not establish the still-separate
 universal memory-frame theorem or a Python projection.
+
+## 2026-08-30 — remove the dense-memory shortcut
+
+Reviewing the new codec against Chapter 4 exposed a semantic mismatch that the
+existing dense examples could not detect. The book defines memory as an
+arbitrary finite map from word addresses to bytes. A valid multi-byte range is
+checked address by address after modular word addition, so it may wrap and the
+domain may contain holes. The first Rust implementation used a zero-based
+`Vec<u8>` and treated `start + byte_count <= len` as validity. That implements
+only dense initial-segment memory and did not fulfill the printed definition.
+
+Replaced the representation with a canonically sorted finite address-byte map.
+`Memory::from_entries` admits sparse domains and rejects duplicate addresses;
+`State::new` rejects addresses outside the declared word width. Load and store
+now enumerate every modular word address in the requested range, require every
+one to be present, and collect the complete address vector before writing. A
+failed store therefore cannot partially commit. The existing dense
+constructors remain convenience projections onto addresses `0..len`.
+
+The canonical state codec now writes the full sorted address and byte for each
+memory entry, so stored zero remains distinct from absence and sparse domains
+round-trip without relying on host-map iteration order. Observation and
+evidence digests likewise consume ordered address-byte pairs. Frame checking
+compares complete domains and handles wrapped write footprints.
+
+A direct width-16 test stores `0xabcd` at address `65535` into the mapped pair
+`{65535, 0}`, confirming bytes `cd` and `ab` across wrap while preserving an
+unrelated mapped address. Removing address zero makes the same store trap with
+the entire sparse memory unchanged. Duplicate addresses and an out-of-width
+domain entry are independently rejected. All 25 machine integration tests and
+the complete evidence test set pass; strict all-target Clippy passes.
+
+This repair advances the semantic package to version 9. It establishes the
+executable finite-map behavior and canonical representation. The universal
+symbolic memory-frame theorem remains a separate open claim.
