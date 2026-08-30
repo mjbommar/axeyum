@@ -30,7 +30,13 @@ use crate::expr::ExprId;
 
 /// `Nat.logAux base fuel value` (mirrors `log.rs`'s private helper of the
 /// same name and shape; not exported from that file).
-fn log_aux(d: &mut NatDev<'_>, p: &NatPrelude, base: ExprId, fuel: ExprId, value: ExprId) -> ExprId {
+fn log_aux(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    base: ExprId,
+    fuel: ExprId,
+    value: ExprId,
+) -> ExprId {
     d.const_app(p.log_aux, &[base, fuel, value])
 }
 
@@ -40,7 +46,13 @@ fn log(d: &mut NatDev<'_>, p: &NatPrelude, base: ExprId, value: ExprId) -> ExprI
 }
 
 /// `Nat.clogAux base fuel value` (mirrors `clog.rs`'s private helper).
-fn clog_aux(d: &mut NatDev<'_>, p: &NatPrelude, base: ExprId, fuel: ExprId, value: ExprId) -> ExprId {
+fn clog_aux(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    base: ExprId,
+    fuel: ExprId,
+    value: ExprId,
+) -> ExprId {
     d.const_app(p.clog_aux, &[base, fuel, value])
 }
 
@@ -158,7 +170,9 @@ fn le_of_bool_select_mono(
         d.le(lhs, bound_expr)
     };
     let split = super::ops::bool_true_or_false(d, p, test1);
-    or_cases(d, p, is_true1, is_false1, goal, true_case, false_case, split)
+    or_cases(
+        d, p, is_true1, is_false1, goal, true_case, false_case, split,
+    )
 }
 
 /// `Nat.div_le_div_right : ∀ n m b, Le n m → Le (div n b) (div m b)`.
@@ -386,7 +400,8 @@ pub(super) fn declare_log_aux_mono(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
 
             let g_fv = d.fresh_fvar();
             let g = d.kernel().fvar(g_fv);
-            let per_g_result = super::ops::cases_zero_succ(d, g, &per_g_motive, &at_g_zero, &at_g_succ);
+            let per_g_result =
+                super::ops::cases_zero_succ(d, g, &per_g_motive, &at_g_zero, &at_g_succ);
             d.lam_fv(g_fv, nat, per_g_result)
         };
 
@@ -447,10 +462,7 @@ pub(super) fn declare_log_monotone(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
 /// argument's monotonicity coming from `add_le_add_right` + `pred_le_pred`
 /// (`sub x 1` is definitionally `pred x`) then
 /// [`declare_div_le_div_right`].
-pub(super) fn declare_clog_aux_mono(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_clog_aux_mono(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
     d.theorem(p.clog_aux_mono, 2, &|d, values| {
@@ -564,7 +576,10 @@ pub(super) fn declare_clog_aux_mono(
 
                 let sum_le = d.lemma(p.add_le_add_right, &[base, n, m, hnm]);
                 let pred_le = d.lemma(p.pred_le_pred, &[sum_n, sum_m, sum_le]);
-                let hnm_div = d.lemma(p.div_le_div_right, &[numerator_n, numerator_m, base, pred_le]);
+                let hnm_div = d.lemma(
+                    p.div_le_div_right,
+                    &[numerator_n, numerator_m, base, pred_le],
+                );
 
                 let ih_at_g = d.apply(
                     ih,
@@ -616,7 +631,8 @@ pub(super) fn declare_clog_aux_mono(
 
             let g_fv = d.fresh_fvar();
             let g = d.kernel().fvar(g_fv);
-            let per_g_result = super::ops::cases_zero_succ(d, g, &per_g_motive, &at_g_zero, &at_g_succ);
+            let per_g_result =
+                super::ops::cases_zero_succ(d, g, &per_g_motive, &at_g_zero, &at_g_succ);
             d.lam_fv(g_fv, nat, per_g_result)
         };
 
@@ -651,10 +667,7 @@ pub(super) fn declare_clog_mono_right(
 
 /// `Nat.clog_monotone : ∀ b, Monotone (clog b)` — the same core-rendered
 /// unfolding as [`declare_log_monotone`].
-pub(super) fn declare_clog_monotone(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_clog_monotone(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     d.theorem(p.clog_monotone, 3, &|d, values| {
         let (base, n, m) = (values[0], values[1], values[2]);
@@ -743,20 +756,16 @@ pub(super) fn declare_clog_pos(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
                 d.lt(zero, selected)
             });
             let reversed_n = d.bool_symm(value_exceeds_one, true_, proof_n_true);
-            let pos_inner = d.bool_transport(true_, motive_inner, pos, value_exceeds_one, reversed_n);
+            let pos_inner =
+                d.bool_transport(true_, motive_inner, pos, value_exceeds_one, reversed_n);
 
             let motive_outer = d.bool_eq_motive(true_, &move |d, x| {
                 let selected = d.bool_select_nat(x, inner_term, zero);
                 d.lt(zero, selected)
             });
             let reversed_b = d.bool_symm(base_exceeds_one, true_, proof_b_true);
-            let pos_outer = d.bool_transport(
-                true_,
-                motive_outer,
-                pos_inner,
-                base_exceeds_one,
-                reversed_b,
-            );
+            let pos_outer =
+                d.bool_transport(true_, motive_outer, pos_inner, base_exceeds_one, reversed_b);
             d.lam_fv(h2_fv, h2_ty, pos_outer)
         };
 
