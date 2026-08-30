@@ -157,6 +157,13 @@ cd "$(dirname "$0")/.." || exit 2
 # `Environment.addDeclCore` -- Lean's KERNEL -- which accepts all 470 in 1.4 s,
 # and its exit status depends on Lean's reported constant count EQUALLING the
 # count read out of our kernel, so "accepted" cannot mean "accepted a subset".
+# CORRECTED 2026-08-30 (see the 229 -> 230 entry below and ADR-0775): "accepts
+# all 470" is FALSE and was never re-derivable -- the suite SIGABRTed before
+# reaching Lean from the day after this paragraph was written. Lean's kernel
+# refuses a `theorem` whose type is not a `Prop`, and 73 of the carrier's 2,058
+# declarations are of that shape or depend on one. The count equality is now
+# against the REPRESENTABLE population, and Lean is required to reject the
+# unfiltered stream.
 # `real_lean_wellfounded_elaborator_divergence` adds FOUR and names the residue
 # the source route leaves: Lean's ELABORATOR does not unfold a `theorem` while
 # reducing, so `Nat.gcd 2 4 = 2` is refused where the structurally recursive
