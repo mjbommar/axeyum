@@ -303,8 +303,20 @@ def main (args : List String) : IO UInt32 := do
   -- A result that does not name its checker is not evidence: every run says
   -- which Lean kernel produced the verdict below, on stdout, unconditionally.
   IO.println s!"lean4export replay: checker Lean {Lean.versionString} (githash {Lean.githash})"
-  let [path] := args
-    | IO.eprintln "usage: lean --run replay-lean4export.lean <stream.ndjson>"
+  -- `--emit-names <out>` writes the sorted names of every constant Lean's own
+  -- kernel ended up holding. It exists so a caller can grade ONE declaration
+  -- rather than inherit a grade from a count: `environment now holds N
+  -- constants` is consistent with a stream in which the declaration a caller
+  -- cares about was renamed, substituted, or absent while some other
+  -- declaration made up the total. The list below comes out of
+  -- `env.constants`, which is Lean's environment and not our stream, so a
+  -- name in it was admitted by Lean's kernel and not merely transmitted.
+  let some (path, namesOut) := (match args with
+      | [p] => some (p, (none : Option String))
+      | [p, "--emit-names", o] => some (p, some o)
+      | _ => none)
+    | IO.eprintln "usage: lean --run replay-lean4export.lean <stream.ndjson> \
+[--emit-names <out>]"
       return 2
   let content ← IO.FS.readFile path
   let mut tables : Tables := {}
@@ -479,6 +491,11 @@ but Lean's kernel generated {disagreement.theirs}"
         let message ← (exception.toMessageData {}).toString
         IO.eprintln s!"line {lineNumber}: REAL LEAN KERNEL REJECTED the declaration: {message}"
         return 1
+  if let some out := namesOut then
+    let names := (env.constants.toList.map (fun entry => toString entry.fst)).toArray
+    let sorted := names.qsort (fun a b => decide (a < b))
+    IO.FS.writeFile out (String.intercalate "\n" sorted.toList ++ "\n")
+    IO.println s!"lean4export replay: wrote {sorted.size} kernel constant names to {out}"
   IO.println s!"lean4export replay: the real Lean kernel accepted {declarations} declaration records \
 ({inductives} inductive groups, {regenerationsChecked} of them also compared field-by-field \
 against Lean's own regeneration over {constantsCompared} constants), environment now holds \
