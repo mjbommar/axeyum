@@ -740,3 +740,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0870](adr-0870-d0-effort-measurement-refines-not-confirms-retrieval-as-bottleneck.md) | Classified 32 sampled completed/declined lane episodes into a | accepted |
 | [0875](adr-0875-the-ivt-evt-dominance-claim-audited-independently.md) | First independent audit of the IVT/EVT Pareto claim. IVT | accepted |
 | [0885](adr-0885-the-graph-dispatcher-is-authoritative-only-where-adr-0865-tested-it.md) | L2 phase G5 makes graph selection the ordinary dispatcher by | accepted |
+| [0890](adr-0890-the-falsification-screen-must-be-found-in-git-log-before-dispatch.md) | D3's counterexample-first screen writes a per-target receipt (git commit + verdict) before a producer may be dispatched at that target; the gate rejects dispatch without a prior clear receipt structurally, and re-checks ordering against real git ancestry when both commits resolve. | accepted |

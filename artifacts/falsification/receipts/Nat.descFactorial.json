@@ -1,0 +1,45 @@
+{
+  "target_id": "Nat.descFactorial",
+  "kind": "definition",
+  "verdict": "clear-for-dispatch",
+  "detail": {
+    "id": "Nat.descFactorial",
+    "kind": "definition",
+    "domain_note": "n, k in [0, 8) -- small enough that factorial(n) never dominates cost",
+    "provenance": "CLAUDE.md: 'only evaluation past the base exercises Nat.sub's silent truncation'",
+    "reference_note": "math.factorial(n) // math.factorial(n - k) for k <= n, else 0 (independent, non-recursive)",
+    "witnesses": [
+      {
+        "args": [
+          3,
+          1
+        ],
+        "reason": "smallest case where the off-by-one term index changes the very first factor: correct=3, mutant=2"
+      },
+      {
+        "args": [
+          5,
+          3
+        ],
+        "reason": "a multi-step case so the discrepancy is not an artifact of a single-term product"
+      }
+    ],
+    "executed": 64,
+    "mismatches": 0,
+    "first_mismatch": "",
+    "mutations": [
+      {
+        "id": "descfactorial-off-by-one-term",
+        "description": "each factor uses n - (j+1) instead of n - j",
+        "executed": 10,
+        "moved": true,
+        "first_divergence": "args=(1, 1): mutant=0 reference=1"
+      }
+    ],
+    "mutations_moved": 1,
+    "mutations_vacuous": 0,
+    "seconds": 0.0
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.284186+00:00"
+}

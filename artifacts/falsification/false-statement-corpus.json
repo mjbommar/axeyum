@@ -1,0 +1,29 @@
+{
+  "pack_version": 1,
+  "generator": "scripts/check-falsification-screen.py",
+  "note": "Generated. Do not hand-edit; run with --write.",
+  "items": [
+    {
+      "id": "lor-aux-comm-of-fuel-unconditional",
+      "kind": "false_statement",
+      "family": "bitwise-fuel",
+      "statement": "forall fuel m n : Nat, lorAux fuel m n = lorAux fuel n m (no Le m fuel / Le n fuel hypothesis)",
+      "provenance": "CLAUDE.md Gotchas, the 'Nat.mul HAS THE SAME ASYMMETRY' entry: 'the obvious lor analogue is not merely harder to prove -- it is false -- lorAux 0 0 1 = 1 against lorAux 0 1 0 = 0'",
+      "executed": 576,
+      "counterexamples": 412,
+      "first_counterexample": "fuel=0 m=0 n=1: lorAux(fuel,m,n)=1 != lorAux(fuel,n,m)=0",
+      "seconds": 0.0
+    },
+    {
+      "id": "bitwise-comm-unconditional-arbitrary-f",
+      "kind": "false_statement",
+      "family": "bitwise-fuel",
+      "statement": "forall f m n : Nat, bitwise f m n = bitwise f n m (no hf : forall a b, f a b = f b a)",
+      "provenance": "CLAUDE.md Gotchas, 'Nat.mul HAS THE SAME ASYMMETRY': 'the unconditional form is false whenever f false true = true (so for or and xor, and true only for and)' -- and the fully unconstrained forall-f statement is false for ANY non-commutative f regardless of that boundary detail, which f=fst demonstrates directly and is the witness this fixture uses",
+      "executed": 576,
+      "counterexamples": 132,
+      "first_counterexample": "f=fst m=0 n=1: bitwise(f,m,n)=0 != bitwise(f,n,m)=1",
+      "seconds": 0.001
+    }
+  ]
+}

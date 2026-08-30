@@ -1,0 +1,45 @@
+{
+  "target_id": "Int.bezout_witnesses",
+  "kind": "definition",
+  "verdict": "clear-for-dispatch",
+  "detail": {
+    "id": "Int.bezout_witnesses",
+    "kind": "definition",
+    "domain_note": "a, b same-sign pairs, |a|,|b| <= 18 -- see the vacuous-witness note below",
+    "provenance": "CLAUDE.md: Bezout witnesses caught a wrong hand-computation via evaluation across sign branches",
+    "reference_note": "the Bezout identity a*x + b*y = g, checked directly (an equation reference, not a second full algorithm) plus a differently-structured iterative implementation as the candidate",
+    "witnesses": [
+      {
+        "args": [
+          12,
+          18
+        ],
+        "reason": "same-sign, gcd != min(a,b): the sign-flip mutation breaks the identity here"
+      },
+      {
+        "args": [
+          7,
+          5
+        ],
+        "reason": "coprime same-sign pair: g=1, a tight identity check"
+      }
+    ],
+    "executed": 4,
+    "mismatches": 0,
+    "first_mismatch": "",
+    "mutations": [
+      {
+        "id": "bezout-coefficient-sign-flip",
+        "description": "coefficient update uses + instead of - for old_s (a hand-computation-shaped sign error)",
+        "executed": 1,
+        "moved": true,
+        "first_divergence": "a=12 b=18: identity fails under the sign-flip mutation"
+      }
+    ],
+    "mutations_moved": 1,
+    "mutations_vacuous": 0,
+    "seconds": 0.0
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.285518+00:00"
+}

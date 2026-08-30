@@ -1,0 +1,45 @@
+{
+  "target_id": "Nat.dist",
+  "kind": "definition",
+  "verdict": "clear-for-dispatch",
+  "detail": {
+    "id": "Nat.dist",
+    "kind": "definition",
+    "domain_note": "m, n in [0, 12)",
+    "provenance": "ADR-0645 names Nat.dist_comm / Nat.dist_self directly; the general hazard is CLAUDE.md's 'Nat.sub's silent truncation' theme",
+    "reference_note": "Python's native abs(m - n)",
+    "witnesses": [
+      {
+        "args": [
+          2,
+          5
+        ],
+        "reason": "m < n: exercises the branch a one-directional subtraction drops entirely"
+      },
+      {
+        "args": [
+          5,
+          2
+        ],
+        "reason": "m > n: the mutant is accidentally correct here -- included to show the mutation is NOT symmetric-safe, only order-dependent"
+      }
+    ],
+    "executed": 144,
+    "mismatches": 0,
+    "first_mismatch": "",
+    "mutations": [
+      {
+        "id": "dist-one-directional-sub",
+        "description": "m - n truncated at 0, missing the n > m branch entirely",
+        "executed": 2,
+        "moved": true,
+        "first_divergence": "args=(0, 1): mutant=0 reference=1"
+      }
+    ],
+    "mutations_moved": 1,
+    "mutations_vacuous": 0,
+    "seconds": 0.0
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.282804+00:00"
+}

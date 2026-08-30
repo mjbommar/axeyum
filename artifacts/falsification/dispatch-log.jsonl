@@ -1,0 +1,1 @@
+{"target_id": "Nat.lor", "commit": "b6d41a7f39053c78c55f49952aa26b41dfbc407c", "timestamp": "2026-08-30T23:38:35.852987+00:00", "note": "D3 demonstration: producer dispatch after a clear-for-dispatch screen receipt (ADR-0890)", "receipt_commit_at_dispatch_time": "9fd6770738158a0b4598c02bea3e18f2ddefbb41"}
