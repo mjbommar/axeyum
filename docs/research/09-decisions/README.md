@@ -738,3 +738,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0855](adr-0855-nursery-v2-cross-population-component-check.md) | check-autogenesis-nursery.py's declared-dependency component | accepted |
 | [0865](adr-0865-two-of-three-g4-pilots-retain-the-graph-ranking-one-category-untested.md) | G4 pilot clusters — signal-scarce population supports 2 | accepted |
 | [0870](adr-0870-d0-effort-measurement-refines-not-confirms-retrieval-as-bottleneck.md) | Classified 32 sampled completed/declined lane episodes into a | accepted |
+| [0885](adr-0885-the-graph-dispatcher-is-authoritative-only-where-adr-0865-tested-it.md) | L2 phase G5 makes graph selection the ordinary dispatcher by | accepted |
