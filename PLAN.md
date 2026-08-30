@@ -34082,10 +34082,14 @@ kernel-route fact the proof term is built and admitted in one step, so
 `add_declaration` IS the production. **2,097 rows carry 2+ checks that are not
 the production.**
 
+That was measured before this lane merged `main`; after the merge the same run
+reports **3,588 / 1,584 / 2,103**, three facts having landed in between. The
+counts move with the ledger and only the derived line is authoritative.
+
 Both the count and the wording changed; the line now reads
 
-    3579 evidence row(s) checked by 2+ distinct checkers -- 1581 of those count
-    the PRODUCING run as one of the two, so 2097 carry 2+ checks that are not
+    3588 evidence row(s) checked by 2+ distinct checkers -- 1584 of those count
+    the PRODUCING run as one of the two, so 2103 carry 2+ checks that are not
     the production itself
 
 S0's `1,356 of 1,984 facts` reproduces exactly under its own method (the literal

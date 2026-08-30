@@ -134,10 +134,15 @@ For a kernel-route fact the proof term is built and admitted in one step, so
 gives a row with one re-derivation, not two. **2,097 rows carry 2+ checks that
 are not the production.**
 
+Those are the figures from before this lane merged `main`. After the merge the
+same run reports **3,588 / 1,584 / 2,103** — three facts landed in between. The
+counts move with the ledger by design and only the derived line is
+authoritative; quote the line, never a number copied out of this ADR.
+
 Both the count and the wording change:
 
-    3579 evidence row(s) checked by 2+ distinct checkers -- 1581 of those count
-    the PRODUCING run as one of the two, so 2097 carry 2+ checks that are not
+    3588 evidence row(s) checked by 2+ distinct checkers -- 1584 of those count
+    the PRODUCING run as one of the two, so 2103 carry 2+ checks that are not
     the production itself
 
 S0's census reported **1,356 of 1,984 facts** by matching the literal string
