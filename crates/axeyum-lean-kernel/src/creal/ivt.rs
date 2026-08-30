@@ -4630,7 +4630,54 @@ fn declare_cauchy_of_abs_diff_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
         let over_n = d.lam_fv(n_fv, nat, body);
         d.lam_fv(m_fv, nat, over_n)
     };
-    let witness = cexists_intro(d, p, nat, cauchy_pred, k2, per_pair);
+
+    // The RAW `(K+2, per-pair)` pair, landed as its own declaration before the
+    // existential closes over `K`.
+    //
+    // `CReal.regular_of_scaled_cauchy` needs exactly this shape as DATA, and
+    // kernel fact 2 (`Exists.rec` is `Prop`-only) means it can never be
+    // recovered from `Cauchy f`. So every construction that turns a
+    // real-valued Cauchy estimate into an actual `CReal` -- `CReal.supOn`
+    // (`creal/supremum.rs`) is the first -- would otherwise have to reproduce
+    // this whole 300-line seven-term bound beside it. Extracted rather than
+    // duplicated: two proofs of one fact that must stay in sync is worse than
+    // one shared lemma, and the kernel would happily verify both.
+    let raw_ty = {
+        let mm_fv = d.fresh_fvar();
+        let mm = d.kernel().fvar(mm_fv);
+        let nn_fv = d.fresh_fvar();
+        let nn = d.kernel().fvar(nn_fv);
+        let fmm = d.apply(f, &[mm]);
+        let fnn = d.apply(f, &[nn]);
+        let left = sample(d, p, fmm, mm);
+        let right = sample(d, p, fnn, nn);
+        let difference = rsub(d, rat, left, right);
+        let bm = div_succ_k(d, p, k2, mm);
+        let bn = div_succ_k(d, p, k2, nn);
+        let bound = radd(d, bm, bn);
+        let claim = within(d, p, difference, bound);
+        let over_n = d.pi_fv(nn_fv, nat, claim);
+        d.pi_fv(mm_fv, nat, over_n)
+    };
+    let raw_decl_ty = {
+        let after_hyp = d.arrow(hyp_ty, raw_ty);
+        let over_k = d.pi_fv(cap_k_fv, nat, after_hyp);
+        d.pi_fv(f_fv, seq_ty, over_k)
+    };
+    let raw_decl_value = {
+        let over_hyp = d.lam_fv(hyp_fv, hyp_ty, per_pair);
+        let over_k = d.lam_fv(cap_k_fv, nat, over_hyp);
+        d.lam_fv(f_fv, seq_ty, over_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.scaled_cauchy_of_abs_diff_le,
+        uparams: vec![],
+        ty: raw_decl_ty,
+        value: raw_decl_value,
+    })?;
+
+    let raw = d.lemma(p.scaled_cauchy_of_abs_diff_le, &[f, cap_k, hyp]);
+    let witness = cexists_intro(d, p, nat, cauchy_pred, k2, raw);
 
     let value = {
         let over_hyp = d.lam_fv(hyp_fv, hyp_ty, witness);
