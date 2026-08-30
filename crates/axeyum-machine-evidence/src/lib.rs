@@ -176,8 +176,23 @@ pub struct MemoryTraceReport {
     pub boundary_trapped: bool,
     /// Whether the trapped store left memory unchanged.
     pub no_partial_write: bool,
+    /// Sparse-domain wraparound and missing-address controls.
+    pub sparse: SparseMemoryReport,
     /// Program counters from initial, stored, and loaded states.
     pub successful_pcs: Vec<u64>,
+}
+
+/// Sparse finite-map controls embedded in the memory trace report.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SparseMemoryReport {
+    /// Modular addresses written by the wraparound control.
+    pub wrapped_addresses: Vec<u64>,
+    /// Bytes stored at those wrapped addresses.
+    pub wrapped_bytes: Vec<u8>,
+    /// Whether removing one wrapped address caused a trap.
+    pub hole_trapped: bool,
+    /// Whether that trapped store preserved the complete finite map.
+    pub no_partial_write: bool,
 }
 
 /// Taken and untaken conditional-branch trace report.
@@ -1482,6 +1497,31 @@ fn compute_memory_trace(
     trap_initial.registers[2] = word16(0xabcd);
     let trapped = step(&trap_program, &trap_initial);
 
+    let sparse_memory = Memory::from_entries(vec![(u64::from(u16::MAX), 0), (0, 0), (7, 0x77)])
+        .expect("sparse fixture has unique addresses");
+    let mut sparse_initial =
+        State::new(16, sparse_memory, word16(0)).expect("sparse memory state is valid");
+    sparse_initial.registers[1] = word16(u64::from(u16::MAX));
+    sparse_initial.registers[2] = word16(0xabcd);
+    let sparse_stored = step(&trap_program, &sparse_initial);
+    let sparse_wrapped_addresses = vec![u64::from(u16::MAX), 0];
+    let sparse_wrapped_bytes = sparse_wrapped_addresses
+        .iter()
+        .map(|address| {
+            sparse_stored
+                .memory
+                .byte_at(*address)
+                .expect("wrapped address remains mapped")
+        })
+        .collect();
+    let sparse_hole_memory = Memory::from_entries(vec![(u64::from(u16::MAX), 0), (7, 0x77)])
+        .expect("sparse hole fixture has unique addresses");
+    let mut sparse_hole_initial =
+        State::new(16, sparse_hole_memory, word16(0)).expect("sparse hole state is valid");
+    sparse_hole_initial.registers[1] = word16(u64::from(u16::MAX));
+    sparse_hole_initial.registers[2] = word16(0xabcd);
+    let sparse_trapped = step(&trap_program, &sparse_hole_initial);
+
     MemoryTraceReport {
         schema: MEMORY_SCHEMA.to_owned(),
         semantic_package_sha256,
@@ -1490,6 +1530,15 @@ fn compute_memory_trace(
         loaded_word: loaded.registers[3].unsigned(),
         boundary_trapped: matches!(trapped.outcome, Outcome::Trapped(Trap::DataRange { .. })),
         no_partial_write: trapped.memory == trap_initial.memory,
+        sparse: SparseMemoryReport {
+            wrapped_addresses: sparse_wrapped_addresses,
+            wrapped_bytes: sparse_wrapped_bytes,
+            hole_trapped: matches!(
+                sparse_trapped.outcome,
+                Outcome::Trapped(Trap::DataRange { .. })
+            ),
+            no_partial_write: sparse_trapped.memory == sparse_hole_initial.memory,
+        },
         successful_pcs: vec![
             initial.pc.unsigned(),
             stored.pc.unsigned(),

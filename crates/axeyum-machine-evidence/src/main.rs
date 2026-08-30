@@ -142,15 +142,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let report = memory_trace_report(Path::new(package))?;
             write_json(Path::new(output), &report)?;
             println!(
-                "memory-trace: PASS: loaded={:#x} boundary_trapped={} no_partial_write={}",
-                report.loaded_word, report.boundary_trapped, report.no_partial_write
+                "memory-trace: PASS: loaded={:#x} boundary_trapped={} no_partial_write={} sparse_wrap={:?} sparse_hole_trapped={}",
+                report.loaded_word,
+                report.boundary_trapped,
+                report.no_partial_write,
+                report.sparse.wrapped_addresses,
+                report.sparse.hole_trapped
             );
         }
         [command, package, report] if command == "check-memory-trace" => {
             let checked = check_memory_trace(Path::new(package), Path::new(report))?;
             println!(
-                "memory-trace: PASS: loaded={:#x} boundary_trapped={} no_partial_write={}",
-                checked.loaded_word, checked.boundary_trapped, checked.no_partial_write
+                "memory-trace: PASS: loaded={:#x} boundary_trapped={} no_partial_write={} sparse_wrap={:?} sparse_hole_trapped={}",
+                checked.loaded_word,
+                checked.boundary_trapped,
+                checked.no_partial_write,
+                checked.sparse.wrapped_addresses,
+                checked.sparse.hole_trapped
             );
         }
         [command, package, report] if command == "control-memory-byte-order" => {

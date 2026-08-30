@@ -90,6 +90,10 @@ fn memory_trace_recomputes_and_byte_order_control_fires() {
     assert_eq!(report.loaded_word, 0xabcd);
     assert!(report.boundary_trapped);
     assert!(report.no_partial_write);
+    assert_eq!(report.sparse.wrapped_addresses, [u64::from(u16::MAX), 0]);
+    assert_eq!(report.sparse.wrapped_bytes, [0xcd, 0xab]);
+    assert!(report.sparse.hole_trapped);
+    assert!(report.sparse.no_partial_write);
     write_json(&report_path, &report).unwrap();
     assert_eq!(
         check_memory_trace(&package_path, &report_path).unwrap(),
