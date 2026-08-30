@@ -649,6 +649,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gcd_dvd_right,
         p.dvd_gcd,
         p.dvd_gcd_iff,
+        p.gcd_mul_right,
         p.lcm_zero_left,
         p.dvd_lcm_left,
         p.dvd_lcm_right,
@@ -7860,7 +7861,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 598,
+        93 + 599,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -16447,5 +16448,102 @@ fn base_induction_applies_at_a_concrete_recursive_instance() {
     assert!(
         f.k.axiom_footprint(p.base_induction).is_empty(),
         "base_induction must rest on zero axioms"
+    );
+}
+
+/// `Nat.gcd_mul_right : gcd(a*c, b*c) = gcd(a,b)*c` (`gcd_mul_right.rs`).
+/// Checked at a concrete, mutually-discriminating triple (small magnitudes,
+/// per the module's own numeral-growth caution), at the base case `a = 0`,
+/// AND symbolically at a genuinely free `(a, b, c)` -- numerals reduce and
+/// hide a definitional-equality gap a symbolic check exposes, so both are
+/// required, not either.
+#[test]
+fn gcd_mul_right_holds_at_concrete_and_symbolic_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: (a, b, c) = (4, 6, 5). gcd(4,6)=2, so RHS = 10; LHS =
+    // gcd(20,30) = 10. Distinct a, b, c so a transposed argument (e.g.
+    // gcd(a,c)*b, or the scale factor landing on the wrong side) would
+    // compute a DIFFERENT wrong numeral rather than coincidentally agreeing.
+    {
+        let a = f.num(4);
+        let b = f.num(6);
+        let c = f.num(5);
+        let applied = f.lemma(p.gcd_mul_right, &[a, b, c]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("gcd_mul_right must apply at (a=4, b=6, c=5): {shown}")
+        });
+        let ac = f.mul(a, c);
+        let bc = f.mul(b, c);
+        let lhs = f.gcd(ac, bc);
+        let gab = f.gcd(a, b);
+        let rhs = f.mul(gab, c);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "gcd_mul_right(4,6,5) must state Eq (gcd (mul 4 5)(mul 6 5)) (mul (gcd 4 6) 5)"
+        );
+        let ten = f.num(10);
+        assert!(f.k.def_eq(lhs, ten), "gcd(20,30) must compute to 10");
+        assert!(f.k.def_eq(rhs, ten), "gcd(4,6)*5 must compute to 10");
+
+        // Negative control: must not ALSO state Eq lhs 15 (a plausible wrong
+        // numeral -- gcd(4,6)*c with c misread as the wrong slot value 3).
+        let fifteen = f.num(15);
+        let bad_want = f.eq(lhs, fifteen);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: gcd_mul_right(4,6,5) must not state Eq lhs 15"
+        );
+    }
+
+    // Concrete base case: a = 0. gcd(0*c, b*c) = gcd(0, b*c) = b*c;
+    // gcd(0,b)*c = b*c. Exercises the zero_minor branch directly.
+    {
+        let zero = f.zero();
+        let b = f.num(7);
+        let c = f.num(3);
+        let applied = f.lemma(p.gcd_mul_right, &[zero, b, c]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("gcd_mul_right must apply at (a=0, b=7, c=3): {shown}")
+        });
+        let zc = f.mul(zero, c);
+        let bc = f.mul(b, c);
+        let lhs = f.gcd(zc, bc);
+        let g0b = f.gcd(zero, b);
+        let rhs = f.mul(g0b, c);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "gcd_mul_right(0,7,3) must state Eq (gcd (mul 0 3)(mul 7 3)) (mul (gcd 0 7) 3)"
+        );
+        let twenty_one = f.num(21);
+        assert!(f.k.def_eq(lhs, twenty_one), "gcd(0,21) must compute to 21");
+        assert!(f.k.def_eq(rhs, twenty_one), "gcd(0,7)*3 must compute to 21");
+    }
+
+    // Symbolic: applies at a genuinely FREE (a, b, c) triple.
+    {
+        let name = f.name("gcd_mul_right_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (a, b, c) = (values[0], values[1], values[2]);
+            let ac = d.mul(a, c);
+            let bc = d.mul(b, c);
+            let lhs = d.gcd(ac, bc);
+            let gab = d.gcd(a, b);
+            let rhs = d.mul(gab, c);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.gcd_mul_right, &[a, b, c]);
+            (stmt, proof)
+        })
+        .expect("gcd_mul_right must apply at symbolic a, b, c");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.gcd_mul_right).is_empty(),
+        "gcd_mul_right must rest on zero axioms"
     );
 }

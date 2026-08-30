@@ -273,10 +273,7 @@ fn mul_mod_mul_right_eq(
 ///
 /// Returns the trusted gate's rejection if the constructed term does not
 /// type-check.
-pub(super) fn declare_gcd_mul_right(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_gcd_mul_right(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
     let one = d.level_one();
