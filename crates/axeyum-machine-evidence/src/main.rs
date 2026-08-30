@@ -8,9 +8,10 @@ use axeyum_machine_evidence::{
     check_decoder_roundtrip, check_memory_byte_order_control, check_memory_trace,
     check_observation_omission_control, check_observation_separation, check_run_classification,
     check_run_false_halt_control, check_step_coverage, check_step_hidden_write_control,
-    check_word_roundtrip, check_word_roundtrip_reversed_control, decoder_roundtrip_report,
-    memory_trace_report, observation_separation_report, run_classification_report,
-    semantic_package, step_coverage_report, word_roundtrip_report, write_json,
+    check_step_mutation_suite_control, check_word_roundtrip, check_word_roundtrip_reversed_control,
+    decoder_roundtrip_report, memory_trace_report, observation_separation_report,
+    run_classification_report, semantic_package, step_coverage_report, word_roundtrip_report,
+    write_json,
 };
 
 fn main() {
@@ -210,6 +211,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_step_hidden_write_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: undeclared register write was accepted".into());
         }
+        [command, package, report] if command == "control-step-mutation-suite" => {
+            check_step_mutation_suite_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: step mutation suite was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -230,7 +235,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  check-decoder-roundtrip PACKAGE REPORT | \
                  control-decoder-reserved-bit PACKAGE REPORT | \
                  emit-step-coverage PACKAGE OUTPUT | check-step-coverage PACKAGE REPORT | \
-                 control-step-hidden-write PACKAGE REPORT"
+                 control-step-hidden-write PACKAGE REPORT | \
+                 control-step-mutation-suite PACKAGE REPORT"
                 .into());
         }
     }

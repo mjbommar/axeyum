@@ -7,9 +7,9 @@ use axeyum_machine_evidence::{
     check_add_wrong_destination_control, check_branch_target_control, check_branch_trace,
     check_decoder_reserved_bit_control, check_decoder_roundtrip, check_memory_byte_order_control,
     check_memory_trace, check_run_classification, check_run_false_halt_control,
-    check_step_coverage, check_step_hidden_write_control, decoder_roundtrip_report,
-    memory_trace_report, run_classification_report, semantic_package, step_coverage_report,
-    write_json,
+    check_step_coverage, check_step_hidden_write_control, check_step_mutation_suite_control,
+    decoder_roundtrip_report, memory_trace_report, run_classification_report, semantic_package,
+    step_coverage_report, write_json,
 };
 
 fn path(name: &str) -> PathBuf {
@@ -154,6 +154,10 @@ fn step_coverage_recomputes_and_hidden_write_fires() {
     );
     assert!(matches!(
         check_step_hidden_write_control(&package_path, &report_path),
+        Err(EvidenceError::SemanticMismatch(_))
+    ));
+    assert!(matches!(
+        check_step_mutation_suite_control(&package_path, &report_path),
         Err(EvidenceError::SemanticMismatch(_))
     ));
     fs::remove_file(package_path).unwrap();

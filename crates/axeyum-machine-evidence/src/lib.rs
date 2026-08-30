@@ -226,6 +226,8 @@ pub enum EvidenceError {
     SemanticPackageMismatch(String),
     /// Recomputed evidence differs from the claimed report.
     SemanticMismatch(String),
+    /// A deliberately faulty route was unexpectedly accepted.
+    ControlFailure(String),
 }
 
 impl core::fmt::Display for EvidenceError {
@@ -237,6 +239,7 @@ impl core::fmt::Display for EvidenceError {
                 write!(formatter, "semantic-package-mismatch: {detail}")
             }
             Self::SemanticMismatch(detail) => write!(formatter, "semantic-mismatch: {detail}"),
+            Self::ControlFailure(detail) => write!(formatter, "control-failure: {detail}"),
         }
     }
 }
@@ -636,6 +639,33 @@ pub fn check_step_hidden_write_control(
     check_step_coverage_with_control(package_path, report_path, StepControl::HiddenWrite)
 }
 
+/// Requires hidden-write, missing-condition, and wrong-PC mutations all to be
+/// rejected independently.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` after all three controls fire, or a control
+/// failure if any mutated recomputation equals the recorded report.
+pub fn check_step_mutation_suite_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<StepCoverageReport, EvidenceError> {
+    for control in [
+        StepControl::HiddenWrite,
+        StepControl::MissingCondition,
+        StepControl::WrongSequentialPc,
+    ] {
+        if check_step_coverage_with_control(package_path, report_path, control).is_ok() {
+            return Err(EvidenceError::ControlFailure(
+                "a step mutation was accepted".to_owned(),
+            ));
+        }
+    }
+    Err(EvidenceError::SemanticMismatch(
+        "hidden-write, missing-condition, and wrong-sequential-PC controls fired".to_owned(),
+    ))
+}
+
 #[derive(Clone, Copy)]
 enum ByteOrderControl {
     Declared,
@@ -682,6 +712,8 @@ enum DecoderControl {
 enum StepControl {
     Declared,
     HiddenWrite,
+    MissingCondition,
+    WrongSequentialPc,
 }
 
 fn check_word_roundtrip_with_control(
@@ -1267,6 +1299,12 @@ fn compute_step_coverage(
         let mut after = step(&program, &initial);
         if matches!(control, StepControl::HiddenWrite) && index == 0 {
             after.registers[7] = word(0x55);
+        }
+        if matches!(control, StepControl::MissingCondition) && index == 4 {
+            after.conditions = initial.conditions;
+        }
+        if matches!(control, StepControl::WrongSequentialPc) && index == 0 {
+            after.pc = word(1);
         }
         frame_checks_passed &= changes_within_writes(&initial, &after, &effects.writes);
         result_digest.update(bytes);

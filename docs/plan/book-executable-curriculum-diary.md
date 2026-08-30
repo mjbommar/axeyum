@@ -254,6 +254,13 @@ families, seventeen exact effect rows, four trap classes, terminal stuttering,
 and frame checks. The evidence crate now has nine route/control tests under
 strict Clippy.
 
+The control was then widened into a diagnostic suite matching the chapter's
+explicit requirements. It independently checks the hidden r7 write, removal
+of the addition condition update, and replacement of sequential `pc+4` with
+`pc+1`. The suite returns `semantic-mismatch` only after all three mutated
+recomputations differ from the recorded report; an unexpectedly accepted
+mutation has the separate `control-failure` category.
+
 This route establishes implementation coverage, not universal semantic
 correctness for every possible input state. The exhaustive decoder and
 width-eight addition routes provide stronger finite claims in their stated
