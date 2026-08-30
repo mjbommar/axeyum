@@ -120,6 +120,133 @@ SETTLED = {"proved", "refuted", "computed"}
 
 CONST_RE = re.compile(r"Lean\.Expr\.const\s+`+([^\s\)\[]+)")
 
+# --- bridge provenance: WHY each constant was promoted --------------------
+#
+# The bridge's inference is: a mirror mentioning C was closed here, so C is
+# expressible here. That fails whenever the mirror was closed by ELIDING C --
+# restating the proposition in an equivalent form C never appears in.
+#
+# Measured instance, 2026-08-30. `F:ml430-nat-log-antitone-left` pins
+#
+#     forall {n : N}, AntitoneOn (fun b => Nat.log b n) (Set.Ioi 1)
+#
+# and closing it promoted `AntitoneOn` and `Set.Ioi`. Our theorem renders as
+# `Le x1 x2 -> Lt 1 x1 -> Lt 1 x2 -> Le (log x2 x0) (log x1 x0)` -- no
+# `AntitoneOn`, no `Set.Ioi`, no `Set` type at all. What that closure
+# established is that THIS proposition has an equivalent pointwise form. It did
+# not establish that `Set.Ioi` is expressible here.
+#
+# THE FIX IS A LABEL, NOT A DELETION, AND THE MEASUREMENT IS WHY.
+# `--check`'s candidate sibling -- promote only what the rendered kernel type
+# mentions -- was tested and REFUTED: Mathlib's pinned `type_repr` is mostly
+# ELABORATION constants (`OfNat.ofNat` 73 witnesses, `instOfNatNat` 61,
+# `instHAdd`/`HAdd.hAdd` 32) that can never appear in a kernel rendering by
+# name, because our kernel has no typeclasses. Applying it takes the statable
+# open pool from 24 to 0. Dropping only the constants this classifier calls
+# `elided` takes it from 24 to 22. So the defect is real and SMALL, and
+# deleting the bridge would be a far larger error than the one being fixed.
+#
+# The four classes, and what each one licenses:
+#
+#   elaboration  a Lean instance (`instHAdd`, `Nat.instDvd`) or a class
+#                projection (`HAdd.hAdd`, `LE.le`). Notation, not vocabulary:
+#                it carries no mathematical content of its own and CANNOT
+#                appear in a kernel rendering, so the rendered-type test is
+#                meaningless for it and is not applied. Both signals are Lean's
+#                own mechanical naming conventions, not a hand-kept list.
+#   expressed    some settled witness's rendered kernel type does mention it.
+#                The bridge inference holds outright.
+#   elided       every settled witness that HAS a rendered kernel type fails to
+#                mention it. Promotion rests on an equivalent restatement.
+#   unrendered   no settled witness carries `formal.kernel_statement` at all,
+#                so the ledger cannot say. Measured 2026-08-30: 139 of 174
+#                settled mirrors have no rendering recorded, which is why this
+#                class exists instead of being folded into `elided`. Calling an
+#                unmeasured thing a defect is the same error in the other
+#                direction.
+#
+# `elided` IS A PRECISION FLAG, NOT A DEFECT FLAG, and overselling it would be
+# dishonest. `Monotone` is elided and perfectly safe -- it unfolds to a
+# pointwise arithmetic statement over env vocabulary, which is exactly what the
+# frontier gate's docstring already says about `Nat.fib_mono`. `Set.Ioi` is
+# elided and thin, because it unfolds through a `Set` type we do not have. This
+# classifier cannot tell those apart and does not claim to. What it buys is
+# that the statable count can be quoted with the elision-backed portion
+# separated out, the way the CAS substance gate publishes its four kinds
+# instead of a flat total.
+INSTANCE_RE = re.compile(r"^inst[A-Z]")
+
+
+def is_elaboration(const: str) -> bool:
+    """Lean instance or class projection -- notation, never kernel vocabulary.
+
+    Two mechanical conventions, both Lean's own:
+      * `mkInstanceName` prefixes `inst` (`instHAdd`, `Nat.instDvd`).
+      * a class's projection is the class name decapitalized (`HAdd.hAdd`,
+        `OfNat.ofNat`). All-caps class names decapitalize whole -- `LE.le`, not
+        `LE.lE` -- so both spellings count. Without that second spelling `LE.le`
+        and `LT.lt` misclassify, which is how this was caught.
+    """
+    head, _, last = const.rpartition(".")
+    last = last or const
+    if INSTANCE_RE.match(last):
+        return True
+    if not head:
+        return False
+    tail = head.rpartition(".")[2]
+    return last in (tail[:1].lower() + tail[1:], tail.lower())
+
+
+TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.']*")
+
+
+def kernel_tokens(rendered: str) -> set[str]:
+    """Names a rendered kernel type mentions, in Mathlib-ish spelling.
+
+    `lean_pp` renders the naturals as `AxNat` -- the `Ax` is *axeyum*, a
+    non-shadowing export root, NOT an axiomatization -- so `AxNat.log` here is
+    `Nat.log` there. Both the qualified name and its last component are
+    returned, because a mirror may render `Nat.Coprime` as bare `Coprime`.
+    """
+    out: set[str] = set()
+    for token in TOKEN_RE.findall(rendered or ""):
+        head, _, rest = token.partition(".")
+        if head.startswith("Ax") and len(head) > 2 and head[2].isupper():
+            head = head[2:]
+        name = head + ("." + rest if rest else "")
+        out.add(name)
+        out.add(name.rsplit(".", 1)[-1])
+    return out
+
+
+def classify_bridge(bridge: list[str],
+                    rows: list[dict[str, Any]],
+                    renderings: dict[str, str]) -> dict[str, dict[str, Any]]:
+    """Per-bridge-constant provenance. Pure function of its three inputs."""
+    witness: dict[str, list[str]] = {c: [] for c in bridge}
+    for row in rows:
+        for const in row["constants"]:
+            if const in witness:
+                witness[const].append(row["source_name"])
+    tokens = {name: kernel_tokens(text) for name, text in renderings.items() if text}
+
+    out: dict[str, dict[str, Any]] = {}
+    for const in sorted(bridge):
+        names = witness[const]
+        rendered = [n for n in names if n in tokens]
+        if is_elaboration(const):
+            kind = "elaboration"
+        elif not rendered:
+            kind = "unrendered"
+        elif any(const in tokens[n] for n in rendered):
+            kind = "expressed"
+        else:
+            kind = "elided"
+        out[const] = {"class": kind,
+                      "rendered_witnesses": len(rendered),
+                      "witnesses": len(names)}
+    return out
+
 KEYED_BY = (
     "Mathlib source_name, NOT fact_id. Naming a fact id here would put held-out"
     " ids in a non-population artifact -- check-autogenesis-holdout-isolation.py"
@@ -175,6 +302,27 @@ def load_statuses() -> dict[str, str]:
             out[ident] = fact.get("epistemic_status")
     if not out:
         die(f"{FACTS} contains no facts")
+    return out
+
+
+def load_renderings() -> dict[str, str]:
+    """fact id -> `formal.kernel_statement`, the rendered kernel type.
+
+    This is our side of the bridge inference and the ledger already carries it,
+    so no cargo run is needed. It is SPARSE -- 35 of 174 settled mirrors had one
+    on 2026-08-30 -- which is exactly why `classify_bridge` has an `unrendered`
+    class rather than treating silence as elision.
+    """
+    out: dict[str, str] = {}
+    for path in sorted(FACTS.glob("*.json")):
+        try:
+            fact = json.loads(path.read_text())
+        except json.JSONDecodeError as exc:
+            die(f"{path}: {exc}")
+        ident = fact.get("id")
+        rendered = (fact.get("formal") or {}).get("kernel_statement")
+        if isinstance(ident, str) and isinstance(rendered, str) and rendered:
+            out[ident] = rendered
     return out
 
 
@@ -239,6 +387,16 @@ def refresh_cache() -> int:
     return emit(CACHE, doc)
 
 
+BRIDGE_CLASSES = ("elaboration", "elided", "expressed", "unrendered")
+
+
+def provenance_coverage(provenance: dict[str, dict[str, Any]]) -> dict[str, int]:
+    """The tier counts, published so the statable pool can be quoted both ways."""
+    return {f"bridge_{kind}":
+            sum(1 for v in provenance.values() if v["class"] == kind)
+            for kind in BRIDGE_CLASSES}
+
+
 def build(cache: dict[str, Any]) -> dict[str, Any]:
     """The whole artifact, from the cache + the ledger + the env snapshot."""
     catalog = load_catalog()
@@ -267,9 +425,17 @@ def build(cache: dict[str, Any]) -> dict[str, Any]:
     witnessed = {c for r in rows for c in r["constants"]}
     bridge = sorted(witnessed - env)
 
+    renderings_by_id = load_renderings()
+    provenance = classify_bridge(
+        bridge, rows,
+        {n: renderings_by_id[catalog[n]] for n in settled_names
+         if catalog[n] in renderings_by_id})
+
     return {
         "bridge": bridge,
+        "bridge_provenance": provenance,
         "coverage": {
+            **provenance_coverage(provenance),
             "bridge_constants": len(bridge),
             "catalogued_propositions": len(catalog),
             "distinct_constants": len(witnessed),
@@ -340,7 +506,34 @@ def check() -> int:
     bridge = doc.get("bridge")
     if not isinstance(bridge, list):
         die(f"{VOCABULARY}: `bridge` must be a list")
+    # V5 -- the provenance block. It is the only thing separating "this
+    # constant is expressible here" from "a mirror mentioning it was closed by
+    # restating it without it", and no other gate derives it.
+    renderings_by_id = load_renderings()
+    derived_provenance = classify_bridge(
+        bridge, rows,
+        {n: renderings_by_id[catalog[n]] for n in settled_names
+         if n in catalog and catalog[n] in renderings_by_id})
+    recorded_provenance = doc.get("bridge_provenance")
+    if recorded_provenance != derived_provenance:
+        if not isinstance(recorded_provenance, dict):
+            detail = f"it is {type(recorded_provenance).__name__}, not an object"
+        else:
+            keys = (set(derived_provenance) ^ set(recorded_provenance))
+            moved = sorted(c for c in set(derived_provenance) & set(recorded_provenance)
+                           if recorded_provenance[c] != derived_provenance[c])
+            detail = (f"{len(keys)} constant(s) present on one side only "
+                      f"({sorted(keys)[:4]}), {len(moved)} reclassified "
+                      f"({moved[:4]})")
+        fails.append(
+            f"V5 bridge-provenance-drift: `bridge_provenance` is not its "
+            f"derivation -- {detail}. It records WHY each bridge constant was "
+            f"promoted, and a hand-edit here would let an elision-backed "
+            f"constant be quoted as expressed. Run "
+            f"scripts/gen-autogenesis-statable-vocabulary.py --write.")
+
     expected_coverage = {
+        **provenance_coverage(derived_provenance),
         "bridge_constants": len(bridge),
         "catalogued_propositions": len(catalog),
         "distinct_constants": len(witnessed),
@@ -394,8 +587,14 @@ def check() -> int:
     for line in fails:
         print(f"FAIL: {line}")
     if not fails:
+        split = provenance_coverage(derived_provenance)
         print(f"AUTOGENESIS_STATABLE_VOCABULARY|rows={len(rows)}"
-              f"|bridge={len(bridge)}|cached={len(read_json(CACHE).get('constants', {}))}"
+              f"|bridge={len(bridge)}"
+              f"|elaboration={split['bridge_elaboration']}"
+              f"|expressed={split['bridge_expressed']}"
+              f"|elided={split['bridge_elided']}"
+              f"|unrendered={split['bridge_unrendered']}"
+              f"|cached={len(read_json(CACHE).get('constants', {}))}"
               f"|verdict=PASS")
     return len(fails)
 

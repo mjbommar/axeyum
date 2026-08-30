@@ -32,7 +32,7 @@ WORK="$(mktemp -d)"
 
 FAILURES=0
 CASES=0
-ALL_GUARDS=(V1 V2 V3 V4)
+ALL_GUARDS=(V1 V2 V3 V4 V5)
 
 # The artifact is a TRACKED file other lanes read, so every case restores it
 # immediately rather than leaving it to the end. The EXIT trap is the backstop
@@ -90,7 +90,7 @@ CASES=$((CASES + 1))
 OUT="$(python3 "$SCRIPT" 2>&1)"; STATUS=$?
 BAD=0
 [ "$STATUS" -ne 0 ] && { echo "FAIL [healthy-real-tree-passes]: exit $STATUS"; BAD=1; }
-HITS="$(printf '%s\n' "$OUT" | /usr/bin/grep -cE '^AUTOGENESIS_STATABLE_VOCABULARY\|rows=[0-9]+\|bridge=[0-9]+\|cached=[0-9]+\|verdict=PASS' || true)"
+HITS="$(printf '%s\n' "$OUT" | /usr/bin/grep -cE '^AUTOGENESIS_STATABLE_VOCABULARY\|rows=[0-9]+\|bridge=[0-9]+\|elaboration=[0-9]+\|expressed=[0-9]+\|elided=[0-9]+\|unrendered=[0-9]+\|cached=[0-9]+\|verdict=PASS' || true)"
 [ "$HITS" -ne 1 ] && {
   echo "FAIL [healthy-real-tree-passes]: no verdict line; the run produced no"
   echo "               report, so 'no guard fired' is not evidence of anything"
@@ -113,20 +113,63 @@ run_with_vocab "V1-hand-appended-constant-redundantly-witnessed" 1 V1 \
 row['constants'] = sorted(row['constants'] + ['Nat'])"
 # ...and a row dropped, which is the drift direction S4 also sees. Listed here
 # because V1 must not be satisfiable by a SUBSET of the generated rows.
+#
+# THE ROW REMOVED MUST BE BRIDGE-NEUTRAL, and picking one that is not cost a
+# run. `Int.ModEq.neg` was the original choice and it witnesses `Neg.neg` and
+# `Int.instNegInt`, so dropping it moves those two constants' witness counts and
+# V5 fires alongside V1 -- a case that kills two guards no longer proves either
+# one exists. Every constant of `Int.ModEq.refl` is in the kernel environment,
+# so it contributes NOTHING to the bridge and V5 cannot see it go; its
+# constants are also all witnessed by other rows, so `distinct_constants` does
+# not move and V2 cannot see it either. Eight rows qualify; any of them works.
 run_with_vocab "V1-a-row-removed" 1 V1 \
-  "keep = [r for r in d['settled'] if r['source_name'] != 'Int.ModEq.neg']
+  "keep = [r for r in d['settled'] if r['source_name'] != 'Int.ModEq.refl']
 d['settled'] = keep"
 
 # ---- V2: the coverage block disagrees with the artifact ---------------------
 # One case per counter, because a guard that compared only the dict's LENGTH,
 # or only the first key, would pass four of these five.
 for KEY in bridge_constants catalogued_propositions distinct_constants \
-           open_propositions settled_propositions; do
+           open_propositions settled_propositions bridge_elaboration \
+           bridge_expressed bridge_elided bridge_unrendered; do
   run_with_vocab "V2-stale-$KEY" 1 V2 \
     "d['coverage']['$KEY'] = d['coverage']['$KEY'] + 7"
 done
 # A coverage block that is absent entirely, not merely wrong.
 run_with_vocab "V2-coverage-block-missing" 1 V2 "d.pop('coverage')"
+
+# ---- V5: the provenance block is not its derivation -------------------------
+# WHY THESE MUTATIONS. V5 and V2 both read derived quantities, so a mutation
+# that moves a class ALSO moves a `bridge_<class>` counter and would trip both,
+# proving nothing about either. Every case below therefore leaves the class
+# HISTOGRAM intact:
+#   * the two-constant SWAP exchanges an `elided` class for an `expressed` one
+#     and back, so all four counters are unchanged and only V5 can see it. It is
+#     also the real-world abuse: relabelling `Set.Ioi` as expressed is exactly
+#     how an elision-backed constant would come to be quoted as sound.
+#   * the witness-count edits do not touch `class` at all, so no counter moves.
+# A guard comparing only the class labels, or only the key set, survives the
+# last two -- which is why they are here.
+run_with_vocab "V5-classes-swapped-between-two-constants" 1 V5 \
+  "pr = d['bridge_provenance']
+a = next(c for c, v in sorted(pr.items()) if v['class'] == 'elided')
+b = next(c for c, v in sorted(pr.items()) if v['class'] == 'expressed')
+pr[a]['class'], pr[b]['class'] = pr[b]['class'], pr[a]['class']"
+run_with_vocab "V5-witness-count-inflated" 1 V5 \
+  "pr = d['bridge_provenance']
+c = sorted(pr)[0]
+pr[c]['witnesses'] = pr[c]['witnesses'] + 5"
+run_with_vocab "V5-rendered-witness-count-inflated" 1 V5 \
+  "pr = d['bridge_provenance']
+c = next(c for c, v in sorted(pr.items()) if v['class'] == 'unrendered')
+pr[c]['rendered_witnesses'] = 3"
+# A constant dropped from the block. The bridge still lists it, so the screen
+# still admits it -- it simply has no recorded reason, which is the state this
+# whole block exists to make impossible.
+run_with_vocab "V5-a-bridge-constant-has-no-provenance" 1 V5 \
+  "d['bridge_provenance'].pop(sorted(d['bridge_provenance'])[0])"
+# ...and the block absent entirely, not merely wrong.
+run_with_vocab "V5-provenance-block-missing" 1 V5 "d.pop('bridge_provenance')"
 
 # ---- V3: the source pin moved without the constants -------------------------
 run_with_vocab "V3-inventory-sha-repinned" 1 V3 \

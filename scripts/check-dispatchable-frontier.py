@@ -93,6 +93,28 @@ The statable-here vocabulary is not taken on trust either:
       adding it cannot retroactively reshuffle an already-frozen family's
       preregistered candidates -- see gen-autogenesis-nursery-refill.py's
       `frozen_partitions()` for why that would be unsafe.
+  S7  the vocabulary's `bridge_provenance` block must be its own derivation.
+      S2 bounds the bridge from below and S3 from above, so between them the
+      bridge's MEMBERSHIP is pinned -- but neither looks at WHY a constant is
+      in it, and that is where the bridge inference has a hole. A mirror closed
+      by ELIDING a constant promotes it without ever expressing it. Measured
+      2026-08-30: `F:ml430-nat-log-antitone-left` pins `AntitoneOn (fun b =>
+      Nat.log b n) (Set.Ioi 1)` and promoted both constants, while our theorem
+      renders `Le x1 x2 -> Lt 1 x1 -> Lt 1 x2 -> Le (log x2 x0) (log x1 x0)`
+      -- no `AntitoneOn`, no `Set.Ioi`, no `Set` type at all. So the `Monotone`
+      / `Nat.fib_mono` reading above is right about `Monotone`, which unfolds
+      pointwise into env vocabulary, and does not carry to `Set.Ioi`, which
+      unfolds through a type this kernel lacks.
+
+      NOTHING IS REFUSED ON THIS BASIS and the bridge does not shrink. The
+      obvious stricter rule -- promote only what our rendered kernel type
+      mentions -- was implemented and measured, and it takes the statable open
+      pool from 24 to 0, because 50 of 72 bridge constants are typeclass
+      elaboration (`OfNat.ofNat`, `instHAdd`) that no kernel rendering could
+      ever name. Dropping only the elided ones takes it 24 -> 22. `--statable`
+      therefore REPORTS the split and enforces neither half, so ADR-0619's
+      headroom argument can be quoted conservatively instead of silently
+      inflated.
 
 Partitions are read from the v1 nursery AND from `nursery-v2-extension.json`
 (the 2026-08-29 refill). A held-out row that only the extension knows about
@@ -236,6 +258,99 @@ def load_partitions(*manifests: pathlib.Path) -> tuple[set[str], set[str]]:
     return held, mutation
 
 
+# --- bridge provenance (S7) ----------------------------------------------
+#
+# Deliberately a SECOND implementation of what
+# gen-autogenesis-statable-vocabulary.py's `classify_bridge` computes, not an
+# import of it. The generator refuses to import SETTLED from this module on the
+# stated ground that a change to either would silently change the other; the
+# same argument applies with more force in this direction, because a gate that
+# consumes the producer's classification cannot catch the producer computing it
+# wrongly. Keep both small enough to read side by side.
+INSTANCE_RE = re.compile(r"^inst[A-Z]")
+TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.']*")
+
+
+def is_elaboration(const: str) -> bool:
+    """A Lean instance or class projection: notation, never kernel vocabulary.
+
+    `mkInstanceName` prefixes `inst`; a class projection is the class name
+    decapitalized. All-caps classes decapitalize whole, so `LE`'s projection is
+    `LE.le` and not `LE.lE` -- both spellings count.
+    """
+    head, _, last = const.rpartition(".")
+    last = last or const
+    if INSTANCE_RE.match(last):
+        return True
+    if not head:
+        return False
+    tail = head.rpartition(".")[2]
+    return last in (tail[:1].lower() + tail[1:], tail.lower())
+
+
+def kernel_tokens(rendered: str) -> set[str]:
+    """Names a rendered kernel type mentions, in Mathlib-ish spelling.
+
+    `lean_pp` exports the naturals as `AxNat` -- the `Ax` is *axeyum*, a
+    non-shadowing root, NOT an axiomatization -- so `AxNat.log` is `Nat.log`.
+    """
+    out: set[str] = set()
+    for token in TOKEN_RE.findall(rendered or ""):
+        head, _, rest = token.partition(".")
+        if head.startswith("Ax") and len(head) > 2 and head[2].isupper():
+            head = head[2:]
+        name = head + ("." + rest if rest else "")
+        out.add(name)
+        out.add(name.rsplit(".", 1)[-1])
+    return out
+
+
+def classify_bridge(bridge: list[str], rows: list[dict[str, Any]],
+                    renderings: dict[str, str]) -> dict[str, dict[str, Any]]:
+    """elaboration / expressed / elided / unrendered, per bridge constant."""
+    witness: dict[str, list[str]] = {c: [] for c in bridge}
+    for row in rows:
+        for const in row["constants"]:
+            if const in witness:
+                witness[const].append(row["source_name"])
+    tokens = {name: kernel_tokens(text) for name, text in renderings.items() if text}
+    out: dict[str, dict[str, Any]] = {}
+    for const in sorted(bridge):
+        names = witness[const]
+        rendered = [n for n in names if n in tokens]
+        if is_elaboration(const):
+            kind = "elaboration"
+        elif not rendered:
+            kind = "unrendered"
+        elif any(const in tokens[n] for n in rendered):
+            kind = "expressed"
+        else:
+            kind = "elided"
+        out[const] = {"class": kind,
+                      "rendered_witnesses": len(rendered),
+                      "witnesses": len(names)}
+    return out
+
+
+def suspect_bridge(vocabulary: dict[str, Any]) -> set[str]:
+    """Bridge constants whose promotion does NOT show they are expressible.
+
+    `elided` -- every settled witness carrying a rendered kernel type fails to
+    mention it -- and `unrendered` -- no witness carries one at all. Both are
+    precision flags rather than defect flags: `Monotone` is elided and safe,
+    because it unfolds pointwise into env vocabulary exactly as this module's
+    docstring says of `Nat.fib_mono`, while `Set.Ioi` is elided and thin,
+    because it unfolds through a `Set` type this kernel does not have. Nothing
+    here separates those two, and the reported pair is honest precisely because
+    it does not pretend to.
+    """
+    provenance = vocabulary.get("bridge_provenance")
+    if not isinstance(provenance, dict):
+        return set()
+    return {c for c, v in provenance.items()
+            if isinstance(v, dict) and v.get("class") in ("elided", "unrendered")}
+
+
 def load_vocabulary(env_path: pathlib.Path,
                     vocab_path: pathlib.Path) -> tuple[dict[str, Any], dict[str, Any]]:
     for path in (env_path, vocab_path):
@@ -373,6 +488,57 @@ def guard_vocabulary(snapshot: dict[str, Any], vocabulary: dict[str, Any],
             f"S3 screen-rejects-a-settled-mirror: the statable-here screen "
             f"rejects {len(rejected)} mirror(s) we have already closed "
             f"({', '.join(rejected[:3])}), so its vocabulary is incomplete.")
+
+    # S7 -- the provenance block must be its own derivation.
+    #
+    # S2 bounds the bridge from below and S3 from above, which together pin the
+    # bridge's MEMBERSHIP. Neither says anything about WHY a constant is in it,
+    # and the bridge inference has a hole exactly there: a mirror closed by
+    # ELIDING a constant promotes it without ever expressing it. Measured
+    # 2026-08-30, `F:ml430-nat-log-antitone-left` promoted `AntitoneOn` and
+    # `Set.Ioi` while our theorem for it mentions neither and needs no `Set`
+    # type at all.
+    #
+    # Re-derived here rather than imported from
+    # gen-autogenesis-statable-vocabulary.py, for the same reason that
+    # generator refuses to import SETTLED from this module: a gate that trusts
+    # the producer's own classification cannot catch the producer being wrong.
+    #
+    # NOT EVALUATED WHEN S1-S4 ALREADY FIRED, and that is deliberate rather
+    # than defensive. S7 derives from the bridge and the row set, so ANY drift
+    # those guards catch -- an unwitnessed bridge entry, an emptied bridge, a
+    # row listed as settled that the ledger says is open -- also moves this
+    # derivation. Reporting both would make every S2/S3/S4 control kill two
+    # guards, and a case that kills two proves neither exists. The refinement
+    # only means anything over a bridge whose membership is already sound.
+    if facts and catalog and not fails:
+        renderings = {}
+        for name, ident in catalog.items():
+            rendered = (facts.get(ident, {}).get("formal") or {}).get(
+                "kernel_statement")
+            if isinstance(rendered, str) and rendered:
+                renderings[name] = rendered
+        good_rows = [r for r in rows if isinstance(r, dict)
+                     and isinstance(r.get("constants"), list)
+                     and isinstance(r.get("source_name"), str)]
+        derived = classify_bridge(sorted(bridge), good_rows, renderings)
+        recorded = vocabulary.get("bridge_provenance")
+        if not isinstance(recorded, dict):
+            fails.append(
+                f"S7 bridge-provenance-drift: `bridge_provenance` is "
+                f"{type(recorded).__name__}, not an object. Without it the "
+                f"statable count cannot be quoted conservatively and an "
+                f"elision-backed constant reads exactly like an expressed one.")
+        elif recorded != derived:
+            only = sorted(set(recorded) ^ set(derived))
+            moved = sorted(c for c in set(recorded) & set(derived)
+                           if recorded[c] != derived[c])
+            fails.append(
+                f"S7 bridge-provenance-drift: the recorded provenance is not "
+                f"its derivation -- {len(only)} constant(s) on one side only "
+                f"({only[:4]}), {len(moved)} reclassified ({moved[:4]}). Run "
+                f"`python3 scripts/gen-autogenesis-statable-vocabulary.py "
+                f"--write`.")
     return fails
 
 
@@ -521,10 +687,14 @@ def read_candidates(path: pathlib.Path) -> list[dict[str, Any]]:
 
 
 def statable_screen(path: pathlib.Path, registry: list[dict[str, Any]],
-                    env: set[str], bridge: set[str]) -> int:
+                    env: set[str], bridge: set[str],
+                    suspect: set[str] | None = None) -> int:
     """S5 (+ G6) -- both screens over candidates before preregistration."""
     candidates = read_candidates(path)
     admissible = env | bridge
+    suspect = suspect or set()
+    conservative = admissible - suspect
+    elision_backed = 0
     blocked = unstatable = glyphed = 0
     for cand in candidates:
         if not isinstance(cand, dict):
@@ -559,11 +729,28 @@ def statable_screen(path: pathlib.Path, registry: list[dict[str, Any]],
             glyphed += 1
             print(f"  GLYPH       {name}  -- {', '.join(glyphs)}")
         else:
-            print(f"  statable-ok {name}")
+            thin = sorted(set(constants) & suspect)
+            if thin:
+                elision_backed += 1
+                print(f"  statable-ok {name}  "
+                      f"[elision-backed: {', '.join(thin[:4])}]")
+            else:
+                print(f"  statable-ok {name}")
     print(f"\n{len(candidates)} candidate(s), {blocked} blocked by the "
           f"divergence registry, {unstatable} not statable here "
           f"(env {len(env)} + bridge {len(bridge)}), {glyphed} carrying an "
           f"elided-proof glyph.")
+    if suspect:
+        # Reported, never enforced. These candidates ARE admitted -- the pair
+        # exists so the statable count can be quoted with and without the
+        # portion that rests on an equivalent restatement rather than on the
+        # constant being expressible here. Refusing them would be the
+        # mirror-image error: 50 of 72 bridge constants are typeclass
+        # elaboration that no kernel rendering could ever name.
+        print(f"of the statable ones, {elision_backed} are admitted only via a "
+              f"bridge constant no closure has been shown to EXPRESS "
+              f"({len(suspect)} such constants; conservative admissible set is "
+              f"{len(conservative)} vs {len(admissible)}).")
     status = 0
     if blocked:
         print("\nG6 blocked-candidate: preregistering these adds population "
@@ -672,7 +859,8 @@ def main() -> int:
                           if f.startswith("S1 ")]
         for line in snapshot_fails:
             print(f"FAIL: {line}", file=sys.stderr)
-        status = statable_screen(args.statable, registry, env, bridge)
+        status = statable_screen(args.statable, registry, env, bridge,
+                                 suspect_bridge(vocabulary))
         return 1 if snapshot_fails else status
 
     facts = load_facts(args.facts_dir)

@@ -73,8 +73,374 @@
     "instOfNatNat",
     "ite"
   ],
+  "bridge_provenance": {
+    "AntitoneOn": {
+      "class": "elided",
+      "rendered_witnesses": 1,
+      "witnesses": 1
+    },
+    "Bool.and": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "Bool.not": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Bool.or": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Dvd.dvd": {
+      "class": "elaboration",
+      "rendered_witnesses": 8,
+      "witnesses": 30
+    },
+    "Even": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "Function.swap": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "HAdd.hAdd": {
+      "class": "elaboration",
+      "rendered_witnesses": 3,
+      "witnesses": 32
+    },
+    "HAnd.hAnd": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "HDiv.hDiv": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "HMod.hMod": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "HMul.hMul": {
+      "class": "elaboration",
+      "rendered_witnesses": 1,
+      "witnesses": 17
+    },
+    "HOr.hOr": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "HPow.hPow": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "HSub.hSub": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 5
+    },
+    "HXor.hXor": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "Int.instAdd": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 13
+    },
+    "Int.instDecidablePredEven": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Int.instDiv": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "Int.instDvd": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 7
+    },
+    "Int.instLEInt": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "Int.instLTInt": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Int.instMod": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Int.instMul": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 11
+    },
+    "Int.instNegInt": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 4
+    },
+    "Int.instSemiring": {
+      "class": "elaboration",
+      "rendered_witnesses": 1,
+      "witnesses": 1
+    },
+    "Int.instSub": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 5
+    },
+    "Int.toNat": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "IsRelPrime": {
+      "class": "expressed",
+      "rendered_witnesses": 1,
+      "witnesses": 1
+    },
+    "LE.le": {
+      "class": "elaboration",
+      "rendered_witnesses": 4,
+      "witnesses": 19
+    },
+    "LT.lt": {
+      "class": "elaboration",
+      "rendered_witnesses": 3,
+      "witnesses": 15
+    },
+    "Monoid.toPow": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Monotone": {
+      "class": "elided",
+      "rendered_witnesses": 2,
+      "witnesses": 4
+    },
+    "Nat.Coprime": {
+      "class": "elided",
+      "rendered_witnesses": 10,
+      "witnesses": 22
+    },
+    "Nat.ModEq": {
+      "class": "elided",
+      "rendered_witnesses": 1,
+      "witnesses": 19
+    },
+    "Nat.Prime": {
+      "class": "elided",
+      "rendered_witnesses": 2,
+      "witnesses": 15
+    },
+    "Nat.cast": {
+      "class": "elided",
+      "rendered_witnesses": 1,
+      "witnesses": 9
+    },
+    "Nat.instAndOp": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "Nat.instDiv": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "Nat.instDvd": {
+      "class": "elaboration",
+      "rendered_witnesses": 8,
+      "witnesses": 23
+    },
+    "Nat.instMod": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "Nat.instMonoid": {
+      "class": "elaboration",
+      "rendered_witnesses": 1,
+      "witnesses": 2
+    },
+    "Nat.instOrOp": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "Nat.instPreorder": {
+      "class": "elaboration",
+      "rendered_witnesses": 3,
+      "witnesses": 7
+    },
+    "Nat.instSemiring": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 5
+    },
+    "Nat.instXorOp": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "Ne": {
+      "class": "elided",
+      "rendered_witnesses": 1,
+      "witnesses": 10
+    },
+    "Neg.neg": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 4
+    },
+    "Odd": {
+      "class": "expressed",
+      "rendered_witnesses": 1,
+      "witnesses": 6
+    },
+    "OfNat.ofNat": {
+      "class": "elaboration",
+      "rendered_witnesses": 15,
+      "witnesses": 73
+    },
+    "Set.Ici": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Set.Ioi": {
+      "class": "elided",
+      "rendered_witnesses": 1,
+      "witnesses": 1
+    },
+    "StrictMono": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "StrictMonoOn": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "Symmetric": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "instAddNat": {
+      "class": "elaboration",
+      "rendered_witnesses": 3,
+      "witnesses": 22
+    },
+    "instHAdd": {
+      "class": "elaboration",
+      "rendered_witnesses": 3,
+      "witnesses": 32
+    },
+    "instHAndOfAndOp": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "instHDiv": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "instHMod": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "instHMul": {
+      "class": "elaboration",
+      "rendered_witnesses": 1,
+      "witnesses": 17
+    },
+    "instHOrOfOrOp": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 3
+    },
+    "instHPow": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    },
+    "instHSub": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 5
+    },
+    "instHXorOfXorOp": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 2
+    },
+    "instLENat": {
+      "class": "elaboration",
+      "rendered_witnesses": 4,
+      "witnesses": 17
+    },
+    "instLTNat": {
+      "class": "elaboration",
+      "rendered_witnesses": 3,
+      "witnesses": 14
+    },
+    "instMulNat": {
+      "class": "elaboration",
+      "rendered_witnesses": 1,
+      "witnesses": 6
+    },
+    "instNatCastInt": {
+      "class": "elaboration",
+      "rendered_witnesses": 1,
+      "witnesses": 9
+    },
+    "instOfNat": {
+      "class": "elaboration",
+      "rendered_witnesses": 0,
+      "witnesses": 13
+    },
+    "instOfNatNat": {
+      "class": "elaboration",
+      "rendered_witnesses": 15,
+      "witnesses": 61
+    },
+    "ite": {
+      "class": "unrendered",
+      "rendered_witnesses": 0,
+      "witnesses": 1
+    }
+  },
   "coverage": {
     "bridge_constants": 72,
+    "bridge_elaboration": 50,
+    "bridge_elided": 8,
+    "bridge_expressed": 2,
+    "bridge_unrendered": 12,
     "catalogued_propositions": 202,
     "distinct_constants": 103,
     "open_propositions": 28,
