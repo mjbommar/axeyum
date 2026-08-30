@@ -26,6 +26,31 @@ fn word_roundtrip_and_signed_reading() {
 }
 
 #[test]
+fn word_extension_and_truncation_are_explicit() {
+    let positive = word(8, 0x7f);
+    let negative = word(8, 0x80);
+
+    assert_eq!(positive.zero_extend(16), Ok(word(16, 0x007f)));
+    assert_eq!(negative.zero_extend(16), Ok(word(16, 0x0080)));
+    assert_eq!(positive.sign_extend(16), Ok(word(16, 0x007f)));
+    assert_eq!(negative.sign_extend(16), Ok(word(16, 0xff80)));
+    assert_eq!(word(16, 0xabcd).truncate(8), Ok(word(8, 0xcd)));
+
+    assert_eq!(negative.zero_extend(8), Ok(negative));
+    assert_eq!(negative.sign_extend(8), Ok(negative));
+    assert_eq!(negative.truncate(8), Ok(negative));
+    assert_eq!(
+        word(16, 0).zero_extend(8),
+        Err(A0Error::InvalidWidthConversion { from: 16, to: 8 })
+    );
+    assert_eq!(
+        word(8, 0).truncate(16),
+        Err(A0Error::InvalidWidthConversion { from: 8, to: 16 })
+    );
+    assert_eq!(negative.sign_extend(12), Err(A0Error::InvalidWordWidth(12)));
+}
+
+#[test]
 fn decoder_rejects_reserved_and_unused_fields() {
     assert_eq!(
         decode([0x10, 0x0a, 0x03, 0]),

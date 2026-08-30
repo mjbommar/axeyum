@@ -22,8 +22,9 @@ pub use symbolic_addition::{
 };
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v6";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v7";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
+const WORD_PACKAGE_SCHEMA: &str = "axeyum.a0.word-package.v1";
 const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
 const ADD_SCHEMA: &str = "axeyum.a0.add-step-exhaustive.v1";
 const MEMORY_SCHEMA: &str = "axeyum.a0.memory-trace.v1";
@@ -67,6 +68,27 @@ pub struct WordRoundtripReport {
     /// Whether every reconstructed word equalled its input.
     pub passed: bool,
     /// SHA-256 of the canonical sequence of checked inputs and outputs.
+    pub result_sha256: String,
+}
+
+/// Source-bound finite audit of the reusable A0 word operations.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WordPackageReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the canonical semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Widths exercised by boundary vectors.
+    pub supported_widths: Vec<u8>,
+    /// Widths whose complete value domains were enumerated.
+    pub exhaustive_source_widths: Vec<u8>,
+    /// Number of source words inspected.
+    pub source_words_checked: u64,
+    /// Number of split/join, reading, extension, and truncation checks.
+    pub operation_checks: u64,
+    /// Whether every operation matched its independent integer oracle.
+    pub passed: bool,
+    /// SHA-256 over every input and observed result.
     pub result_sha256: String,
 }
 
@@ -271,7 +293,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "6".to_owned(),
+        version: "7".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -279,6 +301,7 @@ pub fn semantic_package() -> A0SemanticPackage {
         byte_order: "little-endian".to_owned(),
         capabilities: [
             "words",
+            "word-extension-truncation",
             "finite-memory",
             "state",
             "observations",
@@ -366,6 +389,52 @@ pub fn check_word_roundtrip_reversed_control(
     report_path: &Path,
 ) -> Result<WordRoundtripReport, EvidenceError> {
     check_word_roundtrip_with_control(package_path, report_path, ByteOrderControl::Reversed)
+}
+
+/// Produces the source-bound A0 word-package audit.
+///
+/// The complete 8- and 16-bit domains exercise readings, byte split/join,
+/// every legal widening target, and round-trip truncation. Boundary vectors
+/// exercise the same operations at all larger supported widths.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn word_package_report(package_path: &Path) -> Result<WordPackageReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_word_package(
+        sha256_hex(&package_bytes),
+        WordPackageControl::Declared,
+    ))
+}
+
+/// Recomputes and checks a word-package report.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_word_package(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<WordPackageReport, EvidenceError> {
+    check_word_package_with_control(package_path, report_path, WordPackageControl::Declared)
+}
+
+/// Recomputes with a faulty zero extension that repeats the sign bit.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing mutation fires.
+pub fn check_word_package_signed_zero_extension_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<WordPackageReport, EvidenceError> {
+    check_word_package_with_control(
+        package_path,
+        report_path,
+        WordPackageControl::SignedZeroExtension,
+    )
 }
 
 /// Produces the canonical narrow-versus-broad observation report.
@@ -682,6 +751,12 @@ enum ByteOrderControl {
 }
 
 #[derive(Clone, Copy)]
+enum WordPackageControl {
+    Declared,
+    SignedZeroExtension,
+}
+
+#[derive(Clone, Copy)]
 enum ObservationControl {
     Declared,
     OmitSeparatingRegister,
@@ -776,6 +851,198 @@ fn compute_word_roundtrip(
         values_checked,
         passed,
         result_sha256: hex_digest(result.finalize()),
+    }
+}
+
+fn check_word_package_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: WordPackageControl,
+) -> Result<WordPackageReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: WordPackageReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_word_package(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed word-package report does not equal recomputation (claimed result {}, recomputed {})",
+            claimed.result_sha256, recomputed.result_sha256
+        )));
+    }
+    Ok(claimed)
+}
+
+fn word_mask(width: u8) -> u64 {
+    if width == 64 {
+        u64::MAX
+    } else {
+        (1_u64 << width) - 1
+    }
+}
+
+fn record_word_check(
+    digest: &mut Sha256,
+    operation_checks: &mut u64,
+    passed: &mut bool,
+    observed: u64,
+    expected: u64,
+) {
+    *operation_checks += 1;
+    *passed &= observed == expected;
+    digest.update(observed.to_le_bytes());
+    digest.update(expected.to_le_bytes());
+}
+
+fn audit_word(
+    width: u8,
+    value: u64,
+    control: WordPackageControl,
+    digest: &mut Sha256,
+    operation_checks: &mut u64,
+    passed: &mut bool,
+) {
+    let source = Word::new(width, value).expect("audited width is supported");
+    let reduced = value & word_mask(width);
+    digest.update([width]);
+    digest.update(reduced.to_le_bytes());
+
+    record_word_check(digest, operation_checks, passed, source.unsigned(), reduced);
+    let expected_signed = if reduced & (1_u64 << (width - 1)) == 0 {
+        i128::from(reduced)
+    } else {
+        i128::from(reduced) - (1_i128 << width)
+    };
+    *operation_checks += 1;
+    *passed &= source.signed() == expected_signed;
+    digest.update(source.signed().to_le_bytes());
+    digest.update(expected_signed.to_le_bytes());
+
+    let bytes = source.little_endian_bytes();
+    let expected_bytes = reduced.to_le_bytes()[..usize::from(width / 8)].to_vec();
+    *operation_checks += 1;
+    *passed &= bytes == expected_bytes;
+    digest.update(&bytes);
+    digest.update(&expected_bytes);
+    let joined = Word::from_little_endian(&bytes).expect("audited bytes form a word");
+    record_word_check(digest, operation_checks, passed, joined.unsigned(), reduced);
+
+    for target in (width..=64).step_by(8) {
+        let zero_extended = if matches!(control, WordPackageControl::SignedZeroExtension) {
+            source.sign_extend(target)
+        } else {
+            source.zero_extend(target)
+        }
+        .expect("audited widening is valid");
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            zero_extended.unsigned(),
+            reduced,
+        );
+
+        let sign_extended = source
+            .sign_extend(target)
+            .expect("audited widening is valid");
+        let expected_sign = if source.high_bit() {
+            reduced | (word_mask(target) & !word_mask(width))
+        } else {
+            reduced
+        };
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            sign_extended.unsigned(),
+            expected_sign,
+        );
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            zero_extended
+                .truncate(width)
+                .expect("round-trip truncation is valid")
+                .unsigned(),
+            reduced,
+        );
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            sign_extended
+                .truncate(width)
+                .expect("round-trip truncation is valid")
+                .unsigned(),
+            reduced,
+        );
+    }
+}
+
+fn compute_word_package(
+    semantic_package_sha256: String,
+    control: WordPackageControl,
+) -> WordPackageReport {
+    let supported_widths = vec![8, 16, 24, 32, 40, 48, 56, 64];
+    let mut digest = Sha256::new();
+    let mut source_words_checked = 0_u64;
+    let mut operation_checks = 0_u64;
+    let mut passed = true;
+
+    for width in [8_u8, 16] {
+        for value in 0..(1_u64 << width) {
+            audit_word(
+                width,
+                value,
+                control,
+                &mut digest,
+                &mut operation_checks,
+                &mut passed,
+            );
+            source_words_checked += 1;
+        }
+    }
+    for width in [24_u8, 32, 40, 48, 56, 64] {
+        let high_bit = 1_u64 << (width - 1);
+        for value in [0, 1, high_bit - 1, high_bit, word_mask(width)] {
+            audit_word(
+                width,
+                value,
+                control,
+                &mut digest,
+                &mut operation_checks,
+                &mut passed,
+            );
+            source_words_checked += 1;
+        }
+    }
+
+    let wrong_narrow = Word::new(16, 0)
+        .expect("fixed word is valid")
+        .zero_extend(8);
+    operation_checks += 1;
+    passed &= matches!(
+        wrong_narrow,
+        Err(axeyum_machine::a0::A0Error::InvalidWidthConversion { from: 16, to: 8 })
+    );
+    digest.update(format!("{wrong_narrow:?}"));
+    let wrong_wide = Word::new(8, 0).expect("fixed word is valid").truncate(16);
+    operation_checks += 1;
+    passed &= matches!(
+        wrong_wide,
+        Err(axeyum_machine::a0::A0Error::InvalidWidthConversion { from: 8, to: 16 })
+    );
+    digest.update(format!("{wrong_wide:?}"));
+
+    WordPackageReport {
+        schema: WORD_PACKAGE_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        supported_widths,
+        exhaustive_source_widths: vec![8, 16],
+        source_words_checked,
+        operation_checks,
+        passed,
+        result_sha256: hex_digest(digest.finalize()),
     }
 }
 
