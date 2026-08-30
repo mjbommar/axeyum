@@ -2,7 +2,8 @@
 
 use axeyum_machine::a0::{
     A0Error, Conditions, Instruction, Memory, MemorySpan, Observation, ObservationError, Outcome,
-    Program, State, StateComponent, StopReason, Trap, Word, decode, encode, run, run_prefix, step,
+    Program, State, StateComponent, StopReason, Trap, Word, decode, decode_state, encode,
+    encode_state, run, run_prefix, step,
 };
 
 fn word(width: u8, value: u64) -> Word {
@@ -23,6 +24,141 @@ fn word_roundtrip_and_signed_reading() {
     assert_eq!(value.signed(), -32_513);
     assert_eq!(word(8, 0x1ff).unsigned(), 0xff);
     assert_eq!(Word::new(7, 0), Err(A0Error::InvalidWordWidth(7)));
+}
+
+#[test]
+fn word_extension_and_truncation_are_explicit() {
+    let positive = word(8, 0x7f);
+    let negative = word(8, 0x80);
+
+    assert_eq!(positive.zero_extend(16), Ok(word(16, 0x007f)));
+    assert_eq!(negative.zero_extend(16), Ok(word(16, 0x0080)));
+    assert_eq!(positive.sign_extend(16), Ok(word(16, 0x007f)));
+    assert_eq!(negative.sign_extend(16), Ok(word(16, 0xff80)));
+    assert_eq!(word(16, 0xabcd).truncate(8), Ok(word(8, 0xcd)));
+
+    assert_eq!(negative.zero_extend(8), Ok(negative));
+    assert_eq!(negative.sign_extend(8), Ok(negative));
+    assert_eq!(negative.truncate(8), Ok(negative));
+    assert_eq!(
+        word(16, 0).zero_extend(8),
+        Err(A0Error::InvalidWidthConversion { from: 16, to: 8 })
+    );
+    assert_eq!(
+        word(8, 0).truncate(16),
+        Err(A0Error::InvalidWidthConversion { from: 8, to: 16 })
+    );
+    assert_eq!(negative.sign_extend(12), Err(A0Error::InvalidWordWidth(12)));
+}
+
+#[test]
+fn canonical_state_encoding_roundtrips_every_outcome() {
+    let mut base = State::new(
+        16,
+        Memory::from_bytes(vec![0x10, 0x20, 0x30, 0x40]),
+        word(16, 0x1234),
+    )
+    .unwrap();
+    for (index, register) in base.registers.iter_mut().enumerate() {
+        *register = word(16, u64::try_from(index).unwrap() * 0x1111);
+    }
+    base.conditions = Conditions {
+        zero: true,
+        negative: false,
+        carry: true,
+        overflow: true,
+    };
+    let outcomes = [
+        Outcome::Running,
+        Outcome::Halted,
+        Outcome::Trapped(Trap::MisalignedProgramCounter { pc: 2 }),
+        Outcome::Trapped(Trap::IncompleteCodeFetch { pc: 0xfffc }),
+        Outcome::Trapped(Trap::IllegalEncoding {
+            pc: 4,
+            bytes: [0x99, 1, 2, 3],
+        }),
+        Outcome::Trapped(Trap::DataRange {
+            address: 3,
+            bytes: 2,
+            memory_len: 4,
+        }),
+    ];
+    for outcome in outcomes {
+        let mut state = base.clone();
+        state.outcome = outcome;
+        let encoded = encode_state(&state).unwrap();
+        let decoded = decode_state(&encoded).unwrap();
+        assert_eq!(decoded, state);
+        assert_eq!(encode_state(&decoded).unwrap(), encoded);
+    }
+}
+
+#[test]
+fn canonical_state_decoder_rejects_noncanonical_mutations() {
+    let mut state = State::new(
+        16,
+        Memory::from_bytes(vec![0x10, 0x20, 0x30, 0x40]),
+        word(16, 0x1234),
+    )
+    .unwrap();
+    state.outcome = Outcome::Trapped(Trap::DataRange {
+        address: 3,
+        bytes: 2,
+        memory_len: 4,
+    });
+    let encoded = encode_state(&state).unwrap();
+    let mut mutations = Vec::new();
+
+    let mut bad_magic = encoded.clone();
+    bad_magic[0] ^= 1;
+    mutations.push(bad_magic);
+    let mut bad_version = encoded.clone();
+    bad_version[4] = 2;
+    mutations.push(bad_version);
+    let mut bad_width = encoded.clone();
+    bad_width[5] = 7;
+    mutations.push(bad_width);
+    let mut high_register = encoded.clone();
+    high_register[16] = 1;
+    mutations.push(high_register);
+    let mut reserved_condition = encoded.clone();
+    reserved_condition[122] = 0x80;
+    mutations.push(reserved_condition);
+    let mut unknown_outcome = encoded.clone();
+    unknown_outcome[123] = 0xff;
+    mutations.push(unknown_outcome);
+    let mut unknown_trap = encoded.clone();
+    unknown_trap[124] = 0xff;
+    mutations.push(unknown_trap);
+    let mut wrong_trap_memory = encoded.clone();
+    let last = wrong_trap_memory.len() - 8;
+    wrong_trap_memory[last..].copy_from_slice(&5_u64.to_le_bytes());
+    mutations.push(wrong_trap_memory);
+    let mut trailing = encoded.clone();
+    trailing.push(0);
+    mutations.push(trailing);
+    mutations.push(encoded[..encoded.len() - 1].to_vec());
+
+    for mutation in mutations {
+        assert!(decode_state(&mutation).is_err());
+    }
+
+    let mut wrong_register_width = state.clone();
+    wrong_register_width.registers[0] = word(8, 0);
+    assert!(matches!(
+        encode_state(&wrong_register_width),
+        Err(A0Error::StateWidthMismatch { .. })
+    ));
+    let mut wrong_trap_length = state;
+    wrong_trap_length.outcome = Outcome::Trapped(Trap::DataRange {
+        address: 3,
+        bytes: 2,
+        memory_len: 5,
+    });
+    assert!(matches!(
+        encode_state(&wrong_trap_length),
+        Err(A0Error::InvalidStateEncoding(_))
+    ));
 }
 
 #[test]
@@ -426,6 +562,40 @@ fn sixteen_bit_memory_access_is_little_endian_and_may_be_unaligned() {
     assert_eq!(stored.memory.byte(2), Some(0xab));
     let loaded = step(&code, &stored);
     assert_eq!(loaded.registers[3].unsigned(), 0xabcd);
+}
+
+#[test]
+fn sparse_memory_checks_each_wrapped_word_address_atomically() {
+    let memory = Memory::from_entries(vec![(u64::from(u16::MAX), 0), (0, 0), (7, 0x77)]).unwrap();
+    let mut before = State::new(16, memory, word(16, 0)).unwrap();
+    before.registers[1] = word(16, u64::from(u16::MAX));
+    before.registers[2] = word(16, 0xabcd);
+    let store = Program::new(16, word(16, 0), vec![0x03, 0x08, 0x02, 0]).unwrap();
+    let stored = step(&store, &before);
+    assert_eq!(stored.memory.byte_at(u64::from(u16::MAX)), Some(0xcd));
+    assert_eq!(stored.memory.byte_at(0), Some(0xab));
+    assert_eq!(stored.memory.byte_at(7), Some(0x77));
+
+    let mut missing = before.clone();
+    missing.memory = Memory::from_entries(vec![(u64::from(u16::MAX), 0), (7, 0x77)]).unwrap();
+    let trapped = step(&store, &missing);
+    assert!(matches!(
+        trapped.outcome,
+        Outcome::Trapped(Trap::DataRange { .. })
+    ));
+    assert_eq!(trapped.memory, missing.memory);
+
+    assert_eq!(
+        Memory::from_entries(vec![(1, 0), (1, 1)]),
+        Err(A0Error::DuplicateMemoryAddress(1))
+    );
+    assert_eq!(
+        State::new(8, Memory::from_entries(vec![(256, 0)]).unwrap(), word(8, 0)),
+        Err(A0Error::InvalidMemoryAddress {
+            width: 8,
+            address: 256
+        })
+    );
 }
 
 #[test]

@@ -8,7 +8,8 @@ use std::{collections::BTreeSet, fs, path::Path};
 
 use axeyum_machine::a0::{
     BranchCondition, Instruction, Memory, MemorySpan, Observation, Outcome, Program, State,
-    StateComponent, StopReason, Trap, Word, decode, encode, run, run_prefix, step,
+    StateComponent, StopReason, Trap, Word, decode, decode_state, encode, encode_state, run,
+    run_prefix, step,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -22,8 +23,10 @@ pub use symbolic_addition::{
 };
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v6";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v9";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
+const WORD_PACKAGE_SCHEMA: &str = "axeyum.a0.word-package.v1";
+const STATE_CODEC_SCHEMA: &str = "axeyum.a0.state-codec.v1";
 const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
 const ADD_SCHEMA: &str = "axeyum.a0.add-step-exhaustive.v1";
 const MEMORY_SCHEMA: &str = "axeyum.a0.memory-trace.v1";
@@ -67,6 +70,48 @@ pub struct WordRoundtripReport {
     /// Whether every reconstructed word equalled its input.
     pub passed: bool,
     /// SHA-256 of the canonical sequence of checked inputs and outputs.
+    pub result_sha256: String,
+}
+
+/// Source-bound finite audit of the reusable A0 word operations.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WordPackageReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the canonical semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Widths exercised by boundary vectors.
+    pub supported_widths: Vec<u8>,
+    /// Widths whose complete value domains were enumerated.
+    pub exhaustive_source_widths: Vec<u8>,
+    /// Number of source words inspected.
+    pub source_words_checked: u64,
+    /// Number of split/join, reading, extension, and truncation checks.
+    pub operation_checks: u64,
+    /// Whether every operation matched its independent integer oracle.
+    pub passed: bool,
+    /// SHA-256 over every input and observed result.
+    pub result_sha256: String,
+}
+
+/// Source-bound audit of the canonical complete-state artifact codec.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StateCodecReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the canonical semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Architectural widths exercised.
+    pub widths: Vec<u8>,
+    /// Complete states encoded, decoded, and re-encoded.
+    pub states_checked: u64,
+    /// Distinct malformed encodings rejected.
+    pub malformed_encodings_rejected: u64,
+    /// Whether every outcome and trap form was represented.
+    pub all_outcomes_checked: bool,
+    /// Whether every canonical round trip and malformed-input check passed.
+    pub passed: bool,
+    /// SHA-256 over canonical bytes and mutation outcomes.
     pub result_sha256: String,
 }
 
@@ -271,7 +316,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "6".to_owned(),
+        version: "9".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -279,8 +324,11 @@ pub fn semantic_package() -> A0SemanticPackage {
         byte_order: "little-endian".to_owned(),
         capabilities: [
             "words",
+            "word-extension-truncation",
             "finite-memory",
+            "sparse-wrapping-memory",
             "state",
+            "canonical-state-codec",
             "observations",
             "decode",
             "encode",
@@ -366,6 +414,94 @@ pub fn check_word_roundtrip_reversed_control(
     report_path: &Path,
 ) -> Result<WordRoundtripReport, EvidenceError> {
     check_word_roundtrip_with_control(package_path, report_path, ByteOrderControl::Reversed)
+}
+
+/// Produces the source-bound A0 word-package audit.
+///
+/// The complete 8- and 16-bit domains exercise readings, byte split/join,
+/// every legal widening target, and round-trip truncation. Boundary vectors
+/// exercise the same operations at all larger supported widths.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn word_package_report(package_path: &Path) -> Result<WordPackageReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_word_package(
+        sha256_hex(&package_bytes),
+        WordPackageControl::Declared,
+    ))
+}
+
+/// Recomputes and checks a word-package report.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_word_package(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<WordPackageReport, EvidenceError> {
+    check_word_package_with_control(package_path, report_path, WordPackageControl::Declared)
+}
+
+/// Recomputes with a faulty zero extension that repeats the sign bit.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing mutation fires.
+pub fn check_word_package_signed_zero_extension_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<WordPackageReport, EvidenceError> {
+    check_word_package_with_control(
+        package_path,
+        report_path,
+        WordPackageControl::SignedZeroExtension,
+    )
+}
+
+/// Produces the canonical complete-state codec audit.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn state_codec_report(package_path: &Path) -> Result<StateCodecReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_state_codec(
+        sha256_hex(&package_bytes),
+        StateCodecControl::Declared,
+    ))
+}
+
+/// Recomputes and checks a canonical-state codec report.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_state_codec(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<StateCodecReport, EvidenceError> {
+    check_state_codec_with_control(package_path, report_path, StateCodecControl::Declared)
+}
+
+/// Recomputes while deliberately accepting one trailing byte.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the trailing-byte control fires.
+pub fn check_state_codec_trailing_byte_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<StateCodecReport, EvidenceError> {
+    check_state_codec_with_control(
+        package_path,
+        report_path,
+        StateCodecControl::AcceptTrailingByte,
+    )
 }
 
 /// Produces the canonical narrow-versus-broad observation report.
@@ -682,6 +818,18 @@ enum ByteOrderControl {
 }
 
 #[derive(Clone, Copy)]
+enum WordPackageControl {
+    Declared,
+    SignedZeroExtension,
+}
+
+#[derive(Clone, Copy)]
+enum StateCodecControl {
+    Declared,
+    AcceptTrailingByte,
+}
+
+#[derive(Clone, Copy)]
 enum ObservationControl {
     Declared,
     OmitSeparatingRegister,
@@ -776,6 +924,365 @@ fn compute_word_roundtrip(
         values_checked,
         passed,
         result_sha256: hex_digest(result.finalize()),
+    }
+}
+
+fn check_word_package_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: WordPackageControl,
+) -> Result<WordPackageReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: WordPackageReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_word_package(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed word-package report does not equal recomputation (claimed result {}, recomputed {})",
+            claimed.result_sha256, recomputed.result_sha256
+        )));
+    }
+    Ok(claimed)
+}
+
+fn word_mask(width: u8) -> u64 {
+    if width == 64 {
+        u64::MAX
+    } else {
+        (1_u64 << width) - 1
+    }
+}
+
+fn record_word_check(
+    digest: &mut Sha256,
+    operation_checks: &mut u64,
+    passed: &mut bool,
+    observed: u64,
+    expected: u64,
+) {
+    *operation_checks += 1;
+    *passed &= observed == expected;
+    digest.update(observed.to_le_bytes());
+    digest.update(expected.to_le_bytes());
+}
+
+fn audit_word(
+    width: u8,
+    value: u64,
+    control: WordPackageControl,
+    digest: &mut Sha256,
+    operation_checks: &mut u64,
+    passed: &mut bool,
+) {
+    let source = Word::new(width, value).expect("audited width is supported");
+    let reduced = value & word_mask(width);
+    digest.update([width]);
+    digest.update(reduced.to_le_bytes());
+
+    record_word_check(digest, operation_checks, passed, source.unsigned(), reduced);
+    let expected_signed = if reduced & (1_u64 << (width - 1)) == 0 {
+        i128::from(reduced)
+    } else {
+        i128::from(reduced) - (1_i128 << width)
+    };
+    *operation_checks += 1;
+    *passed &= source.signed() == expected_signed;
+    digest.update(source.signed().to_le_bytes());
+    digest.update(expected_signed.to_le_bytes());
+
+    let bytes = source.little_endian_bytes();
+    let expected_bytes = reduced.to_le_bytes()[..usize::from(width / 8)].to_vec();
+    *operation_checks += 1;
+    *passed &= bytes == expected_bytes;
+    digest.update(&bytes);
+    digest.update(&expected_bytes);
+    let joined = Word::from_little_endian(&bytes).expect("audited bytes form a word");
+    record_word_check(digest, operation_checks, passed, joined.unsigned(), reduced);
+
+    for target in (width..=64).step_by(8) {
+        let zero_extended = if matches!(control, WordPackageControl::SignedZeroExtension) {
+            source.sign_extend(target)
+        } else {
+            source.zero_extend(target)
+        }
+        .expect("audited widening is valid");
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            zero_extended.unsigned(),
+            reduced,
+        );
+
+        let sign_extended = source
+            .sign_extend(target)
+            .expect("audited widening is valid");
+        let expected_sign = if source.high_bit() {
+            reduced | (word_mask(target) & !word_mask(width))
+        } else {
+            reduced
+        };
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            sign_extended.unsigned(),
+            expected_sign,
+        );
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            zero_extended
+                .truncate(width)
+                .expect("round-trip truncation is valid")
+                .unsigned(),
+            reduced,
+        );
+        record_word_check(
+            digest,
+            operation_checks,
+            passed,
+            sign_extended
+                .truncate(width)
+                .expect("round-trip truncation is valid")
+                .unsigned(),
+            reduced,
+        );
+    }
+}
+
+fn compute_word_package(
+    semantic_package_sha256: String,
+    control: WordPackageControl,
+) -> WordPackageReport {
+    let supported_widths = vec![8, 16, 24, 32, 40, 48, 56, 64];
+    let mut digest = Sha256::new();
+    let mut source_words_checked = 0_u64;
+    let mut operation_checks = 0_u64;
+    let mut passed = true;
+
+    for width in [8_u8, 16] {
+        for value in 0..(1_u64 << width) {
+            audit_word(
+                width,
+                value,
+                control,
+                &mut digest,
+                &mut operation_checks,
+                &mut passed,
+            );
+            source_words_checked += 1;
+        }
+    }
+    for width in [24_u8, 32, 40, 48, 56, 64] {
+        let high_bit = 1_u64 << (width - 1);
+        for value in [0, 1, high_bit - 1, high_bit, word_mask(width)] {
+            audit_word(
+                width,
+                value,
+                control,
+                &mut digest,
+                &mut operation_checks,
+                &mut passed,
+            );
+            source_words_checked += 1;
+        }
+    }
+
+    let wrong_narrow = Word::new(16, 0)
+        .expect("fixed word is valid")
+        .zero_extend(8);
+    operation_checks += 1;
+    passed &= matches!(
+        wrong_narrow,
+        Err(axeyum_machine::a0::A0Error::InvalidWidthConversion { from: 16, to: 8 })
+    );
+    digest.update(format!("{wrong_narrow:?}"));
+    let wrong_wide = Word::new(8, 0).expect("fixed word is valid").truncate(16);
+    operation_checks += 1;
+    passed &= matches!(
+        wrong_wide,
+        Err(axeyum_machine::a0::A0Error::InvalidWidthConversion { from: 8, to: 16 })
+    );
+    digest.update(format!("{wrong_wide:?}"));
+
+    WordPackageReport {
+        schema: WORD_PACKAGE_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        supported_widths,
+        exhaustive_source_widths: vec![8, 16],
+        source_words_checked,
+        operation_checks,
+        passed,
+        result_sha256: hex_digest(digest.finalize()),
+    }
+}
+
+fn check_state_codec_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: StateCodecControl,
+) -> Result<StateCodecReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: StateCodecReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_state_codec(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed state-codec report does not equal recomputation (claimed result {}, recomputed {})",
+            claimed.result_sha256, recomputed.result_sha256
+        )));
+    }
+    Ok(claimed)
+}
+
+fn codec_state(width: u8, outcome: Outcome) -> State {
+    let mut state = State::new(
+        width,
+        Memory::from_bytes(vec![0x00, 0x11, 0x80, 0xfe, 0xff]),
+        Word::new(width, word_mask(width).wrapping_sub(3)).expect("codec width is supported"),
+    )
+    .expect("codec state is valid");
+    let values = [
+        0,
+        1,
+        (1_u64 << (width - 1)) - 1,
+        1_u64 << (width - 1),
+        word_mask(width),
+        0x55 & word_mask(width),
+        0xaa & word_mask(width),
+        3,
+    ];
+    for (register, value) in state.registers.iter_mut().zip(values) {
+        *register = Word::new(width, value).expect("codec register is valid");
+    }
+    state.conditions.zero = true;
+    state.conditions.carry = true;
+    state.outcome = outcome;
+    state
+}
+
+fn codec_outcomes(width: u8) -> [Outcome; 6] {
+    [
+        Outcome::Running,
+        Outcome::Halted,
+        Outcome::Trapped(Trap::MisalignedProgramCounter { pc: 2 }),
+        Outcome::Trapped(Trap::IncompleteCodeFetch {
+            pc: word_mask(width).wrapping_sub(3),
+        }),
+        Outcome::Trapped(Trap::IllegalEncoding {
+            pc: 4,
+            bytes: [0x99, 1, 2, 3],
+        }),
+        Outcome::Trapped(Trap::DataRange {
+            address: 4,
+            bytes: usize::from(width / 8),
+            memory_len: 5,
+        }),
+    ]
+}
+
+fn malformed_state_encodings() -> Vec<Vec<u8>> {
+    let state = codec_state(
+        16,
+        Outcome::Trapped(Trap::DataRange {
+            address: 4,
+            bytes: 2,
+            memory_len: 5,
+        }),
+    );
+    let encoded = encode_state(&state).expect("fixture state encodes");
+    let mut mutations = Vec::new();
+    let mut bad_magic = encoded.clone();
+    bad_magic[0] ^= 1;
+    mutations.push(bad_magic);
+    let mut bad_version = encoded.clone();
+    bad_version[4] = 2;
+    mutations.push(bad_version);
+    let mut bad_width = encoded.clone();
+    bad_width[5] = 7;
+    mutations.push(bad_width);
+    let mut high_register = encoded.clone();
+    high_register[16] = 1;
+    mutations.push(high_register);
+    let mut reserved_condition = encoded.clone();
+    reserved_condition[91] = 0x80;
+    mutations.push(reserved_condition);
+    let mut unknown_outcome = encoded.clone();
+    unknown_outcome[92] = 0xff;
+    mutations.push(unknown_outcome);
+    let mut unknown_trap = encoded.clone();
+    unknown_trap[93] = 0xff;
+    mutations.push(unknown_trap);
+    let mut wrong_trap_memory = encoded.clone();
+    let last = wrong_trap_memory.len() - 8;
+    wrong_trap_memory[last..].copy_from_slice(&6_u64.to_le_bytes());
+    mutations.push(wrong_trap_memory);
+    let mut trailing = encoded.clone();
+    trailing.push(0);
+    mutations.push(trailing);
+    mutations.push(encoded[..encoded.len() - 1].to_vec());
+    mutations
+}
+
+fn compute_state_codec(
+    semantic_package_sha256: String,
+    control: StateCodecControl,
+) -> StateCodecReport {
+    let widths = vec![8, 16, 24, 32, 40, 48, 56, 64];
+    let mut digest = Sha256::new();
+    let mut states_checked = 0_u64;
+    let mut passed = true;
+    for width in &widths {
+        for outcome in codec_outcomes(*width) {
+            let state = codec_state(*width, outcome);
+            let encoded = encode_state(&state).expect("well-formed state encodes");
+            let decoded = decode_state(&encoded);
+            passed &= decoded.as_ref() == Ok(&state);
+            let reencoded = decoded.and_then(|decoded| encode_state(&decoded));
+            passed &= reencoded.as_ref() == Ok(&encoded);
+            digest.update([*width]);
+            digest.update(
+                u64::try_from(encoded.len())
+                    .expect("encoding length fits")
+                    .to_le_bytes(),
+            );
+            digest.update(&encoded);
+            states_checked += 1;
+        }
+    }
+
+    let mutations = malformed_state_encodings();
+    let trailing_index = mutations.len() - 2;
+    let mut malformed_encodings_rejected = 0_u64;
+    for (index, mutation) in mutations.iter().enumerate() {
+        let rejected = if matches!(control, StateCodecControl::AcceptTrailingByte)
+            && index == trailing_index
+        {
+            false
+        } else {
+            decode_state(mutation).is_err()
+        };
+        malformed_encodings_rejected += u64::from(rejected);
+        passed &= rejected;
+        digest.update(
+            u64::try_from(index)
+                .expect("mutation index fits")
+                .to_le_bytes(),
+        );
+        digest.update([u8::from(rejected)]);
+        digest.update(Sha256::digest(mutation));
+    }
+    StateCodecReport {
+        schema: STATE_CODEC_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        widths,
+        states_checked,
+        malformed_encodings_rejected,
+        all_outcomes_checked: states_checked == 48,
+        passed,
+        result_sha256: hex_digest(digest.finalize()),
     }
 }
 
@@ -1248,16 +1755,32 @@ fn changes_within_writes(before: &State, after: &State, writes: &[StateComponent
             return false;
         }
     }
-    for address in 0..before.memory.len() {
-        if before.memory.byte(address) != after.memory.byte(address)
+    if before
+        .memory
+        .entries()
+        .map(|(address, _)| address)
+        .collect::<Vec<_>>()
+        != after
+            .memory
+            .entries()
+            .map(|(address, _)| address)
+            .collect::<Vec<_>>()
+    {
+        return false;
+    }
+    for (address, before_byte) in before.memory.entries() {
+        if Some(before_byte) != after.memory.byte_at(address)
             && !writes.iter().any(|component| match component {
                 StateComponent::Memory {
                     address: start,
                     bytes,
-                } => {
-                    let start = usize::try_from(start.unsigned()).ok();
-                    start.is_some_and(|start| address >= start && address < start + bytes)
-                }
+                } => (0..*bytes).any(|offset| {
+                    start
+                        .unsigned()
+                        .wrapping_add(u64::try_from(offset).expect("byte offset fits u64"))
+                        & word_mask(start.width())
+                        == address
+                }),
                 _ => false,
             })
         {
@@ -1274,8 +1797,9 @@ fn digest_state(digest: &mut Sha256, state: &State) {
     for register in state.registers {
         digest.update(register.unsigned().to_le_bytes());
     }
-    for address in 0..state.memory.len() {
-        digest.update([state.memory.byte(address).expect("address is valid")]);
+    for (address, byte) in state.memory.entries() {
+        digest.update(address.to_le_bytes());
+        digest.update([byte]);
     }
     digest.update(state.pc.unsigned().to_le_bytes());
     digest.update([
@@ -1558,8 +2082,9 @@ fn observation_witness_digest(left: &State, right: &State) -> String {
                 .expect("memory length fits u64")
                 .to_le_bytes(),
         );
-        for address in 0..state.memory.len() {
-            digest.update([state.memory.byte(address).expect("address is in range")]);
+        for (address, byte) in state.memory.entries() {
+            digest.update(address.to_le_bytes());
+            digest.update([byte]);
         }
         digest.update(state.pc.unsigned().to_le_bytes());
         digest.update([

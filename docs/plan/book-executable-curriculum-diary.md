@@ -314,3 +314,112 @@ facade now exports the progress-aware function from both its canonical proof
 namespace and crate-root compatibility surface, removing the downstream
 dead-code failure instead of suppressing it. The semantic package is version 6
 and declares `domain-parametric-addition`.
+
+## 2026-08-30 — complete the reusable A0 word-operation contract
+
+Auditing the book's still-open `OP.a0.word-package` obligation against the
+compiled crate found a real partial implementation. `Word` already supplied
+construction, modular reduction, unsigned and signed readings, high-bit
+inspection, and little-endian split/join. It did not supply the explicit zero
+extension, sign extension, or truncation operations that Chapters 1 and 3
+promise to use as reusable semantic primitives.
+
+Added `Word::zero_extend`, `Word::sign_extend`, and `Word::truncate`. Each
+accepts only the eight supported byte-multiple widths. Widening operations
+reject narrowing; truncation rejects widening; identity conversions are legal.
+The error retains both source and target widths. Direct tests cover positive
+and negative extension, low-bit truncation, identity cases, invalid direction,
+and an unsupported target width.
+
+The new source-bound word-package report checks 65,822 source words and
+2,106,910 individual operation results. It exhaustively enumerates all 8- and
+16-bit words, applies every legal widening target, truncates each extension
+back to its source width, and checks signed and unsigned readings plus byte
+split/join against independent integer oracles. Five boundary vectors at each
+larger supported width cover zero, one, the largest positive signed value, the
+smallest negative signed value, and the all-ones word. Invalid-direction
+controls are included in the report.
+
+The load-bearing mutation implements zero extension by calling sign extension.
+It changes the report digest and the checker exits nonzero with
+`semantic-mismatch`. The positive CLI producer and checker pass directly.
+`axeyum-machine` now has 22 integration tests; the evidence crate adds a tenth
+route/control test; strict all-target Clippy passes for both crates.
+
+This is a finite implementation audit, not an induction theorem over arbitrary
+widths. Exhaustiveness applies only to the complete 8- and 16-bit value
+domains. Larger widths have named boundary coverage. The compiled source digest
+binds the report to the implementation, and the semantic package advances to
+version 7; it does not independently prove the Rust compiler or integer
+oracles.
+
+## 2026-08-30 — canonical complete-state artifact boundary
+
+The next book audit found that `OP.a0.state-memory` mixed three different
+claims. Concrete state, observation, finite memory, range checking, and trapped
+effects already execute. Canonical serialization of arbitrary complete states
+did not exist, while the universal memory-frame theorem is a separate symbolic
+claim and must not be inferred from either implementation tests or a codec.
+
+Added a dependency-free canonical binary codec to `axeyum-machine`. The format
+fixes magic, version, architectural width, full finite-memory length and bytes,
+register order, fixed-width little-endian integers, condition-bit positions,
+outcome tags, and all four trap payloads. Encoding rejects register or PC width
+drift, out-of-width trap locations, and a data-range trap whose recorded memory
+length differs from the complete state. Decoding rejects bad magic or version,
+unsupported widths, truncated fields, out-of-width register/PC/trap values,
+reserved condition bits, unknown outcome and trap tags, inconsistent trap
+memory length, and trailing bytes.
+
+Direct tests round-trip and byte-for-byte re-encode running, halted, and all
+four trapped states. A second test checks ten independent malformed encodings
+and malformed in-memory states. The source-bound report expands this to all
+eight supported widths and all six outcome forms: 48 complete canonical state
+round trips plus ten malformed encodings. Its load-bearing mutation accepts one
+trailing byte. Recomputed evidence then changes from ten rejected mutations to
+nine and exits with `semantic-mismatch`.
+
+The positive producer and checker pass directly. `axeyum-machine` has 24
+integration tests, the evidence crate has twelve route/control tests across its
+test binaries, and strict all-target Clippy passes. The semantic package moves
+to version 8 and declares `canonical-state-codec`.
+
+This route establishes a canonical artifact representation for the named test
+population and rejects the declared malformed classes. It is not exhaustive
+over all possible states, and it does not establish the still-separate
+universal memory-frame theorem or a Python projection.
+
+## 2026-08-30 — remove the dense-memory shortcut
+
+Reviewing the new codec against Chapter 4 exposed a semantic mismatch that the
+existing dense examples could not detect. The book defines memory as an
+arbitrary finite map from word addresses to bytes. A valid multi-byte range is
+checked address by address after modular word addition, so it may wrap and the
+domain may contain holes. The first Rust implementation used a zero-based
+`Vec<u8>` and treated `start + byte_count <= len` as validity. That implements
+only dense initial-segment memory and did not fulfill the printed definition.
+
+Replaced the representation with a canonically sorted finite address-byte map.
+`Memory::from_entries` admits sparse domains and rejects duplicate addresses;
+`State::new` rejects addresses outside the declared word width. Load and store
+now enumerate every modular word address in the requested range, require every
+one to be present, and collect the complete address vector before writing. A
+failed store therefore cannot partially commit. The existing dense
+constructors remain convenience projections onto addresses `0..len`.
+
+The canonical state codec now writes the full sorted address and byte for each
+memory entry, so stored zero remains distinct from absence and sparse domains
+round-trip without relying on host-map iteration order. Observation and
+evidence digests likewise consume ordered address-byte pairs. Frame checking
+compares complete domains and handles wrapped write footprints.
+
+A direct width-16 test stores `0xabcd` at address `65535` into the mapped pair
+`{65535, 0}`, confirming bytes `cd` and `ab` across wrap while preserving an
+unrelated mapped address. Removing address zero makes the same store trap with
+the entire sparse memory unchanged. Duplicate addresses and an out-of-width
+domain entry are independently rejected. All 25 machine integration tests and
+the complete evidence test set pass; strict all-target Clippy passes.
+
+This repair advances the semantic package to version 9. It establishes the
+executable finite-map behavior and canonical representation. The universal
+symbolic memory-frame theorem remains a separate open claim.
