@@ -397,6 +397,12 @@ step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.t
 step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
 step autogenesis-holdout-isolation-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
 step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-isolation.py
+# ADR-0695. The isolation gate above reads `epistemic_status` and scans for
+# textual references; neither sees a held-out row the kernel DECIDES BY
+# REDUCTION. `Nat.fermatNumber 0 = 3` closed by `Eq.refl` 21 minutes before
+# draw 7 preregistered it blind. Needs no cargo, so it costs seconds.
+step holdout-closed-evaluation-tests python3 -m unittest scripts.tests.test_check_holdout_closed_evaluation
+step holdout-closed-evaluation python3 scripts/check-holdout-closed-evaluation.py
 # ADR-0652. One producer per generated artifact. The statable vocabulary had
 # two writers and the poorer one silently deleted `bridge_provenance` and
 # `row_digest` at exit 0, so this runs each non-owner producer in a sandboxed

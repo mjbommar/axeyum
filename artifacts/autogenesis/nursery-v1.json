@@ -93,6 +93,40 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-08-30",
+      "family": "natural-parity",
+      "from": "held-out",
+      "to": "development",
+      "reason": "these rows were NEVER blind, and the family is the natural-divisibility shape repeated. It belongs to nursery-v2-extension.json and was preregistered held-out on 2026-08-29 17:22:14 (94b3e61ee); Nat.even_iff_mod_two_eq_zero -- literally F:ml430-nat-even-iff-024826e9's statement, over the Even n := Exists k, n = k + k that IS Mathlib's definition -- was admitted at 2026-08-29 12:10:13 (414eef0a2), five hours and twelve minutes earlier, and git merge-base --is-ancestor confirms the declaration precedes the preregistration. R9 screens on the Mathlib SOURCE name (Nat.even_iff), so it reports a clean 0 of 10 and is structurally blind to a proposition already proved under a different name -- the same blindness recorded in the natural-divisibility amendment above. The family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible, and the indivisibility is doing real work here: seven of the other nine rows have an admitted Int sibling one carrier transport away (Int.odd_of_mul_left, Int.odd_of_mul_right, Int.ediv_two_mul_two_of_even, Int.ediv_two_mul_two_add_one_of_odd, Int.even_add, Int.even_add_prime, Int.even_add_one, all wired into int_prelude.rs:1903-1918, plus the bridge Int.even_iff_nat_abs_even), and int_prelude/parity.rs:199-202 states in its own module doc that it builds the NAT-LEVEL content of the two odd_of_mul rows inline from right_distrib/left_distrib because it has no home in nat_prelude -- an inline step no name screen can ever index. Only F:ml430-nat-add-one-lt-of-even-3464b374 and F:ml430-nat-even-div-395c6b5e have no such sibling. No fact is reopened; F:ml430-nat-even-iff-024826e9 keeps whatever status it holds.",
+      "breach": {
+        "fact_id": "F:ml430-nat-even-iff-024826e9",
+        "proof_shape": "natural-parity:biconditional",
+        "operation_id": "no-operation-preregistered-against-existing-nat-prelude-parity",
+        "registered_commit": "94b3e61ee",
+        "registered_date": "2026-08-29",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
+    },
+    {
+      "date": "2026-08-30",
+      "family": "fermat-numbers",
+      "from": "held-out",
+      "to": "development",
+      "reason": "three of the ten rows were decided in-tree 21 minutes before draw 7 preregistered the family, and the cause is the DEFINITION, not the test that demonstrates it. Nat.fermatNumber was admitted at 2026-08-30 06:48:10 (0065c83b1); draw 7 preregistered fermat-numbers held-out at 2026-08-30 07:09:52 (29d51bd0b); git merge-base --is-ancestor confirms the order. F:ml430-nat-fermatnumber-{zero,one,two} state fermatNumber 0 = 3, fermatNumber 1 = 5 and fermatNumber 2 = 17 -- CLOSED equations between a constant applied to numerals and a numeral, so each is decided by reduction alone and closes by Eq.refl the moment the Definition exists. The same commit's nat_prelude_tests.rs::fermat_number_evaluates_correctly asserts all three by Kernel::def_eq, which is the running demonstration that the reduction fires -- but it is a witness to the spend, not its cause: removing the test would not have made the rows blind again. ADR-0653's exemption -- 'the evaluation-test requirement for a new Definition is safe here precisely because a test is not a declaration' -- is therefore true and beside the point, and ADR-0695 replaces it. R9 screens the Mathlib source names (Nat.fermatNumber_zero and siblings), which are absent from the environment, so it reported a clean 0 of 10. The family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible; the remaining seven rows (coprimality, monotonicity, oddness, fermat_primeFactors_one_lt, pow_of_pow_add_prime) are genuinely unproved here and stay fully usable in development. No fact is reopened.",
+      "breach": {
+        "fact_id": "F:ml430-nat-fermatnumber-zero-ca7aac67",
+        "proof_shape": "fermat-numbers:unconditional-equality",
+        "operation_id": "no-operation-closed-evaluation-decided-by-the-unblocking-definition",
+        "registered_commit": "0065c83b1",
+        "registered_date": "2026-08-30",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "entries": [
@@ -3121,7 +3155,7 @@
   ],
   "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
   "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
-  "split_policy_sha256": "19517c602ce9d3863e4b8fde00d66105194f7fdd3d4ef4b242ca9ccea167343b",
+  "split_policy_sha256": "83433cb4d79ab1ff1b663b02ea2c44c45d85fab4f0ef6de69f4f6ada42878a88",
   "source_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
   "notes": "Autogenesis-1 remains a disjoint longitudinal regression. The 214 Mathlib statements are frozen before target outcomes; source groups, families, family-scoped proof shapes, mutations, and declared dependency components cannot cross evaluation partitions."
 }
