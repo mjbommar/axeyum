@@ -19723,24 +19723,27 @@ fn fermat_number_easy_mirrors_apply_at_free_and_concrete_instances_with_two_nega
     let f2 = f.const_app(p.fermat_number, &[two]);
 
     // --- fermatNumber_zero/_one/_two: closed equations, admitted by refl ---
+    let expected_zero_eq = f.eq(f0, three);
     let applied_zero = f.const_app(p.fermatnumber_zero, &[]);
     let inferred_zero = f
         .k
         .infer(applied_zero)
         .expect("fermatNumber_zero must type-check");
-    assert!(f.k.def_eq(inferred_zero, f.eq(f0, three)));
+    assert!(f.k.def_eq(inferred_zero, expected_zero_eq));
+    let expected_one_eq = f.eq(f1, five);
     let applied_one = f.const_app(p.fermatnumber_one, &[]);
     let inferred_one = f
         .k
         .infer(applied_one)
         .expect("fermatNumber_one must type-check");
-    assert!(f.k.def_eq(inferred_one, f.eq(f1, five)));
+    assert!(f.k.def_eq(inferred_one, expected_one_eq));
+    let expected_two_eq = f.eq(f2, seventeen);
     let applied_two = f.const_app(p.fermatnumber_two, &[]);
     let inferred_two = f
         .k
         .infer(applied_two)
         .expect("fermatNumber_two must type-check");
-    assert!(f.k.def_eq(inferred_two, f.eq(f2, seventeen)));
+    assert!(f.k.def_eq(inferred_two, expected_two_eq));
 
     let nat = f.nat_ty();
     let anon = f.anon_name();
