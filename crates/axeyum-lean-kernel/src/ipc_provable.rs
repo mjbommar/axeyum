@@ -82,11 +82,13 @@
 //!
 //! Neither is attempted here. This file's module tests instead run a
 //! **non-kernel, Rust-level** finite decision procedure mirroring the same
-//! eleven rules (see [`tests::finite_search`]) as a non-vacuity check on the
-//! *rule set itself* — the "a `Definition`/relation can type-check and still
-//! be wrong" gotcha applies to an inductive relation exactly as it does to a
-//! computed function, and this is the cheapest evaluation test available
-//! before soundness exists to do the job properly.
+//! eleven rules (`tests::finite_search_discriminates_between_derivable_and_pem`)
+//! as a non-vacuity check on the *rule set itself* — the "a
+//! `Definition`/relation can type-check and still be wrong" gotcha applies to
+//! an inductive relation exactly as it does to a computed function, and this
+//! is the cheapest evaluation test available before soundness exists to do
+//! the job properly.
+#![allow(clippy::similar_names)]
 
 use crate::{BinderInfo, Declaration, ExprId, KernelError, NameId, RecField};
 use crate::{IpcHeytingPrelude, build_ipc_heyting_prelude};
@@ -217,9 +219,8 @@ pub fn build_ipc_provable_prelude(
     kernel.add_inductive(provable, &[], 0, provable_ty, &ctor_decls)?;
 
     let imp_self = declare_imp_self(kernel, &heyting, &names, imp_intro, ax_head)?;
-    let and_elim1_example = declare_and_elim1_example(
-        kernel, &heyting, &names, imp_intro, ax_head, and_elim1,
-    )?;
+    let and_elim1_example =
+        declare_and_elim1_example(kernel, &heyting, &names, imp_intro, ax_head, and_elim1)?;
 
     Ok(IpcProvablePrelude {
         heyting,
@@ -541,11 +542,7 @@ fn declare_and_elim1_example(
 
     // and_elim1 (cons (and_ p q) nil) p q (...) : Provable (cons (and_ p q) nil) p.
     let and_elim1_const = kernel.const_(and_elim1, vec![]);
-    let and_elim1_term = apply_all(
-        kernel,
-        and_elim1_const,
-        &[ctx_and_pq, p, q, ax_head_term],
-    );
+    let and_elim1_term = apply_all(kernel, and_elim1_const, &[ctx_and_pq, p, q, ax_head_term]);
 
     // imp_intro nil (and_ p q) p (...) : Provable nil (imp (and_ p q) p).
     let imp_intro_const = kernel.const_(imp_intro, vec![]);
@@ -566,4 +563,300 @@ fn declare_and_elim1_example(
         value,
     })?;
     Ok(name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Kernel;
+
+    /// The prelude builds at all: `FormulaList`, its recursor, `Provable`,
+    /// and all eleven constructors are genuine environment declarations.
+    #[test]
+    fn ipc_provable_prelude_builds() {
+        let mut kernel = Kernel::new();
+        let p = build_ipc_provable_prelude(&mut kernel).expect("prelude must build");
+        assert!(kernel.environment().get(p.formula_list).is_some());
+        assert!(kernel.environment().get(p.formula_list_rec).is_some());
+        assert!(kernel.environment().get(p.nil).is_some());
+        assert!(kernel.environment().get(p.cons).is_some());
+        assert!(kernel.environment().get(p.provable).is_some());
+        for ctor in [
+            p.ax_head,
+            p.weaken,
+            p.and_intro,
+            p.and_elim1,
+            p.and_elim2,
+            p.or_intro1,
+            p.or_intro2,
+            p.or_elim,
+            p.imp_intro,
+            p.imp_elim,
+            p.bot_elim,
+        ] {
+            assert!(
+                kernel.environment().get(ctor).is_some(),
+                "constructor {ctor:?} must be a genuine declaration"
+            );
+        }
+    }
+
+    /// The two example derivations (`p -> p`, `(p and q) -> p`) admit through
+    /// the trusted gate and are axiom-free -- genuine natural-deduction proof
+    /// terms built from `Provable`'s constructors, not assertions.
+    #[test]
+    fn example_derivations_admit_and_are_axiom_free() {
+        let mut kernel = Kernel::new();
+        let p = build_ipc_provable_prelude(&mut kernel).expect("prelude must build");
+        assert!(kernel.environment().get(p.imp_self).is_some());
+        assert!(kernel.environment().get(p.and_elim1_example).is_some());
+        assert!(
+            kernel.axiom_footprint(p.imp_self).is_empty(),
+            "imp_self must be axiom-free"
+        );
+        assert!(
+            kernel.axiom_footprint(p.and_elim1_example).is_empty(),
+            "and_elim1_example must be axiom-free"
+        );
+    }
+
+    /// Scoping control mirroring `ipc_heyting.rs`'s
+    /// `no_prior_derivation_relation_exists_before_this_file`: as of THIS
+    /// file, `Provable` IS present by exact name match, checked the same way
+    /// that prior test checked its absence (never a substring test, which
+    /// could pass vacuously against an unrelated declaration).
+    #[test]
+    fn provable_relation_is_present_and_findable_by_exact_name() {
+        let mut kernel = Kernel::new();
+        let p = build_ipc_provable_prelude(&mut kernel).expect("prelude must build");
+        let names: Vec<String> = kernel
+            .environment()
+            .iter()
+            .map(|(name, _)| kernel.display_name(*name).to_string())
+            .collect();
+        let provable_str = kernel.display_name(p.provable).to_string();
+        assert!(
+            names.iter().any(|n| n == &provable_str),
+            "Provable must be found by exact name match"
+        );
+        // Positive control of the identical lookup kind: FormulaList, this
+        // file's own other new declaration.
+        let flist_str = kernel.display_name(p.formula_list).to_string();
+        assert!(names.iter().any(|n| n == &flist_str));
+    }
+
+    // -----------------------------------------------------------------
+    // Non-kernel, Rust-level bounded/finite proof search: a non-vacuity
+    // sanity check on the RULE SET, not a formalized theorem. See the
+    // module doc's "What this slice proves, and what it does not" section.
+    // -----------------------------------------------------------------
+
+    /// A minimal propositional-formula shape used ONLY by this Rust-level
+    /// search, deliberately kept separate from the kernel's `Formula` (which
+    /// has no `PartialEq`/`Hash` and lives inside the kernel arena). The
+    /// eleven closure rules in [`saturate`] are written to mirror
+    /// `Provable`'s eleven constructors one for one -- see the inline
+    /// comments pairing each rule with its kernel counterpart by name.
+    #[derive(Clone, PartialEq, Eq, Debug)]
+    enum MetaFormula {
+        P,
+        Q,
+        Bot,
+        And(Box<MetaFormula>, Box<MetaFormula>),
+        Or(Box<MetaFormula>, Box<MetaFormula>),
+        Imp(Box<MetaFormula>, Box<MetaFormula>),
+    }
+
+    impl MetaFormula {
+        fn imp(a: MetaFormula, b: MetaFormula) -> MetaFormula {
+            MetaFormula::Imp(Box::new(a), Box::new(b))
+        }
+        fn and(a: MetaFormula, b: MetaFormula) -> MetaFormula {
+            MetaFormula::And(Box::new(a), Box::new(b))
+        }
+        fn or(a: MetaFormula, b: MetaFormula) -> MetaFormula {
+            MetaFormula::Or(Box::new(a), Box::new(b))
+        }
+    }
+
+    /// The finite universe `S`: exactly the subformulas needed for the three
+    /// queries below (`p -> p`, `(p and q) -> p`, `p or not p`). Because
+    /// normal (cut-free, no maximal formula) intuitionistic natural
+    /// deduction derivations enjoy the subformula property, a query whose
+    /// full subformula closure lies inside `S` is decided CORRECTLY by
+    /// [`saturate`]'s closure over `S` -- this is not an ad hoc truncation,
+    /// it is exactly the closure the normal-form theorem says is sufficient
+    /// for these three goals from the empty context.
+    fn finite_search_universe() -> Vec<MetaFormula> {
+        let p = MetaFormula::P;
+        let q = MetaFormula::Q;
+        let bot = MetaFormula::Bot;
+        let notp = MetaFormula::imp(p.clone(), bot.clone());
+        let pandq = MetaFormula::and(p.clone(), q.clone());
+        let por_notp = MetaFormula::or(p.clone(), notp.clone());
+        let imp_pp = MetaFormula::imp(p.clone(), p.clone());
+        let imp_andq_p = MetaFormula::imp(pandq.clone(), p.clone());
+        vec![p, q, bot, notp, pandq, por_notp, imp_pp, imp_andq_p]
+    }
+
+    /// Forward-chaining fixpoint over `(context, goal)` pairs where `context`
+    /// is a bitmask subset of `universe` and `goal` is an index into
+    /// `universe`. Representing the context as a SET (not `Provable`'s
+    /// `FormulaList`, an ordered structure) gives `Provable.weaken` for
+    /// free: the base "membership" rule below is re-evaluated independently
+    /// at every bitmask value, so any fact resting only on membership in a
+    /// subset context re-derives identically at every bitmask superset.
+    ///
+    /// Each closure step below is commented with the `Provable` constructor
+    /// it mirrors.
+    #[allow(clippy::too_many_lines)]
+    fn saturate(universe: &[MetaFormula]) -> std::collections::HashSet<(u32, usize)> {
+        let index_of = |f: &MetaFormula| universe.iter().position(|g| g == f);
+        let n = universe.len();
+        let mut derivable: std::collections::HashSet<(u32, usize)> =
+            std::collections::HashSet::new();
+
+        // `ax_head` (+ `weaken`, folded in via the bitmask-superset argument
+        // above): every element of `ctx` is derivable from `ctx`, at every
+        // `ctx` independently.
+        for ctx in 0u32..(1 << n) {
+            for i in 0..n {
+                if ctx & (1 << i) != 0 {
+                    derivable.insert((ctx, i));
+                }
+            }
+        }
+
+        loop {
+            let mut changed = false;
+            for ctx in 0u32..(1 << n) {
+                // Introduction rules: `and_intro`, `or_intro1`/`or_intro2`,
+                // `imp_intro`.
+                for (goal_index, goal) in universe.iter().enumerate() {
+                    if derivable.contains(&(ctx, goal_index)) {
+                        continue;
+                    }
+                    let found = match goal {
+                        MetaFormula::And(a, b) => match (index_of(a), index_of(b)) {
+                            (Some(ai), Some(bi)) => {
+                                derivable.contains(&(ctx, ai)) && derivable.contains(&(ctx, bi))
+                            }
+                            _ => false,
+                        },
+                        MetaFormula::Or(a, b) => {
+                            let via_a =
+                                index_of(a).is_some_and(|ai| derivable.contains(&(ctx, ai)));
+                            let via_b =
+                                index_of(b).is_some_and(|bi| derivable.contains(&(ctx, bi)));
+                            via_a || via_b
+                        }
+                        MetaFormula::Imp(a, b) => match (index_of(a), index_of(b)) {
+                            (Some(ai), Some(bi)) => {
+                                let extended = ctx | (1 << ai);
+                                derivable.contains(&(extended, bi))
+                            }
+                            _ => false,
+                        },
+                        MetaFormula::P | MetaFormula::Q | MetaFormula::Bot => false,
+                    };
+                    if found {
+                        derivable.insert((ctx, goal_index));
+                        changed = true;
+                    }
+                }
+                // Elimination rules, reading a premise already derivable
+                // from `ctx`: `and_elim1`/`and_elim2`, `or_elim`, `imp_elim`,
+                // `bot_elim`.
+                for (premise_index, premise) in universe.iter().enumerate() {
+                    if !derivable.contains(&(ctx, premise_index)) {
+                        continue;
+                    }
+                    match premise {
+                        MetaFormula::And(a, b) => {
+                            if let Some(ai) = index_of(a)
+                                && derivable.insert((ctx, ai))
+                            {
+                                changed = true;
+                            }
+                            if let Some(bi) = index_of(b)
+                                && derivable.insert((ctx, bi))
+                            {
+                                changed = true;
+                            }
+                        }
+                        MetaFormula::Or(a, b) => {
+                            if let (Some(ai), Some(bi)) = (index_of(a), index_of(b)) {
+                                let ctx_a = ctx | (1 << ai);
+                                let ctx_b = ctx | (1 << bi);
+                                for goal_index in 0..n {
+                                    if derivable.contains(&(ctx_a, goal_index))
+                                        && derivable.contains(&(ctx_b, goal_index))
+                                        && derivable.insert((ctx, goal_index))
+                                    {
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+                        MetaFormula::Imp(a, b) => {
+                            if let (Some(ai), Some(bi)) = (index_of(a), index_of(b))
+                                && derivable.contains(&(ctx, ai))
+                                && derivable.insert((ctx, bi))
+                            {
+                                changed = true;
+                            }
+                        }
+                        MetaFormula::Bot => {
+                            for goal_index in 0..n {
+                                if derivable.insert((ctx, goal_index)) {
+                                    changed = true;
+                                }
+                            }
+                        }
+                        MetaFormula::P | MetaFormula::Q => {}
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        derivable
+    }
+
+    /// The non-vacuity check itself: the same rule set that derives the two
+    /// kernel-checked positive theorems ([`declare_imp_self`],
+    /// [`declare_and_elim1_example`]) does NOT derive `p or not p` from the
+    /// empty context. This is the cheapest available discriminating check
+    /// on `Provable`'s ENCODING before soundness (slice 4) exists to make
+    /// the kernel itself answer this question -- see the module doc.
+    #[test]
+    fn finite_search_discriminates_between_derivable_and_pem() {
+        let universe = finite_search_universe();
+        let derivable = saturate(&universe);
+        let index_of = |f: &MetaFormula| universe.iter().position(|g| g == f).unwrap();
+
+        let imp_pp = MetaFormula::imp(MetaFormula::P, MetaFormula::P);
+        let pandq = MetaFormula::and(MetaFormula::P, MetaFormula::Q);
+        let imp_andq_p = MetaFormula::imp(pandq, MetaFormula::P);
+        let notp = MetaFormula::imp(MetaFormula::P, MetaFormula::Bot);
+        let por_notp = MetaFormula::or(MetaFormula::P, notp);
+
+        assert!(
+            derivable.contains(&(0, index_of(&imp_pp))),
+            "p -> p must be derivable from the empty context (matches the kernel-checked \
+             ipc_provable_imp_self)"
+        );
+        assert!(
+            derivable.contains(&(0, index_of(&imp_andq_p))),
+            "(p and q) -> p must be derivable from the empty context (matches the \
+             kernel-checked ipc_provable_and_elim1_example)"
+        );
+        assert!(
+            !derivable.contains(&(0, index_of(&por_notp))),
+            "p or not p must NOT be derivable from the empty context -- if this fires, the \
+             rule set is too permissive (an encoding bug), since ipc_heyting.rs's Heyting-chain \
+             countermodel already shows p or not p is not universally valid"
+        );
+    }
 }
