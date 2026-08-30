@@ -177,6 +177,7 @@ mod irrational;
 mod land;
 mod lcm;
 mod lcm_gcd_lemmas;
+mod least_number;
 mod ldiff;
 mod log;
 mod log2;
@@ -326,6 +327,7 @@ use perfect::declare_perfect_all;
 use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
+use least_number::declare_least_number_all;
 use pow_add_prime::declare_pow_add_prime_all;
 use powsq::declare_powsq_all;
 use prime_char::{
@@ -4381,6 +4383,41 @@ pub struct NatPrelude {
     /// the reusable odd-factor divisibility step behind the Fermat-prime
     /// lemma (`d := 2t+1` odd).
     pub dvd_pow_add_one_of_odd_mul_exp: NameId,
+
+    // -- `lnp-implies-em` lane: `least_number.rs` — ADR-0603 row 2 for the
+    // least-number principle over the naturals.
+    /// `Nat.lnp_bounded_search : ∀ (Q : Nat → Prop), (∀ n, Or (Q n) (Not (Q n)))
+    /// → ∀ n, Or (∀ k, Lt k n → Not (Q k)) (∃ m, And (Lt m n) (And (Q m) (∀ k,
+    /// Lt k m → Not (Q k))))` — bounded least-element search for a
+    /// pointwise-decided predicate, by ordinary induction on the bound.
+    pub lnp_bounded_search: NameId,
+    /// `Nat.lnp_of_pointwise_decision : ∀ (Q : Nat → Prop), (∀ n, Or (Q n) (Not
+    /// (Q n))) → (∃ n, Q n) → ∃ m, And (Q m) (∀ k, Lt k m → Not (Q k))` — the
+    /// least-number principle, WITH a decidability hypothesis. Dropping that
+    /// one hypothesis is exactly excluded middle
+    /// ([`lnp_unrestricted_implies_em`](Self::lnp_unrestricted_implies_em) /
+    /// [`em_implies_lnp`](Self::em_implies_lnp)).
+    pub lnp_of_pointwise_decision: NameId,
+    /// `Nat.lnp_decidable : ∀ (dec : Nat → Bool) (n : Nat), Eq Bool (dec n) true
+    /// → ∃ m, And (Eq Bool (dec m) true) (∀ k, Lt k m → Eq Bool (dec k) false)`
+    /// — the least-number principle for a `Bool`-valued predicate, admitted
+    /// axiom-free. The NON-VACUITY anchor for
+    /// [`lnp_unrestricted_implies_em`](Self::lnp_unrestricted_implies_em): the
+    /// unrestricted form is not merely unproved here, its decidable
+    /// restriction is a theorem.
+    pub lnp_decidable: NameId,
+    /// `Nat.em_implies_lnp : (∀ (P : Prop), Or P (Not P)) → ∀ (Q : Nat → Prop),
+    /// (∃ n, Q n) → ∃ m, And (Q m) (∀ k, Lt k m → Not (Q k))` — the converse of
+    /// [`lnp_unrestricted_implies_em`](Self::lnp_unrestricted_implies_em), so
+    /// the two principles are interderivable.
+    pub em_implies_lnp: NameId,
+    /// `Nat.lnp_unrestricted_implies_em : (∀ (Q : Nat → Prop), (∃ n, Q n) → ∃ m,
+    /// And (Q m) (∀ k, Lt k m → Not (Q k))) → ∀ (P : Prop), Or P (Not P)` —
+    /// ADR-0603 row 2 for the least-number principle: the UNRESTRICTED form
+    /// yields excluded middle for every proposition, strictly stronger than the
+    /// LLPO the analysis row 2s (`creal/ivt_boundary.rs`,
+    /// `creal/extreme_value.rs`) reach. See `least_number.rs`.
+    pub lnp_unrestricted_implies_em: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5222,6 +5259,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_mul: kernel.name_str(nat, "pow_mul"),
             dvd_pow_add_one_of_odd_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_exp"),
             dvd_pow_add_one_of_odd_mul_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_mul_exp"),
+            lnp_bounded_search: kernel.name_str(nat, "lnp_bounded_search"),
+            lnp_of_pointwise_decision: kernel.name_str(nat, "lnp_of_pointwise_decision"),
+            lnp_decidable: kernel.name_str(nat, "lnp_decidable"),
+            em_implies_lnp: kernel.name_str(nat, "em_implies_lnp"),
+            lnp_unrestricted_implies_em: kernel
+                .name_str(nat, "lnp_unrestricted_implies_em"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -5888,6 +5931,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `pow_add_prime.rs`: needs only `Nat.pow_add`/`mul`/`add`/`dvd_add`/
         // `dvd_mul_left` (all far above). Nothing needs it, so it goes last.
         declare_pow_add_prime_all(&mut d, &p)?;
+        // `least_number.rs`: needs only the order fragment (`not_lt_zero`,
+        // `le_of_lt_succ`, `lt_or_eq_of_le`, `lt_succ_self`, `le_succ`,
+        // `lt_of_lt_of_le`, `succ_ne_zero`, all far above) and the logic
+        // prelude. Nothing needs it, so it goes last.
+        declare_least_number_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
