@@ -172,7 +172,10 @@ fn mul_mul_mul_comm(
     let step3 = d.lemma(p.mul_assoc, &[a, c, bd]); // Eq target a_cbd
     let step3_rev = d.symm(target, a_cbd, step3); // Eq a_cbd target
 
-    let (_, proof) = d.chain(start, &[(a_bcd, step1), (a_cbd, congr2), (target, step3_rev)]);
+    let (_, proof) = d.chain(
+        start,
+        &[(a_bcd, step1), (a_cbd, congr2), (target, step3_rev)],
+    );
     proof
 }
 
@@ -334,7 +337,13 @@ fn split_exists_elim(
         let inner_rec = d.kernel().const_(exists_rec_name, vec![one]);
         let inner_result = d.apply(
             inner_rec,
-            &[nat, inner_predicate, inner_motive, inner_minor, inner_pf_var],
+            &[
+                nat,
+                inner_predicate,
+                inner_motive,
+                inner_minor,
+                inner_pf_var,
+            ],
         );
         let with_inner = d.lam_fv(inner_pf_fv, inner_ty, inner_result);
         d.lam_fv(k1_fv, nat, with_inner)
@@ -400,8 +409,7 @@ pub(super) fn declare_dvd_mul_split(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
                         let k1k2_val = d.mul(k1, k2);
                         let q1q2 = d.mul(q1, q2);
                         let mn4 = d.mul(k1k2_val, q1q2);
-                        let congr_k =
-                            d.congr(k1k2_val, k, eq_k1k2_k_proof, &|d, t| d.mul(t, q1q2));
+                        let congr_k = d.congr(k1k2_val, k, eq_k1k2_k_proof, &|d, t| d.mul(t, q1q2));
                         // congr_k : Eq mn4 (mul k q1q2)
                         let k_q1q2 = d.mul(k, q1q2);
                         let (_, eq_mn_k_q1q2) = d.chain(
@@ -524,8 +532,7 @@ pub(super) fn declare_dvd_mul_split(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
                     // gmr : Eq (gcd kk_n mn) (mul g n)
                     let gcd_kkn_mn = d.gcd(kk_n, mn);
                     let g_n = d.mul(g, n);
-                    let dvd_kk_gn =
-                        transport_dvd_right(d, kk, gcd_kkn_mn, g_n, gmr, dvd_kk_gcd);
+                    let dvd_kk_gn = transport_dvd_right(d, kk, gcd_kkn_mn, g_n, gmr, dvd_kk_gcd);
                     // dvd_kk_gn : dvd kk (mul g n)
                     let dvd_gq_gn = transport_dvd_left(d, kk, gq, eq_k_gq, g_n, dvd_kk_gn);
                     // dvd_gq_gn : dvd (mul g q) (mul g n)
@@ -535,10 +542,8 @@ pub(super) fn declare_dvd_mul_split(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
                     let eq_gq_k_ty = d.eq(gq, kk);
                     let dvd_g_m_ty = d.dvd(g, m);
                     let inner_ty = d.const_app(logic.and, &[dvd_q_n_ty, eq_gq_k_ty]);
-                    let inner_and = d.const_app(
-                        logic.and_intro,
-                        &[dvd_q_n_ty, eq_gq_k_ty, dvd_q_n, eq_gq_k],
-                    );
+                    let inner_and =
+                        d.const_app(logic.and_intro, &[dvd_q_n_ty, eq_gq_k_ty, dvd_q_n, eq_gq_k]);
                     let full_and =
                         d.const_app(logic.and_intro, &[dvd_g_m_ty, inner_ty, dvd_g_m, inner_and]);
                     split_exists_intro(d, m, n, kk, g, q, full_and)
