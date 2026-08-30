@@ -84,7 +84,12 @@ Largest fan-outs:
 ## Thin spots
 
 - 664 / 2117 proved facts hold two protections or fewer.
-- 675 / 2117 have no discriminating checker naming their own subject.
+- 675 / 2117 have no discriminating checker naming their own subject, where the subject is taken only from an EXPLICIT
+  `formal.kernel_theorem` / `kernel_declaration` binding.
+- of those, 302 would gain one if the ledger's regex
+  fallback (`theorem_of`, whose own docstring calls it "demonstrably NOT
+  reliable in general") were trusted. That gap is the size of the
+  ledger's unbound-subject debt, not a protection.
 - 1975 / 2117 have no `formal.statement` drift pin.
 - 2109 / 2117 have no independent Lean replay.
 - 2026 / 2117 carry no semantic-falsification evidence row.

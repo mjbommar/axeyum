@@ -129,6 +129,30 @@ def is_footprint_row(ev: dict) -> bool:
     return "axiom_footprint" in supports[:48].lower()
 
 
+# The historical fallback used by `theorem_of` in `check-fact-depends-derived.py`
+# and four sibling scripts: the first dotted name in the fact's own checker
+# commands.  Reproduced here ONLY to measure how much of the ledger's subject
+# binding rests on it, never to credit a protection.
+EXTRACT_RE = re.compile(r"\b([A-Z][A-Za-z0-9]*(?:\.[A-Za-z0-9_']+)+)")
+
+
+def extracted_subject(fact: dict) -> str | None:
+    """The subject a regex would guess when no explicit binding exists.
+
+    `theorem_of`'s own docstring calls this "demonstrably NOT reliable in
+    general" and names two ledger rows it got wrong.  This census therefore
+    reports it as a separate, weaker column rather than folding it into
+    `kernel_theorem`.
+    """
+    if "kernel_theorem" in (fact.get("formal") or {}):
+        return None
+    for ev in fact.get("evidence", []):
+        found = EXTRACT_RE.search(ev.get("checker_command") or "")
+        if found:
+            return found.group(1)
+    return None
+
+
 def subject_of(fact: dict) -> str | None:
     """The fact's own kernel declaration, taken ONLY from explicit bindings.
 
@@ -193,14 +217,19 @@ def classify(fact: dict, pinned: set[str], fan: dict[str, set[str]]) -> dict:
     def any_cmd(rx) -> bool:
         return any(cmd and rx.search(cmd) for _, cmd in cmds)
 
+    guessed = extracted_subject(fact)
     discriminating_subject = False
+    discriminating_guess = False
     for _, cmd in cmds:
         if not cmd:
             continue
         if not any(rx.search(cmd) for rx in DISCRIMINATING):
             continue
-        if subject and subject in cmd.replace("\\", ""):
+        flat = cmd.replace("\\", "")
+        if subject and subject in flat:
             discriminating_subject = True
+        if guessed and guessed in flat:
+            discriminating_guess = True
 
     fanouts = [len(fan.get(cmd, {fact["id"]})) for _, cmd in cmds if cmd]
 
@@ -224,6 +253,8 @@ def classify(fact: dict, pinned: set[str], fan: dict[str, set[str]]) -> dict:
         "mutation_control": any_cmd(NEGATIVE_CONTROL),
         "independent_replay": any_cmd(REAL_LEAN_REPLAY),
         "coverage_bearing_checker": discriminating_subject,
+        "subject_guessed": guessed or "",
+        "coverage_by_guess_only": bool(discriminating_guess and not discriminating_subject),
     }
     row["protection_count"] = sum(1 for c in COLUMNS if row[c])
     return row
@@ -273,7 +304,7 @@ def render_tsv(rows: list[dict]) -> str:
     head = [
         "fact_id", "route", "curation", "language", "subject",
         "n_evidence", "n_checkers", "checker_fanout_min", "checker_fanout_max",
-        *COLUMNS, "protection_count",
+        *COLUMNS, "protection_count", "subject_guessed", "coverage_by_guess_only",
     ]
     lines = ["\t".join(head)]
     for r in rows:
@@ -284,6 +315,8 @@ def render_tsv(rows: list[dict]) -> str:
             str(r["checker_fanout_min"]), str(r["checker_fanout_max"]),
             *("yes" if r[c] else "no" for c in COLUMNS),
             str(r["protection_count"]),
+            r["subject_guessed"] or "-",
+            "yes" if r["coverage_by_guess_only"] else "no",
         ]))
     return "\n".join(lines) + "\n"
 
@@ -350,7 +383,13 @@ def render_summary(rows: list[dict], fan: dict[str, set[str]],
     w(f"- {len(only_kernel)} / {n} proved facts hold two protections or fewer.")
     no_subject_checker = [r for r in rows if not r["coverage_bearing_checker"]]
     w(f"- {len(no_subject_checker)} / {n} have no discriminating checker naming"
-      " their own subject.")
+      " their own subject, where the subject is taken only from an EXPLICIT")
+    w("  `formal.kernel_theorem` / `kernel_declaration` binding.")
+    guess_only = [r for r in rows if r["coverage_by_guess_only"]]
+    w(f"- of those, {len(guess_only)} would gain one if the ledger's regex")
+    w("  fallback (`theorem_of`, whose own docstring calls it \"demonstrably NOT")
+    w("  reliable in general\") were trusted. That gap is the size of the")
+    w("  ledger's unbound-subject debt, not a protection.")
     no_pin = [r for r in rows if not r["exact_statement"]]
     w(f"- {len(no_pin)} / {n} have no `formal.statement` drift pin.")
     no_replay = [r for r in rows if not r["independent_replay"]]
