@@ -1133,3 +1133,255 @@ pub(super) fn declare_prime_not_coprime_iff_dvd(
 
     Ok(())
 }
+
+/// Given `prime_hyp : prime_condition p_var`, `dvd_p_a : dvd p_var a`, `ne_b
+/// : Not (Eq b one)`, and `heq : Eq (mul a b) (mul p_var p_var)`, derive
+/// `And (Eq a p_var) (Eq b p_var)`.
+///
+/// This is the shared content behind `prime_mul_eq_prime_sq_iff`'s `mp`,
+/// generic in which of the two factors the divisor clause names: the
+/// witness `k` from `a = p_var * k` substitutes into `heq` to give `k * b =
+/// p_var` (`mul_assoc` + `mul_left_cancel_of_pos`, using `p_var`'s own
+/// primality lower bound for positivity), and `k`'s primality clause
+/// (`prime_eq_one_or_self_of_dvd`, applied to `k` via the divisor witness
+/// `b`) forces `k = 1` (so `a = p_var` and, from `k * b = p_var`, `b =
+/// p_var`) or `k = p_var` (so `b = 1` via the same cancellation, refuted
+/// against `ne_b`). Call once per factor -- swapping `a`/`b` and rebuilding
+/// `heq` via `mul_comm` -- to cover both branches of the divisor split.
+#[allow(clippy::too_many_arguments)]
+fn prime_sq_factor_case(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    p_var: ExprId,
+    a: ExprId,
+    b: ExprId,
+    prime_hyp: ExprId,
+    ne_b: ExprId,
+    heq: ExprId,
+    dvd_p_a: ExprId,
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let two = d.num(2);
+    let goal_a = d.eq(a, p_var);
+    let goal_b = d.eq(b, p_var);
+    let goal = d.const_app(p.logic.and, &[goal_a, goal_b]);
+
+    let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
+    let lower_pf = and_left(d, lower_ty, divisors_ty, prime_hyp);
+    let le_succ_one = d.lemma(p.le_succ, &[one]);
+    let one_le_p = d.lemma(p.le_trans, &[one, two, p_var, le_succ_one, lower_pf]);
+
+    dvd_elim(d, p_var, a, goal, dvd_p_a, &|d, k, eq_a_pk| {
+        let pk = d.mul(p_var, k);
+        let kb = d.mul(k, b);
+        let p_kb = d.mul(p_var, kb);
+        let ab = d.mul(a, b);
+        let pkb = d.mul(pk, b);
+        let pp = d.mul(p_var, p_var);
+
+        let assoc_pf = d.lemma(p.mul_assoc, &[p_var, k, b]);
+        let a_eq_pk_under_mul = d.congr(a, pk, eq_a_pk, &|d, xx| d.mul(xx, b));
+        let ab_eq_p_kb = d.trans(ab, pkb, p_kb, a_eq_pk_under_mul, assoc_pf);
+        let p_kb_eq_ab = d.symm(ab, p_kb, ab_eq_p_kb);
+        let p_kb_eq_pp = d.trans(p_kb, ab, pp, p_kb_eq_ab, heq);
+        let kb_eq_p = d.lemma(
+            p.mul_left_cancel_of_pos,
+            &[p_var, kb, p_var, one_le_p, p_kb_eq_pp],
+        );
+
+        let p_eq_kb = d.symm(kb, p_var, kb_eq_p);
+        let dvd_k_p = dvd_intro(d, k, p_var, b, p_eq_kb);
+        let k_or = d.lemma(
+            p.prime_eq_one_or_self_of_dvd,
+            &[p_var, prime_hyp, k, dvd_k_p],
+        );
+        let eq_k1_ty = d.eq(k, one);
+        let eq_kp_ty = d.eq(k, p_var);
+
+        let on_k1 = {
+            let hk_fv = d.fresh_fvar();
+            let hk = d.kernel().fvar(hk_fv);
+            let hk_sym = d.symm(k, one, hk);
+            let motive_a = d.eq_motive(one, &|d, xx| {
+                let m = d.mul(p_var, xx);
+                d.eq(m, p_var)
+            });
+            let mul_p_one = d.lemma(p.mul_one, &[p_var]);
+            let pk_eq_p_at_k = d.transport(one, motive_a, mul_p_one, k, hk_sym);
+            let a_eq_p = d.trans(a, pk, p_var, eq_a_pk, pk_eq_p_at_k);
+
+            let motive_kb = d.eq_motive(k, &|d, kk| {
+                let m = d.mul(kk, b);
+                d.eq(m, p_var)
+            });
+            let kb_eq_p_at_one = d.transport(k, motive_kb, kb_eq_p, one, hk);
+            let one_mul_b = d.lemma(p.one_mul, &[b]);
+            let one_b = d.mul(one, b);
+            let b_eq_one_b = d.symm(one_b, b, one_mul_b);
+            let b_eq_p = d.trans(b, one_b, p_var, b_eq_one_b, kb_eq_p_at_one);
+
+            let result = d.const_app(p.logic.and_intro, &[goal_a, goal_b, a_eq_p, b_eq_p]);
+            d.lam_fv(hk_fv, eq_k1_ty, result)
+        };
+
+        let on_kp = {
+            let hk_fv = d.fresh_fvar();
+            let hk = d.kernel().fvar(hk_fv);
+            let motive_kb2 = d.eq_motive(k, &|d, kk| {
+                let m = d.mul(kk, b);
+                d.eq(m, p_var)
+            });
+            let pb_eq_p = d.transport(k, motive_kb2, kb_eq_p, p_var, hk);
+            let mul_p_one2 = d.lemma(p.mul_one, &[p_var]);
+            let p_one = d.mul(p_var, one);
+            let p_eq_p_one = d.symm(p_one, p_var, mul_p_one2);
+            let pb = d.mul(p_var, b);
+            let cancel_in2 = d.trans(pb, p_var, p_one, pb_eq_p, p_eq_p_one);
+            let b_eq_one = d.lemma(
+                p.mul_left_cancel_of_pos,
+                &[p_var, b, one, one_le_p, cancel_in2],
+            );
+            let false_val = d.apply(ne_b, &[b_eq_one]);
+            let inner = absurd(d, &p, goal, false_val);
+            d.lam_fv(hk_fv, eq_kp_ty, inner)
+        };
+
+        or_cases(d, &p, eq_k1_ty, eq_kp_ty, goal, on_k1, on_kp, k_or)
+    })
+}
+
+/// `Nat.Prime.mul_eq_prime_sq_iff : ∀ x y p, prime_condition p → Not (Eq x
+/// one) → Not (Eq y one) → Iff (Eq (mul x y) (pow p two)) (And (Eq x p) (Eq
+/// y p))` — see the `NatPrelude` field doc for the route.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_mul_eq_prime_sq_iff(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.prime_mul_eq_prime_sq_iff, 3, &|d, v| {
+        let (x, y, p_var) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let two = d.num(2);
+        let zero = d.zero();
+        let prime_ty = prime_condition(d, &p, p_var);
+        let ne_x_ty = {
+            let e = d.eq(x, one);
+            d.const_app(p.logic.not, &[e])
+        };
+        let ne_y_ty = {
+            let e = d.eq(y, one);
+            d.const_app(p.logic.not, &[e])
+        };
+        let xy = d.mul(x, y);
+        let p2 = d.pow(p_var, two);
+        let eq_ty = d.eq(xy, p2);
+        let eq_x_p_ty = d.eq(x, p_var);
+        let eq_y_p_ty = d.eq(y, p_var);
+        let and_ty = d.const_app(p.logic.and, &[eq_x_p_ty, eq_y_p_ty]);
+        let iff_ty = d.const_app(p.logic.iff, &[eq_ty, and_ty]);
+        let inner1 = d.arrow(ne_y_ty, iff_ty);
+        let inner2 = d.arrow(ne_x_ty, inner1);
+        let stmt = d.arrow(prime_ty, inner2);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let nex_fv = d.fresh_fvar();
+        let ne_x = d.kernel().fvar(nex_fv);
+        let ney_fv = d.fresh_fvar();
+        let ne_y = d.kernel().fvar(ney_fv);
+
+        // pow2_eq_pp : Eq (pow p_var two) (mul p_var p_var), via `pow_succ`
+        // twice and `pow_zero`/`one_mul` -- the same chain
+        // `divisibility.rs`'s `valuation_at_two_mul_sq` already builds.
+        let one_exp = d.succ(zero);
+        let two_exp = d.succ(one_exp);
+        let pow0 = d.pow(p_var, zero);
+        let pow1 = d.pow(p_var, one_exp);
+        let pow2v = d.pow(p_var, two_exp);
+        let pp = d.mul(p_var, p_var);
+
+        let pow1_step = d.mul(pow0, p_var);
+        let one_p = d.mul(one, p_var);
+        let h_pow1_step = d.lemma(p.pow_succ, &[p_var, zero]);
+        let h_pow0 = d.lemma(p.pow_zero, &[p_var]);
+        let h_pow0_under_mul = d.congr(pow0, one, h_pow0, &|d, xx| d.mul(xx, p_var));
+        let h_one_mul = d.lemma(p.one_mul, &[p_var]);
+        let (_, pow1_eq_p) = d.chain(
+            pow1,
+            &[
+                (pow1_step, h_pow1_step),
+                (one_p, h_pow0_under_mul),
+                (p_var, h_one_mul),
+            ],
+        );
+        let pow1_p = d.mul(pow1, p_var);
+        let h_pow2_step = d.lemma(p.pow_succ, &[p_var, one_exp]);
+        let h_pow1_under_mul = d.congr(pow1, p_var, pow1_eq_p, &|d, xx| d.mul(xx, p_var));
+        let (_, pow2_eq_pp) = d.chain(pow2v, &[(pow1_p, h_pow2_step), (pp, h_pow1_under_mul)]);
+
+        let dvd_x_ty = d.dvd(p_var, x);
+        let dvd_y_ty = d.dvd(p_var, y);
+
+        // mp : Eq xy p2 -> and_ty
+        let mp = {
+            let heq_fv = d.fresh_fvar();
+            let heq = d.kernel().fvar(heq_fv);
+            let xy_eq_pp = d.trans(xy, p2, pp, heq, pow2_eq_pp);
+            let dvd_p_xy = dvd_intro(d, p_var, xy, p_var, xy_eq_pp);
+            let split = d.lemma(p.euclid_lemma, &[p_var, x, y, prime_hyp, dvd_p_xy]);
+
+            let on_x = {
+                let hx_fv = d.fresh_fvar();
+                let hx = d.kernel().fvar(hx_fv);
+                let result =
+                    prime_sq_factor_case(d, &p, p_var, x, y, prime_hyp, ne_y, xy_eq_pp, hx);
+                d.lam_fv(hx_fv, dvd_x_ty, result)
+            };
+            let on_y = {
+                let hy_fv = d.fresh_fvar();
+                let hy = d.kernel().fvar(hy_fv);
+                let mul_comm_yx = d.lemma(p.mul_comm, &[y, x]);
+                let yx = d.mul(y, x);
+                let yx_eq_pp = d.trans(yx, xy, pp, mul_comm_yx, xy_eq_pp);
+                let swapped =
+                    prime_sq_factor_case(d, &p, p_var, y, x, prime_hyp, ne_x, yx_eq_pp, hy);
+                let y_eq_p = and_left(d, eq_y_p_ty, eq_x_p_ty, swapped);
+                let x_eq_p = and_right(d, eq_y_p_ty, eq_x_p_ty, swapped);
+                let result =
+                    d.const_app(p.logic.and_intro, &[eq_x_p_ty, eq_y_p_ty, x_eq_p, y_eq_p]);
+                d.lam_fv(hy_fv, dvd_y_ty, result)
+            };
+            let body = or_cases(d, &p, dvd_x_ty, dvd_y_ty, and_ty, on_x, on_y, split);
+            d.lam_fv(heq_fv, eq_ty, body)
+        };
+
+        // mpr : and_ty -> Eq xy p2
+        let mpr = {
+            let hand_fv = d.fresh_fvar();
+            let hand = d.kernel().fvar(hand_fv);
+            let hx = and_left(d, eq_x_p_ty, eq_y_p_ty, hand);
+            let hy = and_right(d, eq_x_p_ty, eq_y_p_ty, hand);
+            let step1 = d.congr(x, p_var, hx, &|d, xx| d.mul(xx, y));
+            let step2 = d.congr(y, p_var, hy, &|d, yy| d.mul(p_var, yy));
+            let py = d.mul(p_var, y);
+            let xy_eq_pp2 = d.trans(xy, py, pp, step1, step2);
+            let pp_eq_p2 = d.symm(p2, pp, pow2_eq_pp);
+            let result = d.trans(xy, pp, p2, xy_eq_pp2, pp_eq_p2);
+            d.lam_fv(hand_fv, and_ty, result)
+        };
+
+        let iff_proof = d.const_app(p.logic.iff_intro, &[eq_ty, and_ty, mp, mpr]);
+        let with_ney = d.lam_fv(ney_fv, ne_y_ty, iff_proof);
+        let with_nex = d.lam_fv(nex_fv, ne_x_ty, with_ney);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_nex);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}

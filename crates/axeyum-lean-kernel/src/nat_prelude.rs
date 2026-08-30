@@ -325,8 +325,9 @@ use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
 use prime_char::{
-    declare_prime_eq_one_or_self_of_dvd, declare_prime_not_coprime_iff_dvd,
-    declare_prime_not_prime_pow_all, declare_prime_numeric_bounds, declare_prime_parity_facts,
+    declare_prime_eq_one_or_self_of_dvd, declare_prime_mul_eq_prime_sq_iff,
+    declare_prime_not_coprime_iff_dvd, declare_prime_not_prime_pow_all,
+    declare_prime_numeric_bounds, declare_prime_parity_facts,
 };
 use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
@@ -1806,6 +1807,23 @@ pub struct NatPrelude {
     /// `gcd_dvd_left`/`_right` gives `pw ∣ m` and `pw ∣ n`. Closes
     /// `F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca`.
     pub prime_not_coprime_iff_dvd: NameId,
+    /// `Nat.Prime.mul_eq_prime_sq_iff : ∀ x y p, prime_condition p → Not (Eq
+    /// x one) → Not (Eq y one) → Iff (Eq (mul x y) (pow p two)) (And (Eq x
+    /// p) (Eq y p))` — `mpr` substitutes `x = p`/`y = p` into `p * p = p^2`
+    /// (`pow_succ`/`pow_zero`/`one_mul` chained, as `divisibility.rs`'s
+    /// `valuation_at_two_mul_sq` already does). `mp` uses `x*y = p^2 = p*p`
+    /// to get `dvd p (mul x y)`, splits via `euclid_lemma` into `dvd p x ∨
+    /// dvd p y`, and both branches route through this file's own
+    /// `prime_sq_factor_case` (`prime_char.rs`): the divisor witness `k`
+    /// (`a = p*k`) substitutes into `a*b = p*p` to give `k*b = p`
+    /// (`mul_assoc` + `mul_left_cancel_of_pos`), and `k`'s own primality
+    /// clause (`prime_eq_one_or_self_of_dvd`) forces `k = 1` (giving `a = p`
+    /// and, via `k*b=p`, `b = p`) or `k = p` (giving `b = 1` via the same
+    /// cancellation, contradicting the `Not (Eq b one)` hypothesis). The
+    /// `dvd p y` branch calls the same helper with `x`/`y` swapped
+    /// (`mul_comm` rebuilds the equation) and swaps the resulting `And`
+    /// back. Closes `F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31`.
+    pub prime_mul_eq_prime_sq_iff: NameId,
     /// `Nat.Prime.dvd_mul_of_dvd_ne : ∀ p1 p2 n, Not (Eq p1 p2) →
     /// prime_condition p1 → prime_condition p2 → dvd p1 n → dvd p2 n → dvd
     /// (mul p1 p2) n` — [`coprime_primes`](Self::coprime_primes)'s `mpr`
@@ -4733,6 +4751,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_not_prime_pow_ne_one: kernel.name_str(nat, "prime_not_prime_pow_ne_one"),
             prime_eq_one_of_pow: kernel.name_str(nat, "prime_eq_one_of_pow"),
             prime_not_coprime_iff_dvd: kernel.name_str(nat, "prime_not_coprime_iff_dvd"),
+            prime_mul_eq_prime_sq_iff: kernel.name_str(nat, "prime_mul_eq_prime_sq_iff"),
             prime_dvd_mul_of_dvd_ne: kernel.name_str(nat, "prime_dvd_mul_of_dvd_ne"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
@@ -5439,6 +5458,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `lt_or_ge` (all far above) and this file's own `prime_two`
         // (`ops::two_divisor_dichotomy`, also far above).
         declare_prime_not_coprime_iff_dvd(&mut d, &p)?;
+        // Needs `euclid_lemma`/`prime_eq_one_or_self_of_dvd` (just above)
+        // plus `pow_succ`/`pow_zero`/`mul_assoc`/`mul_left_cancel_of_pos`,
+        // all far above.
+        declare_prime_mul_eq_prime_sq_iff(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;

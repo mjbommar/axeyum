@@ -1043,6 +1043,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prime_not_prime_pow_ne_one,
         p.prime_eq_one_of_pow,
         p.prime_not_coprime_iff_dvd,
+        p.prime_mul_eq_prime_sq_iff,
         p.prime_dvd_mul_of_dvd_ne,
         p.log_zero_right,
         p.log_zero_left,
