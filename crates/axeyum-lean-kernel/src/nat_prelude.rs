@@ -163,6 +163,7 @@ mod fibonacci;
 mod finite;
 mod finite_set;
 mod gcd;
+mod gcd_dvd_mirrors;
 mod group;
 mod helpers;
 mod irrational;
@@ -171,6 +172,7 @@ mod lcm;
 mod lcm_gcd_lemmas;
 mod ldiff;
 mod log;
+mod log_clog_order;
 mod lor;
 mod min_fac;
 mod mod_mul_lemmas;
@@ -261,6 +263,7 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
+use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
@@ -271,6 +274,7 @@ use lcm::{
 use lcm_gcd_lemmas::declare_lcm_gcd_lemmas;
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
+use log_clog_order::declare_log_clog_order_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use mod_mul_lemmas::declare_mod_mul_family;
@@ -3012,6 +3016,69 @@ pub struct NatPrelude {
     /// — [`log_aux_le_fuel`](Self::log_aux_le_fuel) specialized at `f := n`,
     /// since `log b n := logAux b n n` definitionally.
     pub log_le_self: NameId,
+    // --- `log`/`clog` order mirrors (`log_clog_order.rs`) -------------------
+    /// `Nat.div_le_div_right : ∀ n m b, Le n m → Le (div n b) (div m b)` —
+    /// general infrastructure, not itself an `ml430` mirror target, filed
+    /// here under its first consumers ([`log_aux_mono`](Self::log_aux_mono),
+    /// [`clog_aux_mono`](Self::clog_aux_mono)). At `b = 0` both sides are
+    /// `0` (`div_zero`); at `b = succ bp`, `div_lt_of_lt_mul` applied to
+    /// `n ≤ m < b*(succ (div m b))` (`div_mod_lt_mul_iff`'s backward
+    /// direction fed `lt_succ_self`, via the canonical `div_mod_exec`
+    /// witness) gives `div n b < succ (div m b)`, hence `≤` by
+    /// `le_of_lt_succ`.
+    pub div_le_div_right: NameId,
+    /// `Nat.log_aux_mono : ∀ b f, ∀ g n m, Le f g → Le n m → Le (logAux b f n)
+    /// (logAux b g m)` — fuel- and value-monotonicity proved TOGETHER by a
+    /// single induction on `f` (with `g`, `n`, `m` generalized inside the
+    /// motive, the same technique [`log_aux_le_fuel`](Self::log_aux_le_fuel)
+    /// uses for `n`). The step case splits the outer fuel-comparison
+    /// hypothesis on `g`'s shape (`g = 0` is refuted by `not_succ_le_zero`)
+    /// and then reconciles `logAux`'s two guard cuts — `b ≤ n` OUTERMOST,
+    /// `2 ≤ b` inner — against the corresponding `m` guards: the `2 ≤ b` cut
+    /// is the SAME test on both sides (closed by the identity implication),
+    /// the `b ≤ n`/`b ≤ m` cut needs `b ≤ n ≤ m` (`le_of_ble_eq_true` +
+    /// `le_trans` + `ble_eq_true_of_le`), and the recursive quotients
+    /// `n / b ≤ m / b` come from [`div_le_div_right`](Self::div_le_div_right).
+    /// [`log_mono_right`](Self::log_mono_right) and
+    /// [`log_monotone`](Self::log_monotone) both specialize this at
+    /// `f := n, g := m` with the SAME hypothesis used for both the fuel and
+    /// value comparison, since `log b n := logAux b n n` is diagonal.
+    pub log_aux_mono: NameId,
+    /// `Nat.log_mono_right : ∀ b n m, Le n m → Le (log b n) (log b m)`
+    /// (`Mathlib`: `Nat.log_mono_right`) —
+    /// [`log_aux_mono`](Self::log_aux_mono) at `f := n, g := m`.
+    pub log_mono_right: NameId,
+    /// `Nat.log_monotone : ∀ b, Monotone (log b)` (`Mathlib`:
+    /// `Nat.log_monotone`) — `Monotone f` unfolds (Mathlib's own definition)
+    /// to `∀ x y, x ≤ y → f x ≤ f y`, exactly
+    /// [`log_mono_right`](Self::log_mono_right)'s core rendering with `b`
+    /// fixed first (the same "core-rendered unfolding" already used for
+    /// `Nat.choose_mono`).
+    pub log_monotone: NameId,
+    /// `Nat.clog_aux_mono` — [`log_aux_mono`](Self::log_aux_mono)'s
+    /// counterpart for `clogAux`. Same double induction; the guard order is
+    /// `clog.rs`'s opposite nesting (`2 ≤ b` OUTERMOST, same test both
+    /// sides via the identity implication; `2 ≤ n`/`2 ≤ m` inner, related by
+    /// `n ≤ m` the same Bool-bridge way), and the recursive argument
+    /// monotonicity is `(n + b - 1) / b ≤ (m + b - 1) / b`, from
+    /// `add_le_add_right` then [`div_le_div_right`](Self::div_le_div_right).
+    pub clog_aux_mono: NameId,
+    /// `Nat.clog_mono_right : ∀ b n m, Le n m → Le (clog b n) (clog b m)`
+    /// (`Mathlib`: `Nat.clog_mono_right`) —
+    /// [`clog_aux_mono`](Self::clog_aux_mono) at `f := n, g := m`.
+    pub clog_mono_right: NameId,
+    /// `Nat.clog_monotone : ∀ b, Monotone (clog b)` (`Mathlib`:
+    /// `Nat.clog_monotone`) — the same `Monotone`-unfolds-to-pointwise
+    /// rendering as [`log_monotone`](Self::log_monotone).
+    pub clog_monotone: NameId,
+    /// `Nat.clog_pos : ∀ b n, Lt 1 b → Lt 1 n → Lt 0 (clog b n)` (`Mathlib`:
+    /// `Nat.clog_pos`) — case-split on `n` (`n = 0` is refuted by `Lt 1 0`
+    /// via `not_succ_le_zero`); at `n = succ n'` the guard `2 ≤ b ∧ 2 ≤ n`
+    /// holds by hypothesis, so `clog b n` reduces (two direct
+    /// `bool_transport`s at the known-`true` evidence, no case split needed
+    /// since the evidence is already in hand) to a `succ`, positive by
+    /// `zero_lt_succ`.
+    pub clog_pos: NameId,
     /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
     /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
     /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
@@ -3697,6 +3764,54 @@ pub struct NatPrelude {
     /// is `Nat.div_mod_lt_mul_iff`'s forward direction fed the canonical
     /// `Nat.div_mod_exec` witness.
     pub div_lt_of_lt_mul: NameId,
+    /// `Nat.dvd_mul_left : ∀ a b, Dvd a (mul b a)` —
+    /// `F:ml430-nat-dvd-mul-left-a1a8a4b8`. `dvd_mul a b : Dvd a (mul a b)`
+    /// transported along `mul_comm a b`.
+    pub dvd_mul_left: NameId,
+    /// `Nat.dvd_mul_left_of_dvd : ∀ a b c, Dvd a b → Dvd a (mul c b)` —
+    /// `F:ml430-nat-dvd-mul-left-of-dvd-200e20a4`. `dvd_mul_right_of_dvd`
+    /// transported along `mul_comm b c`.
+    pub dvd_mul_left_of_dvd: NameId,
+    /// `Nat.eq_zero_of_gcd_eq_zero_left : ∀ m n, Eq (gcd m n) zero → Eq m
+    /// zero` — `F:ml430-nat-eq-zero-of-gcd-eq-zero-left-72cc4246`.
+    /// `gcd_dvd_left` transported along the hypothesis gives `Dvd zero m`;
+    /// a `Dvd zero x` witness forces `x = zero` via `zero_mul`.
+    pub eq_zero_of_gcd_eq_zero_left: NameId,
+    /// `Nat.eq_zero_of_gcd_eq_zero_right : ∀ m n, Eq (gcd m n) zero → Eq n
+    /// zero` — `F:ml430-nat-eq-zero-of-gcd-eq-zero-right-24054a86`, the
+    /// mirror of [`Self::eq_zero_of_gcd_eq_zero_left`] via `gcd_dvd_right`.
+    pub eq_zero_of_gcd_eq_zero_right: NameId,
+    /// `Nat.dvd_mod_iff_gen : ∀ k m n, Dvd k n → (Dvd k (mod m n) ↔ Dvd k m)`
+    /// — `F:ml430-nat-dvd-mod-iff-2d082f10`, the full-generality (every
+    /// `n`, including zero) form of [`Self::dvd_mod_iff`], which only
+    /// covers positive `n`. Case split on `n`: `zero` collapses `mod m 0`
+    /// to `m` (`mod_zero`) so the goal is a reflexive `Iff`; `succ j` is
+    /// exactly `dvd_mod_iff` at `(k, j, m)`.
+    pub dvd_mod_iff_gen: NameId,
+    /// `Nat.div_mul_cancel : ∀ n m, Dvd n m → Eq (mul (div m n) n) m` —
+    /// `F:ml430-nat-div-mul-cancel-99799a00`, the full-generality (every
+    /// `n`) form of `div_mul_cancel_of_dvd` (positive `n` only), factors
+    /// commuted to Mathlib's `m / n * n = m` order. `n = zero`: `Dvd zero
+    /// m` forces `m = zero` and both sides collapse. `n = succ j`: the
+    /// existing lemma plus `mul_comm`.
+    pub div_mul_cancel: NameId,
+    /// `Nat.dvd_iff_mod_eq_zero : ∀ m n, Dvd m n ↔ Eq (mod n m) zero` —
+    /// `F:ml430-nat-dvd-iff-mod-eq-zero-d795bfff`. Case split on `m`:
+    /// `zero` reduces both sides to `Eq n zero`; `succ j` specializes
+    /// `div_mod_remainder_eq_zero_iff_dvd` at the executable witness
+    /// (`div_mod_exec`) and flips the `Iff` order.
+    pub dvd_iff_mod_eq_zero: NameId,
+    /// `Nat.div_gcd_pos_of_pos_left : ∀ a b, Lt zero a → Lt zero (div a
+    /// (gcd a b))` — `F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f`.
+    /// `gcd_dvd_left` plus `div_mul_cancel` give `(a/g)*g = a`; if `a/g`
+    /// were `0` that forces `a = 0` (`zero_mul`), contradicting the
+    /// hypothesis, so `Nat.zero_or_succ` on `a/g` leaves only the
+    /// successor case.
+    pub div_gcd_pos_of_pos_left: NameId,
+    /// `Nat.div_gcd_pos_of_pos_right : ∀ a b, Lt zero b → Lt zero (div b
+    /// (gcd a b))` — `F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c`, the
+    /// mirror of [`Self::div_gcd_pos_of_pos_left`] via `gcd_dvd_right`.
+    pub div_gcd_pos_of_pos_right: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4331,6 +4446,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             clog_one_right: kernel.name_str(nat, "clog_one_right"),
             log_aux_le_fuel: kernel.name_str(nat, "logAux_le_fuel"),
             log_le_self: kernel.name_str(nat, "log_le_self"),
+            div_le_div_right: kernel.name_str(nat, "div_le_div_right"),
+            log_aux_mono: kernel.name_str(nat, "log_aux_mono"),
+            log_mono_right: kernel.name_str(nat, "log_mono_right"),
+            log_monotone: kernel.name_str(nat, "log_monotone"),
+            clog_aux_mono: kernel.name_str(nat, "clog_aux_mono"),
+            clog_mono_right: kernel.name_str(nat, "clog_mono_right"),
+            clog_monotone: kernel.name_str(nat, "clog_monotone"),
+            clog_pos: kernel.name_str(nat, "clog_pos"),
             bit: kernel.name_str(nat, "bit"),
             bit_false: kernel.name_str(nat, "bit_false"),
             bit_true: kernel.name_str(nat, "bit_true"),
@@ -4446,6 +4569,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mul_lt_mul_left: kernel.name_str(nat, "mul_lt_mul_left"),
             mul_lt_mul_right: kernel.name_str(nat, "mul_lt_mul_right"),
             div_lt_of_lt_mul: kernel.name_str(nat, "div_lt_of_lt_mul"),
+            dvd_mul_left: kernel.name_str(nat, "dvd_mul_left"),
+            dvd_mul_left_of_dvd: kernel.name_str(nat, "dvd_mul_left_of_dvd"),
+            eq_zero_of_gcd_eq_zero_left: kernel.name_str(nat, "eq_zero_of_gcd_eq_zero_left"),
+            eq_zero_of_gcd_eq_zero_right: kernel.name_str(nat, "eq_zero_of_gcd_eq_zero_right"),
+            dvd_mod_iff_gen: kernel.name_str(nat, "dvd_mod_iff_gen"),
+            div_mul_cancel: kernel.name_str(nat, "div_mul_cancel"),
+            dvd_iff_mod_eq_zero: kernel.name_str(nat, "dvd_iff_mod_eq_zero"),
+            div_gcd_pos_of_pos_left: kernel.name_str(nat, "div_gcd_pos_of_pos_left"),
+            div_gcd_pos_of_pos_right: kernel.name_str(nat, "div_gcd_pos_of_pos_right"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -4960,6 +5092,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lt_of_mul_lt_mul(&mut d, &p)?;
         declare_mul_lt_mul_iff(&mut d, &p)?;
         declare_div_lt_of_lt_mul(&mut d, &p)?;
+        declare_gcd_dvd_mirrors(&mut d, &p)?;
+        // Needs `Nat.log`/`Nat.clog` (`declare_log_all`/`declare_clog_all`,
+        // far above) and `Nat.div_mod_exec`/`Nat.div_mod_lt_mul_iff`/
+        // `Nat.div_lt_of_lt_mul` (`declare_executable_division_spec`/
+        // `declare_multiplicative_theorems`/just above -- `div_lt_of_lt_mul`
+        // specifically is declared immediately above and nothing else in
+        // this builder needs it, which is why it was last until now).
+        // Nothing needs these order mirrors, so they go last.
+        declare_log_clog_order_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

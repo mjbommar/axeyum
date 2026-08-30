@@ -19,6 +19,11 @@
     "cas.translator-is-univariate-and-integer-coefficient-only: cas_poly_to_int_coeffs calls the CAS's own normalize/MultiPoly::to_univariate and DECLINES (None) on any non-integer coefficient or on more than one variable. So the reconstructed claim is exactly the integer-coefficient univariate slice of what the CAS can decide -- a documented restriction of this translator, not of the kernel's polynomial layer, and NOT a general Rational -> Complex embedding.",
     "cas.ring-law-decision-procedure-is-the-untrusted-producer-and-panics-on-a-false-identity: complex.rs's ring_law_proof assert_eq!s two normal forms and panics rather than declining, so the bridge never invokes it on a pair the CAS has not already certified equal. The negative control is therefore built by RE-ASCRIBING the true proof term against the false type, never by asking the decision procedure to prove a falsehood -- which is what makes the control exercise Kernel::add_declaration's own type check rather than a hand-rolled heuristic."
   ],
+  "cas_substance": {
+    "shape": "identity",
+    "certificate": null,
+    "derivation_declined_reason": "axeyum-cas returns a decomposition / a decided equality here, not a certificate artifact of the shape artifacts/geometry-certificates/*.json carries, so scripts/cas_substance.py has nothing to derive from and the shape recorded here is SELF-REPORTED. It is checked only for validity, for the absence of a refl-shaped equation in formal.statement, and for disclosure -- not against the producer's own output. See ADR-0622."
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-difference-of-squares-true",

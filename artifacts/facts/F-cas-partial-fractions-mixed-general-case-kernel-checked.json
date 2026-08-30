@@ -26,6 +26,11 @@
     "cas.translator-checked-by-evaluation-only: dense_to_rat_poly (Vec<Rational> LSB-first -> this kernel's sparse RatPoly over the single variable x) is checked against numbers (translator_agrees_with_the_dense_evaluator_at_a_point), never by the trusted gate -- the kernel never sees a Vec<Rational>."
   ],
   "proof_route": "cas-certificate",
+  "cas_substance": {
+    "shape": "identity",
+    "certificate": null,
+    "derivation_declined_reason": "axeyum-cas returns a decomposition / a decided equality here, not a certificate artifact of the shape artifacts/geometry-certificates/*.json carries, so scripts/cas_substance.py has nothing to derive from and the shape recorded here is SELF-REPORTED. It is checked only for validity, for the absence of a refl-shaped equation in formal.statement, and for disclosure -- not against the producer's own output. See ADR-0622."
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-partial-fractions-mixed-general-case-identity",

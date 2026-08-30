@@ -23,7 +23,8 @@
     "F:nat-one-le-of-dvd-pos",
     "F:nat-zero-lt-succ",
     "F:nat-zero-mul",
-    "F:ml430-nat-le-antisymm-79dccead"
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-dvd-gcd-e5184fc5"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -314,6 +314,12 @@ facts:
     python3 -m unittest scripts.tests.test_check_shape_duplicates
     python3 -m unittest scripts.tests.test_theorem_inventory_completeness
     python3 -m unittest scripts.tests.test_check_absence_claims
+    # ADR-0622: the `kernel-reconstructed` counter moved for an obligation
+    # of the form `poly_expr(X) = 1 * poly_expr(X)`, because the classifier
+    # read a PACKAGE NAME out of a checker_command. This derives what the
+    # kernel was actually asked to check, from the certificate itself.
+    python3 scripts/check-cas-substance.py
+    python3 -m unittest scripts.tests.test_check_cas_substance
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 scripts/check-settled-fact-statements.py
     # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so

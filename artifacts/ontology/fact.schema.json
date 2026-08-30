@@ -96,6 +96,35 @@
       "description": "What the establishing evidence rests on that was NOT itself proved. REQUIRED when `epistemic_status` is `proved`: an empty array means axiom-free and is a strictly stronger claim than an absent field. This is the metric the project publishes.\n\nONLY COMPARABLE WITHIN A `proof_route`. On `kernel-lean` these are kernel declaration names (`propext`, `Classical.choice`, `Quot.sound`) and `[]` means the environment admits no `Axiom`, `Opaque` or `Quotient` — a claim `Kernel::axiom_footprint` computes per theorem. On `smt-term-level` they name the semantic assumptions the evaluator makes; `[]` is NOT achievable there and the validator rejects it, because an empty list on that route would read as axiom-freedom the route cannot deliver."
     },
 
+    "cas_substance": {
+      "type": "object",
+      "description": "What a `cas-certificate` fact's KERNEL obligation actually establishes (ADR-0622). Required on, and only on, a fact that `scripts/validate-facts.py` classifies as `kernel-reconstructed`. That classification asks which PACKAGE the checker runs, never what the kernel was asked to check, so without this block an obligation of the form `poly_expr(X) = 1 * poly_expr(X)` -- true of every polynomial -- moves the headline counter by exactly as much as a six-variable identity in which sixteen monomials from two independently-derived geometric predicates cancel to eight. Gated by `scripts/check-cas-substance.py`, which DERIVES the shape from the named certificate artifact and refuses a declaration that disagrees with it.",
+      "additionalProperties": false,
+      "required": ["shape", "certificate"],
+      "properties": {
+        "shape": {
+          "enum": ["empty", "refl", "scale", "combination", "identity", "evaluation"],
+          "description": "`empty`: nothing to reconstruct -- no coordinates, no generators, an already-empty conclusion polynomial; refused outright. `refl`: one generator carries a nonzero cofactor, that cofactor is the constant 1, and the generator is identical to the conclusion, so the obligation is X = 1*X and holds for EVERY polynomial. `scale`: one active generator whose cofactor must be distributed. `combination`: two or more active generators, so monomials contributed by distinct generators must cancel -- the shape that makes an identity specific to its configuration. `identity`: a symbolic ring identity at a free variable, not in cofactor form. `evaluation`: a closed obligation at concrete rationals. The first four are DERIVED from a certificate; the last two are declared, because their producers emit no certificate."
+        },
+        "certificate": {
+          "type": ["string", "null"],
+          "description": "Repository-relative path to the certificate artifact the shape is derived from, or null when the producer emits none -- in which case `derivation_declined_reason` must say so and the shape is self-reported."
+        },
+        "derivation_declined_reason": {
+          "type": "string",
+          "description": "Required when `certificate` is null: why no certificate artifact exists for this reconstruction."
+        },
+        "disclosure": {
+          "type": "string",
+          "description": "Required when the shape is non-discriminating (`empty` or `refl`): what the kernel obligation does NOT establish. Registration with disclosure is the honest outcome for a weak-but-real reconstruction; silence is not, and exclusion would drop real work."
+        },
+        "disclosure_axiom_key": {
+          "type": "string",
+          "description": "Required when the shape is non-discriminating: the key of the `axiom_footprint` entry carrying the same disclosure, so a reader meets it where the assumptions are listed and not only in a validator's summary."
+        }
+      }
+    },
+
     "evidence": {
       "type": "array",
       "description": "Zero or more artifacts establishing the status. Deliberately the same shape as `claim.schema.json`'s evidence rows so one checker can walk both. A fact with `epistemic_status: open` carries an empty array -- and that is a statement, not an omission.",

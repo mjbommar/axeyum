@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-dvd-antisymm", "F:nat-dvd-gcd", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:ml430-nat-dvd-antisymm-507f9026"],
+  "depends_on": ["F:nat-dvd-antisymm", "F:nat-dvd-gcd", "F:nat-gcd-dvd-left", "F:nat-gcd-dvd-right", "F:ml430-nat-dvd-antisymm-507f9026", "F:ml430-nat-dvd-gcd-e5184fc5"],
   "evidence": [
     {
       "check_status": "checked",

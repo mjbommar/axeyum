@@ -32,6 +32,10 @@
     "geometry.characteristic-zero-specialisation: inherited unchanged from F:geometry-orthocentre-altitudes-concurrent. A rational-coefficient cofactor identity holds in every Q-algebra, so the theorem is one of every characteristic-zero field, not specifically of the real plane; and this reconstruction is over Rat, not over CReal, so nothing here says the coordinates are real numbers.",
     "cas.multivariate-bridge-covers-constant-cofactors-and-integer-coefficients-only: the proof-emitting normalizer built for this fact handles a LINEAR combination of canonical sums over an ordered monomial basis. It does not multiply two non-constant polynomials, so it reaches only the 2 of 10 geometry certificates whose cofactors are constants (orthocentre and medians-concurrent), and its translator declines any non-integer coefficient, which excludes medians-concurrent's +-1/2 -- leaving orthocentre as the only one of the ten currently in range."
   ],
+  "cas_substance": {
+    "shape": "combination",
+    "certificate": "artifacts/geometry-certificates/orthocentre-altitudes-concurrent.json"
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-orthocentre-cofactor-identity",
