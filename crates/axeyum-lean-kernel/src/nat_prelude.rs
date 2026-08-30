@@ -200,6 +200,7 @@ mod parity;
 mod perfect;
 mod permutation;
 mod powsq;
+mod prime_char;
 mod primes;
 mod rec_agreement;
 mod rectangle;
@@ -323,6 +324,10 @@ use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
+use prime_char::{
+    declare_prime_eq_one_or_self_of_dvd, declare_prime_not_prime_pow_all,
+    declare_prime_numeric_bounds, declare_prime_parity_facts,
+};
 use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
     declare_coprime_odd_of_right, declare_coprime_of_dvd, declare_coprime_of_dvd_both,
@@ -1708,6 +1713,85 @@ pub struct NatPrelude {
     /// p` — [`pos_implies_succ_pred`] (`finite.rs`) gives `p = succ (pred
     /// p)` from `p`'s positivity (itself from `2 ≤ p`); `Eq.symm` flips it.
     pub succ_pred_prime: NameId,
+    // --- `prime_char.rs`: characterizations of primality itself (the
+    // `Mathlib.Data.Nat.Prime.Defs` mirrors, as opposed to the divisibility
+    // cluster in `primes.rs`/`bezout.rs`) ------------------------------------
+    /// `Nat.Prime.one_le : ∀ p, prime_condition p → Le one p` — `le_trans`
+    /// through `le_succ one : Le one two` and the primality lower bound.
+    /// Closes `F:ml430-nat-prime-one-le-03eb3095`.
+    pub prime_one_le: NameId,
+    /// `Nat.Prime.pos : ∀ p, prime_condition p → Lt zero p` — same proof
+    /// term as [`prime_one_le`](Self::prime_one_le): `Lt zero p` is
+    /// definitionally `Le one p`. Closes `F:ml430-nat-prime-pos-85eeeeea`.
+    pub prime_pos: NameId,
+    /// `Nat.Prime.one_lt : ∀ p, prime_condition p → Lt one p` — `Lt one p`
+    /// is definitionally `Le two p`, exactly the primality lower bound
+    /// clause with no further computation. Closes
+    /// `F:ml430-nat-prime-one-lt-bc90cfc7`.
+    pub prime_one_lt: NameId,
+    /// `Nat.Prime.ne_zero : ∀ n, prime_condition n → Not (Eq n zero)` —
+    /// `ne_of_lt`/`ne_symm` (`finite.rs`) applied to
+    /// [`prime_one_le`](Self::prime_one_le)'s conclusion read as `Lt zero
+    /// n`. Closes `F:ml430-nat-prime-ne-zero-b4e8b4d5`.
+    pub prime_ne_zero: NameId,
+    /// `Nat.Prime.ne_one : ∀ p, prime_condition p → Not (Eq p one)` —
+    /// `ne_of_lt`/`ne_symm` applied to the primality lower bound read as
+    /// `Lt one p`. Closes `F:ml430-nat-prime-ne-one-5b7f8845`.
+    pub prime_ne_one: NameId,
+    /// `Nat.Prime.not_dvd_one : ∀ p, prime_condition p → Not (dvd p one)` —
+    /// directly `not_dvd_one_of_two_le` applied to the lower bound. Closes
+    /// `F:ml430-nat-prime-not-dvd-one-be7e780f`.
+    pub prime_not_dvd_one: NameId,
+    /// `Nat.Prime.eq_one_or_self_of_dvd : ∀ p, prime_condition p → ∀ m, dvd
+    /// m p → Eq m one ∨ Eq m p` — the divisor clause of `prime_condition`
+    /// itself, read out via `and_right`; no further proof content. Closes
+    /// `F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb`.
+    pub prime_eq_one_or_self_of_dvd: NameId,
+    /// `Nat.Prime.eq_two_or_odd' : ∀ p, prime_condition p → Eq p two ∨ Odd
+    /// p` — `even_or_odd_exists` case-split, with the even branch closed by
+    /// [`prime_even_iff`](Self::prime_even_iff)'s forward direction. Closes
+    /// `F:ml430-nat-prime-eq-two-or-odd-25691fc9`.
+    pub prime_eq_two_or_odd: NameId,
+    /// `Nat.Prime.eq_two_or_odd : ∀ p, prime_condition p → Eq p two ∨ Eq
+    /// (mod p two) one` — [`prime_eq_two_or_odd`](Self::prime_eq_two_or_odd)
+    /// with its `Odd` disjunct pushed through `odd_iff_mod_two_eq_one`.
+    /// Closes `F:ml430-nat-prime-eq-two-or-odd-44a91651`.
+    pub prime_eq_two_or_odd_mod: NameId,
+    /// `Nat.Prime.mod_two_eq_one_iff_ne_two : ∀ p, prime_condition p → Iff
+    /// (Eq (mod p two) one) (Not (Eq p two))` — `mp` transports the
+    /// hypothesis along a hypothesised `p = two` into `Eq (mod two two)
+    /// one`, refuted by direct computation (`mod two two` reduces to
+    /// `zero`) against `succ_ne_zero`/`ne_symm`; `mpr` composes
+    /// `prime_odd_of_ne_two` with `odd_iff_mod_two_eq_one`. Closes
+    /// `F:ml430-nat-prime-mod-two-eq-one-iff-ne-two-25c35e73`.
+    pub prime_mod_two_eq_one_iff_ne_two: NameId,
+    /// `Nat.Prime.not_prime_pow : ∀ x n, Le two n → Not (prime_condition
+    /// (pow x n))` — the shared argument in
+    /// `prime_pow_ge2_contradiction` (`prime_char.rs`):
+    /// `x` divides `x^n` (witness `x^(n-1)`), so the divisor clause forces
+    /// `x = 1` (collapsing `x^n` to `1` via `one_pow`, contradicting the `2
+    /// ≤ x^n` lower bound) or `x = x^n` (cancelling the shared factor `x`
+    /// via `mul_left_cancel_of_pos` forces `x^(n-2) = 1`, hence `x ∣ 1`,
+    /// refuted by `not_dvd_one_of_two_le`). `n` is cased into `0`, `1`,
+    /// `succ (succ _)` first; the hypothesis is absurd in the first two.
+    /// Closes `F:ml430-nat-prime-not-prime-pow-d6480abf`.
+    pub prime_not_prime_pow_two_le: NameId,
+    /// `Nat.Prime.not_prime_pow' : ∀ x n, Not (Eq n one) → Not
+    /// (prime_condition (pow x n))` — the same case split as
+    /// [`prime_not_prime_pow_two_le`](Self::prime_not_prime_pow_two_le),
+    /// with an `n = 0` case added (`pow x 0 = 1` directly contradicts the
+    /// lower bound) and the `n = 1` case discharged by the `Not (Eq n one)`
+    /// hypothesis itself rather than by an absurd bound. Closes
+    /// `F:ml430-nat-prime-not-prime-pow-5f14afc6`.
+    pub prime_not_prime_pow_ne_one: NameId,
+    /// `Nat.Prime.eq_one_of_pow : ∀ x n, prime_condition (pow x n) → Eq n
+    /// one` — the same three-way case split on `n` read the other way:
+    /// `n = 0` and `n = succ (succ _)` both contradict the primality
+    /// hypothesis directly (the latter via
+    /// `prime_pow_ge2_contradiction` (`prime_char.rs`)),
+    /// leaving `n = 1` as the only reachable case, which **is** the goal.
+    /// Closes `F:ml430-nat-prime-eq-one-of-pow-846d2949`.
+    pub prime_eq_one_of_pow: NameId,
     /// `Nat.Prime.dvd_mul_of_dvd_ne : ∀ p1 p2 n, Not (Eq p1 p2) →
     /// prime_condition p1 → prime_condition p2 → dvd p1 n → dvd p2 n → dvd
     /// (mul p1 p2) n` — [`coprime_primes`](Self::coprime_primes)'s `mpr`
@@ -4620,6 +4704,20 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             five_le_of_ne_two_of_ne_three: kernel.name_str(nat, "five_le_of_ne_two_of_ne_three"),
             prime_pred_pos: kernel.name_str(nat, "prime_pred_pos"),
             succ_pred_prime: kernel.name_str(nat, "succ_pred_prime"),
+            prime_one_le: kernel.name_str(nat, "prime_one_le"),
+            prime_pos: kernel.name_str(nat, "prime_pos"),
+            prime_one_lt: kernel.name_str(nat, "prime_one_lt"),
+            prime_ne_zero: kernel.name_str(nat, "prime_ne_zero"),
+            prime_ne_one: kernel.name_str(nat, "prime_ne_one"),
+            prime_not_dvd_one: kernel.name_str(nat, "prime_not_dvd_one"),
+            prime_eq_one_or_self_of_dvd: kernel.name_str(nat, "prime_eq_one_or_self_of_dvd"),
+            prime_eq_two_or_odd: kernel.name_str(nat, "prime_eq_two_or_odd"),
+            prime_eq_two_or_odd_mod: kernel.name_str(nat, "prime_eq_two_or_odd_mod"),
+            prime_mod_two_eq_one_iff_ne_two: kernel
+                .name_str(nat, "prime_mod_two_eq_one_iff_ne_two"),
+            prime_not_prime_pow_two_le: kernel.name_str(nat, "prime_not_prime_pow_two_le"),
+            prime_not_prime_pow_ne_one: kernel.name_str(nat, "prime_not_prime_pow_ne_one"),
+            prime_eq_one_of_pow: kernel.name_str(nat, "prime_eq_one_of_pow"),
             prime_dvd_mul_of_dvd_ne: kernel.name_str(nat, "prime_dvd_mul_of_dvd_ne"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
@@ -5309,6 +5407,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_even_iff(&mut d, &p)?;
         declare_prime_not_dvd_mul(&mut d, &p)?;
         declare_prime_dvd_of_dvd_pow(&mut d, &p)?;
+        // `prime_char.rs`: the `Mathlib.Data.Nat.Prime.Defs` characterization
+        // mirrors. `declare_prime_numeric_bounds`/`_eq_one_or_self_of_dvd`
+        // need only `prime_condition` itself and basic order lemmas (far
+        // above); `declare_prime_parity_facts` needs `prime_even_iff`/
+        // `prime_odd_of_ne_two` (just declared above) plus `even_or_odd_exists`/
+        // `odd_iff_mod_two_eq_one` (`declare_parity_all`, also above);
+        // `declare_prime_not_prime_pow_all` needs only `pow_succ`/`pow_zero`/
+        // `one_pow`/`mul_left_cancel_of_pos`/`not_dvd_one_of_two_le`, all far
+        // above.
+        declare_prime_numeric_bounds(&mut d, &p)?;
+        declare_prime_eq_one_or_self_of_dvd(&mut d, &p)?;
+        declare_prime_parity_facts(&mut d, &p)?;
+        declare_prime_not_prime_pow_all(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;
