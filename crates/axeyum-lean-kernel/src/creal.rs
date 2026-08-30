@@ -4262,6 +4262,27 @@ pub struct CRealPrelude {
     /// Filed in `creal/ivt.rs` because the exact IVT root is what first
     /// needed it; nothing in the statement or the proof mentions the IVT.
     pub cauchy_of_abs_diff_le: NameId,
+    /// `CReal.scaledCauchy_of_abs_diff_le : ∀ (f : Nat → CReal) (K : Nat),
+    /// (∀ m n, le (abs (add (f m) (neg (f n))))
+    ///           (ofRat (Rat.add (natDivSucc K m) (natDivSucc K n)))) →
+    /// ∀ m n, Within (seq (f m) m − seq (f n) n)
+    ///   (Rat.add (natDivSucc (Nat.add K 2) m) (natDivSucc (Nat.add K 2) n))`
+    /// (`creal/ivt.rs`) — [`Self::cauchy_of_abs_diff_le`]'s own body, stopping
+    /// one step short of the `Exists` intro.
+    ///
+    /// **The reason it is separate at all is kernel fact 2.**
+    /// [`Self::regular_of_scaled_cauchy`] needs the `(K, per-pair)` pair as
+    /// DATA, and `Exists.rec` is `Prop`-only, so a `Cauchy f` witness can
+    /// never give it back. Any construction that turns a real-valued Cauchy
+    /// estimate into an actual `CReal` — [`Self::sup_on`] is the first — needs
+    /// the pair before the existential closes. Extracted rather than
+    /// duplicated beside the caller: the kernel would verify two copies of one
+    /// 300-line seven-term bound just as happily, and they would then have to
+    /// stay in sync.
+    ///
+    /// `K + 2`, not `K`, is what the index shift `j := 3m+2` costs — see
+    /// [`Self::cauchy_of_abs_diff_le`] for the accounting.
+    pub scaled_cauchy_of_abs_diff_le: NameId,
     /// `CReal.converges_of_abs_diff_le : ∀ (f : Nat → CReal) (L : CReal)
     /// (K : Nat), (∀ n, le (abs (add (f n) (neg L)))
     ///                    (ofRat (Rat.natDivSucc K n))) →
@@ -6973,6 +6994,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
         ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
         cauchy_of_abs_diff_le: kernel.name_str(creal, "cauchy_of_abs_diff_le"),
+        scaled_cauchy_of_abs_diff_le: kernel
+            .name_str(creal, "scaledCauchy_of_abs_diff_le"),
         converges_of_abs_diff_le: kernel.name_str(creal, "converges_of_abs_diff_le"),
         ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
         ivt_exact_root: kernel.name_str(creal, "ivt_exact_root"),
@@ -11762,6 +11785,7 @@ const STEPS: &[BuildStep] = &[
         provides: &[
             |p: CRealPrelude| p.abs_diff_le_of_small_image,
             |p: CRealPrelude| p.cauchy_of_abs_diff_le,
+            |p: CRealPrelude| p.scaled_cauchy_of_abs_diff_le,
             |p: CRealPrelude| p.ivt_approx,
             |p: CRealPrelude| p.ivt_bisect,
             |p: CRealPrelude| p.ivt_bisect_diag,
