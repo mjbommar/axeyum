@@ -14,6 +14,36 @@ exercise vs. **Lean-horizon** (proof-track) material. Tags:
 TOCs are factual lists; both books below are freely available (Stein: free PDF;
 Shoup: CC BY-NC-ND). See [README](README.md) for the books' roles.
 
+## What these tags do and do not measure (2026-08-30)
+
+**The ✅/◐/✗ tags classify chapters by what the SOLVER can decide at fixed
+instances. In graded-family terms (ADR-0603) that is ROW 3 only.** The taxonomy
+has no way to record "row 1 landed as a general kernel theorem", so a chapter
+can be tagged ◐ *"at fixed `n`"* while the corresponding universal statement is
+proved, quantified and axiom-free in the Lean kernel.
+
+That is not hypothetical. Stein ch. 1–2 and Shoup ch. 1–2 are tagged for fixed
+instances, and `Nat.exists_prime_gt` (infinitude of primes),
+`Nat.exists_prime_factorization`, `Nat.euclid_lemma`,
+`Nat.pow_prime_modeq_self` (Fermat, all `a`) and
+`Nat.totient_mul_of_coprime` are all landed at 0 axioms.
+
+The tags are **not** re-scored below, because they are correct for what they
+measure. Read them alongside the row-1 status in
+[`../graded-statement-families-number-theory-and-linear-algebra.md`](../graded-statement-families-number-theory-and-linear-algebra.md),
+which states all four rows per family for number theory and linear algebra, and
+[ADR-0716](../../research/09-decisions/adr-0716-row-two-of-a-decidable-subject.md),
+which explains why row 2 is empty for these subjects and what carries the
+dominance argument instead.
+
+One tag that does need qualifying rather than re-scoring: **Boyd–Vandenberghe's
+`computable` framing survives contact with the kernel's type theory.** There is
+no `List`, `Finset` or product type, but a vector is a finite function plus a
+dimension, and `Rat.dotN_cauchy_schwarz` is proved at *arbitrary* `n`. The real
+bound is that `funext` is absent, so matrix identities must be stated pointwise
+rather than as equality of functions — see
+[`../03-destinations/linear-algebra.md`](../03-destinations/linear-algebra.md).
+
 ---
 
 ## Stein, *Elementary Number Theory: Primes, Congruences, and Secrets*

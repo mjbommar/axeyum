@@ -47,10 +47,70 @@ linear algebra, residuals, factorization, spectral shadows, and checked Farkas
 contradictions; consult the generated resource audit rather than treating this
 scenario list as the entire field surface.
 
+## Proved in the kernel — including at general dimension
+
+This section is new (2026-08-30) and corrects an omission: the page described
+only the scenario and solver layers, and did not mention the Lean kernel at all.
+Measured with a freshly built `shape_search --include-constructed`, all
+axiom-free:
+
+- **General dimension `n` over ℚ.** `Rat.dotN : (Nat → Rat) → (Nat → Rat) →
+  Nat → Rat`, with bilinearity (`dotN_add_left`, `dotN_smul_left`), symmetry
+  (`dotN_comm`), positive semidefiniteness (`dotN_self_nonneg`) and
+  **`Rat.dotN_cauchy_schwarz` at arbitrary `n`**. A vector is a finite function
+  plus a dimension — the same encoding `Nat.prodRange` uses — so no `List` or
+  product type is required.
+- **Finite double sums.** `Rat.sumRange_swap` (the rectangular interchange
+  `Σᵢ Σⱼ f i j = Σⱼ Σᵢ f i j`), `Rat.sumRange_diagonal`, `Rat.mul_sumRange`,
+  `Rat.sumRange_congr`. `sumRange_swap` is exactly the lemma matrix-product
+  associativity needs.
+- **Fixed size 2 and 3 over ℚ.** `Rat.det2` with `det2_mul` (multiplicativity),
+  `det2_id`, `det2_swap_rows`, `det2_scale_row`, `det2_row_add`,
+  `det2_eq_zero_of_lin_dep`; `Rat.det3` with `det3_cofactor_row1`, `det3_id`,
+  `det3_scale_row`. Entries are passed as separate scalar arguments.
+- **A 2-D inner-product space over the constructed reals.** `CPoint` — 116
+  declarations — with `dot`, `cross`, `distSq`, `cauchy_schwarz`,
+  `dot_self_zero_iff`, and centroid / circumcentre / Euler-line geometry above
+  it.
+
+## The one hard type-theory bound: no `funext`
+
+`funext` is **absent** from this kernel (positive control: `congrFun'`, the
+other direction, is present). Two functions that agree pointwise are therefore
+not propositionally equal, which decides how a general-dimension statement must
+be phrased:
+
+- A conclusion that is a **scalar** is fine — which is why `dotN_cauchy_schwarz`
+  was reachable at general `n`.
+- A conclusion that is a **vector or matrix equation** — `(AB)C = A(BC)`,
+  `(AB)ᵀ = BᵀAᵀ`, `A·A⁻¹ = I` — cannot be stated as `Eq` of functions. State it
+  **pointwise**: `∀ i j, i < m → j < n → …`. The same applies to every
+  uniqueness statement.
+
+`Nat.Fin` does exist as a dependent inductive if a lane prefers bounds carried
+in the type rather than as hypotheses.
+
 ## Lean-horizon
 
-Dimension theory, the spectral theorem, and anything quantifying over all
-dimensions/vector spaces are Lean-horizon (Mathlib `LinearAlgebra`).
+The spectral theorem, dimension theory proper, and anything quantifying over
+arbitrary vector spaces or fields are Lean-horizon (Mathlib `LinearAlgebra`).
+**"Anything quantifying over all dimensions" is no longer accurate** and used to
+stand here: general `n` is reachable for scalar-valued conclusions and is
+already used (`Rat.dotN`). What is genuinely unbuilt is the matrix layer over
+`Nat → Nat → Rat` — see the graded-family note below, which sizes it as
+assembly over `sumRange_swap` rather than new mathematics.
+
+## Graded-family treatment
+
+[`../graded-statement-families-number-theory-and-linear-algebra.md`](../graded-statement-families-number-theory-and-linear-algebra.md)
+§3 gives the four linear-algebra families with their rows, and the type-theory
+verdict in full. Row 2 is empty for all of them, for the reason
+[ADR-0716](../../research/09-decisions/adr-0716-row-two-of-a-decidable-subject.md)
+gives: `Rat.le_total` is a proved theorem here, so there is no order decision to
+extract. The `Ax = b` family's row 3 — `simplex::feasible` / `check_farkas`,
+`lra::FarkasCertificate::verify`, and kernel reconstruction through
+`prove_unsat_to_lean_module` — is the strongest row 3 anywhere in the
+curriculum and is the template other subjects should be measured against.
 
 ## References
 
