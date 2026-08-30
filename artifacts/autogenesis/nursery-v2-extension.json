@@ -1,7 +1,7 @@
 {
   "coverage": {
-    "attested_cohort_entries": 214,
-    "ceiling_authority": "ADR-0615. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. This QUOTED cohort carries its own ceiling, equal to the ATTESTED cohort, so an unattested population can never outweigh an attested one. When it binds, re-attest (scripts/provision-lean-import-toolchain.sh) rather than raise it.",
+    "attested_cohort_entries": 411,
+    "ceiling_authority": "ADR-0615 as amended by ADR-0616. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. The rule on THIS cohort is ADR-0601's 'scaffolding, never headline': the UNATTESTED population may never outweigh the attested one. It is counted by attestation, not by manifest membership -- an extension row Lean accepted as a proof-free axiom against the pinned Mathlib is on the attested side, by the same method and the same command that produced nursery-v1's accepted-214-proof-free-axiom-types. not_elaborable rows count as UNATTESTED: Lean refused them, so they are worse than unchecked and must never buy headroom. When this binds, attest (scripts/attest-nursery-surface.py) rather than raise it.",
     "combined_evaluation_entries": 414,
     "entries": 200,
     "families": 20,
@@ -11,11 +11,12 @@
       "train": 50
     },
     "per_family": 10,
-    "quoted_cohort_ceiling": 214,
     "screen_rejections": {
       "hygienic-or-generated": 506,
       "not-statable-here": 1716
     },
+    "unattested_cohort_ceiling": 411,
+    "unattested_cohort_entries": 3,
     "v1_evaluation_entries": 214
   },
   "entries": [
@@ -6367,7 +6368,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "10dcf6c8ee4bdc01e1b1544b3c6085995fcfe34a84784b64c8ed09290c067750",
+  "extension_sha256": "269c3e141be40e07d5b6a0bfbbfc81dbab8d2ee859a78b6d81f9c109e95c57a6",
   "family_modules": {
     "integer-absolute-value": [
       "Mathlib.Data.Int.Order.Lemmas",
@@ -6465,8 +6466,9 @@
   "kind": "axeyum-autogenesis-nursery-extension",
   "limitations": [
     "Lean surface propositions are not Axeyum kernel-core terms.",
-    "These statements carry the quotation grade, not v1's real-Lean round-trip attestation; the two must not be reported together as one attested population.",
-    "depends_on is empty: no dependency-component analysis was run for these rows, so source_group is the Mathlib defining module rather than a declared weak component.",
+    "197 of 200 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 0 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
+    "Attestation does not make this an evaluation population equivalent to nursery-v1's. v1 freezes partitions against declared dependency weak components (policy.split_component_authority); here source_group is the Mathlib defining module and no dependency-component analysis was run, so a held-out row can share a component with a dispatchable one and nothing in this manifest sees it. Attestation grades the STATEMENT; this is a property of the ROW.",
+    "Any depends_on on these facts is ledger-owned and accrued after the fact (ADR-0615), never the preregistered component analysis above.",
     "Mathlib declarations remain external prior art and every Axeyum fact here remains open."
   ],
   "partition_assignment_rule": "New families are ordered by the lexicographic path of their primary Mathlib defining module -- a property of the external source, not of our capability -- and partitions are assigned by the repeating cycle held-out, development, train. The cycle starts at held-out because the measured deficiency is held-out breadth: of twelve v1 families exactly two are still open and blind. No target outcome was consulted; the rule is re-derived by --check, so the assignment cannot be hand-edited. ADR-0615: a family an earlier draw preregistered is FROZEN and the cycle runs over the new families only. Without that freeze, adding four families shifted the cycle index of seven of the first eight -- moving natural-division, 8 of whose 10 mirrors are proved, into held-out.",

@@ -173,6 +173,12 @@ autogenesis-nursery:
     python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
     python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
     python3 scripts/check-autogenesis-holdout-isolation.py
+    # ADR-0615 left this unregistered because it was red on a fact's statement
+    # drift; that is resolved, and ADR-0616 made it load-bearing -- R3 compares
+    # the UNATTESTED cohort against the attested one, so `surface_validation` is
+    # now something the ceiling depends on and this re-derives it.
+    python3 -m unittest scripts.tests.test_gen_autogenesis_nursery_refill
+    python3 scripts/gen-autogenesis-nursery-refill.py --check
     python3 -m unittest scripts.tests.test_check_autogenesis_holdout_contamination
     python3 scripts/check-autogenesis-holdout-contamination.py
     bash scripts/tests/test-dispatchable-frontier.sh

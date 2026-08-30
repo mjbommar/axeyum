@@ -143,6 +143,15 @@ step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.t
 step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
 step autogenesis-holdout-isolation-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
 step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-isolation.py
+# The nursery extension's reproduction gate. ADR-0615 left this deliberately
+# unregistered because it was red on arrival from one fact's statement drift;
+# that is resolved, and ADR-0616 made it load-bearing -- R3 now compares the
+# UNATTESTED cohort against the attested one, so a hand-edit to
+# `surface_validation` would change what the ceiling permits and this is what
+# re-derives it. It also refuses a preregistered `formal.statement` that has
+# been rewritten.
+step autogenesis-nursery-refill-tests python3 -m unittest scripts.tests.test_gen_autogenesis_nursery_refill
+step autogenesis-nursery-refill python3 scripts/gen-autogenesis-nursery-refill.py --check
 # The flywheel's input queue. `fact-frontier.py` prints the bands but never a
 # number that reaches zero, and exits 0 either way -- so a queue that has run
 # out reads exactly like a queue being worked down. This one fails when the

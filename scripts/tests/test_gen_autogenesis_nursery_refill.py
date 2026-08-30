@@ -1,4 +1,4 @@
-"""Controls for scripts/gen-autogenesis-nursery-refill.py (ADR-0615).
+"""Controls for scripts/gen-autogenesis-nursery-refill.py (ADR-0615, ADR-0616).
 
 One case per guard, each written so that deleting exactly that guard kills
 exactly this case. Case 0 is the false-positive control and runs against the
@@ -58,6 +58,29 @@ def v1_nursery(count: int = MODULE.V1_EVALUATION_ENTRIES) -> dict:
     return {"entries": entries}
 
 
+def validation(rows: list[dict], *, attested: int = 0, rejected: int = 0) -> dict:
+    """A `surface_validation` block covering `rows`, split three ways.
+
+    The first `attested` ids are accepted, the next `rejected` were REFUSED by
+    Lean, the rest have had no run at all. ADR-0616: R3 compares the union of
+    the last two against the first plus nursery-v1's 214.
+    """
+    ids = [r["fact_id"] for r in rows]
+    return {
+        "attested": sorted(ids[:attested]),
+        "not_elaborable": [{"fact_id": i, "source_name": None, "lean": "no"}
+                           for i in ids[attested:attested + rejected]],
+        "unattested": sorted(ids[attested + rejected:]),
+    }
+
+
+def real_validation() -> dict:
+    """What the committed manifest actually records about its own rows."""
+    manifest = json.loads(
+        (ROOT / "artifacts/autogenesis/nursery-v2-extension.json").read_text())
+    return manifest["surface_validation"]
+
+
 def frozen_manifest(partitions: dict[str, str]) -> dict:
     entries = [entry(f, p, f"Test.{f}_lemma") for f, p in sorted(partitions.items())]
     body = {"family_partitions": dict(partitions), "entries": entries}
@@ -101,7 +124,8 @@ class FalsePositiveControl(unittest.TestCase):
         snapshot = json.loads(
             (ROOT / "artifacts/autogenesis/kernel-environment-snapshot-v1.json"
              ).read_text())
-        MODULE.guard(manifest["entries"], real_v1, set(snapshot["declarations"]))
+        MODULE.guard(manifest["entries"], real_v1, set(snapshot["declarations"]),
+                     real_validation())
 
     def test_real_manifest_is_its_own_freeze(self):
         frozen = MODULE.frozen_partitions()
@@ -110,24 +134,86 @@ class FalsePositiveControl(unittest.TestCase):
 
 
 class CeilingTests(unittest.TestCase):
-    def test_quoted_cohort_over_its_own_ceiling_is_refused(self):
-        Harness(self, {"a": "held-out"})
-        rows = [entry("a", "held-out", f"Test.a_{i}", i)
-                for i in range(MODULE.EXTENSION_CEILING + 1)]
-        with self.assertRaisesRegex(MODULE.RefillError, r"R3 the quoted cohort"):
-            MODULE.guard(rows, v1_nursery(), set())
+    """R3 -- ADR-0616 counts the ceiling by ATTESTATION, not by membership."""
+
+    def _rows(self, count: int) -> list[dict]:
+        """`count` rows over a family set that satisfies every rule but R3.
+
+        Four families, so the module-path cycle yields two held-out (R5) and two
+        dispatchable (R4), and each row carries the partition the rule assigns
+        it (R6). Isolating R3 this way is what lets the refusal case and the
+        promotion case differ ONLY in which attestation bucket a row sits in.
+        """
+        names = ["a", "b", "c", "d"]
+        Harness(self, {n: "" for n in names})
+        assigned = MODULE.assign_partitions()
+        self.assertGreaterEqual(
+            sum(1 for p in assigned.values() if p == "held-out"), 2)
+        self.assertGreaterEqual(
+            sum(1 for p in assigned.values() if p != "held-out"), 1)
+        return [entry(names[i % len(names)],
+                      assigned[names[i % len(names)]],
+                      f"Test.{names[i % len(names)]}_{i}", i)
+                for i in range(count)]
+
+    # Each case below is sized so it dies under EXACTLY ONE mutation of R3,
+    # which needed arithmetic rather than intuition. With `n` rows of which `a`
+    # are attested, the extension contributes `n - a` to the unattested side
+    # (`not_elaborable` rows are unattested too, so `r` does not change that
+    # total) and `a` to the attested side, against v1's 214. R3 refuses when
+    #
+    #     n - a  >  214 + a
+    #
+    # The first draft used n = 215, a = 1 for the promotion case: 214 vs 215,
+    # which passes -- but ALSO passes with the extension's attested rows dropped
+    # from the sum (214 vs 214), so the mutant that reverts the promotion
+    # SURVIVED. The sizes below are chosen against the mutants, not against the
+    # rule as I imagined it.
+    OVER = MODULE.V1_EVALUATION_ENTRIES + 4    # 218
+    OVER_PLUS = MODULE.V1_EVALUATION_ENTRIES + 5   # 219
+
+    def test_unattested_cohort_outweighing_the_attested_one_is_refused(self):
+        # 218 rows nobody has run against 214 attested. Refused either way, so
+        # this case pins that a comparison exists and nothing finer.
+        rows = self._rows(self.OVER)
+        with self.assertRaisesRegex(MODULE.RefillError,
+                                    r"R3 the unattested cohort"):
+            MODULE.guard(rows, v1_nursery(), set(), validation(rows))
+
+    def test_an_attested_row_is_not_counted_as_scaffolding(self):
+        # THE PROMOTION. The identical population, with two rows moved from
+        # `unattested` to `attested`: 216 against 216, so it passes. Count the
+        # extension's attested rows as scaffolding (a flat `len(entries)`, or
+        # `attested_cohort` returning v1's 214 alone) and it becomes 216 > 214
+        # and refuses. This case is what makes ADR-0615's stated exit work, and
+        # it is the ONLY one that dies when the promotion is reverted.
+        rows = self._rows(self.OVER)
+        MODULE.guard(rows, v1_nursery(), set(), validation(rows, attested=2))
+
+    def test_a_lean_refused_row_never_buys_headroom(self):
+        # `not_elaborable` is a preregistered string Lean says is not a
+        # proposition. It HAS been through the round trip, so a checker counting
+        # "covered by a run" would promote it. 219 rows, 2 attested, 1 refused:
+        # 217 unattested against 216 attested, refused. Drop the refused row
+        # from the unattested side and it is 216 against 216 and passes.
+        rows = self._rows(self.OVER_PLUS)
+        with self.assertRaisesRegex(MODULE.RefillError,
+                                    r"R3 the unattested cohort"):
+            MODULE.guard(rows, v1_nursery(), set(),
+                         validation(rows, attested=2, rejected=1))
 
     def test_attested_cohort_moving_is_refused(self):
         Harness(self, {"a": "held-out", "b": "development"})
         rows = [entry("a", "held-out", "Test.a_x"),
                 entry("b", "development", "Test.b_x")]
         with self.assertRaisesRegex(MODULE.RefillError, r"R3 nursery-v1 holds"):
-            MODULE.guard(rows, v1_nursery(MODULE.V1_EVALUATION_ENTRIES - 1), set())
+            MODULE.guard(rows, v1_nursery(MODULE.V1_EVALUATION_ENTRIES - 1),
+                         set(), validation(rows))
 
-    def test_ceiling_is_the_attested_cohort_not_a_free_number(self):
-        self.assertEqual(MODULE.EXTENSION_CEILING, MODULE.V1_EVALUATION_ENTRIES)
+    def test_v1_keeps_its_own_policy_range(self):
         low, high = MODULE.V1_POLICY_RANGE
         self.assertEqual((low, high), (100, 300))
+        self.assertEqual(MODULE.V1_EVALUATION_ENTRIES, 214)
 
 
 class FreezeTests(unittest.TestCase):
@@ -156,14 +242,14 @@ class FreezeTests(unittest.TestCase):
                 entry("m-bravo", "held-out", "Test.m-bravo_x")]
         with mock.patch.object(MODULE, "assign_partitions", lambda: shifted):
             with self.assertRaisesRegex(MODULE.RefillError, r"R8 'm-alpha' was pre"):
-                MODULE.guard(rows, v1_nursery(), set())
+                MODULE.guard(rows, v1_nursery(), set(), validation([]))
 
     def test_dropping_a_preregistered_family_is_refused(self):
         frozen = {"m-alpha": "held-out", "m-bravo": "development"}
         Harness(self, {"m-alpha": "held-out"}, frozen=frozen)
         rows = [entry("m-alpha", "held-out", "Test.m-alpha_x")]
         with self.assertRaisesRegex(MODULE.RefillError, r"R8 preregistered fam"):
-            MODULE.guard(rows, v1_nursery(), set())
+            MODULE.guard(rows, v1_nursery(), set(), validation([]))
 
     def test_a_hand_edited_manifest_cannot_become_the_freeze(self):
         frozen = {"m-alpha": "held-out", "m-bravo": "development"}
@@ -196,7 +282,7 @@ class BlindnessTests(unittest.TestCase):
                 entry("c-new", "train", "Nat.also_new"),
                 entry("d-new", "held-out", "Nat.still_new")]
         with self.assertRaisesRegex(MODULE.RefillError, r"R9 1 held-out cand"):
-            MODULE.guard(rows, v1_nursery(), {"Nat.dvd_add"})
+            MODULE.guard(rows, v1_nursery(), {"Nat.dvd_add"}, validation([]))
 
     def test_a_declared_name_in_a_DISPATCHABLE_row_is_admitted(self):
         """False-positive control: R9 is about blindness, not about novelty."""
@@ -205,7 +291,7 @@ class BlindnessTests(unittest.TestCase):
                 entry("b-new", "development", "Nat.dvd_add"),
                 entry("c-new", "train", "Nat.also_declared"),
                 entry("d-new", "held-out", "Nat.still_new")]
-        MODULE.guard(rows, v1_nursery(), {"Nat.dvd_add", "Nat.also_declared"})
+        MODULE.guard(rows, v1_nursery(), {"Nat.dvd_add", "Nat.also_declared"}, validation([]))
 
     def test_a_frozen_held_out_row_is_not_re_judged(self):
         """Grandfathering: repairing an earlier draw is an ADR-0542 amendment,
@@ -213,7 +299,7 @@ class BlindnessTests(unittest.TestCase):
         frozen = {"m-alpha": "held-out"}
         Harness(self, frozen, frozen=frozen)
         rows = [entry("m-alpha", "held-out", "Nat.dvd_add")]
-        MODULE.guard(rows, v1_nursery(), {"Nat.dvd_add"})
+        MODULE.guard(rows, v1_nursery(), {"Nat.dvd_add"}, validation([]))
 
 
 class RefillMustRefillTests(unittest.TestCase):
@@ -225,14 +311,14 @@ class RefillMustRefillTests(unittest.TestCase):
         with mock.patch.object(MODULE, "assign_partitions",
                                lambda: {"a-new": "held-out", "b-new": "held-out"}):
             with self.assertRaisesRegex(MODULE.RefillError, r"R4 every refill row"):
-                MODULE.guard(rows, v1_nursery(), set())
+                MODULE.guard(rows, v1_nursery(), set(), validation([]))
 
     def test_a_draw_adding_one_held_out_family_is_refused(self):
         Harness(self, {"a-new": "?", "b-new": "?"})
         rows = [entry("a-new", "held-out", "Nat.x"),
                 entry("b-new", "development", "Nat.y")]
         with self.assertRaisesRegex(MODULE.RefillError, r"R5 the refill adds 1"):
-            MODULE.guard(rows, v1_nursery(), set())
+            MODULE.guard(rows, v1_nursery(), set(), validation([]))
 
     def test_a_reproduction_adding_nothing_is_not_judged_as_a_draw(self):
         """--check re-derives the committed manifest and adds no family; R4/R5
@@ -240,7 +326,8 @@ class RefillMustRefillTests(unittest.TestCase):
         unrunnable forever."""
         frozen = {"m-alpha": "held-out"}
         Harness(self, frozen, frozen=frozen)
-        MODULE.guard([entry("m-alpha", "held-out", "Nat.x")], v1_nursery(), set())
+        MODULE.guard([entry("m-alpha", "held-out", "Nat.x")], v1_nursery(), set(),
+                     validation([]))
 
 
 class FactReconciliationTests(unittest.TestCase):
@@ -285,6 +372,99 @@ class FactReconciliationTests(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("is missing", problems[0])
         self.assertFalse(MODULE.fact_path(self.entry["fact_id"]).exists())
+
+
+class AttestationProvenanceTests(unittest.TestCase):
+    """ADR-0616 -- an accepted row buys ceiling headroom, so WHICH Mathlib
+    the run read stopped being descriptive and became load-bearing."""
+
+    def _record(self, commit: str) -> pathlib.Path:
+        path = pathlib.Path(tempfile.mkdtemp()) / "run.json"
+        path.write_text(json.dumps({
+            "host": "s5",
+            "mathlib_commit": commit,
+            "lean_version": "Lean (version 4.30.0)",
+            "module_sha256": "0" * 64,
+            "negative_control_rejected": True,
+            "attested_fact_ids": ["F:test-a-0"],
+            "elapsed_seconds": 1.0,
+            "failures": [],
+        }))
+        return path
+
+    def test_a_run_against_another_mathlib_commit_is_refused(self):
+        rows = [entry("a", "held-out", "Test.a_x")]
+        with self.assertRaisesRegex(MODULE.RefillError, r"not the pinned"):
+            MODULE.surface_validation(rows, self._record("deadbeef" * 5))
+
+    def test_a_run_at_the_pinned_commit_attests(self):
+        # False-positive control for the case above: identical record, only the
+        # commit differs, and the row lands in `attested`.
+        rows = [entry("a", "held-out", "Test.a_x")]
+        got = MODULE.surface_validation(rows, self._record(MODULE.SOURCE_COMMIT))
+        self.assertEqual(got["attested"], ["F:test-a-0"])
+        self.assertEqual(got["unattested"], [])
+
+    def test_a_run_whose_negative_control_was_accepted_is_refused(self):
+        rows = [entry("a", "held-out", "Test.a_x")]
+        path = self._record(MODULE.SOURCE_COMMIT)
+        record = json.loads(path.read_text())
+        record["negative_control_rejected"] = False
+        path.write_text(json.dumps(record))
+        with self.assertRaisesRegex(MODULE.RefillError, r"negative control"):
+            MODULE.surface_validation(rows, path)
+
+
+class LimitationsTests(unittest.TestCase):
+    """ADR-0616 -- the manifest may not assert two incompatible grades.
+
+    The committed file carried a populated `surface_validation.attested` list
+    AND a limitation reading "these statements carry the quotation grade, not
+    v1's real-Lean round-trip attestation". Both cannot be current.
+    """
+
+    def test_a_fully_attested_cohort_is_not_described_as_quotation(self):
+        rows = [entry("a", "held-out", f"Test.a_{i}", i) for i in range(3)]
+        text = " ".join(MODULE.limitations(validation(rows, attested=3)))
+        self.assertNotIn("carry the quotation grade", text)
+        self.assertIn("real-Lean round-trip attestation", text)
+
+    def test_an_unrun_cohort_is_still_described_as_quotation(self):
+        # The other direction, and the reason this is derived rather than
+        # deleted: a manifest nobody has attested must still say so.
+        rows = [entry("a", "held-out", f"Test.a_{i}", i) for i in range(3)]
+        text = " ".join(MODULE.limitations(validation(rows)))
+        self.assertIn("carry the quotation grade", text)
+
+    def test_a_partly_attested_cohort_names_both_populations(self):
+        rows = [entry("a", "held-out", f"Test.a_{i}", i) for i in range(5)]
+        text = " ".join(MODULE.limitations(validation(rows, attested=2,
+                                                      rejected=1)))
+        self.assertIn("2 of 5", text)
+        self.assertIn("2 have had no run", text)
+        self.assertIn("1 were REFUSED", text)
+
+    def test_the_dependency_component_gap_survives_full_attestation(self):
+        # The difference attestation does NOT repair. v1 freezes partitions
+        # against declared dependency weak components; this cohort's
+        # source_group is a Mathlib module. Promoting on the attestation axis
+        # must not launder that away -- it is a property of the ROW.
+        rows = [entry("a", "held-out", f"Test.a_{i}", i) for i in range(3)]
+        text = " ".join(MODULE.limitations(validation(rows, attested=3)))
+        self.assertIn("declared dependency weak components", text)
+        self.assertIn("source_group", text)
+
+    def test_the_committed_manifest_does_not_contradict_its_own_grade(self):
+        # False-positive control against the REAL file: the defect this class
+        # exists for, asserted where it actually occurred.
+        manifest = json.loads(
+            (ROOT / "artifacts/autogenesis/nursery-v2-extension.json").read_text())
+        text = " ".join(manifest["limitations"])
+        attested = manifest["surface_validation"]["attested"]
+        self.assertGreater(len(attested), 0)
+        self.assertNotIn("carry the quotation grade", text)
+        self.assertEqual(manifest["limitations"],
+                         MODULE.limitations(manifest["surface_validation"]))
 
 
 if __name__ == "__main__":

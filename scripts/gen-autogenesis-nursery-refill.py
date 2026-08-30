@@ -362,8 +362,47 @@ V1_EVALUATION_ENTRIES = 214
 # never headline" rule ADR-0601 states for imports. When this binds, the answer
 # is to re-attest (`scripts/provision-lean-import-toolchain.sh`, ~5 min on this
 # host), not to raise it again.
+#
+# ADR-0616. That last sentence is the exit ADR-0615 named, and it did not work,
+# because R3 compared `len(entries)` -- a FLAT COUNT of the extension -- against
+# 214. Re-attesting a row changed nothing: 197 of 200 rows carried the real-Lean
+# round trip and all 200 still counted as scaffolding, so the only way past the
+# ceiling was the raise the ADR rejected. The comparison now says what the rule
+# says. `attested_cohort` is every row that HAS been through the round trip and
+# was accepted (v1's 214, plus the extension's accepted rows);
+# `unattested_cohort` is every extension row that has not. A draw's new rows land
+# in `unattested` by construction -- `surface_validation()` puts an id no run has
+# covered there -- so the guard still binds on a draw and is still cleared only
+# by running Lean, which is exactly the cadence ADR-0615 wanted.
+#
+# `not_elaborable` rows count on the UNATTESTED side deliberately. They have been
+# through the round trip and Lean REFUSED them, so they are preregistered strings
+# that are not propositions: strictly worse than a row nobody has checked, and
+# they must never buy headroom.
 V1_POLICY_RANGE = (100, 300)
-EXTENSION_CEILING = V1_EVALUATION_ENTRIES
+
+
+def attested_cohort(v1_evaluation: list[Any], validation: dict[str, Any]) -> int:
+    """Rows that went through the real-Lean round trip and were ACCEPTED.
+
+    nursery-v1's 214 were accepted as a block: its source catalog records
+    `observed_result: accepted-214-proof-free-axiom-types` against a pinned
+    module whose sha256 still matches on disk. The extension's are accepted per
+    row, by the same method, with a mandatory negative control v1's run did not
+    carry -- see ADR-0616.
+    """
+    return len(v1_evaluation) + len(validation.get("attested", []))
+
+
+def unattested_cohort(validation: dict[str, Any]) -> int:
+    """Extension rows carrying no ACCEPTED round trip.
+
+    Both buckets count: `unattested` (no run has read this row) and
+    `not_elaborable` (a run read it and Lean refused it). The second is worse
+    than the first, so folding them together is the conservative direction.
+    """
+    return (len(validation.get("unattested", []))
+            + len(validation.get("not_elaborable", [])))
 
 
 class RefillError(RuntimeError):
@@ -669,8 +708,16 @@ def select(inventory: dict[str, dict[str, Any]], env: set[str],
 
 
 def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
-          env: set[str]) -> None:
-    """Every rule the refill claims to respect, asserted rather than described."""
+          env: set[str], validation: dict[str, Any]) -> None:
+    """Every rule the refill claims to respect, asserted rather than described.
+
+    `validation` is the surface grade the emitted manifest will carry, computed
+    from the same entries. R3 needs it, and it is a REQUIRED argument rather
+    than something this function re-derives: a default would have to mean either
+    "assume attested" (a guard that cannot fail) or "assume unattested" (a guard
+    that refuses the committed manifest), and both are wrong answers to a
+    question the caller already knows.
+    """
     partitions = assign_partitions()
     frozen = frozen_partitions()
     # R4 and R5 ask what THIS draw adds. Once a second draw exists, every
@@ -695,9 +742,10 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
     if clash:
         raise RefillError(f"R2 new families collide with v1 families: {clash}")
 
-    # R3 -- the ceiling, applied PER COHORT (ADR-0615). v1's own
+    # R3 -- the ceiling, applied PER COHORT (ADR-0615) and counted by
+    # ATTESTATION rather than by manifest membership (ADR-0616). v1's own
     # `policy.evaluation_fact_count` governs v1, and is asserted here rather
-    # than assumed; the quoted cohort may not outgrow the attested one.
+    # than assumed; the UNATTESTED population may not outweigh the attested one.
     v1_evaluation = [e for e in v1_nursery["entries"]
                      if e["partition"] in ("train", "development", "held-out")]
     if len(v1_evaluation) != V1_EVALUATION_ENTRIES:
@@ -709,12 +757,15 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
         raise RefillError(
             f"R3 nursery-v1's {len(v1_evaluation)} evaluation entries fall "
             f"outside its own {low}..{high} policy range")
-    if len(entries) > EXTENSION_CEILING:
+    attested = attested_cohort(v1_evaluation, validation)
+    unattested = unattested_cohort(validation)
+    if unattested > attested:
         raise RefillError(
-            f"R3 the quoted cohort would be {len(entries)} rows, over the "
-            f"{EXTENSION_CEILING}-row ceiling (the size of the ATTESTED "
-            f"cohort). Re-attest rather than raise it: "
-            f"scripts/provision-lean-import-toolchain.sh")
+            f"R3 the unattested cohort would be {unattested} rows against "
+            f"{attested} attested, so scaffolding would outweigh the "
+            f"population that carries the real-Lean round trip. Attest rather "
+            f"than raise it: scripts/attest-nursery-surface.py then "
+            f"--ingest-surface-attestation")
 
     # R4 and R5 judge a DRAW. An invocation that adds no family is a
     # reproduction -- `--check`, or an idempotent re-run -- and there is no
@@ -865,6 +916,19 @@ def surface_validation(entries: list[dict[str, Any]],
             raise RefillError(
                 f"{ingest} records a run whose negative control was ACCEPTED, "
                 f"so the run distinguishes nothing and cannot grade any row")
+        # ADR-0616. An accepted row now counts toward R3's attested cohort, so
+        # WHICH Mathlib the run read is load-bearing rather than descriptive.
+        # Every `formal.statement` here is a byte-identical quotation of the
+        # extractor's output at SOURCE_COMMIT; a run against any other commit
+        # grades those strings against a library they were not quoted from, and
+        # would silently buy ceiling headroom for a round trip that never
+        # happened at the pinned version.
+        if record.get("mathlib_commit") != SOURCE_COMMIT:
+            raise RefillError(
+                f"{ingest} records a run against Mathlib "
+                f"{record.get('mathlib_commit')!r}, not the pinned "
+                f"{SOURCE_COMMIT}; a row quoted from one commit is not "
+                f"attested by elaborating it against another")
         covered = set(record.get("attested_fact_ids") or [])
         if not covered:
             raise RefillError(
@@ -921,11 +985,73 @@ def surface_validation(entries: list[dict[str, Any]],
     return base
 
 
+def limitations(validation: dict[str, Any]) -> list[str]:
+    """What this cohort still does NOT carry -- derived, never asserted.
+
+    ADR-0616. This list used to be a literal, and it went false the same way the
+    grade did before ADR-0615's predecessor made THAT derived: it said "these
+    statements carry the quotation grade, not v1's real-Lean round-trip
+    attestation" while `surface_validation.attested` in the same file named 197
+    rows that had had exactly that round trip. A file asserting both is worse
+    than one asserting only the weaker claim, because a reader cannot tell which
+    sentence is current.
+
+    So the attestation clause is computed from the run, and what remains is the
+    difference attestation does NOT repair: v1's partitions are frozen against
+    DECLARED DEPENDENCY WEAK COMPONENTS (`policy.split_component_authority`,
+    `split_leakage: no-declared-component-may-cross-evaluation-partitions`),
+    while this cohort's `source_group` is the Mathlib defining module and no
+    component analysis was run. Two theorems in different modules can sit in one
+    dependency component, so a held-out row here can be entailed by a train row
+    here and nothing in this manifest would see it. That is a property of the
+    ROW, not of the statement, and no amount of elaboration touches it.
+    """
+    attested = len(validation.get("attested", []))
+    unattested = len(validation.get("unattested", []))
+    rejected = len(validation.get("not_elaborable", []))
+    total = attested + unattested + rejected
+    if attested and not unattested and not rejected:
+        grade_note = (
+            f"All {attested} statements carry the same real-Lean round-trip "
+            f"attestation as nursery-v1's 214 -- declared as proof-free axioms "
+            f"after `import Mathlib` at the pinned commit, per row and with a "
+            f"negative control v1's block run did not carry.")
+    elif attested:
+        grade_note = (
+            f"{attested} of {total} statements carry the same real-Lean "
+            f"round-trip attestation as nursery-v1's 214; {unattested} have "
+            f"had no run and {rejected} were REFUSED by Lean. Only the "
+            f"attested rows may be reported beside v1's as one attested "
+            f"population; see surface_validation for which is which.")
+    else:
+        grade_note = (
+            f"These {total} statements carry the quotation grade, not v1's "
+            f"real-Lean round-trip attestation; the two must not be reported "
+            f"together as one attested population.")
+    return [
+        "Lean surface propositions are not Axeyum kernel-core terms.",
+        grade_note,
+        "Attestation does not make this an evaluation population equivalent to "
+        "nursery-v1's. v1 freezes partitions against declared dependency weak "
+        "components (policy.split_component_authority); here source_group is "
+        "the Mathlib defining module and no dependency-component analysis was "
+        "run, so a held-out row can share a component with a dispatchable one "
+        "and nothing in this manifest sees it. Attestation grades the "
+        "STATEMENT; this is a property of the ROW.",
+        "Any depends_on on these facts is ledger-owned and accrued after the "
+        "fact (ADR-0615), never the preregistered component analysis above.",
+        "Mathlib declarations remain external prior art and every Axeyum "
+        "fact here remains open.",
+    ]
+
+
 def build_extension(entries: list[dict[str, Any]],
                     reasons: Counter,
-                    ingest: pathlib.Path | None = None) -> dict[str, Any]:
+                    validation: dict[str, Any]) -> dict[str, Any]:
     partitions = assign_partitions()
     counts = Counter(e["partition"] for e in entries)
+    attested = V1_EVALUATION_ENTRIES + len(validation.get("attested", []))
+    unattested = unattested_cohort(validation)
     extension = {
         "schema_version": 1,
         "kind": "axeyum-autogenesis-nursery-extension",
@@ -944,7 +1070,7 @@ def build_extension(entries: list[dict[str, Any]],
             "statement_inventory": str(INVENTORY),
             "statement_inventory_sha256": INVENTORY_SHA256,
         },
-        "surface_validation": surface_validation(entries, ingest),
+        "surface_validation": validation,
         "screens": {
             "divergence_registry": "artifacts/autogenesis/mirror-divergence-registry.json",
             "statable_here": "artifacts/autogenesis/mathlib-statable-vocabulary-v1.json",
@@ -981,30 +1107,28 @@ def build_extension(entries: list[dict[str, Any]],
             "partition_counts": dict(sorted(counts.items())),
             "v1_evaluation_entries": V1_EVALUATION_ENTRIES,
             "combined_evaluation_entries": V1_EVALUATION_ENTRIES + len(entries),
-            "attested_cohort_entries": V1_EVALUATION_ENTRIES,
-            "quoted_cohort_ceiling": EXTENSION_CEILING,
+            "attested_cohort_entries": attested,
+            "unattested_cohort_entries": unattested,
+            "unattested_cohort_ceiling": attested,
             "ceiling_authority": (
-                "ADR-0615. nursery-v1's policy.evaluation_fact_count 100..300 "
-                "governs nursery-v1, which check-autogenesis-nursery.py checks "
-                "against its 214 entries alone. This QUOTED cohort carries its "
-                "own ceiling, equal to the ATTESTED cohort, so an unattested "
-                "population can never outweigh an attested one. When it binds, "
-                "re-attest (scripts/provision-lean-import-toolchain.sh) rather "
-                "than raise it."),
+                "ADR-0615 as amended by ADR-0616. nursery-v1's "
+                "policy.evaluation_fact_count 100..300 governs nursery-v1, "
+                "which check-autogenesis-nursery.py checks against its 214 "
+                "entries alone. The rule on THIS cohort is ADR-0601's "
+                "'scaffolding, never headline': the UNATTESTED population may "
+                "never outweigh the attested one. It is counted by attestation, "
+                "not by manifest membership -- an extension row Lean accepted "
+                "as a proof-free axiom against the pinned Mathlib is on the "
+                "attested side, by the same method and the same command that "
+                "produced nursery-v1's accepted-214-proof-free-axiom-types. "
+                "not_elaborable rows count as UNATTESTED: Lean refused them, so "
+                "they are worse than unchecked and must never buy headroom. "
+                "When this binds, attest (scripts/attest-nursery-surface.py) "
+                "rather than raise it."),
             "screen_rejections": dict(sorted(
                 (k, v) for k, v in reasons.items() if not k.startswith("selected:"))),
         },
-        "limitations": [
-            "Lean surface propositions are not Axeyum kernel-core terms.",
-            "These statements carry the quotation grade, not v1's real-Lean "
-            "round-trip attestation; the two must not be reported together as "
-            "one attested population.",
-            "depends_on is empty: no dependency-component analysis was run for "
-            "these rows, so source_group is the Mathlib defining module rather "
-            "than a declared weak component.",
-            "Mathlib declarations remain external prior art and every Axeyum "
-            "fact here remains open.",
-        ],
+        "limitations": limitations(validation),
         "entries": entries,
     }
     extension["extension_sha256"] = digest(extension)
@@ -1299,9 +1423,13 @@ def main() -> int:
                       if row["kind"] == "external-source"}
         entries, reasons = select(inventory, env, vocabulary, registry, catalogued)
         v1_nursery = load_json(AUTOGEN / "nursery-v1.json")
-        guard(entries, v1_nursery, env)
-        extension = build_extension(entries, reasons,
-                                    args.ingest_surface_attestation)
+        # Computed once and handed to both: R3 counts the attested/unattested
+        # split, and the manifest publishes it. Deriving it twice would let the
+        # guard and the emitted file disagree about the very thing being gated.
+        validation = surface_validation(entries,
+                                        args.ingest_surface_attestation)
+        guard(entries, v1_nursery, env, validation)
+        extension = build_extension(entries, reasons, validation)
 
         outputs = {VOCABULARY: render(vocabulary), EXTENSION: render(extension)}
 
@@ -1344,7 +1472,12 @@ def main() -> int:
               f"bridge={len(vocabulary['bridge'])}|"
               f"env={len(env)}|"
               + "|".join(f"{k}={v}" for k, v in sorted(counts.items()))
-              + f"|combined={V1_EVALUATION_ENTRIES + len(entries)}")
+              + f"|combined={V1_EVALUATION_ENTRIES + len(entries)}"
+              # ADR-0616: the two numbers R3 actually compares. Printing the
+              # entry count alone hid that 197 rows had been attested while the
+              # ceiling still counted all 200 as scaffolding.
+              + f"|attested={extension['coverage']['attested_cohort_entries']}"
+              + f"|unattested={extension['coverage']['unattested_cohort_entries']}")
     except RefillError as error:
         print(f"autogenesis-nursery-refill: {error}", file=sys.stderr)
         return 1
