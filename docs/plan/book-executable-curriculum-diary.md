@@ -284,3 +284,33 @@ therefore bind its Boolean terms to the saved DIMACS, recheck DRAT and LRAT,
 and replay a satisfiable mutated formula through concrete execution. The
 existing 21 machine tests and nine evidence route/control tests pass after the
 refactor, including exhaustive width-eight concrete flags.
+
+The certificate route is now implemented. For each supported A0 width (8, 16,
+24, 32, 40, 48, 56, and 64), the evidence producer instantiates that shared
+addition definition with Axeyum IR terms and asks whether any operand pair
+differs from the architecture reference predicates. The saved artifact carries
+the deterministic DIMACS plus DRAT and LRAT refutations. Replay reconstructs
+the Boolean term from source, compares its rendered-term digest, regenerates
+the term-to-CNF binding, checks LRAT, and also checks the published DRAT. A
+certificate with malformed DRAT is rejected in the end-to-end test.
+
+The negative control inverts the derived carry bit. The QF_BV route reports the
+mutated query satisfiable. The evidence producer then independently enumerates
+the complete 65,536-pair width-eight term domain with the Axeyum IR evaluator,
+obtains the deterministic witness `(0, 0)`, and replays encoded A0 `add` through
+the concrete `step` function. Concrete carry is false and mutated carry true;
+the destination result also replays. This establishes a real counterexample
+path rather than merely checking that the proof producer declined.
+
+The claim remains fixed-width and route-specific: eight finite QF_BV theorems,
+not an induction theorem over arbitrary widths. The symbolic adapter's mapping
+to IR primitives and Axeyum's term-to-CNF lowering remain explicit trusted
+reductions. LRAT checks the clausal refutation; it does not erase those
+boundaries.
+
+Strict Clippy also exposed that the default QF_BV profile compiled
+`export_qf_bv_unsat_proof_with_progress` without exporting it. The solver
+facade now exports the progress-aware function from both its canonical proof
+namespace and crate-root compatibility surface, removing the downstream
+dead-code failure instead of suppressing it. The semantic package is version 6
+and declares `domain-parametric-addition`.

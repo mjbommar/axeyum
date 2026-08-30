@@ -162,7 +162,9 @@ version = "0.1.0"
 name = "axeyum-machine-evidence"
 version = "0.1.0"
 dependencies = [
+ "axeyum-ir",
  "axeyum-machine",
+ "axeyum-solver",
  "serde",
  "serde_json",
  "sha2",

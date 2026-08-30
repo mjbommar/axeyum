@@ -8,8 +8,9 @@ use axeyum_machine_evidence::{
     check_decoder_reserved_bit_control, check_decoder_roundtrip, check_memory_byte_order_control,
     check_memory_trace, check_run_classification, check_run_false_halt_control,
     check_step_coverage, check_step_hidden_write_control, check_step_mutation_suite_control,
+    check_symbolic_addition, check_symbolic_addition_inverted_carry_control,
     decoder_roundtrip_report, memory_trace_report, run_classification_report, semantic_package,
-    step_coverage_report, write_json,
+    step_coverage_report, symbolic_addition_report, write_json,
 };
 
 fn path(name: &str) -> PathBuf {
@@ -17,6 +18,47 @@ fn path(name: &str) -> PathBuf {
         "axeyum-machine-flagship-{}-{name}",
         std::process::id()
     ))
+}
+
+#[test]
+fn symbolic_addition_certificates_recheck_and_mutation_replays() {
+    let package_path = path("symbolic-add-package.json");
+    let report_path = path("symbolic-add-report.json");
+    write_json(&package_path, &semantic_package()).unwrap();
+    let report = symbolic_addition_report(&package_path).unwrap();
+    assert_eq!(
+        report
+            .proofs
+            .iter()
+            .map(|proof| proof.width)
+            .collect::<Vec<_>>(),
+        [8, 16, 24, 32, 40, 48, 56, 64]
+    );
+    assert!(report.proofs.iter().all(|proof| proof.lrat.is_some()));
+    assert!(report.inverted_carry_counterexample.replayed_through_step);
+    assert_ne!(
+        report.inverted_carry_counterexample.concrete_carry,
+        report.inverted_carry_counterexample.mutated_carry
+    );
+    write_json(&report_path, &report).unwrap();
+    assert_eq!(
+        check_symbolic_addition(&package_path, &report_path).unwrap(),
+        report
+    );
+    let mut tampered = report.clone();
+    tampered.proofs[0].drat.push_str("not-a-drat-clause\n");
+    write_json(&report_path, &tampered).unwrap();
+    assert!(matches!(
+        check_symbolic_addition(&package_path, &report_path),
+        Err(EvidenceError::SemanticMismatch(_))
+    ));
+    write_json(&report_path, &report).unwrap();
+    assert!(matches!(
+        check_symbolic_addition_inverted_carry_control(&package_path, &report_path),
+        Err(EvidenceError::SemanticMismatch(_))
+    ));
+    fs::remove_file(package_path).unwrap();
+    fs::remove_file(report_path).unwrap();
 }
 
 #[test]

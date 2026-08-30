@@ -266,7 +266,8 @@ pub mod proofs {
         UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
         export_qf_abv_unsat_proof_within, export_qf_aufbv_unsat_proof,
         export_qf_aufbv_unsat_proof_within, export_qf_bv_unsat_proof,
-        export_qf_bv_unsat_proof_within, export_qf_lia_unsat_proof, export_qf_uf_unsat_proof,
+        export_qf_bv_unsat_proof_with_progress, export_qf_bv_unsat_proof_within,
+        export_qf_lia_unsat_proof, export_qf_uf_unsat_proof,
     };
 
     /// Alethe proof emission and checking.
@@ -864,7 +865,8 @@ pub use model::Model;
 pub use proof::{
     CheckBudget, CheckingProgress, UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof,
     export_qf_abv_unsat_proof, export_qf_abv_unsat_proof_within, export_qf_aufbv_unsat_proof,
-    export_qf_aufbv_unsat_proof_within, export_qf_bv_unsat_proof, export_qf_bv_unsat_proof_within,
+    export_qf_aufbv_unsat_proof_within, export_qf_bv_unsat_proof,
+    export_qf_bv_unsat_proof_with_progress, export_qf_bv_unsat_proof_within,
     export_qf_lia_unsat_proof, export_qf_uf_unsat_proof,
 };
 pub use sat_bv_backend::SatBvBackend;
