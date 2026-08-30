@@ -353,18 +353,34 @@ def remeasure(pins: dict[str, Any]) -> dict[str, Any]:
         "modules_already_owned_by_a_family": len(owned),
         "top_sole_blockers": dict(sorted(sole_blockers.most_common(40))),
         "sole_blocker_note": (
-            "A constant that is the ONLY thing blocking a row cannot enter the "
-            "bridge on its own: check-dispatchable-frontier.py's S2 requires a "
-            "bridge constant to be witnessed by an already-SETTLED mirror, and "
-            "a mirror using it cannot be preregistered while the screen rejects "
-            "it. The v1 nursery predates the screen and is what bootstrapped "
-            "the current 70 bridge constants; nothing can bootstrap another one "
-            "the same way. Measured 2026-08-30: instSubNat is the sole blocker "
-            "of 292 rows, and instAddNat / instMulNat / HSub.hSub / instHSub "
-            "are ALREADY bridged -- so the Nat subtraction instance is the "
-            "missing sibling of four constants the bridge already has, while "
-            "Nat.sub itself is in the environment. This is a real ceiling on "
-            "the pool and it needs a decision, not a screen change."),
+            "A constant that is the ONLY thing blocking a row is where pool "
+            "growth would come from, and the two routes are NOT symmetric. "
+            "Measured 2026-08-30, and the first reading of this was wrong in a "
+            "way worth recording: the bridge CAN still grow, but only a "
+            "little, and only from one fixed population. "
+            "check-dispatchable-frontier.py's S2 requires every bridge "
+            "constant to be witnessed by a SETTLED mirror, and the witnesses "
+            "come from mathlib-nat-int-fact-catalog-v1.json -- 202 rows, 162 "
+            "settled, sharing ZERO source names with either nursery manifest. "
+            "Settling all 40 remaining catalog rows would take the bridge from "
+            "70 to 79 constants and the unused-statable pool from 2,354 to "
+            "2,526. That is the whole of it; the catalog is not growing. "
+            "So route 1 (bridge growth) has a hard ceiling of +172 candidates, "
+            "and route 2 (declaring the constant in the kernel, which refreshes "
+            "the environment snapshot) is the one with real headroom -- and it "
+            "is ordinary proof work, which is the point. "
+            "The exception worth a decision: instSubNat is the sole blocker of "
+            "292 rows and is pure ELABORATION, not content. Nat.sub is already "
+            "in the environment and instAddNat / instMulNat / HSub.hSub / "
+            "instHSub are already bridged, so it is the missing sibling of four "
+            "constants the bridge has -- but NO catalog row mentions it, so S2 "
+            "can never admit it. Same for GT.gt (17), GE.ge (13) and "
+            "NatCast.natCast (14). Those are not unstatable propositions; they "
+            "are propositions the screen cannot see are statable. "
+            "The screen is NOT a hand-written word list and should not be "
+            "loosened into one: it is the kernel environment plus a derived "
+            "bridge, and every rejection names a Lean constant this kernel does "
+            "not declare."),
     }
 
 
