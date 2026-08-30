@@ -88,6 +88,7 @@ mod euler;
 mod euler_totient;
 mod fibonacci;
 mod gcd;
+mod gcd_scaled_mirrors;
 mod modeq;
 mod modeq_family;
 mod modinv;
@@ -1384,6 +1385,21 @@ pub struct IntPrelude {
     /// ModEq n (a*c) (b*e)` -- Mathlib's `Int.ModEq.mul`, UNCONDITIONAL in
     /// `n` (the existing [`Self::mod_eq_mul`] needs `0 < n`).
     pub mod_eq_mul_general: NameId,
+
+    // -- `int-gcd-mul-transport` lane: the ℤ transport of
+    // `nat_prelude/gcd_mul_right_mirrors.rs`'s three `ml430` mirrors
+    // (`int_prelude/gcd_scaled_mirrors.rs`). Appended here for the same
+    // pure-addition-diff reason as the block above.
+    /// `dvd_gcd_mul_iff_dvd_mul : ∀ k n m, k ∣ ofNat (gcd k n) * m ↔ k ∣ n * m`
+    /// -- Mathlib's `Int.dvd_gcd_mul_iff_dvd_mul`.
+    pub dvd_gcd_mul_iff_dvd_mul: NameId,
+    /// `dvd_mul_gcd_iff_dvd_mul : ∀ k n m, k ∣ n * ofNat (gcd k m) ↔ k ∣ n * m`
+    /// -- Mathlib's `Int.dvd_mul_gcd_iff_dvd_mul`.
+    pub dvd_mul_gcd_iff_dvd_mul: NameId,
+    /// `dvd_gcd_mul_gcd_iff_dvd_mul : ∀ k n m,
+    /// k ∣ (ofNat (gcd k n)) * (ofNat (gcd k m)) ↔ k ∣ n * m` -- Mathlib's
+    /// `Int.dvd_gcd_mul_gcd_iff_dvd_mul`.
+    pub dvd_gcd_mul_gcd_iff_dvd_mul: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1696,6 +1712,12 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_dvd: child(kernel, "mod_eq_dvd"),
         mod_eq_emod_eq: child(kernel, "mod_eq_emod_eq"),
         mod_eq_mul_general: child(kernel, "mod_eq_mul_general"),
+
+        // `int-gcd-mul-transport` lane -- see the matching struct-field block
+        // above.
+        dvd_gcd_mul_iff_dvd_mul: child(kernel, "dvd_gcd_mul_iff_dvd_mul"),
+        dvd_mul_gcd_iff_dvd_mul: child(kernel, "dvd_mul_gcd_iff_dvd_mul"),
+        dvd_gcd_mul_gcd_iff_dvd_mul: child(kernel, "dvd_gcd_mul_gcd_iff_dvd_mul"),
     }
 }
 
@@ -1953,6 +1975,14 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // Placed last so every lemma it composes (gcd/dvd/modeq family) is
         // already declared.
         dvd_gcd_mirrors::declare_all(&mut d)?;
+        // `int-gcd-mul-transport` lane: the ℤ transport of
+        // `nat_prelude/gcd_mul_right_mirrors.rs`'s three mirrors. Needs
+        // `gcd.rs` (`Int.gcd`, `nat_abs_mul`, the `natAbs`/`dvd` bridges) and
+        // the `Nat` prelude's `dvd_gcd_mul_iff_dvd_mul`/
+        // `dvd_mul_gcd_iff_dvd_mul` (always already built, since `Nat`'s
+        // prelude is a dependency of `Int`'s). Placed last for the same
+        // reason as `dvd_gcd_mirrors` just above.
+        gcd_scaled_mirrors::declare_all(&mut d)?;
         Ok(prelude)
     })();
     match built {

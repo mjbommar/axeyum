@@ -1151,6 +1151,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_iff_mod_eq_zero,
         p.div_gcd_pos_of_pos_left,
         p.div_gcd_pos_of_pos_right,
+        p.dvd_add_iff_left,
     ]
 }
 
