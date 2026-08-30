@@ -167,7 +167,22 @@ cd "$(dirname "$0")/.." || exit 2
 # now. Found by `scripts/check-kernel-suites.sh`, which asserts that every
 # `crates/axeyum-lean-kernel/tests/*.rs` is in exactly one of {runs at push time,
 # owned by this gate}.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-219}"
+#
+# Raised 219 -> 223 on 2026-08-30 by lane `golden-lean-check`: FOUR of the five
+# quantifier golden-pin suites (`quant_affine_growth_lean`,
+# `quant_counterexample_cover`, `quant_eq_partition_lean`,
+# `quant_residue_lean`) carried a byte pin over their rendered module and
+# nothing else -- a pin says the bytes match a blessed hash, never that a real
+# `lean` binary still accepts them. Only `diophantine_lean_reconstruct` (already
+# listed above) had a genuine real-Lean check. Each of the four now has a
+# `*_module_checks_in_real_lean` test following diophantine's exact pattern:
+# write the module, run the pinned toolchain via `lean_probe`, assert exit 0,
+# assert no `sorryAx` in the `#print axioms axeyum_refutation` output. Each
+# reports exactly one real-Lean check, so +4. Doctored-module negative control
+# run manually against all five (this suite included) before landing: flipping
+# the theorem's stated type from `False` to `True` makes Lean reject every one
+# with a type mismatch, exit 1 -- so this check can fail.
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-223}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -234,6 +249,10 @@ axeyum-lean-import||real_lean_wire_differential
 axeyum-solver|full|int_inequality_lean_reconstruct
 axeyum-solver|full|lean_module_fixtures
 axeyum-solver|full|diophantine_lean_reconstruct
+axeyum-solver|full|quant_affine_growth_lean
+axeyum-solver|full|quant_counterexample_cover
+axeyum-solver|full|quant_eq_partition_lean
+axeyum-solver|full|quant_residue_lean
 axeyum-solver|full|regex_emptiness_lean_reconstruct
 axeyum-solver|full|lean_crosscheck
 EOF
