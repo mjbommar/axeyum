@@ -6,15 +6,43 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, AntitoneOn (fun b => Nat.log b n) (Set.Ioi 1)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.log_antitone_left",
+    "kernel_statement": "theorem Nat.log_antitone_left : (((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> ((x4 : AxNat.lt (AxNat.succ AxNat.zero) x1) -> ((x5 : AxNat.lt (AxNat.succ AxNat.zero) x2) -> AxNat.le (AxNat.log x2 x0) (AxNat.log x1 x0))))))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:ml430-nat-log-mono-right-b8939fee"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.log_antitone_left",
+      "kind": "kernel-term",
+      "supports": "`Nat.log_antitone_left` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.log_antitone_left\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> ((x4 : AxNat.lt (AxNat.succ AxNat.zero) x1) -> ((x5 : AxNat.lt (AxNat.succ AxNat.zero) x2) -> AxNat.le (AxNat.log x2 x0) (AxNat.log x1 x0)))))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.log_antitone_left"
+    },
+    {
+      "id": "footprint-Nat.log_antitone_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.log_antitone_left`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.log_antitone_left`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane log-clog-finish (2026-08-30), new kernel construction",
     "source": "statement-only extraction of `Nat.log_antitone_left` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +54,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction. `AntitoneOn f s := forall a in s, forall b in s, a<=b -> f b <= f a` and `x in Set.Ioi c := c < x` are both Mathlib pointwise `def`s (no kernel `Set` type needed), so with `n` fixed this is the core-rendered unfolding `forall a b, 1<a -> 1<b -> a<=b -> log b n <= log a n` -- the same treatment already given `Nat.log_monotone`/`Nat.choose_mono`, this time over a genuinely NEW induction: `Nat.log_aux_antitone_base` proves monotonicity in the BASE with the value held fixed (materially different from `log_aux_mono`, which fixes the base and varies fuel/value), by induction on the shared fuel (both `log b n`/`log a n` are diagonal at the same `n`). Because `1<a`/`1<b` are hypotheses of the statement rather than case-derived, each side's inner `2<=base` guard is already known true unconditionally. The recursive step compares `logAux b f' (n/b)` against `logAux a f' (n/a)` -- different values at different bases -- by chaining the induction hypothesis (bases at the shared value `n/b`) through `log_aux_mono` at the fixed base `a` (values `n/b<=n/a` from the new infrastructure lemma `Nat.div_le_div_left`, the mirror image of `div_le_div_right`, monotone decreasing in the divisor). `crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs`. This is a genuine library-composition increment, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

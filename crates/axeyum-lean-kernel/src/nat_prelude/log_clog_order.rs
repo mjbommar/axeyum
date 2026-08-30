@@ -781,6 +781,1065 @@ pub(super) fn declare_clog_pos(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
     Ok(())
 }
 
+/// `Le n (sub (add n base) 1)`, given `h_one_le_base : Le 1 base` — i.e. `n ≤
+/// n+base-1`. `pred_le_pred(add_le_add_left(n, 1, base, h_one_le_base))` has
+/// type `Le (pred (add n 1)) (pred (add n base))`, which is DEFEQ to the
+/// stated `Le n (sub (add n base) 1)`: `add n 1 ≡ succ n` (`Nat.add`'s
+/// zero-case for the right operand, one iota step past `add n (succ zero)`),
+/// `pred (succ n) ≡ n` (iota), and `sub x 1 ≡ pred x` (two iota steps through
+/// `Nat.sub`'s structural definition, as `clog.rs`'s module doc notes).
+fn n_le_add_sub_one(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n: ExprId,
+    base: ExprId,
+    h_one_le_base: ExprId,
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let add_le = d.lemma(p.add_le_add_left, &[n, one, base, h_one_le_base]);
+    let n_plus_one = d.add(n, one);
+    let n_plus_base = d.add(n, base);
+    d.lemma(p.pred_le_pred, &[n_plus_one, n_plus_base, add_le])
+}
+
+/// `Nat.log_aux_le_clog_aux : ∀ b f n, Le (logAux b f n) (clogAux b f n)`.
+/// See the module doc / `NatPrelude::log_aux_le_clog_aux`'s doc comment for
+/// the route.
+pub(super) fn declare_log_aux_le_clog_aux(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    d.theorem(p.log_aux_le_clog_aux, 2, &|d, values| {
+        let (base, f) = (values[0], values[1]);
+        let two = d.num(2);
+        let base_exceeds_one = d.ble(two, base);
+        let true_ = d.bool_true();
+        let false_ = d.bool_false();
+        let zero = d.zero();
+
+        let motive_at = move |d: &mut NatDev<'_>, fc: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let lhs = log_aux(d, &p, base, fc, n);
+            let rhs = clog_aux(d, &p, base, fc, n);
+            let body = d.le(lhs, rhs);
+            d.pi_fv(n_fv, nat, body)
+        };
+
+        let base_case = move |d: &mut NatDev<'_>| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let zero = d.zero();
+            let proof = d.lemma(p.le_refl, &[zero]);
+            d.lam_fv(n_fv, nat, proof)
+        };
+
+        let step_case = move |d: &mut NatDev<'_>, predecessor: ExprId, ih: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let succ_f = d.succ(predecessor);
+
+            let base_fits = d.ble(base, n);
+            let value_exceeds_one = d.ble(two, n);
+            let one = d.num(1);
+
+            let quotient_log = d.div(n, base);
+            let inner_log_val = log_aux(d, &p, base, predecessor, quotient_log);
+            let stepped_log = d.succ(inner_log_val);
+            let inner_log_term = d.bool_select_nat(base_exceeds_one, stepped_log, zero);
+            let lhs_full = d.bool_select_nat(base_fits, inner_log_term, zero);
+
+            let sum_n = d.add(n, base);
+            let numerator_n = d.sub(sum_n, one);
+            let quotient_clog = d.div(numerator_n, base);
+            let inner_clog_val = clog_aux(d, &p, base, predecessor, quotient_clog);
+            let stepped_clog = d.succ(inner_clog_val);
+            let inner_clog_term = d.bool_select_nat(value_exceeds_one, stepped_clog, zero);
+            let rhs_full = d.bool_select_nat(base_exceeds_one, inner_clog_term, zero);
+
+            let lhs_ctor = log_aux(d, &p, base, succ_f, n);
+            let rhs_ctor = clog_aux(d, &p, base, succ_f, n);
+            let goal = d.le(lhs_ctor, rhs_ctor);
+
+            let is_true1 = d.bool_eq(base_exceeds_one, true_);
+            let is_false1 = d.bool_eq(base_exceeds_one, false_);
+
+            // base_exceeds_one = false: both sides collapse to 0.
+            let case_false1 = {
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+
+                // logAux's inner selector (same test) reduces to 0, then
+                // `bool_select_nat_same` collapses the outer `base_fits`
+                // selector regardless of its value.
+                let motive_inner = d.bool_eq_motive(false_, &|d, x| {
+                    let selected = d.bool_select_nat(x, stepped_log, zero);
+                    d.eq(selected, zero)
+                });
+                let refl_inner = d.refl(zero);
+                let reversed1a = d.bool_symm(base_exceeds_one, false_, h1);
+                let inner_eq_zero = d.bool_transport(
+                    false_,
+                    motive_inner,
+                    refl_inner,
+                    base_exceeds_one,
+                    reversed1a,
+                );
+                let mid = d.bool_select_nat(base_fits, zero, zero);
+                let congr_step = d.congr(inner_log_term, zero, inner_eq_zero, &|d, x| {
+                    d.bool_select_nat(base_fits, x, zero)
+                });
+                let same_step = super::ops::bool_select_nat_same(d, &p, base_fits, zero);
+                let (_, lhs_eq_zero) = d.chain(lhs_full, &[(mid, congr_step), (zero, same_step)]);
+
+                // clogAux's outer selector is the SAME false test.
+                let motive_outer = d.bool_eq_motive(false_, &|d, x| {
+                    let selected = d.bool_select_nat(x, inner_clog_term, zero);
+                    d.eq(selected, zero)
+                });
+                let refl_outer = d.refl(zero);
+                let reversed1b = d.bool_symm(base_exceeds_one, false_, h1);
+                let rhs_eq_zero = d.bool_transport(
+                    false_,
+                    motive_outer,
+                    refl_outer,
+                    base_exceeds_one,
+                    reversed1b,
+                );
+
+                let le_zero_zero = d.lemma(p.le_refl, &[zero]);
+                let motive_r = d.eq_motive(zero, &move |d, x| d.le(zero, x));
+                let symm_rhs = d.symm(rhs_full, zero, rhs_eq_zero);
+                let step1 = d.transport(zero, motive_r, le_zero_zero, rhs_full, symm_rhs);
+                let motive_l = d.eq_motive(zero, &move |d, x| d.le(x, rhs_full));
+                let symm_lhs = d.symm(lhs_full, zero, lhs_eq_zero);
+                let proof = d.transport(zero, motive_l, step1, lhs_full, symm_lhs);
+                d.lam_fv(h1_fv, is_false1, proof)
+            };
+
+            // base_exceeds_one = true.
+            let case_true1 = {
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let hb1_le = d.lemma(p.le_of_ble_eq_true, &[two, base, h1]);
+
+                let is_true2 = d.bool_eq(base_fits, true_);
+                let is_false2 = d.bool_eq(base_fits, false_);
+
+                // base_fits = false: lhs collapses to 0 regardless of rhs.
+                let case_false2 = {
+                    let h2_fv = d.fresh_fvar();
+                    let h2 = d.kernel().fvar(h2_fv);
+                    let zero_le_rhs = d.lemma(p.zero_le, &[rhs_full]);
+                    let motive2 = d.bool_eq_motive(false_, &move |d, x| {
+                        let selected = d.bool_select_nat(x, inner_log_term, zero);
+                        d.le(selected, rhs_full)
+                    });
+                    let reversed2 = d.bool_symm(base_fits, false_, h2);
+                    let proof =
+                        d.bool_transport(false_, motive2, zero_le_rhs, base_fits, reversed2);
+                    d.lam_fv(h2_fv, is_false2, proof)
+                };
+
+                // base_fits = true: the hard leaf.
+                let case_true2 = {
+                    let h2_fv = d.fresh_fvar();
+                    let h2 = d.kernel().fvar(h2_fv);
+                    let hbase_n_le = d.lemma(p.le_of_ble_eq_true, &[base, n, h2]);
+                    let two_le_n = d.lemma(p.le_trans, &[two, base, n, hb1_le, hbase_n_le]);
+                    let value_exceeds_one_true = d.lemma(p.ble_eq_true_of_le, &[two, n, two_le_n]);
+
+                    let le_one_two = d.lemma(p.le_succ, &[one]);
+                    let le_one_base = d.lemma(p.le_trans, &[one, two, base, le_one_two, hb1_le]);
+                    let n_le_numerator = n_le_add_sub_one(d, &p, n, base, le_one_base);
+                    let div_mono =
+                        d.lemma(p.div_le_div_right, &[n, numerator_n, base, n_le_numerator]);
+
+                    let ih_at_qlog = d.apply(ih, &[quotient_log]);
+                    let pred_refl = d.lemma(p.le_refl, &[predecessor]);
+                    let clog_mono_at_qlog = d.lemma(
+                        p.clog_aux_mono,
+                        &[
+                            base,
+                            predecessor,
+                            predecessor,
+                            quotient_log,
+                            quotient_clog,
+                            pred_refl,
+                            div_mono,
+                        ],
+                    );
+                    let clog_ql = clog_aux(d, &p, base, predecessor, quotient_log);
+                    let clog_qc = clog_aux(d, &p, base, predecessor, quotient_clog);
+                    let chained = d.lemma(
+                        p.le_trans,
+                        &[
+                            inner_log_val,
+                            clog_ql,
+                            clog_qc,
+                            ih_at_qlog,
+                            clog_mono_at_qlog,
+                        ],
+                    );
+                    let main_le = d.lemma(p.le_succ_succ, &[inner_log_val, clog_qc, chained]);
+
+                    // Lift `main_le : Le stepped_log stepped_clog` through
+                    // both aux families' bool_selects (inner then outer,
+                    // per side).
+                    let value_exceeds_one_true_rev =
+                        d.bool_symm(value_exceeds_one, true_, value_exceeds_one_true);
+                    let motive_r1 = d.bool_eq_motive(true_, &move |d, x| {
+                        let sel = d.bool_select_nat(x, stepped_clog, zero);
+                        d.le(stepped_log, sel)
+                    });
+                    let step_r1 = d.bool_transport(
+                        true_,
+                        motive_r1,
+                        main_le,
+                        value_exceeds_one,
+                        value_exceeds_one_true_rev,
+                    );
+
+                    let h1_rev = d.bool_symm(base_exceeds_one, true_, h1);
+                    let motive_r2 = d.bool_eq_motive(true_, &move |d, x| {
+                        let sel = d.bool_select_nat(x, inner_clog_term, zero);
+                        d.le(stepped_log, sel)
+                    });
+                    let step_r2 =
+                        d.bool_transport(true_, motive_r2, step_r1, base_exceeds_one, h1_rev);
+
+                    let h1_rev2 = d.bool_symm(base_exceeds_one, true_, h1);
+                    let motive_l1 = d.bool_eq_motive(true_, &move |d, x| {
+                        let sel = d.bool_select_nat(x, stepped_log, zero);
+                        d.le(sel, rhs_full)
+                    });
+                    let step_l1 =
+                        d.bool_transport(true_, motive_l1, step_r2, base_exceeds_one, h1_rev2);
+
+                    let h2_rev = d.bool_symm(base_fits, true_, h2);
+                    let motive_l2 = d.bool_eq_motive(true_, &move |d, x| {
+                        let sel = d.bool_select_nat(x, inner_log_term, zero);
+                        d.le(sel, rhs_full)
+                    });
+                    let proof = d.bool_transport(true_, motive_l2, step_l1, base_fits, h2_rev);
+                    d.lam_fv(h2_fv, is_true2, proof)
+                };
+
+                let split2 = super::ops::bool_true_or_false(d, &p, base_fits);
+                let inner_proof = or_cases(
+                    d,
+                    &p,
+                    is_true2,
+                    is_false2,
+                    goal,
+                    case_true2,
+                    case_false2,
+                    split2,
+                );
+                d.lam_fv(h1_fv, is_true1, inner_proof)
+            };
+
+            let split1 = super::ops::bool_true_or_false(d, &p, base_exceeds_one);
+            let full_proof = or_cases(
+                d,
+                &p,
+                is_true1,
+                is_false1,
+                goal,
+                case_true1,
+                case_false1,
+                split1,
+            );
+            d.lam_fv(n_fv, nat, full_proof)
+        };
+
+        let proof = d.induct(&motive_at, &base_case, &step_case, f);
+        let stmt = motive_at(d, f);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.log_le_clog : ∀ b n, Le (log b n) (clog b n)` —
+/// [`declare_log_aux_le_clog_aux`] at the diagonal `f := n`.
+pub(super) fn declare_log_le_clog(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.log_le_clog, 2, &|d, values| {
+        let (base, n) = (values[0], values[1]);
+        let proof = d.lemma(p.log_aux_le_clog_aux, &[base, n, n]);
+        let log_n = log(d, &p, base, n);
+        let clog_n = clog(d, &p, base, n);
+        let stmt = d.le(log_n, clog_n);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.div_lt_self : ∀ n b, Lt 0 n → Lt 1 b → Lt (div n b) n`.
+pub(super) fn declare_div_lt_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.div_lt_self, 2, &|d, values| {
+        let (n, base) = (values[0], values[1]);
+        let zero = d.zero();
+        let one = d.num(1);
+        let pos_n_ty = d.lt(zero, n);
+        let hb_ty = d.lt(one, base);
+        let pos_n_fv = d.fresh_fvar();
+        let pos_n = d.kernel().fvar(pos_n_fv);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let iff_fn = d.lemma(p.mul_lt_mul_right, &[n, one, base, pos_n]);
+        let mul_one_n = d.mul(one, n);
+        let mul_base_n = d.mul(base, n);
+        let lt_ty1 = d.lt(mul_one_n, mul_base_n);
+        let backward = iff_reverse(d, lt_ty1, hb_ty, iff_fn);
+        let lt_mul = d.apply(backward, &[hb]);
+
+        let one_mul_eq = d.lemma(p.one_mul, &[n]);
+        let motive = d.eq_motive(mul_one_n, &move |d, x| d.lt(x, mul_base_n));
+        let lt_n_mul = d.transport(mul_one_n, motive, lt_mul, n, one_mul_eq);
+
+        let div_lt = d.lemma(p.div_lt_of_lt_mul, &[n, base, n, lt_n_mul]);
+
+        let div_nb = d.div(n, base);
+        let concl = d.lt(div_nb, n);
+        let with_hb = d.arrow(hb_ty, concl);
+        let stmt = d.arrow(pos_n_ty, with_hb);
+        let inner_lam = d.lam_fv(hb_fv, hb_ty, div_lt);
+        let proof = d.lam_fv(pos_n_fv, pos_n_ty, inner_lam);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Eq (logAux base fuel zero) zero`, for ANY `fuel`, given `pos_base : Lt
+/// zero base`. Structural induction on `fuel` alone (no IH needed): `logAux`'s
+/// OUTER cut at `value = zero` is `ble base zero`, which is `false`
+/// unconditionally once `base > 0` (`ble_eq_false_of_lt`), so ONE
+/// `bool_transport` at that known-false evidence collapses the whole
+/// `succ`-row term to `zero` regardless of the INNER cut or the recursive
+/// value — unlike the `log_aux_le_clog_aux` false-branch, which needs
+/// `bool_select_nat_same` because there the KNOWN-false cut is the INNER one.
+fn log_aux_zero_value(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    base: ExprId,
+    fuel: ExprId,
+    pos_base: ExprId,
+) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let false_ = d.bool_false();
+
+    let motive_at = move |d: &mut NatDev<'_>, fc: ExprId| -> ExprId {
+        let lhs = log_aux(d, &p, base, fc, zero);
+        d.eq(lhs, zero)
+    };
+    let base_case = move |d: &mut NatDev<'_>| -> ExprId { d.refl(zero) };
+    let step_case = move |d: &mut NatDev<'_>, predecessor: ExprId, _ih: ExprId| -> ExprId {
+        let two = d.num(2);
+        let base_exceeds_one = d.ble(two, base);
+        let base_fits_zero = d.ble(base, zero);
+        let test_false = d.lemma(p.ble_eq_false_of_lt, &[base, zero, pos_base]);
+        let quotient = d.div(zero, base);
+        let inner_val = log_aux(d, &p, base, predecessor, quotient);
+        let stepped = d.succ(inner_val);
+        let inner_term = d.bool_select_nat(base_exceeds_one, stepped, zero);
+        let motive_full = d.bool_eq_motive(false_, &move |d, x| {
+            let sel = d.bool_select_nat(x, inner_term, zero);
+            d.eq(sel, zero)
+        });
+        let refl_full = d.refl(zero);
+        let reversed = d.bool_symm(base_fits_zero, false_, test_false);
+        d.bool_transport(false_, motive_full, refl_full, base_fits_zero, reversed)
+    };
+    d.induct(&motive_at, &base_case, &step_case, fuel)
+}
+
+/// `Nat.log_aux_lt_of_pos : ∀ b f n, Le n f → Not (Eq n 0) → Lt (logAux b f
+/// n) n`. See the module doc / `NatPrelude::log_aux_lt_of_pos`'s doc comment
+/// for the route.
+pub(super) fn declare_log_aux_lt_of_pos(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    d.theorem(p.log_aux_lt_of_pos, 2, &|d, values| {
+        let (base, f) = (values[0], values[1]);
+        let two = d.num(2);
+        let one = d.num(1);
+        let base_exceeds_one = d.ble(two, base);
+        let true_ = d.bool_true();
+        let false_ = d.bool_false();
+        let zero = d.zero();
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+        let motive_at = move |d: &mut NatDev<'_>, fc: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let le_ty = d.le(n, fc);
+            let eq_ty = d.eq(n, zero);
+            let ne_ty = d.arrow(eq_ty, false_ty);
+            let lhs = log_aux(d, &p, base, fc, n);
+            let concl = d.lt(lhs, n);
+            let with_ne = d.arrow(ne_ty, concl);
+            let with_le = d.arrow(le_ty, with_ne);
+            d.pi_fv(n_fv, nat, with_le)
+        };
+
+        let base_case = move |d: &mut NatDev<'_>| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let le_ty = d.le(n, zero);
+            let eq_ty = d.eq(n, zero);
+            let ne_ty = d.arrow(eq_ty, false_ty);
+            let le_fv = d.fresh_fvar();
+            let le_var = d.kernel().fvar(le_fv);
+            let ne_fv = d.fresh_fvar();
+            let ne_var = d.kernel().fvar(ne_fv);
+
+            let pos_n = d.lemma(p.zero_lt_of_ne_zero, &[n, ne_var]);
+            let contra = d.lemma(p.lt_of_lt_of_le, &[zero, n, zero, pos_n, le_var]);
+            let not_lt_zero_zero = d.lemma(p.not_lt_zero, &[zero]);
+            let false_val = d.apply(not_lt_zero_zero, &[contra]);
+            let lhs = log_aux(d, &p, base, zero, n);
+            let target = d.lt(lhs, n);
+            let elim = false_elim(d, &p, target, false_val);
+            let with_ne = d.lam_fv(ne_fv, ne_ty, elim);
+            let with_le = d.lam_fv(le_fv, le_ty, with_ne);
+            d.lam_fv(n_fv, nat, with_le)
+        };
+
+        let step_case = move |d: &mut NatDev<'_>, predecessor: ExprId, ih: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let succ_f = d.succ(predecessor);
+            let le_ty = d.le(n, succ_f);
+            let eq_ty = d.eq(n, zero);
+            let ne_ty = d.arrow(eq_ty, false_ty);
+            let le_fv = d.fresh_fvar();
+            let le_var = d.kernel().fvar(le_fv);
+            let ne_fv = d.fresh_fvar();
+            let ne_var = d.kernel().fvar(ne_fv);
+
+            let pos_n = d.lemma(p.zero_lt_of_ne_zero, &[n, ne_var]);
+
+            let base_fits = d.ble(base, n);
+            let quotient = d.div(n, base);
+            let inner_val = log_aux(d, &p, base, predecessor, quotient);
+            let stepped = d.succ(inner_val);
+            let inner_term = d.bool_select_nat(base_exceeds_one, stepped, zero);
+            let lhs_full = d.bool_select_nat(base_fits, inner_term, zero);
+
+            let lhs_ctor = log_aux(d, &p, base, succ_f, n);
+            let goal = d.lt(lhs_ctor, n);
+
+            let is_true1 = d.bool_eq(base_exceeds_one, true_);
+            let is_false1 = d.bool_eq(base_exceeds_one, false_);
+
+            // base_exceeds_one = false: lhs collapses to 0 (same congr +
+            // bool_select_nat_same shape as log_aux_le_clog_aux's false
+            // branch, since here the known-false cut is the INNER one).
+            let case_false1 = {
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let motive_inner = d.bool_eq_motive(false_, &move |d, x| {
+                    let selected = d.bool_select_nat(x, stepped, zero);
+                    d.eq(selected, zero)
+                });
+                let refl_inner = d.refl(zero);
+                let reversed1a = d.bool_symm(base_exceeds_one, false_, h1);
+                let inner_eq_zero = d.bool_transport(
+                    false_,
+                    motive_inner,
+                    refl_inner,
+                    base_exceeds_one,
+                    reversed1a,
+                );
+                let mid = d.bool_select_nat(base_fits, zero, zero);
+                let congr_step = d.congr(inner_term, zero, inner_eq_zero, &move |d, x| {
+                    d.bool_select_nat(base_fits, x, zero)
+                });
+                let same_step = super::ops::bool_select_nat_same(d, &p, base_fits, zero);
+                let (_, lhs_eq_zero) = d.chain(lhs_full, &[(mid, congr_step), (zero, same_step)]);
+                let motive_lt = d.eq_motive(zero, &move |d, x| d.lt(x, n));
+                let symm_eq = d.symm(lhs_full, zero, lhs_eq_zero);
+                let proof = d.transport(zero, motive_lt, pos_n, lhs_full, symm_eq);
+                d.lam_fv(h1_fv, is_false1, proof)
+            };
+
+            // base_exceeds_one = true.
+            let case_true1 = {
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let hb1_le = d.lemma(p.le_of_ble_eq_true, &[two, base, h1]);
+
+                let is_true2 = d.bool_eq(base_fits, true_);
+                let is_false2 = d.bool_eq(base_fits, false_);
+
+                // base_fits = false: lhs collapses to 0 (outer select
+                // false), regardless of the inner value.
+                let case_false2 = {
+                    let h2_fv = d.fresh_fvar();
+                    let h2 = d.kernel().fvar(h2_fv);
+                    let motive2 = d.bool_eq_motive(false_, &move |d, x| {
+                        let sel = d.bool_select_nat(x, inner_term, zero);
+                        d.lt(sel, n)
+                    });
+                    let reversed2 = d.bool_symm(base_fits, false_, h2);
+                    let proof = d.bool_transport(false_, motive2, pos_n, base_fits, reversed2);
+                    d.lam_fv(h2_fv, is_false2, proof)
+                };
+
+                // base_fits = true: the hard leaf.
+                let case_true2 = {
+                    let h2_fv = d.fresh_fvar();
+                    let h2 = d.kernel().fvar(h2_fv);
+                    let hbase_n_le = d.lemma(p.le_of_ble_eq_true, &[base, n, h2]);
+                    let pos_base = {
+                        let le_one_two = d.lemma(p.le_succ, &[one]);
+                        d.lemma(p.le_trans, &[one, two, base, le_one_two, hb1_le])
+                    };
+                    let div_lt = d.lemma(p.div_lt_self, &[n, base, pos_n, hb1_le]);
+                    let lt_q_succf =
+                        d.lemma(p.lt_of_lt_of_le, &[quotient, n, succ_f, div_lt, le_var]);
+                    let le_q_pred = d.lemma(p.le_of_lt_succ, &[quotient, predecessor, lt_q_succf]);
+
+                    let goal_leaf = d.lt(stepped, n);
+                    let disj = d.lemma(p.zero_or_succ, &[quotient]);
+                    let eq_q0_ty = d.eq(quotient, zero);
+
+                    let case_q_zero = {
+                        let heq_fv = d.fresh_fvar();
+                        let heq = d.kernel().fvar(heq_fv);
+                        let motive_iv = d.eq_motive(zero, &move |d, x| {
+                            let lv = log_aux(d, &p, base, predecessor, x);
+                            d.eq(lv, zero)
+                        });
+                        let base_at_zero = log_aux_zero_value(d, &p, base, predecessor, pos_base);
+                        let heq_rev = d.symm(quotient, zero, heq);
+                        let inner_eq_zero_at_q =
+                            d.transport(zero, motive_iv, base_at_zero, quotient, heq_rev);
+                        let one_eq =
+                            d.congr(inner_val, zero, inner_eq_zero_at_q, &|d, x| d.succ(x));
+                        let two_le_n = d.lemma(p.le_trans, &[two, base, n, hb1_le, hbase_n_le]);
+                        let succ_zero = d.succ(zero);
+                        let motive_lt = d.eq_motive(succ_zero, &move |d, x| d.lt(x, n));
+                        let symm_one_eq = d.symm(stepped, succ_zero, one_eq);
+                        let proof_leaf =
+                            d.transport(succ_zero, motive_lt, two_le_n, stepped, symm_one_eq);
+                        d.lam_fv(heq_fv, eq_q0_ty, proof_leaf)
+                    };
+
+                    let nat_inner = d.nat_ty();
+                    let one_lvl = d.level_one();
+                    let pred_ty = {
+                        let k_fv = d.fresh_fvar();
+                        let k = d.kernel().fvar(k_fv);
+                        let sk = d.succ(k);
+                        let body = d.eq(quotient, sk);
+                        d.lam_fv(k_fv, nat_inner, body)
+                    };
+                    let exists_c = d.kernel().const_(p.logic.exists_, vec![one_lvl]);
+                    let ex_ty = d.apply(exists_c, &[nat_inner, pred_ty]);
+
+                    let case_q_succ = {
+                        let hex_fv = d.fresh_fvar();
+                        let hex = d.kernel().fvar(hex_fv);
+                        let anon = d.anon_name();
+                        let motive_ex = d.kernel().lam(anon, ex_ty, goal_leaf, BinderInfo::Default);
+                        let minor = {
+                            let k_fv = d.fresh_fvar();
+                            let k = d.kernel().fvar(k_fv);
+                            let sk = d.succ(k);
+                            let heq1_ty = d.eq(quotient, sk);
+                            let heq1_fv = d.fresh_fvar();
+                            let heq1 = d.kernel().fvar(heq1_fv);
+
+                            let ne_sk_zero = d.lemma(p.succ_ne_zero, &[k]);
+                            let sk_eq_quotient = d.symm(quotient, sk, heq1);
+                            let motive_ne = d.eq_motive(sk, &move |d, x| {
+                                let eqx = d.eq(x, zero);
+                                d.arrow(eqx, false_ty)
+                            });
+                            let ne_q_zero =
+                                d.transport(sk, motive_ne, ne_sk_zero, quotient, sk_eq_quotient);
+
+                            let ih_result = d.apply(ih, &[quotient, le_q_pred, ne_q_zero]);
+                            let final_proof = d.lemma(
+                                p.lt_of_le_of_lt,
+                                &[stepped, quotient, n, ih_result, div_lt],
+                            );
+                            let with_heq1 = d.lam_fv(heq1_fv, heq1_ty, final_proof);
+                            d.lam_fv(k_fv, nat_inner, with_heq1)
+                        };
+                        let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+                        let body =
+                            d.apply(exists_rec, &[nat_inner, pred_ty, motive_ex, minor, hex]);
+                        d.lam_fv(hex_fv, ex_ty, body)
+                    };
+
+                    let leaf_proof = or_cases(
+                        d,
+                        &p,
+                        eq_q0_ty,
+                        ex_ty,
+                        goal_leaf,
+                        case_q_zero,
+                        case_q_succ,
+                        disj,
+                    );
+
+                    let h1_rev = d.bool_symm(base_exceeds_one, true_, h1);
+                    let motive_lift1 = d.bool_eq_motive(true_, &move |d, x| {
+                        let sel = d.bool_select_nat(x, stepped, zero);
+                        d.lt(sel, n)
+                    });
+                    let lifted1 =
+                        d.bool_transport(true_, motive_lift1, leaf_proof, base_exceeds_one, h1_rev);
+
+                    let h2_rev = d.bool_symm(base_fits, true_, h2);
+                    let motive_lift2 = d.bool_eq_motive(true_, &move |d, x| {
+                        let sel = d.bool_select_nat(x, inner_term, zero);
+                        d.lt(sel, n)
+                    });
+                    let lifted2 = d.bool_transport(true_, motive_lift2, lifted1, base_fits, h2_rev);
+                    d.lam_fv(h2_fv, is_true2, lifted2)
+                };
+
+                let split2 = super::ops::bool_true_or_false(d, &p, base_fits);
+                let inner_proof = or_cases(
+                    d,
+                    &p,
+                    is_true2,
+                    is_false2,
+                    goal,
+                    case_true2,
+                    case_false2,
+                    split2,
+                );
+                d.lam_fv(h1_fv, is_true1, inner_proof)
+            };
+
+            let split1 = super::ops::bool_true_or_false(d, &p, base_exceeds_one);
+            let full_proof = or_cases(
+                d,
+                &p,
+                is_true1,
+                is_false1,
+                goal,
+                case_true1,
+                case_false1,
+                split1,
+            );
+            let with_ne = d.lam_fv(ne_fv, ne_ty, full_proof);
+            let with_le = d.lam_fv(le_fv, le_ty, with_ne);
+            d.lam_fv(n_fv, nat, with_le)
+        };
+
+        let proof = d.induct(&motive_at, &base_case, &step_case, f);
+        let stmt = motive_at(d, f);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.log_lt_self : ∀ b x, Not (Eq x 0) → Lt (log b x) x` —
+/// [`declare_log_aux_lt_of_pos`] at the diagonal `f := x`, via `le_refl`.
+pub(super) fn declare_log_lt_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.log_lt_self, 2, &|d, values| {
+        let (base, x) = (values[0], values[1]);
+        let zero = d.zero();
+        let eq_ty = d.eq(x, zero);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let ne_ty = d.arrow(eq_ty, false_ty);
+        let ne_fv = d.fresh_fvar();
+        let ne_var = d.kernel().fvar(ne_fv);
+        let le_refl_x = d.lemma(p.le_refl, &[x]);
+        let proof_body = d.lemma(p.log_aux_lt_of_pos, &[base, x, x, le_refl_x, ne_var]);
+        let log_x = log(d, &p, base, x);
+        let concl = d.lt(log_x, x);
+        let stmt = d.arrow(ne_ty, concl);
+        let proof = d.lam_fv(ne_fv, ne_ty, proof_body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.div_le_div_left : ∀ n a b, Lt 0 a → Le a b → Le (div n b) (div n
+/// a)`. See the module doc / `NatPrelude::div_le_div_left`'s doc comment for
+/// the route.
+pub(super) fn declare_div_le_div_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.div_le_div_left, 3, &|d, values| {
+        let (n, a, b) = (values[0], values[1], values[2]);
+        let zero = d.zero();
+        let pos_a_ty = d.lt(zero, a);
+        let hab_ty = d.le(a, b);
+        let pos_a_fv = d.fresh_fvar();
+        let pos_a = d.kernel().fvar(pos_a_fv);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let div_n_b = d.div(n, b);
+        let div_n_a = d.div(n, a);
+        let goal = d.le(div_n_b, div_n_a);
+
+        let disj = d.lemma(p.zero_or_succ, &[a]);
+        let eq_a0_ty = d.eq(a, zero);
+        let case_a_zero = {
+            let heq_fv = d.fresh_fvar();
+            let heq = d.kernel().fvar(heq_fv);
+            let motive = d.eq_motive(a, &move |d, x| d.lt(zero, x));
+            let at_zero = d.transport(a, motive, pos_a, zero, heq);
+            let not_lt = d.lemma(p.not_lt_zero, &[zero]);
+            let false_val = d.apply(not_lt, &[at_zero]);
+            let elim = false_elim(d, &p, goal, false_val);
+            d.lam_fv(heq_fv, eq_a0_ty, elim)
+        };
+
+        let nat_inner = d.nat_ty();
+        let one_lvl = d.level_one();
+        let pred_ty = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sk = d.succ(k);
+            let body = d.eq(a, sk);
+            d.lam_fv(k_fv, nat_inner, body)
+        };
+        let exists_c = d.kernel().const_(p.logic.exists_, vec![one_lvl]);
+        let ex_ty = d.apply(exists_c, &[nat_inner, pred_ty]);
+
+        let case_a_succ = {
+            let hex_fv = d.fresh_fvar();
+            let hex = d.kernel().fvar(hex_fv);
+            let anon = d.anon_name();
+            let motive_ex = d.kernel().lam(anon, ex_ty, goal, BinderInfo::Default);
+            let minor = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = d.succ(k);
+                let heq1_ty = d.eq(a, sk);
+                let heq1_fv = d.fresh_fvar();
+                let heq1 = d.kernel().fvar(heq1_fv);
+
+                let relation_n = d.lemma(p.div_mod_exec, &[k, n]);
+                let div_n_sk = d.div(n, sk);
+                let mod_n_sk = d.modulo(n, sk);
+                let succ_div_n_sk = d.succ(div_n_sk);
+                let iff_fn = d.lemma(
+                    p.div_mod_lt_mul_iff,
+                    &[sk, n, div_n_sk, mod_n_sk, succ_div_n_sk],
+                );
+                let the_iff = d.apply(iff_fn, &[relation_n]);
+                let self_lt = d.lemma(p.lt_succ_self, &[div_n_sk]);
+                let mul_sk_s = d.mul(sk, succ_div_n_sk);
+                let lt_ty1 = d.lt(n, mul_sk_s);
+                let lt_ty2 = d.lt(div_n_sk, succ_div_n_sk);
+                let backward = iff_reverse(d, lt_ty1, lt_ty2, the_iff);
+                let upper_n = d.apply(backward, &[self_lt]);
+
+                let hab_at_sk = {
+                    let motive = d.eq_motive(a, &move |d, x| d.le(x, b));
+                    d.transport(a, motive, hab, sk, heq1)
+                };
+
+                let mul_le = d.lemma(p.mul_le_mul_left, &[succ_div_n_sk, sk, b, hab_at_sk]);
+                let mul_s_sk = d.mul(succ_div_n_sk, sk);
+                let mul_s_b = d.mul(succ_div_n_sk, b);
+                let mul_b_s = d.mul(b, succ_div_n_sk);
+                let comm_sk = d.lemma(p.mul_comm, &[sk, succ_div_n_sk]);
+                let comm_b = d.lemma(p.mul_comm, &[b, succ_div_n_sk]);
+                let motive_l = d.eq_motive(mul_s_sk, &move |d, x| d.le(x, mul_s_b));
+                let symm_comm_sk = d.symm(mul_sk_s, mul_s_sk, comm_sk);
+                let step1 = d.transport(mul_s_sk, motive_l, mul_le, mul_sk_s, symm_comm_sk);
+                let motive_r = d.eq_motive(mul_s_b, &move |d, x| d.le(mul_sk_s, x));
+                let symm_comm_b = d.symm(mul_b_s, mul_s_b, comm_b);
+                let step2 = d.transport(mul_s_b, motive_r, step1, mul_b_s, symm_comm_b);
+
+                let n_lt_mul_b_s =
+                    d.lemma(p.lt_of_lt_of_le, &[n, mul_sk_s, mul_b_s, upper_n, step2]);
+                let div_lt_result =
+                    d.lemma(p.div_lt_of_lt_mul, &[n, b, succ_div_n_sk, n_lt_mul_b_s]);
+                let le_result = d.lemma(p.le_of_lt_succ, &[div_n_b, div_n_sk, div_lt_result]);
+
+                let sk_eq_a = d.symm(a, sk, heq1);
+                let motive_final = d.eq_motive(sk, &move |d, x| {
+                    let dna = d.div(n, x);
+                    d.le(div_n_b, dna)
+                });
+                let final_proof = d.transport(sk, motive_final, le_result, a, sk_eq_a);
+                let with_heq1 = d.lam_fv(heq1_fv, heq1_ty, final_proof);
+                d.lam_fv(k_fv, nat_inner, with_heq1)
+            };
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+            let body = d.apply(exists_rec, &[nat_inner, pred_ty, motive_ex, minor, hex]);
+            d.lam_fv(hex_fv, ex_ty, body)
+        };
+
+        let leaf = or_cases(d, &p, eq_a0_ty, ex_ty, goal, case_a_zero, case_a_succ, disj);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, leaf);
+        let inner_stmt = d.arrow(hab_ty, goal);
+        let stmt = d.arrow(pos_a_ty, inner_stmt);
+        let proof = d.lam_fv(pos_a_fv, pos_a_ty, with_hab);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.log_aux_antitone_base : ∀ f n a b, Le a b → Lt 1 a → Lt 1 b → Le
+/// (logAux b f n) (logAux a f n)`. See the module doc /
+/// `NatPrelude::log_aux_antitone_base`'s doc comment for the route.
+pub(super) fn declare_log_aux_antitone_base(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    d.theorem(p.log_aux_antitone_base, 1, &|d, values| {
+        let f = values[0];
+        let two = d.num(2);
+        let one = d.num(1);
+        let true_ = d.bool_true();
+        let false_ = d.bool_false();
+        let zero = d.zero();
+
+        let motive_at = move |d: &mut NatDev<'_>, fc: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let hab_ty = d.le(a, b);
+            let ha_ty = d.lt(one, a);
+            let hb_ty = d.lt(one, b);
+            let lhs = log_aux(d, &p, b, fc, n);
+            let rhs = log_aux(d, &p, a, fc, n);
+            let concl = d.le(lhs, rhs);
+            let with_hb = d.arrow(hb_ty, concl);
+            let with_ha = d.arrow(ha_ty, with_hb);
+            let with_hab = d.arrow(hab_ty, with_ha);
+            let with_b = d.pi_fv(b_fv, nat, with_hab);
+            let with_a = d.pi_fv(a_fv, nat, with_b);
+            d.pi_fv(n_fv, nat, with_a)
+        };
+
+        let base_case = move |d: &mut NatDev<'_>| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let a_fv = d.fresh_fvar();
+            let b_fv = d.fresh_fvar();
+            let a_stub = d.kernel().fvar(a_fv);
+            let b_stub = d.kernel().fvar(b_fv);
+            let hab_ty = d.le(a_stub, b_stub);
+            let ha_ty = d.lt(one, a_stub);
+            let hb_ty = d.lt(one, b_stub);
+            let hab_fv = d.fresh_fvar();
+            let ha_fv = d.fresh_fvar();
+            let hb_fv = d.fresh_fvar();
+            let proof = d.lemma(p.le_refl, &[zero]);
+            let with_hb = d.lam_fv(hb_fv, hb_ty, proof);
+            let with_ha = d.lam_fv(ha_fv, ha_ty, with_hb);
+            let with_hab = d.lam_fv(hab_fv, hab_ty, with_ha);
+            let with_b = d.lam_fv(b_fv, nat, with_hab);
+            let with_a = d.lam_fv(a_fv, nat, with_b);
+            d.lam_fv(n_fv, nat, with_a)
+        };
+
+        let step_case = move |d: &mut NatDev<'_>, predecessor: ExprId, ih: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let succ_f = d.succ(predecessor);
+            let hab_ty = d.le(a, b);
+            let ha_ty = d.lt(one, a);
+            let hb_ty = d.lt(one, b);
+            let hab_fv = d.fresh_fvar();
+            let hab = d.kernel().fvar(hab_fv);
+            let ha_fv = d.fresh_fvar();
+            let ha = d.kernel().fvar(ha_fv);
+            let hb_fv = d.fresh_fvar();
+            let hb = d.kernel().fvar(hb_fv);
+
+            let ha_true = d.lemma(p.ble_eq_true_of_le, &[two, a, ha]);
+            let hb_true = d.lemma(p.ble_eq_true_of_le, &[two, b, hb]);
+            let base_exceeds_one_a = d.ble(two, a);
+            let base_exceeds_one_b = d.ble(two, b);
+            let base_fits_a = d.ble(a, n);
+            let base_fits_b = d.ble(b, n);
+
+            let quotient_a = d.div(n, a);
+            let quotient_b = d.div(n, b);
+            let inner_a_val = log_aux(d, &p, a, predecessor, quotient_a);
+            let stepped_a = d.succ(inner_a_val);
+            let inner_b_val = log_aux(d, &p, b, predecessor, quotient_b);
+            let stepped_b = d.succ(inner_b_val);
+            let inner_term_a = d.bool_select_nat(base_exceeds_one_a, stepped_a, zero);
+            let inner_term_b = d.bool_select_nat(base_exceeds_one_b, stepped_b, zero);
+            let lhs_full_a = d.bool_select_nat(base_fits_a, inner_term_a, zero);
+            let lhs_full_b = d.bool_select_nat(base_fits_b, inner_term_b, zero);
+
+            let lhs_ctor = log_aux(d, &p, b, succ_f, n);
+            let rhs_ctor = log_aux(d, &p, a, succ_f, n);
+            let goal = d.le(lhs_ctor, rhs_ctor);
+
+            let is_true1 = d.bool_eq(base_fits_b, true_);
+            let is_false1 = d.bool_eq(base_fits_b, false_);
+
+            // base_fits_b = false: the b-side collapses to 0 regardless of
+            // the a-side's value.
+            let case_false1 = {
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let zero_le_a = d.lemma(p.zero_le, &[lhs_full_a]);
+                let motive1 = d.bool_eq_motive(false_, &move |d, x| {
+                    let sel = d.bool_select_nat(x, inner_term_b, zero);
+                    d.le(sel, lhs_full_a)
+                });
+                let reversed1 = d.bool_symm(base_fits_b, false_, h1);
+                let proof = d.bool_transport(false_, motive1, zero_le_a, base_fits_b, reversed1);
+                d.lam_fv(h1_fv, is_false1, proof)
+            };
+
+            // base_fits_b = true: `a <= b <= n` forces `base_fits_a` too.
+            let case_true1 = {
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let hb_n_le = d.lemma(p.le_of_ble_eq_true, &[b, n, h1]);
+                let a_n_le = d.lemma(p.le_trans, &[a, b, n, hab, hb_n_le]);
+                let base_fits_a_true = d.lemma(p.ble_eq_true_of_le, &[a, n, a_n_le]);
+
+                let pos_a = {
+                    let le_one_two = d.lemma(p.le_succ, &[one]);
+                    d.lemma(p.le_trans, &[one, two, a, le_one_two, ha])
+                };
+                let div_mono = d.lemma(p.div_le_div_left, &[n, a, b, pos_a, hab]);
+                let ih_at_qb = d.apply(ih, &[quotient_b, a, b, hab, ha, hb]);
+                let pred_refl = d.lemma(p.le_refl, &[predecessor]);
+                let mono_at_a = d.lemma(
+                    p.log_aux_mono,
+                    &[
+                        a,
+                        predecessor,
+                        predecessor,
+                        quotient_b,
+                        quotient_a,
+                        pred_refl,
+                        div_mono,
+                    ],
+                );
+                let mid_val = log_aux(d, &p, a, predecessor, quotient_b);
+                let chained = d.lemma(
+                    p.le_trans,
+                    &[inner_b_val, mid_val, inner_a_val, ih_at_qb, mono_at_a],
+                );
+                let main_le = d.lemma(p.le_succ_succ, &[inner_b_val, inner_a_val, chained]);
+
+                let hb_true_rev = d.bool_symm(base_exceeds_one_b, true_, hb_true);
+                let motive_b1 = d.bool_eq_motive(true_, &move |d, x| {
+                    let sel = d.bool_select_nat(x, stepped_b, zero);
+                    d.le(sel, stepped_a)
+                });
+                let step_b1 =
+                    d.bool_transport(true_, motive_b1, main_le, base_exceeds_one_b, hb_true_rev);
+
+                let h1_rev = d.bool_symm(base_fits_b, true_, h1);
+                let motive_b2 = d.bool_eq_motive(true_, &move |d, x| {
+                    let sel = d.bool_select_nat(x, inner_term_b, zero);
+                    d.le(sel, stepped_a)
+                });
+                let step_b2 = d.bool_transport(true_, motive_b2, step_b1, base_fits_b, h1_rev);
+
+                let ha_true_rev = d.bool_symm(base_exceeds_one_a, true_, ha_true);
+                let motive_a1 = d.bool_eq_motive(true_, &move |d, x| {
+                    let sel = d.bool_select_nat(x, stepped_a, zero);
+                    d.le(lhs_full_b, sel)
+                });
+                let step_a1 =
+                    d.bool_transport(true_, motive_a1, step_b2, base_exceeds_one_a, ha_true_rev);
+
+                let base_fits_a_true_rev = d.bool_symm(base_fits_a, true_, base_fits_a_true);
+                let motive_a2 = d.bool_eq_motive(true_, &move |d, x| {
+                    let sel = d.bool_select_nat(x, inner_term_a, zero);
+                    d.le(lhs_full_b, sel)
+                });
+                let step_a2 =
+                    d.bool_transport(true_, motive_a2, step_a1, base_fits_a, base_fits_a_true_rev);
+                d.lam_fv(h1_fv, is_true1, step_a2)
+            };
+
+            let split1 = super::ops::bool_true_or_false(d, &p, base_fits_b);
+            let full_proof = or_cases(
+                d,
+                &p,
+                is_true1,
+                is_false1,
+                goal,
+                case_true1,
+                case_false1,
+                split1,
+            );
+            let with_hb = d.lam_fv(hb_fv, hb_ty, full_proof);
+            let with_ha = d.lam_fv(ha_fv, ha_ty, with_hb);
+            let with_hab = d.lam_fv(hab_fv, hab_ty, with_ha);
+            let with_b = d.lam_fv(b_fv, nat, with_hab);
+            let with_a = d.lam_fv(a_fv, nat, with_b);
+            d.lam_fv(n_fv, nat, with_a)
+        };
+
+        let proof = d.induct(&motive_at, &base_case, &step_case, f);
+        let stmt = motive_at(d, f);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.log_antitone_left : ∀ {n}, AntitoneOn (fun b => log b n) (Set.Ioi
+/// 1)` — the core-rendered unfolding at
+/// [`declare_log_aux_antitone_base`]'s diagonal `f := n`.
+pub(super) fn declare_log_antitone_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.log_antitone_left, 3, &|d, values| {
+        let (n, a, b) = (values[0], values[1], values[2]);
+        let one = d.num(1);
+        let hab_ty = d.le(a, b);
+        let ha_ty = d.lt(one, a);
+        let hb_ty = d.lt(one, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+        let proof_body = d.lemma(p.log_aux_antitone_base, &[n, n, a, b, hab, ha, hb]);
+        let log_b = log(d, &p, b, n);
+        let log_a = log(d, &p, a, n);
+        let concl = d.le(log_b, log_a);
+        let with_hb = d.arrow(hb_ty, concl);
+        let with_ha = d.arrow(ha_ty, with_hb);
+        let stmt = d.arrow(hab_ty, with_ha);
+        let inner1 = d.lam_fv(hb_fv, hb_ty, proof_body);
+        let inner2 = d.lam_fv(ha_fv, ha_ty, inner1);
+        let proof = d.lam_fv(hab_fv, hab_ty, inner2);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare every `log`/`clog` order mirror this file carries.
 ///
 /// # Errors
@@ -798,5 +1857,13 @@ pub(super) fn declare_log_clog_order_all(
     declare_clog_mono_right(d, p)?;
     declare_clog_monotone(d, p)?;
     declare_clog_pos(d, p)?;
+    declare_log_aux_le_clog_aux(d, p)?;
+    declare_log_le_clog(d, p)?;
+    declare_div_lt_self(d, p)?;
+    declare_log_aux_lt_of_pos(d, p)?;
+    declare_log_lt_self(d, p)?;
+    declare_div_le_div_left(d, p)?;
+    declare_log_aux_antitone_base(d, p)?;
+    declare_log_antitone_left(d, p)?;
     Ok(())
 }
