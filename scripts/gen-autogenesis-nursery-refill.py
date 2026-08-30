@@ -244,6 +244,78 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
     "integer-basic-arithmetic": ("Init.Data.Int.Lemmas",),
     "natural-basic-arithmetic": ("Init.Data.Nat.Basic", "Init.Data.Nat.Lemmas"),
     "integer-division-inequalities": ("Mathlib.Data.Int.Init",),
+    # --- draw 4, 2026-08-29 (ADR-0615) ---------------------------------------
+    # Re-measured: 14 modules now carry >= 10 fully screened, unused
+    # candidates (down from draw 3's 18 -- four consumed by draw 3). Twelve of
+    # the fourteen are `*.Gcd`, `*.ModEq`, `*.Prime.*`, `*.Factorial.*`,
+    # `*.Choose.*`, `*.Bitwise.*` -- draw 3's own exclusion list, unchanged:
+    # each still sits over the SAME mathematics as a v1 family that is
+    # development or train (natural-gcd/integer-gcd, natural-modular-
+    # equivalence/integer-modular-equivalence, natural-primes, natural-
+    # factorial, natural-binomial, natural-bitwise), so a held-out assignment
+    # there is still the natural-division violation.
+    #
+    # That leaves exactly TWO modules with no existing-family adjacency:
+    # `Init.Prelude` (35 screened, Nat order/comparison bridging -- the same
+    # module draw 3's round 1 considered and dropped) and
+    # `Mathlib.Data.Int.Order.Basic` (13, sign-based Int multiplication
+    # inequalities). Screened, checked, NOT assumed: `Init.Prelude` is 30 of 35
+    # ALREADY DECLARED in this kernel's own prelude (R9-contaminated, same
+    # shape as draw 3's basic-arithmetic finding -- "no family covers this"
+    # and "the kernel has never proved this" are different claims), and
+    # `Mathlib.Data.Int.Order.Basic` is adjacent to the ALREADY-PARTITIONED
+    # `integer-order` (Init.Data.Int.Order, development, v1) -- a held-out
+    # assignment there would put fresh blind rows beside published Int-order
+    # math. Both are fine for development/train (neither partition is blind,
+    # so neither hazard applies there) but NEITHER may land held-out.
+    #
+    # So the two held-out slots need supply from BELOW the 10-candidate floor,
+    # combined across several small modules the way draw 3 combined two Int
+    # modules to reach `integer-division-boundary-cases`. Two candidates
+    # thread every needle (checked, not assumed):
+    #
+    #   `Init.Data.Range.Polymorphic.{Int,Nat}Lemmas` (8 + 8 = 16) -- bounded
+    #   INTERVAL INDUCTION principles (rcc/rco/roc/roo, left/right) over both
+    #   fragments. No v1/v2 family covers interval induction; the nearest
+    #   named family (`natural-induction-and-divisibility`, draw 2, held-out)
+    #   is a DIFFERENT argument (divisibility-flavoured induction, module
+    #   `Mathlib.Data.Nat.Init`) -- blind beside blind is fine per that same
+    #   draw's precedent, and this is not even the same shape.
+    #
+    #   `Mathlib.Data.Int.{Order.Lemmas,Lemmas}` +
+    #   `Mathlib.Algebra.Order.Group.Unbundled.Int` +
+    #   `Init.Data.Dyadic.Basic` (3 + 7 + 2 + 1 = 13) -- every one an
+    #   `Int.natAbs` identity. No existing family names natAbs at all.
+    #
+    # Both screened at 0/13 and 0/16 IN-ENV (R9-clean) and 0 glyphed (S6,
+    # landed this draw -- see check-dispatchable-frontier.py). `Init.Prelude`
+    # and `Mathlib.Data.Int.Order.Basic` are 30/35 and 0/13 IN-ENV
+    # respectively, irrelevant to their dev/train slots.
+    #
+    # Primary-module ordering is chosen, not incidental: the module-path cycle
+    # is mechanical, so the FAMILY SET is picked such that the two held-out-
+    # safe families land at cycle positions 0 and 3 (mod 3 = held-out) and the
+    # two contamination/adjacency-only-safe-for-dev/train families land at 1
+    # and 2 (development, train). Verified by running assign_partitions():
+    #
+    #   Init.Data.Range.Polymorphic.IntLemmas  (range-induction)          held-out
+    #   Init.Prelude                           (natural-order-bridging)   development
+    #   Mathlib.Data.Int.Order.Basic           (integer-order-inequalities) train
+    #   Mathlib.Data.Int.Order.Lemmas          (integer-absolute-value)   held-out
+    #
+    # No target outcome was consulted; the SET and the primary-module choice
+    # within each tuple are a lane's judgement, the assignment is still the
+    # mechanical rule above.
+    "range-induction": (
+        "Init.Data.Range.Polymorphic.IntLemmas",
+        "Init.Data.Range.Polymorphic.NatLemmas"),
+    "natural-order-bridging": ("Init.Prelude",),
+    "integer-order-inequalities": ("Mathlib.Data.Int.Order.Basic",),
+    "integer-absolute-value": (
+        "Mathlib.Data.Int.Order.Lemmas",
+        "Mathlib.Data.Int.Lemmas",
+        "Mathlib.Algebra.Order.Group.Unbundled.Int",
+        "Init.Data.Dyadic.Basic"),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -266,6 +338,10 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
         "kernel-library-application", "modular-arithmetic-reconstruction"),
     "integer-division-boundary-cases": (
         "kernel-library-application", "modular-arithmetic-reconstruction"),
+    "range-induction": ("kernel-induction", "kernel-library-application"),
+    "natural-order-bridging": ("kernel-induction", "kernel-library-application"),
+    "integer-order-inequalities": ("kernel-induction", "kernel-library-application"),
+    "integer-absolute-value": ("kernel-induction", "kernel-library-application"),
 }
 
 PER_FAMILY = 10
