@@ -537,6 +537,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_permute,
         p.count_range_product,
         p.div_mod_block,
+        p.crt_self_map_maps_into,
+        p.crt_self_map_injective_on,
+        p.totient_mul_of_coprime,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -17763,5 +17766,338 @@ fn div_mod_block_reads_a_concrete_block_back_and_needs_its_side_condition() {
     assert!(
         f.k.axiom_footprint(p.div_mod_block).is_empty(),
         "div_mod_block must rest on zero axioms"
+    );
+}
+
+/// `Nat.totient_mul_of_coprime` at two CLOSED coprime instances with both
+/// sides required to COMPUTE, plus a non-coprime negative control at
+/// `m = n = 2` where the identity is genuinely FALSE.
+///
+/// The control is the point of this test. Every step of the proof except one
+/// holds without coprimality (measured at all 26 non-coprime pairs with
+/// `1 <= m,n <= 9` by
+/// `scripts/tests/check-totient-mul-coprime-numerics.py`), so a coprime-only
+/// test could not tell this theorem from the much weaker unconditional facts
+/// it is assembled from. At `m = n = 2` the two sides are `2` and `1`.
+#[test]
+fn totient_mul_of_coprime_computes_at_coprime_pairs_with_a_non_coprime_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let twelve = f.num(12);
+
+    // --- (m, n) = (2, 3): totient 6 = 2 and totient 2 * totient 3 = 1 * 2 ---
+    // `coprime_succ_self 2` is a REAL proof of `gcd 2 3 = 1`, not a `refl`
+    // standing in for one.
+    let coprime_2_3 = f.const_app(p.coprime_succ_self, &[two]);
+    let applied = f.const_app(p.totient_mul_of_coprime, &[two, three, coprime_2_3]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("totient_mul_of_coprime must apply at the coprime pair (2, 3)");
+
+    let mn = f.mul(two, three);
+    let lhs = f.const_app(p.totient, &[mn]);
+    let tot_2 = f.const_app(p.totient, &[two]);
+    let tot_3 = f.const_app(p.totient, &[three]);
+    let rhs = f.mul(tot_2, tot_3);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the statement must be totient (2*3) = totient 2 * totient 3"
+    );
+    assert!(f.k.def_eq(mn, six), "2*3 must compute to 6");
+    assert!(f.k.def_eq(lhs, two), "totient 6 must compute to 2");
+    assert!(f.k.def_eq(tot_2, one), "totient 2 must compute to 1");
+    assert!(f.k.def_eq(tot_3, two), "totient 3 must compute to 2");
+    assert!(
+        f.k.def_eq(rhs, two),
+        "totient 2 * totient 3 must compute to 2"
+    );
+
+    // --- (m, n) = (3, 4): totient 12 = 4 and totient 3 * totient 4 = 2 * 2 --
+    // A second instance where the two factors have EQUAL totients, so it pins
+    // the arithmetic independently of the first.
+    let coprime_3_4 = f.const_app(p.coprime_succ_self, &[three]);
+    let applied2 = f.const_app(p.totient_mul_of_coprime, &[three, four, coprime_3_4]);
+    let inferred2 =
+        f.k.infer(applied2)
+            .expect("totient_mul_of_coprime must apply at the coprime pair (3, 4)");
+    let mn2 = f.mul(three, four);
+    let lhs2 = f.const_app(p.totient, &[mn2]);
+    let tot_4 = f.const_app(p.totient, &[four]);
+    let rhs2 = f.mul(tot_3, tot_4);
+    let expected2 = f.eq(lhs2, rhs2);
+    assert!(f.k.def_eq(inferred2, expected2));
+    assert!(f.k.def_eq(mn2, twelve), "3*4 must compute to 12");
+    assert!(f.k.def_eq(lhs2, four), "totient 12 must compute to 4");
+    assert!(
+        f.k.def_eq(rhs2, four),
+        "totient 3 * totient 4 must compute to 4"
+    );
+
+    // --- NEGATIVE CONTROL: m = n = 2, the smallest non-coprime failure -----
+    // Both halves matter. The hypothesis is unavailable (gcd 2 2 = 2), AND
+    // the conclusion is false -- so this is not a case the theorem merely
+    // declines to cover, it is one where covering it would be unsound.
+    let gcd_2_2 = f.gcd(two, two);
+    assert!(
+        !f.k.def_eq(gcd_2_2, one),
+        "gcd 2 2 must NOT reduce to 1, so the hypothesis cannot be supplied"
+    );
+    let square = f.mul(two, two);
+    let bad_lhs = f.const_app(p.totient, &[square]);
+    let bad_rhs = f.mul(tot_2, tot_2);
+    assert!(f.k.def_eq(square, four), "2*2 must compute to 4");
+    assert!(f.k.def_eq(bad_lhs, two), "totient 4 must compute to 2");
+    assert!(
+        f.k.def_eq(bad_rhs, one),
+        "totient 2 * totient 2 must compute to 1"
+    );
+    assert!(
+        !f.k.def_eq(bad_lhs, bad_rhs),
+        "at m = n = 2 the identity is FALSE (2 against 1), so a coprime-only \
+         test would not discriminate this theorem at all"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.totient_mul_of_coprime).is_empty(),
+        "totient_mul_of_coprime must rest on zero axioms"
+    );
+}
+
+/// `Nat.totient_mul_of_coprime` and both CRT self-map facts at genuinely FREE
+/// variables, each inferred type checked against an independently written
+/// statement.
+///
+/// Numerals reduce, so a concrete instance can hide a definitional-equality
+/// gap that only a free variable exposes; the two checks fail on disjoint
+/// defect classes and this family needs both.
+#[test]
+fn the_totient_multiplicativity_family_applies_at_free_variables() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+    let one = f.num(1);
+
+    let m_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [m_fv, n_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+
+    // --- the two self-map facts, at free PREDECESSORS `m`, `n` -------------
+    let sm = f.succ(m);
+    let sn = f.succ(n);
+    let bound = f.mul(sn, sm);
+    let self_map = {
+        let x_fv = f.fresh_fvar();
+        let x = f.k.fvar(x_fv);
+        let mx = f.modulo(x, sm);
+        let nx = f.modulo(x, sn);
+        let prod = f.mul(sn, mx);
+        let body = f.add(prod, nx);
+        f.lam_fv(x_fv, nat, body)
+    };
+
+    let maps = f.const_app(p.crt_self_map_maps_into, &[m, n]);
+    let maps_ty =
+        f.k.infer_in(maps, &mut ctx)
+            .expect("crtSelfMap_mapsInto must apply at free predecessors");
+    let maps_expected = f.const_app(p.maps_into, &[self_map, bound]);
+    assert!(
+        f.k.def_eq(maps_ty, maps_expected),
+        "crtSelfMap_mapsInto must state MapsInto for the residue-pairing map \
+         on [0, (succ n)*(succ m)) with NO hypothesis"
+    );
+
+    let gcd_sm_sn = f.gcd(sm, sn);
+    let hgcd_ty = f.eq(gcd_sm_sn, one);
+    let hgcd_fv = f.fresh_fvar();
+    let hgcd = f.k.fvar(hgcd_fv);
+    ctx.push(LocalDecl {
+        fvar: hgcd_fv,
+        name: anon,
+        ty: hgcd_ty,
+        info: BinderInfo::Default,
+    });
+    let inj = f.const_app(p.crt_self_map_injective_on, &[m, n, hgcd]);
+    let inj_ty =
+        f.k.infer_in(inj, &mut ctx)
+            .expect("crtSelfMap_injectiveOn must apply at free predecessors");
+    let inj_expected = f.const_app(p.injective_on, &[self_map, bound]);
+    assert!(
+        f.k.def_eq(inj_ty, inj_expected),
+        "crtSelfMap_injectiveOn must state InjectiveOn for the SAME map on the \
+         SAME bound, under the coprimality hypothesis"
+    );
+
+    // --- the theorem itself, at a free coprime pair ------------------------
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    let mut ctx2 = LocalContext::new();
+    for fvar in [a_fv, b_fv] {
+        ctx2.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let gcd_ab = f.gcd(a, b);
+    let hyp_ty = f.eq(gcd_ab, one);
+    let h_fv = f.fresh_fvar();
+    let h = f.k.fvar(h_fv);
+    ctx2.push(LocalDecl {
+        fvar: h_fv,
+        name: anon,
+        ty: hyp_ty,
+        info: BinderInfo::Default,
+    });
+    let sym = f.const_app(p.totient_mul_of_coprime, &[a, b, h]);
+    let sym_ty =
+        f.k.infer_in(sym, &mut ctx2)
+            .expect("totient_mul_of_coprime must apply at a free coprime pair");
+    let ab = f.mul(a, b);
+    let sym_lhs = f.const_app(p.totient, &[ab]);
+    let tot_a = f.const_app(p.totient, &[a]);
+    let tot_b = f.const_app(p.totient, &[b]);
+    let sym_rhs = f.mul(tot_a, tot_b);
+    let sym_expected = f.eq(sym_lhs, sym_rhs);
+    assert!(
+        f.k.def_eq(sym_ty, sym_expected),
+        "the symbolic statement must be totient (m*n) = totient m * totient n"
+    );
+    // Binder order is not free: `totient m * totient n` and its transpose are
+    // different theorems and both type-check at concrete numerals, so pin the
+    // one that actually landed.
+    let transposed = f.mul(tot_b, tot_a);
+    let transposed_stmt = f.eq(sym_lhs, transposed);
+    assert!(
+        !f.k.def_eq(sym_ty, transposed_stmt),
+        "the two factor orders are DIFFERENT statements at free variables; \
+         this assertion is what makes the one above discriminate"
+    );
+
+    for name in [
+        p.crt_self_map_maps_into,
+        p.crt_self_map_injective_on,
+        p.totient_mul_of_coprime,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "the totient multiplicativity family must rest on zero axioms"
+        );
+    }
+}
+
+/// `g x = n*(x mod m) + (x mod n)` at concrete `(m, n)` — the CRT self-map
+/// `Nat.crtSelfMap_injectiveOn` is about, rebuilt here so the test can
+/// EVALUATE it rather than only type-check statements about it.
+fn crt_image_at(f: &mut Fixture, m: ExprId, n: ExprId, x: ExprId) -> ExprId {
+    let mx = f.modulo(x, m);
+    let nx = f.modulo(x, n);
+    let prod = f.mul(n, mx);
+    f.add(prod, nx)
+}
+
+/// The CRT self-map really is injective on `[0, n*m)` for a coprime pair and
+/// really is NOT for a non-coprime one — by EVALUATION at concrete numerals,
+/// because the map is a bare lambda and nothing the kernel checks constrains
+/// what it computes.
+///
+/// At `m = n = 2` it sends both `0` and `2` to `0` while both are below the
+/// bound `4`, the smallest collision
+/// `scripts/tests/check-totient-mul-coprime-numerics.py` reports. So
+/// `Nat.crtSelfMap_injectiveOn`'s hypothesis is load-bearing rather than
+/// decorative.
+#[test]
+fn the_crt_self_map_permutes_a_coprime_block_and_collides_on_a_non_coprime_one() {
+    let mut f = Fixture::new();
+    let zero = f.num(0);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+
+    // --- coprime (m, n) = (2, 3): the six images are a permutation of [0,6) -
+    let mut seen: Vec<u32> = Vec::new();
+    for k in 0..6u32 {
+        let x = f.num(k);
+        let img = crt_image_at(&mut f, two, three, x);
+        let mut matched = None;
+        for target in 0..6u32 {
+            let t = f.num(target);
+            if f.k.def_eq(img, t) {
+                matched = Some(target);
+                break;
+            }
+        }
+        let value = matched.unwrap_or_else(|| panic!("g {k} must land inside [0,6)"));
+        assert!(
+            !seen.contains(&value),
+            "at the coprime pair (2,3) the map must be INJECTIVE, but two \
+             distinct inputs share the image {value}"
+        );
+        seen.push(value);
+    }
+    assert_eq!(seen.len(), 6, "all six images must have been identified");
+    let bound_2_3 = f.mul(three, two);
+    assert!(
+        f.k.def_eq(bound_2_3, six),
+        "the bound n*m must compute to 6"
+    );
+
+    // --- NEGATIVE CONTROL: non-coprime (m, n) = (2, 2) collides at 0 and 2 --
+    let g0 = crt_image_at(&mut f, two, two, zero);
+    let g2 = crt_image_at(&mut f, two, two, two);
+    assert!(
+        f.k.def_eq(g0, zero),
+        "g 0 must compute to 0 at (m,n) = (2,2)"
+    );
+    assert!(
+        f.k.def_eq(g2, zero),
+        "g 2 must compute to 0 at (m,n) = (2,2)"
+    );
+    assert!(
+        f.k.def_eq(g0, g2),
+        "the two images must be equal -- that IS the collision"
+    );
+    assert!(
+        !f.k.def_eq(zero, two),
+        "the two INPUTS must differ, or the collision is vacuous"
+    );
+    let bound_2_2 = f.mul(two, two);
+    assert!(f.k.def_eq(bound_2_2, four), "the bound must compute to 4");
+    // Both colliding inputs are genuinely inside the block, with REAL proofs
+    // rather than well-formedness checks -- so this refutes `InjectiveOn g 4`
+    // itself rather than describing behaviour outside the map's domain.
+    let lt_0_4 = f.zero_lt_succ(three);
+    let want_0_4 = f.lt(zero, bound_2_2);
+    let got_0_4 = f.k.infer(lt_0_4).expect("zero_lt_succ 3 must type-check");
+    assert!(
+        f.k.def_eq(got_0_4, want_0_4),
+        "the first colliding input must be proved below the bound"
+    );
+    let lt_2_4 = f.lemma(f.p.le_succ, &[three]);
+    let want_2_4 = f.lt(two, bound_2_2);
+    let got_2_4 = f.k.infer(lt_2_4).expect("le_succ 3 must type-check");
+    assert!(
+        f.k.def_eq(got_2_4, want_2_4),
+        "the second colliding input must be proved below the bound"
     );
 }
