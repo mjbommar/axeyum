@@ -367,6 +367,17 @@ facts:
     # scripts. ZERO EXECUTED CASES IS ALWAYS FAILURE. A mutation that is not
     # falsified because it is also true is classified, never failed.
     python3 scripts/check-semantic-control-fixtures.py --check
+    # S2 of the same roadmap: the universal trust and circularity audit, read
+    # from the admitted term rather than from authored `depends_on`. Every
+    # kernel-route settled fact is checked against its own transitive
+    # `Kernel::declaration_dependencies` closure -- 1,953 subjects, against the
+    # S0 census's measured `circularity 38 / 2117`. Four guards looking at four
+    # different things, so target injection, indirect target injection, axiom
+    # insertion and population deletion cannot all reject through one path.
+    python3 scripts/check-trust-closure.py --quiet
+    # ...and its controls: 17 cases, then 15 guard deletions each required to
+    # kill EXACTLY ONE.
+    bash scripts/tests/test-trust-closure.sh
     # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so
     # the Mathlib proposition lives only in `formal.statement`. Nineteen had it
     # overwritten with our own `render_lean` output, and the mirror claim -- "we

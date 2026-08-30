@@ -1,0 +1,18 @@
+# Derived by scripts/check-trust-closure.py --update. Do not hand-edit.
+# Theorems whose Kernel::render_lean canonical type is byte-identical.
+# size	members	canonical-type
+2	CPoint.apollonius_from_stewart,CPoint.apollonius_median	((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv (CReal.add (CPoint.distSq x0 x1) (CPoint.distSq x0 x2)) (CReal.add (CReal.add (CPoint.distSq x0 (CPoint.midpoint x1 x2)) (CPoint.distSq x0 (CPoint.midpoint x1 x2))) (CReal.add (CPoint.distSq x1 (CPoint.midpoint x1 x2)) (CPoint.distSq x1 (CPoint.midpoint x1 x2)))))))
+2	CReal.rat_approx_lower,CReal.sampleLowerBound	((x0 : CReal) -> ((x1 : AxNat) -> CReal.le (CReal.ofRat (Rat.sub (CReal.seq x0 x1) (Rat.natDivSucc (AxNat.succ AxNat.zero) x1))) x0))
+2	CReal.rat_approx_upper,CReal.sampleUpperBound	((x0 : CReal) -> ((x1 : AxNat) -> CReal.le x0 (CReal.ofRat (Rat.add (CReal.seq x0 x1) (Rat.natDivSucc (AxNat.succ AxNat.zero) x1)))))
+2	Int.Characterization.discrete,Int.no_int_between	((x0 : Int) -> Not (And (Int.lt Int.zero x0) (Int.lt x0 Int.one)))
+2	Int.Characterization.le_total,Int.le_total	((x0 : Int) -> ((x1 : Int) -> Or (Int.le x0 x1) (Int.le x1 x0)))
+2	Int.Characterization.zero_lt_one,Int.zero_lt_one	Int.lt Int.zero Int.one
+2	Int.add_mul,Rat.int_right_distrib	((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul (Int.add x0 x1) x2) (Int.add (Int.mul x0 x2) (Int.mul x1 x2)))))
+2	Nat.Peano.succ_injective,Nat.succ_injective	((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.succ x0) (AxNat.succ x1)) -> Eq.{1} AxNat x0 x1)))
+2	Nat.clog_mono_right,Nat.clog_monotone	((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.clog x0 x1) (AxNat.clog x0 x2)))))
+2	Nat.coprime_dvd_left,Nat.coprime_of_dvd_left	((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> ((x4 : Eq.{1} AxNat (AxNat.gcd x1 x2) (AxNat.succ AxNat.zero)) -> Eq.{1} AxNat (AxNat.gcd x0 x2) (AxNat.succ AxNat.zero))))))
+2	Nat.dvd_of_dvd_mul_left,Nat.gauss_lemma	((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) -> ((x4 : AxNat.dvd x0 (AxNat.mul x1 x2)) -> AxNat.dvd x0 x2)))))
+2	Nat.le_succ_succ,Nat.succ_le_succ	((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.succ x0) (AxNat.succ x1))))
+2	Nat.log_mono_right,Nat.log_monotone	((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.log x0 x1) (AxNat.log x0 x2)))))
+2	Nat.succ_sub_succ,Nat.succ_sub_succ_eq_sub	((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sub (AxNat.succ x0) (AxNat.succ x1)) (AxNat.sub x0 x1)))
+2	Rat.chebyshev_sampleMean_uncorrelated,Rat.weak_law_of_large_numbers	((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : Rat) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : Rat.IsDistribution x2 x3) -> ((x6 : Rat.PairwiseUncorrelated x0 x4 x2 x3) -> ((x7 : Rat.lt Rat.zero x1) -> Rat.le (Rat.mul (Rat.mul x1 x1) (Rat.expectation (Rat.indicator (Rat.mul x1 x1) (fun (x8 : AxNat) => Rat.mul (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)) (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)))) x2 x3)) (Rat.mul (Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.inv (Rat.natDivSucc x4 AxNat.zero))) (Rat.sumRange (fun (x8 : AxNat) => Rat.variance (x0 x8) x2 x3) x4))))))))))

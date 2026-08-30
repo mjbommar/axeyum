@@ -741,12 +741,54 @@ def main() -> int:
         cas_breakdown[c] = cas_breakdown.get(c, 0) + 1
     # Independent re-derivations. Cross-oracle agreement is the strongest signal
     # here, and it was invisible while every row said `checked` and nothing else.
-    multi = sum(
-        1
-        for f in facts.values()
-        for e in f.get("evidence", [])
-        if len(e.get("checkers", [])) >= 2
-    )
+    #
+    # THE PRODUCING RUN IS NOT A RE-DERIVATION OF ITSELF, and this counter used
+    # to say it was. Measured 2026-08-30 over the whole ledger: of 3,579 rows
+    # carrying 2+ checkers, **1,581 name the run that produced the result** --
+    # `producing-build (Kernel::add_declaration)` 1,333 times, plus 248 more
+    # naming `Kernel::add_declaration` in another phrasing or a
+    # `*-producing-solve`. For a kernel-route fact the proof term is built and
+    # admitted in one step, so `add_declaration` IS the production; listing it
+    # beside `Kernel::axiom_footprint` gives a row with one re-derivation, not
+    # two. Only **2,097** rows carry 2+ checks that are not the production.
+    #
+    # S0's census reported 1,356 of 1,984 facts by matching the literal string
+    # `producing`; reproduced here that is 1,359 of 1,989 today (three facts
+    # landed since). That measurement was right about what it measured. The
+    # broader classifier below is the honest one, because a checker named
+    # `Kernel::add_declaration (re-derives the type from the proof term)` is the
+    # producing build whether or not the word "producing" appears in it.
+    def names_the_producing_run(checker: str) -> bool:
+        lowered = checker.lower()
+        return "producing" in lowered or "add_declaration" in checker
+
+    multi = 0
+    self_rederived = 0
+    independent = 0
+    for f in facts.values():
+        for e in f.get("evidence", []):
+            checkers = e.get("checkers", [])
+            if len(checkers) < 2:
+                continue
+            multi += 1
+            if any(names_the_producing_run(c) for c in checkers):
+                self_rederived += 1
+            if sum(1 for c in checkers if not names_the_producing_run(c)) >= 2:
+                independent += 1
+
+    # A classifier that matches nothing reports the ledger as fully independent,
+    # which is the most flattering possible answer and indistinguishable from a
+    # broken pattern. It matched 1,581 rows when written; a zero here means it
+    # stopped seeing its subject.
+    if multi and self_rederived == 0:
+        print(
+            f"\nvalidate-facts: the producing-run classifier matched ZERO of {multi} "
+            "multi-checker rows. It matched 1,581 when written, so a zero means the "
+            "classifier lost its subject rather than the ledger becoming independent "
+            "-- an empty result is not a negative result.",
+            file=sys.stderr,
+        )
+        return 1
 
     spread = " ".join(f"{k}={v}" for k, v in sorted(by_status.items()))
     print(f"{len(facts)} facts checked, 0 errors  ({spread})")
@@ -808,7 +850,11 @@ def main() -> int:
     if imported:
         print(f"  {imported} fact(s) on an IMPORTED route -- proof term checked here, "
               f"authored elsewhere; not evidence of construction")
-    print(f"  {multi} evidence row(s) re-derived by 2+ independent checkers")
+    print(
+        f"  {multi} evidence row(s) checked by 2+ distinct checkers -- "
+        f"{self_rederived} of those count the PRODUCING run as one of the two, so "
+        f"{independent} carry 2+ checks that are not the production itself"
+    )
     print(f"  external: {backlog} settled elsewhere but not here (import backlog), "
           f"{unclassified} unclassified")
     if novel:

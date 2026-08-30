@@ -374,6 +374,21 @@ step safety-matrix python3 scripts/gen-safety-matrix.py --check
 # CASES IS ALWAYS FAILURE, per fixture and for the pack. A mutation that is
 # not falsified because it is also true is classified, never failed.
 step semantic-control-fixtures python3 scripts/check-semantic-control-fixtures.py --check
+# S2 of the same roadmap: the universal trust and circularity audit. Reads the
+# whole constructed declaration surface out of `kernel_declaration_projection`
+# and checks every kernel-route settled fact against its own transitive
+# `Kernel::declaration_dependencies` closure -- 1,953 subjects, against the S0
+# census's measured `circularity 38 / 2117`. Four guards, deliberately looking
+# at four different things so the four contamination shapes cannot all reject
+# through one path: the subject in its own closure; a byte-identically-typed
+# sibling in its closure; an Axiom/Opaque/Quotient in its closure; and the
+# enforced population itself, which is the guard that exists because the other
+# three cannot fail when there is nothing left to check.
+step trust-closure python3 scripts/check-trust-closure.py --quiet
+# ...and the controls for it: 17 cases, then 15 guard deletions each required to
+# kill EXACTLY ONE. A mutation killing two would mean the cases do not separate
+# what they claim to; killing none would mean the guard is unreachable.
+step trust-closure-controls bash scripts/tests/test-trust-closure.sh
 # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so the
 # Mathlib proposition lives only in `formal.statement`. Nineteen had it
 # overwritten with our own `render_lean` output, and the mirror claim -- "we

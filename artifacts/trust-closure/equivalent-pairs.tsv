@@ -1,0 +1,20 @@
+# Derived by scripts/check-trust-closure.py --update. Do not hand-edit.
+# DISCLOSED, NOT APPROVED. Each row is a ledger fact whose kernel subject
+# is proved from a sibling declaration with a byte-identical canonical
+# type -- one proposition, counted twice. The guard rejects any pair not
+# listed AND any listed pair that no longer occurs, so this file can only
+# shrink without a deliberate, recorded update.
+# fact	subject	equivalent-reached-in-closure
+F:creal-samplelowerbound	CReal.sampleLowerBound	CReal.rat_approx_lower
+F:creal-sampleupperbound	CReal.sampleUpperBound	CReal.rat_approx_upper
+F:int-characterization-discrete	Int.Characterization.discrete	Int.no_int_between
+F:int-characterization-le-total	Int.Characterization.le_total	Int.le_total
+F:int-characterization-zero-lt-one	Int.Characterization.zero_lt_one	Int.zero_lt_one
+F:ml430-nat-clog-monotone-48fe50c6	Nat.clog_monotone	Nat.clog_mono_right
+F:ml430-nat-coprime-coprime-dvd-left-2ce391d2	Nat.coprime_dvd_left	Nat.coprime_of_dvd_left
+F:ml430-nat-coprime-dvd-of-dvd-mul-left-b0608cb9	Nat.dvd_of_dvd_mul_left	Nat.gauss_lemma
+F:ml430-nat-log-monotone-52fad774	Nat.log_monotone	Nat.log_mono_right
+F:nat-peano-succ-injective	Nat.Peano.succ_injective	Nat.succ_injective
+F:nat-succ-le-succ	Nat.succ_le_succ	Nat.le_succ_succ
+F:nat-succ-sub-succ-eq-sub	Nat.succ_sub_succ_eq_sub	Nat.succ_sub_succ
+F:rat-weak-law-of-large-numbers	Rat.weak_law_of_large_numbers	Rat.chebyshev_sampleMean_uncorrelated
