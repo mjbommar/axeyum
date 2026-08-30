@@ -157,6 +157,7 @@ mod div_mod_lemmas;
 mod divisibility;
 mod division;
 mod dvd_add_iff_left;
+mod dvd_mul_split;
 mod euler;
 mod factorization;
 mod fermat;
@@ -257,6 +258,7 @@ use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
+use dvd_mul_split::declare_dvd_mul_split;
 use euler::declare_mod_eq_cancel;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
@@ -3948,6 +3950,16 @@ pub struct NatPrelude {
     /// `dvd_add_iff_right(k,n,m,h) : Iff (dvd k m) (dvd k (n+m))`, transported
     /// along `add_comm n m : Eq (n+m) (m+n)`.
     pub dvd_add_iff_left: NameId,
+
+    // -- `dvd-mul-split` lane: `dvd_mul_split.rs`.
+    /// `Nat.dvd_mul_split : ∀ k m n, Iff (dvd k (m*n)) (∃ k1 k2, And (dvd k1
+    /// m) (And (dvd k2 n) (Eq (k1*k2) k)))` — `F:ml430-nat-dvd-mul-ebd102e2`
+    /// (Mathlib's `Nat.dvd_mul`). NOT named `dvd_mul`: that kernel name is
+    /// already taken by the unrelated trivial lemma `∀ a q, dvd a (a*q)`
+    /// ([`Self::dvd_mul`]). Forward direction (`k1 := gcd(k,m)`, `k2 :=
+    /// k/gcd(k,m)`) needs [`Self::gcd_mul_right`]; reverse is uniform
+    /// four-factor regrouping. See `dvd_mul_split.rs`'s module doc.
+    pub dvd_mul_split: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -4727,6 +4739,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_gcd_pos_of_pos_left: kernel.name_str(nat, "div_gcd_pos_of_pos_left"),
             div_gcd_pos_of_pos_right: kernel.name_str(nat, "div_gcd_pos_of_pos_right"),
             dvd_add_iff_left: kernel.name_str(nat, "dvd_add_iff_left"),
+            dvd_mul_split: kernel.name_str(nat, "dvd_mul_split"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -5268,6 +5281,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_divisibility`/`declare_arithmetic`, far above). Nothing
         // needs it, so it goes last.
         declare_dvd_add_iff_left(&mut d, &p)?;
+        // Needs `Nat.gcd_mul_right` (just above, `declare_gcd_mul_right`),
+        // `Nat.gcd_dvd_left`/`Nat.gcd_dvd_right`/`Nat.dvd_gcd`/`Nat.dvd_mul`/
+        // `Nat.one_le_of_dvd_pos`/`Nat.mul_left_cancel_of_pos`/
+        // `Nat.mul_assoc`/`Nat.mul_eq_zero`/`Nat.dvd_refl`/`Nat.zero_mul`/
+        // `Nat.mul_zero` (`declare_gcd_semantics`/`declare_divisibility`/
+        // `declare_multiplicative_theorems`/`declare_arithmetic`, far
+        // above) and `mul_left_comm` (`binomial.rs`). Nothing needs it, so
+        // it goes last.
+        declare_dvd_mul_split(&mut d, &p)?;
         Ok(p)
     })();
     match built {
