@@ -7,7 +7,28 @@
     "min_identity_bound": 1294,
     "max_header_exempt": 30
   },
-  "amendments": [],
+  "amendments": [
+    {
+      "fact_id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
+      "from_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
+      "to_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
+      "from_prose_sha256": "225262a5bb22d859ca74701375e3d29d3e3a685b838bd4d046d0714926fdc871",
+      "to_prose_sha256": "579cd46630e36adeced9dd10f8840fdabce7bbe0ec89a885f334ac808809a3ba",
+      "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
+      "recorded_by": "coordinator",
+      "recorded_in": "da61dcef9"
+    },
+    {
+      "fact_id": "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
+      "from_sha256": "df5af186f2ca1ddd7cefe0e558827534c9bb0d610fbd60ebb9ef4a2a208d8967",
+      "to_sha256": "df5af186f2ca1ddd7cefe0e558827534c9bb0d610fbd60ebb9ef4a2a208d8967",
+      "from_prose_sha256": "b4365409a57fb3a5db419c049d40c706033c39d2b8cfcf19472e9dcd5b0bff1f",
+      "to_prose_sha256": "4cffed622f5a2e0eddc024b51ab556f3cfe09f7aa70f580fcbf4eecbbe542ee8",
+      "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
+      "recorded_by": "coordinator",
+      "recorded_in": "da61dcef9"
+    }
+  ],
   "pins": [
     {
       "fact_id": "F:acc-inv",
@@ -8359,7 +8380,7 @@
       "fact_id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
       "language": "lean4-surface",
       "statement_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
-      "prose_sha256": "225262a5bb22d859ca74701375e3d29d3e3a685b838bd4d046d0714926fdc871",
+      "prose_sha256": "579cd46630e36adeced9dd10f8840fdabce7bbe0ec89a885f334ac808809a3ba",
       "kernel_theorem": "Nat.eq_or_eq_of_totient_eq_totient"
     },
     {
@@ -9342,7 +9363,7 @@
       "fact_id": "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
       "language": "lean4-surface",
       "statement_sha256": "df5af186f2ca1ddd7cefe0e558827534c9bb0d610fbd60ebb9ef4a2a208d8967",
-      "prose_sha256": "b4365409a57fb3a5db419c049d40c706033c39d2b8cfcf19472e9dcd5b0bff1f",
+      "prose_sha256": "4cffed622f5a2e0eddc024b51ab556f3cfe09f7aa70f580fcbf4eecbbe542ee8",
       "kernel_theorem": "Nat.totient_dvd_of_dvd"
     },
     {
@@ -13332,6 +13353,24 @@
       "statement_sha256": "0348b891056c15a47a5c9b6c6c60b40aca048786a86e83eb30a5c6059a75d6de",
       "prose_sha256": "216e0572f528652e6fe8e46d7fb545942fd9ff880e9f770dfc2bdb7b72747bf3",
       "kernel_theorem": "Rat.markov_inequality"
+    },
+    {
+      "fact_id": "F:rat-matmul-assoc",
+      "language": "lean4",
+      "statement_sha256": "edd80215de9e0e5035dedeee7dda9ec7862dbdc2ab900b9267a4299986b1c77c",
+      "prose_sha256": "a7bdaf6c9158012e6309d7d1e1ca4bec5a3d788d185cefdfdafb997474b278be"
+    },
+    {
+      "fact_id": "F:rat-matmul-id-left",
+      "language": "lean4",
+      "statement_sha256": "ac0441846ac173c90234ef943fa5b1af7070a49f1c8423b1d32845026632b863",
+      "prose_sha256": "b09fe48dcd6797034362ae442e46706a32aeb52caae9ff397129dd655696aa1d"
+    },
+    {
+      "fact_id": "F:rat-matmul-id-right",
+      "language": "lean4",
+      "statement_sha256": "78d8cbc205bf97f7db2aa7fa9605bec3daa71008e66a34b165511a05e336583e",
+      "prose_sha256": "ec72fad855adca45a3eead315e61de558ab864077d7a1e3776203c67818369c5"
     },
     {
       "fact_id": "F:rat-max-cases",
