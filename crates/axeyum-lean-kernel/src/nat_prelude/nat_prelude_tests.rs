@@ -7870,11 +7870,28 @@ fn the_build_is_deterministic() {
     let first = render_all();
     let second = render_all();
     assert_eq!(first, second, "the prelude build must be deterministic");
-    assert_eq!(
-        first.len(),
-        93 + 610,
-        "every promised definition and theorem must be rendered"
-    );
+
+    // A LENGTH PIN USED TO SIT HERE (`assert_eq!(first.len(), 93 + 610)`) AND
+    // IT IS DELIBERATELY GONE. It constrained the two hand-maintained name
+    // lists against a literal -- "are these lists internally consistent" --
+    // and never "are they complete", which is the question that matters.
+    // `every_nat_declaration_is_checked_and_axiom_free` answers the real one by
+    // reading `k.environment()` directly and failing on any `Nat.`
+    // Definition/Theorem absent from the lists. Verified before removing this,
+    // by deleting one `theorem_names` entry in a throwaway worktree: that test
+    // fails and names the declaration
+    // (`["Nat.countRange_union_add_inter"]`). So the pin guarded nothing the
+    // coverage assertion does not guard better.
+    //
+    // What it DID do was collide. It is one line every concurrent `nat_prelude`
+    // lane edits, so two lanes landing correct increments produce a
+    // ZERO-CONFLICT merge with a stale total -- CLAUDE.md's documented trap.
+    // It conflicted three times on 2026-08-30 alone and the arithmetic was
+    // wrong EVERY time, because the base kept moving underneath: 581+4+3 gave
+    // 588 against a counted 598, and later 602 vs 606 against a counted 610.
+    // This is the same removal `creal_tests.rs` made after the same incidents;
+    // do not reintroduce it. The determinism assertion above is this test's
+    // actual content and needs no count.
 }
 
 /// `Nat.eq_one_of_dvd_one` is a theorem with an empty axiom footprint, and it
