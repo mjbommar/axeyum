@@ -405,7 +405,7 @@
       "train"
     ],
     "knowledge_overlay_sha256": "105cd3da3bc2c1bb12a65e8a276702ab62645f1315de9b233541919387370200",
-    "nursery_sha256": "c71ed72edc5f9f314b03aa8771e4ebdeee21dcf9fa41098c8e524242de731b9f",
+    "nursery_sha256": "2fdc3a46bc29f728c8ab00b8096a377a59a01a2d004e24853c3a07dd4d90db41",
     "trust_boundary": "train/development fact coverage plus local reviewed kernel anchors only; never held-out disclosure, proof, operation, or admission authority"
   },
   "kind": "axeyum-autogenesis-concept-coverage-projection",
