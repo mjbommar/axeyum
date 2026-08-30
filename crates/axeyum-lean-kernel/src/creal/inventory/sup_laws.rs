@@ -52,5 +52,6 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.sup_on_ub_at_fine_mesh_point,
             "theorem",
         ),
+        ("CReal.supOn_ub", p.sup_on_ub, "theorem"),
     ]
 }

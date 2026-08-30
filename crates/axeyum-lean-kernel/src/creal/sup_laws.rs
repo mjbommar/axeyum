@@ -79,13 +79,14 @@
 
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
+use super::ring_helpers::right_distrib;
 use super::{CRealPrelude, and_intro, cadd, cle, creal_ty, embed};
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rtrans};
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rtrans, rzero};
 
 /// `CReal.mul x y`.
 fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
@@ -1585,6 +1586,828 @@ pub(super) fn declare_sup_on_ub_at_fine_mesh_point(
     declare_mesh_max_le_sup_on_add_thm(d, p)?;
     declare_sup_on_ub_at_fine_mesh_point_thm(d, p)
 }
+// ---------------------------------------------------------------------------
+// `CReal.supOn_ub` -- the upper-bound law at an ARBITRARY point of `[a, b]`
+// ---------------------------------------------------------------------------
+
+/// `Equiv y x` from `h : Equiv x y`.
+fn esymm(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId, h: ExprId) -> ExprId {
+    d.lemma(p.equiv_symm, &[x, y, h])
+}
+
+/// Fold a list of `(next, Equiv current next)` steps into one `Equiv start
+/// last`. Duplicated from `creal/monotone.rs`'s `pub(super) echain`, per this
+/// development's re-derive-rather-than-widen convention.
+fn echain(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    start: ExprId,
+    steps: &[(ExprId, ExprId)],
+) -> ExprId {
+    let mut current = start;
+    let mut proof = d.lemma(p.equiv_refl, &[start]);
+    for &(next, step) in steps {
+        proof = d.lemma(p.equiv_trans, &[start, current, next, proof, step]);
+        current = next;
+    }
+    proof
+}
+
+/// `Equiv (add a (add b (neg a))) b` -- `a + (b - a) ~ b`. Duplicated from
+/// `creal/monotone.rs`'s and `creal/integral.rs`'s private `add_sub_cancel`.
+fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na);
+    let start = cadd(d, p, a, width);
+
+    let nab = cadd(d, p, na, b);
+    let s1 = cadd(d, p, a, nab);
+    let h1 = {
+        let comm = d.lemma(p.add_comm, &[b, na]);
+        let refl_a = d.lemma(p.equiv_refl, &[a]);
+        d.lemma(p.add_congr, &[a, a, width, nab, refl_a, comm])
+    };
+
+    let ana = cadd(d, p, a, na);
+    let s2 = cadd(d, p, ana, b);
+    let h2 = {
+        let assoc = d.lemma(p.add_assoc, &[a, na, b]);
+        esymm(d, p, s2, s1, assoc)
+    };
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let s3 = cadd(d, p, zero_c, b);
+    let h3 = {
+        let hn = d.lemma(p.add_neg, &[a]);
+        let refl_b = d.lemma(p.equiv_refl, &[b]);
+        d.lemma(p.add_congr, &[ana, zero_c, b, b, hn, refl_b])
+    };
+
+    let s4 = cadd(d, p, b, zero_c);
+    let h4 = d.lemma(p.add_comm, &[zero_c, b]);
+    let h5 = d.lemma(p.add_zero, &[b]);
+
+    echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (b, h5)],
+    )
+}
+
+/// `Equiv (ofNat Nat.zero) zero` -- duplicated from `creal/monotone.rs`'s
+/// private `of_nat_zero_equiv_local`.
+fn of_nat_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let zero_nat = d.num(0);
+    let unit = d.const_app(rat.nat_div_succ, &[zero_nat, zero_nat]);
+    let zero_rat = rzero(d, rat);
+    let unit_eq_zero = d.lemma(rat.self_normalize, &[zero_rat]);
+    let unit_embed = embed(d, p, unit);
+    let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+    rat_eq_rewrite(d, unit, zero_rat, unit_eq_zero, refl_start, &|d, t| {
+        let embedded = embed(d, p, t);
+        cequiv(d, p, unit_embed, embedded)
+    })
+}
+
+/// `Equiv (ofNat (Nat.succ Nat.zero)) one` -- duplicated from
+/// `creal/supremum.rs`'s private `of_nat_one_equiv`.
+fn of_nat_one_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let unit = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let one_rat = d.kernel().const_(rat.one, vec![]);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+    let unit_embed = embed(d, p, unit);
+    let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+    rat_eq_rewrite(d, unit, one_rat, unit_eq_one, refl_start, &|d, t| {
+        let embedded = embed(d, p, t);
+        cequiv(d, p, unit_embed, embedded)
+    })
+}
+
+/// `Equiv (ofNat (Nat.succ m)) (add (ofNat m) one)` -- duplicated from
+/// `creal/supremum.rs`'s private `of_nat_succ_equiv`.
+///
+/// `m` is the numerator on the LEFT in every `natDivSucc`/`Nat.add` pair built
+/// here: `Nat.add m 1` iota-reduces (`Nat.add` recurses on its SECOND
+/// argument) and `Nat.add 1 m` does not, for a symbolic `m`.
+fn of_nat_succ_equiv(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let m_rat = d.const_app(rat.nat_div_succ, &[m, zero_nat]);
+    let one_ratdiv = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let sum_rat = radd(d, m_rat, one_ratdiv);
+    let succ_m = d.succ(m);
+    let succ_rat = d.const_app(rat.nat_div_succ, &[succ_m, zero_nat]);
+    let add_eq = d.lemma(rat.nat_div_succ_add, &[m, one_nat, zero_nat]);
+
+    let of_nat_m = d.const_app(p.of_nat, &[m]);
+    let of_nat_1 = d.const_app(p.of_nat, &[one_nat]);
+    let of_nat_succ_m = d.const_app(p.of_nat, &[succ_m]);
+    let add_of_nat_m_1 = cadd(d, p, of_nat_m, of_nat_1);
+
+    let add_step = d.lemma(p.of_rat_add, &[m_rat, one_ratdiv]);
+    let rewritten = rat_eq_rewrite(d, sum_rat, succ_rat, add_eq, add_step, &|d, t| {
+        let embedded = embed(d, p, t);
+        cequiv(d, p, add_of_nat_m_1, embedded)
+    });
+    let flipped = esymm(d, p, add_of_nat_m_1, of_nat_succ_m, rewritten);
+
+    let one_eq = of_nat_one_equiv(d, p);
+    let refl_m = d.lemma(p.equiv_refl, &[of_nat_m]);
+    let congr_step = d.lemma(
+        p.add_congr,
+        &[of_nat_m, of_nat_m, of_nat_1, one_c, refl_m, one_eq],
+    );
+    let add_of_nat_m_one = cadd(d, p, of_nat_m, one_c);
+    d.lemma(
+        p.equiv_trans,
+        &[
+            of_nat_succ_m,
+            add_of_nat_m_1,
+            add_of_nat_m_one,
+            flipped,
+            congr_step,
+        ],
+    )
+}
+
+/// `Equiv (mul one x) x` -- `mul_comm` then `mul_one`. There is no
+/// `CReal.one_mul`.
+fn one_mul_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let lhs = cmul(d, p, one_c, x);
+    let swapped = cmul(d, p, x, one_c);
+    let comm = d.lemma(p.mul_comm, &[one_c, x]);
+    let trim = d.lemma(p.mul_one, &[x]);
+    d.lemma(p.equiv_trans, &[lhs, swapped, x, comm, trim])
+}
+
+/// `Equiv (meshSamplePoint a delta (Nat.succ n)) (add (meshSamplePoint a delta
+/// n) delta)` -- the mesh advances by exactly one width per index step.
+/// Duplicated from `creal/supremum.rs`'s private `sample_succ_equiv`.
+fn sample_succ_equiv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    delta: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let of_nat_n = d.const_app(p.of_nat, &[n]);
+    let sn = d.succ(n);
+    let of_nat_sn = d.const_app(p.of_nat, &[sn]);
+    let sum_on = cadd(d, p, of_nat_n, one_c);
+
+    let s1 = of_nat_succ_equiv(d, p, n);
+    let refl_delta = d.lemma(p.equiv_refl, &[delta]);
+    let lhs_mul = cmul(d, p, of_nat_sn, delta);
+    let mid_mul = cmul(d, p, sum_on, delta);
+    let m1 = d.lemma(
+        p.mul_congr,
+        &[of_nat_sn, sum_on, delta, delta, s1, refl_delta],
+    );
+
+    let m2 = right_distrib(d, p, of_nat_n, one_c, delta);
+    let on_delta = cmul(d, p, of_nat_n, delta);
+    let one_delta = cmul(d, p, one_c, delta);
+    let split = cadd(d, p, on_delta, one_delta);
+
+    let m3 = one_mul_equiv(d, p, delta);
+    let refl_on_delta = d.lemma(p.equiv_refl, &[on_delta]);
+    let m4 = d.lemma(
+        p.add_congr,
+        &[on_delta, on_delta, one_delta, delta, refl_on_delta, m3],
+    );
+    let trimmed = cadd(d, p, on_delta, delta);
+
+    let chain1 = d.lemma(p.equiv_trans, &[lhs_mul, mid_mul, split, m1, m2]);
+    let chain2 = d.lemma(p.equiv_trans, &[lhs_mul, split, trimmed, chain1, m4]);
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let lifted = d.lemma(p.add_congr, &[a, a, lhs_mul, trimmed, refl_a, chain2]);
+    let sp_succ = cadd(d, p, a, lhs_mul);
+    let nested = cadd(d, p, a, trimmed);
+
+    let assoc = d.lemma(p.add_assoc, &[a, on_delta, delta]);
+    let sp_n = cadd(d, p, a, on_delta);
+    let flat = cadd(d, p, sp_n, delta);
+    let assoc_symm = esymm(d, p, flat, nested, assoc);
+
+    d.lemma(p.equiv_trans, &[sp_succ, nested, flat, lifted, assoc_symm])
+}
+
+/// `Equiv (meshSamplePoint a delta Nat.zero) a` -- the FIRST interface
+/// identity `CReal.stepFamily_locate`'s mesh instantiation needs (`P 0 ~ a`).
+/// `ofNat 0 ~ 0`, `0 * delta ~ 0` (through `mul_comm`, since there is no
+/// `CReal.zero_mul`), then `add_zero`.
+fn sample_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, delta: ExprId) -> ExprId {
+    let zero_nat = d.num(0);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let of_nat_0 = d.const_app(p.of_nat, &[zero_nat]);
+    let term = cmul(d, p, of_nat_0, delta);
+    let zero_delta = cmul(d, p, zero_c, delta);
+    let delta_zero = cmul(d, p, delta, zero_c);
+
+    let zero_eq = of_nat_zero_equiv(d, p);
+    let refl_delta = d.lemma(p.equiv_refl, &[delta]);
+    let t1 = d.lemma(
+        p.mul_congr,
+        &[of_nat_0, zero_c, delta, delta, zero_eq, refl_delta],
+    );
+    let t2 = d.lemma(p.mul_comm, &[zero_c, delta]);
+    let t3 = d.lemma(p.mul_zero, &[delta]);
+    let term_zero = echain(
+        d,
+        p,
+        term,
+        &[(zero_delta, t1), (delta_zero, t2), (zero_c, t3)],
+    );
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let lifted = d.lemma(p.add_congr, &[a, a, term, zero_c, refl_a, term_zero]);
+    let start = cadd(d, p, a, term);
+    let padded = cadd(d, p, a, zero_c);
+    let trim = d.lemma(p.add_zero, &[a]);
+    echain(d, p, start, &[(padded, lifted), (a, trim)])
+}
+
+/// `Equiv (add (meshSamplePoint a (meshDelta a b m) m) (meshDelta a b m)) b`
+/// -- the THIRD interface identity (`P N + delta ~ b`): walking `m` mesh steps
+/// from `a` and taking one more lands exactly on `b`.
+///
+/// [`sample_succ_equiv`] read backwards turns `P m + delta` into `P (succ m)`,
+/// [`CRealPrelude::mesh_count_width`] collapses `(m+1) * delta` to the width
+/// `b + (neg a)`, and [`add_sub_cancel`] folds `a + (b - a)` to `b`. The
+/// composition itself is new: `creal/monotone.rs`'s
+/// `subdivisionPoint_in_bounds` runs the same three steps but lands a `le`
+/// rather than an `Equiv`, so nothing existing could be reused directly.
+fn mesh_endpoint_equiv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let delta = mesh_delta(d, p, a, b, m);
+    let point = mesh_sample_point(d, p, a, delta, m);
+    let start = cadd(d, p, point, delta);
+
+    let sm = d.succ(m);
+    let next = mesh_sample_point(d, p, a, delta, sm);
+    let step = sample_succ_equiv(d, p, a, delta, m);
+    let s1 = esymm(d, p, next, start, step);
+
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na);
+    let of_nat_sm = d.const_app(p.of_nat, &[sm]);
+    let scaled = cmul(d, p, of_nat_sm, delta);
+    let mw = d.lemma(p.mesh_count_width, &[width, m]);
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let s2 = d.lemma(p.add_congr, &[a, a, scaled, width, refl_a, mw]);
+    let a_width = cadd(d, p, a, width);
+
+    let s3 = add_sub_cancel(d, p, a, b);
+
+    echain(d, p, start, &[(next, s1), (a_width, s2), (b, s3)])
+}
+
+/// `le zero (meshDelta a b m)`, given `hab : le a b` -- duplicated from
+/// `creal/supremum.rs`'s private `mesh_delta_nonneg`.
+fn mesh_delta_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    m: ExprId,
+    hab: ExprId,
+) -> ExprId {
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na);
+    let one_nat = d.num(1);
+    let frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_real = embed(d, p, frac);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    let refl_na = d.lemma(p.le_refl, &[na]);
+    let a_na = cadd(d, p, a, na);
+    let shifted = d.lemma(p.add_le_add, &[a, b, na, na, hab, refl_na]);
+    let hn = d.lemma(p.add_neg, &[a]);
+    let refl_width = d.lemma(p.equiv_refl, &[width]);
+    let width_nonneg = d.lemma(
+        p.le_congr,
+        &[a_na, zero_c, width, width, hn, refl_width, shifted],
+    );
+
+    let rzero_v = rzero(d, p.rat);
+    let rle_v = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, m]);
+    let frac_nonneg = d.lemma(p.of_rat_le, &[rzero_v, frac, rle_v]);
+
+    d.lemma(p.mul_nonneg, &[width, frac_real, width_nonneg, frac_nonneg])
+}
+
+/// `Eq Nat (Nat.mul 2 m) (Nat.add m m)` -- duplicated from
+/// `creal/supremum.rs`'s private `nat_two_mul_eq_add`. `Nat.mul` recurses on
+/// its SECOND argument, so `mul 2 m` does not iota-reduce for symbolic `m` and
+/// this has to go through `Nat.succ_mul` plus `Nat.one_mul`.
+fn nat_two_mul_eq_add(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let nat_p = p.rat.int.nat;
+    let one_v = d.num(1);
+    let sm = d.lemma(nat_p.succ_mul, &[one_v, m]);
+    let one_mul_m = d.lemma(nat_p.one_mul, &[m]);
+    let one_m = NatOps::mul(d, one_v, m);
+    let cong_add = NatOps::congr(d, one_m, m, one_mul_m, &|d, t| NatOps::add(d, t, m));
+    let add_one_m_m = NatOps::add(d, one_m, m);
+    let m_m = NatOps::add(d, m, m);
+    let two_v = d.num(2);
+    let two_m = NatOps::mul(d, two_v, m);
+    NatOps::trans(d, two_m, add_one_m_m, m_m, sm, cong_add)
+}
+
+/// `Nat.le n (Nat.add k n)` -- duplicated from `creal/integral.rs`'s private
+/// `nat_le_add_left`. The prelude has `le_add_right` (`Le n (add n k)`) and no
+/// `le_add_left`, so this is that lemma transported across `Nat.add_comm`.
+fn nat_le_add_left(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, n: ExprId) -> ExprId {
+    let nat_p = p.rat.int.nat;
+    let h = d.lemma(nat_p.le_add_right, &[n, k]);
+    let comm = d.lemma(nat_p.add_comm, &[n, k]);
+    let n_plus_k = NatOps::add(d, n, k);
+    let k_plus_n = NatOps::add(d, k, n);
+    nat_rewrite_prop(d, n_plus_k, k_plus_n, comm, h, &|d, x| d.le(n, x))
+}
+
+/// `Nat.le n (Nat.succ (Nat.mul 2 n))` -- the doubling index
+/// `Rat.natDivSucc_halve` demands is above `n` itself, so
+/// `Rat.natDivSucc_antitone` applies to it.
+fn nat_le_succ_two_mul(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let nat_p = p.rat.int.nat;
+    let two_v = d.num(2);
+    let two_n = NatOps::mul(d, two_v, n);
+    let n_n = NatOps::add(d, n, n);
+    let two_eq = nat_two_mul_eq_add(d, p, n);
+    let back = NatOps::symm(d, two_n, n_n, two_eq);
+    let base = d.lemma(nat_p.le_add_right, &[n, n]);
+    let lifted = nat_rewrite_prop(d, n_n, two_n, back, base, &|d, x| d.le(n, x));
+    d.lemma(nat_p.le_succ_of_le, &[n, two_n, lifted])
+}
+
+/// `CReal.supOn_ub : forall F a b (hab : le a b) (u : UniformlyContinuousOn F
+/// a b) (x : CReal), le a x -> le x b -> le (F x) (supOn F a b hab u)` --
+/// **the upper-bound law at an ARBITRARY point, which is what makes `supOn` a
+/// supremum rather than a limit of mesh maxima.**
+///
+/// With [`declare_sup_on_approx_lub_thm`] this is the pair that characterizes
+/// `supOn`: it dominates every value of `F` on `[a, b]`, and it is approached
+/// by them to any requested accuracy. Neither says a maximiser exists, and
+/// [`CRealPrelude::evt_attained_max_decides_sign`] says none can be
+/// constructed.
+///
+/// # The four steps, and where the margin comes from
+///
+/// `supLevel`'s own schedule has ZERO margin -- it is exactly fine enough for
+/// the modulus at the corresponding accuracy, which is why
+/// [`declare_sup_on_ub_at_sup_seq_point_thm`] is stated only at scheduled
+/// levels. An off-mesh point needs strictly more, because `stepFamily_locate`
+/// returns `|x - P i| <= delta + eps` where the schedule alone would pay for
+/// `delta` and nothing else. The margin is bought in TWO independent places,
+/// and neither is a scheduled level:
+///
+/// 1. **The level.** `j := supLevel F a b u kk + (Nat.size c + Nat.size
+///    outer2)` -- an arbitrary level ABOVE a scheduled one, which
+///    [`declare_mesh_max_le_sup_on_add_thm`] makes usable for one epsilon
+///    because `mesh_max_le_add_of_modulus` is depth-uniform. The added summand
+///    is chosen to be exactly
+///    [`CRealPrelude::mesh_level_count_ge_of_size`]'s own threshold, so
+///    `hsize` is `Nat.le dd (Nat.add level dd)` and needs no `Nat.le_dest`
+///    (ADR-0710 predicted an `Exists` here; making `dd` concrete removes it).
+/// 2. **The accuracy the mesh is asked for.** `outer2 := Nat.succ (2 *
+///    outer)`, one HALVING finer than the modulus itself demands, so
+///    `mesh_le_of_ge` reports `delta <= 1/(2*outer + 2)` and the locate
+///    epsilon can be the same `1/(2*outer + 2)`. The two halves fuse to the
+///    `1/(outer + 1)` `uc_spec` consumes, by `Rat.natDivSucc_add` then
+///    `Rat.natDivSucc_halve`. Without this the sum `delta + eps` would exceed
+///    the modulus budget and no amount of extra LEVEL would fix it.
+///
+/// The same halving trick runs a second time at the outer accuracy: `kk :=
+/// Nat.succ (2 * e)` splits the final `1/(e+1)` between the uniform-continuity
+/// transfer and the mesh-maximum gap.
+///
+/// # The three interface identities
+///
+/// [`CRealPrelude::step_family_locate`] is stated over the ORDER alone, so
+/// instantiating it at the mesh costs exactly the three identities its own
+/// documentation names: [`sample_zero_equiv`] (`P 0 ~ a`),
+/// [`sample_succ_equiv`] (`P (i+1) ~ P i + delta`) and
+/// [`mesh_endpoint_equiv`] (`P N + delta ~ b`). No ring algebra enters the
+/// located index itself.
+fn declare_sup_on_ub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat_p = p.rat.int.nat;
+    let rat = p.rat;
+    let logic = p.rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let hab_ty = cle(d, p, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hax_ty = cle(d, p, a, x);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+    let hxb_ty = cle(d, p, x, b);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let target_real = d.const_app(p.sup_on, &[f, a, b, hab, u]);
+    let fx = d.apply(f, &[x]);
+
+    // The rate-`1` accuracy family: `forall e, F x <= supOn + 1/(e+1)`.
+    let rate = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        // `kk := succ (2 * e)`, exactly `Rat.natDivSucc_halve`'s index shape:
+        // the outer budget `1/(e+1)` splits into two halves of `1/(2e+2)`, one
+        // for the uniform-continuity transfer and one for the mesh gap.
+        let doubled_e = NatOps::mul(d, two_nat, e);
+        let kk = d.succ(doubled_e);
+        let (eps_rat, eps_real) = unit_frac_real(d, p, e);
+        let (half_rat, half_real) = unit_frac_real(d, p, kk);
+
+        // `outer` is the accuracy the witness itself demands at index `kk`;
+        // `outer2 := succ (2 * outer)` is one halving finer, so that the mesh
+        // width AND the locate epsilon can each be `1/(outer2 + 1)` and still
+        // fuse to the `1/(outer + 1)` `uc_spec` consumes.
+        let outer = d.const_app(p.uc_modulus, &[f, a, b, u, kk]);
+        let doubled_outer = NatOps::mul(d, two_nat, outer);
+        let outer2 = d.succ(doubled_outer);
+        let (q_rat, q_real) = unit_frac_real(d, p, outer);
+        let (w_rat, w_real) = unit_frac_real(d, p, outer2);
+
+        // The level: a scheduled one plus exactly
+        // `mesh_level_count_ge_of_size`'s own threshold, so both consumers are
+        // satisfied by one choice.
+        let na = cneg(d, p, a);
+        let width = cadd(d, p, b, na);
+        let c = d.const_app(p.bound, &[width]);
+        let size_c = d.const_app(nat_p.size, &[c]);
+        let size_outer2 = d.const_app(nat_p.size, &[outer2]);
+        let dd = NatOps::add(d, size_c, size_outer2);
+        let level = d.const_app(p.sup_level, &[f, a, b, u, kk]);
+        let j = NatOps::add(d, level, dd);
+        let mm = d.const_app(p.mesh_level_count, &[j]);
+        let delta = mesh_delta(d, p, a, b, mm);
+
+        // Step 1 -- `delta <= 1/(outer2 + 1)`.
+        let hsize = nat_le_add_left(d, p, level, dd);
+        let threshold_ok = d.lemma(p.mesh_level_count_ge_of_size, &[c, outer2, j, hsize]);
+        let delta_le_w = d.lemma(p.mesh_le_of_ge, &[a, b, outer2, mm, hab, threshold_ok]);
+
+        // `1/(outer2+1) + 1/(outer2+1) = 1/(outer+1)`, as a `Rat` equation.
+        let w_plus_w_eq_q = {
+            let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, outer2]);
+            let halve = d.lemma(rat.nat_div_succ_halve, &[outer]);
+            let two_over = d.const_app(rat.nat_div_succ, &[two_nat, outer2]);
+            let sum = radd(d, w_rat, w_rat);
+            rtrans(d, sum, two_over, q_rat, fuse, halve)
+        };
+        // `1/(kk+1) + 1/(kk+1) = 1/(e+1)`.
+        let half_plus_half_eq_eps = {
+            let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, kk]);
+            let halve = d.lemma(rat.nat_div_succ_halve, &[e]);
+            let two_over = d.const_app(rat.nat_div_succ, &[two_nat, kk]);
+            let sum = radd(d, half_rat, half_rat);
+            rtrans(d, sum, two_over, eps_rat, fuse, halve)
+        };
+
+        let goal = {
+            let padded = cadd(d, p, target_real, eps_real);
+            cle(d, p, fx, padded)
+        };
+
+        // Step 2 -- locate `x` in the mesh, over the ORDER alone.
+        let fam = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let sp = mesh_sample_point(d, p, a, delta, i);
+            d.lam_fv(i_fv, nat, sp)
+        };
+        let hw = mesh_delta_nonneg(d, p, a, b, mm, hab);
+        let hpos = {
+            let h11 = d.lemma(nat_p.le_refl_thm, &[one_nat]);
+            let rpos = d.lemma(rat.nat_div_succ_pos, &[one_nat, outer2, h11]);
+            d.lemma(p.of_rat_pos, &[w_rat, rpos])
+        };
+        let w_nonneg = d.lemma(p.le_of_lt, &[zero_c, w_real, hpos]);
+
+        let hstep = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let si = d.succ(i);
+            let psi = mesh_sample_point(d, p, a, delta, si);
+            let pi = mesh_sample_point(d, p, a, delta, i);
+            let shifted = cadd(d, p, pi, delta);
+            let eq = sample_succ_equiv(d, p, a, delta, i);
+            let back = esymm(d, p, psi, shifted, eq);
+            let refl_shifted = d.lemma(p.equiv_refl, &[shifted]);
+            let le_shifted = d.lemma(p.le_refl, &[shifted]);
+            let body = d.lemma(
+                p.le_congr,
+                &[shifted, psi, shifted, shifted, back, refl_shifted, le_shifted],
+            );
+            d.lam_fv(i_fv, nat, body)
+        };
+
+        let p_zero = {
+            let zero_nat = d.zero();
+            mesh_sample_point(d, p, a, delta, zero_nat)
+        };
+        let h0 = {
+            let eq = sample_zero_equiv(d, p, a, delta);
+            let back = esymm(d, p, p_zero, a, eq);
+            let refl_x_eq = d.lemma(p.equiv_refl, &[x]);
+            d.lemma(p.le_congr, &[a, p_zero, x, x, back, refl_x_eq, hax])
+        };
+
+        let p_mm = mesh_sample_point(d, p, a, delta, mm);
+        let p_mm_delta = cadd(d, p, p_mm, delta);
+        let hn = {
+            let endpoint = mesh_endpoint_equiv(d, p, a, b, mm);
+            let back = esymm(d, p, p_mm_delta, b, endpoint);
+            let refl_x_eq = d.lemma(p.equiv_refl, &[x]);
+            let landed = d.lemma(p.le_congr, &[x, x, b, p_mm_delta, refl_x_eq, back, hxb]);
+            let grown = shift_le_of_nonneg(d, p, p_mm_delta, w_real, w_nonneg);
+            let padded = cadd(d, p, p_mm_delta, w_real);
+            d.lemma(p.le_trans, &[x, p_mm_delta, padded, landed, grown])
+        };
+
+        let locate = d.lemma(
+            p.step_family_locate,
+            &[fam, delta, w_real, hw, hpos, hstep, mm, x, h0, hn],
+        );
+
+        let locate_pred = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let bound = d.le(i, mm);
+            let point = mesh_sample_point(d, p, a, delta, i);
+            let x_eps = cadd(d, p, x, w_real);
+            let lower = cle(d, p, point, x_eps);
+            let stepped = cadd(d, p, point, delta);
+            let padded = cadd(d, p, stepped, w_real);
+            let upper = cle(d, p, x, padded);
+            let inner = d.and(lower, upper);
+            let body = d.and(bound, inner);
+            d.lam_fv(i_fv, nat, body)
+        };
+
+        let minor = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hp_fv = d.fresh_fvar();
+            let hp = d.kernel().fvar(hp_fv);
+
+            let point = mesh_sample_point(d, p, a, delta, i);
+            let bound_ty = d.le(i, mm);
+            let x_eps = cadd(d, p, x, w_real);
+            let lower_ty = cle(d, p, point, x_eps);
+            let stepped = cadd(d, p, point, delta);
+            let padded = cadd(d, p, stepped, w_real);
+            let upper_ty = cle(d, p, x, padded);
+            let inner_ty = d.and(lower_ty, upper_ty);
+            let hp_ty = d.and(bound_ty, inner_ty);
+
+            let hi = d.and_left(bound_ty, inner_ty, hp);
+            let hinner = d.and_right(bound_ty, inner_ty, hp);
+            let hlo = d.and_left(lower_ty, upper_ty, hinner);
+            let hhi = d.and_right(lower_ty, upper_ty, hinner);
+
+            // Step 3 -- `|x - P i| <= 1/(outer + 1)`, the modulus budget, with
+            // the locate epsilon absorbed by the extra halving.
+            let refl_point = d.lemma(p.le_refl, &[point]);
+            let refl_w = d.lemma(p.le_refl, &[w_real]);
+            let inner_widen = d.lemma(
+                p.add_le_add,
+                &[point, point, delta, w_real, refl_point, delta_le_w],
+            );
+            let point_w = cadd(d, p, point, w_real);
+            let outer_widen = d.lemma(
+                p.add_le_add,
+                &[stepped, point_w, w_real, w_real, inner_widen, refl_w],
+            );
+            let point_w_w = cadd(d, p, point_w, w_real);
+            let chained = d.lemma(p.le_trans, &[x, padded, point_w_w, hhi, outer_widen]);
+
+            // `(P i + w) + w ~ P i + (w + w) ~ P i + 1/(outer+1)`.
+            let assoc = d.lemma(p.add_assoc, &[point, w_real, w_real]);
+            let ww = cadd(d, p, w_real, w_real);
+            let point_ww = cadd(d, p, point, ww);
+            let sum_rat = radd(d, w_rat, w_rat);
+            let sum_real = embed(d, p, sum_rat);
+            let sum_embed = d.lemma(p.of_rat_add, &[w_rat, w_rat]);
+            let rewrite_sum = {
+                let start = d.lemma(p.equiv_refl, &[sum_real]);
+                rat_eq_rewrite(d, sum_rat, q_rat, w_plus_w_eq_q, start, &|d, t| {
+                    let emb = embed(d, p, t);
+                    cequiv(d, p, sum_real, emb)
+                })
+            };
+            let ww_to_q = d.lemma(p.equiv_trans, &[ww, sum_real, q_real, sum_embed, rewrite_sum]);
+            let refl_point_eq = d.lemma(p.equiv_refl, &[point]);
+            let tail = d.lemma(
+                p.add_congr,
+                &[point, point, ww, q_real, refl_point_eq, ww_to_q],
+            );
+            let point_q = cadd(d, p, point, q_real);
+            let whole_eq = d.lemma(
+                p.equiv_trans,
+                &[point_w_w, point_ww, point_q, assoc, tail],
+            );
+            let refl_x_eq = d.lemma(p.equiv_refl, &[x]);
+            let up = d.lemma(
+                p.le_congr,
+                &[x, x, point_w_w, point_q, refl_x_eq, whole_eq, chained],
+            );
+
+            // The other side: `P i <= x + w <= x + 1/(outer+1)`.
+            let houter_le = nat_le_succ_two_mul(d, p, outer);
+            let w_le_q = d.lemma(rat.nat_div_succ_antitone, &[outer, outer2, houter_le]);
+            let lift = d.lemma(p.of_rat_le, &[w_rat, q_rat, w_le_q]);
+            let refl_x_le = d.lemma(p.le_refl, &[x]);
+            let widen = d.lemma(
+                p.add_le_add,
+                &[x, x, w_real, q_real, refl_x_le, lift],
+            );
+            let x_q = cadd(d, p, x, q_real);
+            let down = d.lemma(p.le_trans, &[point, x_eps, x_q, hlo, widen]);
+
+            let closeness = d.lemma(p.abs_le_of_two_sided, &[x, point, q_rat, up, down]);
+
+            // Step 4 -- `uc_spec`, then the fine-mesh upper bound.
+            let hlt = d.lemma(nat_p.lt_succ_of_le, &[i, mm, hi]);
+            let rng = d.const_app(p.riemann_sample_in_bounds, &[a, b, mm, i, hab, hlt]);
+            let plo_ty = cle(d, p, a, point);
+            let phi_ty = cle(d, p, point, b);
+            let hplo = d.const_app(logic.and_left, &[plo_ty, phi_ty, rng]);
+            let hphi = d.const_app(logic.and_right, &[plo_ty, phi_ty, rng]);
+
+            let spec = d.const_app(
+                p.uc_spec,
+                &[f, a, b, u, kk, x, point, hax, hxb, hplo, hphi, closeness],
+            );
+            let f_point = d.apply(f, &[point]);
+            let transfer = d.lemma(p.le_add_of_abs_sub_le, &[fx, f_point, half_rat, spec]);
+            let f_point_half = cadd(d, p, f_point, half_real);
+
+            // `F (P i) <= supOn + 1/2^kk <= supOn + 1/(kk+1)`.
+            let fine = d.lemma(
+                p.sup_on_ub_at_fine_mesh_point,
+                &[f, a, b, hab, u, kk, dd, i, hi],
+            );
+            let mlc_kk = d.const_app(p.mesh_level_count, &[kk]);
+            let (geom_rat, geom_real) = unit_frac_real(d, p, mlc_kk);
+            let geom_le_half = {
+                let hk = d.lemma(p.le_mesh_level_count, &[kk]);
+                d.lemma(rat.nat_div_succ_antitone, &[kk, mlc_kk, hk])
+            };
+            let geom_lift = d.lemma(p.of_rat_le, &[geom_rat, half_rat, geom_le_half]);
+            let refl_target = d.lemma(p.le_refl, &[target_real]);
+            let geom_widen = d.lemma(
+                p.add_le_add,
+                &[
+                    target_real,
+                    target_real,
+                    geom_real,
+                    half_real,
+                    refl_target,
+                    geom_lift,
+                ],
+            );
+            let target_geom = cadd(d, p, target_real, geom_real);
+            let target_half = cadd(d, p, target_real, half_real);
+            let fine_half = d.lemma(
+                p.le_trans,
+                &[f_point, target_geom, target_half, fine, geom_widen],
+            );
+
+            // `F x <= F (P i) + 1/(kk+1) <= (supOn + 1/(kk+1)) + 1/(kk+1)`.
+            let refl_half = d.lemma(p.le_refl, &[half_real]);
+            let grow = d.lemma(
+                p.add_le_add,
+                &[f_point, target_half, half_real, half_real, fine_half, refl_half],
+            );
+            let doubled = cadd(d, p, target_half, half_real);
+            let stacked = d.lemma(
+                p.le_trans,
+                &[fx, f_point_half, doubled, transfer, grow],
+            );
+
+            // `(supOn + h) + h ~ supOn + (h + h) ~ supOn + 1/(e+1)`.
+            let assoc2 = d.lemma(p.add_assoc, &[target_real, half_real, half_real]);
+            let hh = cadd(d, p, half_real, half_real);
+            let target_hh = cadd(d, p, target_real, hh);
+            let sum2_rat = radd(d, half_rat, half_rat);
+            let sum2_real = embed(d, p, sum2_rat);
+            let sum2_embed = d.lemma(p.of_rat_add, &[half_rat, half_rat]);
+            let rewrite_sum2 = {
+                let start = d.lemma(p.equiv_refl, &[sum2_real]);
+                rat_eq_rewrite(d, sum2_rat, eps_rat, half_plus_half_eq_eps, start, &|d, t| {
+                    let emb = embed(d, p, t);
+                    cequiv(d, p, sum2_real, emb)
+                })
+            };
+            let hh_to_eps = d.lemma(
+                p.equiv_trans,
+                &[hh, sum2_real, eps_real, sum2_embed, rewrite_sum2],
+            );
+            let refl_target_eq = d.lemma(p.equiv_refl, &[target_real]);
+            let tail2 = d.lemma(
+                p.add_congr,
+                &[target_real, target_real, hh, eps_real, refl_target_eq, hh_to_eps],
+            );
+            let target_eps = cadd(d, p, target_real, eps_real);
+            let whole_eq2 = d.lemma(
+                p.equiv_trans,
+                &[doubled, target_hh, target_eps, assoc2, tail2],
+            );
+            let refl_fx = d.lemma(p.equiv_refl, &[fx]);
+            let body = d.lemma(
+                p.le_congr,
+                &[fx, fx, doubled, target_eps, refl_fx, whole_eq2, stacked],
+            );
+
+            let inner = d.lam_fv(hp_fv, hp_ty, body);
+            d.lam_fv(i_fv, nat, inner)
+        };
+
+        let per_e = exists_elim(d, locate_pred, goal, locate, minor);
+        d.lam_fv(e_fv, nat, per_e)
+    };
+
+    let body = d.lemma(p.le_of_forall_le_add_rate, &[one_nat, fx, target_real, rate]);
+    let concl = cle(d, p, fx, target_real);
+
+    let ty = {
+        let out = d.arrow(hxb_ty, concl);
+        let out = d.arrow(hax_ty, out);
+        let out = d.pi_fv(x_fv, carrier, out);
+        let out = d.pi_fv(u_fv, u_ty, out);
+        let out = d.pi_fv(hab_fv, hab_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(hxb_fv, hxb_ty, body);
+        let out = d.lam_fv(hax_fv, hax_ty, out);
+        let out = d.lam_fv(x_fv, carrier, out);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sup_on_ub,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.supOn_ub`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sup_on_ub(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_sup_on_ub_thm(d, p)
+}
+
 
 #[cfg(test)]
 mod sup_laws_tests {

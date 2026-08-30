@@ -6541,6 +6541,25 @@ pub struct CRealPrelude {
     /// stronger than [`Self::sup_on_ub_at_sup_seq_point`], which is the
     /// `dd = 0` case with the epsilon dropped. See `creal/sup_laws.rs`.
     pub sup_on_ub_at_fine_mesh_point: NameId,
+    /// `CReal.supOn_ub : ∀ F a b (hab : le a b) (u : UniformlyContinuousOn F
+    /// a b) (x : CReal), le a x → le x b → le (F x) (supOn F a b hab u)` —
+    /// **the upper-bound law at an ARBITRARY point of `[a, b]`, which is what
+    /// makes `supOn` a supremum rather than a limit of mesh maxima.**
+    ///
+    /// With [`Self::sup_on_approx_lub`] this is the pair that characterizes
+    /// `supOn`: it dominates every value of `F` on `[a, b]`, and it is
+    /// approached by them to any requested accuracy. Neither produces an
+    /// argmax and neither may — [`Self::evt_attained_max_decides_sign`] proves
+    /// an attaining maximiser would decide the sign of an arbitrary real.
+    ///
+    /// [`Self::step_family_locate`] places `x` within one mesh cell plus an
+    /// `eps` of a sampled point; the margin `supLevel`'s zero-slack schedule
+    /// does not have is bought in two independent places (an arbitrary level
+    /// above a scheduled one, and asking the mesh for one HALVING more
+    /// accuracy than the modulus demands), then
+    /// [`Self::sup_on_ub_at_fine_mesh_point`] bounds the sampled value. See
+    /// `creal/sup_laws.rs`.
+    pub sup_on_ub: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7313,6 +7332,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         step_family_locate: kernel.name_str(creal, "stepFamily_locate"),
         mesh_max_le_sup_on_add: kernel.name_str(creal, "meshMax_le_supOn_add"),
         sup_on_ub_at_fine_mesh_point: kernel.name_str(creal, "supOn_ub_at_fine_mesh_point"),
+        sup_on_ub: kernel.name_str(creal, "supOn_ub"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -13160,6 +13180,46 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.sup_on_ub_at_fine_mesh_point,
         ],
         run: sup_laws::declare_sup_on_ub_at_fine_mesh_point,
+    },
+    BuildStep {
+        label: "sup_laws::declare_sup_on_ub",
+        requires: &[
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.le_add_of_abs_sub_le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_mesh_level_count,
+            |p: CRealPrelude| p.le_of_forall_le_add_rate,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mesh_count_width,
+            |p: CRealPrelude| p.mesh_le_of_ge,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_level_count_ge_of_size,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_pos,
+            |p: CRealPrelude| p.rat_unit_eq_one,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.step_family_locate,
+            |p: CRealPrelude| p.sup_level,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_on_ub_at_fine_mesh_point,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uc_spec,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.sup_on_ub],
+        run: sup_laws::declare_sup_on_ub,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
