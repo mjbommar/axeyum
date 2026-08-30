@@ -373,18 +373,18 @@ def check() -> int:
 
     # V4 -- the artifact names the environment snapshot the screen is applied
     # against. A dangling pointer describes a screen nobody runs.
-    # The absolute-path case is why this is not a one-liner: `ROOT / "/etc/foo"`
-    # DISCARDS the left operand in pathlib, so a bare `(ROOT / named).is_file()`
-    # cheerfully resolves outside the repository and passes. The controls suite
-    # caught exactly that in this guard's first draft.
+    # `is_relative_to` is doing ALL the work here and the `is_absolute()` test
+    # that stood beside it has been removed, because mutation testing showed no
+    # case could kill it: `ROOT / "/etc/hostname"` DISCARDS the left operand in
+    # pathlib, so the joined path is `/etc/hostname`, and containment already
+    # rejects it. The naive form this replaced -- a bare
+    # `(ROOT / named).is_file()` -- returned PASS for exactly that artifact.
     named = doc.get("environment_snapshot")
     resolved = None
     if isinstance(named, str) and named:
-        candidate = pathlib.Path(named)
-        if not candidate.is_absolute():
-            candidate = (ROOT / candidate).resolve()
-            if candidate.is_relative_to(ROOT) and candidate.is_file():
-                resolved = candidate
+        candidate = (ROOT / named).resolve()
+        if candidate.is_relative_to(ROOT) and candidate.is_file():
+            resolved = candidate
     if resolved is None:
         fails.append(
             f"V4 dangling-environment-snapshot: environment_snapshot is "
