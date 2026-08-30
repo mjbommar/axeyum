@@ -34,6 +34,10 @@ was observed; neither overrides root `PLAN.md`.
 | Full-library SMT-COMP workflow | [SMT-COMP workstream](smtcomp-full-library-workstream/README.md) |
 | Parallel lane briefs and ownership | [Agent program](agent-program-2026-07-28/README.md) |
 | Lean implementation program | [Lean system implementation plan](lean-system-implementation-plan-2026-07-21.md) |
+| Graph-directed library programme | [Graph roadmap](graph-directed-library-roadmap-2026-08-30.md) and [ADR-0717](../research/09-decisions/adr-0717-library-construction-is-graph-directed-through-an-artifact-compatible-trust-anchor.md) |
+| Lean artifact compatibility | [Artifact compatibility roadmap](library-artifact-compatibility-roadmap-2026-08-30.md) |
+| Universal theorem safety | [Trusted library safety roadmap](trusted-library-safety-roadmap-2026-08-30.md) |
+| Definition and proof discovery | [Discovery efficiency roadmap](definition-discovery-efficiency-roadmap-2026-08-30.md) |
 | Paused CAS work | [CAS parity handoff](cas-parity-handoff-2026-07-22.md) |
 | Proposed strategy exploration | [Exploration track](exploration-track/README.md) |
 
@@ -57,6 +61,11 @@ was observed; neither overrides root `PLAN.md`.
 The [exploration track](exploration-track/README.md) is a proposal and remains
 ADR- and measurement-gated. Its local `STATUS.md` is a compatibility pointer;
 root `PLAN.md` controls whether the track may run.
+
+The accepted library-construction programme is deliberately split across four
+documents because its lanes have different authorities: external artifact
+extraction, graph selection, theorem-credit safety, and untrusted discovery.
+Their ordering and current priority live only in generated root `PLAN.md`.
 
 ## Evidence families
 

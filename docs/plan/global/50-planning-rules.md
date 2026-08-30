@@ -20,3 +20,14 @@
 - **Determinism and replay are product promises:** stable order, explicit seeds
   and limits, original-term SAT replay, and independent UNSAT checking remain
   mandatory.
+- **Graph rank is advisory until its authority is complete:** module degree,
+  declaration centrality, curriculum mapping, and cost estimates remain visible
+  components. They never bypass fact-frontier legality, held-out isolation,
+  representability, or the theorem-credit safety contract.
+- **Proof data does not leak into autonomous discovery:** upstream proof/value
+  dependency edges may measure and sequence work but are physically excluded
+  from proof-isolated producer inputs and autonomous credit.
+- **Three parallel library lanes have different jobs:** prefer one shared
+  substrate/definition lane, one reusable producer lane, and one destination
+  theorem/evaluation lane. Each owns disjoint status, script, artifact, and test
+  paths; one generated writer owns every aggregate key.

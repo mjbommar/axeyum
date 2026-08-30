@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution is ordered in the
 single root project tracker.
-Last updated: 2026-08-19
+Last updated: 2026-08-30
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -11,6 +11,13 @@ Last updated: 2026-08-19
 > (Track 1 engine/perf · Track 2 theories · Track 3 proofs/Lean · Track 4
 > use-cases · Track 5 verified systems / IR reflection —
 > [ADR-0056](../09-decisions/adr-0056-verified-systems-track.md)), with the
+> accepted graph-directed library programme in
+> [ADR-0717](../09-decisions/adr-0717-library-construction-is-graph-directed-through-an-artifact-compatible-trust-anchor.md)
+> and its four detailed roadmaps under [`docs/plan/`](../../../docs/plan/README.md).
+> That programme prioritizes artifact compatibility, complete declaration-graph
+> authority, universal theorem credit, and reusable discovery before broad
+> Lean source emulation. Its live L0–L4 order is in generated `PLAN.md`.
+> The existing tracks remain in force, with the
 > current scoped gap analysis in
 > [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](../../../docs/plan/gap-analysis-z3-lean-2026-07-21.md).
 > Its [target evidence audit](../../../docs/plan/parity-target-evidence-audit-2026-07-21.md)
