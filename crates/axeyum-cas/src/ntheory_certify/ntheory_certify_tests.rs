@@ -40,7 +40,18 @@ fn genuine(n: i128) -> PrattCertificate {
 
 #[test]
 fn certifies_primes_across_several_magnitudes() {
-    for n in [2_i128, 3, 5, 7, 13, 97, 7919, 65537, 1_000_003, 2_147_483_647] {
+    for n in [
+        2_i128,
+        3,
+        5,
+        7,
+        13,
+        97,
+        7919,
+        65537,
+        1_000_003,
+        2_147_483_647,
+    ] {
         let cert = certify_prime(n).unwrap_or_else(|| panic!("no certificate for prime {n}"));
         assert!(
             check_primality_certificate(n, &cert),
@@ -106,12 +117,8 @@ fn certifies_factorizations_including_negatives_and_units() {
 
 #[test]
 fn certifies_crt_in_both_directions() {
-    let solvable: &[&[(i128, i128)]] = &[
-        &[(2, 3), (3, 5), (2, 7)],
-        &[(1, 4), (3, 6)],
-        &[],
-        &[(5, 1)],
-    ];
+    let solvable: &[&[(i128, i128)]] =
+        &[&[(2, 3), (3, 5), (2, 7)], &[(1, 4), (3, 6)], &[], &[(5, 1)]];
     for residues in solvable {
         let cert = certify_crt(residues).expect("solvable system must certify");
         assert!(matches!(cert, CrtCertificate::Solution { .. }));
@@ -176,7 +183,10 @@ fn forged_primality_of_15_with_a_composite_claimed_factor() {
     assert_eq!(ntheory::mod_pow(4, 14, 15), Some(1), "Fermat check passes");
     assert_ne!(ntheory::mod_pow(4, 1, 15), Some(1), "order check passes");
     assert_eq!(14_i128, 15 - 1, "completeness check passes");
-    assert!(!ntheory::is_prime(14), "the claimed factor really is composite");
+    assert!(
+        !ntheory::is_prime(14),
+        "the claimed factor really is composite"
+    );
 
     assert!(
         !check_primality_certificate(15, &forged),
@@ -229,7 +239,11 @@ fn forged_primality_rejects_a_non_primitive_witness_for_a_genuine_prime() {
     };
     assert!(ntheory::is_prime(13), "the subject really is prime");
     assert_eq!(ntheory::mod_pow(3, 12, 13), Some(1), "Fermat check passes");
-    assert_eq!(ntheory::mod_pow(3, 6, 13), Some(1), "but the order is not 12");
+    assert_eq!(
+        ntheory::mod_pow(3, 6, 13),
+        Some(1),
+        "but the order is not 12"
+    );
 
     assert!(
         !check_primality_certificate(13, &forged),
@@ -270,9 +284,18 @@ fn forged_primality_rejects_a_repeated_factor_base() {
     assert!(!check_primality_certificate(13, &forged));
 }
 
-/// **G5, exponents.** A zero exponent contributes an empty product, so the
-/// product identity still holds and every other guard passes; a zero-exponent
-/// entry is a factor that is not there.
+/// **G9, via a zero exponent.** A zero exponent contributes an empty product,
+/// so the product identity still holds and the entry names a factor that is not
+/// there.
+///
+/// The comment here originally said this test kills G5, the explicit
+/// `exponent == 0` check. The mutation sweep proved otherwise: with G5 deleted
+/// this test still passes, because **G9 refutes the entry independently** —
+/// `5` does not divide `12`, so the order check refuses before it can run. G5
+/// is redundant for the verdict and is retained only to bound
+/// `checked_prod_pow`. Recording the correction because the guard a test
+/// *appears* to exercise and the guard it *kills* are different questions, and
+/// only the sweep distinguishes them.
 #[test]
 fn forged_primality_rejects_a_zero_exponent_entry() {
     let forged = PrattCertificate {
@@ -364,16 +387,28 @@ fn forged_primality_rejects_an_adversarially_deep_chain() {
 #[test]
 fn forged_compositeness_rejects_the_trivial_divisors() {
     // 1 divides everything; n divides itself. Neither shows compositeness.
-    assert!(!check_composite_certificate(91, &CompositeCertificate { divisor: 1 }));
-    assert!(!check_composite_certificate(91, &CompositeCertificate { divisor: 91 }));
+    assert!(!check_composite_certificate(
+        91,
+        &CompositeCertificate { divisor: 1 }
+    ));
+    assert!(!check_composite_certificate(
+        91,
+        &CompositeCertificate { divisor: 91 }
+    ));
     // Control: the honest divisor is accepted.
-    assert!(check_composite_certificate(91, &CompositeCertificate { divisor: 7 }));
+    assert!(check_composite_certificate(
+        91,
+        &CompositeCertificate { divisor: 7 }
+    ));
 }
 
 #[test]
 fn forged_compositeness_rejects_a_non_divisor_and_a_prime_subject() {
     // In range but does not divide.
-    assert!(!check_composite_certificate(91, &CompositeCertificate { divisor: 5 }));
+    assert!(!check_composite_certificate(
+        91,
+        &CompositeCertificate { divisor: 5 }
+    ));
     // A prime subject admits no in-range divisor at all.
     for divisor in 2..97_i128 {
         assert!(
@@ -570,7 +605,10 @@ fn forged_crt_rejects_a_fabricated_conflict_over_a_solvable_system() {
     assert!(certify_crt(&residues).is_some(), "the system is solvable");
 
     assert!(
-        !check_crt_certificate(&residues, &CrtCertificate::Inconsistent { left: 0, right: 1 }),
+        !check_crt_certificate(
+            &residues,
+            &CrtCertificate::Inconsistent { left: 0, right: 1 }
+        ),
         "accepted a fabricated inconsistency over a solvable system"
     );
 }
@@ -609,10 +647,15 @@ fn forged_crt_rejects_out_of_range_conflict_indices() {
 #[test]
 fn independent_modular_exponentiation_agrees_with_ntheory() {
     let mut compared = 0_u32;
-    for modulus in [7_i128, 91, 1_000_003, 4_294_967_291, 170_141_183_460_469_231_731_687_303_715_884_105_727]
-    {
+    for modulus in [
+        7_i128,
+        91,
+        1_000_003,
+        4_294_967_291,
+        170_141_183_460_469_231_731_687_303_715_884_105_727,
+    ] {
         for base in [2_i128, 3, 10, 12_345, 999_999_937] {
-            for exponent in [0_u128, 1, 5, 90, 1_000_000, u64::MAX as u128] {
+            for exponent in [0_u128, 1, 5, 90, 1_000_000, u128::from(u64::MAX)] {
                 let theirs = ntheory::mod_pow(base, exponent, modulus).expect("mod_pow defined");
                 let ours = crate::ntheory_certify::pow_mod_for_tests(
                     u128::try_from(base).unwrap(),
@@ -628,7 +671,10 @@ fn independent_modular_exponentiation_agrees_with_ntheory() {
             }
         }
     }
-    assert_eq!(compared, 150, "expected 150 comparisons, not a vacuous sweep");
+    assert_eq!(
+        compared, 150,
+        "expected 150 comparisons, not a vacuous sweep"
+    );
 }
 
 /// The `mul_mod` slow path only runs for a modulus above `u64::MAX`; the fast
@@ -637,7 +683,7 @@ fn independent_modular_exponentiation_agrees_with_ntheory() {
 #[test]
 fn modular_arithmetic_slow_path_is_exercised_above_u64_max() {
     let modulus = (1_u128 << 100) + 277; // exceeds u64::MAX, so the slow path runs
-    assert!(modulus > u64::MAX as u128);
+    assert!(modulus > u128::from(u64::MAX));
     // (2^100 + 277) is odd, so 2 is a unit; check a square-and-multiply identity
     // that the fast path could not compute without overflow.
     let a = 3_u128;
@@ -657,7 +703,7 @@ fn modular_arithmetic_slow_path_is_exercised_above_u64_max() {
 #[test]
 fn certifies_a_prime_beyond_u64_max() {
     let mersenne_89: i128 = (1_i128 << 89) - 1;
-    assert!(mersenne_89 > u64::MAX as i128);
+    assert!(mersenne_89 > i128::from(u64::MAX));
     let cert = certify_prime(mersenne_89).expect("2^89 - 1 must certify");
     assert!(check_primality_certificate(mersenne_89, &cert));
     // Non-vacuity: the certificate really does carry a factorization tree.

@@ -56,7 +56,7 @@ fn mul_mod(a: u128, b: u128, m: u128) -> u128 {
     if m <= 1 {
         return 0;
     }
-    if m <= u64::MAX as u128 {
+    if m <= u128::from(u64::MAX) {
         // Both reduced operands are `< 2^64`, so the product fits `u128`.
         return (a % m) * (b % m) % m;
     }
@@ -118,6 +118,13 @@ fn checked_prod_pow(factors: &[(i128, u32)]) -> Option<u128> {
 /// of `n - 1`. It bounds a **forged** certificate, which can present a
 /// syntactically consistent chain `n, n-1, n-2, …` of length `n` and would
 /// otherwise exhaust the stack before any arithmetic guard fires.
+///
+/// MEASURED RESOURCE GUARD, NOT A VERDICT GUARD: deleting it changes no
+/// answer, because a chain deep enough to matter is refuted by G8/G9 at the
+/// top level whether or not the recursion beneath it was cut short. Removing
+/// it therefore kills no test, and the sweep in
+/// `scripts/tests/test-ntheory-certificate-guards.sh` registers it as an
+/// expected survivor and fails if that ever stops being true.
 const MAX_PRATT_DEPTH: u32 = 200;
 
 // ---------------------------------------------------------------------------
@@ -176,6 +183,16 @@ pub fn check_primality_certificate(n: i128, cert: &PrattCertificate) -> bool {
 
 fn check_primality_certificate_at(n: i128, cert: &PrattCertificate, depth: u32) -> bool {
     // G1: the subject must be a candidate prime at all.
+    //
+    // MEASURED REDUNDANT, KEPT AS DEFENCE IN DEPTH. Deleting it kills no test,
+    // because the arithmetic already excludes every `n < 2`: for `n <= 0` the
+    // `u128::try_from(n - 1)` in G6 fails, and for `n = 1` the target is `0`
+    // while a product of bases `>= 2` (G5) is never zero. A guard can only ever
+    // reject more, never less, so keeping it cannot make the checker accept
+    // anything — but the redundancy is recorded rather than left implied,
+    // because an undocumented unkillable guard reads as coverage it does not
+    // provide. Registered as an expected survivor in
+    // `scripts/tests/test-ntheory-certificate-guards.sh`.
     if n < 2 {
         return false;
     }
@@ -194,6 +211,19 @@ fn check_primality_certificate_at(n: i128, cert: &PrattCertificate, depth: u32) 
         }
     }
     // G5: every exponent is at least one, and every base is at least two.
+    //
+    // MEASURED RESOURCE GUARD, NOT A VERDICT GUARD. Deleting it kills no test,
+    // and that is correct rather than a gap in the suite: a zero exponent is
+    // already refuted by G9 (a base contributing nothing to the product cannot
+    // divide `n - 1` and still leave the product equal to it), and a base below
+    // two is already refuted by G7 (its subcertificate hits G1). What G5 does
+    // carry alone is termination — `checked_prod_pow` at `base = 0` or
+    // `base = 1` spins once per unit of a `u32` exponent, up to 4.29e9
+    // iterations, because neither value ever overflows the accumulator.
+    // Registered as an expected survivor in
+    // `scripts/tests/test-ntheory-certificate-guards.sh`, which fails if it is
+    // ever killed (meaning it became verdict-bearing) or if any other guard
+    // joins it.
     if cert
         .factors
         .iter()
@@ -261,7 +291,9 @@ pub fn certify_prime(n: i128) -> Option<PrattCertificate> {
 const WITNESS_SEARCH_BUDGET: i128 = 2_000;
 
 fn build_prime_certificate(n: i128) -> Option<PrattCertificate> {
-    if n < 2 {
+    // Spelled `<= 1` rather than `< 2` so the mutation harness can address the
+    // checker's G1 uniquely; the producer's own bounds are not soundness guards.
+    if n <= 1 {
         return None;
     }
     if n == 2 {
@@ -393,8 +425,10 @@ pub fn check_factorization_certificate(n: i128, cert: &FactorizationCertificate)
         return false;
     }
     // F2: strictly ascending bases — canonical, and rejects a repeated base.
-    for window in cert.factors.windows(2) {
-        if window[0].0 >= window[1].0 {
+    // Spelled with its own binder name so the mutation harness can delete this
+    // guard independently of the identically-shaped G4 above.
+    for pair in cert.factors.windows(2) {
+        if pair[0].0 >= pair[1].0 {
             return false;
         }
     }
@@ -530,7 +564,9 @@ pub fn check_crt_certificate(residues: &[(i128, i128)], cert: &CrtCertificate) -
 /// least common multiple). Self-checked before return.
 #[must_use]
 pub fn certify_crt(residues: &[(i128, i128)]) -> Option<CrtCertificate> {
-    if residues.iter().any(|&(_, modulus)| modulus <= 0) {
+    // Spelled with its own binder so the harness can address the checker's R1
+    // uniquely; this is a producer precondition, not a soundness guard.
+    if residues.iter().any(|&(_, m)| m <= 0) {
         return None;
     }
     let cert = if let Some((solution, modulus)) = ntheory::crt(residues) {
