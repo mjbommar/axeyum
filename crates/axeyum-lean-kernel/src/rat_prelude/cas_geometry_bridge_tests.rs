@@ -970,8 +970,16 @@ mod tests {
             cert.saturations.is_empty(),
             "thales needs no non-degeneracy condition"
         );
-        assert_eq!(cert.generators.len(), 1, "one hypothesis: C lies on the circle");
-        assert_eq!(cert.conclusions.len(), 1, "one conclusion: CA is perpendicular to CB");
+        assert_eq!(
+            cert.generators.len(),
+            1,
+            "one hypothesis: C lies on the circle"
+        );
+        assert_eq!(
+            cert.conclusions.len(),
+            1,
+            "one conclusion: CA is perpendicular to CB"
+        );
 
         let hyp = int_poly(&cert.generators[0]).expect("integer coefficients");
         let concl = int_poly(&cert.conclusions[0].poly).expect("integer coefficients");
@@ -1034,7 +1042,11 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        assert_eq!(eval_int_poly(&hyp, &off), 3, "hand-computed value off the circle");
+        assert_eq!(
+            eval_int_poly(&hyp, &off),
+            3,
+            "hand-computed value off the circle"
+        );
         assert_eq!(
             eval_int_poly(&concl, &off),
             3,
