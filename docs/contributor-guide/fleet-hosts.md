@@ -48,6 +48,19 @@ Every row below was produced by **executing the binary**, not by `command -v`:
 | `s7` | compute, 16 c, largest disk | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` | unmeasured |
 | `s2` | compute, **4 c** — smallest; prefer it for Python/ledger/NAS-IO | `2026-07-11` | 1.58.0 | 0.20.2 | 4.30.0 `d024af09` | unmeasured |
 
+**Having `lean` is NOT having a Mathlib you can `import`.** All five rows above
+show Lean 4.30.0, and as of 2026-08-29 exactly one host — **`s5`** — carries a
+Mathlib checkout at the pinned commit with `.lake/build` populated
+(`~/lean-import-scale/mathlib4`, 6.2 GB, `c5ea00351c28`). Measured by executing
+it, not by listing the directory: a module that does `import Mathlib` and
+declares 160 propositions as proof-free axioms elaborates in **3.6 s** there.
+
+`scripts/provision-lean-import-toolchain.sh` provisions a pinned checkout on any
+host and **does not build Mathlib**, so `--verify` passing does not make a host
+able to do this. Anything needing real Lean elaboration against Mathlib goes to
+s5 over ssh — see
+[Lean surface attestation](lean-surface-attestation.md).
+
 The `uv` column was measured **2026-08-24 on the shared checkout host only**
 (`uv --version` → `uv 0.11.1`, from `~/.local/bin`, which is not on the
 non-interactive ssh `PATH` by default the way `~/.cargo/bin` is). The other four
