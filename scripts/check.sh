@@ -1473,6 +1473,18 @@ step library-artifact-contract-reader-b python3 scripts/check-library-artifact-c
 step library-artifact-contract-tests    python3 scripts/tests/test-library-artifact-contract.py
 step library-artifact-contract-mutations bash scripts/tests/test-library-artifact-contract-mutations.sh
 
+# L1 phase C1/G1 -- the Mathlib DECLARATION graph (below G0's module graph).
+# `scripts/lib/declaration_graph.py` parses lean4export ndjson and reuses
+# ADR-0800's compute_closure/project_type_only rather than re-deriving them.
+# check-declaration-graph.py needs no Lean toolchain: it validates the
+# committed graph, reusing ADR-0800's five guards verbatim plus three new
+# ones (ENDPOINT_RESOLUTION for a deleted row, EDGES_CONSISTENT for a deleted
+# edge, CYCLE_CLASSIFICATION for an unexplained SCC), all eight
+# mutation-verified 1:1 by the third step below.
+step declaration-graph           python3 scripts/check-declaration-graph.py
+step declaration-graph-tests     python3 scripts/tests/test-declaration-graph.py
+step declaration-graph-mutations bash scripts/tests/test-declaration-graph-mutations.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
