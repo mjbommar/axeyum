@@ -39,6 +39,24 @@ def entry(
     }
 
 
+def unshared_entry(fact_id: str, partition: str) -> dict:
+    """An entry() whose family/proof_shape/source_group are all UNIQUE to it.
+
+    `entry()`'s defaults share `family="family"` / `proof_shape="shape"`
+    across every call, so two entries in different partitions always ALSO
+    trip the family- and proof-shape-leak checks. That is fine for tests
+    that only assert on the substring "crosses evaluation partitions" (every
+    leak header contains it), but it pollutes an exemption test's message
+    with unrelated, unexempted violations. Use this helper whenever a test
+    wants to isolate exactly the COMPONENT-split (or longitudinal-overlap)
+    check.
+    """
+    row = entry(fact_id, partition)
+    row["family"] = f"family-{fact_id}"
+    row["proof_shape"] = f"shape-{fact_id}"
+    return row
+
+
 class NurseryTests(unittest.TestCase):
     def setUp(self) -> None:
         repository = json.loads(MODULE.NURSERY.read_text())
@@ -47,6 +65,11 @@ class NurseryTests(unittest.TestCase):
         self.nursery["entries"] = [
             row for row in repository["entries"] if row["partition"] == "longitudinal"
         ]
+        # The real nursery-v1.json carries component_split_exemptions naming
+        # real fact ids that are not part of this test's slimmed-down
+        # synthetic population; each test builds its own tiny scenario and
+        # exercises exemptions explicitly where it needs to.
+        self.nursery["component_split_exemptions"] = []
         self.result = {"verdict": "autogenesis-1-passed"}
         self.facts = {
             "F:nat-zero-add": fact("F:nat-zero-add"),
@@ -179,6 +202,154 @@ class NurseryTests(unittest.TestCase):
         unsigned = dict(first)
         claimed = unsigned.pop("report_sha256")
         self.assertEqual(claimed, MODULE.digest(unsigned))
+
+    def test_component_leak_message_names_members_and_partitions(self) -> None:
+        # Regression guard for the 2026-08-30 defect: the gate used to raise
+        # a bare header naming no component, no fact, and no partition.
+        self.facts.update(
+            {
+                "F:train": fact("F:train"),
+                "F:held": fact("F:held", ["F:train"]),
+            }
+        )
+        self.nursery["entries"].extend(
+            [entry("F:train", "train"), entry("F:held", "held-out")]
+        )
+        with self.assertRaises(MODULE.NurseryError) as ctx:
+            MODULE.build_report(self.nursery, self.facts, self.result)
+        message = str(ctx.exception)
+        self.assertIn("F:train -> train", message)
+        self.assertIn("F:held -> held-out", message)
+        self.assertIn("partitions=", message)
+
+    def test_multiple_violation_types_are_all_reported_at_once(self) -> None:
+        # The gate used to raise on the FIRST violation type only, masking
+        # any other violation until the first was fixed. Engineer both a
+        # component leak and a family leak simultaneously and confirm the
+        # single raised message names both.
+        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held")})
+        train = entry("F:train", "train")
+        held = entry("F:held", "held-out")
+        train["family"] = "shared-family"
+        held["family"] = "shared-family"
+        self.nursery["entries"].extend([train, held])
+        with self.assertRaises(MODULE.NurseryError) as ctx:
+            MODULE.build_report(self.nursery, self.facts, self.result)
+        message = str(ctx.exception)
+        self.assertIn("theorem family crosses evaluation partitions", message)
+        self.assertIn("2 partition-leak violation type(s) found", message)
+
+    def test_exemption_naming_a_non_nursery_fact_is_rejected(self) -> None:
+        self.nursery["component_split_exemptions"] = [
+            {
+                "component_fact_ids": ["F:not-in-nursery"],
+                "reason": "test",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        with self.assertRaisesRegex(MODULE.NurseryError, "which is not a nursery entry"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_duplicate_exemption_is_rejected(self) -> None:
+        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held", ["F:train"])})
+        self.nursery["entries"].extend(
+            [unshared_entry("F:train", "train"), unshared_entry("F:held", "held-out")]
+        )
+        exemption = {
+            "component_fact_ids": ["F:held", "F:train"],
+            "reason": "test",
+            "authority": "test",
+            "date": "2026-08-30",
+        }
+        self.nursery["component_split_exemptions"] = [exemption, dict(exemption)]
+        with self.assertRaisesRegex(MODULE.NurseryError, "duplicates an already-exempted"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_malformed_exemption_fact_ids_are_rejected(self) -> None:
+        self.nursery["component_split_exemptions"] = [
+            {
+                # Not sorted -- must be rejected before it can silently
+                # produce a different digest than the checker's own.
+                "component_fact_ids": ["F:nat-mul-one", "F:nat-zero-add"][::-1],
+                "reason": "test",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        with self.assertRaisesRegex(MODULE.NurseryError, "sorted, deduplicated"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_exemption_suppresses_exactly_the_named_component(self) -> None:
+        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held", ["F:train"])})
+        self.nursery["entries"].extend(
+            [unshared_entry("F:train", "train"), unshared_entry("F:held", "held-out")]
+        )
+        self.nursery["component_split_exemptions"] = [
+            {
+                "component_fact_ids": sorted(["F:train", "F:held"]),
+                "reason": "test exemption",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        report = MODULE.build_report(self.nursery, self.facts, self.result)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        exempted = report["controls"]["component_split_leaks_exempted"]
+        self.assertEqual(len(exempted), 1)
+        member_ids = sorted(m["fact_id"] for m in exempted[0]["members"])
+        self.assertEqual(member_ids, ["F:held", "F:train"])
+        self.assertEqual(report["controls"]["component_split_exemptions_unused"], [])
+
+    def test_exemption_stops_matching_once_the_component_grows(self) -> None:
+        # The self-invalidation property: an exemption names an EXACT fact-id
+        # set, and its digest is recomputed against the CURRENT declared
+        # dependency graph on every run. If a later fact starts depending on
+        # a member of an exempted component, the component's digest changes
+        # and the exemption must stop applying -- the gate must go red again
+        # on the now-larger, unreviewed component.
+        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held", ["F:train"])})
+        self.nursery["entries"].extend(
+            [unshared_entry("F:train", "train"), unshared_entry("F:held", "held-out")]
+        )
+        self.nursery["component_split_exemptions"] = [
+            {
+                "component_fact_ids": sorted(["F:train", "F:held"]),
+                "reason": "test exemption",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        # Sanity: the exemption applies as-is.
+        report = MODULE.build_report(self.nursery, self.facts, self.result)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+
+        # Now grow the component: a new development-partition fact starts
+        # depending on F:train, joining the same weakly-connected component
+        # without being named in the exemption.
+        self.facts["F:new-dependent"] = fact("F:new-dependent", ["F:train"])
+        self.nursery["entries"].append(unshared_entry("F:new-dependent", "development"))
+        with self.assertRaisesRegex(MODULE.NurseryError, "crosses evaluation partitions"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_exemption_also_suppresses_matching_longitudinal_overlap(self) -> None:
+        self.facts["F:leak"] = fact("F:leak", ["F:nat-mul-one"])
+        self.nursery["entries"].append(entry("F:leak", "development"))
+        longitudinal_component = sorted(["F:leak", "F:nat-mul-one", "F:nat-zero-add"])
+        self.nursery["component_split_exemptions"] = [
+            {
+                "component_fact_ids": longitudinal_component,
+                "reason": "test exemption",
+                "authority": "test",
+                "date": "2026-08-30",
+            }
+        ]
+        report = MODULE.build_report(self.nursery, self.facts, self.result)
+        self.assertEqual(report["controls"]["evaluation_longitudinal_component_overlap"], [])
+        self.assertEqual(
+            report["controls"]["evaluation_longitudinal_component_overlap_exempted"],
+            ["F:leak"],
+        )
 
 
 if __name__ == "__main__":

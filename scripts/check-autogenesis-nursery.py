@@ -194,6 +194,92 @@ def components(
     return by_fact, members
 
 
+def describe_leak(
+    header: str,
+    key_label: str,
+    keys: list[str],
+    members_by_key: dict[str, list[str]],
+    by_partition: dict[str, str],
+) -> str:
+    """Render one violation as a header plus every member's fact id and partition.
+
+    The gate used to raise a bare header with no way to act on it (measured
+    2026-08-30: a single stderr line naming no component, fact, or partition,
+    left un-actioned for at least a day because nobody could tell what it
+    meant). Every caller of this function must pass the FULL membership it
+    knows about -- for a declared-dependency component that means every
+    member of the weakly connected component, not only the ones that
+    triggered the cross-partition check, so a reader can see WHY a
+    longitudinal or non-evaluation fact pulled two partitions together.
+    """
+    lines = [header]
+    for key in keys:
+        member_ids = sorted(set(members_by_key.get(key, [])))
+        partitions_seen = sorted({by_partition[fid] for fid in member_ids if fid in by_partition})
+        display_key = key if len(key) <= 16 else f"{key[:12]}…"
+        lines.append(f"  {key_label}={display_key} partitions={partitions_seen}")
+        for fact_id in member_ids:
+            lines.append(f"    {fact_id} -> {by_partition.get(fact_id, 'unknown')}")
+    return "\n".join(lines)
+
+
+def validate_exemptions(
+    raw: Any, entries_by_id: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Validate declared, scoped exemptions from the component-split check.
+
+    An exemption names an EXACT, closed set of fact ids -- never a component
+    digest by itself, because a digest is opaque and a reviewer cannot tell
+    what it covers without re-running the tool. The set must recompute (via
+    `digest`) to the SAME component id the checker itself derives, so an
+    exemption silently stops applying the moment the declared-dependency
+    graph grows that component (a new nursery fact starts depending on one of
+    its members): the gate then goes red again on the ENLARGED, unreviewed
+    component, which is the fail-closed behaviour this mechanism exists to
+    keep. This is deliberately not the amendment ledger (ADR-0542): an
+    amendment MOVES a row between partitions and is irreversible history; an
+    exemption changes nothing about any entry and stops applying automatically
+    if the fact it covers changes shape.
+    """
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise NurseryError("component_split_exemptions must be a list")
+    exemptions: list[dict[str, Any]] = []
+    seen_keys: set[str] = set()
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            raise NurseryError(f"component_split_exemptions[{index}] is not an object")
+        fact_ids = item.get("component_fact_ids")
+        if (
+            not isinstance(fact_ids, list)
+            or not fact_ids
+            or fact_ids != sorted(set(fact_ids))
+            or not all(isinstance(fid, str) and fid for fid in fact_ids)
+        ):
+            raise NurseryError(
+                f"component_split_exemptions[{index}].component_fact_ids must be a "
+                "sorted, deduplicated, non-empty list of strings"
+            )
+        for fact_id in fact_ids:
+            if fact_id not in entries_by_id:
+                raise NurseryError(
+                    f"component_split_exemptions[{index}] names {fact_id}, "
+                    "which is not a nursery entry"
+                )
+        require_string(item.get("reason"), f"component_split_exemptions[{index}].reason")
+        require_string(item.get("authority"), f"component_split_exemptions[{index}].authority")
+        require_string(item.get("date"), f"component_split_exemptions[{index}].date")
+        component_id = digest(fact_ids)
+        if component_id in seen_keys:
+            raise NurseryError(
+                f"component_split_exemptions[{index}] duplicates an already-exempted component"
+            )
+        seen_keys.add(component_id)
+        exemptions.append({**item, "component_id": component_id, "component_fact_ids": fact_ids})
+    return exemptions
+
+
 def maximum_declared_depth(
     fact_ids: set[str], facts: dict[str, dict[str, Any]]
 ) -> int:
@@ -231,6 +317,10 @@ def build_report(
         raise NurseryError("longitudinal result is not a passed Autogenesis-1 result")
     policy = validate_policy(nursery.get("policy"))
     entries = validate_entries(nursery.get("entries"), facts)
+    entries_by_id = {entry["fact_id"]: entry for entry in entries}
+    by_partition_lookup = {entry["fact_id"]: entry["partition"] for entry in entries}
+    exemptions = validate_exemptions(nursery.get("component_split_exemptions"), entries_by_id)
+    exempted_component_ids = {exemption["component_id"] for exemption in exemptions}
     by_fact, component_members = components(entries, facts)
     by_partition = Counter(entry["partition"] for entry in entries)
     evaluation = [entry for entry in entries if entry["partition"] in EVALUATION_PARTITIONS]
@@ -244,41 +334,115 @@ def build_report(
         family_partitions[entry["family"]].add(entry["partition"])
         shape_partitions[entry["proof_shape"]].add(entry["partition"])
         source_group_partitions[entry["source_group"]].add(entry["partition"])
-    leaks = sorted(
+
+    all_leaking_components = sorted(
         component_id
         for component_id, partitions in component_partitions.items()
         if len(partitions) > 1
     )
-    if leaks:
-        raise NurseryError("declared dependency component crosses evaluation partitions")
+    leaks = [c for c in all_leaking_components if c not in exempted_component_ids]
+    leaks_exempted = [c for c in all_leaking_components if c in exempted_component_ids]
     family_leaks = sorted(
         family for family, partitions in family_partitions.items() if len(partitions) > 1
     )
-    if family_leaks:
-        raise NurseryError("theorem family crosses evaluation partitions")
     shape_leaks = sorted(
         shape for shape, partitions in shape_partitions.items() if len(partitions) > 1
     )
-    if shape_leaks:
-        raise NurseryError("proof shape crosses evaluation partitions")
     source_group_leaks = sorted(
         group for group, partitions in source_group_partitions.items() if len(partitions) > 1
     )
-    if source_group_leaks:
-        raise NurseryError("source review group crosses evaluation partitions")
     longitudinal_ids = sorted(
         entry["fact_id"] for entry in entries if entry["partition"] == "longitudinal"
     )
     if longitudinal_ids != ["F:nat-mul-one", "F:nat-zero-add"]:
         raise NurseryError("longitudinal partition must be exactly the Autogenesis-1 chain")
     longitudinal_components = {by_fact[fact_id] for fact_id in longitudinal_ids}
+    all_longitudinal_overlap_components = sorted(
+        c for c in longitudinal_components if c in {by_fact[e["fact_id"]] for e in evaluation}
+    )
+    longitudinal_overlap_components = [
+        c for c in all_longitudinal_overlap_components if c not in exempted_component_ids
+    ]
+    longitudinal_overlap_components_exempted = [
+        c for c in all_longitudinal_overlap_components if c in exempted_component_ids
+    ]
     evaluation_longitudinal_overlap = sorted(
         entry["fact_id"]
         for entry in evaluation
-        if by_fact[entry["fact_id"]] in longitudinal_components
+        if by_fact[entry["fact_id"]] in longitudinal_overlap_components
     )
-    if evaluation_longitudinal_overlap:
-        raise NurseryError("evaluation population shares a component with Autogenesis-1")
+    evaluation_longitudinal_overlap_exempted = sorted(
+        entry["fact_id"]
+        for entry in evaluation
+        if by_fact[entry["fact_id"]] in longitudinal_overlap_components_exempted
+    )
+
+    violation_blocks: list[str] = []
+    if leaks:
+        violation_blocks.append(
+            describe_leak(
+                "declared dependency component crosses evaluation partitions",
+                "component",
+                leaks,
+                {c: component_members[c] for c in leaks},
+                by_partition_lookup,
+            )
+        )
+    if family_leaks:
+        violation_blocks.append(
+            describe_leak(
+                "theorem family crosses evaluation partitions",
+                "family",
+                family_leaks,
+                {
+                    family: [e["fact_id"] for e in evaluation if e["family"] == family]
+                    for family in family_leaks
+                },
+                by_partition_lookup,
+            )
+        )
+    if shape_leaks:
+        violation_blocks.append(
+            describe_leak(
+                "proof shape crosses evaluation partitions",
+                "proof_shape",
+                shape_leaks,
+                {
+                    shape: [e["fact_id"] for e in evaluation if e["proof_shape"] == shape]
+                    for shape in shape_leaks
+                },
+                by_partition_lookup,
+            )
+        )
+    if source_group_leaks:
+        violation_blocks.append(
+            describe_leak(
+                "source review group crosses evaluation partitions",
+                "source_group",
+                source_group_leaks,
+                {
+                    group: [e["fact_id"] for e in evaluation if e["source_group"] == group]
+                    for group in source_group_leaks
+                },
+                by_partition_lookup,
+            )
+        )
+    if longitudinal_overlap_components:
+        violation_blocks.append(
+            describe_leak(
+                f"evaluation population shares a component with Autogenesis-1 "
+                f"(longitudinal={longitudinal_ids})",
+                "component",
+                longitudinal_overlap_components,
+                {c: component_members[c] for c in longitudinal_overlap_components},
+                by_partition_lookup,
+            )
+        )
+    if violation_blocks:
+        raise NurseryError(
+            f"{len(violation_blocks)} partition-leak violation type(s) found:\n\n"
+            + "\n\n".join(violation_blocks)
+        )
 
     provenance_classes = sorted({entry["provenance_class"] for entry in evaluation})
     route_hypotheses = sorted(
@@ -341,6 +505,24 @@ def build_report(
             "answer_access_values": sorted({entry["answer_access"] for entry in entries}),
             "admission_edges_require_proof_derivation": True,
             "route_hypotheses_grant_no_dispatch_or_admission_authority": True,
+            "component_split_leaks_exempted": [
+                {
+                    "component_id": component_id,
+                    "members": [
+                        {"fact_id": fact_id, "partition": by_partition_lookup[fact_id]}
+                        for fact_id in sorted(component_members[component_id])
+                    ],
+                }
+                for component_id in leaks_exempted
+            ],
+            "evaluation_longitudinal_component_overlap_exempted": evaluation_longitudinal_overlap_exempted,
+            "component_split_exemptions": exemptions,
+            "component_split_exemptions_unused": [
+                exemption
+                for exemption in exemptions
+                if exemption["component_id"]
+                not in set(leaks_exempted) | set(longitudinal_overlap_components_exempted)
+            ],
         },
         "ready": not blockers,
         "blockers": blockers,
