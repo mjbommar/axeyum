@@ -47,6 +47,11 @@ class NurseryTests(unittest.TestCase):
         self.nursery["entries"] = [
             row for row in repository["entries"] if row["partition"] == "longitudinal"
         ]
+        # The real nursery-v1.json carries component_split_exemptions naming
+        # real fact ids that are not part of this test's slimmed-down
+        # synthetic population; each test builds its own tiny scenario and
+        # exercises exemptions explicitly where it needs to.
+        self.nursery["component_split_exemptions"] = []
         self.result = {"verdict": "autogenesis-1-passed"}
         self.facts = {
             "F:nat-zero-add": fact("F:nat-zero-add"),
