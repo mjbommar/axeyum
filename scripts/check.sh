@@ -930,6 +930,16 @@ step tock-log2-cache-v3-tests   python3 -m unittest scripts.tests.test_prepare_t
 step tock-log2-cache-v4-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v4
 step tock-log2-cache-v5-tests   python3 -m unittest scripts.tests.test_prepare_tock_log2_cache_v5
 
+# The 2026-08-29 orphan-script audit (docs/plan/status/308-orphan-script-audit.md)
+# found these three well-formed, general-purpose checks with NO caller anywhere
+# -- not this file, not the justfile, not a hook, not a fact. Each is exactly
+# the "genuinely useful but never wired up" case CLAUDE.md warns is a gate
+# waiting to be registered, not a deletion candidate, and each ran clean when
+# tested standing them up here.
+step shared-index      ./scripts/check-shared-index.sh
+step sos-negative-controls ./scripts/check-sos-negative-controls.sh
+step evidence-portability  ./scripts/check-evidence-portability.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0
