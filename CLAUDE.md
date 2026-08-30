@@ -2209,6 +2209,31 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
      carrier, check EVERY prelude for that basename before concluding anything
      about transport.**
 
+  6. **THE SAME ARGUMENT OVER A DIFFERENT AGGREGATE IN A DIFFERENT PRELUDE.
+     This one defeats BOTH retrieval tools, which is why it is worth its own
+     entry.** Measured 2026-08-30. A lane needed "counting over `[0,n)` is
+     invariant under an injective self-map" and `320`'s triage had searched
+     `permutation.rs`, `cardinality.rs` and `subset_product.rs` and correctly
+     found nothing. The answer was **`Int.prodRange_permute`**, which had
+     existed since Wilson's theorem: same induction, same
+     `restrict_injective`/`restrict_maps_into` helpers, reusable skeleton --
+     but over the **product** aggregate in the **Int** prelude.
+
+     A name search misses it (nothing says `countRange`). `shape_search` misses
+     it too, and that is the point: its conclusion head is `AxInt.prodRange`,
+     so no `--concl AxNat.countRange` query can reach it. The only thing that
+     finds it is recognising the PROOF SKELETON, which no index we have
+     represents.
+
+     So when a triage reports a permutation/reindexing/invariance lemma absent,
+     **ask which other aggregates this development folds over** (`sumRange`,
+     `prodRange`, `countRange`, `maxRange`) and **in which other preludes**, and
+     read the one that is furthest along rather than the one that matches your
+     carrier. Not everything transports -- that lane deliberately did NOT copy
+     `prodRange_swap`'s adjacent-transposition machinery, because counting
+     accumulates with `Nat.add` and a single point-change lemma replaced the
+     whole apparatus -- but the skeleton did.
+
   4. **THERE IS NO SINGLE SPELLING, so grep fails even when you DO know the
      name.** The kernel name is `CReal.congrOfUniformlyContinuous`; the Rust
      prelude field, the design docs, every brief and this file all say
