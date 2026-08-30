@@ -474,6 +474,18 @@ def render_tsv(rows: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# A column whose number is an UPPER bound carries its correction ON THE ROW.
+# The disclosure used to sit 36 lines below the table, which is where a reader
+# scanning for a figure will not find it. An overstatement disclosed out of
+# eyeshot of the number it corrects is the shape this census exists to catch.
+UPPER_BOUND_COLUMNS = {
+    "semantic_falsification": (
+        " **UPPER BOUND — 8 demonstrated.** Counts facts whose evidence names a"
+        " semantic control, not facts whose control was shown to discriminate."
+    ),
+}
+
+
 def render_summary(rows: list[dict], fan: dict[str, set[str]],
                    all_facts: list[dict]) -> str:
     n = len(rows)
@@ -497,7 +509,8 @@ def render_summary(rows: list[dict], fan: dict[str, set[str]],
     w("|---|---:|---:|")
     for c in COLUMNS:
         k = sum(1 for r in rows if r[c])
-        w(f"| `{c}` | {k} / {n} | {100.0 * k / n:.1f}% |")
+        note = UPPER_BOUND_COLUMNS.get(c, "")
+        w(f"| `{c}` | {k} / {n} | {100.0 * k / n:.1f}% |{note}")
     w("")
 
     w("## Centrally-enforced coverage (NOT the same measurement)")

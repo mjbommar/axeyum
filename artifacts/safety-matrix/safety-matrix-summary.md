@@ -17,7 +17,7 @@ checker.
 | `per_theorem_footprint` | 59 / 2121 | 2.8% |
 | `env_footprint` | 1863 / 2121 | 87.8% |
 | `circularity` | 14 / 2121 | 0.7% |
-| `semantic_falsification` | 95 / 2121 | 4.5% |
+| `semantic_falsification` | 95 / 2121 | 4.5% | **UPPER BOUND — 8 demonstrated.** Counts facts whose evidence names a semantic control, not facts whose control was shown to discriminate.
 | `mutation_control` | 15 / 2121 | 0.7% |
 | `independent_replay` | 8 / 2121 | 0.4% |
 | `coverage_bearing_checker` | 1443 / 2121 | 68.0% |
