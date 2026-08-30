@@ -257,6 +257,20 @@ under test:       0 theorems matching sup|attain|argmax|maximum|extreme
 CReal.supOn:      not in the environment
 ```
 
+The definition-level probe (`scratch-probe.sh`) ran four positive controls —
+`CReal.UniformlyContinuousOn` (inductive), `CReal.lt_cotrans` (theorem),
+`CReal.maxRange` (definition), `CReal.ivt_approx` (theorem) — all found, and
+nine names under test, all reported absent by name:
+`CReal.ContinuousOn`, `CReal.Continuous`, `CReal.supOn`, `CReal.sup`,
+`CReal.le_total`, `CReal.lt_total`, `CReal.ivt_approx_at`,
+`CReal.evt_approx_max`, `CReal.evtSupOn`. The tool's exit status is itself
+discriminating, checked both ways:
+
+```
+kernel_declaration_projection --require-declaration CReal.supOn      -> 1
+kernel_declaration_projection --require-declaration CReal.ivt_approx -> 0
+```
+
 And `creal/supremum.rs` states it in its own module documentation:
 
 > **Still not landed: `CReal.supOn` itself**, and therefore none of
