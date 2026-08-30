@@ -368,9 +368,13 @@ fn declare_dist_add_add_right(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let h_nk = d.lemma(p.add_comm, &[n, k]); // Eq (add n k) (add k n)
         let h_mk = d.lemma(p.add_comm, &[m, k]); // Eq (add m k) (add k m)
 
-        let step_a = d.congr(add_nk, add_kn, h_nk, &|d, x| d.const_app(p.dist, &[x, add_mk]));
+        let step_a = d.congr(add_nk, add_kn, h_nk, &|d, x| {
+            d.const_app(p.dist, &[x, add_mk])
+        });
         let mid1 = d.const_app(p.dist, &[add_kn, add_mk]);
-        let step_b = d.congr(add_mk, add_km, h_mk, &|d, x| d.const_app(p.dist, &[add_kn, x]));
+        let step_b = d.congr(add_mk, add_km, h_mk, &|d, x| {
+            d.const_app(p.dist, &[add_kn, x])
+        });
         let mid2 = d.const_app(p.dist, &[add_kn, add_km]);
         let step_ab = d.trans(dist_nk_mk, mid1, mid2, step_a, step_b);
 

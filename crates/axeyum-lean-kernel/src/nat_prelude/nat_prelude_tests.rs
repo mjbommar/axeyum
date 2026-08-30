@@ -9868,7 +9868,10 @@ fn dist_draw9_additions_apply_at_concrete_discriminating_instances() {
             f.k.def_eq(inferred, want),
             "dist_mul_left 3 7 2 must state Eq (dist (mul 3 7)(mul 3 2)) (mul 3 (dist 7 2))"
         );
-        assert!(f.k.def_eq(mul_3_dist, fifteen), "3 * dist 7 2 must compute to 15");
+        assert!(
+            f.k.def_eq(mul_3_dist, fifteen),
+            "3 * dist 7 2 must compute to 15"
+        );
     }
 
     // dist_mul_right at (n, k, m) = (7, 3, 2): dist(21, 6) = 15 = dist(7, 2) * 3 = 5 * 3.
@@ -9892,7 +9895,10 @@ fn dist_draw9_additions_apply_at_concrete_discriminating_instances() {
             f.k.def_eq(inferred, want),
             "dist_mul_right 7 3 2 must state Eq (dist (mul 7 3)(mul 2 3)) (mul (dist 7 2) 3)"
         );
-        assert!(f.k.def_eq(dist_mul_3, fifteen), "dist 7 2 * 3 must compute to 15");
+        assert!(
+            f.k.def_eq(dist_mul_3, fifteen),
+            "dist 7 2 * 3 must compute to 15"
+        );
     }
 
     for name in [
