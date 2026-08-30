@@ -8,10 +8,43 @@
     "statement": "∀ (a b c : ℕ), a % (b * c) % b = a % b",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-div-mod-exec",
+    "F:nat-div-mod-unique",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-one-le-mul",
+    "F:nat-mul-assoc",
+    "F:nat-left-distrib",
+    "F:nat-add-assoc",
+    "F:nat-zero-mul",
+    "F:nat-mul-zero",
+    "F:nat-mod-zero",
+    "F:nat-zero-lt-succ"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mod_mul_right_mod",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_mul_right_mod 2>/dev/null | grep -Ec '^Nat\\.mod_mul_right_mod[[:space:]]')\" -ge 1",
+      "supports": "∀ (a b c : ℕ), a % (b * c) % b = a % b",
+      "notes": "Declared in `nat_prelude/mod_mul_lemmas.rs`'s `declare_mod_mul_family`. Case-splits `b` (outer `cases_zero_succ`): at `b=0` both sides collapse to `mod a zero` via `zero_mul`/`mod_zero` congruence (a single `mod_zero` applied to the already-doubled `mod (mod a zero) zero` term, since `dvsr` and the outer divisor coincide at `zero` here); at `b=succ bpred`, case-splits `c`: at `c=0` both sides collapse to `a%b` via `mul_zero`/`mod_zero`; at `c=succ cpred` (both positive), the same `mod_of_dvd_mod` helper as `mod_mul_left_mod` answers the goal directly with `dvsr:=b`, `mult:=c`, `e:=b*c` -- no `mul_comm` bridge needed here since `e` is already `dvsr*mult` in the fact's own order (`e_eq` is `refl`). `nat_theorem_inventory`'s rendered type matches this fact's `formal.statement` verbatim (`x0`=a, `x1`=b, `x2`=c)."
+    },
+    {
+      "id": "footprint-Nat.mod_mul_right_mod",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds Nat.mod_mul_right_mod's own footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +59,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-29 in this ledger: a fresh local construction, not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison and route.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

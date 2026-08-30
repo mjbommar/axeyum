@@ -170,6 +170,7 @@ mod ldiff;
 mod log;
 mod lor;
 mod min_fac;
+mod mod_mul_lemmas;
 mod modular;
 mod multichoose;
 mod no_confusion;
@@ -262,6 +263,7 @@ use ldiff::declare_ldiff_all;
 use log::declare_log_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
+use mod_mul_lemmas::declare_mod_mul_family;
 use modular::declare_modular_congruence;
 use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
@@ -824,6 +826,21 @@ pub struct NatPrelude {
     ///   1 < b -> (∀ m, m < b -> P m) ->
     ///   (∀ m k, k < b -> 0 < m -> P m -> P (b*m+k)) -> P n`.
     pub base_induction: NameId,
+    /// `Nat.mod_mul : ∀ {a b x}, x % (a*b) = x%a + a*(x/a % b)`. Closes
+    /// `F:ml430-nat-mod-mul-beaccbad`.
+    pub mod_mul: NameId,
+    /// `Nat.mod_mul_left_mod : ∀ a b c, a % (b*c) % c = a % c`. Closes
+    /// `F:ml430-nat-mod-mul-left-mod-9b785abc`.
+    pub mod_mul_left_mod: NameId,
+    /// `Nat.mod_mul_right_mod : ∀ a b c, a % (b*c) % b = a % b`. Closes
+    /// `F:ml430-nat-mod-mul-right-mod-a481eff8`.
+    pub mod_mul_right_mod: NameId,
+    /// `Nat.mod_mul_left_div_self : ∀ m n k, m % (k*n) / n = m/n % k`. Closes
+    /// `F:ml430-nat-mod-mul-left-div-self-0aca6c6e`.
+    pub mod_mul_left_div_self: NameId,
+    /// `Nat.mod_mul_right_div_self : ∀ m n k, m % (n*k) / n = m/n % k`. Closes
+    /// `F:ml430-nat-mod-mul-right-div-self-900e0b01`.
+    pub mod_mul_right_div_self: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -3693,6 +3710,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             add_mul_mod_self_right: kernel.name_str(nat, "add_mul_mod_self_right"),
             add_div_of_dvd_add_add_one: kernel.name_str(nat, "add_div_of_dvd_add_add_one"),
             base_induction: kernel.name_str(nat, "base_induction"),
+            mod_mul: kernel.name_str(nat, "mod_mul"),
+            mod_mul_left_mod: kernel.name_str(nat, "mod_mul_left_mod"),
+            mod_mul_right_mod: kernel.name_str(nat, "mod_mul_right_mod"),
+            mod_mul_left_div_self: kernel.name_str(nat, "mod_mul_left_div_self"),
+            mod_mul_right_div_self: kernel.name_str(nat, "mod_mul_right_div_self"),
             dvd: kernel.name_str(nat, "dvd"),
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
@@ -4288,6 +4310,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // after the shift family since it is the ninth mirror in the same
         // dispatched batch and needs no dependency declared later than these.
         declare_add_div_of_dvd_add_add_one(&mut d, &p)?;
+        // Needs `div_mod_exec`/`div_mod_unique` (`declare_divisibility`/
+        // `declare_euclidean_division`, far above), `one_le_mul`
+        // (`declare_divisibility`), `add_mul_div_left` (just declared by
+        // `declare_add_div_mod_shift_family` above), `mod_lt` (`declare_divisibility`,
+        // far above) and `mul_assoc`/`left_distrib`/`add_assoc`/`add_comm`/
+        // `mul_succ`/`mul_le_mul_left`/`add_lt_add_left`/`lt_of_lt_of_le`/
+        // `zero_mul`/`mul_zero`/`add_zero`/`zero_add`/`mod_zero`/`div_zero`/
+        // `zero_mod`/`mul_comm`/`zero_lt_succ` (all `declare_additive_theorems`/
+        // `declare_multiplicative_theorems`/`declare_order`/`declare_order_more`,
+        // far above). Placed here since it is the natural continuation of the
+        // `ml430` `Nat` mod/mul family dispatched alongside the shift family.
+        declare_mod_mul_family(&mut d, &p)?;
         // Needs `lt_well_founded`/`WellFounded.fix` (`declare_gcd_semantics`,
         // far above -- the same primitive `declare_gcd_bezout`/
         // `declare_exists_prime_factorization`/`declare_irrational` already
