@@ -1,4 +1,4 @@
-# ADR-0617: The queue refills from the kernel, not from the bridge
+# ADR-0619: The queue refills from the kernel, not from the bridge
 
 Status: accepted
 Date: 2026-08-30
