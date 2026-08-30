@@ -356,6 +356,14 @@ step cas-substance python3 scripts/check-cas-substance.py
 step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substance
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
+# S1 of the trusted-library safety roadmap (ADR-0763): the exit criterion,
+# executed rather than asserted. Constructs swapped binders, a changed
+# constant, an altered relation, source drift, and -- replayed from the real
+# damaged forms in `e79804fdd` -- an upstream statement overwritten with our
+# own `render_lean` output, then restores the ledger byte-exactly. Records
+# WHICH gate rejected each, because "something failed" is not evidence that
+# the right thing failed. ~2s, no cargo.
+step statement-identity-mutations python3 scripts/check-statement-identity-mutations.py
 # S0 of the trusted-library safety roadmap (ADR-0746): the facts x protections
 # census. It refuses on three distinct findings, each mutation-verified: the
 # committed matrix going stale (a fact or a checker_command silently added,

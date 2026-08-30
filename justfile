@@ -353,6 +353,14 @@ facts:
     python3 -m unittest scripts.tests.test_check_cas_substance
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 scripts/check-settled-fact-statements.py
+    # S1 of the trusted-library safety roadmap (ADR-0763): the exit criterion,
+    # executed rather than asserted. Constructs swapped binders, a changed
+    # constant, an altered relation, source drift, and -- replayed from the
+    # real damaged forms in `e79804fdd` -- an upstream statement overwritten
+    # with our own `render_lean` output, then restores the ledger byte-exactly.
+    # Records WHICH gate rejected each, because "something failed" is not
+    # evidence that the right thing failed. ~2s, no cargo.
+    python3 scripts/check-statement-identity-mutations.py
     # S0 of the trusted-library safety roadmap (ADR-0746): the facts x
     # protections census. Refuses on the committed matrix going stale -- a
     # fact or checker_command silently added, removed, or downgraded from an

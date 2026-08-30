@@ -131,10 +131,13 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "        if amendment is None:",
                 "        if False:",
             ),
+            # Re-anchored for S1 (ADR-0763): the drift branch moved into
+            # `evaluate()` and rustfmt-style rewrapping changed the line shape.
+            # The guard is the same one and still kills exactly this test.
             (
                 "amendment must describe THIS change",
-                '        elif amendment["from_sha256"] != pin["statement_sha256"] or amendment[\n            "to_sha256"\n        ] != now["statement_sha256"]:',
-                "        elif False:",
+                '                amendment["from_sha256"] != pin["statement_sha256"]',
+                "                False",
             ),
             (
                 "amendment must carry a reason",
@@ -2311,6 +2314,114 @@ def check_anchors() -> int:
     print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
     return failed
 
+
+# S1 of the trusted-library safety roadmap (ADR-0763). Until S1 this gate could
+# not fail on the commonest way a statement goes unwatched: never being pinned.
+# Every guard below is mutation-verified because the defect being fixed IS a
+# checker that cannot fail, and reproducing it here would be the worst possible
+# outcome.
+SUITES["settled-fact-statement-identity"] = (
+    "scripts/check-settled-fact-statements.py",
+    "scripts.tests.test_settled_fact_statements",
+    [
+        # ABSENCE. The headline S1 fix. Before it, an unpinned settled fact was
+        # read as "newly settled" and 1,976 of 2,120 statements were unwatched.
+        (
+            "an unpinned settled fact above the allowance is a violation",
+            '    if len(unpinned) > floors["max_unpinned_settled"]:',
+            "    if False:",
+        ),
+        # SLACK. A ratchet that can be hand-loosened is decoration; the gate
+        # re-derives the floor and reports a too-generous allowance as a
+        # violation, which is what makes a loosened floor self-reverting.
+        (
+            "a slack unpinned allowance is a violation",
+            '    elif len(unpinned) < floors["max_unpinned_settled"]:',
+            "    elif False:",
+        ),
+        # PROSE. The reader-facing `statement` is the only field most readers
+        # see. Pinning only `formal.statement` left it rewritable.
+        (
+            "the reader-facing statement must not drift",
+            '        if pinned_prose is not None and pinned_prose != now["prose_sha256"]:',
+            "        if False:",
+        ),
+        # REPOINTING. Which declaration a fact is about is a larger claim than
+        # how its statement is spelled, and nothing watched it.
+        (
+            "a fact must not be repointed at another declaration",
+            '        if pinned_theorem is not None and pinned_theorem != now["kernel_theorem"]:',
+            "        if False:",
+        ),
+        # HEADER BIND. A content hash says "changed"; this says "changed into a
+        # rendering of a DIFFERENT theorem", which no hash can express.
+        (
+            "the rendered header must name the claimed declaration",
+            '            elif now["header_name"] != now["kernel_theorem"]:',
+            "            elif False:",
+        ),
+        # HEADERLESS ALLOWANCE. 30 statements carry no `theorem <name> :`
+        # header and cannot be checked against their declaration. Counted, not
+        # ignored, so a 31st cannot appear quietly.
+        (
+            "a new headerless statement is counted, not ignored",
+            '    if len(header_exempt) > floors["max_header_exempt"]:',
+            "    if False:",
+        ),
+        # IDENTITY FLOOR. Dropping `kernel_theorem` un-binds a fact from its
+        # declaration while every hash stays intact, so no drift guard sees it.
+        (
+            "losing an identity binding is a violation",
+            '    if identity_bound < floors["min_identity_bound"]:',
+            "    if False:",
+        ),
+        (
+            "a slack identity floor is a violation",
+            '    elif identity_bound > floors["min_identity_bound"]:',
+            "    elif False:",
+        ),
+        # The pre-S1 guards -- unamended drift, the wrong-digest amendment
+        # check, the reason requirement, silent retraction, and both
+        # fail-closed paths -- are NOT repeated here. They are already
+        # mutation-verified by the `settled-fact-statements` suite above,
+        # against the same subject file. Mutating one line from two suites
+        # would double the cost and make a stale anchor look like coverage.
+        # FAIL-CLOSED ON A MISSING RATCHET. A manifest with no `coverage_floor`
+        # has no opinion about absence -- exactly the state S1 found this gate
+        # in -- so it is an error, not a default.
+        (
+            "a manifest with no coverage_floor is an error",
+            '    floor = manifest.get("coverage_floor")',
+            '    floor = manifest.get("coverage_floor") or {k: 0 for k in FLOOR_KEYS}',
+        ),
+        (
+            "a non-integer coverage_floor is an error",
+            "        if not isinstance(value, int) or isinstance(value, bool) or value < 0:",
+            "        if False:",
+        ),
+        # `--write` MUST NOT LAUNDER. It used to rebuild pins from current state
+        # unconditionally, so running it after a drift re-pinned the damage and
+        # the gate went green.
+        (
+            "--write refuses to re-pin an unamended change",
+            "    if blocked:",
+            "    if False:",
+        ),
+        # `--write` PRESERVES THE SUPERSEDED STATEMENT -- the roadmap's
+        # "preserve previous statements when correcting a row".
+        (
+            "--write preserves the superseded statement",
+            "                history.append(superseded)",
+            "                pass",
+        ),
+        # `--write` ONLY TIGHTENS. A loosened floor must not survive a write.
+        (
+            "--write only tightens the ratchet",
+            '            old_floor.get("max_unpinned_settled", len(unpinned)), len(unpinned)',
+            '            old_floor.get("max_unpinned_settled", len(unpinned)), 10**9',
+        ),
+    ],
+)
 
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
