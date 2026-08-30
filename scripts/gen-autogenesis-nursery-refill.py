@@ -433,6 +433,64 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
         "Mathlib.Order.Interval.Finset.Nat"),
     "integer-congruence-lemmas": ("Mathlib.Data.Int.ModEq",),
     "natural-congruence-lemmas": ("Mathlib.Data.Nat.ModEq",),
+    # --- draw 7, 2026-08-30 (ADR-0654) ---------------------------------------
+    # Draw 6 was declined twice. ADR-0645 declined it because no held-out-safe
+    # family existed and named `Nat.dist` + `Nat.nth` as the unblock; ADR-0653
+    # declined it again because the lane that declared `Nat.dist` also proved
+    # five exact Mathlib mirror names, two of them inside the first ten a draw
+    # takes, so R9 refuses `Mathlib.Data.Nat.Dist` for held-out forever.
+    # `Nat.fermatNumber` has since landed (nat_prelude/fermat_number.rs), which
+    # is the third unblock ADR-0653 measured and the one it called cheapest.
+    #
+    # THIS FAMILY SET IS NOT CHOSEN -- IT IS THE ONLY LAWFUL ONE. Enumerated
+    # over all 2^11 subsets of the eleven un-owned modules at the PER_FAMILY
+    # floor: a subset is lawful iff every cycle position congruent to 0 mod 3
+    # is occupied by a held-out-safe module and R5's two-family minimum holds.
+    # Exactly ONE subset survives, and it is this one. The reason it is forced:
+    #
+    #   * Held-out-safe means R9-clean in the first ten AND no published v1
+    #     family over the same mathematics. Exactly two modules qualify --
+    #     `Mathlib.Data.Nat.Nth` (R9 0/10, no family names an nth-selector) and
+    #     `Mathlib.NumberTheory.Fermat` (R9 0/10, no family names Fermat
+    #     numbers). The other nine are each adjacent to a PUBLISHED v1 family
+    #     (natural-bitwise, natural-primes, natural-factorial, natural-gcd,
+    #     natural-binomial, integer-gcd -- all development or train), or, for
+    #     `Mathlib.Data.Nat.Dist`, contaminated at R9 2/10.
+    #   * R5 needs two held-out families, so ceil(n/3) = 2 and n is 4, 5 or 6.
+    #   * `Mathlib.NumberTheory.Fermat` sorts LAST of all eleven (NumberTheory
+    #     > Data > Batteries/Init), so it lands at index n-1, which must be 3.
+    #     Hence n = 4 and `Mathlib.Data.Nat.Nth` must be index 0, so nothing in
+    #     the set may sort before it.
+    #   * The only two ready modules sorting strictly between Nth and Fermat
+    #     are the two Prime modules. They fill indices 1 and 2.
+    #
+    # THE TWO PRIME FAMILIES ARE LAWFUL PRECISELY BECAUSE THEY ARE NOT BLIND.
+    # Draws 2-5 excluded `*.Prime.*` from HELD-OUT because v1 `natural-primes`
+    # is development -- published, seen mathematics that lanes work. That
+    # exclusion is a held-out exclusion only: ADR-0653 states the rule directly
+    # for the Dist case ("perfectly good for development or train, where
+    # nothing is blind and contamination is a fast-closure feature rather than
+    # a defect"), and these two land at development and train.
+    #
+    # STATED LIMITATION, because it is the one thing here that is a judgement
+    # rather than a measurement: two of `fermat-numbers`' ten blind rows
+    # (`Nat.fermat_primeFactors_one_lt`, `Nat.pow_of_pow_add_prime`) mention
+    # `Nat.Prime`, and this same draw dispatches twenty prime rows. That is
+    # shared VOCABULARY, not a shared statement -- neither name appears in
+    # either Prime pool, and a blind family must be allowed to use developed
+    # tools or nothing could ever be held out. It is recorded rather than
+    # waved past because it is the nearest thing to an adjacency in this draw.
+    #
+    # `Mathlib.Data.Nat.Dist` is NOT drawn, against ADR-0653's recommendation
+    # to take it as development or train. It sorts BEFORE `Mathlib.Data.Nat.Nth`,
+    # so including it either lands it at index 0 (held-out -- R9 refuses) or
+    # pushes Fermat off index 3. The uniqueness enumeration above is what shows
+    # this is forced rather than an oversight; Dist remains real supply for a
+    # draw whose held-out slots come from elsewhere.
+    "natural-nth-selector": ("Mathlib.Data.Nat.Nth",),
+    "natural-prime-arithmetic": ("Mathlib.Data.Nat.Prime.Basic",),
+    "natural-prime-characterizations": ("Mathlib.Data.Nat.Prime.Defs",),
+    "fermat-numbers": ("Mathlib.NumberTheory.Fermat",),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -469,6 +527,18 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
         "kernel-library-application", "modular-arithmetic-reconstruction"),
     "natural-congruence-lemmas": (
         "kernel-library-application", "modular-arithmetic-reconstruction"),
+    # --- draw 7, 2026-08-30 (ADR-0654) ---------------------------------------
+    # `Nat.nth p n` is a well-founded selector over a decidable predicate and
+    # its rows are monotonicity/indexing facts, so induction plus the recursive
+    # reconstruction route. `Nat.fermatNumber n = 2^(2^n) + 1` is likewise
+    # recursive, and its rows are coprimality and ordering facts.
+    "natural-nth-selector": ("kernel-induction", "recursive-function-reconstruction"),
+    "natural-prime-arithmetic": (
+        "divisibility-library-application", "kernel-library-application"),
+    "natural-prime-characterizations": (
+        "divisibility-library-application", "kernel-induction"),
+    "fermat-numbers": (
+        "divisibility-library-application", "recursive-function-reconstruction"),
 }
 
 PER_FAMILY = 10

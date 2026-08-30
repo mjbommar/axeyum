@@ -2,23 +2,24 @@
   "coverage": {
     "attested_cohort_entries": 411,
     "ceiling_authority": "ADR-0615 as amended by ADR-0616. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. The rule on THIS cohort is ADR-0601's 'scaffolding, never headline': the UNATTESTED population may never outweigh the attested one. It is counted by attestation, not by manifest membership -- an extension row Lean accepted as a proof-free axiom against the pinned Mathlib is on the attested side, by the same method and the same command that produced nursery-v1's accepted-214-proof-free-axiom-types. not_elaborable rows count as UNATTESTED: Lean refused them, so they are worse than unchecked and must never buy headroom. When this binds, attest (scripts/attest-nursery-surface.py) rather than raise it.",
-    "combined_evaluation_entries": 474,
-    "entries": 260,
-    "families": 26,
+    "combined_evaluation_entries": 514,
+    "entries": 300,
+    "families": 30,
     "partition_counts": {
-      "development": 90,
-      "held-out": 100,
-      "train": 70
+      "development": 100,
+      "held-out": 120,
+      "train": 80
     },
     "per_family": 10,
     "screen_rejections": {
-      "already-catalogued": 38,
-      "held-out-construction": 2,
-      "hygienic-or-generated": 598,
-      "not-statable-here": 1903
+      "already-catalogued": 58,
+      "divergence-registry": 22,
+      "held-out-construction": 3,
+      "hygienic-or-generated": 611,
+      "not-statable-here": 1992
     },
     "unattested_cohort_ceiling": 411,
-    "unattested_cohort_entries": 63,
+    "unattested_cohort_entries": 103,
     "v1_evaluation_entries": 214
   },
   "entries": [
@@ -371,6 +372,309 @@
       "source_name": "Nat.sum_four_squares",
       "source_statement_sha256": "0557fc3c5f79b70b99a0ebf5cc0e486cdd4e234915a2a06d7b30f23fead75493",
       "statement": "∀ (n : ℕ), ∃ a b c d, a ^ 2 + b ^ 2 + c ^ 2 + d ^ 2 = n",
+      "statement_shape": "existential-witness"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "161e79c71710cf59e54cddee49a2e6726ca972be56ef2f223cea5cdfb3f5feff",
+      "constants": [
+        "Nat",
+        "Nat.Coprime",
+        "Nat.fermatNumber",
+        "Ne"
+      ],
+      "fact_id": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.coprime_fermatNumber_fermatNumber",
+      "source_statement_sha256": "7fd44c9289d35b1c7d0b3aaabd27158a8cccd5ce9749a6e949147b11b91042a2",
+      "statement": "∀ {m n : ℕ}, m ≠ n → m.fermatNumber.Coprime n.fermatNumber",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b051cee632172f185adb1ed5c8009710bdca4122be1ea84a3a4524a879d36af5",
+      "constants": [
+        "Monotone",
+        "Nat",
+        "Nat.fermatNumber",
+        "Nat.instPreorder"
+      ],
+      "fact_id": "F:ml430-nat-fermatnumber-mono-b051cee6",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:higher-order-property",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.fermatNumber_mono",
+      "source_statement_sha256": "a9edde70c391a1ea0c404ff214cebca58ebc2d7332cb8b62a4c5673b96627bfb",
+      "statement": "Monotone Nat.fermatNumber",
+      "statement_shape": "higher-order-property"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "91232d67fc5c02ac954d9198a2acb8835e1a2f0275a99dfed474a2de2617b562",
+      "constants": [
+        "Nat",
+        "Nat.fermatNumber",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fermatnumber-ne-one-91232d67",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.fermatNumber_ne_one",
+      "source_statement_sha256": "5060c52535fbb4e940f618695878bc5ef69da5413f693af190b115fdc6d46180",
+      "statement": "∀ (n : ℕ), n.fermatNumber ≠ 1",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b1b0798ff76bf028f2b61751a7f15c01787f2ade44c569149e4a7f110fd09409",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.fermatNumber",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fermatnumber-one-b1b0798f",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.fermatNumber_one",
+      "source_statement_sha256": "3e27b0b6880aecc8bb65db55aab5355aff7c5fa2180d2f14c126fd34e1a480fc",
+      "statement": "Nat.fermatNumber 1 = 5",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "acbcb8c6c8bb0b70fb49f694c5d5e957c010beaf88d5cf0a53dc3ba9da165f5b",
+      "constants": [
+        "Nat",
+        "Nat.fermatNumber",
+        "Nat.instPreorder",
+        "StrictMono"
+      ],
+      "fact_id": "F:ml430-nat-fermatnumber-strictmono-acbcb8c6",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:higher-order-property",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.fermatNumber_strictMono",
+      "source_statement_sha256": "5c555df8a053347d5e5164a4be70931c76527d0bf5395ac082d2a8c75ebf8812",
+      "statement": "StrictMono Nat.fermatNumber",
+      "statement_shape": "higher-order-property"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "3aa3bfc42f9071c57e3571913d0573f13206f910c6145ba2e0444d77bc92c55a",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.fermatNumber",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fermatnumber-two-3aa3bfc4",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.fermatNumber_two",
+      "source_statement_sha256": "42ef6604fe5d566ff61cffaa508e0cbbef6420fd2e131423f3bdb762a0bae0d5",
+      "statement": "Nat.fermatNumber 2 = 17",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "ca7aac676561c666fc2fb00ec6c7ea97d2e5e822aab32fc90ba4f9e39596ed59",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.fermatNumber",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fermatnumber-zero-ca7aac67",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.fermatNumber_zero",
+      "source_statement_sha256": "48ece5d084f1dc40524444cd2b9f75f30a595f7772304514dee33a92dfb3bc47",
+      "statement": "Nat.fermatNumber 0 = 3",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "58343c6ff58615513a6b232ea7e3f4e0e42574cf25b922de55112dd438e27c74",
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "Exists",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "HPow.hPow",
+        "LT.lt",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.fermatNumber",
+        "Nat.instDvd",
+        "Nat.instMonoid",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instHMul",
+        "instHPow",
+        "instLTNat",
+        "instMulNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fermat-primefactors-one-lt-58343c6f",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:existential-witness",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.fermat_primeFactors_one_lt",
+      "source_statement_sha256": "22edf8e42c5b6341dadb25b73dfff1c13b8d0eb0345ef3ba73de2b46b1a28fcc",
+      "statement": "∀ (n p : ℕ), 1 < n → Nat.Prime p → p ∣ n.fermatNumber → ∃ k, p = k * 2 ^ (n + 2) + 1",
+      "statement_shape": "existential-witness"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "251041a58860a45cec9adfff34fa2f59dad733c4cba7c94d4571a290b2267f0d",
+      "constants": [
+        "Nat",
+        "Nat.fermatNumber",
+        "Nat.instSemiring",
+        "Odd"
+      ],
+      "fact_id": "F:ml430-nat-odd-fermatnumber-251041a5",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.odd_fermatNumber",
+      "source_statement_sha256": "f123f85e2621c3f8577096f75d1c4b128855cd081a149be8c8042f2ea9307f7d",
+      "statement": "∀ (n : ℕ), Odd n.fermatNumber",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "ab61d0d3eae092bec2a89a3749e82bff1ab9bc562ca1416dc75a74e0442e3c57",
+      "constants": [
+        "Eq",
+        "Exists",
+        "HAdd.hAdd",
+        "HPow.hPow",
+        "LT.lt",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instMonoid",
+        "Ne",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instHPow",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
+      "family": "fermat-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.NumberTheory.Fermat",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "fermat-numbers:existential-witness",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.NumberTheory.Fermat",
+      "source_name": "Nat.pow_of_pow_add_prime",
+      "source_statement_sha256": "d775c7b6e254d7ed87db603fd587bfddc0895c92f417be3cd983fc8fe0060cca",
+      "statement": "∀ {a n : ℕ}, 1 < a → n ≠ 0 → Nat.Prime (a ^ n + 1) → ∃ m, n = 2 ^ m",
       "statement_shape": "existential-witness"
     },
     {
@@ -7062,6 +7366,309 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "6d69133f1bfc667f6db8a28c754c66beb620b60accb3a9a2a2be5df668f9ed0c",
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "LT.lt",
+        "Nat",
+        "Nat.nth",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-le-nth-of-lt-nth-succ-6d69133f",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.le_nth_of_lt_nth_succ",
+      "source_statement_sha256": "7eadde7dd17520fa5854afdcc7aa2c58610731a17d0499f828994fb883f89d96",
+      "statement": "∀ {p : ℕ → Prop} {k a : ℕ}, a < Nat.nth p (k + 1) → p a → a ≤ Nat.nth p k",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a9dfaba989d3646377320a2813d24436778bd05ece1d9787c98b0fb16cbf7798",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "LT.lt",
+        "Nat",
+        "Nat.nth",
+        "Ne",
+        "Not",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-nth-add-a9dfaba9",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_add",
+      "source_statement_sha256": "530084a0f2d4a024b4a4cb348b167e8a899d846f629a72ab048459c80bdfc6f5",
+      "statement": "∀ {p : ℕ → Prop} {m n : ℕ}, (∀ k < m, ¬p k) → Nat.nth p n ≠ 0 → Nat.nth (fun i => p (i + m)) n + m = Nat.nth p n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "3fc46c88bfc37c54984e15500610d136e34a332b4adb1c76b39aa6b2029a73d5",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.nth",
+        "Ne",
+        "Not",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-nth-add-one-3fc46c88",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_add_one",
+      "source_statement_sha256": "0f947a1d7a58ce85a682b6b063c2a3b1608df935d205bb8cb65bbd496391bf85",
+      "statement": "∀ {p : ℕ → Prop} {n : ℕ}, ¬p 0 → Nat.nth p n ≠ 0 → Nat.nth (fun i => p (i + 1)) n + 1 = Nat.nth p n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2dbbfdd56e05cb0145fa1c613e4a29a6a21ba21d7045d5b75810b366c76e0fcd",
+      "constants": [
+        "Eq",
+        "LE.le",
+        "Nat",
+        "Nat.nth",
+        "Not",
+        "OfNat.ofNat",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-nth-eq-zero-mono-2dbbfdd5",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_eq_zero_mono",
+      "source_statement_sha256": "574d667401a64ecc7da90225f44dcbbfc6904fc35f8ff78082f34ca0d9d0843c",
+      "statement": "∀ {p : ℕ → Prop}, ¬p 0 → ∀ {a b : ℕ}, a ≤ b → Nat.nth p a = 0 → Nat.nth p b = 0",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "969b255efdd0a62fa10672133aa70441ba0ce760db47a31eb6cd5bb8a8788a33",
+      "constants": [
+        "Eq",
+        "False",
+        "Nat",
+        "Nat.nth",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-nth-false-969b255e",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_false",
+      "source_statement_sha256": "f00116cd6fe0c1b9b2f7634f188449c8fb637034281e81181ae6ec3740c4f16d",
+      "statement": "∀ (n : ℕ), Nat.nth (fun x => False) n = 0",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "db30d6741ceb337244f8d5e3e97e5d1c5383743b2a239511593e55ec40d96b52",
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.nth",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-nth-mem-anti-db30d674",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_mem_anti",
+      "source_statement_sha256": "a81f5489c3c40fa860d1da0f5aaf9adfd1969f9b89bac5db33fe7b58fb9c81cb",
+      "statement": "∀ {p : ℕ → Prop} {a b : ℕ}, a ≤ b → p (Nat.nth p b) → p (Nat.nth p a)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "c1d86fab2df01b52f5c119625f48cba907d7e613eef7dbf80bc1ba04b04bd204",
+      "constants": [
+        "Nat",
+        "Nat.nth",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-nth-mem-of-ne-zero-c1d86fab",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_mem_of_ne_zero",
+      "source_statement_sha256": "08d40334edf08d829f934e107993c3aa75ae89e171ee254ebfff098ae89af950",
+      "statement": "∀ {p : ℕ → Prop} {n : ℕ}, Nat.nth p n ≠ 0 → p (Nat.nth p n)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "aab2a2dc3594ed8e2dfb7acd85f4a3befc3fb52c6b974ef8e7b67a20296b8f90",
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.nth",
+        "Ne",
+        "Not",
+        "OfNat.ofNat",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-nth-ne-zero-anti-aab2a2dc",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_ne_zero_anti",
+      "source_statement_sha256": "40c53ec6c47f1e085a38dc6fb744eeaca7139fa757899734e1d584dd727bf2da",
+      "statement": "∀ {p : ℕ → Prop}, ¬p 0 → ∀ {a b : ℕ}, a ≤ b → Nat.nth p b ≠ 0 → Nat.nth p a ≠ 0",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "eef6b58751445a8aad74d59c49ae0938d95e44f95cc303b314bd5c0b7e97b859",
+      "constants": [
+        "Eq",
+        "LE.le",
+        "Nat",
+        "Nat.nth",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-nth-of-forall-eef6b587",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_of_forall",
+      "source_statement_sha256": "b449dfeaccae0ffddecb3f8cd482d93157693d0407a687a6fdb8f664bbe64bb4",
+      "statement": "∀ {p : ℕ → Prop} {n : ℕ}, (∀ n' ≤ n, p n') → Nat.nth p n = n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "8ba7e1e1f15766af3e89b61f9aba769351933e5b0d1ac29a625142978c4b7f4e",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.nth",
+        "True"
+      ],
+      "fact_id": "F:ml430-nat-nth-true-8ba7e1e1",
+      "family": "natural-nth-selector",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Nth",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-nth-selector:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Nth",
+      "source_name": "Nat.nth_true",
+      "source_statement_sha256": "e1f6ec8c2f1ef154402c9aca319665280ee2af836c626b8154ae5db618855216",
+      "statement": "∀ (n : ℕ), Nat.nth (fun x => True) n = n",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "e43374dce3baf3a6c09201bf4dd2d35105a80527fbee66d047b01d6f903ffbaa",
       "constants": [
         "HAdd.hAdd",
@@ -7671,6 +8278,633 @@
       "source_statement_sha256": "1bdbd380eeac93ad07e07e8493ef18156050850cc5d182249ab92e73f9735c0e",
       "statement": "∀ {n : ℕ}, Even n ↔ n % 2 = 0",
       "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2752b17f5facc1c51f59131872b0c90dd7b2fd74a49c3ce88f570aa7996cbeeb",
+      "constants": [
+        "Dvd.dvd",
+        "HPow.hPow",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Nat.instMonoid",
+        "Not",
+        "instHPow"
+      ],
+      "fact_id": "F:ml430-nat-prime-coprime-pow-of-not-dvd-2752b17f",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.coprime_pow_of_not_dvd",
+      "source_statement_sha256": "fd54ddf7cd56bad310fe13b0fbbce11c56f303e57a49816abc2a257ac95d3074",
+      "statement": "∀ {p m a : ℕ}, Nat.Prime p → ¬p ∣ a → a.Coprime (p ^ m)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b744689626533703836cc6c6139f99afc00fc14d4e3d0b6b132c660d677c2f7d",
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "Iff",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-dvd-iff-eq-b7446896",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.dvd_iff_eq",
+      "source_statement_sha256": "7ab5f679d74198d66c036ca0f7191dd1e0a8c3235787f4dd2a2e235b07324df5",
+      "statement": "∀ {p a : ℕ}, Nat.Prime p → a ≠ 1 → (a ∣ p ↔ p = a)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "846d2949d417d0359f1544b7a9c814e0cc92bcbf0b54dbb57f789afc7305dd07",
+      "constants": [
+        "Eq",
+        "HPow.hPow",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instMonoid",
+        "OfNat.ofNat",
+        "instHPow",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-eq-one-of-pow-846d2949",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.eq_one_of_pow",
+      "source_statement_sha256": "c64d382c9ba744b8e01ea0ef8c46ca5f77392b284374ad02eac5aa0dc27c8fc0",
+      "statement": "∀ {x n : ℕ}, Nat.Prime (x ^ n) → n = 1",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "44a91651a7570e673bf198491121efdad0f768e7f27c48bad47a0c74f58ef6b6",
+      "constants": [
+        "Eq",
+        "HMod.hMod",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instMod",
+        "OfNat.ofNat",
+        "Or",
+        "instHMod",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-eq-two-or-odd-44a91651",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.eq_two_or_odd",
+      "source_statement_sha256": "bc9f7defabb9c2b72ed4f593726210558d0dea011d82a0e0c3ae95a927ac5519",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → p = 2 ∨ p % 2 = 1",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "25691fc94fb5addef82da6f033ef4006002d20a43346f59f6dc57eb983c1b7b7",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instSemiring",
+        "Odd",
+        "OfNat.ofNat",
+        "Or",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-eq-two-or-odd-25691fc9",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.eq_two_or_odd'",
+      "source_statement_sha256": "2371da7b5e826667ab8d8e468cfa67b51615ee72cb0a3066c4ad3f017a066181",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → p = 2 ∨ Odd p",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "25c35e737a9841a7853f29d53b32d683b987dfb854dfa57ed53591a5808b8e24",
+      "constants": [
+        "Eq",
+        "HMod.hMod",
+        "Iff",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instMod",
+        "Ne",
+        "OfNat.ofNat",
+        "instHMod",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-mod-two-eq-one-iff-ne-two-25c35e73",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.mod_two_eq_one_iff_ne_two",
+      "source_statement_sha256": "c1117c90df2e0c469e77c3002651367b337d3aadffef8386e4b451a679cef3ca",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → (p % 2 = 1 ↔ p ≠ 2)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "d3fd2e31a47eb1e4507086b03983112a1f41fd0aa5871641206f735c741be3de",
+      "constants": [
+        "And",
+        "Eq",
+        "HMul.hMul",
+        "HPow.hPow",
+        "Iff",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instMonoid",
+        "Ne",
+        "OfNat.ofNat",
+        "instHMul",
+        "instHPow",
+        "instMulNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.mul_eq_prime_sq_iff",
+      "source_statement_sha256": "960585dc66551f9e8600b8269a36bdad8075e2c52f200f94d07ed3fd515a6698",
+      "statement": "∀ {x y p : ℕ}, Nat.Prime p → x ≠ 1 → y ≠ 1 → (x * y = p ^ 2 ↔ x = p ∧ y = p)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "c83110ca38c66698419ccc750fdddd37749a666aba1e08f4c4712b916cc90608",
+      "constants": [
+        "And",
+        "Dvd.dvd",
+        "Exists",
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Not"
+      ],
+      "fact_id": "F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:existential-witness",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.not_coprime_iff_dvd",
+      "source_statement_sha256": "ca25ee4b0e8db9506f8c90cd5d435c1a28037c88f1f737c63e1180251b8a732a",
+      "statement": "∀ {m n : ℕ}, ¬m.Coprime n ↔ ∃ p, Nat.Prime p ∧ p ∣ m ∧ p ∣ n",
+      "statement_shape": "existential-witness"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "d6480abf9a5f30b2d93a88ee7e2d74e69ae819a60f6e4e7f38ae977363fac982",
+      "constants": [
+        "HPow.hPow",
+        "LE.le",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instMonoid",
+        "Not",
+        "OfNat.ofNat",
+        "instHPow",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-not-prime-pow-d6480abf",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.not_prime_pow",
+      "source_statement_sha256": "bb1be6cff5619a1731a48631fd3d52b2f3a36300ffc26562db5b8fe16a2865ea",
+      "statement": "∀ {x n : ℕ}, 2 ≤ n → ¬Nat.Prime (x ^ n)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "5f14afc6a9cf34fd330332b95241e22c243f8ed2a16e29ec172400bfc9cd488a",
+      "constants": [
+        "HPow.hPow",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instMonoid",
+        "Ne",
+        "Not",
+        "OfNat.ofNat",
+        "instHPow",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-not-prime-pow-5f14afc6",
+      "family": "natural-prime-arithmetic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-prime-arithmetic:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Basic",
+      "source_name": "Nat.Prime.not_prime_pow'",
+      "source_statement_sha256": "42b49edc39975ded11f17527533240771c70eb862965778be57af0e9706ef504",
+      "statement": "∀ {x n : ℕ}, n ≠ 1 → ¬Nat.Prime (x ^ n)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a85d46a48fea82afc1e790af92b4bb107823c13df23b4f171a18e19bcb0797ce",
+      "constants": [
+        "Dvd.dvd",
+        "Iff",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Not"
+      ],
+      "fact_id": "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.coprime_iff_not_dvd",
+      "source_statement_sha256": "9629bf1b3333dec6b6132e605f4c7588bd9d4cdd3217fe9d5d495d3815579be6",
+      "statement": "∀ {p n : ℕ}, Nat.Prime p → (p.Coprime n ↔ ¬p ∣ n)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "594468475192b29862d8c75ae3365b0859501184c815be701d32618577ffcd76",
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Iff",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Or",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-dvd-mul-59446847",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.dvd_mul",
+      "source_statement_sha256": "d366daea1dc12bd9eed9fde4be2c7a765d3d0ee87eacfe58f74f2c353888cb83",
+      "statement": "∀ {p m n : ℕ}, Nat.Prime p → (p ∣ m * n ↔ p ∣ m ∨ p ∣ n)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "4ae88221cce0986ba2a8bfcd4bb16e81106bca30e5aebf4a6fd60e7cc9b3f07e",
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Or",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.dvd_or_dvd",
+      "source_statement_sha256": "8aa9b6883775b05bf93ce2efe15689920cddb09d63635498056eba9eec6d6635",
+      "statement": "∀ {p m n : ℕ}, Nat.Prime p → p ∣ m * n → p ∣ m ∨ p ∣ n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "48de0abbd6b02980f4af63a835d02c7a95b6c5fbc7fbc9f5295652d323cdb759",
+      "constants": [
+        "Dvd.dvd",
+        "Eq",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "OfNat.ofNat",
+        "Or",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.eq_one_or_self_of_dvd",
+      "source_statement_sha256": "22b149358cb9c7d15380ab72fa9787626e438ac5b5714e5fe3f33634682ecbf9",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → ∀ (m : ℕ), m ∣ p → m = 1 ∨ m = p",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "5b7f8845b9747456882185aec996b222829b5249ff18d49cd7a887b2018fa737",
+      "constants": [
+        "Nat",
+        "Nat.Prime",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-ne-one-5b7f8845",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.ne_one",
+      "source_statement_sha256": "4ccf05b867fd08ecf5097bb3dd6c63df48a87ff02cc48f9ec15000f50a108a50",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → p ≠ 1",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b4e8b4d53f9cb9c650e5ba555fcd733813581016b373c02c589e4fbeb66434f7",
+      "constants": [
+        "Nat",
+        "Nat.Prime",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-ne-zero-b4e8b4d5",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.ne_zero",
+      "source_statement_sha256": "3beb4a605907aa3efe59b0bb10ddca80d6f0bae3e54f4ecd460f75bb8a919d0c",
+      "statement": "∀ {n : ℕ}, Nat.Prime n → n ≠ 0",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "be7e780f011c005ede2ae847994c9b264e91e484bc0b9705b424fa93ba7ff215",
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Not",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-not-dvd-one-be7e780f",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.not_dvd_one",
+      "source_statement_sha256": "c0d3ca3aa9363e4faefc92383de6b4f47f5c0100e4006b8ab7ac80fc8ec0c327",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → ¬p ∣ 1",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "03eb3095895f853ba4d3389746e4d6b60697020ea8d1ce4290e63b895d40b660",
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.Prime",
+        "OfNat.ofNat",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-one-le-03eb3095",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.one_le",
+      "source_statement_sha256": "da8a313a3eb3c682a3ea647059a7c61d49e2af1b27cc4e10d5ec1e4783188026",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → 1 ≤ p",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "bc90cfc7621886eb42f7f55af1bf22743fa7211dc2f01ba80c490b7684c3d398",
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.Prime",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-one-lt-bc90cfc7",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.one_lt",
+      "source_statement_sha256": "859252f5f088a223c68c61e5b3451cf2801de4fd0e032c47eb901ab3f9c35474",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → 1 < p",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "85eeeeeaf7c5c8cb2998a0d84526a76da56037ffa78503601cff142f23d7f370",
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.Prime",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-pos-85eeeeea",
+      "family": "natural-prime-characterizations",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Defs",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-characterizations:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Defs",
+      "source_name": "Nat.Prime.pos",
+      "source_statement_sha256": "7b1dd5dca6aea0e28f800c7fa31d75b3d692348bfbe1abbe348b3b75de14d7a9",
+      "statement": "∀ {p : ℕ}, Nat.Prime p → 0 < p",
+      "statement_shape": "conditional-proposition"
     },
     {
       "answer_access": "withheld-during-episode",
@@ -8302,12 +9536,15 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "4ecf6518f0001f7873e99659d4a8ef0475d78d527b299deae49946b00338de22",
+  "extension_sha256": "1b49c43fa3b2ca6161e2cd9cbec2418e335f89f40a72919ab5d4be1ae4fac9c3",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
       "Mathlib.NumberTheory.SumFourSquares",
       "Mathlib.Order.Interval.Finset.Nat"
+    ],
+    "fermat-numbers": [
+      "Mathlib.NumberTheory.Fermat"
     ],
     "integer-absolute-value": [
       "Mathlib.Data.Int.Order.Lemmas",
@@ -8381,12 +9618,21 @@
     "natural-modulus": [
       "Init.Data.Nat.Mod"
     ],
+    "natural-nth-selector": [
+      "Mathlib.Data.Nat.Nth"
+    ],
     "natural-order-bridging": [
       "Init.Prelude"
     ],
     "natural-parity": [
       "Mathlib.Algebra.Group.Nat.Even",
       "Mathlib.Algebra.Ring.Parity"
+    ],
+    "natural-prime-arithmetic": [
+      "Mathlib.Data.Nat.Prime.Basic"
+    ],
+    "natural-prime-characterizations": [
+      "Mathlib.Data.Nat.Prime.Defs"
     ],
     "natural-totient": [
       "Mathlib.Data.Nat.Totient"
@@ -8398,6 +9644,7 @@
   },
   "family_partitions": {
     "descent-and-well-ordering": "held-out",
+    "fermat-numbers": "held-out",
     "integer-absolute-value": "held-out",
     "integer-basic-arithmetic": "development",
     "integer-congruence-lemmas": "development",
@@ -8419,15 +9666,18 @@
     "natural-induction-and-divisibility": "held-out",
     "natural-lcm": "development",
     "natural-modulus": "train",
+    "natural-nth-selector": "held-out",
     "natural-order-bridging": "development",
     "natural-parity": "held-out",
+    "natural-prime-arithmetic": "development",
+    "natural-prime-characterizations": "train",
     "natural-totient": "development",
     "range-induction": "held-out"
   },
   "kind": "axeyum-autogenesis-nursery-extension",
   "limitations": [
     "Lean surface propositions are not Axeyum kernel-core terms.",
-    "197 of 260 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 60 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
+    "197 of 300 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 100 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
     "Attestation does not make this an evaluation population equivalent to nursery-v1's. v1 freezes partitions against declared dependency weak components (policy.split_component_authority); here source_group is the Mathlib defining module and no dependency-component analysis was run, so a held-out row can share a component with a dispatchable one and nothing in this manifest sees it. Attestation grades the STATEMENT; this is a property of the ROW.",
     "Any depends_on on these facts is ledger-owned and accrued after the fact (ADR-0615), never the preregistered component analysis above.",
     "Mathlib declarations remain external prior art and every Axeyum fact here remains open."
@@ -8435,6 +9685,7 @@
   "partition_assignment_rule": "New families are ordered by the lexicographic path of their primary Mathlib defining module -- a property of the external source, not of our capability -- and partitions are assigned by the repeating cycle held-out, development, train. The cycle starts at held-out because the measured deficiency is held-out breadth: of twelve v1 families exactly two are still open and blind. No target outcome was consulted; the rule is re-derived by --check, so the assignment cannot be hand-edited. ADR-0615: a family an earlier draw preregistered is FROZEN and the cycle runs over the new families only. Without that freeze, adding four families shifted the cycle index of seven of the first eight -- moving natural-division, 8 of whose 10 mirrors are proved, into held-out.",
   "preregistered_family_partitions": {
     "descent-and-well-ordering": "held-out",
+    "fermat-numbers": "held-out",
     "integer-absolute-value": "held-out",
     "integer-basic-arithmetic": "development",
     "integer-congruence-lemmas": "development",
@@ -8456,8 +9707,11 @@
     "natural-induction-and-divisibility": "held-out",
     "natural-lcm": "development",
     "natural-modulus": "train",
+    "natural-nth-selector": "held-out",
     "natural-order-bridging": "development",
     "natural-parity": "held-out",
+    "natural-prime-arithmetic": "development",
+    "natural-prime-characterizations": "train",
     "natural-totient": "development",
     "range-induction": "held-out"
   },
@@ -8465,6 +9719,10 @@
     "descent-and-well-ordering": [
       "kernel-induction",
       "kernel-library-application"
+    ],
+    "fermat-numbers": [
+      "divisibility-library-application",
+      "recursive-function-reconstruction"
     ],
     "integer-absolute-value": [
       "kernel-induction",
@@ -8550,6 +9808,10 @@
       "kernel-induction",
       "kernel-library-application"
     ],
+    "natural-nth-selector": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
     "natural-order-bridging": [
       "kernel-induction",
       "kernel-library-application"
@@ -8557,6 +9819,14 @@
     "natural-parity": [
       "kernel-induction",
       "modular-arithmetic-reconstruction"
+    ],
+    "natural-prime-arithmetic": [
+      "divisibility-library-application",
+      "kernel-library-application"
+    ],
+    "natural-prime-characterizations": [
+      "divisibility-library-application",
+      "kernel-induction"
     ],
     "natural-totient": [
       "divisibility-library-application",
@@ -8877,6 +10147,7 @@
       "F:ml430-nat-cauchy-induction-fc316053",
       "F:ml430-nat-cauchy-induction-mul-7c7491ec",
       "F:ml430-nat-cauchy-induction-two-mul-d6a1fcd8",
+      "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
       "F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f",
       "F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c",
       "F:ml430-nat-dvd-gcd-e5184fc5",
@@ -8888,6 +10159,14 @@
       "F:ml430-nat-eq-zero-of-gcd-eq-zero-left-72cc4246",
       "F:ml430-nat-eq-zero-of-gcd-eq-zero-right-24054a86",
       "F:ml430-nat-euler-four-squares-21d8c900",
+      "F:ml430-nat-fermat-primefactors-one-lt-58343c6f",
+      "F:ml430-nat-fermatnumber-mono-b051cee6",
+      "F:ml430-nat-fermatnumber-ne-one-91232d67",
+      "F:ml430-nat-fermatnumber-one-b1b0798f",
+      "F:ml430-nat-fermatnumber-strictmono-acbcb8c6",
+      "F:ml430-nat-fermatnumber-two-3aa3bfc4",
+      "F:ml430-nat-fermatnumber-zero-ca7aac67",
+      "F:ml430-nat-le-nth-of-lt-nth-succ-6d69133f",
       "F:ml430-nat-modeq-add-1561afa8",
       "F:ml430-nat-modeq-add-iff-left-b719aac5",
       "F:ml430-nat-modeq-add-iff-right-84daa45f",
@@ -8898,6 +10177,37 @@
       "F:ml430-nat-modeq-cancel-left-div-gcd-cfca1225",
       "F:ml430-nat-modeq-cancel-left-of-coprime-f89af373",
       "F:ml430-nat-modeq-cancel-right-div-gcd-22a4f40d",
+      "F:ml430-nat-nth-add-a9dfaba9",
+      "F:ml430-nat-nth-add-one-3fc46c88",
+      "F:ml430-nat-nth-eq-zero-mono-2dbbfdd5",
+      "F:ml430-nat-nth-false-969b255e",
+      "F:ml430-nat-nth-mem-anti-db30d674",
+      "F:ml430-nat-nth-mem-of-ne-zero-c1d86fab",
+      "F:ml430-nat-nth-ne-zero-anti-aab2a2dc",
+      "F:ml430-nat-nth-of-forall-eef6b587",
+      "F:ml430-nat-nth-true-8ba7e1e1",
+      "F:ml430-nat-odd-fermatnumber-251041a5",
+      "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
+      "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",
+      "F:ml430-nat-prime-coprime-pow-of-not-dvd-2752b17f",
+      "F:ml430-nat-prime-dvd-iff-eq-b7446896",
+      "F:ml430-nat-prime-dvd-mul-59446847",
+      "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "F:ml430-nat-prime-eq-one-of-pow-846d2949",
+      "F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb",
+      "F:ml430-nat-prime-eq-two-or-odd-25691fc9",
+      "F:ml430-nat-prime-eq-two-or-odd-44a91651",
+      "F:ml430-nat-prime-mod-two-eq-one-iff-ne-two-25c35e73",
+      "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
+      "F:ml430-nat-prime-ne-one-5b7f8845",
+      "F:ml430-nat-prime-ne-zero-b4e8b4d5",
+      "F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca",
+      "F:ml430-nat-prime-not-dvd-one-be7e780f",
+      "F:ml430-nat-prime-not-prime-pow-5f14afc6",
+      "F:ml430-nat-prime-not-prime-pow-d6480abf",
+      "F:ml430-nat-prime-one-le-03eb3095",
+      "F:ml430-nat-prime-one-lt-bc90cfc7",
+      "F:ml430-nat-prime-pos-85eeeeea",
       "F:ml430-nat-prime-sum-four-squares-a60fd297",
       "F:ml430-nat-sum-four-squares-5cfacf06"
     ]
