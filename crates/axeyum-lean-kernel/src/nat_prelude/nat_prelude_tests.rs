@@ -557,6 +557,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient_dvd_totient_mul_prime,
         p.totient_dvd_totient_mul,
         p.totient_dvd_of_dvd,
+        p.totient_mul_cofactor_bound,
+        p.eq_or_eq_of_totient_eq_totient,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -19374,5 +19376,259 @@ fn totient_dvd_of_dvd_applies_at_a_free_hypothesis_with_a_transposed_control() {
     assert!(
         f.k.axiom_footprint(p.totient_dvd_of_dvd).is_empty(),
         "totient_dvd_of_dvd must rest on zero axioms"
+    );
+}
+
+/// `Nat.totient_mul_cofactor_bound : forall k a, Le one (totient a) -> Le
+/// two k -> Or (Le (mul two (totient a)) (totient (mul a k))) (And (Eq k
+/// two) (Eq (totient (mul a k)) (totient a)))` -- the multiplier-tracking
+/// bound Target 3 is built from, at free `k`, `a` and free hypotheses, plus
+/// a transposed-direction control and closed instances exercising BOTH
+/// disjuncts (k=2 with a odd/coprime gives the second; k=3 with a=1 gives
+/// the first).
+#[test]
+fn totient_mul_cofactor_bound_applies_at_free_variables_with_a_transposed_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    let k_fv = f.fresh_fvar();
+    let k = f.k.fvar(k_fv);
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [k_fv, a_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let one = f.num(1);
+    let two = f.num(2);
+    let tot_a = f.const_app(p.totient, &[a]);
+    let hpos_ty = f.le(one, tot_a);
+    let hpos_fv = f.fresh_fvar();
+    let hpos = f.k.fvar(hpos_fv);
+    ctx.push(LocalDecl {
+        fvar: hpos_fv,
+        name: anon,
+        ty: hpos_ty,
+        info: BinderInfo::Default,
+    });
+    let h2_ty = f.le(two, k);
+    let h2_fv = f.fresh_fvar();
+    let h2 = f.k.fvar(h2_fv);
+    ctx.push(LocalDecl {
+        fvar: h2_fv,
+        name: anon,
+        ty: h2_ty,
+        info: BinderInfo::Default,
+    });
+
+    let applied = f.const_app(p.totient_mul_cofactor_bound, &[k, a, hpos, h2]);
+    let applied_ty =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("totient_mul_cofactor_bound must apply at free k, a and free hypotheses");
+
+    let mul_ak = f.mul(a, k);
+    let tot_ak = f.const_app(p.totient, &[mul_ak]);
+    let two_tot_a = f.mul(two, tot_a);
+    let left_ty = f.le(two_tot_a, tot_ak);
+    let eq_k2_ty = f.eq(k, two);
+    let eq_tot_ty = f.eq(tot_ak, tot_a);
+    let right_ty = f.const_app(p.logic.and, &[eq_k2_ty, eq_tot_ty]);
+    let expected = f.const_app(p.logic.or, &[left_ty, right_ty]);
+    assert!(
+        f.k.def_eq(applied_ty, expected),
+        "must state Or (Le 2*totient(a) totient(a*k)) (And (k=2) (totient(a*k)=totient(a)))"
+    );
+
+    // The TRANSPOSED first-disjunct direction is a different, generally
+    // false statement (false whenever totient(a*k) actually exceeds
+    // 2*totient(a), e.g. k=4, a=1: totient(4)=2 > 2*totient(1)=2 is FALSE
+    // too at equality, but k=5,a=1: totient(5)=4 > 2*1=2, so the transposed
+    // Le 4 2 fails while the real Le 2 4 holds).
+    let transposed_left = f.le(tot_ak, two_tot_a);
+    let transposed = f.const_app(p.logic.or, &[transposed_left, right_ty]);
+    assert!(
+        !f.k.def_eq(applied_ty, transposed),
+        "the transposed first disjunct must not be def-eq to the real statement"
+    );
+
+    // --- k = 2, a = 3 (odd, coprime with 2): SECOND disjunct exactly -----
+    let three = f.num(3);
+    let six = f.num(6);
+    let hpos3_ty = {
+        let tot_3 = f.const_app(p.totient, &[three]);
+        f.le(one, tot_3)
+    };
+    let h2_2_ty = f.le(two, two);
+    let hpos3_fv = f.fresh_fvar();
+    let hpos3 = f.k.fvar(hpos3_fv);
+    let h2c_fv = f.fresh_fvar();
+    let h2c = f.k.fvar(h2c_fv);
+    let mut ctx2 = LocalContext::new();
+    ctx2.push(LocalDecl {
+        fvar: hpos3_fv,
+        name: anon,
+        ty: hpos3_ty,
+        info: BinderInfo::Default,
+    });
+    ctx2.push(LocalDecl {
+        fvar: h2c_fv,
+        name: anon,
+        ty: h2_2_ty,
+        info: BinderInfo::Default,
+    });
+    let applied_c = f.const_app(p.totient_mul_cofactor_bound, &[two, three, hpos3, h2c]);
+    let applied_c_ty =
+        f.k.infer_in(applied_c, &mut ctx2)
+            .expect("totient_mul_cofactor_bound must apply at the closed pair (k=2, a=3)");
+    let three_two = f.mul(three, two);
+    let tot_3 = f.const_app(p.totient, &[three]);
+    let tot_6 = f.const_app(p.totient, &[three_two]);
+    assert!(f.k.def_eq(three_two, six), "3*2 must compute to 6");
+    assert!(f.k.def_eq(tot_3, two), "totient 3 must compute to 2");
+    assert!(f.k.def_eq(tot_6, two), "totient 6 must compute to 2");
+    let left_c_ty = {
+        let two_tot_3 = f.mul(two, tot_3);
+        f.le(two_tot_3, tot_6)
+    };
+    let right_c_ty = {
+        let eq_k2 = f.eq(two, two);
+        let eq_tot = f.eq(tot_6, tot_3);
+        f.const_app(p.logic.and, &[eq_k2, eq_tot])
+    };
+    let expected_c = f.const_app(p.logic.or, &[left_c_ty, right_c_ty]);
+    assert!(
+        f.k.def_eq(applied_c_ty, expected_c),
+        "closed instance (k=2,a=3) must still state the same disjunction shape"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.totient_mul_cofactor_bound).is_empty(),
+        "totient_mul_cofactor_bound must rest on zero axioms"
+    );
+}
+
+/// `Nat.eq_or_eq_of_totient_eq_totient : forall a b, Dvd a b -> Eq (totient
+/// a) (totient b) -> Or (Eq a b) (Eq (mul two a) b)` -- Target 3
+/// (`F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7`) itself, at a free
+/// hypothesis pair, plus a transposed-conclusion control and closed
+/// instances exercising both disjuncts (a=3,b=6 gives the second; a=5,b=5
+/// gives the first).
+#[test]
+fn eq_or_eq_of_totient_eq_totient_applies_at_a_free_hypothesis_with_a_transposed_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [a_fv, b_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let dvd_ab_ty = f.dvd(a, b);
+    let h_fv = f.fresh_fvar();
+    let h = f.k.fvar(h_fv);
+    ctx.push(LocalDecl {
+        fvar: h_fv,
+        name: anon,
+        ty: dvd_ab_ty,
+        info: BinderInfo::Default,
+    });
+    let tot_a = f.const_app(p.totient, &[a]);
+    let tot_b = f.const_app(p.totient, &[b]);
+    let tot_eq_ty = f.eq(tot_a, tot_b);
+    let ht_fv = f.fresh_fvar();
+    let ht = f.k.fvar(ht_fv);
+    ctx.push(LocalDecl {
+        fvar: ht_fv,
+        name: anon,
+        ty: tot_eq_ty,
+        info: BinderInfo::Default,
+    });
+
+    let applied = f.const_app(p.eq_or_eq_of_totient_eq_totient, &[a, b, h, ht]);
+    let applied_ty =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("eq_or_eq_of_totient_eq_totient must apply at a free hypothesis pair");
+
+    let two = f.num(2);
+    let two_a = f.mul(two, a);
+    let eq_ab_ty = f.eq(a, b);
+    let eq_2ab_ty = f.eq(two_a, b);
+    let expected = f.const_app(p.logic.or, &[eq_ab_ty, eq_2ab_ty]);
+    assert!(
+        f.k.def_eq(applied_ty, expected),
+        "must state Or (Eq a b) (Eq (2*a) b)"
+    );
+
+    // The TRANSPOSED first disjunct `Eq b a` is NOT def-eq to `Eq a b` for
+    // free a, b (def_eq compares structurally, not up to symmetry).
+    let transposed_left = f.eq(b, a);
+    let transposed = f.const_app(p.logic.or, &[transposed_left, eq_2ab_ty]);
+    assert!(
+        !f.k.def_eq(applied_ty, transposed),
+        "the transposed first disjunct must not be def-eq to the real statement"
+    );
+
+    // --- a = 3, b = 6 (a odd, dividing, equal totients): SECOND disjunct -
+    let three = f.num(3);
+    let six = f.num(6);
+    let dvd_3_6_ty = f.dvd(three, six);
+    let tot_3 = f.const_app(p.totient, &[three]);
+    let tot_6 = f.const_app(p.totient, &[six]);
+    let tot_eq_3_6_ty = f.eq(tot_3, tot_6);
+    let hc_fv = f.fresh_fvar();
+    let hc = f.k.fvar(hc_fv);
+    let htc_fv = f.fresh_fvar();
+    let htc = f.k.fvar(htc_fv);
+    let mut ctx2 = LocalContext::new();
+    ctx2.push(LocalDecl {
+        fvar: hc_fv,
+        name: anon,
+        ty: dvd_3_6_ty,
+        info: BinderInfo::Default,
+    });
+    ctx2.push(LocalDecl {
+        fvar: htc_fv,
+        name: anon,
+        ty: tot_eq_3_6_ty,
+        info: BinderInfo::Default,
+    });
+    let applied_c = f.const_app(p.eq_or_eq_of_totient_eq_totient, &[three, six, hc, htc]);
+    let applied_c_ty =
+        f.k.infer_in(applied_c, &mut ctx2)
+            .expect("eq_or_eq_of_totient_eq_totient must apply at the closed pair (3, 6)");
+    assert!(f.k.def_eq(tot_3, two), "totient 3 must compute to 2");
+    assert!(f.k.def_eq(tot_6, two), "totient 6 must compute to 2");
+    let expected_c = {
+        let eq_3_6 = f.eq(three, six);
+        let two_three = f.mul(two, three);
+        let eq_2_3_6 = f.eq(two_three, six);
+        f.const_app(p.logic.or, &[eq_3_6, eq_2_3_6])
+    };
+    assert!(
+        f.k.def_eq(applied_c_ty, expected_c),
+        "closed instance (3,6) must still state the same disjunction shape"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.eq_or_eq_of_totient_eq_totient)
+            .is_empty(),
+        "eq_or_eq_of_totient_eq_totient must rest on zero axioms"
     );
 }

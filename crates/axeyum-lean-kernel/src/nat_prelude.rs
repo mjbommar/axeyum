@@ -2049,6 +2049,24 @@ pub struct NatPrelude {
     /// [`totient_dvd_totient_mul`](Self::totient_dvd_totient_mul) at
     /// `(k, a)` (`totient_dvd_chain.rs`).
     pub totient_dvd_of_dvd: NameId,
+    /// `Nat.totient_mul_cofactor_bound : ∀ k a, Le one (totient a) → Le two
+    /// k → Or (Le (mul two (totient a)) (totient (mul a k))) (And (Eq k two)
+    /// (Eq (totient (mul a k)) (totient a)))` — the multiplier-tracking bound
+    /// Target 3 (`F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7`) is
+    /// built from (`totient_dvd_chain.rs`, ADR-0668): for a cofactor `k ≥ 2`,
+    /// either `φ(a·k) ≥ 2·φ(a)` outright, or `k = 2` and `φ(a·k) = φ(a)`
+    /// exactly. The second disjunct is reachable only via a single prime
+    /// step at `q = 2` in the COPRIME branch (`a` odd), never at depth ≥ 2.
+    pub totient_mul_cofactor_bound: NameId,
+    /// `Nat.eq_or_eq_of_totient_eq_totient : ∀ a b, Dvd a b → Eq (totient a)
+    /// (totient b) → Or (Eq a b) (Eq (mul two a) b)` —
+    /// `F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7`. Unpacks `a ∣ b`
+    /// into `b = a*k`; `k = 0` is refuted by `totient(a) ≥ 1`; `k = 1` gives
+    /// `a = b` directly; `k ≥ 2` uses
+    /// [`totient_mul_cofactor_bound`](Self::totient_mul_cofactor_bound) —
+    /// its first disjunct is refuted by the totient-equality hypothesis
+    /// (`2·φ(a) ≤ φ(a) < 2·φ(a)` when `φ(a) ≥ 1`), leaving only `k = 2`.
+    pub eq_or_eq_of_totient_eq_totient: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4692,6 +4710,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             totient_dvd_totient_mul_prime: kernel.name_str(nat, "totient_dvd_totient_mul_prime"),
             totient_dvd_totient_mul: kernel.name_str(nat, "totient_dvd_totient_mul"),
             totient_dvd_of_dvd: kernel.name_str(nat, "totient_dvd_of_dvd"),
+            totient_mul_cofactor_bound: kernel.name_str(nat, "totient_mul_cofactor_bound"),
+            eq_or_eq_of_totient_eq_totient: kernel.name_str(nat, "eq_or_eq_of_totient_eq_totient"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
