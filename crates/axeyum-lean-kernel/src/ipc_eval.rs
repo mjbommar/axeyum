@@ -161,7 +161,7 @@ fn binop_minor(
 
 /// Declare `eval : Formula -> (Nat -> Nat) -> Nat` as a `Formula.rec`
 /// application. See the module docs for the full minor-premise table.
-fn declare_eval(kernel: &mut crate::Kernel, p: &IpcHeytingPrelude) -> Result<NameId, KernelError> {
+pub(crate) fn declare_eval(kernel: &mut crate::Kernel, p: &IpcHeytingPrelude) -> Result<NameId, KernelError> {
     let anon = kernel.anon();
     let nat_ty = kernel.const_(p.nat.nat, vec![]);
     let formula_ty = kernel.const_(p.formula, vec![]);
