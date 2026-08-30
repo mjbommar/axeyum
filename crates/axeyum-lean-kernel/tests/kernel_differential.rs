@@ -51,8 +51,9 @@
 //! for the explicit, honest limitations statement required by the roadmap.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, Lit, LogicPrelude, NameId, ReducibilityHint,
@@ -137,6 +138,17 @@ fn run_lean(lean: &Path, source: &str, tag: &str, dir: &Path) -> bool {
 // ---------------------------------------------------------------------------
 // Shared term-building helpers
 // ---------------------------------------------------------------------------
+
+/// A process-wide monotone free-variable id source. `Kernel::fresh_fvar` is
+/// a method on `LocalContext`, not on `Kernel` itself, and this test never
+/// builds a `LocalContext` -- every case builds its own fresh `Kernel`, so a
+/// single ever-increasing counter shared across the whole test binary can
+/// never collide within any one kernel instance.
+static NEXT_FVAR: AtomicU64 = AtomicU64::new(1_000_000);
+
+fn fresh_fvar() -> u64 {
+    NEXT_FVAR.fetch_add(1, Ordering::Relaxed)
+}
 
 /// Fold repeated application: `apps(k, f, [a, b])` builds `f a b`.
 fn apps(kernel: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId {
@@ -265,7 +277,10 @@ fn relation_type(kernel: &mut Kernel, alpha: ExprId) -> ExprId {
 
 fn conversion_cases() -> Vec<CaseResult> {
     let mut out = Vec::new();
-    let one_lvl = |k: &mut Kernel| k.level_succ(k.level_zero());
+    let one_lvl = |k: &mut Kernel| {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
 
     // P1: beta reduction (`idA a` reduces to `a`).
     {
@@ -277,7 +292,8 @@ fn conversion_cases() -> Vec<CaseResult> {
         let anon = kernel.anon();
         let ida_name = kernel.name_str(anon, "idA");
         let ida_ty = arrow(&mut kernel, a_ty, a_ty);
-        let ida_val = kernel.lam(anon, a_ty, kernel.bvar(0), BinderInfo::Default);
+        let bvar0 = kernel.bvar(0);
+        let ida_val = kernel.lam(anon, a_ty, bvar0, BinderInfo::Default);
         kernel
             .add_declaration(Declaration::Definition {
                 name: ida_name,
@@ -321,7 +337,8 @@ fn conversion_cases() -> Vec<CaseResult> {
         let anon = kernel.anon();
         let ida_name = kernel.name_str(anon, "idA");
         let ida_ty = arrow(&mut kernel, a_ty, a_ty);
-        let ida_val = kernel.lam(anon, a_ty, kernel.bvar(0), BinderInfo::Default);
+        let bvar0 = kernel.bvar(0);
+        let ida_val = kernel.lam(anon, a_ty, bvar0, BinderInfo::Default);
         kernel
             .add_declaration(Declaration::Definition {
                 name: ida_name,
@@ -388,7 +405,8 @@ fn conversion_cases() -> Vec<CaseResult> {
         let anon = kernel.anon();
         let ida_name = kernel.name_str(anon, "idA");
         let ida_ty = arrow(&mut kernel, a_ty, a_ty);
-        let ida_val = kernel.lam(anon, a_ty, kernel.bvar(0), BinderInfo::Default);
+        let bvar0 = kernel.bvar(0);
+        let ida_val = kernel.lam(anon, a_ty, bvar0, BinderInfo::Default);
         kernel
             .add_declaration(Declaration::Definition {
                 name: ida_name,
@@ -433,7 +451,8 @@ fn conversion_cases() -> Vec<CaseResult> {
         let anon = kernel.anon();
         let ida_name = kernel.name_str(anon, "idA");
         let ida_ty = arrow(&mut kernel, a_ty, a_ty);
-        let ida_val = kernel.lam(anon, a_ty, kernel.bvar(0), BinderInfo::Default);
+        let bvar0 = kernel.bvar(0);
+        let ida_val = kernel.lam(anon, a_ty, bvar0, BinderInfo::Default);
         kernel
             .add_declaration(Declaration::Definition {
                 name: ida_name,
@@ -506,26 +525,18 @@ fn universes_cases() -> Vec<CaseResult> {
         let sort_u = kernel.sort(u);
         let a_name = kernel.name_str(anon, "A");
         let a_val_name = kernel.name_str(anon, "a");
-        let idu_ty = kernel.pi(
-            a_name,
-            sort_u,
-            {
-                let inner_ty = kernel.bvar(0);
-                let inner_body = kernel.bvar(1);
-                kernel.pi(a_val_name, inner_ty, inner_body, BinderInfo::Default)
-            },
-            BinderInfo::Implicit,
-        );
-        let idu_val = kernel.lam(
-            a_name,
-            sort_u,
-            {
-                let inner_ty = kernel.bvar(0);
-                let inner_body = kernel.bvar(0);
-                kernel.lam(a_val_name, inner_ty, inner_body, BinderInfo::Default)
-            },
-            BinderInfo::Implicit,
-        );
+        let idu_ty_inner = {
+            let inner_ty = kernel.bvar(0);
+            let inner_body = kernel.bvar(1);
+            kernel.pi(a_val_name, inner_ty, inner_body, BinderInfo::Default)
+        };
+        let idu_ty = kernel.pi(a_name, sort_u, idu_ty_inner, BinderInfo::Implicit);
+        let idu_val_inner = {
+            let inner_ty = kernel.bvar(0);
+            let inner_body = kernel.bvar(0);
+            kernel.lam(a_val_name, inner_ty, inner_body, BinderInfo::Default)
+        };
+        let idu_val = kernel.lam(a_name, sort_u, idu_val_inner, BinderInfo::Implicit);
         let idu_name = kernel.name_str(anon, "idU");
         kernel
             .add_declaration(Declaration::Definition {
@@ -640,7 +651,8 @@ fn universes_cases() -> Vec<CaseResult> {
         let sort_u_plus_1 = kernel.sort(u_plus_1);
         let a_name = kernel.name_str(anon, "A");
         let ty = kernel.pi(a_name, sort_u, sort_u_plus_1, BinderInfo::Default);
-        let value = kernel.lam(a_name, sort_u, kernel.bvar(0), BinderInfo::Default);
+        let bvar0 = kernel.bvar(0);
+        let value = kernel.lam(a_name, sort_u, bvar0, BinderInfo::Default);
         let name = kernel.name_str(anon, "bad_promote");
         let accept = kernel
             .add_declaration(Declaration::Definition {
@@ -677,7 +689,8 @@ fn inductives_cases() -> Vec<CaseResult> {
         let anon = kernel.anon();
         let two = kernel.name_str(anon, "TwoVals");
         let two_c = kernel.const_(two, vec![]);
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let ty = kernel.sort(one_lvl);
         let ff = kernel.name_str(two, "ff");
         let tt = kernel.name_str(two, "tt");
@@ -698,7 +711,8 @@ fn inductives_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let anon = kernel.anon();
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let box_name = kernel.name_str(anon, "Box");
         let a_name = kernel.name_str(anon, "A");
         let sort_1 = kernel.sort(one_lvl);
@@ -734,7 +748,8 @@ fn inductives_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let anon = kernel.anon();
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let bad = kernel.name_str(anon, "Bad");
         let bad_c = kernel.const_(bad, vec![]);
         let ty = kernel.sort(one_lvl);
@@ -763,7 +778,8 @@ fn inductives_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let anon = kernel.anon();
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let two = kernel.name_str(anon, "TwoVals");
         let two_c = kernel.const_(two, vec![]);
         let sort_1 = kernel.sort(one_lvl);
@@ -806,8 +822,9 @@ fn recursors_cases() -> Vec<CaseResult> {
     /// pred_partial)`.
     fn setup() -> (Kernel, ExprId, ExprId, ExprId, ExprId) {
         let mut kernel = Kernel::new();
-        let (nat, zero, succ, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let (nat, _zero, succ, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let rec_name = kernel.name_str(nat, "rec");
         let anon = kernel.anon();
         let motive = kernel.lam(anon, nat_c, nat_c, BinderInfo::Default);
@@ -826,8 +843,10 @@ fn recursors_cases() -> Vec<CaseResult> {
     {
         let (mut kernel, nat_c, zero_c, succ_c, pred_partial) = setup();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
-        let two_v = apps(&mut kernel, succ_c, &[apps(&mut kernel, succ_c, &[zero_c])]);
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
+        let one_v_tmp = apps(&mut kernel, succ_c, &[zero_c]);
+        let two_v = apps(&mut kernel, succ_c, &[one_v_tmp]);
         let pred_two = kernel.app(pred_partial, two_v);
         let one_v = kernel.app(succ_c, zero_c);
         let goal = eq_ty(&mut kernel, &logic, one_lvl, nat_c, pred_two, one_v);
@@ -858,7 +877,8 @@ fn recursors_cases() -> Vec<CaseResult> {
     {
         let (mut kernel, nat_c, zero_c, _succ_c, pred_partial) = setup();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let pred_zero = kernel.app(pred_partial, zero_c);
         let goal = eq_ty(&mut kernel, &logic, one_lvl, nat_c, pred_zero, zero_c);
         let proof = eq_refl(&mut kernel, &logic, one_lvl, nat_c, zero_c);
@@ -890,7 +910,8 @@ fn recursors_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let (nat, _zero, _succ, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let rec_name = kernel.name_str(nat, "rec");
         let anon = kernel.anon();
         let motive = kernel.lam(anon, nat_c, nat_c, BinderInfo::Default);
@@ -921,7 +942,8 @@ fn recursors_cases() -> Vec<CaseResult> {
     {
         let (mut kernel, nat_c, zero_c, succ_c, pred_partial) = setup();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let one_v = kernel.app(succ_c, zero_c);
         let pred_one = kernel.app(pred_partial, one_v);
         let goal = eq_ty(&mut kernel, &logic, one_lvl, nat_c, pred_one, one_v);
@@ -961,7 +983,8 @@ fn projections_cases() -> Vec<CaseResult> {
     fn setup() -> (Kernel, NameId, ExprId, ExprId, ExprId, ExprId) {
         let mut kernel = Kernel::new();
         let anon = kernel.anon();
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let (_, a_ty) = declare_axiom_type(&mut kernel, "A", one_lvl);
         let (_, a_val) = declare_axiom(&mut kernel, "a", a_ty);
         let (_, b_val) = declare_axiom(&mut kernel, "b", a_ty);
@@ -985,7 +1008,8 @@ fn projections_cases() -> Vec<CaseResult> {
     {
         let (mut kernel, pair, a_ty, a_val, _b_val, mk_val) = setup();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let proj0 = kernel.proj(pair, 0, mk_val);
         let goal = eq_ty(&mut kernel, &logic, one_lvl, a_ty, proj0, a_val);
         let proof = eq_refl(&mut kernel, &logic, one_lvl, a_ty, a_val);
@@ -1015,7 +1039,8 @@ fn projections_cases() -> Vec<CaseResult> {
     {
         let (mut kernel, pair, a_ty, _a_val, b_val, mk_val) = setup();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let proj1 = kernel.proj(pair, 1, mk_val);
         let goal = eq_ty(&mut kernel, &logic, one_lvl, a_ty, proj1, b_val);
         let proof = eq_refl(&mut kernel, &logic, one_lvl, a_ty, b_val);
@@ -1045,7 +1070,8 @@ fn projections_cases() -> Vec<CaseResult> {
     {
         let (mut kernel, pair, a_ty, _a_val, b_val, mk_val) = setup();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let proj0 = kernel.proj(pair, 0, mk_val);
         let goal = eq_ty(&mut kernel, &logic, one_lvl, a_ty, proj0, b_val);
         let proof = eq_refl(&mut kernel, &logic, one_lvl, a_ty, b_val);
@@ -1103,7 +1129,8 @@ fn literals_cases() -> Vec<CaseResult> {
         let mut kernel = Kernel::new();
         let (_, _, _, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let three_lit = kernel.lit(Lit::nat(3u64));
         let unary_three = {
             let s1 = kernel.app(succ_c, zero_c);
@@ -1137,7 +1164,8 @@ fn literals_cases() -> Vec<CaseResult> {
         let mut kernel = Kernel::new();
         let (_, _, _, nat_c, zero_c, _succ_c) = declare_minimal_nat(&mut kernel);
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let zero_lit = kernel.lit(Lit::nat(0u64));
         let goal = eq_ty(&mut kernel, &logic, one_lvl, nat_c, zero_lit, zero_c);
         let proof = eq_refl(&mut kernel, &logic, one_lvl, nat_c, zero_c);
@@ -1166,7 +1194,8 @@ fn literals_cases() -> Vec<CaseResult> {
         let mut kernel = Kernel::new();
         let (_, _, _, nat_c, zero_c, succ_c) = declare_minimal_nat(&mut kernel);
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let three_lit = kernel.lit(Lit::nat(3u64));
         let unary_two = {
             let s1 = kernel.app(succ_c, zero_c);
@@ -1198,7 +1227,8 @@ fn literals_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let (_, _, _, _nat_c, _zero_c, _succ_c) = declare_minimal_nat(&mut kernel);
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let (_, not_nat) = declare_axiom_type(&mut kernel, "NotNat", one_lvl);
         let three_lit = kernel.lit(Lit::nat(3u64));
         let anon = kernel.anon();
@@ -1269,8 +1299,8 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
 
     // `Quot.{u} : {alpha : Sort u} -> (alpha -> alpha -> Prop) -> Sort u`.
     let quot_ty = {
-        let alpha_fv = kernel.fresh_fvar();
-        let r_fv = kernel.fresh_fvar();
+        let alpha_fv = fresh_fvar();
+        let r_fv = fresh_fvar();
         let alpha = kernel.fvar(alpha_fv);
         let relation = relation_type(kernel, alpha);
         close_pi(
@@ -1293,9 +1323,9 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
 
     // `Quot.mk.{u} : {alpha} -> (r : alpha -> alpha -> Prop) -> (a : alpha) -> Quot.{u} alpha r`.
     let quot_mk_ty = {
-        let alpha_fv = kernel.fresh_fvar();
-        let r_fv = kernel.fresh_fvar();
-        let a_fv = kernel.fresh_fvar();
+        let alpha_fv = fresh_fvar();
+        let r_fv = fresh_fvar();
+        let a_fv = fresh_fvar();
         let alpha = kernel.fvar(alpha_fv);
         let r = kernel.fvar(r_fv);
         let relation = relation_type(kernel, alpha);
@@ -1323,14 +1353,14 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
     // `Quot.lift.{u,v} : {alpha} -> {r} -> {beta : Sort v} -> (f : alpha -> beta)
     //   -> (h : forall a b, r a b -> Eq beta (f a) (f b)) -> Quot.{u} alpha r -> beta`.
     let quot_lift_ty = {
-        let alpha_fv = kernel.fresh_fvar();
-        let r_fv = kernel.fresh_fvar();
-        let beta_fv = kernel.fresh_fvar();
-        let f_fv = kernel.fresh_fvar();
-        let sanity_fv = kernel.fresh_fvar();
-        let q_fv = kernel.fresh_fvar();
-        let a_fv = kernel.fresh_fvar();
-        let b_fv = kernel.fresh_fvar();
+        let alpha_fv = fresh_fvar();
+        let r_fv = fresh_fvar();
+        let beta_fv = fresh_fvar();
+        let f_fv = fresh_fvar();
+        let sanity_fv = fresh_fvar();
+        let q_fv = fresh_fvar();
+        let a_fv = fresh_fvar();
+        let b_fv = fresh_fvar();
         let alpha = kernel.fvar(alpha_fv);
         let r = kernel.fvar(r_fv);
         let beta = kernel.fvar(beta_fv);
@@ -1379,12 +1409,12 @@ fn build_quotient_package(kernel: &mut Kernel, logic: &LogicPrelude) -> QuotPkg 
     // `Quot.ind.{u} : {alpha} -> {r} -> {beta : Quot alpha r -> Prop}
     //   -> (forall a, beta (Quot.mk r a)) -> forall q, beta q`.
     let quot_ind_ty = {
-        let alpha_fv = kernel.fresh_fvar();
-        let r_fv = kernel.fresh_fvar();
-        let beta_fv = kernel.fresh_fvar();
-        let minor_fv = kernel.fresh_fvar();
-        let q_fv = kernel.fresh_fvar();
-        let a_fv = kernel.fresh_fvar();
+        let alpha_fv = fresh_fvar();
+        let r_fv = fresh_fvar();
+        let beta_fv = fresh_fvar();
+        let minor_fv = fresh_fvar();
+        let q_fv = fresh_fvar();
+        let a_fv = fresh_fvar();
         let alpha = kernel.fvar(alpha_fv);
         let r = kernel.fvar(r_fv);
         let beta = kernel.fvar(beta_fv);
@@ -1441,7 +1471,8 @@ fn quotient_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let pkg = build_quotient_package(&mut kernel, &logic);
         let lu = kernel.level_param(pkg.u);
         let lv = kernel.level_param(pkg.v);
@@ -1483,8 +1514,8 @@ fn quotient_cases() -> Vec<CaseResult> {
         let f_c = kernel.const_(f_name, vec![]);
         // h : forall a b, r a b -> Eq Bool (f a) (f b), proved by refl since f is constant.
         let h_ty = {
-            let a_fv = kernel.fresh_fvar();
-            let b_fv = kernel.fresh_fvar();
+            let a_fv = fresh_fvar();
+            let b_fv = fresh_fvar();
             let a_name = kernel.name_str(anon, "a");
             let b_name = kernel.name_str(anon, "b");
             let a = kernel.fvar(a_fv);
@@ -1492,7 +1523,8 @@ fn quotient_cases() -> Vec<CaseResult> {
             let r_ab = apps(&mut kernel, r, &[a, b]);
             let f_a = kernel.app(f_c, a);
             let f_b = kernel.app(f_c, b);
-            let eq_ab = eq_ty(&mut kernel, &logic, kernel.level_zero(), bool_c, f_a, f_b);
+            let zero_lvl_h = kernel.level_zero();
+            let eq_ab = eq_ty(&mut kernel, &logic, zero_lvl_h, bool_c, f_a, f_b);
             let arrow_ty = arrow(&mut kernel, r_ab, eq_ab);
             close_pi(
                 &mut kernel,
@@ -1504,15 +1536,17 @@ fn quotient_cases() -> Vec<CaseResult> {
             )
         };
         let h_val = {
-            let a_fv = kernel.fresh_fvar();
-            let b_fv = kernel.fresh_fvar();
-            let hyp_fv = kernel.fresh_fvar();
+            let a_fv = fresh_fvar();
+            let b_fv = fresh_fvar();
+            let hyp_fv = fresh_fvar();
             let a_name = kernel.name_str(anon, "a");
             let b_name = kernel.name_str(anon, "b");
             let hyp_name = kernel.name_str(anon, "hyp");
             let f_c2 = kernel.const_(f_name, vec![]);
-            let f_a = kernel.app(f_c2, kernel.fvar(a_fv));
-            let refl_body = eq_refl(&mut kernel, &logic, kernel.level_zero(), bool_c, f_a);
+            let a_ref = kernel.fvar(a_fv);
+            let f_a = kernel.app(f_c2, a_ref);
+            let zero_lvl_h = kernel.level_zero();
+            let refl_body = eq_refl(&mut kernel, &logic, zero_lvl_h, bool_c, f_a);
             let r_ab_ty = {
                 let a = kernel.fvar(a_fv);
                 let b = kernel.fvar(b_fv);
@@ -1543,8 +1577,9 @@ fn quotient_cases() -> Vec<CaseResult> {
         let mk_a0 = apps(&mut kernel, mk_c, &[carrier, r, a0]);
         let lifted = apps(&mut kernel, lift_c, &[carrier, r, bool_c, f_c, h_c, mk_a0]);
         let f_a0 = kernel.app(f_c, a0);
-        let goal = eq_ty(&mut kernel, &logic, kernel.level_zero(), bool_c, lifted, f_a0);
-        let proof = eq_refl(&mut kernel, &logic, kernel.level_zero(), bool_c, f_a0);
+        let zero_lvl_g = kernel.level_zero();
+        let goal = eq_ty(&mut kernel, &logic, zero_lvl_g, bool_c, lifted, f_a0);
+        let proof = eq_refl(&mut kernel, &logic, zero_lvl_g, bool_c, f_a0);
         let thm = kernel.name_str(anon, "case");
         let accept = kernel
             .add_declaration(Declaration::Theorem {
@@ -1572,7 +1607,8 @@ fn quotient_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let pkg = build_quotient_package(&mut kernel, &logic);
         let lu = kernel.level_param(pkg.u);
         let (_, carrier) = declare_axiom_type(&mut kernel, "Carrier", one_lvl);
@@ -1583,10 +1619,11 @@ fn quotient_cases() -> Vec<CaseResult> {
         let true_c = kernel.const_(logic.true_, vec![]);
         let true_intro_c = kernel.const_(logic.true_intro, vec![]);
         // beta := fun _ => True; minor := fun _ => True.intro.
-        let beta_val = kernel.lam(anon, {
+        let quot_alpha_r = {
             let quot_c = kernel.const_(pkg.quot, vec![lu]);
             apps(&mut kernel, quot_c, &[carrier, r])
-        }, true_c, BinderInfo::Default);
+        };
+        let beta_val = kernel.lam(anon, quot_alpha_r, true_c, BinderInfo::Default);
         let minor_val = kernel.lam(anon, carrier, true_intro_c, BinderInfo::Default);
         let ind_c = kernel.const_(pkg._quot_ind, vec![lu]);
         let all_trivial = apps(&mut kernel, ind_c, &[carrier, r, beta_val, minor_val]);
@@ -1619,7 +1656,8 @@ fn quotient_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let pkg = build_quotient_package(&mut kernel, &logic);
         let lu = kernel.level_param(pkg.u);
         let _ = lu;
@@ -1648,7 +1686,8 @@ fn quotient_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let pkg = build_quotient_package(&mut kernel, &logic);
         let lu = kernel.level_param(pkg.u);
         let lv = kernel.level_param(pkg.v);
@@ -1686,9 +1725,8 @@ fn quotient_cases() -> Vec<CaseResult> {
             .expect("fconst must admit");
         let f_c = kernel.const_(f_name, vec![]);
         // wrong_proof : True, used where `forall a b, r a b -> ...` is needed.
-        let (_, wrong_proof) = declare_axiom(&mut kernel, "wrongProof", {
-            kernel.const_(logic.true_, vec![])
-        });
+        let true_c = kernel.const_(logic.true_, vec![]);
+        let (_, wrong_proof) = declare_axiom(&mut kernel, "wrongProof", true_c);
         let lift_c = kernel.const_(pkg.quot_lift, vec![lu, lv]);
         let mk_c = kernel.const_(pkg.quot_mk, vec![lu]);
         let mk_a0 = apps(&mut kernel, mk_c, &[carrier, r, a0]);
@@ -1760,7 +1798,8 @@ fn proof_irrelevance_cases() -> Vec<CaseResult> {
         let (_, p_ty) = declare_axiom_type(&mut kernel, "P", zero_lvl);
         let (_, p1) = declare_axiom(&mut kernel, "p1", p_ty);
         let (_, p2) = declare_axiom(&mut kernel, "p2", p_ty);
-        let c_ty = arrow(&mut kernel, p_ty, kernel.sort(one_lvl));
+        let one_sort = kernel.sort(one_lvl);
+        let c_ty = arrow(&mut kernel, p_ty, one_sort);
         let (c_name, c_c) = declare_axiom(&mut kernel, "C", c_ty);
         let _ = c_name;
         let c_p1 = kernel.app(c_c, p1);
@@ -1793,7 +1832,8 @@ fn proof_irrelevance_cases() -> Vec<CaseResult> {
     {
         let mut kernel = Kernel::new();
         let logic = build_logic_prelude(&mut kernel).expect("logic prelude");
-        let one_lvl = kernel.level_succ(kernel.level_zero());
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
         let (_, a_ty) = declare_axiom_type(&mut kernel, "A", one_lvl);
         let (_, a1) = declare_axiom(&mut kernel, "a1", a_ty);
         let (_, a2) = declare_axiom(&mut kernel, "a2", a_ty);
