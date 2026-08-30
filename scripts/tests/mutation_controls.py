@@ -3619,6 +3619,80 @@ SUITES["absence-claims"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# `nursery-refill-ceiling` — ADR-0616. R3 used to compare a FLAT COUNT of the
+# extension manifest against 214, so re-attesting a row bought nothing and the
+# ADR's own stated exit ("when it binds, re-attest") could not be taken. The
+# comparison now counts by attestation.
+#
+# Two mutants are load-bearing in opposite directions, and neither is "does a
+# bound exist":
+#   * dropping the extension's attested rows from `attested_cohort` reverts the
+#     promotion, and is killed ONLY by the case where an attested row buys the
+#     headroom an unattested one does not;
+#   * dropping `not_elaborable` from `unattested_cohort` promotes a string Lean
+#     REFUSED, and is killed ONLY by the case that supplies its weight from that
+#     bucket.
+#
+# The plain comparison `unattested > attested` is deliberately not mutated to a
+# no-op: two cases assert it fires and both would die, which measures nothing
+# the two mutants above do not already measure more precisely.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-refill-ceiling"] = (
+    "scripts/gen-autogenesis-nursery-refill.py",
+    Unittest("scripts.tests.test_gen_autogenesis_nursery_refill"),
+    [
+        (
+            "an ATTESTED extension row counts toward the attested cohort",
+            '    return len(v1_evaluation) + len(validation.get("attested", []))',
+            "    return len(v1_evaluation)",
+        ),
+        (
+            "a Lean-REFUSED row counts as unattested, never as headroom",
+            '    return (len(validation.get("unattested", []))\n'
+            '            + len(validation.get("not_elaborable", [])))',
+            '    return len(validation.get("unattested", []))',
+        ),
+        (
+            "an ingested run must name the PINNED Mathlib commit",
+            '        if record.get("mathlib_commit") != SOURCE_COMMIT:',
+            "        if False:",
+        ),
+        (
+            "an ingested run whose negative control was ACCEPTED is refused",
+            '        if record.get("negative_control_rejected") is not True:',
+            "        if False:",
+        ),
+        (
+            "a partly-attested cohort reports both populations, not just one",
+            '            f"{attested} of {total} statements carry the same real-Lean "',
+            '            f"{attested} of {attested} statements carry the same real-Lean "',
+        ),
+        (
+            "an UNRUN cohort is still described as quotation grade",
+            '            f"These {total} statements carry the quotation grade, not v1\'s "\n'
+            '            f"real-Lean round-trip attestation; the two must not be reported "\n'
+            '            f"together as one attested population.")',
+            '            f"These {total} statements carry the same real-Lean "\n'
+            '            f"round-trip attestation as nursery-v1\'s 214.")',
+        ),
+        (
+            "the dependency-component gap survives full attestation",
+            '        "Attestation does not make this an evaluation population equivalent to "\n'
+            '        "nursery-v1\'s. v1 freezes partitions against declared dependency weak "\n'
+            '        "components (policy.split_component_authority); here source_group is "\n'
+            '        "the Mathlib defining module and no dependency-component analysis was "\n'
+            '        "run, so a held-out row can share a component with a dispatchable one "\n'
+            '        "and nothing in this manifest sees it. Attestation grades the "\n'
+            '        "STATEMENT; this is a property of the ROW.",',
+            '        "Attestation makes this equivalent to nursery-v1.",',
+        ),
+    ],
+)
+
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()

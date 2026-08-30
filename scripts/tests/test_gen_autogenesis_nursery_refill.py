@@ -156,32 +156,51 @@ class CeilingTests(unittest.TestCase):
                       f"Test.{names[i % len(names)]}_{i}", i)
                 for i in range(count)]
 
+    # Each case below is sized so it dies under EXACTLY ONE mutation of R3,
+    # which needed arithmetic rather than intuition. With `n` rows of which `a`
+    # are attested, the extension contributes `n - a` to the unattested side
+    # (`not_elaborable` rows are unattested too, so `r` does not change that
+    # total) and `a` to the attested side, against v1's 214. R3 refuses when
+    #
+    #     n - a  >  214 + a
+    #
+    # The first draft used n = 215, a = 1 for the promotion case: 214 vs 215,
+    # which passes -- but ALSO passes with the extension's attested rows dropped
+    # from the sum (214 vs 214), so the mutant that reverts the promotion
+    # SURVIVED. The sizes below are chosen against the mutants, not against the
+    # rule as I imagined it.
+    OVER = MODULE.V1_EVALUATION_ENTRIES + 4    # 218
+    OVER_PLUS = MODULE.V1_EVALUATION_ENTRIES + 5   # 219
+
     def test_unattested_cohort_outweighing_the_attested_one_is_refused(self):
-        # 215 rows nobody has run against 214 attested: scaffolding wins by one.
-        rows = self._rows(MODULE.V1_EVALUATION_ENTRIES + 1)
+        # 218 rows nobody has run against 214 attested. Refused either way, so
+        # this case pins that a comparison exists and nothing finer.
+        rows = self._rows(self.OVER)
         with self.assertRaisesRegex(MODULE.RefillError,
                                     r"R3 the unattested cohort"):
             MODULE.guard(rows, v1_nursery(), set(), validation(rows))
 
     def test_an_attested_row_is_not_counted_as_scaffolding(self):
-        # THE PROMOTION. Exactly the population the case above refuses, with a
-        # single row moved from `unattested` to `attested`: 214 unattested
-        # against 215 attested. Reverting R3 to a flat `len(entries)` count
-        # makes this fail and the case above pass, so the pair pins the
-        # DIRECTION of the change, not merely that some bound exists.
-        rows = self._rows(MODULE.V1_EVALUATION_ENTRIES + 1)
-        MODULE.guard(rows, v1_nursery(), set(), validation(rows, attested=1))
+        # THE PROMOTION. The identical population, with two rows moved from
+        # `unattested` to `attested`: 216 against 216, so it passes. Count the
+        # extension's attested rows as scaffolding (a flat `len(entries)`, or
+        # `attested_cohort` returning v1's 214 alone) and it becomes 216 > 214
+        # and refuses. This case is what makes ADR-0615's stated exit work, and
+        # it is the ONLY one that dies when the promotion is reverted.
+        rows = self._rows(self.OVER)
+        MODULE.guard(rows, v1_nursery(), set(), validation(rows, attested=2))
 
     def test_a_lean_refused_row_never_buys_headroom(self):
         # `not_elaborable` is a preregistered string Lean says is not a
-        # proposition. It has been through the round trip, so a checker that
-        # counted "covered by a run" would promote it; it must count as
-        # UNATTESTED instead. Same shape as the promotion case above, so the
-        # only difference is which bucket the row sits in.
-        rows = self._rows(MODULE.V1_EVALUATION_ENTRIES + 1)
+        # proposition. It HAS been through the round trip, so a checker counting
+        # "covered by a run" would promote it. 219 rows, 2 attested, 1 refused:
+        # 217 unattested against 216 attested, refused. Drop the refused row
+        # from the unattested side and it is 216 against 216 and passes.
+        rows = self._rows(self.OVER_PLUS)
         with self.assertRaisesRegex(MODULE.RefillError,
                                     r"R3 the unattested cohort"):
-            MODULE.guard(rows, v1_nursery(), set(), validation(rows, rejected=1))
+            MODULE.guard(rows, v1_nursery(), set(),
+                         validation(rows, attested=2, rejected=1))
 
     def test_attested_cohort_moving_is_refused(self):
         Harness(self, {"a": "held-out", "b": "development"})
