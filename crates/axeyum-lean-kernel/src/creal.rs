@@ -6184,6 +6184,21 @@ pub struct CRealPrelude {
     /// concrete mesh LEVEL via `Nat.size`. See `creal/supremum.rs`'s
     /// `CReal.hclose_of_uc`.
     pub mesh_level_count_pow: NameId,
+    /// `CReal.meshLevelCount_ge_of_size : ∀ (c outer j : Nat),
+    /// Nat.le (Nat.add (Nat.size c) (Nat.size outer)) j →
+    /// Nat.le (Nat.add (Nat.mul (Nat.succ c) outer) c) (meshLevelCount j)` —
+    /// rung 6c's `Nat` half: at which mesh LEVEL does the doubling schedule
+    /// reach [`Self::mesh_le_of_ge`]'s Archimedean threshold?
+    ///
+    /// The threshold is `(bound(b−a)+1)·outer + bound(b−a)`, so the question
+    /// is `2^j ≥ (c+1)·(outer+1)`, and `Nat.lt_pow_size` answers it one
+    /// factor at a time: `size c` covers `c+1`, `size outer` covers
+    /// `outer+1`, and `Nat.pow_add` turns their SUM in the exponent into the
+    /// PRODUCT of the two bounds. Additive, so it composes with
+    /// [`Self::true_exp_of_modulus`]'s own accumulator without introducing a
+    /// `Nat.mul` into the schedule; the one `Nat.mul` here is inside the
+    /// threshold `mesh_le_of_ge` already states. See `creal/supremum.rs`.
+    pub mesh_level_count_ge_of_size: NameId,
     /// `CReal.meshMax : (CReal → CReal) → CReal → CReal → Nat → CReal :=
     /// fun F a b j => maxRange (fun i => F (meshSamplePoint a (meshDelta a b
     /// (meshLevelCount j)) i)) (meshLevelCount j)` — the level-`j` mesh
@@ -7024,6 +7039,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_level_count_zero: kernel.name_str(creal, "meshLevelCount_zero"),
         mesh_level_count_succ: kernel.name_str(creal, "meshLevelCount_succ"),
         mesh_level_count_pow: kernel.name_str(creal, "meshLevelCount_pow"),
+        mesh_level_count_ge_of_size: kernel
+            .name_str(creal, "meshLevelCount_ge_of_size"),
         mesh_max: kernel.name_str(creal, "meshMax"),
         mesh_max_step_le: kernel.name_str(creal, "meshMax_step_le"),
         mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
@@ -12503,6 +12520,15 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.mesh_level_count_pow],
         run: supremum::declare_mesh_level_count_pow,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_level_count_ge_of_size",
+        requires: &[
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_level_count_pow,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_level_count_ge_of_size],
+        run: supremum::declare_mesh_level_count_ge_of_size,
     },
     BuildStep {
         label: "supremum::declare_mesh_max",

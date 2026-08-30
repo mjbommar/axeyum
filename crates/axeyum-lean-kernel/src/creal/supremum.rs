@@ -3465,3 +3465,231 @@ pub(super) fn declare_mesh_level_count_pow(
 ) -> Result<(), KernelError> {
     declare_mesh_level_count_pow_thm(d, p)
 }
+
+// ---------------------------------------------------------------------------
+// Rung 6c: the ACCURACY-SCHEDULE ARITHMETIC.
+//
+// `mesh_max_le_add_of_step_close` (rung 6) discharges every piece of mesh
+// GEOMETRY and leaves exactly one obligation behind: instantiate its `hclose`
+// hypothesis from `UniformlyContinuousOn.spec`. That instantiation needs the
+// level-`j` mesh width `Δⱼ := (b − a)·natDivSucc(1, meshLevelCount j)` bounded
+// by the rational `natDivSucc 1 outer` the spec consumes, where `outer` is the
+// modulus applied at the requested accuracy.
+//
+// The Archimedean half of that is NOT new work: `CReal.mesh_le_of_ge`
+// (`creal/integral.rs`) already states exactly
+//
+//     le a b -> Nat.le ((succ (bound (b − a)))·outer + bound (b − a)) m
+//       -> le (mul (b − a) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1 outer))
+//
+// and its left-hand side is SYNTACTICALLY this file's `mesh_delta a b m`. It
+// reads the threshold straight off `CReal.bound` (a total computable
+// projection), never off `CReal.archimedean`'s `Exists` -- which is what keeps
+// the whole route clear of kernel fact 1.
+//
+// So what this section owes is purely `Nat`: at which LEVEL `j` does
+// `meshLevelCount j` reach that threshold? Since `succ (meshLevelCount j) =
+// 2^j` (`mesh_level_count_pow`) the question is `2^j >= (c+1)·(outer+1)`, and
+// `Nat.lt_pow_size` answers it additively -- `size c` and `size outer` each
+// cover one factor, and `pow_add` turns their SUM in the exponent into the
+// PRODUCT of the two bounds. No `Nat.div`, no search, and the schedule stays
+// additive, matching `trueExpOfModulus`'s own accumulator.
+// ---------------------------------------------------------------------------
+
+/// `Nat.le (pow 2 i) (pow 2 j)` from `h : Nat.le i j`.
+///
+/// This kernel has [`NatPrelude::pow_lt_pow_succ`](crate::NatPrelude::pow_lt_pow_succ)
+/// (strict, one successor step) and
+/// [`NatPrelude::pow_lt_pow_of_lt`](crate::NatPrelude::pow_lt_pow_of_lt)
+/// (strict, across a gap) but no NON-strict monotonicity of `pow` in its
+/// exponent, and the non-strict form is what a `Nat.le` hypothesis hands you.
+/// Composed here through `Nat.le`'s own recursor rather than by case-splitting
+/// `lt_or_eq_of_le`, which is `series.rs`'s [`declare_mono_of_le_succ`] shape
+/// one type down: a `Prop`-into-`Prop` elimination that never touches
+/// `Exists.rec`'s data restriction.
+///
+/// [`declare_mono_of_le_succ`]: super::CRealPrelude::mono_of_le_succ
+fn pow_two_mono(d: &mut IntDev<'_>, p: CRealPrelude, i: ExprId, j: ExprId, h: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+    let two = d.num(2);
+    let pow_i = d.const_app(nat_p.pow, &[two, i]);
+
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hx_fv = d.fresh_fvar();
+        let hx_ty = d.le(i, x);
+        let pow_x = d.const_app(nat_p.pow, &[two, x]);
+        let body = d.le(pow_i, pow_x);
+        let inner = d.lam_fv(hx_fv, hx_ty, body);
+        d.lam_fv(x_fv, nat, inner)
+    };
+    let minor_refl = d.lemma(nat_p.le_refl, &[pow_i]);
+    let minor_step = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hx_fv = d.fresh_fvar();
+        let hx_ty = d.le(i, x);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let pow_x = d.const_app(nat_p.pow, &[two, x]);
+        let sx = d.succ(x);
+        let pow_sx = d.const_app(nat_p.pow, &[two, sx]);
+        let ih_ty = d.le(pow_i, pow_x);
+
+        // `Nat.lt (succ zero) 2` is `Nat.le 2 2` after `Nat.lt`'s own unfold.
+        let h_two = d.lemma(nat_p.le_refl, &[two]);
+        let strict = d.lemma(nat_p.pow_lt_pow_succ, &[two, x, h_two]);
+        let succ_pow_x = d.succ(pow_x);
+        let step_le = d.lemma(nat_p.le_succ, &[pow_x]);
+        let adjacent = d.lemma(
+            nat_p.le_trans,
+            &[pow_x, succ_pow_x, pow_sx, step_le, strict],
+        );
+        let body = d.lemma(nat_p.le_trans, &[pow_i, pow_x, pow_sx, ih, adjacent]);
+        let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+        d.lam_fv(x_fv, nat, with_hx)
+    };
+    d.const_app(nat_p.le_rec, &[i, motive, minor_refl, minor_step, j, h])
+}
+
+/// `CReal.meshLevelCount_ge_of_size : ∀ (c outer j : Nat),
+/// Nat.le (Nat.add (Nat.size c) (Nat.size outer)) j →
+/// Nat.le (Nat.add (Nat.mul (Nat.succ c) outer) c) (CReal.meshLevelCount j)`
+/// — the `Nat` half of rung 6c, and the reason the accuracy schedule can stay
+/// additive.
+///
+/// The right-hand side is exactly [`CRealPrelude::mesh_le_of_ge`]'s threshold
+/// at `c := CReal.bound (b − a)`; the left is a bit-count sum. Every step is
+/// forced:
+///
+/// - `Nat.lt_pow_size` twice: `succ c ≤ 2^(size c)` and `succ outer ≤
+///   2^(size outer)`.
+/// - `mul_le_mul_left` twice (with `mul_comm` for the side this kernel does
+///   not state): `(c+1)·(outer+1) ≤ 2^(size c)·2^(size outer)`.
+/// - `pow_add` read RIGHT to LEFT: that product is `2^(size c + size outer)`.
+/// - [`pow_two_mono`] carries it up to `2^j`.
+/// - `mesh_level_count_pow` read RIGHT to LEFT: `2^j = succ (meshLevelCount j)`.
+/// - `le_of_succ_le_succ` strips the successor, and the two rewrites it needs
+///   on the left are both `Eq.refl` — `mul n (succ m)` and `add x (succ c)`
+///   each reduce, because `Nat.mul` and `Nat.add` both recurse on their RIGHT
+///   argument. Had the schedule been written multiplicatively those would have
+///   been theorems instead.
+fn declare_mesh_level_count_ge_of_size_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+    let two = d.num(2);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let outer_fv = d.fresh_fvar();
+    let outer = d.kernel().fvar(outer_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let sc = d.const_app(nat_p.size, &[c]);
+    let so = d.const_app(nat_p.size, &[outer]);
+    let sum_exp = NatOps::add(d, sc, so);
+
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let h_ty = d.le(sum_exp, j);
+
+    let succ_c = d.succ(c);
+    let succ_outer = d.succ(outer);
+    let prod = NatOps::mul(d, succ_c, succ_outer);
+    let pow_sc = d.const_app(nat_p.pow, &[two, sc]);
+    let pow_so = d.const_app(nat_p.pow, &[two, so]);
+
+    // step1 : (c+1)·(outer+1) ≤ (c+1)·2^(size outer).
+    let h2 = d.lemma(nat_p.lt_pow_size, &[outer]);
+    let mid = NatOps::mul(d, succ_c, pow_so);
+    let step1 = d.lemma(
+        nat_p.mul_le_mul_left,
+        &[succ_c, succ_outer, pow_so, h2],
+    );
+
+    // step2 : (c+1)·2^(size outer) ≤ 2^(size c)·2^(size outer), via the
+    // commuted form (this kernel states `mul_le_mul_left` only).
+    let h1 = d.lemma(nat_p.lt_pow_size, &[c]);
+    let step2 = {
+        let raw = d.lemma(nat_p.mul_le_mul_left, &[pow_so, succ_c, pow_sc, h1]);
+        let lhs_raw = NatOps::mul(d, pow_so, succ_c);
+        let rhs_raw = NatOps::mul(d, pow_so, pow_sc);
+        let rhs = NatOps::mul(d, pow_sc, pow_so);
+        let comm_l = d.lemma(nat_p.mul_comm, &[pow_so, succ_c]);
+        let comm_r = d.lemma(nat_p.mul_comm, &[pow_so, pow_sc]);
+        let after_l = nat_rewrite_prop(d, lhs_raw, mid, comm_l, raw, &|d, z| d.le(z, rhs_raw));
+        nat_rewrite_prop(d, rhs_raw, rhs, comm_r, after_l, &|d, z| d.le(mid, z))
+    };
+
+    let prod_pow = NatOps::mul(d, pow_sc, pow_so);
+    let step3 = d.lemma(nat_p.le_trans, &[prod, mid, prod_pow, step1, step2]);
+
+    // step4 : rewrite `2^(size c)·2^(size outer)` back to `2^(size c + size
+    // outer)` — `pow_add` runs the other way, so it is used symmetrically.
+    let pow_sum = d.const_app(nat_p.pow, &[two, sum_exp]);
+    let step4 = {
+        let fwd = d.lemma(nat_p.pow_add, &[two, sc, so]);
+        let back = d.symm(pow_sum, prod_pow, fwd);
+        nat_rewrite_prop(d, prod_pow, pow_sum, back, step3, &|d, z| d.le(prod, z))
+    };
+
+    let pow_j = d.const_app(nat_p.pow, &[two, j]);
+    let climb = pow_two_mono(d, p, sum_exp, j, h);
+    let step5 = d.lemma(nat_p.le_trans, &[prod, pow_sum, pow_j, step4, climb]);
+
+    // step6 : `2^j = succ (meshLevelCount j)`, again read right to left.
+    let mlc = d.const_app(p.mesh_level_count, &[j]);
+    let succ_mlc = d.succ(mlc);
+    let step6 = {
+        let fwd = d.lemma(p.mesh_level_count_pow, &[j]);
+        let back = d.symm(succ_mlc, pow_j, fwd);
+        nat_rewrite_prop(d, pow_j, succ_mlc, back, step5, &|d, z| d.le(prod, z))
+    };
+
+    // `prod ≡ succ (mul (succ c) outer + c)` by `Nat.mul`/`Nat.add` both
+    // recursing on the right, so `le_of_succ_le_succ` applies directly.
+    let me = NatOps::mul(d, succ_c, outer);
+    let threshold = NatOps::add(d, me, c);
+    let proof = d.lemma(nat_p.le_of_succ_le_succ, &[threshold, mlc, step6]);
+
+    let concl = d.le(threshold, mlc);
+    let ty = {
+        let out = d.arrow(h_ty, concl);
+        let out = d.pi_fv(j_fv, nat, out);
+        let out = d.pi_fv(outer_fv, nat, out);
+        d.pi_fv(c_fv, nat, out)
+    };
+    let value = {
+        let out = d.lam_fv(h_fv, h_ty, proof);
+        let out = d.lam_fv(j_fv, nat, out);
+        let out = d.lam_fv(outer_fv, nat, out);
+        d.lam_fv(c_fv, nat, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_level_count_ge_of_size,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshLevelCount_ge_of_size` alone (a one-declaration
+/// `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_level_count_ge_of_size(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_level_count_ge_of_size_thm(d, p)
+}
