@@ -466,6 +466,21 @@ fn pinned_lean_rejects_a_substituted_proof_for_the_declaration_the_source_route_
             "the rejection must name the TYPE it was checking, or it could be any \
              unrelated failure downstream:\n{report}"
         );
+        // Added after mutation testing, and it did NOT change that mutation's
+        // outcome — recorded as a survivor rather than dressed up as a kill. With
+        // `is_a_proposition` forced to `true` the "representable" slice carries all
+        // 48 non-proposition theorems, and this test still passed: the tampered
+        // `not_zero_one` is refused before Lean reaches any of them, so the pass is
+        // honest but says nothing about the classifier. The assertion below states
+        // what the control assumes rather than leaving it to stream order — if the
+        // export order ever changes, a kind refusal must not be read as a proof
+        // refusal.
+        assert!(
+            refused_theorem_name(&report).is_none(),
+            "the rejection is the not-a-proposition rule firing, not the substituted \
+             proof being caught. This control is only meaningful when the stream is \
+             otherwise acceptable to Lean:\n{report}"
+        );
 
         println!("{CARRIER_MARKER} tampered-proof-rejected subject=CReal.Equiv.not_zero_one");
 
