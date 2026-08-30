@@ -667,3 +667,171 @@ pub(super) fn declare_fermat_number_mirrors_all(
     declare_coprime_fermatnumber_fermatnumber(d, p)?;
     Ok(())
 }
+
+// ============================================================================
+// `fermat-easy` lane: three closed reductions, `Nat.odd_fermatNumber`, and
+// `Nat.fermatNumber_strictMono` — `docs/plan/status/377-fermat-easy.md`.
+// ============================================================================
+
+/// `Nat.fermatNumber_zero : Eq (fermatNumber 0) 3` — `fermatNumber 0 = add
+/// (pow 2 (pow 2 0)) 1 = add (pow 2 1) 1 = add 2 1 = 3`, fully concrete
+/// (largest formed magnitude 3), closed by `refl` alone. This equation was
+/// decided the instant `Nat.fermatNumber` was declared
+/// (`docs/research/09-decisions/adr-0695-…`); this declaration only states
+/// it as its own checkable theorem.
+pub(super) fn declare_fermatnumber_zero(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.fermatnumber_zero, 0, &|d, _v| {
+        let zero = d.zero();
+        let three = d.num(3);
+        let lhs = d.const_app(p.fermat_number, &[zero]);
+        (d.eq(lhs, three), d.refl(lhs))
+    })?;
+    Ok(())
+}
+
+/// `Nat.fermatNumber_one : Eq (fermatNumber 1) 5` — `fermatNumber 1 = add
+/// (pow 2 (pow 2 1)) 1 = add (pow 2 2) 1 = add 4 1 = 5`, largest formed
+/// magnitude 5.
+pub(super) fn declare_fermatnumber_one(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.fermatnumber_one, 0, &|d, _v| {
+        let one = d.num(1);
+        let five = d.num(5);
+        let lhs = d.const_app(p.fermat_number, &[one]);
+        (d.eq(lhs, five), d.refl(lhs))
+    })?;
+    Ok(())
+}
+
+/// `Nat.fermatNumber_two : Eq (fermatNumber 2) 17` — `fermatNumber 2 = add
+/// (pow 2 (pow 2 2)) 1 = add (pow 2 4) 1 = add 16 1 = 17`, largest formed
+/// magnitude 17 — the ceiling this lane holds to (`n = 3` would form 257,
+/// `n = 4` would form 65537; CLAUDE.md's "EVERY `Nat` NUMERAL … IS UNARY"
+/// entry).
+pub(super) fn declare_fermatnumber_two(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.fermatnumber_two, 0, &|d, _v| {
+        let two = d.num(2);
+        let seventeen = d.num(17);
+        let lhs = d.const_app(p.fermat_number, &[two]);
+        (d.eq(lhs, seventeen), d.refl(lhs))
+    })?;
+    Ok(())
+}
+
+/// `Nat.odd_fermatNumber : ∀ n, Odd (fermatNumber n)` — entirely symbolic
+/// (`n` stays a free variable throughout; largest formed numeral is the
+/// base `2`), reusing `odd_fermat_number_local` above verbatim: it already
+/// builds a proof of `Odd (fermatNumber m)` (up to defeq) for whatever `m`
+/// it is handed.
+pub(super) fn declare_odd_fermatnumber(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.odd_fermatnumber, 1, &|d, v| {
+        let n = v[0];
+        let fermat_n = d.const_app(p.fermat_number, &[n]);
+        let stmt = d.const_app(p.odd, &[fermat_n]);
+        let proof = odd_fermat_number_local(d, &p, n);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Lt a b → Lt (add a c) (add b c)`, via `add_comm` + `add_lt_add_left` —
+/// only the `Le`-strength `add_le_add_right` exists directly in this
+/// prelude (used by `declare_fermatnumber_mono`, above).
+fn add_lt_add_right_local(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+) -> ExprId {
+    let p = *p;
+    let lt_ca_cb = d.lemma(p.add_lt_add_left, &[c, a, b, hab]); // Lt (add c a) (add c b)
+    let add_c_a = d.add(c, a);
+    let add_c_b = d.add(c, b);
+    let add_a_c = d.add(a, c);
+    let add_b_c = d.add(b, c);
+    let comm_ca = d.lemma(p.add_comm, &[c, a]); // Eq (add c a) (add a c)
+    let comm_cb = d.lemma(p.add_comm, &[c, b]); // Eq (add c b) (add b c)
+
+    let motive_lhs = d.eq_motive(add_c_a, &move |d, x| d.lt(x, add_c_b));
+    let step1 = d.transport(add_c_a, motive_lhs, lt_ca_cb, add_a_c, comm_ca);
+    let motive_rhs = d.eq_motive(add_c_b, &move |d, x| d.lt(add_a_c, x));
+    d.transport(add_c_b, motive_rhs, step1, add_b_c, comm_cb)
+}
+
+/// `Nat.fermatNumber_strictMono : StrictMono Nat.fermatNumber`
+/// (core-rendered `∀ x y, Lt x y → Lt (fermatNumber x) (fermatNumber y)`).
+/// Entirely symbolic (`x`, `y` stay free; largest formed numeral is the
+/// base `2`) — `pow_lt_pow_of_lt` climbs both `pow 2 ·` layers exactly as
+/// `pow_le_pow_of_le_local`'s strict branch does for
+/// `declare_fermatnumber_mono` above, and `add_lt_add_right_local` closes
+/// the final `+1` layer.
+pub(super) fn declare_fermatnumber_strictmono(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.fermatnumber_strictmono, 2, &|d, v| {
+        let (x, y) = (v[0], v[1]);
+        let one = d.num(1);
+        let two = d.num(2);
+
+        let h_ty = d.lt(x, y);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        // Lt 1 2, defeq Le (succ 1) 2 = Le 2 2 = le_refl 2 (the same device
+        // `declare_fermatnumber_mono` uses for its `hb`).
+        let hb = d.lemma(p.le_refl, &[two]);
+
+        // 2^x < 2^y.
+        let inner_lt = d.lemma(p.pow_lt_pow_of_lt, &[two, x, y, hb, h]);
+        // 2^(2^x) < 2^(2^y).
+        let pow_x = d.pow(two, x);
+        let pow_y = d.pow(two, y);
+        let outer_lt = d.lemma(p.pow_lt_pow_of_lt, &[two, pow_x, pow_y, hb, inner_lt]);
+
+        // fermatNumber x = pow2x2 + 1 < pow2y2 + 1 = fermatNumber y.
+        let pow2x2 = d.pow(two, pow_x);
+        let pow2y2 = d.pow(two, pow_y);
+        let concl_raw = add_lt_add_right_local(d, &p, one, pow2x2, pow2y2, outer_lt);
+
+        let fermat_x = d.const_app(p.fermat_number, &[x]);
+        let fermat_y = d.const_app(p.fermat_number, &[y]);
+        let concl = d.lt(fermat_x, fermat_y);
+        let stmt = d.arrow(h_ty, concl);
+        let proof = d.lam_fv(h_fv, h_ty, concl_raw);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// Declare all five `fermat-easy` mirrors: the three closed reductions,
+/// oddness, and strict monotonicity.
+pub(super) fn declare_fermat_number_easy_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    declare_fermatnumber_zero(d, p)?;
+    declare_fermatnumber_one(d, p)?;
+    declare_fermatnumber_two(d, p)?;
+    declare_odd_fermatnumber(d, p)?;
+    declare_fermatnumber_strictmono(d, p)?;
+    Ok(())
+}

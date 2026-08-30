@@ -290,7 +290,7 @@ use even_div::declare_even_div;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
 use fermat_number::declare_fermat_number_all;
-use fermat_number_mirrors::declare_fermat_number_mirrors_all;
+use fermat_number_mirrors::{declare_fermat_number_easy_all, declare_fermat_number_mirrors_all};
 use fibonacci::declare_fib_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
@@ -4437,6 +4437,19 @@ pub struct NatPrelude {
     /// Coprime (fermatNumber m) (fermatNumber n)` — Goldbach's coprimality
     /// theorem, `fermat_number_mirrors.rs`.
     pub coprime_fermatnumber_fermatnumber: NameId,
+    // -- `fermat-easy` lane: `fermat_number_mirrors.rs` --
+    /// `Nat.fermatNumber_zero : Eq (fermatNumber 0) 3`.
+    pub fermatnumber_zero: NameId,
+    /// `Nat.fermatNumber_one : Eq (fermatNumber 1) 5`.
+    pub fermatnumber_one: NameId,
+    /// `Nat.fermatNumber_two : Eq (fermatNumber 2) 17`.
+    pub fermatnumber_two: NameId,
+    /// `Nat.odd_fermatNumber : ∀ n, Odd (fermatNumber n)`.
+    pub odd_fermatnumber: NameId,
+    /// `Nat.fermatNumber_strictMono : StrictMono Nat.fermatNumber`
+    /// (core-rendered `∀ x y, Lt x y → Lt (fermatNumber x) (fermatNumber
+    /// y)`), `fermat_number_mirrors.rs`.
+    pub fermatnumber_strictmono: NameId,
 
     // -- `lnp-implies-em` lane: `least_number.rs` — ADR-0603 row 2 for the
     // least-number principle over the naturals.
@@ -5327,6 +5340,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fermatnumber_mono: kernel.name_str(nat, "fermatNumber_mono"),
             coprime_fermatnumber_fermatnumber: kernel
                 .name_str(nat, "coprime_fermatNumber_fermatNumber"),
+            fermatnumber_zero: kernel.name_str(nat, "fermatNumber_zero"),
+            fermatnumber_one: kernel.name_str(nat, "fermatNumber_one"),
+            fermatnumber_two: kernel.name_str(nat, "fermatNumber_two"),
+            odd_fermatnumber: kernel.name_str(nat, "odd_fermatNumber"),
+            fermatnumber_strictmono: kernel.name_str(nat, "fermatNumber_strictMono"),
             lnp_bounded_search: kernel.name_str(nat, "lnp_bounded_search"),
             lnp_of_pointwise_decision: kernel.name_str(nat, "lnp_of_pointwise_decision"),
             lnp_decidable: kernel.name_str(nat, "lnp_decidable"),
@@ -6032,6 +6050,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.even_iff_odd_succ` (`declare_parity_all`, far above). Nothing
         // needs it, so it goes last.
         declare_fermat_number_mirrors_all(&mut d, &p)?;
+        // `fermat-easy` lane: the three closed reductions need only
+        // `Nat.fermatNumber` (`declare_fermat_number_all`, far above);
+        // `Nat.odd_fermatNumber` reuses `odd_fermat_number_local`
+        // (`fermat_number_mirrors.rs`, just above, needs the same
+        // dependencies as `declare_fermat_number_mirrors_all`);
+        // `Nat.fermatNumber_strictMono` needs `Nat.pow_lt_pow_of_lt`
+        // (`declare_order`, far above) and `Nat.add_lt_add_left`/
+        // `Nat.add_comm` (far above). Nothing needs it, so it goes last.
+        declare_fermat_number_easy_all(&mut d, &p)?;
         // `least_number.rs`: needs only the order fragment (`not_lt_zero`,
         // `le_of_lt_succ`, `lt_or_eq_of_le`, `lt_succ_self`, `le_succ`,
         // `lt_of_lt_of_le`, `succ_ne_zero`, all far above) and the logic
