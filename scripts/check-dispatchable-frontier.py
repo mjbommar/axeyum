@@ -78,6 +78,21 @@ The statable-here vocabulary is not taken on trust either:
       Without this, flipping one flag smuggles any constant into the bridge and
       S2 becomes satisfiable by assertion.
   S5  `--statable` rejects an unstatable candidate before preregistration.
+  S6  `--statable` rejects a candidate whose statement carries an elided-proof
+      or inaccessible-name glyph (`⋯` U+22EF, `✝` U+271D, `…` U+2026) or the
+      literal token `sorry`. Added 2026-08-29 after
+      `scripts/attest-nursery-surface.py` found `F:ml430-nat-le-induction-`
+      `2f088ac3` preregistered with a `⋯` in its statement -- Lean's
+      pretty-printer glyph for an elided proof term, which re-parsed is a hole
+      nothing can fill. The per-row `source_statement_sha256` cannot catch
+      this: it faithfully binds a LOSSY string. No existing screen looked at
+      the statement text for anything but the constants it names, so this row
+      sailed through `--statable` and `--screen` both. S6 is scoped to
+      `--statable` only (not to `check-dispatchable-frontier.py`'s own
+      re-derivation of `select()`'s candidate pools in the generator) so that
+      adding it cannot retroactively reshuffle an already-frozen family's
+      preregistered candidates -- see gen-autogenesis-nursery-refill.py's
+      `frozen_partitions()` for why that would be unsafe.
 
 Partitions are read from the v1 nursery AND from `nursery-v2-extension.json`
 (the 2026-08-29 refill). A held-out row that only the extension knows about
@@ -123,6 +138,27 @@ DEFAULT_CATALOG = (ROOT / "artifacts" / "autogenesis"
 # goes vacuous, and the one that ADMITS rather than rejects -- fails too.
 ENV_PROBES_PRESENT = ("Eq", "Nat")
 ENV_PROBE_ABSENT = "axeyum probe no declaration can carry"
+
+# S6. Lean's pretty-printer prints an elided proof term as `⋯` and an
+# inaccessible/hygienic name as `✝`; `…` is the same elision spelled with the
+# single-character horizontal ellipsis some renderers use instead of `⋯`. A
+# statement carrying any of these is not the proposition it looks like -- see
+# docs/contributor-guide/lean-surface-attestation.md's "finding". `sorry` is
+# matched as a whole word so a real identifier merely containing the letters
+# (there is none in this inventory, and the word-boundary is the false-positive
+# guard if one ever appears) is not flagged.
+GLYPH_RE = re.compile(r"[⋯✝…]|\bsorry\b")
+
+# The ONE row ADR-0615 already recorded as not a well-formed proposition
+# (docs/contributor-guide/lean-surface-attestation.md, "The finding, 2026-08-29").
+# ADR-0615 forbids rewriting a preregistered `formal.statement` and forbids
+# deleting a held-out row, so this fact_id will carry its `⋯` forever. S6 must
+# not fail the standing gate on a defect that is already known, already
+# recorded, and structurally un-fixable -- but it must fail on any OTHER
+# candidate, present or future, that carries the same glyph. This set is the
+# whole exemption: adding a fact_id here is a decision, not a side effect of
+# running the screen, and nothing else may grow it silently.
+KNOWN_GLYPHED_FACT_IDS = frozenset({"F:ml430-nat-le-induction-2f088ac3"})
 
 MIRROR_PREFIX = "F:ml430-"
 SETTLED = {"proved", "refuted", "computed"}
@@ -466,11 +502,12 @@ def statable_screen(path: pathlib.Path, registry: list[dict[str, Any]],
     """S5 (+ G6) -- both screens over candidates before preregistration."""
     candidates = read_candidates(path)
     admissible = env | bridge
-    blocked = unstatable = 0
+    blocked = unstatable = glyphed = 0
     for cand in candidates:
         if not isinstance(cand, dict):
             die(f"{path}: a candidate is not an object")
         name = cand.get("name") or cand.get("source_name", "<unnamed>")
+        fact_id = cand.get("fact_id")
         statement = cand.get("statement")
         constants = cand.get("constants")
         if not isinstance(statement, str):
@@ -483,6 +520,7 @@ def statable_screen(path: pathlib.Path, registry: list[dict[str, Any]],
                 f"statable-here screen cannot decide it")
         hits = blockers_for(statement, registry)
         missing = sorted(set(constants) - admissible)
+        glyphs = sorted(set(GLYPH_RE.findall(statement)))
         if hits:
             blocked += 1
             classes = ", ".join(f"{h['mathlib_constant']} ({h['class']})"
@@ -491,11 +529,18 @@ def statable_screen(path: pathlib.Path, registry: list[dict[str, Any]],
         elif missing:
             unstatable += 1
             print(f"  UNSTATABLE  {name}  -- {', '.join(missing[:4])}")
+        elif glyphs and fact_id in KNOWN_GLYPHED_FACT_IDS:
+            print(f"  GLYPH       {name}  -- {', '.join(glyphs)}  "
+                  f"(recorded, ADR-0615: {fact_id})")
+        elif glyphs:
+            glyphed += 1
+            print(f"  GLYPH       {name}  -- {', '.join(glyphs)}")
         else:
             print(f"  statable-ok {name}")
     print(f"\n{len(candidates)} candidate(s), {blocked} blocked by the "
           f"divergence registry, {unstatable} not statable here "
-          f"(env {len(env)} + bridge {len(bridge)}).")
+          f"(env {len(env)} + bridge {len(bridge)}), {glyphed} carrying an "
+          f"elided-proof glyph.")
     status = 0
     if blocked:
         print("\nG6 blocked-candidate: preregistering these adds population "
@@ -506,6 +551,13 @@ def statable_screen(path: pathlib.Path, registry: list[dict[str, Any]],
               "kernel cannot name and cannot bridge to, so no proof effort "
               "reaches them. `screened-ok` against the divergence registry is "
               "necessary and NOT sufficient.", file=sys.stderr)
+        status = 1
+    if glyphed:
+        print("\nS6 glyphed-candidate: the statement contains a Lean "
+              "pretty-printer elision or hygiene glyph, so what is "
+              "preregistered is not guaranteed to be a well-formed "
+              "proposition -- see docs/contributor-guide/"
+              "lean-surface-attestation.md.", file=sys.stderr)
         status = 1
     return status
 
