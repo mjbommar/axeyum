@@ -504,7 +504,15 @@ def guard_vocabulary(snapshot: dict[str, Any], vocabulary: dict[str, Any],
     # gen-autogenesis-statable-vocabulary.py, for the same reason that
     # generator refuses to import SETTLED from this module: a gate that trusts
     # the producer's own classification cannot catch the producer being wrong.
-    if facts and catalog:
+    #
+    # NOT EVALUATED WHEN S1-S4 ALREADY FIRED, and that is deliberate rather
+    # than defensive. S7 derives from the bridge and the row set, so ANY drift
+    # those guards catch -- an unwitnessed bridge entry, an emptied bridge, a
+    # row listed as settled that the ledger says is open -- also moves this
+    # derivation. Reporting both would make every S2/S3/S4 control kill two
+    # guards, and a case that kills two proves neither exists. The refinement
+    # only means anything over a bridge whose membership is already sound.
+    if facts and catalog and not fails:
         renderings = {}
         for name, ident in catalog.items():
             rendered = (facts.get(ident, {}).get("formal") or {}).get(

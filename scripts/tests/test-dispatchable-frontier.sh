@@ -22,7 +22,7 @@ trap 'rm -rf "$WORK"' EXIT
 FAILURES=0
 CASES=0
 
-ALL_GUARDS=(G1 G2 G3 G4 G5 G6 G7 S1 S2 S3 S4 S5 S6)
+ALL_GUARDS=(G1 G2 G3 G4 G5 G6 G7 S1 S2 S3 S4 S5 S6 S7)
 
 # The guards that are properties of the ARTIFACTS (a stale registry row, an
 # unwitnessed bridge constant, a screen that rejects something we proved).
@@ -156,6 +156,15 @@ vocab = {"schema_version": 1,
          "kind": "axeyum-autogenesis-statable-vocabulary",
          "derivation": "fixture", "keyed_by": "source_name",
          "bridge": ["Test.bridgeThing"],
+         # S7. `Test.bridgeThing` is not an instance and not a class
+         # projection, and the fixture fact for `Test.settled` carries no
+         # `formal.kernel_statement`, so its derived class is `unrendered` --
+         # the ledger cannot say whether the closure expressed it. Without this
+         # block every case in this file would fail S7 as well as its own
+         # guard.
+         "bridge_provenance": {
+             "Test.bridgeThing": {"class": "unrendered",
+                                  "rendered_witnesses": 0, "witnesses": 1}},
          "settled": [{"source_name": "Test.settled",
                       "constants": ["Test.bridgeThing", "Test.plain"]}]}
 (d / "vocab.json").write_text(json.dumps(vocab, indent=1))
@@ -552,6 +561,48 @@ p.write_text(json.dumps(d, indent=1))
 PY
 mapfile -t A < <(fixargs "$S3")
 run "S3-screen-rejects-a-settled-mirror" 1 S3 -- "${A[@]}"
+
+# ---- case S7a: a bridge constant relabelled as expressed -------------------
+# THE ABUSE S7 EXISTS FOR. The bridge is unchanged, so S2 and S3 both pass and
+# the screen admits exactly what it admitted before -- only the recorded REASON
+# moved, from "no closure has been shown to express this" to "a closure did".
+# That is how an elision-backed constant comes to be quoted as sound, and it is
+# what `F:ml430-nat-log-antitone-left` promoting `Set.Ioi` would look like if
+# someone tidied the label rather than the derivation.
+S7A="$WORK/s7a"; cp -r "$BASE" "$S7A"
+python3 - "$S7A/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["bridge_provenance"]["Test.bridgeThing"]["class"] = "expressed"
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S7A")
+run "S7-bridge-constant-relabelled-as-expressed" 1 S7 -- "${A[@]}"
+
+# ---- case S7b: the witness count inflated -----------------------------------
+# The class is untouched, so a guard comparing only labels survives this.
+S7B="$WORK/s7b"; cp -r "$BASE" "$S7B"
+python3 - "$S7B/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d["bridge_provenance"]["Test.bridgeThing"]["witnesses"] = 9
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S7B")
+run "S7-witness-count-inflated" 1 S7 -- "${A[@]}"
+
+# ---- case S7c: the provenance block absent entirely -------------------------
+# Not merely wrong. The bridge still admits everything it did, with no recorded
+# reason for any of it, and every count downstream reads as fully witnessed.
+S7C="$WORK/s7c"; cp -r "$BASE" "$S7C"
+python3 - "$S7C/vocab.json" <<'PY'
+import json, sys, pathlib
+p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text())
+d.pop("bridge_provenance")
+p.write_text(json.dumps(d, indent=1))
+PY
+mapfile -t A < <(fixargs "$S7C")
+run "S7-provenance-block-missing" 1 S7 -- "${A[@]}"
 
 # ---- case S4a: a row listed as settled that the ledger says is open --------
 # This is the attack S2 alone cannot see: adding a row promotes its constants
