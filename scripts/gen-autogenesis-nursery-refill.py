@@ -711,8 +711,143 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
             f"so they are not blind: {contaminated[:5]}")
 
 
+def stored_surface_validation() -> dict[str, Any]:
+    """What the manifest already records about its own surface grade."""
+    if not EXTENSION.is_file():
+        return {}
+    got = load_json(EXTENSION).get("surface_validation")
+    return got if isinstance(got, dict) else {}
+
+
+def surface_validation(entries: list[dict[str, Any]],
+                       ingest: pathlib.Path | None = None) -> dict[str, Any]:
+    """Derive the surface grade from a real Lean run, never assert one.
+
+    The grade used to be the flat literal `"quotation"`, which was true when it
+    was written and became false the moment a real Lean run happened. A literal
+    also cannot degrade: a later draw that adds rows would inherit whatever the
+    string claimed, and the new rows would silently carry an attestation nobody
+    ran for them. So this reports three DISJOINT sets, matched row by row:
+
+      attested        the run read this row and Lean accepted it
+      not_elaborable  the run read this row and Lean REJECTED it
+      unattested      no run has covered this row at all
+
+    A new draw lands its rows in `unattested` automatically. That is the point:
+    absence of evidence has to look different from evidence of acceptance.
+
+    WHY THIS LIVES IN THE MANIFEST AND NOT IN ITS OWN ARTIFACT. The first
+    version wrote `nursery-v2-extension-surface-attestation.json`, and
+    `check-autogenesis-holdout-isolation.py` correctly refused it: that gate
+    forbids ANY artifact from naming a held-out fact id except the files which
+    define a population, and 70 of these 160 rows are held-out. Exempting a new
+    file, or hashing the ids to slip past a syntactic walk, would both weaken a
+    guard that exists because prose failed to hold this line. The manifest is
+    already exempt and already names every held-out member it preregistered, so
+    the grade belongs here -- beside the rows it grades.
+
+    With `ingest`, a fresh `attest-nursery-surface.py --json-out` record is
+    folded in. Without it, the stored result is carried forward and re-matched
+    against the current entries, so `--check` is reproducible and a new draw
+    still degrades honestly.
+    """
+    base: dict[str, Any] = {
+        "quotation_method": (
+            "formal.statement is a BYTE-IDENTICAL quotation of the pinned "
+            "statement-only extractor's `type` field. Nothing is transcribed, "
+            "so there is no transcription to attest."),
+        "per_row_binding": "source_statement_sha256",
+        "attestation_method": (
+            "declare every formal.statement as an axiom after `import "
+            "Mathlib`; no theorem value and no proof is read. This is the "
+            "method create-autogenesis-mathlib-fact-catalog.py records in "
+            "surface_validation.method for nursery-v1."),
+        "attestation_command": (
+            "python3 scripts/attest-nursery-surface.py --manifest "
+            "artifacts/autogenesis/nursery-v2-extension.json --json-out <tmp> "
+            "&& python3 scripts/gen-autogenesis-nursery-refill.py "
+            "--ingest-surface-attestation <tmp>"),
+        "host_requirement": (
+            "a Mathlib checkout at the pinned commit WITH .lake/build "
+            "populated. As of 2026-08-29 that is s5 "
+            "(~/lean-import-scale/mathlib4, 6.2 GB build, Lean 4.30.0, run in "
+            "3.6 s for all 160 rows). provision-lean-import-toolchain.sh "
+            "provisions a checkout but does NOT build Mathlib, so it is not "
+            "sufficient. `command -v lean` returns nothing on a host that HAS "
+            "Lean; elan keeps toolchains off PATH -- see "
+            "docs/contributor-guide/lean-surface-attestation.md."),
+        "means": (
+            "acceptance is syntax/type evidence about the STATEMENT, not proof "
+            "evidence about the claim. Every row remains open or closed on its "
+            "own merits; nothing here settles anything."),
+    }
+
+    ids = [e["fact_id"] for e in entries]
+    if ingest is not None:
+        record = load_json(ingest)
+        if record.get("negative_control_rejected") is not True:
+            raise RefillError(
+                f"{ingest} records a run whose negative control was ACCEPTED, "
+                f"so the run distinguishes nothing and cannot grade any row")
+        covered = set(record.get("attested_fact_ids") or [])
+        if not covered:
+            raise RefillError(
+                f"{ingest} lists no attested_fact_ids, so no row can be "
+                f"matched to it")
+        failures = {f["fact_id"]: f for f in record.get("failures", [])}
+        source = {
+            "host": record["host"],
+            "mathlib_commit": record["mathlib_commit"],
+            "lean_version": record["lean_version"],
+            "module_sha256": record["module_sha256"],
+            "negative_control_rejected": True,
+            "elapsed_seconds": record.get("elapsed_seconds"),
+        }
+        not_elaborable = [
+            {"fact_id": i, "source_name": failures[i].get("source_name"),
+             "lean": failures[i].get("lean")}
+            for i in sorted(ids) if i in failures
+        ]
+    else:
+        stored = stored_surface_validation()
+        source = stored.get("source")
+        if not source:
+            base["grade"] = "quotation"
+            base["weaker_than_v1_because"] = (
+                "nursery-v1's 214 statements were re-elaborated as axioms "
+                "after `import Mathlib` and accepted "
+                "(accepted-214-proof-free-axiom-types). These have not been: a "
+                "pretty-printed type is not guaranteed to re-parse.")
+            base["attested"] = []
+            base["not_elaborable"] = []
+            base["unattested"] = sorted(ids)
+            return base
+        not_elaborable = [row for row in stored.get("not_elaborable", [])
+                          if row["fact_id"] in set(ids)]
+        covered = set(stored.get("attested", [])) | {
+            row["fact_id"] for row in stored.get("not_elaborable", [])}
+
+    rejected = {row["fact_id"] for row in not_elaborable}
+    base["source"] = source
+    base["attested"] = sorted(i for i in ids if i in covered and i not in rejected)
+    base["not_elaborable"] = not_elaborable
+    base["unattested"] = sorted(i for i in ids if i not in covered)
+    base["grade"] = (
+        "real-lean-axiom-elaboration-per-row" if not base["unattested"]
+        else "mixed-real-lean-and-quotation-per-row")
+    if not_elaborable:
+        base["not_elaborable_means"] = (
+            "Lean will not accept these statements as propositions, so they "
+            "were preregistered as something that is not a well-formed "
+            "proposition and cannot be closed as stated. ADR-0615 forbids "
+            "rewriting a preregistered formal.statement, so they are RECORDED "
+            "here, not repaired and not deleted.")
+    return base
+
+
 def build_extension(entries: list[dict[str, Any]],
-                    reasons: Counter) -> dict[str, Any]:
+                    reasons: Counter,
+                    ingest: pathlib.Path | None = None) -> dict[str, Any]:
     partitions = assign_partitions()
     counts = Counter(e["partition"] for e in entries)
     extension = {
@@ -733,27 +868,7 @@ def build_extension(entries: list[dict[str, Any]],
             "statement_inventory": str(INVENTORY),
             "statement_inventory_sha256": INVENTORY_SHA256,
         },
-        "surface_validation": {
-            "grade": "quotation",
-            "method": (
-                "formal.statement is a BYTE-IDENTICAL quotation of the pinned "
-                "statement-only extractor's `type` field. Nothing is "
-                "transcribed, so there is no transcription to attest."),
-            "weaker_than_v1_because": (
-                "nursery-v1's 214 statements were re-elaborated as axioms after "
-                "`import Mathlib` and accepted "
-                "(accepted-214-proof-free-axiom-types). These were not: a "
-                "pretty-printed type is not guaranteed to re-parse. Reporting "
-                "these rows as carrying v1's attestation would be false."),
-            "blocked_on": (
-                "create-autogenesis-mathlib-fact-catalog.py refuses a catalog "
-                "whose generated surface module differs from "
-                "SURFACE_ATTESTATION_SHA256, and re-attesting needs a built "
-                "Mathlib. /data0/axeyum/lean-import-toolchain/mathlib4 is at "
-                "the pinned commit with no .lake/build, so the attestation "
-                "could not be produced in this lane."),
-            "per_row_binding": "source_statement_sha256",
-        },
+        "surface_validation": surface_validation(entries, ingest),
         "screens": {
             "divergence_registry": "artifacts/autogenesis/mirror-divergence-registry.json",
             "statable_here": "artifacts/autogenesis/mathlib-statable-vocabulary-v1.json",
@@ -861,14 +976,47 @@ def fact_for(entry: dict[str, Any]) -> dict[str, Any]:
             "Open in Axeyum. The external theorem declaration is prior art, "
             "not a locally constructed proof. formal.statement is a "
             "BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed "
-            "type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, "
-            "which were re-elaborated as axioms after `import Mathlib` and "
-            "accepted. Preregistered in "
+            "type. " + surface_grade_note(entry["fact_id"]) + " Preregistered in "
             "artifacts/autogenesis/nursery-v2-extension.json, which carries "
             "the partition; that manifest, not this file, is the split "
             "authority. Screened against the mirror-divergence registry and "
             "the statable-here vocabulary before preregistration."),
     }
+
+
+def surface_grade_note(fact_id: str) -> str:
+    """The one sentence a fact may honestly say about its surface grade.
+
+    Read from the manifest's `surface_validation`, for the same reason that
+    field is derived rather than asserted: a literal cannot degrade. This text
+    used to assert the QUOTATION grade unconditionally -- true when written,
+    false for 159 rows the moment a real Lean run happened, and still not the
+    whole truth for the row Lean REJECTED.
+    """
+    stored = stored_surface_validation()
+    source = stored.get("source") or {}
+    commit = (source.get("mathlib_commit") or "?")[:12]
+    host = source.get("host") or "?"
+    rejected = {row["fact_id"] for row in stored.get("not_elaborable", [])}
+    if fact_id in rejected:
+        return ("Lean REJECTED this statement. Re-elaborated as an axiom after "
+                f"`import Mathlib` against Mathlib {commit} on {host}, it does "
+                "not elaborate, so what is preregistered here is not a "
+                "well-formed proposition and cannot be closed as stated. "
+                "ADR-0615 forbids rewriting a preregistered formal.statement, "
+                "so this is recorded, not repaired. See "
+                "surface_validation.not_elaborable in "
+                "artifacts/autogenesis/nursery-v2-extension.json.")
+    if fact_id in set(stored.get("attested", [])):
+        return ("Re-elaborated as a proof-free axiom after `import Mathlib` "
+                f"against Mathlib {commit} on {host} and ACCEPTED -- the same "
+                "grade as the 214 nursery-v1 rows. Acceptance is syntax/type "
+                "evidence about the statement, never proof evidence about the "
+                "claim.")
+    return ("This row carries the QUOTATION grade, weaker than the 214 "
+            "nursery-v1 rows, which were re-elaborated as axioms after "
+            "`import Mathlib` and accepted: a pretty-printed type is not "
+            "guaranteed to re-parse and this one has not been tried.")
 
 
 def fact_path(fact_id: str) -> pathlib.Path:
@@ -888,6 +1036,12 @@ def render(value: Any) -> str:
 # `evidence`, `depends_on` -- belongs to the ledger and to whichever lane closed
 # the mirror; `validate-facts.py` is its checker, not this script.
 PREREGISTERED_FIELDS = ("id", "title", "statement")
+
+# The exact clause the generator used to emit for every extension fact. A real
+# Lean run made it false for 159 rows and incomplete for the one Lean rejected.
+STALE_GRADE_CLAUSE = (
+    " -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were "
+    "re-elaborated as axioms after `import Mathlib` and accepted.")
 
 
 def shown(path: pathlib.Path) -> str:
@@ -945,12 +1099,91 @@ def reconcile_facts(entries: list[dict[str, Any]], check: bool) -> list[str]:
     return problems
 
 
+def sync_surface_notes(entries: list[dict[str, Any]]) -> int:
+    """Refresh only the surface-grade sentence, only where it is still generated.
+
+    `notes` is NOT a preregistered field, so ADR-0615 permits this -- but a lane
+    that closed a mirror may have written its own note, and overwriting that
+    would destroy real work. So a file is rewritten only when its current
+    `notes` is byte-identical to what this generator would have produced under
+    SOME grade sentence. Anything else is reported and left alone.
+    """
+    grades = [
+        surface_grade_note(entry["fact_id"]) for entry in entries[:1]
+    ] if entries else []
+    rewritten = skipped = repaired = 0
+    for entry in entries:
+        path = fact_path(entry["fact_id"])
+        if not path.exists():
+            print(f"SURFACE_NOTES_MISSING|{shown(path)}")
+            skipped += 1
+            continue
+        existing = json.loads(path.read_text())
+        want = fact_for(entry)["notes"]
+        if existing.get("notes") == want:
+            continue
+        # Is the note still one this generator wrote, under any grade sentence?
+        template_head = ("Open in Axeyum. The external theorem declaration is "
+                         "prior art, not a locally constructed proof.")
+        template_tail = ("Screened against the mirror-divergence registry and "
+                         "the statable-here vocabulary before preregistration.")
+        current = existing.get("notes") or ""
+        if not (current.startswith(template_head)
+                and current.endswith(template_tail)):
+            print(f"SURFACE_NOTES_HAND_EDITED|{shown(path)}|left alone")
+            skipped += 1
+            continue
+        existing["notes"] = want
+        path.write_text(render_fact(existing))
+        rewritten += 1
+
+    # Second pass: the stale grade CLAUSE inside a note a lane extended.
+    # 35 facts that lanes closed carry their own prose around the generated
+    # sentence, so the template guard above correctly declines to overwrite
+    # them -- and they were still asserting the quotation grade, which a real
+    # Lean run has made false. Replacing the exact clause preserves every word
+    # the lane wrote. Guarded on an exact substring: a note that does not carry
+    # it verbatim is not touched.
+    for entry in entries:
+        path = fact_path(entry["fact_id"])
+        if not path.exists():
+            continue
+        existing = json.loads(path.read_text())
+        current = existing.get("notes") or ""
+        if STALE_GRADE_CLAUSE not in current:
+            continue
+        existing["notes"] = current.replace(
+            STALE_GRADE_CLAUSE,
+            ". " + surface_grade_note(entry["fact_id"]))
+        path.write_text(render_fact(existing))
+        repaired += 1
+    missing = sum(1 for e in entries if not fact_path(e["fact_id"]).exists())
+    print(f"SURFACE_NOTES_SYNCED|rewritten={rewritten}|clause_repaired={repaired}"
+          f"|hand_edited_left_alone={skipped - missing}|missing={missing}"
+          f"|entries={len(entries)}|grades={len(grades)}")
+    # A hand-edited note left alone is the guard WORKING, not a failure. A
+    # missing fact file is a real inconsistency between manifest and ledger.
+    return 1 if missing else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true",
                     help="re-derive everything and fail if the tree differs")
     ap.add_argument("--snapshot-from", type=pathlib.Path,
                     help="rewrite the environment snapshot from shape_search stdout")
+    ap.add_argument("--ingest-surface-attestation", type=pathlib.Path,
+                    metavar="RECORD",
+                    help="fold an attest-nursery-surface.py --json-out record "
+                         "into the manifest's surface_validation. Without it "
+                         "the stored grade is carried forward and re-matched, "
+                         "so a new draw's rows degrade to `unattested` rather "
+                         "than inheriting a claim nobody ran for them.")
+    ap.add_argument("--sync-surface-notes", action="store_true",
+                    help="rewrite the surface-grade sentence in extension fact "
+                         "notes from the attestation record. Touches ONLY a "
+                         "notes field still matching a generated template, so "
+                         "a hand-edited note is never clobbered.")
     args = ap.parse_args()
 
     try:
@@ -991,7 +1224,8 @@ def main() -> int:
         entries, reasons = select(inventory, env, vocabulary, registry, catalogued)
         v1_nursery = load_json(AUTOGEN / "nursery-v1.json")
         guard(entries, v1_nursery, env)
-        extension = build_extension(entries, reasons)
+        extension = build_extension(entries, reasons,
+                                    args.ingest_surface_attestation)
 
         outputs = {VOCABULARY: render(vocabulary), EXTENSION: render(extension)}
 
@@ -1005,6 +1239,9 @@ def main() -> int:
         else:
             for path, text in outputs.items():
                 path.write_text(text)
+
+        if args.sync_surface_notes:
+            return sync_surface_notes(entries)
 
         # Facts are reconciled, never rewritten -- see reconcile_facts.
         problems = reconcile_facts(entries, args.check)

@@ -83,6 +83,7 @@ matches your change:
 | Add a backend, theory procedure, or bounded fast path | [Adding a solver route](adding-a-solver-route.md) |
 | Classify SAT replay and UNSAT checking | [Proof and evidence obligations](proof-and-evidence-obligations.md) |
 | Produce a reproducible performance/capability record | [Benchmark artifacts](benchmark-artifacts.md) |
+| Confirm Lean accepts a preregistered statement (needs a BUILT Mathlib — s5) | [Lean surface attestation](lean-surface-attestation.md) |
 
 For concurrent work, read both the [worktree model](multi-agent-worktrees.md)
 and [multi-agent operating discipline](multi-agent-operations.md) before

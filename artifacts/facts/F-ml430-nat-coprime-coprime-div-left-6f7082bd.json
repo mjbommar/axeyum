@@ -10,7 +10,17 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-coprime-of-dvd-left-b0e2aa94", "F:nat-div-mul-cancel-of-dvd", "F:nat-div-zero", "F:nat-dvd-mul", "F:nat-le-succ-succ", "F:nat-mul-comm", "F:nat-mul-left-cancel-of-pos", "F:nat-zero-le", "F:nat-zero-mul"],
+  "depends_on": [
+    "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+    "F:nat-div-mul-cancel-of-dvd",
+    "F:nat-div-zero",
+    "F:nat-dvd-mul",
+    "F:nat-le-succ-succ",
+    "F:nat-mul-comm",
+    "F:nat-mul-left-cancel-of-pos",
+    "F:nat-zero-le",
+    "F:nat-zero-mul"
+  ],
   "evidence": [
     {
       "id": "kernel-Nat.coprime_div_left",
@@ -51,7 +61,7 @@
       }
     ]
   },
-  "notes": "CLOSED via the `totient-multiplicative` lane, 2026-08-29, as `Nat.coprime_div_left` -- axiom-free, confirmed against Mathlib v4.30's `Init.Data.Nat.Coprime` (Lean core, not mathlib4 itself) read directly from the pinned toolchain source at `~/.elan/toolchains/leanprover--lean4---v4.30.0/src/lean/Init/Data/Nat/Coprime.lean`, which proves `coprime_div_right` FROM `coprime_div_left` via `.symm`; this kernel built `coprime_div_left` directly as the mirror image of its own already-closed `coprime_div_right` instead (no `gcd_comm` exists in this prelude to route through `.symm`).\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "notes": "CLOSED via the `totient-multiplicative` lane, 2026-08-29, as `Nat.coprime_div_left` -- axiom-free, confirmed against Mathlib v4.30's `Init.Data.Nat.Coprime` (Lean core, not mathlib4 itself) read directly from the pinned toolchain source at `~/.elan/toolchains/leanprover--lean4---v4.30.0/src/lean/Init/Data/Nat/Coprime.lean`, which proves `coprime_div_right` FROM `coprime_div_left` via `.symm`; this kernel built `coprime_div_left` directly as the mirror image of its own already-closed `coprime_div_right` instead (no `gcd_comm` exists in this prelude to route through `.symm`).\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
   "axiom_footprint": [],
   "proof_route": "kernel-lean"
 }
