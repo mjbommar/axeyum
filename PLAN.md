@@ -174,6 +174,7 @@ now. Nothing was deleted.
 | 2026-08-30 | parity-finish | 3 axiom-free Nat kernel theorems closing the parity/division-by-two cluster's last blockers (`Nat.even_add`, `Nat.even_add'`, `Nat.even_div`); all 3 dispatched facts proved; two of three handoff sizings were wrong (one undersold, one — `even_div` — badly oversold: an existing unconditional lemma closed it in ~75 lines) |
 | 2026-08-30 | fermat-easy | 5 axiom-free Nat kernel theorems: the three closed `fermatNumber` reductions (0/1/2 = 3/5/17), `Nat.odd_fermatNumber`, and `Nat.fermatNumber_strictMono`; all fully symbolic except the three closed equalities (largest formed numeral 17) |
 | 2026-08-30 | pow-add-prime-finish | `Nat.pow_two_or_has_odd_factor` (odd-factor extraction, ordinary fuel-bounded `Nat.rec`, NOT `WellFounded.fix` — the prior handoff's sizing was wrong) and `Nat.pow_of_pow_add_prime` — closes `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3` (open → proved, axiom-free); 222/222 `nat_prelude::` |
+| 2026-08-30 | l0-s6-credit-transaction | Crash-safe two-phase-commit engine (`scripts/credit-transaction.py`) + gate (`scripts/check-credit-transaction.py`) + 27-test suite + 9-guard mutation table (`scripts/tests/test-credit-transaction*`), registered in justfile and check.sh; ADR-0785. |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
@@ -35793,6 +35794,64 @@ it stays fresh) —
 `multi_target_operations=4` (was 3). `python3 scripts/gen-adr-index.py
 --check` — unchanged (ADR-0602's front matter was not touched, only its
 body).
+
+**Done, l0-s6-credit-transaction, 2026-08-30.** [ADR-0785](docs/research/09-decisions/adr-0785-credit-transactions-two-phase-commit-with-a-crash-sweep-that-actually-crashes.md)
+records the full measurement. Summary:
+
+`scripts/credit-transaction.py` is a fault-injectable two-phase-commit engine
+over a self-contained fixture ledger (`facts/`, `receipts/`, `pins/`,
+`graph/`, `dashboards/`) — deliberately NOT wired into the real
+`artifacts/facts/` flip in this phase, since that surface
+(`scripts/validate-facts.py`, the real pins file) belongs to other lanes;
+scope here was the transaction mechanism and its verification.
+
+Measured, not asserted:
+
+- **Crash sweep**: one full transaction performs 26 low-level write ops.
+  Re-running with a fault injected at each of the 26 and then calling
+  `recover()` converges to byte-identical OLD or NEW ledger state at every
+  single one — never neither. The gate fails closed if the sweep ever finds
+  zero boundaries or if either outcome never occurs.
+- **Fresh read**: `commit()` re-reads the journal from disk rather than the
+  in-process object staging returned. Demonstrated by planting a sentinel
+  directly into the on-disk journal's `txn_id` field (a field no staleness
+  check reads, chosen so this is independent of the other four guards) and
+  confirming `commit()` preserves it rather than clobbering it with the
+  cached value.
+- **Four staleness dimensions**, four distinct exception classes:
+  `StaleReceiptError`, `StaleSourceError`, `StaleGraphError`,
+  `StaleCheckerError`. Each has its own fixture that is stale along exactly
+  one dimension while the other three stay fresh; a fifth, fully-fresh
+  fixture must commit without rejecting.
+- **Idempotent replay**: an `applied.json` registry short-circuits a repeat
+  `(fact_id, receipt)` before the cascade is even recomputed. A companion
+  test calls `propose/commit/apply` directly, twice, WITHOUT the guard, and
+  confirms a real duplicate cascade/dashboard entry — proving the guard is
+  load-bearing, not decorative.
+- **Mutation table**: 9 guards (fresh-read, 4 staleness checks, commit/apply
+  state preconditions, corrupt-staging refusal, idempotence short-circuit),
+  each deleted in a scratch copy (`scripts/tests/test-credit-transaction-mutations.sh`,
+  never the shared checkout), each killing EXACTLY its own designated canary
+  from a disjoint set of nine narrow tests. Full table in ADR-0785.
+- **Fails on absence**: `--empty-fixtures` / `--empty-boundaries` each exit 1
+  with a named reason, checked at both the function and subprocess level.
+
+27 tests in `scripts/tests/test-credit-transaction.py`, all green. Registered
+in both `justfile` (the `facts:` recipe) and `scripts/check.sh` as
+`credit-transaction`, `credit-transaction-tests`,
+`credit-transaction-mutations`.
+
+**What this transaction does NOT make atomic**, stated plainly: a receipt
+recorded via `record_latest_receipt()` OUTSIDE any transaction (the exact
+mechanism the stale-receipt fixture uses to simulate a concurrent lane) is,
+by construction, not itself covered by any transaction — it is the external
+"a checker already validated this" event that staleness checking exists to
+detect changes to, not something this mechanism protects.
+
+**Next step for another lane**: wire this engine into the real fact-flip
+path (`artifacts/facts/<id>.json`, `artifacts/ontology/settled-fact-statement-pins.json`,
+the generated dashboards) — that requires touching `scripts/validate-facts.py`
+and files this lane's scope excluded.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was
