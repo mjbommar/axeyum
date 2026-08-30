@@ -54,7 +54,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `NotEqualityGoal`, `TerminalNotDefEqNoRewrite`, `RequiredDeclarationUnavailable` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `close_terminal` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:direct-proof` @ `ce3e2a52e7c9` |
+| Technique | `TQ:direct-proof` |
 | Assurance / status | independently-checked / active |
 
 | Reach | Goal | Source |
@@ -77,7 +77,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `BinderBudgetExceeded`, `UnsupportedRecursorShape`, `NotEqualityGoal`, `TerminalNotDefEqNoRewrite` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `try_induction` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:proof-by-induction` @ `ce3e2a52e7c9` |
+| Technique | `TQ:proof-by-induction` |
 | Assurance / status | independently-checked / active |
 
 | Reach | Goal | Source |
@@ -104,7 +104,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `TerminalNotDefEqNoRewrite` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `try_congr_rewrite` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:substitution-technique` @ `ce3e2a52e7c9` |
+| Technique | `TQ:substitution-technique` |
 | Assurance / status | independently-checked / active |
 
 | Reach | Goal | Source |
@@ -129,7 +129,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `TerminalNotDefEqNoRewrite`, `BinderBudgetExceeded` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `try_residual_lemma` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:divide-and-conquer` @ `ce3e2a52e7c9` |
+| Technique | `TQ:divide-and-conquer` |
 | Assurance / status | independently-checked / active |
 
 | Reach | Goal | Source |
@@ -152,7 +152,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `TerminalNotDefEqNoRewrite` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `try_absurd_elimination` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:reductio-ad-absurdum` @ `ce3e2a52e7c9` |
+| Technique | `TQ:reductio-ad-absurdum` |
 | Assurance / status | mechanically-observed / active |
 
 | Reach | Goal | Source |
@@ -175,7 +175,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `TerminalNotDefEqNoRewrite` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `try_case_split_elimination` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:proof-by-cases` @ `ce3e2a52e7c9` |
+| Technique | `TQ:proof-by-cases` |
 | Assurance / status | mechanically-observed / active |
 
 | Reach | Goal | Source |
@@ -197,7 +197,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `TerminalNotDefEqNoRewrite` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `try_split_congruence` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:generalize-then-specialize` @ `ce3e2a52e7c9` |
+| Technique | `TQ:generalize-then-specialize` |
 | Assurance / status | mechanically-observed / active |
 
 | Reach | Goal | Source |
@@ -219,7 +219,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `TerminalNotDefEqNoRewrite` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/bounded_induction.rs` :: `try_absorbing_argument` |
 | Realizes | `K:bounded-structural-induction` |
-| Technique | `TQ:algebraic-manipulation` @ `ce3e2a52e7c9` |
+| Technique | `TQ:algebraic-manipulation` |
 | Assurance / status | mechanically-observed / active |
 
 | Reach | Goal | Source |
@@ -241,7 +241,7 @@ below two; so does a tactic with zero measured reach rows.
 | Declines with | `TerminalNotClosed`, `BinderBudgetExceeded`, `UnsupportedIffShape`, `UnsupportedRecursorShape`, `RequiredDeclarationUnavailable` |
 | Implemented by | `axeyum-lean-import` :: `crates/axeyum-lean-import/src/producers/modeq_family.rs` :: `close_terminal` |
 | Realizes | `K:modeq-equivalence-combinators` |
-| Technique | `TQ:change-representation` @ `ce3e2a52e7c9` |
+| Technique | `TQ:change-representation` |
 | Assurance / status | independently-checked / active |
 
 | Reach | Goal | Source |

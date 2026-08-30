@@ -129,7 +129,15 @@ def render(catalog: dict) -> str:
             f"| Declines with | {reasons} |",
             f"| Implemented by | `{implemented['crate']}` :: `{implemented['path']}` :: `{implemented['symbol']}` |",
             f"| Realizes | `{tactic['realizes']}` |",
-            f"| Technique | `{tactic['uses_technique']['id']}` @ `{tactic['uses_technique']['revision'][:12]}` |",
+            # `uses_technique` is an UNRESOLVED CITATION LABEL and carries an
+            # `id` and nothing else. ADR-0553 removed its `source` and
+            # `revision` fields on 2026-08-24 -- they had made a sibling
+            # checkout mandatory for every tactic, the strongest form that
+            # coupling took anywhere -- and the schema now pins the shape with
+            # `required: ["id"]` and `additionalProperties: false`. This line
+            # still read `['revision'][:12]`, so it raised KeyError on every
+            # run and this census has produced nothing since that day.
+            f"| Technique | `{tactic['uses_technique']['id']}` |",
             f"| Assurance / status | {tactic['assurance']} / {tactic['status']} |",
             "",
             "| Reach | Goal | Source |",
