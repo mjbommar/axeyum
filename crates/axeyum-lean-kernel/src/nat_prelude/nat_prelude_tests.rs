@@ -559,6 +559,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient_dvd_of_dvd,
         p.totient_mul_cofactor_bound,
         p.eq_or_eq_of_totient_eq_totient,
+        p.totient_gcd_mul_aux,
+        p.totient_gcd_mul_totient_mul,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -20888,6 +20890,119 @@ fn eq_or_eq_of_totient_eq_totient_applies_at_a_free_hypothesis_with_a_transposed
         f.k.axiom_footprint(p.eq_or_eq_of_totient_eq_totient)
             .is_empty(),
         "eq_or_eq_of_totient_eq_totient must rest on zero axioms"
+    );
+}
+
+/// `Nat.totient_gcd_mul_totient_mul : ∀ a b, Eq (mul (totient (gcd a b))
+/// (totient (mul a b))) (mul (mul (totient a) (totient b)) (gcd a b))` —
+/// `F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7`, the last of the three
+/// `ml430` totient mirrors (ADR-0668) and the non-coprime generalization of
+/// [`totient_mul_of_coprime`]. Free `(a,b)` for the statement shape, a
+/// negative control dropping the `gcd` factor (plain multiplicativity, a
+/// DIFFERENT and generally false statement), a coprime concrete pair
+/// (collapses to `totient_mul_of_coprime`), and a NON-coprime concrete pair
+/// where this identity is STRICTLY STRONGER than multiplicativity.
+#[test]
+fn totient_gcd_mul_totient_mul_applies_at_free_variables_and_a_non_coprime_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [a_fv, b_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let applied = f.const_app(p.totient_gcd_mul_totient_mul, &[a, b]);
+    let applied_ty = f
+        .k
+        .infer_in(applied, &mut ctx)
+        .expect("totient_gcd_mul_totient_mul must apply at free a, b");
+
+    let gcd_ab = f.gcd(a, b);
+    let tot_gcd = f.const_app(p.totient, &[gcd_ab]);
+    let mul_ab = f.mul(a, b);
+    let tot_ab = f.const_app(p.totient, &[mul_ab]);
+    let lhs = f.mul(tot_gcd, tot_ab);
+    let tot_a = f.const_app(p.totient, &[a]);
+    let tot_b = f.const_app(p.totient, &[b]);
+    let tot_a_tot_b = f.mul(tot_a, tot_b);
+    let rhs = f.mul(tot_a_tot_b, gcd_ab);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(applied_ty, expected),
+        "must state totient(gcd a b) * totient(a*b) = totient(a)*totient(b)*gcd(a,b)"
+    );
+
+    // Plain multiplicativity (dropping the gcd factor) is a DIFFERENT,
+    // generally false statement at non-coprime pairs.
+    let multiplicativity_only = f.eq(tot_ab, tot_a_tot_b);
+    assert!(
+        !f.k.def_eq(applied_ty, multiplicativity_only),
+        "the plain multiplicativity statement must not be def-eq to this one"
+    );
+
+    // --- coprime pair (3, 4): collapses to totient_mul_of_coprime ----------
+    let three = f.num(3);
+    let four = f.num(4);
+    let one = f.num(1);
+    let two = f.num(2);
+    let gcd_34 = f.gcd(three, four);
+    assert!(f.k.def_eq(gcd_34, one), "gcd 3 4 must compute to 1");
+    let twelve = f.mul(three, four);
+    let tot_3 = f.const_app(p.totient, &[three]);
+    let tot_4 = f.const_app(p.totient, &[four]);
+    let tot_12 = f.const_app(p.totient, &[twelve]);
+    assert!(f.k.def_eq(tot_3, two), "totient 3 must compute to 2");
+    assert!(f.k.def_eq(tot_4, two), "totient 4 must compute to 2");
+    assert!(f.k.def_eq(tot_12, four), "totient 12 must compute to 4");
+
+    // --- NON-coprime pair (6, 4): gcd = 2. Multiplicativity alone would
+    // claim totient 24 = totient 6 * totient 4 = 2*2 = 4, which is FALSE
+    // (totient 24 = 8); this theorem's identity holds because it carries
+    // the extra gcd factor: totient(2)*totient(24) = 1*8 = 8 =
+    // totient(6)*totient(4)*gcd(6,4) = 2*2*2 = 8.
+    let six = f.num(6);
+    let gcd_64 = f.gcd(six, four);
+    assert!(f.k.def_eq(gcd_64, two), "gcd 6 4 must compute to 2");
+    let twentyfour = f.mul(six, four);
+    let tot_6 = f.const_app(p.totient, &[six]);
+    let tot_24 = f.const_app(p.totient, &[twentyfour]);
+    let eight = f.num(8);
+    assert!(f.k.def_eq(tot_6, two), "totient 6 must compute to 2");
+    assert!(f.k.def_eq(tot_24, eight), "totient 24 must compute to 8");
+    let tot_6_tot_4 = f.mul(tot_6, tot_4);
+    assert!(
+        !f.k.def_eq(tot_24, tot_6_tot_4),
+        "plain multiplicativity is FALSE at the non-coprime pair (6,4)"
+    );
+    let tot_gcd_64 = f.const_app(p.totient, &[gcd_64]);
+    assert!(f.k.def_eq(tot_gcd_64, one), "totient 2 must compute to 1");
+    let lhs_64 = f.mul(tot_gcd_64, tot_24);
+    let rhs_64 = f.mul(tot_6_tot_4, gcd_64);
+    assert!(
+        f.k.def_eq(lhs_64, rhs_64),
+        "the full identity must compute correctly at the non-coprime pair (6,4)"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.totient_gcd_mul_totient_mul)
+            .is_empty(),
+        "totient_gcd_mul_totient_mul must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.totient_gcd_mul_aux).is_empty(),
+        "totient_gcd_mul_aux must rest on zero axioms"
     );
 }
 

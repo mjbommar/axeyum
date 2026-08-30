@@ -865,7 +865,16 @@ pub(super) fn declare_totient_gcd_mul_aux(d: &mut NatDev<'_>, p: &NatPrelude) ->
                                 let hq1 = d.lemma(p.one_le_right_of_mul, &[q, g1, h1_mul]);
                                 let lt_g1_kx = derive_cofactor_lt(d, &p, q, kx, g1, kx_eq_q_g1, hp2, hq1);
 
-                                let ih_g1 = d.apply(ih, &[g1, lt_g1_kx]);
+                                // `ih`'s type is stated in terms of the outer
+                                // fix's own bound variable `x`, not `kx` --
+                                // transport along `heq : Eq x kx` first
+                                // (mirroring `totient_dvd_chain.rs`'s
+                                // `lt_proof_kx` -> `lt_proof_x` step).
+                                let heq_sym_lt = d.symm(x, kx, heq);
+                                let motive_lt = d.eq_motive(kx, &|d, t| d.lt(g1, t));
+                                let lt_g1_x = d.transport(kx, motive_lt, lt_g1_kx, x, heq_sym_lt);
+
+                                let ih_g1 = d.apply(ih, &[g1, lt_g1_x]);
                                 let g1_refl = d.refl(g1);
                                 let ih_at = d.apply(ih_g1, &[a1, b1, g1_refl]);
 
