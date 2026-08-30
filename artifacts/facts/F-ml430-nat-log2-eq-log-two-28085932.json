@@ -6,17 +6,43 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, n.log2 = Nat.log 2 n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.log2_eq_log_two",
+    "kernel_statement": "theorem Nat.log2_eq_log_two : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.log2 x0) (AxNat.log (AxNat.succ (AxNat.succ AxNat.zero)) x0))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
     "F:ml430-nat-log-zero-right-8ea186db"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.log2_eq_log_two",
+      "kind": "kernel-term",
+      "supports": "`Nat.log2_eq_log_two` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.log2_eq_log_two\" && $3 == \"((x0 : AxNat) -> Eq.{1} AxNat (AxNat.log2 x0) (AxNat.log (AxNat.succ (AxNat.succ AxNat.zero)) x0))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.log2_eq_log_two"
+    },
+    {
+      "id": "footprint-Nat.log2_eq_log_two",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.log2_eq_log_two` (and for the `Nat.log2` definition it is about). The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane clog-log2-finish (2026-08-30), new kernel construction",
     "source": "statement-only extraction of `Nat.log2_eq_log_two` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -25,8 +51,17 @@
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
         "year": 2026,
         "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+      },
+      {
+        "who": "the Lean 4 core developers (Gabriel Ebner, Robin Arnez)",
+        "what": "`Nat.log2`'s own definition, `Init/Data/Nat/Log2.lean`",
+        "where": "leanprover/lean4 toolchain v4.30.0 (commit d024af09…, resolved by scripts/check-lean-gate.sh)",
+        "year": 2026,
+        "attribution": "read directly (not inferred) before writing any code, to apply the mirror-flip criterion: is `Nat.log2` a Mathlib THEOREM about a structurally different `def`, or does Lean core DEFINE it the way this prelude does?"
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-30. Mirror-flip determination: `Nat.log2` is Lean CORE (Init/Data/Nat/Log2.lean), not Mathlib -- Mathlib imports it unchanged and states `log2_eq_log_two` about it. Its own definition, read directly from the pinned toolchain source, is `n.rec (fun _ => 0) (fun _ ih n => (2.ble n).rec 0 ((ih (n/2)).succ)) n` -- a fuel-recursive `Nat.rec` with a NON-DEPENDENT motive `fun _ => Nat -> Nat`, fuel equal to the value itself (diagonal), single guard `2 <= n` (its own equation lemma `log2_def : n.log2 = if 2 <= n then (n/2).log2 + 1 else 0`). That is exactly this prelude's `Nat.logAux`/`Nat.log` fuel device (fuel argument second, motive the constant row `fun _ => Nat -> Nat`) specialized to the LITERAL base 2: `logAux`'s recursive step `if b <= n then (if 2 <= b then succ (logAux b f (n/b)) else 0) else 0` has its inner cut `2 <= b` become `2 <= 2` at `b := 2`, a literal-literal `Nat.ble` comparison that reduces to `Bool.true` by iota alone (independent of `f`/`n`), collapsing the whole guard to the single outer cut `2 <= n` -- Lean core's own equation, verbatim. Verified against `log2`'s own doc-comment examples before writing any code (`log2 0=0, 1=0, 2=1, 4=2, 7=2, 8=3`, all six matching `Nat.log 2` at those points) and again as a kernel evaluation test at seven concrete points plus a negative control. So this is the HONEST side of the mirror-flip criterion: Lean core defines `log2` the same way this prelude's `log` already works, not merely a theorem about an unrelated def. `Nat.log2` is declared directly as `fun n => Nat.log 2 n` (`crates/axeyum-lean-kernel/src/nat_prelude/log2.rs`) rather than re-deriving a second, independent fuel recursor, which makes `Nat.log2_eq_log_two` a one-line `Eq.refl` -- Mathlib's own proof of the same statement is not this short, because ITS `Nat.log` is well-founded recursion, a genuinely different recursion principle from ITS `log2` (its proof goes through `eq_of_forall_le_iff` plus `le_log2`/`le_log_iff_pow_le`); this prelude's `Nat.log` is already fuel-recursive at every base, so the two collapse to the identical term by construction and no such argument is needed here. The external Mathlib theorem and the Lean core definition both remain prior art; neither's proof term or tactic trace was consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command. Finishes the 14-of-14 `nat-log`/`nat-clog` mirror set started in `docs/plan/status/330-nat-log-mirrors.md`.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

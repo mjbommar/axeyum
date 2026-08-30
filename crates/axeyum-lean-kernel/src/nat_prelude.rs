@@ -178,6 +178,7 @@ mod lcm;
 mod lcm_gcd_lemmas;
 mod ldiff;
 mod log;
+mod log2;
 mod log_clog_order;
 mod lor;
 mod min_fac;
@@ -295,6 +296,7 @@ use lcm_gcd_lemmas::declare_lcm_gcd_lemmas;
 use ldiff::declare_ldiff_all;
 use log::declare_log_all;
 use log_clog_order::declare_log_clog_order_all;
+use log2::declare_log2_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use mod_mul_lemmas::declare_mod_mul_family;
@@ -3316,6 +3318,40 @@ pub struct NatPrelude {
     /// [`log_aux_antitone_base`](Self::log_aux_antitone_base)'s diagonal `f
     /// := n`.
     pub log_antitone_left: NameId,
+    /// `Nat.clog_aux_antitone_base : ∀ f n a b, Le a b → Lt 1 a → Lt 1 b →
+    /// Le (clogAux b f n) (clogAux a f n)` — [`log_aux_antitone_base`](Self::log_aux_antitone_base)'s
+    /// counterpart, with the two guard cuts' roles swapped: `clogAux`'s
+    /// outer cut (`2 ≤ base`) is a pure base cut, individually known true
+    /// from the statement's own `1 < a`/`1 < b` hypotheses (no case split);
+    /// its inner cut (`2 ≤ n`) is the SAME expression on both sides (the
+    /// value is fixed), so it needs exactly one case split. The recursive
+    /// step compares two different CEILING quotients at different bases —
+    /// not covered by [`div_le_div_left`](Self::div_le_div_left) directly,
+    /// which is about a shared numerator — so each side's quotient is first
+    /// rewritten to `(n-1)/base + 1` (a bridging identity between `(n +
+    /// base) - 1` and `(n - 1) + base`, valid given `1 ≤ n`, plus
+    /// `Nat.add_div_right`), turning the comparison into a floor comparison
+    /// at the shared numerator `n - 1`.
+    pub clog_aux_antitone_base: NameId,
+    /// `Nat.clog_antitone_left : ∀ {n}, AntitoneOn (fun b => clog b n)
+    /// (Set.Ioi 1)` (`Mathlib`: `Nat.clog_antitone_left`) — the
+    /// core-rendered unfolding at
+    /// [`clog_aux_antitone_base`](Self::clog_aux_antitone_base)'s diagonal
+    /// `f := n`.
+    pub clog_antitone_left: NameId,
+    /// `Nat.log2 : Nat → Nat`, `log2 n := log 2 n` (Lean **core**,
+    /// `Init/Data/Nat/Log2.lean` — Mathlib imports it unchanged). Lean
+    /// core's own `log2` is a fuel-recursive `Nat.rec` with a non-dependent
+    /// motive `fun _ => Nat → Nat`, fuel = the value itself, single guard
+    /// `2 ≤ n` — exactly `logAux`'s own device specialized to the literal
+    /// base `2` (the inner cut `2 ≤ 2` reduces to `Bool.true` by ι alone,
+    /// leaving only the outer cut `2 ≤ n`), so this prelude declares it
+    /// directly as `Nat.log 2` rather than re-deriving a second recursor.
+    pub log2: NameId,
+    /// `Nat.log2_eq_log_two : ∀ n, Eq (log2 n) (log 2 n)` (`Mathlib`:
+    /// `Nat.log2_eq_log_two`) — `Eq.refl`, since `log2 n` delta-unfolds
+    /// directly to `log 2 n` by construction.
+    pub log2_eq_log_two: NameId,
     /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
     /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
     /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
@@ -4763,6 +4799,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_le_div_left: kernel.name_str(nat, "div_le_div_left"),
             log_aux_antitone_base: kernel.name_str(nat, "log_aux_antitone_base"),
             log_antitone_left: kernel.name_str(nat, "log_antitone_left"),
+            clog_aux_antitone_base: kernel.name_str(nat, "clog_aux_antitone_base"),
+            clog_antitone_left: kernel.name_str(nat, "clog_antitone_left"),
+            log2: kernel.name_str(nat, "log2"),
+            log2_eq_log_two: kernel.name_str(nat, "log2_eq_log_two"),
             bit: kernel.name_str(nat, "bit"),
             bit_false: kernel.name_str(nat, "bit_false"),
             bit_true: kernel.name_str(nat, "bit_true"),
@@ -5494,6 +5534,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // and the `beq` bridges `eq_of_beq_eq_true`/`beq_eq_true_of_eq`/
         // `beq_eq_false_of_ne`. Nothing needs it, so it goes last.
         declare_totient_mul_all(&mut d, &p)?;
+        // Needs only `Nat.log` (`declare_log_all`, far above). Nothing needs
+        // it, so it goes last.
+        declare_log2_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

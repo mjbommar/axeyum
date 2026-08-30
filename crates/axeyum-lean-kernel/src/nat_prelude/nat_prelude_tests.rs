@@ -505,6 +505,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.sqrt,
         p.clog_aux,
         p.clog,
+        p.log2,
         p.bit,
         p.land_aux,
         p.land,
@@ -1048,6 +1049,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_le_div_left,
         p.log_aux_antitone_base,
         p.log_antitone_left,
+        p.clog_aux_antitone_base,
+        p.clog_antitone_left,
+        p.log2_eq_log_two,
         p.bit_false,
         p.bit_true,
         p.bit_true_pos,
@@ -12325,6 +12329,73 @@ fn log_computes_and_its_boundary_equations_apply() {
             "{name:?} must rest on zero axioms"
         );
     }
+}
+
+/// `Nat.log2` COMPUTES against Lean core's own `Init/Data/Nat/Log2.lean`
+/// doc-comment examples (`log2 0 = 0`, `log2 1 = 0`, `log2 2 = 1`,
+/// `log2 4 = 2`, `log2 7 = 2`, `log2 8 = 3`), and `log2_eq_log_two` applies
+/// with EXACTLY that statement (not some vacuously true instance).
+///
+/// `Nat.log2` is declared as `fun n => Nat.log 2 n` (module doc,
+/// `nat_prelude/log2.rs`), so this evaluation test is not merely checking
+/// `Nat.log` a second time under a different name: it is the concrete-
+/// instantiation half of the standing "a `Definition`'s kind-check does not
+/// mean its VALUE is correct" rule -- a hand-computed value against a
+/// reduced term, independent of whatever `Nat.log` itself is proved to do.
+#[test]
+fn log2_computes_and_equals_log_two() {
+    let mut f = Fixture::new();
+    let log2 = f.p.log2;
+
+    for (value, expected) in [(0u32, 0u32), (1, 0), (2, 1), (3, 1), (4, 2), (7, 2), (8, 3)] {
+        let n = f.num(value);
+        let lhs = f.const_app(log2, &[n]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "log2 {value} must reduce to {expected}"
+        );
+    }
+
+    let seven = f.num(7);
+    let log2_seven = f.const_app(log2, &[seven]);
+    let three = f.num(3);
+    assert!(
+        !f.k.def_eq(log2_seven, three),
+        "negative control: log2 7 is 2, not 3"
+    );
+
+    // `log2_eq_log_two` applies at a genuinely FREE `n`, pushed into an
+    // explicit `LocalContext` so `infer_in` can look up its type, and states
+    // EXACTLY `Eq (log2 n) (log 2 n)` -- not, say, an accidentally-vacuous
+    // `Eq (log2 n) (log2 n)` from a copy-paste of the wrong side.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let applied = f.const_app(f.p.log2_eq_log_two, &[n]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred =
+        f.k.infer_in(applied, &mut ctx)
+            .unwrap_or_else(|e| panic!("log2_eq_log_two must apply at a free n: {e:?}"));
+    let two = f.num(2);
+    let log_two_n = f.const_app(f.p.log, &[two, n]);
+    let log2_n = f.const_app(log2, &[n]);
+    let want = f.eq(log2_n, log_two_n);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "log2_eq_log_two must state Eq (log2 n) (log 2 n)"
+    );
+    assert!(
+        f.k.axiom_footprint(f.p.log2_eq_log_two).is_empty(),
+        "log2_eq_log_two must rest on zero axioms"
+    );
 }
 
 /// `Nat.sqrt` COMPUTES, and its two boundary theorems apply at concrete
