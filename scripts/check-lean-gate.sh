@@ -86,6 +86,22 @@ cd "$(dirname "$0")/.." || exit 2
 # headroom so ordinary churn does not trip it; RAISING it as suites grow is the
 # ratchet working, LOWERING it needs a reason in the commit message.
 #
+# Raised 229 -> 261 on 2026-08-30 by lane `l0-s5-kernel-differential` (S5 of the
+# ADR-0717 safety roadmap): `kernel_differential` adds THIRTY-TWO real-Lean
+# invocations, one per corpus case across all eight named subsystems
+# (conversion, universes, inductives, recursors, projections, literals,
+# quotient, proof irrelevance). Unlike the `real_lean_*_crosscheck` suites,
+# every case is authored TWICE, independently -- once via this crate's kernel
+# term-builder API, once as plain Lean surface syntax -- because
+# `Kernel::render_lean_module` only walks an already-admitted closure and so
+# cannot express the nearly-well-typed half of the corpus (a rejected
+# declaration never reaches `environment()`). Measured that day: 32/32 cases,
+# `checked=32`, zero unexplained accept/reject disagreement, one registered
+# incompleteness (`quotient::quot_sound_absent` -- this kernel has no
+# `Quot.sound` by design, ADR-0456). See ADR-0780 and
+# `artifacts/kernel-differential/mutant-kill-table.json` for the accompanying
+# kernel-source mutation pass (4 of 8 targeted guards killed).
+#
 # Raised 223 -> 229 on 2026-08-30 by lane `l0-s4-independent-replay` (S4 of the
 # ADR-0717 safety roadmap): `real_lean_replay_census` adds SIX real-Lean
 # invocations. It is the first check that grades independent replay PER
@@ -225,6 +241,7 @@ cd "$(dirname "$0")/.." || exit 2
 # them. `AXEYUM_REQUIRE_LEAN=1` does NOT catch it -- it fires only when a
 # toolchain cannot be resolved, and the abort happens before the probe.
 CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-230}"
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-261}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -288,6 +305,7 @@ axeyum-lean-kernel||real_lean_kernel_replay
 axeyum-lean-kernel||real_lean_creal_carrier_kernel_replay
 axeyum-lean-kernel||real_lean_replay_census
 axeyum-lean-kernel||real_lean_wellfounded_elaborator_divergence
+axeyum-lean-kernel||kernel_differential
 axeyum-lean-import||real_lean_wire_differential
 axeyum-solver|full|int_inequality_lean_reconstruct
 axeyum-solver|full|lean_module_fixtures

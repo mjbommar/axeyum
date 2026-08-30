@@ -995,6 +995,19 @@ step kernel-suite-partition-controls python3 -m unittest scripts.tests.test_chec
 step kernel-suite-partition ./scripts/check-kernel-suites.sh --list
 step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 step lean-gate ./scripts/check-lean-gate.sh
+# ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean), 32 hand-
+# authored cases across conversion, universes, inductives, recursors,
+# projections, literals, quotient and proof irrelevance -- each side authored
+# independently, since `Kernel::render_lean_module` cannot express the
+# nearly-well-typed half (a rejected declaration never reaches
+# `environment()`). The checker independently re-derives pass/fail from the
+# parsed test output (corpus/subsystem non-empty, Lean actually invoked, zero
+# P0, zero unexplained incompleteness) rather than trusting the exit code
+# alone; its own guards are each mutation-verified to kill exactly one
+# fixture. See ADR-0780 for the accompanying kernel-source mutation pass.
+step kernel-differential-gate-controls bash scripts/tests/test-kernel-differential-gate.sh
+step kernel-differential python3 scripts/check-kernel-differential.py
+step kernel-differential-mutants python3 scripts/check-kernel-differential-mutants.py
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step lean-u2-test-authority-tests python3 -m unittest scripts.tests.test_lean_u2_test_authority
