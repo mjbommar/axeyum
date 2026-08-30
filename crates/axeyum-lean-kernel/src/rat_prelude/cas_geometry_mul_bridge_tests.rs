@@ -210,7 +210,7 @@ pub(super) fn mul_poly(a: &[(Mono, i128)], b: &[(Mono, i128)]) -> IntPoly {
 /// Byte-for-byte the shape
 /// [`super::cas_geometry_bridge_tests::mono_expr`] produces — see
 /// [`mono_factors`].
-fn factors_expr(
+pub(super) fn factors_expr(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,
@@ -236,7 +236,7 @@ fn factors_expr(
 
 /// `Rat.one * x = x`. The prelude has `mul_one` and `mul_comm` but no
 /// `one_mul`, so it is derived rather than assumed.
-fn rat_one_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+pub(super) fn rat_one_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
     let one = rone(d, p);
     let lhs = rmul(d, one, x);
     let flipped = rmul(d, x, one);
@@ -248,7 +248,7 @@ fn rat_one_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
 
 /// `Rat.zero * x = Rat.zero`, derived from `mul_comm` and `mul_zero` for the
 /// same reason as [`rat_one_mul`].
-fn rat_zero_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+pub(super) fn rat_zero_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
     let zero = rzero(d, p);
     let lhs = rmul(d, zero, x);
     let flipped = rmul(d, x, zero);
@@ -262,7 +262,7 @@ fn rat_zero_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
 /// module's `add_left_comm`, and needed for the same reason: the kernel has no
 /// `mul_left_comm`, and the sorted merge needs to pull the right-hand list's
 /// head out past the whole left-hand product.
-fn mul_left_comm(
+pub(super) fn mul_left_comm(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     x: ExprId,
@@ -311,7 +311,7 @@ fn mul_left_comm(
 /// its product in `Rat.one` (a monomial is `ax * (bx * cy)`, not
 /// `ax * (bx * (cy * 1))`), which keeps the declared statement readable at the
 /// cost of these two extra branches.
-fn prove_mono_mul(
+pub(super) fn prove_mono_mul(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,

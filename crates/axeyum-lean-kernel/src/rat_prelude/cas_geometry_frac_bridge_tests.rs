@@ -125,7 +125,7 @@ pub(super) fn rat_poly(poly: &axeyum_cas::mvpoly::MvPoly) -> RatPoly {
 /// `a + b` on [`RatPoly`]s: a sorted merge dropping any monomial whose
 /// combined coefficient is zero. Mirrors [`prove_merge_rat`]'s recursion
 /// exactly, so the two cannot disagree about the answer.
-fn add_poly_rat(a: &[RatTerm], b: &[RatTerm]) -> RatPoly {
+pub(super) fn add_poly_rat(a: &[RatTerm], b: &[RatTerm]) -> RatPoly {
     let (mut i, mut j) = (0usize, 0usize);
     let mut out: RatPoly = Vec::new();
     while i < a.len() && j < b.len() {
@@ -199,7 +199,7 @@ pub(super) fn rat_lit(d: &mut IntDev<'_>, r: Rational) -> ExprId {
 }
 
 /// One term as `rat_lit(coefficient) * monomial`.
-fn term_expr_rat(
+pub(super) fn term_expr_rat(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,
@@ -213,7 +213,7 @@ fn term_expr_rat(
 /// A polynomial as a right-nested `Rat.add` of its terms, terminated in
 /// `Rat.zero` — same shape as
 /// `cas_geometry_bridge_tests::poly_expr`, over [`RatTerm`]s.
-fn poly_expr_rat(
+pub(super) fn poly_expr_rat(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     vars: &BTreeMap<String, ExprId>,
