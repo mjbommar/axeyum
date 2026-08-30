@@ -8,10 +8,31 @@
     "statement": "∀ (a b : ℕ), a ∣ b * a",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-dvd-mul-right-a87a83c4", "F:nat-mul-comm"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_mul_left 2>/dev/null | grep -Ec '^Nat\\.dvd_mul_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.dvd_mul_left",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.dvd_mul_left` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. Built in this session's `nat_prelude/gcd_dvd_mirrors.rs` (lane nat-gcd-dvd-mirrors), wired in via one `declare_gcd_dvd_mirrors` call. `dvd_mul a b : dvd a (mul a b)` transported along `mul_comm a b`. `nat_theorem_inventory`'s rendered type is `(x0:AxNat)->(x1:AxNat)->dvd x0 (mul x1 x0)`, matching this fact's `formal.statement`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified both ways: the real name greps to a count `-ge 1` (confirmed by direct run); grepping a made-up name (`Nat.dvd_mul_left_bogus`) exits non-zero (`nat_theorem_inventory` fails closed on an absent name -- measured: `error: no Nat theorem matches ... -- an absent theorem is a failed check, not an empty report`, exit 1).",
+      "supports": "∀ (a b : ℕ), a ∣ b * a"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names`, and `the_build_is_deterministic`/`every_promised_name_is_admitted_with_the_expected_kind` (both re-run on every `nat_prelude::` sweep) confirm the declaration is admitted at the exact rendered type checked below.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.dvd_mul_left"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "New proof, lane nat-gcd-dvd-mirrors: `dvd_mul(a,b)` gives `dvd a (mul a b)`; transported along `mul_comm a b` to `dvd a (mul b a)`. No new induction.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

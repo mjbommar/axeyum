@@ -30,7 +30,8 @@
     "F:nat-le-total",
     "F:nat-lt-or-eq-of-le",
     "F:nat-one-mul",
-    "F:nat-succ-mul"
+    "F:nat-succ-mul",
+    "F:ml430-nat-dvd-gcd-e5184fc5"
   ],
   "axiom_footprint": [],
   "evidence": [
