@@ -163,7 +163,7 @@ mod lean_probe;
 /// the byte pin alone cannot demonstrate.
 #[test]
 fn affine_growth_module_checks_in_real_lean() {
-    let mut script = parse_script(REPAIR_CONST_NTERM).expect("parse repair-const-nterm");
+    let script = parse_script(REPAIR_CONST_NTERM).expect("parse repair-const-nterm");
     let assertions = script.assertions.clone();
     let certificate = int_affine_growth_refutation(&script.arena, &assertions)
         .expect("target has ADR-0097 evidence");
