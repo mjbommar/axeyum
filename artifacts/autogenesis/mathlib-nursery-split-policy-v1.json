@@ -36,6 +36,40 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-08-30",
+      "family": "natural-logarithm",
+      "from": "held-out",
+      "to": "development",
+      "reason": "ordinary hand development in crates/axeyum-lean-kernel/src/nat_prelude/log.rs and clog.rs, unrelated to autogenesis, established Nat.log_zero_left and Nat.log_zero_right (3707c6040), Nat.log_of_lt (1dd090dff), Nat.log_le_self (722d9c204) and Nat.clog_zero_left/Nat.clog_zero_right (2ccf6322c) on 2026-08-28 -- ten days AFTER this family was preregistered blind on 2026-08-18 (2d65f19d8), when no Nat.log or Nat.clog existed at all. This family was genuinely blind and was genuinely spent; it is NOT the preregistered-against-existing-work shape of the natural-divisibility amendment recorded beside it. Measured 2026-08-30 against a 2,289-declaration kernel snapshot, 10 of the 21 rows' Mathlib source names already have a declaration here and 6 are settled in the ledger; the family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible and log.rs's shared fuel recursion is evidence about every remaining sibling. The already-proved sweep (92a61164e) that flipped six of them did NOT cause this: every declaration predates it, so the sweep recorded a spend rather than making one.",
+      "breach": {
+        "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+        "proof_shape": "natural-logarithm:unconditional-equality",
+        "operation_id": "no-operation-ordinary-nat-prelude-log-development",
+        "registered_commit": "3707c6040",
+        "registered_date": "2026-08-28",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
+    },
+    {
+      "date": "2026-08-30",
+      "family": "natural-divisibility",
+      "from": "held-out",
+      "to": "development",
+      "reason": "these rows were NEVER blind. The family belongs to nursery-v2-extension.json and was preregistered held-out on 2026-08-29 (94b3e61ee), by which time Nat.dvd_add and Nat.dvd_mul (46b47f869, 2026-08-13), Nat.dvd_add_iff_right (eccaf84ac, 2026-08-14) and Nat.dvd_antisymm (7de26df70, 2026-08-24) had been admitted for 5 to 16 days. ADR-0615 recorded this as owed at 4 of 10 by the name screen; measured 2026-08-30 the true figure is at least 5 of 10, because F:ml430-nat-dvd-mul-right-a87a83c4 is satisfied by a declaration we named Nat.dvd_mul -- a NAME screen such as R9 is structurally blind to a proposition already proved under a different name, and only the type-comparing ranker in scripts/brief-step0.py saw it. Four rows are settled; three further rows are exact-constant near-misses that were manually rejected. The family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible and nat_prelude/divisibility.rs is shared machinery for every remaining sibling. This amendment also discharges the debt ADR-0615 recorded as owed.",
+      "breach": {
+        "fact_id": "F:ml430-nat-dvd-add-0c5bcc91",
+        "proof_shape": "natural-divisibility:conditional-proposition",
+        "operation_id": "no-operation-preregistered-against-existing-nat-prelude-divisibility",
+        "registered_commit": "94b3e61ee",
+        "registered_date": "2026-08-29",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "authority": {
@@ -53,7 +87,7 @@
     "natural-factorial": "train",
     "natural-fibonacci": "train",
     "natural-gcd": "development",
-    "natural-logarithm": "held-out",
+    "natural-logarithm": "development",
     "natural-modular-equivalence": "development",
     "natural-primes": "development",
     "natural-square-root": "held-out"

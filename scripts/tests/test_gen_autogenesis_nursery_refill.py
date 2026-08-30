@@ -81,12 +81,32 @@ def real_validation() -> dict:
     return manifest["surface_validation"]
 
 
-def frozen_manifest(partitions: dict[str, str]) -> dict:
+def frozen_manifest(partitions: dict[str, str],
+                    preregistered: dict[str, str] | None = None) -> dict:
+    """A manifest whose EFFECTIVE partitions are `partitions`.
+
+    `preregistered` defaults to the same dict, which is the unamended case. Pass
+    a different one to model a family the ADR-0542 ledger has moved.
+    """
     entries = [entry(f, p, f"Test.{f}_lemma") for f, p in sorted(partitions.items())]
-    body = {"family_partitions": dict(partitions), "entries": entries}
+    body = {
+        "family_partitions": dict(partitions),
+        "preregistered_family_partitions": dict(preregistered or partitions),
+        "entries": entries,
+    }
     body["extension_sha256"] = MODULE.digest(
         {k: v for k, v in body.items() if k != "extension_sha256"})
     return body
+
+
+def ledger(*amendments: dict) -> mock._patch:
+    """Patch the ADR-0542 ledger to exactly these amendments."""
+    return mock.patch.object(MODULE, "amendments",
+                             lambda: {a["family"]: a for a in amendments})
+
+
+def amendment(family: str, was: str, now: str) -> dict:
+    return {"family": family, "from": was, "to": now}
 
 
 class Harness:
@@ -128,9 +148,19 @@ class FalsePositiveControl(unittest.TestCase):
                      real_validation())
 
     def test_real_manifest_is_its_own_freeze(self):
+        """The freeze is the PREREGISTERED assignment, and the effective one
+        differs from it at exactly the families the ADR-0542 ledger names."""
         frozen = MODULE.frozen_partitions()
-        self.assertEqual(frozen, MODULE.assign_partitions())
         self.assertGreater(len(frozen), 0)
+        self.assertEqual(frozen, MODULE.assign_partitions())
+        preregistered = MODULE.preregistered_assignment()
+        moved = {f for f in frozen if preregistered[f] != frozen[f]}
+        amended = set(MODULE.amendments()) & set(frozen)
+        self.assertEqual(moved, amended)
+        # ...and this is not vacuous: the natural-divisibility spend is real.
+        self.assertIn("natural-divisibility", moved)
+        self.assertEqual(preregistered["natural-divisibility"], "held-out")
+        self.assertEqual(frozen["natural-divisibility"], "development")
 
 
 class CeilingTests(unittest.TestCase):
@@ -230,20 +260,6 @@ class FreezeTests(unittest.TestCase):
         self.assertEqual(assignment["a-new"], "held-out")
         self.assertEqual(assignment["b-new"], "development")
 
-    def test_a_moved_frozen_partition_is_refused(self):
-        """The real hazard: the emitted rows AGREE with a shifted assignment,
-        so R6 is satisfied and only the freeze can see it. This is what adding
-        four families to `FAMILY_MODULES` did on 2026-08-29 -- it moved seven
-        of eight -- and it is why R6 is not a substitute for R8."""
-        frozen = {"m-alpha": "held-out", "m-bravo": "development"}
-        Harness(self, frozen, frozen=frozen)
-        shifted = {"m-alpha": "train", "m-bravo": "held-out"}
-        rows = [entry("m-alpha", "train", "Test.m-alpha_x"),
-                entry("m-bravo", "held-out", "Test.m-bravo_x")]
-        with mock.patch.object(MODULE, "assign_partitions", lambda: shifted):
-            with self.assertRaisesRegex(MODULE.RefillError, r"R8 'm-alpha' was pre"):
-                MODULE.guard(rows, v1_nursery(), set(), validation([]))
-
     def test_dropping_a_preregistered_family_is_refused(self):
         frozen = {"m-alpha": "held-out", "m-bravo": "development"}
         Harness(self, {"m-alpha": "held-out"}, frozen=frozen)
@@ -270,6 +286,100 @@ class FreezeTests(unittest.TestCase):
         harness.extension.write_text(json.dumps(body))
         with self.assertRaisesRegex(MODULE.RefillError, r"disagreeing with its own"):
             MODULE.frozen_partitions()
+
+
+class AmendmentTests(unittest.TestCase):
+    """R10 -- an effective partition may leave its preregistered one only
+    through a recorded ADR-0542 breach.
+
+    The hole this closes: `frozen_partitions` used to freeze
+    `family_partitions`, so a hand edit that moved a family AND recomputed
+    `extension_sha256` made itself the freeze and regenerated clean. The digest
+    catches a careless edit, never a deliberate one, and until 2026-08-30
+    nothing tied this manifest to the ledger at all.
+    """
+
+    def _harness(self, effective, preregistered):
+        harness = Harness(self, effective, frozen=preregistered)
+        harness.extension.write_text(
+            json.dumps(frozen_manifest(effective, preregistered)))
+        return [entry(f, p, f"Test.{f}_x") for f, p in sorted(effective.items())]
+
+    def test_a_moved_partition_with_no_amendment_is_refused(self):
+        """The hazard R8's freeze-comparison used to cover, and the one a
+        digest cannot: the manifest agrees with itself in every direction."""
+        rows = self._harness({"m-alpha": "train", "m-bravo": "development"},
+                             {"m-alpha": "held-out", "m-bravo": "development"})
+        with ledger():
+            with self.assertRaisesRegex(
+                    MODULE.RefillError, r"R10 'm-alpha' was preregistered"):
+                MODULE.guard(rows, v1_nursery(), set(), validation([]))
+
+    def test_a_moved_partition_with_a_matching_amendment_is_accepted(self):
+        """The same manifest, one ledger row different. Without this pair the
+        guard above could be satisfied by refusing every move."""
+        rows = self._harness({"m-alpha": "development", "m-bravo": "development"},
+                             {"m-alpha": "held-out", "m-bravo": "development"})
+        with ledger(amendment("m-alpha", "held-out", "development")):
+            MODULE.guard(rows, v1_nursery(), set(), validation([]))
+
+    def test_an_amendment_recording_the_wrong_origin_is_refused(self):
+        rows = self._harness({"m-alpha": "development", "m-bravo": "development"},
+                             {"m-alpha": "held-out", "m-bravo": "development"})
+        with ledger(amendment("m-alpha", "train", "development")):
+            with self.assertRaisesRegex(MODULE.RefillError, r"R10 the 'm-alpha' amend"):
+                MODULE.guard(rows, v1_nursery(), set(), validation([]))
+
+    def test_an_amendment_recording_the_wrong_destination_is_refused(self):
+        rows = self._harness({"m-alpha": "development", "m-bravo": "development"},
+                             {"m-alpha": "held-out", "m-bravo": "development"})
+        with ledger(amendment("m-alpha", "held-out", "train")):
+            with self.assertRaisesRegex(MODULE.RefillError, r"R10 the 'm-alpha' amend"):
+                MODULE.guard(rows, v1_nursery(), set(), validation([]))
+
+    def test_an_amended_family_cannot_be_recycled_into_held_out(self):
+        """ADR-0542: the spend is irreversible. A family whose blind value is
+        gone may not be put back into the blind population, even with a ledger
+        row that describes the move accurately."""
+        rows = self._harness({"m-alpha": "held-out", "m-bravo": "development"},
+                             {"m-alpha": "development", "m-bravo": "development"})
+        with ledger(amendment("m-alpha", "development", "held-out")):
+            with self.assertRaisesRegex(
+                    MODULE.RefillError, r"R10 amended family 'm-alpha'"):
+                MODULE.guard(rows, v1_nursery(), set(), validation([]))
+
+    def test_a_manifest_without_a_preregistered_freeze_is_refused(self):
+        """No fall back to `family_partitions`: a manifest that dropped the key
+        would otherwise make its own amended partitions the freeze."""
+        harness = Harness(self, {"m-alpha": "held-out"},
+                          frozen={"m-alpha": "held-out"})
+        body = frozen_manifest({"m-alpha": "held-out"})
+        del body["preregistered_family_partitions"]
+        body["extension_sha256"] = MODULE.digest(
+            {k: v for k, v in body.items() if k != "extension_sha256"})
+        harness.extension.write_text(json.dumps(body))
+        with self.assertRaisesRegex(
+                MODULE.RefillError, r"no preregistered_family_partitions"):
+            MODULE.preregistered_freeze()
+
+    def test_a_missing_ledger_is_an_error_not_a_quiet_pass(self):
+        with mock.patch.object(MODULE, "SPLIT_POLICY",
+                               pathlib.Path("/nonexistent/ledger.json")):
+            with self.assertRaisesRegex(
+                    MODULE.RefillError, r"amendment ledger is missing"):
+                MODULE.amendments()
+
+    def test_a_family_amended_twice_is_refused(self):
+        """A held-out spend is irreversible, so a second move has no defined
+        `from` and R10's origin check would silently read whichever row won."""
+        policy = pathlib.Path(tempfile.mkdtemp()) / "policy.json"
+        policy.write_text(json.dumps({"amendments": [
+            amendment("m-alpha", "held-out", "development"),
+            amendment("m-alpha", "development", "train"),
+        ]}))
+        with mock.patch.object(MODULE, "SPLIT_POLICY", policy):
+            with self.assertRaisesRegex(MODULE.RefillError, r"amends 'm-alpha' twice"):
+                MODULE.amendments()
 
 
 class BlindnessTests(unittest.TestCase):

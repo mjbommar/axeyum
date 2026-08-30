@@ -59,6 +59,40 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-08-30",
+      "family": "natural-logarithm",
+      "from": "held-out",
+      "to": "development",
+      "reason": "ordinary hand development in crates/axeyum-lean-kernel/src/nat_prelude/log.rs and clog.rs, unrelated to autogenesis, established Nat.log_zero_left and Nat.log_zero_right (3707c6040), Nat.log_of_lt (1dd090dff), Nat.log_le_self (722d9c204) and Nat.clog_zero_left/Nat.clog_zero_right (2ccf6322c) on 2026-08-28 -- ten days AFTER this family was preregistered blind on 2026-08-18 (2d65f19d8), when no Nat.log or Nat.clog existed at all. This family was genuinely blind and was genuinely spent; it is NOT the preregistered-against-existing-work shape of the natural-divisibility amendment recorded beside it. Measured 2026-08-30 against a 2,289-declaration kernel snapshot, 10 of the 21 rows' Mathlib source names already have a declaration here and 6 are settled in the ledger; the family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible and log.rs's shared fuel recursion is evidence about every remaining sibling. The already-proved sweep (92a61164e) that flipped six of them did NOT cause this: every declaration predates it, so the sweep recorded a spend rather than making one.",
+      "breach": {
+        "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+        "proof_shape": "natural-logarithm:unconditional-equality",
+        "operation_id": "no-operation-ordinary-nat-prelude-log-development",
+        "registered_commit": "3707c6040",
+        "registered_date": "2026-08-28",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
+    },
+    {
+      "date": "2026-08-30",
+      "family": "natural-divisibility",
+      "from": "held-out",
+      "to": "development",
+      "reason": "these rows were NEVER blind. The family belongs to nursery-v2-extension.json and was preregistered held-out on 2026-08-29 (94b3e61ee), by which time Nat.dvd_add and Nat.dvd_mul (46b47f869, 2026-08-13), Nat.dvd_add_iff_right (eccaf84ac, 2026-08-14) and Nat.dvd_antisymm (7de26df70, 2026-08-24) had been admitted for 5 to 16 days. ADR-0615 recorded this as owed at 4 of 10 by the name screen; measured 2026-08-30 the true figure is at least 5 of 10, because F:ml430-nat-dvd-mul-right-a87a83c4 is satisfied by a declaration we named Nat.dvd_mul -- a NAME screen such as R9 is structurally blind to a proposition already proved under a different name, and only the type-comparing ranker in scripts/brief-step0.py saw it. Four rows are settled; three further rows are exact-constant near-misses that were manually rejected. The family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible and nat_prelude/divisibility.rs is shared machinery for every remaining sibling. This amendment also discharges the debt ADR-0615 recorded as owed.",
+      "breach": {
+        "fact_id": "F:ml430-nat-dvd-add-0c5bcc91",
+        "proof_shape": "natural-divisibility:conditional-proposition",
+        "operation_id": "no-operation-preregistered-against-existing-nat-prelude-divisibility",
+        "registered_commit": "94b3e61ee",
+        "registered_date": "2026-08-29",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "entries": [
@@ -832,7 +866,7 @@
     },
     {
       "fact_id": "F:ml430-mutation-e8583599cfae2d40cefae3f0",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "generated-mutation",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-relation",
@@ -1140,7 +1174,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:higher-order-property",
@@ -1154,7 +1188,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-mono-right-8d87a410",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:conditional-proposition",
@@ -1168,7 +1202,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-monotone-48fe50c6",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:higher-order-property",
@@ -1182,7 +1216,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-one-left-b496af12",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -1196,7 +1230,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-one-right-1ce3d52f",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -1210,7 +1244,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-pos-00852cb8",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:conditional-proposition",
@@ -1224,7 +1258,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-zero-left-1c61a5bf",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -1238,7 +1272,7 @@
     },
     {
       "fact_id": "F:ml430-nat-clog-zero-right-d42d47b1",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -2148,7 +2182,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:higher-order-property",
@@ -2162,7 +2196,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-le-clog-ac8ab2d4",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-relation",
@@ -2176,7 +2210,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-le-self-da387172",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-relation",
@@ -2190,7 +2224,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-lt-self-529f89fa",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:conditional-proposition",
@@ -2204,7 +2238,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-mono-right-b8939fee",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:conditional-proposition",
@@ -2218,7 +2252,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-monotone-52fad774",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:higher-order-property",
@@ -2232,7 +2266,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-of-lt-89eaf42e",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:conditional-proposition",
@@ -2246,7 +2280,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-one-left-73efc119",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -2260,7 +2294,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-one-right-282332ef",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -2274,7 +2308,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -2288,7 +2322,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log-zero-right-8ea186db",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -2302,7 +2336,7 @@
     },
     {
       "fact_id": "F:ml430-nat-log2-eq-log-two-28085932",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-logarithm",
       "proof_shape": "natural-logarithm:unconditional-equality",
@@ -3087,7 +3121,7 @@
   ],
   "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
   "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
-  "split_policy_sha256": "5acde2057cae7eb8f57a326bbf89b20fb76b95dff80bcca62fc61d3cd0d3a8a8",
+  "split_policy_sha256": "19517c602ce9d3863e4b8fde00d66105194f7fdd3d4ef4b242ca9ccea167343b",
   "source_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
   "notes": "Autogenesis-1 remains a disjoint longitudinal regression. The 214 Mathlib statements are frozen before target outcomes; source groups, families, family-scoped proof shapes, mutations, and declared dependency components cannot cross evaluation partitions."
 }

@@ -108,6 +108,17 @@ def held_out_ids(*manifests: pathlib.Path) -> set[str]:
                 ident = entry.get("fact_id")
                 if isinstance(ident, str):
                     held.add(ident)
+    # FAIL-CLOSED, for the same reason `check-autogenesis-holdout-isolation.py`
+    # does: an empty held-out population makes `screen`'s refusal unreachable,
+    # so this tool would publish a per-fact already-proved verdict for every
+    # blind row while printing exactly what it prints when it works. A guard
+    # whose subject has vanished reports the same "no violations" as a guard
+    # that works. Added 2026-08-30 with the ADR-0617 refusal in
+    # `brief-step0.py`; this tool always had the refusal and never had this.
+    if not held:
+        die(f"no held-out rows in {' or '.join(str(m.name) for m in manifests)}; "
+            f"the refusal below would be unreachable and every blind row would "
+            f"be screened")
     return held
 
 

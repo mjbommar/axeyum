@@ -97,6 +97,11 @@ REGISTRY = AUTOGEN / "mirror-divergence-registry.json"
 ENV_SNAPSHOT = AUTOGEN / "kernel-environment-snapshot-v1.json"
 VOCABULARY = AUTOGEN / "mathlib-statable-vocabulary-v1.json"
 EXTENSION = AUTOGEN / "nursery-v2-extension.json"
+# The ADR-0542 amendment ledger. It is named `-v1` because nursery-v1 was the
+# first population to need one; it is the ledger for BOTH cohorts, and
+# `check-autogenesis-holdout-isolation.py` names it as the single repair site
+# for a spent held-out family regardless of which manifest carries the row.
+SPLIT_POLICY = AUTOGEN / "mathlib-nursery-split-policy-v1.json"
 
 INVENTORY = pathlib.Path(
     "/nas3/data/axeyum/autogenesis/sources/"
@@ -457,6 +462,15 @@ def frozen_partitions() -> dict[str, str]:
 
     The manifest is trusted only against its own digest, so a hand-edited
     `family_partitions` cannot become the frozen truth by being on disk.
+
+    **It freezes `preregistered_family_partitions`, not `family_partitions`.**
+    Those are the same dict until an ADR-0542 amendment moves a family, and
+    keeping them separate is what makes the amendment enforceable. The digest
+    stops a hand edit that FORGETS to update it; it cannot stop a deliberate
+    edit that recomputes it, and before this split there was no immovable
+    reference to check an effective partition against -- the manifest was its
+    own authority, so moving `natural-divisibility` out of held-out with no
+    amendment record anywhere would have regenerated clean. See R10.
     """
     if not EXTENSION.is_file():
         return {}
@@ -480,19 +494,94 @@ def frozen_partitions() -> dict[str, str]:
     return dict(partitions)
 
 
-def assign_partitions() -> dict[str, str]:
+def preregistered_freeze() -> dict[str, str]:
+    """What each earlier draw PREREGISTERED, before any ADR-0542 amendment.
+
+    REQUIRED once the manifest exists, with no fall back to
+    `family_partitions`: falling back would let a manifest that dropped the key
+    make its own amended partitions the preregistered truth, which is exactly
+    the hole R10 closes.
+    """
+    if not EXTENSION.is_file():
+        return {}
+    manifest = load_json(EXTENSION)
+    partitions = manifest.get("preregistered_family_partitions")
+    if not isinstance(partitions, dict) or not partitions:
+        raise RefillError(
+            f"{EXTENSION.name} carries no preregistered_family_partitions, so "
+            f"there is nothing to check its effective partitions against")
+    return dict(partitions)
+
+
+def amendments() -> dict[str, dict[str, Any]]:
+    """The ADR-0542 ledger, keyed by family.
+
+    Required, not optional: an absent or unreadable ledger means a spend could
+    not be checked, and a guard whose subject has vanished reports the same
+    "no violations" as a guard that works.
+    """
+    if not SPLIT_POLICY.is_file():
+        raise RefillError(
+            f"the ADR-0542 amendment ledger is missing at {SPLIT_POLICY}; "
+            f"without it no partition move can be checked against a recorded "
+            f"breach")
+    ledger = load_json(SPLIT_POLICY)
+    recorded = ledger.get("amendments")
+    if not isinstance(recorded, list):
+        raise RefillError(f"{SPLIT_POLICY.name} carries no amendments list")
+    by_family: dict[str, dict[str, Any]] = {}
+    for item in recorded:
+        if not isinstance(item, dict) or "family" not in item:
+            raise RefillError(f"{SPLIT_POLICY.name} has a malformed amendment")
+        family = item["family"]
+        if family in by_family:
+            raise RefillError(
+                f"{SPLIT_POLICY.name} amends {family!r} twice; a held-out spend "
+                f"is irreversible, so a second move has no defined `from`")
+        by_family[family] = item
+    return by_family
+
+
+def _with_cycle(frozen: dict[str, str]) -> dict[str, str]:
     """Frozen families keep their partition; the cycle runs over the NEW ones.
 
     The cycle restarts at `held-out` for each draw's new family set, which is
     what makes R5's "at least two new held-out families" reachable at four
     families. Continuing one global cycle across draws would not.
     """
-    frozen = frozen_partitions()
     assignment = {f: p for f, p in frozen.items() if f in FAMILY_MODULES}
     fresh = sorted((f for f in FAMILY_MODULES if f not in assignment),
                    key=lambda f: FAMILY_MODULES[f][0])
     for index, family in enumerate(fresh):
         assignment[family] = PARTITION_CYCLE[index % len(PARTITION_CYCLE)]
+    return assignment
+
+
+def preregistered_assignment() -> dict[str, str]:
+    """What each draw preregistered, plus the cycle for this draw's new rows.
+
+    No amendment touches this: what a draw preregistered is a historical fact,
+    and it is the immovable reference R10 checks the effective assignment
+    against.
+    """
+    return _with_cycle(preregistered_freeze())
+
+
+def assign_partitions() -> dict[str, str]:
+    """The EFFECTIVE assignment: the manifest's own, plus ADR-0542 amendments.
+
+    The ledger is applied here so that recording an amendment and regenerating
+    is enough to move the family -- and applying one twice is a no-op, because
+    the regenerated manifest already carries `to`. It is applied ON TOP of the
+    manifest rather than on top of `preregistered_assignment()`, which matters:
+    the latter would make R10's no-amendment branch unreachable, since the only
+    way for the two assignments to differ would be a ledger row. R10 has to be
+    able to see a manifest someone moved by hand.
+    """
+    assignment = _with_cycle(frozen_partitions())
+    for family, amendment in amendments().items():
+        if family in assignment:
+            assignment[family] = amendment["to"]
     return assignment
 
 
@@ -720,6 +809,62 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
     """
     partitions = assign_partitions()
     frozen = frozen_partitions()
+
+    # R10 -- an effective partition that differs from the preregistered one is
+    # a SPEND, and it is legible only if the ADR-0542 ledger records it.
+    #
+    # Before this rule the extension manifest was its own authority: R8 froze
+    # against `family_partitions`, so a hand edit that moved a family AND
+    # recomputed `extension_sha256` regenerated perfectly clean, with no
+    # amendment anywhere. The digest catches a careless edit, never a
+    # deliberate one. Measured 2026-08-30 while amending `natural-divisibility`
+    # -- the move the gate's own message demands -- which is when it became
+    # clear the ledger and this manifest had no link at all.
+    #
+    # It reads the two dicts the MANIFEST records, not the two this module
+    # recomputes. That is not a detail: `assign_partitions()` applies the ledger
+    # last, so a recomputed comparison would make both the no-amendment branch
+    # and the destination branch unreachable -- the assignment could differ from
+    # the preregistered one only BY a ledger row, and would then agree with it
+    # by construction. A guard that cannot fail is worse than no guard, and two
+    # drafts of this rule had that shape before it was measured.
+    #
+    # It also runs BEFORE R6. R6 compares entries against the effective
+    # assignment; if the assignment itself is illegitimate, saying so is the
+    # more informative failure, and otherwise a bogus ledger row is reported as
+    # an entry disagreement.
+    ledger = amendments()
+    preregistered = preregistered_freeze()
+    for family, now in sorted(frozen.items()):
+        was = preregistered.get(family)
+        if was is None:
+            raise RefillError(
+                f"R10 {family!r} has an effective partition {now!r} and no "
+                f"preregistered one, so nothing can say whether it moved")
+        amendment = ledger.get(family)
+        if amendment is None:
+            if now != was:
+                raise RefillError(
+                    f"R10 {family!r} was preregistered {was!r} and the manifest "
+                    f"assigns {now!r}, with no ADR-0542 amendment recording the "
+                    f"spend; record the breach in {SPLIT_POLICY.name} or restore "
+                    f"the preregistered partition")
+            continue
+        if amendment.get("from") != was:
+            raise RefillError(
+                f"R10 the {family!r} amendment records from="
+                f"{amendment.get('from')!r} but the family was preregistered "
+                f"{was!r}; the ledger does not describe this manifest")
+        if amendment.get("to") != now:
+            raise RefillError(
+                f"R10 the {family!r} amendment records to="
+                f"{amendment.get('to')!r} but the manifest assigns {now!r}")
+        if now == "held-out":
+            raise RefillError(
+                f"R10 amended family {family!r} is assigned to held-out; a "
+                f"family whose blind-evaluation value was spent cannot be "
+                f"recycled into the blind population")
+
     # R4 and R5 ask what THIS draw adds. Once a second draw exists, every
     # earlier family is still in `entries` (the manifest is regenerated whole),
     # so counting over all of them would make both rules pass on draw-1's rows
@@ -804,18 +949,17 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
         if list(routes) != sorted(set(routes)):
             raise RefillError(f"R7 route hypotheses for {family} are not sorted/unique")
 
-    # R8 -- a family an earlier draw preregistered keeps its partition, and
-    # keeps existing. R6 above cannot see either failure: it re-derives the
-    # assignment from the same function the emitter used, so a cycle that
-    # shifted agrees with itself.
-    for entry in entries:
-        was = frozen.get(entry["family"])
-        if was is not None and entry["partition"] != was:
-            raise RefillError(
-                f"R8 {entry['family']!r} was preregistered as {was!r} and this "
-                f"draw assigns {entry['partition']!r}; a preregistered "
-                f"partition may only move through the ADR-0542 amendment "
-                f"ledger, never by regeneration")
+    # R8 -- a family an earlier draw preregistered keeps EXISTING.
+    #
+    # R8 used to also refuse a MOVED partition, by comparing each entry against
+    # `frozen`. That check is now R10's, and the split is not cosmetic: an
+    # amended family's effective partition legitimately differs from its
+    # preregistered one, so the old comparison would have refused exactly the
+    # repair ADR-0542 prescribes. Re-aiming R8 at `preregistered_assignment()`
+    # instead was tried and is WORSE THAN USELESS -- that function derives from
+    # `frozen` itself, so the two can never disagree and the guard cannot fail.
+    # R6 ties each entry to the effective assignment; R10 ties the effective
+    # assignment to the preregistered one; together they cover what R8 covered.
     dropped = sorted(set(frozen) - set(FAMILY_MODULES))
     if dropped:
         raise RefillError(
@@ -836,7 +980,6 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
             f"R9 {len(contaminated)} held-out candidate(s) already have a "
             f"declaration of the same Mathlib name in the kernel environment, "
             f"so they are not blind: {contaminated[:5]}")
-
 
 def stored_surface_validation() -> dict[str, Any]:
     """What the manifest already records about its own surface grade."""
@@ -1098,6 +1241,11 @@ def build_extension(entries: list[dict[str, Any]],
             "eight -- moving natural-division, 8 of whose 10 mirrors are "
             "proved, into held-out."),
         "family_partitions": partitions,
+        # What each draw preregistered, before any ADR-0542 amendment. This is
+        # the freeze (`frozen_partitions`) and the reference R10 checks the
+        # effective `family_partitions` against; the two differ exactly where a
+        # recorded breach says they should.
+        "preregistered_family_partitions": preregistered_assignment(),
         "family_modules": {f: list(m) for f, m in sorted(FAMILY_MODULES.items())},
         "route_hypotheses": {f: list(r) for f, r in sorted(FAMILY_ROUTES.items())},
         "coverage": {
