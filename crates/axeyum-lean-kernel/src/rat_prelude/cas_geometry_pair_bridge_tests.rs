@@ -325,12 +325,12 @@ mod tests {
     fn geometry_centroid_cofactor_identity_x_kernel_checked() {
         on_a_deep_stack(|| {
             let cert = certificate("centroid-divides-medians");
-            let footprint = reconstruct_conclusion(
-                &cert,
-                0,
-                "Check.geometry_centroid_cofactor_identity_x",
+            let footprint =
+                reconstruct_conclusion(&cert, 0, "Check.geometry_centroid_cofactor_identity_x");
+            assert!(
+                footprint.is_empty(),
+                "must be axiom-free; got {footprint:?}"
             );
-            assert!(footprint.is_empty(), "must be axiom-free; got {footprint:?}");
         });
     }
 
@@ -339,12 +339,12 @@ mod tests {
     fn geometry_centroid_cofactor_identity_y_kernel_checked() {
         on_a_deep_stack(|| {
             let cert = certificate("centroid-divides-medians");
-            let footprint = reconstruct_conclusion(
-                &cert,
-                1,
-                "Check.geometry_centroid_cofactor_identity_y",
+            let footprint =
+                reconstruct_conclusion(&cert, 1, "Check.geometry_centroid_cofactor_identity_y");
+            assert!(
+                footprint.is_empty(),
+                "must be axiom-free; got {footprint:?}"
             );
-            assert!(footprint.is_empty(), "must be axiom-free; got {footprint:?}");
         });
     }
 
@@ -358,7 +358,10 @@ mod tests {
                 0,
                 "Check.geometry_parallelogram_cofactor_identity_x",
             );
-            assert!(footprint.is_empty(), "must be axiom-free; got {footprint:?}");
+            assert!(
+                footprint.is_empty(),
+                "must be axiom-free; got {footprint:?}"
+            );
         });
     }
 
@@ -372,7 +375,10 @@ mod tests {
                 1,
                 "Check.geometry_parallelogram_cofactor_identity_y",
             );
-            assert!(footprint.is_empty(), "must be axiom-free; got {footprint:?}");
+            assert!(
+                footprint.is_empty(),
+                "must be axiom-free; got {footprint:?}"
+            );
         });
     }
 
@@ -393,9 +399,10 @@ mod tests {
             let anon = kernel.anon();
             let mut d = IntDev::new(&mut kernel, prelude.int);
             let p: RatPrelude = prelude;
-            let name = d
-                .kernel()
-                .name_str(anon, "Check.geometry_centroid_cofactor_identity_x_kind_probe");
+            let name = d.kernel().name_str(
+                anon,
+                "Check.geometry_centroid_cofactor_identity_x_kind_probe",
+            );
             let concl_for_build = concl.clone();
             rat_theorem(&mut d, name, names.len(), &|d, fvars| {
                 let vars: BTreeMap<String, ExprId> =
@@ -409,7 +416,9 @@ mod tests {
             })
             .expect("kernel must admit");
             let env = kernel.environment();
-            let decl = env.get(name).expect("declaration must be in the environment");
+            let decl = env
+                .get(name)
+                .expect("declaration must be in the environment");
             assert!(
                 matches!(decl, Decl::Theorem { .. }),
                 "must be admitted as a Theorem, not an Axiom or an Opaque"
