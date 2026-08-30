@@ -8,10 +8,55 @@
     "statement": "∀ (m n k : ℕ), m % (k * n) / n = m / n % k",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:ml430-nat-mod-mul-beaccbad",
+    "F:ml430-nat-add-mul-div-left-e20827dd",
+    "F:nat-mod-lt",
+    "F:nat-div-mod-exec",
+    "F:nat-div-mod-unique",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-zero-add",
+    "F:nat-mul-comm",
+    "F:nat-zero-mul",
+    "F:nat-mul-zero",
+    "F:nat-mod-zero",
+    "F:nat-div-zero",
+    "F:nat-zero-mod",
+    "F:nat-zero-lt-succ",
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-add-lt-add-left",
+    "F:nat-left-distrib",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-mul-assoc",
+    "F:nat-mul-le-mul-left",
+    "F:nat-mul-succ",
+    "F:nat-one-le-mul"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mod_mul_left_div_self",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mod_mul_left_div_self 2>/dev/null | grep -Ec '^Nat\\.mod_mul_left_div_self[[:space:]]')\" -ge 1",
+      "supports": "∀ (m n k : ℕ), m % (k * n) / n = m / n % k",
+      "notes": "Declared in `nat_prelude/mod_mul_lemmas.rs`'s `declare_mod_mul_family`. Case-splits `n` (outer `cases_zero_succ`): at `n=0` both sides collapse to `zero` via `mul_zero`/`mod_zero`/`div_zero`/`zero_mod` congruence (needs no positivity at all); at `n=succ npred`, case-splits `k`: at `k=0` both sides collapse to `div m n` via `zero_mul`/`mod_zero`; at `k=succ kpred` (both positive), the local helper `mod_mul_div_self` answers `div (mod m e) n = mod (div m n) k` for `e = mul n k` (bridged from this fact's `k*n` via `mul_comm`) -- chains `mod_mul`'s identity (`F:ml430-nat-mod-mul-beaccbad`) to rewrite `m%(n*k)` as `m%n + n*(m/n%k)`, then `add_mul_div_left` to divide by `n`, landing on `(m%n)/n + (m/n%k)`; the local helper `div_of_lt` (manufacture a second trivial `divMod` and compare via `div_mod_unique`) collapses `(m%n)/n` to `0` via `mod_lt`, and `zero_add` finishes. `nat_theorem_inventory`'s rendered type matches this fact's `formal.statement` verbatim (`x0`=m, `x1`=n, `x2`=k)."
+    },
+    {
+      "id": "footprint-Nat.mod_mul_left_div_self",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds Nat.mod_mul_left_div_self's own footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +71,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-29 in this ledger: a fresh local construction, not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison and route.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
