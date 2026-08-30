@@ -229,12 +229,9 @@ Two honest consequences:
 - **A three-row family (1, 3, 4) is the NORMAL case in number theory**, not a
   deficiency, exactly as ADR-0603 Amendment 3 concluded for FTA. What was a
   finding about one theorem is a property of a whole subject.
-- **Row 3 must actually be built** for the argument to hold. Today most number
-  theory rows 3 are scenario-level self-checks
-  (`axeyum-scenarios::number_theory`) rather than certificate-producing
-  decision procedures of the `polynomial_mvt`/`verify_mvt_certificate` shape.
-  That is the gap the argument now rests on, and naming it is the price of
-  moving the axis.
+- **Row 3 must actually be built** for the argument to hold — and for classical
+  number theory it very largely is not. This is the note's most actionable
+  finding, so it gets its own section: §2.8.
 
 ---
 
@@ -249,7 +246,7 @@ was read from the fresh dump with its axiom footprint, not from a report.
 |---|---|
 | **1** | **Landed.** `Nat.exists_prime_gt : ∀ n, ∃ p, n < p ∧ Prime p` (theorem, 0 axioms) and `Int.euclid_infinitude` (theorem, 0 axioms), the ℤ form. |
 | **2** | **None, and argued from the shape** per ADR-0603 Am. 3. Euclid's proof is *fully computational*: it produces the bound `n! + 1` and searches below it, so there is no undecidable comparison and no unbounded search to extract. The decision it would need — order totality on ℕ — is `Nat.le_total`, a theorem here (§1.1). |
-| **3** | Reachable and cheap: `exists_prime_gt` evaluated at a concrete `n`, with `minFac` naming the witness. Not built as a certificate-producing routine. |
+| **3** | Reachable and cheap: `exists_prime_gt` evaluated at a concrete `n`, with `minFac` naming the witness. **Not built as a certificate-producing routine** — `axeyum-cas`'s `is_prime` (`ntheory.rs:436`) returns a bare `bool` with no verifier (§2.8). |
 | **4** | Not attempted. `ml430` mirrors exist in the ledger (514 `ml430` facts, 163 number-theory-flavoured). |
 
 This is worth stating loudly because
@@ -263,7 +260,7 @@ some time. See §4.
 |---|---|
 | **1** | **Half landed.** `Nat.pow_prime_modeq_self : ∀ p a, Prime p → a^p ≡ a (mod p)` (theorem, 0 axioms) — Fermat, general form. `Nat.add_pow_modeq_prime` (the freshman's dream, `(a+b)^p ≡ a^p + b^p`) is landed too, 0 axioms. **Euler's theorem `a^φ(n) ≡ 1 (mod n)` for coprime `a,n` is ABSENT** — positive controls of the same kind found by the same method: `Int.euler_criterion_pm_one`, `Int.euler_unit_coprime`, `Int.euler_unit_injective`. The two `euler_unit_*` lemmas are precisely the residue-permutation ingredients Euler's proof needs. |
 | **2** | **None.** The classical proof permutes the residues mod `n` — a bijection of the *bounded* set `[0,n)`, whose constructive content is `Nat.countRange_permute` (landed). Nothing in it decides anything outside a finite range. |
-| **3** | Modular exponentiation at fixed `p` ships in `axeyum-scenarios::number_theory`; it is a self-check, not a certificate with an independent verifier. |
+| **3** | Modular exponentiation at fixed `p` ships in `axeyum-scenarios::number_theory` as a BitVec scenario validated by `self_check()`; it is a self-check, not a producer/verifier pair (§2.8). |
 | **4** | Not attempted. |
 
 **Highest-yield NT target.** Euler's theorem is one theorem away, with both
@@ -285,7 +282,7 @@ halves of the residue-permutation argument already landed and axiom-free.
 | **1** | **Existence landed:** `Nat.exists_prime_factorization` (theorem, 0 axioms), via `prodRange f k`. `Nat.euclid_lemma` (`Prime p → p ∣ ab → p ∣ a ∨ p ∣ b`, 0 axioms) is the uniqueness half's engine and is landed. |
 | **2′** | **Expressiveness, not decision.** No `List`/`Finset`/`Prod`/quotient — see §1.2(b). The multiset statement is unwritable; the multiplicity-agreement statement is writable today with `countRange_permute`. |
 | **2** | **None** in the decision sense: nothing here needs an undecidable comparison. |
-| **3** | Certified factorization of a fixed `n` with an independent verifier. `Nat.minFac`/`minFacAuxMinimal` give the kernel side; the CAS side is surveyed in §5. |
+| **3** | Certified factorization of a fixed `n` with an independent verifier — **not built**. `Nat.minFac`/`minFacAuxMinimal` give the kernel side; `axeyum-cas`'s `factorize` (`ntheory.rs:459`) has no certificate (§2.8). |
 | **4** | Not attempted. |
 
 ### 2.5 Family: Wilson's theorem — *complete row 1, both directions*
@@ -303,7 +300,7 @@ halves of the residue-permutation argument already landed and axiom-free.
 |---|---|
 | **1** | **Absent.** No reciprocity, Legendre or Jacobi declaration exists under any spelling tried (`reciproc`, `legendre`, `jacobi`, `quadratic_res`). Positive controls of the same kind, FOUND: `Int.euler_criterion_pm_one`, `Int.is_quadratic_residue`, `Int.is_quadratic_residue_mul`, `Int.is_quadratic_residue_one`. So the *criterion* is landed and the *reciprocity law* is not. |
 | **2** | **None expected**, argued from shape: every classical proof (Gauss's lemma, Eisenstein's lattice count, Zolotarev) is a finite counting or pairing argument over `[1,(p−1)/2]`. Eisenstein's lattice-point count is a double `countRange`, which is the encoding this kernel already uses. |
-| **3** | The Legendre symbol at fixed `p` is decidable by Euler's criterion, which is landed — a genuinely cheap row 3. |
+| **3** | The Legendre symbol at fixed `p` is decidable by Euler's criterion, which is landed in the kernel, and `legendre_symbol`/`jacobi_symbol` already compute it (`ntheory_advanced.rs:145`, `:180`) — but with no witness type and no verifier, so this is a *cheap* row 3, not a built one (§2.8). |
 | **4** | Not attempted. |
 
 Reciprocity is the one item in `number-theory.md`'s "Lean-horizon" list that is
@@ -317,6 +314,64 @@ still honestly there. The other three are not (§4).
 | **2** | **Not built, and it is the highest-value unbuilt row in this note.** `LNP ⟹ em`, per §1.2(a). Landing it makes number theory a *graded* subject rather than a flat one, and it is a stronger boundary than any analysis row 2 (full EM, not LLPO). |
 | **3** | Bounded search *is* the decidable fragment; row 1 and row 3 coincide here. |
 | **4** | Not attempted. |
+
+### 2.8 Number theory's row 3 barely exists — and §1.3 says the whole argument rests on it
+
+If the dominance argument for a decidable subject is "statement + executable +
+re-derivable certificate under one trust anchor" (§1.3), then it is worth
+knowing exactly how much of the certificate half exists. Surveyed this session
+across `axeyum-cas`, `axeyum-solver` and `axeyum-scenarios`:
+
+**What exists as a genuine producer/independent-checker pair:**
+
+- `prove_lia_unsat_by_diophantine_certified` (`axeyum-solver/src/lia_gcd.rs:108`)
+  with `check_diophantine_certificate` (`:172`) over a named
+  `DiophantineCertificate` (`:250`). The checker "re-derives the combination
+  from the *original* equalities and shares no code with the elimination that
+  produced it" (`:243`), and the producer emits a certificate **only when its
+  own independent checker accepts it** (`:100`). Kernel-reconstructed via
+  `int_reconstruct/diophantine.rs:73`. This is integer-linear Diophantine
+  solvability — Stein ch. 1 / Shoup ch. 4 material, and a real row 3.
+- `int_euclidean_residue_refutation`
+  (`axeyum-solver/src/quant_residue_cert.rs:49`), with a Lean leg at
+  `int_reconstruct/euclidean_residue.rs:35` — Euclidean division.
+- GF(2) polynomial irreducibility: `check_irreducible_certificate`
+  (`axeyum-cas/src/gf2.rs:1785`) and an independent twin
+  (`gf2_independent.rs:131`) — Shoup ch. 18–20 material.
+
+**What does not, and the control that makes this a negative result rather than
+an empty grep:** a sweep for `^pub fn verify_|^pub fn check_` across
+`axeyum-cas/src/` returns **19 verifier functions** — in `mvt.rs`,
+`extremum.rs`, `taylor.rs`, `real_algebraic.rs`, `partial_fractions.rs`,
+`geometry_check.rs`, `telescoping_check.rs`, `gf2*.rs`, `sos/check.rs`,
+`boolean_circuit.rs` — so the method finds verifiers where they exist. **Not
+one of the 19 is number-theoretic.** The classical number-theory CAS is bare
+computation with no witness type and no verifier:
+
+| routine | file:line | returns |
+|---|---|---|
+| `is_prime` | `ntheory.rs:436` | a bare `bool` |
+| `factorize` | `ntheory.rs:459` | factors, no certificate |
+| `mod_inverse`, `crt`, `extended_gcd` | `ntheory.rs:397, 636, 332` | values only |
+| `legendre_symbol`, `jacobi_symbol`, `sqrt_mod`, `discrete_log`, `solve_linear_congruence` | `ntheory_advanced.rs:145, 180, 290, 482, 368` | values only |
+
+No Pratt, Pocklington or ECPP primality certificate exists under any spelling
+(control: the same keyword grep locates the GF(2) certificate pair above).
+
+And `axeyum-scenarios::number_theory` — the 11 families the curriculum cites —
+is **BitVec-encoded SMT scenarios validated by `self_check()`** (SAT by witness,
+UNSAT by bounded enumeration), never a `(witness, verifier)` pair. That is a
+legitimate and useful artifact; it is not row 3 in ADR-0603's sense, and
+`number-theory.md` currently presents it as the subject's testable core.
+
+**So the honest position is:** number theory's row 1 is unusually strong and
+almost entirely landed; its row 2 is provably empty in the analysis sense and
+unbuilt in the one sense available to it (§2.7); and its row 3 — the axis §1.3
+moves the dominance argument onto — exists for integer-linear Diophantine
+solvability and essentially nowhere else. Saying that plainly is the price of
+moving the axis, and it converts a vague "we should build row 3" into a
+specific list: primality, factorization, CRT and the Legendre symbol each need
+a witness type and a verifier that shares no code with the producer.
 
 ---
 
@@ -416,21 +471,46 @@ Row 1 (general `n`) not built; blocked only on a matrix product over the
 existing encoding and a recursive determinant (cofactor expansion is the
 natural constructive definition — `det3_cofactor_row1` is the base case
 already). Row 2: **none** — over ℚ every operation is decidable and
-`Rat.le_total` is a theorem (§1.1). Row 3: **landed at n = 2 and n = 3**
-(`det2_mul`, the `det3_*` family) plus the CAS/solver routes surveyed in §5.
-Row 4: not attempted.
+`Rat.le_total` is a theorem (§1.1). Row 3: **landed in the kernel at n = 2 and
+n = 3** (`det2_mul`, the `det3_*` family, 0 axioms). The CAS computes it at any
+size — `Matrix::determinant` (`axeyum-cas/src/matrix.rs:410`) and the
+fraction-free `bareiss_determinant` (`:522`) — but **ships no certificate and
+no verifier**, so the CAS side is exact computation, not row 3 in ADR-0603's
+sense. Row 4: not attempted.
 
-**LA-2: `Ax = b` solvability.**
-Row 1 (general `n`) not built. Row 2: **none**, same argument. Row 3 is the
-strongest in this note: exact rational solving with the solution as witness,
-and Farkas certificates for infeasibility that are independently re-checked and
-kernel-reconstructed — this is the one place a decidable subject already has
-the full "statement + procedure + certificate under one trust anchor" story
-§1.3 says the dominance argument now rests on. Row 4: not attempted.
+**LA-2: `Ax = b` solvability — the best row 3 in either subject.**
+Row 1 (general `n`) not built. Row 2: **none**, same argument. Row 3 is the one
+place a decidable subject already has the complete "statement + procedure +
+certificate under one trust anchor" story that §1.3 moves the dominance
+argument onto, and it is worth naming precisely because it is the template
+everything else in this note should be measured against:
+
+- **SAT side:** the model is replayed against the original query before it is
+  returned (`axeyum-solver/src/lra.rs:226`, enforced at `:251`, failure path at
+  `:334`).
+- **UNSAT side, two independent re-checkers.** `simplex::feasible`
+  (`simplex.rs:194`) returns Farkas multipliers over the input rows and
+  **self-checks them before returning** (`:695`), with `check_farkas` (`:846`)
+  as the standalone re-checker; separately `lra::FarkasCertificate::verify`
+  (`lra.rs:499`) rebuilds the refutation from scratch. `simplex.rs:842` records
+  that the two "verify differently" and share no helper.
+- **Negative controls on the checker itself** exist, which is rare here:
+  `check_farkas_accepts_valid_and_rejects_invalid` (`simplex.rs:1000`) and
+  `farkas_holds_rejects_tampered_certificates` (`:1525`).
+- **Kernel reconstruction:** `LraReconstructCtx::try_new_over_constructed_reals`
+  (`reconstruct.rs:1987` — fallible-only by design) into
+  `prove_unsat_to_lean_module` (`:2238`), gated by an explicit `False`-inference
+  check (`lra_term_infers_false`, `:2026`).
+
+Row 4: not attempted.
 
 **LA-3: rank and linear independence.**
 Row 1 not built (needs the matrix layer). Row 2: none. Row 3 partial —
-`Rat.det2_eq_zero_of_lin_dep` is the 2×2 case, kernel-checked.
+`Rat.det2_eq_zero_of_lin_dep` is the 2×2 case, kernel-checked. The CAS has
+`rref` (`matrix.rs:577`), `solve` (`:606`), `null_space` (`:666`) and `lu`
+(`:709`), all exact, but **no `rank` function at all** (ABSENT; control:
+`rref` matches 11 times in the same file) and no certificate layer over any of
+them.
 
 **LA-4: inner-product geometry.**
 Row 1 **landed at general dimension over ℚ** (`Rat.dotN` family, Cauchy–Schwarz
