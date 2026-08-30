@@ -53,10 +53,11 @@ STATEMENT_PINS = ROOT / "artifacts/ontology/settled-fact-statement-pins.json"
 def statement_pinned_ids() -> set[str]:
     """Fact ids whose `formal.statement` SHA-256 is pinned against silent drift.
 
-    `scripts/check-settled-fact-statements.py` PASSES for a settled fact that is
-    absent from this manifest -- absence is read as "newly settled", not as a
-    violation -- so membership here is the only thing that distinguishes a
-    protected statement from an unprotected one.
+    NO LONGER TRUE AS OF S1 (ADR-0763): `check-settled-fact-statements.py` now
+    FAILS on a settled fact absent from this manifest, bounded by a
+    `coverage_floor` ratchet, and every settled fact is pinned. The docstring
+    above described the defect S1 removed and is kept as the reason this column
+    exists at all.
     """
     if not STATEMENT_PINS.exists():
         return set()
@@ -290,7 +291,12 @@ POSITIVE_CONTROLS = [
     ("F:logic-and-left", "independent_replay", False),
     ("F:logic-and-left", "semantic_falsification", False),
     ("F:nat-sumrange-add", "kernel_theorem", True),
-    ("F:nat-sumrange-add", "exact_statement", False),
+    # WAS `False`, flipped by S1 (ADR-0763), which pinned every settled fact.
+    # This row is now a POSITIVE control only, and the negative polarity for
+    # this column moved to `UNPINNABLE_PROBE` below -- because with coverage at
+    # 2117/2117 no census row can be the False side, and leaving a `False` here
+    # would make the census permanently red for a reason that is good news.
+    ("F:nat-sumrange-add", "exact_statement", True),
     # `F:acc-inv` carries an `exhaustive-enumeration` row whose `supports` is
     # `axiom_footprint: [] -- ...`.  Reading `kind` at face value would call it
     # semantic falsification.  This control is what keeps that fix alive.
@@ -305,8 +311,27 @@ POSITIVE_CONTROLS = [
 ]
 
 
-def run_controls(by_id: dict[str, dict]) -> list[str]:
+# The negative polarity for `exact_statement`, relocated by S1 (ADR-0763).
+#
+# The column is `fact["id"] in pinned`, so its failure mode is
+# `statement_pinned_ids()` returning something other than what the manifest
+# says -- reading the wrong field, or every fact id regardless of content. A
+# census row used to catch that by being genuinely unpinned; none is, now.
+#
+# An id that is not in the ledger at all cannot become pinned by ordinary work,
+# so this control does not rot the way an `open` fact's id would (which would
+# fire the day somebody proved it, for no fault of this predicate).
+UNPINNABLE_PROBE = "F:this-fact-id-does-not-exist-and-must-never-be-pinned"
+
+
+def run_controls(by_id: dict[str, dict], pinned: set[str] | None = None) -> list[str]:
     failures = []
+    if pinned is not None and UNPINNABLE_PROBE in pinned:
+        failures.append(
+            f"control failed: statement_pinned_ids() contains {UNPINNABLE_PROBE!r}, "
+            "which is in no manifest and no ledger -- the pin set is not being read "
+            "from the manifest at all, and every `exact_statement` yes is worthless"
+        )
     for fact_id, column, expected in POSITIVE_CONTROLS:
         row = by_id.get(fact_id)
         if row is None:
@@ -502,7 +527,7 @@ def main(argv: list[str] | None = None) -> int:
         print("SAFETY_MATRIX|ERROR|duplicate fact id in census", file=sys.stderr)
         return 2
 
-    failures = run_controls(by_id)
+    failures = run_controls(by_id, pinned)
     if failures:
         for line in failures:
             print(f"SAFETY_MATRIX|CONTROL|{line}", file=sys.stderr)
