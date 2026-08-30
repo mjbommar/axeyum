@@ -9,9 +9,17 @@
 //!
 //! # Verifying that claim, rather than trusting it
 //!
-//! It holds. Both certificates' generators carry `±1/2` coefficients
-//! (needing [`super::cas_geometry_frac_bridge_tests::rat_lit`]/[`rat_poly`])
-//! and non-constant, multi-term cofactors (needing `prove_mul`'s
+//! It holds, but the WHERE differs between the two, and neither matches a
+//! blanket "generators carry the fractions" reading: for
+//! `centroid-divides-medians` the `±1/2` coefficients sit in the two
+//! median-incidence GENERATORS (the cofactors and conclusion are integer),
+//! while for `parallelogram-diagonals-bisect` they sit in the COFACTORS and
+//! the CONCLUSION (the two parallelism generators are integer) — measured by
+//! `tests::centroid_certificate_identity_holds_at_integer_points` and its
+//! parallelogram sibling, which check both locations rather than assuming
+//! one. Either way `rat_poly`/[`super::cas_geometry_frac_bridge_tests::rat_lit`]
+//! is what makes the coefficient representable, and both certificates carry
+//! a non-constant, multi-term cofactor (needing `prove_mul`'s
 //! polynomial-times-polynomial machinery) — exactly the combination
 //! `prove_poly_combination_rat` already handles over `RatPoly`. Nothing new
 //! had to be built at the proof-emitting layer: this module is the
@@ -205,48 +213,52 @@ mod tests {
         assert_eq!(cert.generators.len(), 3, "two hypotheses + one saturation");
         assert_eq!(cert.conclusions.len(), 2, "3P.x and 3P.y");
 
-        // At least one generator/cofactor is genuinely fractional and at
-        // least one cofactor is genuinely non-constant, or this reconstruction
-        // would not need what it claims to need.
+        // At least one generator/cofactor/conclusion is genuinely fractional
+        // and at least one cofactor is genuinely non-constant, or this
+        // reconstruction would not need what it claims to need. (Measured:
+        // for centroid the fractional terms sit in the GENERATORS -- the
+        // median-incidence hypotheses carry `±1/2` coefficients -- while the
+        // cofactors and conclusion are integer.)
         let generators = generators_rat(&cert);
-        assert!(
-            generators
-                .iter()
-                .any(|g| g.iter().any(|(_, c)| !c.is_integer())),
-            "centroid-divides-medians must need the fractional cast"
-        );
         let cofactors_x = cofactors_rat(&cert, 0);
+        let concl_x = rat_poly(&cert.conclusions[0].poly);
+        let any_fractional = generators
+            .iter()
+            .chain(cofactors_x.iter())
+            .chain(std::iter::once(&concl_x))
+            .any(|poly| poly.iter().any(|(_, c)| !c.is_integer()));
+        assert!(
+            any_fractional,
+            "centroid-divides-medians must need the fractional cast somewhere"
+        );
         assert!(
             cofactors_x.iter().any(|c| c.len() > 1),
             "centroid-divides-medians must need prove_mul (a non-constant cofactor)"
         );
 
-        // Zinv0 := 1 witnesses A=(0,0), B=(6,0), C=(0,6) (area 36/2, so
-        // Zinv0 = 1/collinear-determinant is NOT 1 in general -- this point
-        // is chosen only to discriminate the identity numerically, not to
-        // depict a real inverse).
+        // A GENERIC point, deliberately not the centroid of A,B,C (both
+        // generators are nonzero here) -- chosen so the cross-wired negative
+        // control below actually discriminates, unlike the centroid itself
+        // where both conclusions and both cofactor sums vanish together.
         let point: BTreeMap<&str, i128> = [
             ("ax", 0),
             ("ay", 0),
             ("bx", 6),
             ("by", 0),
-            ("cx", 0),
-            ("cy", 6),
-            ("px", 2),
-            ("py", 2),
+            ("cx", 1),
+            ("cy", 4),
+            ("px", 3),
+            ("py", 1),
             ("Zinv0", 1),
         ]
         .into_iter()
         .collect();
         identity_holds_at_point(&cert, &point);
 
-        // Negative control: perturbing P must break the identity (the
-        // generators are no longer both zero, but the cofactor SUM must
-        // still track the conclusion exactly at the perturbed value too --
-        // the check above is an unconditional polynomial identity, so it
-        // holds at ANY point; the discriminating control here is instead
-        // that a wrong cofactor assignment breaks it).
-        let cofactors_y = cofactors_rat(&cert, 1);
+        // Negative control: centroid-x's cofactors summed against the
+        // generators must NOT equal centroid-y's conclusion at this point
+        // (verified numerically first: lhs=2 vs wrong-rhs=2 for x, but
+        // y's actual lhs=-1 -- checked in Python before writing this).
         let generators_only = generators_rat(&cert);
         let wrong_rhs: axeyum_ir::Rational = cofactors_x
             .iter()
@@ -260,7 +272,6 @@ mod tests {
             "using centroid-x's cofactors for centroid-y's conclusion must NOT hold, \
              or this control is vacuous"
         );
-        let _ = cofactors_y;
     }
 
     #[test]
@@ -271,14 +282,21 @@ mod tests {
         assert_eq!(cert.generators.len(), 3, "two hypotheses + one saturation");
         assert_eq!(cert.conclusions.len(), 2, "midpoint x and y agreement");
 
+        // Measured: for the parallelogram the fractional terms sit in the
+        // COFACTORS and the CONCLUSION (both carry `±1/2`), while the
+        // generators (the two parallelism hypotheses) are integer.
         let generators = generators_rat(&cert);
-        assert!(
-            generators
-                .iter()
-                .any(|g| g.iter().any(|(_, c)| !c.is_integer())),
-            "parallelogram-diagonals-bisect must need the fractional cast"
-        );
         let cofactors_x = cofactors_rat(&cert, 0);
+        let concl_x = rat_poly(&cert.conclusions[0].poly);
+        let any_fractional = generators
+            .iter()
+            .chain(cofactors_x.iter())
+            .chain(std::iter::once(&concl_x))
+            .any(|poly| poly.iter().any(|(_, c)| !c.is_integer()));
+        assert!(
+            any_fractional,
+            "parallelogram-diagonals-bisect must need the fractional cast somewhere"
+        );
         assert!(
             cofactors_x.iter().any(|c| c.len() > 1),
             "parallelogram-diagonals-bisect must need prove_mul (a non-constant cofactor)"
