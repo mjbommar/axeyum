@@ -149,4 +149,4 @@ needs no other change to read one.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-30 | (pending) | L2 phase G3: publish the infrastructure frontier -- four frozen queues over the group-defs population, content-hash row ids, seven mutation-verified guards (ADR-0845). |
+| 2026-08-30 | `694f01952` | L2 phase G3: publish the infrastructure frontier -- four frozen queues over the group-defs population, content-hash row ids, seven mutation-verified guards (ADR-0845). |
