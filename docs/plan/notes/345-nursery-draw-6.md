@@ -145,6 +145,51 @@ refill generator without `--check`.**
 The brief's premise was one row stale: it quoted **13** dispatchable and the
 measurement on arrival, after merging local main, was **12**.
 
+## `check-fast.sh`: 25 failures, and none of them is mine
+
+`bash scripts/check-fast.sh` exits 1 in this worktree with 25 FAILED steps.
+Rather than assume they were inherited, I baselined: `scripts/
+lane-snapshot.sh ac8120391` (the commit this lane merged from) and ran the
+same gate there.
+
+| | failures |
+| --- | --- |
+| baseline `ac8120391` | **62** |
+| this worktree | **25** |
+| in mine and NOT in the baseline | **0** |
+
+Zero. Nothing in this lane broke a gate. The baseline's extra 37 are
+snapshot-environment artifacts — steps needing a built `target/` or git
+history that a `git archive` extraction does not have — plus two that this
+lane genuinely REPAIRED: `propose-nursery-refill` and its test suite fail at
+the baseline on a stale `refill-headroom-v1.json` and pass here, because
+`--remeasure` refreshed it. Confirmed directly, exit 0.
+
+`plan-authority` deserves separate mention: it caps a status file at 3,000
+bytes and is red for **211** pre-existing files, draw 5's own
+`325-nursery-draw.md` among them. My first draft added a 212th; the detail
+moved here and the status doc is now 2,984 bytes. Verified both directions
+— 212 → 211, mine gone, the 325 control still firing in the same run.
+`scripts/archive-plan-status.py --apply`, which the error message
+recommends, has **no path scoping** and would rewrite all 212, sweeping
+every other lane's status docs. Not run.
+
+## The proposer gate is green and its advice cannot be followed
+
+`propose-nursery-refill.py` exits 0 saying:
+
+> OK -- 15 ready family(ies) available, enough for a draw of 2 that clears
+> the floor of 10. Author it in gen-autogenesis-nursery-refill.py's
+> FAMILY_MODULES and FAMILY_ROUTES, then re-run the generator.
+
+Every clause is wrong for the purpose a lane reads it for. The drawable
+ready set is 11, not 15; a draw of 2 needs one held-out family and none
+exists; and "re-run the generator" is the command that would delete
+`bridge_provenance`. A lane that follows this output exactly will produce
+either a `RefillError` or a silent revert. That is the same
+checker-that-cannot-fail shape this repository keeps finding, arriving as a
+green gate giving confident instructions.
+
 ## Next
 
 - **Decide which generator owns `mathlib-statable-vocabulary-v1.json`**
