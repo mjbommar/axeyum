@@ -75,3 +75,44 @@ and replays evidence should the book mark its A0 proof obligations implemented.
 RV64 and x86-64 remain unavailable until their authoritative source revisions,
 supported instruction forms, decode constraints, and differential controls are
 pinned and implemented.
+
+## 2026-08-30 — first content-bound computation route
+
+Added `axeyum-machine-evidence` as a consumer of the semantic crate. Keeping it
+separate prevents serialization, hashing, and future solver dependencies from
+becoming part of the machine's concrete semantic authority.
+
+The first route emits an A0 semantic package whose digest binds the exact
+compiled `a0.rs`, then exhaustively enumerates byte split/join for all 256
+8-bit words and all 65,536 16-bit words. The report carries the package digest,
+exact domain and count, pass bit, and a digest over every checked input, byte
+sequence, and reconstruction. The checker validates the source-bound package
+and recomputes the whole report; it does not trust the producer's pass bit.
+
+The load-bearing negative control reverses the byte sequence before
+reconstruction. It changes the recomputed result digest from
+`2a1cb64d420914df46de45836be160f4aba2a49025556174c4ec9b35c3cb47d1`
+to `70c1dacac9208e633a1a435302fc0c944426cc0f524ffe60bbcd7be16dd32fb2`
+and exits nonzero with `semantic-mismatch`. A second control mutates the bound
+semantic-source digest and is rejected as `semantic-package-mismatch`.
+
+Focused evidence:
+
+```text
+AXEYUM_AGENT=book-executable scripts/cargo-serialized.sh clippy \
+  -p axeyum-machine-evidence --all-targets -- -D warnings
+PASS
+
+AXEYUM_AGENT=book-executable scripts/cargo-serialized.sh test \
+  -p axeyum-machine-evidence
+PASS: 2 route/control tests
+
+axeyum-machine-evidence check-word-roundtrip PACKAGE REPORT
+PASS: values=65792
+
+axeyum-machine-evidence control-word-roundtrip-reversed PACKAGE REPORT
+EXPECTED NONZERO: semantic-mismatch
+```
+
+This earns only the `computation` trust class over the printed 8- and 16-bit
+domain. It is not a general-width theorem, certificate, or kernel result.
