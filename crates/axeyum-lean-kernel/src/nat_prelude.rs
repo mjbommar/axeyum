@@ -197,6 +197,7 @@ mod subset_product;
 mod testbit_bitwise;
 mod totient;
 mod totient_lemmas;
+mod totient_mul_coprime;
 mod totient_multiplicative;
 pub(crate) mod transposition;
 mod vandermonde;
@@ -325,6 +326,7 @@ use totient_lemmas::{
     declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_coprime_totient_iff,
     declare_totient_even, declare_totient_lemmas_all,
 };
+use totient_mul_coprime::{declare_coprime_mul_iff, declare_gcd_mod_left_eq_gcd};
 use totient_multiplicative::{declare_coprime_mul_of_coprime, declare_gcd_comm};
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
@@ -1010,6 +1012,22 @@ pub struct NatPrelude {
     /// to `dvd k one`. No Bézout-coefficient algebra (route (a) in that doc)
     /// was needed.
     pub coprime_mul_of_coprime: NameId,
+    /// `Nat.gcd_mod_left_eq_gcd : ∀ x m, Eq (gcd (mod x m) m) (gcd x m)` --
+    /// `docs/plan/status/301-totient-multiplicative.md`'s "Step 1"
+    /// (mod-gcd invariance) toward `totient_mul_of_coprime`. Case split on
+    /// `m`: `m = 0` closes by `mod_zero` plus congruence; `m = succ k`
+    /// chains `gcd_succ` (`gcd m x = gcd (mod x m) m`) with `gcd_comm`
+    /// (bridging `gcd m x` to `gcd x m`) via `symm`/`trans`. Filed in
+    /// `totient_mul_coprime.rs` (see that module's doc).
+    pub gcd_mod_left_eq_gcd: NameId,
+    /// `Nat.coprime_mul_iff : ∀ x m n, Iff (Eq (gcd x (mul m n)) one) (And
+    /// (Eq (gcd x m) one) (Eq (gcd x n) one))` -- `301`'s "Step 3" pointwise
+    /// predicate identity (the `mod`-substituted form composes this with
+    /// [`gcd_mod_left_eq_gcd`](Self::gcd_mod_left_eq_gcd) at the call site).
+    /// No `Coprime m n` hypothesis needed: `mp` shrinks via
+    /// `coprime_mul_right_right`/`coprime_mul_left_right`, `mpr` is
+    /// `coprime_mul_of_coprime`. Filed in `totient_mul_coprime.rs`.
+    pub coprime_mul_iff: NameId,
     /// `Nat.coprime_lcm_eq_mul : ∀ a b, gcd a b = 1 → lcm a b = a * b`. From
     /// the unconditional `gcd_mul_lcm`, substituting the coprimality
     /// hypothesis and cancelling the leading `1` with `one_mul`.
@@ -3922,6 +3940,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lcm_comm: kernel.name_str(nat, "lcm_comm"),
             gcd_comm: kernel.name_str(nat, "gcd_comm"),
             coprime_mul_of_coprime: kernel.name_str(nat, "coprime_mul_of_coprime"),
+            gcd_mod_left_eq_gcd: kernel.name_str(nat, "gcd_mod_left_eq_gcd"),
+            coprime_mul_iff: kernel.name_str(nat, "coprime_mul_iff"),
             coprime_lcm_eq_mul: kernel.name_str(nat, "coprime_lcm_eq_mul"),
             gcd_dvd_mul: kernel.name_str(nat, "gcd_dvd_mul"),
             gcd_le_mul: kernel.name_str(nat, "gcd_le_mul"),
@@ -4534,6 +4554,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Needs `coprime_of_forall_prime_dvd` (just above) and `euclid_lemma`
         // (`declare_euclid_lemma`, far above).
         declare_coprime_mul_of_coprime(&mut d, &p)?;
+        // Needs `mod_zero` (`declare_executable_division`, far above),
+        // `gcd_succ`/`gcd_comm` (`declare_executable_gcd`, above) --
+        // `301`'s Step 1, mod-gcd invariance.
+        declare_gcd_mod_left_eq_gcd(&mut d, &p)?;
+        // Needs `coprime_mul_right_right`/`coprime_mul_left_right`
+        // (`declare_coprime_lemmas`, above) and `coprime_mul_of_coprime`
+        // (just above) -- `301`'s Step 3, the pointwise coprimality `Iff`.
+        declare_coprime_mul_iff(&mut d, &p)?;
         declare_dvd_of_forall_prime_mul_dvd(&mut d, &p)?;
         // `IsRelPrime` only needs `dvd_gcd`/`gcd_dvd_left`/`gcd_dvd_right`/
         // `eq_one_of_dvd_one`, all declared long before this point; placed
