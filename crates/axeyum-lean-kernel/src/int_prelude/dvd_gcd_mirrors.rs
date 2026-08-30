@@ -76,7 +76,7 @@ use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 
-use super::modeq::{imodeq, modeq_to_dvd};
+use super::modeq::{dvd_to_modeq, imodeq, modeq_to_dvd};
 use super::ops::IntDev;
 
 // ---------------------------------------------------------------------------
@@ -751,6 +751,118 @@ pub(super) fn declare_mod_eq_emod_eq(d: &mut IntDev<'_>) -> Result<(), KernelErr
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// `Int.ModEq.mul`, UNCONDITIONAL in `n`.
+//
+// `modeq.rs`'s existing `mod_eq_mul_left`/`mod_eq_mul_right`/`mod_eq_mul` are
+// scoped to `0 < n` because they route through `mod_eq_iff_dvd`, which needs
+// that bound. Exactly like `declare_modeq_add_right`/`add_left` did for the
+// additive family, swapping that bridge for the already-unconditional
+// `modeq_to_dvd`/`dvd_to_modeq` removes the hypothesis entirely -- the
+// multiplicative case needs one extra step (`mul_sub` to turn
+// `dvd n (c*(b-a))` into `dvd n (c*b - c*a)`) that the additive case does not,
+// since `Int.add`/`Int.sub` commute with the witness for free while
+// `Int.mul`'s distributivity needs a named lemma.
+// ---------------------------------------------------------------------------
+
+/// `ModEq n a b → ModEq n (c*a) (c*b)`, UNCONDITIONAL in `n`. Not itself
+/// declared as a kernel theorem (no ledger row needs it standalone) --
+/// consumed directly by [`declare_mod_eq_mul_general`], mirroring
+/// `modeq.rs`'s `modeq_to_dvd`/`dvd_to_modeq` (also un-declared private
+/// bridge steps).
+fn mod_eq_mul_left_general_term(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let dvd_h = modeq_to_dvd(d, n, a, b, h); // dvd n (b-a)
+    let sub_ba = d.isub(b, a);
+    let c_sub_ba = d.imul(c, sub_ba);
+    let mul_left_step = d.const_app(p.dvd_mul_left, &[sub_ba, c]); // dvd sub_ba (c*sub_ba)
+    let step1 = d.const_app(p.dvd_trans, &[n, sub_ba, c_sub_ba, dvd_h, mul_left_step]); // dvd n (c*sub_ba)
+
+    let eq_ms = d.const_app(p.mul_sub, &[c, b, a]); // Eq(c*(b-a), c*b - c*a)
+    let cb = d.imul(c, b);
+    let ca = d.imul(c, a);
+    let diff_cb_ca = d.isub(cb, ca);
+    let motive = |d: &mut IntDev<'_>, x: ExprId| super::dvd::idvd(d, n, x);
+    let dvd_new = d.int_eq_rewrite(c_sub_ba, diff_cb_ca, eq_ms, step1, &motive); // dvd n (c*b - c*a)
+
+    dvd_to_modeq(d, n, ca, cb, dvd_new) // ModEq n (c*a) (c*b)
+}
+
+/// `ModEq n a b → ModEq n (a*c) (b*c)`, UNCONDITIONAL in `n`. Commutes
+/// [`mod_eq_mul_left_general_term`]'s result via `Int.mul_comm`, exactly as
+/// `modeq.rs`'s (conditional) `declare_modeq_mul_right` commutes its own
+/// `mul_left` result.
+fn mod_eq_mul_right_general_term(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let left = mod_eq_mul_left_general_term(d, n, a, b, c, h); // ModEq n (c*a) (c*b)
+    let ca = d.imul(c, a);
+    let cb = d.imul(c, b);
+    let ac = d.imul(a, c);
+    let bc = d.imul(b, c);
+    let eq1 = d.const_app(p.mul_comm, &[c, a]); // Eq(ca, ac)
+    let step1 = d.int_eq_rewrite(ca, ac, eq1, left, &|d, x| imodeq(d, n, x, cb));
+    let eq2 = d.const_app(p.mul_comm, &[c, b]); // Eq(cb, bc)
+    d.int_eq_rewrite(cb, bc, eq2, step1, &|d, x| imodeq(d, n, ac, x))
+}
+
+/// `mod_eq_mul_general : ∀ n a b c e, ModEq n a b → ModEq n c e →
+/// ModEq n (a*c) (b*e)` -- Mathlib's `Int.ModEq.mul`, UNCONDITIONAL in `n`
+/// (the existing `p.mod_eq_mul` needs `0 < n`; see this section's module-level
+/// doc for why).
+///
+/// Scale the first hypothesis on the right by `c`
+/// ([`mod_eq_mul_right_general_term`]), scale the second on the left by `b`
+/// ([`mod_eq_mul_left_general_term`]), and chain through `ModEq.trans` --
+/// the same composition `modeq.rs`'s conditional `declare_modeq_mul` already
+/// uses.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_mod_eq_mul_general(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_mul_general, 5, &|d, v| {
+        let (n, a, b, c, e) = (v[0], v[1], v[2], v[3], v[4]);
+        let modeq_ab = imodeq(d, n, a, b);
+        let modeq_ce = imodeq(d, n, c, e);
+        let ac = d.imul(a, c);
+        let be = d.imul(b, e);
+        let concl = imodeq(d, n, ac, be);
+        let inner_arrow = d.arrow(modeq_ce, concl);
+        let stmt = d.arrow(modeq_ab, inner_arrow);
+
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let step1 = mod_eq_mul_right_general_term(d, n, a, b, c, h1); // ModEq n (a*c)(b*c)
+        let step2 = mod_eq_mul_left_general_term(d, n, c, e, b, h2); // ModEq n (b*c)(b*e)
+        let bc = d.imul(b, c);
+        let result = d.const_app(p.mod_eq_trans, &[n, ac, bc, be, step1, step2]);
+
+        let with_h2 = d.lam_fv(h2_fv, modeq_ce, result);
+        let proof = d.lam_fv(h1_fv, modeq_ab, with_h2);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare every theorem this module builds, in dependency order (none of
 /// them depend on each other except [`declare_mod_eq_add_right_cancel_single`]
 /// being needed by [`declare_mod_eq_add_right_cancel_general`]).
@@ -771,5 +883,6 @@ pub(super) fn declare_all(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     declare_mod_eq_add_right_cancel_general(d)?;
     declare_mod_eq_dvd(d)?;
     declare_mod_eq_emod_eq(d)?;
+    declare_mod_eq_mul_general(d)?;
     Ok(())
 }

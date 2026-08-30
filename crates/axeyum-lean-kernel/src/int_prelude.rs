@@ -1380,6 +1380,10 @@ pub struct IntPrelude {
     /// `mod_eq_emod_eq : ∀ n a b, ModEq n a b → Eq Int (emod a n) (emod b n)`
     /// -- Mathlib's `Int.ModEq.eq`, UNCONDITIONAL in `n`.
     pub mod_eq_emod_eq: NameId,
+    /// `mod_eq_mul_general : ∀ n a b c e, ModEq n a b → ModEq n c e →
+    /// ModEq n (a*c) (b*e)` -- Mathlib's `Int.ModEq.mul`, UNCONDITIONAL in
+    /// `n` (the existing [`Self::mod_eq_mul`] needs `0 < n`).
+    pub mod_eq_mul_general: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1691,6 +1695,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_add_right_cancel_general: child(kernel, "mod_eq_add_right_cancel_general"),
         mod_eq_dvd: child(kernel, "mod_eq_dvd"),
         mod_eq_emod_eq: child(kernel, "mod_eq_emod_eq"),
+        mod_eq_mul_general: child(kernel, "mod_eq_mul_general"),
     }
 }
 
