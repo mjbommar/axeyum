@@ -754,7 +754,13 @@ pub(super) fn declare_count_range_ge_two_of_two_witnesses(
 /// `q` and `eq_proof : Eq n (mul a q)` -- local copy of `divisibility.rs`'s
 /// private `dvd_intro`, per this file's own stated convention (local copies
 /// per file rather than a shared private module).
-fn dvd_intro(d: &mut NatDev<'_>, a: ExprId, n: ExprId, witness: ExprId, eq_proof: ExprId) -> ExprId {
+fn dvd_intro(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    n: ExprId,
+    witness: ExprId,
+    eq_proof: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let one = d.level_one();
     let predicate = d.dvd_predicate(a, n);
@@ -767,6 +773,7 @@ fn dvd_intro(d: &mut NatDev<'_>, a: ExprId, n: ExprId, witness: ExprId, eq_proof
 /// into a proof of `target`, given a proof for each of the three cases --
 /// local generalization of `finite.rs`'s `two_way_split` (which eliminates
 /// only the middle case) into a full three-way eliminator.
+#[allow(clippy::too_many_arguments)]
 fn trichotomy_elim(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -813,7 +820,10 @@ fn trichotomy_elim(
         );
         d.lam_fv(h_fv, inner, body)
     };
-    d.const_app(logic.or_elim, &[lt_xc, inner, target, tri, on_left, on_right])
+    d.const_app(
+        logic.or_elim,
+        &[lt_xc, inner, target, tri, on_left, on_right],
+    )
 }
 
 /// From `h_gt : Lt two x` and `h_le : Le (totient x) one`, derive `False`.
@@ -971,7 +981,8 @@ pub(super) fn declare_dvd_two_of_totient_le_one(
         },
     );
 
-    let full_stmt = d.arrow(hpos_ty, d.arrow(hle_ty, goal));
+    let inner_stmt = d.arrow(hle_ty, goal);
+    let full_stmt = d.arrow(hpos_ty, inner_stmt);
     let ty = d.pi_fv(a_fv, nat, full_stmt);
     let value = {
         let with_hle = d.lam_fv(hle_fv, hle_ty, body);
@@ -1054,7 +1065,10 @@ pub(super) fn declare_totient_eq_one_iff(
                     let body = d.const_app(p.logic.or_inl, &[eq_n_1, eq_n_2, h2]);
                     d.lam_fv(h2_fv, eq_n_1, body)
                 };
-                d.const_app(p.logic.or_elim, &[lt_n_1, eq_n_1, rhs_ty, disj, on_zero, on_one])
+                d.const_app(
+                    p.logic.or_elim,
+                    &[lt_n_1, eq_n_1, rhs_ty, disj, on_zero, on_one],
+                )
             },
             &|d, h_eq| d.const_app(p.logic.or_inr, &[eq_n_1, eq_n_2, h_eq]),
             &|d, h_gt| {
@@ -1099,7 +1113,10 @@ pub(super) fn declare_totient_eq_one_iff(
             let body = d.transport(two, motive, refl_at_two, n, eq_2_n);
             d.lam_fv(h2_fv, eq_n_2, body)
         };
-        let body = d.const_app(p.logic.or_elim, &[eq_n_1, eq_n_2, lhs_ty, h, on_one, on_two]);
+        let body = d.const_app(
+            p.logic.or_elim,
+            &[eq_n_1, eq_n_2, lhs_ty, h, on_one, on_two],
+        );
         d.lam_fv(h_fv, rhs_ty, body)
     };
 

@@ -761,6 +761,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_succ_of_true,
         p.count_range_le_of_le,
         p.count_range_ge_two_of_two_witnesses,
+        p.dvd_two_of_totient_le_one,
+        p.totient_eq_one_iff,
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
@@ -1814,6 +1816,172 @@ fn count_range_ge_two_of_two_witnesses_applies_at_the_totient_four_case() {
         f.k.def_eq(inferred, expected),
         "count_range_ge_two_of_two_witnesses must prove Le 2 (countRange f 4)"
     );
+}
+
+/// `Nat.dvd_two_of_totient_le_one` at its two genuinely satisfiable concrete
+/// instances (`a = 1`, `a = 2` -- the only naturals where `totient a <= 1`
+/// actually holds, so these are the only ones a real witness proof can be
+/// built for) and at a genuinely free `a`/`hpos`/`hle` (the universally
+/// quantified case the theorem was actually proved over, which alone
+/// exercises the `2 < a` branch -- no concrete witness for a FALSE
+/// `totient a <= 1` can exist for `a > 2`).
+#[test]
+fn dvd_two_of_totient_le_one_applies_at_one_two_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+
+    // a = 1: `totient 1 = 1`, so `Le (totient 1) one` holds via `le_refl`.
+    let hpos_1 = f.zero_lt_succ(zero); // Lt zero one
+    let hle_1 = f.lemma(p.le_refl, &[one]); // Le one one, defeq Le (totient one) one
+    let proof_1 = f.const_app(p.dvd_two_of_totient_le_one, &[one, hpos_1, hle_1]);
+    let expected_1 = f.dvd(one, two);
+    let inferred_1 =
+        f.k.infer(proof_1)
+            .expect("dvd_two_of_totient_le_one 1 must type-check");
+    assert!(
+        f.k.def_eq(inferred_1, expected_1),
+        "dvd_two_of_totient_le_one 1 must prove dvd 1 2"
+    );
+
+    // a = 2: `totient 2 = 1` too.
+    let hpos_2 = f.zero_lt_succ(one); // Lt zero two
+    let hle_2 = f.lemma(p.le_refl, &[one]);
+    let proof_2 = f.const_app(p.dvd_two_of_totient_le_one, &[two, hpos_2, hle_2]);
+    let expected_2 = f.dvd(two, two);
+    let inferred_2 =
+        f.k.infer(proof_2)
+            .expect("dvd_two_of_totient_le_one 2 must type-check");
+    assert!(
+        f.k.def_eq(inferred_2, expected_2),
+        "dvd_two_of_totient_le_one 2 must prove dvd 2 2"
+    );
+
+    // NEGATIVE reduction control: `totient 6` must NOT reduce to `1` (it is
+    // `2`), confirming the theorem's antecedent is genuinely false at `a > 2`
+    // rather than vacuously unconstrained.
+    let six = f.num(6);
+    let totient_6 = f.const_app(p.totient, &[six]);
+    assert!(
+        !f.k.def_eq(totient_6, one),
+        "totient 6 must NOT reduce to 1 (it is 2)"
+    );
+
+    // Symbolic: genuinely free `a`, `hpos`, `hle`.
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let hpos_ty = f.lt(zero, a);
+    let hpos_fv = f.fresh_fvar();
+    let hpos = f.k.fvar(hpos_fv);
+    let totient_a = f.const_app(p.totient, &[a]);
+    let hle_ty = f.le(totient_a, one);
+    let hle_fv = f.fresh_fvar();
+    let hle = f.k.fvar(hle_fv);
+
+    let proof_sym = f.const_app(p.dvd_two_of_totient_le_one, &[a, hpos, hle]);
+    let expected_sym = f.dvd(a, two);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: a_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: hpos_fv,
+        name: anon,
+        ty: hpos_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: hle_fv,
+        name: anon,
+        ty: hle_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(proof_sym, &mut ctx)
+            .expect("dvd_two_of_totient_le_one must apply at free variables");
+    assert!(
+        f.k.def_eq(inferred_sym, expected_sym),
+        "dvd_two_of_totient_le_one must prove dvd a two symbolically"
+    );
+}
+
+/// `Nat.totient_eq_one_iff` at `n = 1`, `n = 2` (both legs of the RHS
+/// disjunction, each genuinely achievable), `n = 6` (a numeral where the LHS
+/// is genuinely false, exercising the `2 < n` branch's own reduction), and a
+/// genuinely free `n`.
+#[test]
+fn totient_eq_one_iff_applies_at_small_numerals_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+
+    for n in [one, two] {
+        let totient_n = f.const_app(p.totient, &[n]);
+        let iff_n = f.const_app(p.totient_eq_one_iff, &[n]);
+        let lhs = f.eq(totient_n, one);
+        let eq_n_1 = f.eq(n, one);
+        let eq_n_2 = f.eq(n, two);
+        let rhs = f.const_app(p.logic.or, &[eq_n_1, eq_n_2]);
+        let expected = f.const_app(p.logic.iff, &[lhs, rhs]);
+        let inferred =
+            f.k.infer(iff_n)
+                .expect("totient_eq_one_iff must type-check at n in {1,2}");
+        assert!(
+            f.k.def_eq(inferred, expected),
+            "totient_eq_one_iff must state Iff (totient n = 1) (n=1 or n=2)"
+        );
+    }
+
+    // NEGATIVE reduction control at n = 6: `totient 6 = 2`, NOT `1` -- the
+    // `2 < n` branch's antecedent genuinely fails here.
+    let six = f.num(6);
+    let totient_6 = f.const_app(p.totient, &[six]);
+    assert!(
+        !f.k.def_eq(totient_6, one),
+        "totient 6 must NOT reduce to 1 (it is 2)"
+    );
+    let iff_6 = f.const_app(p.totient_eq_one_iff, &[six]);
+    let lhs_6 = f.eq(totient_6, one);
+    let eq_6_1 = f.eq(six, one);
+    let eq_6_2 = f.eq(six, two);
+    let rhs_6 = f.const_app(p.logic.or, &[eq_6_1, eq_6_2]);
+    let expected_6 = f.const_app(p.logic.iff, &[lhs_6, rhs_6]);
+    let inferred_6 =
+        f.k.infer(iff_6)
+            .expect("totient_eq_one_iff must type-check at n=6");
+    assert!(f.k.def_eq(inferred_6, expected_6));
+
+    // Symbolic: a genuinely free `n`.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let totient_n = f.const_app(p.totient, &[n]);
+    let iff_n = f.const_app(p.totient_eq_one_iff, &[n]);
+    let lhs_n = f.eq(totient_n, one);
+    let eq_n_1 = f.eq(n, one);
+    let eq_n_2 = f.eq(n, two);
+    let rhs_n = f.const_app(p.logic.or, &[eq_n_1, eq_n_2]);
+    let expected_n = f.const_app(p.logic.iff, &[lhs_n, rhs_n]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_n =
+        f.k.infer_in(iff_n, &mut ctx)
+            .expect("totient_eq_one_iff must apply at a free variable");
+    assert!(f.k.def_eq(inferred_n, expected_n));
 }
 
 /// `Nat.prodRangeIf` computes on small numerals by REDUCTION, not merely
@@ -7092,7 +7260,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 534,
+        93 + 536,
         "every promised definition and theorem must be rendered"
     );
 }
