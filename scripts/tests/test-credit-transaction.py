@@ -39,8 +39,18 @@ def _load(name: str, relpath: str):
     return mod
 
 
-ct = _load("credit_transaction", "credit-transaction.py")
+# Load `check-credit-transaction.py` FIRST and take `ct` from IT, rather than
+# loading `credit-transaction.py` independently here too. Two separate
+# `importlib` loads of the same file under the same module name produce TWO
+# DISTINCT module objects with their own separate copies of any module-level
+# state (in particular `_LAST_STAGED_JOURNAL`, the cache the fresh-read guard
+# exists to bypass). Fixtures built via `gate._fixture_*` populate the cache
+# inside `gate`'s module instance; calling `ct.commit(...)` against a
+# DIFFERENT instance would see an empty cache and raise a spurious KeyError
+# that has nothing to do with any guard being tested -- confirmed by
+# deliberately reproducing it while building this suite.
 gate = _load("check_credit_transaction", "check-credit-transaction.py")
+ct = gate.ct
 
 
 def _tmp(prefix: str) -> Path:

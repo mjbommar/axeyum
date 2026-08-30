@@ -275,6 +275,15 @@ def run_fresh_pass_control():
 def run_fresh_read_check():
     """Construct a case where the in-process cached journal object and the
     on-disk journal DISAGREE, and confirm `commit()` acts on the disk value.
+
+    Deliberately mutates `txn_id` -- a field NO staleness check and NO status
+    precondition ever reads -- so this demonstrates the fresh-read guard in
+    isolation from the other four/five guards. (An earlier version of this
+    check reused `checker_version`, which the stale-checker guard ALSO reads;
+    removing that guard then broke this check too, for a reason that had
+    nothing to do with freshness. `txn_id` has no such entanglement: commit()
+    only ever writes it back unchanged.)
+
     Returns (ok: bool, detail: str)."""
     root = Path(tempfile.mkdtemp(prefix="credit-txn-fresh-read-"))
     try:
@@ -283,27 +292,30 @@ def run_fresh_read_check():
         _, txn_dir = _propose_fresh(root, fact_id, receipt)
 
         cached = ct._LAST_STAGED_JOURNAL[str(txn_dir)]
-        if cached.inputs.checker_version != ct.CURRENT_CHECKER_VERSION:
-            return False, "setup failed: cached journal was not fresh at staging time"
+        original_txn_id = cached.txn_id
 
         journal_path = txn_dir / "journal.json"
         data = json.loads(journal_path.read_text())
-        data["inputs"]["checker_version"] = "DIVERGED-ON-DISK"
+        data["txn_id"] = "SENTINEL-PLANTED-ON-DISK"
         journal_path.write_text(json.dumps(data))
 
-        disagree = cached.inputs.checker_version != "DIVERGED-ON-DISK"
+        disagree = cached.txn_id != "SENTINEL-PLANTED-ON-DISK"
         if not disagree:
             return False, "setup failed: cached and disk values do not actually diverge"
 
-        try:
-            ct.commit(root, txn_dir)
-            return False, "commit() succeeded despite a diverged on-disk journal -- it used the cache"
-        except ct.StaleCheckerError:
+        ct.commit(root, txn_dir)  # freshness alone; nothing here is stale
+
+        after = json.loads(journal_path.read_text())
+        if after["txn_id"] == "SENTINEL-PLANTED-ON-DISK":
             return True, (
-                f"cached in-memory checker_version={cached.inputs.checker_version!r} "
-                f"disagreed with on-disk 'DIVERGED-ON-DISK', and commit() rejected "
-                f"based on the DISK value"
+                f"cached in-memory txn_id={original_txn_id!r} disagreed with "
+                f"on-disk 'SENTINEL-PLANTED-ON-DISK', and commit() preserved "
+                f"the DISK value when it re-wrote the journal"
             )
+        return False, (
+            f"commit() clobbered the on-disk txn_id with the cached "
+            f"{after['txn_id']!r} -- it read the in-process cache, not disk"
+        )
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
