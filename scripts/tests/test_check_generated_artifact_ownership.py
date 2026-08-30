@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Controls for scripts/check-generated-artifact-ownership.py (ADR-0646).
+"""Controls for scripts/check-generated-artifact-ownership.py (ADR-0652).
 
 One case per guard, and each asserts BOTH that its own arm fired AND that the
 others stayed silent -- so a deleted guard is killed by exactly one case, and

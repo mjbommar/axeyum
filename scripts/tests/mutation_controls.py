@@ -3980,7 +3980,7 @@ SUITES["cas-substance-derivation"] = (
 )
 
 # --------------------------------------------------------------------------
-# `artifact-ownership` -- ADR-0646. One producer per generated artifact.
+# `artifact-ownership` -- ADR-0652. One producer per generated artifact.
 #
 # Two of these mutants deliberately kill more than one case, and that is the
 # structure of the gate rather than a weak suite: CTRL is DEFINED as "the RUNS

@@ -173,7 +173,7 @@ autogenesis-nursery:
     python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
     python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
     python3 scripts/check-autogenesis-holdout-isolation.py
-    # ADR-0646. One producer per generated artifact: the statable vocabulary
+    # ADR-0652. One producer per generated artifact: the statable vocabulary
     # had two writers and the poorer one deleted `bridge_provenance` and
     # `row_digest` at exit 0. Runs each non-owner producer in a sandboxed copy
     # and requires byte-identity; a planted second writer is its own control.

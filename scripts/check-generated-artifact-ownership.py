@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One producer per key: a generated artifact may have exactly one writer.
 
-WHY THIS EXISTS (ADR-0646). `artifacts/autogenesis/
+WHY THIS EXISTS (ADR-0652). `artifacts/autogenesis/
 mathlib-statable-vocabulary-v1.json` had two.
 `gen-autogenesis-statable-vocabulary.py` owns it and emits
 `bridge_provenance` and `row_digest` -- ADR-0631's per-constant
@@ -327,7 +327,7 @@ def key_delta(before: str, after: str) -> str:
 SECOND_WRITER = '''#!/usr/bin/env python3
 """Planted by check-generated-artifact-ownership.py --- CTRL arm.
 
-A synthetic second writer reproducing the ADR-0646 defect exactly: rewrite
+A synthetic second writer reproducing the ADR-0652 defect exactly: rewrite
 the guarded artifact minus a key only its owner derives, and exit 0. The
 RUNS arm must reject it. If it does not, RUNS is inert.
 

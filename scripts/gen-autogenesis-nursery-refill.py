@@ -792,7 +792,7 @@ def derive_vocabulary_content(
     """The two derived fields this script needs, re-derived independently.
 
     This script does NOT own `mathlib-statable-vocabulary-v1.json`;
-    `gen-autogenesis-statable-vocabulary.py` does (ADR-0646). It used to
+    `gen-autogenesis-statable-vocabulary.py` does (ADR-0652). It used to
     build the WHOLE document and write it, which deleted the owner's
     `bridge_provenance` and `row_digest` -- ADR-0631's per-constant
     classification -- on every draw, while exiting 0.
@@ -1690,7 +1690,7 @@ def main() -> int:
             fact = json.loads(path.read_text())
             facts[fact["id"]] = fact
 
-        # ADR-0646: READ, never write. This script is not the owner.
+        # ADR-0652: READ, never write. This script is not the owner.
         vocabulary = read_vocabulary(env, inventory, catalog, facts)
 
         # The false-positive control, run against the real population on every
@@ -1717,7 +1717,7 @@ def main() -> int:
         extension = build_extension(entries, reasons, validation)
 
         # One entry, and it must stay one: VOCABULARY belongs to
-        # gen-autogenesis-statable-vocabulary.py (ADR-0646), and
+        # gen-autogenesis-statable-vocabulary.py (ADR-0652), and
         # check-generated-artifact-ownership.py fails if this script can
         # write it.
         outputs = {EXTENSION: render(extension)}
