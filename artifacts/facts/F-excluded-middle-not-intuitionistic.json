@@ -4,17 +4,136 @@
   "title": "Excluded middle is not derivable in intuitionistic propositional logic",
   "statement": "There is no derivation of (p or not p), for a propositional variable p, in intuitionistic propositional natural deduction.",
   "formal": {
-    "language": "smtlib2",
-    "statement": "; NOT EXPRESSIBLE. The proposition asserts the NON-EXISTENCE of a derivation in a named proof system. axeyum has no term denoting a derivation, a proof system, or a logic other than the classical two-valued one its Bool sort fixes, so there is no assertion whose unsatisfiability would establish it. The standard proof goes through a Kripke or Heyting-algebra countermodel, and we have no object for a non-Boolean algebra of truth values either.",
-    "fragment": "none",
+    "language": "lean4",
+    "statement": "Not (Provable FormulaList.nil (Formula.or_ (Formula.var AxNat.zero) (Formula.imp (Formula.var AxNat.zero) Formula.bot)))",
+    "fragment": "Nat",
     "free_symbols": []
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:excluded-middle"
+    "F:excluded-middle",
+    "F:heyting-3-chain-refutes-excluded-middle"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-ipc_excluded_middle_not_provable",
+      "kind": "kernel-term",
+      "kernel_declaration": "ipc_excluded_middle_not_provable",
+      "supports": "ipc_excluded_middle_not_provable is admitted by the trusted kernel gate with the type recorded in formal.statement: there is no derivation of (p or not p) from the empty context in the Provable relation, the inductive encoding of IPC natural deduction.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example ipc_soundness_inventory -- ipc_excluded_middle_not_provable --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The checker FAILS on absence rather than reporting an empty set, verified both directions on 2026-08-30: the real name exits 0, and 'ipc_excluded_middle_not_provable_FABRICATED' exits 1 with 'an absent declaration is a failed check, not an empty report'. It lists every declaration kind, not only Declaration::Theorem, because a theorem inventory returns zero rows for a Definition and would answer the existence question wrongly in both directions. formal.statement is Kernel::render_lean of the admitted type, taken verbatim from that command's stdout, not transcribed by hand. Declared in crates/axeyum-lean-kernel/src/ipc_soundness.rs via declare_pem_not_provable."
+    },
+    {
+      "id": "kernel-ipc_soundness",
+      "kind": "kernel-term",
+      "kernel_declaration": "ipc_soundness",
+      "supports": "The soundness theorem the result rests on: 'ipc_soundness : forall ctx phi, Provable ctx phi -> forall v, Le (ipc_ctx_meet ctx v) (ipc_eval phi v)', proved by induction on the DERIVATION -- an eleven-minor application of Provable.rec, one case per natural-deduction rule. This is the mathematical content; the headline theorem is its contraposition against the countermodel.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example ipc_soundness_inventory -- ipc_soundness --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Soundness is stated over the MEET of the context, not over a 'every context formula evaluates to top' predicate, because the latter does not carry an induction on derivations: in the imp_intro case the induction hypothesis only says 'if eval phi v = top then eval psi v = top', while the goal needs eval phi v <= eval psi v, and nothing constrains the case where eval phi v is the chain's MIDDLE element. imp_intro goes through by residuation and or_elim by the chain's linearity. Residuation needs ipc_ctx_meet <= 2, which is a real side condition and not decoration -- it is false at m = 3 (meet3 3 1 = 1 <= 1 but 3 <= himp3 1 1 = 2 is not) -- and is discharged by the separate theorem ipc_ctx_meet_le_top."
+    },
+    {
+      "id": "eleven-cases-and-the-composition",
+      "kind": "kernel-term",
+      "kernel_declarations": [
+        "ipc_ctx_meet",
+        "ipc_ctx_meet_le_top",
+        "ipc_meet3_le_left",
+        "ipc_meet3_le_right",
+        "ipc_le_meet3",
+        "ipc_le_join3_left",
+        "ipc_le_join3_right",
+        "ipc_meet_absorb_le",
+        "ipc_or_elim_chain",
+        "ipc_himp3_intro",
+        "ipc_himp3_elim"
+      ],
+      "supports": "All eleven natural-deduction rules -- ax_head, weaken, and_intro, and_elim1, and_elim2, or_intro1, or_intro2, or_elim, imp_intro, imp_elim, bot_elim -- are discharged, each by a chain lemma admitted above it. The prelude does not build unless every one of them type-checks, so a successful build IS the check that no case was skipped.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_soundness::tests::slice_four_prelude_builds_and_declares_everything_it_names",
+      "checkers": [
+        "Kernel::add_declaration"
+      ],
+      "notes": "Mutation-verified on 2026-08-30 that this cannot pass on completion alone: replacing ipc_meet3_le_left with ipc_meet3_le_right in the ax_head case makes all 14 ipc_soundness tests fail. Restored."
+    },
+    {
+      "id": "countermodel-value-discriminates",
+      "kind": "kernel-term",
+      "kernel_declaration": "ipc_eval",
+      "supports": "The countermodel is specific rather than an algebra in which nothing reaches the top. At the SAME valuation p := 1: ipc_eval of (p or not p) is 1, and ipc_eval of the IPC-derivable (p -> p) is the top 2. One is refutable and the other is not, through the same evaluator.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_soundness::tests::pem_evaluates_to_one_and_a_tautology_evaluates_to_top_at_the_same_valuation",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "Mutation-verified on 2026-08-30 that the headline theorem depends on this value: moving declare_pem_not_provable's valuation from 1 to 2 -- where (p or not p) IS the top, so nothing is refutable -- makes the kernel REJECT ipc_excluded_middle_not_provable with a TypeMismatch. Restored. This also ties the generic recursor-based evaluator back to F:heyting-3-chain-refutes-excluded-middle's direct-Nat computation of the same value."
+    },
+    {
+      "id": "positive-control-still-derivable",
+      "kind": "kernel-term",
+      "kernel_declarations": [
+        "ipc_provable_imp_self",
+        "ipc_provable_and_elim1_example"
+      ],
+      "supports": "SAME-KIND positive control for an unprovability claim: the very same Provable relation still DERIVES 'p -> p' and '(p and q) -> p' from the empty context, as kernel-checked natural-deduction proof terms. Without this, 'the relation derives nothing' would explain the headline result just as well as the intended reading.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_soundness::tests::the_relation_still_derives_what_intuitionistic_logic_does_derive",
+      "checkers": [
+        "Kernel::add_declaration"
+      ],
+      "notes": "The two example derivations are from slice 2 (crates/axeyum-lean-kernel/src/ipc_provable.rs) and are built from the same eleven constructors the soundness induction eliminates."
+    },
+    {
+      "id": "sat-is-not-vacuous",
+      "kind": "kernel-term",
+      "kernel_declarations": [
+        "ipc_sat",
+        "ipc_sat_not_vacuous",
+        "ipc_soundness_sat"
+      ],
+      "supports": "The context-satisfaction predicate ipc_sat, and the corollary 'ipc_soundness_sat : Provable ctx phi -> forall v, ipc_sat ctx v -> Le 2 (ipc_eval phi v)'. ipc_sat is pinned in BOTH directions: a kernel theorem inhabits it at a satisfying valuation, and ipc_sat_not_vacuous REFUTES 'ipc_sat [var 0] (fun _ => 1)'. A constantly-true sat -- which would make the corollary vacuous and would satisfy any careless evaluation test -- cannot be refuted at all, so it could not pass this.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example ipc_soundness_inventory -- ipc_sat --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "ipc_sat is a Definition, so kernel admission proves only that it is well-formed; its meaning is pinned by evaluation at concrete arguments (ipc_soundness::tests, magnitudes kept to 0/1/2 because these numerals are unary) plus the refutation above."
+    },
+    {
+      "id": "ctx-meet-computes-what-it-claims",
+      "kind": "kernel-term",
+      "kernel_declaration": "ipc_ctx_meet",
+      "supports": "ipc_ctx_meet is a Definition and the trusted gate cannot tell you a Definition is wrong, so its value is checked by reduction at concrete arguments against hand-computed values: 2 at nil, the head formula's value at a singleton, 0 when the tail drags it down, and 0 at [bot]. Two of those are discriminating -- the same list SHAPE with head var 0 gives 0 and with head var 1 gives 1 under the identity valuation, so a definition ignoring the head cannot pass, and [var 1, var 0] gives 0 where a tail-ignoring definition would give 1.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib ipc_soundness::tests::ctx_meet",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "Four tests. Negative controls vary ONE small numeral rather than a whole term, since a FAILING def_eq has no early exit and a control differing in a large term is itself pathological."
+    },
+    {
+      "id": "footprint-whole-ipc-package",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- and not only for the headline theorem. All 50 declarations the IPC package adds on top of the Nat prelude (the Formula and FormulaList datatypes, the Provable relation with its eleven constructors and its recursor, the chain operations, the evaluator, and every theorem above) have an empty Kernel::axiom_footprint.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example ipc_soundness_inventory -- --require-axiom-free --expect-count 50",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list -- a declaration nobody remembered to list still appears. --expect-count fails on drift in either direction."
+    }
+  ],
   "concept_refs": [
     {
       "graph": "math-education",
@@ -49,7 +168,7 @@
   ],
   "provenance": {
     "date": "2026-08-14",
-    "established_by": "not established in this ledger",
+    "established_by": "axeyum-lean-kernel build_ipc_soundness_prelude, lane ipc-soundness (slice 4), over slices 1-3 by lanes logic-excluded-middle, ipc-provable and ipc-eval",
     "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
     "prior_art": [
       {
@@ -61,8 +180,16 @@
         "date": "2026-08-14",
         "result": "logic: axiom=0 opaque=0 quotient=0 total_trusted=0",
         "establishes": "axeyum's Lean logic prelude assumes nothing classical -- it declares only True, False, And, Or, Iff, Eq, Exists and Not (as `a -> False`). This measures the ABSENCE of a classical axiom in our kernel; it does not by itself prove the non-derivability, which is the cited theorem."
+      },
+      {
+        "measurement": "cargo run -q --release -p axeyum-lean-kernel --example ipc_soundness_inventory -- --require-axiom-free --expect-count 50",
+        "date": "2026-08-30",
+        "result": "50 IPC declarations; axiom-free: yes (50 declarations checked)",
+        "establishes": "The whole formalization -- formulas, contexts, the derivation relation, the evaluator, soundness, and the unprovability theorem -- rests on no axiom, no opaque declaration and no quotient."
       }
     ]
   },
-  "notes": "The most important entry this lane produced, and the one that most sharply exposes the shape of the frontier. axeyum has TWO reasoning routes with DIFFERENT logics and no object that can compare them. The SMT route fixes a two-valued Bool sort and so proves F:excluded-middle, F:double-negation-elimination and F:peirce-law in microseconds. The Lean kernel route has an intuitionistic logic prelude with zero trusted declarations, in which none of those three has a proof term and none can get one without adding an axiom. Today nothing in the stack records that a fact proved on one route is unavailable on the other, and the fact schema has no field for it: `axiom_footprint` describes the route that DID establish the fact and is silent about routes that cannot. Concretely: if a future reconstruction lane pipes an `unsat` from the SMT route into the kernel, every classical tautology in this batch is a reconstruction failure waiting to happen, and the failure will surface as a kernel error rather than as a recognised logic mismatch. That is the roadmap item. The status is `open` in the same misused sense as F:godel-first-incompleteness -- the mathematics is settled; what is open is our ability to say it.\n\nSCOPING UPDATE (2026-08-29, lane logic-excluded-middle): a machine-checked\nversion of this statement needs (1) an inductive Formula AST, (2) an\ninductive derivation relation Provable : Formula -> Prop for IPC natural\ndeduction, (3) a soundness theorem (derivable implies valid in every model),\nand (4) a countermodel. This lane built (1) and (4) --\ncrates/axeyum-lean-kernel/src/ipc_heyting.rs, landed as\nF:heyting-3-chain-refutes-excluded-middle -- and confirmed (2)/(3) do not\nexist anywhere in this kernel (checked by grepping kernel.environment() for\nProvable/Derivation/Deriv, paired with a positive-control lookup of the\njust-declared Formula name so the negative check cannot pass vacuously; see\nipc_heyting::tests::no_prior_derivation_relation_exists_before_this_file).\n(2)+(3) is the remaining, genuinely research-sized gap: an inductive\nnatural-deduction relation plus a soundness proof by induction on\nderivations, comparable in scope to this kernel's other multi-hundred-line\nprelude developments. This fact stays open until that lands. Handoff:\ndocs/plan/status/273-logic-excluded-middle.md."
+  "notes": "CLOSED 2026-08-30 by lane ipc-soundness (slice 4), after slices 1-3.\n\nThis is row 2 of an ADR-0603 graded statement family: an UNPROVABILITY witness, the axis a classical formalization has no counterpart for. The route is entirely syntactic-plus-semantic and needs four pieces, all now landed and all axiom-free:\n  1. Formula, an inductive AST (var/bot/and_/or_/imp) -- ipc_heyting.rs\n  2. Provable : FormulaList -> Formula -> Prop, the eleven IPC natural-deduction rules as an indexed Prop-valued inductive -- ipc_provable.rs\n  3. ipc_eval : Formula -> (Nat -> Nat) -> Nat via Formula.rec, into the 3-element Goedel/Lukasiewicz Heyting chain -- ipc_eval.rs\n  4. ipc_soundness by induction on the DERIVATION (the first use of the Provable.rec that add_inductive generated), contraposed against the countermodel of F:heyting-3-chain-refutes-excluded-middle -- ipc_soundness.rs\n\nWHAT THE KERNEL CHECKS AND WHAT IT DOES NOT. The kernel checks that ipc_excluded_middle_not_provable is a proof term for 'Not (Provable nil (p or not p))'. It does NOT and cannot check that Provable is a faithful encoding of intuitionistic propositional natural deduction -- that is a meta-level judgement about the rule set, and it is where an unsound shortcut would do the most damage, since a 'proof' that excluded middle is underivable built on a relation weaker than IPC would be a confident false claim. The judgement, recorded so a referee can check it: the eleven constructors are exactly assumption (as ax_head + weaken, which between them generate 'the goal occurs anywhere in the context' -- the kernel has no Mem relation), and-I, and-E1, and-E2, or-I1, or-I2, or-E, imp-I, imp-E, bot-E, with 'not p' the standard IPC abbreviation 'imp p bot'. No classical rule is present. Contexts are lists and there is no separate exchange or contraction rule, which is sound here because every use of a hypothesis goes through membership rather than through a positional assumption rule, so the standard list-context presentation loses no derivation. Corroborating and NOT a substitute: slice 2 wrote a non-kernel Rust forward-chaining search over the same eleven rules (ipc_provable::tests::finite_search_discriminates_between_derivable_and_pem) which derives 'p -> p' and '(p and q) -> p' and does not derive 'p or not p' over the subformula closure those queries need. That is a sanity check on the rule set, not a formalized adequacy theorem.\n\nTHE STATEMENT SOUNDNESS IS PROVED IN. Not 'satisfied context implies satisfied goal' -- that shape does not carry the induction, because imp_intro's hypothesis is silent exactly where the goal needs the chain's middle element. The induction runs on the context MEET, and the satisfaction predicate the obvious reading wants is built anyway (ipc_sat) and bridged onto it (ipc_sat_le_ctx_meet, ipc_soundness_sat). See the ipc_soundness.rs module docs for the full argument and docs/plan/status/324-ipc-soundness.md for the lane handoff.\n\nHISTORICAL, and still the sharpest thing in this entry. The original note recorded that axeyum has TWO reasoning routes with different logics and no object that can compare them: the SMT route fixes a two-valued Bool sort and so proves F:excluded-middle in microseconds, while the Lean kernel route's logic prelude has zero trusted declarations and cannot prove it without an axiom. That gap is now not merely described but WITNESSED -- this fact and F:excluded-middle are both proved, they contradict each other read naively, and the reason they do not actually conflict is that they are statements about different logics. A reconstruction lane piping an unsat from the SMT route into the kernel will still hit an opaque wall on every classical tautology, and the fact schema still has no field saying so; axiom_footprint describes the route that DID establish a fact and is silent about routes that cannot. That remains the roadmap item.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
