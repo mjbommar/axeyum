@@ -30,7 +30,7 @@ hand-written seed types with kernel-dumped ones (a correction toward truth), and
 edit" — legitimate corrections happen — it is "an edit must be a deliberate,
 recorded act rather than a side effect".
 
-S1 — WHY THIS GATE GREW (ADR-0752)
+S1 — WHY THIS GATE GREW (ADR-0763)
 ----------------------------------
 
 S0's safety-matrix census (ADR-0746) measured `exact_statement` at 142 of 2117

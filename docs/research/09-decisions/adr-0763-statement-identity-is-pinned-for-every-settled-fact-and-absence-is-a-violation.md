@@ -1,4 +1,4 @@
-# ADR-0752: statement identity is pinned for every settled fact, and absence is a violation
+# ADR-0763: statement identity is pinned for every settled fact, and absence is a violation
 
 Status: accepted
 Date: 2026-08-30

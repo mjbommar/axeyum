@@ -356,7 +356,7 @@ step cas-substance python3 scripts/check-cas-substance.py
 step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substance
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
-# S1 of the trusted-library safety roadmap (ADR-0752): the exit criterion,
+# S1 of the trusted-library safety roadmap (ADR-0763): the exit criterion,
 # executed rather than asserted. Constructs swapped binders, a changed
 # constant, an altered relation, source drift, and -- replayed from the real
 # damaged forms in `e79804fdd` -- an upstream statement overwritten with our
