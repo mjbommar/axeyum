@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m a b c : ℕ}, m.gcd c = 1 → c * a ≡ c * b [MOD m] → a ≡ b [MOD m]",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_eq_cancel_left",
+    "kernel_statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.gcd x0 x3) (AxNat.succ AxNat.zero)) -> ((x5 : AxNat.modEq x0 (AxNat.mul x3 x1) (AxNat.mul x3 x2)) -> AxNat.modEq x0 x1 x2))))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-mod-eq-cancel"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mod_eq_cancel_left",
+      "kind": "kernel-term",
+      "supports": "`Nat.mod_eq_cancel_left` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.gcd x0 x3) (AxNat.succ AxNat.zero)) -> ((x5 : AxNat.modEq x0 (AxNat.mul x3 x1) (AxNat.mul x3 x2)) -> AxNat.modEq x0 x1 x2))))))`.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\t' '$1 == \"Nat.mod_eq_cancel_left\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.gcd x0 x3) (AxNat.succ AxNat.zero)) -> ((x5 : AxNat.modEq x0 (AxNat.mul x3 x1) (AxNat.mul x3 x2)) -> AxNat.modEq x0 x1 x2))))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.mod_eq_cancel_left"
+    },
+    {
+      "id": "footprint-Nat.mod_eq_cancel_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.mod_eq_cancel_left`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.mod_eq_cancel_left`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed by lane nat-modeq-mirrors (2026-08-30): new declaration `Nat.mod_eq_cancel_left` in `crates/axeyum-lean-kernel/src/nat_prelude/modeq_add_cancel.rs`, composed entirely from already-checked lemmas (`mod_eq_add_left`/`mod_eq_add_right`/`mod_eq_symm`/`mod_eq_trans`/`mod_eq_add`/`gcd_comm`/`mod_eq_cancel`) plus two `euler.rs` helpers exported `pub(super)` for this purpose (`cancel_common_right_addend`, `rewrite_mod_eq`). No new existential-elimination term was written; additive cancellation modulo `n` needs no side condition, unlike the multiplicative case. Verified against a genuinely free variable (the theorem is a direct Pi-quantified kernel declaration, never instantiated at a numeral) and against `every_nat_declaration_is_checked_and_axiom_free`/`the_build_is_deterministic`, both of which read the environment directly rather than a maintained list.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

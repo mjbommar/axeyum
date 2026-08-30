@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n a b c d : ℕ}, a ≡ b [MOD n] → c ≡ d [MOD n] → a + c ≡ b + d [MOD n]",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_eq_add",
+    "kernel_statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.modEq x0 x1 x2) -> ((x6 : AxNat.modEq x0 x3 x4) -> AxNat.modEq x0 (AxNat.add x1 x3) (AxNat.add x2 x4))))))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-mod-eq-add-left", "F:nat-mod-eq-add-right", "F:nat-mod-eq-trans"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mod_eq_add",
+      "kind": "kernel-term",
+      "supports": "`Nat.mod_eq_add` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.modEq x0 x1 x2) -> ((x6 : AxNat.modEq x0 x3 x4) -> AxNat.modEq x0 (AxNat.add x1 x3) (AxNat.add x2 x4))))))))`.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\t' '$1 == \"Nat.mod_eq_add\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.modEq x0 x1 x2) -> ((x6 : AxNat.modEq x0 x3 x4) -> AxNat.modEq x0 (AxNat.add x1 x3) (AxNat.add x2 x4))))))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.mod_eq_add"
+    },
+    {
+      "id": "footprint-Nat.mod_eq_add",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.mod_eq_add`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.mod_eq_add`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed by lane nat-modeq-mirrors (2026-08-30). No new proof work: `Nat.mod_eq_add` (modular.rs, declared as part of the balanced-witness `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` congruence family) already states exactly this proposition -- rendered type read character-by-character against `formal.statement` and found to be the same proposition up to alpha-renaming (n/a/b/c/d vs the declaration's d/a/b/c/e). This lane verified the type match and the axiom footprint and flipped the status; it wrote no new declaration for this fact.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
