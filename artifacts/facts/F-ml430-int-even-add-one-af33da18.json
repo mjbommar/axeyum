@@ -10,7 +10,15 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:int-lt-irrefl", "F:int-modeq-add-left", "F:int-modeq-add-right", "F:int-modeq-refl", "F:int-modeq-trans", "F:int-zero-lt-one", "F:nat-mod-two-eq-zero-or-one"],
+  "depends_on": [
+    "F:int-lt-irrefl",
+    "F:int-modeq-add-left",
+    "F:int-modeq-add-right",
+    "F:int-modeq-refl",
+    "F:int-modeq-trans",
+    "F:int-zero-lt-one",
+    "F:nat-mod-two-eq-zero-or-one"
+  ],
   "evidence": [
     {
       "id": "kernel-Int.even_add_one",
@@ -52,7 +60,7 @@
       }
     ]
   },
-  "notes": "CLOSED via the `int-emod-additive` lane, 2026-08-29, as `Int.even_add_one` -- axiom-free, statement identical to Mathlib's. Left `open` by the `int-parity-two` lane pending an additive compatibility law for `emod`.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "notes": "CLOSED via the `int-emod-additive` lane, 2026-08-29, as `Int.even_add_one` -- axiom-free, statement identical to Mathlib's. Left `open` by the `int-parity-two` lane pending an additive compatibility law for `emod`.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
   "proof_route": "kernel-lean",
   "axiom_footprint": []
 }

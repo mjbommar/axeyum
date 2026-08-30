@@ -155,6 +155,11 @@ def parse_diagnostics(output: str) -> dict[int, list[str]]:
                 continue
             current = by_line.setdefault(int(match.group("line")), [])
             current.append(f"{match.group('col')}: {match.group('msg')}")
+        elif raw.startswith("AXEYUM_"):
+            # Our own remote-script sentinels. Without this they attach to the
+            # last diagnostic as continuation lines and end up quoted inside the
+            # manifest as if Lean had said them.
+            current = None
         elif current is not None and raw.strip():
             current.append(f"    {raw.rstrip()}")
     return by_line
@@ -206,6 +211,22 @@ def main() -> int:
     parser.add_argument("--lake", default=DEFAULT_LAKE)
     parser.add_argument("--toolchain", default=DEFAULT_TOOLCHAIN)
     parser.add_argument("--limit", type=int, default=0, help="attest only the first N rows (a SUBSET; say so when reporting)")
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        metavar="FACT_ID",
+        help="attest ONLY these fact ids -- isolates a suspected row from its neighbours",
+    )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="FACT_ID",
+        help="drop these fact ids. Use after a failure to confirm the remaining rows pass on "
+        "their own: a PARSE error can desync Lean's parser and swallow following lines, which "
+        "would report them as elaborated when they were never read.",
+    )
     parser.add_argument("--emit-only", action="store_true", help="write the module and exit without running Lean")
     parser.add_argument("--out", type=pathlib.Path, help="also write the generated module here")
     parser.add_argument("--json-out", type=pathlib.Path, help="write a machine-readable result record here")
@@ -215,9 +236,20 @@ def main() -> int:
 
     rows = load_rows(args.manifest)
     total_rows = len(rows)
-    subset = bool(args.limit) and args.limit < total_rows
+
+    known = {row["fact_id"] for row in rows}
+    for fact_id in list(args.only) + list(args.exclude):
+        if fact_id not in known:
+            raise AttestError(f"--only/--exclude names {fact_id}, which is not in {args.manifest}")
+    if args.only:
+        rows = [row for row in rows if row["fact_id"] in set(args.only)]
+    if args.exclude:
+        rows = [row for row in rows if row["fact_id"] not in set(args.exclude)]
     if args.limit:
         rows = rows[: args.limit]
+    if not rows:
+        raise AttestError("selection left no rows to attest")
+    subset = len(rows) < total_rows
 
     module, line_map = render_module(rows, with_negative_control=not args.no_negative_control)
     module_sha = hashlib.sha256(module.encode()).hexdigest()
@@ -303,6 +335,11 @@ def main() -> int:
                     "mathlib_commit": commit,
                     "lean_version": lean_version,
                     "module_sha256": module_sha,
+                    # Which rows this run actually READ. A consumer must not
+                    # infer coverage from a count: a later draw grows the
+                    # manifest, and a row this run never saw has to be
+                    # distinguishable from one it saw and accepted.
+                    "attested_fact_ids": sorted(row["fact_id"] for row in rows),
                     "rows_attested": len(rows),
                     "rows_in_manifest": total_rows,
                     "subset": subset,
