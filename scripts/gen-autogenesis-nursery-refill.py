@@ -179,7 +179,24 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
 
 PER_FAMILY = 10
 V1_EVALUATION_ENTRIES = 214
-EVALUATION_CEILING = 300
+
+# ADR-0615. The `100..300` range this used to enforce is `nursery-v1.json`'s OWN
+# `policy.evaluation_fact_count`, and `check-autogenesis-nursery.py` checks it
+# against v1's 214 entries alone -- `NURSERY` there is `nursery-v1.json` and
+# nothing else. R3 used to apply that per-manifest bound to the SUM of two
+# manifests (`V1_EVALUATION_ENTRIES + len(entries) > 300`), which is a stricter
+# reading than any rule states and which made the second draw arithmetically
+# impossible at 294 with a 40-row minimum.
+#
+# So the envelope is applied per COHORT, as it is written. v1 keeps its own
+# range, asserted below rather than assumed. The quoted cohort gets a ceiling
+# equal to the ATTESTED one, so an unattested population can never outweigh the
+# population that carries the real-Lean round trip -- the same "scaffolding,
+# never headline" rule ADR-0601 states for imports. When this binds, the answer
+# is to re-attest (`scripts/provision-lean-import-toolchain.sh`, ~5 min on this
+# host), not to raise it again.
+V1_POLICY_RANGE = (100, 300)
+EXTENSION_CEILING = V1_EVALUATION_ENTRIES
 
 
 class RefillError(RuntimeError):
@@ -219,10 +236,58 @@ def statement_shape(statement: str) -> str:
     return "unconditional-relation"
 
 
+def frozen_partitions() -> dict[str, str]:
+    """The partitions an EARLIER draw already preregistered.
+
+    ADR-0615. Without this the generator is not incremental at all: it derives
+    every family's partition from one cycle over the whole of `FAMILY_MODULES`,
+    so adding four new families to make a second draw shifts the cycle index of
+    every family sorting after them. Measured on the eight draw-1 families,
+    adding four moves SEVEN of them -- including `natural-division` (train, 8 of
+    its 10 mirrors proved) into `held-out`, which manufactures a blind
+    population out of rows whose answers are already published. R6 cannot see
+    it: R6 compares the emitted manifest against `assign_partitions()`, and
+    after the change both agree on the new, wrong assignment.
+
+    The manifest is trusted only against its own digest, so a hand-edited
+    `family_partitions` cannot become the frozen truth by being on disk.
+    """
+    if not EXTENSION.is_file():
+        return {}
+    manifest = load_json(EXTENSION)
+    recorded = manifest.get("extension_sha256")
+    body = {k: v for k, v in manifest.items() if k != "extension_sha256"}
+    if digest(body) != recorded:
+        raise RefillError(
+            f"{EXTENSION.name} does not match its own extension_sha256, so its "
+            f"recorded partitions cannot be trusted as the freeze")
+    partitions = manifest.get("family_partitions")
+    if not isinstance(partitions, dict) or not partitions:
+        raise RefillError(
+            f"{EXTENSION.name} carries no family_partitions to freeze")
+    for entry in manifest.get("entries", []):
+        if partitions.get(entry["family"]) != entry["partition"]:
+            raise RefillError(
+                f"{EXTENSION.name} entry {entry['fact_id']} carries partition "
+                f"{entry['partition']!r}, disagreeing with its own "
+                f"family_partitions")
+    return dict(partitions)
+
+
 def assign_partitions() -> dict[str, str]:
-    ordered = sorted(FAMILY_MODULES, key=lambda f: FAMILY_MODULES[f][0])
-    return {family: PARTITION_CYCLE[i % len(PARTITION_CYCLE)]
-            for i, family in enumerate(ordered)}
+    """Frozen families keep their partition; the cycle runs over the NEW ones.
+
+    The cycle restarts at `held-out` for each draw's new family set, which is
+    what makes R5's "at least two new held-out families" reachable at four
+    families. Continuing one global cycle across draws would not.
+    """
+    frozen = frozen_partitions()
+    assignment = {f: p for f, p in frozen.items() if f in FAMILY_MODULES}
+    fresh = sorted((f for f in FAMILY_MODULES if f not in assignment),
+                   key=lambda f: FAMILY_MODULES[f][0])
+    for index, family in enumerate(fresh):
+        assignment[family] = PARTITION_CYCLE[index % len(PARTITION_CYCLE)]
+    return assignment
 
 
 # ---------------------------------------------------------------------------
@@ -436,9 +501,16 @@ def select(inventory: dict[str, dict[str, Any]], env: set[str],
     return entries, reasons
 
 
-def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any]) -> None:
+def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
+          env: set[str]) -> None:
     """Every rule the refill claims to respect, asserted rather than described."""
     partitions = assign_partitions()
+    frozen = frozen_partitions()
+    # R4 and R5 ask what THIS draw adds. Once a second draw exists, every
+    # earlier family is still in `entries` (the manifest is regenerated whole),
+    # so counting over all of them would make both rules pass on draw-1's rows
+    # while the new draw contributed nothing.
+    new_entries = [e for e in entries if e["family"] not in frozen]
 
     # R1 -- the leakage rules the v1 policy states, applied to the new rows.
     for key in ("family", "proof_shape", "source_group"):
@@ -456,26 +528,48 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any]) -> None:
     if clash:
         raise RefillError(f"R2 new families collide with v1 families: {clash}")
 
-    # R3 -- the ceiling. v1's policy caps the evaluation population at 300.
-    total = V1_EVALUATION_ENTRIES + len(entries)
-    if total > EVALUATION_CEILING:
+    # R3 -- the ceiling, applied PER COHORT (ADR-0615). v1's own
+    # `policy.evaluation_fact_count` governs v1, and is asserted here rather
+    # than assumed; the quoted cohort may not outgrow the attested one.
+    v1_evaluation = [e for e in v1_nursery["entries"]
+                     if e["partition"] in ("train", "development", "held-out")]
+    if len(v1_evaluation) != V1_EVALUATION_ENTRIES:
         raise RefillError(
-            f"R3 evaluation population would be {total}, over the "
-            f"{EVALUATION_CEILING} ceiling")
-
-    # R4 -- the refill must actually refill: at least one new row must be
-    # dispatchable, or the whole exercise moved a counter without adding work.
-    dispatchable = [e for e in entries if e["partition"] != "held-out"]
-    if not dispatchable:
-        raise RefillError("R4 every refill row is held-out; nothing is dispatchable")
-
-    # R5 -- and it must restore blind breadth, which is the other half of the
-    # measured deficiency. The surviving v1 held-out set is two families.
-    new_held_out = {e["family"] for e in entries if e["partition"] == "held-out"}
-    if len(new_held_out) < 2:
+            f"R3 nursery-v1 holds {len(v1_evaluation)} evaluation entries, not "
+            f"the frozen {V1_EVALUATION_ENTRIES}; the attested cohort moved")
+    low, high = V1_POLICY_RANGE
+    if not low <= len(v1_evaluation) <= high:
         raise RefillError(
-            f"R5 the refill adds {len(new_held_out)} held-out families; the "
-            f"blind population is already down to two capabilities")
+            f"R3 nursery-v1's {len(v1_evaluation)} evaluation entries fall "
+            f"outside its own {low}..{high} policy range")
+    if len(entries) > EXTENSION_CEILING:
+        raise RefillError(
+            f"R3 the quoted cohort would be {len(entries)} rows, over the "
+            f"{EXTENSION_CEILING}-row ceiling (the size of the ATTESTED "
+            f"cohort). Re-attest rather than raise it: "
+            f"scripts/provision-lean-import-toolchain.sh")
+
+    # R4 and R5 judge a DRAW. An invocation that adds no family is a
+    # reproduction -- `--check`, or an idempotent re-run -- and there is no
+    # refill for them to be about. They are not skippable for a real draw: any
+    # family added to FAMILY_MODULES lands in `new_entries` and both apply.
+    if new_entries:
+        # R4 -- the refill must actually refill: at least one row THIS DRAW
+        # ADDS must be dispatchable, or the exercise moved a counter without
+        # adding work.
+        dispatchable = [e for e in new_entries if e["partition"] != "held-out"]
+        if not dispatchable:
+            raise RefillError("R4 every refill row is held-out; nothing is dispatchable")
+
+        # R5 -- and it must restore blind breadth, which is the other half of
+        # the measured deficiency. The surviving v1 held-out set is two
+        # families.
+        new_held_out = {e["family"] for e in new_entries
+                        if e["partition"] == "held-out"}
+        if len(new_held_out) < 2:
+            raise RefillError(
+                f"R5 the refill adds {len(new_held_out)} held-out families; the "
+                f"blind population is already down to two capabilities")
 
     # R6 -- the assignment must be the one the rule produces. Belt and braces:
     # `select` reads the same function, so this fires only if someone
@@ -491,6 +585,39 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any]) -> None:
     for family, routes in FAMILY_ROUTES.items():
         if list(routes) != sorted(set(routes)):
             raise RefillError(f"R7 route hypotheses for {family} are not sorted/unique")
+
+    # R8 -- a family an earlier draw preregistered keeps its partition, and
+    # keeps existing. R6 above cannot see either failure: it re-derives the
+    # assignment from the same function the emitter used, so a cycle that
+    # shifted agrees with itself.
+    for entry in entries:
+        was = frozen.get(entry["family"])
+        if was is not None and entry["partition"] != was:
+            raise RefillError(
+                f"R8 {entry['family']!r} was preregistered as {was!r} and this "
+                f"draw assigns {entry['partition']!r}; a preregistered "
+                f"partition may only move through the ADR-0542 amendment "
+                f"ledger, never by regeneration")
+    dropped = sorted(set(frozen) - set(FAMILY_MODULES))
+    if dropped:
+        raise RefillError(
+            f"R8 preregistered families are absent from FAMILY_MODULES and "
+            f"would be deleted from the manifest: {dropped}")
+
+    # R9 -- a candidate whose Mathlib name ALREADY has a declaration here may
+    # not be preregistered blind. This is the natural-binomial contamination
+    # (ADR-0542, 2026-08-25: ordinary development in `choose.rs` had already
+    # proved 5 of 20 held-out rows) detected BEFORE preregistration rather than
+    # three days after. Scoped to what this draw adds -- an earlier draw's rows
+    # are frozen, and repairing one is an amendment, not a regeneration.
+    contaminated = sorted(
+        (e["family"], e["source_name"]) for e in new_entries
+        if e["partition"] == "held-out" and e["source_name"] in env)
+    if contaminated:
+        raise RefillError(
+            f"R9 {len(contaminated)} held-out candidate(s) already have a "
+            f"declaration of the same Mathlib name in the kernel environment, "
+            f"so they are not blind: {contaminated[:5]}")
 
 
 def build_extension(entries: list[dict[str, Any]],
@@ -556,7 +683,12 @@ def build_extension(entries: list[dict[str, Any]],
             + ". The cycle starts at held-out because the measured deficiency "
             "is held-out breadth: of twelve v1 families exactly two are still "
             "open and blind. No target outcome was consulted; the rule is "
-            "re-derived by --check, so the assignment cannot be hand-edited."),
+            "re-derived by --check, so the assignment cannot be hand-edited. "
+            "ADR-0615: a family an earlier draw preregistered is FROZEN and the "
+            "cycle runs over the new families only. Without that freeze, adding "
+            "four families shifted the cycle index of seven of the first "
+            "eight -- moving natural-division, 8 of whose 10 mirrors are "
+            "proved, into held-out."),
         "family_partitions": partitions,
         "family_modules": {f: list(m) for f, m in sorted(FAMILY_MODULES.items())},
         "route_hypotheses": {f: list(r) for f, r in sorted(FAMILY_ROUTES.items())},
@@ -567,7 +699,16 @@ def build_extension(entries: list[dict[str, Any]],
             "partition_counts": dict(sorted(counts.items())),
             "v1_evaluation_entries": V1_EVALUATION_ENTRIES,
             "combined_evaluation_entries": V1_EVALUATION_ENTRIES + len(entries),
-            "evaluation_ceiling": EVALUATION_CEILING,
+            "attested_cohort_entries": V1_EVALUATION_ENTRIES,
+            "quoted_cohort_ceiling": EXTENSION_CEILING,
+            "ceiling_authority": (
+                "ADR-0615. nursery-v1's policy.evaluation_fact_count 100..300 "
+                "governs nursery-v1, which check-autogenesis-nursery.py checks "
+                "against its 214 entries alone. This QUOTED cohort carries its "
+                "own ceiling, equal to the ATTESTED cohort, so an unattested "
+                "population can never outweigh an attested one. When it binds, "
+                "re-attest (scripts/provision-lean-import-toolchain.sh) rather "
+                "than raise it."),
             "screen_rejections": dict(sorted(
                 (k, v) for k, v in reasons.items() if not k.startswith("selected:"))),
         },
@@ -651,6 +792,68 @@ def render(value: Any) -> str:
     return json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 
 
+# What preregistration binds about a fact, and therefore all this generator may
+# assert about one that already exists. Everything else -- `epistemic_status`,
+# `evidence`, `depends_on` -- belongs to the ledger and to whichever lane closed
+# the mirror; `validate-facts.py` is its checker, not this script.
+PREREGISTERED_FIELDS = ("id", "title", "statement")
+
+
+def shown(path: pathlib.Path) -> str:
+    """Repository-relative when it can be, absolute when it cannot -- the
+    controls point `FACTS` at a scratch directory outside the tree."""
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def preregistered_view(fact: dict[str, Any]) -> dict[str, Any]:
+    view = {k: fact.get(k) for k in PREREGISTERED_FIELDS}
+    formal = fact.get("formal") or {}
+    view["formal.statement"] = formal.get("statement")
+    view["formal.fragment"] = formal.get("fragment")
+    view["formal.language"] = formal.get("language")
+    return view
+
+
+def reconcile_facts(entries: list[dict[str, Any]], check: bool) -> list[str]:
+    """Emit a fact ONLY where none exists; never rewrite one that does.
+
+    ADR-0615. This generator regenerates the whole manifest from
+    `FAMILY_MODULES`, and it used to regenerate every fact file with it. By the
+    time a second draw was attempted, lanes had closed 39 of draw 1's 50
+    dispatchable mirrors, so `--check` reported `39 generated file(s) are
+    stale` and its own advice -- "regenerate without --check" -- would have
+    overwritten 39 `proved` facts with fresh `open` stubs, discarding the
+    evidence rows and status flips of five lanes.
+
+    A preregistered fact is immutable in the fields preregistration BINDS and
+    mutable in everything else. So the reconciliation asserts the former and
+    leaves the latter alone, in both modes.
+    """
+    problems: list[str] = []
+    for entry in entries:
+        path = fact_path(entry["fact_id"])
+        fresh = fact_for(entry)
+        if not path.exists():
+            if check:
+                problems.append(
+                    f"{shown(path)} is missing; regenerate without --check")
+            else:
+                path.write_text(render_fact(fresh))
+            continue
+        existing = json.loads(path.read_text())
+        want = preregistered_view(fresh)
+        got = preregistered_view(existing)
+        if want != got:
+            drift = sorted(k for k in want if want[k] != got[k])
+            problems.append(
+                f"{shown(path)} has drifted from its preregistration "
+                f"in {drift}; a preregistered statement may not be rewritten")
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true",
@@ -696,12 +899,10 @@ def main() -> int:
                       if row["kind"] == "external-source"}
         entries, reasons = select(inventory, env, vocabulary, registry, catalogued)
         v1_nursery = load_json(AUTOGEN / "nursery-v1.json")
-        guard(entries, v1_nursery)
+        guard(entries, v1_nursery, env)
         extension = build_extension(entries, reasons)
 
         outputs = {VOCABULARY: render(vocabulary), EXTENSION: render(extension)}
-        for entry in entries:
-            outputs[fact_path(entry["fact_id"])] = render_fact(fact_for(entry))
 
         if args.check:
             stale = [p for p, text in outputs.items()
@@ -713,6 +914,24 @@ def main() -> int:
         else:
             for path, text in outputs.items():
                 path.write_text(text)
+
+        # Facts are reconciled, never rewritten -- see reconcile_facts.
+        problems = reconcile_facts(entries, args.check)
+        if problems:
+            # Under --check this is a reproduction failure and must be fatal.
+            # During a draw it is a LEDGER defect in rows this invocation is not
+            # touching, and blocking every future draw on one lane's edit to one
+            # settled fact would be the wrong trade -- so it is reported on
+            # stderr, loudly and by name, and the draw proceeds. Nothing is
+            # written to those files either way.
+            if args.check:
+                raise RefillError(
+                    f"{len(problems)} fact file(s) disagree with the "
+                    f"preregistration; first: {problems[0]}")
+            for problem in problems:
+                print(f"PREREGISTRATION_DRIFT|{problem}", file=sys.stderr)
+            print(f"PREREGISTRATION_DRIFT|{len(problems)} fact(s) drifted; "
+                  f"none were rewritten", file=sys.stderr)
 
         counts = extension["coverage"]["partition_counts"]
         print("AUTOGENESIS_NURSERY_REFILL_OK|"

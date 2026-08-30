@@ -1,8 +1,9 @@
 {
   "coverage": {
+    "attested_cohort_entries": 214,
+    "ceiling_authority": "ADR-0615. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. This QUOTED cohort carries its own ceiling, equal to the ATTESTED cohort, so an unattested population can never outweigh an attested one. When it binds, re-attest (scripts/provision-lean-import-toolchain.sh) rather than raise it.",
     "combined_evaluation_entries": 294,
     "entries": 80,
-    "evaluation_ceiling": 300,
     "families": 8,
     "partition_counts": {
       "development": 30,
@@ -10,6 +11,7 @@
       "train": 20
     },
     "per_family": 10,
+    "quoted_cohort_ceiling": 214,
     "screen_rejections": {
       "hygienic-or-generated": 191,
       "not-statable-here": 495
@@ -2540,7 +2542,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "11919c171918ce79b51e1fa1ca5a8f62895e934566a36097b733864b9a5ad4c3",
+  "extension_sha256": "eb92022be337f81af36bd07f19c04aa1a6abd8350ae9ceb44f2a24e085f1a1e4",
   "family_modules": {
     "integer-division": [
       "Init.Data.Int.DivMod.Lemmas",
@@ -2588,7 +2590,7 @@
     "depends_on is empty: no dependency-component analysis was run for these rows, so source_group is the Mathlib defining module rather than a declared weak component.",
     "Mathlib declarations remain external prior art and every Axeyum fact here remains open."
   ],
-  "partition_assignment_rule": "New families are ordered by the lexicographic path of their primary Mathlib defining module -- a property of the external source, not of our capability -- and partitions are assigned by the repeating cycle held-out, development, train. The cycle starts at held-out because the measured deficiency is held-out breadth: of twelve v1 families exactly two are still open and blind. No target outcome was consulted; the rule is re-derived by --check, so the assignment cannot be hand-edited.",
+  "partition_assignment_rule": "New families are ordered by the lexicographic path of their primary Mathlib defining module -- a property of the external source, not of our capability -- and partitions are assigned by the repeating cycle held-out, development, train. The cycle starts at held-out because the measured deficiency is held-out breadth: of twelve v1 families exactly two are still open and blind. No target outcome was consulted; the rule is re-derived by --check, so the assignment cannot be hand-edited. ADR-0615: a family an earlier draw preregistered is FROZEN and the cycle runs over the new families only. Without that freeze, adding four families shifted the cycle index of seven of the first eight -- moving natural-division, 8 of whose 10 mirrors are proved, into held-out.",
   "route_hypotheses": {
     "integer-division": [
       "kernel-library-application",
