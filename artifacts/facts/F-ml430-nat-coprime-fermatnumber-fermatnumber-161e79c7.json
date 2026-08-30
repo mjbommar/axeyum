@@ -6,12 +6,48 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, m ≠ n → m.fermatNumber.Coprime n.fermatNumber",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_fermatNumber_fermatNumber",
+    "kernel_statement": "theorem Nat.coprime_fermatNumber_fermatNumber : (((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : Eq.{1} AxNat x0 x1) -> False)) -> Eq.{1} AxNat (AxNat.gcd (AxNat.fermatNumber x0) (AxNat.fermatNumber x1)) (AxNat.succ AxNat.zero)))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-coprime-symmetric-9b5cfa12", "F:ml430-nat-coprime-two-left-1b47e7c4", "F:ml430-nat-modeq-gcd-eq-5167ff4f", "F:nat-add-sub-cancel-of-le", "F:nat-le-succ-succ", "F:nat-le-total", "F:nat-le-trans", "F:nat-lt-irrefl", "F:nat-lt-or-eq-of-le", "F:nat-mod-eq-add-right", "F:nat-modeq-pow", "F:nat-mul-comm", "F:nat-mul-one", "F:nat-one-mul", "F:nat-one-pow", "F:nat-pow-add", "F:nat-pow-pos", "F:nat-right-distrib", "F:nat-succ-pred-of-pos", "F:nat-zero-add", "F:nat-zero-le"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.coprime_fermatNumber_fermatNumber",
+      "kind": "kernel-term",
+      "supports": "`Nat.coprime_fermatNumber_fermatNumber` is admitted as a Theorem with EXACTLY the stated shape (`Coprime a b` has no separate kernel name here -- see `primes.rs` -- it is stated by `Eq (gcd a b) one` directly).",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.coprime_fermatNumber_fermatNumber\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : Eq.{1} AxNat x0 x1) -> False)) -> Eq.{1} AxNat (AxNat.gcd (AxNat.fermatNumber x0) (AxNat.fermatNumber x1)) (AxNat.succ AxNat.zero))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.coprime_fermatNumber_fermatNumber"
+    },
+    {
+      "id": "footprint-Nat.coprime_fermatNumber_fermatNumber",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.coprime_fermatNumber_fermatNumber`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including this one.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    },
+    {
+      "id": "reflexive-negative-control-Nat.coprime_fermatNumber_fermatNumber",
+      "kind": "instance-pin",
+      "supports": "The theorem's `Ne m n` hypothesis is load-bearing, not vacuous: at m=n=0 (excluded by the hypothesis), gcd(fermatNumber 0, fermatNumber 0) = gcd(3,3) = 3, NOT 1. Two positive concrete pairs (fermatNumber 0/1 = 3/5, gcd = 1; fermatNumber 1/2 = 5/17, gcd = 1, exercising the theorem's `Lt n m` branch and its `coprime_symmetric` swap) are checked alongside a genuinely free-variable instantiation of the theorem itself.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude_tests::fermat_number_mirrors_apply_at_free_and_concrete_instances_with_a_reflexive_negative_control"
+      ],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::fermat_number_mirrors_apply_at_free_and_concrete_instances_with_a_reflexive_negative_control -- --exact 2>&1 | grep -c '^test result: ok'"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +62,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction (lane fermat-mirrors) -- Goldbach's coprimality theorem for Fermat numbers. For `m < n`, write `a := 2^(2^m)` (so `fermatNumber m` is defeq `a + 1`) and `t := n - m > 0`. Since `pow` recurses on the exponent, `t = succ (pred t)` makes `2^t` defeq `mul j 2` (`j := 2^(pred t)`), and `mul_comm` turns that into `2*j`; `pow_add` plus a locally-built `pow_mul_eq` (`pow b (mul x y) = pow (pow b x) y`, by induction on `y`) then give `2^(2^n) = (a^2)^j`. Separately, `a^2 = a*a` (via `one_mul`+`congr`) satisfies `modEq (a+1) (a*a) 1` by the EXPLICIT witness `u=1, v=a` (`a*a + (a+1)*1 = 1 + (a+1)*a`, an `add`/`mul`/`right_distrib`/`add_assoc`/`add_comm` reshuffle with no subtraction anywhere). `Nat.mod_eq_pow` (`fermat.rs`) raises that to the `j`-th power and `mod_eq_add_right` shifts both sides by `+1`, giving `fermatNumber n ≡ 2 (mod fermatNumber m)`. `Nat.ModEq.gcd_eq` then reduces `gcd (fermatNumber n) (fermatNumber m)` to `gcd 2 (fermatNumber m)`, and `fermatNumber m` is odd (`2^k` is `Even` for any `k>0` via a local `even_pow_two_of_pos`, `pow_pos` gives `2^m>0`, `even_iff_odd_succ`'s `mp` direction gives `Odd (succ (2^(2^m)))`), so `coprime_two_left`'s reverse direction closes it at `gcd 2 (fermatNumber m) = 1`. The `m ≠ n` case split (`lt_or_gt_of_ne_local`, built from `le_total`+`lt_or_eq_of_le`) and a final `coprime_symmetric` swap for the `n < m` branch complete the theorem. `crates/axeyum-lean-kernel/src/nat_prelude/fermat_number_mirrors.rs`. Verified symbolically (admitted over genuinely free `m`, `n`, checked by `Kernel::add_declaration`), at TWO concrete distinct pairs (gcd(3,5)=1, gcd(5,17)=1 -- the second exercising the theorem's other case branch), and against a reflexive negative control confirming `Ne m n` is genuinely load-bearing (gcd(3,3)=3, explicitly asserted NOT defeq to 1). This is a genuine kernel construction, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering (`Coprime` unfolded to `gcd _ _ = one`) checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

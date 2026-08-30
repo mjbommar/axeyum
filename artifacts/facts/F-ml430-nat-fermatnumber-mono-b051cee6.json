@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "Monotone Nat.fermatNumber",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fermatNumber_mono",
+    "kernel_statement": "theorem Nat.fermatNumber_mono : (((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.fermatNumber x0) (AxNat.fermatNumber x1)))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-add-le-add-right", "F:nat-le-trans", "F:nat-lt-or-eq-of-le", "F:nat-pow-lt-pow-of-lt"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.fermatNumber_mono",
+      "kind": "kernel-term",
+      "supports": "`Nat.fermatNumber_mono` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.fermatNumber_mono\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.fermatNumber x0) (AxNat.fermatNumber x1))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.fermatNumber_mono"
+    },
+    {
+      "id": "footprint-Nat.fermatNumber_mono",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.fermatNumber_mono`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.fermatNumber_mono`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction (lane fermat-mirrors). `Monotone f` is Mathlib's own `def Monotone (f : a -> b) := forall x y, x <= y -> f x <= f y`, so this is the core-rendered `forall x y, Le x y -> Le (fermatNumber x) (fermatNumber y)` -- the same treatment already given `Nat.log_monotone`/`Nat.clog_monotone`. `fermatNumber` composes `pow 2 .` with itself twice then `add . 1`; a local `pow_le_pow_of_le_local` helper (case-split on `Lt`/`Eq` from `Le` via `lt_or_eq_of_le`, using `pow_lt_pow_of_lt` for the strict branch) climbs the two `pow` layers and `add_le_add_right` finishes. `crates/axeyum-lean-kernel/src/nat_prelude/fermat_number_mirrors.rs::declare_fermatnumber_mono`. Verified symbolically (admitted over genuinely free `x`, `y`) and at a concrete instance (`nat_prelude_tests.rs`, same test as `fermatNumber_ne_one`: `fermatNumber 0 = 3 <= fermatNumber 1 = 5`). This is a genuine kernel construction, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
