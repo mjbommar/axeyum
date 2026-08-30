@@ -1673,6 +1673,25 @@ pub struct NatPrelude {
     /// each witness plus `count_range_le_of_le` to carry the resulting `≥ 1`
     /// bound up to the next witness and the `≥ 2` bound up to `n`.
     pub count_range_ge_two_of_two_witnesses: NameId,
+    /// `Nat.dvd_two_of_totient_le_one : ∀ a, Lt zero a → Le (totient a) one →
+    /// dvd a two` (`F:ml430-nat-dvd-two-of-totient-le-one`). `trichotomy` at
+    /// `c = 2` on `a`: `a < 2` combined with `0 < a` forces `a = 1` (`dvd 1 2`
+    /// trivially, witness `2`); `a = 2` is `dvd 2 2` (`dvd_refl`); `2 < a`
+    /// contradicts `totient a ≤ 1` via `countRange_ge_two_of_two_witnesses`
+    /// at the two witnesses `1` and `pred a` (see
+    /// `totient_le_one_contradiction_above_two` in `totient_lemmas.rs`,
+    /// shared with `totient_eq_one_iff`'s forward direction).
+    pub dvd_two_of_totient_le_one: NameId,
+    /// `Nat.totient_eq_one_iff : ∀ n, Iff (Eq (totient n) one) (Or (Eq n one)
+    /// (Eq n two))` (`F:ml430-nat-totient-eq-one-iff`). Reverse direction:
+    /// `totient one = one` and `totient two = one` both hold by pure
+    /// reduction (`countRange` over `[0,1)`/`[0,2)`, like
+    /// `totient_computes_on_small_numerals`). Forward direction shares
+    /// `dvd_two_of_totient_le_one`'s `trichotomy` shape at `c = 2`: `n < 2`
+    /// splits again (`lt_or_eq_of_le`) into `n = 0` (contradicts `totient n =
+    /// 1` since `totient 0 = 0`) or `n = 1`; `n = 2` is immediate; `2 < n`
+    /// uses the same shared contradiction as `dvd_two_of_totient_le_one`.
+    pub totient_eq_one_iff: NameId,
 
     // --- `Fin`, and the pigeonhole notions (`finite.rs`) --------------------
     /// `Nat.Fin : Nat → Type 0` — the canonical finite index type
@@ -3797,6 +3816,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_le_of_le: kernel.name_str(nat, "countRange_le_of_le"),
             count_range_ge_two_of_two_witnesses: kernel
                 .name_str(nat, "countRange_ge_two_of_two_witnesses"),
+            dvd_two_of_totient_le_one: kernel.name_str(nat, "dvd_two_of_totient_le_one"),
+            totient_eq_one_iff: kernel.name_str(nat, "totient_eq_one_iff"),
             fin,
             fin_mk: kernel.name_str(fin, "mk"),
             fin_rec: kernel.name_str(fin, "rec"),
