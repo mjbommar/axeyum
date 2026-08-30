@@ -755,6 +755,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_le,
         p.count_range_congr,
         p.count_range_split,
+        p.count_range_reversal_even,
         p.beq_eq_false_of_ne,
         p.count_range_eq_pred_of_only_zero_false,
         p.totient_prime,
@@ -1650,6 +1651,111 @@ fn count_range_succ_of_true_applies_at_a_concrete_witness_and_symbolically() {
     assert!(
         f.k.def_eq(inferred_sym, expected_sym),
         "count_range_succ_of_true must hold symbolically"
+    );
+}
+
+/// `Nat.countRange_reversal_even` — the general, `totient`-independent
+/// evenness lemma (`count_range_reversal.rs`), applied at `L = 0` with a
+/// concrete predicate (`fun k => beq k 0`): both hypotheses are VACUOUS at
+/// `L = 0` (no `j` satisfies `Lt j 0`), discharged via `Nat.not_succ_le_zero`
+/// -- this exercises the theorem's real public signature/currying
+/// (`L` bound before `h`, per the module doc) rather than re-deriving the
+/// mathematical content, which the kernel already checked exhaustively (both
+/// hypotheses are fully symbolic in `h` and `L`) when the theorem itself was
+/// admitted.
+#[test]
+fn count_range_reversal_even_applies_at_a_vacuous_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+
+    let zero = f.zero();
+    let f_concrete = {
+        let x_fv = f.fresh_fvar();
+        let x = f.k.fvar(x_fv);
+        let body = f.beq(x, zero);
+        f.lam_fv(x_fv, nat, body)
+    };
+
+    // `Pi j, Lt j 0 -> Eq Bool (h (sub (pred 0) j)) (h j)`, vacuous.
+    let hyp1_proof = {
+        let j_fv = f.fresh_fvar();
+        let j = f.k.fvar(j_fv);
+        let lt_j_0 = f.lt(j, zero);
+        let hlt_fv = f.fresh_fvar();
+        let hlt = f.k.fvar(hlt_fv);
+        let pred_0 = f.pred(zero);
+        let sub_val = f.sub(pred_0, j);
+        let h_sub = f.apply(f_concrete, &[sub_val]);
+        let h_j = f.apply(f_concrete, &[j]);
+        let goal = f.bool_eq(h_sub, h_j);
+        let not_succ_le_zero_j = f.lemma(p.not_succ_le_zero, &[j]);
+        let contradiction = f.apply(not_succ_le_zero_j, &[hlt]);
+        let false_ty = f.kernel().const_(p.logic.false_, vec![]);
+        let level_zero = f.kernel().level_zero();
+        let false_rec = f.kernel().const_(p.logic.false_rec, vec![level_zero]);
+        let anon = f.anon_name();
+        let motive = f.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+        let body = f.apply(false_rec, &[motive, contradiction]);
+        let inner = f.lam_fv(hlt_fv, lt_j_0, body);
+        f.lam_fv(j_fv, nat, inner)
+    };
+
+    // `Pi j, Lt j 0 -> Eq Bool (h j) true -> Not (Eq j (sub (pred 0) j))`,
+    // vacuous.
+    let hyp2_proof = {
+        let j_fv = f.fresh_fvar();
+        let j = f.k.fvar(j_fv);
+        let lt_j_0 = f.lt(j, zero);
+        let hlt_fv = f.fresh_fvar();
+        let hlt = f.k.fvar(hlt_fv);
+        let h_j = f.apply(f_concrete, &[j]);
+        let true_v = f.bool_true();
+        let heq_true_ty = f.bool_eq(h_j, true_v);
+        let heq_fv = f.fresh_fvar();
+        let pred_0 = f.pred(zero);
+        let sub_val = f.sub(pred_0, j);
+        let eq_j_sub = f.eq(j, sub_val);
+        let false_ty = f.kernel().const_(p.logic.false_, vec![]);
+        let level_zero = f.kernel().level_zero();
+        let false_rec = f.kernel().const_(p.logic.false_rec, vec![level_zero]);
+        let anon = f.anon_name();
+        let not_goal = f.arrow(eq_j_sub, false_ty);
+        let motive = f
+            .kernel()
+            .lam(anon, false_ty, not_goal, BinderInfo::Default);
+        let not_succ_le_zero_j = f.lemma(p.not_succ_le_zero, &[j]);
+        let contradiction = f.apply(not_succ_le_zero_j, &[hlt]);
+        let body = f.apply(false_rec, &[motive, contradiction]);
+        let with_heq = f.lam_fv(heq_fv, heq_true_ty, body);
+        let inner = f.lam_fv(hlt_fv, lt_j_0, with_heq);
+        f.lam_fv(j_fv, nat, inner)
+    };
+
+    let proof = f.const_app(
+        p.count_range_reversal_even,
+        &[zero, f_concrete, hyp1_proof, hyp2_proof],
+    );
+    let cr_h_0 = f.const_app(p.count_range, &[f_concrete, zero]);
+    assert!(
+        f.k.def_eq(cr_h_0, zero),
+        "countRange f 0 must reduce to 0 (no room)"
+    );
+    let expected = f.const_app(p.even, &[cr_h_0]);
+    let inferred =
+        f.k.infer(proof)
+            .expect("countRange_reversal_even must type-check at L = 0");
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "countRange_reversal_even must prove Even (countRange h 0)"
+    );
+
+    // Negative control: `Even` is not vacuously derivable from nothing --
+    // `bool_ty` (an unrelated `Prop`) is NOT what this proves.
+    assert!(
+        !f.k.def_eq(inferred, bool_ty),
+        "the conclusion must not be an arbitrary unrelated type"
     );
 }
 
@@ -7262,7 +7368,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 538,
+        93 + 539,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -4259,17 +4259,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
-        // `Nat.countRange_reversal_even`: general, `totient`-independent.
-        // Needs `count_range`/`count_range_split` (`declare_totient_all`,
-        // just above), `lt_well_founded`/`WellFounded.fix`
-        // (`declare_gcd_semantics`, far above), `zero_or_succ` (declared
-        // alongside the other basic `Nat` equational facts, far above),
-        // `succ_sub_succ`/`succ_sub_of_le`/`succ_pred_of_pos`/`zero_le`/
-        // `le_succ`/`le_trans`/`succ_le_succ`/`le_of_succ_le_succ`/
-        // `lt_succ_self`/`zero_lt_succ` (order lemmas, far above), and
-        // `add_assoc`/`add_comm`/`zero_add`/`succ_add` (additive theorems,
-        // far above).
-        declare_count_range_reversal_even(&mut d, &p)?;
         // Needs `coprime_add_self_right`/`coprime_one_right_iff` (declared
         // far above, alongside the other `Coprime` characterisations) plus
         // `count_range`/`totient`, just declared above.
@@ -4327,6 +4316,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_powsq_all(&mut d, &p)?;
         // Needs `Nat.even_or_odd`, just declared by `declare_powsq_all` above.
         declare_parity_all(&mut d, &p)?;
+        // `Nat.countRange_reversal_even`: general, `totient`-independent.
+        // Needs `count_range`/`count_range_split` (`declare_totient_all`,
+        // far above), `Nat.Even` (`declare_parity_all`, just above),
+        // `lt_well_founded`/`WellFounded.fix` (`declare_gcd_semantics`,
+        // far above), `zero_or_succ` (declared alongside the other basic
+        // `Nat` equational facts, far above), `succ_sub_succ`/
+        // `succ_sub_of_le`/`succ_pred_of_pos`/`zero_le`/`le_succ`/
+        // `le_trans`/`succ_le_succ`/`le_of_succ_le_succ`/`lt_succ_self`/
+        // `zero_lt_succ` (order lemmas, far above), and `add_assoc`/
+        // `add_comm`/`zero_add`/`succ_add` (additive theorems, far above).
+        declare_count_range_reversal_even(&mut d, &p)?;
         // Needs `Nat.Even`/`Nat.Odd`/`even_or_odd_exists`/`even_not_odd`, just
         // declared by `declare_parity_all` above -- cannot run alongside the
         // other `coprime_*` declarations near `declare_primes` since parity

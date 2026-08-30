@@ -252,7 +252,14 @@ fn even_witness(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId) -> ExprId {
 /// `Even x -> Even y -> Even (add x y)`: eliminate both witnesses (`x =
 /// kx+kx`, `y = ky+ky`), then `(kx+kx)+(ky+ky) = (kx+ky)+(kx+ky)` via
 /// [`add_add_add_comm`], giving witness `add kx ky`.
-fn even_add(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, ex: ExprId, y: ExprId, ey: ExprId) -> ExprId {
+fn even_add(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    ex: ExprId,
+    y: ExprId,
+    ey: ExprId,
+) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
     let one_lvl = d.level_one();
@@ -278,14 +285,14 @@ fn even_add(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, ex: ExprId, y: ExprId
         let ey_ty = d.apply(exists_c2, &[nat, pred_y]);
         let motive_inner = d.kernel().lam(anon, ey_ty, goal, BinderInfo::Default);
 
-        let minor_inner = {
-            let ky_fv = d.fresh_fvar();
-            let ky = d.kernel().fvar(ky_fv);
-            let kyky = d.add(ky, ky);
-            let eqy_ty = d.eq(y, kyky);
-            let eqy_fv = d.fresh_fvar();
-            let eqy = d.kernel().fvar(eqy_fv);
+        let ky_fv = d.fresh_fvar();
+        let ky = d.kernel().fvar(ky_fv);
+        let kyky = d.add(ky, ky);
+        let eqy_ty = d.eq(y, kyky);
+        let eqy_fv = d.fresh_fvar();
+        let eqy = d.kernel().fvar(eqy_fv);
 
+        let minor_inner = {
             let add_kxkx_y = d.add(kxkx, y);
             let cong_x = d.congr(x, kxkx, eqx, &|d, t| d.add(t, y));
             let sum_kk = d.add(kxkx, kyky);
@@ -294,7 +301,11 @@ fn even_add(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, ex: ExprId, y: ExprId
             let (four_target, four_proof) = add_add_add_comm(d, &p, kx, kx, ky, ky);
             let (_e, chained) = d.chain(
                 sum_xy,
-                &[(add_kxkx_y, cong_x), (sum_kk, cong_y), (four_target, four_proof)],
+                &[
+                    (add_kxkx_y, cong_x),
+                    (sum_kk, cong_y),
+                    (four_target, four_proof),
+                ],
             );
 
             let witness = d.add(kx, ky);
@@ -310,7 +321,10 @@ fn even_add(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, ex: ExprId, y: ExprId
         d.lam_fv(kx_fv, nat, with_eqx)
     };
     let exists_rec_outer = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
-    d.apply(exists_rec_outer, &[nat, pred_x, motive_outer, minor_outer, ex])
+    d.apply(
+        exists_rec_outer,
+        &[nat, pred_x, motive_outer, minor_outer, ex],
+    )
 }
 
 /// `Eq (countRange f (succ k)) (countRange f k)`, given `h_false : Eq Bool
@@ -521,10 +535,19 @@ fn per_j_bundle(
     let sub_w_j = d.sub(w, j);
     let (_e, idx_eq) = d.chain(
         sub_sw_succj,
-        &[(sub_w_j, succ_sub_succ_fact), (succ_sub_predw_j, sub_w_j_eq)],
+        &[
+            (sub_w_j, succ_sub_succ_fact),
+            (succ_sub_predw_j, sub_w_j_eq),
+        ],
     );
 
-    (lt_succj_v, sub_predw_j, succ_sub_predw_j, sub_sw_succj, idx_eq)
+    (
+        lt_succj_v,
+        sub_predw_j,
+        succ_sub_predw_j,
+        sub_sw_succj,
+        idx_eq,
+    )
 }
 
 /// `hyp1(shift1 h, w)`, built from `hyp1(h, v)` (`h1`) plus the index
@@ -561,7 +584,13 @@ fn build_hyp1_prime(
     let h_succ_j = d.apply(h, &[succ_j]);
 
     let symm_congr = d.bool_symm(h_sub_sw_succj, h_succ_sub_predw_j, congr_idx_bool);
-    let combined = d.bool_trans(h_succ_sub_predw_j, h_sub_sw_succj, h_succ_j, symm_congr, h1_at_succj);
+    let combined = d.bool_trans(
+        h_succ_sub_predw_j,
+        h_sub_sw_succj,
+        h_succ_j,
+        symm_congr,
+        h1_at_succj,
+    );
 
     let bridge_a = shift1_bridge(d, &p, h, sub_predw_j);
     let bridge_b = shift1_bridge(d, &p, h, j);
@@ -605,9 +634,7 @@ fn build_hyp2_prime(
     let htrue_fv = d.fresh_fvar();
     let htrue = d.kernel().fvar(htrue_fv);
 
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
     let eq_j_sub_ty = d.eq(j, sub_predw_j);
-    let not_ty = d.arrow(eq_j_sub_ty, false_ty);
 
     let succ_j = d.succ(j);
     let h_succ_j = d.apply(h, &[succ_j]);
@@ -622,7 +649,10 @@ fn build_hyp2_prime(
         let heq = d.kernel().fvar(heq_fv);
         let congr_succ = d.congr(j, sub_predw_j, heq, &|d, x| d.succ(x));
         let symm_idx_eq = d.symm(sub_sw_succj, succ_sub_predw_j, idx_eq);
-        let (_e, final_eq) = d.chain(succ_j, &[(succ_sub_predw_j, congr_succ), (sub_sw_succj, symm_idx_eq)]);
+        let (_e, final_eq) = d.chain(
+            succ_j,
+            &[(succ_sub_predw_j, congr_succ), (sub_sw_succj, symm_idx_eq)],
+        );
         let false_val = d.apply(h2_at_succj, &[final_eq]);
         d.lam_fv(heq_fv, eq_j_sub_ty, false_val)
     };
@@ -635,7 +665,14 @@ fn build_hyp2_prime(
 /// `statement_at(succ (succ w))`, given `ih : Pi y, Lt y (succ (succ w)) ->
 /// statement_at(y)` and `lt_w_v : Lt w (succ (succ w))`. See the module doc
 /// for the route.
-fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId, ih: ExprId, lt_w_v: ExprId) -> ExprId {
+fn succ_succ_case(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pred_ty: ExprId,
+    w: ExprId,
+    ih: ExprId,
+    lt_w_v: ExprId,
+) -> ExprId {
     let p = *p;
     let sw = d.succ(w);
     let v = d.succ(sw);
@@ -671,7 +708,10 @@ fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId
         count_range(d, &p2, h, x)
     });
     let symm_congr_lhs = d.symm(cr_h_add1sw, cr_h_v, congr_lhs);
-    let (_e1, split_a) = d.chain(cr_h_v, &[(cr_h_add1sw, symm_congr_lhs), (rhs_split, split_eq)]);
+    let (_e1, split_a) = d.chain(
+        cr_h_v,
+        &[(cr_h_add1sw, symm_congr_lhs), (rhs_split, split_eq)],
+    );
 
     let h0 = d.apply(h, &[zero]);
     let sel0 = d.bool_select_nat(h0, one, zero);
@@ -681,7 +721,9 @@ fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId
     let add1w = d.add(one, w);
     let shift1_w = d.apply(shift1, &[w]);
     let h_sw_val = d.apply(h, &[sw]);
-    let congr_shift1w = d.congr(add1w, one_add_w, one_add_w_proof, &|d, x| d.apply(h, &[x]));
+    let congr_shift1w = nat_congr_bool(d, add1w, one_add_w, one_add_w_proof, &|d, x| {
+        d.apply(h, &[x])
+    });
     let sel_shift1w = d.bool_select_nat(shift1_w, one, zero);
     let sel_sw = d.bool_select_nat(h_sw_val, one, zero);
     let sel_congr_c = bool_congr_nat(d, shift1_w, h_sw_val, congr_shift1w, &|d, x| {
@@ -690,7 +732,9 @@ fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId
         d.bool_select_nat(x, one_i, zero_i)
     });
     let cr_shift1_w = count_range(d, &p, shift1, w);
-    let eq_c = d.congr(sel_shift1w, sel_sw, sel_congr_c, &|d, x| d.add(cr_shift1_w, x));
+    let eq_c = d.congr(sel_shift1w, sel_sw, sel_congr_c, &|d, x| {
+        d.add(cr_shift1_w, x)
+    });
 
     let congr_b = d.congr(cr_h_1, sel0, eq_b, &|d, x| d.add(x, cr_shift1_sw));
     let mid1 = d.add(sel0, cr_shift1_sw);
@@ -698,7 +742,10 @@ fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId
     let congr_c2 = d.congr(cr_shift1_sw, inner_c_rhs, eq_c, &|d, x| d.add(sel0, x));
     let mid2 = d.add(sel0, inner_c_rhs);
 
-    let (_e2, master_eq) = d.chain(cr_h_v, &[(rhs_split, split_a), (mid1, congr_b), (mid2, congr_c2)]);
+    let (_e2, master_eq) = d.chain(
+        cr_h_v,
+        &[(rhs_split, split_a), (mid1, congr_b), (mid2, congr_c2)],
+    );
 
     // Rewrite `sel_sw -> sel0` using `h_sw_eq_h0`, then reassociate to
     // `add (add sel0 sel0) rest`.
@@ -725,7 +772,12 @@ fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId
 
     let (_e3, final_eq) = d.chain(
         cr_h_v,
-        &[(mid2, master_eq), (mid3, congr_step1), (mid4, congr_step2), (target_expr, symm_assoc1)],
+        &[
+            (mid2, master_eq),
+            (mid3, congr_step1),
+            (mid4, congr_step2),
+            (target_expr, symm_assoc1),
+        ],
     );
 
     // `Even rest` via the induction hypothesis, `Even (add sel0 sel0)`
@@ -739,7 +791,13 @@ fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId
 
     let motive_final = d.eq_motive(target_expr, &|d, x| d.const_app(p.even, &[x]));
     let symm_final_eq = d.symm(cr_h_v, target_expr, final_eq);
-    let result = d.transport(target_expr, motive_final, even_target, cr_h_v, symm_final_eq);
+    let result = d.transport(
+        target_expr,
+        motive_final,
+        even_target,
+        cr_h_v,
+        symm_final_eq,
+    );
 
     let with_h2 = d.lam_fv(h2_fv, hyp2_ty, result);
     let with_h1 = d.lam_fv(h1_fv, hyp1_ty, with_h2);
@@ -752,7 +810,13 @@ fn succ_succ_case(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, w: ExprId
 /// `Nat.rec`/`cases_zero_succ`, so the recursive case has an actual
 /// equation relating its bound `w` back to `capital_v` for `ih`'s `Lt`
 /// hypothesis — see the module doc.
-fn recursive_step(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, capital_v: ExprId, ih: ExprId) -> ExprId {
+fn recursive_step(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pred_ty: ExprId,
+    capital_v: ExprId,
+    ih: ExprId,
+) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
     let one_lvl = d.level_one();
@@ -848,7 +912,8 @@ fn recursive_step(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, capital_v
                     let (_e2, v_eq_ssw) = d.chain(capital_v, &[(s_pr, heq1), (s_sw, congr_v)]);
                     let motive_lt = d.eq_motive(s_sw, &|d, x| d.lt(w, x));
                     let symm_v_eq_ssw = d.symm(capital_v, s_sw, v_eq_ssw);
-                    let lt_w_v = d.transport(s_sw, motive_lt, le_succw_ssw, capital_v, symm_v_eq_ssw);
+                    let lt_w_v =
+                        d.transport(s_sw, motive_lt, le_succw_ssw, capital_v, symm_v_eq_ssw);
 
                     let proof_ss = succ_succ_case(d, &p, pred_ty, w, ih, lt_w_v);
                     let motive_v3 = d.eq_motive(s_sw, &|d, x| statement_at(d, &p, pred_ty, x));
@@ -864,17 +929,30 @@ fn recursive_step(d: &mut NatDev<'_>, p: &NatPrelude, pred_ty: ExprId, capital_v
 
             let body_pr = d.const_app(
                 p.logic.or_elim,
-                &[eq_pr0_ty, ex_ty2, goal_v, disj2, sub_case_zero, sub_case_succ],
+                &[
+                    eq_pr0_ty,
+                    ex_ty2,
+                    goal_v,
+                    disj2,
+                    sub_case_zero,
+                    sub_case_succ,
+                ],
             );
             let with_heq1 = d.lam_fv(heq1_fv, heq1_ty, body_pr);
             d.lam_fv(pr_fv, nat, with_heq1)
         };
         let exists_rec_outer = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
-        let body_outer = d.apply(exists_rec_outer, &[nat, pred_pred_ty, motive_ex, minor, hex]);
+        let body_outer = d.apply(
+            exists_rec_outer,
+            &[nat, pred_pred_ty, motive_ex, minor, hex],
+        );
         d.lam_fv(hex_fv, ex_ty, body_outer)
     };
 
-    d.const_app(p.logic.or_elim, &[eq_v0_ty, ex_ty, goal_v, disj, case_zero, case_succ])
+    d.const_app(
+        p.logic.or_elim,
+        &[eq_v0_ty, ex_ty, goal_v, disj, case_zero, case_succ],
+    )
 }
 
 /// `Nat.countRange_reversal_even`. See the module doc for the statement and
