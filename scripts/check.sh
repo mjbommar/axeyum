@@ -382,6 +382,23 @@ step safety-matrix python3 scripts/gen-safety-matrix.py --check
 # CASES IS ALWAYS FAILURE, per fixture and for the pack. A mutation that is
 # not falsified because it is also true is classified, never failed.
 step semantic-control-fixtures python3 scripts/check-semantic-control-fixtures.py --check
+# D3 of the definition-discovery-efficiency roadmap (ADR-0890): the
+# counterexample-first falsification screen, one arrow upstream of S3 --
+# definitions and theorem PROPOSALS rather than settled theorem statements.
+# Re-derives 2 retained false statements (both new relative to S3's 13; a
+# lor/bitwise-fuel family neither `lor` nor `bitwise` names in S3's pack),
+# 6 definitions checked against independent references with a mutation each
+# (every mutation verified to move at least one observation -- a mutation
+# that changes nothing is reported by name, not silently accepted), and 2
+# review obligations for unexecutable CReal constructions. Also enforces
+# dispatch ordering: a dispatch-log entry is refused without a receipt, a
+# clear-for-dispatch verdict, and -- when both commits resolve -- a real
+# `git merge-base --is-ancestor` check that the screen ran before dispatch.
+step falsification-screen python3 scripts/check-falsification-screen.py --check
+# ...and its controls: 17 guards, each verified by
+# test-falsification-screen-mutation-verify.sh to kill EXACTLY ONE test when
+# gutted, in a scratch copy (never the shared checkout).
+step falsification-screen-tests python3 -m unittest scripts.tests.test_falsification_screen
 # S2 of the same roadmap: the universal trust and circularity audit. Reads the
 # whole constructed declaration surface out of `kernel_declaration_projection`
 # and checks every kernel-route settled fact against its own transitive

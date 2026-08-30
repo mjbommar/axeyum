@@ -375,6 +375,19 @@ facts:
     # scripts. ZERO EXECUTED CASES IS ALWAYS FAILURE. A mutation that is not
     # falsified because it is also true is classified, never failed.
     python3 scripts/check-semantic-control-fixtures.py --check
+    # D3 of the definition-discovery-efficiency roadmap (ADR-0890): the
+    # counterexample-first falsification screen, one arrow upstream of S3 --
+    # definitions and theorem PROPOSALS rather than settled statements. 2
+    # retained false statements (new relative to S3's 13), 6 definitions
+    # checked against independent references with a mutation each (verified
+    # to move an observation, not silently accepted if vacuous), 2 review
+    # obligations for unexecutable CReal constructions, and dispatch
+    # ordering enforced via git merge-base --is-ancestor when both commits
+    # resolve.
+    python3 scripts/check-falsification-screen.py --check
+    # ...and its controls: 17 guards, each verified to kill EXACTLY ONE test
+    # when gutted in a scratch copy.
+    python3 -m unittest scripts.tests.test_falsification_screen
     # S2 of the same roadmap: the universal trust and circularity audit, read
     # from the admitted term rather than from authored `depends_on`. Every
     # kernel-route settled fact is checked against its own transitive
