@@ -1,5 +1,6 @@
 {
   "bridge": [
+    "AntitoneOn",
     "Bool.and",
     "Bool.not",
     "Bool.or",
@@ -50,6 +51,7 @@
     "Odd",
     "OfNat.ofNat",
     "Set.Ici",
+    "Set.Ioi",
     "StrictMono",
     "StrictMonoOn",
     "Symmetric",
@@ -72,17 +74,17 @@
     "ite"
   ],
   "coverage": {
-    "bridge_constants": 70,
+    "bridge_constants": 72,
     "catalogued_propositions": 202,
-    "distinct_constants": 101,
-    "open_propositions": 31,
-    "settled_propositions": 171
+    "distinct_constants": 103,
+    "open_propositions": 28,
+    "settled_propositions": 174
   },
   "derivation": "bridge = {Lean constants in the pinned type_repr of every SETTLED ml430 mirror} \\ kernel-environment-snapshot-v1.declarations. Derived, never asserted: an entry exists only because a mirror stated with that constant has already been closed here. Regenerate with scripts/gen-autogenesis-statable-vocabulary.py --write; the per-row constants come from mathlib-statement-constants-v1.json, which is itself derived from the pinned inventory by --refresh-cache.",
   "environment_snapshot": "artifacts/autogenesis/kernel-environment-snapshot-v1.json",
   "keyed_by": "Mathlib source_name, NOT fact_id. Naming a fact id here would put held-out ids in a non-population artifact -- check-autogenesis-holdout-isolation.py caught exactly that on the first draft of this file, 35 references. The checker resolves source_name to a fact through the catalog, which IS a population file and may name them.",
   "kind": "axeyum-autogenesis-statable-vocabulary",
-  "row_digest": "94047b18e229239c852447959c069e3d66111ffef9cb8c089376982873ab045e",
+  "row_digest": "47e59f3488eae10c624cafc110f3a311ce0d490a4e0c53d55350c72b0f1732b9",
   "schema_version": 1,
   "settled": [
     {
@@ -1755,12 +1757,46 @@
     },
     {
       "constants": [
+        "AntitoneOn",
+        "Nat",
+        "Nat.instPreorder",
+        "Nat.log",
+        "OfNat.ofNat",
+        "Set.Ioi",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_antitone_left"
+    },
+    {
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.clog",
+        "Nat.log",
+        "instLENat"
+      ],
+      "source_name": "Nat.log_le_clog"
+    },
+    {
+      "constants": [
         "LE.le",
         "Nat",
         "Nat.log",
         "instLENat"
       ],
       "source_name": "Nat.log_le_self"
+    },
+    {
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.log",
+        "Ne",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "source_name": "Nat.log_lt_self"
     },
     {
       "constants": [
