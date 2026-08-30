@@ -145,6 +145,34 @@ STEP_CAP="${AXEYUM_CHECK_STEP_CAP:-1800}"
 STEP_CAP_CARGO="${AXEYUM_CHECK_CAP_CARGO:-7200}"
 STEP_CAP_TEST="${AXEYUM_CHECK_CAP_TEST:-14400}"
 STEP_CAP_FACTS="${AXEYUM_CHECK_CAP_FACTS_REPLAY:-10800}"
+#
+#   STEP_KILL_GRACE 30 s    The SIGTERM-to-SIGKILL grace, and the single most
+#                           important character in this block is the `-k` that
+#                           uses it. `timeout N` sends SIGTERM at the deadline
+#                           and then waits FOREVER for the child to die, so a
+#                           step that ignores TERM or is wedged inside its own
+#                           EXIT trap is not bounded at all -- and `timeout`
+#                           still exits 124, so the caller sees a
+#                           correct-looking "timed out" verdict after an
+#                           arbitrarily long wait. The status is right and the
+#                           bound is fiction. Measured on this host:
+#
+#                               trap '' TERM; sleep 25
+#                               timeout 2      ./that.sh -> 124 after 25s
+#                               timeout -k 1 2 ./that.sh -> 137 after  3s
+#
+#                           30 s is chosen to cover an ordinary EXIT trap --
+#                           these steps clean up scratch directories, which is
+#                           sub-second here -- and no more. It is 1.7% of the
+#                           default cap, so it costs nothing on the honest path
+#                           and cannot become a second hiding place.
+#
+#                           `scripts/check-gate-step-timeout.sh` is the probe
+#                           that keeps this real: it runs a TERM-IGNORING step
+#                           under this cap and fails if the step outlives it.
+#                           Written for the same reason `cargo-serialized.sh`
+#                           carries `--self-check` -- a ceiling nobody has
+#                           watched bite is a ceiling you do not have.
 STEP_KILL_GRACE="${AXEYUM_CHECK_STEP_KILL_GRACE:-30}"
 
 # Per-step overrides for steps whose RECORDED cost exceeds the default. Keep
@@ -182,13 +210,15 @@ step_cap_for() {
   echo "$STEP_CAP"
 }
 
-if [ "$list_only" != "1" ] && ! command -v timeout >/dev/null 2>&1; then
+if [ "$list_only" != "1" ] && { ! command -v timeout >/dev/null 2>&1 \
+     || ! command -v setsid >/dev/null 2>&1 || ! command -v ps >/dev/null 2>&1; }; then
   # Running uncapped is the state this gate was just rescued from, so refuse
   # rather than fall back to it silently. Exit 2 is distinct from a step
   # failure, matching `check-fast.sh`'s vacuity guard.
-  echo "check: FATAL -- coreutils \`timeout\` is not on PATH, so no per-step cap" \
-       "can be applied. Running uncapped is how this gate hung for nine hours;" \
-       "install coreutils rather than removing the cap." >&2
+  echo "check: FATAL -- no per-step cap can be applied: this gate needs" \
+       "\`timeout\` (coreutils), \`setsid\` (util-linux) and \`ps\` (procps)." \
+       "Running uncapped is how this gate hung for nine hours; install the" \
+       "missing tool rather than removing the cap." >&2
   exit 2
 fi
 
@@ -204,23 +234,60 @@ step() {
   local cap; cap="$(step_cap_for "$name" "$@")"
   local t0=$SECONDS
   echo "=== $name (cap ${cap}s) ==="
-  # `</dev/null` because a gate step must never block on stdin. It also matters
-  # for the cap itself: without `--foreground`, `timeout` puts the child in its
-  # OWN process group, so a step that read a terminal would take SIGTTIN and
-  # stop rather than run. No step here reads stdin; this makes that explicit.
+  # `setsid` + a GROUP kill, and neither half is decoration.
   #
-  # NOT `--foreground`, deliberately. The default puts the child in a new
-  # process group and signals the GROUP, so a step's children die with it.
-  # Measured here: `timeout 2 sh -c 'sleeper | cat'` leaves 0 survivors where
-  # the identical uncapped command leaves 2. A cap that kills only the direct
-  # child leaves the grandchild holding whatever lock it holds -- which is
-  # exactly the defect this same commit fixes in the ledger sweep.
-  timeout --kill-after="$STEP_KILL_GRACE" "$cap" "$@" </dev/null
+  # `timeout` alone bounds the step but DOES NOT KILL ITS DESCENDANTS. Measured
+  # here against a step that ignores SIGTERM, with a positive control proving
+  # the grandchild was alive to be counted:
+  #
+  #   no cap at all                     survivors at 6s = 1  (control)
+  #   timeout -k 1 2                    survivors at 6s = 1
+  #   setsid timeout -k 1 2             survivors at 6s = 1
+  #   timeout -k 1 2 setsid             survivors at 6s = 1
+  #   timeout -k 1 --signal=KILL 2      survivors at 6s = 1
+  #
+  # Four variants, none of them enough. `trap '' TERM` sets SIG_IGN, and an
+  # ignored disposition is INHERITED ACROSS exec, so the grandchild ignores the
+  # signal too -- and `timeout`'s kill reaches the child it monitors, not the
+  # tree beneath it.
+  #
+  # That surviving grandchild is not a tidiness problem, it is THE nine-hour
+  # bug: an orphaned `cargo` holds the build-directory lock, whose wait is
+  # unbounded, so every later cargo step blocks on a process nothing is going
+  # to reap.
+  #
+  # So the step runs under `setsid`, which makes it a session AND process-group
+  # leader -- verified rather than assumed, since `setsid` forks only when it is
+  # already a group leader, and a background child of this script is not one:
+  #
+  #   pid=2157206 pgid=2157206 sid=2157206     (exec-in-place)
+  #   survivors before the group kill = 1      (control)
+  #   survivors after  the group kill = 0
+  #
+  # `</dev/null` because a gate step must never block on stdin -- and in a new
+  # session a step that read a terminal would take SIGTTIN and stop, which the
+  # cap would then report as a timeout it caused itself.
+  setsid timeout --kill-after="$STEP_KILL_GRACE" "$cap" "$@" </dev/null &
+  local pid=$!
+  # Read the group BEFORE waiting: after the leader exits there is nothing left
+  # to ask. (The residual risk is pid reuse between the wait and the kill, which
+  # needs a brand-new process to take this exact pid AND become a group leader;
+  # the kill is also only issued on the timeout path, never on a healthy step.)
+  local pgid; pgid="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')"
+  wait "$pid"
   local st=$?
   local el=$(( SECONDS - t0 ))
   if [ "$st" -eq 0 ]; then
     echo "--- $name: ok (${el}s)"
   elif { [ "$st" -eq 124 ] || [ "$st" -eq 137 ]; } && [ "$el" -ge "$cap" ]; then
+    if [ -n "$pgid" ] && [ "$pgid" = "$pid" ]; then
+      kill -KILL -"$pgid" 2>/dev/null
+    else
+      # Say so rather than pretend. If the step was not isolated we could not
+      # reap its tree, and the next cargo step may block on whatever it holds.
+      echo "--- $name: WARNING could not isolate a process group" \
+           "(pid=$pid pgid=${pgid:-unknown}); orphaned children may survive" >&2
+    fi
     # THIRD OUTCOME. Not a pass, not a failure -- UNCHECKED.
     #
     # The elapsed test is load-bearing and not decoration: 124 and 137 are

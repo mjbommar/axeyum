@@ -124,8 +124,46 @@ while IFS=$'\t' read -r name cmd; do
         ;;
     esac
   fi
-  timeout "$budget" bash -c "$cmd" >/dev/null 2>&1
+  # `--kill-after` IS NOT OPTIONAL, and without it this line was decoration.
+  #
+  # `timeout N` sends SIGTERM at the deadline and then waits FOREVER for the
+  # child to die. A step that ignores or is wedged inside a TERM handler is not
+  # bounded at all -- and `timeout` still exits 124, so the caller sees a
+  # correct-looking "timed out" verdict after an arbitrarily long wait. The
+  # status is right and the bound is fiction. Measured on this host:
+  #
+  #   trap '' TERM; sleep 25
+  #   timeout 2      ./that.sh  ->  exit 124 after 25s
+  #   timeout -k 1 2 ./that.sh  ->  exit 137 after  3s
+  #
+  # This was live here: a run of THIS script was found stuck 23 minutes on a
+  # step with a 3-second budget (`scripts/tests/mutate-gate-admission.sh`),
+  # its child shell alive and its grandchildren `<defunct>` -- i.e. wedged
+  # inside its own `trap ... EXIT` cleanup. The tool whose entire purpose is
+  # per-step capping had a cap that could not fire.
+  #
+  # GRACE = 5s, and the number is a choice. It has to cover an ordinary EXIT
+  # trap -- these scripts clean up scratch directories, which is sub-second
+  # here -- and no more, because the real bound is `budget + grace` per step
+  # and this is a tier-0 sweep where the budget is 3s. 30s (what the full gate
+  # uses, where it is 1.7% of a 30-minute cap) would be 10x the budget here.
+  # `setsid` and the GROUP kill below: `timeout` bounds the step but does not
+  # kill its descendants -- an ignored SIGTERM disposition is inherited across
+  # exec, so a grandchild outlives the cap and keeps whatever lock it took.
+  # Measured with a positive control, four `timeout` spellings all left the
+  # grandchild alive; `setsid` + `kill -KILL -$pgid` leaves none.
+  # `scripts/check.sh` carries the same construction and the long version of
+  # this comment.
+  setsid timeout --kill-after="${AXEYUM_CHECK_FAST_KILL_GRACE:-5}" "$budget" \
+    bash -c "$cmd" >/dev/null 2>&1 </dev/null &
+  pid=$!
+  pgid="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')"
+  wait "$pid"
   st=$?
+  if { [ "$st" -eq 124 ] || [ "$st" -eq 137 ]; } \
+     && [ -n "$pgid" ] && [ "$pgid" = "$pid" ]; then
+    kill -KILL -"$pgid" 2>/dev/null
+  fi
   if [ "$st" -eq 0 ]; then
     ok=$((ok + 1))
   elif [ "$st" -eq 124 ] || [ "$st" -eq 137 ]; then
