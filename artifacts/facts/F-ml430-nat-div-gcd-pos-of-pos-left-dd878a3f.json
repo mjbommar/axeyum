@@ -8,10 +8,31 @@
     "statement": "∀ {a : ℕ} (b : ℕ), 0 < a → 0 < a / a.gcd b",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-div-mul-cancel-99799a00", "F:nat-gcd-dvd-left", "F:nat-not-lt-zero", "F:nat-zero-lt-succ", "F:nat-zero-mul"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- div_gcd_pos_of_pos_left 2>/dev/null | grep -Ec '^Nat\\.div_gcd_pos_of_pos_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.div_gcd_pos_of_pos_left",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.div_gcd_pos_of_pos_left` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. Built in this session's `nat_prelude/gcd_dvd_mirrors.rs` (lane nat-gcd-dvd-mirrors), via the shared helper `pos_of_dvd_and_pos_numerator`: `div_mul_cancel` gives `(m/n)*n = m` from `dvd n m`; if `m/n` were `0` that would force `m = 0` (`zero_mul`), contradicting the hypothesis `0 < m` (via `not_lt_zero`); `Nat.zero_or_succ` on `m/n` therefore leaves only the successor case, closed directly by `zero_lt_succ`. Applied with n = gcd(a,b), m = a via `gcd_dvd_left`. `nat_theorem_inventory`'s rendered type is `(x0:AxNat)->(x1:AxNat)->(x2:lt zero x0)->lt zero (div x0 (gcd x0 x1))`, matching this fact's `formal.statement`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified both ways: the real name greps to a count `-ge 1` (confirmed by direct run, which also confirms this exact name does not collide with its sibling `Nat.div_gcd_pos_of_pos_left_right`/`Nat.div_gcd_pos_of_pos_left_left`); grepping a made-up name (`Nat.div_gcd_pos_of_pos_left_bogus`) fails closed (`nat_theorem_inventory` exits 1 on an absent name).",
+      "supports": "∀ {a : ℕ} (b : ℕ), 0 < a → 0 < a / a.gcd b"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names`, and `the_build_is_deterministic`/`every_promised_name_is_admitted_with_the_expected_kind` (both re-run on every `nat_prelude::` sweep) confirm the declaration is admitted at the exact rendered type checked below.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.div_gcd_pos_of_pos_left"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "New proof, lane nat-gcd-dvd-mirrors: `gcd_dvd_left(a,b) : dvd (gcd a b) a` fed into the shared `pos_of_dvd_and_pos_numerator` helper (see `Nat.div_gcd_pos_of_pos_right`'s note for the argument).",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
