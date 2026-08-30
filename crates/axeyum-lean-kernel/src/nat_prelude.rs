@@ -200,6 +200,7 @@ mod parity;
 mod perfect;
 mod permutation;
 mod powsq;
+mod prime_dvd_mirrors;
 mod primes;
 mod rec_agreement;
 mod rectangle;
@@ -323,6 +324,7 @@ use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
+use prime_dvd_mirrors::declare_prime_dvd_mirrors_all;
 use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
     declare_coprime_odd_of_right, declare_coprime_of_dvd, declare_coprime_of_dvd_both,
@@ -1230,6 +1232,47 @@ pub struct NatPrelude {
     /// ledger's `F:nat-euclid-lemma` states and a fact is only closed by the
     /// statement it actually makes.
     pub euclid_lemma: NameId,
+    // --- `prime_dvd_mirrors.rs`: the small consequences of `prime_condition`'s
+    // own clause, plus the `Coprime <-> not dvd` bridge -------------------
+    /// `Nat.prime_one_lt : ∀ p, prime_condition p → Lt one p`.
+    pub prime_one_lt: NameId,
+    /// `Nat.prime_one_le : ∀ p, prime_condition p → Le one p`.
+    pub prime_one_le: NameId,
+    /// `Nat.prime_pos : ∀ p, prime_condition p → Lt zero p`.
+    pub prime_pos: NameId,
+    /// `Nat.prime_ne_one : ∀ p, prime_condition p → Not (Eq p one)`.
+    pub prime_ne_one: NameId,
+    /// `Nat.prime_ne_zero : ∀ p, prime_condition p → Not (Eq p zero)`.
+    pub prime_ne_zero: NameId,
+    /// `Nat.prime_not_dvd_one : ∀ p, prime_condition p → Not (dvd p one)`.
+    pub prime_not_dvd_one: NameId,
+    /// `Nat.prime_eq_one_or_self_of_dvd : ∀ p m, prime_condition p → dvd m p
+    /// → Or (Eq m one) (Eq m p)` — the divisor clause of `prime_condition`
+    /// applied at `m`, named.
+    pub prime_eq_one_or_self_of_dvd: NameId,
+    /// `Nat.prime_dvd_iff_eq : ∀ p a, prime_condition p → Not (Eq a one) →
+    /// Iff (dvd a p) (Eq p a)`.
+    pub prime_dvd_iff_eq: NameId,
+    /// `Nat.prime_dvd_mul_iff : ∀ p m n, prime_condition p → Iff (dvd p (mul
+    /// m n)) (Or (dvd p m) (dvd p n))` — `euclid_lemma` plus
+    /// `dvd_mul_right_of_dvd`/`dvd_mul_left_of_dvd`.
+    pub prime_dvd_mul_iff: NameId,
+    /// `Nat.prime_coprime_iff_not_dvd : ∀ p n, prime_condition p → Iff (Eq
+    /// (gcd p n) one) (Not (dvd p n))`.
+    pub prime_coprime_iff_not_dvd: NameId,
+    /// `Nat.prime_eq_two_or_odd : ∀ p, prime_condition p → Or (Eq p two)
+    /// (Odd p)`.
+    pub prime_eq_two_or_odd: NameId,
+    /// `Nat.prime_eq_two_or_mod_two_eq_one : ∀ p, prime_condition p → Or (Eq
+    /// p two) (Eq (mod p two) one)`.
+    pub prime_eq_two_or_mod_two_eq_one: NameId,
+    /// `Nat.prime_mod_two_eq_one_iff_ne_two : ∀ p, prime_condition p → Iff
+    /// (Eq (mod p two) one) (Not (Eq p two))`.
+    pub prime_mod_two_eq_one_iff_ne_two: NameId,
+    /// `Nat.prime_coprime_pow_of_not_dvd : ∀ p m a, prime_condition p → Not
+    /// (dvd p a) → Eq (gcd a (pow p m)) one` — induction on `m` via
+    /// `coprime_mul_of_coprime`.
+    pub prime_coprime_pow_of_not_dvd: NameId,
     /// `Nat.prime_dvd_choose : ∀ p k, prime p → 0 < k → k < p → p ∣ choose p
     /// k` — a live lane's blocker on the way to Fermat's little theorem.
     /// Primality is spelled inline, matching `euclid_lemma`'s own convention.
@@ -4546,6 +4589,22 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_add: kernel.name_str(nat, "dvd_add"),
             dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
             euclid_lemma: kernel.name_str(nat, "euclid_lemma"),
+            prime_one_lt: kernel.name_str(nat, "prime_one_lt"),
+            prime_one_le: kernel.name_str(nat, "prime_one_le"),
+            prime_pos: kernel.name_str(nat, "prime_pos"),
+            prime_ne_one: kernel.name_str(nat, "prime_ne_one"),
+            prime_ne_zero: kernel.name_str(nat, "prime_ne_zero"),
+            prime_not_dvd_one: kernel.name_str(nat, "prime_not_dvd_one"),
+            prime_eq_one_or_self_of_dvd: kernel.name_str(nat, "prime_eq_one_or_self_of_dvd"),
+            prime_dvd_iff_eq: kernel.name_str(nat, "prime_dvd_iff_eq"),
+            prime_dvd_mul_iff: kernel.name_str(nat, "prime_dvd_mul_iff"),
+            prime_coprime_iff_not_dvd: kernel.name_str(nat, "prime_coprime_iff_not_dvd"),
+            prime_eq_two_or_odd: kernel.name_str(nat, "prime_eq_two_or_odd"),
+            prime_eq_two_or_mod_two_eq_one: kernel
+                .name_str(nat, "prime_eq_two_or_mod_two_eq_one"),
+            prime_mod_two_eq_one_iff_ne_two: kernel
+                .name_str(nat, "prime_mod_two_eq_one_iff_ne_two"),
+            prime_coprime_pow_of_not_dvd: kernel.name_str(nat, "prime_coprime_pow_of_not_dvd"),
             prime_dvd_choose: kernel.name_str(nat, "prime_dvd_choose"),
             one_le_factorial: kernel.name_str(nat, "one_le_factorial"),
             exists_prime_gt: kernel.name_str(nat, "exists_prime_gt"),
@@ -5663,6 +5722,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // above) plus the `modEq` witness helpers (`declare_modular_congruence`,
         // far above). Nothing needs it, so it goes last.
         declare_mod_eq_add_le_of_lt(&mut d, &p)?;
+        // `ml430` prime-divisibility mirrors (`prime_dvd_mirrors.rs`): needs
+        // `prime_condition`/`euclid_lemma`/`prime_even_iff`
+        // (`primes.rs`, far above), `dvd_gcd`/`gcd_dvd_left`/`gcd_dvd_right`/
+        // `dvd_mul_right_of_dvd`/`dvd_mul_left_of_dvd`, `coprime_symmetric`
+        // (`primes.rs`), `coprime_mul_of_coprime`
+        // (`totient_multiplicative.rs`, far above),
+        // `even_or_odd_exists`/`even_iff_mod_two_eq_zero`/
+        // `odd_iff_mod_two_eq_one` (`declare_parity_all`, far above), and
+        // `ne_of_lt`/`ne_symm` (`finite.rs`). Nothing needs it, so it goes
+        // last.
+        declare_prime_dvd_mirrors_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
