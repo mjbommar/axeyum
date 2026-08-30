@@ -164,6 +164,7 @@ mod finite;
 mod finite_set;
 mod gcd;
 mod gcd_dvd_mirrors;
+mod gcd_mul_right;
 mod group;
 mod helpers;
 mod irrational;
@@ -264,6 +265,7 @@ use finite::{
 use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
+use gcd_mul_right::declare_gcd_mul_right;
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
@@ -927,6 +929,13 @@ pub struct NatPrelude {
     pub dvd_gcd: NameId,
     /// `Nat.dvd_gcd_iff : k | gcd m n ↔ k | m ∧ k | n`.
     pub dvd_gcd_iff: NameId,
+    /// `Nat.gcd_mul_right : ∀ a b c, gcd (a*c) (b*c) = gcd a b * c` — the
+    /// Euclidean algorithm's descent commutes with scaling both arguments by
+    /// a common factor. Built by well-founded induction on the first
+    /// argument mirroring `gcd`'s own recursion (`gcd_mul_right.rs`), using
+    /// the scaling lemma `(n*c) % (m*c) = (n%m)*c` as the bridge between the
+    /// unscaled and scaled Euclidean steps.
+    pub gcd_mul_right: NameId,
     /// `Nat.lcm a b := div (mul a b) (gcd a b)` — the least common multiple.
     /// `lcm 0 0 = 0` matches Mathlib's convention: at that one degenerate point
     /// `gcd a b = 0` too, and `div _ 0 = 0`, so `lcm 0 0` computes to `0` and
@@ -4062,6 +4071,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gcd_dvd_right: kernel.name_str(nat, "gcd_dvd_right"),
             dvd_gcd: kernel.name_str(nat, "dvd_gcd"),
             dvd_gcd_iff: kernel.name_str(nat, "dvd_gcd_iff"),
+            gcd_mul_right: kernel.name_str(nat, "gcd_mul_right"),
             lcm: kernel.name_str(nat, "lcm"),
             lcm_zero_left: kernel.name_str(nat, "lcm_zero_left"),
             dvd_lcm_left: kernel.name_str(nat, "dvd_lcm_left"),
@@ -5101,6 +5111,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // this builder needs it, which is why it was last until now).
         // Nothing needs these order mirrors, so they go last.
         declare_log_clog_order_all(&mut d, &p)?;
+        // Needs `Nat.gcd_zero_left`/`Nat.gcd_succ` (`declare_executable_gcd`,
+        // far above), `Nat.div_mod_exec`/`Nat.div_mod_unique`/`Nat.mod_lt`/
+        // `Nat.succ_pred_of_pos` (`declare_divisibility`/
+        // `declare_euclidean_division`, far above) and
+        // `Nat.mul_lt_mul_right`/`Nat.one_le_mul`/`Nat.mul_assoc`/
+        // `Nat.right_distrib`/`Nat.mul_comm`/`Nat.zero_mul`/`Nat.mul_zero`
+        // (`declare_multiplicative_theorems`, far above). Nothing later
+        // needs it, so it goes last.
+        declare_gcd_mul_right(&mut d, &p)?;
         Ok(p)
     })();
     match built {
