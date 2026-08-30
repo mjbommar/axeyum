@@ -155,6 +155,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-machine"
+version = "0.1.0"
+
+[[package]]
+name = "axeyum-machine-evidence"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+ "axeyum-machine",
+ "axeyum-solver",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "axeyum-property"
 version = "0.1.0"
 dependencies = [
