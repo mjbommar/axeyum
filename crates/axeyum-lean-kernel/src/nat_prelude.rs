@@ -3140,6 +3140,48 @@ pub struct NatPrelude {
     /// [`log_aux_lt_of_pos`](Self::log_aux_lt_of_pos) at the diagonal `f :=
     /// x`, via `le_refl`.
     pub log_lt_self: NameId,
+    /// `Nat.div_le_div_left : ∀ n a b, Lt 0 a → Le a b → Le (div n b) (div n
+    /// a)` — the MIRROR image of
+    /// [`div_le_div_right`](Self::div_le_div_right): monotone DECREASING in
+    /// the divisor rather than increasing in the dividend. Reconstructs `a`
+    /// as `succ (pred a)` (`succ_pred_of_pos`, the `div_mod_reconstructed`
+    /// pattern `base_induction.rs` uses) to get `div_mod_exec` in scope, then
+    /// the same `div_mod_lt_mul_iff`/`lt_succ_self`/`div_lt_of_lt_mul` chain
+    /// [`div_le_div_right`](Self::div_le_div_right) uses, with `a`'s role in
+    /// the final product rewritten to `b` via `mul_le_mul_left` + `mul_comm`
+    /// (`a ≤ b` gives `a * S ≤ b * S` after commuting to put the varying
+    /// factor on the left).
+    pub div_le_div_left: NameId,
+    /// `Nat.log_aux_antitone_base : ∀ f n a b, Le a b → Lt 1 a → Lt 1 b → Le
+    /// (logAux b f n) (logAux a f n)` — monotonicity in the BASE with the
+    /// value held fixed, a materially different induction from
+    /// [`log_aux_mono`](Self::log_aux_mono) (which fixes the base and varies
+    /// fuel/value). Induction on the SHARED fuel `f` (both sides use the
+    /// same `f`, since `log b n`/`log a n` share the same diagonal `n`); `n`,
+    /// `a`, `b` generalized inside the motive. Because `1 < a`/`1 < b` are
+    /// universal HYPOTHESES of the statement (not case-derived), each side's
+    /// inner `2 ≤ base` cut is already known TRUE unconditionally — no case
+    /// split on it, unlike `log_aux_mono`. Only `b ≤ n` is split: `false`
+    /// collapses the `b`-side to `0` regardless of the `a`-side
+    /// (`a ≤ n` need not even be decided); `true` gives `a ≤ b ≤ n` via
+    /// `le_trans`, so the `a`-side's cut is also true. The recursive
+    /// obligation compares `logAux b f' (n/b)` against `logAux a f' (n/a)` —
+    /// DIFFERENT values at DIFFERENT bases — via `IH(n/b, a, b)` (bases at
+    /// the SAME value `n/b`) chained through
+    /// [`log_aux_mono`](Self::log_aux_mono) at the SAME base `a` (values
+    /// `n/b ≤ n/a` from [`div_le_div_left`](Self::div_le_div_left)) and
+    /// `le_trans`, then `le_succ_succ`.
+    pub log_aux_antitone_base: NameId,
+    /// `Nat.log_antitone_left : ∀ {n}, AntitoneOn (fun b => log b n) (Set.Ioi
+    /// 1)` (`Mathlib`: `Nat.log_antitone_left`) — the core-rendered
+    /// unfolding (`AntitoneOn f s := ∀ ⦃a⦄, a ∈ s → ∀ ⦃b⦄, b ∈ s → a ≤ b → f
+    /// b ≤ f a` and `x ∈ Set.Ioi c := c < x` are both Mathlib pointwise
+    /// `def`s, the same "definitionally a pointwise implication" situation
+    /// that already made `Monotone`/`log_monotone` an honest flip; no kernel
+    /// `Set` type is needed) at
+    /// [`log_aux_antitone_base`](Self::log_aux_antitone_base)'s diagonal `f
+    /// := n`.
+    pub log_antitone_left: NameId,
     /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
     /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
     /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
@@ -4520,6 +4562,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_lt_self: kernel.name_str(nat, "div_lt_self"),
             log_aux_lt_of_pos: kernel.name_str(nat, "log_aux_lt_of_pos"),
             log_lt_self: kernel.name_str(nat, "log_lt_self"),
+            div_le_div_left: kernel.name_str(nat, "div_le_div_left"),
+            log_aux_antitone_base: kernel.name_str(nat, "log_aux_antitone_base"),
+            log_antitone_left: kernel.name_str(nat, "log_antitone_left"),
             bit: kernel.name_str(nat, "bit"),
             bit_false: kernel.name_str(nat, "bit_false"),
             bit_true: kernel.name_str(nat, "bit_true"),

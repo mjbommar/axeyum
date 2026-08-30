@@ -1471,6 +1471,130 @@ pub(super) fn declare_log_lt_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     Ok(())
 }
 
+/// `Nat.div_le_div_left : ∀ n a b, Lt 0 a → Le a b → Le (div n b) (div n
+/// a)`. See the module doc / `NatPrelude::div_le_div_left`'s doc comment for
+/// the route.
+pub(super) fn declare_div_le_div_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.div_le_div_left, 3, &|d, values| {
+        let (n, a, b) = (values[0], values[1], values[2]);
+        let zero = d.zero();
+        let pos_a_ty = d.lt(zero, a);
+        let hab_ty = d.le(a, b);
+        let pos_a_fv = d.fresh_fvar();
+        let pos_a = d.kernel().fvar(pos_a_fv);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let div_n_b = d.div(n, b);
+        let div_n_a = d.div(n, a);
+        let goal = d.le(div_n_b, div_n_a);
+
+        let disj = d.lemma(p.zero_or_succ, &[a]);
+        let eq_a0_ty = d.eq(a, zero);
+        let case_a_zero = {
+            let heq_fv = d.fresh_fvar();
+            let heq = d.kernel().fvar(heq_fv);
+            let motive = d.eq_motive(a, &move |d, x| d.lt(zero, x));
+            let at_zero = d.transport(a, motive, pos_a, zero, heq);
+            let not_lt = d.lemma(p.not_lt_zero, &[zero]);
+            let false_val = d.apply(not_lt, &[at_zero]);
+            let elim = false_elim(d, &p, goal, false_val);
+            d.lam_fv(heq_fv, eq_a0_ty, elim)
+        };
+
+        let nat_inner = d.nat_ty();
+        let one_lvl = d.level_one();
+        let pred_ty = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sk = d.succ(k);
+            let body = d.eq(a, sk);
+            d.lam_fv(k_fv, nat_inner, body)
+        };
+        let exists_c = d.kernel().const_(p.logic.exists_, vec![one_lvl]);
+        let ex_ty = d.apply(exists_c, &[nat_inner, pred_ty]);
+
+        let case_a_succ = {
+            let hex_fv = d.fresh_fvar();
+            let hex = d.kernel().fvar(hex_fv);
+            let anon = d.anon_name();
+            let motive_ex = d.kernel().lam(anon, ex_ty, goal, BinderInfo::Default);
+            let minor = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = d.succ(k);
+                let heq1_ty = d.eq(a, sk);
+                let heq1_fv = d.fresh_fvar();
+                let heq1 = d.kernel().fvar(heq1_fv);
+
+                let relation_n = d.lemma(p.div_mod_exec, &[k, n]);
+                let div_n_sk = d.div(n, sk);
+                let mod_n_sk = d.modulo(n, sk);
+                let succ_div_n_sk = d.succ(div_n_sk);
+                let iff_fn = d.lemma(
+                    p.div_mod_lt_mul_iff,
+                    &[sk, n, div_n_sk, mod_n_sk, succ_div_n_sk],
+                );
+                let the_iff = d.apply(iff_fn, &[relation_n]);
+                let self_lt = d.lemma(p.lt_succ_self, &[div_n_sk]);
+                let mul_sk_s = d.mul(sk, succ_div_n_sk);
+                let lt_ty1 = d.lt(n, mul_sk_s);
+                let lt_ty2 = d.lt(div_n_sk, succ_div_n_sk);
+                let backward = iff_reverse(d, lt_ty1, lt_ty2, the_iff);
+                let upper_n = d.apply(backward, &[self_lt]);
+
+                let hab_at_sk = {
+                    let motive = d.eq_motive(a, &move |d, x| d.le(x, b));
+                    d.transport(a, motive, hab, sk, heq1)
+                };
+
+                let mul_le = d.lemma(p.mul_le_mul_left, &[succ_div_n_sk, sk, b, hab_at_sk]);
+                let mul_s_sk = d.mul(succ_div_n_sk, sk);
+                let mul_s_b = d.mul(succ_div_n_sk, b);
+                let mul_b_s = d.mul(b, succ_div_n_sk);
+                let comm_sk = d.lemma(p.mul_comm, &[sk, succ_div_n_sk]);
+                let comm_b = d.lemma(p.mul_comm, &[b, succ_div_n_sk]);
+                let motive_l = d.eq_motive(mul_s_sk, &move |d, x| d.le(x, mul_s_b));
+                let symm_comm_sk = d.symm(mul_sk_s, mul_s_sk, comm_sk);
+                let step1 = d.transport(mul_s_sk, motive_l, mul_le, mul_sk_s, symm_comm_sk);
+                let motive_r = d.eq_motive(mul_s_b, &move |d, x| d.le(mul_sk_s, x));
+                let symm_comm_b = d.symm(mul_b_s, mul_s_b, comm_b);
+                let step2 = d.transport(mul_s_b, motive_r, step1, mul_b_s, symm_comm_b);
+
+                let n_lt_mul_b_s =
+                    d.lemma(p.lt_of_lt_of_le, &[n, mul_sk_s, mul_b_s, upper_n, step2]);
+                let div_lt_result =
+                    d.lemma(p.div_lt_of_lt_mul, &[n, b, succ_div_n_sk, n_lt_mul_b_s]);
+                let le_result = d.lemma(p.le_of_lt_succ, &[div_n_b, div_n_sk, div_lt_result]);
+
+                let sk_eq_a = d.symm(a, sk, heq1);
+                let motive_final = d.eq_motive(sk, &move |d, x| {
+                    let dna = d.div(n, x);
+                    d.le(div_n_b, dna)
+                });
+                let final_proof = d.transport(sk, motive_final, le_result, a, sk_eq_a);
+                let with_heq1 = d.lam_fv(heq1_fv, heq1_ty, final_proof);
+                d.lam_fv(k_fv, nat_inner, with_heq1)
+            };
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+            let body = d.apply(exists_rec, &[nat_inner, pred_ty, motive_ex, minor, hex]);
+            d.lam_fv(hex_fv, ex_ty, body)
+        };
+
+        let leaf = or_cases(d, &p, eq_a0_ty, ex_ty, goal, case_a_zero, case_a_succ, disj);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, leaf);
+        let inner_stmt = d.arrow(hab_ty, goal);
+        let stmt = d.arrow(pos_a_ty, inner_stmt);
+        let proof = d.lam_fv(pos_a_fv, pos_a_ty, with_hab);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare every `log`/`clog` order mirror this file carries.
 ///
 /// # Errors
@@ -1493,5 +1617,6 @@ pub(super) fn declare_log_clog_order_all(
     declare_div_lt_self(d, p)?;
     declare_log_aux_lt_of_pos(d, p)?;
     declare_log_lt_self(d, p)?;
+    declare_div_le_div_left(d, p)?;
     Ok(())
 }
