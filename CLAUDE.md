@@ -1880,6 +1880,31 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   mentions an **unbounded** part of the value and the technique gives no
   foothold.
 
+- **A TRACED PLAN'S "VERIFIED NUMERICALLY" IS ITSELF A CLAIM, AND ONE OF THEM
+  WAS FALSE.** The tracer/executor split — one lane writes a hand-traced,
+  Python-checked plan and deliberately writes no code, the next executes it —
+  closed this repository's two hardest bitwise targets and three successive
+  totient refinements. Its stated strength is that every non-obvious step is
+  checked numerically first.
+
+  Measured 2026-08-30: a plan asserted a `count_range_row_major` identity was
+  coprimality-INDEPENDENT and "verified numerically at non-coprime pairs
+  (4,6),(6,9)". It is false at **26 of 26** non-coprime pairs with
+  `1 <= m,n <= 9` — the smallest counterexample is `m = n = 2`, where
+  `totient(4) = 2` against `totient(2)*totient(2) = 1`. The identity is exactly
+  CRT bijectivity and needs `gcd(m,n) = 1`, which that plan explicitly said was
+  "not needed".
+
+  Nothing catches this. An executor finds a *structural* error by running the
+  proof — that has happened every time — but a false NUMERICAL claim survives
+  until someone re-runs the numbers, and the plan's confidence is the reason
+  nobody does.
+
+  **So: re-run a plan's numeric checks, do not inherit them.** They are ten
+  lines of Python and the plan already tells you which pairs to try. And when
+  writing a plan, state the check you ran as a command that can be re-executed,
+  not as a sentence claiming it passed.
+
 - **NO FUEL ENCODING CAN BE A DEPENDENT RECURSOR, AND THAT PERMANENTLY DECIDES
   A WHOLE CLASS OF `ml430` MIRRORS.** Measured 2026-08-29 building
   `Nat.binaryRec`. Mathlib's (`Mathlib/Data/Nat/BinaryRec.lean:88` at the pinned
