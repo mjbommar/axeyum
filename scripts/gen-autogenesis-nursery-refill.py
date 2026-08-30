@@ -164,6 +164,32 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
     "natural-lcm": ("Init.Data.Nat.Lcm",),
     "natural-parity": ("Mathlib.Algebra.Group.Nat.Even", "Mathlib.Algebra.Ring.Parity"),
     "natural-totient": ("Mathlib.Data.Nat.Totient",),
+    # --- draw 2, 2026-08-29 (ADR-0615) ---------------------------------------
+    # Selected from the 22 modules carrying >= 10 fully screened, unused
+    # candidates, under one further constraint the existing rules do not state
+    # and R2 cannot see: R2 forbids reusing a v1 family NAME, but a new family
+    # over the same MATHEMATICS as an already-partitioned one leaks just as
+    # much. So `Mathlib.Data.Nat.ModEq` (v1 natural-modular-equivalence),
+    # `*.Gcd` (v1 natural-gcd / integer-gcd), `*.Prime.*` (v1 natural-primes),
+    # `*.Factorial.*`, `*.Choose.*` and `*.Bitwise.*` are all excluded despite
+    # having ample supply, because each would sit blind beside a family lanes
+    # are working. The four below are the only remaining coherent modules whose
+    # every adjacency lands in the SAME partition:
+    #
+    #   integer-natcast       held-out     no existing family covers casts
+    #   natural-coprimality   development  adjacent to v1 natural-gcd, also development
+    #   natural-modulus       train        adjacent to v2 natural-division, also train
+    #   natural-induction-and-divisibility
+    #                         held-out     its dvd rows are adjacent to v2
+    #                                      natural-divisibility, also held-out
+    #
+    # The assignment is still the mechanical module-path cycle; what was chosen
+    # by judgement is the SET, and only against already-published partitions --
+    # no target outcome was consulted.
+    "integer-natcast": ("Init.Data.Int.LemmasAux",),
+    "natural-coprimality": ("Init.Data.Nat.Coprime",),
+    "natural-induction-and-divisibility": ("Mathlib.Data.Nat.Init",),
+    "natural-modulus": ("Init.Data.Nat.Mod",),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -175,6 +201,11 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
     "natural-lcm": ("divisibility-library-application", "kernel-induction"),
     "natural-parity": ("kernel-induction", "modular-arithmetic-reconstruction"),
     "natural-totient": ("divisibility-library-application", "kernel-induction"),
+    "integer-natcast": ("kernel-induction", "kernel-library-application"),
+    "natural-coprimality": ("divisibility-library-application", "kernel-induction"),
+    "natural-induction-and-divisibility": (
+        "divisibility-library-application", "kernel-induction"),
+    "natural-modulus": ("kernel-induction", "kernel-library-application"),
 }
 
 PER_FAMILY = 10
