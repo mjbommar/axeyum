@@ -131,7 +131,7 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "        if amendment is None:",
                 "        if False:",
             ),
-            # Re-anchored for S1 (ADR-0747): the drift branch moved into
+            # Re-anchored for S1 (ADR-0752): the drift branch moved into
             # `evaluate()` and rustfmt-style rewrapping changed the line shape.
             # The guard is the same one and still kills exactly this test.
             (
@@ -2204,7 +2204,7 @@ def check_anchors() -> int:
     return failed
 
 
-# S1 of the trusted-library safety roadmap (ADR-0747). Until S1 this gate could
+# S1 of the trusted-library safety roadmap (ADR-0752). Until S1 this gate could
 # not fail on the commonest way a statement goes unwatched: never being pinned.
 # Every guard below is mutation-verified because the defect being fixed IS a
 # checker that cannot fail, and reproducing it here would be the worst possible

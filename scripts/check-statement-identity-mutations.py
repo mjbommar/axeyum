@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""S1's exit criterion, executed rather than asserted (ADR-0747).
+"""S1's exit criterion, executed rather than asserted (ADR-0752).
 
 The trusted-library safety roadmap's S1 exit is verbatim:
 
