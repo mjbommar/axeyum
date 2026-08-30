@@ -238,6 +238,15 @@ fn run() -> i32 {
     instantiate_evt_at_evt_linear(&mut s, evt_name, evt_ty);
     instantiate_ivt_at_plateau(&mut s);
 
+    // ================================================================
+    // Part 4 -- `CReal.supOn` is indexed by the uniform-continuity
+    //           WITNESS, which is DATA (`Sort 1`, not `Prop`) because it
+    //           carries the modulus. So "the supremum of F on [a,b]" is a
+    //           modulus-indexed family unless independence is proved.
+    //           Nothing in the environment proves it. This does.
+    // ================================================================
+    build_modulus_independence(&mut s);
+
     if s.failures.is_empty() {
         println!("\nPROBE PASSED -- every declaration admitted, axiom-free; the exact control was refused");
         0
@@ -599,6 +608,153 @@ fn instantiate_ivt_at_plateau(s: &mut Probe) {
     };
     let name = s.kernel.name_str(s.audit_ns, "ivt_approx_at_ivtPlateau");
     s.admit(name, ty, value, "EvtAudit.ivt_approx_at_ivtPlateau");
+}
+
+/// `EvtAudit.supOn_le_supOn_of_two_moduli` and
+/// `EvtAudit.supOn_modulus_independent`.
+///
+/// `CReal.supOn F a b hab huc` takes the uniform-continuity witness as an
+/// argument, and `CReal.UniformlyContinuousOn` is an inductive in `Sort 1`
+/// (`Type 0`), **not** a `Prop` — it carries the modulus, so it is data and is
+/// not proof-irrelevant. `hab : CReal.le a b` IS a `Prop` and does not have
+/// this problem. Consequently two different moduli for the same `F` give two
+/// `supOn` terms the kernel does not identify, and nothing in the environment
+/// relates them.
+///
+/// They are nonetheless equal up to `CReal.Equiv`, from the two characterizing
+/// laws plus `CReal.le_of_forall_le_add_small`. This builds that proof.
+fn build_modulus_independence(s: &mut Probe) {
+    let p = s.p;
+    let anon = s.anon;
+    let creal_ty = s.creal_ty;
+    let nat_ty = s.nat_ty;
+
+    let fn_ty = s.kernel.pi(anon, creal_ty, creal_ty, BinderInfo::Default);
+    let f_id = s.fresh();
+    let f = s.kernel.fvar(f_id);
+    let a_id = s.fresh();
+    let a = s.kernel.fvar(a_id);
+    let b_id = s.fresh();
+    let b = s.kernel.fvar(b_id);
+    let hab_ty = capp(&mut s.kernel, p.le, &[a, b]);
+    let hab_id = s.fresh();
+    let hab = s.kernel.fvar(hab_id);
+    let huc_ty = capp(&mut s.kernel, p.uniformly_continuous_on, &[f, a, b]);
+    let u1_id = s.fresh();
+    let u1 = s.kernel.fvar(u1_id);
+    let u2_id = s.fresh();
+    let u2 = s.kernel.fvar(u2_id);
+
+    // One direction, as a closure over the two witnesses in either order.
+    let one_way = |s: &mut Probe, ua: ExprId, ub_w: ExprId| -> (ExprId, ExprId) {
+        let sup_a = capp(&mut s.kernel, p.sup_on, &[f, a, b, hab, ua]);
+        let sup_b = capp(&mut s.kernel, p.sup_on, &[f, a, b, hab, ub_w]);
+
+        let n_id = s.fresh();
+        let n = s.kernel.fvar(n_id);
+        let lub = capp(&mut s.kernel, p.sup_on_approx_lub, &[f, a, b, hab, ua, n]);
+        let lub_decl_ty = decl_ty(&s.kernel, p.sup_on_approx_lub);
+        let lub_ty = apply_ty(&mut s.kernel, lub_decl_ty, &[f, a, b, hab, ua, n]);
+        let (_carrier, pred) = args2(&s.kernel, lub_ty);
+
+        let x_id = s.fresh();
+        let x = s.kernel.fvar(x_id);
+        let pred_body = s.kernel.lam_body(pred).expect("predicate must be a lambda");
+        let px = s.kernel.instantiate(pred_body, &[x]);
+        let (a1, r1) = args2(&s.kernel, px);
+        let (a2, a3) = args2(&s.kernel, r1);
+        // a3 = le sup_a (add (F x) eps)
+        let (_lhs, rhs) = args2(&s.kernel, a3);
+        let (fx, eps) = args2(&s.kernel, rhs);
+
+        let hx_id = s.fresh();
+        let hx = s.kernel.fvar(hx_id);
+        let ha = capp(&mut s.kernel, s.and_left, &[a1, r1, hx]);
+        let hr = capp(&mut s.kernel, s.and_right, &[a1, r1, hx]);
+        let hxb = capp(&mut s.kernel, s.and_left, &[a2, a3, hr]);
+        let hsup = capp(&mut s.kernel, s.and_right, &[a2, a3, hr]);
+
+        // `F x ≤ sup_b` from the OTHER witness's upper-bound law.
+        let hub = capp(&mut s.kernel, p.sup_on_ub, &[f, a, b, hab, ub_w, x, ha, hxb]);
+        let eps_refl = capp(&mut s.kernel, p.le_refl, &[eps]);
+        let step = capp(
+            &mut s.kernel,
+            p.add_le_add,
+            &[fx, sup_b, eps, eps, hub, eps_refl],
+        );
+        let sup_b_plus = capp(&mut s.kernel, p.add, &[sup_b, eps]);
+        let chained = capp(
+            &mut s.kernel,
+            p.le_trans,
+            &[sup_a, rhs, sup_b_plus, hsup, step],
+        );
+
+        let motive_body = capp(&mut s.kernel, p.le, &[sup_a, sup_b_plus]);
+        let motive = s.kernel.lam(anon, lub_ty, motive_body, BinderInfo::Default);
+        let intro_branch = {
+            let l2 = lam1(&mut s.kernel, anon, px, hx_id, chained);
+            lam1(&mut s.kernel, anon, creal_ty, x_id, l2)
+        };
+        let at_n = capp_u(
+            &mut s.kernel,
+            s.exists_rec,
+            s.lvl1,
+            &[creal_ty, pred, motive, intro_branch, lub],
+        );
+        let forall_n = lam1(&mut s.kernel, anon, nat_ty, n_id, at_n);
+        let le_ab = capp(
+            &mut s.kernel,
+            p.le_of_forall_le_add_small,
+            &[sup_a, sup_b, forall_n],
+        );
+        let ty = capp(&mut s.kernel, p.le, &[sup_a, sup_b]);
+        (le_ab, ty)
+    };
+
+    let (fwd, fwd_ty) = one_way(s, u1, u2);
+    let (bwd, _bwd_ty) = one_way(s, u2, u1);
+
+    let sup1 = capp(&mut s.kernel, p.sup_on, &[f, a, b, hab, u1]);
+    let sup2 = capp(&mut s.kernel, p.sup_on, &[f, a, b, hab, u2]);
+    let equiv = capp(&mut s.kernel, p.equiv_of_le_le, &[sup1, sup2, fwd, bwd]);
+    let equiv_ty = capp(&mut s.kernel, p.equiv, &[sup1, sup2]);
+
+    let close_value = |s: &mut Probe, v: ExprId| -> ExprId {
+        let v5 = lam1(&mut s.kernel, anon, huc_ty, u2_id, v);
+        let v4 = lam1(&mut s.kernel, anon, huc_ty, u1_id, v5);
+        let v3 = lam1(&mut s.kernel, anon, hab_ty, hab_id, v4);
+        let v2 = lam1(&mut s.kernel, anon, creal_ty, b_id, v3);
+        let v1 = lam1(&mut s.kernel, anon, creal_ty, a_id, v2);
+        lam1(&mut s.kernel, anon, fn_ty, f_id, v1)
+    };
+    let close_ty = |s: &mut Probe, t: ExprId| -> ExprId {
+        let t5 = pi1(&mut s.kernel, anon, huc_ty, u2_id, t);
+        let t4 = pi1(&mut s.kernel, anon, huc_ty, u1_id, t5);
+        let t3 = pi1(&mut s.kernel, anon, hab_ty, hab_id, t4);
+        let t2 = pi1(&mut s.kernel, anon, creal_ty, b_id, t3);
+        let t1 = pi1(&mut s.kernel, anon, creal_ty, a_id, t2);
+        pi1(&mut s.kernel, anon, fn_ty, f_id, t1)
+    };
+
+    let half_value = close_value(s, fwd);
+    let half_ty = close_ty(s, fwd_ty);
+    let half_name = s.kernel.name_str(s.audit_ns, "supOn_le_supOn_of_two_moduli");
+    s.admit(
+        half_name,
+        half_ty,
+        half_value,
+        "EvtAudit.supOn_le_supOn_of_two_moduli",
+    );
+
+    let eq_value = close_value(s, equiv);
+    let eq_ty = close_ty(s, equiv_ty);
+    let eq_name = s.kernel.name_str(s.audit_ns, "supOn_modulus_independent");
+    s.admit(
+        eq_name,
+        eq_ty,
+        eq_value,
+        "EvtAudit.supOn_modulus_independent",
+    );
 }
 
 fn main() {
