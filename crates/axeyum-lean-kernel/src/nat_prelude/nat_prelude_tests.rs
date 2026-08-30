@@ -7860,15 +7860,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-<<<<<<< HEAD
-<<<<<<< HEAD
-        93 + 581,
-=======
-        93 + 585,
->>>>>>> worktree-agent-a1afbb72ee0ce06a8
-=======
-        93 + 584,
->>>>>>> worktree-agent-a95fd2d7220329cda
+        93 + 598,
         "every promised definition and theorem must be rendered"
     );
 }

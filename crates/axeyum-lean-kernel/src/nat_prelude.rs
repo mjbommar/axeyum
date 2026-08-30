@@ -5092,9 +5092,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lt_of_mul_lt_mul(&mut d, &p)?;
         declare_mul_lt_mul_iff(&mut d, &p)?;
         declare_div_lt_of_lt_mul(&mut d, &p)?;
-<<<<<<< HEAD
         declare_gcd_dvd_mirrors(&mut d, &p)?;
-=======
         // Needs `Nat.log`/`Nat.clog` (`declare_log_all`/`declare_clog_all`,
         // far above) and `Nat.div_mod_exec`/`Nat.div_mod_lt_mul_iff`/
         // `Nat.div_lt_of_lt_mul` (`declare_executable_division_spec`/
@@ -5103,7 +5101,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // this builder needs it, which is why it was last until now).
         // Nothing needs these order mirrors, so they go last.
         declare_log_clog_order_all(&mut d, &p)?;
->>>>>>> worktree-agent-a95fd2d7220329cda
         Ok(p)
     })();
     match built {
