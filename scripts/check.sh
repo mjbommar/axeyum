@@ -406,6 +406,18 @@ step creal-prelude-build-ratio-controls ./scripts/tests/test-creal-prelude-build
 # and its python half then pinned an unexplained floor of 188 unnamed suites.
 # 15 cases, each mutation-verified to die when its guard is deleted.
 step control-registration-controls ./scripts/tests/test-check-control-registration.sh
+# `scripts/check-fast.sh` -- tier-0 of THIS gate, and its controls. Measured
+# 2026-08-29: this script declares 379 steps; a 1-in-5 sample of its 355
+# non-cargo steps took 549 s with 15 of 71 steps accounting for 528 s of it, so
+# the aggregate is over an hour and the fast ~80% of it costs ~4% of the time.
+# Neither `hooks/pre-push` nor `.github/workflows/ci.yml` names this script or
+# `just check`, so its only caller is a human -- which is why
+# `check-local-ci-freshness` above sat RED for 265 h. The tier-0 runner exists
+# so something runnable in ~2 min can be run unconditionally. Its five guards
+# are each mutation-verified to kill exactly one control, plus a
+# false-positive control that survives all five; the load-bearing one is that
+# DEFERRED is a third outcome and never folds into `ok`.
+step check-fast-controls ./scripts/tests/test-check-fast.sh
 # ...and the catch-all that makes registration DERIVED rather than remembered.
 # Measured 2026-08-27: 188 of 382 python control suites -- 49% -- were named by
 # no caller at all, pinned as a numeric floor nobody had chosen. This runs every
