@@ -122,10 +122,35 @@ reports 0 spent. The spend is real; only the screen is blind to it.
 with held-out at indices 0 and 3, Dist fits at 1 or 2. ADR-0653's closing
 recommendation becomes executable at draw 9.
 
+## `check-fast.sh` was NOT run, and that is a reported gap
+
+This lane's entire diff against its merge-base is **five `.md` files, 915
+insertions, zero deletions** — no Rust, no Python, no JSON, no artifact.
+Byte-identity of every file the draw would have touched is asserted with
+`git hash-object` against `main`, with a positive control that fires:
+
+    IDENTICAL  artifacts/autogenesis/nursery-v1.json
+    IDENTICAL  artifacts/autogenesis/nursery-v2-extension.json
+    IDENTICAL  artifacts/autogenesis/mathlib-statable-vocabulary-v1.json
+    IDENTICAL  artifacts/autogenesis/refill-headroom-v1.json
+    IDENTICAL  scripts/gen-autogenesis-nursery-refill.py
+    IDENTICAL  scripts/gen-autogenesis-statable-vocabulary.py
+    DIFFERS    PLAN.md   <-- control fires
+
+`check-links.sh` (all links ok) and `check-merge-hygiene.sh` — which covers
+generated-file freshness, conflict markers and duplicate ADR numbers — are
+both green, and those are the two gates a documentation-only diff can move.
+Baselining `check-fast.sh` honestly needs both this tree and a merge-base
+worktree, roughly twelve minutes, to re-measure the merge-base's own failures.
+Recorded as **did not run** rather than skipped silently.
+
 ## Landed changes
 
 | commit | what |
 | --- | --- |
 | `2acd25b3d` | early status stub, before any measurement |
 | `2155404c6` | notes: seven probes, every number re-derived on this tree |
-| _this_ | ADR-0762, regenerated ADR index, this status |
+| `67bf67f9b` | ADR-0762 and the regenerated ADR index |
+| `8994636c2` | regenerate PLAN.md |
+| `a8d81257e` | merge `main` (the 382 safety-matrix lane landed mid-run); both conflicts were in GENERATED files and were resolved by regenerating, never by hand |
+| _this_ | record the byte-identity control and the `check-fast.sh` gap |
