@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier
 
 fmt:
     cargo fmt --all --check
@@ -2157,3 +2157,48 @@ library-artifact-contract:
     python3 scripts/check-library-artifact-contract-reader-b.py
     python3 scripts/tests/test-library-artifact-contract.py
     bash scripts/tests/test-library-artifact-contract-mutations.sh
+
+# L1 phase C1/G1 -- the Mathlib DECLARATION graph, below G0's module graph
+# (docs/plan/graph-directed-library-roadmap-2026-08-30.md section G1,
+# docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md section C1).
+# `scripts/lib/declaration_graph.py` parses lean4export ndjson into rows
+# shaped like ADR-0800 packs and reuses that contract's compute_closure/
+# project_type_only rather than re-deriving them. The checker needs no Lean
+# toolchain (it validates the committed graph): five guards reused verbatim
+# from ADR-0800 (MISSING/DUPLICATE/REORDERED/TRUNCATED/VALUE_EXPOSED) plus
+# three new ones -- ENDPOINT_RESOLUTION (a deleted ROW), EDGES_CONSISTENT (a
+# deleted EDGE), CYCLE_CLASSIFICATION (an SCC not explained by any row's
+# mutual_group) -- all eight mutation-verified 1:1.
+declaration-graph:
+    python3 scripts/check-declaration-graph.py
+    python3 scripts/tests/test-declaration-graph.py
+    bash scripts/tests/test-declaration-graph-mutations.sh
+
+# L1 phase G2 -- join the Mathlib declaration graph (ADR-0820) to Axeyum's own
+# state: ledger facts, kernel declarations, statement vocabulary, curriculum
+# destination nodes, producers, declines, and trust footprints
+# (docs/plan/graph-directed-library-roadmap-2026-08-30.md section G2,
+# ADR-0835). Needs no Lean toolchain and no cargo run -- every input is
+# already-committed JSON. `fact_ids`/`kernel_declarations` resolve ONLY
+# through an exact match on an existing ledger fact's own title/evidence,
+# never a bare name match; `name_coincidence_candidates` records every case
+# where a name coincided with an unrelated fact and was NOT treated as an
+# identity. Six guards (EMPTY_POPULATION, EMPTY_FACTS, ACCOUNTING,
+# STALE_ARTIFACT, POSITIVE_CONTROL, BARE_NAME_BASIS), all mutation-verified
+# 1:1 in test-graph-join-mutations.sh.
+graph-join:
+    python3 scripts/check-graph-join.py
+    python3 scripts/tests/test-graph-join.py
+    bash scripts/tests/test-graph-join-mutations.sh
+
+# L2 phase G3 infrastructure frontier (docs/plan/graph-directed-library-
+# roadmap-2026-08-30.md section G3, ADR-0845). Reads the L1 G2 graph join
+# (read-only) and a hand-curated candidate list; re-validates every
+# candidate against the live join at generation time and fails the whole
+# gate if the committed artifact is stale. Seven guards (MISSING_JOIN,
+# STALE_ARTIFACT, ROW_ID_UNIQUE, ROW_ID_PURITY, EMPTY_QUEUE_REASON,
+# ROW_EVIDENCE_COMPLETE, CROSS_CHECK_PRESENT), all mutation-verified 1:1 in
+# test-infrastructure-frontier-mutations.sh.
+infrastructure-frontier:
+    python3 scripts/check-infrastructure-frontier.py
+    bash scripts/tests/test-infrastructure-frontier-mutations.sh

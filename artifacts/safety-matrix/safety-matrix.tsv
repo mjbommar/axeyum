@@ -938,7 +938,7 @@ F:int-wilson-iff	kernel-lean	generated-unreviewed	lean4	Int.wilson_iff	2	2	1	128
 F:int-wilson	kernel-lean	generated-unreviewed	lean4	Int.wilson	2	2	1	128	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
 F:int-zero-lt-one	kernel-lean	generated-unreviewed	lean4	Int.zero_lt_one	2	2	1	128	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
 F:int-zero-subnatnat	kernel-lean	generated-unreviewed	lean4	Int.zero_subNatNat	2	2	1	128	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
-F:lean-kernel-accepts-the-whole-constructed-real-carrier	kernel-lean	-	lean4	-	3	3	1	1	no	no	no	no	no	no	yes	no	1	yes	-	no	no	no
+F:lean-kernel-accepts-the-whole-constructed-real-carrier	kernel-lean	-	lean4	-	5	5	1	1	no	no	no	no	no	no	yes	no	1	yes	-	no	no	no
 F:lean-query-module-shrinks-by-a-shared-import	kernel-lean	-	lean4	-	5	5	1	1	no	no	no	no	yes	no	no	no	1	yes	-	no	no	no
 F:list-nil-append	imported-kernel-lean	-	lean4	-	2	2	1	1	no	yes	no	no	no	no	yes	no	2	yes	List.nil_append	no	yes	no
 F:loadplan-hazmat-iis	search-certificate	-	smtlib2	-	2	2	1	1	no	no	no	no	yes	no	no	no	1	yes	-	no	yes	yes

@@ -836,6 +836,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_sum_range_of_forall_lt,
         p.add_pow_modeq_prime,
         p.pow_prime_modeq_self,
+        p.mod_eq_iff_mod_eq,
+        p.not_prime_of_pow_mod_ne,
         p.count_range_zero,
         p.count_range_succ,
         p.count_range_le,
@@ -1125,6 +1127,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_xor,
         p.xor_comm,
         p.test_bit_xor,
+        p.test_bit_land,
+        p.test_bit_lor,
         p.self_lt_two_pow,
         p.self_lt_two_pow_add,
         p.lt_of_test_bit,
@@ -14904,6 +14908,156 @@ fn test_bit_xor_applies_at_a_concrete_discriminating_instance_and_symbolically()
     );
 }
 
+/// `Nat.testBit_land` -- the AND analogue of `Nat.testBit_xor`, transported
+/// to `landAux` (`testbit_bitwise.rs`). Checked at `(m, n) = (3, 5)`
+/// (binary `011`/`101`, `land 3 5 = 1` = `001`) across all three of its
+/// meaningfully differing bits (bit `0`: `1`/`1` -> AND `1`; bit `1`:
+/// `1`/`0` -> AND `0`; bit `2`: `0`/`1` -> AND `0`) -- a single bit position
+/// could not discriminate a swapped combine (e.g. an OR-shaped step) -- AND
+/// symbolically against a genuinely FREE `(m, n, i)` triple.
+#[test]
+fn test_bit_land_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: land 3 5 = 1 (011 & 101 = 001); check all three bits.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        for (i, expected_bit) in [(0u32, 1u32), (1, 0), (2, 0)] {
+            let idx = f.num(i);
+            let applied = f.lemma(p.test_bit_land, &[three, five, idx]);
+            let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+                let shown = f.explain(&e);
+                panic!("test_bit_land must apply at (m=3, n=5, i={i}): {shown}")
+            });
+            let land_35 = f.const_app(p.land, &[three, five]);
+            let lhs = f.const_app(p.test_bit, &[land_35, idx]);
+            let tb_m = f.const_app(p.test_bit, &[three, idx]);
+            let tb_n = f.const_app(p.test_bit, &[five, idx]);
+            let rhs = f.mul(tb_m, tb_n);
+            let want = f.eq(lhs, rhs);
+            assert!(
+                f.k.def_eq(inferred, want),
+                "test_bit_land must state Eq (testBit (land 3 5) {i}) \
+                 (mul (testBit 3 {i}) (testBit 5 {i}))"
+            );
+            let expected = f.num(expected_bit);
+            assert!(
+                f.k.def_eq(lhs, expected),
+                "testBit (land 3 5) {i} must compute to {expected_bit}"
+            );
+            // Negative control: the OTHER bit value must not also def_eq.
+            let other = f.num(1 - expected_bit);
+            let bad_want = f.eq(lhs, other);
+            assert!(
+                !f.k.def_eq(inferred, bad_want),
+                "negative control: bit {i} of land 3 5 must not ALSO be {}",
+                1 - expected_bit
+            );
+        }
+    }
+
+    // Symbolic: test_bit_land applies at a genuinely FREE (m, n, i) triple.
+    {
+        let name = f.name("test_bit_land_restated");
+        f.theorem(name, 3, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let i = values[2];
+            let land_mn = d.const_app(p.land, &[m, n]);
+            let lhs = d.const_app(p.test_bit, &[land_mn, i]);
+            let tb_m = d.const_app(p.test_bit, &[m, i]);
+            let tb_n = d.const_app(p.test_bit, &[n, i]);
+            let rhs = d.mul(tb_m, tb_n);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.test_bit_land, &[m, n, i]);
+            (stmt, proof)
+        })
+        .expect("test_bit_land must apply at symbolic m, n, i");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.test_bit_land).is_empty(),
+        "test_bit_land must rest on zero axioms"
+    );
+}
+
+/// `Nat.testBit_lor` -- the OR analogue of `Nat.testBit_xor`/
+/// `Nat.testBit_land`, transported to `lorAux` (`testbit_bitwise.rs`).
+/// Checked at `(m, n) = (3, 5)` (binary `011`/`101`, `lor 3 5 = 7` = `111`,
+/// matching `lor_three_five`'s own numeral pair) across all three bits
+/// (bit `0`: `1`/`1` -> OR `1`; bit `1`: `1`/`0` -> OR `1`; bit `2`:
+/// `0`/`1` -> OR `1`) -- AND symbolically against a genuinely FREE
+/// `(m, n, i)` triple.
+#[test]
+fn test_bit_lor_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Concrete: lor 3 5 = 7 (011 | 101 = 111); check all three bits.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        for (i, expected_bit) in [(0u32, 1u32), (1, 1), (2, 1)] {
+            let idx = f.num(i);
+            let applied = f.lemma(p.test_bit_lor, &[three, five, idx]);
+            let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+                let shown = f.explain(&e);
+                panic!("test_bit_lor must apply at (m=3, n=5, i={i}): {shown}")
+            });
+            let lor_35 = f.const_app(p.lor, &[three, five]);
+            let lhs = f.const_app(p.test_bit, &[lor_35, idx]);
+            let tb_m = f.const_app(p.test_bit, &[three, idx]);
+            let tb_n = f.const_app(p.test_bit, &[five, idx]);
+            let rhs = super::testbit_bitwise::lor_bit(&mut f, tb_m, tb_n);
+            let want = f.eq(lhs, rhs);
+            assert!(
+                f.k.def_eq(inferred, want),
+                "test_bit_lor must state Eq (testBit (lor 3 5) {i}) \
+                 (lor_bit (testBit 3 {i}) (testBit 5 {i}))"
+            );
+            let expected = f.num(expected_bit);
+            assert!(
+                f.k.def_eq(lhs, expected),
+                "testBit (lor 3 5) {i} must compute to {expected_bit}"
+            );
+            // Negative control: the OTHER bit value must not also def_eq.
+            let other = f.num(1 - expected_bit);
+            let bad_want = f.eq(lhs, other);
+            assert!(
+                !f.k.def_eq(inferred, bad_want),
+                "negative control: bit {i} of lor 3 5 must not ALSO be {}",
+                1 - expected_bit
+            );
+        }
+    }
+
+    // Symbolic: test_bit_lor applies at a genuinely FREE (m, n, i) triple.
+    {
+        let name = f.name("test_bit_lor_restated");
+        f.theorem(name, 3, &|d, values| {
+            let m = values[0];
+            let n = values[1];
+            let i = values[2];
+            let lor_mn = d.const_app(p.lor, &[m, n]);
+            let lhs = d.const_app(p.test_bit, &[lor_mn, i]);
+            let tb_m = d.const_app(p.test_bit, &[m, i]);
+            let tb_n = d.const_app(p.test_bit, &[n, i]);
+            let rhs = super::testbit_bitwise::lor_bit(d, tb_m, tb_n);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.test_bit_lor, &[m, n, i]);
+            (stmt, proof)
+        })
+        .expect("test_bit_lor must apply at symbolic m, n, i");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.test_bit_lor).is_empty(),
+        "test_bit_lor must rest on zero axioms"
+    );
+}
+
 /// `Nat.self_lt_two_pow`/`Nat.self_lt_two_pow_add` -- checked at concrete
 /// instances, both symbolically and against numerals large enough that a
 /// wrong direction (`Le` vs `Lt`, or the bound landing on the WRONG side)
@@ -21805,5 +21959,101 @@ fn the_unrestricted_lnp_and_excluded_middle_are_pinned_as_an_exact_equivalence()
         holders.is_empty(),
         "the unrestricted least-number principle is already proved as {holders:?} -- \
          `Nat.lnp_unrestricted_implies_em` would then prove excluded middle outright"
+    );
+}
+
+/// ADR-0603 row 3 for `Nat.not_prime_of_pow_mod_ne` (`fermat_witness.rs`):
+/// the general theorem instantiated at concrete, DISCRIMINATING numerals,
+/// checked by kernel reduction and by genuine kernel rejection, not merely
+/// type-checked symbolically.
+///
+/// Composite witness: `p := 4`, `a := 3`. `3^4 = 81`, `81 mod 4 = 1`,
+/// `3 mod 4 = 3`, `1 != 3` — so `not_prime_of_pow_mod_ne` instantiated here
+/// produces a fully kernel-checked, executable compositeness certificate
+/// for `4`, admitted as a throwaway theorem below.
+///
+/// Prime control: `p := 5`, `a := 3`. `3^5 = 243`, `243 mod 5 = 3 = 3 mod 5`
+/// — the SAME construction attempted here must be REJECTED by the trusted
+/// gate, because `Eq.refl` cannot certify `beq 3 3 = false` (it reduces to
+/// `true`). This is the non-vacuity control: the check genuinely depends on
+/// the arithmetic outcome, not merely on the shape of the term.
+#[test]
+fn not_prime_of_pow_mod_ne_certifies_four_composite_and_is_rejected_at_five_prime() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // --- Composite instance: p = 4, a = 3 -----------------------------
+    let four = f.num(4);
+    let three = f.num(3);
+    let pow_3_4 = f.pow(three, four);
+    let mod_pow_4 = f.modulo(pow_3_4, four);
+    let mod_a_4 = f.modulo(three, four);
+    let one = f.num(1);
+    assert!(
+        f.k.def_eq(mod_pow_4, one),
+        "3^4 mod 4 must reduce to 1 by kernel computation"
+    );
+    assert!(
+        f.k.def_eq(mod_a_4, three),
+        "3 mod 4 must reduce to 3 by kernel computation"
+    );
+
+    let beq_4 = f.beq(mod_pow_4, mod_a_4);
+    let bool_false = f.bool_false();
+    let refl_beq_4 = f.bool_refl(beq_4);
+    let ne_fn_4 = f.lemma(p.ne_of_beq_eq_false, &[mod_pow_4, mod_a_4, refl_beq_4]);
+    let not_prime_fn_4 = f.lemma(p.not_prime_of_pow_mod_ne, &[four, three]);
+    let not_prime_four = f.apply(not_prime_fn_4, &[ne_fn_4]);
+
+    // Admit the composite certificate as a throwaway theorem -- the kernel
+    // must accept it, proving `Not (Prime 4)` was genuinely derived.
+    let prime_four_ty = {
+        let nat = f.nat_ty();
+        let two = f.num(2);
+        let two_le = f.le(two, four);
+        let c_fv = f.fresh_fvar();
+        let c = f.kernel().fvar(c_fv);
+        let dvd_c4 = f.dvd(c, four);
+        let is_one = f.eq(c, one);
+        let is_four = f.eq(c, four);
+        let disj = f.const_app(p.logic.or, &[is_one, is_four]);
+        let inner = f.arrow(dvd_c4, disj);
+        let clause = f.pi_fv(c_fv, nat, inner);
+        f.const_app(p.logic.and, &[two_le, clause])
+    };
+    let not_prime_four_ty = f.const_app(p.logic.not, &[prime_four_ty]);
+    let cert_name = f.name("fermat_witness_composite_four");
+    if let Err(e) = f.declare_theorem(cert_name, not_prime_four_ty, not_prime_four) {
+        panic!("composite witness rejected: {}", f.explain(&e));
+    }
+
+    // --- Prime control: p = 5, a = 3 -- the SAME shape must be REJECTED ---
+    let five = f.num(5);
+    let pow_3_5 = f.pow(three, five);
+    let mod_pow_5 = f.modulo(pow_3_5, five);
+    let mod_a_5 = f.modulo(three, five);
+    assert!(
+        f.k.def_eq(mod_pow_5, three),
+        "3^5 mod 5 must reduce to 3 by kernel computation"
+    );
+    assert!(
+        f.k.def_eq(mod_a_5, three),
+        "3 mod 5 must reduce to 3 by kernel computation -- the antecedent \
+         genuinely does not hold at a real prime"
+    );
+
+    let beq_5 = f.beq(mod_pow_5, mod_a_5);
+    let refl_beq_5 = f.bool_refl(beq_5);
+    // refl_beq_5 : Eq (beq mod_pow_5 mod_a_5) (beq mod_pow_5 mod_a_5), and
+    // `beq_5` reduces to `true`, not `false` -- so it does not have the
+    // type `ne_of_beq_eq_false`'s hypothesis slot needs at 5, and the
+    // trusted gate must refuse it.
+    let bogus_ne_name = f.name("fermat_witness_bogus_five_hypothesis");
+    let bogus_hyp_ty = f.bool_eq(beq_5, bool_false);
+    let result = f.declare_theorem(bogus_ne_name, bogus_hyp_ty, refl_beq_5);
+    assert!(
+        result.is_err(),
+        "the trusted gate must REFUSE `Eq (beq (3^5 mod 5) (3 mod 5)) false` \
+         at the real prime 5, since beq reduces to `true` there"
     );
 }

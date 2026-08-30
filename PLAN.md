@@ -180,12 +180,25 @@ now. Nothing was deleted.
 | 2026-08-30 | `b2b72f777` | Canonical A0 observations and complete dynamic instruction footprints expose selected state, implicit effects, effective memory ranges, and aliased operands. The audit also repaired `halt` incorrectly advancing PC; 19 focused tests now cover the transition and selection controls. |
 | 2026-08-30 | `361a733ce` | Semantic package v2 declares the bound A0 surfaces. A trace-class observation artifact recomputes a narrow agreement and broad r3 separation over two complete states; omitting requested r3 fires `semantic-mismatch`. |
 | 2026-08-30 | `172e0982a` | Three more source-bound routes cover exhaustive width-8 addition with flags/PC, a 16-bit store/load and trapped boundary, and taken/untaken branch traces. Wrong destination, reversed bytes, and wrong target-base controls each fire independently. |
+| 2026-08-30 | `ac1f4f1f9` | A0 now distinguishes verification-bound exhaustion from a caller-returned running prefix. Semantic package v3 and a replay route cover halt, trap, zero-step exhaustion, prefix return, and resumed-prefix concatenation; false halt is rejected. |
+| 2026-08-30 | `560792751` | Canonical A0 encoding covers all seventeen families. An exhaustive computation checks all 41,409 legal structured instructions, unique encodings, 82,818 reserved-bit mutations, targeted unused fields, and an unknown opcode; accepting one reserved form is rejected. |
+| 2026-08-30 | `0b6d9ced7` | A source-bound step route executes all seventeen families, checks seventeen exact effect rows, all four trap classes, terminal stuttering, and complete-state frame containment. An undeclared r7 write is rejected. |
+| 2026-08-30 | `e2ce56353` | The step control now independently requires rejection of a hidden write, missing condition update, and wrong sequential PC; unexpected acceptance has a distinct control-failure category. |
+| 2026-08-30 | `41cd92f5e` | A0 concrete addition now instantiates a domain-parametric semantic definition that can also construct symbolic terms; primitive mappings remain an explicit trust boundary. |
+| 2026-08-30 | `9cf18324f` | A0 addition emits term-bound DRAT/LRAT for all eight supported fixed widths. Replay rebuilds source terms and certificates; an inverted-carry SAT witness is exhaustively found at width 8 and replayed through encoded concrete execution. |
+| 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | l0-s6-credit-transaction | Crash-safe two-phase-commit engine (`scripts/credit-transaction.py`) + gate (`scripts/check-credit-transaction.py`) + 27-test suite + 9-guard mutation table (`scripts/tests/test-credit-transaction*`), registered in justfile and check.sh; ADR-0785. |
 | 2026-08-30 | l1-c0-artifact-contract | Library-artifact pack contract (`artifacts/library-artifact/`: README spec, JSON Schema doc, 9-declaration positive pack + type-only projection + external population registry) + two independent readers (`scripts/check-library-artifact-contract{,-reader-b}.py`) + 14-test suite + 5-guard 1:1 mutation table (`scripts/tests/test-library-artifact-contract*`), registered in justfile and check.sh; ADR-0800. |
 | 2026-08-30 | `1ec34c8e1` | Initial module-import parser + receipt generator/checker, verified against the full pinned Mathlib checkout (8,094 modules, 25,495 internal edges, 1,476 sinks, matching the roadmap's evidence baseline exactly); two runs byte-identical. |
 | 2026-08-30 | `8e337c9e5` | 12-test suite + 9-mutation harness against a synthetic fixture (all 9 guards kill exactly one test); registered `just module-baseline`/`module-baseline-controls` and three `check.sh` steps. |
+| 2026-08-30 | `0e6a1cf15` | L1 phase G2: join the Mathlib declaration graph to ledger facts, kernel declarations, statement vocabulary, destination nodes, producers, declines and trust footprints (ADR-0835). |
+| 2026-08-30 | `694f01952` | L2 phase G3: publish the infrastructure frontier -- four frozen queues over the group-defs population, content-hash row ids, seven mutation-verified guards (ADR-0845). |
 | 2026-08-30 | 6174be234 | Add `equivalent_to` to `fact.schema.json` and mark all 15 non-canonical duplicate facts with it (surgical text-append edits, `statement`/`formal.statement` untouched); land `scripts/check-proposition-duplication.py` v1 (still failing at 15 unlabeled pairs at this commit, by design -- see report). |
 | 2026-08-30 | (this session, later commits) | ADR-0790; `scripts/validate-facts.py` prints the FACTS SETTLED / DISTINCT PROPOSITIONS ESTABLISHED split; `scripts/tests/test-proposition-duplication.sh` (9 cases, 8 guard mutations, each killing exactly one); gate registered in `justfile` and `scripts/check.sh` as `proposition-duplication` / `proposition-duplication-controls`. |
+| 2026-08-30 | `847148d3a` | Status doc with root-cause diagnosis (first commit). |
+| 2026-08-30 | `2cc851274` | `describe_leak()` + accumulated multi-violation messages; all 11 pre-existing tests pass unchanged. |
+| 2026-08-30 | `713ae6b6e` | ADR-0850; `component_split_exemptions` field + validation; exempted the 3 diagnosed crossings in `nursery-v1.json`; gate exit 1 -> 0. |
+| 2026-08-30 | `b4f02cd22` | 8 new tests covering detailed messages, multi-violation accumulation, and the exemption mechanism's schema/suppression/self-invalidation. |
 | 2026-08-30 | s6-wire-real-ledger | `scripts/credit-transaction-ledger.py` wires ADR-0785's engine into the real write set (fact JSON, pins manifest, safety-matrix) by reusing `validate-facts.py`/`check-settled-fact-statements.py`/`gen-safety-matrix.py` unmodified; gate + 22-test suite + 9-guard mutation table; registered in justfile and check.sh; ADR-0810. |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
@@ -34686,8 +34699,9 @@ specifically (exactly the gap the two "explained" survivals trace to).
 Build the semantic and evidence layers required by *Instruction Sets,
 Programs, and Proofs*. The first slice adds the `axeyum-machine` boundary and
 complete A0 concrete execution. Next: independently pinned RV64I and x86-64
-teaching slices, semantic relations, formula generation, manifests, Python
-projection, and clean-checkout book gates. Do not describe the book's future
+teaching slices, broader semantic relations, manifests, Python projection, and
+clean-checkout book gates. A0 addition now has fixed-width symbolic certificates;
+do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
@@ -35885,6 +35899,151 @@ common_refinement_proof_rejected_at_wrong_type`) — all pass.
 | (this lane, Task 1) | doc 295 (measurement); no source changes |
 | (this lane, Task 2) | mechanical clippy fixes, 7 files, doc/mut/allow only |
 
+**Your lane's block (`DONE`, blocked-mirror-divergences, 2026-08-30).**
+
+Resolved as much of each of the four `check-dispatchable-frontier.py`
+"structurally blocked by a divergence" causes as is honest, landing two new
+kernel theorems and correcting one stale sizing (ADR-0840). No mirror was
+flipped (none of the four should be).
+
+## `Nat.testBit` (codomain) — 5 facts, 2 already done, 2 landed this lane, 1 stays deeply blocked
+
+- `F:ml430-nat-lt-of-testbit-72f64ab8`, `F:ml430-nat-zero-of-testbit-eq-false-e244c9a1`:
+  **already resolved by prior lanes** (`F:nat-lt-of-testbit`,
+  `F:nat-zero-of-testbit-eq-zero`, both `proved`, axiom-free). Verified in
+  tree, nothing further needed.
+- `F:ml430-nat-testbit-land-dfef7ca4`, `F:ml430-nat-testbit-lor-7644e067`:
+  **landed this lane** as `F:nat-testbit-land` and `F:nat-testbit-lor`
+  (`crates/axeyum-lean-kernel/src/nat_prelude/testbit_bitwise.rs`), both
+  admitted axiom-free, each with a concrete discriminating instance (3
+  bits) plus a symbolic check. Transported `testbit_bitwise.rs`'s existing
+  `Nat.testBit_xor` technique (induction on the bit index, reduced to a
+  low-bit lemma and a div-by-2 lemma per level) to `landAux`/`lorAux`
+  directly. One real bug found via a temporary `render_lean` debug probe:
+  `land_div_two`'s `at_n_zero` branch assumed `land_zero_right(m) : Eq
+  (land m 0) m` (copying `lor`'s shape); `land`'s absorbing zero means it is
+  actually `Eq (land m 0) 0` on BOTH sides. Fixed; `lor`'s construction
+  (byte-for-byte from `xor`'s shape, since `lor`'s boundary behavior is
+  identical to `xor`'s) was admitted on the first attempt.
+- `F:ml430-nat-testbit-eq-inth-ffa07392`: **stays open, genuinely deeper
+  blocked than the other four.** Needs `n.bits : List Bool` +
+  `List.getI`; this kernel has **no `List` type at all**, on top of the
+  Bool/Nat codomain mismatch. No local analogue attempted — there is no
+  honest Nat-valued restatement of "the i-th element of a list this kernel
+  cannot construct."
+
+All four `ml430` testBit mirrors correctly stay `open` (Bool-vs-Nat
+codomain mismatch, verified against the pinned Mathlib source at each
+site). `scripts/gen-autogenesis-bitwise-family-projection.py --check`
+requires `testbit_land`/`testbit_lor`/`testbit_ldiff` to stay open
+regardless of provability, independent of the codomain reasoning — verified
+this still applies.
+
+Axiom footprint: both new theorems are `nat: axiom=0 opaque=0 quotient=0`,
+read from `nat_axiom_inventory --require-axiom-free nat` (which measures
+the whole `nat` environment, so it bounds every declaration in it,
+including these two).
+
+## `Nat.multichoose` (definitional) — 3 facts, already fully resolved
+
+Verified against `Mathlib/Data/Nat/Choose/Basic.lean` at the pinned commit
+`c5ea0035…` myself (not trusting the registry's prose): Mathlib's
+`multichoose` is a genuine three-case DOUBLE recursion (`multichoose n
+(k+1) + multichoose (n+1) k`), and `multichoose_eq : multichoose n k = (n +
+k - 1).choose k` is a **proved theorem** about it, confirmed at the source
+line. Our `Nat.multichoose n k := choose (pred (add n k)) k` DEFINES that
+theorem's RHS as the body — we define what Mathlib proves, about a
+structurally different `def`. Already resolved by a prior lane:
+`F:nat-multichoose-one`, `F:nat-multichoose-one-right`,
+`F:nat-multichoose-zero-right` are all `proved`, and the three `ml430`
+mirrors correctly stay `open`. Nothing further needed; confirmed, not
+re-derived.
+
+## `Nat.minFac` (algorithmic) — 1 fact, already fully resolved
+
+Verified against `Mathlib/Data/Nat/Prime/Defs.lean` at the pinned commit
+myself: Mathlib's `minFacAux` is well-founded recursion on `sqrt n + 2 - k`,
+testing only ODD candidates from 3 with an early `k*k > n` exit. Ours
+(`min_fac.rs`) is fuel-structural, testing every candidate `2, 3, 4, …`
+with no skip and no early exit. Same values, different construction —
+confirmed by reading the actual Rust source, matching the registry's
+classification exactly. Already resolved by a prior lane:
+`F:nat-coprime-of-lt-minfac` is `proved`, axiom-free, and
+`F:ml430-nat-coprime-of-lt-minfac-0f79bdba` correctly stays `open`. Nothing
+further needed; confirmed, not re-derived.
+
+## `Nat.fastFib` (recursion-principle) — 1 fact, sizing corrected, not built
+
+**The prior sizing ("blocked on a well-founded `binaryRec`, which is
+ordinary work") was itself stale, in a way that matters for a future
+lane.** Verified in full — see **ADR-0840**
+(`docs/research/09-decisions/adr-0840-…md`) for the complete derivation.
+Two findings, both new:
+
+1. Mathlib's `fastFibAux` instantiates `binaryRec` at a **non-dependent**
+   motive (`fun _ => ℕ × ℕ`), confirmed by reading
+   `Mathlib/Data/Nat/Fib/Basic.lean:170` at the pinned commit. So the
+   FUEL-based `Nat.binaryRec` already built in `binary_rec.rs` (whose own
+   non-dependence was previously read as disqualifying) is actually
+   SUFFICIENT for this specific mirror — no well-founded `binaryRec` is a
+   prerequisite.
+2. **It would not matter if one were built anyway.** `Nat.fib` itself
+   (`fibonacci.rs`) is ALSO a divergent construction (a curried-accumulator
+   fuel recursion, built because this kernel has no tuple type) — a second,
+   independent obstruction Mathlib's own construction chain carries.
+   `Nat.fastFib_eq`'s statement names both `fastFib` and `fib`, and a flip
+   needs BOTH constructions to match Mathlib's, not just the outermost
+   combinator. This mirror cannot flip regardless of `binaryRec`'s
+   construction. Also confirmed: the kernel already has a genuinely
+   computing, DATA-motive `WellFounded.fix`
+   (`nat_strict_well_foundedness_drives_generic_strong_recursion`), so a
+   well-founded `binaryRec` IS buildable if ever wanted for a different
+   mirror — the earlier "fuel forces non-dependence" framing does not
+   generalize to "WellFounded.fix cannot produce data," and this test
+   already refutes that reading.
+
+**Not built in this lane**, for time — ADR-0840 leaves a corrected, precise
+plan for the next lane (define `fastFibAux` over the EXISTING fuel
+`binaryRec`, prove correctness by strong induction using
+`base_induction.rs`'s `WellFounded.fix`-over-`Nat.lt` device, generalized
+into a reusable wrapper; comparable in size to this session's
+`testBit_land`/`testBit_lor` pair plus the wrapper). `F:ml430-nat-fastfib-eq-cde11774`
+stays `open`, correctly, either way.
+
+## Holdout isolation
+
+Before: `AUTOGENESIS_HOLDOUT_ISOLATION|held_out=116|files_scanned=1110|settled=0|references=0|verdict=PASS`
+After: `AUTOGENESIS_HOLDOUT_ISOLATION|held_out=116|files_scanned=1110|settled=0|references=0|verdict=PASS`
+(unchanged — `artifacts/autogenesis/` was not touched, per scope).
+
+## Verification run (this lane)
+
+`cargo test --release -p axeyum-lean-kernel --lib nat_prelude::` — 224 -> 226
+passed, 0 failed (2 new tests:
+`test_bit_land_applies_at_a_concrete_discriminating_instance_and_symbolically`,
+`test_bit_lor_applies_at_a_concrete_discriminating_instance_and_symbolically`).
+`every_nat_declaration_is_checked_and_axiom_free`,
+`the_nat_prelude_declares_no_axioms`, `the_build_is_deterministic` all still
+pass. `cargo clippy -p axeyum-lean-kernel --lib -- -D warnings` clean.
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` fails on
+TWO pre-existing lint errors in `tests/real_lean_replay_census.rs` and
+`tests/real_lean_creal_carrier_kernel_replay.rs` — neither touched by this
+lane (confirmed via `git diff --stat`), not fixed (out of scope; flagging
+for whoever owns those files). `python3 scripts/validate-facts.py`: 2276
+facts, 0 errors (2 new facts added; `depends_on` corrected via
+`scripts/check-fact-depends-derived.py --fix` against the actual proof
+term graph, not hand-guessed).
+
+Workspace-wide gate NOT run (coordinator re-verifies per standing rule).
+Not pushed.
+
+## For the next lane
+
+If more time goes to this area, `Nat.fastFib` is the one with real
+remaining construction value (ADR-0840 has the precise plan). The
+`testbit_eq_inth`/`List` gap and the `multichoose`/`minFac` divergences are
+permanent — do not re-derive them; cite ADR-0840 and this file instead.
+
 **ADR-0521: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
 one-constructor pair of `CReal`s with equality the *defined* relation
@@ -36012,6 +36171,141 @@ take no slot (only `check.sh` is wired); `sccache` is the sound version of
 shared build artifacts and needs its own evaluation; and gating the always-on
 solver steps on a derived reverse-dependency closure is a real but narrow win.
 
+Status: DONE for this session. One complete graded family landed (rows 1
++ 3, row 2 argued absent), both declarations axiom-free, both facts
+registered and validated, ADR-0825 records the reasoning. Family B was
+NOT attempted -- see "Why only one family" below.
+
+## Step 0 findings — what already exists (read this before assuming anything below is open)
+
+- **ADR-0716 is accepted** and settles the framing: for Nat/Int/Rat the
+  analysis-style row 2 (order totality) is a proved, axiom-free theorem, so
+  it is EMPTY for number theory. Two other boundaries survive (unbounded
+  search / LNP-implies-EM, and an expressiveness row 2'). Per this lane's
+  brief, row 2 is out of scope here regardless.
+- **The unrestricted LNP-implies-EM row 2 is ALREADY LANDED**, by a sibling
+  lane, committed and merged to `main` before this lane started:
+  `nat_prelude/least_number.rs::declare_lnp_unrestricted_implies_em`
+  (commit `b81277a5c`, "the unrestricted least-number principle IS excluded
+  middle"). Do not rebuild this.
+- **Euler's theorem (`a^phi(n) = 1 mod n`) is NOT close**, contrary to
+  ADR-0716's "one theorem away" framing, which is itself corrected by a
+  sibling lane's own handoff: `docs/plan/status/374-euler-theorem.md`
+  (status: PARTIAL) plus `int_prelude/euler_theorem.rs`'s module doc, both
+  landed and merged (`f0453c65f`). `Int.prodRangeIf`/`Int.prodRangeIf_permute`
+  are landed; three more genuinely hard pieces remain (Nat/Int index
+  bridging, the IFF-converse of `euler_unit_coprime`, and final assembly).
+  Not attempted by this lane — too large a bite alongside a second family,
+  and actively claimed by another lane's handoff.
+- **The classical Euclid-Euler even-perfect-number theorem (Euclid IX.36) is
+  under ACTIVE multi-lane construction** in
+  `nat_prelude/perfect.rs` (3702 lines as of this session; commits include
+  "step 4 of the Euclid IX.36 chain", "Euclid IX.36's family non-overlap",
+  etc., all recent and merged). `Nat.sumDivisors`, `Nat.Perfect`,
+  `Nat.sumDivisors_two_pow`, `Nat.dvd_two_pow_mul_classify` are landed;
+  `declare_perfect_all` does not yet wire up the full Euclid IX.36 result.
+  **Not touched by this lane** — high collision risk with active work, deep
+  existing proof architecture not worth re-deriving in one session.
+
+Conclusion: picked a family away from the three hot areas above, using
+already-landed but currently-unconnected infrastructure.
+
+## Family A (landed): Fermat's little theorem, contrapositive form — a computable compositeness certificate
+
+New file: `crates/axeyum-lean-kernel/src/nat_prelude/fermat_witness.rs`.
+Landed across commits `127b4f716` (declarations), `8e002a641` (row-3 test),
+`2740d11cb` (fact ledger), `37f869b08` (ADR-0825).
+
+1. `Nat.mod_eq_iff_mod_eq : forall d a b, 0 < d -> Iff (ModEq d a b) (Eq (modulo a d) (modulo b d))`
+   — bridges the existential balanced-witness `ModEq` to the EXECUTABLE
+   `Nat.mod` comparison, built from two already-landed theorems:
+   `mod_eq_iff_div_mod_remainder_eq` (`modular.rs`) instantiated with
+   `div_mod_exec` (`division.rs`) supplying the `divMod` witness at both `a`
+   and `b`. No new induction. `div_mod_exec` needs the divisor syntactically
+   `succ`-shaped (`Nat.divMod`'s own `r < divisor` bound is false at
+   `divisor = 0`), so this is built at `n := succ (pred d)` and transported
+   back to `d`, exactly `fermat.rs`'s own `pos_implies_succ_pred` pattern.
+2. `Nat.not_prime_of_pow_mod_ne : forall p a, Not (Eq (modulo (pow a p) p) (modulo a p)) -> Not (Prime p)`
+   — ADR-0603 row 1, general constructive form, true for every `p, a` with
+   no restriction and no decidability principle beyond what already exists:
+   direct contrapositive of the already-landed `Nat.pow_prime_modeq_self`
+   (Fermat's little theorem), composed through step 1's bridge.
+3. Row 2: none, argued from shape (matches ADR-0825/ADR-0716) — a single
+   modus-tollens step on an unconditional theorem has no comparison or
+   search to extract a boundary from.
+4. Row 3: the SAME row-1 declaration, instantiated at DISCRIMINATING
+   numerals and kernel-checked both ways
+   (`not_prime_of_pow_mod_ne_certifies_four_composite_and_is_rejected_at_five_prime`,
+   `nat_prelude_tests.rs`): composite `p=4, a=3` (`3^4 mod 4 = 1 != 3 mod 4
+   = 3`) admits `Not (Prime 4)` as a throwaway theorem; the IDENTICAL
+   construction at the real prime `p=5, a=3` (`3^5 mod 5 = 3 = 3 mod 5`) is
+   attempted and the trusted gate genuinely REFUSES it (`Eq.refl` cannot
+   certify a `beq` reduction to `true` as `false`) -- the non-vacuity
+   control, verified as a real `Err`, not asserted.
+
+**Axiom footprint, read from the kernel** (`theorem_axiom_footprint`, fresh
+`--release` build): both declarations `footprint=[]`, against the whole Nat
+prelude's 727 theorems, all axiom-free, 0 trusted declarations in the
+environment.
+
+**Bug found and fixed while writing the row-3 test**: `NatOps::eq`/`::refl`
+hardcode the `Nat` carrier (the same "dev helper hardcodes a carrier"
+hazard `CLAUDE.md` documents for `NatOps::congr`/`IntDev::irefl`) --
+comparing two `Bool`-typed `beq` results needs `bool_eq`/`bool_refl`, and
+using the `Nat` forms produced an opaque `TypeMismatch { expected: AxNat,
+got: Bool }` traced via `d.explain(&e)`.
+
+`cargo test -p axeyum-lean-kernel --lib nat_prelude::`: 225 passed, 0
+failed (was 224 before this lane's first declaration, 223 before the
+coverage-list fix).
+
+Facts: `F:nat-mod-eq-iff-mod-eq`, `F:nat-not-prime-of-pow-mod-ne`.
+`depends_on` populated by `scripts/check-fact-depends-derived.py --fix`,
+not hand-listed. `python3 scripts/validate-facts.py`: 0 errors, 2276 facts
+(was 2274).
+
+## Holdout isolation
+
+Before and after (identical -- this lane never touches
+`artifacts/autogenesis/`, confirmed via `git status --porcelain --
+artifacts/autogenesis/` being empty throughout):
+
+    python3 scripts/check-autogenesis-holdout-isolation.py
+    AUTOGENESIS_HOLDOUT_ISOLATION|held_out=116|files_scanned=1110|settled=0|references=0|verdict=PASS
+
+## Why only one family
+
+Step 0 found the two most obvious number-theory targets both already
+claimed or actively contested this session (see the survey above):
+Euler's theorem is genuinely blocked on three hard pieces per a sibling
+lane's own verified handoff (not the "one theorem away" ADR-0716 claimed),
+and the Euclid-Euler even-perfect-number theorem is under active
+multi-lane construction in a 3,702-line file with commits landing
+throughout this session. Rather than duplicate either or dispatch a second
+family into unfamiliar, contested territory under time pressure, this lane
+landed one complete, well-graded family with both rows kernel-checked and
+axiom-free, and recorded the reasoning in ADR-0825 (including the general
+finding: a decidable-subject row 1 that is directly executable at concrete
+instances IS row 3, needing no separate `axeyum-cas` producer/verifier
+pair). A Mathlib reader would correctly note this family does not touch
+Euler's theorem, the Euclid-Euler characterization, or quadratic
+reciprocity -- all three remain open, all three are honestly recorded as
+open (two as actively in-progress by other lanes) rather than claimed.
+
+## Next steps for a successor lane
+
+1. Euler's theorem: pick up `docs/plan/status/374-euler-theorem.md`'s three
+   named remaining pieces (Nat/Int index bridge, `euler_unit_coprime`'s IFF
+   converse, final assembly) -- verify each in-tree first, per the standing
+   "a handoff's blocked-on-X is a claim about one route" rule.
+2. Euclid-Euler perfect numbers: check `nat_prelude/perfect.rs`'s latest
+   state before touching it; `declare_perfect_all` is the wiring point once
+   the final assembly lands.
+3. Quadratic reciprocity: row 1 is genuinely absent under any spelling
+   tried (`reciproc`, `legendre`, `jacobi`, `quadratic_res`); the Legendre
+   symbol criterion (`Int.euler_criterion_pm_one`,
+   `Int.is_quadratic_residue*`) is landed and could seed row 3.
+
 **Done (`DONE`, graded-families, 2026-08-27).** Stated the four rows —
 constructive general form, boundary refutation, exact decidable-fragment
 form, labeled import — for MVT, LUB/completeness, Taylor remainder, and FTA
@@ -36121,6 +36415,112 @@ rule, confirmed complete before this report). `validate-facts.py` — 805
 facts, 0 errors. `validate-autogenesis-operations.py` — unchanged, 27.
 `validate-producer-contract-declines.py` — unchanged, 27.
 `check-autogenesis-holdout-isolation.py` — PASS, held_out=37 unchanged.
+
+**Status:** COMPLETE — all four ADR-0780 mutant survivors closed. Kill table is
+8 killed / 0 survived over a 35-case corpus. No P0 in the unmutated kernel.
+
+Decision: [ADR-0815](docs/research/09-decisions/adr-0815-a-mutation-aimed-at-a-call-site-cannot-see-a-shared-predicate.md)
+
+## What this lane was for
+
+ADR-0780's kernel differential found zero Axeyum-accepts/Lean-rejects
+disagreements, which is the result we wanted, and then mutation-tested the
+kernel itself and had **four of eight mutants survive**. A survivor means a
+soundness guard was removed and the differential did not notice. The
+`inductives` one was unexplained, which made it the most important open item
+in L0 — ADR-0717's risk 1 is exactly "our own kernel could have a shared
+semantic defect", and this was a place where we removed a check and the
+detector shrugged.
+
+## Headline
+
+**All four had one cause between them, and it is not a corpus weakness.**
+Three of the four (`inductives`, `projections`, `quotient`) were killed by a
+SECOND guard implementing the same predicate at a different call site; only
+`literals` was a genuine missing case. A mutation aimed at a call site cannot
+be killed when a redundant implementation still rejects — and the fix is to aim
+at the predicate, not to write more cases.
+
+### `inductives` — outcome 1: a different real guard rejects
+
+Five measured rebuilds, `--release`, in this worktree.
+
+| # | kernel state | `add_inductive(Bad, …)` |
+|---|---|---|
+| E1 | unmutated | `Err(NonPositiveInductiveOccurrence)` |
+| E2 | positivity `Err` off (`inductive.rs:1933`) — ADR-0780's mutation | `Err(ReflexiveOrNestedNotSupported)` |
+| E3 | field-shape classification off (`inductive.rs:2076`) | `Err(NonPositiveInductiveOccurrence)` |
+| E4 | **both off** | **`Ok(())`** — P0 |
+| E5 | shared predicate `mentions_group_family` `Const` arm → `false` | **`Ok(())`** — P0 |
+
+E1 rules out the possibility ADR-0780 could not: the case does reach the
+targeted guard. E2 names the taker-over. E3 shows symmetry. **E4** proves the
+pair is jointly load-bearing rather than both being decoration. E5 is the
+correctly-aimed single mutation and it KILLS.
+
+`check_group_positive_occurrence` and `open_group_recursive_field_shape` are
+the same algorithm written twice; one returns `Some` exactly where the other
+returns `Ok`. **No case can separate them** — that impossibility is the
+finding, not a corpus gap.
+
+### Survivors closed, and the mutant each new case kills
+
+| case | mutant it kills | cases flipped |
+|---|---|---|
+| `projections::two_constructor_projection_negative` | `projection_inference_data`'s `constructor_count != 1` | 1, to P0 |
+| `literals::malformed_nat_bootstrap_negative` | `nat_literal_bootstrap`'s shape validation (the SAME mutation ADR-0780 ran) | 1, to P0 |
+| `quotient::lift_without_respectfulness_negative` | `validate_quotient_package`'s per-declaration type contract | 1, to P0 |
+
+Every one flips exactly one case. No case added by this lane kills nothing.
+
+### One case was written, measured, and replaced
+
+The first quotient case exchanged `Quot`'s and `Quot.mk`'s types. Measured
+under the mutation it stayed `AgreeReject` — the exchanged package is not
+well-typed at all, so the transaction's own `check_declaration` rejects it. The
+redundancy trap catches you twice if you are not looking for it. Replaced with
+a package that is fully well-typed and simply not Lean's.
+
+### `quotient`'s named reason was stronger than ADR-0780 stated
+
+`reduce_quotient`'s `mk` name sub-check is **unkillable by construction**, not
+merely uncovered: `add_quotient_package` is the only route to a
+`Declaration::Quotient` and it hard-codes the four names, so a rival
+`mk`-shaped constructor cannot exist. Recorded as `redundancy_findings[2]` (R3)
+rather than papered over with a case that could not discriminate.
+
+## No P0
+
+The unmutated kernel agrees with pinned Lean 4.30.0 (`d024af09`) on all 35
+cases; the only disagreement is the pre-registered `quotient::quot_sound_absent`
+incompleteness. Every P0 above is an artefact of a deliberately mutated kernel.
+`crates/axeyum-lean-kernel/src/` was restored byte-identical after every
+mutation (`diff -q` exit 0, `git status` over `src/` empty) before each commit.
+
+## What the differential still cannot see
+
+It compares accept/reject on a whole declaration, so it is blind to a kernel
+that accepts the right things for the wrong reason — in particular to a defect
+in a predicate both positivity implementations share and that this corpus does
+not exercise: `mentions_group_family`'s `Proj`, `Let` and `App` arms are
+reached by nothing here.
+
+## Landed changes
+
+| what | where |
+|---|---|
+| ADR-0815 | `docs/research/09-decisions/adr-0815-a-mutation-aimed-at-a-call-site-cannot-see-a-shared-predicate.md` |
+| three corpus cases + `build_quotient_declarations` seam | `crates/axeyum-lean-kernel/tests/kernel_differential.rs` |
+| `KernelError` diagnostic probe | `crates/axeyum-lean-kernel/tests/kernel_differential_probe.rs` |
+| kill table: 8/0, `superseded_mutation` blocks, `redundancy_findings` R1–R3 | `artifacts/kernel-differential/mutant-kill-table.json` |
+
+## Not attempted, deliberately
+
+ADR-0780's uncovered list (mutual/nested inductives, indexed families beyond
+0-index, Prop-restricted large elimination, structure eta, string literals,
+zeta reduction, well-founded recursion, longer reduction chains) is unchanged.
+Three cases were added and no more: a case that does not change a mutant's
+outcome is decoration, and each of these three is shown to change one.
 
 **Closed the "no shape for hand-authored kernel proof" gap doc 293 hit**
 (`DONE`, kernel-receipt, 2026-08-27). Doc 293 proved five `Int.ModEq`
@@ -36407,6 +36807,373 @@ over the population this receipt's module set defines, joined against
 exit criteria (complete selected-population coverage, resolved endpoints,
 acyclicity where required, deletion mutations for rows and edges).
 
+**Done, l1-g1-declaration-graph, 2026-08-30.** [ADR-0820](docs/research/09-decisions/adr-0820-the-declaration-graph-reuses-the-artifact-contracts-type-proof-separation.md)
+records the design decisions.
+
+## What landed
+
+Executed C1 of `docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md`
+and G1 of `docs/plan/graph-directed-library-roadmap-2026-08-30.md`: a real
+(not hand-authored) declaration graph over a bounded, named population,
+built on ADR-0800's artifact contract and ADR-0805's toolchain provisioning.
+
+- **Population, committed first**:
+  `artifacts/declaration-graph/populations/mathlib-group-defs-v1.json` --
+  seven real roots (`Semigroup`, `CommMagma`, `Monoid`, `mul_left_cancel`,
+  `mul_comm`, `mul_assoc` from `Mathlib.Algebra.Group.Defs`, plus core
+  `Nat.add_comm`), named BEFORE any extraction ran.
+- **Extraction**: bounded, stated as such -- **446 declarations, 2,451
+  edges**, from 7 real roots via the pinned lean4export toolchain
+  (mathlib4 `c5ea0035`, lean4export `a3e35a58`), NOT all of Mathlib
+  (a full `lean4export Mathlib` dump is ~680,925 records per
+  `docs/formalized-math-2026-08/diary-import-scale.md`). Two independent
+  regenerations are byte-identical (verified with `diff`).
+- **Type vs proof, enforced structurally**: `scripts/lib/declaration_graph.py`
+  imports `compute_closure`/`compute_type_digest`/`compute_value_digest`/
+  `compute_identity_digest`/`compute_pack_digest`/`project_type_only`
+  directly from `scripts/check-library-artifact-contract.py` (ADR-0800) via
+  `importlib` -- the SAME mechanism, run on real data, not reimplemented.
+  `*.typeproj.json` is the producer-facing file; `*.rows.json` (archival,
+  carries `value`/`direct_value_deps`/`transitive_value_deps`) is not.
+- **Cycles**: 49 real cycles found, ALL classified `mutual_inductive`
+  (Nat<->{zero,succ}, Mul<->Mul.mk, etc.), **0 unexpected**, both in the
+  type-only graph and the full (type+value) graph. Real Mathlib data
+  produced no naturally-occurring mutual-RECURSION example and no
+  naturally-occurring unexpected cycle; both classification branches are
+  separately proven correct against synthetic fixtures in
+  `scripts/tests/test-declaration-graph.py` (`CycleClassificationTests`),
+  independent of what a bounded real population happens to contain.
+- **Deletion mutations, different guards**: row deletion is caught by
+  `check_endpoint_resolution` (a dangling dependency name); edge deletion is
+  caught by `check_edges_consistent` (materialized edges.json disagreeing
+  with rows.json's own dependency fields). Confirmed structurally distinct:
+  deleting a leaf row does NOT change `edges.json` vs `rows.json` agreement
+  and does NOT change any OTHER row's recorded transitive closure (the
+  deleted leaf had no further dependencies), so only ENDPOINT_RESOLUTION
+  fires; deleting one edges.json entry does not touch any row's own
+  `direct_*_deps`, so only EDGES_CONSISTENT fires.
+- **Eight guards total**, all mutation-verified 1:1 in
+  `scripts/tests/test-declaration-graph-mutations.sh`: five reused verbatim
+  from ADR-0800 (MISSING, DUPLICATE, REORDERED, TRUNCATED, VALUE_EXPOSED)
+  plus three new (ENDPOINT_RESOLUTION, EDGES_CONSISTENT,
+  CYCLE_CLASSIFICATION). Kill table:
+
+  ```
+  MISSING              -> missing
+  DUPLICATE            -> duplicate
+  REORDERED            -> reordered
+  TRUNCATED            -> truncated
+  VALUE_EXPOSED        -> value_exposed
+  ENDPOINT_RESOLUTION  -> row_deleted
+  EDGES_CONSISTENT     -> edge_deleted
+  CYCLE_CLASSIFICATION -> unexpected_cycle
+  ```
+
+- Gate registered in both `justfile` (`declaration-graph` recipe, appended
+  to the `check:` dependency line) and `scripts/check.sh` (three `step`
+  lines: `declaration-graph`, `declaration-graph-tests`,
+  `declaration-graph-mutations`). `just declaration-graph` and
+  `AXEYUM_CHECK_LIST=1 bash scripts/check.sh` both verified to include the
+  new steps without restructuring either file's existing dependency list.
+
+## What this does not capture
+
+Per-declaration module attribution is only the requesting root's own
+module, not a true declaration-to-file map (that is G0's job). Recursor
+`rules[*].rhs` bodies are not walked into edges -- Recursor is a trusted
+kind by construction, carrying zero value/proof edges regardless of what
+lean4export's export happens to include. A measured, documented fix during
+extraction: lean4export's macro hygiene assigns per-elaboration-session
+numeric suffixes to internal binder names, so two independent exports of
+the identical declaration disagreed byte-for-byte on binder display names
+alone; the renderer now drops binder names entirely (alpha-invariant,
+de Bruijn indices only), which is what makes byte-identical reproduction
+across independent runs hold.
+
+## Files
+
+- `artifacts/declaration-graph/populations/mathlib-group-defs-v1.json`
+- `artifacts/declaration-graph/graph/mathlib-group-defs-v1.{rows,typeproj,edges,cycles}.json`
+- `scripts/lib/declaration_graph.py` (parser + graph utilities)
+- `scripts/gen-declaration-graph.py` (extractor, needs the pinned toolchain)
+- `scripts/check-declaration-graph.py` (gate, needs no toolchain)
+- `scripts/tests/declaration_graph_mutations.py` (fixture builder)
+- `scripts/tests/test-declaration-graph.py` (in-process assertions, 7 tests)
+- `scripts/tests/test-declaration-graph-mutations.sh` (guard-deletion kill table)
+- `docs/research/09-decisions/adr-0820-the-declaration-graph-reuses-the-artifact-contracts-type-proof-separation.md`
+
+## Next (not this lane's scope)
+
+G2 (join Axeyum state: resolve Mathlib declarations to fact IDs, kernel
+declarations, statement vocabulary) and G3 (publish the infrastructure
+frontier queues) both consume this graph as a checked precondition. A wider
+population (more roots, or a size-bounded BFS over Mathlib's own hub list
+from ADR-0805) is a straightforward re-run of `gen-declaration-graph.py`
+against a new population file -- nothing in the pipeline is specific to the
+seven roots chosen here.
+
+**Done, l1-g2-join-axeyum-state, 2026-08-30.** [ADR-0835](docs/research/09-decisions/adr-0835-the-graph-join-resolves-identity-only-through-an-existing-ledger-mirror.md)
+records the design decisions.
+
+## What landed
+
+Executed G2 of `docs/plan/graph-directed-library-roadmap-2026-08-30.md`:
+joined ADR-0820's declaration graph (446 declarations, population
+`mathlib-group-defs-v1`) to seven dimensions of Axeyum's own state, with
+every dimension's population, resolved and unresolved counts reported
+explicitly.
+
+- **The prerequisite (ADR-0820, l1-g1-declaration-graph) was landed but not
+  yet on `main`** when this lane started -- it existed only on a sibling
+  worktree branch (`worktree-agent-aa31b64cb74260e6c`). Merged that branch
+  into this one (clean merge, 17 files, no conflicts) to get
+  `artifacts/declaration-graph/` and ADR-0820 into this tree.
+- **The join** (`scripts/lib/graph_join.py`, `scripts/gen-graph-join.py`,
+  `scripts/check-graph-join.py`): seven dimensions --
+  `fact_ids`, `kernel_declarations`, `statement_vocabulary`,
+  `destination_nodes`, `producers`, `declines`, `trust_footprints` -- each a
+  `population`/`resolved`/`unresolved` triple with named unresolved members,
+  written to `artifacts/graph-join/mathlib-group-defs-v1.join.json` and
+  `artifacts/graph-join/dashboard.md`.
+- **No theorem-name similarity silently creates an identity.**
+  `fact_ids`/`kernel_declarations` resolve ONLY through an EXACT match on an
+  existing ledger fact's `title` field (the `F:ml430-*` mirror family,
+  whose own evidence already compared a rendered kernel type against the
+  Mathlib statement) -- never a match on a fact `id`, never a substring.
+  `name_coincidence_candidates` computes, as an explicit diagnostic, every
+  declaration name that coincides with an UNRELATED fact's kernel subject
+  elsewhere in the ledger and keeps every one unresolved: **27 found in the
+  current population**, all correctly declined. See ADR-0835 for the full
+  argument and the `Fin`/`Nat.Fin` non-match this join deliberately produces.
+- **Measured, over the bounded 446-declaration population**:
+  ```
+  fact_ids:             9 / 446   (437 unresolved, named)
+  kernel_declarations:  9 / 9     (population = fact_ids.resolved)
+  statement_vocabulary: 161 / 446
+  destination_nodes:    1 / 1     -> curriculum_groups (lean_status: planned)
+  producers:            0 / 9
+  declines:             0 / 9
+  trust_footprints:     9 / 9     (all axiom_footprint = [])
+  ```
+  All 9 resolved facts are `kernel-lean`, `proved`, axiom-free, and none
+  participates in an S2 duplicate-identity class
+  (`artifacts/trust-closure/identity-map.tsv`).
+- **No second duplicate-detection mechanism.** `trust_footprints.
+  in_identity_class` reads `artifacts/trust-closure/identity-map.tsv`
+  verbatim; nothing here recomputes `Kernel::render_lean` canonical-type
+  equality. This join therefore inherits ADR-0790/S2's own stated limit
+  (byte-identical canonical types only) exactly, stated in `join.json`'s
+  own `notes.adr_0790_limit_inherited` field.
+- **Absence fails loudly.** Emptying the declaration population (a scratch
+  fixture with `declarations: []`) makes `check-graph-join.py` exit 1 with
+  `EMPTY_POPULATION: declaration graph has zero declarations` -- confirmed
+  by hand, not merely asserted.
+- **Six guards, six distinct mutation classes, mutation-verified 1:1**
+  (`scripts/tests/test-graph-join-mutations.sh`):
+  ```
+  EMPTY_POPULATION  -> bad_EMPTY_POPULATION
+  EMPTY_FACTS       -> bad_EMPTY_FACTS
+  ACCOUNTING        -> bad_ACCOUNTING
+  STALE_ARTIFACT    -> bad_STALE_ARTIFACT
+  POSITIVE_CONTROL  -> bad_POSITIVE_CONTROL
+  BARE_NAME_BASIS   -> bad_BARE_NAME_BASIS
+  ```
+  Baseline: the good fixture passes every guard, all six bad fixtures fail;
+  each guard's deletion flips exactly its own target and nothing else, and
+  the good fixture stays green throughout the whole sweep (mutation-tested
+  in this worktree only, in scratch copies -- never the shared checkout).
+- 15 in-process unit tests (`scripts/tests/test-graph-join.py`), all
+  passing: every guard's good/bad fixture, the no-name-similarity
+  requirement directly (exact title match, name-coincidence recorded but
+  not resolved, `Fin` vs `Nat.Fin` deliberately not equated), and a
+  regression suite against the REAL 446-declaration population.
+- Gate registered in both `justfile` (`graph-join` recipe, appended to the
+  `check:` dependency line) and `scripts/check.sh` (three `step` lines:
+  `graph-join`, `graph-join-tests`, `graph-join-mutations`). Verified:
+  `just --justfile justfile --list` lists `graph-join`;
+  `AXEYUM_CHECK_LIST=1 bash scripts/check.sh` lists all three new steps;
+  neither edit touched the other lines in either dependency list.
+
+## What this join does not capture
+
+Bounded to `mathlib-group-defs-v1`'s 446 declarations, which are heavily
+Lean/Mathlib-CORE arithmetic and abstract-algebra typeclass scaffolding
+(`Add`, `Mul`, `Semigroup`, `Monoid`, `CommMagma`) -- 0 of which have a
+representable Axeyum counterpart, since this kernel has no bundled-
+structure/typeclass mechanism at all; the low 9/446 `fact_ids` resolution
+rate is the honest, expected shape of THIS population, not a defect of the
+join. `destination_nodes` operates at population granularity only (the
+curriculum ledger carries no per-declaration join key).
+`producers`/`declines` are checked only against the 9 already-resolved fact
+ids; a producer targeting an unresolved declaration is invisible to this
+join by construction, since that declaration has no fact yet. Trust
+footprints are read from each fact's own committed `axiom_footprint`,
+never re-derived by calling the kernel.
+
+## Files
+
+- `artifacts/graph-join/mathlib-group-defs-v1.join.json`
+- `artifacts/graph-join/dashboard.md`
+- `scripts/lib/graph_join.py` (join logic, identity-safety rules)
+- `scripts/gen-graph-join.py` (generator, no toolchain needed)
+- `scripts/check-graph-join.py` (gate, no toolchain needed)
+- `scripts/tests/graph_join_mutations.py` (good/bad fixture builder)
+- `scripts/tests/test-graph-join.py` (15 in-process tests)
+- `scripts/tests/test-graph-join-mutations.sh` (guard-deletion kill table)
+- `docs/research/09-decisions/adr-0835-the-graph-join-resolves-identity-only-through-an-existing-ledger-mirror.md`
+
+## Next (not this lane's scope)
+
+G3 (publish the infrastructure frontier) can read `join.json` for which
+declarations in this bounded population already have ledger/kernel/producer
+coverage. Extending the join to a wider or different declaration-graph
+population needs only a new population, not a new identity mechanism.
+
+**Done, l2-g3-infrastructure-frontier, 2026-08-30.**
+[ADR-0845](docs/research/09-decisions/adr-0845-the-infrastructure-frontier-curates-candidates-and-validates-them-live.md)
+records the design decisions.
+
+## What landed
+
+Executed G3 of `docs/plan/graph-directed-library-roadmap-2026-08-30.md`:
+four frozen queues over the L1 phase G2 graph join
+(`artifacts/graph-join/mathlib-group-defs-v1.join.json`, ADR-0835), each
+row carrying a stable content-hash id, raw evidence, a stated gain kind,
+current blockers, destination paths, an estimated cost, and a
+preregistered, re-runnable metric.
+
+- **Rank-by-degree was tried first and rejected in favor of hand-curated
+  candidates re-validated live.** The population's top in-degree
+  declarations (`Nat` 194, `OfNat.ofNat`/`instOfNatNat` 85, `LT.lt`/
+  `instLTNat` 54, ...) are Lean/Mathlib-core notation plumbing with no
+  independent content -- a pure-degree queue would violate the roadmap's
+  own closing line ("raw degree never authorizes work"). Candidates instead
+  live as source in `scripts/lib/infrastructure_frontier.py::
+  ROW_CANDIDATES`, each with a written mechanism (`gain_explanation`), and
+  are re-validated against the live join/graph at generation time
+  (`validate_candidate` raises if a candidate's premise no longer holds).
+- **Measured result over `mathlib-group-defs-v1` (446 declarations)**:
+  ```
+  language-infrastructure:   4 rows
+  proof-producers:           0 rows (structural: 9/9 fact-linked already proved)
+  theorem-dominators:        1 row
+  dependency-ready-leaves:   0 rows (8 candidates, all excluded for a stated reason)
+  ```
+  Two of four queues are genuinely empty for this population, each for a
+  data-backed, machine-checkable reason computed in `_empty_reason` (never
+  asserted in prose alone) and re-derivable from the artifact's own
+  `diagnostics` section.
+- **Row rows, briefly:**
+  - `language-infrastructure` (4): Semigroup+mul_assoc, CommMagma+mul_comm,
+    Mul+IsLeftCancelMul+mul_left_cancel, and carrier-polymorphic congrArg.
+    All four cite the same root cause ADR-0835 already measured -- this
+    kernel has no bundled-structure/typeclass mechanism at all -- and the
+    congrArg row separately cites CLAUDE.md's own documented per-carrier
+    `congr_X_to_Y` hardcoding incidents (2026-08-29) as its cost evidence.
+  - `theorem-dominators` (1): `of_decide_eq_true`. NOT a
+    `name_coincidence_candidate` in the join (that scan only reads FACT
+    evidence text), but a plain source grep finds a same-named kernel
+    prelude primitive (`crates/axeyum-lean-kernel/src/prelude.rs`). Per
+    ADR-0835's own refusal to treat name similarity as identity, this row's
+    action is "verify the two statements match before doing anything
+    else", not "go prove this" -- confidence `low`, gain kind
+    `independent_assurance` pending that verification.
+  - `proof-producers` (0): the join's `producers`/`declines` dimensions can
+    only see the 9 declarations already resolved in `fact_ids`
+    (ADR-0835's own stated limit), and all 9 are already
+    `epistemic_status=proved` -- there is no open, fact-linked cluster in
+    this population for a producer to serve.
+  - `dependency-ready-leaves` (0): 8 Theorem-kind declarations have every
+    direct TYPE dependency already available (computed from
+    `direct_type_deps` only, never proof/value deps -- phase G1's own rule
+    that proof-derived data is forbidden producer input). Each was excluded
+    for a stated reason: built-in inductive projections needing no separate
+    proof (`And.left`, `And.right`, `Or.elim`), Lean-generated auxiliary
+    machinery with no independent content (`noConfusion_of_Nat` and its
+    private aux, `Nat.le.brecOn`), or promoted to another queue because the
+    real blocker is architectural (`congrArg`) or a naming question
+    (`of_decide_eq_true`). Matches
+    `scripts/check-dispatchable-frontier.py`'s own finding that the
+    ledger-wide dispatchable set is nearly empty (1 of 139 open ml430
+    mirrors) -- this population contributes 0 to that 1.
+- **Row ids are content hashes of substance, not position.**
+  `row_id(queue, population_id, subject, gain_kind)` hashes only those four
+  fields -- explicitly excluding degree, resolved counts, and confidence --
+  so an id survives a graph refresh that shifts degree by one but proposes
+  the same increment. `ROW_ID_PURITY` re-derives every row's id from its
+  own recorded fields and fails if it does not match.
+- **Cross-checked against `scripts/check-dispatchable-frontier.py`**
+  (read-only, out of this lane's edit scope). None of this population's 446
+  names is a subject that script reports on -- its dispatchable/held-out/
+  blocked sets are drawn from unrelated `ml430` number-theory mirror
+  families -- so no direct disagreement is possible; the artifact records
+  this explicitly (`cross_check.population_overlap_note`) rather than
+  omitting the comparison, and notes the thematic agreement: both
+  independently land on "almost nothing is immediately actionable", for
+  different reasons.
+- **Absence fails loudly, confirmed by hand, not merely asserted.**
+  Pointing `--join-dir` at a nonexistent directory:
+  `FAIL: MISSING_JOIN: .../mathlib-group-defs-v1.join.json does not exist`,
+  exit 1. Pointing `--frontier-dir` at a nonexistent directory (no generated
+  artifact yet): `FAIL: .../mathlib-group-defs-v1.frontier.json does not
+  exist -- run scripts/gen-infrastructure-frontier.py`, exit 1.
+- **Seven guards, seven distinct mutation classes, mutation-verified 1:1**
+  (`scripts/tests/test-infrastructure-frontier-mutations.sh`):
+  ```
+  MISSING_JOIN           -> bad_MISSING_JOIN
+  STALE_ARTIFACT         -> bad_STALE_ARTIFACT
+  ROW_ID_UNIQUE          -> bad_ROW_ID_UNIQUE
+  ROW_ID_PURITY          -> bad_ROW_ID_PURITY
+  EMPTY_QUEUE_REASON     -> bad_EMPTY_QUEUE_REASON
+  ROW_EVIDENCE_COMPLETE  -> bad_ROW_EVIDENCE_COMPLETE
+  CROSS_CHECK_PRESENT    -> bad_CROSS_CHECK_PRESENT
+  ```
+  Baseline: the good fixture passes every guard, all seven bad fixtures
+  fail; each guard's deletion flips exactly its own target and nothing
+  else, and the good fixture stays green throughout the whole sweep
+  (mutation-tested in this worktree only, in a scratch copy -- never the
+  shared checkout).
+- Gate registered in both `justfile` (`infrastructure-frontier` recipe,
+  appended to the `check:` dependency line -- only that append, no
+  restructuring) and `scripts/check.sh` (two `step` lines:
+  `infrastructure-frontier`, `infrastructure-frontier-mutations`).
+  Verified: `AXEYUM_CHECK_LIST=1 bash scripts/check.sh` lists both new
+  steps; neither edit touched the other lines in either dependency list.
+
+## What this queue set does not capture
+
+Bounded to the same 446-declaration `mathlib-group-defs-v1` population
+ADR-0835 joins -- a wider population needs its own join first (ADR-0835's
+own consequence), which is out of this lane's scope. The `grep_presence`
+heuristic backing the `of_decide_eq_true` row is explicitly
+non-authoritative; a row built on it names verification as its first step,
+never proof work. Rows never claim a downstream FACT count from the ledger
+beyond what the join can see -- since the join resolves only 9/446 to
+facts (all already proved), "top downstream facts" for the
+language-infrastructure rows is reported as the in-population Mathlib
+dependent count (a proxy, explicitly labeled as such), not a ledger count,
+because no ledger fact currently depends on a construction this kernel
+cannot yet represent.
+
+## Files
+
+- `artifacts/infrastructure-frontier/mathlib-group-defs-v1.frontier.json`
+- `artifacts/infrastructure-frontier/mathlib-group-defs-v1.dashboard.md`
+- `scripts/lib/infrastructure_frontier.py` (candidates, evidence computation, row_id)
+- `scripts/gen-infrastructure-frontier.py` (generator, no toolchain needed)
+- `scripts/check-infrastructure-frontier.py` (gate, no toolchain needed)
+- `scripts/tests/infrastructure_frontier_mutations.py` (good/bad fixture builder)
+- `scripts/tests/test-infrastructure-frontier-mutations.sh` (guard-deletion kill table)
+- `docs/research/09-decisions/adr-0845-the-infrastructure-frontier-curates-candidates-and-validates-them-live.md`
+
+## Next (not this lane's scope)
+
+G4 (three pilot clusters) can cite a row's `row_id` in a lane brief and
+re-run its `preregistered_metric.command` afterward to check whether it
+moved. Widening beyond `mathlib-group-defs-v1` needs a new L1 G1/G2
+population and join first; this generator takes a `--population-id` and
+needs no other change to read one.
+
 **DONE (`ledger-duplicate-propositions`, 2026-08-30).** ADR-0771 (S2 trust-closure)
 measured 15 identity classes (theorem pairs sharing a byte-identical
 `Kernel::render_lean` canonical type), all 15 with both members registered as
@@ -36467,6 +37234,348 @@ that are pure ℕ schemas (`telescoping`, `parity-argument`, `pigeonhole` at
 fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
+
+**Done** (`WIP`, nursery-partition-leak, 2026-08-30). `check-autogenesis-nursery.py`
+went from `EXIT=1` with a bare, un-actionable header to `EXIT=0` naming every
+crossing it forgives and why.
+
+Diagnosed independently against `artifacts/autogenesis/nursery-v1.json` (not
+inherited from a prior lane's report, which named the wrong facts): **3
+declared-dependency components cross train/development, zero held-out
+involvement**, plus a 4th/overlapping violation where 8 evaluation facts (7
+train, 1 development) share a component with the Autogenesis-1 longitudinal
+facts via `F:nat-mul-one`/`F:nat-zero-add`. Root cause: commit `237c1abdd`
+(2026-08-29) retroactively added 1,054 real `depends_on` edges the
+2026-08-18 freeze never saw. All 18 affected facts are independently verified
+`epistemic_status: proved`, zero of the 29 registered autogenesis operations
+reference any of them, and none are held-out.
+
+Landed: `describe_leak()` renders every violation with full component/family/
+shape/source-group membership and partitions, and `build_report` accumulates
+ALL violation types into one message instead of raising on the first. A new
+`component_split_exemptions` mechanism (self-invalidating: keyed on the exact
+component digest recomputed from the CURRENT dependency graph, so it silently
+stops applying the moment an exempted component grows) covers exactly the 3
+diagnosed benign crossings, recorded and justified in
+[ADR-0850](docs/research/09-decisions/adr-0850-nursery-split-exemption-mechanism.md).
+No amendment, no partition move, no fact edit — the crossing was a
+bookkeeping gap the ledger-hygiene fix exposed, not a spent evaluation row.
+
+Flagged in the ADR for a decision above this lane's level, not resolved here:
+104/120 development and 72/78 train v1 entries are already `proved` against
+0/16 held-out — consistent with train/development being meant for ordinary,
+non-blind work, but nothing in ADR-0478 says so explicitly and no gate
+measures it.
+
+8 new tests added (19 total, all green); 6-guard mutation kill table below
+— 5 guards killed exactly 1 test, 1 guard (`leaks` exemption filtering) killed
+2 (both legitimately exercise the same suppression path from different
+angles; not a vacuous-guard case).
+
+**Status: DONE — draw 9 is AUTHORED. The dispatchable frontier clears its
+floor (1 -> 21 against floor 10) with ZERO new kernel constructions**, against
+ADR-0762's (draw 8, declined) conclusion that two new construction-only
+declarations were required first.
+
+Decision record:
+[ADR-0830](docs/research/09-decisions/adr-0830-nursery-draw-9-two-below-floor-held-out-combinations-not-two-new-constructions.md).
+
+## What changed
+
+`scripts/gen-autogenesis-nursery-refill.py`: four new families in
+`FAMILY_MODULES`/`FAMILY_ROUTES`.
+
+| family | partition | modules | rows |
+| --- | --- | --- | --- |
+| `integer-elementary-identities` | held-out | `Init.Data.Int.Basic`, `Init.Data.Int.Compare`, `Init.Data.Int.Linear`, `Mathlib.Data.Int.DivMod` | 10 of 11 |
+| `natural-bitwise-basics` | development | `Init.Data.Nat.Bitwise.Lemmas` | 10 of 33 |
+| `natural-distance` | train | `Mathlib.Data.Nat.Dist` | 10 of 18 |
+| `natural-elementary-bounds` | held-out | 10 small leftover Nat modules (see ADR-0830) | 10 of 12 |
+
+Regenerated: `artifacts/autogenesis/nursery-v2-extension.json` (300 -> 340
+entries). 40 new fact files under `artifacts/facts/F-ml430-*.json`.
+
+## Why this route and not ADR-0762's
+
+ADR-0762 measured the un-owned floor at 7 modules, none held-out-safe, and
+concluded draw 9 needed two NEW kernel declarations (`Nat.nthRoot` clean, a
+second candidate unidentified — `Squarefree` measured and rejected). That
+measurement re-derives identically on this tree (`env=2383`, same seven
+modules). What ADR-0762 did not check: several modules BELOW the
+`PER_FAMILY` floor, already admissible with **zero new declarations**, combine
+into a held-out-safe pool the way draws 3/4/5 already did
+(`integer-division-boundary-cases`, `range-induction`,
+`integer-absolute-value`). Two such combinations exist and both are R9/R11
+clean, verified with the real `select()`/`guard()` in memory before being
+written — see ADR-0830 for the full reasoning and the exact probe output.
+
+## Screening performed (every family considered, including rejections)
+
+- **`Mathlib.Data.Nat.Dist`** — re-screened per this session's own standing
+  rule (a readiness figure from before an unblock exists is a figure about a
+  different tree). Still R9 2/10 (`dist_comm`, `dist_self` already declared,
+  per ADR-0653/ADR-0695's incident). **Used for `natural-distance` as
+  TRAIN, not held-out** — contamination in a published partition is
+  harmless; R9 would refuse it for held-out.
+- **`Mathlib.Data.Nat.Factorial.Basic`, `Mathlib.Data.Int.GCD`** — R9
+  1/10 each, contaminated. Not drawn this round (real supply remains for a
+  future dev/train slot).
+- **`Init.Data.Nat.Bitwise.Lemmas`, `Batteries.Data.Nat.Bitwise.Lemmas`,
+  `Mathlib.Data.Nat.GCD.Basic`, `Mathlib.Data.Nat.Choose.Basic`** — R9
+  clean but topically adjacent to published `natural-bitwise`/`natural-gcd`/
+  `natural-binomial`. **Unsafe for held-out** (R11 would refuse — this is
+  the exact ADR-0762 counter-example). `Init.Data.Nat.Bitwise.Lemmas` drawn
+  for `natural-bitwise-basics` as DEVELOPMENT, where the adjacency is a
+  feature not a defect.
+- **`Nat.nthRoot`, `Squarefree`** (ADR-0762's own candidates) — not pursued;
+  both require a new kernel construction, and this draw found a route that
+  needs none. Left for a future lane if the below-floor route runs out
+  (ADR-0830's consequences section: it is close to exhausted after this
+  draw).
+- **58 un-owned modules with >= 1 admissible survivor** were enumerated
+  (286 rows total). Coarse topic-clash filter against the published
+  dev/train topic vocabulary (`Bitwise, Choose, Coprime, Div, Dvd, Even,
+  Factorial, Fermat, Fib, GCD, Gcd, Lcm, Log, Mod, ModEq, Parity, Prime,
+  Totient`) left 100 rows in topic-clean modules; the two held-out families
+  drawn here account for 23 of those 100 (11 + 12), each independently
+  confirmed R9/R11-clean via the real screen rather than the coarse filter.
+  `Mathlib.Data.Int.Fib.Basic` (6, genuinely novel Fibonacci content, no
+  existing family) was considered and set aside for a future draw — not
+  enough supply alone to reach the floor without either combining with the
+  contaminated `Mathlib.Data.Nat.Fib.Basic` pool (whose one in-env row
+  `Nat.fib_add` falls inside the first 10 alphabetically) or reaching a new
+  construction.
+- **`Init.Core`'s `Nat.add_zero`** — the only OTHER leftover row in the
+  small-module sweep, excluded: already `IN-ENV` (R9-contaminated), so it
+  cannot serve held-out and was not needed for the dev/train slots.
+
+## Verification
+
+| check | result |
+| --- | --- |
+| `gen-autogenesis-nursery-refill.py --check` | exit 0, idempotent post-regen: `entries=340\|development=130\|held-out=120\|train=90\|attested=411\|unattested=143` |
+| `check-dispatchable-frontier.py` | exit 0 — dispatchable set non-empty, **1 -> 21** against floor 10 |
+| `check-autogenesis-holdout-isolation.py` | exit 0 — `held_out=136 files_scanned=1110 settled=0 references=0 PASS` |
+| `validate-facts.py` | exit 0 — `2314 facts checked, 0 errors` |
+| `check-holdout-adjacency.py` (standalone, R11) | exit 0 — 13 held-out families, 0 refused; both new held-out families `topic=0 vocab=0/10 env=[]` |
+| `check-merge-hygiene.sh` | exit 0 — `PASS` |
+| `check-autogenesis-nursery.py` | **exit 1 — PRE-EXISTING, reproduced against `HEAD`'s own extension file with none of this draw's rows present; unrelated to this draw. See ADR-0830.** |
+
+The one red gate (`check-autogenesis-nursery.py`, "declared dependency
+component crosses evaluation partitions") was confirmed pre-existing by
+swapping `artifacts/autogenesis/nursery-v2-extension.json` back to `HEAD`'s
+committed version, re-running the check (same exit 1, same error), and
+restoring this draw's version (`git diff --stat` confirmed byte-identical to
+this draw's regenerated file afterward). The three leaking dependency
+components (sizes 206, 4, 3) are entirely pre-existing `F:ml430-int-modeq-*`
+/ `F:ml430-nat-div-gcd-*` / `F:ml430-int-add-*` facts committed 2026-08-29/30,
+none of which touch any family this draw adds. This draw's 40 new entries
+carry `depends_on: []` (the generator's standing convention for newly-drawn
+rows) and are graph-isolated, so they cannot join or create a leaking
+component.
+
+## How long this draw lasts
+
+**Not long — one more draw, maybe two, before the queue starves again on
+this route.** The below-floor, un-owned, non-adjacent supply this draw
+tapped is close to exhausted (`natural-elementary-bounds` already had to
+reach into ten different tiny modules, including single-simp-lemma files, to
+find ten rows). The two big remaining supplies — `Mathlib.Data.Nat.
+Factorial.Basic`/`Mathlib.Data.Int.GCD` (contaminated for held-out, real for
+dev/train) and the genuinely novel but too-small `Mathlib.Data.Int.Fib.Basic`
+— can fund ONE more dispatchable dev/train family each, but neither opens a
+new held-out family on its own. The next draw will most likely need
+ADR-0762's original route: a construction-only kernel declaration (its own
+`Nat.nthRoot` candidate is still clean and unspent) or a genuinely new
+Mathlib area this inventory has not screened.
+
+## Prohibitions honored
+
+Floor was not lowered (still 10, unchanged in `check-dispatchable-frontier.py`).
+No existing held-out row was touched — `git status` shows only new `??`
+fact files plus the two generator/manifest edits. Nothing drawn this round
+was proved; all 40 new rows are `open`.
+
+**Done** (`done`, nursery-v2-component-coverage, 2026-08-30). Extended
+`scripts/check-autogenesis-nursery.py`'s declared-dependency component-split
+check to the union of `nursery-v1.json` and `nursery-v2-extension.json`:
+`build_cross_population_report()` found 3 previously-invisible cross-population
+component crossings (none held-out) and they are now exempted with full detail
+per ADR-0850's mechanism. ADR-0855 records the decision and settles ADR-0850's
+open train/development invariant question from the existing record. Full
+diagnosis, mutation guard->test table, and open items below.
+
+## Task
+
+`scripts/check-autogenesis-nursery.py` only ever reads
+`artifacts/autogenesis/nursery-v1.json` for its declared-dependency
+component-split check. `artifacts/autogenesis/nursery-v2-extension.json`
+(340 entries) is invisible to it entirely — no v2-internal crossing and no
+v1<->v2 crossing is checked anywhere.
+
+## Diagnosis (independently measured, union graph over v1 entries + v2 entries,
+adjacency from `artifacts/facts/*.json` `depends_on`, restricted to edges
+where both endpoints are in the v1∪v2 selected set)
+
+v1/v2 fact_id overlap: **none** (0 of 556 total ids collide).
+
+Computing weakly-connected components over the **union** surfaces **3**
+declared-dependency components that cross evaluation partitions
+(train/development/held-out), none involving held-out:
+
+1. `4c696b5744bb...` — 3 members, **entirely within v2**:
+   `F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f` (train),
+   `F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c` (train),
+   `F:ml430-nat-div-mul-cancel-99799a00` (development).
+2. `510e9696bc85...` — 206 members, **v1 ∪ v2 merge**. This is v1's THREE
+   ADR-0850-exempted components (`de94125d520a`, `6959be9c08c2`,
+   `533d01fc3b24`, all train/development, previously the entire finding of
+   ADR-0850) merged with TWO v2-internal crossing components
+   (`aee5f7b663cc`, `11b9f2566178`) into one component, via real declared
+   dependency edges between v1 and v2 facts (`int-gcd`/`int-dvd`/`nat-choose`/
+   `nat-coprime`/`nat-factorial` families chain together). Also touches the
+   two longitudinal Autogenesis-1 facts (`F:nat-mul-one`, `F:nat-zero-add`),
+   same as ADR-0850 already found for the v1-only version of this component.
+3. `55e86f8aed26...` — 4 members, **v1 ∪ v2 merge, newly visible only in the
+   union** (does not appear as a crossing in v1-only OR v2-only analysis):
+   `F:ml430-int-modeq-add-left-cancel-062ad5fe` (v1, train) plus three v2
+   development entries (`...-c1adde5a`, `...-d7366811`, `...-f74acb64`).
+
+**Held-out involvement: none.** Verified directly — no member of any of the
+3 crossing components has `partition == "held-out"`.
+
+Confirmed the self-invalidating property already works as designed without
+any code change: recomputing `digest()` for each of v1's 3 existing
+`component_split_exemptions` entries against the **live union graph** shows
+none of them match anymore (their named component grew by merging with v2
+members) — exactly the fail-closed behaviour ADR-0850 specifies.
+
+family/proof_shape/source_group leak checks: 0 crossings in the union
+(checked as a diligence pass; not the primary target of this task).
+
+## What landed
+
+- `build_cross_population_report()` in `scripts/check-autogenesis-nursery.py`:
+  the same weak-component-vs-evaluation-partition check as `build_report`,
+  over `nursery-v1.json` entries UNION `nursery-v2-extension.json` entries.
+  Wired into `main()` as a second hard gate (`AUTOGENESIS_NURSERY_CROSS_
+  POPULATION_OK` line; script exits 1 if either check fails).
+- Reuses `validate_entries`/`components`/`validate_exemptions`/`describe_leak`
+  verbatim from ADR-0850 rather than a second mechanism. The exemption list
+  is a new top-level `cross_population_component_split_exemptions` key in
+  `nursery-v2-extension.json` (not touching `nursery-v1.json` or its own
+  `component_split_exemptions`, and not touching `build_report`'s v1-scoped
+  readiness/policy computation).
+- `describe_leak` gained an optional `origin_of` parameter (tags each printed
+  member `[v1]`/`[v2]`); every pre-existing call site is unaffected.
+- Added the 3 exemption records (digests recomputed and matched against the
+  live checker, never hand-transcribed), after independently confirming
+  every one of the ~213 member facts across all three components is
+  non-`held-out`.
+- 10 new tests in `CrossPopulationTests` (`scripts/tests/
+  test_check_autogenesis_nursery.py`), all 19 pre-existing tests pass
+  unchanged (29 total, 0 failures).
+- ADR-0855 records the decision and settles ADR-0850's open
+  train/development question from the existing record (see below).
+
+## Gate exit status
+
+Before this change: `check-autogenesis-nursery.py` never examined
+nursery-v2-extension.json at all (0 lines of code referenced it) — exit 0
+proved nothing about it.
+
+After: both checks run.
+`AUTOGENESIS_NURSERY_OK|...|ready=true|evaluation=214|blockers=0` and
+`AUTOGENESIS_NURSERY_CROSS_POPULATION_OK|...|v1=216|v2=340|components=295`,
+script exit 0. Confirmed the cross-population check is NOT vacuous by
+removing the 3 exemption records and re-running: exit 1, both violation
+types (component-split and longitudinal-overlap) reported in full detail.
+
+## Mutation guard -> test kill table
+
+All mutations applied to a private snapshot of the file in this worktree
+only, one at a time, restored from a pristine backup between each. Full
+`python3 -m unittest scripts.tests.test_check_autogenesis_nursery` run after
+each mutation.
+
+| # | guard (line, mutated form) | test(s) killed |
+|---|---|---|
+| 1 | `kind != "...nursery-extension"` schema check -> `if False` | `test_wrong_extension_kind_is_rejected` (1) |
+| 2 | `extends != "...nursery-v1.json"` check -> `if False` | `test_extension_must_still_declare_its_base` (1) |
+| 3 | `if overlap:` (v1/v2 fact-id collision) -> `if False` | `test_overlapping_fact_ids_across_files_are_rejected` (1) |
+| 4 | `leaks = [c for c in all_leaking_components if c not in exempted_component_ids]` -> `leaks = []` | `test_v2_internal_component_leak_fails_closed`, `test_cross_file_dependency_edge_creates_a_leak_invisible_to_either_file_alone`, `test_exemption_stops_matching_once_the_cross_population_component_grows` (3 — see note) |
+| 5 | `if longitudinal_overlap_components:` (append violation block) -> `if False` | `test_cross_population_longitudinal_overlap_fails_closed_and_can_be_exempted` (1) |
+| 6 | `origin_of=origin_of` on the component-leak `describe_leak` call -> `origin_of=None` | `test_cross_file_dependency_edge_creates_a_leak_invisible_to_either_file_alone` (1) |
+| 7 | `"origin": origin_of[fact_id]` in the report's exempted-members list -> hardcoded `"v1"` | `test_exemption_suppresses_exactly_the_named_cross_population_component` (1) |
+| 8 | `cross_population_component_split_exemptions_unused` comprehension -> hardcoded `[]` | **0 tests died on first try** — see below. Added `test_stale_exemption_matching_no_live_component_is_reported_as_unused`; re-ran the same mutation: `test_stale_exemption_matching_no_live_component_is_reported_as_unused` (1) |
+| 9 | `entries_by_id` built from union -> built from `v1_entries` only | `test_exemption_suppresses_exactly_the_named_cross_population_component`, `test_exemption_stops_matching_once_the_cross_population_component_grows`, `test_cross_population_longitudinal_overlap_fails_closed_and_can_be_exempted`, `test_stale_exemption_matching_no_live_component_is_reported_as_unused` (4 — every test whose exemption names a v2 fact) |
+| 10 | `if violation_blocks:` (top-level raise trigger) -> `if False` | all 4 fail-closed scenario tests (4 — the final gate every failing scenario depends on) |
+
+**Guard 8 is the one that actually mattered.** The first cut of the "unused
+exemptions" reporting field passed mutation with the existing test suite
+(0 kills) — my own tests only ever checked it was `[]` in scenarios where it
+was trivially `[]` regardless of the logic, exactly the checker-that-cannot-
+fail shape this repository's CLAUDE.md warns about. Added a dedicated test
+with a genuinely stale exemption (names two facts that are not, in fact,
+connected to each other, so its digest matches no live component) before
+re-measuring; the guard then dies as guard #8 above shows.
+
+**Guards 4, 9, and 10 kill more than one test each, and that is a measured
+fact, not a shortcut.** All three sit on code paths several independent
+scenarios legitimately share (the core leak-detection list, the union-vs-v1
+exemption lookup, and the single top-level raise), the same way `build_report`'s
+equivalent lines (`leaks = [...]`, `if violation_blocks:`) are exercised by
+multiple tests in the pre-existing `NurseryTests` suite. I did not force an
+artificial 1:1 split across scenarios that are honestly testing the same
+underlying mechanism from different angles; every one of these mutations
+still kills at least one test, so none of the three is a checker that cannot
+fail — the repository's actual concern.
+
+## Held-out involvement
+
+**None**, in either the raw diagnosis or after the fix. Every member of all
+3 crossing components was checked directly against its `partition` field;
+zero are `held-out`. No held-out row's partition was moved, no fact's
+`epistemic_status` was touched, and `check-autogenesis-holdout-isolation.py`
+(out of this lane's scope, read-only) already unions both `nursery-v1.json`
+and `nursery-v2-extension.json` for its own held-out isolation check — that
+gap does not exist for held-out; it only existed for the declared-dependency
+component-split check this lane closes.
+
+## Train/development invariant: settled, not gated further
+
+ADR-0850 left open whether train/development being mostly `proved` already
+(104/120 v1 development, 72/78 v1 train, vs 0/16 held-out) undermines
+whatever measurement train/development are for. Settled from the existing
+record (full evidence and citations in ADR-0855):
+
+- ADR-0542 states directly that spent rows "remain fully usable in
+  development, where looking is allowed" — development is explicitly not a
+  blind population.
+- `check-autogenesis-holdout-isolation.py`'s two rules ("no held-out fact may
+  be settled", "no artifact may reference a held-out fact id") name only
+  held-out; train/development settlement is unrestricted by design, not by
+  omission.
+- Every ADR-0542 amendment moves a family OUT of held-out INTO development,
+  never the reverse and never involving train — consistent with held-out
+  alone being the spendable, non-renewable blind resource.
+
+**No new gate was added for this**, because the enforcement the evidence
+calls for already exists exactly where it should (held-out isolation, which
+already covers both nursery files) — a gate restricting train/development
+settlement would contradict ADR-0542's own explicit design rather than
+complete it. This is written down in ADR-0855 as the closing of ADR-0850's
+open question, not left open.
+
+## What is still unchecked about these populations
+
+`check-autogenesis-nursery.py`'s family/proof_shape/source_group leak checks
+were run over the union as a diligence pass (0 crossings found) but are
+NOT extended by this change the way the component-split check is — a
+cross-population family/shape/source-group leak would currently only be
+caught if it also happens to coincide with a declared-dependency crossing.
+Nothing found one in the current data, but that is a measurement of today's
+data, not a standing guarantee the way the component check now is.
 
 **Prototype landed and green** (`WIP`, prelude-spike, 2026-08-27). Built the
 level-1 phase-order fix and the level-2 topological-order validation from

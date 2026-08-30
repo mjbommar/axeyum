@@ -2026,11 +2026,33 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   genuine `P : Nat → Prop` motive parameter.
 
   What is true is only the narrow claim: **a FUEL encoding's non-dependence is
-  forced.** The `binaryRec` lane chose fuel; it was not obliged to. So
-  `F:ml430-nat-fastfib-eq-cde11774` is **not permanently blocked** — it is
-  blocked on a `binaryRec` built the well-founded way rather than the fuel way,
-  which is ordinary work, and the content landed as local facts in the
-  meantime.
+  forced.** The `binaryRec` lane chose fuel; it was not obliged to.
+
+  **AND MY REPAIR OF THAT OVER-GENERALISATION WAS ITSELF WRONG, IN BOTH HALVES.
+  Measured 2026-08-30 (ADR-0840).** I wrote that
+  `F:ml430-nat-fastfib-eq-cde11774` is "blocked on a `binaryRec` built the
+  well-founded way rather than the fuel way, which is ordinary work", and put
+  that into a lane brief. The lane checked it and refuted both parts:
+
+  - Mathlib's `fastFibAux` only ever instantiates `binaryRec` at a
+    **non-dependent** motive, so the **fuel `binaryRec` already in the tree is
+    sufficient**. No well-founded rebuild is needed for this target.
+  - It would not matter if it were, because **`Nat.fib` ITSELF is a second,
+    independently divergent construction**: ours is
+    `Nat.fib n := fibAux n 0 1`, a curried-accumulator recursion
+    (`nat_prelude/fibonacci.rs`, motive `Nat → Nat → Nat`), against Mathlib's
+    own recurrence. Verified by reading the module doc, not inferred.
+
+  So the mirror stays open **regardless of effort**, and it is a mirror-flip
+  question rather than a construction task. **A flip needs EVERY constituent
+  construction in the statement to match, not just the outermost one** — that
+  is the generalisable rule, and it is what both my sizings missed. ADR-0840
+  carries the corrected plan.
+
+  Three sizings of one target, by three readers, each wrong in a different
+  direction. The file that records obstacles accumulates stale ones by
+  construction, and its authority is exactly what makes them expensive — which
+  this entry now demonstrates about itself twice over.
 
   This is the standing "do not generalise a lane's local finding" failure in
   its purest form: the lane reported accurately on *its own construction*, and

@@ -1,0 +1,829 @@
+{
+  "population_id": "mathlib-group-defs-v1",
+  "type_graph": {
+    "self_loops": [],
+    "expected_cycles": [
+      {
+        "nodes": [
+          "Add",
+          "Add.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "And",
+          "And.intro"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "List",
+          "List.cons",
+          "List.nil"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Array",
+          "Array.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Nat",
+          "Nat.succ",
+          "Nat.zero"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "LT",
+          "LT.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Fin",
+          "Fin.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HPow",
+          "HPow.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "OfNat",
+          "OfNat.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Pow",
+          "Pow.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "NatPow",
+          "NatPow.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "BitVec",
+          "BitVec.ofFin"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Bool",
+          "Bool.false",
+          "Bool.true"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Decidable",
+          "Decidable.isFalse",
+          "Decidable.isTrue"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Eq",
+          "Eq.refl"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "UInt8",
+          "UInt8.ofBitVec"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "ByteArray",
+          "ByteArray.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "UInt32",
+          "UInt32.ofBitVec"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Char",
+          "Char.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "ByteArray.IsValidUTF8",
+          "ByteArray.IsValidUTF8.intro"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Or",
+          "Or.inl",
+          "Or.inr"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HMul",
+          "HMul.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Mul",
+          "Mul.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "CommMagma",
+          "CommMagma.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Div",
+          "Div.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "LE",
+          "LE.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HAdd",
+          "HAdd.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HDiv",
+          "HDiv.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HEq",
+          "HEq.refl"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HMod",
+          "HMod.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HSub",
+          "HSub.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "IsLeftCancelMul",
+          "IsLeftCancelMul.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "String",
+          "String.ofByteArray"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.Name",
+          "Lean.Name.anonymous",
+          "Lean.Name.num",
+          "Lean.Name.str"
+        ],
+        "size": 4,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "String.Pos.Raw",
+          "String.Pos.Raw.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Substring.Raw",
+          "Substring.Raw.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.SourceInfo",
+          "Lean.SourceInfo.none",
+          "Lean.SourceInfo.original",
+          "Lean.SourceInfo.synthetic"
+        ],
+        "size": 4,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.Syntax.Preresolved",
+          "Lean.Syntax.Preresolved.decl",
+          "Lean.Syntax.Preresolved.namespace"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.Syntax",
+          "Lean.Syntax.atom",
+          "Lean.Syntax.ident",
+          "Lean.Syntax.missing",
+          "Lean.Syntax.node"
+        ],
+        "size": 5,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "PProd",
+          "PProd.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Mod",
+          "Mod.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "One",
+          "One.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Semigroup",
+          "Semigroup.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Monoid",
+          "Monoid.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Sub",
+          "Sub.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Nat.le",
+          "Nat.le.refl",
+          "Nat.le.step"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Nat.le.below",
+          "Nat.le.below.refl",
+          "Nat.le.below.step"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "PUnit",
+          "PUnit.unit"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "True",
+          "True.intro"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      }
+    ],
+    "unexpected_cycles": []
+  },
+  "full_graph": {
+    "self_loops": [],
+    "expected_cycles": [
+      {
+        "nodes": [
+          "Add",
+          "Add.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "And",
+          "And.intro"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "List",
+          "List.cons",
+          "List.nil"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Array",
+          "Array.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Nat",
+          "Nat.succ",
+          "Nat.zero"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "OfNat",
+          "OfNat.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "PProd",
+          "PProd.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "PUnit",
+          "PUnit.unit"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "LT",
+          "LT.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Nat.le",
+          "Nat.le.refl",
+          "Nat.le.step"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Fin",
+          "Fin.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HPow",
+          "HPow.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Pow",
+          "Pow.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "NatPow",
+          "NatPow.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "BitVec",
+          "BitVec.ofFin"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HMul",
+          "HMul.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HAdd",
+          "HAdd.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Eq",
+          "Eq.refl"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "LE",
+          "LE.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Nat.le.below",
+          "Nat.le.below.refl",
+          "Nat.le.below.step"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HEq",
+          "HEq.refl"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Mul",
+          "Mul.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HMod",
+          "HMod.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Mod",
+          "Mod.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Bool",
+          "Bool.false",
+          "Bool.true"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Decidable",
+          "Decidable.isFalse",
+          "Decidable.isTrue"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "True",
+          "True.intro"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HSub",
+          "HSub.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Sub",
+          "Sub.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Or",
+          "Or.inl",
+          "Or.inr"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "UInt8",
+          "UInt8.ofBitVec"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "ByteArray",
+          "ByteArray.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "UInt32",
+          "UInt32.ofBitVec"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Char",
+          "Char.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "HDiv",
+          "HDiv.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Div",
+          "Div.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "ByteArray.IsValidUTF8",
+          "ByteArray.IsValidUTF8.intro"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "CommMagma",
+          "CommMagma.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "IsLeftCancelMul",
+          "IsLeftCancelMul.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "String",
+          "String.ofByteArray"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.Name",
+          "Lean.Name.anonymous",
+          "Lean.Name.num",
+          "Lean.Name.str"
+        ],
+        "size": 4,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "String.Pos.Raw",
+          "String.Pos.Raw.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Substring.Raw",
+          "Substring.Raw.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.SourceInfo",
+          "Lean.SourceInfo.none",
+          "Lean.SourceInfo.original",
+          "Lean.SourceInfo.synthetic"
+        ],
+        "size": 4,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.Syntax.Preresolved",
+          "Lean.Syntax.Preresolved.decl",
+          "Lean.Syntax.Preresolved.namespace"
+        ],
+        "size": 3,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Lean.Syntax",
+          "Lean.Syntax.atom",
+          "Lean.Syntax.ident",
+          "Lean.Syntax.missing",
+          "Lean.Syntax.node"
+        ],
+        "size": 5,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "One",
+          "One.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Semigroup",
+          "Semigroup.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      },
+      {
+        "nodes": [
+          "Monoid",
+          "Monoid.mk"
+        ],
+        "size": 2,
+        "classification": "mutual_inductive"
+      }
+    ],
+    "unexpected_cycles": []
+  }
+}

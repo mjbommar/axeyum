@@ -167,6 +167,7 @@ mod factorization;
 mod fermat;
 mod fermat_number;
 mod fermat_number_mirrors;
+mod fermat_witness;
 mod fibonacci;
 mod finite;
 mod finite_set;
@@ -292,6 +293,7 @@ use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
 use fermat_number::declare_fermat_number_all;
 use fermat_number_mirrors::{declare_fermat_number_easy_all, declare_fermat_number_mirrors_all};
+use fermat_witness::declare_fermat_witness_all;
 use fibonacci::declare_fib_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
@@ -1977,6 +1979,15 @@ pub struct NatPrelude {
     /// `Nat.pow_prime_modeq_self : prime p → a^p ≡ a [p]` — Fermat's little
     /// theorem.
     pub pow_prime_modeq_self: NameId,
+    /// `Nat.mod_eq_iff_mod_eq : ∀ d a b, Iff (ModEq d a b) (Eq (modulo a d)
+    /// (modulo b d))` — bridges the existential balanced-witness congruence
+    /// to the executable `Nat.mod` comparison (`fermat_witness.rs`).
+    pub mod_eq_iff_mod_eq: NameId,
+    /// `Nat.not_prime_of_pow_mod_ne : ∀ p a, Not (Eq (modulo (pow a p) p)
+    /// (modulo a p)) → Not (Prime p)` — the contrapositive of
+    /// `pow_prime_modeq_self`, a computable Fermat compositeness certificate
+    /// (`fermat_witness.rs`).
+    pub not_prime_of_pow_mod_ne: NameId,
 
     // --- Euler's totient (`totient.rs`) -------------------------------------
     /// `Nat.countRange p n := |{k < n : p k = true}|` — the count of a
@@ -3833,6 +3844,20 @@ pub struct NatPrelude {
     /// `testBit` returns `Bool`), so this is a local fact, not an `ml430`
     /// mirror. See `nat_prelude::testbit_bitwise`.
     pub test_bit_xor: NameId,
+    /// `Nat.testBit_land : ∀ m n i, Eq (testBit (land m n) i)
+    /// (mul (testBit m i) (testBit n i))` -- the Nat-valued AND analogue
+    /// of `Nat.testBit_xor`, transported from `testbit_bitwise.rs`'s
+    /// technique. Mathlib's `Nat.testBit_land` is `Bool`-valued, so this
+    /// is a local fact, not an `ml430` mirror. See
+    /// `nat_prelude::testbit_bitwise`.
+    pub test_bit_land: NameId,
+    /// `Nat.testBit_lor : ∀ m n i, Eq (testBit (lor m n) i)
+    /// (bool_select_nat (ble (testBit m i) (testBit n i)) (testBit n i)
+    /// (testBit m i))` -- the Nat-valued OR analogue of
+    /// `Nat.testBit_xor`. Mathlib's `Nat.testBit_lor` is `Bool`-valued, so
+    /// this is a local fact, not an `ml430` mirror. See
+    /// `nat_prelude::testbit_bitwise`.
+    pub test_bit_lor: NameId,
     /// `Nat.self_lt_two_pow : ∀ n, Lt n (pow 2 n)` — induction on `n`. See
     /// `nat_prelude::bit_order`.
     pub self_lt_two_pow: NameId,
@@ -4961,6 +4986,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dvd_sum_range_of_forall_lt: kernel.name_str(nat, "dvd_sumRange_of_forall_lt"),
             add_pow_modeq_prime: kernel.name_str(nat, "add_pow_modeq_prime"),
             pow_prime_modeq_self: kernel.name_str(nat, "pow_prime_modeq_self"),
+            mod_eq_iff_mod_eq: kernel.name_str(nat, "mod_eq_iff_mod_eq"),
+            not_prime_of_pow_mod_ne: kernel.name_str(nat, "not_prime_of_pow_mod_ne"),
             count_range: kernel.name_str(nat, "countRange"),
             count_range_zero: kernel.name_str(nat, "countRange_zero"),
             count_range_succ: kernel.name_str(nat, "countRange_succ"),
@@ -5260,6 +5287,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_xor: kernel.name_str(nat, "even_xor"),
             xor_comm: kernel.name_str(nat, "xor_comm"),
             test_bit_xor: kernel.name_str(nat, "testBit_xor"),
+            test_bit_land: kernel.name_str(nat, "testBit_land"),
+            test_bit_lor: kernel.name_str(nat, "testBit_lor"),
             self_lt_two_pow: kernel.name_str(nat, "self_lt_two_pow"),
             self_lt_two_pow_add: kernel.name_str(nat, "self_lt_two_pow_add"),
             lt_of_test_bit: kernel.name_str(nat, "lt_of_testBit"),
@@ -5544,6 +5573,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_pred_pos(&mut d, &p)?;
         declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
+        declare_fermat_witness_all(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
         // Needs `coprime_add_self_right`/`coprime_one_right_iff` (declared
         // far above, alongside the other `Coprime` characterisations) plus

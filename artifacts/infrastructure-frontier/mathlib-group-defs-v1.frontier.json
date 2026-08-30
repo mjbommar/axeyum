@@ -1,0 +1,397 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-infrastructure-frontier",
+  "generated_by": "scripts/gen-infrastructure-frontier.py",
+  "population_id": "mathlib-group-defs-v1",
+  "source_join": "artifacts/graph-join/mathlib-group-defs-v1.join.json",
+  "declaration_population_count": 446,
+  "advisory_notice": "Graph rank is ADVISORY until its authority is complete (docs/plan/global/50-planning-rules.md: 'Graph rank is advisory until its authority is complete'). These queues are a proposal for humans and coordinators to read, not an automatic dispatcher -- that is L2 phase G5's job, not this artifact's. A row's rank or presence here does not authorize work; a lane brief citing a row still needs the ordinary review this repository requires for any increment.",
+  "raw_input_disclaimer": "In-population in-/out-degree is reported as a RAW INPUT (the roadmap's own requirement: 'all scores must show their raw inputs'), never as the row's justification by itself. Every row's real argument is its 'gain' field and its 'current_blockers' -- a row whose only argument is its degree does not belong in this file.",
+  "population_summary": {
+    "declaration_count": 446,
+    "theorem_count": 68,
+    "fact_linked_count": 9,
+    "fact_linked_all_proved": true,
+    "unresolved_theorem_count": 59,
+    "name_coincidence_candidate_count": 27
+  },
+  "cross_check": {
+    "dispatchable_frontier": {
+      "ran": false,
+      "note": "Not re-run this generation; see docs/plan/status/l2-g3-infrastructure-frontier.md for the last captured run. scripts/check-dispatchable-frontier.py is out of this lane's edit scope and is read-only input here."
+    },
+    "population_overlap_note": "None of this population's 446 declaration names is an `F:ml430-*` mirror subject outside the 9 already resolved in this join (checked: no Mathlib name in this population matches scripts/check-dispatchable-frontier.py's own reported dispatchable/held-out/blocked subjects, which are drawn from unrelated Nat/number-theory mirror families). No disagreement is possible on overlapping subjects because there are none; the agreement is thematic: both this population's queues and the ledger-wide dispatchable count independently land on 'almost nothing is actually ready to dispatch right now', for related but distinct reasons (this population: unstatable without new infrastructure; ledger-wide: held-out/blocked/controls)."
+  },
+  "diagnostics": {
+    "dependency_ready_leaf_candidates_before_filtering": [
+      {
+        "name": "And.left",
+        "in_degree_within_population": 1,
+        "direct_type_deps": [
+          "And"
+        ]
+      },
+      {
+        "name": "And.right",
+        "in_degree_within_population": 1,
+        "direct_type_deps": [
+          "And"
+        ]
+      },
+      {
+        "name": "Nat.le.brecOn",
+        "in_degree_within_population": 3,
+        "direct_type_deps": [
+          "Nat",
+          "Nat.le",
+          "Nat.le.below"
+        ]
+      },
+      {
+        "name": "Or.elim",
+        "in_degree_within_population": 1,
+        "direct_type_deps": [
+          "Or"
+        ]
+      },
+      {
+        "name": "_private.Init.Prelude.#0.noConfusion_of_Nat.aux",
+        "in_degree_within_population": 1,
+        "direct_type_deps": [
+          "Bool",
+          "Bool.rec",
+          "False",
+          "Nat",
+          "Nat.beq",
+          "True"
+        ]
+      },
+      {
+        "name": "congrArg",
+        "in_degree_within_population": 5,
+        "direct_type_deps": [
+          "Eq"
+        ]
+      },
+      {
+        "name": "noConfusion_of_Nat",
+        "in_degree_within_population": 4,
+        "direct_type_deps": [
+          "Bool",
+          "Bool.rec",
+          "Eq",
+          "False",
+          "Nat",
+          "Nat.beq",
+          "True"
+        ]
+      },
+      {
+        "name": "of_decide_eq_true",
+        "in_degree_within_population": 3,
+        "direct_type_deps": [
+          "Bool",
+          "Bool.true",
+          "Decidable",
+          "Decidable.decide",
+          "Eq"
+        ]
+      }
+    ],
+    "note": "These are the raw candidates dependency-ready-leaves' own empty_reason filters against (built-in projections, Lean-generated auxiliaries, or promoted to language-infrastructure). Shown here so the empty_reason's counts are independently checkable rather than asserted."
+  },
+  "queues": {
+    "language-infrastructure": {
+      "rows": [
+        {
+          "row_id": "IF-LANG-4f071ea9a3",
+          "queue": "language-infrastructure",
+          "title": "Bundled commutative-magma structure + generic commutativity",
+          "subject_declarations": [
+            "CommMagma",
+            "mul_comm"
+          ],
+          "population_id": "mathlib-group-defs-v1",
+          "gain_kind": "statability",
+          "gain_explanation": "Same missing bundled-structure mechanism as Semigroup, applied to commutativity. Every carrier in this kernel restates and reproves its own *_comm; CLAUDE.md's own incident log (the 'Nat.lor_aux_comm_of_fuel'/'lorAux'/'ldiffAux' entries) records several sessions spent re-deriving commutativity per-operator because no shared statement or transport lemma exists.",
+          "evidence": {
+            "raw_inputs_disclaimer": "In-population in-/out-degree is reported as a RAW INPUT (the roadmap's own requirement: 'all scores must show their raw inputs'), never as the row's justification by itself. Every row's real argument is its 'gain' field and its 'current_blockers' -- a row whose only argument is its degree does not belong in this file.",
+            "per_subject": [
+              {
+                "name": "CommMagma",
+                "kind": "Inductive",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 5,
+                "out_degree_within_population": 1,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              },
+              {
+                "name": "mul_comm",
+                "kind": "Theorem",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 0,
+                "out_degree_within_population": 6,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              }
+            ]
+          },
+          "current_blockers": [
+            "join:statement_vocabulary -- 'CommMagma' resolves to no KERNEL_CARRIER_ROOTS entry",
+            "join:fact_ids -- 'mul_comm' has no ml430 mirror fact",
+            "claude.md:gotchas -- 'A transported proof needs its binder structure re-derived, not only its lemma names re-pointed' (the *_comm/*_assoc transport-by-hand pattern, measured 2026-08-29 across land/lor/ldiff)"
+          ],
+          "destination_paths": [
+            "docs/curriculum/02-structures/groups.md"
+          ],
+          "destination_note": null,
+          "estimated_cost": {
+            "tier": "L",
+            "rationale": "Same shape as the Semigroup row; likely shares the underlying predicate-bundle mechanism, so should be designed together with it rather than twice."
+          },
+          "preregistered_metric": {
+            "description": "A generic (carrier-polymorphic) commutativity helper should exist that is not specific to one carrier's *_comm theorem.",
+            "command": "/usr/bin/grep -rlE 'IsCommutative|is_commutative|generic_comm' crates/axeyum-lean-kernel/src | wc -l",
+            "expected_change": "increases",
+            "baseline": 0
+          },
+          "confidence": "high",
+          "not_this": []
+        },
+        {
+          "row_id": "IF-LANG-53e5bef137",
+          "queue": "language-infrastructure",
+          "title": "Carrier-polymorphic congruence (generic congrArg)",
+          "subject_declarations": [
+            "congrArg"
+          ],
+          "population_id": "mathlib-group-defs-v1",
+          "gain_kind": "dispatchability",
+          "gain_explanation": "'congrArg' (indegree 5 in this population -- five other population declarations cite it directly) is a genuinely new statement here (not fact-resolved, not a name-coincidence candidate) and its Mathlib type is fully carrier-generic: '\u2200 {\u03b1 \u03b2} (f : \u03b1 \u2192 \u03b2) {a b}, a = b \u2192 f a = f b'. CLAUDE.md's own gotcha log ('THE DEV-HELPER LAYER HARDCODES A CARRIER') documents this kernel building a NEW per-carrier congr helper every time one is needed (congr_nat_to, congr_bool_to_nat, congr_bool_to_nat, NatOps::congr stating its conclusion at Nat only) -- each one an opaque TypeMismatch away from being found. A genuinely generic congrArg would remove a recurring, already-measured cost rather than add new statable content, hence 'dispatchability' (it changes how CHEAPLY future proof work dispatches) rather than 'statability'.",
+          "evidence": {
+            "raw_inputs_disclaimer": "In-population in-/out-degree is reported as a RAW INPUT (the roadmap's own requirement: 'all scores must show their raw inputs'), never as the row's justification by itself. Every row's real argument is its 'gain' field and its 'current_blockers' -- a row whose only argument is its degree does not belong in this file.",
+            "per_subject": [
+              {
+                "name": "congrArg",
+                "kind": "Theorem",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 5,
+                "out_degree_within_population": 3,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              }
+            ]
+          },
+          "current_blockers": [
+            "join:fact_ids -- 'congrArg' unresolved, not a name-coincidence candidate",
+            "claude.md:gotchas -- 'THE DEV-HELPER LAYER HARDCODES A CARRIER, AND EVERY CROSS-CARRIER USE FAILS AS ONE OPAQUE TypeMismatch ACROSS THE WHOLE SUITE' (three separate lanes, 2026-08-29, in NatOps::congr / IntDev::irefl / Bool congr)"
+          ],
+          "destination_paths": [],
+          "destination_note": "No curriculum node names this; it is cross-cutting kernel API surface (crates/axeyum-lean-kernel), not a mathematical topic with its own curriculum row.",
+          "estimated_cost": {
+            "tier": "S",
+            "rationale": "A single generic helper over an arbitrary Pi-typed function and an Eq hypothesis; the surrounding kernel machinery (Kernel::infer, def_eq) already supports polymorphic Pi types, so this is API consolidation, not new kernel capability."
+          },
+          "preregistered_metric": {
+            "description": "Count of distinct per-carrier 'congr_X_to_Y'-shaped dev helpers in crates/axeyum-lean-kernel/src should stop growing (ideally shrink) once a generic congrArg exists; baseline count of the three CLAUDE.md names it directly.",
+            "command": "/usr/bin/grep -rlE 'congr_nat_to|congr_bool_to_nat' crates/axeyum-lean-kernel/src | wc -l",
+            "expected_change": "increases",
+            "baseline": 1
+          },
+          "confidence": "medium",
+          "not_this": []
+        },
+        {
+          "row_id": "IF-LANG-d629d21781",
+          "queue": "language-infrastructure",
+          "title": "Left-cancellative-multiplication structure",
+          "subject_declarations": [
+            "IsLeftCancelMul",
+            "Mul",
+            "mul_left_cancel"
+          ],
+          "population_id": "mathlib-group-defs-v1",
+          "gain_kind": "statability",
+          "gain_explanation": "'mul_left_cancel' is a Theorem in the population with no fact_id and no name-coincidence hit (a genuinely new statement, not merely unmirrored), but it is stated over 'IsLeftCancelMul', a bundled predicate this kernel cannot represent yet -- same root cause as the Semigroup/CommMagma rows. Concrete carriers already have their OWN cancellation lemmas (e.g. Nat has cancellation facts for '*'); the gain here is a single generic statement usable across carriers sharing the predicate, not a new concrete fact.",
+          "evidence": {
+            "raw_inputs_disclaimer": "In-population in-/out-degree is reported as a RAW INPUT (the roadmap's own requirement: 'all scores must show their raw inputs'), never as the row's justification by itself. Every row's real argument is its 'gain' field and its 'current_blockers' -- a row whose only argument is its degree does not belong in this file.",
+            "per_subject": [
+              {
+                "name": "Mul",
+                "kind": "Inductive",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 17,
+                "out_degree_within_population": 1,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              },
+              {
+                "name": "IsLeftCancelMul",
+                "kind": "Inductive",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 4,
+                "out_degree_within_population": 2,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              },
+              {
+                "name": "mul_left_cancel",
+                "kind": "Theorem",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 0,
+                "out_degree_within_population": 6,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              }
+            ]
+          },
+          "current_blockers": [
+            "join:statement_vocabulary -- 'IsLeftCancelMul' and 'Mul' resolve to no KERNEL_CARRIER_ROOTS entry",
+            "join:fact_ids -- 'mul_left_cancel' unresolved, and NOT a name-coincidence candidate (join computed: no other fact's extracted kernel subject matches this bare string)"
+          ],
+          "destination_paths": [
+            "docs/curriculum/02-structures/groups.md"
+          ],
+          "destination_note": null,
+          "estimated_cost": {
+            "tier": "M",
+            "rationale": "Depends on the Semigroup/CommMagma predicate-bundle mechanism landing first; once that exists, one more predicate plus one theorem is a small increment."
+          },
+          "preregistered_metric": {
+            "description": "artifacts/graph-join/mathlib-group-defs-v1.join.json name_coincidence_candidates must still NOT contain 'mul_left_cancel' after this lands (a hit there would mean an unrelated fact happens to share this name and needs identity resolution, not fresh work).",
+            "command": "python3 -c \"import json; d=json.load(open('artifacts/graph-join/mathlib-group-defs-v1.join.json')); print('mul_left_cancel' in d['name_coincidence_candidates'])\"",
+            "expected_change": "becomes_true",
+            "baseline": false
+          },
+          "confidence": "medium",
+          "not_this": []
+        },
+        {
+          "row_id": "IF-LANG-dce29ad3f7",
+          "queue": "language-infrastructure",
+          "title": "Bundled semigroup structure + generic associativity",
+          "subject_declarations": [
+            "Semigroup",
+            "mul_assoc"
+          ],
+          "population_id": "mathlib-group-defs-v1",
+          "gain_kind": "statability",
+          "gain_explanation": "This kernel has no bundled-structure/typeclass mechanism at all (ADR-0835, 'what this join does not capture': 0 of 446 typeclass/structure declarations in this population have a representable counterpart). So 'let (S, *) be associative' cannot be STATED once and reused -- every carrier (Nat, Int, Rat, CReal, Complex) restates and reproves its own *_assoc from scratch. The gain is statability of the GENERAL proposition, not of any one instance.",
+          "evidence": {
+            "raw_inputs_disclaimer": "In-population in-/out-degree is reported as a RAW INPUT (the roadmap's own requirement: 'all scores must show their raw inputs'), never as the row's justification by itself. Every row's real argument is its 'gain' field and its 'current_blockers' -- a row whose only argument is its degree does not belong in this file.",
+            "per_subject": [
+              {
+                "name": "Semigroup",
+                "kind": "Inductive",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 7,
+                "out_degree_within_population": 1,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              },
+              {
+                "name": "mul_assoc",
+                "kind": "Theorem",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 0,
+                "out_degree_within_population": 6,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              }
+            ]
+          },
+          "current_blockers": [
+            "join:statement_vocabulary -- 'Semigroup' resolves to no KERNEL_CARRIER_ROOTS entry (root-exact match against the 12 inductive carriers only; a bundled structure is not one of them)",
+            "join:fact_ids -- 'mul_assoc' has no ml430 mirror fact and is not a name-coincidence candidate (it names no existing kernel subject at all under this join's extraction)",
+            "adr:0835 -- 'this kernel has no bundled-structure/typeclass mechanism at all' (What this join does not capture)"
+          ],
+          "destination_paths": [
+            "docs/curriculum/02-structures/groups.md"
+          ],
+          "destination_note": null,
+          "estimated_cost": {
+            "tier": "L",
+            "rationale": "Needs a new kernel-representable pattern (a predicate bundle over an existing carrier + operation, e.g. 'IsAssociative f', not necessarily Lean-style bundled structures) PLUS at least one worked instance per carrier to show the abstraction is usable and not merely declarable. Comparable in shape to the CReal uniform-continuity/congruence infrastructure already built."
+          },
+          "preregistered_metric": {
+            "description": "A generic (carrier-polymorphic) associativity helper should exist in crates/axeyum-lean-kernel/src that is NOT specific to one carrier's *_assoc theorem.",
+            "command": "/usr/bin/grep -rlE 'IsAssociative|is_associative|generic_assoc' crates/axeyum-lean-kernel/src | wc -l",
+            "expected_change": "increases",
+            "baseline": 0
+          },
+          "confidence": "high",
+          "not_this": []
+        }
+      ],
+      "empty_reason": null
+    },
+    "proof-producers": {
+      "rows": [],
+      "empty_reason": "0 rows. Structural, not incidental: `producers`/`declines` in the ADR-0835 join are checked ONLY against the 9 declarations already resolved in `fact_ids` (ADR-0835, 'what this join does not capture': 'a producer targeting an unresolved declaration ... cannot be seen by this join by construction'), and all 9 of those are already `epistemic_status=proved` (verified against artifacts/facts/*.json: 9/9 proved). A reusable producer serves an OPEN cluster; this population currently contributes 0 open, fact-linked declarations, so there is no cluster here for a producer to serve. The real shared-producer opportunity this population points at (a generic commutativity/associativity transport step, reusable across Nat/Int/Rat/CReal/Complex) is a LANGUAGE-infrastructure prerequisite, recorded in the language-infrastructure queue instead of padded in here."
+    },
+    "theorem-dominators": {
+      "rows": [
+        {
+          "row_id": "IF-DOM-aae4bb9a55",
+          "queue": "theorem-dominators",
+          "title": "Decidable/Bool bridge lemma -- verify identity before dispatch",
+          "subject_declarations": [
+            "of_decide_eq_true"
+          ],
+          "population_id": "mathlib-group-defs-v1",
+          "gain_kind": "independent_assurance",
+          "gain_explanation": "'of_decide_eq_true' has in-population indegree 3 among unresolved Theorem-kind declarations after excluding built-in projections and Lean-internal auxiliaries -- a real dominator candidate by the population's own structure. It is NOT a name_coincidence_candidate in the join (that mechanism scans only FACT evidence text), but a plain source grep finds 'Decidable.of_decide_eq_true' already declared as a kernel prelude primitive (crates/axeyum-lean-kernel/src/prelude.rs). This is the exact bare-name-similarity situation ADR-0835 refuses to treat as an identity claim, so this row is NOT 'go prove this' -- it is 'go compare the Mathlib statement against Kernel::Prelude::of_decide_eq_true's actual type before doing anything else'. If the comparison confirms the same proposition, the gain is independent_assurance (an explicit, checked cross-reference where today there is only a name coincidence nobody has looked at); if it refutes it, this row converts to a genuine proof-class candidate.",
+          "evidence": {
+            "raw_inputs_disclaimer": "In-population in-/out-degree is reported as a RAW INPUT (the roadmap's own requirement: 'all scores must show their raw inputs'), never as the row's justification by itself. Every row's real argument is its 'gain' field and its 'current_blockers' -- a row whose only argument is its degree does not belong in this file.",
+            "per_subject": [
+              {
+                "name": "of_decide_eq_true",
+                "kind": "Theorem",
+                "origin_module": "Mathlib.Algebra.Group.Defs",
+                "in_degree_within_population": 3,
+                "out_degree_within_population": 10,
+                "fact_id_resolved": false,
+                "statement_vocabulary_resolved": false,
+                "is_name_coincidence_candidate": false
+              }
+            ]
+          },
+          "current_blockers": [
+            "join:fact_ids -- 'of_decide_eq_true' unresolved (no ml430 mirror fact)",
+            "methodology -- the join's own name_coincidence_candidates dimension only scans FACT evidence text and cannot see this coincidence, because 'of_decide_eq_true' is named in kernel prelude source, not in any fact's evidence; this row exists specifically because that blind spot needed a human check"
+          ],
+          "destination_paths": [],
+          "destination_note": "Cross-cutting Decidable/Bool bridge machinery, not a single curriculum topic; the check belongs wherever Kernel::Prelude::of_decide_eq_true is exercised (crates/axeyum-lean-kernel/src/prelude.rs and its tests).",
+          "estimated_cost": {
+            "tier": "S",
+            "rationale": "The verification step is reading two type signatures side by side; if they agree, no proof work is needed at all. Only if they disagree does this become new proof work, at which point its cost is unknown and must be re-estimated."
+          },
+          "preregistered_metric": {
+            "description": "Existence of an explicit written comparison (a fact, a code comment, or a doc note) between the Mathlib 'of_decide_eq_true' statement and Kernel::Prelude::of_decide_eq_true's rendered type. Baseline: no such comparison exists anywhere in the repo.",
+            "command": "/usr/bin/grep -rlE 'of_decide_eq_true' docs/ artifacts/facts | wc -l",
+            "expected_change": "increases",
+            "baseline": 0
+          },
+          "confidence": "low",
+          "not_this": [
+            "Not classified as dependency-ready-leaves: its direct type deps (Bool, Bool.true, Decidable, Decidable.decide, Eq) are all vocabulary-covered, which is exactly why it survived that filter too -- but it is presented here, once, rather than in both queues, because the decisive next step is identity verification, not proof dispatch."
+          ]
+        }
+      ],
+      "empty_reason": null
+    },
+    "dependency-ready-leaves": {
+      "rows": [],
+      "empty_reason": "0 rows. 8 Theorem-kind declarations had every direct TYPE dependency already available (fact-resolved or vocabulary-covered) -- computed from direct_type_deps only, never proof/value deps, per this phase's own rule that proof-derived data is forbidden producer input. Every one of those candidates was excluded for a stated reason: built-in inductive projections needing no separate proof (And.left, And.right, Or.elim -- the carrier's own elimination principle already provides them); Lean-generated auxiliary/private machinery with no independent mathematical content (noConfusion_of_Nat and its private aux, Nat.le.brecOn); promoted to the language-infrastructure queue because the real blocker is architectural (congrArg); or promoted to theorem-dominators because the decisive next step is identity verification, not proof dispatch (of_decide_eq_true). This matches scripts/check-dispatchable-frontier.py's own finding that the ledger-wide dispatchable set is nearly empty (1 of 139 open ml430 mirrors) -- this population contributes 0 to that 1."
+    }
+  }
+}
