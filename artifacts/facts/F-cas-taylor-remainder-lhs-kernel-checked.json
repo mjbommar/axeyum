@@ -19,6 +19,11 @@
     "cas.taylor-certificate-generalized-rolle-lagrange-identity-and-witness-not-claimed-here: this fact states ONLY the two evaluations p(2)=16 and T_1(2)=0. It does not reconstruct the remainder subtraction 16-0=16, does not reconstruct the generalized-Rolle argument or p''=12x^2, and does not reconstruct the witness xi=sqrt(2/3) or its Sturm-isolated bracket -- all remain cas-internal, checked only by taylor::verify_taylor_certificate (see F:cas-taylor-quartic-lagrange-witness's own evidence notes).",
     "cas.t1-evaluation-is-trivial-by-construction: T_1(2)=0 holds because T_1 is the zero polynomial for this instance (p'(0)=0, so taylor::build_taylor_and_deriv's own if-!c_k.is_zero() guard adds no coefficients) -- this sub-claim needed no independent verification and is reconstructed through the same machinery as p(2)=16 purely for uniformity with this batch's other bridges, not because it was in doubt."
   ],
+  "cas_substance": {
+    "shape": "evaluation",
+    "certificate": null,
+    "derivation_declined_reason": "axeyum-cas's real-algebraic sign-bracket route (IVT / EVT / MVT / Taylor) returns a decision plus a witness interval; it emits no certificate artifact of the shape artifacts/geometry-certificates/*.json carries. The bridge test reads the polynomial and the evaluation points from the CAS in-process, so scripts/cas_substance.py has nothing to derive from and the shape recorded here is SELF-REPORTED. It is checked only for validity, for the absence of a refl-shaped equation in formal.statement, and for disclosure -- not against the producer's own output. Closing that gap means having this producer emit a certificate; see ADR-0622."
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-taylor-remainder-p-at-b",

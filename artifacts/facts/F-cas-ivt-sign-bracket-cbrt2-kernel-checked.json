@@ -18,6 +18,11 @@
     "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval whose proof consults no Axiom/Opaque/Quotient declaration (every constant it calls -- Rat.pow_zero/pow_succ, Rat.ofInt_add/ofInt_mul, Nat.le.refl/le.step, Int.lt's own definitional negSucc/ofNat case, True.intro -- traces to rat_prelude/int_prelude/nat_prelude, all measured axiom-free by rat_prelude_is_axiom_free), but ADR-0601 SS2's classify_cas_certificate_fact / AXIOM_FREE_CAPABLE reserves the headline axiom-free TALLY to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support even though the underlying kernel derivation genuinely has no axioms.",
     "cas.ivt-certificate-root-containment-and-sturm-count-not-claimed-here: this fact states ONLY the sign bracket (item 1 of the three-part IvtCertificate in F:cas-ivt-cbrt2-in-1-2's notes) -- root containment (item 2, exact division of p by cert.root's minimal polynomial) and the Sturm uniqueness count (item 3) are NOT reconstructed by this fact's evidence and remain cas-internal, checked only by real_algebraic::verify_ivt_certificate."
   ],
+  "cas_substance": {
+    "shape": "evaluation",
+    "certificate": null,
+    "derivation_declined_reason": "axeyum-cas's real-algebraic sign-bracket route (IVT / EVT / MVT / Taylor) returns a decision plus a witness interval; it emits no certificate artifact of the shape artifacts/geometry-certificates/*.json carries. The bridge test reads the polynomial and the evaluation points from the CAS in-process, so scripts/cas_substance.py has nothing to derive from and the shape recorded here is SELF-REPORTED. It is checked only for validity, for the absence of a refl-shaped equation in formal.statement, and for disclosure -- not against the producer's own output. Closing that gap means having this producer emit a certificate; see ADR-0622."
+  },
   "evidence": [
     {
       "id": "kernel-reconstructed-ivt-sign-bracket-cbrt2-lower",
