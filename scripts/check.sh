@@ -418,6 +418,17 @@ step control-registration-controls ./scripts/tests/test-check-control-registrati
 # false-positive control that survives all five; the load-bearing one is that
 # DEFERRED is a third outcome and never folds into `ok`.
 step check-fast-controls ./scripts/tests/test-check-fast.sh
+# `scripts/brief-step0.py` -- the dispatcher-side retrieval step, and its
+# controls. Measured 2026-08-29 over 272 lane status documents: mutation
+# testing (harness + gate) is followed 46% of the time, `shape_search` (prose
+# only) 4.8%. Compliance tracks MECHANIZATION, not emphasis, so the "does it
+# already exist" step moved out of the lane and into the brief. Eight guards,
+# each mutation-verified in a scratch copy to kill exactly one control, plus a
+# false-positive control that survives all eight. The load-bearing ones: a
+# snapshot that cannot retrieve the built-in probe is UNANSWERABLE rather than
+# a source of ABSENT verdicts, and a snapshot from another kernel tree exits 4
+# instead of reading as current.
+step brief-step0-controls ./scripts/tests/test-brief-step0.sh
 # ...and the catch-all that makes registration DERIVED rather than remembered.
 # Measured 2026-08-27: 188 of 382 python control suites -- 49% -- were named by
 # no caller at all, pinned as a numeric floor nobody had chosen. This runs every

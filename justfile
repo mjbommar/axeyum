@@ -499,6 +499,12 @@ gate-controls:
     # control that survives all five. The load-bearing guard: an over-budget
     # step is DEFERRED, a third outcome, and never folds into `ok`.
     scripts/tests/test-check-fast.sh
+    # Controls for `scripts/brief-step0.py`, the dispatcher-side retrieval
+    # step. Eight guards, each mutation-verified to kill exactly one control,
+    # plus a false-positive control that survives all eight. The load-bearing
+    # guard: a snapshot that cannot retrieve the built-in probe is
+    # UNANSWERABLE, never a source of ABSENT verdicts.
+    scripts/tests/test-brief-step0.sh
     # ...and the catch-all that makes registration DERIVED rather than
     # remembered. 188 of 382 python control suites were named by no caller at
     # all on 2026-08-27 -- 49%, pinned as a floor nobody had chosen. This runs

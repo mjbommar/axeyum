@@ -208,8 +208,20 @@ def snapshot_path(sha: str) -> pathlib.Path:
     return cache_dir() / f"snapshot-{sha}.json"
 
 
+# Env overrides so the controls can drive a FIXTURE binary. Also useful when a
+# lane wants to point at a build it made somewhere else.
+BINARY_OVERRIDE = {
+    PROJECTION_EXAMPLE: "AXEYUM_BRIEF_STEP0_PROJECTION_BIN",
+    SHAPE_EXAMPLE: "AXEYUM_BRIEF_STEP0_SHAPE_BIN",
+}
+
+
 def find_binary(root: pathlib.Path, name: str) -> pathlib.Path | None:
     """Prefer this worktree's build, then the shared checkout's, then PATH."""
+    override = os.environ.get(BINARY_OVERRIDE.get(name, ""))
+    if override:
+        path = pathlib.Path(override)
+        return path if path.is_file() else None
     candidates = [root / "target" / "release" / "examples" / name]
     shared = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--path-format=absolute",
@@ -746,6 +758,11 @@ def report_target(root: pathlib.Path, fact: dict[str, Any], snapshot: dict[str, 
         if exact:
             out.append(f"   verdict: PRESENT -- {len(exact)} declaration(s) whose "
                        f"rendered type has exactly these constants")
+            out.append("   NOTE a constant multiset cannot see argument ORDER, so "
+                       "left/right variants collide (`Int.add_assoc` and "
+                       "`Int.add_left_comm` both score 1.00 against `a+b+c = "
+                       "a+(b+c)`). READ the rendered type before flipping a "
+                       "status; 1.00 is a candidate, not a verdict.")
         elif ranked and ranked[0][0] >= args.threshold:
             out.append(f"   verdict: LIKELY PRESENT -- best score "
                        f"{ranked[0][0]:.2f} (threshold {args.threshold})")
