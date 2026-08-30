@@ -308,8 +308,10 @@ fn sum_shape(
 
     match (m_odd, n_odd) {
         (false, false) => {
-            let (_end, chained) =
-                d.chain(mn, &[(step1_rhs, step1), (step2_rhs, step2), (target_ee, comm)]);
+            let (_end, chained) = d.chain(
+                mn,
+                &[(step1_rhs, step1), (step2_rhs, step2), (target_ee, comm)],
+            );
             (kj, false, chained)
         }
         (false, true) => {

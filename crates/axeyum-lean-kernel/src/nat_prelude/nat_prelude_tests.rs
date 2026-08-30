@@ -1044,6 +1044,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.odd_of_mul_left,
         p.odd_of_mul_right,
         p.even_add_one,
+        p.even_add,
+        p.even_add_prime,
         p.coprime_two_left,
         p.coprime_two_right,
         p.coprime_odd_of_left,
@@ -12804,6 +12806,161 @@ fn even_add_one_applies_at_a_concrete_odd_instance_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.even_add_one).is_empty(),
         "even_add_one must rest on zero axioms"
+    );
+}
+
+/// `Nat.even_add`/`Nat.even_add'` (`F:ml430-nat-even-add-31386639`/
+/// `F:ml430-nat-even-add-39e3bc07`), lane `parity-finish` (2026-08-30):
+/// `(m, n) := (2, 2)` (both `Even`, `sum_shape`'s `EE` leg) exercises
+/// `even_add`'s `mp` chain with REAL witnesses on both sides (`Even 2` is
+/// inhabited); `(m, n) := (3, 3)` (both `Odd`, the hardest leg -- the only
+/// one needing `succ_add` twice plus a re-association) exercises
+/// `even_add'`'s `mp` chain the same way (`Odd 3` is inhabited; `Even 3` is
+/// NOT, so `even_add`'s inner `Iff` at `(3, 3)` is the vacuous
+/// both-refuted case and cannot be demonstrated with a real witness). Plus
+/// a symbolic restatement of each over genuinely free `m`, `n` (concrete
+/// numerals reduce and would hide a `sum_shape` defeq-slot mistake that a
+/// free-variable check exposes -- see `CLAUDE.md`'s
+/// concrete-instantiation-is-not-sufficient gotcha).
+#[test]
+fn even_add_and_even_add_prime_apply_at_concrete_pairs_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let one = f.num(1);
+
+    // Even 2, witnessed by 1.
+    let even2 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(two, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(two);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, one, proof])
+    };
+
+    // Even 4, witnessed by 2.
+    let even4 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(four, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(four);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two, proof])
+    };
+
+    // Even 6, witnessed by 3.
+    let even6 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let body = f.eq(six, kk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(six);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, three, proof])
+    };
+
+    // Odd 3, witnessed by 1 (3 = succ(1+1)).
+    let odd3 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(three, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(three);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, one, proof])
+    };
+
+    let even4_ty = f.lemma(p.even, &[four]);
+    let even2_ty = f.lemma(p.even, &[two]);
+    let even6_ty = f.lemma(p.even, &[six]);
+    let odd3_ty = f.lemma(p.odd, &[three]);
+
+    // even_add(2,2).mp(Even 4) : Iff (Even 2) (Even 2); mp(Even 2) : Even 2.
+    let even_iff_at_22 = f.lemma(p.even_add, &[two, two]);
+    let even_inner_ty = f.const_app(p.logic.iff, &[even2_ty, even2_ty]);
+    let mp_fn = f.const_app(p.logic.iff_mp, &[even4_ty, even_inner_ty, even_iff_at_22]);
+    let inner_iff = f.apply(mp_fn, &[even4]);
+    let inner_mp = f.const_app(p.logic.iff_mp, &[even2_ty, even2_ty, inner_iff]);
+    let even2_from_chain = f.apply(inner_mp, &[even2]);
+    let even2_from_chain_ty = f.k.infer(even2_from_chain).unwrap_or_else(|e| {
+        panic!(
+            "even_add(2,2).mp(Even 4).mp(Even 2) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(even2_from_chain_ty, even2_ty),
+        "even_add(2,2)'s inner mp must land on Even 2"
+    );
+
+    // even_add'(3,3).mp(Even 6) : Iff (Odd 3) (Odd 3); mp(Odd 3) : Odd 3.
+    let odd_iff_at_33 = f.lemma(p.even_add_prime, &[three, three]);
+    let odd_inner_ty = f.const_app(p.logic.iff, &[odd3_ty, odd3_ty]);
+    let mp_fn2 = f.const_app(p.logic.iff_mp, &[even6_ty, odd_inner_ty, odd_iff_at_33]);
+    let inner_iff2 = f.apply(mp_fn2, &[even6]);
+    let inner_mp2 = f.const_app(p.logic.iff_mp, &[odd3_ty, odd3_ty, inner_iff2]);
+    let odd3_from_chain = f.apply(inner_mp2, &[odd3]);
+    let odd3_from_chain_ty = f.k.infer(odd3_from_chain).unwrap_or_else(|e| {
+        panic!(
+            "even_add'(3,3).mp(Even 6).mp(Odd 3) should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(odd3_from_chain_ty, odd3_ty),
+        "even_add'(3,3)'s inner mp must land on Odd 3"
+    );
+
+    // Symbolic restatements over genuinely free m, n.
+    let restated_even = f.name("even_add_restated");
+    f.theorem(restated_even, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let mn = d.add(m, n);
+        let even_mn_ty = d.lemma(p.even, &[mn]);
+        let even_m_ty = d.lemma(p.even, &[m]);
+        let even_n_ty = d.lemma(p.even, &[n]);
+        let inner_ty = d.const_app(p.logic.iff, &[even_m_ty, even_n_ty]);
+        let stmt = d.const_app(p.logic.iff, &[even_mn_ty, inner_ty]);
+        let proof = d.lemma(p.even_add, &[m, n]);
+        (stmt, proof)
+    })
+    .expect("even_add must apply at genuinely free m, n");
+
+    let restated_odd = f.name("even_add_prime_restated");
+    f.theorem(restated_odd, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let mn = d.add(m, n);
+        let even_mn_ty = d.lemma(p.even, &[mn]);
+        let odd_m_ty = d.lemma(p.odd, &[m]);
+        let odd_n_ty = d.lemma(p.odd, &[n]);
+        let inner_ty = d.const_app(p.logic.iff, &[odd_m_ty, odd_n_ty]);
+        let stmt = d.const_app(p.logic.iff, &[even_mn_ty, inner_ty]);
+        let proof = d.lemma(p.even_add_prime, &[m, n]);
+        (stmt, proof)
+    })
+    .expect("even_add' must apply at genuinely free m, n");
+
+    assert!(
+        f.k.axiom_footprint(p.even_add).is_empty(),
+        "even_add must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.even_add_prime).is_empty(),
+        "even_add' must rest on zero axioms"
     );
 }
 
