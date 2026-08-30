@@ -3079,6 +3079,67 @@ pub struct NatPrelude {
     /// since the evidence is already in hand) to a `succ`, positive by
     /// `zero_lt_succ`.
     pub clog_pos: NameId,
+    /// `Nat.log_aux_le_clog_aux : ∀ b f n, Le (logAux b f n) (clogAux b f
+    /// n)` — the two aux FAMILIES compared at a SHARED fuel (both `log`/
+    /// `clog` are diagonal at `f := n`, so one fuel counter suffices, unlike
+    /// [`log_aux_mono`](Self::log_aux_mono)/
+    /// [`clog_aux_mono`](Self::clog_aux_mono), which compare one family
+    /// against itself at two DIFFERENT fuels). Induction on `f` (`n`
+    /// generalized inside the motive); the step splits on THREE
+    /// independent booleans — `2 ≤ b` (`logAux`'s inner cut, `clogAux`'s
+    /// outer cut: the SAME test both families use), `b ≤ n` (`logAux`'s
+    /// outer cut only) and `2 ≤ n` (`clogAux`'s inner cut only, derived from
+    /// the first two via `le_trans` rather than split independently). The
+    /// hard leaf (`2 ≤ b` and `b ≤ n` both true) needs one new small lemma,
+    /// `Le n (sub (add n b) 1)` for `Le 1 b` (`n ≤ n+b-1`, via
+    /// `add_le_add_left` then `pred_le_pred`, `sub x 1` being
+    /// definitionally `pred x`), which gives `n / b ≤ (n+b-1) / b` via
+    /// [`div_le_div_right`](Self::div_le_div_right); the recursive
+    /// obligation is then `IH(n/b)` chained through
+    /// `clog_aux_mono(predecessor, predecessor, n/b, (n+b-1)/b, le_refl,
+    /// div_mono)` via `le_trans`, then `le_succ_succ`.
+    pub log_aux_le_clog_aux: NameId,
+    /// `Nat.log_le_clog : ∀ b n, Le (log b n) (clog b n)` (`Mathlib`:
+    /// `Nat.log_le_clog`) —
+    /// [`log_aux_le_clog_aux`](Self::log_aux_le_clog_aux) at the diagonal
+    /// `f := n`, since both `log b n := logAux b n n` and
+    /// `clog b n := clogAux b n n`.
+    pub log_le_clog: NameId,
+    /// `Nat.div_lt_self : ∀ n b, Lt 0 n → Lt 1 b → Lt (div n b) n`
+    /// (`Mathlib`: `Nat.div_lt_self`) — general infrastructure for
+    /// [`log_lt_self`](Self::log_lt_self), filed here under its first
+    /// consumer. `mul_lt_mul_right(n, 1, b, pos_n)` (the `Iff` form,
+    /// backward direction) fed `hb : Lt 1 b` gives `Lt (mul 1 n) (mul b
+    /// n)`; rewriting `mul 1 n = n` via `one_mul` gives `Lt n (mul b n)`,
+    /// then `div_lt_of_lt_mul(n, b, n, that)` gives `Lt (div n b) n`
+    /// directly.
+    pub div_lt_self: NameId,
+    /// `Nat.log_aux_lt_of_pos : ∀ b f n, Le n f → Not (Eq n 0) → Lt (logAux
+    /// b f n) n` — the genuinely hard tier for `log_lt_self`: STRUCTURAL
+    /// induction on the fuel `f` (n generalized inside the motive, `Le n f`
+    /// carried as an explicit hypothesis rather than needed well-founded
+    /// recursion on `n` itself), because the recursive call's fuel
+    /// (`predecessor`) and its argument (`n / b`) are validated together —
+    /// `predecessor` is always sufficient fuel for `n / b` because
+    /// [`div_lt_self`](Self::div_lt_self) plus `Le n (succ predecessor)`
+    /// gives `Lt (n/b) (succ predecessor)`, hence `Le (n/b) predecessor` via
+    /// `le_of_lt_succ`.
+    ///
+    /// The step case's hard leaf (both guards true) splits further on
+    /// whether `n / b` is itself `0`: if so, `logAux b predecessor 0 = 0`
+    /// unconditionally (a small nested induction on `predecessor` alone,
+    /// using that `b ≤ 0` is provably `false` whenever `Lt 0 b`, collapsing
+    /// BOTH of `logAux`'s guard levels via `bool_select_nat_same` — this
+    /// does not need the outer `Le`/`Ne` hypotheses at all), giving `succ 0
+    /// = 1 < n` directly from `2 ≤ b ≤ n`; otherwise the induction
+    /// hypothesis applies at `n / b` (nonzero, sufficiently fueled),
+    /// chained through `div_lt_self` and `lt_of_lt_of_le`/`le_of_lt_succ`.
+    pub log_aux_lt_of_pos: NameId,
+    /// `Nat.log_lt_self : ∀ b x, Not (Eq x 0) → Lt (log b x) x` (`Mathlib`:
+    /// `Nat.log_lt_self`) —
+    /// [`log_aux_lt_of_pos`](Self::log_aux_lt_of_pos) at the diagonal `f :=
+    /// x`, via `le_refl`.
+    pub log_lt_self: NameId,
     /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
     /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
     /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
@@ -4454,6 +4515,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             clog_mono_right: kernel.name_str(nat, "clog_mono_right"),
             clog_monotone: kernel.name_str(nat, "clog_monotone"),
             clog_pos: kernel.name_str(nat, "clog_pos"),
+            log_aux_le_clog_aux: kernel.name_str(nat, "log_aux_le_clog_aux"),
+            log_le_clog: kernel.name_str(nat, "log_le_clog"),
+            div_lt_self: kernel.name_str(nat, "div_lt_self"),
+            log_aux_lt_of_pos: kernel.name_str(nat, "log_aux_lt_of_pos"),
+            log_lt_self: kernel.name_str(nat, "log_lt_self"),
             bit: kernel.name_str(nat, "bit"),
             bit_false: kernel.name_str(nat, "bit_false"),
             bit_true: kernel.name_str(nat, "bit_true"),
