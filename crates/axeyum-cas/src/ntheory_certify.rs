@@ -90,6 +90,14 @@ fn pow_mod(base: u128, mut exp: u128, m: u128) -> u128 {
     result
 }
 
+/// Test-only access to [`pow_mod`], so the adversarial suite can compare this
+/// module's independent modular arithmetic against [`crate::ntheory`]'s and
+/// exercise the `> u64::MAX` slow path directly.
+#[cfg(test)]
+pub(crate) fn pow_mod_for_tests(base: u128, exp: u128, m: u128) -> u128 {
+    pow_mod(base, exp, m)
+}
+
 /// Checked `∏ base^exp` over `(base, exponent)` pairs, as `u128`.
 /// Returns `None` on overflow. The empty product is `1`.
 fn checked_prod_pow(factors: &[(i128, u32)]) -> Option<u128> {
@@ -544,3 +552,6 @@ pub fn certify_crt(residues: &[(i128, i128)]) -> Option<CrtCertificate> {
     };
     check_crt_certificate(residues, &cert).then_some(cert)
 }
+
+#[cfg(test)]
+mod ntheory_certify_tests;
