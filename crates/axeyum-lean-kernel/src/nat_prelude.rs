@@ -208,6 +208,7 @@ mod subset_product;
 mod testbit_bitwise;
 mod totient;
 mod totient_lemmas;
+mod totient_mul;
 mod totient_mul_coprime;
 mod totient_multiplicative;
 pub(crate) mod transposition;
@@ -353,6 +354,7 @@ use totient_lemmas::{
     declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_coprime_totient_iff,
     declare_totient_even, declare_totient_lemmas_all,
 };
+use totient_mul::declare_totient_mul_all;
 use totient_mul_coprime::{declare_coprime_mul_iff, declare_gcd_mod_left_eq_gcd};
 use totient_multiplicative::{declare_coprime_mul_of_coprime, declare_gcd_comm};
 use transposition::{
@@ -1910,6 +1912,40 @@ pub struct NatPrelude {
     /// `add (mul n a) b`, and a predicate written in `div y n` / `mod y n`
     /// reduces there only once these two equations are in hand.
     pub div_mod_block: NameId,
+    /// `Nat.crtSelfMap_mapsInto : ∀ mp np, MapsInto (fun x => add (mul
+    /// (succ np) (mod x (succ mp))) (mod x (succ np))) (mul (succ np) (succ
+    /// mp))` (`totient_mul.rs`) — the CRT residue-pairing self-map of
+    /// `[0, n*m)` stays in range. **No hypothesis**: positivity is syntactic
+    /// in the successor form, and coprimality is genuinely not needed (it
+    /// holds at all 26 non-coprime pairs with `1 ≤ m,n ≤ 9`). One lemma of
+    /// content, `Nat.mul_succ_add_lt_of_le_of_lt`.
+    pub crt_self_map_maps_into: NameId,
+    /// `Nat.crtSelfMap_injectiveOn : ∀ mp np, Eq (gcd (succ mp) (succ np)) 1
+    /// → InjectiveOn (the same map) (mul (succ np) (succ mp))`
+    /// (`totient_mul.rs`) — and this is the ONLY obligation under
+    /// [`totient_mul_of_coprime`](Self::totient_mul_of_coprime) that the
+    /// coprimality hypothesis pays for. Sharp: injective at every coprime
+    /// pair and at **none** of the 26 non-coprime ones (smallest collision
+    /// `m = n = 2`, where the map sends both `0` and `2` to `0`). Route:
+    /// [`div_mod_block`](Self::div_mod_block) twice, then
+    /// `mod_eq_iff_div_mod_remainder_eq` in reverse, then
+    /// [`crt_unique`](Self::crt_unique) — the Nat-native one — then the same
+    /// iff forward at the product modulus. No Bezout witness and no CRT
+    /// existence over the naturals is used.
+    pub crt_self_map_injective_on: NameId,
+    /// `Nat.totient_mul_of_coprime : ∀ m n, Eq (gcd m n) 1 → Eq (totient (mul
+    /// m n)) (mul (totient m) (totient n))` (`totient_mul.rs`) — Euler's
+    /// totient is multiplicative on coprime arguments. The identity is FALSE
+    /// without the hypothesis, at 26 of 26 non-coprime pairs with
+    /// `1 ≤ m,n ≤ 9` (smallest counterexample `m = n = 2`: `totient 4 = 2`
+    /// against `1 * 1`), which is what `docs/plan/status/301`'s traced plan
+    /// got wrong. Assembled from
+    /// [`count_range_congr`](Self::count_range_congr) (pointwise,
+    /// unconditional), [`count_range_permute`](Self::count_range_permute)
+    /// (the one coprimality-dependent step) and
+    /// [`count_range_product`](Self::count_range_product) (Fubini, also
+    /// unconditional).
+    pub totient_mul_of_coprime: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4499,6 +4535,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_permute: kernel.name_str(nat, "countRange_permute"),
             count_range_product: kernel.name_str(nat, "countRange_product"),
             div_mod_block: kernel.name_str(nat, "div_mod_block"),
+            crt_self_map_maps_into: kernel.name_str(nat, "crtSelfMap_mapsInto"),
+            crt_self_map_injective_on: kernel.name_str(nat, "crtSelfMap_injectiveOn"),
+            totient_mul_of_coprime: kernel.name_str(nat, "totient_mul_of_coprime"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -5442,6 +5481,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `ops.rs`, no ordering constraint of its own). Nothing needs it, so
         // it goes last — `docs/plan/status/348-nat-dist-nth.md`.
         declare_nth_all(&mut d, &p)?;
+        // `Nat.totient_mul_of_coprime` and its two CRT self-map facts
+        // (`totient_mul.rs`). Needs, all far above: `Nat.countRange_permute`/
+        // `countRange_product`/`div_mod_block` (`declare_count_range_permute`
+        // and neighbours), `Nat.countRange_congr`/`Nat.totient`
+        // (`declare_totient_all`), `Nat.crt_unique` (`declare_crt`),
+        // `Nat.mod_eq_iff_div_mod_remainder_eq` (`modular.rs`),
+        // `Nat.gcd_mod_left_eq_gcd`/`Nat.coprime_mul_iff`
+        // (`totient_mul_coprime.rs`), `Nat.mul_succ_add_lt_of_le_of_lt`
+        // (`order.rs`), `Nat.div_mod_exec`, `Nat.mod_eq_self_of_lt`,
+        // `Nat.mod_lt`, `Nat.le_of_lt_succ`, `Nat.mul_comm`/`Nat.zero_mul`,
+        // and the `beq` bridges `eq_of_beq_eq_true`/`beq_eq_true_of_eq`/
+        // `beq_eq_false_of_ne`. Nothing needs it, so it goes last.
+        declare_totient_mul_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
