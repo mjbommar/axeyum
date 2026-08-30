@@ -48,7 +48,14 @@ fn app2(kernel: &mut Kernel, f: ExprId, x: ExprId, y: ExprId) -> ExprId {
     kernel.app(fx, y)
 }
 
-fn eq_of(kernel: &mut Kernel, eq_name: axeyum_lean_kernel::NameId, level: LevelId, ty: ExprId, lhs: ExprId, rhs: ExprId) -> ExprId {
+fn eq_of(
+    kernel: &mut Kernel,
+    eq_name: axeyum_lean_kernel::NameId,
+    level: LevelId,
+    ty: ExprId,
+    lhs: ExprId,
+    rhs: ExprId,
+) -> ExprId {
     let eq_c = kernel.const_(eq_name, vec![level]);
     let e1 = kernel.app(eq_c, ty);
     let e2 = kernel.app(e1, lhs);

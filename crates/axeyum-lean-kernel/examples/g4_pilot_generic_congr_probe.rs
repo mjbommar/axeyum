@@ -33,14 +33,27 @@ fn lam_over(kernel: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
     kernel.lam(anon, ty, b, BinderInfo::Default)
 }
 
-fn eq_of(kernel: &mut Kernel, eq_name: NameId, level: LevelId, ty: ExprId, lhs: ExprId, rhs: ExprId) -> ExprId {
+fn eq_of(
+    kernel: &mut Kernel,
+    eq_name: NameId,
+    level: LevelId,
+    ty: ExprId,
+    lhs: ExprId,
+    rhs: ExprId,
+) -> ExprId {
     let c = kernel.const_(eq_name, vec![level]);
     let e1 = kernel.app(c, ty);
     let e2 = kernel.app(e1, lhs);
     kernel.app(e2, rhs)
 }
 
-fn refl_of(kernel: &mut Kernel, eq_refl_name: NameId, level: LevelId, ty: ExprId, a: ExprId) -> ExprId {
+fn refl_of(
+    kernel: &mut Kernel,
+    eq_refl_name: NameId,
+    level: LevelId,
+    ty: ExprId,
+    a: ExprId,
+) -> ExprId {
     let c = kernel.const_(eq_refl_name, vec![level]);
     let e = kernel.app(c, ty);
     kernel.app(e, a)
@@ -159,8 +172,14 @@ fn main() {
     let generic_proof = generic_congr_arg(&mut kernel, &logic, one, nat_ty, a2, b2, h2, x_fv, &f2);
 
     println!("-- G4 pilot 2 probe: carrier-generic congr_arg vs NatOps::congr --");
-    println!("existing route proof (rendered): {}", kernel.render_lean(existing_route_proof));
-    println!("generic  route proof (rendered): {}", kernel.render_lean(generic_proof));
+    println!(
+        "existing route proof (rendered): {}",
+        kernel.render_lean(existing_route_proof)
+    );
+    println!(
+        "generic  route proof (rendered): {}",
+        kernel.render_lean(generic_proof)
+    );
 
     if existing_route_proof == generic_proof {
         println!("RESULT: PASS -- identical ExprId: the generic helper reconstructs");
@@ -201,7 +220,9 @@ fn main() {
         ty: full_ty,
         value: full_val,
     }) {
-        Ok(()) => println!("KERNEL ACCEPTS: the generic-route proof, wrapped as a real theorem, admits."),
+        Ok(()) => {
+            println!("KERNEL ACCEPTS: the generic-route proof, wrapped as a real theorem, admits.")
+        }
         Err(e) => {
             println!("KERNEL REJECTS: {e:?}");
             std::process::exit(1);
