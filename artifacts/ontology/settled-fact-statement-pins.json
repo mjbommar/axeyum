@@ -8211,10 +8211,40 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-dist-add-add-left-92fa4403",
+      "language": "lean4-surface",
+      "statement_sha256": "01940aa40a2e9f4e9b8fe3e56a2b95e0afad1291cf84574425b9816cbe510921",
+      "prose_sha256": "abe2f3759ebc70353e860e0940fee02b04e8b862b6bd66fd5719308b95d530f4"
+    },
+    {
+      "fact_id": "F:ml430-nat-dist-add-add-right-6e5d8bbb",
+      "language": "lean4-surface",
+      "statement_sha256": "67949ec2a4b30fcf0ecb910499911a2405cc32928a30cbd4d15058ca1798c0f8",
+      "prose_sha256": "696ea7607ddb8dc8c97a83aa56c726681b147aad9e6657bdb65246339b27cc05"
+    },
+    {
       "fact_id": "F:ml430-nat-dist-comm-1fa29a04",
       "language": "lean4-surface",
       "statement_sha256": "787eae9a8b1e8021fa782e572435af93daec6296a271d0f180343540a17736fd",
       "prose_sha256": "f92599066c5c5d15ce8109ec3b543bcddf233c76c4d638d1659acba800bc23a1"
+    },
+    {
+      "fact_id": "F:ml430-nat-dist-eq-zero-5ae5b706",
+      "language": "lean4-surface",
+      "statement_sha256": "69d9e41f571c12d94c1be19614181d9a192907536d38ec15a0b18c0e7b5c267f",
+      "prose_sha256": "f06d8b7d51fb7d62e87e5e7382ad5ca58c4913d51111cc8d9356a9c3b864e3a4"
+    },
+    {
+      "fact_id": "F:ml430-nat-dist-mul-left-92624d63",
+      "language": "lean4-surface",
+      "statement_sha256": "d09ee1ddc02b7cb43bd7fc12035d4f8e0275cc589e804852db7776db904b54a3",
+      "prose_sha256": "2cc5281df52a04525bedadc443010c6116764947f35996fe5cd3cac42ce5dc64"
+    },
+    {
+      "fact_id": "F:ml430-nat-dist-mul-right-d4e0c33d",
+      "language": "lean4-surface",
+      "statement_sha256": "5d7a9cec0c3e4db744e925d4ba15b2bdd2894aa8d1c7b030cd802656bc5abaf6",
+      "prose_sha256": "5383abd750b7758d1c3d06c63e1fd93e0e3568bba39daed36fc92dca70656c3d"
     },
     {
       "fact_id": "F:ml430-nat-dist-self-0cfa5426",
