@@ -611,6 +611,33 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   that their entry survived — `git ls-files -s <path>` should print the same blob
   hash it did before you started.
 
+- **AN ADR NUMBER IS A SHARED ALLOCATION POINT, AND GENERATING THE INDEX DID NOT
+  FIX IT.** `docs/research/09-decisions/README.md` is generated precisely so
+  concurrent lanes stop conflicting on it — but the NUMBER in the filename is
+  still one key every lane writes, chosen by looking at the tree. Two lanes that
+  start within an hour of each other read the same maximum and pick the same
+  next number.
+
+  Measured 2026-08-30, twice in a row: `queue-refill` and `holdout-amendment`
+  both wrote **0617**; after the first was renumbered to 0618,
+  `mobility-census` had independently written **0618** as well. Each collision
+  costs a `git mv`, a sweep of inbound references, and an index regeneration —
+  and the second one was caused by the fix for the first.
+
+  Nothing surfaces it at merge time. The two files have different names, so git
+  merges them cleanly and `git show --stat` looks ordinary.
+  `scripts/gen-adr-index.py --check` DOES fail on a duplicate outside its
+  grandfathered `{0166, 0167}` set (verified: injecting a duplicate makes it
+  exit 1), and it is wired into both aggregate gates — the gate is not the
+  problem. The problem is that merges happen far more often than the ~10-minute
+  gate runs.
+
+  So: **when briefing a lane, name a specific number well above the current
+  maximum**, and tell it to check the tree first. When merging, run
+  `scripts/check-merge-hygiene.sh` (~2s) — it runs `gen-adr-index.py --check`
+  plus a conflict-marker scan and a generated-file freshness check, each of the
+  three being a defect that reached a commit through this same gap.
+
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use
