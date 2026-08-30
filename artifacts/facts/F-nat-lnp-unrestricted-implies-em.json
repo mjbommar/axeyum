@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lnp-unrestricted-implies-em",
+  "title": "Nat.lnp_unrestricted_implies_em: the unrestricted least-number principle over the naturals yields excluded middle for every proposition",
+  "statement": "ADR-0603 row 2 for the least-number principle over the naturals, and the first row-2 result this ledger carries that is NOT about the reals. Row 2 asks what a classical conclusion costs when you demand it in full generality. Here the classical conclusion is the least-number principle -- every non-empty subset of the naturals has a least element -- stated with NO decidability hypothesis on the predicate: for every Q : Nat -> Prop, if some n satisfies Q then some m satisfies Q with nothing below m satisfying it. Nat.lnp_unrestricted_implies_em derives from that hypothesis the ambient excluded middle, ∀ (P : Prop), Or P (Not P), quantified over every proposition this kernel can form. The argument forms Qp n := Or (Eq n 1) (And (Eq n 0) P), which is inhabited unconditionally at n = 1 with no appeal to P, and reads P off the POSITION of the least element: m = 0 forces P, m = succ j refutes it. Only the numerals 0 and 1 are ever formed. THE PRICE IS EXACTLY EXCLUDED MIDDLE, NOT MERELY AT LEAST EXCLUDED MIDDLE: the converse Nat.em_implies_lnp is proved in the same file, so the two principles are interderivable over this prelude, and crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs::the_unrestricted_lnp_and_excluded_middle_are_pinned_as_an_exact_equivalence pins the two declared types as literally `L -> E` and `E -> L` for the same two ExprIds -- structural equality, not defeq, not prose. THIS IS STRICTLY STRONGER THAN THE ANALYSIS ROW 2s. F:creal-ivt-exact-root-decides-sign and F:creal-evt-attained-max-decides-sign each reduce a classical conclusion to deciding the sign of one arbitrary real, i.e. to analytic LLPO, a weak omniscience principle that does NOT give excluded middle for arbitrary propositions. This row gives it for every P. WHAT THIS FACT DOES NOT CLAIM: it does not claim the unrestricted least-number principle is false, or refuted, or that this development has failed to prove something it should have. It claims a price, and the companion fact F:nat-lnp-decidable pays the ordinary version of that price and gets the theorem.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.lnp_unrestricted_implies_em : ((x0 : ((x0 : ((x0 : AxNat) -> Prop)) -> ((x1 : Exists.{1} AxNat (fun (x1 : AxNat) => x0 x1)) -> Exists.{1} AxNat (fun (x2 : AxNat) => And (x0 x2) (((x3 : AxNat) -> ((x4 : AxNat.lt x3 x2) -> Not (x0 x3)))))))) -> ((x1 : Prop) -> Or x1 (Not x1)))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Nat.lnp_unrestricted_implies_em"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-succ-ne-zero",
+    "F:nat-le-succ-succ",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lnp_unrestricted_implies_em",
+      "kind": "kernel-term",
+      "supports": "Nat.lnp_unrestricted_implies_em is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.lnp_unrestricted_implies_em 2>/dev/null | grep -cE '^Nat\\.lnp_unrestricted_implies_em[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.lnp_unrestricted_implies_em",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Verified BOTH ways on 2026-08-30: the real name exits 0 printing 1; the fabricated name Nat.lnp_unrestricted_implies_em_bogus exits 1.",
+      "verified_at": "2026-08-30"
+    },
+    {
+      "id": "footprint-Nat.lnp_unrestricted_implies_em",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the nat prelude's trusted surface is empty, which bounds Nat.lnp_unrestricted_implies_em. In particular the conclusion `∀ (P : Prop), Or P (Not P)` is DERIVED from the stated hypothesis and is nowhere assumed.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it."
+    },
+    {
+      "id": "nonvacuity-and-equivalence-Nat.lnp_unrestricted_implies_em",
+      "kind": "instance-pin",
+      "supports": "The reduction is not vacuous and the price is exactly excluded middle: no declaration in the environment has the unrestricted principle's type or excluded middle's type, and Nat.lnp_unrestricted_implies_em / Nat.em_implies_lnp are literally `L -> E` and `E -> L` for the same two ExprIds.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test -p axeyum-lean-kernel --lib",
+        "environment-wide type scan with a same-scan positive control"
+      ],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib the_unrestricted_lnp_and_excluded_middle_are_pinned_as_an_exact_equivalence 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The grep -c count is what makes this discriminating: a fabricated or renamed test filter makes cargo print `test result: ok. 0 passed` and exit 0, and the anchored `1 passed` pattern then matches nothing, so grep -c prints 0 and exits 1. Verified both ways on 2026-08-30. The test itself carries its own positive control -- it scans every environment declaration for the unrestricted principle's type AND for lnp_unrestricted_implies_em's own type, and fails unless the second scan finds exactly one hit, so a scan that has stopped matching anything fails rather than reporting a clean zero. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/least_number.rs)",
+    "source": "formal.statement is the verbatim `Kernel::render_lean` of the declaration's type, read from `cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory lnp_unrestricted_implies_em`. depends_on was derived by `scripts/check-fact-depends-derived.py --fix` from the proof term's own direct-theorem edges, not hand-listed: the run reports And.left, And.right, Nat.le_succ_succ, Nat.succ_ne_zero, Nat.zero_le and Or.elim, of which the three Nat entries are registered here. Prose is hand-written."
+  },
+  "notes": "Motivated by ADR-0716 and docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md, which measured that ADR-0603 row 2 is EMPTY for the naturals, integers and rationals: the decision principle every analysis row 2 extracts is le_total, and Nat.le_total / Int.le_total / Rat.le_total are all already proved and axiom-free here while CReal.le_total is absent, so nothing stated over the naturals can reduce to that obstruction. This row is the boundary that survives, and it is a stronger one. Companion facts: F:nat-lnp-decidable is the decidable-fragment exact form, and F:excluded-middle-not-intuitionistic (ipc_soundness.rs) independently establishes that excluded middle is not free in an intuitionistic setting -- the two are complementary and neither is evidence for the other's subject. The statement is deliberately NOT routed through ipc_soundness.rs's Formula/Provable object language: the encoded least-number principle is not the principle any theorem in this prelude is stated with, so an object-language reduction would not touch the real thing. Source: crates/axeyum-lean-kernel/src/nat_prelude/least_number.rs."
+}
