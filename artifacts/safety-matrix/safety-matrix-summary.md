@@ -97,6 +97,11 @@ Largest fan-outs:
 - 2058 / 2117 have no PER-THEOREM axiom footprint check; their footprint evidence is the prelude-wide sweep.
 - 48 / 2117 have NO checker of their own: every command they cite is shared with another fact.
 - 17 / 2117 cite no `checker_command` at all.
+- 1984 / 2117 carry an evidence row listing two or more named `checkers`, and 1356 of those name the PRODUCING run as one of
+  them. The production is not a re-derivation of itself, so those rows
+  are one check and one re-list, not two independent checks —
+  `validate-facts.py` counts them toward its "re-derived by 2+
+  independent checkers" line.
 - 1901 evidence rows across 1901 facts declare a semantic `kind` (`exhaustive-enumeration` / `instance-pin`) while their
   `supports` records an axiom footprint. Nothing was enumerated. Read at
   face value the `kind` enum would over-report semantic falsification by

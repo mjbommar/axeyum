@@ -108,6 +108,29 @@ with hundreds of siblings. Describing such a row as carrying "two independent
 checks" is wrong. The honest description is one fact-specific check plus a share
 in one prelude-wide check.
 
+### "re-derived by 2+ independent checkers" counts the producing run
+
+`validate-facts.py` prints `3578 evidence row(s) re-derived by 2+ independent
+checkers`. The count is of names in the `checkers` list, and the schema's own
+rule for that list is *"Two entries that share an implementation are ONE check
+wearing two names; the value of the list is independence, not length."*
+
+Measured: **1,356 of the 1,984 proved facts carrying a multi-name `checkers`
+list name the PRODUCING run as one of the names.** The dominant pair, on 1,300
+evidence rows, is
+
+    ("producing-build (Kernel::add_declaration)",
+     "theorem_dependency_inventory re-list")
+
+The production is not a re-derivation of itself. Those rows are one check and
+one re-list of the same environment, not two independent checks. The second
+most common pair — `Kernel::axiom_footprint` with an environment-wide
+trusted-surface enumeration, on 1,640 rows — is better, since the two reach the
+answer by different routes, but they share the kernel implementation entirely.
+
+Nothing here is false: each named checker really runs. The over-claim is in the
+word *independent*, and it is in an aggregate line a referee reads.
+
 ### The `generated-unreviewed` rows are the best-protected part of the ledger
 
 This is the finding that most contradicts the prior expectation.

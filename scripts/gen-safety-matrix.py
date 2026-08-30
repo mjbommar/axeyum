@@ -217,6 +217,19 @@ def classify(fact: dict, pinned: set[str], fan: dict[str, set[str]]) -> dict:
     def any_cmd(rx) -> bool:
         return any(cmd and rx.search(cmd) for _, cmd in cmds)
 
+    # The fact schema's own rule: "Two entries that share an implementation are
+    # ONE check wearing two names; the value of the list is independence, not
+    # length."  A row naming the PRODUCING run as one of its checkers is not
+    # re-derived twice -- the production is not a re-derivation of itself.
+    # `validate-facts.py` counts such a row toward "re-derived by 2+
+    # independent checkers", which is why this is measured separately.
+    producer_named = any(
+        "producing" in name.lower() or "producing-build" in name.lower()
+        for ev, _ in cmds
+        for name in (ev.get("checkers") or [])
+    )
+    multi_checker = any(len(ev.get("checkers") or []) >= 2 for ev, _ in cmds)
+
     guessed = extracted_subject(fact)
     discriminating_subject = False
     discriminating_guess = False
@@ -253,6 +266,8 @@ def classify(fact: dict, pinned: set[str], fan: dict[str, set[str]]) -> dict:
         "mutation_control": any_cmd(NEGATIVE_CONTROL),
         "independent_replay": any_cmd(REAL_LEAN_REPLAY),
         "coverage_bearing_checker": discriminating_subject,
+        "checkers_name_producer": producer_named,
+        "checkers_multi": multi_checker,
         "subject_guessed": guessed or "",
         "coverage_by_guess_only": bool(discriminating_guess and not discriminating_subject),
     }
@@ -282,6 +297,11 @@ POSITIVE_CONTROLS = [
     ("F:acc-inv", "semantic_falsification", False),
     # ... while a genuine enumeration row still counts.
     ("F:alternating-binomial-row-sum-zero", "semantic_falsification", True),
+    # The generated template names `producing-build (Kernel::add_declaration)`
+    # as one of two `checkers`. Both polarities pinned so the predicate cannot
+    # silently start saying yes (or no) to everything.
+    ("F:nat-sumrange-add", "checkers_name_producer", True),
+    ("F:alternating-binomial-row-sum-zero", "checkers_name_producer", False),
 ]
 
 
@@ -305,6 +325,7 @@ def render_tsv(rows: list[dict]) -> str:
         "fact_id", "route", "curation", "language", "subject",
         "n_evidence", "n_checkers", "checker_fanout_min", "checker_fanout_max",
         *COLUMNS, "protection_count", "subject_guessed", "coverage_by_guess_only",
+        "checkers_multi", "checkers_name_producer",
     ]
     lines = ["\t".join(head)]
     for r in rows:
@@ -317,6 +338,8 @@ def render_tsv(rows: list[dict]) -> str:
             str(r["protection_count"]),
             r["subject_guessed"] or "-",
             "yes" if r["coverage_by_guess_only"] else "no",
+            "yes" if r["checkers_multi"] else "no",
+            "yes" if r["checkers_name_producer"] else "no",
         ]))
     return "\n".join(lines) + "\n"
 
@@ -406,6 +429,14 @@ def render_summary(rows: list[dict], fan: dict[str, set[str]],
       " they cite is shared with another fact.")
     no_cmd = [r for r in rows if r["n_checkers"] == 0]
     w(f"- {len(no_cmd)} / {n} cite no `checker_command` at all.")
+    multi = [r for r in rows if r["checkers_multi"]]
+    prod = [r for r in multi if r["checkers_name_producer"]]
+    w(f"- {len(multi)} / {n} carry an evidence row listing two or more named"
+      f" `checkers`, and {len(prod)} of those name the PRODUCING run as one of")
+    w("  them. The production is not a re-derivation of itself, so those rows")
+    w("  are one check and one re-list, not two independent checks —")
+    w("  `validate-facts.py` counts them toward its \"re-derived by 2+")
+    w("  independent checkers\" line.")
     mis = sum(r["footprint_rows_mislabelled"] for r in rows)
     mis_facts = sum(1 for r in rows if r["footprint_rows_mislabelled"])
     w(f"- {mis} evidence rows across {mis_facts} facts declare a semantic"
