@@ -3,9 +3,11 @@
 use std::{env, path::Path};
 
 use axeyum_machine_evidence::{
-    check_observation_omission_control, check_observation_separation, check_word_roundtrip,
-    check_word_roundtrip_reversed_control, observation_separation_report, semantic_package,
-    word_roundtrip_report, write_json,
+    add_step_report, branch_trace_report, check_add_step, check_add_wrong_destination_control,
+    check_branch_target_control, check_branch_trace, check_memory_byte_order_control,
+    check_memory_trace, check_observation_omission_control, check_observation_separation,
+    check_word_roundtrip, check_word_roundtrip_reversed_control, memory_trace_report,
+    observation_separation_report, semantic_package, word_roundtrip_report, write_json,
 };
 
 fn main() {
@@ -15,6 +17,7 @@ fn main() {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().skip(1).collect();
     match args.as_slice() {
@@ -68,13 +71,76 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_observation_omission_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: omitted requested register was accepted".into());
         }
+        [command, package, output] if command == "emit-add-step" => {
+            let report = add_step_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "add-step: PASS: cases={} destination=r{} result_sha256={}",
+                report.cases_checked, report.destination, report.result_sha256
+            );
+        }
+        [command, package, report] if command == "check-add-step" => {
+            let checked = check_add_step(Path::new(package), Path::new(report))?;
+            println!(
+                "add-step: PASS: cases={} destination=r{} result_sha256={}",
+                checked.cases_checked, checked.destination, checked.result_sha256
+            );
+        }
+        [command, package, report] if command == "control-add-wrong-destination" => {
+            check_add_wrong_destination_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: wrong addition destination was accepted".into());
+        }
+        [command, package, output] if command == "emit-memory-trace" => {
+            let report = memory_trace_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "memory-trace: PASS: loaded={:#x} boundary_trapped={} no_partial_write={}",
+                report.loaded_word, report.boundary_trapped, report.no_partial_write
+            );
+        }
+        [command, package, report] if command == "check-memory-trace" => {
+            let checked = check_memory_trace(Path::new(package), Path::new(report))?;
+            println!(
+                "memory-trace: PASS: loaded={:#x} boundary_trapped={} no_partial_write={}",
+                checked.loaded_word, checked.boundary_trapped, checked.no_partial_write
+            );
+        }
+        [command, package, report] if command == "control-memory-byte-order" => {
+            check_memory_byte_order_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: reversed stored bytes were accepted".into());
+        }
+        [command, package, output] if command == "emit-branch-trace" => {
+            let report = branch_trace_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "branch-trace: PASS: taken={:?} untaken={:?}",
+                report.taken_pcs, report.untaken_pcs
+            );
+        }
+        [command, package, report] if command == "check-branch-trace" => {
+            let checked = check_branch_trace(Path::new(package), Path::new(report))?;
+            println!(
+                "branch-trace: PASS: taken={:?} untaken={:?}",
+                checked.taken_pcs, checked.untaken_pcs
+            );
+        }
+        [command, package, report] if command == "control-branch-target" => {
+            check_branch_target_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: wrong branch target was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
                  control-word-roundtrip-reversed PACKAGE REPORT | \
                  emit-observation-separation PACKAGE OUTPUT | \
                  check-observation-separation PACKAGE REPORT | \
-                 control-observation-omission PACKAGE REPORT"
+                 control-observation-omission PACKAGE REPORT | \
+                 emit-add-step PACKAGE OUTPUT | check-add-step PACKAGE REPORT | \
+                 control-add-wrong-destination PACKAGE REPORT | \
+                 emit-memory-trace PACKAGE OUTPUT | check-memory-trace PACKAGE REPORT | \
+                 control-memory-byte-order PACKAGE REPORT | \
+                 emit-branch-trace PACKAGE OUTPUT | check-branch-trace PACKAGE REPORT | \
+                 control-branch-target PACKAGE REPORT"
                 .into());
         }
     }

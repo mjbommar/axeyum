@@ -6,7 +6,9 @@
 
 use std::{fs, path::Path};
 
-use axeyum_machine::a0::{Memory, MemorySpan, Observation, State, Word};
+use axeyum_machine::a0::{
+    Memory, MemorySpan, Observation, Outcome, Program, State, StopReason, Trap, Word, run, step,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -14,6 +16,9 @@ const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
 const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v2";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
 const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
+const ADD_SCHEMA: &str = "axeyum.a0.add-step-exhaustive.v1";
+const MEMORY_SCHEMA: &str = "axeyum.a0.memory-trace.v1";
+const BRANCH_SCHEMA: &str = "axeyum.a0.branch-trace.v1";
 
 /// Stable metadata that binds evidence to the concrete A0 semantic authority.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,6 +81,63 @@ pub struct ObservationSeparationReport {
     pub left_value: Option<u64>,
     /// Separating value in the right state.
     pub right_value: Option<u64>,
+}
+
+/// Exhaustive width-8 A0 addition report, including flags and PC.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AddStepReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Exhaustively checked architectural width.
+    pub width: u8,
+    /// Destination register inspected by the checker.
+    pub destination: u8,
+    /// Number of operand pairs checked.
+    pub cases_checked: u64,
+    /// Whether result, Z/N/C/V, PC, and frame controls matched the oracle.
+    pub passed: bool,
+    /// SHA-256 over every input and recomputed architectural output.
+    pub result_sha256: String,
+}
+
+/// Concrete store/load and trapped-boundary report.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MemoryTraceReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Stored word.
+    pub stored_word: u64,
+    /// Bytes observed at increasing addresses after store.
+    pub stored_bytes: Vec<u8>,
+    /// Word recovered by the following load.
+    pub loaded_word: u64,
+    /// Whether an out-of-range store trapped.
+    pub boundary_trapped: bool,
+    /// Whether the trapped store left memory unchanged.
+    pub no_partial_write: bool,
+    /// Program counters from initial, stored, and loaded states.
+    pub successful_pcs: Vec<u64>,
+}
+
+/// Taken and untaken conditional-branch trace report.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BranchTraceReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// PCs in the initial, branched, and halted taken-path states.
+    pub taken_pcs: Vec<u64>,
+    /// PCs in the initial, branched, and halted untaken-path states.
+    pub untaken_pcs: Vec<u64>,
+    /// Stop classification for the taken trace.
+    pub taken_stop: String,
+    /// Stop classification for the untaken trace.
+    pub untaken_stop: String,
 }
 
 /// Why an evidence package or report was rejected.
@@ -265,6 +327,120 @@ pub fn check_observation_omission_control(
     )
 }
 
+/// Produces the exhaustive width-8 A0 addition-step report.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn add_step_report(package_path: &Path) -> Result<AddStepReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_add_step(
+        sha256_hex(&package_bytes),
+        AddControl::Declared,
+    ))
+}
+
+/// Recomputes and checks the exhaustive addition-step report.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_add_step(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<AddStepReport, EvidenceError> {
+    check_add_step_with_control(package_path, report_path, AddControl::Declared)
+}
+
+/// Reads the wrong destination register and requires report rejection.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing control fires.
+pub fn check_add_wrong_destination_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<AddStepReport, EvidenceError> {
+    check_add_step_with_control(package_path, report_path, AddControl::WrongDestination)
+}
+
+/// Produces the concrete 16-bit store/load and boundary-trap report.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn memory_trace_report(package_path: &Path) -> Result<MemoryTraceReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_memory_trace(
+        sha256_hex(&package_bytes),
+        MemoryControl::Declared,
+    ))
+}
+
+/// Recomputes and checks the memory trace.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_memory_trace(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<MemoryTraceReport, EvidenceError> {
+    check_memory_trace_with_control(package_path, report_path, MemoryControl::Declared)
+}
+
+/// Reverses the observed stored bytes and requires report rejection.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing control fires.
+pub fn check_memory_byte_order_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<MemoryTraceReport, EvidenceError> {
+    check_memory_trace_with_control(package_path, report_path, MemoryControl::ReverseStoredBytes)
+}
+
+/// Produces the taken and untaken A0 branch traces.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn branch_trace_report(package_path: &Path) -> Result<BranchTraceReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_branch_trace(
+        sha256_hex(&package_bytes),
+        BranchControl::Declared,
+    ))
+}
+
+/// Recomputes and checks both branch traces.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_branch_trace(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<BranchTraceReport, EvidenceError> {
+    check_branch_trace_with_control(package_path, report_path, BranchControl::Declared)
+}
+
+/// Uses the current PC instead of sequential PC as the taken target base.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing control fires.
+pub fn check_branch_target_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<BranchTraceReport, EvidenceError> {
+    check_branch_trace_with_control(package_path, report_path, BranchControl::WrongTargetBase)
+}
+
 #[derive(Clone, Copy)]
 enum ByteOrderControl {
     Declared,
@@ -275,6 +451,24 @@ enum ByteOrderControl {
 enum ObservationControl {
     Declared,
     OmitSeparatingRegister,
+}
+
+#[derive(Clone, Copy)]
+enum AddControl {
+    Declared,
+    WrongDestination,
+}
+
+#[derive(Clone, Copy)]
+enum MemoryControl {
+    Declared,
+    ReverseStoredBytes,
+}
+
+#[derive(Clone, Copy)]
+enum BranchControl {
+    Declared,
+    WrongTargetBase,
 }
 
 fn check_word_roundtrip_with_control(
@@ -409,6 +603,205 @@ fn compute_observation_separation(
     }
 }
 
+fn check_add_step_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: AddControl,
+) -> Result<AddStepReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: AddStepReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_add_step(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed add report does not equal recomputation (claimed destination r{}, recomputed r{})",
+            claimed.destination, recomputed.destination
+        )));
+    }
+    Ok(claimed)
+}
+
+fn compute_add_step(semantic_package_sha256: String, control: AddControl) -> AddStepReport {
+    let program =
+        Program::new(8, word(0), vec![0x10, 0x02, 0x01, 0]).expect("fixed add program is valid");
+    let destination = if matches!(control, AddControl::Declared) {
+        2
+    } else {
+        3
+    };
+    let mut result_digest = Sha256::new();
+    let mut passed = true;
+    let mut cases_checked = 0_u64;
+    for lhs in 0_u16..=255 {
+        for rhs in 0_u16..=255 {
+            let mut before =
+                State::new(8, Memory::zeroed(0), word(0)).expect("fixed add state is valid");
+            before.registers[0] = word(u64::from(lhs));
+            before.registers[1] = word(u64::from(rhs));
+            let after = step(&program, &before);
+            let actual = after.registers[usize::from(destination)].unsigned();
+            let expected = lhs.wrapping_add(rhs) & 0xff;
+            let overflow = (lhs & 0x80) == (rhs & 0x80) && (expected & 0x80) != (lhs & 0x80);
+            passed &= actual == u64::from(expected)
+                && after.conditions.zero == (expected == 0)
+                && after.conditions.negative == (expected & 0x80 != 0)
+                && after.conditions.carry == (lhs + rhs >= 256)
+                && after.conditions.overflow == overflow
+                && after.pc == word(4)
+                && after.registers[0] == before.registers[0]
+                && after.registers[1] == before.registers[1]
+                && after.outcome == Outcome::Running;
+            result_digest.update(lhs.to_le_bytes());
+            result_digest.update(rhs.to_le_bytes());
+            result_digest.update(actual.to_le_bytes());
+            result_digest.update([
+                u8::from(after.conditions.zero),
+                u8::from(after.conditions.negative),
+                u8::from(after.conditions.carry),
+                u8::from(after.conditions.overflow),
+            ]);
+            result_digest.update(after.pc.unsigned().to_le_bytes());
+            cases_checked += 1;
+        }
+    }
+    AddStepReport {
+        schema: ADD_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        width: 8,
+        destination,
+        cases_checked,
+        passed,
+        result_sha256: hex_digest(result_digest.finalize()),
+    }
+}
+
+fn check_memory_trace_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: MemoryControl,
+) -> Result<MemoryTraceReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: MemoryTraceReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_memory_trace(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed memory report does not equal recomputation (claimed bytes {:?}, recomputed {:?})",
+            claimed.stored_bytes, recomputed.stored_bytes
+        )));
+    }
+    Ok(claimed)
+}
+
+fn compute_memory_trace(
+    semantic_package_sha256: String,
+    control: MemoryControl,
+) -> MemoryTraceReport {
+    let program = Program::new(16, word16(0), vec![0x03, 0x08, 0x02, 1, 0x02, 0x0b, 0, 1])
+        .expect("fixed memory program is valid");
+    let mut initial =
+        State::new(16, Memory::zeroed(4), word16(0)).expect("fixed memory state is valid");
+    initial.registers[1] = word16(0);
+    initial.registers[2] = word16(0xabcd);
+    let stored = step(&program, &initial);
+    let loaded = step(&program, &stored);
+    let mut stored_bytes = vec![
+        stored.memory.byte(1).expect("stored byte is in range"),
+        stored.memory.byte(2).expect("stored byte is in range"),
+    ];
+    if matches!(control, MemoryControl::ReverseStoredBytes) {
+        stored_bytes.reverse();
+    }
+
+    let trap_program = Program::new(16, word16(0), vec![0x03, 0x08, 0x02, 0])
+        .expect("fixed trap program is valid");
+    let mut trap_initial =
+        State::new(16, Memory::zeroed(4), word16(0)).expect("fixed trap state is valid");
+    trap_initial.registers[1] = word16(4);
+    trap_initial.registers[2] = word16(0xabcd);
+    let trapped = step(&trap_program, &trap_initial);
+
+    MemoryTraceReport {
+        schema: MEMORY_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        stored_word: 0xabcd,
+        stored_bytes,
+        loaded_word: loaded.registers[3].unsigned(),
+        boundary_trapped: matches!(trapped.outcome, Outcome::Trapped(Trap::DataRange { .. })),
+        no_partial_write: trapped.memory == trap_initial.memory,
+        successful_pcs: vec![
+            initial.pc.unsigned(),
+            stored.pc.unsigned(),
+            loaded.pc.unsigned(),
+        ],
+    }
+}
+
+fn check_branch_trace_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: BranchControl,
+) -> Result<BranchTraceReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: BranchTraceReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_branch_trace(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed branch report does not equal recomputation (claimed taken PCs {:?}, recomputed {:?})",
+            claimed.taken_pcs, recomputed.taken_pcs
+        )));
+    }
+    Ok(claimed)
+}
+
+fn compute_branch_trace(
+    semantic_package_sha256: String,
+    control: BranchControl,
+) -> BranchTraceReport {
+    let program = Program::new(
+        8,
+        word(0),
+        vec![0x30, 0, 0, 1, 0xff, 0, 0, 0, 0xff, 0, 0, 0],
+    )
+    .expect("fixed branch program is valid");
+    let mut taken_initial =
+        State::new(8, Memory::zeroed(0), word(0)).expect("fixed branch state is valid");
+    taken_initial.conditions.zero = true;
+    let mut untaken_initial = taken_initial.clone();
+    untaken_initial.conditions.zero = false;
+    let taken = run(&program, taken_initial, 2);
+    let untaken = run(&program, untaken_initial, 2);
+    let mut taken_pcs: Vec<u64> = taken
+        .states
+        .iter()
+        .map(|state| state.pc.unsigned())
+        .collect();
+    if matches!(control, BranchControl::WrongTargetBase) {
+        taken_pcs[1] = 4;
+    }
+    BranchTraceReport {
+        schema: BRANCH_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        taken_pcs,
+        untaken_pcs: untaken
+            .states
+            .iter()
+            .map(|state| state.pc.unsigned())
+            .collect(),
+        taken_stop: stop_label(taken.stop).to_owned(),
+        untaken_stop: stop_label(untaken.stop).to_owned(),
+    }
+}
+
+const fn stop_label(stop: StopReason) -> &'static str {
+    match stop {
+        StopReason::Halted => "halted",
+        StopReason::Trapped => "trapped",
+        StopReason::BoundExhausted => "bound-exhausted",
+    }
+}
+
 fn observation_witness_digest(left: &State, right: &State) -> String {
     let mut digest = Sha256::new();
     for state in [left, right] {
@@ -438,6 +831,10 @@ fn observation_witness_digest(left: &State, right: &State) -> String {
 
 fn word(value: u64) -> Word {
     Word::new(8, value).expect("fixed evidence word width is valid")
+}
+
+fn word16(value: u64) -> Word {
+    Word::new(16, value).expect("fixed evidence word width is valid")
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {

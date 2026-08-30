@@ -165,3 +165,27 @@ tests under strict all-target Clippy.
 This route earns only the `trace` class for the printed pair of states. It does
 not prove that one observation factors through another for every state, nor
 does it yet serialize arbitrary states for a public Python API.
+
+## 2026-08-30 — addition, memory, and branch flagship routes
+
+Added the next three concrete A0 evidence producers and replay checkers:
+
+- exhaustive width-8 addition checks all 65,536 operand pairs against an
+  independent arithmetic oracle for the destination, Z/N/C/V, PC=4, preserved
+  sources, and running outcome;
+- a 16-bit memory trace stores `0xabcd` at unaligned address 1, observes bytes
+  `[0xcd, 0xab]`, loads the same word, and separately establishes that an
+  out-of-range store traps without a partial write;
+- conditional-branch traces record taken PCs `[0,8,8]` and untaken PCs
+  `[0,4,4]`, including the repaired rule that halt preserves its PC.
+
+Each route has a distinct firing mutation. Addition reads r3 instead of the
+declared r2 destination. Memory reverses the two stored bytes. Branching uses
+the current PC instead of sequential PC as its relative-target base. All three
+controls exit nonzero with `semantic-mismatch`, while the positive CLI routes
+reproduce their reports. The evidence crate now has six passing route tests
+under strict all-target Clippy.
+
+Addition earns the `computation` class only for width 8. Memory and branch earn
+the `trace` class only for their printed inputs. None is a symbolic theorem,
+independent certificate, or kernel reconstruction.
