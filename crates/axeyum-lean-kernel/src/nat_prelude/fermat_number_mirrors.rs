@@ -36,12 +36,12 @@
 //! `k > 0`, `pow_pos` gives `2^m > 0`), so `coprime_two_left`'s reverse
 //! direction closes it at `gcd 2 (fermatNumber m) = 1`.
 
+use super::NatPrelude;
 use super::finite::{ne_of_lt, ne_symm};
 use super::helpers::{iff_forward, iff_reverse};
+use super::ops::{NatDev, NatOps};
 use super::parity::even_predicate;
 use super::primes::{absurd, or_cases};
-use super::NatPrelude;
-use super::ops::{NatDev, NatOps};
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -218,7 +218,13 @@ fn pow_mul_eq(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId, x: ExprId, y: ExprI
 
 /// `Not (Eq m n) → Or (Lt m n) (Lt n m)`, via `le_total` then `lt_or_eq_of_le`
 /// on each branch, refuting the equality case against `hne`.
-fn lt_or_gt_of_ne_local(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId, hne: ExprId) -> ExprId {
+fn lt_or_gt_of_ne_local(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    n: ExprId,
+    hne: ExprId,
+) -> ExprId {
     let p = *p;
     let logic = p.logic;
     let lt_mn = d.lt(m, n);
@@ -278,7 +284,13 @@ fn lt_or_gt_of_ne_local(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId
 /// `Lt m (add m t) → Lt zero t`, via `zero_le t` + `lt_or_eq_of_le`: the
 /// `Eq zero t` branch transports `hlt` along it to `Lt m (add m zero)`,
 /// defeq `Lt m m`, refuted by `lt_irrefl`.
-fn pos_of_lt_add_left(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, t: ExprId, hlt: ExprId) -> ExprId {
+fn pos_of_lt_add_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    t: ExprId,
+    hlt: ExprId,
+) -> ExprId {
     let p = *p;
     let zero = d.zero();
     let goal = d.lt(zero, t);
@@ -336,7 +348,13 @@ fn even_pow_two_of_pos(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId, hk_pos: Ex
 
     let step_eq_rev = d.symm(add_add_zero_j_j, add_j_j, step_eq);
     let motive1 = d.eq_motive(add_j_j, &move |d, x| d.const_app(p.even, &[x]));
-    let even_add_add_zero_j_j = d.transport(add_j_j, motive1, even_add_j_j, add_add_zero_j_j, step_eq_rev);
+    let even_add_add_zero_j_j = d.transport(
+        add_j_j,
+        motive1,
+        even_add_j_j,
+        add_add_zero_j_j,
+        step_eq_rev,
+    );
     // even_add_add_zero_j_j : Even (add (add zero j) j), defeq Even (mul j 2), defeq Even (pow 2 (succ (pred k)))
 
     let h_rev = d.symm(k, succ_pred_k, succpred_eq); // Eq (succ (pred k)) k
@@ -373,6 +391,7 @@ fn odd_fermat_number_local(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> Exp
 
 /// A `modEq d a b` proof from explicit witnesses `u, v` and an equation
 /// `Eq (a + d*u) (b + d*v)`.
+#[allow(clippy::too_many_arguments)]
 fn mk_mod_eq(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -457,7 +476,13 @@ fn base_congr_a_plus_1(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId 
 
 /// `Lt m n → Eq (gcd (fermatNumber m) (fermatNumber n)) one` — see the
 /// module doc for the full route.
-fn fermat_coprime_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId, hlt: ExprId) -> ExprId {
+fn fermat_coprime_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    m: ExprId,
+    n: ExprId,
+    hlt: ExprId,
+) -> ExprId {
     let p = *p;
     let two = d.num(2);
     let one = d.num(1);
@@ -492,14 +517,20 @@ fn fermat_coprime_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId
     let mul_j2 = d.mul(j, two);
     let mul_2j = d.mul(two, j);
     let comm_j2 = d.lemma(p.mul_comm, &[j, two]); // Eq (mul j two) (mul two j)
-    let (_last1, t_pow_eq_2j) = d.chain(t_pow, &[(mul_j2, t_pow_eq_pow_succpredt), (mul_2j, comm_j2)]);
+    let (_last1, t_pow_eq_2j) = d.chain(
+        t_pow,
+        &[(mul_j2, t_pow_eq_pow_succpredt), (mul_2j, comm_j2)],
+    );
 
     let exp_n = d.pow(two, n);
     let pow_two_addmt = d.pow(two, add_m_t);
     let congr_n = d.congr(n, add_m_t, eq_n, &move |d, x| d.pow(two, x));
     let pow_add_eq = d.lemma(p.pow_add, &[two, m, t]); // Eq (pow2 (add m t)) (mul (pow2 m) (pow2 t))
     let mul_em_tpow = d.mul(exp_m, t_pow);
-    let (_last2, exp_n_eq) = d.chain(exp_n, &[(pow_two_addmt, congr_n), (mul_em_tpow, pow_add_eq)]);
+    let (_last2, exp_n_eq) = d.chain(
+        exp_n,
+        &[(pow_two_addmt, congr_n), (mul_em_tpow, pow_add_eq)],
+    );
 
     let congr_tpow = d.congr(t_pow, mul_2j, t_pow_eq_2j, &move |d, x| d.mul(exp_m, x));
     let mul_em_2j = d.mul(exp_m, mul_2j);
@@ -540,11 +571,17 @@ fn fermat_coprime_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId
     let mod_eq_expn = d.transport(a2_j, motive_modeq2, mod_eq_final, pow_exp_n, master_eq_rev);
     // modEq a_plus_1 pow_exp_n one
 
-    let mod_eq_plus1 = d.lemma(p.mod_eq_add_right, &[a_plus_1, pow_exp_n, one, one, mod_eq_expn]);
+    let mod_eq_plus1 = d.lemma(
+        p.mod_eq_add_right,
+        &[a_plus_1, pow_exp_n, one, one, mod_eq_expn],
+    );
     // modEq a_plus_1 (add pow_exp_n one) (add one one), defeq modEq (fermatNumber m) (fermatNumber n) two
 
     let fermat_n_raw = d.add(pow_exp_n, one);
-    let gcd_eq = d.lemma(p.mod_eq_gcd_eq, &[a_plus_1, fermat_n_raw, two, mod_eq_plus1]);
+    let gcd_eq = d.lemma(
+        p.mod_eq_gcd_eq,
+        &[a_plus_1, fermat_n_raw, two, mod_eq_plus1],
+    );
     // Eq (gcd fermat_n_raw a_plus_1) (gcd two a_plus_1)
 
     let odd_fermat_m = odd_fermat_number_local(d, &p, m); // Odd (add a one) = Odd a_plus_1
@@ -558,10 +595,16 @@ fn fermat_coprime_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId
 
     let gcd_fnraw_ap1 = d.gcd(fermat_n_raw, a_plus_1);
     let gcd_two_ap1 = d.gcd(two, a_plus_1);
-    let (_last5, gcd_nm_eq_one) = d.chain(gcd_fnraw_ap1, &[(gcd_two_ap1, gcd_eq), (one, gcd_two_ap1_eq_one)]);
+    let (_last5, gcd_nm_eq_one) = d.chain(
+        gcd_fnraw_ap1,
+        &[(gcd_two_ap1, gcd_eq), (one, gcd_two_ap1_eq_one)],
+    );
     // Eq (gcd fermat_n_raw a_plus_1) one
 
-    d.lemma(p.coprime_symmetric, &[fermat_n_raw, a_plus_1, gcd_nm_eq_one])
+    d.lemma(
+        p.coprime_symmetric,
+        &[fermat_n_raw, a_plus_1, gcd_nm_eq_one],
+    )
     // Eq (gcd a_plus_1 fermat_n_raw) one, defeq Eq (gcd (fermatNumber m) (fermatNumber n)) one
 }
 

@@ -1217,6 +1217,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dist_zero_right,
         p.dist_zero_left,
         p.dist_succ_succ,
+        // `fermat-mirrors` lane: `fermat_number_mirrors.rs`.
+        p.fermatnumber_ne_one,
+        p.fermatnumber_mono,
+        p.coprime_fermatnumber_fermatnumber,
     ]
 }
 
@@ -18783,6 +18787,161 @@ fn totient_mul_of_coprime_computes_at_coprime_pairs_with_a_non_coprime_control()
     assert!(
         f.k.axiom_footprint(p.totient_mul_of_coprime).is_empty(),
         "totient_mul_of_coprime must rest on zero axioms"
+    );
+}
+
+/// `Nat.fermatNumber_ne_one`/`Nat.fermatNumber_mono`/
+/// `Nat.coprime_fermatNumber_fermatNumber` apply at a genuinely FREE variable
+/// (each is admitted symbolically, over ANY `n`/`m`/`x`/`y`) and at small
+/// concrete instances (`fermatNumber 0 = 3`, `1 = 5`, `2 = 17`), with a
+/// NEGATIVE CONTROL confirming coprimality genuinely needs the `Ne m n`
+/// hypothesis: `gcd (fermatNumber 0) (fermatNumber 0) = gcd 3 3 = 3`, not `1`.
+#[test]
+fn fermat_number_mirrors_apply_at_free_and_concrete_instances_with_a_reflexive_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let seventeen = f.num(17);
+
+    // --- fermatNumber 0/1/2 compute to 3/5/17 (pinning the base facts the
+    // rest of this test relies on) ---
+    let f0 = f.const_app(p.fermat_number, &[zero]);
+    let f1 = f.const_app(p.fermat_number, &[one]);
+    let f2 = f.const_app(p.fermat_number, &[two]);
+    assert!(f.k.def_eq(f0, three), "fermatNumber 0 must compute to 3");
+    assert!(f.k.def_eq(f1, five), "fermatNumber 1 must compute to 5");
+    assert!(
+        f.k.def_eq(f2, seventeen),
+        "fermatNumber 2 must compute to 17"
+    );
+
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    // --- fermatNumber_ne_one, at a genuinely free variable ---
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let mut ctx_n = LocalContext::new();
+    ctx_n.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let applied_free = f.const_app(p.fermatnumber_ne_one, &[n]);
+    f.k.infer_in(applied_free, &mut ctx_n)
+        .expect("fermatNumber_ne_one must apply at a free n");
+
+    // --- fermatNumber_ne_one, at n = 0 ---
+    let applied0 = f.const_app(p.fermatnumber_ne_one, &[zero]);
+    f.k.infer(applied0)
+        .expect("fermatNumber_ne_one must apply at n=0");
+
+    // --- fermatNumber_mono, at genuinely free x, y ---
+    let x_fv = f.fresh_fvar();
+    let x = f.k.fvar(x_fv);
+    let y_fv = f.fresh_fvar();
+    let y = f.k.fvar(y_fv);
+    let mut ctx_xy = LocalContext::new();
+    for fvar in [x_fv, y_fv] {
+        ctx_xy.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let partial_mono = f.const_app(p.fermatnumber_mono, &[x, y]);
+    let inferred_mono_ty =
+        f.k.infer_in(partial_mono, &mut ctx_xy)
+            .expect("fermatNumber_mono must apply to two free naturals");
+    let expected_hyp = f.le(x, y);
+    let fx = f.const_app(p.fermat_number, &[x]);
+    let fy = f.const_app(p.fermat_number, &[y]);
+    let expected_concl = f.le(fx, fy);
+    let expected_mono_ty = f.arrow(expected_hyp, expected_concl);
+    assert!(
+        f.k.def_eq(inferred_mono_ty, expected_mono_ty),
+        "fermatNumber_mono's type must be Le x y -> Le (fermatNumber x) (fermatNumber y)"
+    );
+
+    // --- fermatNumber_mono, concretely at (0, 1): fermatNumber 0=3 <= fermatNumber 1=5 ---
+    let le_0_1 = f.const_app(p.zero_le, &[one]);
+    let applied_mono01 = f.const_app(p.fermatnumber_mono, &[zero, one, le_0_1]);
+    let inferred01 =
+        f.k.infer(applied_mono01)
+            .expect("fermatNumber_mono must apply at (0, 1)");
+    let expected01 = f.le(f0, f1);
+    assert!(f.k.def_eq(inferred01, expected01));
+    assert!(f.k.def_eq(f0, three));
+    assert!(f.k.def_eq(f1, five));
+
+    // --- coprime_fermatNumber_fermatNumber, concretely at (0, 1) ---
+    // gcd(fermatNumber 0, fermatNumber 1) = gcd(3, 5) = 1.
+    let bfalse = f.bool_false();
+    let refl_false = f.bool_refl(bfalse);
+    let ne_0_1 = f.const_app(p.ne_of_beq_eq_false, &[zero, one, refl_false]);
+    let applied_cop01 = f.const_app(p.coprime_fermatnumber_fermatnumber, &[zero, one, ne_0_1]);
+    let inferred_cop01 =
+        f.k.infer(applied_cop01)
+            .expect("coprime_fermatNumber_fermatNumber must apply at (0, 1)");
+    let gcd_f0_f1 = f.gcd(f0, f1);
+    let expected_cop01 = f.eq(gcd_f0_f1, one);
+    assert!(f.k.def_eq(inferred_cop01, expected_cop01));
+    assert!(
+        f.k.def_eq(gcd_f0_f1, one),
+        "gcd(fermatNumber 0, fermatNumber 1) = gcd(3, 5) must reduce to 1"
+    );
+
+    // --- coprime_fermatNumber_fermatNumber, concretely at (1, 2) ---
+    // gcd(fermatNumber 1, fermatNumber 2) = gcd(5, 17) = 1 -- a SECOND pair,
+    // pinning the arithmetic independently of the first (and taking the
+    // theorem's `Lt n m` branch rather than `Lt m n`, exercising the
+    // `coprime_symmetric` swap `declare_coprime_fermatnumber_fermatnumber`
+    // uses on that side).
+    let ne_1_2 = f.const_app(p.ne_of_beq_eq_false, &[one, two, refl_false]);
+    let applied_cop12 = f.const_app(p.coprime_fermatnumber_fermatnumber, &[one, two, ne_1_2]);
+    let inferred_cop12 =
+        f.k.infer(applied_cop12)
+            .expect("coprime_fermatNumber_fermatNumber must apply at (1, 2)");
+    let gcd_f1_f2 = f.gcd(f1, f2);
+    let expected_cop12 = f.eq(gcd_f1_f2, one);
+    assert!(f.k.def_eq(inferred_cop12, expected_cop12));
+    assert!(
+        f.k.def_eq(gcd_f1_f2, one),
+        "gcd(fermatNumber 1, fermatNumber 2) = gcd(5, 17) must reduce to 1"
+    );
+
+    // --- NEGATIVE CONTROL: m = n = 0 -- the `Ne m n` hypothesis is essential.
+    // Without distinctness, gcd(fermatNumber 0, fermatNumber 0) = gcd(3, 3) =
+    // 3, NOT 1: coprimality genuinely depends on the hypothesis rather than
+    // holding vacuously for this definition's shape.
+    let gcd_f0_f0 = f.gcd(f0, f0);
+    assert!(
+        f.k.def_eq(gcd_f0_f0, three),
+        "gcd(fermatNumber 0, fermatNumber 0) = gcd(3, 3) must reduce to 3"
+    );
+    assert!(
+        !f.k.def_eq(gcd_f0_f0, one),
+        "gcd(3, 3) must NOT be defeq to 1 -- the control must genuinely fail"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.fermatnumber_ne_one).is_empty(),
+        "fermatNumber_ne_one must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.fermatnumber_mono).is_empty(),
+        "fermatNumber_mono must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.coprime_fermatnumber_fermatnumber)
+            .is_empty(),
+        "coprime_fermatNumber_fermatNumber must rest on zero axioms"
     );
 }
 
