@@ -785,9 +785,23 @@ def parse_env_dump(text: str) -> dict[str, Any]:
     return snapshot
 
 
-def build_vocabulary(env: set[str], inventory: dict[str, dict[str, Any]],
-                     catalog: dict[str, Any],
-                     facts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def derive_vocabulary_content(
+        env: set[str], inventory: dict[str, dict[str, Any]],
+        catalog: dict[str, Any],
+        facts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """The two derived fields this script needs, re-derived independently.
+
+    This script does NOT own `mathlib-statable-vocabulary-v1.json`;
+    `gen-autogenesis-statable-vocabulary.py` does (ADR-0652). It used to
+    build the WHOLE document and write it, which deleted the owner's
+    `bridge_provenance` and `row_digest` -- ADR-0631's per-constant
+    classification -- on every draw, while exiting 0.
+
+    What survives here is the derivation, which is genuinely independent:
+    constants come from the pinned inventory's `type_repr` here and from
+    `mathlib-statement-constants-v1.json` there. It is used to CROSS-CHECK
+    the owned artifact in `read_vocabulary`, never to overwrite it.
+    """
     external = [row for row in catalog["facts"] if row["kind"] == "external-source"]
     rows = []
     open_count = 0
@@ -806,34 +820,34 @@ def build_vocabulary(env: set[str], inventory: dict[str, dict[str, Any]],
     bridge: set[str] = set()
     for row in rows:
         bridge |= set(row["constants"]) - env
-    return {
-        "schema_version": 1,
-        "kind": "axeyum-autogenesis-statable-vocabulary",
-        "derivation": (
-            "bridge = {Lean constants in the pinned type_repr of every SETTLED "
-            "ml430 mirror} \\ kernel-environment-snapshot-v1.declarations. "
-            "Derived, never asserted: an entry exists only because a mirror "
-            "stated with that constant has already been closed here."),
-        "keyed_by": (
-            "Mathlib source_name, NOT fact_id. Naming a fact id here would put "
-            "held-out ids in a non-population artifact -- "
-            "check-autogenesis-holdout-isolation.py caught exactly that on the "
-            "first draft of this file, 35 references. The checker resolves "
-            "source_name to a fact through the catalog, which IS a population "
-            "file and may name them."),
-        "source": {"mathlib_commit": SOURCE_COMMIT, "mathlib_tag": SOURCE_TAG,
-                   "statement_inventory_sha256": INVENTORY_SHA256},
-        "environment_snapshot": "artifacts/autogenesis/kernel-environment-snapshot-v1.json",
-        "coverage": {
-            "catalogued_propositions": len(rows) + open_count,
-            "settled_propositions": len(rows),
-            "open_propositions": open_count,
-            "distinct_constants": len({c for r in rows for c in r["constants"]}),
-            "bridge_constants": len(bridge),
-        },
-        "bridge": sorted(bridge),
-        "settled": rows,
-    }
+    return {"bridge": sorted(bridge), "settled": rows}
+
+
+def read_vocabulary(env: set[str], inventory: dict[str, dict[str, Any]],
+                    catalog: dict[str, Any],
+                    facts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Load the OWNED vocabulary and confirm it agrees with our derivation.
+
+    Reading rather than writing is the whole point: one producer per key.
+    The agreement check is what a second writer used to buy us by accident
+    -- two independent derivations of `bridge` and `settled` -- kept
+    deliberately, and made to FAIL rather than to overwrite.
+    """
+    vocabulary = load_json(VOCABULARY)
+    derived = derive_vocabulary_content(env, inventory, catalog, facts)
+    for field in ("bridge", "settled"):
+        on_disk = vocabulary.get(field)
+        if on_disk != derived[field]:
+            raise RefillError(
+                f"{VOCABULARY.name}: `{field}` disagrees with this script's "
+                f"independent derivation ({len(derived[field])} derived, "
+                f"{len(on_disk) if isinstance(on_disk, list) else 'absent'} "
+                f"on disk). This script does not own that file and will not "
+                f"rewrite it -- regenerate with "
+                f"scripts/gen-autogenesis-statable-vocabulary.py --write, "
+                f"which owns it and emits bridge_provenance and row_digest "
+                f"as well.")
+    return vocabulary
 
 
 def admissible(env: set[str], vocabulary: dict[str, Any]) -> set[str]:
@@ -1676,7 +1690,8 @@ def main() -> int:
             fact = json.loads(path.read_text())
             facts[fact["id"]] = fact
 
-        vocabulary = build_vocabulary(env, inventory, catalog, facts)
+        # ADR-0652: READ, never write. This script is not the owner.
+        vocabulary = read_vocabulary(env, inventory, catalog, facts)
 
         # The false-positive control, run against the real population on every
         # invocation rather than against a fixture: a screen that rejects a
@@ -1701,7 +1716,11 @@ def main() -> int:
         guard(entries, v1_nursery, env, validation)
         extension = build_extension(entries, reasons, validation)
 
-        outputs = {VOCABULARY: render(vocabulary), EXTENSION: render(extension)}
+        # One entry, and it must stay one: VOCABULARY belongs to
+        # gen-autogenesis-statable-vocabulary.py (ADR-0652), and
+        # check-generated-artifact-ownership.py fails if this script can
+        # write it.
+        outputs = {EXTENSION: render(extension)}
 
         if args.check:
             stale = [p for p, text in outputs.items()
