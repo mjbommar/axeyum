@@ -4,8 +4,8 @@
   "title": "Mathlib v4.30 source proposition Nat.totient_dvd_of_dvd",
   "statement": "The proposition declared as `Nat.totient_dvd_of_dvd` in the pinned Mathlib v4.30 source: for naturals a and b, a | b implies totient(a) | totient(b).",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.totient_dvd_of_dvd : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.dvd x0 x1) -> AxNat.dvd (AxNat.totient x0) (AxNat.totient x1))))",
+    "language": "lean4-surface",
+    "statement": "∀ {a b : ℕ}, a ∣ b → a.totient ∣ b.totient",
     "fragment": "Nat",
     "kernel_theorem": "Nat.totient_dvd_of_dvd",
     "free_symbols": [

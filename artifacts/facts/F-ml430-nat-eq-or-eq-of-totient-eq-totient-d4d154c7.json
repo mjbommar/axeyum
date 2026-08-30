@@ -4,8 +4,8 @@
   "title": "Mathlib v4.30 source proposition Nat.eq_or_eq_of_totient_eq_totient",
   "statement": "The proposition declared as `Nat.eq_or_eq_of_totient_eq_totient` in the pinned Mathlib v4.30 source: for naturals a and b, a | b and totient(a) = totient(b) implies a = b or 2*a = b.",
   "formal": {
-    "language": "lean4",
-    "statement": "theorem Nat.eq_or_eq_of_totient_eq_totient : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.dvd x0 x1) -> ((x3 : Eq.{1} AxNat (AxNat.totient x0) (AxNat.totient x1)) -> Or (Eq.{1} AxNat x0 x1) (Eq.{1} AxNat (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0) x1)))))",
+    "language": "lean4-surface",
+    "statement": "∀ {a b : ℕ}, a ∣ b → a.totient = b.totient → a = b ∨ 2 * a = b",
     "fragment": "Nat",
     "kernel_theorem": "Nat.eq_or_eq_of_totient_eq_totient",
     "free_symbols": [
