@@ -4600,8 +4600,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_dvd_mul_iff: kernel.name_str(nat, "prime_dvd_mul_iff"),
             prime_coprime_iff_not_dvd: kernel.name_str(nat, "prime_coprime_iff_not_dvd"),
             prime_eq_two_or_odd: kernel.name_str(nat, "prime_eq_two_or_odd"),
-            prime_eq_two_or_mod_two_eq_one: kernel
-                .name_str(nat, "prime_eq_two_or_mod_two_eq_one"),
+            prime_eq_two_or_mod_two_eq_one: kernel.name_str(nat, "prime_eq_two_or_mod_two_eq_one"),
             prime_mod_two_eq_one_iff_ne_two: kernel
                 .name_str(nat, "prime_mod_two_eq_one_iff_ne_two"),
             prime_coprime_pow_of_not_dvd: kernel.name_str(nat, "prime_coprime_pow_of_not_dvd"),

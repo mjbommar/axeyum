@@ -16,7 +16,9 @@
 
 use super::NatPrelude;
 use super::finite::{ne_of_lt, ne_symm};
-use super::helpers::{and_left, and_right, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right};
+use super::helpers::{
+    and_left, and_right, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right,
+};
 use super::ops::{NatDev, NatOps};
 use super::parity::even_predicate;
 use super::primes::{absurd, or_cases, prime_condition, prime_parts};
@@ -275,7 +277,10 @@ pub(super) fn declare_prime_eq_one_or_self_of_dvd(
 /// # Errors
 ///
 /// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_prime_dvd_iff_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_prime_dvd_iff_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     d.theorem(p.prime_dvd_iff_eq, 2, &|d, v| {
         let (p_var, a_var) = (v[0], v[1]);
@@ -352,7 +357,10 @@ pub(super) fn declare_prime_dvd_iff_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Re
 /// # Errors
 ///
 /// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_prime_dvd_mul_iff(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_prime_dvd_mul_iff(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     d.theorem(p.prime_dvd_mul_iff, 3, &|d, v| {
         let (p_var, m_var, n_var) = (v[0], v[1], v[2]);
@@ -495,7 +503,10 @@ pub(super) fn declare_prime_coprime_iff_not_dvd(
 /// # Errors
 ///
 /// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_prime_eq_two_or_odd(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_prime_eq_two_or_odd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     d.theorem(p.prime_eq_two_or_odd, 1, &|d, v| {
         let p_var = v[0];
@@ -689,7 +700,16 @@ pub(super) fn declare_prime_mod_two_eq_one_iff_ne_two(
                 let result = d.apply(mp_fn2, &[h]);
                 d.lam_fv(h_fv, odd_ty, result)
             };
-            let result = or_cases(d, &p, even_ty, odd_ty, mod_eq_one_ty, on_even, on_odd, split);
+            let result = or_cases(
+                d,
+                &p,
+                even_ty,
+                odd_ty,
+                mod_eq_one_ty,
+                on_even,
+                on_odd,
+                split,
+            );
             d.lam_fv(hne_fv, ne_two_ty, result)
         };
 
@@ -766,7 +786,10 @@ pub(super) fn declare_prime_coprime_pow_of_not_dvd(
             },
             &|d, j, ih| {
                 let pj = d.pow(p_var, j);
-                d.lemma(p.coprime_mul_of_coprime, &[a_var, pj, p_var, ih, coprime_a_p])
+                d.lemma(
+                    p.coprime_mul_of_coprime,
+                    &[a_var, pj, p_var, ih, coprime_a_p],
+                )
             },
             m_var,
         );
