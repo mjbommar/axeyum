@@ -1,6 +1,6 @@
 {
   "generated_by": "scripts/check-trust-closure.py --update",
-  "min_subjects": 1953,
-  "min_ratio": 0.9582,
-  "min_declarations": 2469
+  "min_subjects": 1956,
+  "min_ratio": 0.9583,
+  "min_declarations": 2482
 }
