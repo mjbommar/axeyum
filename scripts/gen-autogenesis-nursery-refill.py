@@ -131,11 +131,28 @@ HYGIENE = re.compile(
     r"|\.congr_|\.sizeOf_|\.inj$|\.injEq$|\.noConfusion|^Int\.Linear\.|^Nat\.Linear\."
 )
 
-# The two surviving held-out families are `natural-logarithm` (21 open) and
-# `natural-square-root` (16). The split key is `<family>:<statement-shape>`
-# BECAUSE a route for one member is evidence about its siblings -- so a refill
-# row over the same constructions would spend blind-evaluation value without
-# anyone touching the partition. Excluded by construction, not by care.
+# The split key is `<family>:<statement-shape>` BECAUSE a route for one member
+# is evidence about its siblings -- so a refill row over the same constructions
+# would spend blind-evaluation value without anyone touching the partition.
+# Excluded by construction, not by care.
+#
+# UPDATED 2026-08-30 (draw 5). When this was written the two surviving v1
+# held-out families were `natural-logarithm` (21 open) and
+# `natural-square-root` (16). `natural-logarithm` was amended OUT of held-out
+# the same day under ADR-0542 (ordinary hand development in nat_prelude/log.rs
+# and clog.rs spent it), so `Nat.log`/`Nat.clog`/`Nat.log2` no longer guard a
+# blind family. **They are kept here deliberately.** Dropping them is a
+# behaviour change that unlocks `Mathlib.Data.Nat.Log`'s 34 candidates for a
+# development/train family, which is a decision for a draw that wants them and
+# not a side effect of an unrelated draw; keeping them over-excludes, which is
+# the safe direction. `Nat.sqrt` is still live -- `natural-square-root` is now
+# the ONLY surviving v1 held-out family.
+#
+# Note the consequence for anyone reading `propose-nursery-refill.py`'s output:
+# the PROPOSER does not apply this screen and the GENERATOR does, so
+# `Mathlib.Data.Nat.Log` and `Mathlib.Data.Nat.Sqrt` appear in the proposer's
+# "ready families" and yield ZERO candidates here. The ready set is 17 drawable
+# of the 19 reported.
 HELD_OUT_CONSTRUCTIONS = {"Nat.log", "Nat.clog", "Nat.log2", "Nat.sqrt"}
 
 # ---------------------------------------------------------------------------
@@ -321,6 +338,101 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
         "Mathlib.Data.Int.Lemmas",
         "Mathlib.Algebra.Order.Group.Unbundled.Int",
         "Init.Data.Dyadic.Basic"),
+    # --- draw 5, 2026-08-30 (ADR-0620) ---------------------------------------
+    # SIX families: the largest draw the cycle permits on TWO held-out families
+    # (`ceil(n/3)`, so n=6 is the last size before a third held-out slot opens).
+    # That ceiling is the binding constraint of this draw and the reason it is
+    # six rather than the nineteen the proposer reports as ready.
+    #
+    # THE MEASURED FINDING, which changes what a draw can be from here on.
+    # Held-out-SAFE supply is nearly exhausted, while dispatchable supply is
+    # abundant. Measured 2026-08-30 over all 94 modules carrying survivors:
+    #
+    #   * A module belongs to exactly ONE family -- `select`'s `module_family`
+    #     is a dict -- so the 193 survivors still sitting in
+    #     `Init.Data.Int.DivMod.Lemmas` are unreachable: `integer-division`
+    #     owns that module. Owned modules cannot supply a new family at all.
+    #   * Of the 19 modules the proposer calls ready, `Mathlib.Data.Nat.Log`
+    #     and `Mathlib.Data.Nat.Sqrt` yield ZERO here (HELD_OUT_CONSTRUCTIONS),
+    #     leaving 17 drawable.
+    #   * Every one of those 17 is over mathematics an existing DEVELOPMENT or
+    #     TRAIN family already publishes -- gcd, ModEq, Prime, factorial,
+    #     choose, bitwise, fib, Int basics. Draws 2, 3 and 4 each excluded
+    #     exactly this list from held-out and the reason is unchanged: a blind
+    #     family over published mathematics is the natural-division violation
+    #     ADR-0615 records. They are fine for development/train, where nothing
+    #     is blind, and that is where all four dispatchable families below go.
+    #   * So both held-out slots had to come from UN-OWNED modules below the
+    #     10-candidate floor with no development/train adjacency, combined the
+    #     way draw 3 and draw 4 combined theirs. The whole of that supply is
+    #     24 propositions across eight modules. This draw takes 20 of them.
+    #     **After this draw ~4 remain, so draw 6 cannot satisfy R5 from
+    #     un-owned modules at all.** That is a real terminal condition and it
+    #     is recorded in ADR-0620 rather than worked around here.
+    #
+    # THE TWO HELD-OUT FAMILIES. Both are R9-clean by measurement, not by
+    # argument: 0 of 10 selected rows in either has a declaration of the same
+    # Mathlib name in the kernel environment (the natural-binomial
+    # contamination shape, ADR-0542, checked before preregistration).
+    #
+    #   integer-multiplicative-structure (held-out) -- `Init.Data.Int.Cooper`
+    #   (3: dvd_of_mul_dvd, dvd_emod_add_of_dvd_add, dvd_mul_emod_add_of_dvd_
+    #   mul_add) + `Mathlib.Algebra.Group.Int.Units` (7: mul_eq_one_iff_eq_one_
+    #   or_neg_one and its relatives). One coherent question -- what a product
+    #   lets you conclude about its integer factors. The Cooper rows are the
+    #   same mathematics as `integer-division`, `integer-division-boundary-
+    #   cases` and `integer-division-inequalities`, ALL THREE of which are
+    #   already held-out: blind beside blind, the draw-2 precedent. No family
+    #   names Int units at all.
+    #
+    #   descent-and-well-ordering (held-out) -- `Mathlib.Data.Int.LeastGreatest`
+    #   (2: exists_least_of_bdd, exists_greatest_of_bdd) +
+    #   `Mathlib.NumberTheory.SumFourSquares` (4) +
+    #   `Mathlib.Order.Interval.Finset.Nat` (4: Nat.cauchy_induction and
+    #   relatives). One coherent question again -- the extremal principle and
+    #   the descent arguments built on it: well-ordering of a bounded integer
+    #   set, forward-backward (Cauchy) induction, and Lagrange's four-square
+    #   theorem with Euler's identity. `cauchy_induction` is adjacent to
+    #   `natural-induction-and-divisibility` and `range-induction`, both
+    #   held-out; the other two modules have no existing family.
+    #
+    #   `Mathlib.NumberTheory.{SumTwoSquares,PythagoreanTriples}` were
+    #   available and are deliberately NOT taken: `Int.sq_ne_two_mod_four` is
+    #   mod-4 arithmetic, adjacent to the TRAIN family
+    #   `integer-modular-equivalence`, and it is not worth a mild leak to buy
+    #   slack. Both held-out pools are therefore exactly 10 with none dropped.
+    #
+    # THE FOUR DISPATCHABLE FAMILIES are the four highest-yield drawable
+    # modules (117, 82, 80, 87 survivors), all gcd/ModEq -- precisely the
+    # mathematics draws 2-4 excluded from HELD-OUT and explicitly allowed in
+    # development/train.
+    #
+    # PRIMARY-MODULE ORDERING IS CHOSEN, NOT INCIDENTAL, exactly as in draw 4:
+    # the cycle is mechanical over `FAMILY_MODULES[f][0]` sorted lexicographically,
+    # so the SET and each tuple's first element are picked to put the two
+    # held-out-safe families at cycle positions 0 and 3. Verified by running
+    # assign_partitions():
+    #
+    #   Init.Data.Int.Cooper            integer-multiplicative-structure  held-out
+    #   Init.Data.Int.Gcd               integer-gcd-algorithm             development
+    #   Init.Data.Nat.Gcd               natural-gcd-algorithm             train
+    #   Mathlib.Data.Int.LeastGreatest  descent-and-well-ordering         held-out
+    #   Mathlib.Data.Int.ModEq          integer-congruence-lemmas         development
+    #   Mathlib.Data.Nat.ModEq          natural-congruence-lemmas         train
+    #
+    # No target outcome was consulted. R6 re-derives the assignment and R10
+    # ties it to the preregistered one.
+    "integer-multiplicative-structure": (
+        "Init.Data.Int.Cooper",
+        "Mathlib.Algebra.Group.Int.Units"),
+    "integer-gcd-algorithm": ("Init.Data.Int.Gcd",),
+    "natural-gcd-algorithm": ("Init.Data.Nat.Gcd",),
+    "descent-and-well-ordering": (
+        "Mathlib.Data.Int.LeastGreatest",
+        "Mathlib.NumberTheory.SumFourSquares",
+        "Mathlib.Order.Interval.Finset.Nat"),
+    "integer-congruence-lemmas": ("Mathlib.Data.Int.ModEq",),
+    "natural-congruence-lemmas": ("Mathlib.Data.Nat.ModEq",),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -347,6 +459,16 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
     "natural-order-bridging": ("kernel-induction", "kernel-library-application"),
     "integer-order-inequalities": ("kernel-induction", "kernel-library-application"),
     "integer-absolute-value": ("kernel-induction", "kernel-library-application"),
+    # --- draw 5, 2026-08-30 ---------------------------------------------------
+    "integer-multiplicative-structure": (
+        "divisibility-library-application", "kernel-library-application"),
+    "integer-gcd-algorithm": ("divisibility-library-application", "kernel-induction"),
+    "natural-gcd-algorithm": ("divisibility-library-application", "kernel-induction"),
+    "descent-and-well-ordering": ("kernel-induction", "kernel-library-application"),
+    "integer-congruence-lemmas": (
+        "kernel-library-application", "modular-arithmetic-reconstruction"),
+    "natural-congruence-lemmas": (
+        "kernel-library-application", "modular-arithmetic-reconstruction"),
 }
 
 PER_FAMILY = 10

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-nat-euler-four-squares-21d8c900",
+  "title": "Mathlib v4.30 source proposition Nat.euler_four_squares",
+  "statement": "The proposition declared as `Nat.euler_four_squares` in the pinned Mathlib v4.30 source.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "∀ (a b c d x y z w : ℕ),\n  (↑a * ↑x - ↑b * ↑y - ↑c * ↑z - ↑d * ↑w).natAbs ^ 2 + (↑a * ↑y + ↑b * ↑x + ↑c * ↑w - ↑d * ↑z).natAbs ^ 2 +\n        (↑a * ↑z - ↑b * ↑w + ↑c * ↑x + ↑d * ↑y).natAbs ^ 2 +\n      (↑a * ↑w + ↑b * ↑z - ↑c * ↑y + ↑d * ↑x).natAbs ^ 2 =\n    (a ^ 2 + b ^ 2 + c ^ 2 + d ^ 2) * (x ^ 2 + y ^ 2 + z ^ 2 + w ^ 2)",
+    "fragment": "Nat"
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "not established in this ledger",
+    "source": "statement-only extraction of `Nat.euler_four_squares` from Mathlib v4.30.0; no proof value was exposed",
+    "prior_art": [
+      {
+        "who": "the Mathlib contributors",
+        "what": "the theorem declaration `Nat.euler_four_squares`",
+        "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+        "year": 2026,
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+      }
+    ]
+  },
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+}
