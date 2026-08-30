@@ -127,7 +127,42 @@ def scan_targets() -> list[pathlib.Path]:
     walk that only looked at `*.json` would therefore skip every file an agent
     actually wrote its reasoning into.
     """
-    targets = list(ARTIFACTS.glob("*.json"))
+    # `rglob`, not `glob`, since 2026-08-30. The non-recursive form silently
+    # dropped `artifacts/autogenesis/producer-contracts/` -- 2 JSON files, the
+    # same class of artifact in the same tree this gate claims to cover, in a
+    # subdirectory that did not exist when the glob was written. A producer
+    # contract is prospective dispatch: naming a held-out fact in one is exactly
+    # the breach this gate exists for.
+    #
+    # This is the ONLY widening taken. The 2026-08-30 session audit found held-out
+    # ids outside the scan set and asked whether the scan should grow; re-derived
+    # here over all 136 pre-amendment ids, **18 distinct ids** appear in `crates/`,
+    # `docs/`, `scripts/` and `PLAN.md`. Widening to those trees is REFUSED, and
+    # not on volume:
+    #
+    #   * 13 of the 18 are in `docs/plan/generated/autogenesis-baseline.json`, a
+    #     premise->consequent graph whose edges come from the facts' OWN
+    #     preregistered `depends_on`. It republishes population data; it adds
+    #     nothing a reader of the nursery does not already have.
+    #   * `nat_prelude/sqrt.rs:55` reasons in a source comment about
+    #     `F:ml430-nat-sqrt-eq-79ae8eae` and says `sqrt_zero`/`sqrt_one` are its
+    #     `n in {0,1}` instances. That is an incidental mention, not a spend: the
+    #     row is the QUANTIFIED `forall n, sqrt (n*n) = n`, two instances of a
+    #     universal do not establish it, and the comment explicitly declines the
+    #     general theorem. (Were it a closed equation, `check-holdout-closed-
+    #     evaluation.py` would refuse it -- a different gate, deliberately.)
+    #   * The rest are bookkeeping: an attestation ceiling ADR, draw status
+    #     files, a refusal-test fixture, a `not_elaborable` exemption set.
+    #
+    # And the decisive one: a widened scan would fire on
+    # `docs/research/11-design-review/2026-08-30-session-audit.md`, the document
+    # that FOUND the contamination, and on the ADR recording the repair. **A gate
+    # that reds when someone writes down a discovered leak punishes disclosure**,
+    # and the predictable response is an exemption list that grows until the gate
+    # means nothing. The narrow scan measures "no reference in the autogenesis
+    # artifacts", which is a real property; the verdict line should be read as
+    # that, and not as "the held-out set is untouched by the tree".
+    targets = list(ARTIFACTS.rglob("*.json"))
     if EPISODES.is_dir():
         targets += EPISODES.rglob("*.json")
         targets += EPISODES.rglob("*.json.snapshot")
