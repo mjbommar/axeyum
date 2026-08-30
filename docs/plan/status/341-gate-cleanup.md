@@ -6,10 +6,11 @@
 [`docs/plan/notes/341-gate-cleanup.md`](../notes/341-gate-cleanup.md).
 
     before   declared=404|ok=248|failed=43|deferred=113
-    after    declared=405|ok=261|failed=23|deferred=121
+    after    declared=405|ok=273|failed=17|deferred=115
 
 All 43 were re-run at merged HEAD first and all 43 still failed, so none was a
-stale-list artifact. **20 cleared, 23 left red with reasons.**
+stale-list artifact. **26 no longer fail** — 24 fixed, plus 2 reclassified as
+host-conditional and deferred. **17 left red with reasons.**
 
 The one real defect: a spurious `depends_on` back-edge made the fact DAG cyclic
 (`log_mono_right` <-> `log_monotone`), which exited `gen-autogenesis-baseline.py`
@@ -34,7 +35,7 @@ span development/train — none reaches held-out; the fix is an ADR-0542
 amendment, not gate work), `development-partition`, `mobility-census` (3 real
 violations another lane kept red today), `local-ci-freshness` (needs a real CI
 run), `plan-authority` (systemic, 1.98 MB of status files), `obstruction-graph`
-(an unclassified decline shape it correctly refuses to drop), and seven pinned
+(an unclassified decline shape it correctly refuses to drop), and six pinned
 counts I could not verify as legitimate moves.
 
 <!-- /plan-section -->

@@ -3,15 +3,17 @@
 Detail behind [`docs/plan/status/341-gate-cleanup.md`](../status/341-gate-cleanup.md).
 
     before   CHECK_FAST|NOT-A-FULL-GATE|declared=404|ok=248|failed=43|deferred=113|budget=3s
-    after    CHECK_FAST|NOT-A-FULL-GATE|declared=405|ok=261|failed=23|deferred=121|budget=3s
+    after    CHECK_FAST|NOT-A-FULL-GATE|declared=405|ok=273|failed=17|deferred=115|budget=3s
 
 All 43 were re-run at the merged HEAD first: **all 43 still failed**, so none was
 an artifact of a stale list. `declared` rises by one because this lane
 registered a new control in both `scripts/check.sh` and the justfile.
 
-The `after` run was taken *before* the last four commits, and it also caught
-three steps this lane had itself broken. Those are fixed and described below;
-they are not in the 23.
+An intermediate run at `failed=23` caught three steps this lane had itself
+broken by regenerating. Those are fixed and described below; the final run is
+the one quoted above. Deferred rises by exactly 2, the two host-conditional
+steps — the intermediate 121 was timing variance in the over-3s bucket, not a
+step going quiet.
 
 ## Fixed
 
