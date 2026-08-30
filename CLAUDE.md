@@ -2335,6 +2335,35 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   (contracts, retrieval, sharding). On this evidence it is the binding one:
   **more lane-hours went to re-deriving what existed than to proof difficulty.**
 
+- **A HANDOFF'S "BLOCKED ON X" IS A CLAIM ABOUT ONE ROUTE, NOT ABOUT THE
+  TARGET -- AND IT IS RELIABLY PESSIMISTIC.** Three instances on 2026-08-30, all
+  from lanes that verified the blocker instead of inheriting it:
+
+  - Two lanes recorded `Nat.dvd_mul` as "a factorization-existence statement
+    with no short route found". A third tried the gcd construction
+    (`k1 := gcd(k,m)`, `k2 := k/gcd(k,m)`) and closed it. Both earlier lanes had
+    sized it before `Nat.gcd_mul_right` existed and neither had tried that route.
+  - The modular-cancellation family was recorded as needing new division-by-gcd
+    machinery. What actually unlocked it was `Nat.gcd_cofactors_coprime`,
+    **already present in `bezout.rs`**, which neither prior lane found -- and on
+    the Int side `Int.gcd_div_gcd_div_gcd` and `Int.gauss_lemma` also already
+    existed, contrary to the handoff that said otherwise.
+  - `Int.dvd_mul`'s handoff named three prerequisites. **Two were unnecessary**
+    once the proof routed through `natAbs` bridging to the Nat lemma; only one
+    was real, and it was cheap.
+
+  The mechanism is not carelessness. A lane that stops writes down what **its
+  own route** still needed -- honestly, and usually accurately about that route.
+  It cannot name the lemma that makes a different route work, because it never
+  looked for it. So a blocker list is a lower bound on what one path costs, and
+  says nothing about the cheapest path.
+
+  So: **when briefing against a handoff, tell the lane to verify each named
+  prerequisite in-tree and to consider whether a different route avoids it.**
+  Ask "which of these does the BEST route need?", not "how do we build these
+  three?". And note the asymmetry -- a handoff's report of what it LANDED is
+  reliable; its report of what REMAINS is a hypothesis.
+
 - **An empty result from a tool that was never pointed at your subject is
   indistinguishable from a strong negative result.** Distinct from the inert-gate
   trap above: the tool runs, exits 0, and prints a correct empty answer to a
