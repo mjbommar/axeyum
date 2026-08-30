@@ -55,7 +55,7 @@
 //! - `c ≠ 0`: let `nc, na, nb := natAbs c, natAbs a, natAbs b` and
 //!   `g1_nat := Nat.gcd nc na`, `c1 := ofNat g1_nat`.
 //!   - `dvd c1 a` is `gcd_dvd_right c a` directly (`Int.gcd c a` δ-reduces to
-//!     `Nat.gcd nc na`, accepted by def_eq with no bridging lemma).
+//!     `Nat.gcd nc na`, accepted by `def_eq` with no bridging lemma).
 //!   - `gcd_dvd_left c a : dvd c1 c`; `Int`-level `dvd_elim` gives a witness
 //!     `w` with `c = c1*w`. `c2 := w`; `symm` is the third conjunct.
 //!   - The real content, `dvd w b`: bridge `h : c ∣ a*b` to `nc ∣ na*nb`
@@ -126,7 +126,8 @@ fn idvd_elim(
     let minor = {
         let c_fv = d.fresh_fvar();
         let c = d.kernel().fvar(c_fv);
-        let eq_ty = d.ieq(b, d.imul(a, c));
+        let ac = d.imul(a, c);
+        let eq_ty = d.ieq(b, ac);
         let eq_fv = d.fresh_fvar();
         let eq_proof = d.kernel().fvar(eq_fv);
         let body = continuation(d, c, eq_proof);
@@ -279,7 +280,10 @@ fn imul_mul_mul_comm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, dd: Ex
     let step3 = d.const_app(p.mul_assoc, &[a, c, bd]); // Eq target a_cbd
     let step3_rev = d.isymm(target, a_cbd, step3); // Eq a_cbd target
 
-    let (_, proof) = d.ichain(start, &[(a_bcd, step1), (a_cbd, congr2), (target, step3_rev)]);
+    let (_, proof) = d.ichain(
+        start,
+        &[(a_bcd, step1), (a_cbd, congr2), (target, step3_rev)],
+    );
     proof
 }
 
@@ -326,7 +330,13 @@ fn nat_dvd_elim(
     d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
 }
 
-fn nat_dvd_intro(d: &mut IntDev<'_>, a: ExprId, n: ExprId, witness: ExprId, proof: ExprId) -> ExprId {
+fn nat_dvd_intro(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    n: ExprId,
+    witness: ExprId,
+    proof: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let one = d.level_one();
     let predicate = d.dvd_predicate(a, n);
@@ -367,7 +377,14 @@ fn dvd_cancel_left_of_ne_zero(
 // of `nat_prelude/dvd_mul_split.rs`'s `split_exists_ty`/`_intro`/`_elim`.
 // ---------------------------------------------------------------------------
 
-fn split_body_ty(d: &mut IntDev<'_>, c1: ExprId, c2: ExprId, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+fn split_body_ty(
+    d: &mut IntDev<'_>,
+    c1: ExprId,
+    c2: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
     let logic = d.int().logic;
     let dvd_c1_a = idvd(d, c1, a);
     let dvd_c2_b = idvd(d, c2, b);
@@ -377,7 +394,7 @@ fn split_body_ty(d: &mut IntDev<'_>, c1: ExprId, c2: ExprId, a: ExprId, b: ExprI
     d.const_app(logic.and, &[dvd_c1_a, inner])
 }
 
-fn split_exists_ty(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+pub(super) fn split_exists_ty(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
     let int_ty = d.int_ty();
     let one = d.level_one();
     let exists_name = d.int().logic.exists_;
@@ -398,7 +415,7 @@ fn split_exists_ty(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId) -> ExprI
 }
 
 #[allow(clippy::too_many_arguments)]
-fn split_exists_intro(
+pub(super) fn split_exists_intro(
     d: &mut IntDev<'_>,
     a: ExprId,
     b: ExprId,
@@ -503,13 +520,22 @@ fn split_exists_elim(
         let inner_rec = d.kernel().const_(exists_rec_name, vec![one]);
         let inner_result = d.apply(
             inner_rec,
-            &[int_ty, inner_predicate, inner_motive, inner_minor, inner_pf_var],
+            &[
+                int_ty,
+                inner_predicate,
+                inner_motive,
+                inner_minor,
+                inner_pf_var,
+            ],
         );
         let with_inner = d.lam_fv(inner_pf_fv, inner_ty, inner_result);
         d.lam_fv(c1_fv, int_ty, with_inner)
     };
     let outer_rec = d.kernel().const_(exists_rec_name, vec![one]);
-    d.apply(outer_rec, &[int_ty, outer_predicate, outer_motive, outer_minor, witness])
+    d.apply(
+        outer_rec,
+        &[int_ty, outer_predicate, outer_motive, outer_minor, witness],
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -561,7 +587,8 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                         let c1c2_val = d.imul(c1, c2);
                         let p1p2 = d.imul(p1, p2);
                         let ab4 = d.imul(c1c2_val, p1p2);
-                        let congr_c = d.icongr(c1c2_val, c, eq_c1c2_c_proof, &|d, t| d.imul(t, p1p2));
+                        let congr_c =
+                            d.icongr(c1c2_val, c, eq_c1c2_c_proof, &|d, t| d.imul(t, p1p2));
                         let c_p1p2 = d.imul(c, p1p2);
                         let (_, eq_ab_c_p1p2) = d.ichain(
                             ab,
@@ -615,7 +642,9 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                             let dvd_izero_a = {
                                 let refl_izero = d.lemma(p.dvd_refl, &[izero]);
                                 let ha_symm = d.isymm(a, izero, ha);
-                                d.int_eq_rewrite(izero, a, ha_symm, refl_izero, &|d, y| idvd(d, izero, y))
+                                d.int_eq_rewrite(izero, a, ha_symm, refl_izero, &|d, y| {
+                                    idvd(d, izero, y)
+                                })
                             };
                             let dvd_b_b = d.lemma(p.dvd_refl, &[b]);
                             let mul_izero_b = d.imul(izero, b);
@@ -624,15 +653,18 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                                 let comm = d.const_app(p.mul_comm, &[izero, b]);
                                 let mz = d.const_app(p.mul_zero, &[b]);
                                 let hc_symm = d.isymm(c, izero, hc);
-                                let (_, chained) = d.ichain(mul_izero_b, &[(b_izero, comm), (izero, mz)]);
+                                let (_, chained) =
+                                    d.ichain(mul_izero_b, &[(b_izero, comm), (izero, mz)]);
                                 d.itrans(mul_izero_b, izero, c, chained, hc_symm)
                             };
                             let dvd_b_b_ty = idvd(d, b, b);
                             let eq_mul_c_ty = d.ieq(mul_izero_b, c);
                             let dvd_izero_a_ty = idvd(d, izero, a);
                             let inner_ty = d.const_app(logic.and, &[dvd_b_b_ty, eq_mul_c_ty]);
-                            let inner_and =
-                                d.const_app(logic.and_intro, &[dvd_b_b_ty, eq_mul_c_ty, dvd_b_b, eq_mul_c]);
+                            let inner_and = d.const_app(
+                                logic.and_intro,
+                                &[dvd_b_b_ty, eq_mul_c_ty, dvd_b_b, eq_mul_c],
+                            );
                             let full_and = d.const_app(
                                 logic.and_intro,
                                 &[dvd_izero_a_ty, inner_ty, dvd_izero_a, inner_and],
@@ -645,7 +677,9 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                             let dvd_izero_b = {
                                 let refl_izero = d.lemma(p.dvd_refl, &[izero]);
                                 let hb_symm = d.isymm(b, izero, hb);
-                                d.int_eq_rewrite(izero, b, hb_symm, refl_izero, &|d, y| idvd(d, izero, y))
+                                d.int_eq_rewrite(izero, b, hb_symm, refl_izero, &|d, y| {
+                                    idvd(d, izero, y)
+                                })
                             };
                             let mul_a_izero = d.imul(a, izero);
                             let eq_mul_c = {
@@ -661,8 +695,10 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                                 logic.and_intro,
                                 &[dvd_izero_b_ty, eq_mul_c_ty, dvd_izero_b, eq_mul_c],
                             );
-                            let full_and =
-                                d.const_app(logic.and_intro, &[dvd_a_a_ty, inner_ty, dvd_a_a, inner_and]);
+                            let full_and = d.const_app(
+                                logic.and_intro,
+                                &[dvd_a_a_ty, inner_ty, dvd_a_a, inner_and],
+                            );
                             split_exists_intro(d, a, b, c, a, izero, full_and)
                         },
                     )
@@ -690,14 +726,16 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                         let nat_abs_ab = d.const_app(p.nat_abs, &[ab]);
                         let mul_na_nb = d.mul(na, nb);
                         let step_b = d.lemma(p.nat_abs_mul, &[a, b]); // Eq Nat (natAbs ab) (mul na nb)
-                        let big_h = d.nat_rewrite(nat_abs_ab, mul_na_nb, step_b, bridge0, &|d, y| {
-                            d.dvd(nc, y)
-                        });
+                        let big_h =
+                            d.nat_rewrite(nat_abs_ab, mul_na_nb, step_b, bridge0, &|d, y| {
+                                d.dvd(nc, y)
+                            });
                         // big_h : Nat.dvd nc (mul na nb)
 
                         let dvd_nc_ncnb = d.lemma(p.nat.dvd_mul, &[nc, nb]); // Nat.dvd nc (mul nc nb)
                         let nc_nb = d.mul(nc, nb);
-                        let h3 = d.lemma(p.nat.dvd_gcd, &[nc, nc_nb, mul_na_nb, dvd_nc_ncnb, big_h]);
+                        let h3 =
+                            d.lemma(p.nat.dvd_gcd, &[nc, nc_nb, mul_na_nb, dvd_nc_ncnb, big_h]);
                         // h3 : Nat.dvd nc (Nat.gcd nc_nb mul_na_nb)
 
                         let gmr = d.lemma(p.nat.gcd_mul_right, &[nc, na, nb]);
@@ -722,7 +760,8 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                         let (_, keq) = d.chain(nc, &[(nat_abs_gw, step1), (g1_natabsw, step2)]);
                         // keq : Eq Nat nc (mul g1_nat nat_abs_w)  (def_eq bridges natAbs g1 / g1_nat)
 
-                        let dvd_hyp = d.nat_rewrite(nc, g1_natabsw, keq, h4, &|d, cand| d.dvd(cand, g1_nb));
+                        let dvd_hyp =
+                            d.nat_rewrite(nc, g1_natabsw, keq, h4, &|d, cand| d.dvd(cand, g1_nb));
                         // dvd_hyp : Nat.dvd (mul g1_nat nat_abs_w) (mul g1_nat nb)
 
                         // g1_nat ≠ 0, from c ≠ 0.
@@ -731,7 +770,8 @@ pub(super) fn declare_dvd_mul_split(d: &mut IntDev<'_>) -> Result<(), KernelErro
                         let g1_ne_zero = {
                             let h0_fv = d.fresh_fvar();
                             let h0 = d.kernel().fvar(h0_fv);
-                            let nc_eq_zero = d.lemma(p.nat.eq_zero_of_gcd_eq_zero_left, &[nc, na, h0]);
+                            let nc_eq_zero =
+                                d.lemma(p.nat.eq_zero_of_gcd_eq_zero_left, &[nc, na, h0]);
                             let c_eq_zero_fn = nat_abs_zero_implies_int_zero(d, c);
                             let c_is_zero = d.apply(c_eq_zero_fn, &[nc_eq_zero]);
                             let false_pf = d.apply(hc_ne, &[c_is_zero]);

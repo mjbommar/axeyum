@@ -22,6 +22,7 @@
 //!   no `Quotient` primitive.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
+use super::dvd_mul_split::{split_exists_intro, split_exists_ty};
 use super::ops::IntDev;
 use crate::ExprId;
 use crate::env::Declaration;
@@ -184,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 211] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 212] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -278,6 +279,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 211] {
         p.ne_zero_of_gcd,
         p.gcd_eq_one_of_gcd_mul_right_eq_one_left,
         p.gcd_eq_one_of_gcd_mul_right_eq_one_right,
+        p.dvd_mul_split,
         p.gcd_eq_gcd_ab,
         p.coprime_of_bezout_one,
         p.gauss_lemma,
@@ -4198,5 +4200,166 @@ fn gcd_div_applies_at_a_positive_a_negative_divisor_and_at_zero() {
         let wa = d.izero();
         let wb = d.izero();
         check_gcd_div(&mut d, a, b, cc, wa, wb, 0, "a=0,b=0,c=0 (degenerate)");
+    }
+}
+
+/// `Int.dvd_mul_split` exercised at the axes the working notes called out:
+/// a discriminating instance where `c` shares a factor with BOTH `a` and `b`
+/// (`Iff.mpr`, real content, `c=6,a=4,b=9,c1=2,c2=3`), a NEGATIVE divisor
+/// (`Iff.mp`, `c=-6,a=4,b=9`), and the `c=0` degenerate branch with a
+/// genuinely FREE `b` (`Iff.mp`). Each check confirms the kernel's own
+/// `infer` accepts the constructed proof term against the exact stated
+/// type -- the same idiom `gcd_div_applies_at_a_positive_a_negative_divisor_and_at_zero`
+/// and `emod_eq_zero_iff_dvd_mp_produces_a_real_witness` use.
+#[test]
+fn dvd_mul_split_applies_at_a_discriminating_negative_and_free_degenerate_instance() {
+    fn int_num(d: &mut IntDev<'_>, n: u32) -> ExprId {
+        let mut nat = d.zero();
+        for _ in 0..n {
+            nat = d.succ(nat);
+        }
+        d.of_nat(nat)
+    }
+
+    fn int_neg_num(d: &mut IntDev<'_>, magnitude: u32) -> ExprId {
+        assert!(magnitude >= 1, "negSucc represents magnitudes >= 1");
+        let mut nat = d.zero();
+        for _ in 0..(magnitude - 1) {
+            nat = d.succ(nat);
+        }
+        d.neg_succ(nat)
+    }
+
+    /// `Int.dvd cc x` from a witness `w`, via `Eq.refl x` relying on the
+    /// kernel's own defeq check that `x` computes to `cc*w` -- the same
+    /// idiom `gcd_div_applies_...`'s `dvd_by_computation` uses.
+    fn dvd_by_computation(d: &mut IntDev<'_>, cc: ExprId, x: ExprId, w: ExprId) -> ExprId {
+        let p = d.int();
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let cq = d.imul(cc, q);
+        let body = d.ieq(x, cq);
+        let int_ty = d.int_ty();
+        let pred = d.lam_fv(q_fv, int_ty, body);
+        let one = d.level_one();
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let proof = d.irefl(x);
+        d.apply(intro, &[int_ty, pred, w, proof])
+    }
+
+    fn idvd_ty(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
+        let f = d.int().dvd;
+        d.const_app(f, &[x, y])
+    }
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.dvd_mul_split).is_empty(),
+        "Int.dvd_mul_split must rest on no axiom"
+    );
+    let mut d = IntDev::new(&mut k, p);
+
+    // ---- Iff.mpr at a discriminating instance where c shares a factor
+    //      with BOTH a and b: c=6, a=4, b=9, c1=2, c2=3.
+    {
+        let a = int_num(&mut d, 4);
+        let b = int_num(&mut d, 9);
+        let c = int_num(&mut d, 6);
+        let c1 = int_num(&mut d, 2);
+        let c2 = int_num(&mut d, 3);
+        let w1 = int_num(&mut d, 2); // a = c1*w1 = 2*2 = 4
+        let w2 = int_num(&mut d, 3); // b = c2*w2 = 3*3 = 9
+
+        let dvd_c1_a = dvd_by_computation(&mut d, c1, a, w1);
+        let dvd_c2_b = dvd_by_computation(&mut d, c2, b, w2);
+        let dvd_c1_a_ty = idvd_ty(&mut d, c1, a);
+        let dvd_c2_b_ty = idvd_ty(&mut d, c2, b);
+        let c1c2 = d.imul(c1, c2);
+        let eq_ty = d.ieq(c1c2, c);
+        let eq_proof = d.irefl(c1c2); // 2*3 computes to 6 = c, by def_eq
+
+        let logic = d.int().logic;
+        let inner_ty = d.const_app(logic.and, &[dvd_c2_b_ty, eq_ty]);
+        let inner_and = d.const_app(logic.and_intro, &[dvd_c2_b_ty, eq_ty, dvd_c2_b, eq_proof]);
+        let full_and = d.const_app(
+            logic.and_intro,
+            &[dvd_c1_a_ty, inner_ty, dvd_c1_a, inner_and],
+        );
+        let exists_proof = split_exists_intro(&mut d, a, b, c, c1, c2, full_and);
+
+        let ab = d.imul(a, b);
+        let dvd_c_ab_ty = idvd_ty(&mut d, c, ab);
+        let ex_ty = split_exists_ty(&mut d, a, b, c);
+        let theorem = d.kernel().const_(p.dvd_mul_split, vec![]);
+        let iff_term = d.apply(theorem, &[c, a, b]);
+        let mpr = d.kernel().const_(p.logic.iff_mpr, vec![]);
+        let applied = d.apply(mpr, &[dvd_c_ab_ty, ex_ty, iff_term, exists_proof]);
+        let inferred = d.kernel().infer(applied).unwrap_or_else(|e| {
+            panic!("Int.dvd_mul_split mpr at c=6,a=4,b=9 should type-check: {e:?}")
+        });
+        assert!(
+            d.kernel().def_eq(inferred, dvd_c_ab_ty),
+            "mpr result should have type Int.dvd 6 36"
+        );
+        let want36 = int_num(&mut d, 36);
+        assert!(d.kernel().def_eq(ab, want36), "a*b should compute to 36");
+    }
+
+    // ---- Iff.mp at a NEGATIVE divisor: c=-6, a=4, b=9.
+    //      dvd(-6,36) via witness -6 (36 = -6 * -6).
+    {
+        let a = int_num(&mut d, 4);
+        let b = int_num(&mut d, 9);
+        let c = int_neg_num(&mut d, 6); // -6
+        let ab = d.imul(a, b);
+        let w = int_neg_num(&mut d, 6); // -6
+        let dvd_c_ab = dvd_by_computation(&mut d, c, ab, w);
+        let dvd_c_ab_ty = idvd_ty(&mut d, c, ab);
+        let ex_ty = split_exists_ty(&mut d, a, b, c);
+        let theorem = d.kernel().const_(p.dvd_mul_split, vec![]);
+        let iff_term = d.apply(theorem, &[c, a, b]);
+        let mp = d.kernel().const_(p.logic.iff_mp, vec![]);
+        let applied = d.apply(mp, &[dvd_c_ab_ty, ex_ty, iff_term, dvd_c_ab]);
+        let inferred = d.kernel().infer(applied).unwrap_or_else(|e| {
+            panic!("Int.dvd_mul_split mp at c=-6,a=4,b=9 should type-check: {e:?}")
+        });
+        assert!(
+            d.kernel().def_eq(inferred, ex_ty),
+            "mp result at a negative divisor should have the exists type"
+        );
+    }
+
+    // ---- Iff.mp at the c = 0 degenerate branch, with a genuinely free b.
+    {
+        let anon = d.kernel().anon();
+        let b_name = d.kernel().name_str(anon, "dvd_mul_split_free_b");
+        let int_ty = d.int_ty();
+        d.kernel()
+            .add_declaration(Declaration::Axiom {
+                name: b_name,
+                uparams: vec![],
+                ty: int_ty,
+            })
+            .unwrap();
+        let b = d.kernel().const_(b_name, vec![]);
+        let a = d.izero();
+        let c = d.izero();
+        let ab = d.imul(a, b); // 0 * b
+        // dvd 0 (0*b): witness b, proof 0*b = 0*b (Eq.refl, syntactically).
+        let dvd_c_ab = dvd_by_computation(&mut d, c, ab, b);
+        let dvd_c_ab_ty = idvd_ty(&mut d, c, ab);
+        let ex_ty = split_exists_ty(&mut d, a, b, c);
+        let theorem = d.kernel().const_(p.dvd_mul_split, vec![]);
+        let iff_term = d.apply(theorem, &[c, a, b]);
+        let mp = d.kernel().const_(p.logic.iff_mp, vec![]);
+        let applied = d.apply(mp, &[dvd_c_ab_ty, ex_ty, iff_term, dvd_c_ab]);
+        let inferred = d.kernel().infer(applied).unwrap_or_else(|e| {
+            panic!("Int.dvd_mul_split mp at c=0,a=0,b=free should type-check: {e:?}")
+        });
+        assert!(
+            d.kernel().def_eq(inferred, ex_ty),
+            "mp result at the free degenerate branch should have the exists type"
+        );
     }
 }
