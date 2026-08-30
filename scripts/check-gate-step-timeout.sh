@@ -83,7 +83,13 @@ PY
 cat > "$work/ignores-term.sh" <<'EOF'
 #!/usr/bin/env bash
 trap '' TERM
-sleep 120
+# BACKGROUND-AND-WAIT, not a bare `sleep`, and the difference decides whether
+# this fixture tests anything. bash exec-optimizes a script's LAST simple
+# command, which would make the sleeper the DIRECT child of `timeout` -- the one
+# process `timeout` is guaranteed to kill. The bug being probed is the
+# GRANDCHILD that outlives the cap, so the fixture has to guarantee one.
+sleep 30 &
+wait $!
 EOF
 chmod +x "$work/ignores-term.sh"
 
@@ -105,12 +111,12 @@ run_gate() {  # run_gate <dir> <env assignments...> ; sets REPLY_OUT / REPLY_ST 
 }
 
 echo "=== case 1: check.sh caps a step that simply hangs ==="
-make_gate "$work/hang" "step hangs sleep 120"
+make_gate "$work/hang" "step hangs sleep 30"
 run_gate "$work/hang" AXEYUM_CHECK_STEP_CAP=2 AXEYUM_CHECK_STEP_KILL_GRACE=1
 if [ "$REPLY_EL" -le 20 ]; then
-  note_pass "a 120s step under a 2s cap returned in ${REPLY_EL}s"
+  note_pass "a 30s step under a 2s cap returned in ${REPLY_EL}s"
 else
-  note_fail "a 120s step under a 2s cap took ${REPLY_EL}s -- the cap did not bind"
+  note_fail "a 30s step under a 2s cap took ${REPLY_EL}s -- the cap did not bind"
 fi
 case "$REPLY_OUT" in
   *"TIMED OUT"*) note_pass "it is reported as TIMED OUT" ;;
@@ -153,7 +159,7 @@ if [ "${1:-}" = "--self-check" ]; then
 fi
 
 echo "=== case 3: a TIMED OUT step is never a pass ==="
-make_gate "$work/green" "step hangs sleep 120"
+make_gate "$work/green" "step hangs sleep 30"
 run_gate "$work/green" AXEYUM_CHECK_STEP_CAP=2 AXEYUM_CHECK_STEP_KILL_GRACE=1
 if [ "$REPLY_ST" -ne 0 ]; then
   note_pass "the gate exits non-zero (${REPLY_ST}) when a step timed out"

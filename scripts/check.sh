@@ -211,12 +211,12 @@ step_cap_for() {
 }
 
 if [ "$list_only" != "1" ] && { ! command -v timeout >/dev/null 2>&1 \
-     || ! command -v setsid >/dev/null 2>&1 || ! command -v ps >/dev/null 2>&1; }; then
+     || ! command -v ps >/dev/null 2>&1; }; then
   # Running uncapped is the state this gate was just rescued from, so refuse
   # rather than fall back to it silently. Exit 2 is distinct from a step
   # failure, matching `check-fast.sh`'s vacuity guard.
   echo "check: FATAL -- no per-step cap can be applied: this gate needs" \
-       "\`timeout\` (coreutils), \`setsid\` (util-linux) and \`ps\` (procps)." \
+       "\`timeout\` (coreutils) and \`ps\` (procps)." \
        "Running uncapped is how this gate hung for nine hours; install the" \
        "missing tool rather than removing the cap." >&2
   exit 2
@@ -234,42 +234,43 @@ step() {
   local cap; cap="$(step_cap_for "$name" "$@")"
   local t0=$SECONDS
   echo "=== $name (cap ${cap}s) ==="
-  # `setsid` + a GROUP kill, and neither half is decoration.
+  # A GROUP kill, because `timeout` alone bounds the step and DOES NOT KILL ITS
+  # DESCENDANTS. `trap '' TERM` sets SIG_IGN, an ignored disposition is
+  # INHERITED ACROSS exec, and `timeout`'s signals reach the child it monitors
+  # rather than the tree beneath it. Measured at a 2s cap against a
+  # TERM-ignoring step, with an uncapped positive control proving the grandchild
+  # was there to be counted, in two fixture shapes -- one where the sleeper is
+  # the script's last command (bash may exec-optimize it into the direct child)
+  # and one where it is backgrounded so a grandchild is guaranteed:
   #
-  # `timeout` alone bounds the step but DOES NOT KILL ITS DESCENDANTS. Measured
-  # here against a step that ignores SIGTERM, with a positive control proving
-  # the grandchild was alive to be counted:
-  #
-  #   no cap at all                     survivors at 6s = 1  (control)
-  #   timeout -k 1 2                    survivors at 6s = 1
-  #   setsid timeout -k 1 2             survivors at 6s = 1
-  #   timeout -k 1 2 setsid             survivors at 6s = 1
-  #   timeout -k 1 --signal=KILL 2      survivors at 6s = 1
-  #
-  # Four variants, none of them enough. `trap '' TERM` sets SIG_IGN, and an
-  # ignored disposition is INHERITED ACROSS exec, so the grandchild ignores the
-  # signal too -- and `timeout`'s kill reaches the child it monitors, not the
-  # tree beneath it.
+  #                                        shape 1   shape 2
+  #     uncapped (control)                       1         1
+  #     timeout -k                               1         1
+  #     timeout -k, group kill omitted           1         1
+  #     timeout -k + kill -KILL -$pgid           0         0
   #
   # That surviving grandchild is not a tidiness problem, it is THE nine-hour
   # bug: an orphaned `cargo` holds the build-directory lock, whose wait is
-  # unbounded, so every later cargo step blocks on a process nothing is going
-  # to reap.
+  # unbounded, so every later cargo step blocks on a process nothing will reap.
   #
-  # So the step runs under `setsid`, which makes it a session AND process-group
-  # leader -- verified rather than assumed, since `setsid` forks only when it is
-  # already a group leader, and a background child of this script is not one:
+  # NO `setsid` HERE, and that is a measured decision rather than an omission.
+  # It was in the first version of this fix, on the theory that the step had to
+  # be made a group leader before a group could be killed. Deleting it changed
+  # nothing -- `timeout` already calls `setpgid(0,0)` on itself, so `pgid ==
+  # pid` holds either way (measured: pid=2198873 pgid=2198873 with no `setsid`
+  # anywhere). The mutation sweep is what caught it: dropping `setsid` killed no
+  # assertion, which for a guard means it was doing no work.
   #
-  #   pid=2157206 pgid=2157206 sid=2157206     (exec-in-place)
-  #   survivors before the group kill = 1      (control)
-  #   survivors after  the group kill = 0
+  # The code does not TRUST that, it CHECKS it: the group is killed only when
+  # the child really is its own group leader, and says so loudly when it is not.
   #
-  # `</dev/null` because a gate step must never block on stdin -- and in a new
-  # session a step that read a terminal would take SIGTTIN and stop, which the
-  # cap would then report as a timeout it caused itself.
-  setsid timeout --kill-after="$STEP_KILL_GRACE" "$cap" "$@" </dev/null &
+  # `</dev/null` because a gate step must never block on stdin -- and since
+  # `timeout` puts the child in its own process group, a step that read a
+  # terminal would take SIGTTIN and stop, which the cap would then report as a
+  # timeout it had caused itself.
+  timeout --kill-after="$STEP_KILL_GRACE" "$cap" "$@" </dev/null &
   local pid=$!
-  # Read the group BEFORE waiting: after the leader exits there is nothing left
+  # Read the group BEFORE waiting: once the leader exits there is nothing left
   # to ask. (The residual risk is pid reuse between the wait and the kill, which
   # needs a brand-new process to take this exact pid AND become a group leader;
   # the kill is also only issued on the timeout path, never on a healthy step.)

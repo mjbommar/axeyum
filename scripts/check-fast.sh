@@ -147,14 +147,15 @@ while IFS=$'\t' read -r name cmd; do
   # here -- and no more, because the real bound is `budget + grace` per step
   # and this is a tier-0 sweep where the budget is 3s. 30s (what the full gate
   # uses, where it is 1.7% of a 30-minute cap) would be 10x the budget here.
-  # `setsid` and the GROUP kill below: `timeout` bounds the step but does not
-  # kill its descendants -- an ignored SIGTERM disposition is inherited across
-  # exec, so a grandchild outlives the cap and keeps whatever lock it took.
-  # Measured with a positive control, four `timeout` spellings all left the
-  # grandchild alive; `setsid` + `kill -KILL -$pgid` leaves none.
-  # `scripts/check.sh` carries the same construction and the long version of
-  # this comment.
-  setsid timeout --kill-after="${AXEYUM_CHECK_FAST_KILL_GRACE:-5}" "$budget" \
+  # The GROUP kill below: `timeout` bounds the step but does not kill its
+  # descendants -- an ignored SIGTERM disposition is inherited across exec, so a
+  # grandchild outlives the cap and keeps whatever lock it took. Measured with
+  # an uncapped positive control in two fixture shapes, `timeout -k` alone left
+  # the grandchild alive both times and `kill -KILL -$pgid` left none.
+  # `scripts/check.sh` carries the long version of this, including why there is
+  # no `setsid` (measured at zero effect -- `timeout` already makes the child
+  # its own process-group leader).
+  timeout --kill-after="${AXEYUM_CHECK_FAST_KILL_GRACE:-5}" "$budget" \
     bash -c "$cmd" >/dev/null 2>&1 </dev/null &
   pid=$!
   pgid="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')"
