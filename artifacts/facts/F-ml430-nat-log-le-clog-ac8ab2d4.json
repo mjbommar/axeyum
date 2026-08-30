@@ -6,17 +6,44 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (b n : ℕ), Nat.log b n ≤ Nat.clog b n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.log_le_clog",
+    "kernel_statement": "theorem Nat.log_le_clog : (((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le (AxNat.log x0 x1) (AxNat.clog x0 x1))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-nat-log-zero-right-8ea186db"
+    "F:ml430-nat-log-zero-right-8ea186db",
+    "F:ml430-nat-clog-mono-right-8d87a410"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.log_le_clog",
+      "kind": "kernel-term",
+      "supports": "`Nat.log_le_clog` is admitted as a Theorem with EXACTLY the stated shape.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"Nat.log_le_clog\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le (AxNat.log x0 x1) (AxNat.clog x0 x1)))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.log_le_clog"
+    },
+    {
+      "id": "footprint-Nat.log_le_clog",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.log_le_clog`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.log_le_clog`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane log-clog-finish (2026-08-30), new kernel construction",
     "source": "statement-only extraction of `Nat.log_le_clog` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -28,5 +55,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-30 by a native, axiom-free kernel construction. `Nat.log_aux_le_clog_aux : forall b f n, Le (logAux b f n) (clogAux b f n)` compares the two aux FAMILIES at a SHARED fuel (both `log`/`clog` are diagonal, unlike `log_aux_mono`/`clog_aux_mono` which compare one family against itself at two different fuels): induction on `f` with `n` generalized inside the motive, splitting on three booleans (`2<=b`, the SAME test in both families' guards at different nesting depths; `b<=n`, `logAux`'s outer cut only; `2<=n`, `clogAux`'s inner cut, derived from the first two via `le_trans` rather than split independently). New infrastructure: `n_le_add_sub_one : Le n (sub (add n base) 1)` for `Le 1 base` (`add_le_add_left` then `pred_le_pred`, using that `sub x 1` is definitionally `pred x`), which gives `n/b <= (n+b-1)/b` via `div_le_div_right`; the hard leaf chains the induction hypothesis at `n/b` through `clog_aux_mono` via `le_trans`, then `le_succ_succ`. `Nat.log_le_clog` is the diagonal instantiation at `f := n`. `crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs`. This is a genuine library-composition increment, not a found pre-existing declaration. The external Mathlib theorem remains prior art; its proof term and tactic trace were not consulted. formal.statement remains the pinned Lean surface spelling, definitionally equivalent to the explicit core rendering checked by the evidence command.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
