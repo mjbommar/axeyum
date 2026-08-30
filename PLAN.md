@@ -190,7 +190,7 @@ now. Nothing was deleted.
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
 | 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
 | 2026-08-30 | `094e80a21` | Lean-replay coverage per subject, with a control of the opposite verdict |
-| 2026-08-30 | `pending` | ADR-0875; four corrections to `08-ivt-and-evt-measured-against-mathlib.md`; this status file |
+| 2026-08-30 | `d0cc13942` | ADR-0875; four corrections to `08-ivt-and-evt-measured-against-mathlib.md`; this status file |
 | 2026-08-30 | l0-s6-credit-transaction | Crash-safe two-phase-commit engine (`scripts/credit-transaction.py`) + gate (`scripts/check-credit-transaction.py`) + 27-test suite + 9-guard mutation table (`scripts/tests/test-credit-transaction*`), registered in justfile and check.sh; ADR-0785. |
 | 2026-08-30 | l1-c0-artifact-contract | Library-artifact pack contract (`artifacts/library-artifact/`: README spec, JSON Schema doc, 9-declaration positive pack + type-only projection + external population registry) + two independent readers (`scripts/check-library-artifact-contract{,-reader-b}.py`) + 14-test suite + 5-guard 1:1 mutation table (`scripts/tests/test-library-artifact-contract*`), registered in justfile and check.sh; ADR-0800. |
 | 2026-08-30 | `1ec34c8e1` | Initial module-import parser + receipt generator/checker, verified against the full pinned Mathlib checkout (8,094 modules, 25,495 internal edges, 1,476 sinks, matching the roadmap's evidence baseline exactly); two runs byte-identical. |

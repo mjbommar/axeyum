@@ -67,4 +67,4 @@ every** safety-matrix protection.
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
 | 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
 | 2026-08-30 | `094e80a21` | Lean-replay coverage per subject, with a control of the opposite verdict |
-| 2026-08-30 | `pending` | ADR-0875; four corrections to `08-ivt-and-evt-measured-against-mathlib.md`; this status file |
+| 2026-08-30 | `d0cc13942` | ADR-0875; four corrections to `08-ivt-and-evt-measured-against-mathlib.md`; this status file |
