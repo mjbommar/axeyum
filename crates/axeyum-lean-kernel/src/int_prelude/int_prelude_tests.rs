@@ -184,7 +184,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 196] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 207] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -382,6 +382,18 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 196] {
         p.mul_pos_iff,
         p.mul_neg_iff,
         p.mul_nonpos_iff,
+        // `int-dvd-mirrors` lane: `int_prelude/dvd_gcd_mirrors.rs`.
+        p.dvd_gcd_nat,
+        p.dvd_gcd_nat_iff,
+        p.dvd_coe_gcd_iff,
+        p.ediv_gcd_ne_zero_of_ne_zero_left,
+        p.ediv_gcd_ne_zero_if_ne_zero_right,
+        p.mod_eq_add,
+        p.mod_eq_add_right_cancel,
+        p.mod_eq_add_left_cancel_general,
+        p.mod_eq_add_right_cancel_general,
+        p.mod_eq_dvd,
+        p.mod_eq_emod_eq,
     ]
 }
 
