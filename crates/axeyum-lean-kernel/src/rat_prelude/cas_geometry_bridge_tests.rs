@@ -322,7 +322,7 @@ pub(super) fn poly_expr(
 /// `x + (y + z) = y + (x + z)` — the swap [`prove_merge`] needs when the
 /// right-hand list supplies the next monomial. Built from `add_assoc` and
 /// `add_comm`, since the kernel has no `add_left_comm`.
-fn add_left_comm(
+pub(super) fn add_left_comm(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     x: ExprId,

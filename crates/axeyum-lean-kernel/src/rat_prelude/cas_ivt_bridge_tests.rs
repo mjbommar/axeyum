@@ -175,7 +175,7 @@ pub(crate) fn of_int(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
 /// `1 <= n` obligation (`Int.lt (ofNat 0) (ofNat n)` reduces to `Nat.le 1
 /// n`, not to `True` — only the `negSucc`/`ofNat` mixed case of `Int.lt` is
 /// unconditionally `True`).
-fn nat_le_lit(d: &mut IntDev<'_>, lo: u32, hi: u32) -> ExprId {
+pub(super) fn nat_le_lit(d: &mut IntDev<'_>, lo: u32, hi: u32) -> ExprId {
     assert!(lo <= hi, "nat_le_lit: {lo} > {hi}");
     let n = d.prelude();
     let lo_e = d.num(lo);
