@@ -695,6 +695,14 @@ step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
 # were written, both pass, and one of them was invoked by nothing for a day
 # because registering a control is a manual step separate from writing it.
 step control-registration ./scripts/check-control-registration.sh
+# `check-control-registration.sh`'s G2 measured 2026-08-30 that three of four
+# hyphenated numeric-control scripts under scripts/tests/ are already reachable
+# via 7 facts' checker_command (replayed by check-fact-evidence-replay.sh
+# below), but this fourth was cited by NOTHING -- not a fact, not a gate. It is
+# the `Nat.countRange` bijection/CRT numeric control that the totient family's
+# facts assume held; nothing re-ran it. Invoked directly by path, same
+# convention as any other standalone control.
+step countrange-bijection-numerics python3 scripts/tests/check-countrange-bijection-numerics.py
 # A `#[test]` attribute separated from its function, or duplicated onto one.
 # Measured 2026-08-29: a `lane-merge-additive.py splice` anchored on an item's
 # `fn` line inserted the spliced items BETWEEN a `#[test]` and its function, so

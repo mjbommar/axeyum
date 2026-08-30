@@ -36,7 +36,7 @@ cases=0
 build() {
   local root="$1"
   rm -rf "$root"
-  mkdir -p "$root/scripts/tests" "$root/.github/workflows" "$root/hooks"
+  mkdir -p "$root/scripts/tests" "$root/.github/workflows" "$root/hooks" "$root/artifacts/facts"
   cp "$GATE" "$root/scripts/check-control-registration.sh"
   cp "$RUNNER" "$root/scripts/run-python-controls.py"
 
@@ -47,6 +47,14 @@ build() {
   for i in $(seq 1 6); do
     printf '#!/usr/bin/env bash\nexit 0\n' > "$root/scripts/tests/test-sh-$i.sh"
   done
+
+  # G2: a hyphenated `.py` reachable ONLY via a fact's checker_command -- not
+  # named in scripts/check.sh, the justfile, hooks/pre-push, or
+  # .github/workflows. This is the property check-fact-evidence-replay.sh
+  # actually establishes for 3 of the 4 real scripts G2 was written against.
+  printf 'import sys\nsys.exit(0)\n' > "$root/scripts/tests/check-reachable-numerics.py"
+  printf '{"checker_command": "python3 scripts/tests/check-reachable-numerics.py"}\n' \
+    > "$root/artifacts/facts/fake-fact.json"
 
   # Callers. Every `.sh` control is named; two `.py` suites are named by hand,
   # one in each invocation form, so the "both forms count" path is exercised;
@@ -127,13 +135,38 @@ build "$WORK/repo"
 sed -i 's|^scripts/run-python-controls.py$|# scripts/run-python-controls.py|' "$WORK/repo/scripts/check.sh"
 case_ runner-named-only-in-a-comment 1 "is invoked by no caller"
 
-# --- 4. G2: a hyphenated `.py` control is unreachable twice over -- invisible
-#        to the `test_*.py` glob AND not an importable module name. Confirmed
-#        by probe; the two vacuous tests deleted on 2026-08-27 were the only
-#        hyphenated files present, so the gate could not have seen them.
+# --- 4. G2: a hyphenated `.py` control invoked by NOTHING -- not a caller, not
+#        a fact's checker_command. Confirmed by probe 2026-08-30 that the old
+#        "not an importable module" half of this guard's reasoning was false
+#        (see check-control-registration.sh's header); reachability, not the
+#        hyphen itself, is what this now tests.
 build "$WORK/repo"
 printf 'import unittest\n' > "$WORK/repo/scripts/tests/test-hyphen-probe.py"
-case_ hyphenated-py 1 "unreachable TWICE"
+case_ hyphenated-py 1 "invoked by NOTHING"
+
+# --- 4b. G2 POSITIVE: a hyphenated `.py` cited ONLY by a fact's
+#         checker_command (build()'s check-reachable-numerics.py, named in
+#         artifacts/facts/fake-fact.json and nowhere else) must NOT be
+#         rejected. This is the real-world shape: 3 of the 4 scripts G2 was
+#         written against are reachable this way and by nothing else.
+build "$WORK/repo"
+out="$(AXEYUM_CONTROL_OPTOUT_CEILING=3 bash "$WORK/repo/scripts/check-control-registration.sh" 2>&1)"
+got=$?
+cases=$((cases + 1))
+if [ "$got" -ne 0 ] || [ "$(printf '%s' "$out" | grep -cF 'check-reachable-numerics.py')" -ne 0 ]; then
+  echo "FAIL case:hyphen-py-reachable-via-fact rc=$got -- $(printf '%s' "$out" | tr '\n' '|')"
+  fail=1
+else
+  echo "ok   case:hyphen-py-reachable-via-fact"
+fi
+
+# --- 4c. G2 MUTATION CHECK: remove the ONE fact reference that makes 4b pass
+#         and confirm the gate now rejects the same file. This is what proves
+#         4b is testing the fact-reachability path and not passing by
+#         accident (e.g. an empty-corpus vacuity in the new facts_text glob).
+build "$WORK/repo"
+rm -f "$WORK/repo/artifacts/facts/fake-fact.json"
+case_ hyphen-py-fact-reference-removed 1 "check-reachable-numerics.py"
 
 # --- 5. G3: an opt-out entry naming a file that no longer exists. An allowlist
 #        that only ever grows is where dead entries hide.
@@ -194,7 +227,7 @@ rm -f "$WORK/repo/scripts/control-optout.tsv"
 case_ optout-missing 1 "is missing"
 
 echo "test-check-control-registration: $cases case(s)"
-if [ "$cases" -lt 14 ]; then
+if [ "$cases" -lt 17 ]; then
   echo "FAIL: only $cases case(s) ran; this suite must not shrink silently" >&2
   exit 1
 fi
