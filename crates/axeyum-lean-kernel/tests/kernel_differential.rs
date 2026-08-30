@@ -50,6 +50,16 @@
 //! See the doc comment on `kernel_differential_corpus_matches_pinned_lean`
 //! for the explicit, honest limitations statement required by the roadmap.
 
+// Each `*_cases` function builds several independent, hand-authored corpus
+// cases in one place deliberately (so a reader sees a whole subsystem's
+// positive/negative pairs together rather than split across files); that is
+// what trips `too_many_lines`. Several cases share a small `setup()`/
+// `declare_idu()` helper scoped to their own function, which trips
+// `items_after_statements` -- the helper is intentionally local, not hoisted
+// to module scope, because it closes over nothing but is only meaningful
+// beside the cases that use it.
+#![allow(clippy::too_many_lines, clippy::items_after_statements)]
+
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
@@ -214,7 +224,11 @@ fn eq_refl(
 }
 
 /// Declares a fresh `axiom name : Sort level` and returns its `Const`.
-fn declare_axiom_type(kernel: &mut Kernel, label: &str, level: axeyum_lean_kernel::LevelId) -> (NameId, ExprId) {
+fn declare_axiom_type(
+    kernel: &mut Kernel,
+    label: &str,
+    level: axeyum_lean_kernel::LevelId,
+) -> (NameId, ExprId) {
     let anon = kernel.anon();
     let name = kernel.name_str(anon, label);
     let ty = kernel.sort(level);
@@ -783,7 +797,9 @@ fn inductives_cases() -> Vec<CaseResult> {
         let field_ty = arrow(&mut kernel, bad_c, codomain);
         let mk_ty = arrow(&mut kernel, field_ty, bad_c);
         let mk = kernel.name_str(bad, "mk");
-        let accept = kernel.add_inductive(bad, &[], 0, ty, &[(mk, mk_ty)]).is_ok();
+        let accept = kernel
+            .add_inductive(bad, &[], 0, ty, &[(mk, mk_ty)])
+            .is_ok();
         out.push(CaseResult {
             subsystem: "inductives",
             name: "inductives::non_positive_occurrence_negative",
@@ -1296,7 +1312,7 @@ struct QuotPkg {
     quot: NameId,
     quot_mk: NameId,
     quot_lift: NameId,
-    _quot_ind: NameId,
+    quot_ind: NameId,
     eq: NameId,
     eq_refl: NameId,
 }
@@ -1544,7 +1560,7 @@ fn build_quotient_package(kernel: &mut Kernel) -> QuotPkg {
         quot,
         quot_mk,
         quot_lift,
-        _quot_ind: quot_ind,
+        quot_ind,
         eq,
         eq_refl,
     }
@@ -1715,7 +1731,7 @@ fn quotient_cases() -> Vec<CaseResult> {
         };
         let beta_val = kernel.lam(anon, quot_alpha_r, true_c, BinderInfo::Default);
         let minor_val = kernel.lam(anon, carrier, true_intro_c, BinderInfo::Default);
-        let ind_c = kernel.const_(pkg._quot_ind, vec![lu]);
+        let ind_c = kernel.const_(pkg.quot_ind, vec![lu]);
         let all_trivial = apps(&mut kernel, ind_c, &[carrier, r, beta_val, minor_val]);
         let mk_c = kernel.const_(pkg.quot_mk, vec![lu]);
         let mk_a0 = apps(&mut kernel, mk_c, &[carrier, r, a0]);
