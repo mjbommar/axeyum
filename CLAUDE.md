@@ -2400,6 +2400,19 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   ABSENT. That is the coverage trap below, with the tool broken rather than
   misaimed.
 
+- **TWO INVENTORY TOOLS SILENTLY DISCARD ALL BUT ONE NAME ARGUMENT, AND THEY
+  KEEP OPPOSITE ENDS — so there is no rule to remember, only a habit: pass ONE
+  NAME PER INVOCATION.** `theorem_dependency_inventory` keeps the FIRST;
+  `nat_theorem_inventory` keeps the **LAST**. Measured 2026-08-30, both orders:
+
+      nat_theorem_inventory -- totient_mul_of_coprime dist_comm
+        -> 1 row: Nat.dist_comm
+      nat_theorem_inventory -- dist_comm totient_mul_of_coprime
+        -> 1 row: Nat.totient_mul_of_coprime
+
+  Exit 0 either way, one plausible row either way. A lane hit this while
+  checking several new declarations at once and reported the sweep as clean.
+
 - **`theorem_dependency_inventory` CONSUMES ONLY ITS FIRST NAME ARGUMENT AND
   SILENTLY IGNORES THE REST — a three-name call reads as success.** Measured
   2026-08-29 while checking seven new declarations at once. The run printed one
