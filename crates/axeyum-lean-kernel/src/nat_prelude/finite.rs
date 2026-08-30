@@ -1389,7 +1389,13 @@ pub(super) fn declare_pigeonhole(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
 // this one-point override of `σ n`'s value onto `i0`'s slot.
 
 /// `point_override σ i0 v k`'s inner layer: `σ k` when `i0 < k`, else `v`.
-pub(super) fn po_inner(d: &mut NatDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId, k: ExprId) -> ExprId {
+pub(super) fn po_inner(
+    d: &mut NatDev<'_>,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    k: ExprId,
+) -> ExprId {
     let sk = d.apply(sigma, &[k]);
     let succ_i0 = d.succ(i0);
     let above_cond = d.ble(succ_i0, k);
@@ -1397,7 +1403,13 @@ pub(super) fn po_inner(d: &mut NatDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId,
 }
 
 /// `point_override σ i0 v k := if k < i0 then σ k else po_inner(σ, i0, v, k)`.
-pub(super) fn point_override(d: &mut NatDev<'_>, sigma: ExprId, i0: ExprId, v: ExprId, k: ExprId) -> ExprId {
+pub(super) fn point_override(
+    d: &mut NatDev<'_>,
+    sigma: ExprId,
+    i0: ExprId,
+    v: ExprId,
+    k: ExprId,
+) -> ExprId {
     let sk = d.apply(sigma, &[k]);
     let inner = po_inner(d, sigma, i0, v, k);
     let succ_k = d.succ(k);

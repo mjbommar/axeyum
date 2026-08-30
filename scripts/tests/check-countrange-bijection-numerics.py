@@ -203,6 +203,35 @@ for n in range(1, 8):
                 ok &= lhs == rhs
 check("countRange product/Fubini step over [0, n*m), 1<=n<=7, m<=7", ok)
 
+# ---------------------------------------------------------------------------
+# 7. The exact concrete instance the Rust test certifies:
+#    sigma := Nat.transposition 1 2 (swaps 1 and 2, fixes the rest), n = 4,
+#    f k := (2 <= k).  Both sides must count 2, over DIFFERENT index sets.
+# ---------------------------------------------------------------------------
+def transposition(i, j, k):
+    return j if k == i else (i if k == j else k)
+
+
+sigma = lambda k: transposition(1, 2, k)
+f = lambda k: 2 <= k
+lhs_set = [k for k in range(4) if f(k)]
+rhs_set = [k for k in range(4) if f(sigma(k))]
+check("concrete instance: countRange f 4 == 2", count_range(f, 4) == 2)
+check(
+    "concrete instance: countRange (f o transposition 1 2) 4 == 2",
+    count_range(lambda k: f(sigma(k)), 4) == 2,
+)
+print(f"      index sets: f -> {lhs_set}, f o sigma -> {rhs_set}")
+check(
+    "the two index sets DIFFER, so the equality is not a syntactic identity",
+    lhs_set != rhs_set,
+)
+check(
+    "NEGATIVE CONTROL: with the constant-0 map (MapsInto, not injective) the "
+    "counts differ, 2 vs 0",
+    count_range(f, 4) == 2 and count_range(lambda k: f(0), 4) == 0,
+)
+
 print()
 if FAIL:
     print(f"{len(FAIL)} CHECK(S) FAILED: {FAIL}")

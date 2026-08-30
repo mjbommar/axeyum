@@ -856,15 +856,7 @@ fn permute_branch_override(
     let inj_tau = d.const_app(p.restrict_injective, &[sigma, i0, n, inj_sigma, lt_i0_n]);
     let maps_tau = d.const_app(
         p.restrict_maps_into,
-        &[
-            sigma,
-            i0,
-            n,
-            inj_sigma,
-            maps_sigma,
-            lt_i0_n,
-            sigma_i0_eq_n,
-        ],
+        &[sigma, i0, n, inj_sigma, maps_sigma, lt_i0_n, sigma_i0_eq_n],
     );
     let ih_result = d.apply(ih, &[tau, inj_tau, maps_tau]);
 
@@ -1106,13 +1098,40 @@ pub(super) fn declare_count_range_permute(
         n,
     );
 
+    // The induction necessarily binds `n` (its target) outside `σ` (generalized
+    // in the motive). Re-abstract to the natural reading order `∀ f σ n`: the
+    // binders are introduced by free variable, so their ORDER is free, and
+    // nothing in `σ`'s type depends on `n`.
+    let _ = stmt;
+    let fn_ty = d.arrow(nat, nat);
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let inj_ty = d.const_app(p.injective_on, &[sigma, n]);
+    let inj_fv = d.fresh_fvar();
+    let inj = d.kernel().fvar(inj_fv);
+    let maps_ty = d.const_app(p.maps_into, &[sigma, n]);
+    let maps_fv = d.fresh_fvar();
+    let maps = d.kernel().fvar(maps_fv);
+    let applied = d.apply(proof, &[sigma, inj, maps]);
+
+    let composed = compose(d, f, sigma);
+    let lhs = count_range(d, &p, f, n);
+    let rhs = count_range(d, &p, composed, n);
+    let concl = d.eq(lhs, rhs);
+
     let ty = {
-        let over_n = d.pi_fv(n_fv, nat, stmt);
-        d.pi_fv(f_fv, pred_ty, over_n)
+        let with_maps = d.arrow(maps_ty, concl);
+        let with_inj = d.arrow(inj_ty, with_maps);
+        let over_n = d.pi_fv(n_fv, nat, with_inj);
+        let over_sigma = d.pi_fv(sigma_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, pred_ty, over_sigma)
     };
     let value = {
-        let over_n = d.lam_fv(n_fv, nat, proof);
-        d.lam_fv(f_fv, pred_ty, over_n)
+        let with_maps = d.lam_fv(maps_fv, maps_ty, applied);
+        let with_inj = d.lam_fv(inj_fv, inj_ty, with_maps);
+        let over_n = d.lam_fv(n_fv, nat, with_inj);
+        let over_sigma = d.lam_fv(sigma_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, pred_ty, over_sigma)
     };
     d.declare_theorem(p.count_range_permute, ty, value)
 }

@@ -532,6 +532,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_union_add_inter,
         p.count_range_le_of_subset,
         p.count_range_compl,
+        p.count_range_congr_lt,
+        p.count_range_point_change,
+        p.count_range_permute,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -16764,5 +16767,300 @@ fn gcd_mul_right_mirrors_apply_at_concrete_and_symbolic_instances() {
         f.k.axiom_footprint(p.dvd_gcd_mul_gcd_iff_dvd_mul)
             .is_empty(),
         "dvd_gcd_mul_gcd_iff_dvd_mul must rest on zero axioms"
+    );
+}
+
+/// `Nat.countRange_permute` at a fully CERTIFIED concrete instance: `σ :=
+/// Nat.transposition 1 2` on `[0,4)`, whose `InjectiveOn`/`MapsInto`
+/// hypotheses are discharged by the prelude's own
+/// `transposition_injective`/`transposition_maps_into` rather than assumed,
+/// so this is a real theorem instance and not merely a type-check of an
+/// application.
+///
+/// The predicate `fun x => Nat.ble 2 x` is true on `{2,3}` and its composite
+/// with `σ` on `{1,3}` — DIFFERENT index sets with the same count, checked
+/// both ways, so the equality cannot pass by being a syntactic identity.
+/// Both sides are then required to COMPUTE to `2`; the kernel accepting the
+/// application says nothing about what either side counts.
+///
+/// Negative control: the constant-`0` map is `MapsInto [0,4)` and is NOT
+/// injective, and there the two counts genuinely differ (`2` against `0`) —
+/// so `InjectiveOn` is load-bearing rather than decorative. Every term here
+/// is concrete and below `4`, so the failing `def_eq` terminates at once.
+#[test]
+fn count_range_permute_certifies_a_transposition_with_a_non_injective_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+
+    // `σ := fun k => Nat.transposition 1 2 k`, the shape
+    // `transposition_injective`/`_maps_into` state their conclusions at.
+    let sigma = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.const_app(p.transposition, &[one, two, k]);
+        f.lam_fv(k_fv, nat, body)
+    };
+    // `pred := fun x => Nat.ble 2 x`, true exactly on `{2,3}` below `4`.
+    let pred = {
+        let x_fv = f.fresh_fvar();
+        let x = f.k.fvar(x_fv);
+        let body = f.ble(two, x);
+        f.lam_fv(x_fv, nat, body)
+    };
+    let composed = |f: &mut Fixture, sig: ExprId| {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let sk = f.apply(sig, &[k]);
+        let body = f.apply(pred, &[sk]);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    // `Lt 1 2` is `Le 2 2`; `Lt 2 4` is `Le 3 4`.
+    let lt_1_2 = f.lemma(p.le_refl, &[two]);
+    let lt_2_4 = f.lemma(p.le_succ, &[three]);
+    let inj = f.const_app(p.transposition_injective, &[one, two, lt_1_2, four]);
+    let maps = f.const_app(p.transposition_maps_into, &[one, two, lt_1_2, four, lt_2_4]);
+
+    let proof = f.const_app(p.count_range_permute, &[pred, sigma, four, inj, maps]);
+    let inferred =
+        f.k.infer(proof)
+            .expect("countRange_permute must apply at transposition 1 2 over [0,4)");
+
+    let comp = composed(&mut f, sigma);
+    let lhs = f.const_app(p.count_range, &[pred, four]);
+    let rhs = f.const_app(p.count_range, &[comp, four]);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the instance must state countRange pred 4 = countRange (pred . sigma) 4"
+    );
+
+    // The two sides count the SAME number over DIFFERENT index sets.
+    assert!(
+        f.k.def_eq(lhs, two),
+        "countRange (2 <= .) 4 must compute to 2"
+    );
+    assert!(
+        f.k.def_eq(rhs, two),
+        "countRange ((2 <= .) . sigma) 4 must compute to 2"
+    );
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+    let pred_at_2 = f.apply(pred, &[two]);
+    let comp_at_2 = f.apply(comp, &[two]);
+    assert!(f.k.def_eq(pred_at_2, true_), "pred holds at index 2");
+    assert!(
+        f.k.def_eq(comp_at_2, false_),
+        "pred . sigma FAILS at index 2 -- the two index sets are genuinely different"
+    );
+
+    // NEGATIVE CONTROL: drop injectivity and the conclusion is false.
+    let const_zero = {
+        let k_fv = f.fresh_fvar();
+        f.lam_fv(k_fv, nat, zero)
+    };
+    let comp_zero = composed(&mut f, const_zero);
+    let rhs_zero = f.const_app(p.count_range, &[comp_zero, four]);
+    assert!(
+        f.k.def_eq(rhs_zero, zero),
+        "the constant-0 map sends every index to a point where pred is false"
+    );
+    assert!(
+        !f.k.def_eq(lhs, rhs_zero),
+        "without InjectiveOn the two counts differ (2 against 0), so the \
+         hypothesis is load-bearing"
+    );
+
+    for name in [
+        p.count_range_permute,
+        p.count_range_point_change,
+        p.count_range_congr_lt,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "the countRange permutation family must rest on zero axioms"
+        );
+    }
+}
+
+/// The three new `countRange` laws applied at genuinely FREE variables, not
+/// numerals: numerals reduce, and reduction hides definitional-equality gaps
+/// that a symbolic instantiation exposes. Each inferred type is checked
+/// against the statement written out independently here, so a declaration
+/// whose binder order or hypothesis shape drifted would fail rather than pass.
+#[test]
+fn the_count_range_permutation_family_applies_at_free_variables() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+    let pred_ty = f.arrow(nat, bool_ty);
+    let fn_ty = f.arrow(nat, nat);
+    let anon = f.anon_name();
+
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let sigma_fv = f.fresh_fvar();
+    let sigma = f.k.fvar(sigma_fv);
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+
+    let mut ctx = LocalContext::new();
+    for (fvar, ty) in [(a_fv, pred_ty), (sigma_fv, fn_ty), (n_fv, nat)] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let inj_ty = f.const_app(p.injective_on, &[sigma, n]);
+    let maps_ty = f.const_app(p.maps_into, &[sigma, n]);
+    let inj_fv = f.fresh_fvar();
+    let inj = f.k.fvar(inj_fv);
+    let maps_fv = f.fresh_fvar();
+    let maps = f.k.fvar(maps_fv);
+    for (fvar, ty) in [(inj_fv, inj_ty), (maps_fv, maps_ty)] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let applied = f.const_app(p.count_range_permute, &[a, sigma, n, inj, maps]);
+    let inferred =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("countRange_permute must apply at free f, sigma, n");
+    let composed = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let sk = f.apply(sigma, &[k]);
+        let body = f.apply(a, &[sk]);
+        f.lam_fv(k_fv, nat, body)
+    };
+    let lhs = f.const_app(p.count_range, &[a, n]);
+    let rhs = f.const_app(p.count_range, &[composed, n]);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the symbolic statement must be countRange a n = countRange (a . sigma) n"
+    );
+
+    // `countRange_congr_lt` at free `a`, `b`, `n` plus a free agreement proof.
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    ctx.push(LocalDecl {
+        fvar: b_fv,
+        name: anon,
+        ty: pred_ty,
+        info: BinderInfo::Default,
+    });
+    let agree_ty = {
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let ai = f.apply(a, &[i]);
+        let bi = f.apply(b, &[i]);
+        let eq = f.bool_eq(ai, bi);
+        let bound = f.lt(i, n);
+        let body = f.arrow(bound, eq);
+        f.pi_fv(i_fv, nat, body)
+    };
+    let agree_fv = f.fresh_fvar();
+    let agree = f.k.fvar(agree_fv);
+    ctx.push(LocalDecl {
+        fvar: agree_fv,
+        name: anon,
+        ty: agree_ty,
+        info: BinderInfo::Default,
+    });
+    let congr_applied = f.const_app(p.count_range_congr_lt, &[a, b, n, agree]);
+    let congr_inferred =
+        f.k.infer_in(congr_applied, &mut ctx)
+            .expect("countRange_congr_lt must apply at free a, b, n");
+    let congr_lhs = f.const_app(p.count_range, &[a, n]);
+    let congr_rhs = f.const_app(p.count_range, &[b, n]);
+    let congr_expected = f.eq(congr_lhs, congr_rhs);
+    assert!(f.k.def_eq(congr_inferred, congr_expected));
+
+    // `countRange_point_change` at free `a`, `b`, `i0`, `n`.
+    let i0_fv = f.fresh_fvar();
+    let i0 = f.k.fvar(i0_fv);
+    ctx.push(LocalDecl {
+        fvar: i0_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let bound_ty = f.lt(i0, n);
+    let below_ty = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let ak = f.apply(a, &[k]);
+        let bk = f.apply(b, &[k]);
+        let eq = f.bool_eq(ak, bk);
+        let lower = f.lt(k, i0);
+        let body = f.arrow(lower, eq);
+        f.pi_fv(k_fv, nat, body)
+    };
+    let above_ty = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let ak = f.apply(a, &[k]);
+        let bk = f.apply(b, &[k]);
+        let eq = f.bool_eq(ak, bk);
+        let upper = f.lt(k, n);
+        let inner = f.arrow(upper, eq);
+        let lower = f.lt(i0, k);
+        let body = f.arrow(lower, inner);
+        f.pi_fv(k_fv, nat, body)
+    };
+    let bound_fv = f.fresh_fvar();
+    let bound = f.k.fvar(bound_fv);
+    let below_fv = f.fresh_fvar();
+    let below = f.k.fvar(below_fv);
+    let above_fv = f.fresh_fvar();
+    let above = f.k.fvar(above_fv);
+    for (fvar, ty) in [
+        (bound_fv, bound_ty),
+        (below_fv, below_ty),
+        (above_fv, above_ty),
+    ] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+    let change_applied = f.const_app(
+        p.count_range_point_change,
+        &[a, b, i0, n, bound, below, above],
+    );
+    let change_inferred =
+        f.k.infer_in(change_applied, &mut ctx)
+            .expect("countRange_point_change must apply at free a, b, i0, n");
+    let one = f.num(1);
+    let zero = f.zero();
+    let ca = f.const_app(p.count_range, &[a, n]);
+    let cb = f.const_app(p.count_range, &[b, n]);
+    let a_i0 = f.apply(a, &[i0]);
+    let b_i0 = f.apply(b, &[i0]);
+    let sel_a = f.bool_select_nat(a_i0, one, zero);
+    let sel_b = f.bool_select_nat(b_i0, one, zero);
+    let change_lhs = f.add(ca, sel_b);
+    let change_rhs = f.add(cb, sel_a);
+    let change_expected = f.eq(change_lhs, change_rhs);
+    assert!(
+        f.k.def_eq(change_inferred, change_expected),
+        "point_change must exchange the two values at i0, not repeat one of them"
     );
 }
