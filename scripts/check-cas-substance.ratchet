@@ -1,0 +1,23 @@
+# The kernel-reconstructed cas-certificate floor. One row per fact:
+#
+#   <fact id>	<derived|declared>	<discriminating|non-discriminating>
+#
+# Regenerate with: python3 scripts/check-cas-substance.py --update
+#
+# A row here is ground this ledger has already established. Losing one is a
+# real regression and the gate refuses it; GAINING a fact needs no edit. See
+# ADR-0692 for why the count alone was not enough.
+F:cas-difference-of-squares-free-x-kernel-checked	declared	discriminating
+F:cas-evt-endpoint-exclusion-cubic-kernel-checked	declared	discriminating
+F:cas-extremum-deriv-sign-bracket-kernel-checked	declared	discriminating
+F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve	declared	discriminating
+F:cas-ivt-sign-bracket-cbrt2-kernel-checked	declared	discriminating
+F:cas-mvt-secant-endpoints-kernel-checked	declared	discriminating
+F:cas-partial-fractions-mixed-general-case-kernel-checked	declared	discriminating
+F:cas-taylor-remainder-lhs-kernel-checked	declared	discriminating
+F:geometry-centroid-divides-medians-kernel-checked	derived	discriminating
+F:geometry-medians-cofactor-identity-kernel-checked	derived	discriminating
+F:geometry-orthocentre-cofactor-identity-kernel-checked	derived	discriminating
+F:geometry-parallelogram-diagonals-bisect-kernel-checked	derived	discriminating
+F:geometry-rhombus-cofactor-identity-kernel-checked	derived	discriminating
+F:geometry-thales-cofactor-identity-kernel-checked	derived	non-discriminating

@@ -109,10 +109,25 @@ def fact(
     return body
 
 
+# `ratchet=ABSENT` writes no ratchet file at all, which is a different state
+# from an empty one and is refused by a different guard.
+ABSENT = "<no ratchet file>"
+
+
 class GateHarness(unittest.TestCase):
     """Writes a fixture ledger to a temp root and runs the gate over it."""
 
-    def run_gate(self, facts: list[dict], certificates: dict[str, dict] | None = None):
+    def run_gate(
+        self,
+        facts: list[dict],
+        certificates: dict[str, dict] | None = None,
+        ratchet: list[str] | None = None,
+        min_reconstructed: int = 0,
+    ):
+        """`ratchet=None` means "derive the floor from this fixture", which is
+        what every substance guard wants: it isolates the guard under test from
+        the ratchet entirely. A guard that needs the RATCHET to fire passes the
+        rows explicitly."""
         module = _load_gate()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -127,20 +142,40 @@ class GateHarness(unittest.TestCase):
             import io
             import contextlib
 
+            ratchet_path = root / "ratchet.tsv"
             buffer = io.StringIO()
-            with contextlib.redirect_stdout(buffer):
-                status = module.main(["--facts-root", str(root)])
+            # `--min-reconstructed 0`: the absolute floor is a property of the
+            # REAL ledger, not of a three-fact fixture. The two controls that
+            # exercise it pass their own value.
+            argv = ["--facts-root", str(root), "--ratchet", str(ratchet_path),
+                    "--min-reconstructed", str(min_reconstructed)]
+            # stderr too: the ratchet refusals print there, and a control that
+            # asserted only on stdout would pass on an EMPTY message.
+            with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+                if ratchet is None:
+                    module.main([*argv, "--update"])
+                elif ratchet == ABSENT:
+                    pass  # leave no file at all
+                else:
+                    ratchet_path.write_text(
+                        "# fixture floor\n" + "".join(r + "\n" for r in ratchet)
+                    )
+                buffer.truncate(0)
+                buffer.seek(0)
+                status = module.main(argv)
             return status, buffer.getvalue()
 
-    def assertRefused(self, facts, certificates=None, because: str = ""):
-        status, output = self.run_gate(facts, certificates)
+    def assertRefused(self, facts, certificates=None, because: str = "", ratchet=None,
+                      min_reconstructed: int = 0):
+        status, output = self.run_gate(facts, certificates, ratchet, min_reconstructed)
         self.assertEqual(status, 1, f"expected refusal; got exit 0 with:\n{output}")
         if because:
             self.assertIn(because, output)
         return output
 
-    def assertAccepted(self, facts, certificates=None):
-        status, output = self.run_gate(facts, certificates)
+    def assertAccepted(self, facts, certificates=None, ratchet=None,
+                       min_reconstructed: int = 0):
+        status, output = self.run_gate(facts, certificates, ratchet, min_reconstructed)
         self.assertEqual(status, 0, f"expected acceptance; got:\n{output}")
         return output
 
@@ -366,6 +401,138 @@ class DerivationGuards(unittest.TestCase):
         self.assertIsNone(self.core.statement_is_refl_shaped("(assert (= a a)))"))
         self.assertTrue(self.core.statement_is_refl_shaped("(assert (= a (* 1 a)))"))
         self.assertFalse(self.core.statement_is_refl_shaped("(assert (= a (* 2 a)))"))
+
+
+class RatchetGuards(GateHarness):
+    """The 2026-08-30 session audit's third survivor: the headline count was
+    DERIVED but not DEFENDED.
+
+    Measured that day, all three on the real ledger:
+
+        strip a fact's kernel reconstruction AND its cas_substance block
+            -> exit 0, "OK: 13 ..."
+        strip the reconstruction but KEEP the block
+            -> exit 1, G12 fires
+        delete the fact file outright
+            -> exit 0, "OK: 13 ..."
+
+    So the gate caught an INCONSISTENT downgrade and passed a CONSISTENT one.
+    A gate that reports a smaller number as success cannot notice deletion.
+    """
+
+    # The fixture's own id, so a ratchet row can name it.
+    FID = "F:fixture"
+
+    def rows(self, provenance="derived", discriminating="discriminating"):
+        return [f"{self.FID}\t{provenance}\t{discriminating}"]
+
+    def test_the_floor_holds_when_nothing_moved(self):
+        """The positive control. Without it every refusal below is consistent
+        with a ratchet that refuses everything."""
+        out = self.assertAccepted(
+            [fact(substance=GOOD_COMBINATION)], CERTS, ratchet=self.rows()
+        )
+        self.assertIn("ratchet floor 1, all held", out)
+
+    def test_r1_a_ratcheted_fact_that_VANISHES_is_refused(self):
+        """Deletion. The exact case that exited 0 with a smaller number."""
+        self.assertRefused(
+            [], CERTS,
+            because="is not one now",
+            ratchet=self.rows(),
+        )
+
+    def test_r1_a_ratcheted_fact_DOWNGRADED_to_cas_internal_is_refused(self):
+        """A consistent downgrade: the checker stops naming the kernel package
+        AND the block goes with it, so G12 has nothing to fire on."""
+        self.assertRefused(
+            [fact(substance=None, checker=CAS_CHECKER)], CERTS,
+            because="is not one now",
+            ratchet=self.rows(),
+        )
+
+    def test_r2_losing_a_CERTIFICATE_is_refused(self):
+        """`derived` -> `declared`: the fact keeps a plausible shape and the
+        gate quietly stops checking the half a lane cannot talk its way
+        around."""
+        self.assertRefused(
+            [fact(substance={"shape": "combination", "certificate": None,
+                             "derivation_declined_reason": "no artifact"})],
+            CERTS,
+            because="is now self-reported",
+            ratchet=self.rows(provenance="derived"),
+        )
+
+    def test_r3_a_shape_going_NON_DISCRIMINATING_is_refused(self):
+        """`combination` -> `refl`, fully disclosed so every substance rule
+        still passes. Registration stays honest for a weak reconstruction;
+        silently BECOMING weak does not."""
+        self.assertRefused(
+            [fact(substance=GOOD_REFL, footprint=REFL_FOOTPRINT)], CERTS,
+            because="is now non-discriminating",
+            ratchet=self.rows(discriminating="discriminating"),
+        )
+
+    def test_a_fact_going_the_OTHER_way_is_accepted(self):
+        """Growth is free, and so is strengthening: a row recorded as
+        non-discriminating that becomes discriminating must not fail. A ratchet
+        that refuses improvement is a freeze."""
+        self.assertAccepted(
+            [fact(substance=GOOD_COMBINATION)], CERTS,
+            ratchet=self.rows(discriminating="non-discriminating"),
+        )
+
+    def test_a_NEW_fact_absent_from_the_ratchet_is_accepted(self):
+        """The floor constrains what was established, never what is new.
+        Growth needs no edit here, which is what keeps the ratchet from
+        becoming a tax on landing facts."""
+        self.assertAccepted(
+            [fact(substance=GOOD_COMBINATION)], CERTS, ratchet=["# nothing yet"]
+        )
+
+    def test_a_MISSING_ratchet_file_is_refused(self):
+        """No file at all is the state the gate shipped in for its whole life,
+        and it is the state in which a smaller headline reads as success."""
+        self.assertRefused(
+            [fact(substance=GOOD_COMBINATION)], CERTS,
+            because="Without it this gate reports a SMALLER number as success",
+            ratchet=ABSENT,
+        )
+
+    def test_a_TRIMMED_ratchet_is_refused_by_the_absolute_floor(self):
+        """The per-fact rules alone have one hole, and it is the one that
+        matters most: deleting a fact AND its ratchet row in one commit
+        satisfies every one of them. The absolute floor is what makes that
+        loud -- the shape `--expect-axioms 26` has elsewhere in this ledger."""
+        self.assertRefused(
+            [fact(substance=GOOD_COMBINATION)], CERTS,
+            because="Trimming the ratchet and the ledger together",
+            ratchet=["# emptied"],
+            min_reconstructed=1,
+        )
+
+    def test_a_LEDGER_below_the_absolute_floor_is_refused(self):
+        """The other half: the ratchet is intact and the LEDGER fell.
+
+        The arrangement is deliberate. A ratchet of two rows against one live
+        fact keeps the trimmed-ratchet rule satisfied (2 >= 2) so only this
+        guard can fire, and the assertion is on the floor's OWN message rather
+        than on a nonzero exit -- because R1 fires here too, and a
+        status-only assertion would pass with this guard deleted."""
+        self.assertRefused(
+            [fact(substance=GOOD_COMBINATION)], CERTS,
+            because="A smaller headline is a retreat to publish",
+            ratchet=[*self.rows(), "F:other\tderived\tdiscriminating"],
+            min_reconstructed=2,
+        )
+
+    def test_the_absolute_floor_is_satisfied_when_the_ledger_holds(self):
+        """The negative control for both floor scenarios: at a floor the ledger
+        meets, neither fires."""
+        self.assertAccepted(
+            [fact(substance=GOOD_COMBINATION)], CERTS,
+            ratchet=self.rows(), min_reconstructed=1,
+        )
 
 
 class LiveLedger(unittest.TestCase):

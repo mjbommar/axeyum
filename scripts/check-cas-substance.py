@@ -207,6 +207,112 @@ def check_fact(fact: dict, facts_root: Path) -> tuple[list[str], dict | None]:
     return errors, substance
 
 
+# --------------------------------------------------------------------------
+# THE RATCHET.  The headline count is DERIVED -- 12 registered mutants each kill
+# a control and the number moves under mutation, so it is not a literal -- and
+# that is not the same as being defended.  Measured 2026-08-30:
+#
+#   strip a fact's kernel reconstruction AND its cas_substance block -> exit 0,
+#                                                            "OK: 13 ..."
+#   strip the reconstruction but KEEP the block               -> exit 1, G12
+#   delete the fact file outright                             -> exit 0,
+#                                                            "OK: 13 ..."
+#
+# So it catches an INCONSISTENT downgrade and passes a CONSISTENT one.  A gate
+# that reports a smaller number as success cannot notice deletion, and this is
+# the ledger's own headline metric.  Compare `--expect-axioms 26`, which is what
+# a pinned expectation looks like elsewhere here.
+#
+# What the floor IS, stated plainly because a ratchet with a hand-chosen number
+# is a wish: it is the SET of facts that reached kernel reconstruction, with,
+# for each, the two properties this gate can actually verify -- whether its
+# shape was DERIVED from a committed certificate, and whether that shape is
+# DISCRIMINATING.  Nothing is asserted about facts that do not exist yet:
+# growth is free and needs no edit here.
+#
+# What it REFUSES:
+#   R1 a ratcheted fact that no longer classifies as kernel-reconstructed --
+#      downgraded to `cas-internal`, or the file deleted outright;
+#   R2 a ratcheted fact whose shape was derived from a certificate and is now
+#      self-reported (it lost the artifact, so the gate stopped checking it);
+#   R3 a ratcheted fact whose shape was discriminating and is now `refl` or
+#      `empty`.
+#
+# All three are LOSSES OF ESTABLISHED GROUND, which is the only thing a ratchet
+# should refuse.  Any of them can be recorded deliberately with `--update`, and
+# the diff is then visible in review rather than absorbed into a smaller
+# headline.  A missing or empty ratchet file is refused outright: this gate has
+# had a nonzero floor since the day it was written, so an empty one means the
+# file was lost, not that the ledger emptied.
+RATCHET = REPO_ROOT / "scripts" / "check-cas-substance.ratchet"
+
+# The per-fact ratchet alone still has one hole, and it is worth naming rather
+# than hiding: deleting a fact AND its ratchet row in one commit satisfies every
+# rule above.  That is true of every baseline in this repository -- `--update`
+# exists precisely so a deliberate loss is recorded -- but here the number IS
+# the headline, so it also carries an absolute floor, which is what
+# `--expect-axioms 26` looks like elsewhere in this ledger.  Raise it when the
+# ledger grows; lowering it is a published retreat, not a maintenance edit.
+MIN_KERNEL_RECONSTRUCTED = 14
+
+RATCHET_HEADER = """\
+# The kernel-reconstructed cas-certificate floor. One row per fact:
+#
+#   <fact id>\t<derived|declared>\t<discriminating|non-discriminating>
+#
+# Regenerate with: python3 scripts/check-cas-substance.py --update
+#
+# A row here is ground this ledger has already established. Losing one is a
+# real regression and the gate refuses it; GAINING a fact needs no edit. See
+# ADR-0692 for why the count alone was not enough.
+"""
+
+
+def read_ratchet(path):
+    """`{fact id: (provenance, discriminating)}`, or None when absent."""
+    if not path.is_file():
+        return None
+    rows = {}
+    for line in path.read_text().splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        rows[parts[0]] = (parts[1], parts[2] == "discriminating")
+    return rows
+
+
+def ratchet_errors(recorded, current):
+    """R1/R2/R3. `current` is `{fact id: (provenance, discriminating)}`."""
+    errors = []
+    for fid in sorted(recorded):
+        was_provenance, was_discriminating = recorded[fid]
+        if fid not in current:
+            errors.append(
+                f"{fid}: recorded as kernel-reconstructed and is not one now. "
+                f"Either its checker stopped naming the kernel package or the "
+                f"fact is gone. A smaller headline is not a pass; if the "
+                f"downgrade is deliberate, record it with --update so the diff "
+                f"is visible."
+            )
+            continue
+        now_provenance, now_discriminating = current[fid]
+        if was_provenance == "derived" and now_provenance != "derived":
+            errors.append(
+                f"{fid}: its shape was DERIVED from a committed certificate and "
+                f"is now self-reported. The gate can no longer check the half a "
+                f"lane cannot talk its way around (ADR-0622 rule 3)."
+            )
+        if was_discriminating and not now_discriminating:
+            errors.append(
+                f"{fid}: its shape was discriminating and is now "
+                f"non-discriminating. Registration stays honest for a weak "
+                f"reconstruction; silently BECOMING weak does not."
+            )
+    return errors
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -218,6 +324,23 @@ def main(argv: list[str]) -> int:
         "--report",
         action="store_true",
         help="print the per-fact substance table as well as the verdict",
+    )
+    parser.add_argument(
+        "--update",
+        action="store_true",
+        help="rewrite the ratchet file from the current ledger, then exit",
+    )
+    parser.add_argument(
+        "--ratchet",
+        default=str(RATCHET),
+        help="ratchet file to check against (the controls point this elsewhere)",
+    )
+    parser.add_argument(
+        "--min-reconstructed",
+        type=int,
+        default=MIN_KERNEL_RECONSTRUCTED,
+        help="absolute floor on the kernel-reconstructed count (the fixture "
+             "controls set this to 0 so they can exercise one rule at a time)",
     )
     args = parser.parse_args(argv)
 
@@ -287,6 +410,52 @@ def main(argv: list[str]) -> int:
         )
         print()
 
+    current = {
+        fid: (provenance, discriminating)
+        for fid, _shape, provenance, discriminating in rows
+    }
+
+    ratchet_path = Path(args.ratchet)
+    if args.update:
+        ratchet_path.write_text(
+            RATCHET_HEADER
+            + "".join(
+                f"{fid}\t{provenance}\t"
+                f"{'discriminating' if discriminating else 'non-discriminating'}\n"
+                for fid, (provenance, discriminating) in sorted(current.items())
+            )
+        )
+        print(f"recorded {len(current)} kernel-reconstructed fact(s) in {ratchet_path}")
+        return 0
+
+    recorded = read_ratchet(ratchet_path)
+    if recorded is None:
+        print(
+            f"FAIL: no ratchet at {ratchet_path}. Without it this gate reports a "
+            f"SMALLER number as success and cannot notice a deletion. Run "
+            f"--update to record the current floor.",
+            file=sys.stderr,
+        )
+        return 1
+    if len(recorded) < args.min_reconstructed:
+        print(
+            f"FAIL: the ratchet at {ratchet_path} names {len(recorded)} fact(s) "
+            f"against an absolute floor of {args.min_reconstructed}. Trimming "
+            f"the ratchet and the ledger together satisfies every per-fact rule; "
+            f"this is what stops that being silent.",
+            file=sys.stderr,
+        )
+        return 1
+    if kernel_reconstructed < args.min_reconstructed:
+        print(
+            f"FAIL: {kernel_reconstructed} kernel-reconstructed cas-certificate "
+            f"fact(s) against an absolute floor of {args.min_reconstructed}. A "
+            f"smaller headline is a retreat to publish, not a pass.",
+            file=sys.stderr,
+        )
+        return 1
+    errors.extend(ratchet_errors(recorded, current))
+
     if errors:
         print(f"FAIL: {len(errors)} cas-certificate substance violation(s)")
         for error in errors:
@@ -295,7 +464,8 @@ def main(argv: list[str]) -> int:
 
     print(
         f"OK: {kernel_reconstructed} kernel-reconstructed cas-certificate fact(s) "
-        f"carry a checked cas_substance block"
+        f"carry a checked cas_substance block "
+        f"(ratchet floor {len(recorded)}, all held)"
     )
     return 0
 

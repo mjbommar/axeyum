@@ -3935,6 +3935,45 @@ SUITES["cas-substance"] = (
             '            if isinstance(fact.get("cas_substance"), dict):',
             "            if False:",
         ),
+        # -- THE RATCHET (ADR-0692). The 2026-08-30 audit's third survivor:
+        # every guard above passes a CONSISTENT downgrade, so a fact could lose
+        # its kernel reconstruction, or vanish, and the gate stayed green with a
+        # quietly smaller headline.
+        (
+            "R0 a missing ratchet file is refused",
+            "    if recorded is None:",
+            "    if False:",
+        ),
+        (
+            "R0b a trimmed ratchet is refused by the absolute floor",
+            "    if len(recorded) < args.min_reconstructed:",
+            "    if False:",
+        ),
+        (
+            "R0c a ledger below the absolute floor is refused",
+            "    if kernel_reconstructed < args.min_reconstructed:",
+            "    if False:",
+        ),
+        (
+            "R1 a ratcheted fact that is no longer kernel-reconstructed",
+            "        if fid not in current:",
+            "        if False:",
+        ),
+        (
+            "R2 a derived shape that became self-reported",
+            '        if was_provenance == "derived" and now_provenance != "derived":',
+            "        if False:",
+        ),
+        (
+            "R3 a discriminating shape that became non-discriminating",
+            "        if was_discriminating and not now_discriminating:",
+            "        if False:",
+        ),
+        (
+            "R4 the ratchet is CONSULTED at all",
+            "    errors.extend(ratchet_errors(recorded, current))",
+            "    pass",
+        ),
     ],
 )
 

@@ -701,3 +701,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0668](adr-0668-the-totient-mirrors-do-not-need-multiset-uniqueness.md) | The Euler-product route to the three open `ml430` totient | accepted |
 | [0675](adr-0675-evt-is-a-refutation-with-no-row-one-behind-it.md) | Audited IVT and EVT against Mathlib at the pinned commit. IVT's | accepted |
 | [0691](adr-0691-supon-lands-evt-gets-a-row-one-but-not-yet-the-lub-laws.md) | `CReal.supOn` is in the environment, derived and axiom-free, | accepted |
+| [0692](adr-0692-a-derived-count-is-not-a-defended-one.md) | `check-cas-substance.py`'s headline count was derived from the | accepted |
