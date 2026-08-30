@@ -169,7 +169,10 @@ fn square_eq_pred_mul_succ_add_one(d: &mut NatDev<'_>, p: &NatPrelude, xp: ExprI
     let xp_plus_one = d.add(xp, one);
     let t3 = d.add(mul_xp_x, xp_plus_one);
     let kprime_rev = d.symm(xx, target2, kprime_proof); // Eq(target2, xx), defeq-usable as Eq(t3, xx)
-    let (_, proof) = d.chain(start, &[(t1, h1), (t2, h2b), (t3, h_assoc), (xx, kprime_rev)]);
+    let (_, proof) = d.chain(
+        start,
+        &[(t1, h1), (t2, h2b), (t3, h_assoc), (xx, kprime_rev)],
+    );
     proof
 }
 
@@ -258,7 +261,10 @@ fn step_t_branch(d: &mut NatDev<'_>, p: &NatPrelude, xp: ExprId, j: ExprId, ih: 
 
     let dvd_a_plus_one = ih; // Dvd(p_fixed, a_pow_plus_one), exactly motive_t(j)
 
-    let dvd_sum = d.lemma(p.dvd_add, &[p_fixed, m_target, a_pow_plus_one, dvd_m, dvd_a_plus_one]);
+    let dvd_sum = d.lemma(
+        p.dvd_add,
+        &[p_fixed, m_target, a_pow_plus_one, dvd_m, dvd_a_plus_one],
+    );
     // dvd_sum : Dvd(p_fixed, target7)
 
     let final_eq_rev = d.symm(b_plus_one, target7, final_eq);
@@ -325,24 +331,18 @@ pub(super) fn declare_dvd_pow_add_one_of_odd_exp(
         let (x, t) = (v[0], v[1]);
         let stmt = core_stmt(d, x, t);
         let motive_x = |d: &mut NatDev<'_>, xx: ExprId| -> ExprId { core_stmt(d, xx, t) };
-        let proof = cases_zero_succ(
-            d,
-            x,
-            &motive_x,
-            &|d| at_zero_branch(d, &p, t),
-            &|d, xp| {
-                let motive_t = |d: &mut NatDev<'_>, tt: ExprId| -> ExprId {
-                    let xx = d.succ(xp);
-                    core_stmt(d, xx, tt)
-                };
-                d.induct(
-                    &motive_t,
-                    &|d| base_t_branch(d, &p, xp),
-                    &|d, j, ih| step_t_branch(d, &p, xp, j, ih),
-                    t,
-                )
-            },
-        );
+        let proof = cases_zero_succ(d, x, &motive_x, &|d| at_zero_branch(d, &p, t), &|d, xp| {
+            let motive_t = |d: &mut NatDev<'_>, tt: ExprId| -> ExprId {
+                let xx = d.succ(xp);
+                core_stmt(d, xx, tt)
+            };
+            d.induct(
+                &motive_t,
+                &|d| base_t_branch(d, &p, xp),
+                &|d, j, ih| step_t_branch(d, &p, xp, j, ih),
+                t,
+            )
+        });
         (stmt, proof)
     })?;
     Ok(())

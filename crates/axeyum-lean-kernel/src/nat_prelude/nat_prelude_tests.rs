@@ -1217,6 +1217,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dist_zero_right,
         p.dist_zero_left,
         p.dist_succ_succ,
+        // `pow-add-prime` lane (toward
+        // `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`), `pow_add_prime.rs`.
+        p.pow_mul,
+        p.dvd_pow_add_one_of_odd_exp,
+        p.dvd_pow_add_one_of_odd_mul_exp,
     ]
 }
 
@@ -19983,5 +19988,79 @@ fn eq_or_eq_of_totient_eq_totient_applies_at_a_free_hypothesis_with_a_transposed
         f.k.axiom_footprint(p.eq_or_eq_of_totient_eq_totient)
             .is_empty(),
         "eq_or_eq_of_totient_eq_totient must rest on zero axioms"
+    );
+}
+
+/// `Nat.dvd_pow_add_one_of_odd_mul_exp` (`a^e+1 ∣ a^{e*(2t+1)}+1`) at a
+/// genuinely FREE `(a,e,t)` — applying it at fresh fvars and checking the
+/// applied type IS the free-variable instantiation check, since the theorem
+/// itself is `∀ a e t, …` — and at the concrete discriminating instance
+/// `a=2, e=1, t=1` (`d=2t+1=3`, odd, `>1`): `2^1+1=3` divides `2^(1*3)+1=9`,
+/// the smallest instance the classical Fermat-prime argument would use (`9`
+/// is composite, `3 · 3`, which is exactly why a prime `a^n+1` cannot have an
+/// odd factor `>1` in its exponent). The negative control is arithmetic, not
+/// a kernel proof attempt: dropping "odd" is essential, since `3` does NOT
+/// divide `2^2+1=5` (an even exponent), so the theorem could not be
+/// strengthened to arbitrary exponents.
+#[test]
+fn dvd_pow_add_one_of_odd_mul_exp_applies_at_a_concrete_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Free-variable check: a, e, t are bound into an explicit LocalContext at
+    // `Nat` (a bare `f.k.infer` on a raw fvar rejects it as `UnboundFVar`).
+    let nat = f.nat_ty();
+    let anon = f.k.anon();
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let e_fv = f.fresh_fvar();
+    let e = f.k.fvar(e_fv);
+    let t_fv = f.fresh_fvar();
+    let t = f.k.fvar(t_fv);
+    let mut ctx = LocalContext::new();
+    for fv in [a_fv, e_fv, t_fv] {
+        ctx.push(LocalDecl {
+            fvar: fv,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let applied = f.const_app(p.dvd_pow_add_one_of_odd_mul_exp, &[a, e, t]);
+    f.k.infer_in(applied, &mut ctx).unwrap_or_else(|err| {
+        panic!(
+            "dvd_pow_add_one_of_odd_mul_exp must apply at free a, e, t: {}",
+            f.explain(&err)
+        )
+    });
+
+    // Concrete discriminating instance: a=2, e=1, t=1 -> d=2t+1=3 (odd, >1).
+    // Claim: 2^1+1=3 divides 2^(1*3)+1 = 9.
+    let two = f.num(2);
+    let one = f.num(1);
+    let three = f.num(3);
+    let nine = f.num(9);
+    let proof = f.lemma(p.dvd_pow_add_one_of_odd_mul_exp, &[two, one, one]);
+    let stmt = f.dvd(three, nine);
+    let name = f.name("two_add_one_dvd_two_cubed_add_one");
+    f.declare_theorem(name, stmt, proof).unwrap_or_else(|err| {
+        panic!(
+            "dvd_pow_add_one_of_odd_mul_exp(2,1,1) should give 3 | 9: {}",
+            f.explain(&err)
+        )
+    });
+
+    assert!(
+        f.k.axiom_footprint(name).is_empty(),
+        "the odd-factor divisibility instance must rest on zero axioms"
+    );
+
+    // Discriminating negative control (arithmetic, not a kernel proof
+    // attempt): dropping "odd" is essential -- 2^2+1 = 5 is NOT divisible
+    // by 3, so the same claim over an EVEN exponent (d=2) genuinely fails.
+    assert_ne!(
+        5 % 3,
+        0,
+        "3 must NOT divide 2^2+1=5 -- the odd hypothesis is load-bearing"
     );
 }

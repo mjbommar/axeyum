@@ -5221,8 +5221,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fermat_number: kernel.name_str(nat, "fermatNumber"),
             pow_mul: kernel.name_str(nat, "pow_mul"),
             dvd_pow_add_one_of_odd_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_exp"),
-            dvd_pow_add_one_of_odd_mul_exp: kernel
-                .name_str(nat, "dvd_pow_add_one_of_odd_mul_exp"),
+            dvd_pow_add_one_of_odd_mul_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_mul_exp"),
         };
 
         let mut d = NatDev::new(kernel, p);
