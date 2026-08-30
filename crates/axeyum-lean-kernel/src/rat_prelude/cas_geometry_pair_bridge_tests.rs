@@ -68,6 +68,8 @@ use super::cas_partial_fractions_bridge_tests::prove_poly_combination_rat;
 use super::ops::{rat_theorem, req, rsymm};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
+use crate::nat_prelude::NatOps;
 use crate::on_a_deep_stack;
 
 // ---------------------------------------------------------------------------
@@ -124,7 +126,7 @@ fn reconstruct_conclusion(
     cert: &GeometryCertificate,
     conclusion_index: usize,
     theorem_name: &str,
-) -> Vec<String> {
+) -> Vec<NameId> {
     let generators = generators_rat(cert);
     let cofactors = cofactors_rat(cert, conclusion_index);
     assert_eq!(
