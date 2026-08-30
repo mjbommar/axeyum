@@ -653,6 +653,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_gcd_mul_iff_dvd_mul,
         p.dvd_mul_gcd_iff_dvd_mul,
         p.dvd_gcd_mul_gcd_iff_dvd_mul,
+        p.mod_eq_cancel_left_div_gcd,
+        p.mod_eq_cancel_right_div_gcd,
+        p.mod_eq_cancel_left_div_gcd_general,
         p.lcm_zero_left,
         p.dvd_lcm_left,
         p.dvd_lcm_right,
@@ -7864,7 +7867,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 602,
+        93 + 605,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -16739,4 +16742,153 @@ fn gcd_mul_right_mirrors_apply_at_concrete_and_symbolic_instances() {
             .is_empty(),
         "dvd_gcd_mul_gcd_iff_dvd_mul must rest on zero axioms"
     );
+}
+
+/// `Nat.ModEq.cancel_left_div_gcd`/`cancel_right_div_gcd`/
+/// `cancel_left_div_gcd'` at a DISCRIMINATING concrete instance
+/// (`gcd(m,c) = 2 > 1`, so a coprime instance could not tell this family
+/// apart from the pre-existing `Nat.mod_eq_cancel`), plus a negative control
+/// transposing the cancelled endpoints, plus a symbolic restatement at a
+/// genuinely free `(m,a,b,c)` -- both checks are needed per the standing
+/// rule that numerals reduce and hide a definitional-equality gap a
+/// symbolic check would expose.
+///
+/// `(m, c, a, b) = (6, 4, 1, 4)`: `gcd(6,4) = 2`, `m/gcd = 3`.
+/// `c*a = 4`, `c*b = 16`, and `4 ≡ 16 [MOD 6]` (witnesses `u=2, v=0`:
+/// `4+6*2=16`, `16+6*0=16`). The conclusion `1 ≡ 4 [MOD 3]` holds
+/// (witnesses `u=1, v=0`: `1+3*1=4`, `4+3*0=4`).
+#[test]
+fn mod_eq_cancel_div_gcd_family_applies_at_a_discriminating_concrete_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let six = f.num(6);
+    let five = f.num(5);
+    let four = f.num(4);
+    let three = f.num(3);
+    let one = f.num(1);
+    let two = f.num(2);
+    let zero = f.num(0);
+
+    let hm = f.zero_lt_succ(five); // Lt zero six, since six = succ(five)
+    let g64 = f.gcd(six, four); // gcd(6,4) = 2
+    let m1_check = f.div(six, g64);
+    assert!(
+        f.k.def_eq(m1_check, three),
+        "6 / gcd(6,4) must compute to 3"
+    );
+
+    // -- cancel_left_div_gcd : c*a ≡ c*b [MOD m] -> a ≡ b [MOD m/gcd(m,c)] --
+    {
+        let ca = f.mul(four, one); // 4
+        let cb = f.mul(four, four); // 16
+        let h = f.concrete_mod_eq(six, ca, cb, two, zero); // 4+6*2=16, 16+6*0=16
+        let cancel_proof = f.lemma(p.mod_eq_cancel_left_div_gcd, &[six, one, four, four, hm, h]);
+        let m1 = f.div(six, g64);
+        let cancel_ty = f.mod_eq(m1, one, four);
+        let name = f.name("cancel_left_div_gcd_at_6_4_1_4");
+        f.declare_theorem(name, cancel_ty, cancel_proof)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "mod_eq_cancel_left_div_gcd(6,1,4,4) should admit: {}",
+                    f.explain(&e)
+                )
+            });
+
+        // Negative control: the SAME proof must be rejected against the
+        // transposed conclusion `4 ≡ 1 [MOD 3]`.
+        let wrong_ty = f.mod_eq(m1, four, one);
+        let wrong_name = f.name("nc_cancel_left_div_gcd_transposed");
+        let wrong_proof = f.lemma(p.mod_eq_cancel_left_div_gcd, &[six, one, four, four, hm, h]);
+        let result = f.declare_theorem(wrong_name, wrong_ty, wrong_proof);
+        assert!(
+            result.is_err(),
+            "mod_eq_cancel_left_div_gcd's proof must be rejected against the transposed conclusion"
+        );
+        assert!(
+            !f.k.environment().contains(wrong_name),
+            "a rejected declaration must not enter the environment"
+        );
+    }
+
+    // -- cancel_right_div_gcd : a*c ≡ b*c [MOD m] -> a ≡ b [MOD m/gcd(m,c)] --
+    {
+        let ac = f.mul(one, four); // 4
+        let bc = f.mul(four, four); // 16
+        let h = f.concrete_mod_eq(six, ac, bc, two, zero);
+        let cancel_proof = f.lemma(
+            p.mod_eq_cancel_right_div_gcd,
+            &[six, one, four, four, hm, h],
+        );
+        let m1 = f.div(six, g64);
+        let cancel_ty = f.mod_eq(m1, one, four);
+        let name = f.name("cancel_right_div_gcd_at_6_4_1_4");
+        f.declare_theorem(name, cancel_ty, cancel_proof)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "mod_eq_cancel_right_div_gcd(6,1,4,4) should admit: {}",
+                    f.explain(&e)
+                )
+            });
+    }
+
+    // -- cancel_left_div_gcd' : c≡d[MOD m] -> c*a≡d*b[MOD m] ->
+    //    a≡b[MOD m/gcd(m,c)] -- at (m,a,b,c,d) = (6,1,4,4,10). --
+    {
+        let ten = f.add(six, four);
+        let hcd = f.concrete_mod_eq(six, four, ten, one, zero); // 4+6*1=10, 10+6*0=10
+        let ca = f.mul(four, one); // 4
+        let db = f.mul(ten, four); // 40
+        let h = f.concrete_mod_eq(six, ca, db, six, zero); // 4+6*6=40, 40+6*0=40
+        let cancel_proof = f.lemma(
+            p.mod_eq_cancel_left_div_gcd_general,
+            &[six, one, four, four, ten, hm, hcd, h],
+        );
+        let m1 = f.div(six, g64);
+        let cancel_ty = f.mod_eq(m1, one, four);
+        let name = f.name("cancel_left_div_gcd_general_at_6_4_1_4_10");
+        f.declare_theorem(name, cancel_ty, cancel_proof)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "mod_eq_cancel_left_div_gcd_general(6,1,4,4,10) should admit: {}",
+                    f.explain(&e)
+                )
+            });
+    }
+
+    // -- Symbolic restatement at a genuinely free `(m,a,b,c)`: re-applying
+    // `mod_eq_cancel_left_div_gcd` at fresh fvars, inside a NEW theorem,
+    // must still type-check. --
+    {
+        let d = &mut f;
+        let stmt_ty_name = d.name("symbolic_cancel_left_div_gcd_restated");
+        d.theorem(stmt_ty_name, 4, &|d, v| {
+            let (m, a, b, c) = (v[0], v[1], v[2], v[3]);
+            let zero = d.zero();
+            let hm_ty = d.lt(zero, m);
+            let ca = d.mul(c, a);
+            let cb = d.mul(c, b);
+            let h_ty = d.mod_eq(m, ca, cb);
+            let g = d.gcd(m, c);
+            let m1 = d.div(m, g);
+            let concl = d.mod_eq(m1, a, b);
+            let inner = d.arrow(h_ty, concl);
+            let stmt = d.arrow(hm_ty, inner);
+
+            let hm_fv = d.fresh_fvar();
+            let hm = d.kernel().fvar(hm_fv);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let applied = d.lemma(p.mod_eq_cancel_left_div_gcd, &[m, a, b, c, hm, h]);
+            let with_h = d.lam_fv(h_fv, h_ty, applied);
+            let proof = d.lam_fv(hm_fv, hm_ty, with_h);
+            (stmt, proof)
+        })
+        .unwrap_or_else(|e| {
+            panic!(
+                "mod_eq_cancel_left_div_gcd must apply at a genuinely free (m,a,b,c): {}",
+                d.explain(&e)
+            )
+        });
+    }
 }

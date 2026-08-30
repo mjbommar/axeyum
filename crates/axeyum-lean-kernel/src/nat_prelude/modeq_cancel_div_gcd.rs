@@ -61,6 +61,7 @@ use crate::expr::ExprId;
 /// `Eq l r`, `Eq l l2`, `Eq r r2` -> `Eq l2 r2` -- rewrite both sides of a
 /// plain equation. Local copy of the pattern `euler.rs`'s `rewrite_mod_eq`
 /// uses for a `modEq` target, specialized here to a plain `Eq` target.
+#[allow(clippy::too_many_arguments)]
 fn rewrite_eq(
     d: &mut NatDev<'_>,
     l: ExprId,
@@ -164,8 +165,12 @@ fn mod_eq_cancel_scale(
             //      = scale*x + scale*(modulus*u)     [mul_assoc, reversed]
             //      = scale*(x + modulus*u)            [left_distrib, reversed]
             //      = scale_x_plus
-            let assoc_u = d.lemma(p.mul_assoc, &[scale, modulus, u]); // Eq scale_mod_u du
-            let du_eq_scale_mod_u = d.symm(scale_mod_u, du, assoc_u);
+            // `mul_assoc(scale, modulus, u) : Eq (mul (mul scale modulus) u)
+            // (mul scale (mul modulus u))`, i.e. `Eq du scale_mod_u` directly
+            // -- NOT `Eq scale_mod_u du` (a prior version of this file got
+            // this backwards and it type-checked as a swapped-equality
+            // `TypeMismatch`, found via `Kernel::render_lean` on both sides).
+            let du_eq_scale_mod_u = d.lemma(p.mul_assoc, &[scale, modulus, u]); // Eq du scale_mod_u
             let step_u = d.congr(du, scale_mod_u, du_eq_scale_mod_u, &|d, t| {
                 d.add(scaled_x, t)
             });
@@ -174,8 +179,7 @@ fn mod_eq_cancel_scale(
             let distrib_l_rev = d.symm(scale_x_plus, lhs1, distrib_l);
             let (_, eq_l_full) = d.chain(lhs0, &[(lhs1, step_u), (scale_x_plus, distrib_l_rev)]);
 
-            let assoc_v = d.lemma(p.mul_assoc, &[scale, modulus, v]); // Eq scale_mod_v dv
-            let dv_eq_scale_mod_v = d.symm(scale_mod_v, dv, assoc_v);
+            let dv_eq_scale_mod_v = d.lemma(p.mul_assoc, &[scale, modulus, v]); // Eq dv scale_mod_v
             let step_v = d.congr(dv, scale_mod_v, dv_eq_scale_mod_v, &|d, t| {
                 d.add(scaled_y, t)
             });
@@ -288,8 +292,7 @@ pub(super) fn declare_modeq_cancel_div_gcd(
         let step_a = d.congr(g_c1, c, eq_c, &|d, x| d.gcd(x, g_m1));
         let step_b = d.congr(g_m1, m, eq_m, &|d, x| d.gcd(c, x));
         let comm = d.lemma(p.gcd_comm, &[c, m]); // Eq (gcd c m) (gcd m c) = Eq gcd_c_m g
-        let (_, cofactor_eq) =
-            d.chain(start, &[(gcd_c_gm1, step_a), (gcd_c_m, step_b), (g, comm)]);
+        let (_, cofactor_eq) = d.chain(start, &[(gcd_c_gm1, step_a), (gcd_c_m, step_b), (g, comm)]);
         // cofactor_eq : Eq (gcd g_c1 g_m1) g
 
         let coprime = d.lemma(p.gcd_cofactors_coprime, &[g, c1, m1, one_le_g, cofactor_eq]);
@@ -331,7 +334,6 @@ pub(super) fn declare_modeq_cancel_div_gcd(
         let proof = d.lam_fv(hm_fv, hm_ty, with_h);
         (stmt, proof)
     })?;
-
     // Nat.ModEq.cancel_right_div_gcd :
     //   0 < m -> a*c ≡ b*c [MOD m] -> a ≡ b [MOD m / gcd m c]
     d.theorem(p.mod_eq_cancel_right_div_gcd, 4, &|d, v| {
