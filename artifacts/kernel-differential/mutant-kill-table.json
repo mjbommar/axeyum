@@ -1,0 +1,121 @@
+{
+  "_comment": "ADR-0717 S5 kernel-source mutation kill table. Each entry disables ONE guard in the trusted kernel (crates/axeyum-lean-kernel/src/{tc,inductive,quotient}.rs) and records whether the kernel_differential corpus (32 cases, run against pinned Lean 4.30.0) detected it. Measured by hand on 2026-08-30 in lane l0-s5-kernel-differential's isolated worktree via a one-off runner (never committed; mutating tracked source in a shared checkout breaks other lanes' builds, so this is not a script other lanes can run unattended -- re-measuring requires manually reapplying each `old`/`new` snippet pair below, one at a time, against a clean tree, then reverting). This artifact is the ledger of that measurement, not an automatically re-derivable one; scripts/check-kernel-differential-mutants.py checks the artifact's own internal consistency (every subsystem present, every status one of KILLED/SURVIVED, every KILLED entry names at least one flipped case) rather than re-running cargo, which would need ~8 kernel rebuilds and is a job for a human-triggered re-measurement, not a CI gate.",
+  "measured_date": "2026-08-30",
+  "lean_toolchain": "leanprover/lean4:v4.30.0 (d024af099ca4bf2c86f649261ebf59565dc8c622)",
+  "baseline": {
+    "cases": 32,
+    "exit_code": 0,
+    "note": "the unmutated kernel_differential_corpus_matches_pinned_lean run, confirmed passing before and after every mutation below"
+  },
+  "mutants": [
+    {
+      "subsystem": "proof_irrelevance",
+      "file": "crates/axeyum-lean-kernel/src/tc.rs",
+      "function": "proof_type",
+      "guard": "the level_is_zero(l) restriction that confines proof irrelevance to Sort 0 (Prop)",
+      "mutation": "always return Some(ty) regardless of the sort's level, so proof irrelevance applies to Type as well as Prop",
+      "status": "KILLED",
+      "kill_signal": "P0 (AxeyumAcceptsLeanRejects)",
+      "flipped_cases": [
+        "conversion::beta_mismatch_negative",
+        "conversion::delta_chain_mismatch_negative",
+        "recursors::swapped_minors_negative",
+        "recursors::wrong_computed_value_negative",
+        "projections::wrong_field_negative",
+        "literals::three_equals_two_negative",
+        "literals::wrong_carrier_negative",
+        "quotient::lift_wrong_hypothesis_negative",
+        "proof_irrelevance::type_is_not_irrelevant_negative",
+        "proof_irrelevance::unrelated_props_negative"
+      ],
+      "note": "10 of 32 cases flipped, all to P0. This is the corpus's single most valuable kill: proof_irrelevance::type_is_not_irrelevant_negative is precisely the case this mutation targets, but the mutation is so unsound it also breaks nine unrelated negative controls across five other subsystems, because 'two distinct closed Type-sorted terms are not defeq' is load-bearing everywhere a mismatch case relies on def_eq distinguishing them."
+    },
+    {
+      "subsystem": "universes",
+      "file": "crates/axeyum-lean-kernel/src/tc.rs",
+      "function": "check_declaration",
+      "guard": "the undeclared_universe_param closure check on a declaration's type/value",
+      "mutation": "skip the check entirely (drop the Err branch, keep the param unused)",
+      "status": "KILLED",
+      "kill_signal": "P0 (AxeyumAcceptsLeanRejects)",
+      "flipped_cases": ["universes::undeclared_universe_param_negative"],
+      "note": "Exactly the targeted case flips, and only that one -- the cleanest kill in the table."
+    },
+    {
+      "subsystem": "inductives",
+      "file": "crates/axeyum-lean-kernel/src/inductive.rs",
+      "function": "check_group_positive_occurrence",
+      "guard": "the non-positive-occurrence rejection when the family occurs in a Pi domain",
+      "mutation": "gate the Err branch behind `false &&`, disabling it",
+      "status": "SURVIVED",
+      "kill_signal": null,
+      "flipped_cases": [],
+      "note": "inductives::non_positive_occurrence_negative did NOT flip. Not yet root-caused: either this specific occurrence check is not the one the corpus's `Bad.mk : (Bad -> Codomain) -> Bad` construction actually reaches (a different positivity check elsewhere in the group-admission path may reject it first), or admission fails earlier for an unrelated structural reason that also happens to reject this term. This is an honest gap: the corpus does not currently prove THIS guard is load-bearing for that case, and the true mechanism needs a follow-up bisection (e.g. tracing which KernelError variant actually fires under the mutation with an added eprintln) that this lane did not have time to complete."
+    },
+    {
+      "subsystem": "recursors",
+      "file": "crates/axeyum-lean-kernel/src/inductive.rs",
+      "function": "reduce_rec",
+      "guard": "iota rule selection: `rec_rules.iter().find(|r| r.ctor_name == major_ctor_name)`",
+      "mutation": "always take `rec_rules.first()`, ignoring the major's actual constructor tag",
+      "status": "KILLED",
+      "kill_signal": "process panic/abort (exit 101), all 32 cases reported <MISSING>",
+      "flipped_cases": [],
+      "note": "This mutation is caught before ANY of the 32 differential cases print, almost certainly because build_logic_prelude's own internal proofs (Or.elim, Iff.mp, etc.) use recursors with multiple rules and the wrong-rule substitution produces an ill-typed intermediate that panics deep in the prelude build. A strong, unambiguous signal that the wrong-rule mutation is caught -- just not attributable to one differential case, since the corpus never got the chance to run."
+    },
+    {
+      "subsystem": "projections",
+      "file": "crates/axeyum-lean-kernel/src/tc.rs",
+      "function": "projection_inference_data",
+      "guard": "the explicit `field_index >= field_count` bounds check",
+      "mutation": "gate it behind `false &&`, disabling it",
+      "status": "SURVIVED",
+      "kill_signal": null,
+      "flipped_cases": [],
+      "note": "projections::out_of_range_index_negative did NOT flip -- Axeyum still rejects it. Read together with infer_projection's own field-walking loop (crates/axeyum-lean-kernel/src/tc.rs, the `for previous_index in 0..field_index` loop a few lines below this guard): once the explicit bounds check is gone, walking past the last real field still runs out of Pi binders in the constructor's telescope and hits the loop's own `else { return Err(MalformedProjectionConstructor) }`. So this specific guard is REDUNDANT with a second, structural one for THIS case shape -- a real, positive finding (defense in depth), not a blind spot, though it does mean this differential case cannot distinguish the two guards from each other."
+    },
+    {
+      "subsystem": "literals",
+      "file": "crates/axeyum-lean-kernel/src/tc.rs",
+      "function": "nat_literal_bootstrap",
+      "guard": "the inductive_ok && zero_ok && succ_ok shape validation of the declared `Nat`",
+      "mutation": "gate the Err branch behind `false &&`, disabling it",
+      "status": "SURVIVED",
+      "kill_signal": null,
+      "flipped_cases": [],
+      "note": "Expected to survive: every literals case in this corpus uses build_logic_prelude's own correctly-shaped Nat, so none of the four cases ever exercises the bootstrap validator's failure path. This is a genuine, named coverage gap -- see the report's honesty statement -- not a surprise."
+    },
+    {
+      "subsystem": "quotient",
+      "file": "crates/axeyum-lean-kernel/src/quotient.rs",
+      "function": "reduce_quotient",
+      "guard": "the is_named_quotient_member(constructor_name, \"mk\") check on the major's head constructor",
+      "mutation": "drop that sub-check, keeping only the arity/kind checks",
+      "status": "SURVIVED",
+      "kill_signal": null,
+      "flipped_cases": [],
+      "note": "Expected to survive: this corpus builds exactly one quotient package per kernel instance, so there is never a second, non-canonical 'mk'-shaped constructor for a wrong one to be confused with. Another named coverage gap, not a surprise."
+    },
+    {
+      "subsystem": "conversion",
+      "file": "crates/axeyum-lean-kernel/src/tc.rs",
+      "function": "infer_app",
+      "guard": "the per-argument `check_core(argument, domain, ctx)` loop against each Pi's domain",
+      "mutation": "skip the loop body, keeping the arguments unused",
+      "status": "KILLED",
+      "kill_signal": "P0 (AxeyumAcceptsLeanRejects)",
+      "flipped_cases": [
+        "recursors::swapped_minors_negative",
+        "quotient::lift_wrong_hypothesis_negative"
+      ],
+      "note": "Neither conversion case itself flips (their mismatch is caught by a SEPARATE declared-type-vs-inferred-type def_eq check at Theorem admission, not by infer_app's per-argument loop), but two OTHER subsystems' cases -- both built via a bare `kernel.infer(...)` on a raw malformed application -- flip to P0. This is the clearest evidence in the table that 'one guard, one subsystem' is not how this kernel's checks are actually organized: the same core argument-checking loop is load-bearing for recursor-application shape and quotient-primitive misuse, not for the conversion cases it was nominally assigned to."
+    }
+  ],
+  "summary": {
+    "killed": 4,
+    "survived": 4,
+    "total": 8,
+    "killed_subsystems": ["proof_irrelevance", "universes", "recursors", "conversion"],
+    "survived_subsystems": ["inductives", "projections", "literals", "quotient"]
+  }
+}
