@@ -4,10 +4,11 @@ use std::{env, path::Path};
 
 use axeyum_machine_evidence::{
     add_step_report, branch_trace_report, check_add_step, check_add_wrong_destination_control,
-    check_branch_target_control, check_branch_trace, check_memory_byte_order_control,
-    check_memory_trace, check_observation_omission_control, check_observation_separation,
-    check_run_classification, check_run_false_halt_control, check_word_roundtrip,
-    check_word_roundtrip_reversed_control, memory_trace_report, observation_separation_report,
+    check_branch_target_control, check_branch_trace, check_decoder_reserved_bit_control,
+    check_decoder_roundtrip, check_memory_byte_order_control, check_memory_trace,
+    check_observation_omission_control, check_observation_separation, check_run_classification,
+    check_run_false_halt_control, check_word_roundtrip, check_word_roundtrip_reversed_control,
+    decoder_roundtrip_report, memory_trace_report, observation_separation_report,
     run_classification_report, semantic_package, word_roundtrip_report, write_json,
 };
 
@@ -156,6 +157,31 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_run_false_halt_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: running prefix was accepted as halted".into());
         }
+        [command, package, output] if command == "emit-decoder-roundtrip" => {
+            let report = decoder_roundtrip_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "decoder-roundtrip: PASS: instructions={} unique={} reserved_rejected={} unused_rejected={}",
+                report.instructions_checked,
+                report.unique_encodings,
+                report.reserved_mutations_rejected,
+                report.unused_field_controls_rejected
+            );
+        }
+        [command, package, report] if command == "check-decoder-roundtrip" => {
+            let checked = check_decoder_roundtrip(Path::new(package), Path::new(report))?;
+            println!(
+                "decoder-roundtrip: PASS: instructions={} unique={} reserved_rejected={} unused_rejected={}",
+                checked.instructions_checked,
+                checked.unique_encodings,
+                checked.reserved_mutations_rejected,
+                checked.unused_field_controls_rejected
+            );
+        }
+        [command, package, report] if command == "control-decoder-reserved-bit" => {
+            check_decoder_reserved_bit_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: reserved-bit encoding was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -171,7 +197,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  control-branch-target PACKAGE REPORT | \
                  emit-run-classification PACKAGE OUTPUT | \
                  check-run-classification PACKAGE REPORT | \
-                 control-run-false-halt PACKAGE REPORT"
+                 control-run-false-halt PACKAGE REPORT | \
+                 emit-decoder-roundtrip PACKAGE OUTPUT | \
+                 check-decoder-roundtrip PACKAGE REPORT | \
+                 control-decoder-reserved-bit PACKAGE REPORT"
                 .into());
         }
     }

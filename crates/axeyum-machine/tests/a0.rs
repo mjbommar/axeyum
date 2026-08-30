@@ -2,7 +2,7 @@
 
 use axeyum_machine::a0::{
     A0Error, Conditions, Instruction, Memory, MemorySpan, Observation, ObservationError, Outcome,
-    Program, State, StateComponent, StopReason, Trap, Word, decode, run, run_prefix, step,
+    Program, State, StateComponent, StopReason, Trap, Word, decode, encode, run, run_prefix, step,
 };
 
 fn word(width: u8, value: u64) -> Word {
@@ -51,6 +51,21 @@ fn decoder_rejects_reserved_and_unused_fields() {
         decode([0x99, 0, 0, 0]),
         Err(A0Error::IllegalEncoding(_))
     ));
+}
+
+#[test]
+fn encoder_is_canonical_and_rejects_invalid_registers() {
+    let instruction = Instruction::Add {
+        rd: 2,
+        rs1: 1,
+        rs2: 3,
+    };
+    assert_eq!(encode(instruction), Ok([0x10, 0x0a, 0x03, 0]));
+    assert_eq!(decode(encode(instruction).unwrap()), Ok(instruction));
+    assert_eq!(
+        encode(Instruction::Mov { rd: 8, rs1: 0 }),
+        Err(A0Error::InvalidRegister(8))
+    );
 }
 
 #[test]

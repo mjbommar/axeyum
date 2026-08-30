@@ -213,3 +213,26 @@ labels the running prefix as halted and is rejected with `semantic-mismatch`.
 Strict Clippy passes; `axeyum-machine` has 20 passing integration tests and the
 evidence crate has seven passing route/control tests. This is concrete trace
 evidence, not a termination proof.
+
+## 2026-08-30 — canonical A0 encoding and exhaustive decoder round trip
+
+The Chapter 6 audit found that A0 had a strict decoder but no encoder. Without
+one canonical encoder, the promised structured-instruction round trip and
+encoding injectivity check could not run. Added `encode` to the same Rust
+semantic authority. It covers all seventeen instruction families and rejects
+register indices outside r0 through r7 instead of truncating them into fields.
+
+The decoder evidence route enumerates all 41,409 legal structured A0
+instructions: every register combination, every signed eight-bit immediate or
+offset, every branch condition, and halt. All 41,409 canonical encodings are
+distinct, and decoding each returns the exact input instruction. The route
+also rejects 82,818 high-reserved-bit mutations, eight targeted unused-field
+mutations, and an unknown opcode. Its load-bearing control accepts one reserved
+mutation; recomputation falls to 82,817 rejections and exits with
+`semantic-mismatch`.
+
+The semantic package is now version 4 and declares the encoder. Strict Clippy
+passes; the machine crate has 21 integration tests and the evidence crate has
+eight route/control tests. The result is an exhaustive finite computation over
+the structured legal instruction domain. It does not enumerate all 2^32 byte
+strings or prove a symbolic decoder theorem.

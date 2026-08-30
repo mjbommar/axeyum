@@ -4,23 +4,24 @@
 //! Reports bind the exact semantic source digest, declare their finite domain,
 //! and are accepted only after the checker recomputes the result.
 
-use std::{fs, path::Path};
+use std::{collections::BTreeSet, fs, path::Path};
 
 use axeyum_machine::a0::{
-    Memory, MemorySpan, Observation, Outcome, Program, State, StopReason, Trap, Word, run,
-    run_prefix, step,
+    BranchCondition, Instruction, Memory, MemorySpan, Observation, Outcome, Program, State,
+    StopReason, Trap, Word, decode, encode, run, run_prefix, step,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v3";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v4";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
 const OBSERVATION_SCHEMA: &str = "axeyum.a0.observation-separation.v1";
 const ADD_SCHEMA: &str = "axeyum.a0.add-step-exhaustive.v1";
 const MEMORY_SCHEMA: &str = "axeyum.a0.memory-trace.v1";
 const BRANCH_SCHEMA: &str = "axeyum.a0.branch-trace.v1";
 const RUN_SCHEMA: &str = "axeyum.a0.run-classification.v1";
+const DECODER_SCHEMA: &str = "axeyum.a0.decoder-roundtrip.v1";
 
 /// Stable metadata that binds evidence to the concrete A0 semantic authority.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,6 +166,31 @@ pub struct RunClassificationReport {
     pub resumed_pcs: Vec<u64>,
 }
 
+/// Exhaustive report over every structured A0 instruction encoding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DecoderRoundtripReport {
+    /// Report schema identifier.
+    pub schema: String,
+    /// SHA-256 of the semantic-package JSON bytes.
+    pub semantic_package_sha256: String,
+    /// Number of structured instruction families.
+    pub families: u8,
+    /// Number of legal structured instructions checked.
+    pub instructions_checked: u64,
+    /// Number of distinct canonical byte encodings.
+    pub unique_encodings: u64,
+    /// Whether decoding every canonical encoding returned its exact input.
+    pub roundtrip_passed: bool,
+    /// Number of high-reserved-bit mutations rejected.
+    pub reserved_mutations_rejected: u64,
+    /// Number of instruction-unused-field controls rejected.
+    pub unused_field_controls_rejected: u64,
+    /// Whether an unknown opcode was rejected.
+    pub unknown_opcode_rejected: bool,
+    /// SHA-256 over every structured instruction and canonical encoding.
+    pub result_sha256: String,
+}
+
 /// Why an evidence package or report was rejected.
 #[derive(Debug)]
 pub enum EvidenceError {
@@ -210,7 +236,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "3".to_owned(),
+        version: "4".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -222,6 +248,7 @@ pub fn semantic_package() -> A0SemanticPackage {
             "state",
             "observations",
             "decode",
+            "encode",
             "dynamic-effects",
             "step",
             "bounded-trace",
@@ -507,6 +534,46 @@ pub fn check_run_false_halt_control(
     check_run_classification_with_control(package_path, report_path, RunControl::FalseHalt)
 }
 
+/// Produces the exhaustive canonical A0 encoder/decoder report.
+///
+/// # Errors
+///
+/// Returns an error if the supplied semantic package is not the compiled one.
+pub fn decoder_roundtrip_report(
+    package_path: &Path,
+) -> Result<DecoderRoundtripReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    Ok(compute_decoder_roundtrip(
+        sha256_hex(&package_bytes),
+        DecoderControl::Declared,
+    ))
+}
+
+/// Recomputes and checks the exhaustive canonical decoder report.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the report differs from recomputation.
+pub fn check_decoder_roundtrip(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<DecoderRoundtripReport, EvidenceError> {
+    check_decoder_roundtrip_with_control(package_path, report_path, DecoderControl::Declared)
+}
+
+/// Accepts one reserved-bit mutation and requires report rejection.
+///
+/// # Errors
+///
+/// Returns `semantic-mismatch` when the load-bearing control fires.
+pub fn check_decoder_reserved_bit_control(
+    package_path: &Path,
+    report_path: &Path,
+) -> Result<DecoderRoundtripReport, EvidenceError> {
+    check_decoder_roundtrip_with_control(package_path, report_path, DecoderControl::AcceptReserved)
+}
+
 #[derive(Clone, Copy)]
 enum ByteOrderControl {
     Declared,
@@ -541,6 +608,12 @@ enum BranchControl {
 enum RunControl {
     Declared,
     FalseHalt,
+}
+
+#[derive(Clone, Copy)]
+enum DecoderControl {
+    Declared,
+    AcceptReserved,
 }
 
 fn check_word_roundtrip_with_control(
@@ -882,6 +955,157 @@ fn check_run_classification_with_control(
         )));
     }
     Ok(claimed)
+}
+
+fn check_decoder_roundtrip_with_control(
+    package_path: &Path,
+    report_path: &Path,
+    control: DecoderControl,
+) -> Result<DecoderRoundtripReport, EvidenceError> {
+    load_semantic_package(package_path)?;
+    let package_bytes = fs::read(package_path)?;
+    let claimed: DecoderRoundtripReport = serde_json::from_slice(&fs::read(report_path)?)?;
+    let recomputed = compute_decoder_roundtrip(sha256_hex(&package_bytes), control);
+    if claimed != recomputed {
+        return Err(EvidenceError::SemanticMismatch(format!(
+            "claimed decoder report does not equal recomputation (claimed reserved rejects {}, recomputed {})",
+            claimed.reserved_mutations_rejected, recomputed.reserved_mutations_rejected
+        )));
+    }
+    Ok(claimed)
+}
+
+#[allow(clippy::too_many_lines)]
+fn legal_instructions() -> Vec<Instruction> {
+    let mut instructions = Vec::with_capacity(41_409);
+    for rd in 0..8 {
+        for rs1 in 0..8 {
+            instructions.push(Instruction::Mov { rd, rs1 });
+        }
+        for immediate in i8::MIN..=i8::MAX {
+            instructions.push(Instruction::MovImmediate { rd, immediate });
+        }
+        for base in 0..8 {
+            for offset in i8::MIN..=i8::MAX {
+                instructions.push(Instruction::Load { rd, base, offset });
+            }
+        }
+    }
+    for base in 0..8 {
+        for source in 0..8 {
+            for offset in i8::MIN..=i8::MAX {
+                instructions.push(Instruction::Store {
+                    base,
+                    source,
+                    offset,
+                });
+            }
+        }
+    }
+    for rd in 0..8 {
+        for rs1 in 0..8 {
+            for rs2 in 0..8 {
+                instructions.extend([
+                    Instruction::Add { rd, rs1, rs2 },
+                    Instruction::Sub { rd, rs1, rs2 },
+                    Instruction::And { rd, rs1, rs2 },
+                    Instruction::Or { rd, rs1, rs2 },
+                    Instruction::Xor { rd, rs1, rs2 },
+                    Instruction::ShiftLeft { rd, rs1, rs2 },
+                    Instruction::ShiftRight { rd, rs1, rs2 },
+                    Instruction::ArithmeticShiftRight { rd, rs1, rs2 },
+                ]);
+            }
+            instructions.push(Instruction::Not { rd, rs1 });
+        }
+    }
+    for rs1 in 0..8 {
+        for rs2 in 0..8 {
+            instructions.push(Instruction::Compare { rs1, rs2 });
+        }
+    }
+    for condition in [
+        BranchCondition::Eq,
+        BranchCondition::Ne,
+        BranchCondition::Lt,
+        BranchCondition::Ge,
+        BranchCondition::Lo,
+        BranchCondition::Hs,
+        BranchCondition::Hi,
+        BranchCondition::Ls,
+    ] {
+        for offset in i8::MIN..=i8::MAX {
+            instructions.push(Instruction::Branch { condition, offset });
+        }
+    }
+    for offset in i8::MIN..=i8::MAX {
+        instructions.push(Instruction::Jump { offset });
+    }
+    instructions.push(Instruction::Halt);
+    instructions
+}
+
+fn compute_decoder_roundtrip(
+    semantic_package_sha256: String,
+    control: DecoderControl,
+) -> DecoderRoundtripReport {
+    let instructions = legal_instructions();
+    let mut encodings = BTreeSet::new();
+    let mut result_digest = Sha256::new();
+    let mut roundtrip_passed = true;
+    let mut reserved_mutations_rejected = 0_u64;
+    for (index, instruction) in instructions.iter().copied().enumerate() {
+        let bytes = encode(instruction).expect("enumerator creates legal registers");
+        roundtrip_passed &= decode(bytes) == Ok(instruction);
+        encodings.insert(bytes);
+        result_digest.update(
+            u64::try_from(index)
+                .expect("case count fits u64")
+                .to_le_bytes(),
+        );
+        result_digest.update(bytes);
+        for (byte_index, bit) in [(1_usize, 0x80_u8), (2, 0x80)] {
+            let mut mutated = bytes;
+            mutated[byte_index] |= bit;
+            let rejected = if matches!(control, DecoderControl::AcceptReserved)
+                && index == 0
+                && byte_index == 1
+            {
+                false
+            } else {
+                decode(mutated).is_err()
+            };
+            reserved_mutations_rejected += u64::from(rejected);
+        }
+    }
+    let unused_controls = [
+        [0x00, 0, 0, 1],
+        [0x01, 8, 0, 0],
+        [0x10, 0, 8, 0],
+        [0x15, 0, 1, 0],
+        [0x20, 1, 0, 0],
+        [0x30, 1, 0, 0],
+        [0x31, 0, 1, 0],
+        [0xff, 0, 0, 1],
+    ];
+    DecoderRoundtripReport {
+        schema: DECODER_SCHEMA.to_owned(),
+        semantic_package_sha256,
+        families: 17,
+        instructions_checked: u64::try_from(instructions.len()).expect("case count fits u64"),
+        unique_encodings: u64::try_from(encodings.len()).expect("encoding count fits u64"),
+        roundtrip_passed,
+        reserved_mutations_rejected,
+        unused_field_controls_rejected: u64::try_from(
+            unused_controls
+                .into_iter()
+                .filter(|bytes| decode(*bytes).is_err())
+                .count(),
+        )
+        .expect("control count fits u64"),
+        unknown_opcode_rejected: decode([0x99, 0, 0, 0]).is_err(),
+        result_sha256: hex_digest(result_digest.finalize()),
+    }
 }
 
 fn compute_run_classification(

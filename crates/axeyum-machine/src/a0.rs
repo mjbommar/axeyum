@@ -696,6 +696,90 @@ impl BranchCondition {
             Self::Ls => !flags.carry || flags.zero,
         }
     }
+
+    const fn encoding(self) -> u8 {
+        match self {
+            Self::Eq => 0,
+            Self::Ne => 1,
+            Self::Lt => 2,
+            Self::Ge => 3,
+            Self::Lo => 4,
+            Self::Hs => 5,
+            Self::Hi => 6,
+            Self::Ls => 7,
+        }
+    }
+}
+
+/// Encodes one structured A0 instruction in its unique four-byte form.
+///
+/// # Errors
+///
+/// Returns [`A0Error::InvalidRegister`] when a register field is outside
+/// A0's range `r0` through `r7`.
+pub fn encode(instruction: Instruction) -> Result<[u8; 4], A0Error> {
+    let pair = |rd: u8, rs1: u8| -> Result<u8, A0Error> {
+        validate_register(rd)?;
+        validate_register(rs1)?;
+        Ok(rd | (rs1 << 3))
+    };
+    let triple = |rd: u8, rs1: u8, rs2: u8| -> Result<(u8, u8), A0Error> {
+        validate_register(rs2)?;
+        Ok((pair(rd, rs1)?, rs2))
+    };
+    let bytes = match instruction {
+        Instruction::Mov { rd, rs1 } => [0x00, pair(rd, rs1)?, 0, 0],
+        Instruction::MovImmediate { rd, immediate } => {
+            validate_register(rd)?;
+            [0x01, rd, 0, immediate.cast_unsigned()]
+        }
+        Instruction::Load { rd, base, offset } => {
+            [0x02, pair(rd, base)?, 0, offset.cast_unsigned()]
+        }
+        Instruction::Store {
+            base,
+            source,
+            offset,
+        } => {
+            validate_register(base)?;
+            validate_register(source)?;
+            [0x03, base << 3, source, offset.cast_unsigned()]
+        }
+        Instruction::Add { rd, rs1, rs2 } => encode_three(0x10, triple(rd, rs1, rs2)?),
+        Instruction::Sub { rd, rs1, rs2 } => encode_three(0x11, triple(rd, rs1, rs2)?),
+        Instruction::And { rd, rs1, rs2 } => encode_three(0x12, triple(rd, rs1, rs2)?),
+        Instruction::Or { rd, rs1, rs2 } => encode_three(0x13, triple(rd, rs1, rs2)?),
+        Instruction::Xor { rd, rs1, rs2 } => encode_three(0x14, triple(rd, rs1, rs2)?),
+        Instruction::Not { rd, rs1 } => [0x15, pair(rd, rs1)?, 0, 0],
+        Instruction::ShiftLeft { rd, rs1, rs2 } => encode_three(0x18, triple(rd, rs1, rs2)?),
+        Instruction::ShiftRight { rd, rs1, rs2 } => encode_three(0x19, triple(rd, rs1, rs2)?),
+        Instruction::ArithmeticShiftRight { rd, rs1, rs2 } => {
+            encode_three(0x1a, triple(rd, rs1, rs2)?)
+        }
+        Instruction::Compare { rs1, rs2 } => {
+            validate_register(rs1)?;
+            validate_register(rs2)?;
+            [0x20, rs1 << 3, rs2, 0]
+        }
+        Instruction::Branch { condition, offset } => {
+            [0x30, 0, condition.encoding() << 3, offset.cast_unsigned()]
+        }
+        Instruction::Jump { offset } => [0x31, 0, 0, offset.cast_unsigned()],
+        Instruction::Halt => [0xff, 0, 0, 0],
+    };
+    Ok(bytes)
+}
+
+const fn encode_three(opcode: u8, fields: (u8, u8)) -> [u8; 4] {
+    [opcode, fields.0, fields.1, 0]
+}
+
+const fn validate_register(register: u8) -> Result<(), A0Error> {
+    if register < 8 {
+        Ok(())
+    } else {
+        Err(A0Error::InvalidRegister(register))
+    }
 }
 
 /// Decodes one four-byte A0 encoding, rejecting reserved or unused fields.
@@ -1025,6 +1109,8 @@ pub enum A0Error {
     InvalidWordWidth(u8),
     /// Two values that must share a width do not.
     WidthMismatch { expected: u8, actual: u8 },
+    /// An encoder input named a register outside r0 through r7.
+    InvalidRegister(u8),
     /// Reserved or unused encoding fields were nonzero, or opcode was unknown.
     IllegalEncoding([u8; 4]),
 }

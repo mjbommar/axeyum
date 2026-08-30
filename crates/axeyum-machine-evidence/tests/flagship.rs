@@ -5,8 +5,9 @@ use std::{fs, path::PathBuf};
 use axeyum_machine_evidence::{
     EvidenceError, add_step_report, branch_trace_report, check_add_step,
     check_add_wrong_destination_control, check_branch_target_control, check_branch_trace,
-    check_memory_byte_order_control, check_memory_trace, check_run_classification,
-    check_run_false_halt_control, memory_trace_report, run_classification_report, semantic_package,
+    check_decoder_reserved_bit_control, check_decoder_roundtrip, check_memory_byte_order_control,
+    check_memory_trace, check_run_classification, check_run_false_halt_control,
+    decoder_roundtrip_report, memory_trace_report, run_classification_report, semantic_package,
     write_json,
 };
 
@@ -101,6 +102,32 @@ fn runner_classifications_recompute_and_false_halt_fires() {
     );
     assert!(matches!(
         check_run_false_halt_control(&package_path, &report_path),
+        Err(EvidenceError::SemanticMismatch(_))
+    ));
+    fs::remove_file(package_path).unwrap();
+    fs::remove_file(report_path).unwrap();
+}
+
+#[test]
+fn decoder_roundtrip_is_exhaustive_and_reserved_bit_fires() {
+    let package_path = path("decoder-package.json");
+    let report_path = path("decoder-report.json");
+    write_json(&package_path, &semantic_package()).unwrap();
+    let report = decoder_roundtrip_report(&package_path).unwrap();
+    assert_eq!(report.families, 17);
+    assert_eq!(report.instructions_checked, 41_409);
+    assert_eq!(report.unique_encodings, report.instructions_checked);
+    assert!(report.roundtrip_passed);
+    assert_eq!(report.reserved_mutations_rejected, 82_818);
+    assert_eq!(report.unused_field_controls_rejected, 8);
+    assert!(report.unknown_opcode_rejected);
+    write_json(&report_path, &report).unwrap();
+    assert_eq!(
+        check_decoder_roundtrip(&package_path, &report_path).unwrap(),
+        report
+    );
+    assert!(matches!(
+        check_decoder_reserved_bit_control(&package_path, &report_path),
         Err(EvidenceError::SemanticMismatch(_))
     ));
     fs::remove_file(package_path).unwrap();
