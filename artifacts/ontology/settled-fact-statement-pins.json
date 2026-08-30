@@ -9,6 +9,15 @@
   },
   "amendments": [
     {
+      "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
+      "date": "2026-08-30",
+      "from_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2",
+      "to_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25",
+      "reason": "OVERCLAIM CORRECTED, NOT A ROUTE UPGRADE. The statement claimed pinned Lean's kernel accepts EVERY declaration of the constructed-real carrier. It does not: `Lean.Environment.addDeclCore` refuses a `theorem` whose type is not a proposition, and this kernel admits 48 of them (plus 25 declarations that depend on one), because `CReal.UniformConvergesOn` is deliberately `Type`-valued. Measured 2026-08-30 by L0/S4's `real_lean_replay_census` and re-measured here: population 2,058, representable 1,985, residue 73. The statement is narrowed to the representable population, with the residue typed, counted and named; nothing was proved that was not proved before, and the claim is strictly weaker. The superseded statement is preserved verbatim in the fact's `notes` AND kept executable as `the_superseded_whole_carrier_claim_is_refuted_by_the_same_binary`, which fails if pinned Lean ever accepts the unfiltered export. The part that is no longer claimed is now the OPEN row `F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier`. ADR-0775; lane `carrier-replay-overclaim`. The reader-facing `statement` narrows in step with the formal one and its digests are recorded here too -- the gate correctly refused the amendment without them, since the prose is the field most readers actually see.",
+      "from_prose_sha256": "427a14e1a799ae27229548c6963f5af49c2b7e46579365d6ae081e10915c8371",
+      "to_prose_sha256": "fe0cc1e272577f838f63124ee0f39c0a0ce2eae2317f3c6677c6696edb0ea985"
+    },
+    {
       "fact_id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
       "from_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
       "to_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
@@ -27,14 +36,6 @@
       "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
       "recorded_by": "coordinator",
       "recorded_in": "da61dcef9"
-  "note": "SHA-256 of formal.statement for every settled fact. A settled fact's statement is what the ledger CLAIMS; changing it silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row below.",
-  "amendments": [
-    {
-      "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
-      "date": "2026-08-30",
-      "from_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2",
-      "to_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25",
-      "reason": "OVERCLAIM CORRECTED, NOT A ROUTE UPGRADE. The statement claimed pinned Lean's kernel accepts EVERY declaration of the constructed-real carrier. It does not: `Lean.Environment.addDeclCore` refuses a `theorem` whose type is not a proposition, and this kernel admits 48 of them (plus 25 declarations that depend on one), because `CReal.UniformConvergesOn` is deliberately `Type`-valued. Measured 2026-08-30 by L0/S4's `real_lean_replay_census` and re-measured here: population 2,058, representable 1,985, residue 73. The statement is narrowed to the representable population, with the residue typed, counted and named; nothing was proved that was not proved before, and the claim is strictly weaker. The superseded statement is preserved verbatim in the fact's `notes` AND kept executable as `the_superseded_whole_carrier_claim_is_refuted_by_the_same_binary`, which fails if pinned Lean ever accepts the unfiltered export. The part that is no longer claimed is now the OPEN row `F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier`. ADR-0775; lane `carrier-replay-overclaim`."
     }
   ],
   "pins": [
@@ -6701,15 +6702,14 @@
     {
       "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
       "language": "lean4",
-      "statement_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2",
-      "prose_sha256": "427a14e1a799ae27229548c6963f5af49c2b7e46579365d6ae081e10915c8371",
+      "statement_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25",
+      "prose_sha256": "fe0cc1e272577f838f63124ee0f39c0a0ce2eae2317f3c6677c6696edb0ea985",
       "history": [
         {
           "language": "lean4",
           "statement_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2"
         }
       ]
-      "statement_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25"
     },
     {
       "fact_id": "F:lean-query-module-shrinks-by-a-shared-import",
