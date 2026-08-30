@@ -210,6 +210,7 @@ mod sqrt;
 mod subset_product;
 mod testbit_bitwise;
 mod totient;
+mod totient_dvd_chain;
 mod totient_lemmas;
 mod totient_mul;
 mod totient_mul_coprime;
@@ -357,6 +358,7 @@ use sqrt::declare_sqrt_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
+use totient_dvd_chain::declare_totient_dvd_chain_all;
 use totient_lemmas::{
     declare_odd_totient_iff, declare_odd_totient_iff_eq_one, declare_totient_coprime_totient_iff,
     declare_totient_even, declare_totient_lemmas_all,
@@ -2032,6 +2034,21 @@ pub struct NatPrelude {
     /// one at a time from [`exists_prime_dvd`](Self::exists_prime_dvd), ANY
     /// choice works, and no factor multiset is ever named.
     pub totient_dvd_totient_mul_prime: NameId,
+    /// `Nat.totient_dvd_totient_mul : ∀ k a, Dvd (totient a) (totient (mul a
+    /// k))` — the fully general (no hypothesis) form of Target 1
+    /// (`F:ml430-nat-totient-dvd-of-dvd-9622e44a`), by well-founded induction
+    /// on the cofactor `k` (`totient_dvd_chain.rs`). Chains
+    /// [`totient_dvd_totient_mul_prime`](Self::totient_dvd_totient_mul_prime)
+    /// along a factorisation of `k` supplied one prime at a time by
+    /// [`exists_prime_dvd`](Self::exists_prime_dvd); no factor multiset is
+    /// ever named (ADR-0668).
+    pub totient_dvd_totient_mul: NameId,
+    /// `Nat.totient_dvd_of_dvd : ∀ a b, Dvd a b → Dvd (totient a) (totient
+    /// b)` — `F:ml430-nat-totient-dvd-of-dvd-9622e44a`. One `exists_rec`
+    /// unpacking `a ∣ b` into `b = a*k` plus
+    /// [`totient_dvd_totient_mul`](Self::totient_dvd_totient_mul) at
+    /// `(k, a)` (`totient_dvd_chain.rs`).
+    pub totient_dvd_of_dvd: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4673,6 +4690,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             totient_pow_succ_of_prime: kernel.name_str(nat, "totient_pow_succ_of_prime"),
             totient_prime_pow: kernel.name_str(nat, "totient_prime_pow"),
             totient_dvd_totient_mul_prime: kernel.name_str(nat, "totient_dvd_totient_mul_prime"),
+            totient_dvd_totient_mul: kernel.name_str(nat, "totient_dvd_totient_mul"),
+            totient_dvd_of_dvd: kernel.name_str(nat, "totient_dvd_of_dvd"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -5648,6 +5667,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // placed after it because both are last and this one is the newer.
         // Nothing needs it, so it goes last.
         declare_totient_prime_pow_all(&mut d, &p)?;
+        // `Nat.totient_dvd_of_dvd`: needs `Nat.totient_dvd_totient_mul_prime`
+        // (just above), `Nat.exists_prime_dvd`, `Nat.two_le_succ_or_eq_one`,
+        // `Nat.dvd_zero`/`dvd_refl`/`dvd_trans`, `Nat.mul_assoc`/`mul_comm`/
+        // `mul_one`, and the `WellFounded.fix` machinery `Nat.gcd` and
+        // `Nat.exists_prime_factorization` already use. ADR-0668.
+        declare_totient_dvd_chain_all(&mut d, &p)?;
         // Needs only `Nat.log` (`declare_log_all`, far above). Nothing needs
         // it, so it goes last.
         declare_log2_all(&mut d, &p)?;

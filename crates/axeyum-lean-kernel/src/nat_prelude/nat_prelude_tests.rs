@@ -555,6 +555,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.totient_pow_succ_of_prime,
         p.totient_prime_pow,
         p.totient_dvd_totient_mul_prime,
+        p.totient_dvd_totient_mul,
+        p.totient_dvd_of_dvd,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -19194,5 +19196,183 @@ fn the_prime_step_divides_at_free_variables_with_a_transposed_control() {
         f.k.axiom_footprint(p.totient_dvd_totient_mul_prime)
             .is_empty(),
         "totient_dvd_totient_mul_prime must rest on zero axioms"
+    );
+}
+
+/// `Nat.totient_dvd_totient_mul : ∀ k a, Dvd (totient a) (totient (mul a k))`
+/// — the fully general (no hypothesis) engine behind Target 1
+/// (`F:ml430-nat-totient-dvd-of-dvd-9622e44a`), at free `k`, `a`, plus a
+/// transposed-direction control and closed instances exercising a chain of
+/// length 0 (`k=1`), 1 (`k` prime), and 2 (`k` composite, forcing the
+/// well-founded induction to peel two primes).
+#[test]
+fn totient_dvd_totient_mul_applies_at_free_variables_with_a_transposed_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    let k_fv = f.fresh_fvar();
+    let k = f.k.fvar(k_fv);
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [k_fv, a_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let applied = f.const_app(p.totient_dvd_totient_mul, &[k, a]);
+    let applied_ty =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("totient_dvd_totient_mul must apply at free k, a");
+
+    let mul_ak = f.mul(a, k);
+    let tot_a = f.const_app(p.totient, &[a]);
+    let tot_ak = f.const_app(p.totient, &[mul_ak]);
+    let expected = f.dvd(tot_a, tot_ak);
+    assert!(
+        f.k.def_eq(applied_ty, expected),
+        "must state Dvd (totient a) (totient (a*k))"
+    );
+
+    // The TRANSPOSED divisibility is a DIFFERENT, generally false statement
+    // (e.g. k=2, a=1: totient 2 = 1 divides totient 1 = 1 is degenerate, but
+    // k=3, a=1: totient 3 = 2 does NOT divide totient 1 = 1).
+    let transposed = f.dvd(tot_ak, tot_a);
+    assert!(
+        !f.k.def_eq(applied_ty, transposed),
+        "the transposed divisibility must not be def-eq to the real statement"
+    );
+
+    // --- k = 1 (chain length 0): totient a | totient a trivially ----------
+    let three = f.num(3);
+    let one = f.num(1);
+    let three_one = f.mul(three, one);
+    let tot_3 = f.const_app(p.totient, &[three]);
+    let tot_3b = f.const_app(p.totient, &[three_one]);
+    assert!(f.k.def_eq(three_one, three), "3*1 must compute to 3");
+    assert!(f.k.def_eq(tot_3, tot_3b), "totient 3 = totient (3*1)");
+
+    // --- k = 3, a = 4 (chain length 1, k prime): totient 4 = 2 | totient 12 = 4
+    let four = f.num(4);
+    let twelve = f.num(12);
+    let four_three = f.mul(four, three);
+    let two = f.num(2);
+    let tot_4 = f.const_app(p.totient, &[four]);
+    let tot_12 = f.const_app(p.totient, &[four_three]);
+    assert!(f.k.def_eq(four_three, twelve), "4*3 must compute to 12");
+    assert!(f.k.def_eq(tot_4, two), "totient 4 must compute to 2");
+    assert!(f.k.def_eq(tot_12, four), "totient 12 must compute to 4");
+
+    // --- k = 4 = 2*2 (chain length 2, composite k): totient 3 = 2 | totient 12 = 4
+    // This exercises the well-founded induction actually peeling TWO primes
+    // off the cofactor rather than stopping after one step.
+    let three_four = f.mul(three, four);
+    let tot_3c = f.const_app(p.totient, &[three]);
+    let tot_12b = f.const_app(p.totient, &[three_four]);
+    assert!(f.k.def_eq(three_four, twelve), "3*4 must compute to 12");
+    assert!(f.k.def_eq(tot_3c, two), "totient 3 must compute to 2");
+    assert!(f.k.def_eq(tot_12b, four), "totient 12 must compute to 4");
+
+    assert!(
+        f.k.axiom_footprint(p.totient_dvd_totient_mul).is_empty(),
+        "totient_dvd_totient_mul must rest on zero axioms"
+    );
+}
+
+/// `Nat.totient_dvd_of_dvd : ∀ a b, Dvd a b → Dvd (totient a) (totient b)` —
+/// `F:ml430-nat-totient-dvd-of-dvd-9622e44a` itself, at a free hypothesis
+/// (the divisibility witness is never constructed, only its TYPE is pushed
+/// into context, matching this file's standing pattern for a hypothesis
+/// fvar), plus a transposed-conclusion control and a closed dividing pair.
+#[test]
+fn totient_dvd_of_dvd_applies_at_a_free_hypothesis_with_a_transposed_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [a_fv, b_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let dvd_ab_ty = f.dvd(a, b);
+    let h_fv = f.fresh_fvar();
+    let h = f.k.fvar(h_fv);
+    ctx.push(LocalDecl {
+        fvar: h_fv,
+        name: anon,
+        ty: dvd_ab_ty,
+        info: BinderInfo::Default,
+    });
+
+    let applied = f.const_app(p.totient_dvd_of_dvd, &[a, b, h]);
+    let applied_ty =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("totient_dvd_of_dvd must apply at a free hypothesis");
+
+    let tot_a = f.const_app(p.totient, &[a]);
+    let tot_b = f.const_app(p.totient, &[b]);
+    let expected = f.dvd(tot_a, tot_b);
+    assert!(
+        f.k.def_eq(applied_ty, expected),
+        "must state Dvd (totient a) (totient b)"
+    );
+
+    // The TRANSPOSED divisibility is a different, generally false statement
+    // (fails whenever a=1, b>2: totient b does not divide totient 1 = 1).
+    let transposed = f.dvd(tot_b, tot_a);
+    assert!(
+        !f.k.def_eq(applied_ty, transposed),
+        "the transposed divisibility must not be def-eq to the real statement"
+    );
+
+    // --- closed dividing pair: a = 4, b = 12, totient 4 = 2 | totient 12 = 4
+    let four = f.num(4);
+    let twelve = f.num(12);
+    let three = f.num(3);
+    let two = f.num(2);
+    let four_three = f.mul(four, three);
+    let dvd_4_12_ty = f.dvd(four, twelve);
+    let hc_fv = f.fresh_fvar();
+    let hc = f.k.fvar(hc_fv);
+    let mut ctx2 = LocalContext::new();
+    ctx2.push(LocalDecl {
+        fvar: hc_fv,
+        name: anon,
+        ty: dvd_4_12_ty,
+        info: BinderInfo::Default,
+    });
+    let applied_c = f.const_app(p.totient_dvd_of_dvd, &[four, twelve, hc]);
+    let applied_c_ty =
+        f.k.infer_in(applied_c, &mut ctx2)
+            .expect("totient_dvd_of_dvd must apply at the closed pair (4, 12)");
+    let tot_4 = f.const_app(p.totient, &[four]);
+    let tot_12 = f.const_app(p.totient, &[four_three]);
+    assert!(f.k.def_eq(four_three, twelve), "4*3 must compute to 12");
+    assert!(f.k.def_eq(tot_4, two), "totient 4 must compute to 2");
+    let expected_c = f.dvd(tot_4, tot_12);
+    assert!(
+        f.k.def_eq(applied_c_ty, expected_c),
+        "closed instance must still state Dvd (totient 4) (totient 12)"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.totient_dvd_of_dvd).is_empty(),
+        "totient_dvd_of_dvd must rest on zero axioms"
     );
 }
