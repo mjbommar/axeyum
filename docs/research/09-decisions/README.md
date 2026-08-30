@@ -735,3 +735,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0845](adr-0845-the-infrastructure-frontier-curates-candidates-and-validates-them-live.md) | L2 phase G3 publishes four frozen queues (missing language | accepted |
 | [0850](adr-0850-nursery-split-exemption-mechanism.md) | Adds a component-scoped exemption mechanism to the nursery | accepted |
 | [0855](adr-0855-nursery-v2-cross-population-component-check.md) | check-autogenesis-nursery.py's declared-dependency component | accepted |
+| [0865](adr-0865-two-of-three-g4-pilots-retain-the-graph-ranking-one-category-untested.md) | G4 pilot clusters — signal-scarce population supports 2 | accepted |
