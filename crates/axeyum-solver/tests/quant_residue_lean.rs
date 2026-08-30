@@ -2,6 +2,8 @@
 //! integer-prelude decomposition theorem.
 #![cfg(feature = "full")]
 
+use std::process::Command;
+
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     ProofFragment, int_euclidean_residue_refutation, prove_unsat_to_lean_module,
@@ -136,4 +138,58 @@ fn weakened_satisfiable_near_miss_does_not_route() {
         ProofFragment::IntEuclideanResidue
     );
     assert!(prove_unsat_to_lean_module(&mut script.arena, &assertions).is_err());
+}
+
+// Real-Lean toolchain discovery and skip accounting, shared with the other
+// Lean-gated suites. Until this test existed, the golden pin above only
+// asserted the rendered bytes matched a blessed hash -- never that a real Lean
+// binary still accepts them. See `lean_probe.rs`'s module doc for the
+// resolution policy (elan's toolchain directories are not on `PATH`).
+#[path = "../../axeyum-lean-kernel/tests/support/lean_probe.rs"]
+mod lean_probe;
+
+/// **Real-Lean crosscheck**: the rendered clock-3 euclidean-residue module
+/// must be accepted by a genuine `lean` binary (skips gracefully if none is
+/// installed), and `#print axioms axeyum_refutation` must not depend on
+/// `sorryAx`. This is the end-to-end kernel-checked payoff of ADR-0104 that
+/// the byte pin alone cannot demonstrate. Only clock-3 is checked here (the
+/// golden pin above is clock-3-only too); clock-10 is exercised without a
+/// pin by `committed_clock_rows_reconstruct_and_route`.
+#[test]
+fn residue_module_checks_in_real_lean() {
+    let script = parse_script(CLOCK_3).expect("parse clock-3");
+    let assertions = script.assertions.clone();
+    let certificate = int_euclidean_residue_refutation(&script.arena, &assertions)
+        .expect("clock-3 has ADR-0095 evidence");
+    let source =
+        reconstruct_int_euclidean_residue_to_lean_module(&script.arena, &assertions, &certificate)
+            .expect("clock-3 reconstructs");
+
+    let Some(bin) = lean_probe::lean_bin_or_skip("euclidean-residue", 1) else {
+        return;
+    };
+    let dir = std::env::temp_dir().join("axeyum_lean_euclidean_residue");
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join("euclidean_residue.lean");
+    std::fs::write(&file, &source).expect("write lean module");
+    let out = Command::new(&bin).arg(&file).output().expect("run lean");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success(),
+        "lean REJECTED the euclidean-residue module\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}"
+    );
+    assert!(
+        !stdout.contains("sorryAx"),
+        "euclidean-residue proof depends on sorryAx:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("axeyum_refutation"),
+        "missing #print axioms output:\n{stdout}"
+    );
+    eprintln!(
+        "[lean ok] euclidean-residue: {}",
+        stdout.trim().replace('\n', " | ")
+    );
+    lean_probe::report_checked("euclidean-residue", 1);
 }

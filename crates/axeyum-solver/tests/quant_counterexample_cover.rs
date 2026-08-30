@@ -1,6 +1,7 @@
 //! ADR-0108: checked source-bound counterexample covers for quantified UNSAT.
 #![cfg(feature = "full")]
 
+use std::process::Command;
 use std::time::Duration;
 
 use axeyum_ir::{Sort, TermArena, Value};
@@ -304,4 +305,60 @@ fn dropping_one_of_two_cover_cases_fails_closure() {
             &incomplete
         ));
     }
+}
+
+// Real-Lean toolchain discovery and skip accounting, shared with the other
+// Lean-gated suites. Until this test existed, the golden pin above only
+// asserted the rendered bytes matched a blessed hash -- never that a real Lean
+// binary still accepts them. See `lean_probe.rs`'s module doc for the
+// resolution policy (elan's toolchain directories are not on `PATH`).
+#[path = "../../axeyum-lean-kernel/tests/support/lean_probe.rs"]
+mod lean_probe;
+
+/// **Real-Lean crosscheck**: the rendered small counterexample-cover module
+/// must be accepted by a genuine `lean` binary (skips gracefully if none is
+/// installed), and `#print axioms axeyum_refutation` must not depend on
+/// `sorryAx`. This is the end-to-end kernel-checked payoff of ADR-0108 that
+/// the byte pin alone cannot demonstrate.
+#[test]
+fn counterexample_cover_module_checks_in_real_lean() {
+    let (mut arena, assertions) = small_cover_query();
+    let certificate =
+        quantified_counterexample_cover_refutation(&mut arena, &assertions, &config(5))
+            .unwrap()
+            .expect("one counterexample cube");
+    let source = reconstruct_quantified_counterexample_cover_to_lean_module(
+        &arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("checked small cover should reconstruct");
+
+    let Some(bin) = lean_probe::lean_bin_or_skip("counterexample-cover", 1) else {
+        return;
+    };
+    let dir = std::env::temp_dir().join("axeyum_lean_counterexample_cover");
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join("counterexample_cover.lean");
+    std::fs::write(&file, &source).expect("write lean module");
+    let out = Command::new(&bin).arg(&file).output().expect("run lean");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success(),
+        "lean REJECTED the counterexample-cover module\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}"
+    );
+    assert!(
+        !stdout.contains("sorryAx"),
+        "counterexample-cover proof depends on sorryAx:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("axeyum_refutation"),
+        "missing #print axioms output:\n{stdout}"
+    );
+    eprintln!(
+        "[lean ok] counterexample-cover: {}",
+        stdout.trim().replace('\n', " | ")
+    );
+    lean_probe::report_checked("counterexample-cover", 1);
 }
