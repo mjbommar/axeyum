@@ -566,6 +566,11 @@ gate-controls:
     # because registering a control is a manual step separate from writing it.
     # A control nobody runs cannot fail, so it is not a control.
     scripts/check-control-registration.sh
+    # G2 measured 2026-08-30: 3 of 4 hyphenated numeric-control scripts under
+    # scripts/tests/ are already reachable via 7 facts' checker_command, but
+    # this one -- the Nat.countRange bijection/CRT numeric control -- was cited
+    # by nothing at all. Invoked directly by path.
+    python3 scripts/tests/check-countrange-bijection-numerics.py
     # A `#[test]` separated from its function, or duplicated onto one. A splice
     # merge did exactly that on 2026-08-29 and ONE TEST SILENTLY NEVER RAN,
     # with `cargo test`'s count healthy the whole time. Four lanes repaired it.

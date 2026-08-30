@@ -45,11 +45,39 @@
 #       suite falls through it and the whole scheme is inert -- the exact
 #       failure this file is about, so it is checked FIRST and by an
 #       independent grep rather than by asking the runner.
-#   G2  no hyphenated `.py` under scripts/tests/. Confirmed by probe the same
-#       day: the `test_*.py` glob cannot see `test-foo.py`, AND such a name is
-#       not an importable module, so `python3 -m unittest scripts.tests.test-foo`
-#       cannot run it either. Inert twice over. `.sh` controls are unaffected --
-#       hyphens are their convention and all 20 are registered.
+#   G2  a hyphenated `.py` under scripts/tests/ must be invoked BY PATH by
+#       something real. Originally this rejected every hyphenated name
+#       outright, reasoning that `test_*.py` discovery cannot see a hyphen AND
+#       that a hyphenated name is not an importable module. MEASURED
+#       2026-08-30: the second half is FALSE. `python3 -m unittest
+#       scripts.tests.check-foo` DOES import the file -- `__import__`/
+#       `importlib.import_module` resolve a dotted path by matching FILE NAMES
+#       on disk, and only the `import` STATEMENT's parser enforces the
+#       identifier restriction. What actually happens with the four scripts
+#       this was written against is stranger than "cannot run": none is a
+#       `unittest.TestCase`, each is a standalone script that calls
+#       `sys.exit(0)`/`sys.exit(1)` at module level, so the IMPORT ITSELF
+#       terminates the whole `python3` process before unittest's loader ever
+#       builds or runs a TestSuite (confirmed by the absence of any "Ran N
+#       tests" line, and by reproducing the identical exit with a bare
+#       `importlib.import_module(...)` and no unittest involved at all). That
+#       invocation form is not "unittest discovered and ran a test"; it is
+#       "importing the file executes it as a script and its own exit code
+#       escapes before unittest does anything," and nothing should rely on it.
+#
+#       What DOES make a hyphenated `.py` reachable is the same thing that
+#       already justifies a hyphenated `.sh`: invocation BY PATH, from CALLERS
+#       or from a fact's `checker_command`. `scripts/check-fact-evidence-replay.sh`
+#       (registered in scripts/check.sh and the justfile) executes every
+#       `proved`/`computed`/`refuted`/`axiom` fact's literal `checker_command`
+#       string, and 3 of the 4 scripts this guard was written against are
+#       cited that way by 7 `proved` facts -- a real caller, exercised on
+#       every `just check`, invisible to this gate only because it never read
+#       `artifacts/facts/*.json`. So: fine if invoked by path from CALLERS or a
+#       fact; still rejected if invoked by nothing (the property is
+#       reachability, not the hyphen itself). `.sh` controls keep their
+#       separate, pre-existing check below -- hyphens are their convention and
+#       all 20 are registered via CALLERS.
 #   G3  every opt-out entry names a file that exists (a stale exclusion hides
 #       nothing and misstates the corpus).
 #   G4  every opt-out entry carries a reason.
@@ -136,20 +164,35 @@ if [ "${runner_named:-0}" -eq 0 ]; then
   rc=1
 fi
 
-# --- G2: hyphenated .py controls are unreachable ------------------------------
+# --- G2: hyphenated .py controls must be invoked BY PATH ---------------------
+# A fact's checker_command is a real caller (scripts/check-fact-evidence-replay.sh
+# executes every settled fact's checker_command verbatim, and it is itself
+# registered in CALLERS' scripts/check.sh and the justfile) -- see the header
+# comment above for the measurement that made this a reachability check rather
+# than a blanket rejection.
+FACTS_GLOB="${AXEYUM_FACTS_GLOB:-artifacts/facts/*.json}"
+facts_text=$(cat $FACTS_GLOB 2>/dev/null)
+
 hyphen_py=()
 for f in scripts/tests/*.py; do
   [ -e "$f" ] || continue
   b=$(basename "$f")
-  case "$b" in *-*) hyphen_py+=("$b") ;; esac
+  case "$b" in *-*) : ;; *) continue ;; esac
+  by_path=$(printf '%s' "$callers_text" | grep -cF "scripts/tests/$b")
+  by_path=$((by_path + $(printf '%s' "$facts_text" | grep -cF "scripts/tests/$b")))
+  [ "${by_path:-0}" -eq 0 ] && hyphen_py+=("$b")
 done
 if [ "${#hyphen_py[@]}" -gt 0 ]; then
   for h in "${hyphen_py[@]}"; do
-    echo "CONTROL_REGISTRATION_ERROR|scripts/tests/$h is unreachable TWICE: the" \
-         "test_*.py discovery glob does not match a hyphen, and a hyphenated name" \
-         "is not an importable module so \`python3 -m unittest scripts.tests.${h%.py}\`" \
-         "cannot run it either. Rename it with underscores. (.sh controls keep" \
-         "hyphens -- they are invoked by path.)" >&2
+    echo "CONTROL_REGISTRATION_ERROR|scripts/tests/$h is a hyphenated .py control" \
+         "invoked by NOTHING: not named by path in scripts/check.sh, the" \
+         "justfile, hooks/pre-push, .github/workflows, or any fact's" \
+         "checker_command. Either invoke it by path from one of those (the same" \
+         "convention a .sh control already uses) or rename it with underscores" \
+         "and register it as a discoverable test_*.py suite. (Note:" \
+         "\`python3 -m unittest scripts.tests.${h%.py}\` is NOT a fix -- see the" \
+         "header comment on why that invocation form does not actually run it" \
+         "as a test.)" >&2
   done
   rc=1
 fi
