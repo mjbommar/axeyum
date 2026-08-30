@@ -725,6 +725,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_div_left,
         p.gcd_comm,
         p.coprime_mul_of_coprime,
+        p.gcd_mod_left_eq_gcd,
+        p.coprime_mul_iff,
         p.coprime_of_forall_prime_dvd,
         p.dvd_of_forall_prime_mul_dvd,
         p.coprime_iff_is_rel_prime,
@@ -7836,7 +7838,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        93 + 574,
+        93 + 576,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8388,6 +8390,192 @@ fn coprime_mul_of_coprime_applies_at_a_concrete_instance_and_symbolically() {
     assert!(
         f.k.axiom_footprint(p.coprime_mul_of_coprime).is_empty(),
         "coprime_mul_of_coprime rests on a trusted declaration"
+    );
+}
+
+/// `Nat.gcd_mod_left_eq_gcd` at concrete instances exercising BOTH branches
+/// of its `m` case split, plus a genuinely free `(x, m)`.
+///
+/// `m = 0`: `x = 7`, so `mod 7 0 = 7` (`Nat.mod_zero`) and the conclusion is
+/// the (still non-trivial, since the two sides are syntactically different
+/// `gcd` applications before reduction) `Eq (gcd (mod 7 0) 0) (gcd 7 0)`.
+/// `m = succ k` (`k = 4`, so `m = 5`): `x = 17`, `mod 17 5 = 2` -- checked to
+/// NOT be syntactically/definitionally `17` first, so this instance
+/// genuinely exercises the Euclidean step rather than a degenerate case
+/// where the remainder happens to equal the dividend; `gcd 2 5 = 1 = gcd 17
+/// 5` confirms the reduced values agree too.
+#[test]
+fn gcd_mod_left_eq_gcd_applies_at_both_branches_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // m = 0 branch.
+    let seven = f.num(7);
+    let zero = f.zero();
+    let applied_zero = f.lemma(p.gcd_mod_left_eq_gcd, &[seven, zero]);
+    let inferred_zero =
+        f.k.infer(applied_zero)
+            .expect("gcd_mod_left_eq_gcd must type-check at (7, 0)");
+    let mod_7_0 = f.modulo(seven, zero);
+    let gcd_mod_7_0 = f.gcd(mod_7_0, zero);
+    let gcd_7_0 = f.gcd(seven, zero);
+    let expected_zero = f.eq(gcd_mod_7_0, gcd_7_0);
+    assert!(f.k.def_eq(inferred_zero, expected_zero));
+
+    // m = succ k branch, k = 4 (m = 5).
+    let seventeen = f.num(17);
+    let five = f.num(5);
+    let two = f.num(2);
+    let mod_17_5 = f.modulo(seventeen, five);
+    assert!(
+        !f.k.def_eq(mod_17_5, seventeen),
+        "mod 17 5 must NOT reduce to 17 -- this instance must exercise the \
+         real Euclidean step, not a degenerate m=0-shaped one"
+    );
+    assert!(f.k.def_eq(mod_17_5, two), "mod 17 5 must reduce to 2");
+    let one = f.num(1);
+    let gcd_17_5 = f.gcd(seventeen, five);
+    assert!(f.k.def_eq(gcd_17_5, one), "gcd 17 5 must reduce to 1");
+    let applied_succ = f.lemma(p.gcd_mod_left_eq_gcd, &[seventeen, five]);
+    let inferred_succ =
+        f.k.infer(applied_succ)
+            .expect("gcd_mod_left_eq_gcd must type-check at (17, 5)");
+    let gcd_mod_17_5 = f.gcd(mod_17_5, five);
+    let expected_succ = f.eq(gcd_mod_17_5, gcd_17_5);
+    assert!(f.k.def_eq(inferred_succ, expected_succ));
+
+    // Symbolic: a genuinely free `(x, m)`.
+    let x_fv = f.fresh_fvar();
+    let m_fv = f.fresh_fvar();
+    let x = f.k.fvar(x_fv);
+    let m = f.k.fvar(m_fv);
+    let applied_sym = f.lemma(p.gcd_mod_left_eq_gcd, &[x, m]);
+    let mod_x_m = f.modulo(x, m);
+    let gcd_mod_x_m = f.gcd(mod_x_m, m);
+    let gcd_x_m = f.gcd(x, m);
+    let expected_sym = f.eq(gcd_mod_x_m, gcd_x_m);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: x_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(applied_sym, &mut ctx)
+            .expect("gcd_mod_left_eq_gcd must apply at free variables");
+    assert!(f.k.def_eq(inferred_sym, expected_sym));
+
+    assert!(
+        f.k.axiom_footprint(p.gcd_mod_left_eq_gcd).is_empty(),
+        "gcd_mod_left_eq_gcd rests on a trusted declaration"
+    );
+}
+
+/// `Nat.coprime_mul_iff` at a concrete coprime instance (`x=5, m=2, n=3`,
+/// mirroring `coprime_mul_of_coprime`'s own test point) and a concrete
+/// NON-coprime instance (`x=2, m=2, n=3`: `gcd 2 2 = 2 != 1`, so the `Iff`'s
+/// right side's first conjunct is a genuinely unprovable proposition here --
+/// checked directly, so this instantiation is not vacuous), plus a
+/// genuinely free `(x, m, n)`.
+#[test]
+fn coprime_mul_iff_applies_at_concrete_instances_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+
+    // Coprime instance.
+    let five = f.num(5);
+    let two = f.num(2);
+    let three = f.num(3);
+    let six = f.mul(two, three);
+    let applied = f.const_app(p.coprime_mul_iff, &[five, two, three]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("coprime_mul_iff must type-check at (5,2,3)");
+    let gcd_5_6 = f.gcd(five, six);
+    let lhs_ty = f.eq(gcd_5_6, one);
+    let gcd_5_2 = f.gcd(five, two);
+    let eq_5_2 = f.eq(gcd_5_2, one);
+    let gcd_5_3 = f.gcd(five, three);
+    let eq_5_3 = f.eq(gcd_5_3, one);
+    let rhs_ty = f.const_app(p.logic.and, &[eq_5_2, eq_5_3]);
+    let expected = f.const_app(p.logic.iff, &[lhs_ty, rhs_ty]);
+    assert!(f.k.def_eq(inferred, expected));
+
+    // Non-coprime instance: gcd 2 2 = 2 != 1, checked directly so this
+    // instantiation genuinely exercises a false right-conjunct, not a
+    // vacuous copy of the coprime case above.
+    let gcd_2_2 = f.gcd(two, two);
+    assert!(!f.k.def_eq(gcd_2_2, one), "gcd 2 2 must NOT reduce to one");
+    let applied_nc = f.const_app(p.coprime_mul_iff, &[two, two, three]);
+    let inferred_nc =
+        f.k.infer(applied_nc)
+            .expect("coprime_mul_iff must type-check at (2,2,3)");
+    let two_times_three = f.mul(two, three);
+    let gcd_2_6 = f.gcd(two, two_times_three);
+    let lhs_nc = f.eq(gcd_2_6, one);
+    let eq_2_2 = f.eq(gcd_2_2, one);
+    let gcd_2_3 = f.gcd(two, three);
+    let eq_2_3 = f.eq(gcd_2_3, one);
+    let rhs_nc = f.const_app(p.logic.and, &[eq_2_2, eq_2_3]);
+    let expected_nc = f.const_app(p.logic.iff, &[lhs_nc, rhs_nc]);
+    assert!(f.k.def_eq(inferred_nc, expected_nc));
+
+    // Symbolic: a genuinely free `(x, m, n)`.
+    let x_fv = f.fresh_fvar();
+    let m_fv = f.fresh_fvar();
+    let n_fv = f.fresh_fvar();
+    let x = f.k.fvar(x_fv);
+    let m = f.k.fvar(m_fv);
+    let n = f.k.fvar(n_fv);
+    let applied_sym = f.const_app(p.coprime_mul_iff, &[x, m, n]);
+    let mn = f.mul(m, n);
+    let gcd_x_mn = f.gcd(x, mn);
+    let lhs_sym = f.eq(gcd_x_mn, one);
+    let gcd_x_m = f.gcd(x, m);
+    let eq_x_m = f.eq(gcd_x_m, one);
+    let gcd_x_n = f.gcd(x, n);
+    let eq_x_n = f.eq(gcd_x_n, one);
+    let rhs_sym = f.const_app(p.logic.and, &[eq_x_m, eq_x_n]);
+    let expected_sym = f.const_app(p.logic.iff, &[lhs_sym, rhs_sym]);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: x_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let inferred_sym =
+        f.k.infer_in(applied_sym, &mut ctx)
+            .expect("coprime_mul_iff must apply at free variables");
+    assert!(f.k.def_eq(inferred_sym, expected_sym));
+
+    assert!(
+        f.k.axiom_footprint(p.coprime_mul_iff).is_empty(),
+        "coprime_mul_iff rests on a trusted declaration"
     );
 }
 
