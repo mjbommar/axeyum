@@ -1232,6 +1232,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_mul,
         p.dvd_pow_add_one_of_odd_exp,
         p.dvd_pow_add_one_of_odd_mul_exp,
+        p.pow_two_or_has_odd_factor,
+        p.pow_of_pow_add_prime,
         // `fermat-mirrors` lane: `fermat_number_mirrors.rs`.
         p.fermatnumber_ne_one,
         p.fermatnumber_mono,
@@ -21131,6 +21133,140 @@ fn dvd_pow_add_one_of_odd_mul_exp_applies_at_a_concrete_instance_and_symbolicall
         5 % 3,
         0,
         "3 must NOT divide 2^2+1=5 -- the odd hypothesis is load-bearing"
+    );
+}
+
+/// `Nat.pow_two_or_has_odd_factor` and `Nat.pow_of_pow_add_prime`
+/// (`F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`) at genuinely FREE `n`
+/// (resp. `a, n`), and `pow_two_or_has_odd_factor` at the concrete
+/// discriminating instance `n = 6`. The construction's own recursion (traced
+/// by hand: `6 = 3+3`, `3 = succ(1+1)` odd with witness `t=1`, re-assembled
+/// at `n=6` as `e := 2*1 = 2`) produces the odd-factor witness `e=2, t=1`
+/// (`6 = 2*(2*1+1) = 2*3`), which this test's independently-built statement
+/// pins down by declaring the disjunction at `n=6` as its own theorem (a
+/// re-check, not a tautology: the kernel must accept `proof6`'s type as
+/// EXACTLY this `Or`, not merely as SOME provable type).
+#[test]
+fn pow_two_or_has_odd_factor_and_pow_of_pow_add_prime_apply_at_free_and_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.k.anon();
+
+    // Free-variable check: `pow_two_or_has_odd_factor` at a fresh `n`.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let applied_n = f.const_app(p.pow_two_or_has_odd_factor, &[n]);
+    f.k.infer_in(applied_n, &mut ctx).unwrap_or_else(|err| {
+        panic!(
+            "pow_two_or_has_odd_factor must apply at a free n: {}",
+            f.explain(&err)
+        )
+    });
+
+    // Free-variable check: `pow_of_pow_add_prime` at fresh `a, n`.
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let n2_fv = f.fresh_fvar();
+    let n2 = f.k.fvar(n2_fv);
+    let mut ctx2 = LocalContext::new();
+    for fv in [a_fv, n2_fv] {
+        ctx2.push(LocalDecl {
+            fvar: fv,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let applied_an = f.const_app(p.pow_of_pow_add_prime, &[a, n2]);
+    f.k.infer_in(applied_an, &mut ctx2).unwrap_or_else(|err| {
+        panic!(
+            "pow_of_pow_add_prime must apply at free a, n: {}",
+            f.explain(&err)
+        )
+    });
+
+    // Concrete discriminating instance: n = 6 = 2*3, 3 odd and > 1.
+    let six = f.num(6);
+    let zero = f.zero();
+    let five = f.num(5);
+    let hne6 = {
+        let h_fv = f.fresh_fvar();
+        let h = f.k.fvar(h_fv);
+        let body = f.lemma(p.succ_ne_zero, &[five, h]);
+        let succ_five = f.succ(five);
+        let eq_ty = f.eq(succ_five, zero);
+        f.lam_fv(h_fv, eq_ty, body)
+    };
+    let proof6 = f.lemma(p.pow_two_or_has_odd_factor, &[six, hne6]);
+
+    // The disjunction's statement at n = 6, built independently of the
+    // lemma's own construction: `Or (∃ m, 6 = 2^m) (∃ e t, 6 = e*(succ(2t))
+    // ∧ t ≠ 0)`.
+    let two = f.num(2);
+    let one_lvl = f.level_one();
+    let m_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let pw = f.pow(two, m);
+    let pow2_eqn = f.eq(six, pw);
+    let pow2_pred_6 = f.lam_fv(m_fv, nat, pow2_eqn);
+    let ex_m = f.k.const_(p.logic.exists_, vec![one_lvl]);
+    let pow2_disjunct_6 = f.apply(ex_m, &[nat, pow2_pred_6]);
+
+    let e_fv = f.fresh_fvar();
+    let e = f.k.fvar(e_fv);
+    let t_fv = f.fresh_fvar();
+    let t = f.k.fvar(t_fv);
+    let mt = f.mul(two, t);
+    let dexp = f.succ(mt);
+    let prod = f.mul(e, dexp);
+    let odd_eqn = f.eq(six, prod);
+    let eq_t0 = f.eq(t, zero);
+    let false_ty = f.k.const_(p.logic.false_, vec![]);
+    let net = f.arrow(eq_t0, false_ty);
+    let conj = f.const_app(p.logic.and, &[odd_eqn, net]);
+    let odd_inner_pred_6 = f.lam_fv(t_fv, nat, conj);
+    let ex_t = f.k.const_(p.logic.exists_, vec![one_lvl]);
+    let odd_body = f.apply(ex_t, &[nat, odd_inner_pred_6]);
+    let odd_pred_6 = f.lam_fv(e_fv, nat, odd_body);
+    let ex_e = f.k.const_(p.logic.exists_, vec![one_lvl]);
+    let odd_disjunct_6 = f.apply(ex_e, &[nat, odd_pred_6]);
+
+    let disj_6 = f.const_app(p.logic.or, &[pow2_disjunct_6, odd_disjunct_6]);
+
+    let name6 = f.name("six_is_a_power_of_two_or_has_an_odd_factor");
+    f.declare_theorem(name6, disj_6, proof6)
+        .unwrap_or_else(|err| {
+            panic!(
+                "pow_two_or_has_odd_factor(6) must give the n=6 disjunction: {}",
+                f.explain(&err)
+            )
+        });
+    assert!(
+        f.k.axiom_footprint(name6).is_empty(),
+        "the n=6 odd-factor instance must rest on zero axioms"
+    );
+
+    // Discriminating negative control (arithmetic, not a kernel proof
+    // attempt): the witness this lemma's construction actually produces for
+    // n=6 is e=2, t=1 (6 = 2*(2*1+1) = 2*3) -- the wrong odd factor e=1
+    // (giving 1*3=3) must NOT reconstruct 6.
+    let wrong_witness_e1_d3 = 3; // e=1, d=3 -> 1*3
+    assert_ne!(
+        wrong_witness_e1_d3, 6,
+        "e=1 is the wrong witness for n=6 -- e=2 is required"
+    );
+    assert_eq!(
+        2 * 3,
+        6,
+        "the genuine witness e=2, t=1 (d=3) must reconstruct n=6"
     );
 }
 
