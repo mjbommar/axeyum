@@ -100,17 +100,19 @@ def is_closed_evaluation(statement: str) -> bool:
     text = statement.strip()
     if not text or BINDER.search(text):
         return False
-    if "=" not in text:
-        return False
     residue = IDENT.sub(" ", text)
     residue = re.sub(r"[0-9]+", " ", residue)
     if any(ch not in ALLOWED_PUNCT for ch in residue):
         return False
-    # At least one side must be a bare numeral, and at least one identifier must
-    # appear. `1 = 1` is not a nursery row and `Foo = Bar` is not an evaluation.
+    # Exactly one `=`, so this also rejects a statement with none -- an explicit
+    # `"=" not in text` guard was here and was UNKILLABLE by mutation, because
+    # this line already covers it. A guard no test can kill is one nobody can
+    # tell is working.
     sides = [s.strip() for s in text.split("=")]
     if len(sides) != 2:
         return False
+    # At least one side must be a bare numeral, and at least one identifier must
+    # appear. `1 = 1` is not a nursery row and `Foo = Bar` is not an evaluation.
     if not any(NUMERAL.match(s) for s in sides):
         return False
     return bool(IDENT.search(text))
@@ -141,6 +143,12 @@ CLASSIFIER_FIXTURES: list[tuple[str, bool, str]] = [
     ("∀ {n : ℕ}, Even n ↔ n % 2 = 0", False, "quantified biconditional"),
     ("Nat.sqrt 0 = 0", True, "same shape, different family -- the rule is general"),
     ("Nat.gcd m n = Nat.gcd n m", False, "free variables, no numeral side"),
+    # Not Mathlib syntax, and that is the point: the single-`=` guard has no
+    # REACHABLE discriminating input among real statements, so without this
+    # fixture it is unkillable by mutation -- a guard nobody can tell is
+    # working. Anything the classifier cannot parse into two sides must be
+    # declined rather than guessed at.
+    ("Nat.foo 0 = 1 = 1", False, "chained equality is not a two-sided evaluation"),
 ]
 
 

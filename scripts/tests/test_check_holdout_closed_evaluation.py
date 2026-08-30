@@ -53,6 +53,15 @@ class ClassifierTests(unittest.TestCase):
         """Kills the mutation that drops the numeral-side requirement."""
         self.assertFalse(gate.is_closed_evaluation("Nat.gcd m n = Nat.gcd n m"))
 
+    def test_a_chained_equality_is_not_classified(self) -> None:
+        """Kills the mutation that drops the single-`=` guard.
+
+        There is no realistic Mathlib statement that separates that guard from
+        the numeral-side one, so without this case it is UNKILLABLE -- which is
+        the shape this repository treats as worse than a missing guard.
+        """
+        self.assertFalse(gate.is_closed_evaluation("Nat.foo 0 = 1 = 1"))
+
     def test_an_unfamiliar_token_is_not_classified(self) -> None:
         """The classifier refuses to guess rather than guessing wrong."""
         self.assertFalse(gate.is_closed_evaluation("Nat.foo 0 ⊕ 1 = 3"))
