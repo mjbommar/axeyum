@@ -4,18 +4,63 @@
   "title": "Mathlib v4.30 source proposition Nat.dvd_two_of_totient_le_one",
   "statement": "The proposition declared as `Nat.dvd_two_of_totient_le_one` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {a : ℕ}, 0 < a → a.totient ≤ 1 → a ∣ 2",
-    "fragment": "Nat"
+    "language": "lean4",
+    "statement": "theorem Nat.dvd_two_of_totient_le_one : ((x0 : AxNat) -> ((x1 : AxNat.lt AxNat.zero x0) -> ((x2 : AxNat.le (AxNat.totient x0) (AxNat.succ AxNat.zero)) -> AxNat.dvd x0 (AxNat.succ (AxNat.succ AxNat.zero)))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Nat.dvd_two_of_totient_le_one"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:ml430-nat-totient-eq-zero-3be161d6",
+    "F:ml430-nat-coprime-one-left-iff-45945e80",
+    "F:nat-beq-eq-true-of-eq",
+    "F:nat-dvd-refl",
+    "F:nat-le-antisymm",
+    "F:nat-le-of-succ-le-succ",
+    "F:nat-le-succ-succ",
+    "F:nat-le-total",
+    "F:nat-le-trans",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-lt-succ-self",
+    "F:nat-not-succ-le-zero",
+    "F:nat-one-mul",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.dvd_two_of_totient_le_one",
+      "kind": "kernel-term",
+      "supports": "0 < a -> totient a <= 1 -> a | 2",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_two_of_totient_le_one 2>/dev/null | grep -Ec '^Nat\\.dvd_two_of_totient_le_one[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the constructed proof term against the stated type. `trichotomy` at c=2 on `a`: `a < 2` combined with `0 < a` forces `a = 1` (`dvd 1 2` via a concrete witness `2` and `one_mul`); `a = 2` is `dvd 2 2` (`dvd_refl`); `2 < a` contradicts `totient a <= 1` via `countRange_ge_two_of_two_witnesses` at witnesses `1` (`coprime_one_left_iff`, unconditional) and `pred a` (`coprime_succ_self`), refuted by peeling two `succ`s down to `not_succ_le_zero` (`totient_le_one_contradiction_above_two`, `totient_lemmas.rs`, shared with `totient_eq_one_iff`'s forward direction). `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed."
+    },
+    {
+      "id": "footprint-Nat.dvd_two_of_totient_le_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.dvd_two_of_totient_le_one` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane totient-even",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.dvd_two_of_totient_le_one` and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +71,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type -- the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Honest flip, confirmed against the pinned Mathlib v4.30 source per `F:ml430-nat-totient-eq-zero-3be161d6`'s own mirror-flip check (same `Nat.totient` construction, `nat_prelude/totient.rs`). `formal.statement` is the actual kernel-core `render_lean` output for `Nat.dvd_two_of_totient_le_one`, not the Mathlib surface form named in `title`. `depends_on` restricts to entries that already carry a fact ledger entry; the route also composes `Nat.coprime_succ_self`, `Nat.coprime_one_left_iff`, and the counting lemmas `Nat.countRange_succ_of_true`/`countRange_le_of_le`/`countRange_ge_two_of_two_witnesses` landed by the prior `totient-counting` lane, none of which carry a fact entry of their own -- unregistered nat-prelude theorems, not axioms, per the empty-footprint evidence above. This fact's partition in `artifacts/autogenesis/nursery-v2-extension.json` is `development`, not held-out."
 }
