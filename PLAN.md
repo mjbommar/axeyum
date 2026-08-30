@@ -170,6 +170,7 @@ now. Nothing was deleted.
 | 2026-08-30 | nat-parity-div | 6 new axiom-free Nat kernel theorems (parity/div-two cluster) + 1 mirror flipped onto a pre-existing theorem; 7 of 10 dispatched facts proved, 3 blocked with named reasons |
 | 2026-08-30 | fermat-mirrors | `Nat.fermatNumber_ne_one`/`_mono`/`coprime_fermatNumber_fermatNumber` — three new axiom-free kernel theorems (`nat_prelude/fermat_number_mirrors.rs`), facts flipped to `proved` with evidence, 208 `nat_prelude::` tests passing (was 204). |
 | 2026-08-30 | pow-add-prime | `Nat.pow_mul`, `Nat.dvd_pow_add_one_of_odd_exp`, `Nat.dvd_pow_add_one_of_odd_mul_exp` — the odd-factor divisibility step toward `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`, subtraction-free (no alternating sum, no `Int` transport); fact stays `open`, full lemma not assembled |
+| 2026-08-30 | `planning` | Accept ADR-0717; add artifact, graph, safety, and discovery roadmaps; promote L0–L4 into the generated primary plan with collision-free 2–3 lane ownership. |
 | 2026-08-30 | parity-finish | 3 axiom-free Nat kernel theorems closing the parity/division-by-two cluster's last blockers (`Nat.even_add`, `Nat.even_add'`, `Nat.even_div`); all 3 dispatched facts proved; two of three handoff sizings were wrong (one undersold, one — `even_div` — badly oversold: an existing unconditional lemma closed it in ~75 lines) |
 | 2026-08-30 | fermat-easy | 5 axiom-free Nat kernel theorems: the three closed `fermatNumber` reductions (0/1/2 = 3/5/17), `Nat.odd_fermatNumber`, and `Nat.fermatNumber_strictMono`; all fully symbolic except the three closed equalities (largest formed numeral 17) |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
@@ -629,10 +630,11 @@ changes that still determine the immediate queue.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
-here as closed evidence boundaries. A3 remains incomplete, but all currently
-preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
-A5 is the first active item.
+The accepted library programme below is the new cross-cutting focus. It does
+not erase the retained A1–A11 solver programme: P0 safety work
+preempts it, P1 graph/artifact authority may run beside A5/A6, and production
+pilots begin only after their authorities land. A3 remains incomplete but
+yielded, A4 yielded, and A5 remains the first active solver-depth item.
 
 **The prose half of the ledger is now derived, not transcribed** (`WIP`,
 ledger-freshness, 2026-08-18). `F:schedule-critical-chain-infeasible` said "the
@@ -32578,6 +32580,16 @@ sharply. Splitting that status is a schema change with a validator and an
 - `./scripts/check-links.sh`: `all links ok`.
 - No `cargo test` run — this lane changed no Rust.
 
+**Library programme (`DONE`, library-construction-roadmaps, 2026-08-30).**
+ADR-0717 and four detailed roadmaps now define the new L0–L4 focus: universal
+theorem credit; pinned declaration-graph authority; graph join and
+infrastructure ranking; declarative, counterexample-first discovery; and a thin
+Lean adapter before demand-gated source compatibility. Project-wide plan
+sources, the plan index, research roadmap, and generated root plan carry the
+same order. Implementation belongs to new disjoint graph-authority,
+graph-ranking, safety-contract, and discovery lanes; this planning lane owns no
+producer, fact status, or generated graph artifact.
+
 ## Status
 
 **DONE.** ADR-0603 row 2 for the least-number principle over the naturals is
@@ -33169,6 +33181,99 @@ family, confirmed by direct lookup — never held-out).
 Each `checker_command` verified BOTH directions against a fresh
 `nat_theorem_inventory` dump: 1 match for the true (name, type) pair, 0 for
 a fabricated name, 0 for the true name paired with a wrong type.
+
+**Lane:** `nt-certificates`
+**Status:** landed — ADR-0745
+**Date:** 2026-08-30
+
+## What this lane was for
+
+ADR-0716 measured that ADR-0603's **row 2** (the boundary refutation) is
+provably empty for ℕ, ℤ and ℚ, so number-theoretic dominance has to come from
+rows 1 + 3: a statement, an executable, and a re-derivable certificate. It then
+measured the row-3 obligation as unmet.
+
+## The gap, re-measured rather than inherited
+
+Positive controls in the same command, GNU `grep` (not the interactive
+`ugrep`):
+
+| file | `verify_`/`check_` fns | plain `fn`s |
+| --- | --- | --- |
+| `crates/axeyum-cas/src/ntheory.rs` | **0** | 39 |
+| `crates/axeyum-cas/src/ntheory_advanced.rs` | **0** | 29 |
+| `crates/axeyum-cas/src/taylor.rs` (control) | 8 | — |
+| `crates/axeyum-cas/src/mvt.rs` (control) | 9 | — |
+
+Confirmed: 68 number-theoretic functions, zero verifiers, in a crate whose
+analysis modules carry 8–9 apiece.
+
+## What landed
+
+`crates/axeyum-cas/src/ntheory_certify.rs` — four certificate types, four
+independent checkers, self-checking producers. Modular arithmetic is the
+module's own so a shared `mod_pow` defect cannot fool both sides; agreement
+with `ntheory::mod_pow` is tested at 150 points including modulus `i128::MAX`.
+
+- `PrattCertificate` / `check_primality_certificate` — recursive Lucas.
+- `CompositeCertificate` / `check_composite_certificate` — a divisor. Kept a
+  **separate type**; the two directions are never interchangeable.
+- `FactorizationCertificate` / `check_factorization_certificate` — factor list
+  + per-base Pratt + product identity + strict ascending order.
+- `CrtCertificate` / `check_crt_certificate` — `Solution` with a **least**
+  common multiple, or a named `Inconsistent` pair.
+
+33 adversarial fixtures, 0 failures. Plus the 40 pre-existing `ntheory` tests:
+73 passing under `--lib ntheory`.
+
+## Trust anchor
+
+**Nothing reconstructs through `Kernel::add_declaration`, deliberately**, and
+the module doc labels itself `cas-internal` (ADR-0601). Over unary numerals a
+reconstruction of `n = d · e` would be an `Eq.refl` on a numeral tower —
+exactly the `refl`-shaped, substance-free reconstruction
+`scripts/check-cas-substance.py` exists to catch.
+
+## Guard-kill measurement
+
+`scripts/tests/test-ntheory-certificate-guards.sh`:
+`measured=23 survivors=3 not_measured=0`, exit 0.
+
+Twenty verdict-bearing guards each killed (sixteen by one test, four by two).
+Three survivors — G1, G5, G10 — **found by the sweep, not predicted**, each
+provably unable to change a verdict, each documented at its site and pinned in
+`EXPECTED_SURVIVORS` with a two-way assertion.
+
+The sweep failed twice on real conditions before passing (two patterns matched
+in two places, silently leaving guards `NOT MEASURED`; then a changed survivor
+set), which is better evidence it can fail than a synthetic control. It also
+corrected a comment I had written confidently and wrongly — the zero-exponent
+fixture kills G9, not G5.
+
+## Gating
+
+- `scripts/check-ntheory-certificates.sh` — fixture suite with a **ratcheted
+  nonzero** count (floor 33). Verified both ways: passes at 33, exits 1 at 999.
+- Registered in **both** `scripts/check.sh` and the `justfile`;
+  `check-aggregate-scope.sh` green at 64 recorded divergences, unchanged.
+- The mutation sweep (~23 incremental builds) is deliberately **not** in the
+  aggregate chain.
+
+## What the row-1 + row-3 claim honestly becomes
+
+Complete for **4** routines: primality (both directions), factorization, CRT
+(both directions). Still **false** for the other 64 functions across the two
+files — `legendre_symbol`, `jacobi_symbol`, `euler_phi`, `mod_inverse`,
+`divisor_sigma` and the rest remain bare computation. Four routines, not a
+subject.
+
+## Next
+
+- Legendre symbol via Euler's criterion at a certified prime; Jacobi symbol via
+  a certified factorization. Both are natural now that `PrattCertificate`
+  exists, and neither was claimed here.
+- `euler_phi` from a `FactorizationCertificate` — the certificate already
+  carries everything the formula needs.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
@@ -34915,6 +35020,33 @@ for this crate unaffected.
 code. Did not extend `trusted_substitution`'s allowlist (named as the real
 remaining work). Did not weaken `TrustedDeclaration` to force a pass.
 
+### L0–L4 — Graph-directed trusted library programme (`TODO`, P0–P2)
+
+Run the accepted [ADR-0717](docs/research/09-decisions/adr-0717-library-construction-is-graph-directed-through-an-artifact-compatible-trust-anchor.md)
+programme in this order:
+
+1. **L0, P0 — theorem credit:** exact statement and closure identity, forbidden
+   trust/target checks, nonzero coverage, semantic controls, and independently
+   graded replay for every changed settled fact. See the
+   [safety roadmap](docs/plan/trusted-library-safety-roadmap-2026-08-30.md).
+2. **L1, P1 — graph authority:** freeze the pinned source/extractor and emit
+   complete, sealed declaration edge layers; proof/value edges remain forbidden
+   producer input. See the [artifact](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
+   and [graph](docs/plan/graph-directed-library-roadmap-2026-08-30.md) roadmaps.
+3. **L2, P1 — infrastructure frontier:** join exact Axeyum identities,
+   representability, destinations, obstructions, producers, and provenance;
+   expose every score component and preserve `fact-frontier.py` legality.
+4. **L3, P2 — discovery pilots:** after L0–L2, run one substrate, one reusable
+   producer, and one destination pilot with falsification before search and a
+   frozen local-ready comparison. See the
+   [efficiency roadmap](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md).
+5. **L4, P2 — Lean adapter:** complete artifact replay, then an elaborated-goal
+   adapter whose result Lean checks. Source/elaboration features remain blocked
+   until a preregistered population measures demand.
+
+Each phase's roadmap exit is mandatory. Zero-yield pilots remain results; raw
+degree never authorizes work; broad Lean-source compatibility is not an exit.
+
 ### A1 and A2 — `DONE`, archived
 
 Both completed. Moved to
@@ -35207,6 +35339,17 @@ For concurrency and resource rules, follow
 - **Determinism and replay are product promises:** stable order, explicit seeds
   and limits, original-term SAT replay, and independent UNSAT checking remain
   mandatory.
+- **Graph rank is advisory until its authority is complete:** module degree,
+  declaration centrality, curriculum mapping, and cost estimates remain visible
+  components. They never bypass fact-frontier legality, held-out isolation,
+  representability, or the theorem-credit safety contract.
+- **Proof data does not leak into autonomous discovery:** upstream proof/value
+  dependency edges may measure and sequence work but are physically excluded
+  from proof-isolated producer inputs and autonomous credit.
+- **Three parallel library lanes have different jobs:** prefer one shared
+  substrate/definition lane, one reusable producer lane, and one destination
+  theorem/evaluation lane. Each owns disjoint status, script, artifact, and test
+  paths; one generated writer owns every aggregate key.
 
 ## Durable detail map
 
@@ -35226,6 +35369,10 @@ For concurrency and resource rules, follow
 - Proof gaps: [`docs/plan/generated/proof-gap-matrix.md`](docs/plan/generated/proof-gap-matrix.md)
 - SMT-COMP lane: [`docs/plan/smtcomp-full-library-workstream/README.md`](docs/plan/smtcomp-full-library-workstream/README.md)
 - Lean implementation: [`docs/plan/lean-system-implementation-plan-2026-07-21.md`](docs/plan/lean-system-implementation-plan-2026-07-21.md)
+- Library artifact compatibility: [`docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md`](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
+- Graph-directed library construction: [`docs/plan/graph-directed-library-roadmap-2026-08-30.md`](docs/plan/graph-directed-library-roadmap-2026-08-30.md)
+- Trusted theorem-credit safety: [`docs/plan/trusted-library-safety-roadmap-2026-08-30.md`](docs/plan/trusted-library-safety-roadmap-2026-08-30.md)
+- Definition and discovery efficiency: [`docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md`](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md)
 - Exploration proposal: [`docs/plan/exploration-track/README.md`](docs/plan/exploration-track/README.md)
 - CAS pause handoff: [`docs/plan/cas-parity-handoff-2026-07-22.md`](docs/plan/cas-parity-handoff-2026-07-22.md)
 

@@ -3,12 +3,40 @@
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
-here as closed evidence boundaries. A3 remains incomplete, but all currently
-preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
-A5 is the first active item.
+The accepted library programme below is the new cross-cutting focus. It does
+not erase the retained A1–A11 solver programme: P0 safety work
+preempts it, P1 graph/artifact authority may run beside A5/A6, and production
+pilots begin only after their authorities land. A3 remains incomplete but
+yielded, A4 yielded, and A5 remains the first active solver-depth item.
 
 <!-- plan-generated: lane-status -->
+
+### L0–L4 — Graph-directed trusted library programme (`TODO`, P0–P2)
+
+Run the accepted [ADR-0717](docs/research/09-decisions/adr-0717-library-construction-is-graph-directed-through-an-artifact-compatible-trust-anchor.md)
+programme in this order:
+
+1. **L0, P0 — theorem credit:** exact statement and closure identity, forbidden
+   trust/target checks, nonzero coverage, semantic controls, and independently
+   graded replay for every changed settled fact. See the
+   [safety roadmap](docs/plan/trusted-library-safety-roadmap-2026-08-30.md).
+2. **L1, P1 — graph authority:** freeze the pinned source/extractor and emit
+   complete, sealed declaration edge layers; proof/value edges remain forbidden
+   producer input. See the [artifact](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
+   and [graph](docs/plan/graph-directed-library-roadmap-2026-08-30.md) roadmaps.
+3. **L2, P1 — infrastructure frontier:** join exact Axeyum identities,
+   representability, destinations, obstructions, producers, and provenance;
+   expose every score component and preserve `fact-frontier.py` legality.
+4. **L3, P2 — discovery pilots:** after L0–L2, run one substrate, one reusable
+   producer, and one destination pilot with falsification before search and a
+   frozen local-ready comparison. See the
+   [efficiency roadmap](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md).
+5. **L4, P2 — Lean adapter:** complete artifact replay, then an elaborated-goal
+   adapter whose result Lean checks. Source/elaboration features remain blocked
+   until a preregistered population measures demand.
+
+Each phase's roadmap exit is mandatory. Zero-yield pilots remain results; raw
+degree never authorizes work; broad Lean-source compatibility is not an exit.
 
 ### A1 and A2 — `DONE`, archived
 

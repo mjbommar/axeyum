@@ -347,6 +347,11 @@ step validate-facts-allowlist-tests python3 -m unittest scripts.tests.test_valid
 step shape-duplicates-tests python3 -m unittest scripts.tests.test_check_shape_duplicates
 step theorem-inventory-completeness-tests python3 -m unittest scripts.tests.test_theorem_inventory_completeness
 step absence-claims-tests python3 -m unittest scripts.tests.test_check_absence_claims
+# ADR-0745: the number-theory certificate checkers. Asserts a ratcheted NONZERO
+# fixture count, because a bare `cargo test --lib <filter>` exits 0 when the
+# filter matches nothing. The guard-kill mutation sweep is
+# `scripts/tests/test-ntheory-certificate-guards.sh`, deliberately not here.
+step ntheory-certificates scripts/check-ntheory-certificates.sh
 step cas-substance python3 scripts/check-cas-substance.py
 step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substance
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
