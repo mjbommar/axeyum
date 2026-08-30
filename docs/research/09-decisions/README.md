@@ -736,3 +736,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0845](adr-0845-the-infrastructure-frontier-curates-candidates-and-validates-them-live.md) | L2 phase G3 publishes four frozen queues (missing language | accepted |
 | [0850](adr-0850-nursery-split-exemption-mechanism.md) | Adds a component-scoped exemption mechanism to the nursery | accepted |
 | [0855](adr-0855-nursery-v2-cross-population-component-check.md) | check-autogenesis-nursery.py's declared-dependency component | accepted |
+| [0890](adr-0890-the-falsification-screen-must-be-found-in-git-log-before-dispatch.md) | D3's counterexample-first screen writes a per-target receipt (git commit + verdict) before a producer may be dispatched at that target; the gate rejects dispatch without a prior clear receipt structurally, and re-checks ordering against real git ancestry when both commits resolve. | accepted |
