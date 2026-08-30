@@ -247,6 +247,7 @@ use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
+    declare_count_range_product,
 };
 use count_range_reversal::declare_count_range_reversal_even;
 use crt::declare_crt;
@@ -1865,6 +1866,17 @@ pub struct NatPrelude {
     /// the CRT map `x ↦ (x mod m) * n + (x mod n)` is such a self-map of
     /// `[0, m*n)` exactly when `m` and `n` are coprime.
     pub count_range_permute: NameId,
+    /// `Nat.countRange_product : ∀ P R S n m,
+    /// (∀ a b, Lt b n → Eq Bool (R a) true → Eq Bool (P (add (mul n a) b)) (S b)) →
+    /// (∀ a b, Lt b n → Eq Bool (R a) false → Eq Bool (P (add (mul n a) b)) false) →
+    /// Eq Nat (countRange P (mul n m)) (mul (countRange S n) (countRange R m))`
+    /// — counting over `[0, n*m)` a predicate that factors through the block
+    /// decomposition `y = n*a + b` multiplies the two factors' counts
+    /// (`count_range_permute.rs`). **Coprimality-INDEPENDENT**, unlike the
+    /// totient identity it will serve; keeping the two apart is the lesson of
+    /// `301`'s false `count_range_row_major` claim. No `Lt 0 n` needed: at
+    /// `n = 0` both sides are `zero` and both hypotheses are vacuous.
+    pub count_range_product: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4408,6 +4420,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_congr_lt: kernel.name_str(nat, "countRange_congr_lt"),
             count_range_point_change: kernel.name_str(nat, "countRange_point_change"),
             count_range_permute: kernel.name_str(nat, "countRange_permute"),
+            count_range_product: kernel.name_str(nat, "countRange_product"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -4940,6 +4953,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_count_range_congr_lt(&mut d, &p)?;
         declare_count_range_point_change(&mut d, &p)?;
         declare_count_range_permute(&mut d, &p)?;
+        declare_count_range_product(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
         declare_transposition_involutive(&mut d, &p)?;
         declare_transposition_injective(&mut d, &p)?;

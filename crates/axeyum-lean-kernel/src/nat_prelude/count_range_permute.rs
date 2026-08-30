@@ -70,14 +70,25 @@
 //!   stated as a single `k ≠ i0`, so neither producing nor consuming them
 //!   needs any `Not`-elimination.
 //! - [`declare_count_range_permute`] — the headline.
+//! - [`declare_count_range_product`] — `Nat.countRange_product`, the second
+//!   half the CRT argument needs and the one that is **coprimality-
+//!   INDEPENDENT**: counting a predicate over `[0, n*m)` that factors through
+//!   the block decomposition `y = n*a + b` (`b < n`) multiplies the two
+//!   factors' counts. Keeping this apart from the totient identity — which is
+//!   NOT coprimality-independent — is the whole lesson of the false
+//!   `count_range_row_major` claim `docs/plan/status/301-totient-
+//!   multiplicative.md` recorded and `316-queue-sweep.md` refuted.
 //!
 //! No new `Definition` is introduced, so nothing here can be well-typed and
 //! mean the wrong thing.
 
 use super::NatPrelude;
-use super::finite::{override_eq_at, override_eq_gt, override_eq_lt, point_override};
+use super::finite::{
+    override_eq_at, override_eq_gt, override_eq_lt, point_override, select_nat_false,
+    select_nat_true,
+};
 use super::helpers::{and_left, and_right};
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, bool_true_or_false};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -1134,4 +1145,399 @@ pub(super) fn declare_count_range_permute(
         d.lam_fv(f_fv, pred_ty, over_sigma)
     };
     d.declare_theorem(p.count_range_permute, ty, value)
+}
+
+// ============================================================================
+// `Nat.countRange_product` — the block/Fubini factorization.
+// ============================================================================
+
+/// `fun k => f (add offset k)` — `f` shifted so its own zero sits at `offset`,
+/// exactly the shape `Nat.countRange_split`'s tail is stated at.
+fn shifted(d: &mut NatDev<'_>, f: ExprId, offset: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let ok = d.add(offset, k);
+    let body = d.apply(f, &[ok]);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `hf : ∀ k, Lt k n → Eq Bool (f k) false ⊢ Eq Nat (countRange f n) zero`.
+///
+/// A short arrow-motive induction, the same shape
+/// [`declare_count_range_congr_lt`] uses. Kept private: the only caller is
+/// [`declare_count_range_product`]'s `R j = false` branch, where the whole
+/// block contributes nothing.
+fn count_range_zero_of_false_below(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    f: ExprId,
+    n: ExprId,
+    hf: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let motive = |d: &mut NatDev<'_>, x: ExprId| {
+        let false_ = d.bool_false();
+        let hyp = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let fk = d.apply(f, &[k]);
+            let eq = d.bool_eq(fk, false_);
+            let bound = d.lt(k, x);
+            let body = d.arrow(bound, eq);
+            d.pi_fv(k_fv, nat, body)
+        };
+        let count = count_range(d, &p, f, x);
+        let zero = d.zero();
+        let concl = d.eq(count, zero);
+        d.arrow(hyp, concl)
+    };
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let false_ = d.bool_false();
+            let hyp = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let fk = d.apply(f, &[k]);
+                let eq = d.bool_eq(fk, false_);
+                let zero_inner = d.zero();
+                let bound = d.lt(k, zero_inner);
+                let body = d.arrow(bound, eq);
+                d.pi_fv(k_fv, nat, body)
+            };
+            let zero = d.zero();
+            let refl_case = d.refl(zero);
+            let h_fv = d.fresh_fvar();
+            d.lam_fv(h_fv, hyp, refl_case)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let false_ = d.bool_false();
+            let hyp_ty = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let fk = d.apply(f, &[k]);
+                let eq = d.bool_eq(fk, false_);
+                let bound = d.lt(k, sj);
+                let body = d.arrow(bound, eq);
+                d.pi_fv(k_fv, nat, body)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let restricted = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let hk_fv = d.fresh_fvar();
+                let hk = d.kernel().fvar(hk_fv);
+                let hk_ty = d.lt(k, j);
+                let lifted = lift_lt(d, &p, k, j, hk);
+                let applied = d.apply(h, &[k, lifted]);
+                let with_hk = d.lam_fv(hk_fv, hk_ty, applied);
+                d.lam_fv(k_fv, nat, with_hk)
+            };
+            let ih_result = d.apply(ih, &[restricted]);
+
+            let prior = count_range(d, &p, f, j);
+            let fj = d.apply(f, &[j]);
+            let sel_fj = sel(d, fj);
+            let zero = d.zero();
+            let start = d.add(prior, sel_fj);
+            let mid = d.add(zero, sel_fj);
+            let step1 = d.congr(prior, zero, ih_result, &|d, t| d.add(t, sel_fj));
+
+            let j_lt_sj = d.lemma(p.lt_succ_self, &[j]);
+            let at_j = d.apply(h, &[j, j_lt_sj]);
+            let one = d.num(1);
+            let sel_zero = select_nat_false(d, fj, one, zero, at_j);
+            let step2 = d.congr(sel_fj, zero, sel_zero, &|d, t| {
+                let zero_inner = d.zero();
+                d.add(zero_inner, t)
+            });
+
+            // `add zero zero` is defeq `zero`, so the chain may end there.
+            let (_e, chained) = d.chain(start, &[(mid, step1), (zero, step2)]);
+            d.lam_fv(h_fv, hyp_ty, chained)
+        },
+        n,
+    );
+    d.apply(proof, &[hf])
+}
+
+/// `∀ a b, Lt b n → Eq Bool (R a) `value` → Eq Bool (P (add (mul n a) b))
+/// `rhs(b)`` — the shape of both of [`declare_count_range_product`]'s
+/// per-block hypotheses, differing only in which `Bool` `R a` is pinned to and
+/// what `P` is then equal to.
+fn block_hypothesis(
+    d: &mut NatDev<'_>,
+    pred: ExprId,
+    r: ExprId,
+    n: ExprId,
+    value: ExprId,
+    rhs: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let na = d.mul(n, a);
+    let idx = d.add(na, b);
+    let lhs = d.apply(pred, &[idx]);
+    let target = rhs(d, b);
+    let concl = d.bool_eq(lhs, target);
+
+    let ra = d.apply(r, &[a]);
+    let pinned = d.bool_eq(ra, value);
+    let with_pin = d.arrow(pinned, concl);
+    let bound = d.lt(b, n);
+    let with_bound = d.arrow(bound, with_pin);
+    let over_b = d.pi_fv(b_fv, nat, with_bound);
+    d.pi_fv(a_fv, nat, over_b)
+}
+
+/// `Nat.countRange_product : ∀ P R S n m,
+///   (∀ a b, Lt b n → Eq Bool (R a) true  → Eq Bool (P (add (mul n a) b)) (S b)) →
+///   (∀ a b, Lt b n → Eq Bool (R a) false → Eq Bool (P (add (mul n a) b)) false) →
+///   Eq Nat (countRange P (mul n m)) (mul (countRange S n) (countRange R m))`
+///
+/// Counting over `[0, n*m)` a predicate that factors through the block
+/// decomposition `y = n*a + b` with `b < n` multiplies the two factors'
+/// counts. **This step needs no coprimality**, and saying so precisely is the
+/// point: the TOTIENT identity it will eventually serve does need it (false at
+/// 26 of 26 non-coprime pairs with `1 ≤ m,n ≤ 9`), and conflating the two is
+/// what produced `301`'s false `count_range_row_major` claim.
+///
+/// Stated over an arbitrary `P` with two hypotheses pinning `R a` to each
+/// `Bool`, rather than over a fixed conjunction: this kernel has no exposed
+/// `Bool`-valued `and` (`finite_set.rs`'s `bool_select_bool` is private), and
+/// a caller supplying its own combination discharges both hypotheses by
+/// reduction.
+///
+/// `Lt 0 n` is deliberately NOT required. At `n = 0` both sides are `zero` and
+/// both hypotheses are vacuous, so the statement holds — and the proof never
+/// divides, so nothing needs the divisor positive.
+///
+/// Induction on `m`. `mul n (succ j) ≡ add (mul n j) n` definitionally
+/// (`Nat.mul` recurses on its right argument), so `Nat.countRange_split` peels
+/// one block of width `n` with no `Nat.sub` anywhere. The block's own count is
+/// `countRange S n` or `zero` according to `ops::bool_true_or_false` on
+/// `R j`, via [`declare_count_range_congr_lt`] and
+/// [`count_range_zero_of_false_below`]; `Nat.left_distrib` splits the
+/// right-hand side to match.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_count_range_product(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let pred_fv = d.fresh_fvar();
+    let pred = d.kernel().fvar(pred_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let htrue_ty = block_hypothesis(d, pred, r, n, true_, &|d, b| d.apply(s, &[b]));
+    let hfalse_ty = block_hypothesis(d, pred, r, n, false_, &|d, _b| d.bool_false());
+    let htrue_fv = d.fresh_fvar();
+    let htrue = d.kernel().fvar(htrue_fv);
+    let hfalse_fv = d.fresh_fvar();
+    let hfalse = d.kernel().fvar(hfalse_fv);
+
+    let motive = |d: &mut NatDev<'_>, x: ExprId| {
+        let bound = d.mul(n, x);
+        let lhs = count_range(d, &p, pred, bound);
+        let cs = count_range(d, &p, s, n);
+        let cr = count_range(d, &p, r, x);
+        let rhs = d.mul(cs, cr);
+        d.eq(lhs, rhs)
+    };
+    let stmt = motive(d, m);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let zero = d.zero();
+            d.refl(zero)
+        },
+        &|d, j, ih| {
+            let cs = count_range(d, &p, s, n);
+            let cr_j = count_range(d, &p, r, j);
+            let block = d.mul(n, j);
+            let cp_j = count_range(d, &p, pred, block);
+            let shift = shifted(d, pred, block);
+            let tail = count_range(d, &p, shift, n);
+            let rj = d.apply(r, &[j]);
+            let sel_rj = sel(d, rj);
+
+            // `countRange P (mul n (succ j))` is defeq `countRange P (add (mul
+            // n j) n)`, which `countRange_split` peels.
+            let sj = d.succ(j);
+            let bound_sj = d.mul(n, sj);
+            let start = count_range(d, &p, pred, bound_sj);
+            let after_split = d.add(cp_j, tail);
+            let split = d.lemma(p.count_range_split, &[pred, block, n]);
+
+            let scaled = d.mul(cs, cr_j);
+            let after_ih = d.add(scaled, tail);
+            let step_ih = d.congr(cp_j, scaled, ih, &|d, t| d.add(t, tail));
+
+            // Both branches prove `add scaled tail = add scaled (mul cs sel_rj)`.
+            let branch_goal = {
+                let prod = d.mul(cs, sel_rj);
+                let rhs = d.add(scaled, prod);
+                d.eq(after_ih, rhs)
+            };
+            let true_ty = {
+                let t = d.bool_true();
+                d.bool_eq(rj, t)
+            };
+            let false_ty = {
+                let fl = d.bool_false();
+                d.bool_eq(rj, fl)
+            };
+
+            let on_true = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                // The block's predicate agrees with `S` below `n`.
+                let agree = {
+                    let k_fv = d.fresh_fvar();
+                    let k = d.kernel().fvar(k_fv);
+                    let hk_fv = d.fresh_fvar();
+                    let hk = d.kernel().fvar(hk_fv);
+                    let hk_ty = d.lt(k, n);
+                    let applied = d.apply(htrue, &[j, k, hk, h]);
+                    let with_hk = d.lam_fv(hk_fv, hk_ty, applied);
+                    d.lam_fv(k_fv, nat, with_hk)
+                };
+                let tail_eq = d.lemma(p.count_range_congr_lt, &[shift, s, n, agree]);
+                let mid = d.add(scaled, cs);
+                let step1 = d.congr(tail, cs, tail_eq, &|d, t| d.add(scaled, t));
+
+                // `sel (R j) = 1`, so `mul cs (sel (R j)) = cs`.
+                let one = d.num(1);
+                let zero = d.zero();
+                let sel_one = select_nat_true(d, rj, one, zero, h);
+                let one2 = d.num(1);
+                let mul_sel_one = d.congr(sel_rj, one2, sel_one, &|d, t| d.mul(cs, t));
+                let mul_one = d.lemma(p.mul_one, &[cs]);
+                let mul_cs_one = d.mul(cs, one2);
+                let prod = d.mul(cs, sel_rj);
+                let prod_eq_cs = d.trans(prod, mul_cs_one, cs, mul_sel_one, mul_one);
+                let cs_eq_prod = d.symm(prod, cs, prod_eq_cs);
+                let end_ = d.add(scaled, prod);
+                let step2 = d.congr(cs, prod, cs_eq_prod, &|d, t| d.add(scaled, t));
+
+                let (_e, chained) = d.chain(after_ih, &[(mid, step1), (end_, step2)]);
+                d.lam_fv(h_fv, true_ty, chained)
+            };
+
+            let on_false = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let agree = {
+                    let k_fv = d.fresh_fvar();
+                    let k = d.kernel().fvar(k_fv);
+                    let hk_fv = d.fresh_fvar();
+                    let hk = d.kernel().fvar(hk_fv);
+                    let hk_ty = d.lt(k, n);
+                    let applied = d.apply(hfalse, &[j, k, hk, h]);
+                    let with_hk = d.lam_fv(hk_fv, hk_ty, applied);
+                    d.lam_fv(k_fv, nat, with_hk)
+                };
+                let tail_eq = count_range_zero_of_false_below(d, &p, shift, n, agree);
+                let zero = d.zero();
+                let mid = d.add(scaled, zero);
+                let step1 = d.congr(tail, zero, tail_eq, &|d, t| d.add(scaled, t));
+
+                // `sel (R j) = 0`, so `mul cs (sel (R j)) = 0`.
+                let one = d.num(1);
+                let sel_zero = select_nat_false(d, rj, one, zero, h);
+                let mul_sel_zero = d.congr(sel_rj, zero, sel_zero, &|d, t| d.mul(cs, t));
+                let mul_zero = d.lemma(p.mul_zero, &[cs]);
+                let mul_cs_zero = d.mul(cs, zero);
+                let prod = d.mul(cs, sel_rj);
+                let prod_eq_zero = d.trans(prod, mul_cs_zero, zero, mul_sel_zero, mul_zero);
+                let zero_eq_prod = d.symm(prod, zero, prod_eq_zero);
+                let end_ = d.add(scaled, prod);
+                let step2 = d.congr(zero, prod, zero_eq_prod, &|d, t| d.add(scaled, t));
+
+                let (_e, chained) = d.chain(after_ih, &[(mid, step1), (end_, step2)]);
+                d.lam_fv(h_fv, false_ty, chained)
+            };
+
+            let decided = bool_true_or_false(d, &p, rj);
+            let branch = or_elim(
+                d,
+                &p,
+                true_ty,
+                false_ty,
+                branch_goal,
+                on_true,
+                on_false,
+                decided,
+            );
+
+            // `mul cs (countRange R (succ j))` is defeq `mul cs (add cr_j
+            // sel_rj)`, which `left_distrib` splits into the shape reached.
+            let prod = d.mul(cs, sel_rj);
+            let distributed = d.add(scaled, prod);
+            let combined = d.add(cr_j, sel_rj);
+            let regrouped = d.mul(cs, combined);
+            let distrib = d.lemma(p.left_distrib, &[cs, cr_j, sel_rj]);
+            let step_last = d.symm(regrouped, distributed, distrib);
+
+            let (_e, whole) = d.chain(
+                start,
+                &[
+                    (after_split, split),
+                    (after_ih, step_ih),
+                    (distributed, branch),
+                    (regrouped, step_last),
+                ],
+            );
+            whole
+        },
+        m,
+    );
+
+    let ty = {
+        let with_hfalse = d.arrow(hfalse_ty, stmt);
+        let with_htrue = d.arrow(htrue_ty, with_hfalse);
+        let over_m = d.pi_fv(m_fv, nat, with_htrue);
+        let over_n = d.pi_fv(n_fv, nat, over_m);
+        let over_s = d.pi_fv(s_fv, pred_ty, over_n);
+        let over_r = d.pi_fv(r_fv, pred_ty, over_s);
+        d.pi_fv(pred_fv, pred_ty, over_r)
+    };
+    let value = {
+        let with_hfalse = d.lam_fv(hfalse_fv, hfalse_ty, proof);
+        let with_htrue = d.lam_fv(htrue_fv, htrue_ty, with_hfalse);
+        let over_m = d.lam_fv(m_fv, nat, with_htrue);
+        let over_n = d.lam_fv(n_fv, nat, over_m);
+        let over_s = d.lam_fv(s_fv, pred_ty, over_n);
+        let over_r = d.lam_fv(r_fv, pred_ty, over_s);
+        d.lam_fv(pred_fv, pred_ty, over_r)
+    };
+    d.declare_theorem(p.count_range_product, ty, value)
 }
