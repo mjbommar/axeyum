@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls module-baseline module-baseline-controls
 
 fmt:
     cargo fmt --all --check
@@ -748,6 +748,20 @@ local-ci-freshness:
 # going down stays visible.
 parity-freshness:
     scripts/check-parity-freshness.py
+
+# L1 phase G0 (docs/plan/graph-directed-library-roadmap-2026-08-30.md): the
+# Mathlib module-import baseline receipt. Re-parses the pinned mathlib4
+# checkout TWICE (so "two runs reproduce the receipt" is checked mechanically
+# on every invocation, not just asserted once) and fails naming SOURCE_DRIFT
+# or PARSER_DRIFT independently -- see scripts/check-module-baseline.py's
+# header. Vendors no Mathlib checkout; reads whatever
+# scripts/provision-lean-import-toolchain.sh provisioned.
+module-baseline:
+    python3 scripts/check-module-baseline.py
+
+module-baseline-controls:
+    python3 scripts/tests/test-module-baseline.py
+    scripts/tests/test-module-baseline-mutations.sh
 
 autogenesis-knowledge-controls:
     python3 -m unittest scripts.tests.test_validate_autogenesis_knowledge
