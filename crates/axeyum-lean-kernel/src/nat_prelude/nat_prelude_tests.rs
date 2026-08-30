@@ -532,6 +532,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_union_add_inter,
         p.count_range_le_of_subset,
         p.count_range_compl,
+        p.count_range_congr_lt,
+        p.count_range_point_change,
+        p.count_range_permute,
+        p.count_range_product,
+        p.div_mod_block,
         p.add_zero,
         p.add_succ,
         p.mul_zero,
@@ -17128,4 +17133,635 @@ fn mod_eq_cancel_div_gcd_family_applies_at_a_discriminating_concrete_instance_an
             )
         });
     }
+}
+
+/// `Nat.countRange_permute` at a fully CERTIFIED concrete instance: `σ :=
+/// Nat.transposition 1 2` on `[0,4)`, whose `InjectiveOn`/`MapsInto`
+/// hypotheses are discharged by the prelude's own
+/// `transposition_injective`/`transposition_maps_into` rather than assumed,
+/// so this is a real theorem instance and not merely a type-check of an
+/// application.
+///
+/// The predicate `fun x => Nat.ble 2 x` is true on `{2,3}` and its composite
+/// with `σ` on `{1,3}` — DIFFERENT index sets with the same count, checked
+/// both ways, so the equality cannot pass by being a syntactic identity.
+/// Both sides are then required to COMPUTE to `2`; the kernel accepting the
+/// application says nothing about what either side counts.
+///
+/// Negative control: the constant-`0` map is `MapsInto [0,4)` and is NOT
+/// injective, and there the two counts genuinely differ (`2` against `0`) —
+/// so `InjectiveOn` is load-bearing rather than decorative. Every term here
+/// is concrete and below `4`, so the failing `def_eq` terminates at once.
+#[test]
+fn count_range_permute_certifies_a_transposition_with_a_non_injective_negative_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+
+    // `σ := fun k => Nat.transposition 1 2 k`, the shape
+    // `transposition_injective`/`_maps_into` state their conclusions at.
+    let sigma = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.const_app(p.transposition, &[one, two, k]);
+        f.lam_fv(k_fv, nat, body)
+    };
+    // `pred := fun x => Nat.ble 2 x`, true exactly on `{2,3}` below `4`.
+    let pred = {
+        let x_fv = f.fresh_fvar();
+        let x = f.k.fvar(x_fv);
+        let body = f.ble(two, x);
+        f.lam_fv(x_fv, nat, body)
+    };
+    let composed = |f: &mut Fixture, sig: ExprId| {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let sk = f.apply(sig, &[k]);
+        let body = f.apply(pred, &[sk]);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    // `Lt 1 2` is `Le 2 2`; `Lt 2 4` is `Le 3 4`.
+    let lt_1_2 = f.lemma(p.le_refl, &[two]);
+    let lt_2_4 = f.lemma(p.le_succ, &[three]);
+    let inj = f.const_app(p.transposition_injective, &[one, two, lt_1_2, four]);
+    let maps = f.const_app(p.transposition_maps_into, &[one, two, lt_1_2, four, lt_2_4]);
+
+    let proof = f.const_app(p.count_range_permute, &[pred, sigma, four, inj, maps]);
+    let inferred =
+        f.k.infer(proof)
+            .expect("countRange_permute must apply at transposition 1 2 over [0,4)");
+
+    let comp = composed(&mut f, sigma);
+    let lhs = f.const_app(p.count_range, &[pred, four]);
+    let rhs = f.const_app(p.count_range, &[comp, four]);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the instance must state countRange pred 4 = countRange (pred . sigma) 4"
+    );
+
+    // The two sides count the SAME number over DIFFERENT index sets.
+    assert!(
+        f.k.def_eq(lhs, two),
+        "countRange (2 <= .) 4 must compute to 2"
+    );
+    assert!(
+        f.k.def_eq(rhs, two),
+        "countRange ((2 <= .) . sigma) 4 must compute to 2"
+    );
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+    let pred_at_2 = f.apply(pred, &[two]);
+    let comp_at_2 = f.apply(comp, &[two]);
+    assert!(f.k.def_eq(pred_at_2, true_), "pred holds at index 2");
+    assert!(
+        f.k.def_eq(comp_at_2, false_),
+        "pred . sigma FAILS at index 2 -- the two index sets are genuinely different"
+    );
+
+    // NEGATIVE CONTROL: drop injectivity and the conclusion is false.
+    let const_zero = {
+        let k_fv = f.fresh_fvar();
+        f.lam_fv(k_fv, nat, zero)
+    };
+    let comp_zero = composed(&mut f, const_zero);
+    let rhs_zero = f.const_app(p.count_range, &[comp_zero, four]);
+    assert!(
+        f.k.def_eq(rhs_zero, zero),
+        "the constant-0 map sends every index to a point where pred is false"
+    );
+    assert!(
+        !f.k.def_eq(lhs, rhs_zero),
+        "without InjectiveOn the two counts differ (2 against 0), so the \
+         hypothesis is load-bearing"
+    );
+
+    for name in [
+        p.count_range_permute,
+        p.count_range_point_change,
+        p.count_range_congr_lt,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "the countRange permutation family must rest on zero axioms"
+        );
+    }
+}
+
+/// The three new `countRange` laws applied at genuinely FREE variables, not
+/// numerals: numerals reduce, and reduction hides definitional-equality gaps
+/// that a symbolic instantiation exposes. Each inferred type is checked
+/// against the statement written out independently here, so a declaration
+/// whose binder order or hypothesis shape drifted would fail rather than pass.
+#[test]
+fn the_count_range_permutation_family_applies_at_free_variables() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+    let pred_ty = f.arrow(nat, bool_ty);
+    let fn_ty = f.arrow(nat, nat);
+    let anon = f.anon_name();
+
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let sigma_fv = f.fresh_fvar();
+    let sigma = f.k.fvar(sigma_fv);
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+
+    let mut ctx = LocalContext::new();
+    for (fvar, ty) in [(a_fv, pred_ty), (sigma_fv, fn_ty), (n_fv, nat)] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let inj_ty = f.const_app(p.injective_on, &[sigma, n]);
+    let maps_ty = f.const_app(p.maps_into, &[sigma, n]);
+    let inj_fv = f.fresh_fvar();
+    let inj = f.k.fvar(inj_fv);
+    let maps_fv = f.fresh_fvar();
+    let maps = f.k.fvar(maps_fv);
+    for (fvar, ty) in [(inj_fv, inj_ty), (maps_fv, maps_ty)] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let applied = f.const_app(p.count_range_permute, &[a, sigma, n, inj, maps]);
+    let inferred =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("countRange_permute must apply at free f, sigma, n");
+    let composed = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let sk = f.apply(sigma, &[k]);
+        let body = f.apply(a, &[sk]);
+        f.lam_fv(k_fv, nat, body)
+    };
+    let lhs = f.const_app(p.count_range, &[a, n]);
+    let rhs = f.const_app(p.count_range, &[composed, n]);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the symbolic statement must be countRange a n = countRange (a . sigma) n"
+    );
+
+    // `countRange_congr_lt` at free `a`, `b`, `n` plus a free agreement proof.
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    ctx.push(LocalDecl {
+        fvar: b_fv,
+        name: anon,
+        ty: pred_ty,
+        info: BinderInfo::Default,
+    });
+    let agree_ty = {
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let ai = f.apply(a, &[i]);
+        let bi = f.apply(b, &[i]);
+        let eq = f.bool_eq(ai, bi);
+        let bound = f.lt(i, n);
+        let body = f.arrow(bound, eq);
+        f.pi_fv(i_fv, nat, body)
+    };
+    let agree_fv = f.fresh_fvar();
+    let agree = f.k.fvar(agree_fv);
+    ctx.push(LocalDecl {
+        fvar: agree_fv,
+        name: anon,
+        ty: agree_ty,
+        info: BinderInfo::Default,
+    });
+    let congr_applied = f.const_app(p.count_range_congr_lt, &[a, b, n, agree]);
+    let congr_inferred =
+        f.k.infer_in(congr_applied, &mut ctx)
+            .expect("countRange_congr_lt must apply at free a, b, n");
+    let congr_lhs = f.const_app(p.count_range, &[a, n]);
+    let congr_rhs = f.const_app(p.count_range, &[b, n]);
+    let congr_expected = f.eq(congr_lhs, congr_rhs);
+    assert!(f.k.def_eq(congr_inferred, congr_expected));
+
+    // `countRange_point_change` at free `a`, `b`, `i0`, `n`.
+    let i0_fv = f.fresh_fvar();
+    let i0 = f.k.fvar(i0_fv);
+    ctx.push(LocalDecl {
+        fvar: i0_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    let bound_ty = f.lt(i0, n);
+    let below_ty = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let ak = f.apply(a, &[k]);
+        let bk = f.apply(b, &[k]);
+        let eq = f.bool_eq(ak, bk);
+        let lower = f.lt(k, i0);
+        let body = f.arrow(lower, eq);
+        f.pi_fv(k_fv, nat, body)
+    };
+    let above_ty = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let ak = f.apply(a, &[k]);
+        let bk = f.apply(b, &[k]);
+        let eq = f.bool_eq(ak, bk);
+        let upper = f.lt(k, n);
+        let inner = f.arrow(upper, eq);
+        let lower = f.lt(i0, k);
+        let body = f.arrow(lower, inner);
+        f.pi_fv(k_fv, nat, body)
+    };
+    let bound_fv = f.fresh_fvar();
+    let bound = f.k.fvar(bound_fv);
+    let below_fv = f.fresh_fvar();
+    let below = f.k.fvar(below_fv);
+    let above_fv = f.fresh_fvar();
+    let above = f.k.fvar(above_fv);
+    for (fvar, ty) in [
+        (bound_fv, bound_ty),
+        (below_fv, below_ty),
+        (above_fv, above_ty),
+    ] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+    let change_applied = f.const_app(
+        p.count_range_point_change,
+        &[a, b, i0, n, bound, below, above],
+    );
+    let change_inferred =
+        f.k.infer_in(change_applied, &mut ctx)
+            .expect("countRange_point_change must apply at free a, b, i0, n");
+    let one = f.num(1);
+    let zero = f.zero();
+    let ca = f.const_app(p.count_range, &[a, n]);
+    let cb = f.const_app(p.count_range, &[b, n]);
+    let a_i0 = f.apply(a, &[i0]);
+    let b_i0 = f.apply(b, &[i0]);
+    let sel_a = f.bool_select_nat(a_i0, one, zero);
+    let sel_b = f.bool_select_nat(b_i0, one, zero);
+    let change_lhs = f.add(ca, sel_b);
+    let change_rhs = f.add(cb, sel_a);
+    let change_expected = f.eq(change_lhs, change_rhs);
+    assert!(
+        f.k.def_eq(change_inferred, change_expected),
+        "point_change must exchange the two values at i0, not repeat one of them"
+    );
+}
+
+/// `Nat.countRange_product` — three checks, and what each one does and does
+/// NOT establish is stated rather than implied.
+///
+/// 1. A CLOSED instance at `n = 0`, hypotheses discharged from
+///    `Nat.not_lt_zero` (they quantify over `Lt b 0`, so they are vacuous).
+///    Degenerate — both sides are `zero` — but it is a real theorem instance
+///    with nothing assumed, and it is the case that would be unreachable if
+///    the lemma carried the `Lt 0 n` hypothesis it deliberately does not.
+/// 2. The statement instantiated at `n = 2`, `m = 3` with `R a := beq a 1`,
+///    `S b := beq b 0`, `P y := beq y 2` — the genuinely factoring predicate.
+///    Both sides are required to COMPUTE to `1`. The hypotheses are supplied
+///    as free variables rather than proved (discharging them symbolically in
+///    `a` needs div/mod reasoning that is the CONSUMER's job), so this checks
+///    what the two sides denote, not the implication.
+/// 3. Negative control: `P y := ble 4 y` does not factor through
+///    `(y / 2, y % 2)` against the same `R`, `S`, and there the two sides are
+///    `2` and `1`. Asserted as `!def_eq`, so the hypotheses are load-bearing
+///    rather than decorative. Every term is concrete and below `6`.
+#[test]
+fn count_range_product_computes_at_a_factoring_predicate_with_a_non_factoring_control() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let bool_ty = f.bool_ty();
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let anon = f.anon_name();
+    let level_zero = f.kernel().level_zero();
+
+    let pred_of = |f: &mut Fixture, body: &dyn Fn(&mut Fixture, ExprId) -> ExprId| {
+        let x_fv = f.fresh_fvar();
+        let x = f.k.fvar(x_fv);
+        let b = body(f, x);
+        f.lam_fv(x_fv, nat, b)
+    };
+    let r = pred_of(&mut f, &|f, a| f.beq(a, one));
+    let s = pred_of(&mut f, &|f, b| f.beq(b, zero));
+    let pred = pred_of(&mut f, &|f, y| f.beq(y, two));
+    let pred_bad = pred_of(&mut f, &|f, y| f.ble(four, y));
+
+    // (1) A CLOSED instance at `n = 0`: both hypotheses are vacuous.
+    // Building the vacuous hypotheses by hand needs the exact conclusion the
+    // declared type carries, so construct each directly.
+    let vacuous_hyp = |f: &mut Fixture, want_true: bool| {
+        let a_fv = f.fresh_fvar();
+        let a = f.k.fvar(a_fv);
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let hb_fv = f.fresh_fvar();
+        let hb = f.k.fvar(hb_fv);
+        let zero_inner = f.zero();
+        let hb_ty = f.lt(b, zero_inner);
+
+        let na = f.mul(zero_inner, a);
+        let idx = f.add(na, b);
+        let lhs = f.apply(pred, &[idx]);
+        let rhs = if want_true {
+            f.apply(s, &[b])
+        } else {
+            f.bool_false()
+        };
+        let goal = f.bool_eq(lhs, rhs);
+
+        let contradiction = f.lemma(p.not_lt_zero, &[b, hb]);
+        let false_ty = f.k.const_(p.logic.false_, vec![]);
+        let motive = f.k.lam(anon, false_ty, goal, BinderInfo::Default);
+        let false_rec = f.k.const_(p.logic.false_rec, vec![level_zero]);
+        let body = f.apply(false_rec, &[motive, contradiction]);
+
+        let ra = f.apply(r, &[a]);
+        let pin = if want_true {
+            let t = f.bool_true();
+            f.bool_eq(ra, t)
+        } else {
+            let fl = f.bool_false();
+            f.bool_eq(ra, fl)
+        };
+        let hr_fv = f.fresh_fvar();
+        let with_hr = f.lam_fv(hr_fv, pin, body);
+        let with_hb = f.lam_fv(hb_fv, hb_ty, with_hr);
+        let over_b = f.lam_fv(b_fv, nat, with_hb);
+        f.lam_fv(a_fv, nat, over_b)
+    };
+    let htrue0 = vacuous_hyp(&mut f, true);
+    let hfalse0 = vacuous_hyp(&mut f, false);
+    let five = f.num(5);
+    let closed = f.const_app(
+        p.count_range_product,
+        &[pred, r, s, zero, five, htrue0, hfalse0],
+    );
+    let closed_ty =
+        f.k.infer(closed)
+            .expect("countRange_product must apply with NO positivity hypothesis at n = 0");
+    let bound0 = f.mul(zero, five);
+    let lhs0 = f.const_app(p.count_range, &[pred, bound0]);
+    let cs0 = f.const_app(p.count_range, &[s, zero]);
+    let cr0 = f.const_app(p.count_range, &[r, five]);
+    let rhs0 = f.mul(cs0, cr0);
+    let expected0 = f.eq(lhs0, rhs0);
+    assert!(f.k.def_eq(closed_ty, expected0));
+    assert!(f.k.def_eq(lhs0, zero), "the n = 0 instance counts zero");
+
+    // (2) The statement at n = 2, m = 3, with the FACTORING predicate.
+    let bound = f.mul(two, three);
+    assert!(
+        f.k.def_eq(bound, six),
+        "the block decomposition covers [0,6)"
+    );
+    let lhs = f.const_app(p.count_range, &[pred, bound]);
+    let cs = f.const_app(p.count_range, &[s, two]);
+    let cr = f.const_app(p.count_range, &[r, three]);
+    let rhs = f.mul(cs, cr);
+    assert!(
+        f.k.def_eq(lhs, one),
+        "countRange (· == 2) 6 must compute to 1"
+    );
+    assert!(
+        f.k.def_eq(cs, one),
+        "countRange (· == 0) 2 must compute to 1"
+    );
+    assert!(
+        f.k.def_eq(cr, one),
+        "countRange (· == 1) 3 must compute to 1"
+    );
+    assert!(
+        f.k.def_eq(lhs, rhs),
+        "the factoring instance balances at 1 = 1 * 1"
+    );
+
+    // (3) NEGATIVE CONTROL: a predicate that does NOT factor breaks it.
+    let lhs_bad = f.const_app(p.count_range, &[pred_bad, bound]);
+    assert!(
+        f.k.def_eq(lhs_bad, two),
+        "countRange (4 <= ·) 6 must compute to 2"
+    );
+    assert!(
+        !f.k.def_eq(lhs_bad, rhs),
+        "a non-factoring predicate gives 2 against 1, so the two per-block \
+         hypotheses are load-bearing"
+    );
+
+    // The statement's own shape, at genuinely free P, R, S, n, m.
+    let pred_ty = f.arrow(nat, bool_ty);
+    let mut ctx = LocalContext::new();
+    let fvs: Vec<(u64, ExprId)> = {
+        let p_fv = f.fresh_fvar();
+        let r_fv = f.fresh_fvar();
+        let s_fv = f.fresh_fvar();
+        let n_fv = f.fresh_fvar();
+        let m_fv = f.fresh_fvar();
+        vec![
+            (p_fv, pred_ty),
+            (r_fv, pred_ty),
+            (s_fv, pred_ty),
+            (n_fv, nat),
+            (m_fv, nat),
+        ]
+    };
+    for &(fvar, ty) in &fvs {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+    let sp = f.k.fvar(fvs[0].0);
+    let sr = f.k.fvar(fvs[1].0);
+    let ss = f.k.fvar(fvs[2].0);
+    let sn = f.k.fvar(fvs[3].0);
+    let sm = f.k.fvar(fvs[4].0);
+
+    let hyp_ty = |f: &mut Fixture, want_true: bool| {
+        let a_fv = f.fresh_fvar();
+        let a = f.k.fvar(a_fv);
+        let b_fv = f.fresh_fvar();
+        let b = f.k.fvar(b_fv);
+        let na = f.mul(sn, a);
+        let idx = f.add(na, b);
+        let lhs = f.apply(sp, &[idx]);
+        let rhs = if want_true {
+            f.apply(ss, &[b])
+        } else {
+            f.bool_false()
+        };
+        let concl = f.bool_eq(lhs, rhs);
+        let ra = f.apply(sr, &[a]);
+        let pin = if want_true {
+            let t = f.bool_true();
+            f.bool_eq(ra, t)
+        } else {
+            let fl = f.bool_false();
+            f.bool_eq(ra, fl)
+        };
+        let with_pin = f.arrow(pin, concl);
+        let bound = f.lt(b, sn);
+        let with_bound = f.arrow(bound, with_pin);
+        let over_b = f.pi_fv(b_fv, nat, with_bound);
+        f.pi_fv(a_fv, nat, over_b)
+    };
+    let ht_ty = hyp_ty(&mut f, true);
+    let hf_ty = hyp_ty(&mut f, false);
+    let ht_fv = f.fresh_fvar();
+    let ht = f.k.fvar(ht_fv);
+    let hf_fv = f.fresh_fvar();
+    let hf = f.k.fvar(hf_fv);
+    for (fvar, ty) in [(ht_fv, ht_ty), (hf_fv, hf_ty)] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+    let applied = f.const_app(p.count_range_product, &[sp, sr, ss, sn, sm, ht, hf]);
+    let inferred =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("countRange_product must apply at free P, R, S, n, m");
+    let sbound = f.mul(sn, sm);
+    let slhs = f.const_app(p.count_range, &[sp, sbound]);
+    let scs = f.const_app(p.count_range, &[ss, sn]);
+    let scr = f.const_app(p.count_range, &[sr, sm]);
+    let srhs = f.mul(scs, scr);
+    let sexpected = f.eq(slhs, srhs);
+    assert!(
+        f.k.def_eq(inferred, sexpected),
+        "the symbolic statement must be countRange P (n*m) = countRange S n * countRange R m"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.count_range_product).is_empty(),
+        "countRange_product must rest on zero axioms"
+    );
+}
+
+/// `Nat.div_mod_block` at a CLOSED concrete instance — `n = 3`, `a = 2`,
+/// `b = 1`, with the `Lt 1 3` side condition supplied as a real proof — plus
+/// a genuinely free `(n, a, b)`, and a negative control at `b = n` where the
+/// readback is false and the theorem correspondingly cannot be applied.
+#[test]
+fn div_mod_block_reads_a_concrete_block_back_and_needs_its_side_condition() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let anon = f.anon_name();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let seven = f.num(7);
+
+    // `Lt 1 3` is `Le 2 3`, which is `le_succ 2`.
+    let lt_1_3 = f.lemma(p.le_succ, &[two]);
+    let applied = f.const_app(p.div_mod_block, &[three, two, one, lt_1_3]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("div_mod_block must apply at (n, a, b) = (3, 2, 1)");
+
+    let na = f.mul(three, two);
+    let value = f.add(na, one);
+    assert!(f.k.def_eq(value, seven), "3*2 + 1 must compute to 7");
+    let quotient = f.div(value, three);
+    let remainder = f.modulo(value, three);
+    let left = f.eq(quotient, two);
+    let right = f.eq(remainder, one);
+    let expected = f.const_app(p.logic.and, &[left, right]);
+    assert!(f.k.def_eq(inferred, expected));
+    assert!(f.k.def_eq(quotient, two), "7 / 3 must compute to 2");
+    assert!(f.k.def_eq(remainder, one), "7 % 3 must compute to 1");
+
+    // NEGATIVE CONTROL: at `b = n` the readback is false, so the `Lt b n`
+    // side condition is load-bearing rather than decorative. The theorem
+    // cannot be applied here at all (there is no `Lt 3 3`), and the values
+    // it would have claimed are wrong both ways.
+    let bad_value = f.add(na, three);
+    let bad_quotient = f.div(bad_value, three);
+    let bad_remainder = f.modulo(bad_value, three);
+    assert!(
+        !f.k.def_eq(bad_quotient, two),
+        "at b = n the quotient is 3, not the claimed 2"
+    );
+    assert!(
+        !f.k.def_eq(bad_remainder, three),
+        "at b = n the remainder is 0, not the claimed 3"
+    );
+
+    // Symbolic: a genuinely free `(n, a, b)` with a free side-condition proof.
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let a_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let b_fv = f.fresh_fvar();
+    let b = f.k.fvar(b_fv);
+    let mut ctx = LocalContext::new();
+    for fvar in [n_fv, a_fv, b_fv] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty: nat,
+            info: BinderInfo::Default,
+        });
+    }
+    let hb_ty = f.lt(b, n);
+    let hb_fv = f.fresh_fvar();
+    let hb = f.k.fvar(hb_fv);
+    ctx.push(LocalDecl {
+        fvar: hb_fv,
+        name: anon,
+        ty: hb_ty,
+        info: BinderInfo::Default,
+    });
+    let sym = f.const_app(p.div_mod_block, &[n, a, b, hb]);
+    let sym_ty =
+        f.k.infer_in(sym, &mut ctx)
+            .expect("div_mod_block must apply at free (n, a, b)");
+    let sym_na = f.mul(n, a);
+    let sym_value = f.add(sym_na, b);
+    let sym_q = f.div(sym_value, n);
+    let sym_r = f.modulo(sym_value, n);
+    let sym_left = f.eq(sym_q, a);
+    let sym_right = f.eq(sym_r, b);
+    let sym_expected = f.const_app(p.logic.and, &[sym_left, sym_right]);
+    assert!(
+        f.k.def_eq(sym_ty, sym_expected),
+        "the symbolic statement must read back BOTH the quotient and the remainder"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.div_mod_block).is_empty(),
+        "div_mod_block must rest on zero axioms"
+    );
 }

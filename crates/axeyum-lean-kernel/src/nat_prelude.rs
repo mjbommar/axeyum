@@ -148,6 +148,7 @@ mod catalan;
 mod choose;
 mod clog;
 mod coprime_lemmas;
+mod count_range_permute;
 mod count_range_reversal;
 mod crt;
 mod defs;
@@ -246,6 +247,10 @@ use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
+use count_range_permute::{
+    declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
+    declare_count_range_product,
+};
 use count_range_reversal::declare_count_range_reversal_even;
 use crt::declare_crt;
 use defs::{
@@ -254,7 +259,9 @@ use defs::{
 };
 use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
-use div_mod_lemmas::{declare_add_div_mod_shift_family, declare_add_div_of_dvd_add_add_one};
+use div_mod_lemmas::{
+    declare_add_div_mod_shift_family, declare_add_div_of_dvd_add_add_one, declare_div_mod_block,
+};
 use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
@@ -1855,6 +1862,50 @@ pub struct NatPrelude {
     /// `countRange` analogue of `sumRange_split` (`rectangle.rs`), by
     /// induction on `j` alone (`f`, `m` held fixed).
     pub count_range_split: NameId,
+    /// `Nat.countRange_congr_lt : ∀ f g n, (∀ i, Lt i n → Eq Bool (f i) (g i))
+    /// → Eq Nat (countRange f n) (countRange g n)` — the BOUNDED pointwise
+    /// congruence (`count_range_permute.rs`), the form
+    /// [`count_range_congr`](Self::count_range_congr)'s own doc comment says to
+    /// add when a proof needs it.
+    pub count_range_congr_lt: NameId,
+    /// `Nat.countRange_point_change : ∀ a b i0 n, Lt i0 n →
+    /// (∀ k, Lt k i0 → Eq Bool (a k) (b k)) →
+    /// (∀ k, Lt i0 k → Lt k n → Eq Bool (a k) (b k)) →
+    /// Eq Nat (add (countRange a n) (sel (b i0)))
+    ///        (add (countRange b n) (sel (a i0)))` — two predicates agreeing on
+    /// `[0,n)` except possibly at the single index `i0` have counts that differ
+    /// exactly as their values at `i0` do (`count_range_permute.rs`). Stated
+    /// additively; `Nat.sub` is truncated. This is what lets `countRange` skip
+    /// the adjacent-transposition apparatus `Int.prodRange_permute` needed.
+    pub count_range_point_change: NameId,
+    /// `Nat.countRange_permute : ∀ f σ n, InjectiveOn σ n → MapsInto σ n →
+    /// Eq Nat (countRange f n) (countRange (fun k => f (σ k)) n)` — counting
+    /// over `[0,n)` is invariant under any injective self-map of `[0,n)`
+    /// (`count_range_permute.rs`), the exact `countRange` mirror of
+    /// `Int.prodRange_permute`. The primitive under `Nat.totient_mul_of_coprime`:
+    /// the CRT map `x ↦ (x mod m) * n + (x mod n)` is such a self-map of
+    /// `[0, m*n)` exactly when `m` and `n` are coprime.
+    pub count_range_permute: NameId,
+    /// `Nat.countRange_product : ∀ P R S n m,
+    /// (∀ a b, Lt b n → Eq Bool (R a) true → Eq Bool (P (add (mul n a) b)) (S b)) →
+    /// (∀ a b, Lt b n → Eq Bool (R a) false → Eq Bool (P (add (mul n a) b)) false) →
+    /// Eq Nat (countRange P (mul n m)) (mul (countRange S n) (countRange R m))`
+    /// — counting over `[0, n*m)` a predicate that factors through the block
+    /// decomposition `y = n*a + b` multiplies the two factors' counts
+    /// (`count_range_permute.rs`). **Coprimality-INDEPENDENT**, unlike the
+    /// totient identity it will serve; keeping the two apart is the lesson of
+    /// `301`'s false `count_range_row_major` claim. No `Lt 0 n` needed: at
+    /// `n = 0` both sides are `zero` and both hypotheses are vacuous.
+    pub count_range_product: NameId,
+    /// `Nat.div_mod_block : ∀ n a b, Lt b n →
+    /// And (Eq (div (add (mul n a) b) n) a) (Eq (mod (add (mul n a) b) n) b)`
+    /// — the block decomposition read back (`div_mod_lemmas.rs`). Both halves
+    /// at once, because they come from one `Nat.div_mod_unique`. This is the
+    /// bridge [`count_range_product`](Self::count_range_product)'s consumer
+    /// needs: that lemma's per-block hypotheses live at the index
+    /// `add (mul n a) b`, and a predicate written in `div y n` / `mod y n`
+    /// reduces there only once these two equations are in hand.
+    pub div_mod_block: NameId,
     /// `Nat.countRange_reversal_even : ∀ L h, (∀ j, Lt j L → Eq Bool (h (sub
     /// (pred L) j)) (h j)) → (∀ j, Lt j L → Eq Bool (h j) true → Not (Eq Nat
     /// j (sub (pred L) j))) → Even (countRange h L)` — a general,
@@ -4409,6 +4460,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_le: kernel.name_str(nat, "countRange_le"),
             count_range_congr: kernel.name_str(nat, "countRange_congr"),
             count_range_split: kernel.name_str(nat, "countRange_split"),
+            count_range_congr_lt: kernel.name_str(nat, "countRange_congr_lt"),
+            count_range_point_change: kernel.name_str(nat, "countRange_point_change"),
+            count_range_permute: kernel.name_str(nat, "countRange_permute"),
+            count_range_product: kernel.name_str(nat, "countRange_product"),
+            div_mod_block: kernel.name_str(nat, "div_mod_block"),
             count_range_reversal_even: kernel.name_str(nat, "countRange_reversal_even"),
             totient_even: kernel.name_str(nat, "totient_even"),
             odd_totient_iff_eq_one: kernel.name_str(nat, "odd_totient_iff_eq_one"),
@@ -4935,6 +4991,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_nat_pigeonhole(&mut d, &p)?;
         declare_restrict_injective(&mut d, &p)?;
         declare_restrict_maps_into(&mut d, &p)?;
+        // `count_range_permute.rs`: needs `countRange`/`countRange_succ`
+        // (`declare_totient_all`, above), the pigeonhole
+        // (`declare_pigeonhole`) and BOTH restriction lemmas immediately
+        // above — its successor step is exactly their intended consumer.
+        declare_count_range_congr_lt(&mut d, &p)?;
+        declare_count_range_point_change(&mut d, &p)?;
+        declare_count_range_permute(&mut d, &p)?;
+        declare_count_range_product(&mut d, &p)?;
+        declare_div_mod_block(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
         declare_transposition_involutive(&mut d, &p)?;
         declare_transposition_injective(&mut d, &p)?;

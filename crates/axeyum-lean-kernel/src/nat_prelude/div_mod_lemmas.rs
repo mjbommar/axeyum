@@ -62,7 +62,7 @@ use crate::expr::ExprId;
 /// `pos_dd : Lt zero dd`. A local copy of `group.rs`'s private
 /// `div_mod_reconstructed` -- see the module doc for why this is copied
 /// rather than shared.
-fn div_mod_reconstructed(
+pub(super) fn div_mod_reconstructed(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     dd: ExprId,
@@ -905,5 +905,76 @@ pub(super) fn declare_add_div_of_dvd_add_add_one(
         (stmt, proof)
     })?;
 
+    Ok(())
+}
+
+/// `Nat.div_mod_block : ∀ n a b, Lt b n →
+///   And (Eq (div (add (mul n a) b) n) a) (Eq (mod (add (mul n a) b) n) b)`
+///
+/// The block decomposition read back: an index written as `n*a + b` with the
+/// remainder `b` already known to be below `n` has quotient `a` and remainder
+/// `b`, on the nose. Both halves at once, because they come from one
+/// `Nat.div_mod_unique` and splitting them would duplicate the whole
+/// derivation.
+///
+/// This is the bridge `Nat.countRange_product`'s consumer needs: that lemma's
+/// two per-block hypotheses are stated at the index `add (mul n a) b`, and a
+/// predicate written in terms of `div y n` and `mod y n` reduces there only
+/// once these two equations are in hand.
+///
+/// One line of content. `divMod d n q r` is `n = d*q + r ∧ r < d`, so
+/// `divMod n (n*a + b) a b` is `And (Eq.refl _) hb` — the hand-built witness
+/// costs nothing — and `div_mod_unique` against
+/// [`div_mod_reconstructed`]'s executable witness returns exactly the pair.
+/// `Lt 0 n` comes from `Lt b n` through `Le 1 (succ b)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+pub(super) fn declare_div_mod_block(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.div_mod_block, 3, &|d, values| {
+        let n = values[0];
+        let a = values[1];
+        let b = values[2];
+
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+        let hb_ty = d.lt(b, n);
+
+        let na = d.mul(n, a);
+        let value = d.add(na, b);
+        let quotient = d.div(value, n);
+        let remainder = d.modulo(value, n);
+        let left_ty = d.eq(quotient, a);
+        let right_ty = d.eq(remainder, b);
+        let concl = d.const_app(p.logic.and, &[left_ty, right_ty]);
+
+        // `Lt 0 n` from `Lt b n`: `Le 1 (succ b)` then transitivity.
+        let zero = d.zero();
+        let one = d.num(1);
+        let zero_le_b = d.lemma(p.zero_le, &[b]);
+        let succ_b = d.succ(b);
+        let one_le_succ_b = d.lemma(p.succ_le_succ, &[zero, b, zero_le_b]);
+        let pos_n = d.lemma(p.le_trans, &[one, succ_b, n, one_le_succ_b, hb]);
+
+        let executable = div_mod_reconstructed(d, &p, n, pos_n, value);
+
+        // `divMod n value a b` is `And (Eq value (add (mul n a) b)) (Lt b n)`,
+        // and its left conjunct is `Eq.refl value` because `value` IS that sum.
+        let eq_ty = d.eq(value, value);
+        let refl_case = d.refl(value);
+        let hand_built = d.const_app(p.logic.and_intro, &[eq_ty, hb_ty, refl_case, hb]);
+
+        let pair = d.const_app(
+            p.div_mod_unique,
+            &[n, value, quotient, remainder, a, b, executable, hand_built],
+        );
+
+        let ty = d.arrow(hb_ty, concl);
+        let proof = d.lam_fv(hb_fv, hb_ty, pair);
+        (ty, proof)
+    })?;
     Ok(())
 }
