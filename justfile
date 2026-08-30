@@ -350,7 +350,7 @@ facts:
     # that has stopped discriminating, which would otherwise report a
     # cheerful zero for a whole protection column.
     python3 scripts/gen-safety-matrix.py --check
-    # S3 of the same roadmap (ADR-0747): the retained semantic-control
+    # S3 of the same roadmap (ADR-0752): the retained semantic-control
     # fixture pack -- known-false, known-vacuous and known-valid statements,
     # each a real defect this repository produced or the valid control one
     # line away from it, plus statement mutations and the in-tree numerics

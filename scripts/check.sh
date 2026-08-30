@@ -363,7 +363,7 @@ step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 # sweep), and a classifier that has stopped discriminating -- which would
 # otherwise report a cheerful zero for a whole protection column.
 step safety-matrix python3 scripts/gen-safety-matrix.py --check
-# S3 of the same roadmap (ADR-0747): the retained semantic-control fixture
+# S3 of the same roadmap (ADR-0752): the retained semantic-control fixture
 # pack. Executes 13 fixtures of known-FALSE, known-VACUOUS and known-VALID
 # statements -- every one a real defect this repository produced, or the valid
 # control that sits one line away from it -- plus 19 statement mutations and
