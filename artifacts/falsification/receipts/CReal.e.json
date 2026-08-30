@@ -1,0 +1,13 @@
+{
+  "target_id": "CReal.e",
+  "kind": "review_obligation",
+  "verdict": "review-required",
+  "detail": {
+    "id": "CReal.e",
+    "kind": "review_obligation",
+    "reason": "Defined as the limit of a Cauchy sequence of rational partial sums; evaluating it to any fixed rational precision needs the same regularity witness the definition itself supplies, so no structurally-independent reference exists at reasonable cost. Needs a human-reviewed bounded-precision approximation with an explicitly audited error budget before this pack can execute it.",
+    "status": "open"
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.288248+00:00"
+}

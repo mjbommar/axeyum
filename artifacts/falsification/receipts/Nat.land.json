@@ -1,0 +1,45 @@
+{
+  "target_id": "Nat.land",
+  "kind": "definition",
+  "verdict": "clear-for-dispatch",
+  "detail": {
+    "id": "Nat.land",
+    "kind": "definition",
+    "domain_note": "m, n in [0, 12) -- unary Nat numerals, small magnitudes only",
+    "provenance": "CLAUDE.md: 'land has an absorbing zero (m = 0 => result 0 regardless of n)'",
+    "reference_note": "Python's native `&` -- a wholly different (non-recursive, machine-word) implementation",
+    "witnesses": [
+      {
+        "args": [
+          0,
+          7
+        ],
+        "reason": "m=0 discriminates the absorbing-zero base case from any pass-through variant"
+      },
+      {
+        "args": [
+          5,
+          3
+        ],
+        "reason": "a case with no zero operand exercises the per-bit combine, not just the base"
+      }
+    ],
+    "executed": 144,
+    "mismatches": 0,
+    "first_mismatch": "",
+    "mutations": [
+      {
+        "id": "land-passthrough-base",
+        "description": "fuel-exhaustion base returns n instead of the absorbing 0",
+        "executed": 2,
+        "moved": true,
+        "first_divergence": "args=(0, 1): mutant=1 reference=0"
+      }
+    ],
+    "mutations_moved": 1,
+    "mutations_vacuous": 0,
+    "seconds": 0.0
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.278249+00:00"
+}

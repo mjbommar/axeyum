@@ -1,0 +1,38 @@
+{
+  "target_id": "Nat.lor",
+  "kind": "definition",
+  "verdict": "clear-for-dispatch",
+  "detail": {
+    "id": "Nat.lor",
+    "kind": "definition",
+    "domain_note": "m, n in [0, 12)",
+    "provenance": "CLAUDE.md: 'Nat.lor would have silently dropped every bit of n when m = 0, because land's absorbing-zero shortcut was copied to an operator with no absorbing element. Type-correct, admitted, wrong.'",
+    "reference_note": "Python's native `|`",
+    "witnesses": [
+      {
+        "args": [
+          0,
+          7
+        ],
+        "reason": "m=0, n!=0: the exact shape of the shipped defect -- correct answer is 7, buggy answer is 0"
+      }
+    ],
+    "executed": 144,
+    "mismatches": 0,
+    "first_mismatch": "",
+    "mutations": [
+      {
+        "id": "lor-absorbing-base",
+        "description": "fuel-exhaustion base returns 0 instead of the pass-through n (the real shipped bug)",
+        "executed": 2,
+        "moved": true,
+        "first_divergence": "args=(0, 1): mutant=0 reference=1"
+      }
+    ],
+    "mutations_moved": 1,
+    "mutations_vacuous": 0,
+    "seconds": 0.0
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.279813+00:00"
+}

@@ -1,0 +1,18 @@
+{
+  "target_id": "bitwise-comm-unconditional-arbitrary-f",
+  "kind": "false_statement",
+  "verdict": "reject-before-dispatch",
+  "detail": {
+    "id": "bitwise-comm-unconditional-arbitrary-f",
+    "kind": "false_statement",
+    "family": "bitwise-fuel",
+    "statement": "forall f m n : Nat, bitwise f m n = bitwise f n m (no hf : forall a b, f a b = f b a)",
+    "provenance": "CLAUDE.md Gotchas, 'Nat.mul HAS THE SAME ASYMMETRY': 'the unconditional form is false whenever f false true = true (so for or and xor, and true only for and)' -- and the fully unconstrained forall-f statement is false for ANY non-commutative f regardless of that boundary detail, which f=fst demonstrates directly and is the witness this fixture uses",
+    "executed": 576,
+    "counterexamples": 132,
+    "first_counterexample": "f=fst m=0 n=1: bitwise(f,m,n)=0 != bitwise(f,n,m)=1",
+    "seconds": 0.001
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.276657+00:00"
+}

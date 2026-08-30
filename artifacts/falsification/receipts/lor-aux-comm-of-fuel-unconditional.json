@@ -1,0 +1,18 @@
+{
+  "target_id": "lor-aux-comm-of-fuel-unconditional",
+  "kind": "false_statement",
+  "verdict": "reject-before-dispatch",
+  "detail": {
+    "id": "lor-aux-comm-of-fuel-unconditional",
+    "kind": "false_statement",
+    "family": "bitwise-fuel",
+    "statement": "forall fuel m n : Nat, lorAux fuel m n = lorAux fuel n m (no Le m fuel / Le n fuel hypothesis)",
+    "provenance": "CLAUDE.md Gotchas, the 'Nat.mul HAS THE SAME ASYMMETRY' entry: 'the obvious lor analogue is not merely harder to prove -- it is false -- lorAux 0 0 1 = 1 against lorAux 0 1 0 = 0'",
+    "executed": 576,
+    "counterexamples": 412,
+    "first_counterexample": "fuel=0 m=0 n=1: lorAux(fuel,m,n)=1 != lorAux(fuel,n,m)=0",
+    "seconds": 0.0
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.274658+00:00"
+}

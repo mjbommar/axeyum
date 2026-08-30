@@ -1,0 +1,52 @@
+{
+  "target_id": "Nat.ldiff",
+  "kind": "definition",
+  "verdict": "clear-for-dispatch",
+  "detail": {
+    "id": "Nat.ldiff",
+    "kind": "definition",
+    "domain_note": "m, n in [0, 12)",
+    "provenance": "CLAUDE.md: 'ldiff is the instructive one: it takes land's base case but its inner succ-row guard is a hybrid' and gives the asymmetry witness 'ldiff 3 5 = 2 against ldiff 5 3 = 4'",
+    "reference_note": "Python's native `m & ~n`",
+    "witnesses": [
+      {
+        "args": [
+          3,
+          5
+        ],
+        "reason": "CLAUDE.md's own asymmetry witness: ldiff(3,5)=2"
+      },
+      {
+        "args": [
+          5,
+          3
+        ],
+        "reason": "swapped operands give a DIFFERENT value (4) -- proves ldiff is not commutative, so a commutativity mutation would be vacuous here and is correctly not attempted"
+      },
+      {
+        "args": [
+          0,
+          7
+        ],
+        "reason": "m=0 discriminates the absorbing-zero base from lor's pass-through"
+      }
+    ],
+    "executed": 144,
+    "mismatches": 0,
+    "first_mismatch": "",
+    "mutations": [
+      {
+        "id": "ldiff-passthrough-base",
+        "description": "fuel-exhaustion base returns n instead of the absorbing 0 (copying lor's shape onto an operator that needs land's)",
+        "executed": 2,
+        "moved": true,
+        "first_divergence": "args=(0, 1): mutant=1 reference=0"
+      }
+    ],
+    "mutations_moved": 1,
+    "mutations_vacuous": 0,
+    "seconds": 0.0
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.281427+00:00"
+}

@@ -1,0 +1,13 @@
+{
+  "target_id": "CReal.integral",
+  "kind": "review_obligation",
+  "verdict": "review-required",
+  "detail": {
+    "id": "CReal.integral",
+    "kind": "review_obligation",
+    "reason": "Defined via limits of Riemann sums over a Cauchy sequence of rationals with an INTERVAL-RELATIVE mesh (2026-08-27 architecture review); there is no closed finite equation over Q, and a bounded-precision rational approximation would have to replicate CReal's own regularity/completion machinery to serve as a genuinely INDEPENDENT reference -- doing so would test the reimplementation against itself, which is the certificate-shaped vacuity ADR-0752 already catalogues, arriving here for a definition.",
+    "status": "open"
+  },
+  "git_commit": "9fd6770738158a0b4598c02bea3e18f2ddefbb41",
+  "screened_at": "2026-08-30T23:36:12.286832+00:00"
+}
