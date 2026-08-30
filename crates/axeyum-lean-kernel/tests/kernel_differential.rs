@@ -1158,6 +1158,66 @@ fn projections_cases() -> Vec<CaseResult> {
         });
     }
 
+    // N3: projection from a TWO-constructor inductive.
+    //
+    // Added by lane `kernel-mutant-survivors` to close ADR-0780's
+    // `projections` SURVIVED entry. `out_of_range_index_negative` (N2) cannot
+    // kill any single projection guard, because `projection_inference_data`'s
+    // explicit `field_index >= field_count` bounds check is redundant with
+    // `infer_projection`'s own field-walking loop: remove the bounds check and
+    // the walk runs out of Pi binders and returns
+    // `MalformedProjectionConstructor` instead. This case targets the one
+    // guard in `projection_inference_data` that nothing downstream reproduces,
+    // `constructor_count != 1` -> `ProjectionConstructorCount`.
+    //
+    // Field 0 of the FIRST constructor is deliberately well-formed and
+    // in-bounds, so every other guard in the function passes: the projected
+    // head is the right `Const`, the family is inductive, the parameter/index
+    // spine is complete, the constructor metadata matches, and `0 < 1`. Only
+    // the constructor-count check stands between this term and a `Payload`
+    // extracted from a value that may have been built with `right`.
+    //
+    // Lean 4.30.0 rejects it with "Projections extract constructor fields for
+    // one-constructor inductive types ... `Choice` ... is not a
+    // one-constructor inductive type" -- the same guard, named.
+    {
+        let mut kernel = Kernel::new();
+        let anon = kernel.anon();
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
+        let sort_1 = kernel.sort(one_lvl);
+        let (_, payload) = declare_axiom_type(&mut kernel, "Payload", one_lvl);
+        let choice = kernel.name_str(anon, "Choice");
+        let choice_c = kernel.const_(choice, vec![]);
+        let ctor_ty = arrow(&mut kernel, payload, choice_c);
+        let left = kernel.name_str(choice, "left");
+        let right = kernel.name_str(choice, "right");
+        kernel
+            .add_inductive(
+                choice,
+                &[],
+                0,
+                sort_1,
+                &[(left, ctor_ty), (right, ctor_ty)],
+            )
+            .expect("Choice must admit");
+        let (_, s_val) = declare_axiom(&mut kernel, "s", choice_c);
+        let proj0 = kernel.proj(choice, 0, s_val);
+        let accept = kernel.infer(proj0).is_ok();
+        out.push(CaseResult {
+            subsystem: "projections",
+            name: "projections::two_constructor_projection_negative",
+            axeyum_accept: accept,
+            lean_source: "set_option autoImplicit false\n\
+                axiom Payload : Type\n\
+                inductive Choice where\n  | left : Payload -> Choice\n  \
+                | right : Payload -> Choice\n\
+                axiom s : Choice\n\
+                example : Payload := s.1\n"
+                .to_string(),
+        });
+    }
+
     out
 }
 
@@ -1301,6 +1361,63 @@ fn literals_cases() -> Vec<CaseResult> {
         });
     }
 
+    // N3: a `Nat` literal against a MALFORMED `Nat`.
+    //
+    // Added by lane `kernel-mutant-survivors` to close ADR-0780's `literals`
+    // SURVIVED entry, whose named reason was that every literals case uses
+    // `build_logic_prelude`'s own correctly-shaped `Nat`, so none of them ever
+    // reaches `nat_literal_bootstrap`'s failure path.
+    //
+    // This case therefore does NOT build the logic prelude. It declares its
+    // own `Nat` that is a perfectly well-formed inductive but is not THE
+    // `Nat` the literal machinery means: `succ` takes two arguments instead of
+    // one. Every other clause of the bootstrap contract is deliberately
+    // satisfied -- no universe parameters, `Sort 1`, zero parameters, zero
+    // indices, recursive, constructors exactly `[Nat.zero, Nat.succ]`, `zero`
+    // at index 0 with no fields -- so only the `num_fields: 1` clause of
+    // `succ_ok` rejects it.
+    //
+    // That clause is load-bearing for soundness, not tidiness: `reduce_nat_succ`
+    // and `reduce_nat_binop` compute over a literal by treating `succ` as
+    // unary, so admitting a literal at a binary-`succ` carrier would let the
+    // kernel evaluate arithmetic against constructors that mean something else.
+    //
+    // Lean 4.30.0 has no way to express "a numeral at a differently-shaped
+    // `Nat`" as anything other than shadowing the built-in one, and rejects
+    // the attempt: "`Nat` has already been declared". Both kernels refuse; the
+    // failure points differ (Lean at the redeclaration, Axeyum at the literal)
+    // and that is stated here rather than papered over.
+    {
+        let mut kernel = Kernel::new();
+        let anon = kernel.anon();
+        let zero_lvl_tmp = kernel.level_zero();
+        let one_lvl = kernel.level_succ(zero_lvl_tmp);
+        let sort_1 = kernel.sort(one_lvl);
+        let nat = kernel.name_str(anon, "Nat");
+        let nat_c = kernel.const_(nat, vec![]);
+        let zero = kernel.name_str(nat, "zero");
+        let succ = kernel.name_str(nat, "succ");
+        // `succ : Nat -> Nat -> Nat`, one argument too many.
+        let succ_ty = {
+            let inner = arrow(&mut kernel, nat_c, nat_c);
+            arrow(&mut kernel, nat_c, inner)
+        };
+        kernel
+            .add_inductive(nat, &[], 0, sort_1, &[(zero, nat_c), (succ, succ_ty)])
+            .expect("the malformed Nat must itself be a well-formed inductive");
+        let three_lit = kernel.lit(Lit::nat(3u64));
+        let accept = kernel.infer(three_lit).is_ok();
+        out.push(CaseResult {
+            subsystem: "literals",
+            name: "literals::malformed_nat_bootstrap_negative",
+            axeyum_accept: accept,
+            lean_source: "set_option autoImplicit false\n\
+                inductive Nat where\n  | zero : Nat\n  | succ : Nat -> Nat -> Nat\n\
+                example : Nat := 3\n"
+                .to_string(),
+        });
+    }
+
     out
 }
 
@@ -1379,7 +1496,7 @@ fn declare_canonical_quotient_eq(kernel: &mut Kernel) -> (NameId, NameId) {
 /// read from source, not called: those helpers are private to the crate and
 /// unreachable from an external integration test). Declares its own
 /// canonical `Eq` first (see [`declare_canonical_quotient_eq`]).
-fn build_quotient_package(kernel: &mut Kernel) -> QuotPkg {
+fn build_quotient_declarations(kernel: &mut Kernel) -> (QuotPkg, Vec<Declaration>) {
     let (eq, eq_refl) = declare_canonical_quotient_eq(kernel);
     let anon = kernel.anon();
     let quot = kernel.name_str(anon, "Quot");
@@ -1552,18 +1669,35 @@ fn build_quotient_package(kernel: &mut Kernel) -> QuotPkg {
         kind: axeyum_lean_kernel::QuotKind::Ind,
     });
 
+    (
+        QuotPkg {
+            quot,
+            quot_mk,
+            quot_lift,
+            quot_ind,
+            eq,
+            eq_refl,
+        },
+        declarations,
+    )
+}
+
+/// Build the canonical four-declaration package AND admit it, panicking if it
+/// does not.
+///
+/// Split from [`build_quotient_declarations`] so a corpus case can corrupt
+/// exactly one field of exactly one candidate declaration before admission —
+/// `Kernel::add_quotient_package` is the only route by which a
+/// `Declaration::Quotient` ever reaches the environment (verified: the sole
+/// non-test `env.insert_unchecked` of a `Quotient` is `quotient.rs:90`, inside
+/// this function's own transaction), so the malformed-package path cannot be
+/// reached any other way.
+fn build_quotient_package(kernel: &mut Kernel) -> QuotPkg {
+    let (pkg, declarations) = build_quotient_declarations(kernel);
     kernel
         .add_quotient_package(&declarations)
         .unwrap_or_else(|e| panic!("quotient package must admit: {e:?}"));
-
-    QuotPkg {
-        quot,
-        quot_mk,
-        quot_lift,
-        quot_ind,
-        eq,
-        eq_refl,
-    }
+    pkg
 }
 
 fn quotient_cases() -> Vec<CaseResult> {
@@ -1853,6 +1987,75 @@ fn quotient_cases() -> Vec<CaseResult> {
                 def fconst (_ : Carrier) : Bool := true\n\
                 axiom wrongProof : True\n\
                 example : Bool := Quot.lift fconst wrongProof (Quot.mk r a0)\n"
+                .to_string(),
+        });
+    }
+
+    // N2: a malformed package -- `Quot` and `Quot.mk` swap types.
+    //
+    // Added by lane `kernel-mutant-survivors` to close ADR-0780's `quotient`
+    // SURVIVED entry. That entry's named reason was that this corpus builds
+    // exactly one quotient package per kernel, so `reduce_quotient`'s
+    // `is_named_quotient_member(constructor_name, "mk")` sub-check never has a
+    // second, non-canonical `mk`-shaped constructor to be confused with.
+    //
+    // That reason is stronger than it looks and it is why this case targets a
+    // DIFFERENT guard: a second `mk`-shaped constructor is not merely absent
+    // from the corpus, it is UNCONSTRUCTIBLE. `Kernel::add_quotient_package`
+    // is the only route by which a `Declaration::Quotient` reaches the
+    // environment, and it validates names against `quotient_names()`, which
+    // hard-codes `Quot`/`Quot.mk`/`Quot.lift`/`Quot.ind`. So no corpus case
+    // can ever kill that sub-check, and none is written pretending to.
+    //
+    // What IS reachable is the package validator, and within it exactly one
+    // guard that nothing downstream reproduces: the per-declaration type
+    // contract. The corruption here is minimal and surgical -- the four
+    // declarations keep their names, their kinds, their order and their
+    // universe arities, and only the TYPES of `Quot` and `Quot.mk` are
+    // exchanged. Every other guard in `validate_quotient_package` therefore
+    // passes (length, name, kind, arity), leaving `QuotientTypeMismatch` as
+    // the sole rejection, which is what makes this case discriminating.
+    //
+    // It is also the soundness-critical guard: the whole trust argument for
+    // admitting quotients as primitives rather than axioms is that the kernel
+    // re-derives Lean's four types itself and compares. Remove that comparison
+    // and a caller supplies its own eliminator.
+    //
+    // Lean's mirror is that its quotient package is the compiler primitive
+    // `init_quot` and no user declaration may occupy those names; it rejects
+    // with "`Quot` has already been declared".
+    {
+        let mut kernel = Kernel::new();
+        let (_pkg, mut declarations) = build_quotient_declarations(&mut kernel);
+        assert_eq!(declarations.len(), 4, "canonical package is four declarations");
+        let quot_ty = match &declarations[0] {
+            Declaration::Quotient { ty, .. } => *ty,
+            other => panic!("declaration 0 must be Quot: {other:?}"),
+        };
+        let quot_mk_ty = match &declarations[1] {
+            Declaration::Quotient { ty, .. } => *ty,
+            other => panic!("declaration 1 must be Quot.mk: {other:?}"),
+        };
+        assert_ne!(
+            quot_ty, quot_mk_ty,
+            "swapping two identical types would make this case vacuous"
+        );
+        match &mut declarations[0] {
+            Declaration::Quotient { ty, .. } => *ty = quot_mk_ty,
+            other => panic!("declaration 0 must be Quot: {other:?}"),
+        }
+        match &mut declarations[1] {
+            Declaration::Quotient { ty, .. } => *ty = quot_ty,
+            other => panic!("declaration 1 must be Quot.mk: {other:?}"),
+        }
+        let accept = kernel.add_quotient_package(&declarations).is_ok();
+        out.push(CaseResult {
+            subsystem: "quotient",
+            name: "quotient::malformed_package_swapped_types_negative",
+            axeyum_accept: accept,
+            lean_source: "set_option autoImplicit false\n\
+                axiom Quot : Type\n\
+                axiom Quot.mk : True\n"
                 .to_string(),
         });
     }
