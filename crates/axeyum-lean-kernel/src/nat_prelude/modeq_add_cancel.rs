@@ -44,7 +44,11 @@ use crate::expr::ExprId;
 /// chaining the two through `mod_eq_symm`/`mod_eq_trans` to
 /// `modEq n (c+b) (d+b)`, and peeling the shared right addend `b`
 /// (`cancel_common_right_addend`).
-fn build_add_left_cancel(d: &mut NatDev<'_>, p: &NatPrelude, values: &[ExprId]) -> (ExprId, ExprId) {
+fn build_add_left_cancel(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    values: &[ExprId],
+) -> (ExprId, ExprId) {
     let p = *p;
     let (modulus, a, b, c, dd) = (values[0], values[1], values[2], values[3], values[4]);
     let ac = d.add(a, c);
@@ -117,11 +121,16 @@ fn build_add_right_cancel(
     (stmt, proof)
 }
 
-pub(super) fn declare_mod_eq_add_cancel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_mod_eq_add_cancel(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
 
     // mod_eq_add_left_cancel : modEq n a b → modEq n (a+c) (b+d) → modEq n c d
-    d.theorem(p.mod_eq_add_left_cancel, 5, &|d, v| build_add_left_cancel(d, &p, v))?;
+    d.theorem(p.mod_eq_add_left_cancel, 5, &|d, v| {
+        build_add_left_cancel(d, &p, v)
+    })?;
 
     // mod_eq_add_right_cancel : modEq n c d → modEq n (a+c) (b+d) → modEq n a b
     d.theorem(p.mod_eq_add_right_cancel, 5, &|d, v| {
@@ -143,10 +152,7 @@ pub(super) fn declare_mod_eq_add_cancel(d: &mut NatDev<'_>, p: &NatPrelude) -> R
         let mp = {
             let h2_fv = d.fresh_fvar();
             let h2 = d.kernel().fvar(h2_fv);
-            let body = d.lemma(
-                p.mod_eq_add_left_cancel,
-                &[modulus, a, b, c, dd, h1, h2],
-            );
+            let body = d.lemma(p.mod_eq_add_left_cancel, &[modulus, a, b, c, dd, h1, h2]);
             d.lam_fv(h2_fv, lhs_ty, body)
         };
         let mpr = {
@@ -177,10 +183,7 @@ pub(super) fn declare_mod_eq_add_cancel(d: &mut NatDev<'_>, p: &NatPrelude) -> R
         let mp = {
             let h2_fv = d.fresh_fvar();
             let h2 = d.kernel().fvar(h2_fv);
-            let body = d.lemma(
-                p.mod_eq_add_right_cancel,
-                &[modulus, a, b, c, dd, h1, h2],
-            );
+            let body = d.lemma(p.mod_eq_add_right_cancel, &[modulus, a, b, c, dd, h1, h2]);
             d.lam_fv(h2_fv, lhs_ty, body)
         };
         let mpr = {
