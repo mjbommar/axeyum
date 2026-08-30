@@ -63,6 +63,7 @@ mod expr;
 mod inductive;
 mod int_prelude;
 mod ipc_heyting;
+mod ipc_provable;
 mod lean_export;
 mod lean_pp;
 mod level;
@@ -100,6 +101,7 @@ pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use ipc_heyting::{
     IpcHeytingPrelude, NatPreludeHandle, build_ipc_heyting_prelude, pem_instance,
 };
+pub use ipc_provable::{IpcProvablePrelude, build_ipc_provable_prelude};
 pub use lean_export::{
     AutoParamTypeNormalizationReport, EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata,
 };
