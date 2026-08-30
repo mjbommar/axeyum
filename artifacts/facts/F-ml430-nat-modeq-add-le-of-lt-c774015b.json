@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m a b : ℕ}, a ≡ b [MOD m] → a < b → a + m ≤ b",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_eq_add_le_of_lt",
+    "kernel_statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.modEq x0 x1 x2) -> ((x4 : AxNat.lt x1 x2) -> AxNat.le (AxNat.add x1 x0) x2)))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-lt-of-mul-lt-mul-left-234e8530", "F:nat-add-le-add-left", "F:nat-le-of-add-le-add-left", "F:nat-le-of-add-le-add-right", "F:nat-mul-le-mul-left"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mod_eq_add_le_of_lt",
+      "kind": "kernel-term",
+      "supports": "`Nat.mod_eq_add_le_of_lt` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.modEq x0 x1 x2) -> ((x4 : AxNat.lt x1 x2) -> AxNat.le (AxNat.add x1 x0) x2)))))`.",
+      "check_status": "checked",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory mod_eq_add_le_of_lt 2>/dev/null | awk -F'\t' '$1 == \"Nat.mod_eq_add_le_of_lt\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.modEq x0 x1 x2) -> ((x4 : AxNat.lt x1 x2) -> AxNat.le (AxNat.add x1 x0) x2)))))\"' | wc -l)\" -ge 1",
+      "kernel_declaration": "Nat.mod_eq_add_le_of_lt"
+    },
+    {
+      "id": "footprint-Nat.mod_eq_add_le_of_lt",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for `Nat.mod_eq_add_le_of_lt`. The `nat` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including `Nat.mod_eq_add_le_of_lt`.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed by lane modeq-add-le (2026-08-30). A prior handoff (docs/plan/status/329-nat-modeq-mirrors.md) judged this fact needed \"2-3 new order/monotonicity lemmas\" -- an Lt-to-existence bridge plus a m*u>m*v -> u>v cancellation -- and left it open rather than risk a rushed order argument. Verifying in-tree found neither was needed: this prelude's `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` is already an existence form, so the hypothesis hands over witnesses directly (no bridge to build), and `Nat.lt_of_mul_lt_mul_left` (mul_order_lemmas.rs) already IS the m*u>m*v -> u>v cancellation, needing no positivity side-condition. New file `nat_prelude/modeq_add_le_of_lt.rs` composes only pre-existing lemmas (`add_le_add_left`, `le_of_add_le_add_left`, `le_of_add_le_add_right`, `mul_le_mul_left`, `lt_of_mul_lt_mul_left`, `add_comm`, `add_assoc`) plus the modEq witness helpers already in `modular.rs`; no new order/monotonicity lemma was written. Rendered type checked character-for-character against `nat_theorem_inventory` output before flipping status. Verified at a tight boundary instance (m=3,a=2,b=5, b-a==m exactly), a slack instance (m=3,a=2,b=8, b-a==2m), a genuinely free m/a/b with fresh hypothesis fvars (Kernel::infer), and a reversed control (m=3,a=5,b=2: a≡b holds but a>b) showing the conclusion `Nat.ble (5+3) 2` computes to `false` -- the `a<b` hypothesis is load-bearing, not decorative; dropping it would be unsound, not merely inapplicable. `checker_command` verified both directions: exit 0 against the real declaration, empty match against a `_FABRICATED_NONEXISTENT`-suffixed name.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
