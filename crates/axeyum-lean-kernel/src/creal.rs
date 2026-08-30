@@ -7312,8 +7312,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sup_on_ub_at_sup_seq_point: kernel.name_str(creal, "supOn_ub_at_supSeq_point"),
         step_family_locate: kernel.name_str(creal, "stepFamily_locate"),
         mesh_max_le_sup_on_add: kernel.name_str(creal, "meshMax_le_supOn_add"),
-        sup_on_ub_at_fine_mesh_point: kernel
-            .name_str(creal, "supOn_ub_at_fine_mesh_point"),
+        sup_on_ub_at_fine_mesh_point: kernel.name_str(creal, "supOn_ub_at_fine_mesh_point"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),

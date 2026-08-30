@@ -257,7 +257,15 @@ fn declare_max_range_attained_approx_thm(
             let refl_rhs = d.lemma(p.equiv_refl, &[padded_eps]);
             d.lemma(
                 p.lt_congr,
-                &[padded_zero, fsj, padded_eps, padded_eps, trim, refl_rhs, raw],
+                &[
+                    padded_zero,
+                    fsj,
+                    padded_eps,
+                    padded_eps,
+                    trim,
+                    refl_rhs,
+                    raw,
+                ],
             )
         };
         let head_padded = cadd(d, p, fsj, eps);
@@ -668,7 +676,12 @@ fn declare_sup_on_approx_lub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
             let tail = d.lemma(
                 p.add_congr,
                 &[
-                    f_point, f_point, inner_sum, eps_real, refl_point, inner_to_eps,
+                    f_point,
+                    f_point,
+                    inner_sum,
+                    eps_real,
+                    refl_point,
+                    inner_to_eps,
                 ],
             );
             let regrouped = cadd(d, p, f_point, inner_sum);
@@ -679,7 +692,9 @@ fn declare_sup_on_approx_lub_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
             let refl_seq_m = d.lemma(p.equiv_refl, &[seq_m]);
             let body = d.lemma(
                 p.le_congr,
-                &[seq_m, seq_m, doubled, padded_eps, refl_seq_m, whole_eq, step2],
+                &[
+                    seq_m, seq_m, doubled, padded_eps, refl_seq_m, whole_eq, step2,
+                ],
             );
             d.lam_fv(m_fv, nat, body)
         };
@@ -1089,10 +1104,7 @@ fn lt_add_pos(
 /// above the index being tested. The split has to be at the TOP of the range
 /// under consideration, not at the point the inductive hypothesis will be
 /// applied to.
-fn declare_step_family_locate_thm(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+fn declare_step_family_locate_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let carrier = creal_ty(d, p);
     let fam_ty = d.arrow(nat, carrier);
@@ -1423,10 +1435,7 @@ fn declare_mesh_max_le_sup_on_add_thm(
     let target_real = d.const_app(p.sup_on, &[f, a, b, hab, u]);
     let top = d.lemma(p.sup_seq_le_sup_on, &[f, a, b, hab, u, k]);
     let refl_eps = d.lemma(p.le_refl, &[eps]);
-    let widen = d.lemma(
-        p.add_le_add,
-        &[seq_k, target_real, eps, eps, top, refl_eps],
-    );
+    let widen = d.lemma(p.add_le_add, &[seq_k, target_real, eps, eps, top, refl_eps]);
 
     let lhs = d.const_app(p.mesh_max, &[f, a, b, deep]);
     let mid = cadd(d, p, seq_k, eps);
@@ -1575,4 +1584,239 @@ pub(super) fn declare_sup_on_ub_at_fine_mesh_point(
 ) -> Result<(), KernelError> {
     declare_mesh_max_le_sup_on_add_thm(d, p)?;
     declare_sup_on_ub_at_fine_mesh_point_thm(d, p)
+}
+
+#[cfg(test)]
+mod sup_laws_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Mandatory concrete instantiation, two positives and two negative
+    /// controls**, on the two declarations of this file that can be
+    /// instantiated cheaply.
+    ///
+    /// `CReal.supOn_approx_lub` and the three theorems around it are
+    /// deliberately NOT instantiated concretely here, and that is a
+    /// considered choice rather than an omission: every one of them mentions
+    /// `CReal.supOn`, whose `Definition` embeds a `regular_of_scaled_cauchy`
+    /// construction, so instantiating it at concrete arguments is exactly the
+    /// shape `CLAUDE.md` records as pathological (a control that runs for
+    /// minutes and gigabytes is worse than no control). What covers them
+    /// instead is `creal_tests::every_creal_declaration_is_checked_and_axiom_free`,
+    /// which reads the ENVIRONMENT rather than a list and asserts every
+    /// declaration this file adds is a `Theorem` with an empty axiom
+    /// footprint, plus `creal_prelude_builds`, which is what actually runs
+    /// the kernel over the proof terms.
+    ///
+    /// The two checked here need none of that machinery:
+    ///
+    /// 1. `stepFamily_locate` at the constant family `P i := 0`, `w := 0`,
+    ///    `eps := 1`, `n := 0`, `t := 1`. The control transposes the first
+    ///    conjunct's `le` — ONE swap, not two large terms — giving
+    ///    `1 + 1 <= 0`, which is false.
+    /// 2. `maxRange_attained_approx` at `f i := 0`, `n := 0`, `e := 0` (so
+    ///    the slack is `natDivSucc 1 0`, i.e. `1`). The control transposes the
+    ///    estimate, giving `0 + 1 <= 0`.
+    ///
+    /// Both controls are checked in the two directions this repository's
+    /// guidance demands: not vacuous (the mutated predicate is asserted not
+    /// `def_eq` to the real one) and not inverted (the mutated statement is
+    /// genuinely false at the chosen instance, as the comments record).
+    #[test]
+    fn sup_laws_concrete_and_negative_controls() {
+        crate::on_a_deep_stack(sup_laws_concrete_and_negative_controls_body);
+    }
+
+    fn sup_laws_concrete_and_negative_controls_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let anon = d.kernel().anon();
+        let nat = d.nat_ty();
+        let one_level = d.level_one();
+        let logic = p.rat.int.logic;
+
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let zero_n = d.zero();
+
+        // The constant family `fun _ : Nat => 0`, shared by both cases.
+        let fam = {
+            let i_fv = d.fresh_fvar();
+            d.lam_fv(i_fv, nat, zero_c)
+        };
+
+        // --- 1. stepFamily_locate ------------------------------------------
+        //
+        // `0 <= 0` and `0 < 1` are the two order hypotheses, both closed
+        // terms; the step hypothesis is `0 <= 0 + 0`.
+        let hw = d.lemma(p.le_refl, &[zero_c]);
+        let hpos = d.lemma(p.zero_lt_one, &[]);
+
+        let sum00 = cadd(&mut d, p, zero_c, zero_c);
+        let trim0 = d.lemma(p.add_zero, &[zero_c]);
+        let hstep = {
+            let i_fv = d.fresh_fvar();
+            let back = d.lemma(p.equiv_symm, &[sum00, zero_c, trim0]);
+            let refl_z = d.lemma(p.equiv_refl, &[zero_c]);
+            let le_z = d.lemma(p.le_refl, &[zero_c]);
+            let body = d.lemma(
+                p.le_congr,
+                &[zero_c, zero_c, zero_c, sum00, refl_z, back, le_z],
+            );
+            d.lam_fv(i_fv, nat, body)
+        };
+
+        // `le (P 0) t`, i.e. `0 <= 1`.
+        let h0 = d.lemma(p.le_of_lt, &[zero_c, one_c, hpos]);
+
+        // `le t ((P 0 + w) + eps)`, i.e. `1 <= (0 + 0) + 1`, by rewriting the
+        // right-hand side down to `1`.
+        let sum001 = cadd(&mut d, p, sum00, one_c);
+        let zero_plus_one = cadd(&mut d, p, zero_c, one_c);
+        let one_plus_zero = cadd(&mut d, p, one_c, zero_c);
+        let hn = {
+            let refl_one = d.lemma(p.equiv_refl, &[one_c]);
+            let collapse_left =
+                d.lemma(p.add_congr, &[sum00, zero_c, one_c, one_c, trim0, refl_one]);
+            let comm = d.lemma(p.add_comm, &[zero_c, one_c]);
+            let trim1 = d.lemma(p.add_zero, &[one_c]);
+            let step2 = d.lemma(
+                p.equiv_trans,
+                &[zero_plus_one, one_plus_zero, one_c, comm, trim1],
+            );
+            let whole = d.lemma(
+                p.equiv_trans,
+                &[sum001, zero_plus_one, one_c, collapse_left, step2],
+            );
+            let back = d.lemma(p.equiv_symm, &[sum001, one_c, whole]);
+            let refl_one2 = d.lemma(p.equiv_refl, &[one_c]);
+            let le_one = d.lemma(p.le_refl, &[one_c]);
+            d.lemma(
+                p.le_congr,
+                &[one_c, one_c, one_c, sum001, refl_one2, back, le_one],
+            )
+        };
+
+        let locate = d.lemma(
+            p.step_family_locate,
+            &[fam, zero_c, one_c, hw, hpos, hstep, zero_n, one_c, h0, hn],
+        );
+
+        // `fun i => Nat.le i 0 /\ (0 <= 1 + 1 /\ 1 <= (0 + 0) + 1)`, and the
+        // control with the FIRST conjunct's `le` transposed.
+        let locate_pred = |d: &mut IntDev<'_>, flip: bool| -> ExprId {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let bound = d.le(i, zero_n);
+            let t_eps = cadd(d, p, one_c, one_c);
+            let lower = if flip {
+                cle(d, p, t_eps, zero_c)
+            } else {
+                cle(d, p, zero_c, t_eps)
+            };
+            let upper = cle(d, p, one_c, sum001);
+            let inner = d.and(lower, upper);
+            let body = d.and(bound, inner);
+            d.lam_fv(i_fv, nat, body)
+        };
+        let pred_ok = locate_pred(&mut d, false);
+        let pred_bad = locate_pred(&mut d, true);
+        assert!(
+            !d.kernel().def_eq(pred_ok, pred_bad),
+            "negative control must not be vacuous: transposing `0 <= 1 + 1` \
+             must change the predicate"
+        );
+
+        let exists_const = d.kernel().const_(logic.exists_, vec![one_level]);
+        let ty_ok = d.apply(exists_const, &[nat, pred_ok]);
+        let name_ok = d.kernel().name_str(anon, "__stepFamilyLocateOk");
+        let res_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: ty_ok,
+            value: locate,
+        });
+        assert!(
+            res_ok.is_ok(),
+            "stepFamily_locate at the constant family P i := 0, w := 0, \
+             eps := 1, n := 0, t := 1 must locate t: {:?}",
+            res_ok.err()
+        );
+
+        let ty_bad = d.apply(exists_const, &[nat, pred_bad]);
+        let name_bad = d.kernel().name_str(anon, "__stepFamilyLocateBad");
+        let res_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: ty_bad,
+            value: locate,
+        });
+        assert!(
+            res_bad.is_err(),
+            "negative control must be REJECTED: the same proof term cannot \
+             prove the transposed first conjunct `1 + 1 <= 0`"
+        );
+
+        // --- 2. maxRange_attained_approx -----------------------------------
+        //
+        // At `e := 0` the slack is `natDivSucc 1 0`, which is `1`, so the
+        // estimate reads `maxRange f 0 <= f i + 1`, i.e. `0 <= 0 + 1`.
+        let attained = d.lemma(p.max_range_attained_approx, &[fam, zero_n, zero_n]);
+        let one_nat = d.num(1);
+        let slack_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_n]);
+        let slack = embed(&mut d, p, slack_rat);
+
+        let attained_pred = |d: &mut IntDev<'_>, flip: bool| -> ExprId {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let bound = d.le(i, zero_n);
+            let padded = cadd(d, p, zero_c, slack);
+            let mr = d.const_app(p.max_range, &[fam, zero_n]);
+            let est = if flip {
+                cle(d, p, padded, mr)
+            } else {
+                cle(d, p, mr, padded)
+            };
+            let body = d.and(bound, est);
+            d.lam_fv(i_fv, nat, body)
+        };
+        let apred_ok = attained_pred(&mut d, false);
+        let apred_bad = attained_pred(&mut d, true);
+        assert!(
+            !d.kernel().def_eq(apred_ok, apred_bad),
+            "negative control must not be vacuous: transposing the estimate \
+             must change the predicate"
+        );
+
+        let aty_ok = d.apply(exists_const, &[nat, apred_ok]);
+        let aname_ok = d.kernel().name_str(anon, "__maxRangeAttainedOk");
+        let ares_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: aname_ok,
+            uparams: vec![],
+            ty: aty_ok,
+            value: attained,
+        });
+        assert!(
+            ares_ok.is_ok(),
+            "maxRange_attained_approx at f i := 0, n := 0, e := 0 must give \
+             `maxRange f 0 <= f 0 + 1`: {:?}",
+            ares_ok.err()
+        );
+
+        let aty_bad = d.apply(exists_const, &[nat, apred_bad]);
+        let aname_bad = d.kernel().name_str(anon, "__maxRangeAttainedBad");
+        let ares_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: aname_bad,
+            uparams: vec![],
+            ty: aty_bad,
+            value: attained,
+        });
+        assert!(
+            ares_bad.is_err(),
+            "negative control must be REJECTED: the same proof term cannot \
+             prove the transposed estimate `0 + 1 <= maxRange f 0`, i.e. \
+             `1 <= 0`"
+        );
+    }
 }
