@@ -6,15 +6,66 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, Even (m / n) ↔ m % (2 * n) / n = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.even_div",
+    "kernel_statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Iff (AxNat.Even (AxNat.div x0 x1)) (Eq.{1} AxNat (AxNat.div (AxNat.mod x0 (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) x1) AxNat.zero)))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-even-iff-024826e9", "F:ml430-nat-mod-mul-right-div-self-900e0b01", "F:nat-mul-comm"],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/even_div.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory even_div 2>/dev/null | awk -F'\\t' '$1 == \"Nat.even_div\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> Iff (AxNat.Even (AxNat.div x0 x1)) (Eq.{1} AxNat (AxNat.div (AxNat.mod x0 (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) x1) AxNat.zero)))\"' | wc -l)\" -ge 1",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "id": "kernel-Nat.even_div",
+      "kind": "kernel-term",
+      "supports": "`Nat.even_div` is admitted as a Theorem with EXACTLY the mirror's shape, pinned verbatim via the kernel's own renderer. Reduces to `Nat.even_iff_mod_two_eq_zero` at `q := m/n`, bridged through `Nat.mod_mul_right_div_self` (an UNCONDITIONAL digit-decomposition identity already in `mod_mul_lemmas.rs`: `m % (n*k) / n = (m/n) % k`, at `k := 2`) and `Nat.mul_comm` (to align `2*n`/`n*2`), transported along the resulting `Eq` via `Eq.rec` directly. No new arithmetic lemma."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::even_div_applies_at_concrete_pairs_and_rejects_a_wrong_residue_control -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude_tests::even_div_applies_at_concrete_pairs_and_rejects_a_wrong_residue_control"
+      ],
+      "id": "instance-Nat.even_div",
+      "kind": "kernel-term",
+      "supports": "Applies at a concrete `(m, n) := (7, 3)` (`q := 2` Even, `7 % 6 / 3 = 0`) with REAL witnesses on both `mp` (a genuine `Even 2`) and `mpr` (`Eq 0 0` by `refl`) legs, each confirmed by `def_eq` against the computed reduct; plus a truncation control at `(9, 3)` (`q := 3` Odd) confirming `9 % 6 / 3` genuinely computes to `1`, not `0` -- the residue a wrong scaling/truncation formula would miss; plus genuinely free `m`, `n`."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free nat",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free (reads Kernel::axiom_footprint for every listed Nat declaration and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free nat (independently sums the whole nat prelude's trusted surface and fails nonzero)"
+      ],
+      "id": "footprint-Nat.even_div",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Nat.even_div`. The `nat` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "id": "coverage-Nat.even_div",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Nat.even_div` derived from `kernel.environment()` directly, not from an inventory list -- a Nat-namespace declaration missing from `theorem_names` fails this test by name."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane parity-finish (2026-08-30): built directly as a kernel declaration in the new file nat_prelude/even_div.rs. The prior lane (nat-parity-div) had sized this as needing a new div/mod-scaling identity built from `div_mod_exec`/`div_mod_unique`; instead it reduces to `Nat.even_iff_mod_two_eq_zero` at `q := m/n` via the ALREADY-EXISTING unconditional `Nat.mod_mul_right_div_self` (`mod_mul_lemmas.rs`) at `k := 2`, bridged by `Nat.mul_comm` and `Eq.rec` transport -- no new arithmetic lemma. Verified against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that this is a standard Nat division/parity lemma about the SAME `Nat.div`/`Nat.mod`/`Nat.Even` this kernel already has (no new definition introduced), so mirroring it under Mathlib's own name is honest under the mirror-flip criterion.",
     "source": "statement-only extraction of `Nat.even_div` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +77,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established in Axeyum. formal.statement is UNCHANGED and remains a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type; do not edit it. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. That acceptance was syntax/type evidence about the statement; the evidence above is proof evidence about the claim, from a genuinely re-derivable kernel term. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
 }

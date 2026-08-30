@@ -170,7 +170,7 @@ now. Nothing was deleted.
 | 2026-08-30 | nat-parity-div | 6 new axiom-free Nat kernel theorems (parity/div-two cluster) + 1 mirror flipped onto a pre-existing theorem; 7 of 10 dispatched facts proved, 3 blocked with named reasons |
 | 2026-08-30 | fermat-mirrors | `Nat.fermatNumber_ne_one`/`_mono`/`coprime_fermatNumber_fermatNumber` — three new axiom-free kernel theorems (`nat_prelude/fermat_number_mirrors.rs`), facts flipped to `proved` with evidence, 208 `nat_prelude::` tests passing (was 204). |
 | 2026-08-30 | pow-add-prime | `Nat.pow_mul`, `Nat.dvd_pow_add_one_of_odd_exp`, `Nat.dvd_pow_add_one_of_odd_mul_exp` — the odd-factor divisibility step toward `F:ml430-nat-pow-of-pow-add-prime-ab61d0d3`, subtraction-free (no alternating sum, no `Int` transport); fact stays `open`, full lemma not assembled |
-| 2026-08-30 | `planning` | Accept ADR-0717; add artifact, graph, safety, and discovery roadmaps; promote L0–L4 into the generated primary plan with collision-free 2–3 lane ownership. |
+| 2026-08-30 | parity-finish | 3 axiom-free Nat kernel theorems closing the parity/division-by-two cluster's last blockers (`Nat.even_add`, `Nat.even_add'`, `Nat.even_div`); all 3 dispatched facts proved; two of three handoff sizings were wrong (one undersold, one — `even_div` — badly oversold: an existing unconditional lemma closed it in ~75 lines) |
 | 2026-08-29 | nat-rec-agreement | `mod 2 ∈ {0,1}` split + fuel-generalized agreement induction; `bitwise and_fn = land` and `bitwise or_fn = lor` proved universally |
 | 2026-08-29 | int-gcd-div | closed `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` via `declare_exists_mul_mod_eq_gcd`; `Int.gcd_div`/`Int.gcd_div_gcd_div_gcd` re-scoped open with a named blocking lemma gap each, not attempted half-finished |
 | 2026-08-29 | nat-bitwise-facts | full triage of all 19 `natural-bitwise` facts; 0 closed (all blocked on out-of-scope files or shared missing machinery, or are mirror mismatches, or a flagged mutation); no source changed |
@@ -628,11 +628,10 @@ changes that still determine the immediate queue.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-The accepted library programme below is the new cross-cutting focus. It does
-not erase the retained A1–A11 solver programme: P0 safety work
-preempts it, P1 graph/artifact authority may run beside A5/A6, and production
-pilots begin only after their authorities land. A3 remains incomplete but
-yielded, A4 yielded, and A5 remains the first active solver-depth item.
+The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
+here as closed evidence boundaries. A3 remains incomplete, but all currently
+preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
+A5 is the first active item.
 
 **The prose half of the ledger is now derived, not transcribed** (`WIP`,
 ledger-freshness, 2026-08-18). `F:schedule-critical-chain-infeasible` said "the
@@ -32193,6 +32192,98 @@ count did not move).
   a hyphenated `.py` reachable only via a fabricated fact; 2 new cases; case 4's
   expected message updated; case-count floor 14 → 17.
 
+**Status: LANDED (partial, and the partiality is precise). 2026-08-30.**
+
+Eight declarations in a new `crates/axeyum-lean-kernel/src/creal/sup_laws.rs`,
+all admitted through `Kernel::add_declaration` with an empty axiom footprint,
+every one a first-attempt kernel accept. Decision recorded in
+[ADR-0710](docs/research/09-decisions/adr-0710-supon-is-a-supremum-from-below-and-on-a-dense-family-from-above.md).
+
+## What landed
+
+**The approximate least-upper-bound law is complete.**
+
+```
+CReal.supOn_approx_lub : ∀ F a b (hab : le a b) (u : UniformlyContinuousOn F a b) (e : Nat),
+  ∃ x, le a x ∧ (le x b ∧ le (supOn F a b hab u) (add (F x) (ofRat (Rat.natDivSucc 1 e))))
+```
+
+It must stay approximate: `CReal.evt_attained_max_decides_sign` refutes the
+attaining form, which is EVT's row 2. No `argmax`-shaped declaration was added
+and none may be.
+
+Supporting it: `CReal.maxRange_attained_approx` (a finite maximum is
+approximately attained at one of its samples, by `lt_cotrans`) and
+`CReal.supSeq_le_shift`.
+
+**The upper-bound law landed at every sampled point, not at an arbitrary one.**
+
+```
+CReal.supSeq_le_supOn             : le (supSeq F a b u k) (supOn F a b hab u)
+CReal.supOn_ub_at_supSeq_point    : i ≤ meshLevelCount (supLevel F a b u k)
+                                    → le (F (sample i)) (supOn F a b hab u)
+CReal.meshMax_le_supOn_add        : le (meshMax F a b (supLevel F a b u k + dd))
+                                       (add (supOn F a b hab u)
+                                            (ofRat (natDivSucc 1 (meshLevelCount k))))
+CReal.supOn_ub_at_fine_mesh_point : i ≤ meshLevelCount (supLevel F a b u k + dd)
+                                    → le (F (sample i))
+                                         (add (supOn F a b hab u)
+                                              (ofRat (natDivSucc 1 (meshLevelCount k))))
+```
+
+The last is the strongest: the refinement depth `dd` is free, so the sampled
+points can be made as fine as wanted while `k` controls the error
+independently.
+
+**The tool the remaining step needs**, `CReal.stepFamily_locate`, is landed —
+cell location stated over the ORDER alone, with no mesh algebra in the
+induction.
+
+## What does NOT hold
+
+`∀ x, le a x → le x b → le (F x) (supOn F a b hab u)` at an arbitrary `x`.
+One declaration; ADR-0710's "What remains, precisely" gives the four-step
+route, the level construction, and the reason the locate epsilon cannot be
+absorbed by the schedule alone.
+
+## Verdict on the two-axis dominance test
+
+**EVT remains ineligible**, and this lane does not change ADR-0692/0699's
+verdict. Trusted base: `creal` stays at 0. Computational content: improved,
+not sufficient — Mathlib's `IsCompact.exists_isMaxOn` bounds `F` at every
+point of the interval, and so must we before the statements are comparable.
+
+## Measurements
+
+| | before | after |
+| --- | --- | --- |
+| `creal_prelude_builds` | 109.88 s | 110.80 s |
+| `cargo test -p axeyum-lean-kernel --lib creal::` | 199 passed / 399.23 s | 200 passed / 425.32 s |
+| `shape_search --const CReal.supOn --kind theorem` | — | 6 (control: `CReal.integral` 18) |
+
+**The canary did not move**: eight declarations cost about a second, inside
+the noise. Intermediate readings of 118-127 s were taken under lane
+contention and are not the cost of this work -- the harness's own
+`finished in` is CPU-contended even though `cargo-serialized.sh` serializes
+the cargo jobs themselves. Read the number on a quiet box before attributing
+a regression to a declaration.
+
+Five of those six theorem types are new in this lane; `supSeq_converges_supOn`
+predates it. ADR-0691's "zero against 45" was a different instrument and the
+two are not on the same scale.
+
+## Checks run
+
+- `cargo test -p axeyum-lean-kernel --lib creal_prelude_builds` — 1 passed,
+  after every increment.
+- `cargo test -p axeyum-lean-kernel --lib every_creal_declaration_is_checked_and_axiom_free`
+  — 1 passed. This is the discriminating one: it reads
+  `kernel.environment()` rather than a list, so a build step that never ran
+  would fail it through the shard entry.
+- `cargo test -p axeyum-lean-kernel --lib sup_laws_concrete_and_negative_controls`
+  — 1 passed, both negative controls rejected by the kernel.
+- `cargo fmt --all --check`, `clippy -D warnings` on this crate — clean.
+
 **Your lane's block (`DONE for this dispatch`, nat-parity-div, 2026-08-30).**
 Closed 7 of 10 dispatched mirrors plus flipped 1 pre-existing (see landed-changes).
 3 remain open with named blockers below. All work is direct Nat-level kernel
@@ -32485,16 +32576,6 @@ sharply. Splitting that status is a schema change with a validator and an
 - `python3 scripts/gen-adr-index.py --check`: exit 0, `rows=630`.
 - `./scripts/check-links.sh`: `all links ok`.
 - No `cargo test` run — this lane changed no Rust.
-
-**Library programme (`DONE`, library-construction-roadmaps, 2026-08-30).**
-ADR-0717 and four detailed roadmaps now define the new L0–L4 focus: universal
-theorem credit; pinned declaration-graph authority; graph join and
-infrastructure ranking; declarative, counterexample-first discovery; and a thin
-Lean adapter before demand-gated source compatibility. Project-wide plan
-sources, the plan index, research roadmap, and generated root plan carry the
-same order. Implementation belongs to new disjoint graph-authority,
-graph-ranking, safety-contract, and discovery lanes; this planning lane owns no
-producer, fact status, or generated graph artifact.
 
 ## Status
 
@@ -32820,6 +32901,197 @@ python3 scripts/check-fact-depends-derived.py --fix          # nothing to fix
 
 Not run (out of scope / no `nat_prelude` or `Nat.prodRangeIf` edits made):
 `cargo test -p axeyum-lean-kernel --lib nat_prelude::`.
+
+**Status: LANDED.** `CReal.supOn_ub` is admitted, axiom-free, first-attempt
+kernel accept. ADR-0733.
+
+```
+CReal.supOn_ub : ∀ F a b (hab : le a b) (u : UniformlyContinuousOn F a b) (x : CReal),
+  le a x → le x b → le (F x) (supOn F a b hab u)
+```
+
+This is the one declaration ADR-0710 named as remaining between `CReal.supOn`
+and comparability with Mathlib's `IsCompact.exists_isMaxOn`. With
+`CReal.supOn_approx_lub` it is the pair that characterizes `supOn` as a
+supremum: an upper bound at every point of `[a, b]`, and approached to any
+requested accuracy at an exhibited point.
+
+## Measured
+
+| check | result |
+| --- | --- |
+| `creal_prelude_builds` before | **110.54 s** |
+| `creal_prelude_builds` after | **110.00 s** (flat) |
+| `cargo test -p axeyum-lean-kernel --lib creal::` | **201 passed, 0 failed** |
+| `every_creal_declaration_is_checked_and_axiom_free` | passes — reads `kernel.environment()`, so `CReal.supOn_ub` is a `Theorem` with an empty axiom footprint |
+| `cargo fmt --all --check`, clippy `-D warnings` on this crate | clean |
+
+The flat prelude build matters: none of the defeq traps this development has
+accumulated (a `Definition` forced to unfold, a concrete witness driving
+partial evaluation) was tripped.
+
+## ADR-0710's four steps: three held, one drifted CHEAPER
+
+The route in ADR-0710 was accurate and was followed. The one drift is in our
+favour:
+
+- **Step 2** predicted the refinement depth `dd` would come from `Nat.le_dest`,
+  "an `Exists` into a `Prop`, which is permitted". It does not have to.
+  Choosing `j := supLevel F a b u kk + (Nat.size c + Nat.size outer2)` makes
+  `dd` **concrete**, so the obligation reduces to
+  `Nat.le dd (Nat.add level dd)` and **no existential is eliminated anywhere in
+  the proof**. One summand satisfies both consumers at once.
+- Steps 1, 3 and 4 held verbatim, including the arithmetic in step 3.
+- Step 1's three interface identities were exactly what was needed and no more.
+  Two are re-derivations of `creal/supremum.rs` private helpers
+  (`sample_zero_equiv`, `sample_succ_equiv`); `mesh_endpoint_equiv`
+  (`P N + Δ ~ b`) is new. Worth knowing:
+  `creal/monotone.rs`'s `subdivisionPoint_in_bounds` already runs those same
+  three steps but lands a `le` rather than an `Equiv`, so it could not be
+  reused — only the shape could.
+
+## Where the margin came from, since `supLevel` has none
+
+`supLevel`'s schedule is exactly fine enough for the modulus at the
+corresponding accuracy, which is why an off-mesh point cannot reuse it. The
+margin is bought in **two independent places, neither of which is a scheduled
+level**, and they are not interchangeable:
+
+1. **The level** — an arbitrary level ABOVE a scheduled one, made usable for
+   one epsilon by `meshMax_le_supOn_add` (`mesh_max_le_add_of_modulus` is
+   depth-uniform). This handles the mesh-maximum side.
+2. **The accuracy the mesh is ASKED for** — `outer2 := succ (2·outer)`, one
+   halving finer than the modulus itself demands, so `mesh_le_of_ge` reports
+   `Δ ≤ 1/(2·outer + 2)` and the locate epsilon can be the same size. The two
+   fuse to exactly the `1/(outer + 1)` `uc_spec` consumes. **No amount of extra
+   LEVEL substitutes for this**, because the schedule's guarantee is stated at
+   the accuracy you asked for.
+
+The same halving runs a second time at the outer accuracy (`kk := succ (2·e)`)
+to split the final `1/(e+1)` between the uniform-continuity transfer and the
+mesh-maximum gap.
+
+## The value/argmax distinction is untouched
+
+No `argmax`-shaped declaration was added and none should be.
+`CReal.evt_attained_max_decides_sign` proves an attaining maximiser would
+decide the sign of an arbitrary real — a genuine impossibility result, not an
+unfinished proof.
+
+## EVT comparability — the honest verdict
+
+**EVT is now ELIGIBLE for the per-statement dominance claim, and on the two
+axes ADR-0692/0699 settled it passes.** Trusted base: `creal` stays at 0.
+Computational content: `supOn` now carries both halves of the supremum
+characterization, and the specific gap ADR-0710 named is closed.
+
+**Two things still separate the statements**, and a referee must be told both:
+
+1. **Our hypothesis is stronger.** `UniformlyContinuousOn F a b` versus
+   Mathlib's continuity on a compact set. We do **not** have Heine–Cantor
+   in-tree — measured, with a positive control, not assumed. This is not an
+   oversight: Heine–Cantor is not constructively available, which is why
+   Bishop-style analysis takes uniform continuity as the definition. The two
+   developments quantify over different classes of input.
+2. **Our conclusion is a bound, not an attained maximum**, permanently, by
+   `evt_attained_max_decides_sign`.
+
+So: EVT's supremum is now stated and proved here in a form comparable to
+Mathlib's, axiom-free, with computational content Mathlib's does not carry —
+under a stronger hypothesis and with a constructive rather than attained
+conclusion. That is a per-statement comparison a referee can check. **It is not
+a coverage claim and must not be quoted as one.**
+
+## Next
+
+The obvious follow-on is not more `supOn` machinery. It is to decide, at the
+strategy layer, whether the hypothesis difference in (1) should be recorded as
+a permanent axis of the comparison — the way breadth already is — rather than
+as an open task, since no amount of work in this kernel removes it.
+
+**Your lane's block (`DONE for this dispatch`, parity-finish, 2026-08-30).**
+All three facts handed off by `nat-parity-div` (see
+`docs/plan/status/369-nat-parity-div.md`) are closed. All three sizings from
+the handoff were WRONG in the optimistic direction (the two "no missing
+lemma, just a doubled case split" facts needed real new infrastructure; the
+one sized as "more substantial... needs a new arithmetic identity" turned out
+to need none) — see below for what each cost.
+
+Verification run: `cargo test -p axeyum-lean-kernel --lib nat_prelude::` —
+221 passed, 0 failed (was 218 before this lane's first commit; +3 net over
+the two new files plus one shared test/coverage-list registration per
+declaration). `clippy -D warnings` clean on `-p axeyum-lean-kernel
+--all-targets --all-features`. `rustfmt --edition 2024 --check` clean on
+every touched file. `python3 scripts/validate-facts.py` — 2270 facts, 0
+errors. `python3 scripts/check-mirror-statement-fidelity.py` —
+verdict=PASS. `python3 scripts/check-autogenesis-holdout-isolation.py` —
+settled=0, references=0, verdict=PASS.
+
+**Closed:**
+
+- `Nat.even_add : ∀ m n, Even (m+n) ↔ (Even m ↔ Even n)`
+  (`F:ml430-nat-even-add-31386639`) and `Nat.even_add' : ∀ m n, Even (m+n) ↔
+  (Odd m ↔ Odd n)` (`F:ml430-nat-even-add-39e3bc07`) — new file
+  `crates/axeyum-lean-kernel/src/nat_prelude/even_add_family.rs`. The
+  handoff's sizing ("NOT missing any single lemma... roughly 2-3x
+  `even_add_one`'s proof volume") was directionally right but the "no new
+  arithmetic lemma needed" part undersold it: `Nat.add`/`Nat.Even`/`Nat.Odd`
+  are witness-based (`Even n := Exists k, n = k+k`) in THIS prelude, not
+  `mod`-based like `Int.even_add`/`Int.even_add'`, so the four-way
+  case-split combine machinery (`TruthFact`/`iff_fact`/`mk_iff_both_true`/
+  `mk_iff_both_false`, ported structurally from `int_prelude/parity.rs`) had
+  to be paired with a NEW witness-arithmetic piece (`sum_shape`) relating
+  `add m n`'s own Even/Odd witness to `m`'s and `n`'s via
+  `Nat.add_add_add_comm`/`Nat.succ_add` plus the definitional
+  `add x (succ y) ≡ succ (add x y)`. The `OO` (both-odd) leg needs
+  `succ_add` twice plus one re-association step; that's the leg the
+  concrete test (`(3,3)`, both Odd) exercises with a real `Odd 3` witness.
+  Both facts share this one construction, only the inner predicate
+  (`Even`/`Odd`) differs.
+- `Nat.even_div : ∀ m n, Even (m/n) ↔ m % (2*n) / n = 0`
+  (`F:ml430-nat-even-div-395c6b5e`) — new file
+  `crates/axeyum-lean-kernel/src/nat_prelude/even_div.rs`. The handoff sized
+  this as the hardest of the three, needing a NEW `Nat.div_mod_scale`-shaped
+  identity built from `div_mod_exec`/`div_mod_unique` at divisor `2*n` after
+  checking `division.rs`/`div_mod_lemmas.rs`/`mod_mul_lemmas.rs`. It needed
+  NONE of that: `mod_mul_lemmas.rs`'s `Nat.mod_mul_right_div_self : ∀ m n k,
+  m % (n*k) / n = (m/n) % k` — UNCONDITIONAL, no positivity hypothesis on
+  `n` or `k` — is exactly this identity at `k := 2`. The whole fact reduces
+  to `Nat.even_iff_mod_two_eq_zero` at `q := m/n`, bridged by `Nat.mul_comm`
+  (`2*n` vs `n*2`) and transported along the resulting `Eq` via `Eq.rec`
+  directly (`NatOps::transport`/`eq_motive` used as a general `Iff`
+  congruence tool, not for arithmetic rewriting). ~75 lines including the
+  module doc; no case split on `n` needed (the borrowed lemma already
+  handles `n = 0` via its own `cases_zero_succ`). This is the sharpest
+  instance this session of "verify the handoff, don't inherit it" — the
+  fact sized as MOST work was the LEAST work, because the prior lane's
+  three-file search for a scaling identity happened to land one file short
+  of where it actually lived.
+
+**Int-transport route re-checked, same finding as the handoff reported.**
+Did not re-derive the Int-side `ofNat`/`natAbs` bridge cost (an `Iff`-inside-
+`Iff` congruence lemma this kernel lacks) since the handoff's finding held
+up structurally: `int_prelude/parity.rs`'s `even_add`/`even_add'` are
+`mod`-based and this prelude's `Nat.Even`/`Odd` are witness-based, so a
+direct Nat-level construction (mirroring the COMBINE machinery, not the
+mod-arithmetic) was cheaper than bridging carriers, exactly as reported.
+
+**Frontier after this lane's three closes:** re-ran
+`check-dispatchable-frontier.py --json` after merging local `main` — 8
+dispatchable facts remain, ALL either explicitly fermat-family
+(`fermat-primefactors-one-lt`, `fermatnumber-{one,strictmono,two,zero}`,
+`odd-fermatnumber`, `pow-of-pow-add-prime` — this last one's
+`formal.statement` is literally `1 < a → n ≠ 0 → Prime (a^n+1) → ∃ m, n =
+2^m`, the Fermat-number primality shape) or bundled with that cluster by
+the prior lane's own skip list (`totient-gcd-mul-totient-mul` — a general
+totient identity, not fermat-shaped on its face, but named explicitly in
+`369-nat-parity-div.md`'s "Skipped per brief" list alongside the fermat
+facts as sibling-lane territory). Per this lane's brief ("skip anything in
+the fermat or creal families"), none of these 8 were taken. The dispatch
+gate (`G7 queue-below-floor`) is currently failing (8 dispatchable against a
+floor of 10) — NOT this lane's to fix per its brief ("do NOT run
+`gen-autogenesis-nursery-refill.py`"); flagging for whichever lane owns
+queue refill next.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
@@ -34566,33 +34838,6 @@ for this crate unaffected.
 code. Did not extend `trusted_substitution`'s allowlist (named as the real
 remaining work). Did not weaken `TrustedDeclaration` to force a pass.
 
-### L0–L4 — Graph-directed trusted library programme (`TODO`, P0–P2)
-
-Run the accepted [ADR-0717](docs/research/09-decisions/adr-0717-library-construction-is-graph-directed-through-an-artifact-compatible-trust-anchor.md)
-programme in this order:
-
-1. **L0, P0 — theorem credit:** exact statement and closure identity, forbidden
-   trust/target checks, nonzero coverage, semantic controls, and independently
-   graded replay for every changed settled fact. See the
-   [safety roadmap](docs/plan/trusted-library-safety-roadmap-2026-08-30.md).
-2. **L1, P1 — graph authority:** freeze the pinned source/extractor and emit
-   complete, sealed declaration edge layers; proof/value edges remain forbidden
-   producer input. See the [artifact](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
-   and [graph](docs/plan/graph-directed-library-roadmap-2026-08-30.md) roadmaps.
-3. **L2, P1 — infrastructure frontier:** join exact Axeyum identities,
-   representability, destinations, obstructions, producers, and provenance;
-   expose every score component and preserve `fact-frontier.py` legality.
-4. **L3, P2 — discovery pilots:** after L0–L2, run one substrate, one reusable
-   producer, and one destination pilot with falsification before search and a
-   frozen local-ready comparison. See the
-   [efficiency roadmap](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md).
-5. **L4, P2 — Lean adapter:** complete artifact replay, then an elaborated-goal
-   adapter whose result Lean checks. Source/elaboration features remain blocked
-   until a preregistered population measures demand.
-
-Each phase's roadmap exit is mandatory. Zero-yield pilots remain results; raw
-degree never authorizes work; broad Lean-source compatibility is not an exit.
-
 ### A1 and A2 — `DONE`, archived
 
 Both completed. Moved to
@@ -34885,17 +35130,6 @@ For concurrency and resource rules, follow
 - **Determinism and replay are product promises:** stable order, explicit seeds
   and limits, original-term SAT replay, and independent UNSAT checking remain
   mandatory.
-- **Graph rank is advisory until its authority is complete:** module degree,
-  declaration centrality, curriculum mapping, and cost estimates remain visible
-  components. They never bypass fact-frontier legality, held-out isolation,
-  representability, or the theorem-credit safety contract.
-- **Proof data does not leak into autonomous discovery:** upstream proof/value
-  dependency edges may measure and sequence work but are physically excluded
-  from proof-isolated producer inputs and autonomous credit.
-- **Three parallel library lanes have different jobs:** prefer one shared
-  substrate/definition lane, one reusable producer lane, and one destination
-  theorem/evaluation lane. Each owns disjoint status, script, artifact, and test
-  paths; one generated writer owns every aggregate key.
 
 ## Durable detail map
 
@@ -34915,10 +35149,6 @@ For concurrency and resource rules, follow
 - Proof gaps: [`docs/plan/generated/proof-gap-matrix.md`](docs/plan/generated/proof-gap-matrix.md)
 - SMT-COMP lane: [`docs/plan/smtcomp-full-library-workstream/README.md`](docs/plan/smtcomp-full-library-workstream/README.md)
 - Lean implementation: [`docs/plan/lean-system-implementation-plan-2026-07-21.md`](docs/plan/lean-system-implementation-plan-2026-07-21.md)
-- Library artifact compatibility: [`docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md`](docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md)
-- Graph-directed library construction: [`docs/plan/graph-directed-library-roadmap-2026-08-30.md`](docs/plan/graph-directed-library-roadmap-2026-08-30.md)
-- Trusted theorem-credit safety: [`docs/plan/trusted-library-safety-roadmap-2026-08-30.md`](docs/plan/trusted-library-safety-roadmap-2026-08-30.md)
-- Definition and discovery efficiency: [`docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md`](docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md)
 - Exploration proposal: [`docs/plan/exploration-track/README.md`](docs/plan/exploration-track/README.md)
 - CAS pause handoff: [`docs/plan/cas-parity-handoff-2026-07-22.md`](docs/plan/cas-parity-handoff-2026-07-22.md)
 
