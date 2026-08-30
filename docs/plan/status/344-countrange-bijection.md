@@ -104,7 +104,7 @@ induction and an `add` rearrangement per branch.
 
 ## Verification
 
-- `python3 scripts/tests/check-countrange-bijection-numerics.py` — 26 checks,
+- `python3 scripts/tests/check-countrange-bijection-numerics.py` — 25 checks,
   each with a negative control that must genuinely fail. Run BEFORE any Rust.
   It **re-derives rather than inherits** the number `316`/`320` warn about: the
   totient product identity fails at **26 of 26** non-coprime pairs with
@@ -218,7 +218,7 @@ factorization is not reachable without a multiset type.
   `pub(super)`. Visibility only.
 - `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs` — four
   tests, five names added to `theorem_names`. No pin reintroduced.
-- `scripts/tests/check-countrange-bijection-numerics.py` — new, 26 checks.
+- `scripts/tests/check-countrange-bijection-numerics.py` — new, 25 checks.
 
 No fact file was touched: like `gcd_comm` and `coprime_mul_of_coprime` before
 them, these are unregistered nat-prelude helper theorems. The facts they serve
