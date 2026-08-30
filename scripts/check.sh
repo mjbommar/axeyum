@@ -182,6 +182,8 @@ step dispatchable-frontier-statable python3 scripts/check-dispatchable-frontier.
     --statable artifacts/autogenesis/nursery-v2-extension.json
 step autogenesis-holdout-contamination-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_contamination
 step autogenesis-holdout-contamination python3 scripts/check-autogenesis-holdout-contamination.py
+step artifact-gate-provenance-tests python3 -m unittest scripts.tests.test_artifact_gate_provenance
+step artifact-gate-provenance python3 scripts/check-artifact-gate-provenance.py
 step development-partition-tests python3 -m unittest scripts.tests.test_development_partition
 step development-partition python3 scripts/check-development-partition.py
 step autogenesis-must-decline-population-tests python3 -m unittest scripts.tests.test_check_autogenesis_must_decline_population

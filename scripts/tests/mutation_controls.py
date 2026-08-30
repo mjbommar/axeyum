@@ -81,6 +81,47 @@ ROOT = Path(__file__).resolve().parents[2]
 # edits when that is not the subject, which is how a control can be mutated to
 # check the control.
 SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] = {
+    "artifact-gate-provenance": (
+        "scripts/check-artifact-gate-provenance.py",
+        "scripts.tests.test_artifact_gate_provenance",
+        [
+            (
+                "absolute / out-of-repo citation guard",
+                '        if raw.startswith("/") or not candidates:',
+                "        if False:",
+            ),
+            (
+                "cited script exists nowhere",
+                "        if name not in live and name not in archived:",
+                "        if False:",
+            ),
+            (
+                "cited script is archived, so cannot run in place",
+                "        if name in archived:",
+                "        if False:",
+            ),
+            (
+                "spelled directory disagrees with the file's location",
+                '        if prefix.strip("/") and f"scripts/{name}" not in candidates:',
+                "        if False:",
+            ),
+            (
+                "live script invoking an archived sibling",
+                "        if name in archived and name not in live:",
+                "        if False:",
+            ),
+            (
+                "artifact-citation vacuity floor",
+                "    if floors and artifact_citations < MIN_ARTIFACT_CITATIONS:",
+                "    if False:",
+            ),
+            (
+                "sibling-reference vacuity floor",
+                "    if floors and sibling_references < MIN_SIBLING_REFERENCES:",
+                "    if False:",
+            ),
+        ],
+    ),
     "settled-fact-statements": (
         "scripts/check-settled-fact-statements.py",
         "scripts.tests.test_settled_fact_statements",

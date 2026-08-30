@@ -190,6 +190,8 @@ autogenesis-nursery:
     python3 scripts/propose-nursery-refill.py
     python3 scripts/check-autogenesis-already-proved.py
     python3 scripts/check-dispatchable-frontier.py --statable artifacts/autogenesis/nursery-v2-extension.json
+    python3 -m unittest scripts.tests.test_artifact_gate_provenance
+    python3 scripts/check-artifact-gate-provenance.py
     python3 -m unittest scripts.tests.test_development_partition
     python3 scripts/check-development-partition.py
     python3 -m unittest scripts.tests.test_check_autogenesis_must_decline_population
