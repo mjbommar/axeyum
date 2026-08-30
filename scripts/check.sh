@@ -78,6 +78,122 @@ list_only="${AXEYUM_CHECK_LIST:-0}"
 # here?" -- and the list has to answer both.
 step_prefix=""
 
+# ---------------------------------------------------------------------------
+# THE PER-STEP TIME CAP (ADR-0623). Until 2026-08-30 this gate had ZERO
+# timeout-guarded steps, so ONE hung step hung the whole aggregate gate forever.
+#
+# That is not a hypothetical. A run started 16:43 was reaped at 02:51 the next
+# morning -- over NINE HOURS, 0% CPU at every level of the process tree,
+# reparented to init, its log last written at 17:33 and stopped mid
+# `=== facts-replay ===`. Nothing timed it out and nothing noticed.
+#
+# The cost is not one lost run. A gate people cannot finish is a gate people
+# stop running, and this repository has already measured what that produces: 64
+# failing steps in one census, 32 of them pre-existing, and
+# `scripts/check-local-ci-freshness.sh` -- the gate whose job is to notice the
+# battery has gone stale -- sat RED for 265 h across 3,974 commits because its
+# only caller was the battery that had gone stale.
+#
+# CHOOSING THE CAP. A cap that fires on a HEALTHY step is worse than no cap: a
+# gate that reports spurious timeouts is one people learn to ignore, which is
+# the exact failure being fixed here. So the default is generous, and the
+# handful of steps with a recorded cost above it get a named override in
+# `step_cap_for` rather than the default being raised for all 400.
+#
+# THE OUTCOME IS A THIRD ONE, never a pass. `scripts/check-fast.sh` established
+# the contract -- ok / FAILED / DEFERRED, never two -- and this follows it: a
+# timed-out step is UNCHECKED, is counted and named separately from a failure,
+# and sets `fail`, so the gate can never go green by going blind.
+# THE NUMBERS, and what each is anchored to. Every one is a repository
+# measurement, cited so the next person can re-derive it rather than inherit it.
+#
+#   STEP_CAP        30 min   The non-cargo default. The whole non-cargo half of
+#                            this gate -- all 355 of those steps -- extrapolates
+#                            to ~45 minutes (docs/research/11-design-review/
+#                            2026-08-29-process-retrospective.md:83, from a
+#                            71-step sample measured at 549 s). So this cap says
+#                            no single cheap step may take two thirds of what all
+#                            of them together take. The heaviest 15 of that
+#                            sample accounted for 528 s BETWEEN them; contention
+#                            on this box is documented at 4-7x uniformly
+#                            (2026-08-27-gate-throughput.md:22-26), and 30 min
+#                            still clears the worst of those with room.
+#
+#   STEP_CAP_CARGO   2 h     Anything that builds. The heaviest measured cargo
+#                            steps in THIS file are axiom-freedom-* at 509 s
+#                            release (check.sh:533), solver-reconstruct-sweep at
+#                            294 s (:516), evidence-lean-module-wrapper at 293 s
+#                            (:523) and frontier at 216 s. At the documented 7x
+#                            contention multiplier the worst of those projects to
+#                            ~3,560 s, so 2 h is roughly 2x the worst credible
+#                            contended run -- and it also has to absorb a COLD
+#                            target directory, which in a fresh lane worktree
+#                            lands entirely on whichever cargo step runs first.
+#
+#   STEP_CAP_TEST    4 h     `step test` -> check-workspace-tests.sh. This is the
+#                            one step nobody has ever timed: docs/plan/notes/
+#                            102-local-ci-run.md:136 says so outright and
+#                            estimates ~2 h. Its closest recorded analogue is the
+#                            workspace nextest sweep in
+#                            artifacts/local-ci-runs/57af69142-s4.json at
+#                            6,588 s, which is the highest-confidence single-step
+#                            number in the repository because it is a recorded
+#                            artifact rather than prose. 4 h is 2.2x that.
+#
+#   STEP_CAP_FACTS   3 h     The ledger sweep -- see step_cap_for below.
+STEP_CAP="${AXEYUM_CHECK_STEP_CAP:-1800}"
+STEP_CAP_CARGO="${AXEYUM_CHECK_CAP_CARGO:-7200}"
+STEP_CAP_TEST="${AXEYUM_CHECK_CAP_TEST:-14400}"
+STEP_CAP_FACTS="${AXEYUM_CHECK_CAP_FACTS_REPLAY:-10800}"
+STEP_KILL_GRACE="${AXEYUM_CHECK_STEP_KILL_GRACE:-30}"
+
+# Per-step overrides for steps whose RECORDED cost exceeds the default. Keep
+# this list short and keep the evidence beside each entry: an override with no
+# measurement behind it is how a cap silently becomes decoration.
+#
+# Takes the step NAME and its COMMAND, because neither alone is enough. The name
+# is needed for `clippy`, `prelude-reuse` and `foundational-resources`, whose
+# command strings never say "cargo" but which shell out to it; the command is
+# needed because a `*cargo*` glob covers the 24 direct cargo steps AND any added
+# later, so a new cargo step is not silently held to the cheap default.
+step_cap_for() {
+  local name="$1"; shift
+  case "$name" in
+    # The ledger sweep. 2,018 settled facts / 4,122 `checker_command`s, 4,064 of
+    # which invoke cargo, and a row may declare `checker_seconds` up to 490 and
+    # be granted 2x that -- 980 s for one row. Its own header records 251.8 s
+    # idle and 747.7 s under contention, against a ledger roughly a fifth of
+    # today's size; scaling that gives ~3,700 s, and this is ~3x it. The budget
+    # exists to bound the pathology, not to discipline a slow run: if every row
+    # timed out and retried, the per-row budgets sum to 993,952 s -- 11.5 days.
+    facts-replay) echo "$STEP_CAP_FACTS"; return 0 ;;
+    test)         echo "$STEP_CAP_TEST";  return 0 ;;
+    clippy|prelude-reuse|foundational-resources|kernel-suite-partition)
+                  echo "$STEP_CAP_CARGO"; return 0 ;;
+  esac
+  # A `case` glob and NOT `printf | grep -q`: CLAUDE.md's banned-idiom list is
+  # explicit that `grep -q` consuming a pipeline under `set -o pipefail`
+  # SIGPIPEs its producer for status 141, which `pipefail` then reports as "not
+  # found" -- the same tree answering differently on consecutive runs.
+  # `check-fast.sh` makes the same choice at the same decision for this reason.
+  case "$*" in
+    *cargo*) echo "$STEP_CAP_CARGO"; return 0 ;;
+  esac
+  echo "$STEP_CAP"
+}
+
+if [ "$list_only" != "1" ] && ! command -v timeout >/dev/null 2>&1; then
+  # Running uncapped is the state this gate was just rescued from, so refuse
+  # rather than fall back to it silently. Exit 2 is distinct from a step
+  # failure, matching `check-fast.sh`'s vacuity guard.
+  echo "check: FATAL -- coreutils \`timeout\` is not on PATH, so no per-step cap" \
+       "can be applied. Running uncapped is how this gate hung for nine hours;" \
+       "install coreutils rather than removing the cap." >&2
+  exit 2
+fi
+
+timed_out_steps=()
+
 step() {
   local name="$1"; shift
   ran=$((ran + 1))
@@ -85,11 +201,38 @@ step() {
     printf '%s\t%s\n' "${step_prefix}${name}" "$*"
     return 0
   fi
-  echo "=== $name ==="
-  if "$@"; then
-    echo "--- $name: ok"
+  local cap; cap="$(step_cap_for "$name" "$@")"
+  local t0=$SECONDS
+  echo "=== $name (cap ${cap}s) ==="
+  # `</dev/null` because a gate step must never block on stdin. It also matters
+  # for the cap itself: without `--foreground`, `timeout` puts the child in its
+  # OWN process group, so a step that read a terminal would take SIGTTIN and
+  # stop rather than run. No step here reads stdin; this makes that explicit.
+  #
+  # NOT `--foreground`, deliberately. The default puts the child in a new
+  # process group and signals the GROUP, so a step's children die with it.
+  # Measured here: `timeout 2 sh -c 'sleeper | cat'` leaves 0 survivors where
+  # the identical uncapped command leaves 2. A cap that kills only the direct
+  # child leaves the grandchild holding whatever lock it holds -- which is
+  # exactly the defect this same commit fixes in the ledger sweep.
+  timeout --kill-after="$STEP_KILL_GRACE" "$cap" "$@" </dev/null
+  local st=$?
+  local el=$(( SECONDS - t0 ))
+  if [ "$st" -eq 0 ]; then
+    echo "--- $name: ok (${el}s)"
+  elif { [ "$st" -eq 124 ] || [ "$st" -eq 137 ]; } && [ "$el" -ge "$cap" ]; then
+    # THIRD OUTCOME. Not a pass, not a failure -- UNCHECKED.
+    #
+    # The elapsed test is load-bearing and not decoration: 124 and 137 are
+    # ordinary exit codes a step is free to return on its own, and a step that
+    # exits 124 in two seconds has FAILED, not timed out. Without the
+    # conjunction a gate could be made green-ish by teaching a broken step to
+    # exit 124.
+    echo "--- $name: TIMED OUT after ${el}s (cap ${cap}s) -- UNCHECKED, neither passed nor failed"
+    timed_out_steps+=("$name(cap ${cap}s)")
+    fail=1
   else
-    echo "--- $name: FAILED"
+    echo "--- $name: FAILED (exit $st, ${el}s)"
     failed_steps+=("$name")
     fail=1
   fi
@@ -1033,7 +1176,18 @@ fi
 # LOWERING it needs a reason in the commit message. Controls 4 and 6 in
 # `scripts/tests/test-gate-scope-controls.sh` cover the listing and this floor.
 STEP_FLOOR=80
-echo "check: ran $ran steps (floor $STEP_FLOOR), ${#failed_steps[@]} failed"
+echo "check: ran $ran steps (floor $STEP_FLOOR), ${#failed_steps[@]} failed," \
+     "${#timed_out_steps[@]} timed out"
+if [ ${#timed_out_steps[@]} -gt 0 ]; then
+  # As loud as `check-fast.sh`'s DEFERRED banner, and for the same reason: a
+  # step that hit its cap was NOT checked, and a reader who skims the summary
+  # must not be able to mistake it for one that passed.
+  echo "check: TIMED OUT -- these steps are UNCHECKED (neither passed nor failed):" >&2
+  printf '  %s\n' "${timed_out_steps[@]}" >&2
+  echo "check: a timeout is not evidence the step is broken. Re-run the named" \
+       "step alone on an idle box before believing it; if it is genuinely this" \
+       "slow, raise its entry in step_cap_for and say what you measured." >&2
+fi
 if [ "$ran" -lt "$STEP_FLOOR" ]; then
   echo "check: only $ran steps ran, below the committed floor of $STEP_FLOOR --" \
        "steps have been removed. If that was deliberate, lower STEP_FLOOR in" \
@@ -1052,7 +1206,10 @@ if [ "$fail" -ne 0 ]; then
   if [ ${#failed_steps[@]} -gt 0 ]; then
     printf 'check: FAILED steps: %s\n' "${failed_steps[*]}" >&2
   fi
-  echo "check: one or more gates FAILED" >&2
+  if [ ${#timed_out_steps[@]} -gt 0 ]; then
+    printf 'check: TIMED-OUT (unchecked) steps: %s\n' "${timed_out_steps[*]}" >&2
+  fi
+  echo "check: one or more gates FAILED or went UNCHECKED" >&2
   exit 1
 fi
 echo "check: all $ran gates passed"
