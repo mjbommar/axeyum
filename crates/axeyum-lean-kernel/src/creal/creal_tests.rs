@@ -18,7 +18,7 @@ use crate::{Declaration, Kernel, on_a_deep_stack};
 /// `Kernel::add_declaration` under the full type checker exactly once.
 /// `creal_prelude_builds` deliberately does **not** use this — it is the test
 /// that exercises the real build.
-fn built() -> (Kernel, CRealPrelude) {
+pub(super) fn built() -> (Kernel, CRealPrelude) {
     use std::sync::OnceLock;
     static TEMPLATE: OnceLock<(Kernel, CRealPrelude)> = OnceLock::new();
     // Run on a deep stack: whichever test happens to be the first (in

@@ -14495,6 +14495,13 @@ mod uniform_convergence;
 #[cfg(test)]
 mod creal_tests;
 
+/// Tests for `creal/lub_boundary.rs` (ADR-0603 row 2 for the least upper
+/// bound property). Kept out of `creal_tests.rs` for the same reason the
+/// inventory is sharded: that file is the append point every concurrent
+/// `creal` lane collides on.
+#[cfg(test)]
+mod lub_boundary_tests;
+
 /// Per-module declaration inventory consumed by `creal_tests`'s
 /// environment-derived coverage test. `#[cfg(test)]`: pure test scaffolding,
 /// not shipped in a release build. See `creal/inventory.rs` module docs for
