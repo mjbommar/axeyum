@@ -742,3 +742,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0885](adr-0885-the-graph-dispatcher-is-authoritative-only-where-adr-0865-tested-it.md) | L2 phase G5 makes graph selection the ordinary dispatcher by | accepted |
 | [0890](adr-0890-the-falsification-screen-must-be-found-in-git-log-before-dispatch.md) | D3's counterexample-first screen writes a per-target receipt (git commit + verdict) before a producer may be dispatched at that target; the gate rejects dispatch without a prior clear receipt structurally, and re-checks ordering against real git ancestry when both commits resolve. | accepted |
 | [0895](adr-0895-evt-row-1-lands-and-two-absence-claims-were-wrong.md) | `CReal.evt_approx_max` lands as pure composition of two | accepted |
+| [0900](adr-0900-draw-10-is-declined-the-below-floor-held-out-safe-supply-is-exhausted.md) | Dispatched to author draw 10 against a reported "3 dispatchable | accepted |
