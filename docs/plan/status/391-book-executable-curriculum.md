@@ -9,8 +9,9 @@ complete A0 concrete execution. The reusable word layer exposes and audits
 explicit extension and truncation, complete states have a canonical binary
 artifact codec, and the source-derived symbolic memory-frame route covers all
 eight supported widths. Next: independently pinned RV64I and x86-64 teaching
-slices, broader semantic relations, manifests, Python
-projection, and clean-checkout book gates. A0 addition has fixed-width symbolic certificates;
+slices, broader semantic relations, manifests, the remaining Python machine
+projection, and clean-checkout book gates. The first PyO3 slice now projects A0
+words faithfully; state, instruction, trace, and real-ISA bindings remain. A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
 
@@ -37,3 +38,4 @@ interfaces as implemented until those routes run and their controls fire.
 | 2026-08-30 | `eac21f4d4` | Add replayable RV64I source-pin and decoder/step reports. The route executes all twelve selected forms, all nine XOR words, five trap classes, and three semantic mutations; source-digest and branch-base controls fail closed. Book manifests remain pending. |
 | 2026-08-30 | `3c5d2cafb` | Add the source-pinned seventeen-form x86-64 decoder, encoder, complete step profile, flags, memory and implicit stack control, plus canonical projection. Eight tests execute all six manuscript listings; book evidence remains pending. |
 | 2026-08-30 | `5ad3bbfcd` | Add replayable x86-64 source-pin and decoder/step reports. Six manuscript programs execute across all seventeen forms; three trap classes and four semantic mutations are checked; source-digest and following-RIP branch-base controls fail closed. Book manifests remain pending. |
+| 2026-08-30 | `7b6986fed` | Begin the faithful PyO3 machine projection with A0 words, dotted imports, generated stubs, and runtime/static-type controls. The focused surface passes; the aggregate Python suite separately exposes one stale agent fixture and a deterministic prelude-build segfault that remain full-gate blockers. |

@@ -196,6 +196,7 @@ now. Nothing was deleted.
 | 2026-08-30 | `eac21f4d4` | Add replayable RV64I source-pin and decoder/step reports. The route executes all twelve selected forms, all nine XOR words, five trap classes, and three semantic mutations; source-digest and branch-base controls fail closed. Book manifests remain pending. |
 | 2026-08-30 | `3c5d2cafb` | Add the source-pinned seventeen-form x86-64 decoder, encoder, complete step profile, flags, memory and implicit stack control, plus canonical projection. Eight tests execute all six manuscript listings; book evidence remains pending. |
 | 2026-08-30 | `5ad3bbfcd` | Add replayable x86-64 source-pin and decoder/step reports. Six manuscript programs execute across all seventeen forms; three trap classes and four semantic mutations are checked; source-digest and following-RIP branch-base controls fail closed. Book manifests remain pending. |
+| 2026-08-30 | `7b6986fed` | Begin the faithful PyO3 machine projection with A0 words, dotted imports, generated stubs, and runtime/static-type controls. The focused surface passes; the aggregate Python suite separately exposes one stale agent fixture and a deterministic prelude-build segfault that remain full-gate blockers. |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
 | 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
@@ -34732,8 +34733,9 @@ complete A0 concrete execution. The reusable word layer exposes and audits
 explicit extension and truncation, complete states have a canonical binary
 artifact codec, and the source-derived symbolic memory-frame route covers all
 eight supported widths. Next: independently pinned RV64I and x86-64 teaching
-slices, broader semantic relations, manifests, Python
-projection, and clean-checkout book gates. A0 addition has fixed-width symbolic certificates;
+slices, broader semantic relations, manifests, the remaining Python machine
+projection, and clean-checkout book gates. The first PyO3 slice now projects A0
+words faithfully; state, instruction, trace, and real-ISA bindings remain. A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
 

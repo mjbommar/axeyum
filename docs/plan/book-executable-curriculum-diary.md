@@ -639,3 +639,44 @@ both negative controls exit nonzero with `semantic-mismatch`. The evidence
 routes landed as `5ad3bbfcd`. The Axeyum half is complete, but the book objects
 remain open until their manifests, saved reports, digests, prose bindings, and
 full `make check-run` replay land.
+
+## 2026-08-30 — first reader-facing PyO3 machine projection
+
+Started the Python lesson surface at the lowest reusable boundary: A0 words.
+Added `axeyum.machine.a0.Word` as a direct wrapper around
+`axeyum_machine::a0::Word`; construction, signed and unsigned readings, high
+bit, little-endian bytes, zero extension, sign extension, and truncation all
+delegate to the Rust value. Python does not carry duplicate bit arithmetic.
+The constructor preserves the Rust contract and reduces an admitted `u64`
+modulo the selected width; unsupported widths and wrong-direction conversions
+raise `ValueError` with messages supplied by a new `Display` implementation on
+`A0Error`.
+
+Added the normal `axeyum.machine` forwarding module, nested dotted imports,
+generated stubs, and seven direct Python controls. The audit caught two
+interface defects before publication. PyO3 exposes `Vec<u8>` as Python
+`bytes`, while the generated stub claimed `list[int]`; the binding now returns
+`PyBytes` explicitly so runtime and static type agree. Stub regeneration also
+revealed that the existing runtime constant
+`producers.MAX_RETRIEVED_DECLARATIONS` had no generator declaration. Added the
+missing module-variable record instead of preserving a hand-written stub.
+
+Focused evidence passes: 26 A0, 7 RV64, and 8 x86 machine tests; 8 native
+binding tests; 24 machine/import Python tests; strict Clippy for
+`axeyum-machine` and `axeyum-py`; generated-stub/runtime comparison; the
+94.7-percent typed-stub gate; `mypy.stubtest`; the type-diagnostic budget;
+Ruff lint; and Ruff formatting.
+
+The aggregate `just py-check` is not green for reasons reproduced outside the
+new machine tests. `test_an_unresolvable_export_is_recorded_as_a_retrieval_miss`
+uses fact `F:ml430-int-fib-add-181b6a2c`, which is no longer in the current
+eligible population. Separately,
+`test_agent_tools.py::test_every_declared_prelude_builds` deterministically
+segfaults by itself in `agent/tools.py::_kernel_for` while building every
+prelude. These are full-gate blockers, not evidence against the focused word
+projection, and must be repaired before this lane can claim the complete
+Python gate.
+
+This slice is intentionally not called the Python machine interface complete.
+States, memory, instructions, decode/encode, step, trace, RV64, x86-64, and the
+cross-machine relation remain unbound.
