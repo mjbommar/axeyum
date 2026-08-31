@@ -3906,13 +3906,13 @@ SUITES["absence-claims"] = (
         ),
         (
             "G19 a marker quoted in a code span is documentation, not a claim",
-            "            for match in MARKER_RE.finditer(CODE_SPAN_RE.sub(\" \", line)):",
-            "            for match in MARKER_RE.finditer(line):",
+            '    masked = CODE_SPAN_RE.sub(" ", line)',
+            "    masked = line",
         ),
         (
             "G20 a marker inside a code fence is documentation, not a claim",
-            "            if FENCE_RE.match(line):\n                in_fence = not in_fence\n                continue",
-            "            if False:\n                in_fence = not in_fence\n                continue",
+            "            if FENCE_RE.match(line):\n                in_fence = not in_fence",
+            "            if FENCE_RE.match(line):\n                in_fence = in_fence",
         ),
         (
             "quoted markers are counted rather than silently dropped",
@@ -3925,8 +3925,40 @@ SUITES["absence-claims"] = (
             # answered -- the exact defect the 133-ledger-uc.md stale claim
             # had in reverse (a correct marker one blank line too far).
             "a marker attaches to its own block",
-            "            for line in block:\n                for match in MARKER_RE.finditer(line):",
-            "            for line in lines:\n                for match in MARKER_RE.finditer(line):",
+            '            marker_scan = "\\n".join(marker_scan_line(rel, line) for line in block)',
+            '            marker_scan = "\\n".join(marker_scan_line(rel, line) for line in lines)',
+        ),
+        (
+            # ADR-1250. A marker is an HTML COMMENT, so it is legitimately
+            # multi-line, and one carrying a note wraps at the same column as
+            # the prose around it. Without DOTALL the body's `.*?` stops at the
+            # newline and such a marker matches NOTHING -- not merely
+            # unattached, INVISIBLE, in all three readers at once. That is a
+            # marker that cannot attach: the mirror of a checker that cannot
+            # fail, leaving `--update-budget` as the only way to retire a
+            # resolved claim.
+            "G25 a marker may be written across lines",
+            "    re.IGNORECASE | re.DOTALL,",
+            "    re.IGNORECASE,",
+        ),
+        (
+            # A marker wrapped inside a `//!` doc comment carries `//!` at the
+            # head of every continuation line. Left in place it lands in the
+            # names field and the marker is rejected as malformed -- so the
+            # Rust surface would support only single-line markers while the
+            # Markdown surface supported both.
+            "G26 a wrapped Rust comment prefix is not part of a marker's names",
+            '        masked = RUST_COMMENT_PREFIX_RE.sub("", masked)',
+            "        masked = masked",
+        ),
+        (
+            # The census locates a claim by index into the marker-stripped
+            # body, so collapsing an N-line marker to one space shifts every
+            # later line in that block by N-1 and the gate names the wrong
+            # source line -- pointing a reader at prose that carries no claim.
+            "G27 stripping a marker keeps its newlines",
+            '    return " " + "\\n" * match.group(0).count("\\n")',
+            '    return " "',
         ),
         (
             "G21 a claim's subjects are the names in its OWN unit",

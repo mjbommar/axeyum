@@ -798,4 +798,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1235](adr-1235-wilson-supplies-the-residue-witness-and-the-first-supplementary-law-closes.md) | The `p = 1 (mod 4)` half of the first supplementary law is | accepted |
 | [1240](adr-1240-index-zero-is-filled-an-inductive-prop-gives-up-the-evaluation-test.md) | ADR-1220 measured that cycle index 0 was the binding slot for | accepted |
 | [1245](adr-1245-index-three-is-filled-and-a-boundary-count-is-definition-relative.md) | ADR-1220 measured that draw 16 needs two viable held-out slots | accepted |
+| [1250](adr-1250-a-marker-that-cannot-attach-is-the-mirror-of-a-checker-that-cannot-fail.md) | `scripts/check-absence-claims.py` (ADR-0611) makes a prose | accepted |
 | [1255](adr-1255-draw-16-is-authored-and-both-disclosure-sweeps-found-something.md) | ADR-1240 and ADR-1245 filled cycle indices 0 and 3 with | accepted |
