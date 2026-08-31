@@ -206,11 +206,23 @@ fn base_case_two(
     let add_succnfact_two = d.add(succ_nfact, two);
     let h_step_combined = d.lemma(
         p.le_trans,
-        &[add_succnfact_two, add_succnfact_f1, add_f1_f1, h_step2, h_step1],
+        &[
+            add_succnfact_two,
+            add_succnfact_f1,
+            add_f1_f1,
+            h_step2,
+            h_step1,
+        ],
     );
     let h_final_pre = d.lemma(
         p.le_trans,
-        &[add_succnfact_two, add_f1_f1, f2_actual, h_step_combined, h_f1f1_le],
+        &[
+            add_succnfact_two,
+            add_f1_f1,
+            f2_actual,
+            h_step_combined,
+            h_f1f1_le,
+        ],
     );
     // h_final_pre : Le (add (succ nfact) 2) f2_actual
     //             ≡defeq Le (succ (succ (succ nfact))) f2_actual
@@ -220,7 +232,14 @@ fn base_case_two(
     let (succ_succ_nfact, eq2nfact) = two_add_eq_succ_succ(d, &p, nfact);
     let add2nfact = d.add(two, nfact);
     let eq2nfact_rev = d.symm(add2nfact, succ_succ_nfact, eq2nfact);
-    let h_mid = lt_transport_lhs(d, succ_succ_nfact, add2nfact, f2_actual, eq2nfact_rev, h_final_pre);
+    let h_mid = lt_transport_lhs(
+        d,
+        succ_succ_nfact,
+        add2nfact,
+        f2_actual,
+        eq2nfact_rev,
+        h_final_pre,
+    );
 
     let (succ_succ_n, eq2n) = two_add_eq_succ_succ(d, &p, n);
     let add2n = d.add(two, n);

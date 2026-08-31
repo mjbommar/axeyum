@@ -793,6 +793,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_add_self_right,
         p.coprime_self_add_right,
         p.coprime_symmetric,
+        p.coprime_mul_add_mul_ne_mul,
         p.not_coprime_zero_zero,
         p.coprime_one_left_iff,
         p.coprime_one_right_iff,
