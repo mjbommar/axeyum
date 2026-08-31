@@ -11,22 +11,25 @@ an explicit `covered` versus `lean-horizon` decision.
 
 ## Summary
 
-- curriculum rows: 23
+- curriculum rows: 24
 
 ### Source Status Totals
 
 - `covered`: 19
 - `lean-horizon`: 4
+- `planned`: 1
 
 ### Audit Totals
 
 - `aligned-covered`: 19
 - `bounded-evidence-lean-horizon`: 4
+- `source-planned-resource-validated`: 1
 
 ### Recommendation Totals
 
 - `covered`: 19
 - `lean-horizon`: 4
+- `review-covered`: 1
 
 ## Detail
 
@@ -55,3 +58,4 @@ an explicit `covered` versus `lean-horizon` decision.
 | `bounded-evidence-lean-horizon` | `cardinality` | `lean-horizon` | `proof-horizon` | `lean-horizon` | `R4 checked evidence` | `R5 solver reuse` | `finite-cardinality-v0`, `cardinality-principles-v0`, `finite-order-lattices-v0` | `checked`: 13, `lean-horizon`: 3, `replay-only`: 4 | Validated bounded or finite resource packs exist, but the general theorem layer remains a Lean horizon. | Keep the bounded-vs-general boundary explicit until no-sorry Lean evidence lands. |
 | `bounded-evidence-lean-horizon` | `complex` | `lean-horizon` | `proof-horizon` | `lean-horizon` | `R4 checked evidence` | `R5 solver reuse` | `complex-algebraic-v0`, `complex-plane-transforms-v0`, `finite-cauchy-riemann-shadow-v0` | `checked`: 5, `lean-horizon`: 2, `replay-only`: 11 | Validated bounded or finite resource packs exist, but the general theorem layer remains a Lean horizon. | Keep the bounded-vs-general boundary explicit until no-sorry Lean evidence lands. |
 | `bounded-evidence-lean-horizon` | `sequences-and-limits` | `lean-horizon` | `proof-horizon` | `lean-horizon` | `R4 checked evidence` | `R5 solver reuse` | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0`, `finite-recurrence-prefix-v0`, `finite-aitken-acceleration-v0`, `finite-steffensen-method-v0` | `checked`: 8, `lean-horizon`: 5, `replay-only`: 22 | Validated bounded or finite resource packs exist, but the general theorem layer remains a Lean horizon. | Keep the bounded-vs-general boundary explicit until no-sorry Lean evidence lands. |
+| `source-planned-resource-validated` | `probability` | `planned` | `validated` | `review-covered` | `R4 checked evidence` | `R5 solver reuse` | `finite-probability-v0` | `checked`: 5, `replay-only`: 5 | Validated resource packs exist, but the curriculum DAG still says `planned`. At least one linked row has checked evidence. | Audit the source status: use `covered` for a mature finite/computable slice or `lean-horizon` when the general theorem is the real target. |

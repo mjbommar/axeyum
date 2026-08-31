@@ -106,8 +106,18 @@ BUCKETS: list[tuple[str, str]] = [
     # matrix layer is unbuilt, which was true when written and is not now
     # (`Rat.matMul`, `matMul_assoc`, `matTranspose_mul` are all landed).
     # Two readers, two stale negatives, same direction. Re-measure.
+    #
+    # `det` (bare, not just `det2|det3`) covers ADR-1120's general-`n`
+    # determinant: `Rat.det`, `det_zero`, `det_succ`, `det_one`,
+    # `det_eq_det2`, `det_eq_det3`, `det_eval_*`. Landed 2026-08-31 and, until
+    # this fix, silently fell through to the `rationals` catch-all below --
+    # measured 22 declarations mis-attributed that way (`Rat.det*`,
+    # `Rat.matSkip`, `Rat.matMinor`, `Rat.altSign`, `Rat.matInv2*`), the same
+    # failure this comment already describes, recurring on the very rung the
+    # DEPTH-PROPOSAL named as the keystone.
     ("linear-algebra",
-     r"^Rat\.(det2|det3|dotN|mat(Id|Mul|Transpose)|cramer|inv2_|mul_adj2_)"),
+     r"^Rat\.(det|dotN|mat(Id|Mul|Transpose|Skip|Minor|Inv2)|altSign|"
+     r"cramer|inv2_|mul_adj2_)"),
     # layer 2 structures
     ("divisibility-and-euclid",
      r"^(Nat|Int)\.(gcd|Gcd|lcm|dvd|Dvd|bezout|Bezout|xgcd|"

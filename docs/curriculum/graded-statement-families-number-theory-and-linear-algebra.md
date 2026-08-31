@@ -2,6 +2,16 @@
 
 Status: measurement note (2026-08-30)
 
+**Correction, 2026-08-31 (ADR-1140).** Two row-1 entries below say "absent" /
+"not built" for content that landed the same day this note was written:
+§2.2's Euler's theorem (`Int.euler_totient_theorem`, ADR-1110) and §3.3's
+general-`n` determinant (`Rat.det`, ADR-1120). Both entries are left as
+written below — they are dated measurements, not living claims — but do not
+read either "ABSENT"/"needs the matrix layer" as current. See
+[`03-destinations/number-theory.md`](03-destinations/number-theory.md) and
+[`03-destinations/linear-algebra.md`](03-destinations/linear-algebra.md) for
+the corrected, currently-maintained tables.
+
 [ADR-0603](../research/09-decisions/adr-0603-classical-theorems-land-as-graded-statement-families.md)
 says a classical theorem lands as a graded family — constructive general form
 (row 1), boundary/unprovability witness (row 2), exact form on the decidable

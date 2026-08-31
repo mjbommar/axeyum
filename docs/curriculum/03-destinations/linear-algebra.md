@@ -64,10 +64,18 @@ axiom-free:
   `Σᵢ Σⱼ f i j = Σⱼ Σᵢ f i j`), `Rat.sumRange_diagonal`, `Rat.mul_sumRange`,
   `Rat.sumRange_congr`. `sumRange_swap` is exactly the lemma matrix-product
   associativity needs.
-- **Fixed size 2 and 3 over ℚ.** `Rat.det2` with `det2_mul` (multiplicativity),
-  `det2_id`, `det2_swap_rows`, `det2_scale_row`, `det2_row_add`,
-  `det2_eq_zero_of_lin_dep`; `Rat.det3` with `det3_cofactor_row1`, `det3_id`,
-  `det3_scale_row`. Entries are passed as separate scalar arguments.
+- **The determinant at general dimension `n`, and fixed size 2 and 3 over ℚ.**
+  `Rat.det : (Nat → Nat → Rat) → Nat → Rat` (ADR-1120, landed 2026-08-31) is a
+  **cofactor recursion over the dimension bound** — the route this page used
+  to name as the missing piece, and the honest one since a permutation sum
+  needs permutations as data and this kernel has no `List`. `det_zero`/
+  `det_succ` are the recursion equations; `det_eq_det2`/`det_eq_det3` prove it
+  agrees with the fixed-size forms at `n = 2, 3`: `Rat.det2` with `det2_mul`
+  (multiplicativity), `det2_id`, `det2_swap_rows`, `det2_scale_row`,
+  `det2_row_add`, `det2_eq_zero_of_lin_dep`; `Rat.det3` with
+  `det3_cofactor_row1`, `det3_id`, `det3_scale_row`. Fixed-size entries are
+  passed as separate scalar arguments; the general form takes the matrix as a
+  `Nat → Nat → Rat` function, matching `matMul`/`matTranspose`.
 - **A 2-D inner-product space over the constructed reals.** `CPoint` — 116
   declarations — with `dot`, `cross`, `distSq`, `cauchy_schwarz`,
   `dot_self_zero_iff`, and centroid / circumcentre / Euler-line geometry above
@@ -106,10 +114,16 @@ unbuilt is the matrix layer over `Nat → Nat → Rat`" — that layer landed:
 and all stated pointwise as the absence of `funext` requires. `Rat.cramer2_*`
 and the 2×2 adjugate inverse (`inv2_*`, `mul_adj2_*`) are landed too.
 
-Measured 2026-08-31, this destination attributes **55 kernel declarations**
-(ADR-1075). The remaining genuine gaps are the determinant at general `n` — a
-cofactor recursion over the bound, since a permutation sum needs data this
-kernel has no type for — and everything spectral.
+**A third sentence needs the same correction, hours after the second.**
+Measured 2026-08-31 morning, this destination attributed 55/59 kernel
+declarations (ADR-1075/ADR-1082) and named the general-`n` determinant as the
+remaining genuine gap. That gap closed the same day (ADR-1120): re-measured
+after fixing a bucket-attribution bug in
+`scripts/measure-curriculum-kernel-coverage.py` that had silently mis-filed
+the new `Rat.det`/`matSkip`/`matMinor`/`altSign`/`matInv2*` declarations under
+`rationals`, this destination attributes **81 kernel declarations** (ADR-1140).
+The remaining genuine gap is everything spectral — eigenvalues, eigenvectors,
+the characteristic polynomial's roots — which is Mathlib-scale.
 
 ## Graded-family treatment
 

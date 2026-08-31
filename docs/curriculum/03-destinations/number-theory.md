@@ -59,6 +59,7 @@ landed in the in-tree Lean kernel, general and axiom-free**:
 | Euler's totient multiplicativity | `Nat.totient_mul_of_coprime`, `Nat.totient_prime_pow` | 0 |
 | Wilson's theorem, **both directions** | `Int.wilson`, `Int.wilson_converse`, `Int.wilson_iff` | 0 |
 | Euler's criterion | `Int.euler_criterion_pm_one` | 0 |
+| **Euler's theorem `a^φ(n) ≡ 1 (mod n)`, all `a` (ADR-1110, landed 2026-08-31)** | `Int.euler_totient_theorem` | 0 |
 
 Read these from the kernel, not from this table — it is a snapshot:
 `prelude_theorem_inventory --release --include-constructed`.
@@ -69,8 +70,6 @@ Read these from the kernel, not from this table — it is a snapshot:
   `Int.is_quadratic_residue` both FOUND by the same method). The Legendre symbol
   at a fixed `p` is decidable by Euler's criterion, so the *decidable fragment*
   is cheap; the reciprocity law itself is unbuilt.
-- **Euler's theorem `a^φ(n) ≡ 1 (mod n)`** — absent, though both residue-permutation
-  ingredients (`Int.euler_unit_coprime`, `Int.euler_unit_injective`) are landed.
 - **Uniqueness of prime factorization** — blocked by the kernel's *type theory*,
   not by decidability: there is no `List`, `Finset`, product type or quotient by
   permutation in which to state multiset equality. The expressible reformulation
