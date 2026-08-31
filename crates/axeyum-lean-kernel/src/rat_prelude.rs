@@ -1994,6 +1994,59 @@ pub struct RatPrelude {
     /// the full range, which is what makes the plain rectangle Fubini
     /// [`Self::sum_range_swap`] applicable to a double cofactor expansion.
     pub sum_range_mat_skip: NameId,
+
+    // --- the summand layer of Laplace expansion (`matrix_det`, ADR-1185) ----
+    /// `Rat.unskip : Nat → Nat → Nat` — the LEFT INVERSE of
+    /// [`Self::mat_skip`]: `unskip p q` is `q`'s position in `[0, n+1) \ {p}`,
+    /// so `unskip p (matSkip p k) = k` ([`Self::unskip_mat_skip`]).
+    ///
+    /// Declared as a DOUBLE `Nat.rec` (`unskip 0 q ≡ Nat.pred q`,
+    /// `unskip (succ p) 0 ≡ 0`, `unskip (succ p) (succ q) ≡ succ (unskip p q)`)
+    /// rather than as the closed form `if ble (succ p) q then pred q else q`,
+    /// even though the two agree at every pair below 8 (checked in
+    /// `adr-1185-laplace-summand-checks.py`). The reason is the one
+    /// [`Self::mat_skip_succ_succ`] records from the other side: the closed
+    /// form leaves a *stuck* `Nat.ble` guard that a `Bool.rec` case split
+    /// cannot reach, because reducing `ble (succ p) (succ c)` re-creates the
+    /// very scrutinee the split abstracted. All three rows of the recursive
+    /// form hold by ι alone, so the index lemmas above it are plain
+    /// inductions.
+    pub unskip: NameId,
+    /// `Rat.unskip_zero : ∀ q, unskip 0 q = Nat.pred q` — `Eq.refl`.
+    pub unskip_zero: NameId,
+    /// `Rat.unskip_succ_zero : ∀ p, unskip (succ p) 0 = 0` — `Eq.refl`.
+    pub unskip_succ_zero: NameId,
+    /// `Rat.unskip_succ_succ : ∀ p q, unskip (succ p) (succ q) =
+    /// succ (unskip p q)` — `Eq.refl`.
+    pub unskip_succ_succ: NameId,
+    /// `Rat.unskip_matSkip : ∀ p k, unskip p (matSkip p k) = k` — `unskip p`
+    /// is a left inverse of the injection `matSkip p`, UNCONDITIONALLY (no
+    /// `ble` premise: `matSkip p` never produces `p`, so its image is exactly
+    /// where `unskip p` is well behaved).
+    ///
+    /// The index lemma that lets the Laplace summand be defined on the whole
+    /// square: the inner column of a double cofactor expansion is `k`, but the
+    /// summand has to be a function of the two COLUMNS `(p, q)`, and
+    /// `k = unskip p q` is how it recovers it.
+    pub unskip_mat_skip: NameId,
+    /// `Rat.beq_matSkip : ∀ j k, Nat.beq j (matSkip j k) = false` —
+    /// `matSkip j` misses `j`. The guard side of
+    /// [`Self::unskip_mat_skip`]: it is what makes the diagonal branch of the
+    /// Laplace summand unreachable along the reindexing.
+    pub beq_mat_skip: NameId,
+    /// `Rat.beq_matSkip_left : ∀ j k, Nat.beq (matSkip j k) j = false` —
+    /// [`Self::beq_mat_skip`] with the arguments the other way round. Stated
+    /// separately rather than derived, because the two cofactor expansions
+    /// reach the summand's guard from opposite sides and this prelude has no
+    /// `Nat.beq` commutativity.
+    pub beq_mat_skip_left: NameId,
+    /// `Rat.altSign_succ_add : ∀ n k, altSign (Nat.add (succ n) k) =
+    /// neg (altSign (Nat.add n k))` — the parity step of the summand's sign.
+    ///
+    /// `Nat.add` recurses on its RIGHT argument, so `add n (succ k)` reduces
+    /// and `add (succ n) k` does NOT; this is the missing half, and it is one
+    /// `Nat.succ_add` followed by [`Self::alt_sign_succ`] (itself `Eq.refl`).
+    pub alt_sign_succ_add: NameId,
 }
 
 impl RatPrelude {
@@ -2379,6 +2432,14 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_minor_col_comm: child(kernel, "det_minor_col_comm"),
         sum_range_peel_head: child(kernel, "sumRange_peel_head"),
         sum_range_mat_skip: child(kernel, "sumRange_matSkip"),
+        unskip: child(kernel, "unskip"),
+        unskip_zero: child(kernel, "unskip_zero"),
+        unskip_succ_zero: child(kernel, "unskip_succ_zero"),
+        unskip_succ_succ: child(kernel, "unskip_succ_succ"),
+        unskip_mat_skip: child(kernel, "unskip_matSkip"),
+        beq_mat_skip: child(kernel, "beq_matSkip"),
+        beq_mat_skip_left: child(kernel, "beq_matSkip_left"),
+        alt_sign_succ_add: child(kernel, "altSign_succ_add"),
     }
 }
 

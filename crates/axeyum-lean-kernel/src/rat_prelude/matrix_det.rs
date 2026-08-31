@@ -101,6 +101,10 @@ const SKIP_HEIGHT: u16 = 49;
 /// Delta height for `Rat.matMinor`: one above [`SKIP_HEIGHT`], which it calls.
 const MINOR_HEIGHT: u16 = 50;
 
+/// Delta height for `Rat.unskip`, alongside [`SKIP_HEIGHT`]: it calls only
+/// `Nat.pred` and `Nat.rec`, never `Rat.matSkip`, so it does not outrank it.
+const UNSKIP_HEIGHT: u16 = 49;
+
 /// Delta height for `Rat.det`: above [`MINOR_HEIGHT`], `Rat.altSign` and
 /// `Rat.sumRange`, all of which it unfolds to.
 const DET_HEIGHT: u16 = 51;
@@ -134,7 +138,12 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_mat_minor_col_comm(d, p)?;
     declare_det_minor_col_comm(d, p)?;
     declare_sum_range_peel_head(d, p)?;
-    declare_sum_range_mat_skip(d, p)
+    declare_sum_range_mat_skip(d, p)?;
+    declare_unskip(d, p)?;
+    declare_unskip_equations(d, p)?;
+    declare_unskip_mat_skip(d, p)?;
+    declare_beq_mat_skip(d, p)?;
+    declare_alt_sign_succ_add(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -2335,4 +2344,497 @@ fn declare_sum_range_mat_skip(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), K
     let ty = d.pi_fv(n_fv, nat, stmt);
     let value = d.lam_fv(n_fv, nat, proof);
     d.declare_theorem(p.sum_range_mat_skip, ty, value)
+}
+
+// --- the summand layer of Laplace expansion (ADR-1185) ---------------------
+//
+// ADR-1155 landed the index layer (`matSkip_*`) and the range layer
+// (`sumRange_*`) and named what remains: a summand defined on the WHOLE
+// square, with a `Nat.beq` diagonal guard, so that both cofactor
+// parametrisations of a double expansion hit the same function and the double
+// sum becomes a plain rectangle. This section is that summand's index layer.
+
+/// `Rat.unskip p q`.
+fn runskip(d: &mut IntDev<'_>, p: RatPrelude, at: ExprId, q: ExprId) -> ExprId {
+    d.const_app(p.unskip, &[at, q])
+}
+
+/// From `h : Eq Nat a b`, derive `Eq Bool (f a) (f b)`.
+///
+/// The `Bool`-valued companion of
+/// [`nat_eq_to_rat`](super::ops::nat_eq_to_rat), needed because the summand's
+/// guard is `Nat.beq` — a `Bool`, not a `Rat` — and rewriting a `Nat` index
+/// underneath it has to land in `Eq Bool`.
+fn nat_eq_to_bool(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = NatOps::eq_motive(d, a, &|d, x| {
+        let fx = f(d, x);
+        d.bool_eq(fa, fx)
+    });
+    let refl_case = d.bool_refl(fa);
+    NatOps::transport(d, a, motive, refl_case, b, h)
+}
+
+/// Admit `Rat.unskip : Nat → Nat → Nat`, the left inverse of
+/// [`declare_mat_skip`].
+///
+/// ```text
+/// unskip zero        q        ≡ Nat.pred q
+/// unskip (succ p)    zero     ≡ zero
+/// unskip (succ p) (succ q)    ≡ succ (unskip p q)
+/// ```
+///
+/// A double `Nat.rec`, the construction `Nat.ble` and `Nat.beq` both use, so
+/// **all three rows hold by ι-reduction alone**.
+///
+/// The closed form ADR-1155 names — `if Nat.ble (succ p) q then pred q else q`
+/// — computes the same function (checked at all 64 pairs below 8 in
+/// `docs/research/09-decisions/adr-1185-laplace-summand-checks.py`) and is the
+/// wrong shape to reason with. `unskip p (matSkip p c)` leaves TWO stuck
+/// `Nat.ble` guards, and a `Bool.rec` split on the inner one does not reach
+/// the outer: reducing `ble (succ p) (succ c)` re-creates `ble p c`, the very
+/// scrutinee the split had abstracted away. With the recursive form the same
+/// lemma is a two-level induction with no case split at all.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_unskip(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one = d.level_one();
+    let rec_name = d.prelude().rec;
+    let nat_to_nat = d.arrow(nat, nat);
+    let nat_motive = d.kernel().lam(anon, nat, nat, BinderInfo::Default);
+
+    // `unskip zero` is `Nat.pred`, with no inner recursion.
+    let zero_minor = {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let body = d.pred(y);
+        d.lam_fv(y_fv, nat, body)
+    };
+
+    // `unskip (succ x)`: zero at zero, `succ` of the row below at `succ y`.
+    let succ_minor = {
+        let x_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let step = {
+            let predecessor_fv = d.fresh_fvar();
+            let predecessor = d.kernel().fvar(predecessor_fv);
+            let unused_ih_fv = d.fresh_fvar();
+            let inner = d.apply(ih, &[predecessor]);
+            let body = d.succ(inner);
+            let with_ih = d.lam_fv(unused_ih_fv, nat, body);
+            d.lam_fv(predecessor_fv, nat, with_ih)
+        };
+        let zero_n = d.zero();
+        let rec = d.kernel().const_(rec_name, vec![one]);
+        let body = d.apply(rec, &[nat_motive, zero_n, step, y]);
+        let with_y = d.lam_fv(y_fv, nat, body);
+        let with_ih = d.lam_fv(ih_fv, nat_to_nat, with_y);
+        d.lam_fv(x_fv, nat, with_ih)
+    };
+
+    let outer_motive = d.kernel().lam(anon, nat, nat_to_nat, BinderInfo::Default);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let rec = d.kernel().const_(rec_name, vec![one]);
+    let row = d.apply(rec, &[outer_motive, zero_minor, succ_minor, x]);
+    let body = d.apply(row, &[y]);
+    let value = {
+        let with_y = d.lam_fv(y_fv, nat, body);
+        d.lam_fv(x_fv, nat, with_y)
+    };
+    let ty = {
+        let inner = d.arrow(nat, nat);
+        d.arrow(nat, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.unskip,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(UNSKIP_HEIGHT),
+    })
+}
+
+/// `Rat.unskip_zero`, `Rat.unskip_succ_zero` and `Rat.unskip_succ_succ`: the
+/// three defining equations, each `Eq.refl`.
+///
+/// Published rather than left implicit because **the trusted gate cannot tell
+/// you a `Definition` is wrong** — `Nat → Nat → Nat` is that type whatever the
+/// function returns — so a reader has no way to see which recursion was
+/// declared except by reading these back. The evaluation evidence proper is
+/// `rat_prelude_tests::the_laplace_summand_index_layer_computes`, which pins
+/// concrete values.
+fn declare_unskip_equations(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    // unskip_zero : ∀ q, unskip 0 q = Nat.pred q
+    {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let zero_n = d.zero();
+        let lhs = runskip(d, p, zero_n, q);
+        let rhs = d.pred(q);
+        let stmt = NatOps::eq(d, lhs, rhs);
+        let proof = NatOps::refl(d, rhs);
+        let ty = d.pi_fv(q_fv, nat, stmt);
+        let value = d.lam_fv(q_fv, nat, proof);
+        d.declare_theorem(p.unskip_zero, ty, value)?;
+    }
+
+    // unskip_succ_zero : ∀ x, unskip (succ x) 0 = 0
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let sx = d.succ(x);
+        let zero_n = d.zero();
+        let lhs = runskip(d, p, sx, zero_n);
+        let stmt = NatOps::eq(d, lhs, zero_n);
+        let proof = NatOps::refl(d, zero_n);
+        let ty = d.pi_fv(x_fv, nat, stmt);
+        let value = d.lam_fv(x_fv, nat, proof);
+        d.declare_theorem(p.unskip_succ_zero, ty, value)?;
+    }
+
+    // unskip_succ_succ : ∀ x y, unskip (succ x) (succ y) = succ (unskip x y)
+    {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let sx = d.succ(x);
+        let sy = d.succ(y);
+        let lhs = runskip(d, p, sx, sy);
+        let inner = runskip(d, p, x, y);
+        let rhs = d.succ(inner);
+        let stmt = NatOps::eq(d, lhs, rhs);
+        let proof = NatOps::refl(d, rhs);
+        let ty = {
+            let over_y = d.pi_fv(y_fv, nat, stmt);
+            d.pi_fv(x_fv, nat, over_y)
+        };
+        let value = {
+            let over_y = d.lam_fv(y_fv, nat, proof);
+            d.lam_fv(x_fv, nat, over_y)
+        };
+        d.declare_theorem(p.unskip_succ_succ, ty, value)?;
+    }
+    Ok(())
+}
+
+/// Admit `Rat.unskip_matSkip : ∀ p k, unskip p (matSkip p k) = k`.
+///
+/// **Unconditional** — no `Nat.ble` premise, unlike every other lemma in this
+/// cluster. `matSkip p` never produces `p`, so its whole image lies where
+/// `unskip p` inverts it, and the two branches of the guard are covered by the
+/// two branches of the recursion rather than by a case split.
+///
+/// Induction on `p` with `k` under the motive, then a case split on `k`:
+///
+/// - `p = 0`: `matSkip 0 k ≡ succ k` and `unskip 0 (succ k) ≡ pred (succ k) ≡ k`
+///   — both steps ι, so this is `Eq.refl`.
+/// - `p = succ p'`, `k = 0`: `matSkip (succ p') 0 ≡ 0` (since
+///   `ble (succ p') zero ≡ false`) and `unskip (succ p') 0 ≡ 0` — `Eq.refl`.
+/// - `p = succ p'`, `k = succ k'`: one [`declare_mat_skip_succ_succ`] to peel
+///   the shift, after which `unskip (succ p') (succ _)` ι-reduces to
+///   `succ (unskip p' _)` and the induction hypothesis finishes it under
+///   `succ`.
+fn declare_unskip_mat_skip(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let motive = |d: &mut IntDev<'_>, at: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let skipped = rmat_skip(d, p, at, k);
+        let lhs = runskip(d, p, at, skipped);
+        let eq = NatOps::eq(d, lhs, k);
+        d.pi_fv(k_fv, nat, eq)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let nat = d.nat_ty();
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let pf = NatOps::refl(d, k);
+        d.lam_fv(k_fv, nat, pf)
+    };
+
+    let step = |d: &mut IntDev<'_>, pp: ExprId, ih: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let spp = d.succ(pp);
+
+        let motive_k = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+            let skipped = rmat_skip(d, p, spp, k);
+            let lhs = runskip(d, p, spp, skipped);
+            NatOps::eq(d, lhs, k)
+        };
+
+        let k_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            NatOps::refl(d, zero_n)
+        };
+
+        let k_at_succ = |d: &mut IntDev<'_>, kp: ExprId| -> ExprId {
+            let skp = d.succ(kp);
+            let inner = rmat_skip(d, p, pp, kp);
+            let start = {
+                let sk = rmat_skip(d, p, spp, skp);
+                runskip(d, p, spp, sk)
+            };
+
+            // 1. `matSkip (succ p') (succ k')  ->  succ (matSkip p' k')`,
+            //    under `unskip (succ p') _`; the result then ι-reduces to
+            //    `succ (unskip p' (matSkip p' k'))`.
+            let s1 = {
+                let from = rmat_skip(d, p, spp, skp);
+                let to = d.succ(inner);
+                let pf = d.lemma(p.mat_skip_succ_succ, &[pp, kp]);
+                NatOps::congr(d, from, to, pf, &|d, t| runskip(d, p, spp, t))
+            };
+            let peeled = runskip(d, p, pp, inner);
+            let mid1 = d.succ(peeled);
+
+            // 2. the induction hypothesis at `k'`, under `succ`.
+            let s2 = {
+                let pf = d.apply(ih, &[kp]);
+                NatOps::congr(d, peeled, kp, pf, &|d, t| d.succ(t))
+            };
+
+            let (_e, proof) = NatOps::chain(d, start, &[(mid1, s1), (skp, s2)]);
+            proof
+        };
+
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let per_k = d.induct(&motive_k, &k_at_zero, &|d, kp, _ih| k_at_succ(d, kp), k);
+        d.lam_fv(k_fv, nat, per_k)
+    };
+
+    let p_fv = d.fresh_fvar();
+    let at = d.kernel().fvar(p_fv);
+    let stmt = motive(d, at);
+    let proof = d.induct(&motive, &base, &step, at);
+    let ty = d.pi_fv(p_fv, nat, stmt);
+    let value = d.lam_fv(p_fv, nat, proof);
+    d.declare_theorem(p.unskip_mat_skip, ty, value)
+}
+
+/// Admit `Rat.beq_matSkip : ∀ j k, Nat.beq j (matSkip j k) = false` and
+/// `Rat.beq_matSkip_left : ∀ j k, Nat.beq (matSkip j k) j = false`.
+///
+/// `matSkip j` is the injection whose image MISSES `j`; these are that fact in
+/// the `Bool` form the summand's diagonal guard is written in. Both are the
+/// same two-level induction as [`declare_unskip_mat_skip`], with `Nat.beq`'s
+/// three ι-rows (`beq zero (succ _) ≡ false`, `beq (succ _) zero ≡ false`,
+/// `beq (succ x) (succ y) ≡ beq x y`) doing the work `Nat.pred` did there.
+///
+/// Stated in BOTH argument orders rather than derived one from the other: this
+/// prelude has no `Nat.beq` commutativity, and the two cofactor
+/// parametrisations reach the guard from opposite sides — the row-`0`
+/// expansion has the skipped index on the right, the row-`i` expansion has it
+/// on the left.
+fn declare_beq_mat_skip(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    // beq_matSkip : ∀ j k, beq j (matSkip j k) = false
+    {
+        let motive = |d: &mut IntDev<'_>, j: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let skipped = rmat_skip(d, p, j, k);
+            let lhs = d.beq(j, skipped);
+            let false_ = d.bool_false();
+            let eq = d.bool_eq(lhs, false_);
+            d.pi_fv(k_fv, nat, eq)
+        };
+
+        let base = |d: &mut IntDev<'_>| -> ExprId {
+            // `beq 0 (matSkip 0 k) ≡ beq 0 (succ k) ≡ false`.
+            let nat = d.nat_ty();
+            let k_fv = d.fresh_fvar();
+            let false_ = d.bool_false();
+            let pf = d.bool_refl(false_);
+            d.lam_fv(k_fv, nat, pf)
+        };
+
+        let step = |d: &mut IntDev<'_>, jp: ExprId, ih: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let sjp = d.succ(jp);
+
+            let motive_k = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+                let skipped = rmat_skip(d, p, sjp, k);
+                let lhs = d.beq(sjp, skipped);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let k_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+                // `matSkip (succ j') 0 ≡ 0` and `beq (succ j') 0 ≡ false`.
+                let false_ = d.bool_false();
+                d.bool_refl(false_)
+            };
+            let k_at_succ = |d: &mut IntDev<'_>, kp: ExprId| -> ExprId {
+                let skp = d.succ(kp);
+                let inner = rmat_skip(d, p, jp, kp);
+                let start = {
+                    let sk = rmat_skip(d, p, sjp, skp);
+                    d.beq(sjp, sk)
+                };
+                let s1 = {
+                    let from = rmat_skip(d, p, sjp, skp);
+                    let to = d.succ(inner);
+                    let pf = d.lemma(p.mat_skip_succ_succ, &[jp, kp]);
+                    nat_eq_to_bool(d, from, to, pf, &|d, t| d.beq(sjp, t))
+                };
+                // `beq (succ j') (succ _) ≡ beq j' _`, which is what `ih` has.
+                let mid1 = d.beq(jp, inner);
+                let s2 = d.apply(ih, &[kp]);
+                let false_ = d.bool_false();
+                d.bool_trans(start, mid1, false_, s1, s2)
+            };
+
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let per_k = d.induct(&motive_k, &k_at_zero, &|d, kp, _ih| k_at_succ(d, kp), k);
+            d.lam_fv(k_fv, nat, per_k)
+        };
+
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let stmt = motive(d, j);
+        let proof = d.induct(&motive, &base, &step, j);
+        let ty = d.pi_fv(j_fv, nat, stmt);
+        let value = d.lam_fv(j_fv, nat, proof);
+        d.declare_theorem(p.beq_mat_skip, ty, value)?;
+    }
+
+    // beq_matSkip_left : ∀ j k, beq (matSkip j k) j = false
+    {
+        let motive = |d: &mut IntDev<'_>, j: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let skipped = rmat_skip(d, p, j, k);
+            let lhs = d.beq(skipped, j);
+            let false_ = d.bool_false();
+            let eq = d.bool_eq(lhs, false_);
+            d.pi_fv(k_fv, nat, eq)
+        };
+
+        let base = |d: &mut IntDev<'_>| -> ExprId {
+            // `beq (succ k) 0 ≡ false`.
+            let nat = d.nat_ty();
+            let k_fv = d.fresh_fvar();
+            let false_ = d.bool_false();
+            let pf = d.bool_refl(false_);
+            d.lam_fv(k_fv, nat, pf)
+        };
+
+        let step = |d: &mut IntDev<'_>, jp: ExprId, ih: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let sjp = d.succ(jp);
+
+            let motive_k = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+                let skipped = rmat_skip(d, p, sjp, k);
+                let lhs = d.beq(skipped, sjp);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let k_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+                // `matSkip (succ j') 0 ≡ 0` and `beq 0 (succ j') ≡ false`.
+                let false_ = d.bool_false();
+                d.bool_refl(false_)
+            };
+            let k_at_succ = |d: &mut IntDev<'_>, kp: ExprId| -> ExprId {
+                let skp = d.succ(kp);
+                let inner = rmat_skip(d, p, jp, kp);
+                let start = {
+                    let sk = rmat_skip(d, p, sjp, skp);
+                    d.beq(sk, sjp)
+                };
+                let s1 = {
+                    let from = rmat_skip(d, p, sjp, skp);
+                    let to = d.succ(inner);
+                    let pf = d.lemma(p.mat_skip_succ_succ, &[jp, kp]);
+                    nat_eq_to_bool(d, from, to, pf, &|d, t| d.beq(t, sjp))
+                };
+                let mid1 = d.beq(inner, jp);
+                let s2 = d.apply(ih, &[kp]);
+                let false_ = d.bool_false();
+                d.bool_trans(start, mid1, false_, s1, s2)
+            };
+
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let per_k = d.induct(&motive_k, &k_at_zero, &|d, kp, _ih| k_at_succ(d, kp), k);
+            d.lam_fv(k_fv, nat, per_k)
+        };
+
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let stmt = motive(d, j);
+        let proof = d.induct(&motive, &base, &step, j);
+        let ty = d.pi_fv(j_fv, nat, stmt);
+        let value = d.lam_fv(j_fv, nat, proof);
+        d.declare_theorem(p.beq_mat_skip_left, ty, value)?;
+    }
+
+    Ok(())
+}
+
+/// Admit `Rat.altSign_succ_add : ∀ n k, altSign (Nat.add (succ n) k) =
+/// neg (altSign (Nat.add n k))`.
+///
+/// The parity step the summand's sign needs. `Rat.altSign_succ` is `Eq.refl`
+/// and gives the `succ` on the OUTSIDE; `Nat.add` recurses on its RIGHT
+/// argument, so `add n (succ k)` ι-reduces and `add (succ n) k` is stuck. One
+/// `Nat.succ_add` bridges them, and the `neg` then appears definitionally.
+fn declare_alt_sign_succ_add(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let sn = d.succ(n);
+    let shifted = d.add(sn, k);
+    let plain = d.add(n, k);
+    let lhs = ralt_sign(d, p, shifted);
+    let rhs = {
+        let inner = ralt_sign(d, p, plain);
+        rneg(d, inner)
+    };
+    let stmt = req(d, lhs, rhs);
+
+    let succ_add = {
+        let name = d.prelude().succ_add;
+        d.const_app(name, &[n, k])
+    };
+    let peeled = d.succ(plain);
+    let proof = nat_eq_to_rat(d, shifted, peeled, succ_add, &|d, t| ralt_sign(d, p, t));
+
+    let ty = {
+        let over_k = d.pi_fv(k_fv, nat, stmt);
+        d.pi_fv(n_fv, nat, over_k)
+    };
+    let value = {
+        let over_k = d.lam_fv(k_fv, nat, proof);
+        d.lam_fv(n_fv, nat, over_k)
+    };
+    d.declare_theorem(p.alt_sign_succ_add, ty, value)
 }
