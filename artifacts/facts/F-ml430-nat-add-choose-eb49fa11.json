@@ -8,10 +8,31 @@
     "statement": "∀ (i j : ℕ), (i + j).choose j = (i + j).factorial / (i.factorial * j.factorial)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef", "F:ml430-nat-dvd-mul-right-a87a83c4", "F:nat-div-mul-cancel-of-dvd", "F:nat-mul-assoc", "F:nat-mul-comm", "F:nat-mul-left-cancel-of-pos", "F:nat-one-le-factorial", "F:nat-one-le-mul"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_choose 2>/dev/null | /usr/bin/grep -Ec '^Nat\\.add_choose[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.add_choose",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.add_choose` through the trusted `Kernel::add_declaration` gate, declared in new module `nat_prelude/add_choose_div.rs`. It is the division-normal form of the already-proved `Nat.add_choose_mul_factorial_mul_factorial` (`(i+j).choose j * i! * j! = (i+j)!`, `F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef`): converted to `(i+j).choose j = (i+j)! / (i! * j!)` by the standard \"exact factor divided back out\" route (a `div_eq_of_mul_eq` helper, copied per this crate's per-file local-helper convention -- the same technique `coprime_lemmas.rs`/`lcm_gcd_lemmas.rs` already use for other targets), with the divisor's positivity (`Le 1 (i! * j!)`) from `one_le_factorial` on each factor plus `one_le_mul`. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.choose (AxNat.add x0 x1) x1) (AxNat.div (AxNat.factorial (AxNat.add x0 x1)) (AxNat.mul (AxNat.factorial x0) (AxNat.factorial x1)))))`, matching this fact's `formal.statement`. The grep anchor `^Nat\\.add_choose[[:space:]]` is deliberately anchored so it does not also match `Nat.add_choose_mul_factorial_mul_factorial` (verified: the same command against the un-anchored substring returns 2, against this exact anchored pattern returns 1); the `-ge 1` count-based test (not `grep -q`) requires the admitted declaration to actually be printed, and grepping a made-up name (`Nat.add_choose_bogus`) greps to `0`.",
+      "supports": "∀ (i j : ℕ), (i + j).choose j = (i + j).factorial / (i.factorial * j.factorial)"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names` (this declaration's `p.add_choose` entry was added there in the same commit that declared it), and `the_build_is_deterministic`/`every_promised_name_is_admitted_with_the_expected_kind` (both re-run on every `nat_prelude::` sweep) confirm the declaration is admitted at the exact rendered type checked above. `nat_prelude/add_choose_div_tests.rs` independently checks this declaration's `axiom_footprint` too, plus a concrete instantiation at i=2,j=3 (5.choose 3 = 10, 5! = 120, 2!*3! = 12, 120/12 = 10, all confirmed as actual reductions) with a genuinely-discriminating negative control (5.choose 1 = 5). Full `nat_prelude::` sweep: 251 passed, 0 failed.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.add_choose"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Established 2026-08-31 in this ledger by the `draw11-theorems-d` lane: a fresh local construction (`nat_prelude/add_choose_div.rs`) building on the already-proved `Nat.add_choose_mul_factorial_mul_factorial`, not a transcription of Mathlib's proof. The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `depends_on` will be populated by `check-fact-depends-derived.py --fix` from the proof term's own dependency edges.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
