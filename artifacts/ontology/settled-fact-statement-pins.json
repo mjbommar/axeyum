@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2027,
+    "min_identity_bound": 2030,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -6870,6 +6870,13 @@
       "kernel_theorem": "Int.firstSupplementaryLawNotResidue"
     },
     {
+      "fact_id": "F:int-firstsupplementarylawresidue",
+      "language": "lean4",
+      "statement_sha256": "9117356b9910ef4602092796fdb9a5f916614d19b2a9aa52e4c970d3152efbb9",
+      "prose_sha256": "2df7a4cdb2ace9ac7df2a25a593b74e30a7695d2bfda1f3f989618ae77254acd",
+      "kernel_theorem": "Int.firstSupplementaryLawResidue"
+    },
+    {
       "fact_id": "F:int-gauss-lemma",
       "language": "lean4",
       "statement_sha256": "301916642cdf35183a5b13969ad18e7f4a310300c263c78fe9205c865883c43f",
@@ -8100,6 +8107,13 @@
       "statement_sha256": "9bf60ce43f07a873326b35f6baeb8ecc17d223432fa567ca8514c43fefd511e9",
       "prose_sha256": "1092aad0ee643a83fe40e56d1a3a005118827a592ea62b5302b05168da70421c",
       "kernel_theorem": "Int.wilson_iff"
+    },
+    {
+      "fact_id": "F:int-wilsonhalfsplit",
+      "language": "lean4",
+      "statement_sha256": "6fdbf460f81d85eb1e6789e2c25395ce15f6350dc40f3a2eeb8edcc6b536379b",
+      "prose_sha256": "e72bfe385236169ff305652aa063840728360b29a7b68369898867b4cda8619e",
+      "kernel_theorem": "Int.wilsonHalfSplit"
     },
     {
       "fact_id": "F:int-zero-lt-one",
@@ -16762,6 +16776,13 @@
           "prose_sha256": "8c3834ed2867bec390e13143b6a7119eebe247e3a6fe2705d3b6e8b13f91d30f"
         }
       ]
+    },
+    {
+      "fact_id": "F:nat-sub-sub-self",
+      "language": "lean4",
+      "statement_sha256": "9637b6dd5178726506fd0f1e742fae4f553292f6d7be8ec21778221e0dd0ad1f",
+      "prose_sha256": "b331294dcf3b5d7d3e3c370e3e40df52a350cf0bfe0ff4773d8f17b8b2e3424f",
+      "kernel_theorem": "Nat.sub_sub_self"
     },
     {
       "fact_id": "F:nat-sub-succ",

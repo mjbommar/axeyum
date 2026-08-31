@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:int-firstsupplementarylawresidue",
+  "title": "The first supplementary law of quadratic reciprocity, residue half, over the constructed integers",
+  "statement": "The residue half of the first supplementary law of quadratic reciprocity. For a modulus p = 2m+1 satisfying this kernel's PrimeCond, with m EVEN -- equivalently p congruent to 1 modulo 4 -- the integer -1 IS a quadratic residue modulo p, where `Int.IsQuadraticResidue p a` is this prelude's own definition, the existence of an x with x*x congruent to a modulo p. The witness is `Int.factorial m`. Nothing here is imported or axiomatised: the modulus is this kernel's constructed natural, the congruence is `Int.ModEq` over the constructed integers, and `Kernel::axiom_footprint` for this declaration is EMPTY. WHAT THIS DOES AND DOES NOT CLAIM. Together with F:int-firstsupplementarylawnotresidue (the p congruent to 3 modulo 4 half, ADR-1230) this pair decides -1's quadratic-residue-hood for every odd prime, which is the full first supplementary law. Neither fact alone does, and this one alone decides nothing about p congruent to 3 modulo 4. The two are stated as separate implications, not as one biconditional; no single declaration in this prelude carries the biconditional. Primality is load-bearing and is not discharged -- it is what Wilson's theorem needs. `Nat.Even m` is load-bearing too and the theorem is FALSE without it: at odd m the conclusion is the exact opposite one, which F:int-firstsupplementarylawnotresidue proves. The CONVERSE of Euler's criterion is NOT used and is still not available in this kernel; see notes for the route that avoids it.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.firstSupplementaryLawResidue : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))) -> ((x2 : AxNat.Even x0) -> Int.is_quadratic_residue (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (Int.neg Int.one))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Int.firstSupplementaryLawResidue"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-one-mul",
+    "F:int-pow-neg-one-of-even",
+    "F:int-wilsonhalfsplit"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.firstSupplementaryLawResidue",
+      "kind": "kernel-term",
+      "supports": "Int.firstSupplementaryLawResidue is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.firstSupplementaryLawResidue 2>/dev/null | grep -cE '^Int\\.firstSupplementaryLawResidue[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Int.firstSupplementaryLawResidue",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.firstSupplementaryLawResidue",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.firstSupplementaryLawResidue.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it, including Int.firstSupplementaryLawResidue. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "generated-unreviewed",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored. `title`, `statement` and `notes` were then REPLACED by hand (lane first-supplementary-residue, ADR-1235); every other field is the generator's output unmodified."
+  },
+  "notes": "Route (`int_prelude/first_supplementary_residue.rs`, ADR-1235). The textbook route to a witness is the converse of Euler's criterion, which `int_prelude/qr_criterion.rs`'s module doc records as needing a primitive root or a root-counting argument this kernel has no List/Finset to state. WILSON'S THEOREM SUPPLIES THE WITNESS OUTRIGHT, with no converse: (p-1)! splits at m into m! times the product over j from m+1 to 2m of j; reversing the upper half and using 2m-k + (k+1) = p makes each factor congruent to -(k+1), so (p-1)! is congruent to m! * ((-1)^m * m!) -- that is F:int-wilsonhalfsplit, stated for BOTH parities -- and Wilson makes the left side -1. At even m the sign is 1, so (m!)^2 is congruent to -1 and m! is the witness. THE HYPOTHESIS IS `Nat.Even m`, NOT `p mod 4 = 1`, for the reason ADR-1230 gives for its own `Nat.Odd`: `Nat.div` and `Nat.mod` are stuck at symbolic arguments, while `Nat.Even`'s witness is an equation `Int.pow_neg_one_of_even` consumes directly. THE ONE NEW SUPPORTING LEMMA is `Nat.sub_sub_self` (F:nat-sub-sub-self), the BOUNDED involution law of the reflection k -> (m-1) - k; the unbounded form is false because `Nat.sub` truncates, which is also why `Nat.conjugate_injective` (hypothesis: an unbounded involution) does not apply and `int_prelude/wilson.rs`'s private `injective_of_involutive_local` -- which takes exactly the bounded law -- was promoted and reused instead of re-derived. MUTATION MEASUREMENT, three columns. Nine mutations, none surviving. Five the KERNEL rejected. Two of those five are statement-FALSE rather than merely proof-broken (the residue half restated at `Nat.Odd m`; F:int-wilsonhalfsplit restated without the (-1)^m factor), and their falsity is independently exhibited: the first is refuted in-kernel by composing with F:int-firstsupplementarylawnotresidue to get False, the second by the kernel computing both sides' `Int.emod` at m = 3, p = 7 to 6 and 1. Three more were proof-broken with the statement still true (succ_pred_of_pos used without a symm; the reflection off by one; the pointwise factor scaled by +1). THREE mutations the kernel ADMITTED, each producing a TRUE statement that is not this law -- ADR-1230's M5 shape, and the only thing that sees them is the test's symbolic check: concluding at -1's natural representative `ofNat (2m)` (transported there with `Int.isQuadraticResidue_of_modEq`); concluding at `one` and proving it with `Int.is_quadratic_residue_one`; and taking an extra unused `Nat.Odd m` hypothesis, which makes the theorem vacuous. No axiom footprint, prelude build or inventory check distinguishes any of the three. WHAT THE CONTROLS DO NOT CATCH: the test never constructs a PrimeCond proof, so hypothesis satisfiability is evidence from outside the kernel (the numeric script's C9/C10 rows, over the 44 primes below 500 with even half). The numeric content is re-runnable: `python3 docs/research/09-decisions/adr-1235-first-supplementary-residue-checks.py`."
+}

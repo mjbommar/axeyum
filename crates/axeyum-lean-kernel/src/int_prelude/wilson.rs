@@ -4570,7 +4570,7 @@ fn ne_symm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
 /// j) = j`, using involution at `i` and at `j` and nothing else about
 /// `sigma`), so this needs no fixed-point-freedom, no `MapsInto`, nothing
 /// specific to `Nat.inverseIndex` at all.
-fn injective_of_involutive_local(
+pub(super) fn injective_of_involutive_local(
     d: &mut IntDev<'_>,
     sigma: ExprId,
     invol: ExprId,

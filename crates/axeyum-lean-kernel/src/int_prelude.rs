@@ -98,6 +98,7 @@ mod euler_unit_range;
 mod exists_gcd_one;
 mod fibonacci;
 mod first_supplementary;
+mod first_supplementary_residue;
 mod gauss_assembly;
 mod gauss_factorial_coprime;
 mod gauss_factorial_product;
@@ -617,6 +618,27 @@ pub struct IntPrelude {
     /// representative `ofNat aa`, while the supplementary laws are about `-1`.
     /// `first_supplementary.rs`.
     pub is_quadratic_residue_of_mod_eq: NameId,
+    /// `Int.wilsonHalfSplit : ∀ m, Nat.PrimeCond (succ (mul 2 m)) →
+    ///   ModEq (ofNat (succ (mul 2 m)))
+    ///     (mul (factorial m) (mul (pow (neg one) m) (factorial m))) (neg one)`
+    /// — `(p-1)! = m! · ((-1)^m · m!)` mod `p`, for BOTH parities of `m`.
+    /// Wilson's theorem split at `m` (`prodRange_split`), the upper half
+    /// reversed by `prodRange_permute` at `k ↦ sub (pred m) k`, made congruent
+    /// termwise to `(-1)·(k+1)`, and collapsed by
+    /// [`Self::prod_range_scaled_index_eq_pow_mul_factorial`]. This is the
+    /// witness supply the residue half of the first supplementary law needs,
+    /// and it avoids the converse of Euler's criterion entirely.
+    /// `first_supplementary_residue.rs`.
+    pub wilson_half_split: NameId,
+    /// `Int.firstSupplementaryLawResidue : ∀ m,
+    ///   Nat.PrimeCond (succ (mul 2 m)) → Nat.Even m →
+    ///   IsQuadraticResidue (ofNat (succ (mul 2 m))) (neg one)` — **the first
+    /// supplementary law of quadratic reciprocity**, residue half: for an odd
+    /// prime `p ≡ 1 (mod 4)`, `-1` IS a quadratic residue, witness
+    /// `Int.factorial m`. Together with
+    /// [`Self::first_supplementary_law_not_residue`] this is the whole law.
+    /// `first_supplementary_residue.rs`.
+    pub first_supplementary_law_residue: NameId,
     /// `Int.firstSupplementaryLawNotResidue : ∀ m,
     ///   Nat.PrimeCond (succ (mul 2 m)) → Nat.Odd m →
     ///   Not (IsQuadraticResidue (ofNat (succ (mul 2 m))) (neg one))`
@@ -1798,6 +1820,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         pow_neg_one_of_odd: child(kernel, "pow_neg_one_of_odd"),
         second_supplementary_law: child(kernel, "secondSupplementaryLaw"),
         is_quadratic_residue_of_mod_eq: child(kernel, "isQuadraticResidue_of_modEq"),
+        wilson_half_split: child(kernel, "wilsonHalfSplit"),
+        first_supplementary_law_residue: child(kernel, "firstSupplementaryLawResidue"),
         first_supplementary_law_not_residue: child(kernel, "firstSupplementaryLawNotResidue"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
@@ -2279,6 +2303,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // (`qr_criterion.rs`) plus `second_supplementary.rs`'s
         // `pow_neg_one_of_odd` and `two_mul_eq_add_self`.
         first_supplementary::declare_first_supplementary_all(&mut d)?;
+        // The RESIDUE half (ADR-1235): needs `Int.wilson`, `prodRange_split`,
+        // `prodRange_permute` at the reflection, and `Nat.sub_sub_self`.
+        first_supplementary_residue::declare_first_supplementary_residue_all(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;

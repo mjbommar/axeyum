@@ -207,7 +207,7 @@ fn two_le_two_mul(d: &mut IntDev<'_>, m: ExprId, one_le_m: ExprId) -> ExprId {
 /// `Lt zero (of_nat (succ j))`, mirroring `wilson::declare_factorial_pos`'s
 /// own inline construction (`Int.lt_ofNat_add zero j` transported past
 /// `add_comm`/`add_zero`).
-fn pos_of_nat_succ(d: &mut IntDev<'_>, j: ExprId) -> ExprId {
+pub(super) fn pos_of_nat_succ(d: &mut IntDev<'_>, j: ExprId) -> ExprId {
     let p = d.int();
     let zero_i = d.izero();
     let sj = d.succ(j);

@@ -2658,7 +2658,7 @@ pub(super) fn declare_prod_range_swap(d: &mut IntDev<'_>) -> Result<(), KernelEr
 // `τ := point_override σ i0 (σ n)` feeding the induction hypothesis).
 
 /// `fun k => f (g k)`.
-fn compose(d: &mut IntDev<'_>, f: ExprId, g: ExprId) -> ExprId {
+pub(super) fn compose(d: &mut IntDev<'_>, f: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
