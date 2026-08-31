@@ -89,7 +89,7 @@ fn int_exists_intro(
 /// `minor : ∀ (a : Int), predicate a → target`. The same shape as
 /// `modinv.rs`'s private `idvd_elim`, generalized off `Int.dvd`'s own
 /// predicate (that one is not `pub(super)`, and this is nine lines).
-fn int_exists_elim(
+pub(super) fn int_exists_elim(
     d: &mut IntDev<'_>,
     predicate: ExprId,
     target: ExprId,
@@ -107,7 +107,7 @@ fn int_exists_elim(
 }
 
 /// `fun (x : Int) => ModEq p_modulus (x*x) a`.
-fn residue_predicate(d: &mut IntDev<'_>, p_modulus: ExprId, a: ExprId) -> ExprId {
+pub(super) fn residue_predicate(d: &mut IntDev<'_>, p_modulus: ExprId, a: ExprId) -> ExprId {
     let int_ty = d.int_ty();
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
@@ -197,7 +197,7 @@ pub(super) fn declare_is_quadratic_residue_one(d: &mut IntDev<'_>) -> Result<(),
 /// down to `(x*x)*(y*y)` (`mul_assoc`/`mul_comm` only), then flipped with
 /// `isymm` — cheaper than chasing the same identity in the other direction
 /// from scratch.
-fn sq_mul_sq_eq_mul_sq(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn sq_mul_sq_eq_mul_sq(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
     let p = d.int();
     let xy = d.imul(x, y);
     let start = d.imul(xy, xy); // (x*y)*(x*y)
