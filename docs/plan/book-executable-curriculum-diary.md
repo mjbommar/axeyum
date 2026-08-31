@@ -487,3 +487,36 @@ finite bit-vector widths and arbitrary finite-domain characteristic arrays. It
 does not prove an induction theorem for widths outside A0, instruction decode,
 or any RV64I or x86-64 memory behavior. The semantic package advances to
 version 10 and declares `domain-parametric-memory`.
+
+## 2026-08-30 — first source-pinned RV64I decoder and step slice
+
+The book's seven RV64I listings reduce to twelve base forms: `ADDI`, `ADD`,
+`SUB`, `OR`, `XOR`, `LD`, `SD`, `BEQ`, `BNE`, `BGE`, `JAL`, and `JALR`.
+Pinned them to the official RISC-V Unprivileged Architecture release
+20260120, RV64I version 2.1. The official 696-page PDF retrieved from
+`docs.riscv.org` on 2026-08-30 is 4,580,174 bytes with SHA-256
+`06bb3c23074f72060a0ec061a80933af948cae7ceafdcd9d1fe177b05fd150bc`.
+The selected profile excludes compressed instructions and every extension.
+It requires four-byte instruction addresses and naturally aligned
+doubleword accesses; missing data bytes, misaligned data, incomplete fetch,
+illegal words, and misaligned taken targets remain distinct traps.
+
+Added `axeyum-machine::rv64` with strict decode and canonical encode for all
+twelve forms, complete 32-register state with architectural `x0`, finite
+little-endian memory, immutable code, PC-relative branches and `JAL`, low-bit
+clearing for `JALR`, link writes, atomic aligned `LD`/`SD`, and terminal trap
+stuttering. The memory path reuses the source-derived domain-parametric A0
+load/store orchestration with an RV64 doubleword adapter rather than creating a
+second range and byte-order loop.
+
+Seven direct tests bind the source identity and exact form set; round-trip
+known encodings from Chapters 6 and 12; decode every word in the nine-row XOR
+table from Chapter 15; exercise `x0`, arithmetic, and branch-PC rules; test
+little-endian aligned load/store plus sparse access and alignment traps; test
+link, target, and fault-before-link behavior; and check a canonical
+refinement-facing projection with sorted registers and the complete sparse
+memory domain. Strict Clippy passes.
+
+This code slice does not yet close either RV64 obligation. The book-facing
+source manifest, independently replayed decoder/step evidence, mutation suite,
+and pinned Axeyum revision still need to land and run.
