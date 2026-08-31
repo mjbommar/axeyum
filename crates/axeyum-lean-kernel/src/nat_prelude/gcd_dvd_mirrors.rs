@@ -14,6 +14,7 @@ use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
+use crate::proof_plan::{self, Template};
 
 /// `dvd(zero, x) -> eq(x, zero)`. `dvd 0 x` unfolds to `∃ q, x = 0*q`;
 /// eliminate the witness and collapse `0*q` with `zero_mul`.
@@ -43,71 +44,13 @@ fn zero_dvd_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, proof: ExprId) -
     d.apply(exists_rec, &[nat, pred, motive, minor, proof])
 }
 
-/// `eq(a,b) -> Iff (pred a) (pred b)`, for an arbitrary one-argument
-/// proposition-valued `pred`. `Eq.rec` at the reflexive instance.
-fn pred_iff_of_eq(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    a: ExprId,
-    b: ExprId,
-    eq_ab: ExprId,
-    pred: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
-) -> ExprId {
-    let p = *p;
-    let pa = pred(d, a);
-    let motive = d.eq_motive(a, &|d, x| {
-        let px = pred(d, x);
-        d.const_app(p.logic.iff, &[pa, px])
-    });
-    let refl_case = {
-        let x_fv = d.fresh_fvar();
-        let x = d.kernel().fvar(x_fv);
-        let id = d.lam_fv(x_fv, pa, x);
-        d.const_app(p.logic.iff_intro, &[pa, pa, id, id])
-    };
-    d.transport(a, motive, refl_case, b, eq_ab)
-}
-
-/// `h1 : Iff A B, h2 : Iff B C  ⊢  Iff A C`.
-fn iff_trans(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    a_ty: ExprId,
-    b_ty: ExprId,
-    c_ty: ExprId,
-    h1: ExprId,
-    h2: ExprId,
-) -> ExprId {
-    let p = *p;
-    let mp = {
-        let a_fv = d.fresh_fvar();
-        let a = d.kernel().fvar(a_fv);
-        let h1_mp = d.const_app(p.logic.iff_mp, &[a_ty, b_ty, h1]);
-        let b_from_a = d.apply(h1_mp, &[a]);
-        let h2_mp = d.const_app(p.logic.iff_mp, &[b_ty, c_ty, h2]);
-        let c_from_b = d.apply(h2_mp, &[b_from_a]);
-        d.lam_fv(a_fv, a_ty, c_from_b)
-    };
-    let mpr = {
-        let c_fv = d.fresh_fvar();
-        let c = d.kernel().fvar(c_fv);
-        let h2_mpr = d.const_app(p.logic.iff_mpr, &[b_ty, c_ty, h2]);
-        let b_from_c = d.apply(h2_mpr, &[c]);
-        let h1_mpr = d.const_app(p.logic.iff_mpr, &[a_ty, b_ty, h1]);
-        let a_from_b = d.apply(h1_mpr, &[b_from_c]);
-        d.lam_fv(c_fv, c_ty, a_from_b)
-    };
-    d.const_app(p.logic.iff_intro, &[a_ty, c_ty, mp, mpr])
-}
-
-/// `h : Iff A B  ⊢  Iff B A`.
-fn iff_symm(d: &mut NatDev<'_>, p: &NatPrelude, a_ty: ExprId, b_ty: ExprId, h: ExprId) -> ExprId {
-    let p = *p;
-    let mp = d.const_app(p.logic.iff_mpr, &[a_ty, b_ty, h]);
-    let mpr = d.const_app(p.logic.iff_mp, &[a_ty, b_ty, h]);
-    d.const_app(p.logic.iff_intro, &[b_ty, a_ty, mp, mpr])
-}
-
+/// The `Eq -> Iff` lift, the `Iff` chain, and the `Iff` flip below used to be
+/// local `pred_iff_of_eq`/`iff_trans`/`iff_symm` copies (the same three this
+/// file's sibling `gcd_mul_right_mirrors.rs` and `dvd_add_iff_left.rs` also
+/// carried by hand); they now go through [`crate::proof_plan`] (L3 D5)
+/// instead, which builds the identical term shape — see
+/// `proof_plan::tests::rewrite_iff_matches_pred_iff_of_eq`.
+///
 /// Declare the `ml430` gcd/divisibility mirrors that are cheap compositions
 /// of `declare_divisibility`/`declare_gcd_semantics`/`declare_lcm_gcd_lemmas`
 /// output. Must run after all three (needs `dvd_gcd`, `dvd_gcd_iff`,
@@ -218,7 +161,8 @@ pub(super) fn declare_gcd_dvd_mirrors(
                 let hyp_fv = d.fresh_fvar();
                 let modm0 = d.modulo(m, zero);
                 let mod_zero_m = d.lemma(p.mod_zero, &[m]); // eq(mod(m,0), m)
-                let iff_proof = pred_iff_of_eq(d, &p, modm0, m, mod_zero_m, &|d, x| d.dvd(k, x));
+                let ctx = Template::App(p.dvd, vec![Template::Fixed(k), Template::Hole]);
+                let iff_proof = proof_plan::iff_lift(d, ctx, modm0, m, mod_zero_m);
                 d.lam_fv(hyp_fv, dvd_k_zero_ty, iff_proof)
             },
             &|d, j, _ih| d.lemma(p.dvd_mod_iff, &[k, j, m]),
@@ -330,13 +274,16 @@ pub(super) fn declare_gcd_dvd_mirrors(
                 // iff_a : Iff (eq (mod n 0) 0) (eq n 0)
                 let mod_zero_n = d.lemma(p.mod_zero, &[n]); // eq(mod(n,0), n)
                 let modn0 = d.modulo(n, zero);
-                let iff_a = pred_iff_of_eq(d, &p, modn0, n, mod_zero_n, &|d, x| {
-                    let zero = d.zero();
-                    d.eq(x, zero)
-                });
+                let eq_zero_ctx =
+                    Template::EqNat(Box::new(Template::Hole), Box::new(Template::Fixed(zero)));
+                let iff_a = proof_plan::iff_lift(d, eq_zero_ctx, modn0, n, mod_zero_n);
                 let modn0_eq_zero = d.eq(modn0, zero);
-                let iff_a_symm = iff_symm(d, &p, modn0_eq_zero, n_eq_zero, iff_a);
-                iff_trans(d, &p, dvd_0_n, n_eq_zero, modn0_eq_zero, iff_b, iff_a_symm)
+                let iff_a_symm = proof_plan::iff_flip(d, modn0_eq_zero, n_eq_zero, iff_a);
+                proof_plan::iff_chain(
+                    d,
+                    dvd_0_n,
+                    &[(n_eq_zero, iff_b), (modn0_eq_zero, iff_a_symm)],
+                )
             },
             &|d, j, _ih| {
                 let succ_j = d.succ(j);
@@ -351,7 +298,7 @@ pub(super) fn declare_gcd_dvd_mirrors(
                 let zero = d.zero();
                 let remainder_eq_zero = d.eq(remainder, zero);
                 let dvd_succ_j_n = d.dvd(succ_j, n);
-                iff_symm(d, &p, remainder_eq_zero, dvd_succ_j_n, result)
+                proof_plan::iff_flip(d, remainder_eq_zero, dvd_succ_j_n, result)
             },
             m,
         );

@@ -73,6 +73,7 @@ mod name;
 mod nat_prelude;
 mod prelude;
 pub mod prelude_cache;
+pub mod proof_plan;
 mod quotient;
 mod rat_prelude;
 pub mod shape_index;
