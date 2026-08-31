@@ -128,6 +128,7 @@ use crate::PreludeValue;
 use crate::build_logic_prelude;
 use crate::name::NameId;
 
+mod abundant_deficient;
 mod add_basics;
 mod add_choose_div;
 mod add_desc_factorial_asc_factorial;
@@ -236,6 +237,7 @@ mod restrict_pair;
 mod size_extra;
 mod sqrt;
 mod squarefree;
+mod stirling;
 mod subset_product;
 mod testbit_bitwise;
 mod totient;
@@ -256,6 +258,7 @@ mod xor_trichotomy;
 
 pub use ops::{NatDev, NatOps, NatState};
 
+use abundant_deficient::declare_abundant_deficient_all;
 use add_basics::declare_add_basics;
 use add_choose_div::declare_add_choose;
 use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factorial;
@@ -422,6 +425,7 @@ use restrict_pair::{
 use size_extra::declare_size_extra_all;
 use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
+use stirling::declare_stirling_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -4936,6 +4940,34 @@ pub struct NatPrelude {
     /// Rust identifiers collide).
     pub pair_fn: NameId,
 
+    // -- `unblock-four-families` lane: `abundant_deficient.rs` --
+    // `docs/research/09-decisions/adr-1100-four-families-for-draw-14.md`
+    // (ADR-1095's measured gap: the free family supply all sorts EARLY, so
+    // it can fill the partition cycle's index 0 but never index 3, and R5
+    // needs both. These two open
+    // `Mathlib.NumberTheory.FactorisationProperties`, which sorts late and
+    // whose topic segment no development/train family publishes.)
+    // Construction only, ADR-0653 -- no theorem about either is declared.
+    /// `Nat.Abundant (n : Nat) : Prop := Lt (mul 2 n) (sumDivisors n)` --
+    /// abundance stated against `Nat.sumDivisors` (ALL divisors, `n`
+    /// included), continuing [`Self::perfect`]'s own subtraction-free
+    /// convention. Equivalent to, and not definitionally identical with,
+    /// Mathlib's proper-divisor phrasing; see `abundant_deficient.rs`.
+    pub abundant: NameId,
+    /// `Nat.Deficient (n : Nat) : Prop := Lt (sumDivisors n) (mul 2 n)` --
+    /// the mirror of [`Self::abundant`], same convention.
+    pub deficient: NameId,
+    /// `Nat.stirlingFirst (n k : Nat) : Nat` -- the unsigned Stirling
+    /// numbers of the first kind, Mathlib's own recurrence
+    /// `c(n+1,k+1) = n * c(n,k+1) + c(n,k)`. Same two-argument recursor
+    /// shape as [`Self::choose`], different base row and a coefficient;
+    /// see `stirling.rs`.
+    pub stirling_first: NameId,
+    /// `Nat.stirlingSecond (n k : Nat) : Nat` -- the Stirling numbers of
+    /// the second kind, `S(n+1,k+1) = (k+1) * S(n,k+1) + S(n,k)`. Differs
+    /// from [`Self::stirling_first`] ONLY in that coefficient.
+    pub stirling_second: NameId,
+
     // -- `avg-pair-constructions` lane: `minmax.rs` --
     // `docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md`
     // (ADR-1045's named "largest remaining opportunity": four bare-root/
@@ -5914,6 +5946,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
             avg: kernel.name_str(nat, "avg"),
             pair_fn: kernel.name_str(nat, "pair"),
+            abundant: kernel.name_str(nat, "Abundant"),
+            deficient: kernel.name_str(nat, "Deficient"),
+            stirling_first: kernel.name_str(nat, "stirlingFirst"),
+            stirling_second: kernel.name_str(nat, "stirlingSecond"),
             max_max: {
                 let root = kernel.anon();
                 let max_ns = kernel.name_str(root, "Max");
@@ -6808,6 +6844,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Mathlib.Data.Nat.Pairing` for the autogenesis screen
         // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
         declare_avg_pair_all(&mut d, &p)?;
+        // `Nat.Abundant`/`Nat.Deficient` (`abundant_deficient.rs`): needs
+        // `Nat.sumDivisors` (`perfect.rs`, far above), `Nat.mul` and
+        // `Nat.lt`. Opens `Mathlib.NumberTheory.FactorisationProperties`
+        // for the autogenesis screen (ADR-1095/ADR-1100). Nothing needs
+        // it, so it goes last.
+        declare_abundant_deficient_all(&mut d, &p)?;
+        // `Nat.stirlingFirst`/`Nat.stirlingSecond` (`stirling.rs`): needs
+        // only `Nat.rec`, `Nat.add` and `Nat.mul`, all far above. Opens
+        // `Mathlib.Combinatorics.Enumerative.Stirling` for the autogenesis
+        // screen (ADR-1100). Nothing needs it, so it goes last.
+        declare_stirling_all(&mut d, &p)?;
         // `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` (`minmax.rs`):
         // needs only `Nat.ble`/`bool_select_nat`, both far above. Opens
         // `Init.Data.Nat.MinMax` for the autogenesis screen
@@ -6835,7 +6882,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
 mod nat_prelude_tests;
 
 #[cfg(test)]
+mod abundant_deficient_tests;
+
+#[cfg(test)]
 mod avg_pair_tests;
+
+#[cfg(test)]
+mod stirling_tests;
 
 #[cfg(test)]
 mod minmax_tests;
