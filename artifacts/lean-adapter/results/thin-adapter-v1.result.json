@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "goal_pack_id": "thin-adapter-v1",
+  "goal_pack_file": "artifacts/lean-adapter/goal-pack/thin-adapter-v1.json",
+  "lean_version": "4.30.0",
+  "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+  "environment_id": "lean-4.30.0@d024af099ca4bf2c86f649261ebf59565dc8c622:thin-adapter-v1",
+  "subject": "Nat.add_comm",
+  "borrowed": "Nat.le_refl",
+  "outcomes": [
+    {
+      "category": "success",
+      "expected_verdict": "accepted",
+      "observed_verdict": "accepted",
+      "reason": null,
+      "lean_invoked": true
+    },
+    {
+      "category": "unknown",
+      "expected_verdict": "declined",
+      "observed_verdict": "declined",
+      "reason": "unknown",
+      "lean_invoked": false
+    },
+    {
+      "category": "timeout",
+      "expected_verdict": "declined",
+      "observed_verdict": "declined",
+      "reason": "timeout",
+      "lean_invoked": false
+    },
+    {
+      "category": "unsupported",
+      "expected_verdict": "declined",
+      "observed_verdict": "declined",
+      "reason": "unsupported",
+      "lean_invoked": false
+    },
+    {
+      "category": "malformed_response",
+      "expected_verdict": "declined",
+      "observed_verdict": "declined",
+      "reason": "malformed-response",
+      "lean_invoked": false
+    },
+    {
+      "category": "wrong_goal",
+      "expected_verdict": "rejected",
+      "observed_verdict": "rejected",
+      "reason": "wrong-goal",
+      "lean_invoked": true
+    },
+    {
+      "category": "wrong_environment",
+      "expected_verdict": "rejected",
+      "observed_verdict": "rejected",
+      "reason": "wrong-environment",
+      "lean_invoked": false
+    },
+    {
+      "category": "mutated_proof",
+      "expected_verdict": "rejected",
+      "observed_verdict": "rejected",
+      "reason": "mutated-proof",
+      "lean_invoked": true
+    }
+  ]
+}
