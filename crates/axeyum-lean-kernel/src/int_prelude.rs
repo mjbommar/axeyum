@@ -521,6 +521,12 @@ pub struct IntPrelude {
     /// — see `euler_theorem.rs`'s module doc for the route and for the
     /// precise remaining gap to Euler's totient theorem.
     pub prod_range_if_permute: NameId,
+    /// `prodRangeIf_const_eq_pow_count : ∀ pred a n, Eq Int (prodRangeIf pred
+    ///   (fun _ => a) n) (pow a (Nat.countRange pred n))` — a
+    /// predicate-restricted product where every contributing factor is the
+    /// SAME constant `a` collapses to `a` raised to the count of indices
+    /// where the predicate holds. `euler_theorem.rs::declare_prod_range_if_const_eq_pow_count`.
+    pub prod_range_if_const_eq_pow_count: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1628,6 +1634,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_zero: child(kernel, "prodRangeIf_zero"),
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
         prod_range_if_permute: child(kernel, "prodRangeIf_permute"),
+        prod_range_if_const_eq_pow_count: child(kernel, "prodRangeIf_constEqPowCount"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),

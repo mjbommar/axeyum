@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 224] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 225] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -248,6 +248,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 224] {
         p.factorial_sq_modeq_one,
         p.prod_range_mul,
         p.prod_range_const_pow,
+        p.prod_range_if_const_eq_pow_count,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -1184,6 +1185,137 @@ fn prod_range_if_computes_and_rejects_a_false_value() {
     assert!(
         result.is_err(),
         "the trusted gate accepted a false claim that prodRangeIf (beq _ 2) (ofNat . succ) 4 = 2"
+    );
+}
+
+/// `Int.prodRangeIf_constEqPowCount` applied at a DISCRIMINATING concrete
+/// instance -- `pred i := Nat.ble i 1` (true at `i ∈ {0,1}`, false at
+/// `i ∈ {2,3,4}`), `a := 2`, `n := 5` -- so the count is `2`, not `1`: an
+/// off-by-one in the exponent (the single most likely defect in an
+/// induction pairing `Int.pow`/`Nat.countRange`) would be caught, unlike a
+/// count-of-1 instance where `pow a 1 = a` coincides with `a` itself.
+/// `prodRangeIf pred (fun _ => 2) 5` folds `2 * 2 * 1 * 1 * 1 = 4`, and
+/// `pow 2 (countRange pred 5) = pow 2 2 = 4` independently. The trusted gate
+/// must also REFUSE the false claim that the same product is `8` (`pow 2
+/// 3`, the off-by-one this instance is chosen to catch) -- the same
+/// discriminating-negative-control pattern as
+/// [`prod_range_if_computes_and_rejects_a_false_value`].
+#[test]
+fn prod_range_if_const_eq_pow_count_computes_and_rejects_an_off_by_one_exponent() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    // pred := fun i => Nat.ble i 1.
+    let pred = {
+        let i_fv = 900_400;
+        let i = k.fvar(i_fv);
+        let one_nat = numeral_nat(&mut k, &p, 1);
+        let ble = k.const_(p.nat.ble, vec![]);
+        let applied = k.app(ble, i);
+        let body = k.app(applied, one_nat);
+        let abstracted = k.abstract_fvars(body, &[i_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+    let two_int = numeral(&mut k, &p, 2);
+    let five = numeral_nat(&mut k, &p, 5);
+
+    let lemma = k.const_(p.prod_range_if_const_eq_pow_count, vec![]);
+    let lemma_pred = k.app(lemma, pred);
+    let lemma_pred_a = k.app(lemma_pred, two_int);
+    let applied = k.app(lemma_pred_a, five);
+    let inferred = k
+        .infer(applied)
+        .expect("prod_range_if_const_eq_pow_count must apply at concrete pred, a, n");
+
+    // Build the statement's LHS/RHS directly and confirm the general
+    // theorem's application infers exactly that shape, then confirm both
+    // sides compute to the SAME concrete numeral (4), independently.
+    let two_lambda = k.lam(anon, nat_ty, two_int, BinderInfo::Default);
+    let one_i = k.const_(p.one, vec![]);
+    let selector = {
+        let i_fv = 900_401;
+        let i = k.fvar(i_fv);
+        let pred_i = k.app(pred, i);
+        let two_val = k.app(two_lambda, i);
+        let level_one_local = {
+            let z = k.level_zero();
+            k.level_succ(z)
+        };
+        let bool_rec = k.const_(p.logic.bool_rec, vec![level_one_local]);
+        let bool_ty_local = k.const_(p.logic.bool_, vec![]);
+        let anon2 = k.anon();
+        let int_ty_local = k.const_(p.z, vec![]);
+        let motive = k.lam(anon2, bool_ty_local, int_ty_local, BinderInfo::Default);
+        let with_motive = k.app(bool_rec, motive);
+        let with_false = k.app(with_motive, one_i);
+        let with_true = k.app(with_false, two_val);
+        let body = k.app(with_true, pred_i);
+        let abstracted = k.abstract_fvars(body, &[i_fv]);
+        k.lam(anon2, nat_ty, abstracted, BinderInfo::Default)
+    };
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_sel = k.app(prod_range_c, selector);
+    let lhs_direct = k.app(prod_range_sel, five);
+
+    let count_range_c = k.const_(p.nat.count_range, vec![]);
+    let count_range_pred = k.app(count_range_c, pred);
+    let count5 = k.app(count_range_pred, five);
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_a = k.app(pow_c, two_int);
+    let rhs_direct = k.app(pow_a, count5);
+
+    let int_ty = k.const_(p.z, vec![]);
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "prod_range_if_const_eq_pow_count's instantiated type must match the \
+         direct prodRangeIf/pow application"
+    );
+
+    let four = numeral(&mut k, &p, 4);
+    assert!(
+        k.def_eq(lhs_direct, four),
+        "prodRangeIf (ble _ 1) (fun _ => 2) 5 should compute to 4"
+    );
+    assert!(
+        k.def_eq(rhs_direct, four),
+        "pow 2 (countRange (ble _ 1) 5) should compute to 4"
+    );
+
+    // Negative control: the trusted gate must REFUSE the false claim that
+    // the same product is `8` (the off-by-one exponent `pow 2 3` would give).
+    let eight = numeral(&mut k, &p, 8);
+    let false_stmt = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, eight)
+    };
+    let refl = k.const_(p.logic.eq_refl, vec![level_one]);
+    let false_proof = {
+        let r = k.app(refl, int_ty);
+        k.app(r, four)
+    };
+    let scratch_name = k.name_str(anon, "prod_range_if_const_eq_pow_count_false_claim_scratch");
+    let result = k.add_declaration(Declaration::Theorem {
+        name: scratch_name,
+        uparams: vec![],
+        ty: false_stmt,
+        value: false_proof,
+    });
+    assert!(
+        result.is_err(),
+        "the trusted gate accepted a false claim that prodRangeIf (ble _ 1) (fun _ => 2) 5 = 8"
     );
 }
 
