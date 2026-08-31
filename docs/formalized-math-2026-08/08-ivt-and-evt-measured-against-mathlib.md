@@ -101,7 +101,7 @@ different for the two theorems**:
 | | IVT | EVT |
 | --- | --- | --- |
 | ADR-0603 row 1 — general constructive form | **present** (`CReal.ivt_approx`) | **present as of 2026-08-30** (`CReal.evt_approx_max`, ADR-0895 — was reported ABSENT here and in ADR-0692, both searching for a name, `CReal.supOn_upper_bound`, that never existed) |
-| row 2 — boundary refutation | **present**, with hypothesis class proved and a discriminating non-vacuity check | **present**, hypothesis class proved, **but no non-vacuity evidence in the ledger** |
+| row 2 — boundary refutation | **present**, with hypothesis class proved and a discriminating non-vacuity check | **present as of 2026-08-31**, hypothesis class proved, **now with non-vacuity evidence in the ledger too** (`F:creal-evt-attained-max-decides-sign`'s `hypothesis-class-satisfiable-evt` and `nonvacuity-le-total-absent-evt` evidence rows — was reported missing here) |
 | row 3 — decidable-fragment exact form | present, and the substantive half is `cas-internal` | present, and the substantive half is `cas-internal` |
 | row 4 — labeled import | **present as of 2026-08-31** (`F:ivt-mathlib-import-intermediate-value-icc`, ADR-1090) | **present as of 2026-08-31** (`F:evt-mathlib-import-compact-exists-is-max-on`, ADR-1090) |
 
@@ -140,6 +140,10 @@ evidence in the ledger** — so nothing rules out its being a refutation of an
 empty class. Row 4 (labeled import) is now present for EVT *and* IVT as of
 2026-08-31 (ADR-1090); row 2's non-vacuity gap remains the one closable task
 here.
+row 2's non-vacuity gap is now closed (2026-08-31, lane `evt-row2-nonvacuity`
+— see the table above), and row 4 (labeled import) is ABSENT for EVT *and* for
+IVT. That is a closable task. Neither is the structural absence claimed here
+before.
 
 ## Method, and a correction to the survey this lane was given
 
@@ -462,21 +466,31 @@ is proved rather than assumed, via `CReal.evtLinear_uniformly_continuous`.
 `…_at_v_zero_c_zero`), which guard against the maximality hypothesis being
 vacuously unsatisfiable — a guard IVT's row 2 does not have and should.
 
-Two asymmetries against IVT, both in the ledger rather than in the kernel:
+Two asymmetries against IVT were recorded here against the ledger, not the
+kernel. **Both are now stale, one closed by this lane and one already false
+when written:**
 
-- **`F:creal-evt-attained-max-decides-sign` carries no non-vacuity evidence.**
-  Its two `evidence` entries are "the theorem is in the dependency inventory"
-  and "the `creal` prelude is axiom-free." The absence check that makes the
-  reduction meaningful lives only in IVT's fact. Since the two theorems have
-  the *same* conclusion, the check does cover both mathematically — but an
-  auditor reading the EVT fact alone sees a reduction with no evidence that
+- **~~`F:creal-evt-attained-max-decides-sign` carries no non-vacuity
+  evidence.~~ CLOSED 2026-08-31 (lane `evt-row2-nonvacuity`).** Its two
+  `evidence` entries were "the theorem is in the dependency inventory" and
+  "the `creal` prelude is axiom-free." The absence check that makes the
+  reduction meaningful lived only in IVT's fact. Since the two theorems have
+  the *same* conclusion, the check did cover both mathematically — but an
+  auditor reading the EVT fact alone saw a reduction with no evidence that
   its target is unavailable, which is the "reduction to something the kernel
-  already proves is worth nothing" failure the IVT test was written to prevent.
-- **The fact is `provenance.curation = "generated-unreviewed"` with
-  `external_status` absent**, whereas IVT's row 2 is curated with
-  `external_status = "proved"`. Nothing in the ledger identifies it as a row-2
-  fact at all. The brief's description of it as "looks like row 2" was correct
-  precisely because the ledger does not say so.
+  already proves is worth nothing" failure the IVT test was written to
+  prevent. The fact now carries `hypothesis-class-satisfiable-evt` (citing the
+  two `evt_attained_max_hypothesis_is_satisfiable_at_*` tests below) and
+  `nonvacuity-le-total-absent-evt` (a dedicated EVT mirror of IVT's
+  environment-absence test, naming `CReal.evt_attained_max_decides_sign`
+  directly rather than only citing IVT's).
+- **~~The fact is `provenance.curation = "generated-unreviewed"` with
+  `external_status` absent~~ — this was ALREADY FALSE when written.** Read
+  fresh 2026-08-31: `provenance.curation = "curated"` and
+  `external_status = "proved"`, matching IVT's row 2. Verified by reading the
+  fact file directly rather than inheriting the claim — this repository's own
+  standing lesson about stale obstacle claims, applying to this document a
+  second time in the same paragraph.
 
 Also worth recording: `CReal.ivtPlateau_nonpos_at_zero`, `_nonneg_at_one`,
 `_uniformly_continuous` and `CReal.evtLinear_uniformly_continuous` — the four
@@ -721,7 +735,7 @@ sink the verdict):
 
 | axis | verdict | evidence |
 | --- | --- | --- |
-| Boundary statement (row 2) | **we have one; Mathlib has no counterpart** | `evt_attained_max_decides_sign`. The theorem is genuine; the *ledger evidence* for its non-vacuity is missing (§2). Same status as IVT's boundary row: informative, not part of the two-axis test. |
+| Boundary statement (row 2) | **we have one; Mathlib has no counterpart** | `evt_attained_max_decides_sign`. The theorem is genuine; the *ledger evidence* for its non-vacuity was missing (§2) and is now attached (2026-08-31, lane `evt-row2-nonvacuity`). Same status as IVT's boundary row: informative, not part of the two-axis test. |
 | Generality of structure | **Mathlib is more general, not reachable here** | as for IVT, and more so: Mathlib's is over compact subsets of arbitrary topological spaces. |
 
 **SUPERSEDED 2026-08-30 (ADR-0875): the two EVT rows above are now WRONG, and
@@ -814,9 +828,15 @@ For **EVT** to reach the position IVT already holds, in dependency order:
    row 2 says the `∀n` cannot be pushed inside, row 1 says everything short of
    that is available. **DONE (landed and registered 2026-08-30, ADR-0895 —
    see F:creal-evt-approx-max).**
-3. **A fact for `CReal.evtLinear_uniformly_continuous`**, and non-vacuity
-   evidence on `F:creal-evt-attained-max-decides-sign` — either its own test or
-   an explicit citation of the IVT one, since the conclusion is the same Prop.
+3. **A fact for `CReal.evtLinear_uniformly_continuous`** (still open) — and
+   non-vacuity evidence on `F:creal-evt-attained-max-decides-sign`.
+   **DONE (2026-08-31, lane `evt-row2-nonvacuity`).** Went with its own test
+   rather than a bare citation of the IVT one: `creal_tests::evt_row_two_derives_a_principle_absent_from_the_environment`
+   mirrors `ivt_row_two_derives_a_principle_absent_from_the_environment` but
+   names `CReal.evt_attained_max_decides_sign` directly, and the fact now also
+   cites the pre-existing `evt_attained_max_hypothesis_is_satisfiable_at_*`
+   tests it previously did not. Both checkers verified to fail closed by
+   mutation in a scratch snapshot (never the tracked file).
 
 For **IVT**, three smaller items, none of them blocking the claim:
 
