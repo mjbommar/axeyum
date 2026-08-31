@@ -1605,7 +1605,6 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         d.declare_theorem(p.sub_add_cancel, ty, value)?;
     }
 
-
     // sub_eq_zero_of_le : ∀ a b, Le a b → sub a b = zero
     d.theorem(p.sub_eq_zero_of_le, 2, &|d, v| {
         let (a, b) = (v[0], v[1]);

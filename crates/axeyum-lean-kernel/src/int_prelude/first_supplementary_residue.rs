@@ -189,10 +189,7 @@ fn reflect_maps_into(d: &mut IntDev<'_>, m: ExprId) -> ExprId {
     let pred_lt = d.lemma(np.sub_lt, &[m, one_nat, pos_m, pos_one]);
     let bounded = d.lemma(np.sub_le, &[pm, i]);
     let reflected = d.sub(pm, i);
-    let body = d.lemma(
-        np.lt_of_le_of_lt,
-        &[reflected, pm, m, bounded, pred_lt],
-    );
+    let body = d.lemma(np.lt_of_le_of_lt, &[reflected, pm, m, bounded, pred_lt]);
 
     let with_hi = d.lam_fv(hi_fv, hi_ty, body);
     d.lam_fv(i_fv, nat, with_hi)
