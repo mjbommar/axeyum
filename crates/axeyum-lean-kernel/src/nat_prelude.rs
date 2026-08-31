@@ -185,7 +185,7 @@ mod fibonacci;
 mod finite;
 mod finite_set;
 mod gauss_lemma;
-mod half_ceil_parity;
+pub(crate) mod half_ceil_parity;
 mod gcd;
 mod gcd_dvd_mirrors;
 mod gcd_mul_right;

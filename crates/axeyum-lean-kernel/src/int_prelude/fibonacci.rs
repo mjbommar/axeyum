@@ -209,7 +209,7 @@ fn neg_sub_eq(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
 }
 
 /// `Eq Int (pow (neg one) (succ k)) (neg (pow (neg one) k))`.
-fn pow_neg_one_succ(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
+pub(super) fn pow_neg_one_succ(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
     let p = d.int();
     let one_i = d.ione();
     let neg_one = d.ineg(one_i);
@@ -936,7 +936,7 @@ fn succ_double_eq_nat(d: &mut IntDev<'_>, m: ExprId) -> ExprId {
 /// symbolic `succ k`, not the literal `two` the `mul`-shaped version has), so
 /// the step case bridges with an actual equation ([`succ_double_eq_nat`])
 /// lifted to `Int` via `nat_eq_to_int`, rather than `d.irefl`.
-fn pow_neg_one_add_self(d: &mut IntDev<'_>, j: ExprId) -> ExprId {
+pub(super) fn pow_neg_one_add_self(d: &mut IntDev<'_>, j: ExprId) -> ExprId {
     let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
         let exponent = d.add(v, v);
         let one_nat = d.num(1);

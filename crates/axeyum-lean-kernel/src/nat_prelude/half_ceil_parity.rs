@@ -81,7 +81,7 @@ use crate::expr::ExprId;
 /// Index `r` is the shape of an `m` with `m ≡ r (mod 4)`; at `pp := 2m+1` those
 /// are `pp = 8q+1`, `8q+3`, `8q+5`, `8q+7` respectively — i.e. index `0` and
 /// `3` are exactly `p ≡ ±1 (mod 8)`.
-fn class_shape(d: &mut NatDev<'_>, q: ExprId, r: u8) -> ExprId {
+pub(crate) fn class_shape<D: NatOps>(d: &mut D, q: ExprId, r: u8) -> ExprId {
     let qq = d.add(q, q);
     let sqq = d.succ(qq);
     match r {
@@ -99,7 +99,13 @@ fn class_shape(d: &mut NatDev<'_>, q: ExprId, r: u8) -> ExprId {
 }
 
 /// `Or (Eq m (class_shape q a)) (Eq m (class_shape q b))`.
-fn class_disjunction(d: &mut NatDev<'_>, m: ExprId, q: ExprId, a: u8, b: u8) -> ExprId {
+pub(crate) fn class_disjunction<D: NatOps>(
+    d: &mut D,
+    m: ExprId,
+    q: ExprId,
+    a: u8,
+    b: u8,
+) -> ExprId {
     let logic = d.prelude().logic;
     let sa = class_shape(d, q, a);
     let sb = class_shape(d, q, b);
@@ -110,7 +116,7 @@ fn class_disjunction(d: &mut NatDev<'_>, m: ExprId, q: ExprId, a: u8, b: u8) -> 
 
 /// The four component types of the statement, for a given `m`:
 /// `(p ≡ ±1 (mod 8) classes, p ≡ ±3 (mod 8) classes, Even N, Odd N)`.
-fn components(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> [ExprId; 4] {
+pub(crate) fn components<D: NatOps>(d: &mut D, p: &NatPrelude, m: ExprId) -> [ExprId; 4] {
     let p = *p;
     let two = d.num(2);
     let half = d.div(m, two);

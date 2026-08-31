@@ -98,6 +98,7 @@ mod euler_unit_range;
 mod exists_gcd_one;
 mod fibonacci;
 mod gauss_assembly;
+mod second_supplementary;
 mod gauss_factorial_coprime;
 mod gauss_factorial_product;
 mod gauss_sign_product;
@@ -574,6 +575,26 @@ pub struct IntPrelude {
     /// misnomer `Nat.gauss_lemma` carries, and the reason this declaration is
     /// spelled out rather than taking the bare name.
     pub gauss_lemma_sign_count: NameId,
+
+    // --- the second supplementary law of quadratic reciprocity (ADR-1150) ---
+    /// `Int.pow_neg_one_of_even : ∀ (n : Nat), Nat.Even n →
+    ///   Eq Int (pow (neg one) n) one` (`second_supplementary.rs`).
+    pub pow_neg_one_of_even: NameId,
+    /// `Int.pow_neg_one_of_odd : ∀ (n : Nat), Nat.Odd n →
+    ///   Eq Int (pow (neg one) n) (neg one)` (`second_supplementary.rs`).
+    pub pow_neg_one_of_odd: NameId,
+    /// `Int.secondSupplementaryLaw : ∀ m, Nat.PrimeCond (succ (mul 2 m)) →`
+    /// `  Or (And <p = 8q+1 or 8q+7> (ModEq (ofNat p) (pow (ofNat 2) m) one))`
+    /// `     (And <p = 8q+3 or 8q+5> (ModEq (ofNat p) (pow (ofNat 2) m) (neg one)))`
+    /// — **the second supplementary law of quadratic reciprocity** in its
+    /// Legendre-symbol form: for an odd prime `p = 2m+1`,
+    /// `2^((p-1)/2) ≡ 1 [p]` exactly when `p ≡ ±1 (mod 8)` and `≡ -1` exactly
+    /// when `p ≡ ±3 (mod 8)`. The four `m`-shapes are exhaustive and mutually
+    /// exclusive, so this single disjunction gives both directions of each
+    /// line. Over `Int.gaussLemmaSignCount` (ADR-1130),
+    /// `Nat.gaussNegCountTwoClosedForm` and `Nat.half_ceil_parity`
+    /// (ADR-1150). `second_supplementary.rs`.
+    pub second_supplementary_law: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1732,6 +1753,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         coprime_factorial_of_lt_prime: child(kernel, "coprimeFactorialOfLtPrime"),
         gauss_term_mod_eq: child(kernel, "gaussTermModEq"),
         gauss_lemma_sign_count: child(kernel, "gaussLemmaSignCount"),
+        pow_neg_one_of_even: child(kernel, "pow_neg_one_of_even"),
+        pow_neg_one_of_odd: child(kernel, "pow_neg_one_of_odd"),
+        second_supplementary_law: child(kernel, "secondSupplementaryLaw"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -2201,6 +2225,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         gauss_term_congruence::declare_gauss_term_mod_eq(&mut d)?;
         gauss_assembly::declare_gauss_lemma(&mut d)?;
+        // The second supplementary law of quadratic reciprocity (ADR-1150):
+        // needs `gaussLemmaSignCount` (just above), `Nat.half_ceil_parity`,
+        // `Nat.gaussNegCountTwoClosedForm` and `Nat.coprime_two_left` (all in
+        // the Nat prelude), plus `fibonacci.rs`'s `pow_neg_one_*` helpers.
+        second_supplementary::declare_second_supplementary_all(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;
