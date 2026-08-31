@@ -680,3 +680,41 @@ Python gate.
 This slice is intentionally not called the Python machine interface complete.
 States, memory, instructions, decode/encode, step, trace, RV64, x86-64, and the
 cross-machine relation remain unbound.
+
+## 2026-08-30 — Python full-gate crash and stale-control repair
+
+Investigated the aggregate Python failures rather than excluding the agent
+tests. The prelude crash was reproducible without pytest: a fresh interpreter
+built `nat`, `int`, `logic`, and `rat`, then `build_creal_prelude()` exited 139;
+a second fresh interpreter did the same in `build_complex_prelude()`. Both had
+outgrown the main thread's 8 MB stack. The existing `cpoint` binding already
+documented and solved the same failure by building on a scoped 64 MB thread.
+Moved `creal` and `complex` across that boundary, retaining GIL release, panic
+conversion, and the returned kernel. The seven-prelude census now passes in
+115.75 seconds instead of killing CPython.
+
+The retrieval-miss control named a fact that had left the live eligible
+population. It now derives an eligible fact for which the authoritative export
+resolver returns `ExportUnavailable`, and fails explicitly if the corpus no
+longer contains such a control case. The focused test reaches the intended
+`retrieval-miss` outcome again.
+
+After those repairs, the complete suite runs to completion rather than
+segfaulting: 1,846 pass and 34 skip. Nine failures remain in unrelated,
+already-drifted knowledge/autogenesis checks: two bounded-application census
+expectations, one changed dependency count, three parsers that assume an older
+validator output grammar, one clean fixture rejected by the current validator,
+one nursery population mismatch, and one standard-library-only scripts rule
+breached by a tracked generator. This lane does not reinterpret those nine as
+machine-binding failures, but the aggregate `just py-check` remains red until
+their owning artifacts are reconciled.
+
+Those nine results came from the lane's superseded base. Before integration,
+`origin/main` was fetched and found 1,825 commits ahead; the four lane commits
+were rebased cleanly onto that authoritative head. The current-base gates must
+therefore be rerun before retaining or clearing any of the nine diagnoses.
+
+The current-base rerun completed in 563.08 seconds with the same exact result:
+1,846 passed, 34 skipped, and the nine named knowledge/autogenesis failures.
+The machine projection, prelude crash repair, and retrieval control all passed
+inside that run; the aggregate gate remains accurately red.
