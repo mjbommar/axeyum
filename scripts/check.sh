@@ -359,8 +359,18 @@ step absence-claims-tests python3 -m unittest scripts.tests.test_check_absence_c
 # ADR-0745: the number-theory certificate checkers. Asserts a ratcheted NONZERO
 # fixture count, because a bare `cargo test --lib <filter>` exits 0 when the
 # filter matches nothing. The guard-kill mutation sweep is
-# `scripts/tests/test-ntheory-certificate-guards.sh`, deliberately not here.
+# `scripts/tests/test-ntheory-certificate-guards.sh`.
 step ntheory-certificates scripts/check-ntheory-certificates.sh
+# ...and that mutation sweep itself, registered 2026-08-31 (absence-and-orphans
+# lane, `scripts/check-control-registration.sh` G2) after it sat unregistered
+# and unrun by any gate since it was written -- "a control nobody invokes
+# cannot fail, so it is not a control." Deletes each of the 26 guards across
+# the four certificate checkers one at a time and confirms the survivor set
+# equals exactly the two documented resource guards (G1-subject-range,
+# G5-exponent-and-base, G10-depth-bound are total-function/depth checks that
+# panic rather than refuse when removed, per the script's own header). ~50s
+# uncontended, ~23 incremental `axeyum-cas` builds via cargo-serialized.sh.
+step ntheory-certificate-guards ./scripts/tests/test-ntheory-certificate-guards.sh
 step cas-substance python3 scripts/check-cas-substance.py
 step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substance
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
@@ -408,6 +418,13 @@ step falsification-screen python3 scripts/check-falsification-screen.py --check
 # test-falsification-screen-mutation-verify.sh to kill EXACTLY ONE test when
 # gutted, in a scratch copy (never the shared checkout).
 step falsification-screen-tests python3 -m unittest scripts.tests.test_falsification_screen
+# ...and the mutation-kill verification ITSELF, registered 2026-08-31
+# (absence-and-orphans lane, `scripts/check-control-registration.sh` G2) --
+# it existed and passed since this section was written but nothing had ever
+# invoked it automatically. Guts each of the 16 guard functions in a SCRATCH
+# COPY to unconditionally `return []` and confirms EXACTLY ONE test dies per
+# guard. ~2s, no cargo.
+step falsification-screen-mutation-verify ./scripts/tests/test-falsification-screen-mutation-verify.sh
 # S2 of the same roadmap: the universal trust and circularity audit. Reads the
 # whole constructed declaration surface out of `kernel_declaration_projection`
 # and checks every kernel-route settled fact against its own transitive
