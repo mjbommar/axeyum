@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1960,
+    "min_identity_bound": 1967,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -4003,6 +4003,13 @@
       "statement_sha256": "5e87dd7fcda1aa7adbea92274b0ca6b3587d919eaf7c4eb0fc3e51c2dfc3f725",
       "prose_sha256": "0bc7e1aeda009e6a1829bc4742adaacf17a37eb44b74e00f0a1613d4061b0ae9",
       "kernel_theorem": "CReal.lt_trans"
+    },
+    {
+      "fact_id": "F:creal-lub-decides-em",
+      "language": "lean4",
+      "statement_sha256": "ba0d3c2f474bb105b4f9d6a9eaa07346a375a6094fcc5d623bbb66701cb71b90",
+      "prose_sha256": "4f6d20fdf30e551e6849773dc9f4c0456e6803fb24a03830e6b652c77c7edecd",
+      "kernel_theorem": "CReal.lub_decides_em"
     },
     {
       "fact_id": "F:creal-mag-bound-le-sumrange-of-lt",
@@ -8630,6 +8637,20 @@
       ]
     },
     {
+      "fact_id": "F:ml430-int-exists-gcd-one-657db3e2",
+      "language": "lean4-surface",
+      "statement_sha256": "7ac14acd8599aa51376190148d84829e7a6259bf2a6d101ee6aa6fb62afbb6c7",
+      "prose_sha256": "e2866724c233145581984a65888d1bc7dce66459217182c6db9b0901d4b1814a",
+      "kernel_theorem": "Int.exists_gcd_one'"
+    },
+    {
+      "fact_id": "F:ml430-int-exists-gcd-one-d8820780",
+      "language": "lean4-surface",
+      "statement_sha256": "1ff320623dae35443450e7932d0975de4e2dda622612dd400238eb54237d7190",
+      "prose_sha256": "2af0cc6d58c56e3e4fc0d41e3631f45df924322fc1f4e850024b4827bf01b9d3",
+      "kernel_theorem": "Int.exists_gcd_one"
+    },
+    {
       "fact_id": "F:ml430-int-fib-add-181b6a2c",
       "language": "lean4-surface",
       "statement_sha256": "51a6a61625f3e4681344cfebadfb51041af1035d31edb63a0c635208d1166ca2",
@@ -8806,6 +8827,13 @@
           "prose_sha256": "873270e694e40d6bac413aac6ba45fbc125048a05adc70cd66961cdeb0fef3f1"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-int-gcd-dvd-iff-66fa03b3",
+      "language": "lean4-surface",
+      "statement_sha256": "d25e04589eafcfb31bb77d385de856925645c4dadc2d23577d7f56c8c2df8b47",
+      "prose_sha256": "ee31fd19580569274d8c98979d06abef0381cba44bbe5400230c2fca232cbf25",
+      "kernel_theorem": "Int.gcd_dvd_iff"
     },
     {
       "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
@@ -9553,10 +9581,24 @@
       "prose_sha256": "8d1544e43b390a8835d2fd39f6e47853b532ff3c423a37234f4545c4ddb8f460"
     },
     {
+      "fact_id": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
+      "language": "lean4-surface",
+      "statement_sha256": "a59400c3f30e0394ba09196438136f65637eb0201f4d94bde57f9c05e83de7c9",
+      "prose_sha256": "ec4853c8b342832ad5907a7e25198d570cc093a4468b5e98260f1d88031b83fe",
+      "kernel_theorem": "Nat.add_factorial_lt_factorial_add"
+    },
+    {
       "fact_id": "F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb",
       "language": "lean4-surface",
       "statement_sha256": "bb45cc493d440eebb047ba2d8de578e76f310344af44f368604564182d77506d",
       "prose_sha256": "1b1bb20d0a0f0796d0ada51384928c4cbe52e2199acf3d11482f342d286fb13b"
+    },
+    {
+      "fact_id": "F:ml430-nat-add-factorial-succ-lt-factorial-add-succ-ec0fa8d3",
+      "language": "lean4-surface",
+      "statement_sha256": "d498dfcf2caa776c63654dad46b71b14dd767f75e73f7d0451219b75b22ca5e4",
+      "prose_sha256": "6a78516c26cab60f85a08d7780ab839203eaaba0d7a16ffdedcc39efe2c68383",
+      "kernel_theorem": "Nat.add_factorial_succ_lt_factorial_add_succ"
     },
     {
       "fact_id": "F:ml430-nat-add-mod-left-6b337077",
@@ -10419,6 +10461,13 @@
           "prose_sha256": "642c0948d03b650d4d8a825bb7c0d15bd3f0052db9f15993c3e7078202ea7abd"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
+      "language": "lean4-surface",
+      "statement_sha256": "06fc8c97ef67f51a6fdf830c6e6c7b31af8e771f815292da2ec814d64b4c7712",
+      "prose_sha256": "967cab184f22a92c012e188820b6704fb85f645c22766f5bc07723e676b89654",
+      "kernel_theorem": "Nat.coprime_mul_add_mul_ne_mul"
     },
     {
       "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",

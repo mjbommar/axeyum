@@ -8,7 +8,7 @@ merely `≡ ±1`) and `Int.euler_criterion_neg_one_imp_not_residue` (odd-prime
 non-residue detector), both axiom-free, in a new
 `crates/axeyum-lean-kernel/src/int_prelude/qr_criterion.rs`. Full details,
 route, and exact remaining work in
-[ADR-0960](../research/09-decisions/adr-0960-euler-criterion-necessary-direction-lands-second-supplementary-law-stays-open.md).
+[ADR-0960](../../research/09-decisions/adr-0960-euler-criterion-necessary-direction-lands-second-supplementary-law-stays-open.md).
 
 **The second supplementary law (2 is a QR mod `p` iff `p ≡ ±1 mod 8`) is NOT
 reached and is not reachable from what landed here alone.** It needs one of:

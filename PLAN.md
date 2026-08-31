@@ -139,6 +139,14 @@ now. Nothing was deleted.
 | 2026-08-31 | `a0ffe4a5c` | feat: `Nat.add_factorial_le_factorial_add` + succ corollary, with tests (255 pass) |
 | 2026-08-31 | `42a386df5` | facts: flip both `add_factorial_le_factorial_add` facts to proved |
 | 2026-08-31 | `552837296` | style: rustfmt this lane's new files |
+| 2026-08-31 | `1bfe38739` | feat: `Nat.add_factorial_lt_factorial_add` + succ corollary, with tests (nat 257 pass) |
+| 2026-08-31 | `1faff5f53` | facts: flip both strict-factorial-inequality facts to proved |
+| 2026-08-31 | `ddb2e44b0` | feat: `Int.gcd_dvd_iff` (int 52 pass) |
+| 2026-08-31 | `34d932896` | facts: flip `Int.gcd_dvd_iff` to proved |
+| 2026-08-31 | `7a0de986c` | feat: `Int.exists_gcd_one` + `Int.exists_gcd_one'` (int 52 pass) |
+| 2026-08-31 | `c7d5bdb19` | facts: flip both `exists_gcd_one` facts to proved |
+| 2026-08-31 | `0b488679f` | feat: `Nat.Coprime.mul_add_mul_ne_mul` (nat 257 pass); rustfmt catch-up |
+| 2026-08-31 | `4c8a81d76` | facts: flip `Nat.coprime_mul_add_mul_ne_mul` to proved |
 | 2026-08-31 | `b12847d90` | `Int.euler_unit_coprime_iff` — the full predicate-preservation iff, axiom-free, no new induction; closes item 2 of the Fermat->Euler handoff. |
 | 2026-08-31 | five-risk-coverage-audit | Per-risk audit of the L0 safety programme: contamination reaches ~1,956 facts but 28% of those subjects are regex-chosen; vacuity reaches 8 of 2,167; `independent_replay` at 7 is mismeasured in both directions; 539 facts hold a prelude-wide sweep or nothing; no L0 gate runs in CI or pre-push (ADR-1000). Report only — nothing repaired. |
 | 2026-08-31 | gauss-lemma-closed-form-b | `Nat.gaussCountBleClosedFormDisj` (general `countRange` closed-form invariant) and `Nat.gaussNegCountTwoClosedForm` (`gaussNegCount (succ (mul 2 m)) 2 m = sub m (div m 2)`, the classical odd-prime closed form) land axiom-free in `nat_prelude/gauss_lemma.rs` (ADR-0985), executing the route ADR-0970 sized and left open; agreement with all six landed `a := 2` concrete instances recomputed independently; the connecting theorem to `a^m mod p` stays open, unchanged sizing. |
@@ -147,6 +155,10 @@ now. Nothing was deleted.
 | 2026-08-31 | gauss-pairing-lemma | `Nat.least_residue_ne_zero_of_coprime` and `Nat.gaussFold`/`Nat.gauss_fold_injective_of_coprime` land axiom-free in `nat_prelude/gauss_lemma.rs` -- the nonzero-residue lemma ADR-0990 flagged absent, and the mathematically hard half (same-sign/opposite-sign case split) of Gauss's-lemma piece 2 (the pairing lemma). `MapsInto` and the 0-indexed shift wrapper `Int.prodRange_permute` needs are precisely sized in ADR-1015 and NOT built this session -- one new arithmetic fact (`div (succ (mul 2 m)) 2 = m`) is the sole missing ingredient. |
 | 2026-08-31 | `74ca7790b` | `proof_plan.rs` + compiler; three families rewritten; digest probe |
 | 2026-08-31 | `ba2b22bbb` | add missing type-leak decline test; mutation-verify all 5 guards |
+| 2026-08-31 | `a6ccca023` | `creal/lub_boundary.rs`: `CReal.lubSet`, `lubSet_inhabited`, `lubSet_bounded`, `lub_decides_em` — ADR-0603 row 2 for the least upper bound property |
+| 2026-08-31 | `29c593d2a` | `creal/lub_boundary_tests.rs`: non-vacuity discharge at `A := True`, negative control, statement pin, footprint check |
+| 2026-08-31 | `96c5ea9b8` | ADR-1010; `graded-statement-families.md` §2 corrected with the superseded absence quoted in place; `spivak.md` ch. 8 row; `F:creal-lub-decides-em` and its statement pin |
+| 2026-08-31 | `6ff707144` | record `lub_boundary` in the pinned build order — full `creal::` sweep 206 passed, 0 failed |
 | 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-30 | queue-sweep | No fact closed. All three assigned non-sign dispatchable facts (`totient_dvd_of_dvd`, `totient_gcd_mul_totient_mul`, `eq_or_eq_of_totient_eq_totient`) declined for this session: correctly-stated Mathlib mirrors this kernel does not yet have the general multiplicative-function theory to prove, distinct from the divergence-registry category. Corrected a false numerical claim in `301-totient-multiplicative.md`'s Step 4 (`count_range_row_major` is NOT coprimality-independent — fails at every tested non-coprime pair, e.g. `totient(4)=2 ≠ totient(2)*totient(2)=1`), which would have sent the next totient lane at a statement a sound kernel cannot admit. |
@@ -34821,7 +34833,7 @@ merely `≡ ±1`) and `Int.euler_criterion_neg_one_imp_not_residue` (odd-prime
 non-residue detector), both axiom-free, in a new
 `crates/axeyum-lean-kernel/src/int_prelude/qr_criterion.rs`. Full details,
 route, and exact remaining work in
-[ADR-0960](../research/09-decisions/adr-0960-euler-criterion-necessary-direction-lands-second-supplementary-law-stays-open.md).
+[ADR-0960](docs/research/09-decisions/adr-0960-euler-criterion-necessary-direction-lands-second-supplementary-law-stays-open.md).
 
 **The second supplementary law (2 is a QR mod `p` iff `p ≡ ±1 mod 8`) is NOT
 reached and is not reachable from what landed here alone.** It needs one of:
@@ -36706,6 +36718,102 @@ final `add_declaration` — the same technique `divisibility.rs`'s existing
 `factorial_lt_of_lt` already used, found by reading that file rather than
 assuming a named rewrite step was needed everywhere `factorial(succ _)`
 appears.
+
+**Done (`DONE`, draw11-theorems-e, 2026-08-31).** Measured 10 dispatchable
+at session start (`python3 scripts/check-dispatchable-frontier.py`),
+matching the brief. Closed **6** `ml430` mirrors, all axiom-free
+(`theorem_axiom_footprint`, `0` in every matched row):
+
+- `Nat.add_factorial_lt_factorial_add : 2<=i -> 1<=n -> i+n! < (i+n)!` and
+  its succ corollary `Nat.add_factorial_succ_lt_factorial_add_succ` — the
+  strict companions of a sibling lane's already-proved `<=` pair.
+  `le_dest`+`Exists.rec` peel `2<=i` into `i = 2+k`, then a `k`-indexed
+  strict induction: base (`k=0`) via `factorial_lt_of_lt`+`factorial_le`
+  (`factorial 2 ≡ 2` by pure `δ/ι`)+`mul_le_mul_left`; step reuses the `<=`
+  proof's own step function verbatim, since `Lt a b` is definitionally
+  `Le (succ a) b` and lands the IH one `succ` ahead for free. New module
+  `nat_prelude/add_factorial_lt.rs`.
+- `Int.gcd_dvd_iff : gcd a b | n <-> exists x y, n = a*x+b*y` — both
+  directions route through the already-checked Bezout identity at the
+  NAMED witnesses `gcdA`/`gcdB` (`gcd_eq_gcd_ab_witnesses`), so only the
+  fact's own quantifiers need elimination/introduction: a local
+  `int_exists_elim` (the shared `int_prelude::ops::exists_elim` hardcodes
+  the `Nat`-quantified case) for the reverse direction, `Nat.dvd`'s own
+  witness scaling both Bezout coefficients for the forward direction. One
+  real bug caught: `icongr` is Int-typed and cannot consume a `Nat`
+  equality directly — needed `nat_eq_to_int` (cross-carrier lift), the
+  exact trap CLAUDE.md documents. New module `int_prelude/gcd_dvd_iff.rs`.
+- `Int.exists_gcd_one`/`Int.exists_gcd_one'` — dividing `m,n` by their own
+  `gcd` leaves a coprime pair. Both reuse `gcd.rs`'s already-checked
+  `gcd_div_gcd_div_gcd` for coprimality and rebuild that theorem's PRIVATE
+  `exact` closure locally (`a = c*(a.ediv c)`, via
+  `emod_eq_zero_iff_dvd`+`ediv_add_emod`) to get the quotient equations,
+  commuted with `mul_comm` to the fact's stated order. The primed mirror
+  reuses the identical construction at `g := gcd m n`, with the hypothesis
+  itself doubling as the `0 < g` conjunct — no new arithmetic, one more
+  `Exists.intro`/`And.intro` layer. New module `int_prelude/exists_gcd_one.rs`.
+- `Nat.Coprime.mul_add_mul_ne_mul : Coprime m n -> a<>0 -> b<>0 -> a*m+b*n
+  <> m*n` — the one genuinely non-trivial proof this session. A
+  `cases_zero_succ` split on `m` then `n` (outer hypotheses folded into the
+  per-branch motive, per that helper's own doc) handles the `m=0`/`n=0`
+  degenerate cases (`m=0` forces `n=1` and collapses to `b=0`,
+  contradicting `b<>0`; `n=0` is more direct — pure `δ/ι` on both sides).
+  The `m,n>=1` case is Gauss's lemma run in both directions (`m|b`, `n|a`
+  via `gauss_lemma`/`coprime_symmetric`) then `le_of_dvd` to get `m<=b`,
+  `n<=a`, lifted via `mul_le_mul_left`+`mul_comm` to `X+X<=X` (`X:=m*n`,
+  `X>=1` via `one_le_mul`), refuted by `lt_irrefl`. New module
+  `nat_prelude/coprime_mul_add_mul_ne_mul.rs`.
+
+Every declaration compiled and was kernel-accepted on its first or second
+attempt (one Int/Nat carrier-mismatch bug, one missing `pi_fv`/`lam_fv`
+wrap for a non-arity-bound variable, both caught by a temporary debug test
+rendering the `TypeMismatch` operands via `Kernel::render_lean` rather than
+guessing). All six facts flipped to `proved` with kernel-term +
+axiom-footprint evidence (checker commands verified to actually match
+before writing them into the JSON — including the `theorem_axiom_footprint`
+substring-match trap on `Int.exists_gcd_one'`, and the
+lowercase-vs-Mathlib-namespace trap on `Nat.coprime_mul_add_mul_ne_mul`),
+`depends_on` derived via `check-fact-depends-derived.py --fix`, statements
+pinned via `check-settled-fact-statements.py --write` each time (the first
+`--write` backfilled `kernel_theorem`/`history` for the WHOLE ledger, since
+the committed pins file predated those fields for many facts other lanes
+had already added `formal.kernel_theorem` to — a large but deterministic
+diff, not scope creep).
+
+**Full `nat_prelude::`/`int_prelude::` sweeps after every change: nat 257
+passed 0 failed throughout (256 baseline, +1 for the strict-factorial pair
+declared together, +0 more until the coprime fact, then 257); int 52
+passed 0 failed throughout (51 baseline +1 for `gcd_dvd_iff`, then +2 for
+the `exists_gcd_one` pair — pin recounted 219→220→222 across the two
+int_prelude landings).** No regressions at any step. `bash
+scripts/lane-prepush-fmt.sh` run before the final commit (reformatted this
+lane's own `add_factorial_lt.rs`, which had never been run through
+`rustfmt` before its first commit — whitespace only, re-verified green).
+
+Holdout isolation: `python3 scripts/check-autogenesis-holdout-isolation.py`
+→ `PASS`, `held_out=146`, measured before this lane's first edit and again
+after every subsequent flip — unchanged throughout.
+`artifacts/autogenesis/` was never touched.
+
+**4 declined without attempting, all for measured DIFFICULTY, matching the
+brief's own sizing and re-verified against the live frontier before
+stopping:** `Nat.size_bit`/`Nat.size_le_size` (`Nat.size` is fuel-indexed on
+the first argument, needing the same fuel-sufficiency machinery `land`/`lor`
+required — not attempted); `Nat.Squarefree.ext_iff` (needs unique
+factorization, which `nat_prelude/factorization.rs`'s own module doc says
+this kernel cannot express — no `List`/`Finset`); `Nat.fermat_primefactors_one_lt`
+(needs multiplicative-order theory plus a quadratic-reciprocity supplementary
+law; a sibling lane sized and declined this same target the same session).
+
+**Hardest thing this session:** the `Int.gcd_dvd_iff` `TypeMismatch{expected:
+Int, got: AxNat}` from passing a `Nat`-typed equality (`heq : Eq Nat n
+(mul g q)`, from `Nat.dvd`'s witness) directly into `icongr`, the Int-typed
+congruence combinator — a carrier mismatch that compiles fine (both are
+`ExprId`) and only fails at kernel-check time, with an error naming neither
+side by name. The fix (`nat_eq_to_int`, the cross-carrier lift
+`int_prelude::ops` already provides for exactly this) was findable only by
+grepping for how `sign.rs`'s `mul_assoc` proof handles the same
+Nat-equation-lifted-to-Int shape in its `(OfNat,OfNat,OfNat)` branch.
 
 ## Status (2026-08-30) -- DONE for this session
 
@@ -39967,6 +40075,104 @@ propositions** among the 2,121 `proved` facts alone.
 Nothing else in this repository changed status: no fact's `epistemic_status`
 flipped, no held-out nursery row was touched, `scripts/check-trust-closure.py`
 (S2's own file) was not edited.
+
+Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
+
+Outcome 1 of the three the brief listed: **a proved implication from a stated
+LUB principle to an omniscience principle**. The principle is *unrestricted
+excluded middle*, not the analytic LLPO the two sibling rows reach.
+
+## What was there before
+
+`docs/curriculum/graded-statement-families.md` §2 recorded LUB's row 2 as
+**pure absence** — "the unavailability is asserted, not proved" — the one
+clean absence in that note, and the load-bearing one, since row 2 is the axis
+ADR-0603's dominance argument rests on. An asserted unavailability cannot
+fail, so it is not evidence.
+
+## What the two existing row-2 results look like
+
+Both are first-order implications taking the CLASSICAL CONCLUSION at a
+specific family as a hypothesis and deriving a decision principle, both with
+their family's hypothesis-class membership proved rather than asserted:
+
+- `CReal.evt_attained_max_decides_sign` (`creal/extreme_value.rs`), family
+  `CReal.evtLinear v := fun t => mul t v`, plus
+  `evtLinear_uniformly_continuous`.
+- `CReal.ivt_exact_root_decides_sign` (`creal/ivt_boundary.rs`), family
+  `CReal.ivtPlateau`, plus its three hypothesis lemmas.
+
+Both land on `∀ v, Or (le v zero) (le zero v)` — **analytic LLPO**, i.e. the
+`lt_total` `creal/cotransitivity.rs` says is neither assumed nor provable.
+Both carry an "Honest scope" section: the classical conclusion is proved at
+least as strong as a principle this kernel lacks, not proved false.
+
+## What landed
+
+`crates/axeyum-lean-kernel/src/creal/lub_boundary.rs` — four declarations, all
+**first-attempt kernel accepts**, all footprint **0** (read from
+`kernel_declaration_projection`, not from prose):
+
+| declaration | type (`render_lean` column, verbatim) | kind |
+|---|---|---|
+| `CReal.lubSet` | `(x0 : Prop) -> ((x1 : CReal) -> Prop)` | definition |
+| `CReal.lubSet_inhabited` | `(x0 : Prop) -> CReal.lubSet x0 CReal.zero` | theorem |
+| `CReal.lubSet_bounded` | `(x0 : Prop) -> ((x1 : CReal) -> ((x2 : CReal.lubSet x0 x1) -> CReal.le x1 CReal.one))` | theorem |
+| `CReal.lub_decides_em` | `(x0 : Prop) -> ((x1 : CReal) -> ((x2 : ((x2 : CReal) -> ((x3 : CReal.lubSet x0 x2) -> CReal.le x2 x1))) -> ((x3 : ((x3 : CReal) -> ((x4 : CReal.lt x3 x1) -> Exists.{1} CReal (fun (x5 : CReal) => And (CReal.lubSet x0 x5) (CReal.lt x3 x5))))) -> Or x0 (Not x0))))` | theorem |
+
+`CReal.lubSet A := fun x => Or (le x zero) (And A (le x one))` — the set
+`(−∞, 0] ∪ ((−∞, 1] if A)`. Spivak's P13 quantifies over an ARBITRARY
+inhabited bounded-above set, so a set carved out by an arbitrary `Prop` is
+faithful to the classical statement rather than a strawman.
+
+Why the conclusion is stronger than the siblings': `Or A (Not A)` for an
+arbitrary `Prop` is unrestricted excluded middle. This kernel has only
+`Decidable.em` (which takes a `Decidable` instance) and the four conditional
+bridges that take unrestricted `em` as a HYPOTHESIS. LLPO is consistent with
+BISH; `em` is not.
+
+Why Bishop's supremum and not the classical one: the classical leastness
+clause yields only `¬¬A` here, and `¬¬A → A` is itself the principle at issue,
+so the reduction through it would be circular. The approximation property is
+also exactly the clause `CReal.supOn_approx_lub` proves for the located case,
+so row 2 refutes precisely the generalisation row 1 stops short of.
+
+## Verification
+
+- `creal_prelude_builds` — passes. Cost measured by toggling the build step in
+  this worktree: **120.6 s** stubbed out against **130.5 s / 134.0 s** live
+  (two runs), so ~+11 s / 9%. Not a multiple.
+- `creal::lub_boundary_tests` — **4 passed**, in a new file rather than in
+  `creal_tests.rs` (the append point every concurrent `creal` lane collides
+  on). The one that matters is the ADR-0603 Amendment 2 non-vacuity control:
+  at `A := True` BOTH supremum hypotheses are discharged and `Kernel::infer`
+  accepts the instance, conclusion pinned verbatim against an independently
+  built `Or True (Not True)`.
+- `cargo test -p axeyum-lean-kernel --lib creal::` — **206 passed, 0
+  failed**, 411.31 s. The first attempt was 205/1: the recorded build order
+  in `creal_tests::steps_table_matches_recorded_extraction` is a pin a new
+  `BuildStep` is invisible to until it is listed, and that one test was the
+  only failure.
+- `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` — clean
+  for this lane's files. Twelve errors remain on this base, all in
+  `nat_prelude` (`add_factorial_le.rs` 2, `gauss_lemma.rs` 2,
+  `nat_prelude_tests.rs` 8); this lane touched no `nat_prelude` file, so they
+  are reported rather than fixed.
+- `kernel_declaration_projection --require-declaration` discriminates:
+  verified by asking for `CReal.lubSet_nonexistent_control`, which exits 1.
+- `python3 scripts/validate-facts.py` — 2365 facts, 0 errors.
+- `python3 scripts/check-settled-fact-statements.py` — PASS.
+- `python3 scripts/check-autogenesis-holdout-isolation.py` — PASS before and
+  after, `held_out=146 settled=0 references=0` both times. Nothing under
+  `artifacts/autogenesis/` was touched.
+
+## One thing worth carrying forward
+
+The superseded §2 assessment looked for "a bounded, inhabited, **located** set
+with no computable least upper bound". Locatedness is the wrong target — it is
+exactly the data that makes `supOn` work. Dropping it is what made the
+reduction four declarations long, using no primitive that was not already
+present.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was

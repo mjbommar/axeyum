@@ -6,12 +6,39 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℤ}, 0 < m.gcd n → ∃ m' n', m'.gcd n' = 1 ∧ m = m' * ↑(m.gcd n) ∧ n = n' * ↑(m.gcd n)",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.exists_gcd_one"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:int-add-zero", "F:int-ediv-add-emod", "F:int-emod-eq-zero-iff-dvd", "F:int-gcd-dvd-left", "F:int-gcd-dvd-right", "F:int-mul-comm", "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc"],
+  "evidence": [
+    {
+      "id": "kernel-Int.exists_gcd_one",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.exists_gcd_one` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`declare_exists_gcd_one` (`crates/axeyum-lean-kernel/src/int_prelude/exists_gcd_one.rs`): witnesses `m' := m.ediv (ofNat (gcd m n))`, `n' := n.ediv (ofNat (gcd m n))`. Coprimality is `gcd.rs`'s already-checked `gcd_div_gcd_div_gcd` directly; `m = m'*c`/`n = n'*c` reuse that theorem's private `exact` closure (rebuilt locally) via `emod_eq_zero_iff_dvd` + `ediv_add_emod`, commuted with `mul_comm` to match the stated multiplication order."
+    },
+    {
+      "id": "footprint-Int.exists_gcd_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.exists_gcd_one 2>/dev/null | grep -Ec 'integer[[:space:]]Int\\.exists_gcd_one[[:space:]]0[[:space:]]*$')\" -ge 1",
+      "notes": "The matched row's trailing footprint column is EMPTY, so a nonzero footprint or an absent declaration both give a count of 0 and fail. The tool substring-matches, so `Int.exists_gcd_one'` also appears in its output; the anchored `[[:space:]]0[[:space:]]*$` (whitespace, not `'`, right after the name) is what keeps this pattern from matching that row too. Pass exactly one name per invocation -- this tool keeps only the first."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED via the `draw11-theorems-e` lane, 2026-08-31, as `Int.exists_gcd_one` in `int_prelude/exists_gcd_one.rs` -- axiom-free, statement identical to Mathlib's.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

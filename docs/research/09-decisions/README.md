@@ -760,5 +760,6 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0990](adr-0990-gauss-lemma-least-residue-injectivity-lands-pairing-route-simplified-and-sized.md) | `Nat.least_residue_injective_of_coprime : ∀ pp a k k', 0 < pp | accepted |
 | [1000](adr-1000-the-five-risks-are-covered-unevenly-and-vacuity-is-the-thin-one.md) | Audited ADR-0717's five risks against every L0 gate. Contamination | accepted |
 | [1005](adr-1005-extraction-verified-subjects-bound-two-wrong-three-guards-newly-red.md) | 660 kernel-lean settled facts whose subject came from | accepted |
+| [1010](adr-1010-the-least-upper-bound-boundary-is-excluded-middle-not-llpo.md) | LUB's ADR-0603 row 2 was the one family whose boundary was asserted rather than proved; `CReal.lub_decides_em` closes it, and the principle it extracts is UNRESTRICTED excluded middle rather than the analytic LLPO the IVT and EVT rows land on — because Spivak's P13 quantifies over a set given by an arbitrary predicate, not over the range of a continuous function. | accepted |
 | [1015](adr-1015-gauss-lemma-pairing-injectivity-lands-mapsinto-and-shift-wrapper-precisely-sized.md) | `Nat.gauss_fold_injective_of_coprime : ∀ m a k k', gcd a | accepted |
 | [1025](adr-1025-euler-theorem-item-2-closed-item-1-cheaper-than-sized.md) | Of the three pieces `docs/plan/status/374-euler-theorem.md` | accepted |

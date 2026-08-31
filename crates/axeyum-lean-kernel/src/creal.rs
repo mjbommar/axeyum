@@ -5757,6 +5757,56 @@ pub struct CRealPrelude {
     /// here rather than refutable).
     pub ivt_exact_root_decides_sign: NameId,
 
+    // --- the least-upper-bound property's boundary certificate (ADR-0603 row 2)
+    /// `CReal.lubSet : Prop -> CReal -> Prop := fun A x => Or (le x zero)
+    /// (And A (le x one))` -- the LUB counterexample family
+    /// (`creal/lub_boundary.rs`), the set `(-inf, 0] union ((-inf, 1] if A)`.
+    /// Classical supremum `1` when `A` holds and `0` when it does not, so
+    /// *where the supremum sits* IS the truth value of `A`.
+    ///
+    /// Spivak ch. 8's P13 quantifies over an ARBITRARY inhabited bounded-above
+    /// set, so a set carved out by an arbitrary `Prop` is faithful to the
+    /// classical statement rather than a strawman -- and it is exactly the
+    /// generalisation [`Self::sup_on`] (a uniformly continuous function on a
+    /// compact interval, whose modulus supplies the locatedness) stops short
+    /// of.
+    pub lub_set: NameId,
+    /// `CReal.lubSet_inhabited : forall (A : Prop), lubSet A zero` -- classical
+    /// LUB's first hypothesis, **proved rather than asserted**, and at an
+    /// EXHIBITED witness rather than as an `Exists`. One [`Self::le_refl`]
+    /// under `Or.inl`. See `creal/lub_boundary.rs`.
+    pub lub_set_inhabited: NameId,
+    /// `CReal.lubSet_bounded : forall (A : Prop) (x : CReal), lubSet A x ->
+    /// le x one` -- classical LUB's second hypothesis, **proved rather than
+    /// asserted**, and at an EXPLICIT bound rather than as an `Exists`. The
+    /// `x <= 0` disjunct reaches `1` through [`Self::le_trans`] against
+    /// `0 <= 1`, the other by projection. See `creal/lub_boundary.rs`.
+    pub lub_set_bounded: NameId,
+    /// `CReal.lub_decides_em : forall (A : Prop) (s : CReal),
+    /// (forall x, lubSet A x -> le x s) ->
+    /// (forall t, lt t s -> Exists CReal (fun x => And (lubSet A x) (lt t x)))
+    /// -> Or A (Not A)` --
+    /// **ADR-0603 row 2 for the least upper bound property**, machine-checked
+    /// rather than asserted (`creal/lub_boundary.rs`).
+    ///
+    /// A supremum for [`Self::lub_set`] -- in **Bishop's** sense, an upper
+    /// bound plus the approximation property, which is the constructive
+    /// definition and the one [`Self::sup_on_approx_lub`] proves for the
+    /// located case -- yields `Or A (Not A)` for an ARBITRARY proposition.
+    /// That is UNRESTRICTED EXCLUDED MIDDLE, a strictly stronger boundary
+    /// than [`Self::evt_attained_max_decides_sign`] and
+    /// [`Self::ivt_exact_root_decides_sign`], which both land on analytic
+    /// LLPO (consistent with Bishop; this is not).
+    ///
+    /// One [`Self::lt_cotrans`] call on the fixed strict pair
+    /// [`Self::zero_lt_one`] at `z := s`: the `0 < s` branch reads `A` off the
+    /// approximation witness at `t := 0`, and the `s < 1` branch refutes `A`
+    /// because `A` would put `1` in the set. See that module's own
+    /// documentation, including its "Honest scope" section: this proves the
+    /// classical conclusion at least as strong as a decision principle this
+    /// kernel does not have, NOT that the principle is false.
+    pub lub_decides_em: NameId,
+
     // --- general `cos : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.cosFnTerm : Nat → CReal → CReal := fun k x => mul (cosTerm k)
     /// (pow x (Nat.add k k))` — the `k`-th power-series term of general
@@ -7260,6 +7310,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_plateau_nonneg_at_one: kernel.name_str(creal, "ivtPlateau_nonneg_at_one"),
         ivt_plateau_uniformly_continuous: kernel.name_str(creal, "ivtPlateau_uniformly_continuous"),
         ivt_exact_root_decides_sign: kernel.name_str(creal, "ivt_exact_root_decides_sign"),
+        lub_set: kernel.name_str(creal, "lubSet"),
+        lub_set_inhabited: kernel.name_str(creal, "lubSet_inhabited"),
+        lub_set_bounded: kernel.name_str(creal, "lubSet_bounded"),
+        lub_decides_em: kernel.name_str(creal, "lub_decides_em"),
         cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
         cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),
         cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
@@ -12183,6 +12237,31 @@ const STEPS: &[BuildStep] = &[
         run: ivt_boundary::declare_ivt_boundary,
     },
     BuildStep {
+        label: "lub_boundary::declare_lub_boundary",
+        requires: &[
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.lt_cotrans,
+            |p: CRealPrelude| p.lt_irrefl,
+            |p: CRealPrelude| p.lt_of_le_of_lt,
+            |p: CRealPrelude| p.lt_of_lt_of_le,
+            |p: CRealPrelude| p.one,
+            |p: CRealPrelude| p.zero,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.lub_decides_em,
+            |p: CRealPrelude| p.lub_set,
+            |p: CRealPrelude| p.lub_set_bounded,
+            |p: CRealPrelude| p.lub_set_inhabited,
+        ],
+        run: lub_boundary::declare_lub_boundary,
+    },
+    BuildStep {
         label: "trig_fn::declare_cos_fn_family",
         requires: &[
             |p: CRealPrelude| p.abs,
@@ -14392,6 +14471,7 @@ mod inverse_fn;
 mod ivt;
 mod ivt_boundary;
 mod lattice;
+mod lub_boundary;
 mod monotone;
 mod mul_self_zero;
 mod mvt;
@@ -14414,6 +14494,13 @@ mod uniform_convergence;
 
 #[cfg(test)]
 mod creal_tests;
+
+/// Tests for `creal/lub_boundary.rs` (ADR-0603 row 2 for the least upper
+/// bound property). Kept out of `creal_tests.rs` for the same reason the
+/// inventory is sharded: that file is the append point every concurrent
+/// `creal` lane collides on.
+#[cfg(test)]
+mod lub_boundary_tests;
 
 /// Per-module declaration inventory consumed by `creal_tests`'s
 /// environment-derived coverage test. `#[cfg(test)]`: pure test scaffolding,

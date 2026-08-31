@@ -796,6 +796,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_add_self_right,
         p.coprime_self_add_right,
         p.coprime_symmetric,
+        p.coprime_mul_add_mul_ne_mul,
         p.not_coprime_zero_zero,
         p.coprime_one_left_iff,
         p.coprime_one_right_iff,
@@ -1059,6 +1060,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.factorial_ne_zero,
         p.add_factorial_le_factorial_add,
         p.add_factorial_succ_le_factorial_add_succ,
+        p.add_factorial_lt_factorial_add,
+        p.add_factorial_succ_lt_factorial_add_succ,
         p.fib_mono,
         p.even_or_odd_exists,
         p.add_self_ne_succ_add_self,
@@ -23184,199 +23187,200 @@ fn and_or_distrib_right_applies_at_a_concrete_discriminating_instance_and_symbol
         f.k.axiom_footprint(p.and_or_distrib_right).is_empty(),
         "and_or_distrib_right must rest on zero axioms"
     );
+}
 
-    /// `Nat.add_one_mul_choose_eq` at a concrete point (`n = 3, k = 1`):
-    /// `mul (succ 3) (choose 3 1) = mul (choose 4 2) (succ 1)`, i.e.
-    /// `4 * 3 = 6 * 2 = 12`. Independently re-built via `succ_mul_choose_eq`
-    /// read backwards would give `4 * 3 = 2 * 6`; the `mul_comm` step this
-    /// theorem adds is exactly what makes the product order match Mathlib's
-    /// `(n+1).choose(k+1) * (k+1)` rather than `(k+1) * (n+1).choose(k+1)`, so
-    /// checking the RENDERED type (not just the reduced value) discriminates a
-    /// dropped `mul_comm`.
-    #[test]
-    fn add_one_mul_choose_eq_holds_at_a_concrete_point() {
-        let mut f = Fixture::new();
-        let p = f.p;
+/// `Nat.add_one_mul_choose_eq` at a concrete point (`n = 3, k = 1`):
+/// `mul (succ 3) (choose 3 1) = mul (choose 4 2) (succ 1)`, i.e.
+/// `4 * 3 = 6 * 2 = 12`. Independently re-built via `succ_mul_choose_eq`
+/// read backwards would give `4 * 3 = 2 * 6`; the `mul_comm` step this
+/// theorem adds is exactly what makes the product order match Mathlib's
+/// `(n+1).choose(k+1) * (k+1)` rather than `(k+1) * (n+1).choose(k+1)`, so
+/// checking the RENDERED type (not just the reduced value) discriminates a
+/// dropped `mul_comm`.
+#[test]
+fn add_one_mul_choose_eq_holds_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
 
-        let three = f.num(3);
-        let one = f.num(1);
-        let proof = f.const_app(p.add_one_mul_choose_eq, &[three, one]);
-        let inferred = f.k.infer(proof).unwrap_or_else(|e| {
-            panic!("add_one_mul_choose_eq(3,1) should infer: {}", f.explain(&e))
-        });
+    let three = f.num(3);
+    let one = f.num(1);
+    let proof = f.const_app(p.add_one_mul_choose_eq, &[three, one]);
+    let inferred = f
+        .k
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("add_one_mul_choose_eq(3,1) should infer: {}", f.explain(&e)));
 
-        let four = f.succ(three);
-        let two = f.succ(one);
-        let choose_3_1 = f.choose(three, one);
-        let lhs = f.mul(four, choose_3_1);
-        let choose_4_2 = f.choose(four, two);
-        let rhs = f.mul(choose_4_2, two);
-        let expected = f.eq(lhs, rhs);
-        assert!(
-            f.k.def_eq(inferred, expected),
-            "add_one_mul_choose_eq(3,1) should state (succ 3) * choose 3 1 = choose 4 2 * (succ 1), \
+    let four = f.succ(three);
+    let two = f.succ(one);
+    let choose_3_1 = f.choose(three, one);
+    let lhs = f.mul(four, choose_3_1);
+    let choose_4_2 = f.choose(four, two);
+    let rhs = f.mul(choose_4_2, two);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "add_one_mul_choose_eq(3,1) should state (succ 3) * choose 3 1 = choose 4 2 * (succ 1), \
          in that product order"
-        );
+    );
 
-        let twelve = f.num(12);
-        assert!(f.k.def_eq(lhs, twelve), "4 * choose 3 1 must reduce to 12");
-        assert!(f.k.def_eq(rhs, twelve), "choose 4 2 * 2 must reduce to 12");
+    let twelve = f.num(12);
+    assert!(f.k.def_eq(lhs, twelve), "4 * choose 3 1 must reduce to 12");
+    assert!(f.k.def_eq(rhs, twelve), "choose 4 2 * 2 must reduce to 12");
 
-        assert!(
-            f.k.axiom_footprint(p.add_one_mul_choose_eq).is_empty(),
-            "add_one_mul_choose_eq must rest on zero axioms"
-        );
-    }
+    assert!(
+        f.k.axiom_footprint(p.add_one_mul_choose_eq).is_empty(),
+        "add_one_mul_choose_eq must rest on zero axioms"
+    );
+}
 
-    /// `Nat.coprime_dvd_mul_left`'s statement at a concrete `(k, m, n) = (5, 2,
-    /// 3)`, checked against an independently rebuilt type: `gcd 5 2 = 1 → (dvd
-    /// 5 (mul 2 3) ↔ dvd 5 3)`. The hand-built `expected` fixes the Iff sides in
-    /// the order the mirror statement declares them (`dvd k (m*n)` first, `dvd k
-    /// n` second) — a swapped Iff or a swapped `m`/`n` in the product would fail
-    /// `def_eq` here. The coprime witness (`gcd 5 2 = 1` is `rfl`) is then
-    /// actually applied, so both `mp` and `mpr` are exercised as real proof
-    /// terms, not just a type shape.
-    #[test]
-    fn coprime_dvd_mul_left_states_and_proves_the_iff_at_a_concrete_point() {
-        let mut f = Fixture::new();
-        let p = f.p;
-        let one = f.num(1);
+/// `Nat.coprime_dvd_mul_left`'s statement at a concrete `(k, m, n) = (5, 2,
+/// 3)`, checked against an independently rebuilt type: `gcd 5 2 = 1 → (dvd
+/// 5 (mul 2 3) ↔ dvd 5 3)`. The hand-built `expected` fixes the Iff sides in
+/// the order the mirror statement declares them (`dvd k (m*n)` first, `dvd k
+/// n` second) — a swapped Iff or a swapped `m`/`n` in the product would fail
+/// `def_eq` here. The coprime witness (`gcd 5 2 = 1` is `rfl`) is then
+/// actually applied, so both `mp` and `mpr` are exercised as real proof
+/// terms, not just a type shape.
+#[test]
+fn coprime_dvd_mul_left_states_and_proves_the_iff_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
 
-        let five = f.num(5);
-        let two = f.num(2);
-        let three = f.num(3);
-        let applied = f.const_app(p.coprime_dvd_mul_left, &[five, two, three]);
+    let five = f.num(5);
+    let two = f.num(2);
+    let three = f.num(3);
+    let applied = f.const_app(p.coprime_dvd_mul_left, &[five, two, three]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("coprime_dvd_mul_left must type-check at (5,2,3)");
+
+    let gcd_5_2 = f.gcd(five, two);
+    let coprime_ty = f.eq(gcd_5_2, one);
+    let two_three = f.mul(two, three);
+    let dvd_5_23 = f.dvd(five, two_three);
+    let dvd_5_3 = f.dvd(five, three);
+    let iff_ty = f.const_app(p.logic.iff, &[dvd_5_23, dvd_5_3]);
+    let expected = f.arrow(coprime_ty, iff_ty);
+    assert!(f.k.def_eq(inferred, expected));
+
+    let coprime_proof = f.refl(one); // gcd 5 2 reduces to 1, so Eq.refl 1 : gcd 5 2 = 1
+    let iff_proof = f.apply(applied, &[coprime_proof]);
+    let iff_inferred =
+        f.k.infer(iff_proof)
+            .expect("coprime_dvd_mul_left(5,2,3) applied to the coprime witness must infer");
+    assert!(f.k.def_eq(iff_inferred, iff_ty));
+
+    assert!(
+        f.k.axiom_footprint(p.coprime_dvd_mul_left).is_empty(),
+        "coprime_dvd_mul_left must rest on zero axioms"
+    );
+}
+
+/// `Nat.coprime_dvd_mul_right`'s statement at a concrete `(k, m, n) = (5, 3,
+/// 2)`: `gcd 5 2 = 1 → (dvd 5 (mul 3 2) ↔ dvd 5 3)` — the mirror image of
+/// [`coprime_dvd_mul_left_states_and_proves_the_iff_at_a_concrete_point`],
+/// with the coprimality hypothesis on the SECOND factor and the surviving
+/// divisor the FIRST factor.
+#[test]
+fn coprime_dvd_mul_right_states_and_proves_the_iff_at_a_concrete_point() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+
+    let five = f.num(5);
+    let three = f.num(3);
+    let two = f.num(2);
+    let applied = f.const_app(p.coprime_dvd_mul_right, &[five, three, two]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("coprime_dvd_mul_right must type-check at (5,3,2)");
+
+    let gcd_5_2 = f.gcd(five, two);
+    let coprime_ty = f.eq(gcd_5_2, one);
+    let three_two = f.mul(three, two);
+    let dvd_5_32 = f.dvd(five, three_two);
+    let dvd_5_3 = f.dvd(five, three);
+    let iff_ty = f.const_app(p.logic.iff, &[dvd_5_32, dvd_5_3]);
+    let expected = f.arrow(coprime_ty, iff_ty);
+    assert!(f.k.def_eq(inferred, expected));
+
+    let coprime_proof = f.refl(one); // gcd 5 2 reduces to 1
+    let iff_proof = f.apply(applied, &[coprime_proof]);
+    let iff_inferred =
+        f.k.infer(iff_proof)
+            .expect("coprime_dvd_mul_right(5,3,2) applied to the coprime witness must infer");
+    assert!(f.k.def_eq(iff_inferred, iff_ty));
+
+    assert!(
+        f.k.axiom_footprint(p.coprime_dvd_mul_right).is_empty(),
+        "coprime_dvd_mul_right must rest on zero axioms"
+    );
+}
+
+/// `Nat.coprime_eq_of_mul_eq_zero`'s statement at `(m, n) = (0, 1)`, an
+/// instance that ACTUALLY DISCHARGES both hypotheses (`gcd 0 1 = 1` and
+/// `mul 0 1 = 0` are both `rfl`) and lands on the LEFT disjunct
+/// (`m = 0 ∧ n = 1`), applied all the way to a real proof term. A second
+/// instance at `(m, n) = (1, 0)` is checked at the type-shape level and must
+/// select the RIGHT disjunct. Checking the disjunct's *position* at two
+/// genuinely different concrete instances discriminates a swapped
+/// `or_inl`/`or_inr`.
+#[test]
+fn coprime_eq_of_mul_eq_zero_selects_the_correct_disjunct() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+
+    // (m, n) = (0, 1): must select the LEFT disjunct, proof term applied all
+    // the way through.
+    {
+        let applied = f.const_app(p.coprime_eq_of_mul_eq_zero, &[zero, one]);
+        let coprime_witness = f.refl(one); // gcd 0 1 reduces to 1
+        let with_coprime = f.apply(applied, &[coprime_witness]);
+        let zero_witness = f.refl(zero); // mul 0 1 reduces to 0
+        let result = f.apply(with_coprime, &[zero_witness]);
         let inferred =
-            f.k.infer(applied)
-                .expect("coprime_dvd_mul_left must type-check at (5,2,3)");
+            f.k.infer(result)
+                .expect("coprime_eq_of_mul_eq_zero(0,1) applied to both witnesses must infer");
 
-        let gcd_5_2 = f.gcd(five, two);
-        let coprime_ty = f.eq(gcd_5_2, one);
-        let two_three = f.mul(two, three);
-        let dvd_5_23 = f.dvd(five, two_three);
-        let dvd_5_3 = f.dvd(five, three);
-        let iff_ty = f.const_app(p.logic.iff, &[dvd_5_23, dvd_5_3]);
-        let expected = f.arrow(coprime_ty, iff_ty);
+        let m_eq_zero = f.eq(zero, zero);
+        let n_eq_one = f.eq(one, one);
+        let left_and = f.const_app(p.logic.and, &[m_eq_zero, n_eq_one]);
+        let m_eq_one = f.eq(zero, one);
+        let n_eq_zero = f.eq(one, zero);
+        let right_and = f.const_app(p.logic.and, &[m_eq_one, n_eq_zero]);
+        let expected = f.const_app(p.logic.or, &[left_and, right_and]);
         assert!(f.k.def_eq(inferred, expected));
-
-        let coprime_proof = f.refl(one); // gcd 5 2 reduces to 1, so Eq.refl 1 : gcd 5 2 = 1
-        let iff_proof = f.apply(applied, &[coprime_proof]);
-        let iff_inferred =
-            f.k.infer(iff_proof)
-                .expect("coprime_dvd_mul_left(5,2,3) applied to the coprime witness must infer");
-        assert!(f.k.def_eq(iff_inferred, iff_ty));
-
-        assert!(
-            f.k.axiom_footprint(p.coprime_dvd_mul_left).is_empty(),
-            "coprime_dvd_mul_left must rest on zero axioms"
-        );
     }
 
-    /// `Nat.coprime_dvd_mul_right`'s statement at a concrete `(k, m, n) = (5, 3,
-    /// 2)`: `gcd 5 2 = 1 → (dvd 5 (mul 3 2) ↔ dvd 5 3)` — the mirror image of
-    /// [`coprime_dvd_mul_left_states_and_proves_the_iff_at_a_concrete_point`],
-    /// with the coprimality hypothesis on the SECOND factor and the surviving
-    /// divisor the FIRST factor.
-    #[test]
-    fn coprime_dvd_mul_right_states_and_proves_the_iff_at_a_concrete_point() {
-        let mut f = Fixture::new();
-        let p = f.p;
-        let one = f.num(1);
-
-        let five = f.num(5);
-        let three = f.num(3);
-        let two = f.num(2);
-        let applied = f.const_app(p.coprime_dvd_mul_right, &[five, three, two]);
-        let inferred =
+    // (m, n) = (1, 0): must select the RIGHT disjunct (checked at the level
+    // of the STATEMENT shape only, mirroring the left case above).
+    {
+        let applied = f.const_app(p.coprime_eq_of_mul_eq_zero, &[one, zero]);
+        let inferred_ty =
             f.k.infer(applied)
-                .expect("coprime_dvd_mul_right must type-check at (5,3,2)");
+                .expect("coprime_eq_of_mul_eq_zero must type-check at (1,0)");
 
-        let gcd_5_2 = f.gcd(five, two);
-        let coprime_ty = f.eq(gcd_5_2, one);
-        let three_two = f.mul(three, two);
-        let dvd_5_32 = f.dvd(five, three_two);
-        let dvd_5_3 = f.dvd(five, three);
-        let iff_ty = f.const_app(p.logic.iff, &[dvd_5_32, dvd_5_3]);
-        let expected = f.arrow(coprime_ty, iff_ty);
-        assert!(f.k.def_eq(inferred, expected));
-
-        let coprime_proof = f.refl(one); // gcd 5 2 reduces to 1
-        let iff_proof = f.apply(applied, &[coprime_proof]);
-        let iff_inferred =
-            f.k.infer(iff_proof)
-                .expect("coprime_dvd_mul_right(5,3,2) applied to the coprime witness must infer");
-        assert!(f.k.def_eq(iff_inferred, iff_ty));
-
-        assert!(
-            f.k.axiom_footprint(p.coprime_dvd_mul_right).is_empty(),
-            "coprime_dvd_mul_right must rest on zero axioms"
-        );
+        let gcd_10 = f.gcd(one, zero);
+        let coprime_ty = f.eq(gcd_10, one);
+        let mul_10 = f.mul(one, zero);
+        let mul_zero_ty = f.eq(mul_10, zero);
+        let m_eq_zero = f.eq(one, zero);
+        let n_eq_one = f.eq(zero, one);
+        let left_and = f.const_app(p.logic.and, &[m_eq_zero, n_eq_one]);
+        let m_eq_one = f.eq(one, one);
+        let n_eq_zero = f.eq(zero, zero);
+        let right_and = f.const_app(p.logic.and, &[m_eq_one, n_eq_zero]);
+        let concl = f.const_app(p.logic.or, &[left_and, right_and]);
+        let inner = f.arrow(mul_zero_ty, concl);
+        let expected = f.arrow(coprime_ty, inner);
+        assert!(f.k.def_eq(inferred_ty, expected));
     }
 
-    /// `Nat.coprime_eq_of_mul_eq_zero`'s statement at `(m, n) = (0, 1)`, an
-    /// instance that ACTUALLY DISCHARGES both hypotheses (`gcd 0 1 = 1` and
-    /// `mul 0 1 = 0` are both `rfl`) and lands on the LEFT disjunct
-    /// (`m = 0 ∧ n = 1`), applied all the way to a real proof term. A second
-    /// instance at `(m, n) = (1, 0)` is checked at the type-shape level and must
-    /// select the RIGHT disjunct. Checking the disjunct's *position* at two
-    /// genuinely different concrete instances discriminates a swapped
-    /// `or_inl`/`or_inr`.
-    #[test]
-    fn coprime_eq_of_mul_eq_zero_selects_the_correct_disjunct() {
-        let mut f = Fixture::new();
-        let p = f.p;
-        let zero = f.zero();
-        let one = f.num(1);
-
-        // (m, n) = (0, 1): must select the LEFT disjunct, proof term applied all
-        // the way through.
-        {
-            let applied = f.const_app(p.coprime_eq_of_mul_eq_zero, &[zero, one]);
-            let coprime_witness = f.refl(one); // gcd 0 1 reduces to 1
-            let with_coprime = f.apply(applied, &[coprime_witness]);
-            let zero_witness = f.refl(zero); // mul 0 1 reduces to 0
-            let result = f.apply(with_coprime, &[zero_witness]);
-            let inferred =
-                f.k.infer(result)
-                    .expect("coprime_eq_of_mul_eq_zero(0,1) applied to both witnesses must infer");
-
-            let m_eq_zero = f.eq(zero, zero);
-            let n_eq_one = f.eq(one, one);
-            let left_and = f.const_app(p.logic.and, &[m_eq_zero, n_eq_one]);
-            let m_eq_one = f.eq(zero, one);
-            let n_eq_zero = f.eq(one, zero);
-            let right_and = f.const_app(p.logic.and, &[m_eq_one, n_eq_zero]);
-            let expected = f.const_app(p.logic.or, &[left_and, right_and]);
-            assert!(f.k.def_eq(inferred, expected));
-        }
-
-        // (m, n) = (1, 0): must select the RIGHT disjunct (checked at the level
-        // of the STATEMENT shape only, mirroring the left case above).
-        {
-            let applied = f.const_app(p.coprime_eq_of_mul_eq_zero, &[one, zero]);
-            let inferred_ty =
-                f.k.infer(applied)
-                    .expect("coprime_eq_of_mul_eq_zero must type-check at (1,0)");
-
-            let gcd_10 = f.gcd(one, zero);
-            let coprime_ty = f.eq(gcd_10, one);
-            let mul_10 = f.mul(one, zero);
-            let mul_zero_ty = f.eq(mul_10, zero);
-            let m_eq_zero = f.eq(one, zero);
-            let n_eq_one = f.eq(zero, one);
-            let left_and = f.const_app(p.logic.and, &[m_eq_zero, n_eq_one]);
-            let m_eq_one = f.eq(one, one);
-            let n_eq_zero = f.eq(zero, zero);
-            let right_and = f.const_app(p.logic.and, &[m_eq_one, n_eq_zero]);
-            let concl = f.const_app(p.logic.or, &[left_and, right_and]);
-            let inner = f.arrow(mul_zero_ty, concl);
-            let expected = f.arrow(coprime_ty, inner);
-            assert!(f.k.def_eq(inferred_ty, expected));
-        }
-
-        assert!(
-            f.k.axiom_footprint(p.coprime_eq_of_mul_eq_zero).is_empty(),
-            "coprime_eq_of_mul_eq_zero must rest on zero axioms"
-        );
-    }
+    assert!(
+        f.k.axiom_footprint(p.coprime_eq_of_mul_eq_zero).is_empty(),
+        "coprime_eq_of_mul_eq_zero must rest on zero axioms"
+    );
 }
