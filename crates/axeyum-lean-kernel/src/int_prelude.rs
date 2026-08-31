@@ -102,6 +102,7 @@ mod order_add;
 mod order_coercion;
 mod parity;
 mod prod;
+mod qr_criterion;
 mod rat;
 mod ring;
 mod sign;
@@ -1238,6 +1239,34 @@ pub struct IntPrelude {
     /// that direction needs a primitive root or a counting argument this
     /// prelude does not build.
     pub euler_criterion_pm_one: NameId,
+    /// `euler_criterion_residue_imp_one :
+    /// ∀ pp aa m, (2 ≤ pp ∧ ∀ d, d ∣ pp → d = 1 ∨ d = pp) →
+    ///   Eq Nat (pp-1) (m+m) → 0 < aa → aa < pp →
+    ///   IsQuadraticResidue (ofNat pp) (ofNat aa) →
+    ///   ModEq (ofNat pp) (pow (ofNat aa) m) one` — Euler's criterion, the
+    /// NECESSARY direction: a quadratic residue's half-power is `≡ 1`, not
+    /// merely `≡ ±1`. Route (`qr_criterion.rs`): the witness `x` (`x*x ≡ a`)
+    /// is reduced to its canonical residue `r := emod x p` (in range for
+    /// Fermat), Fermat gives `r^(p-1) ≡ 1` hence `r^(m+m) ≡ 1`, `ModEq.pow`
+    /// transports that along `x ≡ r` to `x^(m+m) ≡ 1`, and
+    /// `Int.pow_add`/[`qr_criterion::pow_mul_self`](crate) identify
+    /// `x^(m+m)` with `(x*x)^m`, which `ModEq.pow` along `x*x ≡ a` finally
+    /// relates to `a^m`. Does NOT prove the converse (`a^m ≡ 1 → residue`),
+    /// which still needs a primitive root or a root-counting argument this
+    /// prelude does not build — see [`Self::euler_criterion_pm_one`].
+    pub euler_criterion_residue_imp_one: NameId,
+    /// `euler_criterion_neg_one_imp_not_residue :
+    /// ∀ pp aa m, (2 ≤ pp ∧ ∀ d, d ∣ pp → d = 1 ∨ d = pp) → Lt 2 pp →
+    ///   Eq Nat (pp-1) (m+m) → 0 < aa → aa < pp →
+    ///   ModEq (ofNat pp) (pow (ofNat aa) m) (neg one) →
+    ///   Not (IsQuadraticResidue (ofNat pp) (ofNat aa))` — Euler's
+    /// criterion's non-residue detector: for an ODD prime `p` (`2 < p`), a
+    /// half-power `≡ -1` rules out `a` being a residue. Contrapositive of
+    /// [`Self::euler_criterion_residue_imp_one`]: if `a` were a residue its
+    /// half-power would be `≡ 1`, so combined with the `≡ -1` hypothesis
+    /// `1 ≡ -1 [p]`, i.e. `p ∣ 2`; `Nat.le_of_dvd` then forces `p ≤ 2`,
+    /// contradicting `2 < p`.
+    pub euler_criterion_neg_one_imp_not_residue: NameId,
 
     // --- the Euler's-totient-theorem unit-permutation step (`euler_totient.rs`) ---
     /// `euler_unit_coprime : ∀ n a k, 0 < n → Coprime a n → Coprime k n →
@@ -1719,6 +1748,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         is_quadratic_residue_one: child(kernel, "is_quadratic_residue_one"),
         is_quadratic_residue_mul: child(kernel, "is_quadratic_residue_mul"),
         euler_criterion_pm_one: child(kernel, "euler_criterion_pm_one"),
+        euler_criterion_residue_imp_one: child(kernel, "euler_criterion_residue_imp_one"),
+        euler_criterion_neg_one_imp_not_residue: child(
+            kernel,
+            "euler_criterion_neg_one_imp_not_residue",
+        ),
         euler_unit_coprime: child(kernel, "euler_unit_coprime"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
@@ -1997,6 +2031,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler::declare_is_quadratic_residue_one(&mut d)?;
         euler::declare_is_quadratic_residue_mul(&mut d)?;
         euler::declare_euler_criterion_pm_one(&mut d)?;
+        qr_criterion::declare_euler_criterion_residue_imp_one(&mut d)?;
+        qr_criterion::declare_euler_criterion_neg_one_imp_not_residue(&mut d)?;
         euler_totient::declare_euler_unit_coprime(&mut d)?;
         euler_totient::declare_euler_unit_injective(&mut d)?;
         euler_theorem::declare_prod_range_if_all(&mut d)?;

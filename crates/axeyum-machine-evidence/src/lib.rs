@@ -14,11 +14,16 @@ use axeyum_machine::a0::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+mod cross_isa;
 mod rv64;
 mod symbolic_addition;
 mod symbolic_memory;
 mod x64;
 
+pub use cross_isa::{
+    AbsoluteValueCase, CrossIsaAbsoluteValueReport, check_cross_isa_absolute_value,
+    check_cross_isa_predicate_control, cross_isa_absolute_value_report,
+};
 pub use rv64::{
     Rv64EncodingRecord, Rv64ExecutionReport, Rv64SourceReport, check_rv64_branch_base_control,
     check_rv64_execution, check_rv64_source, check_rv64_source_digest_control,

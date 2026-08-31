@@ -8,5 +8,6 @@
 
 pub mod a0;
 mod a0_error;
+pub mod cross_isa;
 pub mod rv64;
 pub mod x64;

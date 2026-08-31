@@ -853,3 +853,52 @@ Like RV64, this is a complete selected single-step projection, not a new
 Python-only runner. Real-ISA bounded trace types, instruction effect sets,
 symbolic execution, and cross-machine relations remain open.
 The implementation and generated reader contract landed as `ebcbfc618`.
+
+## 2026-08-30 — first typed cross-machine relation and replay route
+
+The executable machine layers made the next open book dependency precise:
+Chapter 12 had three working absolute-value programs but no typed object that
+said when their unequal states represented the same logical point. Added a
+`cross_isa` semantic module that consumes the existing A0, RV64I, and x86-64
+states and steps. It binds the exact bytes printed in the chapter and names the
+entry, decision, optional negative update, and exit synchronization points.
+
+The relation reports stable clauses for logical control, running outcomes,
+A0-to-RV64 value agreement, A0-to-x86-64 value agreement, the A0 harness zero,
+the shared signed predicate at the decision, and preservation of each entry
+memory. A replay retains all three concrete states at every applicable point
+and returns the first failed named clause. It implements no second instruction
+semantics. Both the nonnegative stutter path and negative update path execute
+through the original machine packages.
+
+Added a source-bound evidence route over ten declared 64-bit boundary and
+branch-shape inputs. The set includes zero, positive and negative witnesses,
+both signed extrema, and mixed-bit patterns. Every case reaches all applicable
+points and produces one common modular result. The report separately records
+that the signed minimum is excluded from the positive mathematical-absolute-
+value interpretation, although its modular result still agrees on all three
+machines. This is a finite concrete computation, not a universal theorem over
+all 64-bit words.
+
+The load-bearing control changes the x86 signed jump from `jns` to `je` while
+leaving the relation checker unchanged. Input seven then reaches x86 address 8
+instead of the shared exit at 11, and the route rejects the trace at the exit
+`ControlPoint` clause. Direct production and replay report ten passing cases
+with result SHA-256
+`75f1e5d688a694861ee4b397938174b5c122d64998155a9ce2c2f36598e7ad4d`;
+the control exits nonzero with `semantic-mismatch`. Strict all-target Clippy
+passes for both machine crates, and the direct relation tests cover the two
+paths, signed boundaries, stable point order, first-failure diagnosis, replay,
+and malformed-report rejection.
+
+The first artifact-generation pass caught that `u64::MAX` and signed `-1`
+named the same bit pattern, so the advertised ten cases contained only nine
+distinct inputs. Replaced the duplicate with `0x8000000000000001` and added a
+set-cardinality assertion. The digest above is from the corrected ten-distinct-
+input report.
+
+This implements the first concrete A0-to-RV64 and A0-to-x86-64 relation route.
+The book object and artifact still need to bind it before the obligation can
+move from open to computed. A universal symbolic simulation, the A0
+equivalence/counterexample route, scalar minimality, and the complete XOR
+three-machine case remain open.
