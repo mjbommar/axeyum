@@ -60,6 +60,16 @@ Each looks at a different failure shape, mutation-verified 1:1 by
                                     of them is canonical (no `equivalent_to`).
                                     This is the guard that catches a NEW
                                     duplicate pair entering the ledger.
+  - `canonical_is_the_dependency` -- the canonical member's proof closure
+                                    REACHES a class-mate that carries
+                                    `equivalent_to`, so canonicity is on the
+                                    wrapper rather than on the dependency
+                                    ADR-0790's rule names. Direction, which no
+                                    count of canonical members can see and
+                                    which `check-trust-closure.py`'s disclosed
+                                    backlog does not read. Added by ADR-1265
+                                    after exactly this inversion was found in
+                                    `Int.add_mul`/`Rat.int_right_distrib`.
   - `no_canonical_designated`    -- an identity class has 2+ settled facts and
                                     NONE is canonical (a dangling/cyclic
                                     `equivalent_to` graph).
@@ -313,6 +323,79 @@ def _normalise_statement(text: str) -> str:
 
 
 
+# GUARD:CANONICAL_IS_THE_DEPENDENCY begin
+def guard_canonical_is_the_dependency(
+    class_facts: dict[str, list[tuple[str, str, bool]]],
+    reach: dict[str, Any],
+) -> GuardResult:
+    """The canonical member is PROVED FROM its own class-mate: canonicity is
+    pointing at the wrapper instead of the dependency.
+
+    ADR-0790 fixes the choice and states it as a rule, not a preference: "for
+    the 13 disclosed pairs, the canonical member is the one whose kernel
+    theorem is REACHED IN the other's proof closure (the dependency, not the
+    wrapper)". Earlier `provenance.date` decides only the INDEPENDENT pairs,
+    where neither closure reaches the other.
+
+    Nothing enforced that rule until this guard, and the gap is not
+    theoretical -- it is exactly the state this guard was written from.
+    Measured 2026-08-31 over all 15 identity classes: 14 have a REACHES
+    relation and 13 put canonicity on the reached member.
+    `Int.add_mul`/`Rat.int_right_distrib` was the one inversion, and it
+    arrived by a route no existing guard could see. The pair was genuinely
+    independent when ADR-0790 designated the earlier-dated
+    `Rat.int_right_distrib` canonical; ADR-1170's shape-duplicate repair then
+    made the Rat proof FORWARD to `Int.add_mul`, moving the pair from the
+    independent bucket to the disclosed one and inverting the designation
+    without touching either fact.
+
+    Both neighbouring gates stayed green throughout, and that is the point of
+    a separate guard rather than a widened one:
+
+      - `guard_unlabeled_duplicate_pair` counts canonical members and finds
+        exactly one. Direction is invisible to a count.
+      - `check-trust-closure.py`'s `guard_alias_occurrence` keys its disclosed
+        backlog on `(fact, subject, equivalent-reached)` and never reads
+        `equivalent_to` at all, so disclosing the pair silences it whichever
+        way canonicity points.
+
+    So a lane could flip these two markers back tomorrow and both gates would
+    pass while the published DISTINCT PROPOSITIONS count pointed a reader at
+    the fact that proves nothing of its own.
+
+    Reads `reach` -- `check-trust-closure.py`'s transitive
+    `declaration_dependencies` closure, computed from the admitted term -- and
+    never a fact's authored `depends_on`, which is exactly the shape of
+    evidence this rule is about.
+    """
+    failures = []
+    hits = 0
+    scanned = 0
+    for ctype, members in sorted(class_facts.items()):
+        if len(members) < 2:
+            continue
+        scanned += 1
+        for fid, name, marked in members:
+            if marked:
+                continue
+            for other_fid, other_name, _ in members:
+                if other_name == name:
+                    continue
+                if other_name in reach.get(name, frozenset()):
+                    hits += 1
+                    failures.append(
+                        f"CANONICAL-IS-NOT-THE-DEPENDENCY {fid} (`{name}`) is the "
+                        f"canonical member of identity class `{ctype[:60]}...`, but "
+                        f"its proof closure REACHES `{other_name}` ({other_fid}), "
+                        f"which carries the `equivalent_to` marker. ADR-0790 puts "
+                        f"canonicity on the member REACHED IN the other's closure -- "
+                        f"the dependency, not the wrapper. Move `equivalent_to` from "
+                        f"{other_fid} to {fid}, pointing at {other_fid}"
+                    )
+    return GuardResult("canonical_is_the_dependency", scanned, hits, failures)
+# GUARD:CANONICAL_IS_THE_DEPENDENCY end
+
+
 def guard_no_canonical_designated(
     class_facts: dict[str, list[tuple[str, str, bool]]],
 ) -> GuardResult:
@@ -508,6 +591,7 @@ def main(argv: list[str]) -> int:
         guard_identity_classes_below_floor(classes, floor),
         guard_unlabeled_duplicate_pair(class_facts),
         guard_shared_declaration_pair(facts),
+        guard_canonical_is_the_dependency(class_facts, tc.closures(decls)),
         guard_no_canonical_designated(class_facts),
         guard_equivalent_to_target_absent(facts),
         guard_equivalent_to_target_unsettled(facts),

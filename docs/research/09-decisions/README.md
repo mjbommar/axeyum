@@ -800,3 +800,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1245](adr-1245-index-three-is-filled-and-a-boundary-count-is-definition-relative.md) | ADR-1220 measured that draw 16 needs two viable held-out slots | accepted |
 | [1250](adr-1250-a-marker-that-cannot-attach-is-the-mirror-of-a-checker-that-cannot-fail.md) | `scripts/check-absence-claims.py` (ADR-0611) makes a prose | accepted |
 | [1255](adr-1255-draw-16-is-authored-and-both-disclosure-sweeps-found-something.md) | ADR-1240 and ADR-1245 filled cycle indices 0 and 3 with | accepted |
+| [1265](adr-1265-canonicity-follows-the-proof-not-the-date.md) | canonicity follows the proof, not the date | Accepted |

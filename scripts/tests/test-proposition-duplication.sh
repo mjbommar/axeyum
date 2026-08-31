@@ -224,6 +224,24 @@ case_shared_declaration_pair() {  # guard_shared_declaration_pair
   run_case "$dir"; expect_tag shared-declaration-pair "$dir" "SHARED-DECLARATION-PAIR"
 }
 
+case_canonical_is_the_dependency() {  # guard_canonical_is_the_dependency
+  local dir="$WORK/$1/canonical-direction"; new_case "$dir" || { fixture_failed "${FUNCNAME[0]}"; return 1; }
+  # Give TYPE-D's CANONICAL member a direct dependency on its own marked
+  # class-mate: `T.d1`'s closure now reaches `T.d2`, so canonicity sits on the
+  # wrapper instead of on the dependency (ADR-0790, ADR-1265). Nothing else
+  # about the fixture changes -- TYPE-D still has exactly one canonical member
+  # and one marked one -- so `unlabeled_duplicate_pair` and
+  # `no_canonical_designated` both stay silent. That is the whole point: no
+  # count of canonical members can see a DIRECTION.
+  #
+  # The baseline projection carries no dependency edges at all, which is why
+  # this guard cannot fire on any other case in this suite.
+  awk -F'\t' 'BEGIN { OFS = "\t" } $3 == "T.d1" { $6 = "T.d2" } { print }' \
+    "$dir/projection.tsv" > "$dir/p.tmp"
+  mv "$dir/p.tmp" "$dir/projection.tsv"
+  run_case "$dir"; expect_tag canonical-is-the-dependency "$dir" "CANONICAL-IS-NOT-THE-DEPENDENCY"
+}
+
 CASES=(
   case_baseline
   case_empty_projection
@@ -235,6 +253,7 @@ CASES=(
   case_chain
   case_different_proposition
   case_shared_declaration_pair
+  case_canonical_is_the_dependency
 )
 
 # Case name -> the mutation expected to kill it, and the anchor that mutation
@@ -251,6 +270,7 @@ MUTATION_NAMES=(
   equivalent_to_chain
   equivalent_to_different_proposition
   shared_declaration_pair
+  canonical_is_the_dependency
 )
 MUTATION_ANCHORS=(
   "    if len(classes) == 0:"
@@ -262,6 +282,7 @@ MUTATION_ANCHORS=(
   "        if target_eq:"
   "        if own_type != target_type:"
   "            if len(unmarked) > 1:"
+  "                if other_name in reach.get(name, frozenset()):"
 )
 MUTATION_REPLACEMENTS=(
   "    if False:"
@@ -273,6 +294,7 @@ MUTATION_REPLACEMENTS=(
   "        if False:"
   "        if False:"
   "            if False:"
+  "                if False:"
 )
 
 run_all_cases() {

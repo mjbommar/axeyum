@@ -192,6 +192,8 @@ now. Nothing was deleted.
 | 2026-08-31 | `6ff707144` | record `lub_boundary` in the pinned build order — full `creal::` sweep 206 passed, 0 failed |
 | 2026-08-31 | (this lane) | Re-measured and corrected `07-the-cost-model-and-pareto-position.md` in place (dated correction blocks, doc-08 convention); added ADR-1165 with full method and numbers. |
 | 2026-08-31 | (uncommitted at status-file write time) | ADR-1082 + `probability` curriculum node: `docs/curriculum/curriculum.toml` (new node, `rationals`/`counting` unlocks, corrected `kernel_decls` for 5 drifted nodes, updated header), `crates/axeyum-scenarios/src/mathtour.rs` mirror, `docs/curriculum/03-destinations/probability.md`, `scripts/measure-curriculum-kernel-coverage.py` (new bucket + NODES entry), `scripts/gen-foundational-concepts.py` (new `CURRICULUM_MAP` entry reusing `finite-probability-v0`), regenerated `artifacts/ontology/foundational-concepts.json`. |
+| 2026-08-31 | `1669fab4` | trust-closure: canonicity moved to the dependency; disclosed pairs 13 -> 14; the fact's call-site count corrected to 14, all in `rat_prelude/` |
+| 2026-08-31 | | `guard_canonical_is_the_dependency` + its control case and mutation; ADR-1265 |
 | 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-30 | queue-sweep | No fact closed. All three assigned non-sign dispatchable facts (`totient_dvd_of_dvd`, `totient_gcd_mul_totient_mul`, `eq_or_eq_of_totient_eq_totient`) declined for this session: correctly-stated Mathlib mirrors this kernel does not yet have the general multiplicative-function theory to prove, distinct from the divergence-registry category. Corrected a false numerical claim in `301-totient-multiplicative.md`'s Step 4 (`count_range_row_major` is NOT coprimality-independent — fails at every tested non-coprime pair, e.g. `totient(4)=2 ≠ totient(2)*totient(2)=1`), which would have sent the next totient lane at a statement a sound kernel cannot admit. |
@@ -44131,6 +44133,76 @@ from its committed pin and labelled as floors, not as a live measurement.
 Register the number-theory certificate checkers as facts. That is the binding
 item — more verifiers do not help while no fact names the ones that exist.
 The ledger was deliberately out of scope for a verification lane.
+
+**Done (`trust-closure-equivalent`, 2026-08-31).**
+`scripts/check-trust-closure.py` is green again, resolved the way the gate's own
+message directs — the disclosed backlog with the duplicate acknowledged — and
+the direction rule that was silently violated is now a guard rather than a
+sentence in an ADR. Decision:
+[ADR-1265](docs/research/09-decisions/adr-1265-canonicity-follows-the-proof-not-the-date.md).
+
+`Rat.int_right_distrib` and `Int.add_mul` are one proposition under two names.
+ADR-1170's shape-duplicate repair made the Rat declaration forward to
+`Int.add_mul`, which moved the pair out of ADR-0790's INDEPENDENT bucket
+(canonical = earlier `provenance.date`) into its DISCLOSED bucket (canonical =
+the member REACHED IN the other's closure) — inverting the canonical
+designation without touching either fact. So canonicity moved to
+`F:ml430-int-add-mul-66aa025b` and `F:rat-int-right-distrib` now carries
+`equivalent_to`. The declaration stays (14 consuming call sites); the FACT is
+the duplicate. Nothing deleted, nothing retracted (ADR-0542); `retracted=0`
+before and after.
+
+**Neither headline number moves**, which is the point: FACTS SETTLED 2253,
+facts carrying `equivalent_to` 20, DISTINCT PROPOSITIONS ESTABLISHED 2233 —
+identical before and after. The pair was already collapsing to one proposition;
+only which fact id a reader is pointed at changed, and it now points at the one
+whose proof term does the work.
+
+*The gap a disclosure row alone would have left.* ADR-0790 states the
+canonical-direction rule and nothing enforced it.
+`guard_unlabeled_duplicate_pair` counts canonical members and cannot see a
+direction; `check-trust-closure.py`'s `guard_alias_occurrence` never reads
+`equivalent_to`, so the disclosure silences it whichever way canonicity points.
+Both gates were green on the inverted state. New guard
+`canonical_is_the_dependency` (`check-proposition-duplication.py`) reads the
+transitive closure of the admitted term and rejects a canonical member that
+reaches a marked class-mate. Measured over all 15 identity classes: 14 have a
+REACHES relation, 13 put canonicity on the reached member, and this was the
+only inversion.
+
+*Proof the gate still fires,* against the shipped tree with a captured
+projection of 2,711 declarations — removing the new row reports
+`EQUIVALENT-IN-CLOSURE` for `F:rat-int-right-distrib`; removing a different
+pre-existing row reports it for THAT pair and not this one; a row that no longer
+occurs reports `STALE-DISCLOSURE`. The new guard, run against the pre-fix ledger
+reconstructed from `HEAD~1`, rejects with `CANONICAL-IS-NOT-THE-DEPENDENCY`
+while every other guard stays at 0. Controls: proposition-duplication 11 cases /
+10 mutations, trust-closure 17 cases / 15 mutations, each killing exactly one.
+
+**`unresolved=90` — reported, not fixed, and it is ONE away from firing.**
+These are kernel-route settled facts whose declaration `subject_of` cannot
+identify; they count toward `kernel_facts` but are not SUBJECTS, so three of
+trust-closure's four guards never examine them. Only **9 of the 90** are
+deliberately unresolvable (7 explicit `"kernel_theorem": null`, 2 umbrella
+facts). The other **81 are under-annotated**, and mechanically so — sampled
+facts carry evidence rows whose `id` spells the declaration
+(`kernel-CPoint.cauchy_schwarz`) while `kernel_declaration` is `null` and
+`formal.kernel_theorem` is absent. It IS indirectly enforced: `resolved /
+kernel_facts` is 0.958430 against `min_ratio` 0.9579, which permits at most
+**91** unresolved. So 90 is not drift — it is 90 of a permitted 91, and the next
+kernel-lean fact landing without naming its declaration turns an L0 gate red
+with a message reading as a population-floor breach rather than a missing
+annotation. ADR-1005 already did this binding work for 660 subjects; the same
+treatment for these 81 is the queue item.
+
+*Also found, out of scope, recorded so it is not rediscovered:*
+`crates/axeyum-lean-kernel/src/creal/sqrt.rs` carries a private local
+`fn int_right_distrib` re-deriving the same chain inline — a THIRD copy of this
+proposition that no identity class can see, because it declares nothing
+(CLAUDE.md's hiding place 2). And `check-trust-closure.py --update` rewrites
+`artifacts/trust-closure/population.json` while DROPPING its hand-written
+`ratio_floor_note`, the paragraph telling the next lane not to lower that floor;
+that file was deliberately restored to `HEAD` rather than committed.
 
 Status: DONE — cycle index 3 is filled. Draw 15 is possible.
 
