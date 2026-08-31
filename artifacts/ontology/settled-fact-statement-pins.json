@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1967,
+    "min_identity_bound": 1970,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -6734,6 +6734,20 @@
       "kernel_theorem": "Int.euler_unit_injective"
     },
     {
+      "fact_id": "F:int-euler-unit-perm-injective",
+      "language": "lean4",
+      "statement_sha256": "53d350ce1a50a12c9a13d1936a683450ab2d319b8e30165c9a649bcda11d0b74",
+      "prose_sha256": "457b28a2ba4a41541c4ff0210878d5c56ae192829534337fc99ad7a36c1e571f",
+      "kernel_theorem": "Int.euler_unit_perm_injective"
+    },
+    {
+      "fact_id": "F:int-euler-unit-perm-maps-into",
+      "language": "lean4",
+      "statement_sha256": "58454a0840243ca4698bc2644fe4d4a4baffedc19afea8f40f652e9a761bc25d",
+      "prose_sha256": "889c1aa5e9a790537bd6f8b9f08d08db209abef4a52e9f3de5242f85f14366b1",
+      "kernel_theorem": "Int.euler_unit_perm_maps_into"
+    },
+    {
       "fact_id": "F:int-even",
       "language": "lean4",
       "statement_sha256": "d7db4c092f6952fc3669d6a3bc2cd1722900fd769fbecae922a77dca3e01e252",
@@ -7728,6 +7742,13 @@
       "statement_sha256": "f49de680fe365a31fa4e9858188a146f7a81e21b9360545a65ff685866328746",
       "prose_sha256": "86f353c640240e400ce8edf83b52a09fd1a56e6475b56f26a151361b38c7fa48",
       "kernel_theorem": "Int.prodRange_zero"
+    },
+    {
+      "fact_id": "F:int-prodrangeif-const-eq-pow-count",
+      "language": "lean4",
+      "statement_sha256": "55a94bd8d0c52597086b7ccaeb3179a777a93fe5ae05816b24da6ce6e96b0099",
+      "prose_sha256": "4415647a389b510aeddc60f21cda2d1cb1ecb244dbbcdc7b13df9b103e103467",
+      "kernel_theorem": "Int.prodRangeIf_const_eq_pow_count"
     },
     {
       "fact_id": "F:int-prodrangeif-permute",
