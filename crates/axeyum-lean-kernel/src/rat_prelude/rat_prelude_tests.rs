@@ -169,6 +169,10 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("det_eval_example", p.det_eval_example),
         ("det_eval_singular", p.det_eval_singular),
         ("det_eval_example4", p.det_eval_example4),
+        ("sumRange_head_of_tail_zero", p.sum_range_head_of_tail_zero),
+        ("det_congr", p.det_congr),
+        ("matMinor_matId", p.mat_minor_mat_id),
+        ("det_matId", p.det_mat_id),
     ]
 }
 
@@ -6726,6 +6730,14 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("det_eval_example", p.det_eval_example, true),
         ("det_eval_singular", p.det_eval_singular, true),
         ("det_eval_example4", p.det_eval_example4, true),
+        (
+            "sumRange_head_of_tail_zero",
+            p.sum_range_head_of_tail_zero,
+            true,
+        ),
+        ("det_congr", p.det_congr, true),
+        ("matMinor_matId", p.mat_minor_mat_id, true),
+        ("det_matId", p.det_mat_id, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -6870,4 +6882,177 @@ fn the_determinant_evaluation_examples_reject_the_wrong_value() {
             "Rat.{label}: the evaluation accepted a WRONG value, so it checks nothing"
         );
     }
+}
+
+/// The two determinant LAWS are stated at a **symbolic** dimension, and
+/// `det_congr` still carries its pointwise hypothesis.
+///
+/// The whole point of `Rat.det_matId` over the existing `det_eval_*` theorems
+/// is that its `n` is a bound variable rather than a numeral -- an edit that
+/// quietly restated it at a fixed dimension would turn this file's first
+/// general law back into an evaluation example while every axiom-footprint
+/// check stayed green. And `Rat.det_congr` is only interesting *because* it
+/// has a hypothesis: the unhypothesized `∀ n A B, det A n = det B n` is FALSE
+/// (the control below exhibits two matrices that separate it), so a statement
+/// that lost the premise would be unprovable rather than merely weaker --
+/// which is why the shape is pinned here rather than trusted.
+#[test]
+fn the_determinant_laws_are_stated_at_a_symbolic_dimension() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let identity = rendered(&mut kernel, p.det_mat_id);
+    assert!(
+        identity.contains("(x0 : AxNat)"),
+        "det_matId must quantify over the dimension, got {identity}"
+    );
+    assert!(
+        identity.contains("Rat.det Rat.matId x0"),
+        "det_matId's dimension must be the BOUND VARIABLE, not a numeral, got {identity}"
+    );
+    assert!(
+        identity.contains("Rat.one"),
+        "det_matId must conclude at `Rat.one`, got {identity}"
+    );
+    assert!(
+        !identity.contains("AxNat.succ"),
+        "det_matId must not mention any numeral -- it is the general law, got {identity}"
+    );
+
+    let congr = rendered(&mut kernel, p.det_congr);
+    assert!(
+        congr.contains("Rat.det x1 x0") && congr.contains("Rat.det x2 x0"),
+        "det_congr must compare `det A n` with `det B n` at the same bound `n`, got {congr}"
+    );
+    assert!(
+        congr.contains("(x1 x"),
+        "det_congr must carry the POINTWISE hypothesis `∀ r c, A r c = B r c`; without it \
+         the statement is false, got {congr}"
+    );
+}
+
+/// The three ingredients of `Rat.det_matId` each rest on a check that can
+/// fail, and each control says which reading it rules out.
+///
+/// `Rat.matMinor_matId` is `Eq.refl`, so on its own it is exactly as strong as
+/// the reductions behind it -- and it would be equally `refl` if `Rat.matSkip`
+/// ignored its first argument, or if `Rat.matMinor` ignored the deleted
+/// indices. Likewise `Rat.det_matId` would be trivial if `Rat.det` returned
+/// `1` regardless of its matrix, and `Rat.sumRange_head_of_tail_zero`'s
+/// premise would be discardable if `Rat.sumRange` collapsed to its head.
+///
+/// So each of the three is paired: a POSITIVE `def_eq` on the exact term the
+/// proof relies on, and a NEGATIVE one differing in a **small**, ground term.
+/// Every value here is `0` or `1` and every dimension is at most three, so
+/// both directions reduce to closed `Rat` numerals -- a failing `def_eq` has
+/// no early exit, and this file's existing evaluation controls are careful
+/// about that for the same reason.
+///
+/// What each control rules out, and what it does NOT:
+///
+/// - **`matMinor matId 0 1 0 0 ≠ matId 0 0`** rules out a `matSkip` that
+///   ignores the index being deleted (`matMinor matId 0 j` the identity for
+///   EVERY `j`). It does not distinguish a sign error -- there are no signs
+///   in `matMinor`.
+/// - **`det (matMinor matId 0 1) 2 ≠ 1`** rules out `det` returning `1`
+///   independently of its matrix, which is the reading that would make
+///   `det_matId` vacuous. Its true value is `0`, so it would NOT separate a
+///   sign flip (`neg 0 = 0`) -- `det_eval_example`, whose value is `13`, is
+///   the theorem that does that, and this one deliberately does not duplicate
+///   it.
+/// - **`sumRange (fun _ => 1) 2 ≠ 1`** rules out a `sumRange` that returns its
+///   first summand, which is the reading under which
+///   `sumRange_head_of_tail_zero` would hold with no hypothesis at all. It
+///   says nothing about the ORDER of summation.
+#[test]
+fn the_determinant_law_ingredients_reject_the_degenerate_reading() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rone, rsum_range};
+
+    let (mut kernel, p) = built();
+
+    let (leading, shifted, identity_at_origin, det_identity_3, det_shifted_2, sum_1, sum_2, one) = {
+        let mut d = IntDev::new(&mut kernel, p.int);
+        let nat = d.nat_ty();
+        let zero_n = d.num(0);
+        let one_n = d.num(1);
+        let two_n = d.num(2);
+        let three_n = d.num(3);
+        let one_r = rone(&mut d, p);
+        let mat_id = d.kernel().const_(p.mat_id, vec![]);
+
+        // (a) the LEADING minor of the identity is the identity at (0,0);
+        //     deleting column 1 instead is not.
+        let leading = d.const_app(p.mat_minor, &[mat_id, zero_n, zero_n, zero_n, zero_n]);
+        let shifted = d.const_app(p.mat_minor, &[mat_id, zero_n, one_n, zero_n, zero_n]);
+        let identity_at_origin = d.apply(mat_id, &[zero_n, zero_n]);
+
+        // (b) `det matId 3` computes to `1`; the same recursion on the
+        //     column-1 minor (a genuine matrix built by the SAME machinery)
+        //     computes to `0`.
+        let det_identity_3 = d.const_app(p.det, &[mat_id, three_n]);
+        let shifted_matrix = d.const_app(p.mat_minor, &[mat_id, zero_n, one_n]);
+        let det_shifted_2 = d.const_app(p.det, &[shifted_matrix, two_n]);
+
+        // (c) the tail premise of `sumRange_head_of_tail_zero` is load-bearing.
+        let constant_one = {
+            let k_fv = d.fresh_fvar();
+            d.lam_fv(k_fv, nat, one_r)
+        };
+        let sum_1 = rsum_range(&mut d, p, constant_one, one_n);
+        let sum_2 = rsum_range(&mut d, p, constant_one, two_n);
+
+        (
+            leading,
+            shifted,
+            identity_at_origin,
+            det_identity_3,
+            det_shifted_2,
+            sum_1,
+            sum_2,
+            one_r,
+        )
+    };
+
+    assert!(
+        kernel.def_eq(leading, identity_at_origin),
+        "matMinor matId 0 0 0 0 must reduce to matId 0 0 -- this is exactly what \
+         Rat.matMinor_matId asserts by Eq.refl"
+    );
+    assert!(
+        !kernel.def_eq(shifted, identity_at_origin),
+        "matMinor matId 0 1 0 0 accepted matId 0 0, so matSkip ignores the deleted index \
+         and Rat.matMinor_matId holds for a degenerate reason"
+    );
+
+    assert!(
+        kernel.def_eq(det_identity_3, one),
+        "det matId 3 must compute to 1 -- the concrete instantiation of Rat.det_matId"
+    );
+    assert!(
+        !kernel.def_eq(det_shifted_2, one),
+        "det (matMinor matId 0 1) 2 accepted 1, so det returns 1 regardless of its matrix \
+         and Rat.det_matId is vacuous"
+    );
+
+    assert!(
+        kernel.def_eq(sum_1, one),
+        "sumRange (fun _ => 1) 1 must compute to 1"
+    );
+    assert!(
+        !kernel.def_eq(sum_2, one),
+        "sumRange (fun _ => 1) 2 accepted 1, so sumRange collapses to its head and \
+         Rat.sumRange_head_of_tail_zero's premise is discardable"
+    );
 }

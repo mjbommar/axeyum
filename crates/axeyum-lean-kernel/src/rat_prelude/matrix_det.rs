@@ -83,7 +83,8 @@
 use super::RatPrelude;
 use super::matrix::{rdet2, rdet3};
 use super::ops::{
-    radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rsum_range, rtrans, rzero,
+    radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rrefl, rsum_range, rtrans,
+    rzero,
 };
 use super::probability::bool_select_rat;
 use crate::KernelError;
@@ -1494,11 +1495,7 @@ fn declare_det_mat_id(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelErr
             let collapse = d.lemma(p.mul_one, &[one]);
             let s3 = rcongr(d, one_one, one, collapse, &|d, t| rmul(d, one, t));
             let s4 = d.lemma(p.mul_one, &[one]);
-            let (_e, tidy) = rchain(
-                d,
-                head,
-                &[(mid1, s1), (mid2, s2), (one_one, s3), (one, s4)],
-            );
+            let (_e, tidy) = rchain(d, head, &[(mid1, s1), (mid2, s2), (one_one, s3), (one, s4)]);
 
             let sj = d.succ(j);
             let sum_lhs = rsum_range(d, p, f, sj);
