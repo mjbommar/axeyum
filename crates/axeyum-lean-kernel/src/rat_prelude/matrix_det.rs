@@ -4791,7 +4791,12 @@ fn declare_det_row_expansion(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 
 /// `fun c => altSign c * (M 0 c * det (matMinor M 0 c) m)` — the summand
 /// `Rat.det_succ` unfolds `det M (succ m)` to, expansion along the FIRST ROW.
-pub(super) fn row_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
+pub(super) fn row_zero_expansion_fn(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    m: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let zero_n = d.zero();
     let c_fv = d.fresh_fvar();
@@ -4808,7 +4813,12 @@ pub(super) fn row_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: Expr
 /// `fun r => altSign r * (M r 0 * det (matMinor M r 0) m)` — expansion along
 /// the FIRST COLUMN, the summand [`declare_det_col_expansion`] proves equal to
 /// `det M (succ m)`.
-pub(super) fn col_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
+pub(super) fn col_zero_expansion_fn(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    m: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let zero_n = d.zero();
     let r_fv = d.fresh_fvar();
@@ -5092,7 +5102,10 @@ fn l_eq_r_term(
         let outer = rmul(d, entry_left, inner);
         rmul(d, sign_row, outer)
     };
-    let s2 = d.lemma(p.mul_perm4, &[sign_c, entry_top, sign_row, entry_left, det_r]);
+    let s2 = d.lemma(
+        p.mul_perm4,
+        &[sign_c, entry_top, sign_row, entry_left, det_r],
+    );
 
     // 3. `altSign (succ c) = neg (altSign c)`.
     let t3 = {
@@ -5467,7 +5480,10 @@ fn declare_det_col_expansion(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
             radd(d, head, tail)
         };
         let s5 = {
-            let pf = d.lemma(p.sum_range_congr, &[l_swapped, r_double, n1, pointwise_swap]);
+            let pf = d.lemma(
+                p.sum_range_congr,
+                &[l_swapped, r_double, n1, pointwise_swap],
+            );
             let from = rsum_range(d, p, l_swapped, n1);
             let to = rsum_range(d, p, r_double, n1);
             rcongr(d, from, to, pf, &|d, t| radd(d, head, t))
