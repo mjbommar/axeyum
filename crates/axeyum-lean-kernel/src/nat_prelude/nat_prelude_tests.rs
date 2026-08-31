@@ -1376,6 +1376,27 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // the two branch halves of the per-term congruence.
         p.gauss_fold_modeq_of_sign_false,
         p.gauss_fold_add_modeq_zero_of_sign_true,
+        // `mirror-frontier` lane (`minmax_lemmas.rs`): the order theory of
+        // `Max.max`/`Min.min`, closing the twelve `Init.Data.Nat.MinMax`
+        // mirrors plus the four rewrite cuts they all run through.
+        p.max_eq_right,
+        p.max_eq_left,
+        p.min_eq_left,
+        p.min_eq_right,
+        p.le_max_left,
+        p.le_max_right,
+        p.min_le_left,
+        p.min_le_right,
+        p.max_comm,
+        p.le_min_of_le_of_le,
+        p.le_min,
+        p.lt_min,
+        p.add_max_add_left,
+        p.add_max_add_right,
+        p.add_min_add_left,
+        p.add_min_add_right,
+        p.add_eq_max_iff,
+        p.add_eq_min_iff,
     ]
 }
 

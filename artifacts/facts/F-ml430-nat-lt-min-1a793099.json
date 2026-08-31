@@ -1,30 +1,62 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-lt-min-1a793099",
-  "title": "Mathlib v4.30 source proposition Nat.lt_min",
-  "statement": "The proposition declared as `Nat.lt_min` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {a b c : ℕ}, a < min b c ↔ a < b ∧ a < c",
-    "fragment": "Nat"
+ "schema_version": 1,
+ "id": "F:ml430-nat-lt-min-1a793099",
+ "title": "Mathlib v4.30 source proposition Nat.lt_min",
+ "statement": "The proposition declared as `Nat.lt_min` in the pinned Mathlib v4.30 source.",
+ "formal": {
+  "language": "lean4-surface",
+  "statement": "∀ {a b c : ℕ}, a < min b c ↔ a < b ∧ a < c",
+  "fragment": "Nat",
+  "kernel_theorem": "Nat.lt_min"
+ },
+ "epistemic_status": "proved",
+ "external_status": "proved",
+ "depends_on": ["F:ml430-nat-le-min-69904590"],
+ "evidence": [
+  {
+   "id": "kernel-Nat.lt_min",
+   "kind": "kernel-term",
+   "check_status": "checked",
+   "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- lt_min 2>/dev/null | grep -Ec '^Nat\\.lt_min[[:space:]]')\" -ge 1",
+   "notes": "`build_nat_prelude` admits `Nat.lt_min` through the trusted `Kernel::add_declaration` gate, declared in `nat_prelude/minmax_lemmas.rs`. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Iff (AxNat.lt x0 (Min.min x1 x2)) (And (AxNat.lt x0 x1) (AxNat.lt x0 x2)))))`, matching this fact's `formal.statement` modulo binder info. The flip is honest under the def-vs-theorem criterion, checked at the pinned toolchain source rather than from a paraphrase: Lean core's `max`/`min` at `Nat` ARE `if a <= b then b else a` / `if a <= b then a else b` (`Init/Prelude.lean:1311` `maxOfLe`, `:1328` `minOfLe`, `Init/Data/Nat/Basic.lean:873` `instance : Max Nat := maxOfLe`, `Init/Prelude.lean:2088` `instance : Min Nat := minOfLe`, and `Basic.lean:871` `Nat.min_def : min n m = if n <= m then n else m := rfl`), decided by `Nat.decLe` i.e. `Nat.ble`. `nat_prelude/minmax.rs` declares `Max.max`/`Min.min` with exactly that body, so this is the SAME function and only the delivery (a class projection at an instance) differs -- the same relation `HAdd.hAdd`/`instAddNat` bear to `Nat.add` in every already-settled mirror mentioning `+`. The rendered type differs from the pinned surface statement only in binder INFO (all binders explicit here; Mathlib marks some implicit), which is elaboration, not proposition. The tool exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, consuming the pipe, never `grep -q`) requires the admitted declaration to actually be printed; verified both ways -- the real name greps to a count `-ge 1`, a made-up `Nat.lt_min_bogus` greps to `0`. Note `nat_theorem_inventory` keeps only its LAST name argument, so this command passes exactly one.",
+   "supports": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Iff (AxNat.lt x0 (Min.min x1 x2)) (And (AxNat.lt x0 x1) (AxNat.lt x0 x2)))))"
   },
-  "epistemic_status": "open",
-  "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
-  "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.lt_min` from Mathlib v4.30.0; no proof value was exposed",
-    "prior_art": [
-      {
-        "who": "the Mathlib contributors",
-        "what": "the theorem declaration `Nat.lt_min`",
-        "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
-      }
-    ]
+  {
+   "id": "instantiation-Nat.lt_min",
+   "kind": "kernel-term",
+   "check_status": "checked",
+   "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::minmax_lemmas_tests",
+   "notes": "The kernel gate says the proof term checks; it does not say the STATEMENT is the intended one. `minmax_lemmas_tests.rs` infers each applied theorem's type with `Kernel::infer`/`infer_in` and compares it against an independently built expectation, at BOTH orderings (`Le a b` and `Le b a` select opposite arms of the `Bool.rec`), at the `a = b` boundary where `Nat.ble a b` is `true` yet `max_eq_left`/`min_eq_right` return the other argument, and at genuinely free variables where nothing reduces. Each check carries a transposed negative control. One control was measured VACUOUS on the first run -- at `(7, 2)` the max reduces to `7`, so `a <= max a b` and `max a b <= a` are the same proposition -- and was moved to the symbolic instance, which is where it discriminates. The suite is ungated (no `#![cfg(feature ...)]`) and reports 9 tests.",
+   "supports": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Iff (AxNat.lt x0 (Min.min x1 x2)) (And (AxNat.lt x0 x1) (AxNat.lt x0 x2)))))"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  {
+   "id": "footprint-Nat.lt_min",
+   "kind": "exhaustive-enumeration",
+   "check_status": "checked",
+   "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+   "checkers": [
+    "Kernel::axiom_footprint",
+    "environment-wide trusted-surface enumeration"
+   ],
+   "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally derives its coverage from `kernel.environment()` -- not from a hand list -- and so fails if `Nat.lt_min` were live but unlisted; it checks this theorem's own `Kernel::axiom_footprint` directly. `minmax_lemmas_tests::the_minmax_order_theory_rests_on_zero_axioms` names all eighteen of the module's declarations and asserts each is live in the environment with an empty footprint.",
+   "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+  }
+ ],
+ "provenance": {
+  "date": "2026-08-29",
+  "established_by": "the `mirror-frontier` lane, 2026-08-31 (`nat_prelude/minmax_lemmas.rs`)",
+  "source": "statement-only extraction of `Nat.lt_min` from Mathlib v4.30.0; no proof value was exposed",
+  "prior_art": [
+   {
+    "who": "the Mathlib contributors",
+    "what": "the theorem declaration `Nat.lt_min`",
+    "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+    "year": 2026,
+    "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+   }
+  ]
+ },
+ "notes": "Established 2026-08-31 in this ledger by the `mirror-frontier` lane: a fresh local construction in `nat_prelude/minmax_lemmas.rs`, not a transcription of Lean core's proof. The flip is honest under the def-vs-theorem criterion, checked at the pinned toolchain source rather than from a paraphrase: Lean core's `max`/`min` at `Nat` ARE `if a <= b then b else a` / `if a <= b then a else b` (`Init/Prelude.lean:1311` `maxOfLe`, `:1328` `minOfLe`, `Init/Data/Nat/Basic.lean:873` `instance : Max Nat := maxOfLe`, `Init/Prelude.lean:2088` `instance : Min Nat := minOfLe`, and `Basic.lean:871` `Nat.min_def : min n m = if n <= m then n else m := rfl`), decided by `Nat.decLe` i.e. `Nat.ble`. `nat_prelude/minmax.rs` declares `Max.max`/`Min.min` with exactly that body, so this is the SAME function and only the delivery (a class projection at an instance) differs -- the same relation `HAdd.hAdd`/`instAddNat` bear to `Nat.add` in every already-settled mirror mentioning `+`. The rendered type differs from the pinned surface statement only in binder INFO (all binders explicit here; Mathlib marks some implicit), which is elaboration, not proposition. The construction: `Max.max a b` is a `Bool.rec` stuck at a symbolic `Nat.ble a b`, so every proof first learns the boolean -- `Nat.le_total` plus `Nat.ble_eq_true_of_le`, then an `Eq.rec` at `Bool` in the symm direction so the `refl` case iota-reduces. `Nat.max_eq_left`/`Nat.min_eq_right` take `Le b a`, which does NOT decide the boolean (at `a = b` it is `true` and the other arm is selected), so they split on `bool_true_or_false` and close the true arm through `Nat.le_antisymm`. No declaration in the module inducts, and none forms a numeral larger than `0`. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority.",
+ "proof_route": "kernel-lean",
+ "axiom_footprint": []
 }
