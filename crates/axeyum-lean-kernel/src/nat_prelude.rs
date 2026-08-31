@@ -5235,7 +5235,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let pair = kernel.name_str(nat, "Pair");
         let primrec = kernel.name_str(nat, "Primrec");
         let cases_on_uparam_name = {
-            let anon = kernel.anon_name();
+            let anon = kernel.anon();
             kernel.name_str(anon, "u")
         };
         let p = NatPrelude {
@@ -7174,6 +7174,9 @@ mod avg_pair_tests;
 
 #[cfg(test)]
 mod unpair_tests;
+
+#[cfg(test)]
+mod primrec_tests;
 
 #[cfg(test)]
 mod stirling_tests;
