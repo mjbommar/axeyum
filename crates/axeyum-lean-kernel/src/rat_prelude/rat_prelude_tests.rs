@@ -173,6 +173,11 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("det_congr", p.det_congr),
         ("matMinor_matId", p.mat_minor_mat_id),
         ("det_matId", p.det_mat_id),
+        ("matSkip_zero", p.mat_skip_zero),
+        ("matSkip_succ_succ", p.mat_skip_succ_succ),
+        ("matSkip_comm", p.mat_skip_comm),
+        ("matMinor_col_comm", p.mat_minor_col_comm),
+        ("det_minor_col_comm", p.det_minor_col_comm),
     ]
 }
 
@@ -6738,6 +6743,11 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("det_congr", p.det_congr, true),
         ("matMinor_matId", p.mat_minor_mat_id, true),
         ("det_matId", p.det_mat_id, true),
+        ("matSkip_zero", p.mat_skip_zero, true),
+        ("matSkip_succ_succ", p.mat_skip_succ_succ, true),
+        ("matSkip_comm", p.mat_skip_comm, true),
+        ("matMinor_col_comm", p.mat_minor_col_comm, true),
+        ("det_minor_col_comm", p.det_minor_col_comm, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

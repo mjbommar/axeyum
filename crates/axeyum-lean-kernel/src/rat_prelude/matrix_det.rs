@@ -83,8 +83,8 @@
 use super::RatPrelude;
 use super::matrix::{rdet2, rdet3};
 use super::ops::{
-    radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rrefl, rsum_range, rtrans,
-    rzero,
+    nat_eq_to_rat, radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rrefl,
+    rsum_range, rtrans, rzero,
 };
 use super::probability::bool_select_rat;
 use crate::KernelError;
@@ -127,7 +127,12 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_sum_range_head_of_tail_zero(d, p)?;
     declare_det_congr(d, p)?;
     declare_mat_minor_mat_id(d, p)?;
-    declare_det_mat_id(d, p)
+    declare_det_mat_id(d, p)?;
+    declare_mat_skip_zero(d, p)?;
+    declare_mat_skip_succ_succ(d, p)?;
+    declare_mat_skip_comm(d, p)?;
+    declare_mat_minor_col_comm(d, p)?;
+    declare_det_minor_col_comm(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -1507,4 +1512,475 @@ fn declare_det_mat_id(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelErr
     let ty = d.pi_fv(n_fv, nat, stmt);
     let value = d.lam_fv(n_fv, nat, proof);
     d.declare_theorem(p.det_mat_id, ty, value)
+}
+
+// --- the index layer of Laplace expansion (ADR-1155) -----------------------
+
+/// `Bool.rec.{0}` as a two-branch case split at `Prop`: from `motive true` and
+/// `motive false`, a proof of `motive b` for a symbolic `b : Bool`.
+///
+/// The kernel's defeq checker does not decide a `Bool.rec` on a symbolic
+/// scrutinee, so every `Nat.ble`-guarded index identity in this file needs
+/// this — `nat_prelude`'s own copies are `pub(super)` there and not reachable
+/// from `rat_prelude`.
+fn bool_cases(
+    d: &mut IntDev<'_>,
+    scrutinee: ExprId,
+    motive: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    at_true: &dyn Fn(&mut IntDev<'_>) -> ExprId,
+    at_false: &dyn Fn(&mut IntDev<'_>) -> ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let motive_lam = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = motive(d, c);
+        d.lam_fv(c_fv, bool_ty, body)
+    };
+    let case_true = at_true(d);
+    let case_false = at_false(d);
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.prelude().logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![level_zero]);
+    d.apply(rec, &[motive_lam, case_false, case_true, scrutinee])
+}
+
+/// Admit `Rat.matSkip_zero : ∀ x, matSkip 0 x = succ x`.
+///
+/// `Eq.refl`. `Nat.ble`'s zero row is the constant `true` function with no
+/// inner recursion (`nat_prelude::ble`), so `ble zero x` iota-reduces to
+/// `true` for a *symbolic* `x` and the `Bool.rec` inside `matSkip` fires.
+/// This is the one `matSkip` equation that needs no case split, and it is why
+/// deleting row 0 is definitionally a shift by one.
+fn declare_mat_skip_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let zero_n = d.zero();
+    let lhs = rmat_skip(d, p, zero_n, x);
+    let rhs = d.succ(x);
+    let stmt = NatOps::eq(d, lhs, rhs);
+    let proof = NatOps::refl(d, rhs);
+    let ty = d.pi_fv(x_fv, nat, stmt);
+    let value = d.lam_fv(x_fv, nat, proof);
+    d.declare_theorem(p.mat_skip_zero, ty, value)
+}
+
+/// Admit `Rat.matSkip_succ_succ : ∀ q x, matSkip (succ q) (succ x) =
+/// succ (matSkip q x)`.
+///
+/// **Not** `Eq.refl`, and the reason is the shape of the guard rather than the
+/// arithmetic. `Nat.ble (succ q) (succ x)` *does* iota-reduce to
+/// `Nat.ble q x`, so both sides are `Bool.rec` applications on the same
+/// symbolic scrutinee — but the left has `succ` inside its two branches and
+/// the right has it outside, and the kernel does not push a constructor
+/// through a stuck recursor. A two-branch [`bool_cases`] closes it: at `true`
+/// both sides are `succ (succ x)` and at `false` both are `succ x`.
+fn declare_mat_skip_succ_succ(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let sq = d.succ(q);
+    let sx = d.succ(x);
+    let lhs = rmat_skip(d, p, sq, sx);
+    let inner = rmat_skip(d, p, q, x);
+    let rhs = d.succ(inner);
+    let stmt = NatOps::eq(d, lhs, rhs);
+
+    let ssx = d.succ(sx);
+    let cond = d.ble(q, x);
+    let motive = |d: &mut IntDev<'_>, c: ExprId| -> ExprId {
+        let left = d.bool_select_nat(c, ssx, sx);
+        let right_inner = d.bool_select_nat(c, sx, x);
+        let right = d.succ(right_inner);
+        NatOps::eq(d, left, right)
+    };
+    let proof = bool_cases(
+        d,
+        cond,
+        &motive,
+        &|d| NatOps::refl(d, ssx),
+        &|d| NatOps::refl(d, sx),
+    );
+
+    let ty = {
+        let inner = d.pi_fv(x_fv, nat, stmt);
+        d.pi_fv(q_fv, nat, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(x_fv, nat, proof);
+        d.lam_fv(q_fv, nat, inner)
+    };
+    d.declare_theorem(p.mat_skip_succ_succ, ty, value)
+}
+
+/// `∀ x, matSkip a (matSkip b x) = matSkip (succ b) (matSkip a x)`, the body
+/// of [`declare_mat_skip_comm`]'s statement at a given `a`, `b`.
+fn skip_comm_body(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let inner_b = rmat_skip(d, p, b, x);
+    let lhs = rmat_skip(d, p, a, inner_b);
+    let inner_a = rmat_skip(d, p, a, x);
+    let sb = d.succ(b);
+    let rhs = rmat_skip(d, p, sb, inner_a);
+    let eq = NatOps::eq(d, lhs, rhs);
+    d.pi_fv(x_fv, nat, eq)
+}
+
+/// `Eq Bool (Nat.ble a b) true`, [`declare_mat_skip_comm`]'s hypothesis.
+fn ble_true_ty(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let lhs = d.ble(a, b);
+    let true_ = d.bool_true();
+    d.bool_eq(lhs, true_)
+}
+
+/// Admit `Rat.matSkip_comm : ∀ a b, Nat.ble a b = true → ∀ x,
+/// matSkip a (matSkip b x) = matSkip (succ b) (matSkip a x)`.
+///
+/// **The index content of Laplace expansion.** Deleting index `b` and then
+/// index `a` from `[0, n)` reaches the same injection as deleting `a` and then
+/// the shifted `succ b`, provided `a ≤ b`.
+///
+/// The hypothesis is not decoration: at `a = 1`, `b = 0`, `x = 0` the two
+/// sides are `2` and `0`. It is carried as the BOOLEAN `Nat.ble a b = true`
+/// rather than `Nat.le a b` because the successor step has to invert it, and
+/// `ble` inverts by iota-reduction alone — `ble (succ a') zero ≡ false` makes
+/// the `b = 0` case a [`NatOps::false_true_elim`], and
+/// `ble (succ a') (succ b') ≡ ble a' b'` hands the induction hypothesis its
+/// own premise with no bridging lemma. With `Nat.le` both steps would need
+/// inversion lemmas.
+///
+/// Induction on `a` with `b`, the hypothesis, and `x` all under the motive —
+/// the same "quantify the moving arguments inside" shape
+/// [`declare_det_congr`] needs, and for the same reason: the induction
+/// hypothesis is applied at a *different* pair `(a', b')`.
+///
+/// - `a = 0`: `matSkip 0 y ≡ succ y`, so the goal is exactly
+///   [`declare_mat_skip_succ_succ`] read backwards. No hypothesis is used.
+/// - `a = succ a'`, `b = 0`: the premise is `false = true`.
+/// - `a = succ a'`, `b = succ b'`, `x = 0`: both sides reduce to `0`, since
+///   `ble (succ _) zero ≡ false` collapses every `matSkip (succ _) 0`.
+/// - `a = succ a'`, `b = succ b'`, `x = succ x'`: five rewrites, four of them
+///   [`declare_mat_skip_succ_succ`] peeling a `succ` off each nested shift,
+///   with the induction hypothesis at `(a', b', x')` in the middle.
+fn declare_mat_skip_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let motive = |d: &mut IntDev<'_>, a: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let hyp = ble_true_ty(d, a, b);
+        let concl = skip_comm_body(d, p, a, b);
+        let arr = d.arrow(hyp, concl);
+        d.pi_fv(b_fv, nat, arr)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let nat = d.nat_ty();
+        let zero_n = d.zero();
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let hyp = ble_true_ty(d, zero_n, b);
+        let h_fv = d.fresh_fvar();
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        // Goal: `matSkip 0 (matSkip b x) = matSkip (succ b) (matSkip 0 x)`,
+        // definitionally `succ (matSkip b x) = matSkip (succ b) (succ x)`.
+        let sx = d.succ(x);
+        let sb = d.succ(b);
+        let shifted = rmat_skip(d, p, sb, sx);
+        let inner = rmat_skip(d, p, b, x);
+        let peeled = d.succ(inner);
+        let mss = d.lemma(p.mat_skip_succ_succ, &[b, x]);
+        let pf = NatOps::symm(d, shifted, peeled, mss);
+        let over_x = d.lam_fv(x_fv, nat, pf);
+        let over_h = d.lam_fv(h_fv, hyp, over_x);
+        d.lam_fv(b_fv, nat, over_h)
+    };
+
+    let step = |d: &mut IntDev<'_>, ap: ExprId, ih: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let sap = d.succ(ap);
+
+        let motive_b = |d: &mut IntDev<'_>, b: ExprId| -> ExprId {
+            let hyp = ble_true_ty(d, sap, b);
+            let concl = skip_comm_body(d, p, sap, b);
+            d.arrow(hyp, concl)
+        };
+
+        let b_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, sap, zero_n);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let target = skip_comm_body(d, p, sap, zero_n);
+            let pf = d.false_true_elim(target, h);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let b_at_succ = |d: &mut IntDev<'_>, bp: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let sbp = d.succ(bp);
+            let ssbp = d.succ(sbp);
+            let hyp = ble_true_ty(d, sap, sbp);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            // `h : ble (succ a') (succ b') = true` is definitionally
+            // `ble a' b' = true`, which is exactly what `ih` wants at `b'`.
+            let ih_at = d.apply(ih, &[bp, h]);
+
+            let motive_x = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+                let inner_b = rmat_skip(d, p, sbp, x);
+                let lhs = rmat_skip(d, p, sap, inner_b);
+                let inner_a = rmat_skip(d, p, sap, x);
+                let rhs = rmat_skip(d, p, ssbp, inner_a);
+                NatOps::eq(d, lhs, rhs)
+            };
+
+            let x_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+                // `matSkip (succ _) 0 ≡ 0`, so both sides are `0`.
+                let zero_n = d.zero();
+                NatOps::refl(d, zero_n)
+            };
+
+            let x_at_succ = |d: &mut IntDev<'_>, xp: ExprId| -> ExprId {
+                let sxp = d.succ(xp);
+                let skip_bp = rmat_skip(d, p, bp, xp);
+                let skip_ap = rmat_skip(d, p, ap, xp);
+
+                let start = {
+                    let inner = rmat_skip(d, p, sbp, sxp);
+                    rmat_skip(d, p, sap, inner)
+                };
+
+                // 1. `matSkip (succ b') (succ x')  ->  succ (matSkip b' x')`
+                let s1 = {
+                    let from = rmat_skip(d, p, sbp, sxp);
+                    let to = d.succ(skip_bp);
+                    let pf = d.lemma(p.mat_skip_succ_succ, &[bp, xp]);
+                    NatOps::congr(d, from, to, pf, &|d, t| rmat_skip(d, p, sap, t))
+                };
+                let mid1 = {
+                    let peeled = d.succ(skip_bp);
+                    rmat_skip(d, p, sap, peeled)
+                };
+
+                // 2. `matSkip (succ a') (succ y)  ->  succ (matSkip a' y)`
+                let nested = rmat_skip(d, p, ap, skip_bp);
+                let mid2 = d.succ(nested);
+                let s2 = d.lemma(p.mat_skip_succ_succ, &[ap, skip_bp]);
+
+                // 3. the induction hypothesis, under `succ`
+                let swapped = rmat_skip(d, p, sbp, skip_ap);
+                let mid3 = d.succ(swapped);
+                let s3 = {
+                    let pf = d.apply(ih_at, &[xp]);
+                    NatOps::congr(d, nested, swapped, pf, &|d, t| d.succ(t))
+                };
+
+                // 4. `succ (matSkip (succ b') y)  ->  matSkip (succ (succ b')) (succ y)`
+                let peeled_a = d.succ(skip_ap);
+                let mid4 = rmat_skip(d, p, ssbp, peeled_a);
+                let s4 = {
+                    let pf = d.lemma(p.mat_skip_succ_succ, &[sbp, skip_ap]);
+                    NatOps::symm(d, mid4, mid3, pf)
+                };
+
+                // 5. `succ (matSkip a' x')  ->  matSkip (succ a') (succ x')`
+                let from5 = rmat_skip(d, p, sap, sxp);
+                let s5 = {
+                    let pf = d.lemma(p.mat_skip_succ_succ, &[ap, xp]);
+                    let back = NatOps::symm(d, from5, peeled_a, pf);
+                    NatOps::congr(d, peeled_a, from5, back, &|d, t| rmat_skip(d, p, ssbp, t))
+                };
+                let end = rmat_skip(d, p, ssbp, from5);
+
+                let (_e, proof) = NatOps::chain(
+                    d,
+                    start,
+                    &[(mid1, s1), (mid2, s2), (mid3, s3), (mid4, s4), (end, s5)],
+                );
+                proof
+            };
+
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let per_x = d.induct(&motive_x, &x_at_zero, &|d, xp, _ih| x_at_succ(d, xp), x);
+            let over_x = d.lam_fv(x_fv, nat, per_x);
+            d.lam_fv(h_fv, hyp, over_x)
+        };
+
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let per_b = d.induct(&motive_b, &b_at_zero, &|d, bp, _ih| b_at_succ(d, bp), b);
+        d.lam_fv(b_fv, nat, per_b)
+    };
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let stmt = motive(d, a);
+    let proof = d.induct(&motive, &base, &step, a);
+    let ty = d.pi_fv(a_fv, nat, stmt);
+    let value = d.lam_fv(a_fv, nat, proof);
+    d.declare_theorem(p.mat_skip_comm, ty, value)
+}
+
+/// Admit `Rat.matMinor_col_comm : ∀ A i j a b, Nat.ble a b = true → ∀ r c,
+/// matMinor (matMinor A i a) j b r c = matMinor (matMinor A i (succ b)) j a r c`.
+///
+/// [`declare_mat_skip_comm`] lifted from indices to entries, POINTWISE — the
+/// only form available, since `funext` is absent (ADR-1135).
+///
+/// The row indices `i`, `j` are the SAME on both sides, deliberately. A
+/// cofactor expansion of a cofactor expansion deletes row `0` and then row `0`
+/// of the minor, so the row half of the double deletion is already identical
+/// term-for-term and only the columns need exchanging. The fully general
+/// double-minor exchange would move the rows too (`(0,0)` becomes `(1,0)`),
+/// which is a *different* matrix and not what Laplace needs.
+fn declare_mat_minor_col_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let hyp = ble_true_ty(d, u, v);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let sv = d.succ(v);
+    let left_outer = rmat_minor_of(d, p, mat, i, u);
+    let lhs = rmat_minor(d, p, left_outer, j, v, r, c);
+    let right_outer = rmat_minor_of(d, p, mat, i, sv);
+    let rhs = rmat_minor(d, p, right_outer, j, u, r, c);
+    let stmt = req(d, lhs, rhs);
+
+    // Both sides delta-beta-reduce to `A (matSkip i (matSkip j r)) <column>`,
+    // and only the column differs.
+    let row_index = {
+        let inner = rmat_skip(d, p, j, r);
+        rmat_skip(d, p, i, inner)
+    };
+    let left_col = {
+        let inner = rmat_skip(d, p, v, c);
+        rmat_skip(d, p, u, inner)
+    };
+    let right_col = {
+        let inner = rmat_skip(d, p, u, c);
+        rmat_skip(d, p, sv, inner)
+    };
+    let comm = d.lemma(p.mat_skip_comm, &[u, v, h]);
+    let comm_at = d.apply(comm, &[c]);
+    let proof = nat_eq_to_rat(d, left_col, right_col, comm_at, &|d, t| {
+        d.apply(mat, &[row_index, t])
+    });
+
+    let ty = {
+        let over_c = d.pi_fv(c_fv, nat, stmt);
+        let over_r = d.pi_fv(r_fv, nat, over_c);
+        let with_h = d.pi_fv(h_fv, hyp, over_r);
+        let over_v = d.pi_fv(v_fv, nat, with_h);
+        let over_u = d.pi_fv(u_fv, nat, over_v);
+        let over_j = d.pi_fv(j_fv, nat, over_u);
+        let over_i = d.pi_fv(i_fv, nat, over_j);
+        d.pi_fv(a_fv, mty, over_i)
+    };
+    let value = {
+        let over_c = d.lam_fv(c_fv, nat, proof);
+        let over_r = d.lam_fv(r_fv, nat, over_c);
+        let with_h = d.lam_fv(h_fv, hyp, over_r);
+        let over_v = d.lam_fv(v_fv, nat, with_h);
+        let over_u = d.lam_fv(u_fv, nat, over_v);
+        let over_j = d.lam_fv(j_fv, nat, over_u);
+        let over_i = d.lam_fv(i_fv, nat, over_j);
+        d.lam_fv(a_fv, mty, over_i)
+    };
+    d.declare_theorem(p.mat_minor_col_comm, ty, value)
+}
+
+/// Admit `Rat.det_minor_col_comm : ∀ m A i j a b, Nat.ble a b = true →
+/// det (matMinor (matMinor A i a) j b) m =
+/// det (matMinor (matMinor A i (succ b)) j a) m`.
+///
+/// [`declare_mat_minor_col_comm`] carried to the determinant by
+/// [`declare_det_congr`] — the only route, because the two doubly-deleted
+/// matrices agree at every index pair and are not the same term, and this
+/// kernel has no `funext`.
+///
+/// This is the step a Laplace expansion needs at the *bottom* of its double
+/// sum: for a pair of distinct columns `{x, y}`, the two orders of deletion
+/// produce the two determinants whose alternating signs then have to cancel.
+fn declare_det_minor_col_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let hyp = ble_true_ty(d, u, v);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let sv = d.succ(v);
+    let left = {
+        let outer = rmat_minor_of(d, p, mat, i, u);
+        rmat_minor_of(d, p, outer, j, v)
+    };
+    let right = {
+        let outer = rmat_minor_of(d, p, mat, i, sv);
+        rmat_minor_of(d, p, outer, j, u)
+    };
+    let lhs = rdet(d, p, left, m);
+    let rhs = rdet(d, p, right, m);
+    let stmt = req(d, lhs, rhs);
+
+    let pointwise = d.const_app(p.mat_minor_col_comm, &[mat, i, j, u, v, h]);
+    let proof = d.lemma(p.det_congr, &[m, left, right, pointwise]);
+
+    let ty = {
+        let with_h = d.pi_fv(h_fv, hyp, stmt);
+        let over_v = d.pi_fv(v_fv, nat, with_h);
+        let over_u = d.pi_fv(u_fv, nat, over_v);
+        let over_j = d.pi_fv(j_fv, nat, over_u);
+        let over_i = d.pi_fv(i_fv, nat, over_j);
+        let over_a = d.pi_fv(a_fv, mty, over_i);
+        d.pi_fv(m_fv, nat, over_a)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp, proof);
+        let over_v = d.lam_fv(v_fv, nat, with_h);
+        let over_u = d.lam_fv(u_fv, nat, over_v);
+        let over_j = d.lam_fv(j_fv, nat, over_u);
+        let over_i = d.lam_fv(i_fv, nat, over_j);
+        let over_a = d.lam_fv(a_fv, mty, over_i);
+        d.lam_fv(m_fv, nat, over_a)
+    };
+    d.declare_theorem(p.det_minor_col_comm, ty, value)
 }
