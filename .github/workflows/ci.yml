@@ -247,6 +247,39 @@ jobs:
           grep -Fx \
             'LEAN_CROSSCHECK|label=representative|families=78|modules=78|checked=78|budget_skipped=0|failed=0' \
             "$RUNNER_TEMP/lean-representative.log"
+      # L0 kernel differential (ADR-1050). The `kernel_differential` test
+      # target ran in NO automated context before this: 0 references in
+      # ci.yml, hooks/pre-push and scripts/local-ci.sh alike, against controls
+      # of 9, 14 and 3 `cargo test` invocations in those same files.
+      #
+      # It belongs in THIS job and nowhere else, because it hard-requires the
+      # pinned Lean toolchain -- `AXEYUM_REQUIRE_LEAN=1` (already this job's
+      # env) turns a missing toolchain into a failure rather than a skip, so
+      # in any job without Lean it would go red for the wrong reason. Measured
+      # warm on s4: 7s incremental, 27s from a cold-ish target. The script
+      # re-derives its verdict from the test's output text (guards G1..G6)
+      # instead of trusting the harness exit status alone.
+      - run: python3 scripts/check-kernel-differential.py
+      # Proves those six guards each still fire on the input that names them.
+      - run: python3 scripts/check-kernel-differential-mutants.py
+
+  # L0 trust closure (ADR-1050). Its own job because it shells out to
+  # `cargo run --release -p axeyum-lean-kernel --example
+  # kernel_declaration_projection`, and NO other job in this file does a
+  # release build at all (measured: zero `--release` occurrences before this).
+  # `--release` is mandatory for that example -- in debug it SIGABRTs on stack
+  # depth building creal/complex/cpoint, which looks like a broken tool rather
+  # than a resource limit. Measured warm on s4: 58s once the example is built;
+  # the build itself is what `rust-cache` is here for. Runs in parallel, so it
+  # extends CI's critical path only if it becomes the slowest job.
+  l0-trust-closure:
+    name: L0 trust closure (kernel declaration projection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: python3 scripts/check-trust-closure.py --quiet
 
   deny:
     name: cargo-deny
@@ -364,4 +397,26 @@ jobs:
       - run: python3 scripts/gen-smtlib-session-contract.py --check
       - run: ./scripts/check-smtcomp-resume.sh
       - run: python3 scripts/check-plan-authority.py
+      # L0 trusted-library safety gates (ADR-1050). Until now the entire L0
+      # programme ran ONLY from `scripts/check.sh` and the `justfile` -- that
+      # is, only when a human typed a command. `ci.yml`, `hooks/pre-push` and
+      # `scripts/local-ci.sh` (which this file calls "the authoritative gate
+      # for main") named none of the seven.
+      #
+      # These five are pure Python and need no build, which is why they live in
+      # this job rather than a cargo one. Measured warm on s4, single run:
+      # settled-fact-statements 0.09s, holdout-closed-evaluation 0.06s,
+      # semantic-control-fixtures 1.09s, credit-transaction-ledger 10.6s,
+      # proposition-duplication 55-72s. Ordered cheapest-first so a fast
+      # violation is reported without paying for the slow ones.
+      #
+      # NO `continue-on-error` on any of these, deliberately: two steps above
+      # carry it for a documented lean-parity reason, and a safety gate whose
+      # failure is swallowed manufactures the appearance of enforcement.
+      # `scripts/check-l0-gate-enforcement.py` fails if one ever acquires it.
+      - run: python3 scripts/check-settled-fact-statements.py
+      - run: python3 scripts/check-holdout-closed-evaluation.py
+      - run: python3 scripts/check-semantic-control-fixtures.py --check
+      - run: python3 scripts/check-credit-transaction-ledger.py
+      - run: python3 scripts/check-proposition-duplication.py
       - run: ./scripts/check-links.sh
