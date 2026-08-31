@@ -1,8 +1,8 @@
 {
   "command": "cargo run --release -p axeyum-lean-kernel --example shape_search -- --include-constructed --limit 999999 --kind axiom --kind definition --kind theorem --kind inductive --kind constructor --kind recursor",
-  "control": "axiom=30 definition=358 theorem=2124 opaque=0 inductive=24 constructor=31 recursor=24 quot=0",
-  "coverage": "groups=[logic,nat,axreal,integer,rat,characterization,string,creal,complex,cpoint] declarations=2591 values_indexed=false build=30.0s",
-  "declaration_count": 2591,
+  "control": "axiom=30 definition=360 theorem=2124 opaque=0 inductive=24 constructor=31 recursor=24 quot=0",
+  "coverage": "groups=[logic,nat,axreal,integer,rat,characterization,string,creal,complex,cpoint] declarations=2593 values_indexed=false build=27.9s",
+  "declaration_count": 2593,
   "declarations": [
     "Acc",
     "Acc.intro",
@@ -2036,6 +2036,8 @@
     "Nat.sqrt_one",
     "Nat.sqrt_zero",
     "Nat.squarefreeAux",
+    "Nat.stirlingFirst",
+    "Nat.stirlingSecond",
     "Nat.sub",
     "Nat.sub_add_cancel",
     "Nat.sub_eq_zero_of_le",

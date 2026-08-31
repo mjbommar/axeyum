@@ -773,3 +773,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1075](adr-1075-the-curriculum-graph-measures-scenarios-not-the-kernel.md) | `docs/curriculum/curriculum.toml`'s `status` field is the | accepted |
 | [1082](adr-1082-add-a-probability-node-the-kernel-had-the-spine-the-map-did-not.md) | Adds `probability` (layer 3, destinations) to | accepted |
 | [1095](adr-1095-draw-13-is-declined-two-constructions-are-not-four-families.md) | ADR-1060 built BOTH of draw 12's named unblocks | accepted |
+| [1100](adr-1100-four-families-for-draw-14-the-free-supply-all-sorts-early.md) | ADR-1095 measured that a draw needs >= 4 fresh families | accepted |
