@@ -222,6 +222,7 @@ mod rectangle;
 mod rel_prime;
 mod relation;
 mod restrict_pair;
+mod size_extra;
 mod sqrt;
 mod squarefree;
 mod subset_product;
@@ -392,6 +393,7 @@ use relation::{
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
+use size_extra::declare_size_extra_all;
 use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
@@ -2602,6 +2604,11 @@ pub struct NatPrelude {
     /// strictly bounded by 2 raised to its own bit count. The
     /// `fuel := n` instance of [`Self::size_aux_lt_pow`].
     pub lt_pow_size: NameId,
+    /// `Nat.size_one : Eq (size 1) 1` — `refl`. See `nat_prelude::size_extra`.
+    pub size_one: NameId,
+    /// `Nat.size_eq_zero : ∀ n, Iff (Eq (size n) 0) (Eq n 0)`. See
+    /// `nat_prelude::size_extra`.
+    pub size_eq_zero: NameId,
     /// `Nat.mod_eq_self_of_lt : ∀ n m, Lt n m → mod n m = n` — a general
     /// division fact (not specific to binary representation), needed as glue
     /// for [`Self::sum_test_bit_eq`]. Proved by comparing the executable
@@ -5235,6 +5242,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             size_zero: kernel.name_str(nat, "size_zero"),
             size_aux_lt_pow: kernel.name_str(nat, "size_aux_lt_pow"),
             lt_pow_size: kernel.name_str(nat, "lt_pow_size"),
+            size_one: kernel.name_str(nat, "size_one"),
+            size_eq_zero: kernel.name_str(nat, "size_eq_zero"),
             mod_eq_self_of_lt: kernel.name_str(nat, "mod_eq_self_of_lt"),
             sum_test_bit_eq: kernel.name_str(nat, "sum_testBit_eq"),
             sum_range_const_zero: kernel.name_str(nat, "sumRange_const_zero"),
@@ -5814,6 +5823,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
+        // Needs `Nat.size`/`lt_pow_size`/`size_zero` (`declare_size_all`,
+        // just above) plus basic order lemmas from far above
+        // (`le_of_lt_succ`, `zero_le`, `le_antisymm`); nothing needs these
+        // two closed `ml430` mirrors, so they go right after `Nat.size`.
+        declare_size_extra_all(&mut d, &p)?;
         declare_zero_of_test_bit(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
         declare_relation_properties(&mut d, &p)?;
@@ -6440,3 +6454,6 @@ mod nat_prelude_tests;
 
 #[cfg(test)]
 mod bit_extra_tests;
+
+#[cfg(test)]
+mod size_extra_tests;

@@ -892,6 +892,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.size_zero,
         p.size_aux_lt_pow,
         p.lt_pow_size,
+        p.size_one,
+        p.size_eq_zero,
         p.mod_eq_self_of_lt,
         p.sum_test_bit_eq,
         p.sum_range_const_zero,
