@@ -18434,6 +18434,12 @@
       "kernel_theorem": "Rat.markov_inequality"
     },
     {
+      "fact_id": "F:rat-matinv2-matmul-top-left",
+      "language": "lean4",
+      "statement_sha256": "7118f264718caeb9e84e8b5e07292026d0f14a943fdf748c4e4ca1fd6b1590cc",
+      "prose_sha256": "0e9de7748a07a830a1e59fc101c15d3e18f220aee32cd8eb560069e990890071"
+    },
+    {
       "fact_id": "F:rat-matmul-assoc",
       "language": "lean4",
       "statement_sha256": "edd80215de9e0e5035dedeee7dda9ec7862dbdc2ab900b9267a4299986b1c77c",
@@ -18474,6 +18480,12 @@
           "prose_sha256": "ec72fad855adca45a3eead315e61de558ab864077d7a1e3776203c67818369c5"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-matmul-matinv2-top-left",
+      "language": "lean4",
+      "statement_sha256": "244932d7e46e42f6de3de5140ec2fc0637eb2392afe687255e929c3ad3907f46",
+      "prose_sha256": "a98c851e61d6b533dedaa737b2c3e54516e295bc9f6e0380bba2e29a696d5fe4"
     },
     {
       "fact_id": "F:rat-mattranspose-mul",
