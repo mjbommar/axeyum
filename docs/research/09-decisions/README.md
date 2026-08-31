@@ -776,3 +776,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1095](adr-1095-draw-13-is-declined-two-constructions-are-not-four-families.md) | ADR-1060 built BOTH of draw 12's named unblocks | accepted |
 | [1100](adr-1100-four-families-for-draw-14-the-free-supply-all-sorts-early.md) | ADR-1095 measured that a draw needs >= 4 fresh families | accepted |
 | [1110](adr-1110-euler-totient-theorem-lands-axiom-free-first-attempt.md) | Closes the Fermat -> Euler handoff | accepted |
+| [1115](adr-1115-draw-14-is-declined-r12-could-not-see-a-ground-predicate.md) | ADR-1100 enabled two four-family layouts for draw 14 and left | accepted |
