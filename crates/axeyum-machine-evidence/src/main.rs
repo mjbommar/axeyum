@@ -3,15 +3,19 @@
 use std::{env, path::Path};
 
 use axeyum_machine_evidence::{
-    add_step_report, branch_trace_report, check_add_step, check_add_wrong_destination_control,
-    check_branch_target_control, check_branch_trace, check_cross_isa_absolute_value,
-    check_cross_isa_predicate_control, check_decoder_reserved_bit_control, check_decoder_roundtrip,
-    check_memory_byte_order_control, check_memory_trace, check_observation_omission_control,
-    check_observation_separation, check_run_classification, check_run_false_halt_control,
-    check_rv64_branch_base_control, check_rv64_execution, check_rv64_source,
-    check_rv64_source_digest_control, check_state_codec, check_state_codec_trailing_byte_control,
-    check_step_coverage, check_step_hidden_write_control, check_step_mutation_suite_control,
-    check_symbolic_addition, check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
+    a0_equivalence_report, a0_minimality_report, add_step_report, branch_trace_report,
+    check_a0_equivalence, check_a0_equivalence_corrupt_model_control,
+    check_a0_equivalence_destination_control, check_a0_minimality,
+    check_a0_minimality_language_omission_control, check_a0_minimality_witness_control,
+    check_add_step, check_add_wrong_destination_control, check_branch_target_control,
+    check_branch_trace, check_cross_isa_absolute_value, check_cross_isa_predicate_control,
+    check_decoder_reserved_bit_control, check_decoder_roundtrip, check_memory_byte_order_control,
+    check_memory_trace, check_observation_omission_control, check_observation_separation,
+    check_run_classification, check_run_false_halt_control, check_rv64_branch_base_control,
+    check_rv64_execution, check_rv64_source, check_rv64_source_digest_control, check_state_codec,
+    check_state_codec_trailing_byte_control, check_step_coverage, check_step_hidden_write_control,
+    check_step_mutation_suite_control, check_symbolic_addition,
+    check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
     check_symbolic_memory_partial_store_control, check_word_package,
     check_word_package_signed_zero_extension_control, check_word_roundtrip,
     check_word_roundtrip_reversed_control, check_x64_branch_base_control, check_x64_execution,
@@ -444,6 +448,68 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_cross_isa_predicate_control(Path::new(report))?;
             return Err("control-failure: mutated cross-ISA predicate was accepted".into());
         }
+        [command, package, output] if command == "emit-a0-equivalence" => {
+            let report = a0_equivalence_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "a0-equivalence: PASS: result-only={} full-with-premise={} counterexamples=2 replayed=2",
+                report.result_only.cases_checked, report.full_state_with_premise.cases_checked
+            );
+        }
+        [command, package, report] if command == "check-a0-equivalence" => {
+            let checked = check_a0_equivalence(Path::new(package), Path::new(report))?;
+            println!(
+                "a0-equivalence: PASS: result-only={} full-with-premise={} counterexamples=2 replayed=2",
+                checked.result_only.cases_checked, checked.full_state_with_premise.cases_checked
+            );
+        }
+        [command, package, report] if command == "control-a0-equivalence-destination" => {
+            check_a0_equivalence_destination_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: mutated A0 destination was accepted".into());
+        }
+        [command, package, report] if command == "control-a0-equivalence-corrupt-model" => {
+            check_a0_equivalence_corrupt_model_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: corrupted A0 counterexample model was accepted".into());
+        }
+        [command, package, output] if command == "emit-a0-minimality" => {
+            let report = a0_minimality_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "a0-minimality: PASS: alphabet={} strata={:?} minimum={} witness={} result_sha256={}",
+                report.language.alphabet.len(),
+                report
+                    .strata
+                    .iter()
+                    .map(|stratum| stratum.candidates_checked)
+                    .collect::<Vec<_>>(),
+                report.minimum_cost,
+                report.witness.len(),
+                report.result_sha256
+            );
+        }
+        [command, package, report] if command == "check-a0-minimality" => {
+            let checked = check_a0_minimality(Path::new(package), Path::new(report))?;
+            println!(
+                "a0-minimality: PASS: alphabet={} strata={:?} minimum={} witness={} result_sha256={}",
+                checked.language.alphabet.len(),
+                checked
+                    .strata
+                    .iter()
+                    .map(|stratum| stratum.candidates_checked)
+                    .collect::<Vec<_>>(),
+                checked.minimum_cost,
+                checked.witness.len(),
+                checked.result_sha256
+            );
+        }
+        [command, package, report] if command == "control-a0-minimality-witness" => {
+            check_a0_minimality_witness_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: mutated A0 minimality witness was accepted".into());
+        }
+        [command, package, report] if command == "control-a0-minimality-language-omission" => {
+            check_a0_minimality_language_omission_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: incomplete A0 minimality language was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -483,7 +549,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  check-x64-execution REPORT | control-x64-branch-base REPORT | \
                  emit-cross-isa-absolute-value OUTPUT | \
                  check-cross-isa-absolute-value REPORT | \
-                 control-cross-isa-predicate REPORT"
+                 control-cross-isa-predicate REPORT | \
+                 emit-a0-equivalence PACKAGE OUTPUT | \
+                 check-a0-equivalence PACKAGE REPORT | \
+                 control-a0-equivalence-destination PACKAGE REPORT | \
+                 control-a0-equivalence-corrupt-model PACKAGE REPORT | \
+                 emit-a0-minimality PACKAGE OUTPUT | \
+                 check-a0-minimality PACKAGE REPORT | \
+                 control-a0-minimality-witness PACKAGE REPORT | \
+                 control-a0-minimality-language-omission PACKAGE REPORT"
                 .into());
         }
     }

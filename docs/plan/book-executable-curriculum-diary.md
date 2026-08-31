@@ -902,3 +902,71 @@ The book object and artifact still need to bind it before the obligation can
 move from open to computed. A universal symbolic simulation, the A0
 equivalence/counterexample route, scalar minimality, and the complete XOR
 three-machine case remain open.
+
+## 2026-08-31 — finite A0 equivalence queries and decoded-model replay
+
+Implemented the first semantics-backed A0 equivalence route around the exact
+one-instruction pair used in Chapter 11: `movi r0,0` and `xor r0,r0,r0`. A
+canonical query now binds both encoded programs, width, one-step bound,
+precondition, observation, and complete finite input family. The checker
+decodes both programs and executes the existing A0 step function for every
+admitted state; it does not introduce a second instruction semantics.
+
+The route runs four queries at width eight. Result-only equivalence checks all
+4,096 combinations of `r0` and Z/N/C/V. A destination mutation writing `r1`
+instead produces a canonical encoded-state witness whose first observed
+difference is `r0`. Full-state equivalence without a condition premise also
+produces a witness; deterministic minimization chooses an initial state with
+Z and C set so carry is the only successor difference. The exact premise
+Z=true and N=C=V=false then establishes full-state equality for all 256 `r0`
+values in that restricted family.
+
+Every counterexample stores the complete canonical initial state and both
+complete successor states. The checker decodes the saved model, reruns the
+encoded programs, and requires the same successors and first observation
+difference. One control mutates the XOR destination and requires a replayed
+`r0` witness. A second changes one byte of the saved initial-state model and
+requires concrete replay to reject it. Direct production and checking pass;
+both controls exit nonzero with `semantic-mismatch`. The report SHA-256 is
+`1f7697bc7e06a98f9c16edd055376d2a8c0c0ed8e6ce6c6ef9b166d4ebf4dc06`.
+Strict all-target Clippy and the focused route test pass.
+
+The scope is deliberately exact. This is exhaustive evidence for the declared
+width-eight state families, not a solver certificate, a theorem for all A0
+widths, arbitrary memory, multi-instruction programs, or termination. It now
+provides the executable equivalence and counterexample-replay substrate needed
+by the first bounded scalar-minimality route. The book object and manifest
+remain to be bound before `OP.rel.a0-equivalence` can move from open.
+
+## 2026-08-31 — exhaustive bounded A0 scalar minimality
+
+Implemented the first executable minimality route for the Chapter 13 `x + 2`
+example. The candidate language is an exact six-instance alphabet: `mov r0,r0`,
+`mov r0,r1`, and the four `add r0,rs1,rs2` combinations with each source drawn
+from `r0` and the read-only resource register `r1 = 1`. Only `r0` is writable.
+The cost is decoded instruction count, the maximum cost is two, and the
+observation requires both the final `r0` value and running completion.
+
+The executable A0 model supports byte-multiple widths, so this route exhausts
+all 256 inputs at width eight rather than the manuscript's earlier informal
+width-four sketch. It enumerates the complete syntax product at costs zero,
+one, and two: 1, 6, and 36 candidates. Those strata contain 1, 5, and 11
+distinct complete truth tables and respectively 0, 0, and 4 correct syntactic
+candidates. The selected printed witness is two consecutive
+`add r0,r0,r1` instructions. Its report stores the complete 256-entry truth
+table and establishes minimum cost two within this declared language.
+
+Two load-bearing controls fail as required. Replacing the second increment
+with `add r0,r0,r0` produces a concrete mismatch at input one. Omitting the
+last alphabet member changes both the canonical language digest and enumerated
+stratum cardinality. The direct producer and checker agree on result SHA-256
+`06a6550fdf29f7239d0355f8d25a271fb866c641f25452a76fa738e19ab12f30`;
+the serialized report SHA-256 is
+`268bc13e35e606637b5703ddde0ca7a563a39a658793453b930339b653d071ce`.
+Strict all-target Clippy and the focused route test pass.
+
+This is finite direct enumeration over one exact width-eight language. It is
+not a solver certificate, a search over arbitrary A0 programs, a theorem for
+all widths, or a minimality result for RV64I or x86-64. The book object and
+manifest still need to bind the report before the chapter obligation can move
+from open to computed.

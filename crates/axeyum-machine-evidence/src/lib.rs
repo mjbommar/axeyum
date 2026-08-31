@@ -14,12 +14,24 @@ use axeyum_machine::a0::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+mod a0_equivalence;
+mod a0_minimality;
 mod cross_isa;
 mod rv64;
 mod symbolic_addition;
 mod symbolic_memory;
 mod x64;
 
+pub use a0_equivalence::{
+    A0EquivalenceCounterexample, A0EquivalenceQueryResult, A0EquivalenceReport,
+    a0_equivalence_report, check_a0_equivalence, check_a0_equivalence_corrupt_model_control,
+    check_a0_equivalence_destination_control,
+};
+pub use a0_minimality::{
+    A0MinimalityReport, CandidateLanguageRecord, CandidateRecord, MinimalityStratum,
+    a0_minimality_report, check_a0_minimality, check_a0_minimality_language_omission_control,
+    check_a0_minimality_witness_control,
+};
 pub use cross_isa::{
     AbsoluteValueCase, CrossIsaAbsoluteValueReport, check_cross_isa_absolute_value,
     check_cross_isa_predicate_control, cross_isa_absolute_value_report,
