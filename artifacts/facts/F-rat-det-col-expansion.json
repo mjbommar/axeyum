@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-col-expansion",
+  "title": "Rat.det_col_expansion: cofactor expansion along the first COLUMN, at symbolic dimension",
+  "statement": "Rat.det A n is the determinant of the matrix A (a function Nat -> Nat -> Rat plus an explicit bound) defined by cofactor expansion along the FIRST ROW. This fact records that the same value is obtained by expanding along the first COLUMN: det A (succ m) = sum over p < succ m of altSign p * (A p 0 * det (matMinor A p 0) m), with the dimension symbolic and the matrix universally quantified. It does NOT follow from Rat.det_row_expansion, and reaching for that law here is circular: expansion along a column of A is expansion along a row of A transposed, so it presupposes the transpose invariance it is meant to establish. What the row law does give is one summand at a time -- the p-th column summand is exactly the c = 0 slice of the row-p expansion -- so the row law constrains each summand's siblings and never the column sum itself. The column law is therefore its own induction on the dimension. Both sides peel their index-0 summand, and the two peeled heads are the SAME term, so nothing has to be proved about them; under the tails the induction hypothesis (left) and Rat.det_succ (right) expand each minor one step further, two Rat.mul_sumRange pulls take the cofactor coefficients inside, and what remains is one rectangle summed in the two orders, closed by Rat.sumRange_swap.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_col_expansion : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> Eq.{1} Rat (Rat.det x1 (AxNat.succ x0)) (Rat.sumRange (fun (x2 : AxNat) => Rat.mul (Rat.altSign x2) (Rat.mul (x1 x2 AxNat.zero) (Rat.det (Rat.matMinor x1 x2 AxNat.zero) x0))) (AxNat.succ x0))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "Rat.det_col_expansion"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:rat-det-congr-pointwise", "F:rat-mul-sumrange", "F:rat-sumrange-congr", "F:rat-sumrange-swap", "F:rat-mul-neg", "F:rat-neg-mul", "F:rat-sum-range-peel-head"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_col_expansion",
+      "kind": "kernel-term",
+      "supports": "Rat.det_col_expansion is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_col_expansion 2>/dev/null | grep -cE '^Rat\\.det_col_expansion[[:space:]]'",
+      "checker_seconds": 12,
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- GNU grep reads \\t as a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation: this tool silently consumes only its FIRST name argument. --release is MANDATORY; in debug the example SIGABRTs on a stack overflow, which reads like an absent declaration.",
+      "kernel_declaration": "Rat.det_col_expansion"
+    },
+    {
+      "id": "footprint-Rat.det_col_expansion",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_col_expansion.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-det-col-expansion-is-not-the-row-expansion",
+      "kind": "kernel-term",
+      "supports": "The column sum evaluates to 13 on a pinned non-symmetric 3x3 whose determinant Rat.det_eval_example independently pins at 13; the same sum with the alternating sign shifted by one evaluates to -13; and the per-index column summands (1, 0, 12) are pinned against the per-index ROW summands (1, 12, 0), in both directions.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The count is tested, not just the exit status: `1 passed` fails if the test is renamed away or filtered out. The per-index pins exist because the TOTAL cannot separate the two builders -- for this matrix both come to 13 and the summand multiset is {1, 0, 12} either way. Only the per-index values differ, and both directions are asserted, so swapping the two builders fails rather than passes. The -13 sign control is asserted POSITIVELY rather than as a failed def_eq, because a failing def_eq has no early exit and a pathological control is a documented hazard here. What it does NOT check: Nat.ble's guard ORDER inside Rat.matSkip, which Rat.det_eq_det2 separates."
+    },
+    {
+      "id": "control-adr-1210-numeric-sweep",
+      "kind": "exhaustive-enumeration",
+      "supports": "Column-0 expansion agrees with this det over 300 random matrices at m = 0..4; the induction step's head-plus-rectangle decomposition holds on both sides; the double minors agree pointwise over 5,310 index pairs; and the double-minor index identity is matSkip_succ_succ on each axis, unconditionally, over all 1,296 index tuples below 6.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1210-det-transpose-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1210-det-transpose-checks.py",
+      "checker_seconds": 25,
+      "notes": "Simulates Rat.matSkip, Rat.matMinor, Rat.altSign, Rat.det and Rat.matTranspose over Fraction at exactly the definitions rat_prelude/matrix_det.rs uses, and exits 1 if any claim fails. Section 0 checks the transcription itself against a Leibniz determinant, so a wrong simulation cannot silently agree with a wrong proof. Four negative controls: a swapped matSkip must falsify the target, the crux and the index identity; the alternation dropped and the alternation shifted by one must each falsify the column sum. Re-run rather than inherited from ADR-1155 or ADR-1185."
+    },
+    {
+      "id": "control-det-col-expansion-mutation",
+      "kind": "exhaustive-enumeration",
+      "supports": "Under the Rat.matSkip branch-swap mutation the statement is FALSE at 205 of 240 instances; under the column-entry-index mutation it is FALSE at 215 of 240. Both mutations refuse the declaration, the second on its own merits rather than through a missing prerequisite.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1210-det-transpose-checks.py section 10 (statement column)",
+        "declare_matrix_det reporting run (declaration column, ADR-1210)"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1210-det-transpose-checks.py 2>&1 | grep -cE '^     det_col_expansion +FALSE'",
+      "checker_seconds": 25,
+      "notes": "grep -c on a tested count, consuming the whole pipe; the count is 2 because both mutation sections report this row. The declaration column was measured once in an isolated worktree with declare_matrix_det rewritten to REPORT each rejection instead of short-circuiting, and is recorded in ADR-1210's table rather than re-run here. Both columns are needed: a declaration rejected while its theorem stays true adds no coverage, which is what the matSkip mutation does to Rat.matMinor_transpose."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane det-transpose. Design note: ADR-1210."
+  },
+  "notes": "This lane declares no new Definition at all -- no Rat.laplaceSummand analogue, no Rat.unskip, no Nat.beq diagonal guard -- and the whole route uses Rat.sumRange_congr rather than Rat.sumRange_congr_lt, because its termwise identity holds at every index pair with no bound. The reason is that the two exchanges happen on DIFFERENT axes: ADR-1185's double expansion ran along two rows, so its two column deletions had to be ordered against each other and Rat.matSkip_comm's Nat.ble hypothesis was unavoidable; here one expansion deletes a row and the other a column, and the double-minor identification (Rat.matMinor_row_col_comm) is Rat.matSkip_succ_succ once per axis with no hypothesis and no case split. ADR-1185 predicted transpose invariance would be strictly downstream of Rat.det_row_expansion. That prediction is corrected here: the row law is not used, and cannot be."
+}
