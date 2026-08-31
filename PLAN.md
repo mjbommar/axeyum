@@ -223,6 +223,7 @@ now. Nothing was deleted.
 | 2026-08-30 | `9fd677073` | D3 counterexample-first screen: fixtures, gen-falsification-screen.py, check-falsification-screen.py. |
 | 2026-08-30 | 6174be234 | Add `equivalent_to` to `fact.schema.json` and mark all 15 non-canonical duplicate facts with it (surgical text-append edits, `statement`/`formal.statement` untouched); land `scripts/check-proposition-duplication.py` v1 (still failing at 15 unlabeled pairs at this commit, by design -- see report). |
 | 2026-08-30 | (this session, later commits) | ADR-0790; `scripts/validate-facts.py` prints the FACTS SETTLED / DISTINCT PROPOSITIONS ESTABLISHED split; `scripts/tests/test-proposition-duplication.sh` (9 cases, 8 guard mutations, each killing exactly one); gate registered in `justfile` and `scripts/check.sh` as `proposition-duplication` / `proposition-duplication-controls`. |
+| 2026-08-30 | nthroot-squarefree-constructions | `Nat.nthRoot`/`Squarefree` declared (construction + evaluation test only); un-owned floor now opens both modules ADR-0762/ADR-0830 named, R9-clean; nothing under `artifacts/autogenesis/` touched |
 | 2026-08-30 | `847148d3a` | Status doc with root-cause diagnosis (first commit). |
 | 2026-08-30 | `2cc851274` | `describe_leak()` + accumulated multi-violation messages; all 11 pre-existing tests pass unchanged. |
 | 2026-08-30 | `713ae6b6e` | ADR-0850; `component_split_exemptions` field + validation; exempted the 3 diagnosed crossings in `nursery-v1.json`; gate exit 1 -> 0. |
@@ -38462,6 +38463,43 @@ that are pure ℕ schemas (`telescoping`, `parity-argument`, `pigeonhole` at
 fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
+
+**Done (`DONE`, nthroot-squarefree-constructions, 2026-08-30).** Declared
+`Nat.nthRoot`/`Nat.nthRootAux` (`nth_root.rs`) and `Squarefree`/
+`Nat.squarefreeAux` (`squarefree.rs`) in the Nat prelude — construction and
+evaluation test only, ADR-0653 discipline, no theorem about either. Full
+detail and every re-derived number: ADR-0910.
+
+Re-verified before building: ADR-0762's enumeration (either constant alone
+gives 0 lawful family sets, both together give the two new held-out-safe
+modules R5 needs) still holds on this tree, byte-identical to ADR-0830's own
+re-measurement (env=2383, same un-owned floor modulo the four ADR-0830
+already drew). The brief's cited "ADR-0900 (draw 10, declined)" does not
+exist in this worktree or `origin/main` (ADR index tops out at 0855) — not
+inherited, reported instead.
+
+Re-screened after declaring: `Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas`
+(13 rows) and `Mathlib.Data.Nat.Squarefree` (11 rows) both open, both R9
+0/10 (neither module's first ten screened rows collides with a name this
+kernel already declares). `nat_prelude::` sweep: 229 passed, 0 failed
+(confirmed nonzero, includes both new evaluation tests plus the
+environment-derived coverage assertion). `cargo clippy -p axeyum-lean-kernel
+--lib -- -D warnings`: clean. Holdout isolation before/after: identical,
+`held_out=136|files_scanned=1110|settled=0|references=0|verdict=PASS` —
+`artifacts/autogenesis/` untouched (this lane enables a draw, does not
+author one).
+
+**What the next lane needs to know.** This does NOT regenerate
+`artifacts/autogenesis/kernel-environment-snapshot-v1.json` (out of this
+lane's scope) or run the real `select()`/`guard()` end to end — only the
+`admissible()`/module-opening slice, in memory, confirming the prediction.
+The next lane must: regenerate that snapshot from a fresh kernel build,
+run the real draw, and read `docs/plan/notes/383-nursery-draw-8.md`'s two
+`Nat.nthRoot`-specific warnings (the `nthRoot_zero_left`/`nthRoot_one_right`
+closed-evaluation spend this construction's own equations create, and
+whether `Nat.nthRoot.lt_pow_go_succ_aux` — a Mathlib-internal auxiliary
+about ITS OWN Newton iteration, not ours — is a fair blind target) before
+drawing either module.
 
 **Done** (`WIP`, nursery-partition-leak, 2026-08-30). `check-autogenesis-nursery.py`
 went from `EXIT=1` with a bare, un-actionable header to `EXIT=0` naming every

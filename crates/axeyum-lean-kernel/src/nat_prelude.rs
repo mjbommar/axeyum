@@ -201,6 +201,7 @@ mod mul_order_lemmas;
 mod multichoose;
 mod no_confusion;
 mod nth;
+mod nth_root;
 mod ops;
 mod order;
 mod order_extra;
@@ -220,6 +221,7 @@ mod rel_prime;
 mod relation;
 mod restrict_pair;
 mod sqrt;
+mod squarefree;
 mod subset_product;
 mod testbit_bitwise;
 mod totient;
@@ -338,6 +340,7 @@ use mul_order_lemmas::{
 use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
 use nth::declare_nth_all;
+use nth_root::declare_nth_root_all;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use order_more::declare_order_more;
@@ -386,6 +389,7 @@ use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
 use sqrt::declare_sqrt_all;
+use squarefree::declare_squarefree_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -4550,6 +4554,27 @@ pub struct NatPrelude {
     /// 0 n`. Type differs from Mathlib's `(ℕ → Prop) → ℕ → ℕ`; any `ml430`
     /// mirror against `Nat.nth` stays `open` (see `nth.rs`).
     pub nth: NameId,
+    /// `Nat.nthRootAux (n a fuel : Nat) : Nat` — fuel-bounded linear search
+    /// for the greatest `m` with `m ^ n <= a`. See `nth_root.rs`'s module
+    /// doc for why this is structural fuel recursion rather than Mathlib's
+    /// well-founded Newton iteration.
+    pub nth_root_aux: NameId,
+    /// `Nat.nthRoot (n a : Nat) : Nat := if n == 0 then 1 else nthRootAux n
+    /// a a` — construction only, ADR-0653; opens `Mathlib.Analysis.
+    /// SpecialFunctions.Pow.NthRootLemmas` for the autogenesis screen (see
+    /// `nth_root.rs`).
+    pub nth_root: NameId,
+    /// `Nat.squarefreeAux (n fuel : Nat) : Nat -> Bool` — fuel-bounded
+    /// linear search for a non-unit square factor of `n`. See
+    /// `squarefree.rs`'s module doc.
+    pub squarefree_aux: NameId,
+    /// `Squarefree (n : Nat) : Bool` at the **bare root namespace** (not
+    /// `Nat.squarefree`) — matches the literal constant token Mathlib's own
+    /// `Squarefree` statements use, opening `Mathlib.Data.Nat.Squarefree`
+    /// for the autogenesis screen. Construction only, ADR-0653; see
+    /// `squarefree.rs`'s module doc for why this is `Bool`-valued with no
+    /// `Prop` bridge.
+    pub squarefree: NameId,
 
     // -- `nat-fermat-number` lane: `fermat_number.rs` —
     // `docs/research/09-decisions/adr-0653-declaring-the-unblocking-constant-contaminated-the-family-it-opened.md`.
@@ -5507,6 +5532,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dist_triangle_inequality: kernel.name_str(nat, "dist_triangle_inequality"),
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
+            nth_root_aux: kernel.name_str(nat, "nthRootAux"),
+            nth_root: kernel.name_str(nat, "nthRoot"),
+            squarefree_aux: kernel.name_str(nat, "squarefreeAux"),
+            // Bare root namespace, deliberately -- see `squarefree.rs`'s
+            // module doc: the pinned inventory's raw `Lean.Expr` dump for
+            // Mathlib's `Squarefree` applies the constant `` `Squarefree ``
+            // directly, never `` `Nat.Squarefree ``.
+            squarefree: {
+                let root = kernel.anon();
+                kernel.name_str(root, "Squarefree")
+            },
             fermat_number: kernel.name_str(nat, "fermatNumber"),
             pow_mul: kernel.name_str(nat, "pow_mul"),
             dvd_pow_add_one_of_odd_exp: kernel.name_str(nat, "dvd_pow_add_one_of_odd_exp"),
@@ -6307,6 +6343,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `lt_of_lt_of_le`, `succ_ne_zero`, all far above) and the logic
         // prelude. Nothing needs it, so it goes last.
         declare_least_number_all(&mut d, &p)?;
+        // `Nat.nthRootAux`/`Nat.nthRoot` (`nth_root.rs`): needs only
+        // `Nat.pow`/`Nat.ble`/`Nat.beq`/`Nat.succ`/`bool_select_nat`, all far
+        // above. Opens `Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas`
+        // for the autogenesis screen (ADR-0762/ADR-0830). Nothing needs it,
+        // so it goes last.
+        declare_nth_root_all(&mut d, &p)?;
+        // `Nat.squarefreeAux`/`Squarefree` (`squarefree.rs`): needs only
+        // `Nat.mul`/`Nat.mod`/`Nat.beq`/`Nat.succ`/`bool_select`, all far
+        // above. Opens `Mathlib.Data.Nat.Squarefree` for the autogenesis
+        // screen, paired with `Nat.nthRoot` above (ADR-0762/ADR-0830).
+        // Nothing needs it, so it goes last.
+        declare_squarefree_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

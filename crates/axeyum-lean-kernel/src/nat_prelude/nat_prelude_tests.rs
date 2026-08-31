@@ -533,6 +533,13 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         // adr-0653-declaring-the-unblocking-constant-contaminated-the-
         // family-it-opened.md`). Definition only, deliberately.
         p.fermat_number,
+        // `nthroot-squarefree-constructions` lane: `nth_root.rs`/
+        // `squarefree.rs` (ADR-0762/ADR-0830). Definitions only,
+        // deliberately (ADR-0653).
+        p.nth_root_aux,
+        p.nth_root,
+        p.squarefree_aux,
+        p.squarefree,
     ]
 }
 
@@ -10009,6 +10016,175 @@ fn nth_evaluates_correctly() {
     );
 
     for name in [p.nth_aux, p.nth] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// `Nat.nthRoot` computes the floor `n`-th root at concrete, non-perfect-power
+/// instances, where an off-by-one (rounding up instead of down) would give a
+/// different answer than flooring: `nthRoot 2 10 = 3` (`3^2 = 9 <= 10 < 16 =
+/// 4^2`) and `nthRoot 3 26 = 2` (`2^3 = 8 <= 26 < 27 = 3^3`). `nthRoot 3 8 =
+/// 2` is the exact-power boundary in the other direction. `nthRoot 0 5 = 1`
+/// and `nthRoot 1 7 = 7` are the two convention cases the module doc calls
+/// out — the first is NOT reachable by the fuel search at all (it is the
+/// dedicated `n = 0` branch), the second falls out of the search
+/// automatically. `nthRoot 5 0 = 0` is the zero-radicand boundary.
+///
+/// Negative controls: `nthRoot 2 10` must NOT be `4` (the ceiling, which a
+/// `<` vs `<=` slip or a search that overshoots would give) and `nthRoot 3
+/// 26` must NOT be `3` (same failure mode at a different exponent).
+#[test]
+fn nth_root_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let seven = f.num(7);
+    let eight = f.num(8);
+    let nine = f.num(9);
+    let ten = f.num(10);
+    let twenty_six = f.num(26);
+
+    let nth_root_2_10 = f.const_app(p.nth_root, &[two, ten]);
+    assert!(
+        f.k.def_eq(nth_root_2_10, three),
+        "nthRoot 2 10 must floor to 3"
+    );
+    assert!(
+        !f.k.def_eq(nth_root_2_10, four),
+        "negative control: nthRoot 2 10 must NOT round up to 4"
+    );
+
+    let nth_root_3_26 = f.const_app(p.nth_root, &[three, twenty_six]);
+    assert!(
+        f.k.def_eq(nth_root_3_26, two),
+        "nthRoot 3 26 must floor to 2"
+    );
+    assert!(
+        !f.k.def_eq(nth_root_3_26, three),
+        "negative control: nthRoot 3 26 must NOT round up to 3"
+    );
+
+    let nth_root_3_8 = f.const_app(p.nth_root, &[three, eight]);
+    assert!(
+        f.k.def_eq(nth_root_3_8, two),
+        "nthRoot 3 8 (an exact cube) must be 2"
+    );
+
+    let nth_root_0_5 = f.const_app(p.nth_root, &[zero, five]);
+    assert!(
+        f.k.def_eq(nth_root_0_5, one),
+        "nthRoot 0 a must be 1 by convention, for every a"
+    );
+
+    let nth_root_1_7 = f.const_app(p.nth_root, &[one, seven]);
+    assert!(
+        f.k.def_eq(nth_root_1_7, seven),
+        "nthRoot 1 a must be a (the first root of a is a itself)"
+    );
+
+    let nth_root_5_0 = f.const_app(p.nth_root, &[five, zero]);
+    assert!(f.k.def_eq(nth_root_5_0, zero), "nthRoot n 0 must be 0");
+
+    // A different exponent at the same radicand must not collapse to the
+    // same answer by coincidence -- nthRoot 2 9 (a perfect square) is 3;
+    // confirm the exponent is actually being used, not the constant 2.
+    let nth_root_2_9 = f.const_app(p.nth_root, &[two, nine]);
+    assert!(
+        f.k.def_eq(nth_root_2_9, three),
+        "nthRoot 2 9 (an exact square) must be 3"
+    );
+
+    for name in [p.nth_root_aux, p.nth_root] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// `Squarefree` decides the right VALUE at concrete instances. `4 = 2 * 2`
+/// is the smallest witness a square divides, and `9 = 3 * 3` is a second
+/// witness whose divisor is NOT found at the very first candidate
+/// (`k = 2`) -- confirming the search actually continues past one step
+/// rather than only ever testing `k = 2`. `6 = 2 * 3` and `2` (prime) are
+/// squarefree; `12 = 4 * 3` is not (`2 * 2 | 12`). `0` and `1` are the two
+/// boundary cases the module doc calls out: `Squarefree 0` is `false` by
+/// the dedicated `n = 0` branch (Mathlib's own `Squarefree 0 = False`), and
+/// `Squarefree 1` is `true` (vacuously -- no `k >= 2` has `k * k | 1`).
+///
+/// Negative control: `Squarefree 9` must NOT be `true` (the value a search
+/// that only ever tests `k = 2` would give, since `4 ∤ 9`).
+#[test]
+fn squarefree_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let four = f.num(4);
+    let six = f.num(6);
+    let nine = f.num(9);
+    let twelve = f.num(12);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    let squarefree_0 = f.const_app(p.squarefree, &[zero]);
+    assert!(
+        f.k.def_eq(squarefree_0, false_),
+        "Squarefree 0 must be false"
+    );
+
+    let squarefree_1 = f.const_app(p.squarefree, &[one]);
+    assert!(f.k.def_eq(squarefree_1, true_), "Squarefree 1 must be true");
+
+    let squarefree_2 = f.const_app(p.squarefree, &[two]);
+    assert!(
+        f.k.def_eq(squarefree_2, true_),
+        "Squarefree 2 (prime) must be true"
+    );
+
+    let squarefree_4 = f.const_app(p.squarefree, &[four]);
+    assert!(
+        f.k.def_eq(squarefree_4, false_),
+        "Squarefree 4 must be false (2 * 2 | 4)"
+    );
+
+    let squarefree_6 = f.const_app(p.squarefree, &[six]);
+    assert!(
+        f.k.def_eq(squarefree_6, true_),
+        "Squarefree 6 (= 2 * 3, no square factor) must be true"
+    );
+
+    let squarefree_9 = f.const_app(p.squarefree, &[nine]);
+    assert!(
+        f.k.def_eq(squarefree_9, false_),
+        "Squarefree 9 must be false (3 * 3 | 9)"
+    );
+    assert!(
+        !f.k.def_eq(squarefree_9, true_),
+        "negative control: Squarefree 9 must NOT be true (the value a \
+         search that only ever tests k = 2 would give)"
+    );
+
+    let squarefree_12 = f.const_app(p.squarefree, &[twelve]);
+    assert!(
+        f.k.def_eq(squarefree_12, false_),
+        "Squarefree 12 must be false (2 * 2 | 12)"
+    );
+
+    for name in [p.squarefree_aux, p.squarefree] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{} must rest on zero axioms",
