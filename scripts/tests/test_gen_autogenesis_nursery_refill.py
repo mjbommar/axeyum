@@ -412,6 +412,102 @@ class BlindnessTests(unittest.TestCase):
         MODULE.guard(rows, v1_nursery(), {"Nat.dvd_add"}, validation([]))
 
 
+class ClosedEvaluationScreenTests(unittest.TestCase):
+    """R12 (ADR-0695/ADR-0950) -- a NEW held-out row already decided by
+    reduction over declared constants is not blind.
+
+    `test_the_real_spent_statements_are_refused_as_a_new_draw` is not a
+    synthetic fixture: it replays the exact two statements ADR-0950 amended
+    (`Nat.bit false 0 = 0`, `Nat.size 1 = 1`) against the REAL committed
+    kernel-environment snapshot. Draw 11 (882ae1a52, 2026-08-30) preregistered
+    `natural-bit-decode` held-out even though `Nat.bit` (2facd789, 2026-08-28)
+    and `Nat.size` (a7ac623d7, 2026-08-24) were already admitted -- both
+    confirmed ancestors of the draw commit. If this screen or the snapshot
+    ever stopped seeing those two declarations, this test would go green for
+    the wrong reason, so it is paired with a false-positive control using the
+    real env below.
+    """
+
+    def _snapshot_env(self) -> set[str]:
+        snap = json.loads(
+            (ROOT / "artifacts/autogenesis/kernel-environment-snapshot-v1.json"
+             ).read_text())
+        return set(snap["declarations"])
+
+    def test_the_real_spent_statements_are_refused_as_a_new_draw(self):
+        env = self._snapshot_env()
+        rows = [entry("bit-decode-replay", "held-out", "Nat.bit_false_zero"),
+                entry("bit-decode-replay", "held-out", "Nat.size_one")]
+        rows[0]["statement"] = "Nat.bit false 0 = 0"
+        rows[1]["statement"] = "Nat.size 1 = 1"
+        with self.assertRaisesRegex(MODULE.RefillError, r"R12 2 held-out cand"):
+            MODULE._closed_evaluation_screen(rows, env)
+
+    def test_a_quantified_sibling_from_the_same_family_is_admitted(self):
+        """False-positive control: R12 is about closed evaluation, not about
+        the family's name. Uses the REAL env so a screen that started
+        refusing everything from this family would still be caught."""
+        env = self._snapshot_env()
+        rows = [entry("bit-decode-replay", "held-out", "Nat.bit_le")]
+        rows[0]["statement"] = (
+            "∀ (b : Bool) {m n : ℕ}, m ≤ n → "
+            "Nat.bit b m ≤ Nat.bit b n")
+        MODULE._closed_evaluation_screen(rows, env)  # must not raise
+
+    def test_a_closed_row_over_an_undeclared_constant_is_admitted(self):
+        """A row SHAPED like a closed evaluation but over a constant this
+        kernel does not declare is genuinely blind; R12 must not refuse it.
+
+        The made-up tail must not appear as a source-fallback false positive
+        (`source_declares` over-approximates on purpose, see its docstring),
+        so it is deliberately long and implausible rather than a short word
+        like `bar` that collides with ordinary Rust identifiers.
+        """
+        rows = [entry("undeclared-family", "held-out", "Foo.zzzquxxNotarealthing")]
+        rows[0]["statement"] = "Foo.zzzquxxNotarealthing 0 = 0"
+        MODULE._closed_evaluation_screen(rows, set())  # must not raise
+
+    def test_a_dispatchable_row_is_not_screened(self):
+        """R12 is about BLINDNESS; a `development` row may restate a closed
+        fact freely -- development is where looking is allowed."""
+        env = self._snapshot_env()
+        rows = [entry("bit-decode-replay", "development", "Nat.size_one")]
+        rows[0]["statement"] = "Nat.size 1 = 1"
+        MODULE._closed_evaluation_screen(rows, env)  # must not raise
+
+    def test_a_ground_inequality_is_not_a_closed_evaluation(self):
+        """R12 must defer to the STANDING classifier's shape rule (binder-free
+        EQUATION, not any ground relation), not just check whether a row's
+        names are all declared.
+
+        Without the `is_closed_evaluation` call this row -- ground, both
+        sides the same declared constant, no bound variables at all -- has no
+        undeclared name to save it, so it would be flagged even though it
+        carries no `=` and the standing gate does not classify it as a closed
+        evaluation. Kills the mutation that drops the shape check and keeps
+        only the undeclared-name filter, which the bound-variable case above
+        cannot kill because a quantifier's own bound names (`m`, `n`, ...)
+        happen to look undeclared too."""
+        env = self._snapshot_env()
+        self.assertIn("Nat.size", env)
+        rows = [entry("bit-decode-replay", "held-out", "Nat.size_le_size_refl")]
+        rows[0]["statement"] = "Nat.size 1 ≤ Nat.size 1"
+        MODULE._closed_evaluation_screen(rows, env)  # must not raise
+
+    def test_guard_integration_refuses_via_r12(self):
+        """The screen is wired into `guard()`, not just callable standalone.
+        Mirrors `BlindnessTests`' R9 harness shape so R4/R5/R6 are satisfied
+        and the only new failure is R12."""
+        Harness(self, {"a-new": "?", "b-new": "?", "c-new": "?", "d-new": "?"})
+        rows = [entry("a-new", "held-out", "Nat.bit_false_zero"),
+                entry("b-new", "development", "Nat.brand_new"),
+                entry("c-new", "train", "Nat.also_new"),
+                entry("d-new", "held-out", "Nat.still_new")]
+        rows[0]["statement"] = "Nat.bit false 0 = 0"
+        with self.assertRaisesRegex(MODULE.RefillError, r"R12"):
+            MODULE.guard(rows, v1_nursery(), {"Nat.bit"}, validation([]))
+
+
 class RefillMustRefillTests(unittest.TestCase):
     def test_a_draw_with_no_dispatchable_row_is_refused(self):
         Harness(self, {"a-new": "?", "b-new": "?"})

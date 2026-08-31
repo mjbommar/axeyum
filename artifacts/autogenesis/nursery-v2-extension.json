@@ -6,8 +6,8 @@
     "entries": 380,
     "families": 38,
     "partition_counts": {
-      "development": 140,
-      "held-out": 140,
+      "development": 150,
+      "held-out": 130,
       "train": 100
     },
     "per_family": 10,
@@ -5475,7 +5475,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Bits",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:unconditional-equality",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5506,7 +5506,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Bits",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:unconditional-equality",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5535,7 +5535,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Bits",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:unconditional-equality",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5563,7 +5563,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Bits",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5591,7 +5591,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Bits",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5620,7 +5620,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Bits",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5652,7 +5652,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Size",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5681,7 +5681,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Size",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:biconditional",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5708,7 +5708,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Size",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -5736,7 +5736,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Size",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-bit-decode:unconditional-equality",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -12315,7 +12315,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "d443f557bcb98c007b28563ea08bb4e971b57ba3ec9a242cfee6e684d8ba008e",
+  "extension_sha256": "5aeec725d038eb76e61ed477aa501c55edd7834afa2bd4458112661935dfc843",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
@@ -12479,7 +12479,7 @@
     "integer-order-inequalities": "train",
     "integer-parity": "train",
     "natural-basic-arithmetic": "train",
-    "natural-bit-decode": "held-out",
+    "natural-bit-decode": "development",
     "natural-bitwise-basics": "development",
     "natural-congruence-lemmas": "train",
     "natural-coprimality": "development",
