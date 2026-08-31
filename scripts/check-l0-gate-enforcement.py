@@ -13,7 +13,7 @@ partition or silently drops a semantic control from reaching `main`.
 This gate exists so that cannot silently come back. It checks WIRING, not the
 gates' own findings -- those are each gate's job.
 
-Six guards, each of which fails naming the gate it is about:
+Eight guards, each of which fails naming the gate it is about:
 
   G1  every L0 gate appears in at least one CI `run:` step
   G2  no L0 CI step carries `continue-on-error: true`
@@ -22,6 +22,11 @@ Six guards, each of which fails naming the gate it is about:
   G5  the pre-push L0 block runs BEFORE the Rust/TOML early exit
   G6  the pre-push block reacts to a nonzero exit (it must not be a bare call
       whose failure `set -e` alone might not surface through the loop)
+  G7  all seven gates appear in `scripts/local-ci.sh` -- the file ci.yml
+      itself calls "the authoritative gate for main"
+  G8  every L0 line in `scripts/local-ci.sh` actually feeds `rc` (`|| rc=$?`)
+      rather than being a bare call `set -uo pipefail` won't catch, or a
+      swallowed one (`|| true`)
 
 G2 and G3 are separate on purpose. `ci.yml` legitimately carries
 `continue-on-error: true` on two lean-parity steps for a documented reason, so
@@ -33,6 +38,14 @@ hook exits early when no `*.rs`/`*.toml`/`Cargo.lock` changed, and every L0
 gate guards JSON and documentation content -- `artifacts/facts/`, the
 proposition corpus, the credit ledger, the nursery partition. Below that exit,
 a push touching only the content these gates protect is gated by nothing.
+
+G8 is the local-ci.sh analogue of G3/G6, and it has to check for something
+different from either: `scripts/local-ci.sh` runs under `set -uo pipefail`,
+not `set -e`, and every other step in it uses `run <cmd> || rc=$?` precisely
+because a bare `run <cmd>` would let that step's nonzero return vanish without
+touching `rc` at all -- no `||` needed for the swallow. So G8 requires the
+`|| rc=$?` suffix on every L0 line, which refuses both that silent drop and an
+explicit `|| true`.
 
 Usage:
     scripts/check-l0-gate-enforcement.py            # run the gate
@@ -49,6 +62,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CI = ROOT / ".github/workflows/ci.yml"
 PREPUSH = ROOT / "hooks/pre-push"
+LOCAL_CI = ROOT / "scripts/local-ci.sh"
 
 # The seven L0 trusted-library safety gates (ADR-0717 and successors).
 L0_GATES = (
@@ -74,6 +88,11 @@ PREPUSH_GATES = (
 EARLY_EXIT = 'exit 0 # docs/bench-results/scripts-only push'
 
 SWALLOW = re.compile(r"\|\|\s*(true|:)\s*$|;\s*true\s*$", re.MULTILINE)
+
+# G8: the exact suffix scripts/local-ci.sh's own idiom requires. Every other
+# step in that file is `run <cmd> || rc=$?`; anything else -- a bare call, or
+# `|| true` -- lets the step's failure vanish under `set -uo pipefail`.
+RC_CAPTURE = re.compile(r"\|\|\s*rc=\$\?\s*$")
 
 
 def strip_comments(text: str) -> str:
@@ -108,7 +127,7 @@ def ci_steps(text: str) -> list[tuple[str, bool]]:
     return steps
 
 
-def check(ci_text: str, prepush_text: str) -> list[str]:
+def check(ci_text: str, prepush_text: str, local_ci_text: str) -> list[str]:
     failures: list[str] = []
     steps = ci_steps(ci_text)
 
@@ -170,6 +189,26 @@ def check(ci_text: str, prepush_text: str) -> list[str]:
             "G6 no-failure-path: the pre-push L0 block has no branch that "
             "fails the push on a nonzero gate exit.")
 
+    # scripts/local-ci.sh -- the file ci.yml calls "the authoritative gate for
+    # main" -- must run all seven, and each must feed `rc` the same way every
+    # other step in that file does.
+    lci_code = strip_comments(local_ci_text)
+    lci_lines = lci_code.splitlines()
+
+    for gate in L0_GATES:
+        gate_lines = [ln for ln in lci_lines if gate in ln]
+        if not gate_lines:                                        # GUARD:G7
+            failures.append(
+                f"G7 not-in-local-ci: `{gate}` appears in no executable line "
+                f"of scripts/local-ci.sh.")
+            continue
+        if not any(RC_CAPTURE.search(ln) for ln in gate_lines):    # GUARD:G8
+            failures.append(
+                f"G8 not-captured-in-local-ci: `{gate}`'s scripts/local-ci.sh "
+                f"invocation does not end in `|| rc=$?`, so its failure would "
+                f"not reach the script's exit status under `set -uo pipefail` "
+                f"(no `set -e`).")
+
     return failures
 
 
@@ -177,36 +216,42 @@ def self_test() -> list[str]:
     """Each guard must fire on the input that names it, and only then."""
     ci = CI.read_text(encoding="utf-8")
     pp = PREPUSH.read_text(encoding="utf-8")
+    lci = LOCAL_CI.read_text(encoding="utf-8")
     bad: list[str] = []
 
-    if check(ci, pp):
+    if check(ci, pp, lci):
         bad.append("all-clear: the committed tree must pass")
 
     cases = [
-        ("G1", ci.replace("python3 scripts/check-trust-closure.py --quiet\n", "", 1), pp),
+        ("G1", ci.replace("python3 scripts/check-trust-closure.py --quiet\n", "", 1), pp, lci),
         ("G2", ci.replace(
             "      - run: python3 scripts/check-proposition-duplication.py",
             "      - run: python3 scripts/check-proposition-duplication.py\n"
-            "        continue-on-error: true", 1), pp),
+            "        continue-on-error: true", 1), pp, lci),
         ("G3", ci.replace(
             "- run: python3 scripts/check-settled-fact-statements.py",
-            "- run: python3 scripts/check-settled-fact-statements.py || true", 1), pp),
+            "- run: python3 scripts/check-settled-fact-statements.py || true", 1), pp, lci),
         ("G4", ci, pp.replace(
-            '  "scripts/check-holdout-closed-evaluation.py" \\\n', "", 1)),
-        ("G6", ci, pp.replace("L0 gate rejected this push", "all fine", 1)),
+            '  "scripts/check-holdout-closed-evaluation.py" \\\n', "", 1), lci),
+        ("G6", ci, pp.replace("L0 gate rejected this push", "all fine", 1), lci),
+        ("G7", ci, pp, lci.replace(
+            "run python3 scripts/check-trust-closure.py --quiet || rc=$?\n", "", 1)),
+        ("G8", ci, pp, lci.replace(
+            "run python3 scripts/check-holdout-closed-evaluation.py || rc=$?",
+            "run python3 scripts/check-holdout-closed-evaluation.py || true", 1)),
     ]
-    for tag, c, p in cases:
-        hits = [f for f in check(c, p) if f.startswith(tag)]
+    for tag, c, p, l in cases:
+        hits = [f for f in check(c, p, l) if f.startswith(tag)]
         if not hits:
             bad.append(f"{tag}: guard did not fire on its own case")
 
     # G5: append a real (non-comment) reference to a pre-push gate BELOW the
     # early exit, so the last executable mention sits after it.
     moved = pp + f'\npython3 scripts/{PREPUSH_GATES[0]}.py\n'
-    if not [f for f in check(ci, moved) if f.startswith("G5")]:
+    if not [f for f in check(ci, moved, lci) if f.startswith("G5")]:
         bad.append("G5: guard did not fire on its own case")
 
-    if not [f for f in check("", pp) if f.startswith("VACUOUS")]:
+    if not [f for f in check("", pp, lci) if f.startswith("VACUOUS")]:
         bad.append("VACUOUS: the zero-steps guard did not fire")
     return bad
 
@@ -221,15 +266,16 @@ def main() -> int:
         bad = self_test()
         for item in bad:
             print(f"SELF-TEST FAILED: {item}", file=sys.stderr)
-        print(f"L0_GATE_ENFORCEMENT|self-test|cases=7|failures={len(bad)}")
+        print(f"L0_GATE_ENFORCEMENT|self-test|cases=9|failures={len(bad)}")
         return 1 if bad else 0
 
     failures = check(CI.read_text(encoding="utf-8"),
-                     PREPUSH.read_text(encoding="utf-8"))
+                     PREPUSH.read_text(encoding="utf-8"),
+                     LOCAL_CI.read_text(encoding="utf-8"))
     steps = len(ci_steps(CI.read_text(encoding="utf-8")))
     print(f"L0_GATE_ENFORCEMENT|gates={len(L0_GATES)}|pre_push_gates="
-          f"{len(PREPUSH_GATES)}|ci_run_steps={steps}|"
-          f"verdict={'FAIL' if failures else 'PASS'}")
+          f"{len(PREPUSH_GATES)}|local_ci_gates={len(L0_GATES)}|"
+          f"ci_run_steps={steps}|verdict={'FAIL' if failures else 'PASS'}")
     for item in failures:
         print(f"  {item}", file=sys.stderr)
     return 1 if failures else 0

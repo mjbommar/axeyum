@@ -4777,6 +4777,20 @@ SUITES["l0-gate-enforcement"] = (
             "    if SWALLOW.search(prepush_text) or \"L0 gate rejected this push\" not in prepush_text:",
             "    if False:",
         ),
+        # G7/G8 close the third context this lane's own task named:
+        # scripts/local-ci.sh -- ci.yml calls it "the authoritative gate for
+        # main" and it ran none of the seven either, until this lane wired
+        # them in with the file's own `run <cmd> || rc=$?` idiom.
+        (
+            "a gate absent from local-ci.sh is refused",
+            "        if not gate_lines:                                        # GUARD:G7",
+            "        if False:",
+        ),
+        (
+            "a local-ci.sh gate call missing `|| rc=$?` is refused",
+            "        if not any(RC_CAPTURE.search(ln) for ln in gate_lines):    # GUARD:G8",
+            "        if False:",
+        ),
     ],
 )
 
