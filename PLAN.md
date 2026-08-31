@@ -139,6 +139,7 @@ now. Nothing was deleted.
 | 2026-08-31 | `a0ffe4a5c` | feat: `Nat.add_factorial_le_factorial_add` + succ corollary, with tests (255 pass) |
 | 2026-08-31 | `42a386df5` | facts: flip both `add_factorial_le_factorial_add` facts to proved |
 | 2026-08-31 | `552837296` | style: rustfmt this lane's new files |
+| 2026-08-31 | `b12847d90` | `Int.euler_unit_coprime_iff` — the full predicate-preservation iff, axiom-free, no new induction; closes item 2 of the Fermat->Euler handoff. |
 | 2026-08-31 | five-risk-coverage-audit | Per-risk audit of the L0 safety programme: contamination reaches ~1,956 facts but 28% of those subjects are regex-chosen; vacuity reaches 8 of 2,167; `independent_replay` at 7 is mismeasured in both directions; 539 facts hold a prelude-wide sweep or nothing; no L0 gate runs in CI or pre-push (ADR-1000). Report only — nothing repaired. |
 | 2026-08-31 | gauss-lemma-closed-form-b | `Nat.gaussCountBleClosedFormDisj` (general `countRange` closed-form invariant) and `Nat.gaussNegCountTwoClosedForm` (`gaussNegCount (succ (mul 2 m)) 2 m = sub m (div m 2)`, the classical odd-prime closed form) land axiom-free in `nat_prelude/gauss_lemma.rs` (ADR-0985), executing the route ADR-0970 sized and left open; agreement with all six landed `a := 2` concrete instances recomputed independently; the connecting theorem to `a^m mod p` stays open, unchanged sizing. |
 | 2026-08-31 | gauss-lemma-connecting-b | `Nat.least_residue_injective_of_coprime` (least-residue map injectivity given positivity + coprimality, no case split) lands axiom-free in `nat_prelude/gauss_lemma.rs` — piece 1 of the Gauss's-lemma connecting theorem ADR-0970/ADR-0985 sized. Piece 2 (the pairing lemma) is re-sized with a genuine simplification (self-map `InjectiveOn`/`MapsInto`, matching `Int.prodRange_permute`'s exact hypothesis shape — no bijection witness needed) and checked lemma-by-lemma against the tree (ADR-0990); piece 3 (product cancellation, Nat/Int bridge) stays open, unchanged sizing. |
@@ -36862,6 +36863,114 @@ reports `FAIL: G7 queue-below-floor` (3 dispatchable, floor 10) -- that gate
 is about refilling the autogenesis nursery queue, out of this lane's scope
 (`artifacts/autogenesis/` was not touched), and is not a regression this
 lane caused; it fires once the queue shrinks regardless of who shrinks it.
+
+**Your lane's block (`WIP`, euler-theorem-spine, 2026-08-31).** Dispatched to
+verify and complete the three-piece handoff in
+`docs/plan/status/374-euler-theorem.md` (item 1: bridge `Int.euler_unit_injective`
+to `Int.prodRangeIf_permute`'s `Nat -> Nat` self-map; item 2: the converse of
+the predicate-preservation hypothesis; item 3: the final product/power
+assembly). All three were re-verified in-tree per the standing "a handoff's
+report of what REMAINS is a hypothesis" rule, not inherited.
+
+**Item 2 closed, axiom-free.** `int_prelude/euler_unit_preserve.rs` (new)
+declares `Int.euler_unit_coprime_iff : n a k, 0 < n -> 0 <= k -> k < n ->
+Coprime a n -> (Coprime k n <-> Coprime (emod (a*k) n) n)`. Forward direction
+is `Int.euler_unit_coprime` directly; backward applies the same lemma a
+second time at `a`'s own modular inverse (`Int.modEq_inverse_exists`,
+commuted via `Int.mul_comm`, fed through `euler_totient.rs`'s private
+Bézout-extraction step — made `pub(super)` as `coprime_of_modeq_inverse` for
+this reuse), then a `ModEq`/ring chain (`emod_modeq_self`, `mod_eq_mul_left`,
+`mul_assoc`, `mod_eq_mul_right`, `one_mul`, `mod_eq_trans`) identifies the
+resulting residue with `k`, closed by `emod_eq_self_of_in_range`. **No new
+induction anywhere in this file.** Admitted by the kernel on the first
+attempt. `theorem_axiom_footprint` (via
+`cargo run --release -p axeyum-lean-kernel --example theorem_axiom_footprint
+-- euler_unit_coprime_iff`) confirms footprint **0**:
+
+```
+integer	Int.euler_unit_coprime_iff	0
+```
+
+Coverage-checked by `every_int_declaration_is_checked_and_axiom_free`
+(`derived_laws` 219 -> 220, recounted with
+`scripts/recount-pinned-inventory.py --check`, not incremented by hand).
+`cargo test -p axeyum-lean-kernel --lib int_prelude::`: **52 passed, 0
+failed** (was 52 passed / 1 failed on the coverage assertion before the
+inventory update).
+
+Fact `F:int-euler-unit-coprime-iff` registered via
+`python3 scripts/gen-kernel-facts.py --prelude integer --date 2026-08-31
+--emit` (the generator surfaced 7 other unregistered `integer`-prelude
+theorems belonging to other lanes' work; those 7 were **not** emitted here,
+same as `374-euler-theorem.md`'s own precedent). `validate-facts.py`: 0
+errors. The fact's discriminating evidence checker
+(`theorem_dependency_inventory -- Int.euler_unit_coprime_iff | grep -cE
+'^Int\.euler_unit_coprime_iff[[:space:]]'`) re-run and confirmed nonzero.
+
+**Item 1 re-sized, not built.** The handoff called this "an `ofNat`/`natAbs`
+round trip and `InjectiveOn`/`MapsInto` re-derived in the other shape."
+Verified in-tree: the ORDER half of that round trip is **free by defeq**, not
+a lemma to write. `int_prelude/order_coercion.rs`'s
+`declare_ofnat_order_coercions` proves `Int.le (ofNat m) (ofNat n) -> Nat.le
+m n` with the identity function — `Int.le`/`Int.lt` iota-reduce their
+`ofNat`/`ofNat` branch straight to the `Nat` comparison, so the same
+hypothesis term type-checks either direction: a `Nat.lt i n` proof already
+satisfies `Int.lt (ofNat i) (ofNat n)`, with no lemma application needed.
+`Int.of_nat_nat_abs_of_nonneg` (`x = ofNat(natAbs x)` for `0 <= x`, already
+in `gcd.rs`) covers the value-side half. What is NOT free, and NOT built
+this lane: constructing `Nat.InjectiveOn`/`Nat.MapsInto`
+(`nat_prelude/finite.rs`'s bounded-`Nat` definitions,
+`∀ i j, i<n -> j<n -> f i=f j -> i=j` / `∀ i, i<n -> f i<n`) for
+`sigma(k) := natAbs (emod (a * ofNat k) n)` using `Int.euler_unit_injective`
+and these two coercions. Sized at roughly 100-150 lines of proof-term
+plumbing (two declarations: `InjectiveOn`, `MapsInto`), no new induction.
+
+**Item 3 untouched.** `prodRangeIf pred (fun _ => a) n = pow a (countRange
+pred n)` (new induction pairing `Int.pow`/`Nat.countRange`), pointwise
+factoring, termwise `ModEq` transport, and cancellation via
+`Int.modEq_cancel`. Confirmed still absent under any name
+(`theorem_dependency_inventory -- Int.euler_totient_theorem` /
+`-- Int.pow_totient`: no rows). Not attempted this lane; sizing not
+re-verified beyond the absence check.
+
+**Full assembly (Euler's theorem itself) is reachable from here, not
+proximate.** One honest sentence: with item 2 closed, item 1 re-sized down
+to assembly-not-invention, and item 3 the one piece requiring genuinely new
+mathematics (an induction this kernel has not built before), Euler's theorem
+is a bounded amount of further engineering — plausibly 1-2 more lane
+sessions — not a research question; nothing found this lane suggests it is
+blocked.
+
+**Corrections made:**
+`docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
+§2.2 updated with the per-item verification above (dated 2026-08-31,
+superseding the 2026-08-30 three-piece sizing without erasing it).
+`docs/research/09-decisions/adr-1025-euler-theorem-item-2-closed-item-1-cheaper-than-sized.md`
+is the durable decision-record copy.
+
+**Holdout isolation (never touched `artifacts/autogenesis/`):**
+`python3 scripts/check-autogenesis-holdout-isolation.py` — BEFORE:
+`AUTOGENESIS_HOLDOUT_ISOLATION|held_out=146|files_scanned=1110|settled=0|references=0|verdict=PASS`.
+AFTER (re-run post-changes): same command, same verdict `PASS` (settled=0,
+references=0) — unaffected, as expected since this lane's diff never touches
+that directory.
+
+**Not run** (per the "run every check in the FOREGROUND, unfinished =
+did-not-run" rule and this lane's scope, which is `int_prelude/`,
+`artifacts/facts/`, and docs only): the workspace-wide gate,
+`nat_prelude::` sweep (no `nat_prelude/` file was touched), `just check`.
+Clippy on the whole `axeyum-lean-kernel` crate could not complete cleanly —
+it fails on **pre-existing** errors in `nat_prelude/gauss_lemma.rs` and
+`nat_prelude_tests.rs` from a sibling lane's committed WIP (commit
+`de4cc6d18`, "wip(nat_prelude): Gauss's-lemma..."), unrelated to this lane's
+diff and explicitly out of this lane's scope (CLAUDE.md instructs: do not
+touch `gauss_lemma.rs`). `cargo check -p axeyum-lean-kernel` is clean.
+
+**Next task for whoever picks this up:** item 1 (`Nat.InjectiveOn`/
+`Nat.MapsInto` for the residue-multiplication self-map, ~100-150 lines,
+sized above), then item 3 (the assembly induction), then wire
+`Int.prodRangeIf_permute` + `Int.euler_unit_coprime_iff` + the item-3
+assembly into a single `Int.euler_totient_theorem` declaration.
 
 **Status: DONE.** Acted on an independent audit's finding that the published
 "EVT row 1 — there is none" claim (`08-ivt-and-evt-measured-against-mathlib.md`

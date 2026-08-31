@@ -269,28 +269,54 @@ some time. See §4.
 | **3** | Modular exponentiation at fixed `p` ships in `axeyum-scenarios::number_theory` as a BitVec scenario validated by `self_check()`; it is a self-check, not a producer/verifier pair (§2.8). |
 | **4** | Not attempted. |
 
-**Highest-yield NT target — but NOT one theorem away. Corrected 2026-08-30.**
+**Highest-yield NT target — but NOT one theorem away, and the three-piece
+handoff itself needed correction. Updated 2026-08-31 (`euler-theorem-spine`,
+[`docs/plan/status/euler-theorem-spine.md`](../plan/status/euler-theorem-spine.md)).**
 Both halves of the residue-permutation argument are landed and axiom-free, and
 that is what made "one theorem away" look right. It is wrong: the lane that
 actually built the cheap half recorded three remaining pieces, all real work,
 in [`docs/plan/status/374-euler-theorem.md`](../plan/status/374-euler-theorem.md)
-and in `int_prelude/euler_theorem.rs`'s own module doc.
+and in `int_prelude/euler_theorem.rs`'s own module doc. All three were
+re-verified in-tree rather than inherited, per the standing "a handoff's
+report of what REMAINS is a hypothesis" rule:
 
-1. `Int.euler_unit_injective`'s hypotheses are about `Int`-sorted indices, while
-   `Int.prodRangeIf_permute` quantifies over a `Nat -> Nat` self-map. Bridging
-   them needs an `ofNat`/`natAbs` round trip and `InjectiveOn`/`MapsInto`
-   re-derived in the other shape.
-2. The predicate-preservation hypothesis is an **iff** and only one direction is
-   proved. The converse needs `a`'s modular inverse applied a second time, and
-   that inverse exists only *inside* `euler_unit_coprime`'s own proof.
-3. The final assembly `prodRangeIf pred (fun _ => a) n = pow a (countRange pred n)`
-   is a new induction pairing `Int.pow` with `Nat.countRange`.
+1. **Still open, but cheaper than sized.** `Int.euler_unit_injective`'s
+   hypotheses are about `Int`-sorted indices, while `Int.prodRangeIf_permute`
+   quantifies over a `Nat -> Nat` self-map. The handoff called the bridge an
+   `ofNat`/`natAbs` round trip; verified in-tree, most of that round trip is
+   **free by defeq, not a lemma**: `order_coercion.rs`'s own
+   `declare_ofnat_order_coercions` proves `Int.le (ofNat m) (ofNat n) ->
+   Nat.le m n` with the identity function (`Int.le`/`Int.lt` iota-reduce
+   their `ofNat`/`ofNat` branch straight to the `Nat` comparison), so the
+   SAME term works in reverse — a `Nat.lt i n` proof type-checks directly
+   where `Int.lt (ofNat i) (ofNat n)` is wanted, no lemma application at all.
+   What remains is real: constructing `Nat.InjectiveOn`/`Nat.MapsInto`
+   (`nat_prelude/finite.rs`'s definitions, `∀ i j, i<n -> j<n -> f i=f j ->
+   i=j` / `∀ i, i<n -> f i<n`) for `σ(k) := natAbs (emod (a * ofNat k) n)`,
+   using `Int.of_nat_nat_abs_of_nonneg` (`x = ofNat(natAbs x)` for `0 <= x`)
+   to round-trip the `MapsInto` bound and injectivity conclusion back through
+   `natAbs`. Not built.
+2. **Closed 2026-08-31, axiom-free.** The predicate-preservation hypothesis
+   was an iff with only the forward direction proved. `Int.euler_unit_coprime`
+   itself, applied a second time at `a`'s own modular inverse
+   (`Int.modEq_inverse_exists`, commuted, fed through
+   `euler_totient.rs`'s Bézout-extraction step — now `pub(super)`), plus a
+   `ModEq`/ring chain identifying the resulting residue with `k`, gives the
+   converse with **no new induction**. `Int.euler_unit_coprime_iff : n a k,
+   0 < n -> 0 <= k -> k < n -> Coprime a n -> (Coprime k n <-> Coprime
+   (emod (a*k) n) n)` — `int_prelude/euler_unit_preserve.rs`, admitted on
+   the first attempt, `theorem_axiom_footprint` confirms 0.
+3. **Still open, unchanged.** The final assembly `prodRangeIf pred (fun _ =>
+   a) n = pow a (countRange pred n)` is a new induction pairing `Int.pow`
+   with `Nat.countRange`, plus pointwise factoring and termwise `ModEq`
+   transport — not attempted this lane.
 
-That lane's own words: this is "a good deal more than 'wire it up'". The general
-rule it illustrates is the one this repository keeps relearning — **a handoff's
-report of what it LANDED is reliable; its report of what REMAINS is a
-hypothesis**, and a sizing written before the hard half was attempted is a
-sizing of the easy half.
+So: one of three pieces landed, one is real but smaller than the original
+handoff sized, one is untouched. That lane's own words about the whole task
+still hold — this is "a good deal more than 'wire it up'" — and the general
+rule it illustrates compounds: **a handoff's report of what it LANDED is
+reliable; its report of what REMAINS is a hypothesis, and re-verifying a
+"remains" item in-tree can shrink it as easily as confirm it.**
 
 ### 2.3 Family: Euler's totient — *the strongest row 1 in the subject*
 

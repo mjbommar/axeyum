@@ -258,7 +258,13 @@ fn mul_swap_inner(d: &mut IntDev<'_>, a: ExprId, b: ExprId, x: ExprId, y: ExprId
 /// as one step of a larger proof; this is the same derivation, extracted,
 /// with `a`,`b` renamed `x`,`y` to avoid confusion with this file's own
 /// `a` (the multiplier)).
-fn coprime_of_modeq_inverse(
+///
+/// `pub(super)`, not private: [`super::euler_unit_preserve`] reuses it
+/// unchanged for the converse half of `Int.euler_unit_coprime_iff` (item 2
+/// of `euler_theorem.rs`'s "what does NOT land here" list) — a second
+/// application of the same Bézout-extraction, at `a`'s own modular inverse
+/// rather than at `a` itself.
+pub(super) fn coprime_of_modeq_inverse(
     d: &mut IntDev<'_>,
     n: ExprId,
     x: ExprId,
