@@ -707,7 +707,7 @@ fn div_mod_reconstructed(
 /// `Nat.modEq n x (mod x n)`, for any `x` (given `pos_n : 0 < n`) — the
 /// balanced witness is `(u, v) := (0, div x n)`, using `x = n*(div x n) +
 /// mod x n` from [`div_mod_reconstructed`] reordered by `add_comm`.
-fn mod_self_congr(
+pub(super) fn mod_self_congr(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     n: ExprId,
@@ -750,7 +750,7 @@ fn mod_self_congr(
 
 /// `modEq n u v → mod u n = mod v n`, by feeding two [`div_mod_reconstructed`]
 /// witnesses to `div_mod_remainder_eq_of_mod_eq`'s remainder-uniqueness.
-fn mod_eq_of_mod_eq_rel(
+pub(super) fn mod_eq_of_mod_eq_rel(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     n: ExprId,

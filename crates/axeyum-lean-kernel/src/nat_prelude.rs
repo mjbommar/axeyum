@@ -4777,6 +4777,16 @@ pub struct NatPrelude {
     /// `a := 2` and `pp := 2*m+1` (the classical odd-prime shape), landing
     /// the closed form ADR-0970 sized and left open (ADR-0985).
     pub gauss_neg_count_two_closed_form: NameId,
+    /// `Nat.least_residue_injective_of_coprime : ∀ pp a k k', 0 < pp →
+    ///   gcd a pp = 1 → k < pp → k' < pp → leastResidue pp a k =
+    ///   leastResidue pp a k' → k = k'` (`gauss_lemma.rs`) — the least-residue
+    /// map `k ↦ leastResidue pp a k` is injective on `[0, pp)` whenever `a`
+    /// is coprime to `pp`. Piece 1 of the connecting theorem ADR-0970/
+    /// ADR-0985 sized and left open (a caller supplies coprimality via
+    /// `coprime_of_lt_prime` for the classical Gauss's-lemma setting `pp`
+    /// prime, `0 < a < pp`; this theorem itself needs only positivity and
+    /// coprimality, not primality).
+    pub least_residue_injective_of_coprime: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5708,6 +5718,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_neg_count_seven_three: kernel.name_str(nat, "gauss_neg_count_seven_three"),
             gauss_count_ble_closed_form_disj: kernel.name_str(nat, "gaussCountBleClosedFormDisj"),
             gauss_neg_count_two_closed_form: kernel.name_str(nat, "gaussNegCountTwoClosedForm"),
+            least_residue_injective_of_coprime: kernel
+                .name_str(nat, "least_residue_injective_of_coprime"),
         };
 
         let mut d = NatDev::new(kernel, p);
