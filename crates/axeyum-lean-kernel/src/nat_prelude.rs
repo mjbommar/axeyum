@@ -5965,8 +5965,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
             coprime_factorial_of_lt_prime: kernel.name_str(nat, "coprime_factorial_of_lt_prime"),
-            gauss_fold_modeq_of_sign_false: kernel
-                .name_str(nat, "gauss_fold_modeq_of_sign_false"),
+            gauss_fold_modeq_of_sign_false: kernel.name_str(nat, "gauss_fold_modeq_of_sign_false"),
             gauss_fold_add_modeq_zero_of_sign_true: kernel
                 .name_str(nat, "gauss_fold_add_modeq_zero_of_sign_true"),
             avg: kernel.name_str(nat, "avg"),

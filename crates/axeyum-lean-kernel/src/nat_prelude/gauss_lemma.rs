@@ -3082,7 +3082,8 @@ mod tests {
         let mut k = Kernel::new();
         let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
         assert!(
-            k.axiom_footprint(p.gauss_fold_modeq_of_sign_false).is_empty(),
+            k.axiom_footprint(p.gauss_fold_modeq_of_sign_false)
+                .is_empty(),
             "Nat.gauss_fold_modeq_of_sign_false must rest on no axiom"
         );
         assert!(

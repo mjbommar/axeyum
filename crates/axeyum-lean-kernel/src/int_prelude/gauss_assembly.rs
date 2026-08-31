@@ -315,23 +315,14 @@ pub(super) fn declare_gauss_lemma(d: &mut IntDev<'_>) -> Result<(), KernelError>
         let succ_mul_eq = d.lemma(p.nat.succ_mul, &[one_nat, m]);
         let one_mul_eq = d.lemma(p.nat.one_mul, &[m]);
         let congr_one_mul = d.congr(mul_one_m, m, one_mul_eq, &|d, x| d.add(x, m));
-        let two_mul_eq_add = d.trans(
-            mul2m,
-            add_mul_one_m_m,
-            add_m_m,
-            succ_mul_eq,
-            congr_one_mul,
-        );
+        let two_mul_eq_add = d.trans(mul2m, add_mul_one_m_m, add_m_m, succ_mul_eq, congr_one_mul);
         // two_mul_eq_add : Eq Nat (mul 2 m) (add m m)
         let add_eq_two_mul = d.symm(mul2m, add_m_m, two_mul_eq_add);
         let le_motive = d.eq_motive(add_m_m, &|d, x| d.le(m, x));
         let le_m_mul2m = d.transport(add_m_m, le_motive, le_m_mm, mul2m, add_eq_two_mul);
         let lt_m_pp = d.lemma(p.nat.lt_succ_of_le, &[m, mul2m, le_m_mul2m]);
 
-        let cop_fact = d.const_app(
-            p.coprime_factorial_of_lt_prime,
-            &[pp, m, prime, lt_m_pp],
-        );
+        let cop_fact = d.const_app(p.coprime_factorial_of_lt_prime, &[pp, m, prime, lt_m_pp]);
         // cop_fact : Coprime (factorial m) (ofNat pp)
 
         let cancelled = d.const_app(

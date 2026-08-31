@@ -161,10 +161,7 @@ pub(super) fn declare_gauss_term_mod_eq(d: &mut IntDev<'_>) -> Result<(), Kernel
             let zero_i = d.izero();
             let neg_g = d.ineg(g);
 
-            let s1 = d.lemma(
-                p.mod_eq_add_right,
-                &[n_int, x_plus_g, zero_i, neg_g, hz],
-            );
+            let s1 = d.lemma(p.mod_eq_add_right, &[n_int, x_plus_g, zero_i, neg_g, hz]);
             let lhs_s1 = d.iadd(x_plus_g, neg_g);
             let rhs_s1 = d.iadd(zero_i, neg_g);
             // s1 : ModEq n_int ((x+g)+(-g)) (0+(-g))
@@ -212,9 +209,7 @@ pub(super) fn declare_gauss_term_mod_eq(d: &mut IntDev<'_>) -> Result<(), Kernel
             let mul_one_g = d.imul(one_i, g);
             let om = d.const_app(p.one_mul, &[g]); // Eq (mul one g) g
             let om_rev = d.isymm(mul_one_g, g, om); // Eq g (mul one g)
-            let s1 = d.int_eq_rewrite(g, mul_one_g, om_rev, hb, &|d, t| {
-                imodeq(d, n_int, x, t)
-            });
+            let s1 = d.int_eq_rewrite(g, mul_one_g, om_rev, hb, &|d, t| imodeq(d, n_int, x, t));
             // s1 : ModEq n_int x (mul one g)
 
             let sel_eq = select_int_false(d, test, neg_one, one_i, h); // Eq sel one
