@@ -253,6 +253,7 @@ mod totient_mul_coprime;
 mod totient_multiplicative;
 mod totient_prime_pow;
 pub(crate) mod transposition;
+mod unpair;
 mod vandermonde;
 mod xor;
 mod xor_algebra;
@@ -452,6 +453,7 @@ use transposition::{
     declare_transposition_injective, declare_transposition_involutive,
     declare_transposition_maps_into,
 };
+use unpair::declare_unpair_all;
 use vandermonde::declare_vandermonde_all;
 use xor::declare_xor_all;
 use xor_algebra::declare_xor_algebra_all;
@@ -4980,6 +4982,24 @@ pub struct NatPrelude {
     /// Rust identifiers collide).
     pub pair_fn: NameId,
 
+    // -- `unblock-draw-16` lane: `unpair.rs` --
+    // `docs/research/09-decisions/adr-1220-index-0-is-now-the-binding-slot.md`
+    // `Nat.pair`'s inverse, which `avg_pair.rs` records as unreachable
+    // because Mathlib's `Nat.unpair` returns `Prod`. The PROJECTIONS need
+    // no product: they are the standing Bool-selected-scalar workaround,
+    // and `Nat.unpaired`'s Mathlib type mentions no `Prod` either.
+    // Construction only, ADR-0653 -- no theorem about any of the three.
+    /// `Nat.unpairLeft (n : Nat) : Nat` -- the first component of Lean
+    /// core's `Nat.unpair`, as a scalar function. See `unpair.rs`.
+    pub unpair_left: NameId,
+    /// `Nat.unpairRight (n : Nat) : Nat` -- the second component. See
+    /// `unpair.rs` for why the `- s` correction in the false arm is the
+    /// discriminating case its evaluation test pins.
+    pub unpair_right: NameId,
+    /// `Nat.unpaired (f : Nat -> Nat -> Nat) (n : Nat) : Nat := f
+    /// (unpairLeft n) (unpairRight n)` -- Mathlib's own type, `Prod`-free.
+    pub unpaired: NameId,
+
     // -- `unblock-four-families` lane: `abundant_deficient.rs` --
     // `docs/research/09-decisions/adr-1100-four-families-for-draw-14.md`
     // (ADR-1095's measured gap: the free family supply all sorts EARLY, so
@@ -6090,6 +6110,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "gauss_fold_add_modeq_zero_of_sign_true"),
             avg: kernel.name_str(nat, "avg"),
             pair_fn: kernel.name_str(nat, "pair"),
+            unpair_left: kernel.name_str(nat, "unpairLeft"),
+            unpair_right: kernel.name_str(nat, "unpairRight"),
+            unpaired: kernel.name_str(nat, "unpaired"),
             find_greatest: kernel.name_str(nat, "findGreatest"),
             abundant: kernel.name_str(nat, "Abundant"),
             deficient: kernel.name_str(nat, "Deficient"),
@@ -7017,6 +7040,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Mathlib.Data.Nat.Pairing` for the autogenesis screen
         // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
         declare_avg_pair_all(&mut d, &p)?;
+        // `Nat.unpairLeft`/`Nat.unpairRight`/`Nat.unpaired` (`unpair.rs`):
+        // needs `Nat.sqrt` (`sqrt.rs`, far above), `Nat.mul`/`Nat.sub`/
+        // `Nat.ble`/`Nat.succ`/`bool_select_nat`, and `Nat.pair` only in
+        // its TESTS. Inverts the pairing `declare_avg_pair_all` just
+        // declared, so it goes immediately after it. Nothing needs it.
+        declare_unpair_all(&mut d, &p)?;
         // `Nat.Abundant`/`Nat.Deficient` (`abundant_deficient.rs`): needs
         // `Nat.sumDivisors` (`perfect.rs`, far above), `Nat.mul` and
         // `Nat.lt`. Opens `Mathlib.NumberTheory.FactorisationProperties`
@@ -7088,6 +7117,9 @@ mod find_greatest_tests;
 
 #[cfg(test)]
 mod avg_pair_tests;
+
+#[cfg(test)]
+mod unpair_tests;
 
 #[cfg(test)]
 mod stirling_tests;
