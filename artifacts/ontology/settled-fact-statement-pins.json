@@ -9540,6 +9540,18 @@
       "prose_sha256": "8bba5df7a77e48f048e16d62f4ae65859f4d1160b7e94d441c40404fb27b102d"
     },
     {
+      "fact_id": "F:ml430-nat-size-eq-zero-020ad98c",
+      "language": "lean4-surface",
+      "statement_sha256": "ebc8a02dbfc7676111d659273c5a983db80cf714dcb965b1e728d77f295ff36e",
+      "prose_sha256": "fcc156e31b6ecf707b4b737f71a1f3e6bf24633344901b957a8449677c36d6a4"
+    },
+    {
+      "fact_id": "F:ml430-nat-size-one-e23e5f71",
+      "language": "lean4-surface",
+      "statement_sha256": "40ba96ddb1c9f5207d2bee4ac8678f5c81dd1bdc0dcf643750e2dbd87e9532e9",
+      "prose_sha256": "a5288b078b34015766d5e9708625e77493c7ece0e7827fd4fe2fb1e72616e9fc"
+    },
+    {
       "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
       "language": "lean4-surface",
       "statement_sha256": "517fbe030eaa01e7897f9bb937aac816636be6970b5cd9fb0176878e9e210b71",
