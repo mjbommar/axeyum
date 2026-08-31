@@ -19,6 +19,32 @@ set -u
 BRANCH="${1:?usage: lane-merge-land.sh <branch>}"
 GENERATED=(PLAN.md docs/research/09-decisions/README.md)
 
+# A DIRTY TREE BEFORE THE MERGE GETS SWEPT INTO THE MERGE COMMIT.
+# Line 44 below is `git add -A -- PLAN.md docs/ artifacts/ scripts/ crates/
+# justfile`, which is right for the regenerated files a merge produces and wrong
+# for anything else already modified. Measured 2026-08-31: my own uncommitted
+# `scripts/lane-push.sh` edit and a `settled-fact-statement-pins.json` floor bump
+# were swept into a draw-15 merge commit whose message mentions neither. Nothing
+# was lost and the content was correct -- but the change is attributed to a merge
+# it has nothing to do with, and `git log -- scripts/lane-push.sh` now points at
+# a nursery draw.
+#
+# This is CLAUDE.md's pathspec hazard from the other side: the documented failure
+# is a pathspec too NARROW dropping your own hunks; this is one wide enough to
+# adopt someone else's. Both are silent.
+#
+# So: refuse to start on a dirty tree. Commit your own work first, then merge.
+if [ "${LANE_MERGE_ALLOW_DIRTY:-0}" != 1 ]; then
+  dirty=$(git status --porcelain --untracked-files=no)
+  if [ -n "$dirty" ]; then
+    echo "LANE_MERGE_LAND|DECLINING -- tracked files are modified before the merge." >&2
+    printf '%s\n' "$dirty" | sed 's/^/  /' >&2
+    echo "  `git add -A` after the merge would sweep these into the merge commit." >&2
+    echo "  Commit them first. LANE_MERGE_ALLOW_DIRTY=1 overrides." >&2
+    exit 1
+  fi
+fi
+
 git merge --no-edit "$BRANCH" > /dev/null 2>&1
 MERGE_STATUS=$?
 

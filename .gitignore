@@ -65,3 +65,11 @@ python/axeyum/*.pyd
 # the CURRENT tree, not a stable pin, and it changes on every declaration
 # any prelude lands.
 /artifacts/declaration-spec/generated/kernel-names-snapshot.txt
+
+# Session sentinel for the /goal stop-hook. Deliberately untracked -- it is
+# per-session state, not repository content. Ignored because broad `git add`
+# operations kept staging it (and once swept it into a merge commit).
+are_we_done
+
+# Lane scratch from the Lean store harness; per-run, never content.
+.axeyum-lean-store-cell-*/
