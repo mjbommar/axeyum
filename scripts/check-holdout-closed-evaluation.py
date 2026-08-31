@@ -89,20 +89,23 @@ class ClosedEvaluationError(Exception):
 # the classifier
 
 
-def is_closed_evaluation(statement: str) -> bool:
-    """Is this Mathlib proposition a binder-free equation over ground terms?
+def _ground_shape(text: str) -> bool:
+    """Binder-free, and every token an identifier, a numeral or allowed punct.
 
-    Not "is it true" and not "does the kernel decide it" -- only whether its
-    SHAPE admits decision by reduction. Whether the vocabulary is actually
-    declared here is a separate question, asked by the caller, because the two
-    fail in opposite directions and conflating them hides which one moved.
+    Shared prefix of both shapes below. Anything else is declined rather than
+    guessed at -- this gate refuses to reason about syntax it does not model.
     """
-    text = statement.strip()
     if not text or BINDER.search(text):
         return False
     residue = IDENT.sub(" ", text)
     residue = re.sub(r"[0-9]+", " ", residue)
-    if any(ch not in ALLOWED_PUNCT for ch in residue):
+    return not any(ch not in ALLOWED_PUNCT for ch in residue)
+
+
+def _is_ground_equation(statement: str) -> bool:
+    """`Nat.fermatNumber 0 = 3` -- the shape draws 7 and 11 spent rows on."""
+    text = statement.strip()
+    if not _ground_shape(text):
         return False
     # Exactly one `=`, so this also rejects a statement with none -- an explicit
     # `"=" not in text` guard was here and was UNKILLABLE by mutation, because
@@ -116,6 +119,59 @@ def is_closed_evaluation(statement: str) -> bool:
     if not any(NUMERAL.match(s) for s in sides):
         return False
     return bool(IDENT.search(text))
+
+
+def _is_ground_predicate(statement: str) -> bool:
+    """`Nat.Abundant 12` -- a PREDICATE applied to numerals, with no `=` at all.
+
+    ADR-1115. Every family this gate had seen stated its ground rows as
+    equations, so the `=` requirement above looked like part of the definition
+    of "closed evaluation" rather than an artefact of the sample. It is not.
+    `Nat.abundant_twelve : Nat.Abundant 12` unfolds -- measured, by the
+    committed `abundant_evaluates_at_twelve` `def_eq` test -- to the ground
+    inequality `Lt 24 28`, decided with no mathematical content the instant
+    `Nat.Abundant` is declared. `is_closed_evaluation` returned False for it,
+    so R12 reported a clean 0 of 10 over a family with two spent rows.
+
+    The numeral requirement is what keeps this narrow. `Monotone
+    Nat.fermatNumber` and `StrictMono Nat.fermatNumber` are binder-free
+    non-equations too, and both are genuinely blind: they quantify over the
+    whole function, so nothing reduces. Requiring at least one numeral
+    ARGUMENT separates them, and both are pinned as negatives below.
+    """
+    text = statement.strip()
+    if not _ground_shape(text):
+        return False
+    # No explicit `"=" not in text` guard, for the same reason the equation
+    # branch has none: mutation-verified UNKILLABLE (0 fixtures die when it is
+    # removed), because `=` is neither an identifier nor a numeral and the
+    # token check below already rejects it. The two classifiers stay disjoint
+    # through that line, not through a redundant one nobody could tell was
+    # working.
+    tokens = text.replace("(", " ").replace(")", " ").split()
+    if not all(IDENT.fullmatch(t) or NUMERAL.match(t) for t in tokens):
+        return False
+    # A head to apply and a ground argument to apply it to. Without the numeral
+    # this admits `Monotone Nat.fermatNumber`, which is blind.
+    if not any(IDENT.fullmatch(t) for t in tokens):
+        return False
+    return any(NUMERAL.match(t) for t in tokens)
+
+
+def is_closed_evaluation(statement: str) -> bool:
+    """Is this Mathlib proposition decided by reduction over ground terms?
+
+    Not "is it true" and not "does the kernel decide it" -- only whether its
+    SHAPE admits decision by reduction. Whether the vocabulary is actually
+    declared here is a separate question, asked by the caller, because the two
+    fail in opposite directions and conflating them hides which one moved.
+
+    TWO shapes, because assuming one was the whole story cost a draw: a ground
+    EQUATION (`Nat.fermatNumber 0 = 3`) and a ground PREDICATE APPLICATION
+    (`Nat.Abundant 12`). See `_is_ground_predicate` for how the second was
+    found and why the numeral requirement is load-bearing.
+    """
+    return _is_ground_equation(statement) or _is_ground_predicate(statement)
 
 
 def constants(statement: str) -> set[str]:
@@ -149,6 +205,28 @@ CLASSIFIER_FIXTURES: list[tuple[str, bool, str]] = [
     # working. Anything the classifier cannot parse into two sides must be
     # declined rather than guessed at.
     ("Nat.foo 0 = 1 = 1", False, "chained equality is not a two-sided evaluation"),
+    # --- the ground-PREDICATE shape (ADR-1115) -------------------------------
+    # The two rows draw 14 measured. Verbatim `formal.statement` values as
+    # `select()` emits them from the pinned Mathlib inventory. Both unfold to
+    # ground `Lt` inequalities -- `Nat.Abundant 12` to `Lt 24 28`, per the
+    # committed `abundant_evaluates_at_twelve` def_eq test -- so both are
+    # decided the instant the construction lands.
+    ("Nat.Abundant 12", True, "ground predicate application: the draw-14 row"),
+    ("Nat.Deficient 1", True, "ground predicate application: the draw-14 row"),
+    # A THIRD form of the same shape, from a family nobody has drawn: this must
+    # not depend on the predicate being one we happen to have declared, which is
+    # the caller's separate question.
+    ("Nat.Prime 7", True, "ground predicate application over an undrawn subject"),
+    # The numeral requirement is what keeps this narrow, and the two fixtures
+    # that kill it are ALREADY ABOVE: `Monotone Nat.fermatNumber` and
+    # `StrictMono Nat.fermatNumber`, listed as the Fermat family's genuinely
+    # blind siblings. Delete `any(NUMERAL...)` from `_is_ground_predicate` and
+    # exactly those two die -- verified, and the reason they are not repeated
+    # here. A duplicated fixture inflates the count without adding a case.
+    #
+    # A bare numeral with no head to apply is not a proposition anybody drew,
+    # and admitting it would make the shape match arithmetic fragments.
+    ("12", False, "a numeral alone is not an application"),
 ]
 
 
