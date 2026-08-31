@@ -87,13 +87,12 @@ fn avg_evaluates_correctly() {
     let avg_5_5 = f.const_app(p.avg, &[five, five]);
     assert!(f.k.def_eq(avg_5_5, five), "avg 5 5 must be exactly 5");
 
-    for name in [p.avg] {
-        assert!(
-            f.k.axiom_footprint(name).is_empty(),
-            "{} must rest on zero axioms",
-            f.k.display_name(name)
-        );
-    }
+    let name = p.avg;
+    assert!(
+        f.k.axiom_footprint(name).is_empty(),
+        "{} must rest on zero axioms",
+        f.k.display_name(name)
+    );
 }
 
 /// `Nat.pair` computes the right VALUES at concrete instances, chosen to
@@ -101,8 +100,8 @@ fn avg_evaluates_correctly() {
 /// b`, the textbook two-multiplication Cantor pairing `(a+b)*(a+b+1)/2 +
 /// a`, and a transposed branch condition (`b < a` instead of `a < b`).
 ///
-/// Hand-computed table for `a, b` in `[0, 2]` (`pair a b := if a < b then b
-/// * b + a else a * a + a + b`):
+/// Hand-computed table for `a, b` in `[0, 2]`
+/// (`pair a b := if a < b then b * b + a else a * a + a + b`):
 ///
 /// | (a,b) | a<b | value |
 /// |-------|-----|-------|
@@ -182,11 +181,10 @@ fn pair_evaluates_correctly() {
     let pair_2_2 = f.const_app(p.pair_fn, &[two, two]);
     assert!(f.k.def_eq(pair_2_2, eight), "pair 2 2 must be 8");
 
-    for name in [p.pair_fn] {
-        assert!(
-            f.k.axiom_footprint(name).is_empty(),
-            "{} must rest on zero axioms",
-            f.k.display_name(name)
-        );
-    }
+    let name = p.pair_fn;
+    assert!(
+        f.k.axiom_footprint(name).is_empty(),
+        "{} must rest on zero axioms",
+        f.k.display_name(name)
+    );
 }
