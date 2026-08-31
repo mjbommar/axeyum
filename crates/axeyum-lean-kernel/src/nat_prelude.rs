@@ -139,6 +139,7 @@ mod binary;
 mod binary_rec;
 mod binomial;
 mod bit_decode;
+mod bit_extra;
 mod bit_order;
 mod bits;
 mod bitwise;
@@ -147,6 +148,7 @@ mod cantor;
 mod cardinality;
 mod catalan;
 mod choose;
+mod choose_factorial_add;
 mod clog;
 mod coprime_lemmas;
 mod count_range_permute;
@@ -223,6 +225,7 @@ mod rectangle;
 mod rel_prime;
 mod relation;
 mod restrict_pair;
+mod size_extra;
 mod sqrt;
 mod squarefree;
 mod subset_product;
@@ -263,6 +266,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use bit_decode::declare_bit_decode_all;
+use bit_extra::declare_bit_extra_all;
 use bit_order::declare_bit_order_all;
 use bits::declare_bit_all;
 use bitwise::{
@@ -273,6 +277,7 @@ use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
+use choose_factorial_add::declare_add_choose_mul_factorial_mul_factorial;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
 use count_range_permute::{
@@ -394,6 +399,7 @@ use relation::{
 use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
+use size_extra::declare_size_extra_all;
 use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
@@ -516,6 +522,9 @@ pub struct NatPrelude {
     /// induction hypothesis, `mul_left_comm`, [`Self::succ_mul_choose_eq`],
     /// `mul_assoc`, and [`Self::factorial_succ`].
     pub desc_factorial_eq_factorial_mul_choose: NameId,
+    /// `Nat.add_choose_mul_factorial_mul_factorial : ∀ i j, (i+j).choose j *
+    /// i! * j! = (i+j)!`. See `nat_prelude::choose_factorial_add`.
+    pub add_choose_mul_factorial_mul_factorial: NameId,
     /// `factorial_dvd_descFactorial : ∀ n k, k! ∣ n.descFactorial k`.
     /// Closes `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`. Immediate
     /// from [`Self::desc_factorial_eq_factorial_mul_choose`] plus `dvd_mul`.
@@ -2604,6 +2613,11 @@ pub struct NatPrelude {
     /// strictly bounded by 2 raised to its own bit count. The
     /// `fuel := n` instance of [`Self::size_aux_lt_pow`].
     pub lt_pow_size: NameId,
+    /// `Nat.size_one : Eq (size 1) 1` — `refl`. See `nat_prelude::size_extra`.
+    pub size_one: NameId,
+    /// `Nat.size_eq_zero : ∀ n, Iff (Eq (size n) 0) (Eq n 0)`. See
+    /// `nat_prelude::size_extra`.
+    pub size_eq_zero: NameId,
     /// `Nat.mod_eq_self_of_lt : ∀ n m, Lt n m → mod n m = n` — a general
     /// division fact (not specific to binary representation), needed as glue
     /// for [`Self::sum_test_bit_eq`]. Proved by comparing the executable
@@ -3696,6 +3710,24 @@ pub struct NatPrelude {
     /// sides unfold to `mul 2 n` and `succ (mul 2 n)`, so `le_succ` at
     /// `mul 2 n` is accepted directly by defeq.
     pub bit_false_le_bit_true: NameId,
+    /// `Nat.bit_false_zero : Eq (bit false 0) 0` — `refl`. See
+    /// `nat_prelude::bit_extra`.
+    pub bit_false_zero: NameId,
+    /// `Nat.bit_le : ∀ (b : Bool) {m n}, Le m n → Le (bit b m) (bit b n)`.
+    /// See `nat_prelude::bit_extra`.
+    pub bit_le: NameId,
+    /// `Nat.bit_ne_zero : ∀ (b : Bool) {n}, n ≠ 0 → bit b n ≠ 0`. See
+    /// `nat_prelude::bit_extra`.
+    pub bit_ne_zero: NameId,
+    /// `Nat.bit_lt_bit : ∀ {m n} (a b : Bool), Lt m n → Lt (bit a m) (bit b
+    /// n)`. See `nat_prelude::bit_extra`.
+    pub bit_lt_bit: NameId,
+    /// `Nat.bit_add_left : ∀ (b : Bool) (n m), bit b (n+m) = bit false n +
+    /// bit b m`. See `nat_prelude::bit_extra`.
+    pub bit_add_left: NameId,
+    /// `Nat.bit_add_right : ∀ (b : Bool) (n m), bit b (n+m) = bit b n + bit
+    /// false m`. See `nat_prelude::bit_extra`.
+    pub bit_add_right: NameId,
     /// `Nat.landAux : Nat → Nat → Nat → Nat`, `landAux fuel m n`: structural
     /// recursion on the fuel (like `logAux`/`testBitAux`/`sizeAux`), carrying
     /// `m`/`n` through unchanged except for `div _ 2` at each step.
@@ -4802,6 +4834,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             desc_factorial_succ_eq_succ_mul: kernel.name_str(nat, "descFactorial_succ_eq_succ_mul"),
             desc_factorial_eq_factorial_mul_choose: kernel
                 .name_str(nat, "descFactorial_eq_factorial_mul_choose"),
+            add_choose_mul_factorial_mul_factorial: kernel
+                .name_str(nat, "add_choose_mul_factorial_mul_factorial"),
             factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),
             desc_factorial_self: kernel.name_str(nat, "descFactorial_self"),
             desc_factorial_le: kernel.name_str(nat, "descFactorial_le"),
@@ -5261,6 +5295,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             size_zero: kernel.name_str(nat, "size_zero"),
             size_aux_lt_pow: kernel.name_str(nat, "size_aux_lt_pow"),
             lt_pow_size: kernel.name_str(nat, "lt_pow_size"),
+            size_one: kernel.name_str(nat, "size_one"),
+            size_eq_zero: kernel.name_str(nat, "size_eq_zero"),
             mod_eq_self_of_lt: kernel.name_str(nat, "mod_eq_self_of_lt"),
             sum_test_bit_eq: kernel.name_str(nat, "sum_testBit_eq"),
             sum_range_const_zero: kernel.name_str(nat, "sumRange_const_zero"),
@@ -5446,6 +5482,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bit_true: kernel.name_str(nat, "bit_true"),
             bit_true_pos: kernel.name_str(nat, "bit_true_pos"),
             bit_false_le_bit_true: kernel.name_str(nat, "bit_false_le_bit_true"),
+            bit_false_zero: kernel.name_str(nat, "bit_false_zero"),
+            bit_le: kernel.name_str(nat, "bit_le"),
+            bit_ne_zero: kernel.name_str(nat, "bit_ne_zero"),
+            bit_lt_bit: kernel.name_str(nat, "bit_lt_bit"),
+            bit_add_left: kernel.name_str(nat, "bit_add_left"),
+            bit_add_right: kernel.name_str(nat, "bit_add_right"),
             land_aux: kernel.name_str(nat, "landAux"),
             land: kernel.name_str(nat, "land"),
             land_zero_left: kernel.name_str(nat, "land_zero_left"),
@@ -5851,6 +5893,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_catalan_all(&mut d, &p)?;
         declare_binary_all(&mut d, &p)?;
         declare_size_all(&mut d, &p)?;
+        // Needs `Nat.size`/`lt_pow_size`/`size_zero` (`declare_size_all`,
+        // just above) plus basic order lemmas from far above
+        // (`le_of_lt_succ`, `zero_le`, `le_antisymm`); nothing needs these
+        // two closed `ml430` mirrors, so they go right after `Nat.size`.
+        declare_size_extra_all(&mut d, &p)?;
         declare_zero_of_test_bit(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
         declare_relation_properties(&mut d, &p)?;
@@ -5975,6 +6022,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mul_zero`, `mul_one`); nothing needs `Nat.descFactorial`, so it
         // goes last too.
         declare_desc_factorial_all(&mut d, &p)?;
+        // Needs `Nat.descFactorial_eq_factorial_mul_choose`/
+        // `Nat.descFactorial_succ_eq_succ_mul` (`declare_desc_factorial_all`,
+        // just above) plus `mul_comm`/`mul_assoc`/`one_mul`/`factorial_succ`,
+        // all far above; nothing needs this closed `ml430` mirror.
+        declare_add_choose_mul_factorial_mul_factorial(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul`/`Nat.beq` (`declare_arithmetic`/
         // `declare_boolean_equality`) and `Nat.div`/`Nat.mod`
         // (`declare_executable_division`), all far above; nothing needs
@@ -6244,6 +6296,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lt_of_mul_lt_mul(&mut d, &p)?;
         declare_mul_lt_mul_iff(&mut d, &p)?;
         declare_div_lt_of_lt_mul(&mut d, &p)?;
+        // Needs `Nat.bit` (`declare_bit_all`, far above) plus order/algebra
+        // machinery from all over this file, the last piece being
+        // `Nat.mul_lt_mul_left` (`declare_mul_lt_mul_iff`, just above) --
+        // that ordering dependency is why these five closed `ml430` mirrors
+        // sit here rather than right after `Nat.bit` itself (a `bit_ne_zero`
+        // draft placed there hit `UnknownConst` on `mul_lt_mul_left`, which
+        // is not declared until here). Nothing needs these theorems, so
+        // moving them later than `Nat.bit` costs nothing.
+        declare_bit_extra_all(&mut d, &p)?;
         declare_gcd_dvd_mirrors(&mut d, &p)?;
         // Needs `Nat.log`/`Nat.clog` (`declare_log_all`/`declare_clog_all`,
         // far above) and `Nat.div_mod_exec`/`Nat.div_mod_lt_mul_iff`/
@@ -6479,3 +6540,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
 
 #[cfg(test)]
 mod nat_prelude_tests;
+
+#[cfg(test)]
+mod bit_extra_tests;
+
+#[cfg(test)]
+mod size_extra_tests;
+
+#[cfg(test)]
+mod choose_factorial_add_tests;

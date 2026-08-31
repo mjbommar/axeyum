@@ -8,10 +8,39 @@
     "statement": "∀ {m n : ℕ} (a b : Bool), m < n → Nat.bit a m < Nat.bit b n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-add-le-add-left",
+    "F:nat-le-add-right",
+    "F:nat-lt-of-le-of-lt",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-succ-self",
+    "F:nat-mul-le-mul-left",
+    "F:nat-zero-le"
+  ],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bit_lt_bit 2>/dev/null | grep -Ec '^Nat\\.bit_lt_bit[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bit_lt_bit",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.bit_lt_bit` through the trusted `Kernel::add_declaration` gate, declared in `nat_prelude/bit_extra.rs` (a new module, kept separate from `bits.rs`'s own dense theorem set). `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : Bool) -> ((x4 : AxNat.lt x0 x1) -> AxNat.lt (AxNat.bit x2 x0) (AxNat.bit x3 x1))))))`, matching this fact's `formal.statement`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified both ways: the real name greps to a count `-ge 1`; grepping a made-up name (`Nat.bit_lt_bit_bogus`) greps to `0`.",
+      "supports": "∀ {m n : ℕ} (a b : Bool), m < n → Nat.bit a m < Nat.bit b n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names` (this declaration's `p.bit_lt_bit` entry was added there in the same session), and `the_build_is_deterministic`/`every_promised_name_is_admitted_with_the_expected_kind` (both re-run on every `nat_prelude::` sweep) confirm the declaration is admitted at the exact rendered type checked above. `nat_prelude/bit_extra_tests.rs` independently checks this declaration's `axiom_footprint` too, plus a concrete instantiation with a discriminating negative control.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.bit_lt_bit"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +55,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Established 2026-08-31 in this ledger by the `draw11-theorems-c` lane: a fresh local construction (`nat_prelude/bit_extra.rs`), not a transcription of Mathlib's proof. The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `depends_on` was populated by `check-fact-depends-derived.py --fix` from the proof term's own dependency edges -- pre-existing order/algebra prelude lemmas (`mul_le_mul_left`, `add_le_add_right`/`add_le_add_left`, `zero_lt_of_ne_zero`, `mul_lt_mul_left`, `add_pos_right`, `lt_succ_self`, `lt_of_lt_of_le`/`lt_of_le_of_lt`, `left_distrib`, `add_assoc`, `add_right_comm`, `add_comm`), not another `ml430` fact. Concrete-instance coverage (with a genuinely-discriminating negative control per theorem) lives in `nat_prelude/bit_extra_tests.rs`.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

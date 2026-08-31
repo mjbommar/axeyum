@@ -7660,6 +7660,12 @@
       "prose_sha256": "b42573df3a75a6ec9404433d3710aad7a1b69396c1cb7df32e1896f12604f524"
     },
     {
+      "fact_id": "F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef",
+      "language": "lean4-surface",
+      "statement_sha256": "ea0c24662ffe819744eec113ecefa37eda85b47bc592d7e281e83f0bc8290554",
+      "prose_sha256": "38ea58da98ced245f65006425e501f29cdef55e61682e2f3e148eaafc9ee1256"
+    },
+    {
       "fact_id": "F:ml430-nat-add-comm-56a2d614",
       "language": "lean4-surface",
       "statement_sha256": "50cf83163399903358d23447f8d7bb955a5c71844f2e1b210dcdc474663648a2",
@@ -7869,6 +7875,42 @@
       "language": "lean4-surface",
       "statement_sha256": "36c843315686d67d511acdc696c325ae2b60357402e95b706402a16576211552",
       "prose_sha256": "860ffa7cac89c3ba49f6cdd8518728e4887bcb1f959726915815764ad20470ef"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-add-b1edcc8e",
+      "language": "lean4-surface",
+      "statement_sha256": "c95d7e251d31be0050ab7649b343d618f4bac33928b35020b145e588c501eff3",
+      "prose_sha256": "fcbb18eb42536ac3ea13df00785a68adc2ab63b987a8908a6377a662e9121ba8"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-add-d487108f",
+      "language": "lean4-surface",
+      "statement_sha256": "47e043657c3eef6b48ce38ec1c1ae86286e5a7591457f6a8d90b52c42740b512",
+      "prose_sha256": "ab89c8b0771df61f170b7e11b95574f64250bfe1045ba33cf33be918c9c4175b"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-false-zero-d996adbf",
+      "language": "lean4-surface",
+      "statement_sha256": "aa681293473cac20de096265c6b640116626ab1e147e081650270edd58c5c442",
+      "prose_sha256": "df2d98b7c0a59370f34bd7dc7bcc15e553103cf2d28da866caef951e6b0bc469"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-le-40743fa3",
+      "language": "lean4-surface",
+      "statement_sha256": "57b3c895e2200d56d44731b6a8e1a94ad70c6537bf7a6da16a664080455bc1ef",
+      "prose_sha256": "556ef2dd3c5dd8fb86e38f08522f860f81629a9865377fff2985260a2b50b1d7"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-lt-bit-295453cc",
+      "language": "lean4-surface",
+      "statement_sha256": "6c39ec80ebe611284681c2bcd4c7cff25b5fbc4f8e9fd55d7891252fc50a5817",
+      "prose_sha256": "8e1699a417f63010c5f4df6b90cd75b4595fee529e44603978f1f8bc153c7b69"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-ne-zero-181bd65c",
+      "language": "lean4-surface",
+      "statement_sha256": "1850f30f9548a75165d0bdab287447ed7c0d65ba4a260d87ec6db68e8c40c4d9",
+      "prose_sha256": "b3f0627beb0d8fa9174060f547c3308a6256f0b43e7bc110a6673a3ede26b198"
     },
     {
       "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
@@ -9544,6 +9586,18 @@
       "language": "lean4-surface",
       "statement_sha256": "e544f18c217d9bfec7866d3bdb5dd5aa261c549f574162ffd8a4d8df5e501d84",
       "prose_sha256": "8bba5df7a77e48f048e16d62f4ae65859f4d1160b7e94d441c40404fb27b102d"
+    },
+    {
+      "fact_id": "F:ml430-nat-size-eq-zero-020ad98c",
+      "language": "lean4-surface",
+      "statement_sha256": "ebc8a02dbfc7676111d659273c5a983db80cf714dcb965b1e728d77f295ff36e",
+      "prose_sha256": "fcc156e31b6ecf707b4b737f71a1f3e6bf24633344901b957a8449677c36d6a4"
+    },
+    {
+      "fact_id": "F:ml430-nat-size-one-e23e5f71",
+      "language": "lean4-surface",
+      "statement_sha256": "40ba96ddb1c9f5207d2bee4ac8678f5c81dd1bdc0dcf643750e2dbd87e9532e9",
+      "prose_sha256": "a5288b078b34015766d5e9708625e77493c7ece0e7827fd4fe2fb1e72616e9fc"
     },
     {
       "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
