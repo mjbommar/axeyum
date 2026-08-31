@@ -1,0 +1,58 @@
+{
+  "population_id": "credited-roots-v1",
+  "description": "L4 phase C2 credited-root population: the declarations in ADR-0835's graph join (artifacts/graph-join/mathlib-group-defs-v1.join.json) whose `trust_footprints` dimension resolved -- i.e. every declaration in the bounded 446-declaration mathlib-group-defs-v1 population that (a) matches a fact ledger mirror by exact title (fact_ids), (b) that fact's kernel_theorem resolves to a real declaration in this kernel's checked environment (kernel_declarations), and (c) that declaration's kernel-reported axiom_footprint is empty (trust_footprints). This is the scoping word 'credited' in the roadmap's C2 phase: a root that carries ledger credit, as opposed to any of the other 437 declarations in the join population which have no fact at all. This file is committed as an external snapshot of that join's resolved set; scripts/check-checked-interchange.py cross-checks it against a FRESH read of the live join file (never against this snapshot's own internal fields) so a name silently dropped from the join is a fresh failure, not something this file can paper over.",
+  "source_join_artifact": "artifacts/graph-join/mathlib-group-defs-v1.join.json",
+  "source_join_dimension": "trust_footprints",
+  "expected_roots": [
+    "Nat.add_comm",
+    "Nat.add_pos_right",
+    "Nat.ble_eq_true_of_le",
+    "Nat.ble_self_eq_true",
+    "Nat.ble_succ_eq_true",
+    "Nat.le_of_ble_eq_true",
+    "Nat.le_of_lt_succ",
+    "Nat.le_of_succ_le_succ",
+    "Nat.le_refl"
+  ],
+  "root_bindings": {
+    "Nat.add_comm": {
+      "fact_id": "F:ml430-nat-add-comm-56a2d614",
+      "kernel_theorem": "Nat.add_comm"
+    },
+    "Nat.add_pos_right": {
+      "fact_id": "F:ml430-nat-add-pos-right-e43374dc",
+      "kernel_theorem": "Nat.add_pos_right"
+    },
+    "Nat.ble_eq_true_of_le": {
+      "fact_id": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+      "kernel_theorem": "Nat.ble_eq_true_of_le"
+    },
+    "Nat.ble_self_eq_true": {
+      "fact_id": "F:ml430-nat-ble-self-eq-true-839df126",
+      "kernel_theorem": "Nat.ble_self_eq_true"
+    },
+    "Nat.ble_succ_eq_true": {
+      "fact_id": "F:ml430-nat-ble-succ-eq-true-000a69f4",
+      "kernel_theorem": "Nat.ble_succ_eq_true"
+    },
+    "Nat.le_of_ble_eq_true": {
+      "fact_id": "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+      "kernel_theorem": "Nat.le_of_ble_eq_true"
+    },
+    "Nat.le_of_lt_succ": {
+      "fact_id": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "kernel_theorem": "Nat.le_of_lt_succ"
+    },
+    "Nat.le_of_succ_le_succ": {
+      "fact_id": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "kernel_theorem": "Nat.le_of_succ_le_succ"
+    },
+    "Nat.le_refl": {
+      "fact_id": "F:ml430-nat-le-refl-fd7d9e15",
+      "kernel_theorem": "Nat.le_refl"
+    }
+  },
+  "lean_version": "4.30.0",
+  "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+  "note": "expected_roots is the authority scripts/check-checked-interchange.py's MISSING guard reads; a census that deletes a root and tidies its own counts to match still fails against this file, exactly as ADR-0800's MISSING guard does against its own population file."
+}

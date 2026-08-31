@@ -1599,3 +1599,6 @@ fi
 echo "check: all $ran gates passed"
 step structural-index           python3 scripts/check-structural-index.py
 step structural-index-mutations bash scripts/tests/test-structural-index-mutations.sh
+step checked-interchange           python3 scripts/check-checked-interchange.py
+step checked-interchange-mutations bash scripts/tests/test-checked-interchange-mutations.sh
+step checked-interchange-tests     python3 scripts/tests/test-checked-interchange.py
