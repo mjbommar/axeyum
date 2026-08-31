@@ -363,7 +363,7 @@ still honestly there. The other three are not (§4).
 | Row | Status |
 |---|---|
 | **1** | **Landed:** `Nat.least_divisor_search` (theorem, 0 axioms) — the bounded LNP, in exactly the `Or (found least) (none below bound)` shape a constructive least-element statement must take. `Nat.minFacAuxMinimal` is the same content for `minFac`. |
-| **2** | **Not built, and it is the highest-value unbuilt row in this note.** `LNP ⟹ em`, per §1.2(a). Landing it makes number theory a *graded* subject rather than a flat one, and it is a stronger boundary than any analysis row 2 (full EM, not LLPO). |
+| **2** | **LANDED — corrected 2026-08-31 (lane `three-domain-dominance-verification`).** This row read "Not built, and it is the highest-value unbuilt row in this note" until today; it was built in `b81277a5c` (`nat_prelude/least_number.rs`) and is decided by **ADR-0725**. Measured, not inferred: `kernel_declaration_projection --include-constructed` (release) reports `nat theorem Nat.lnp_unrestricted_implies_em 0` and `nat theorem Nat.em_implies_lnp 0`. So `LNP ⟹ em` per §1.2(a) is a kernel-checked theorem, number theory IS a graded subject, and the boundary is full EM rather than the LLPO the analysis rows reach. **It is also the only row 2 in the repository pinned as an exact equivalence** — ADR-0725 §2 carries the converse and `nat_prelude_tests::the_unrestricted_lnp_and_excluded_middle_are_pinned_as_an_exact_equivalence` requires the two declared types to be literally `L → E` and `E → L` over the same two `ExprId`s. The three `CReal` rows are one-directional, so they bound the price from below where this one states it exactly. Non-vacuity: `Nat.lnp_of_pointwise_decision` is the identical statement one hypothesis stronger. |
 | **3** | Bounded search *is* the decidable fragment; row 1 and row 3 coincide here. |
 | **4** | Not attempted. |
 
@@ -399,6 +399,34 @@ an empty grep:** a sweep for `^pub fn verify_|^pub fn check_` across
 `boolean_circuit.rs` — so the method finds verifiers where they exist. **Not
 one of the 19 is number-theoretic.** The classical number-theory CAS is bare
 computation with no witness type and no verifier:
+
+> **STALE as of 2026-08-31 (lane `three-domain-dominance-verification`), and the
+> METHOD above was sound — the tree moved under it.** Re-running that exact
+> pattern today returns **22 distinct** verifiers, not 19, and **six of them are
+> number-theoretic**: `check_primality_certificate`,
+> `check_composite_certificate`, `check_factorization_certificate`,
+> `check_crt_certificate`, `check_irreducible_certificate` and
+> `check_irreducible_certificate_independent`. They live in
+> `crates/axeyum-cas/src/ntheory_certify.rs` (added in `8cb7c98e6`), which
+> exports `PrattCertificate`, `CompositeCertificate`, `FactorizationCertificate`
+> and `CrtCertificate`; the primality checker's own doc records that it "shares
+> no code with `certify_prime` or with `ntheory::is_prime`; in particular the
+> modular arithmetic is this module's own" — the producer/verifier separation
+> ADR-0716 §(gaps) asked for. Three of that gap list's four items (primality,
+> factorization, CRT) are therefore closed. **The fourth is not**: `legendre`
+> matches 0 times in that file, against a 17-match `Pratt` positive control run
+> in the same command.
+>
+> **But do not read that as row 3 being citable.** Facts naming any of those
+> checkers: **0**, against a positive control of 3 facts naming
+> `verify_extremum_certificate` and 2,366 facts in the ledger. The content
+> exists and the bookkeeping that would let a referee check it does not — the
+> same defect ADR-0875 diagnosed for EVT's row 1, recurring here with no gate
+> noticing. See
+> [`09-the-dominance-claim-verified-across-three-domains.md`](../formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md)
+> §7.4.
+
+The original assessment, accurate when written:
 
 | routine | file:line | returns |
 |---|---|---|
@@ -636,11 +664,19 @@ does not re-derive it — the retrieval failure
 [`2026-08-27-retrieval-is-the-bottleneck.md`](../research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md)
 measures as the binding constraint.
 
-### (1) `Nat.lnp_unrestricted_implies_em` — number theory's only row 2
+### (1) `Nat.lnp_unrestricted_implies_em` — number theory's only row 2 — **DONE**
 
-The single highest-value item in this note: it converts number theory from a
-flat subject into a graded one, and lands a **stronger** boundary than any
-analysis row 2 (full EM, not LLPO).
+**Corrected 2026-08-31 (lane `three-domain-dominance-verification`): this target
+is closed and should not be dispatched.** It landed in `b81277a5c`
+(`nat_prelude/least_number.rs`, ADR-0725, `F:nat-lnp-unrestricted-implies-em`),
+together with its converse `Nat.em_implies_lnp`. Both read footprint 0 from
+`kernel_declaration_projection --include-constructed`. The sizing below was
+accurate when written and is kept only as the record of what the work needed;
+§2.7's row 2 now carries the landed statement.
+
+The item as originally written: the single highest-value item in this note; it
+converts number theory from a flat subject into a graded one, and lands a
+**stronger** boundary than any analysis row 2 (full EM, not LLPO).
 
 Already in the kernel: `Nat.least_divisor_search` and `Nat.minFacAuxMinimal`
 (the bounded LNP, showing the row is non-vacuous — mandatory for this shape per

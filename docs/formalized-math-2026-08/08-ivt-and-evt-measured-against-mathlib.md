@@ -708,6 +708,39 @@ so a fresh two-axis pass is needed to say whether that counts as dominance,
 narrower-but-comparable, or something else — ADR-0895 does not make that call
 and leaves it for whoever next revisits this table.
 
+**THAT CALL IS NOW MADE, 2026-08-31 (lane `three-domain-dominance-verification`,
+ADR-1030): it is CONCEDED. EVT is not a per-statement dominance example, and the
+reason is neither the trusted base nor the bookkeeping — it is that the two
+statements are not comparable.** Both sides re-measured rather than quoted:
+ours reads footprint `0` from `kernel_declaration_projection --include-constructed`
+(release), Mathlib's `IsCompact.exists_isMaxOn` reads
+`[propext, Classical.choice, Quot.sound]` at pinned commit
+`c5ea00351c28e24afc9f0f84379aa41082b1188f` under Lean 4.30.0, with `IsMaxOn`,
+`Nat.find` and `Nat.le_total` as axiom-free controls in the same run so the
+probe is not printing three axioms for everything.
+
+The concession is forced by two asymmetries pointing the SAME way, which this
+document already records separately (§3 for the first, §2 and §5 for the
+second) but never rolls into one comparison. Our EVT **assumes strictly more**
+— uniform continuity with an explicit modulus, carried as `Sort 1` data against
+Mathlib's `ContinuousOn` `Prop` — **and concludes strictly less** — a bound plus
+an approximation clause, with the witness `x` under the `∀ n` and never claimed
+to converge, against an attained argmax. The two-axis test is defined to run on
+a statement "comparable in content to Mathlib's", and this one differs in the
+hypothesis and in the conclusion, in the same direction. Calling the axiom-count
+win dominance across that gap is the category error a Mathlib maintainer would
+name, and it is a fair objection.
+
+What survives, and it is worth more than the overclaim: the classical
+conclusion is not merely unbuilt here. `CReal.evt_attained_max_decides_sign`
+(footprint 0) shows an attained maximum yields analytic LLPO, so the gap is a
+**boundary rather than a hole** — which is the honest claim about EVT and the
+one this table should carry. IVT is unaffected: `ivt_approx` and
+`intermediate_value_Icc` are the same *kind* of statement, and their exactness
+difference is exactly the computational-content trade the axis measures. Full
+reasoning:
+[`09-the-dominance-claim-verified-across-three-domains.md`](09-the-dominance-claim-verified-across-three-domains.md) §3.
+
 ## 5. What would have to land
 
 For **EVT** to reach the position IVT already holds, in dependency order:
