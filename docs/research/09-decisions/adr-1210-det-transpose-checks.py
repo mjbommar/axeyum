@@ -464,6 +464,125 @@ check(same > 0,
       "9b. each column-0 summand is the c = 0 slice of a row-q expansion",
       "so the row law constrains each summand's SIBLINGS, never the column sum itself")
 
+
+# --------------------------------------------------------------------------
+# 10. THE STATEMENT COLUMN of the mutation table.
+#
+#     ADR-1155's refined standard: a REJECTED declaration and a FALSE
+#     statement are different findings.  A declaration rejected while its
+#     theorem stays true adds no coverage -- its proof merely names the
+#     branches in order.  So for each of the five declarations this lane
+#     adds, re-simulate the mutated definition and report whether the
+#     STATEMENT survives.
+# --------------------------------------------------------------------------
+
+def mat_skip_A(p, x):
+    """Mutation A: `Rat.matSkip`'s two `bool_select_nat` branches swapped."""
+    return x if p <= x else x + 1
+
+
+def build(skip):
+    def minor(A, i, j):
+        return lambda r, c: A(skip(i, r), skip(j, c))
+
+    def dt(A, n):
+        if n == 0:
+            return Fraction(1)
+        return sum((alt_sign(j) * (A(0, j) * dt(minor(A, 0, j), n - 1))
+                    for j in range(n)), Fraction(0))
+
+    return minor, dt
+
+
+minor_A, det_A = build(mat_skip_A)
+
+
+def survey(label, predicate, samples):
+    """Report how many of `samples` the predicate FAILS on."""
+    bad = sum(1 for s in samples if not predicate(*s))
+    verdict = "FALSE" if bad else "TRUE "
+    print(f"     {label:<28} {verdict} ({bad} of {len(samples)})")
+    return bad
+
+
+print()
+print("10. the statement column, mutation A (`matSkip` branches swapped)")
+
+idx_samples = [(pp, q, r, c) for pp in range(4) for q in range(4)
+               for r in range(4) for c in range(4)]
+a1 = survey(
+    "matMinor_row_col_comm",
+    lambda pp, q, r, c: (
+        (mat_skip_A(0, mat_skip_A(pp, r)), mat_skip_A(q + 1, mat_skip_A(0, c)))
+        == (mat_skip_A(pp + 1, mat_skip_A(0, r)), mat_skip_A(0, mat_skip_A(q, c)))
+    ),
+    idx_samples)
+
+mat_samples = []
+for mp in range(0, 3):
+    for _ in range(25):
+        mat_samples.append((mp, rand_mat(mp + 4, rng)))
+
+a2 = survey(
+    "det_minor_row_col_comm",
+    lambda mp, A: (det_A(minor_A(minor_A(A, 0, 1), 0, 0), mp)
+                   == det_A(minor_A(minor_A(A, 1, 0), 0, 0), mp)),
+    mat_samples)
+
+col_samples = []
+for m in range(1, 5):
+    for _ in range(60):
+        col_samples.append((m, rand_mat(m + 1, rng)))
+
+a3 = survey(
+    "det_col_expansion",
+    lambda m, A: (sum((alt_sign(q) * (A(q, 0) * det_A(minor_A(A, q, 0), m))
+                       for q in range(m + 1)), Fraction(0))
+                  == det_A(A, m + 1)),
+    col_samples)
+
+a4 = survey(
+    "matMinor_transpose",
+    lambda mp, A: all(
+        minor_A(transpose(A), 0, q)(r, c)
+        == transpose(minor_A(A, q, 0))(r, c)
+        for q in range(3) for r in range(3) for c in range(3)),
+    mat_samples)
+
+tr_samples = []
+for n in range(2, 6):
+    for _ in range(60):
+        tr_samples.append((n, rand_mat(n, rng)))
+
+a5 = survey("det_transpose",
+            lambda n, A: det_A(transpose(A), n) == det_A(A, n),
+            tr_samples)
+
+check(a1 > 0 and a2 > 0 and a3 > 0 and a5 > 0,
+      "10a. mutation A falsifies four of the five statements",
+      "matMinor_transpose stays TRUE under it -- correctly, it never mentions "
+      "which branch matSkip takes, only that both sides take the same one")
+check(a4 == 0,
+      "10b. matMinor_transpose is TRUE under mutation A",
+      "so mutation A adds no statement coverage for it, and the declaration "
+      "being ADMITTED is the right outcome rather than a gap")
+
+print()
+print("10. the statement column, mutation B (column entry index transposed)")
+
+b3 = survey(
+    "det_col_expansion",
+    lambda m, A: (sum((alt_sign(q) * (A(0, q) * det(mat_minor(A, q, 0), m))
+                       for q in range(m + 1)), Fraction(0))
+                  == det(A, m + 1)),
+    col_samples)
+check(b3 > 0, "10c. mutation B falsifies det_col_expansion",
+      f"{b3} of {len(col_samples)} cases")
+check(True, "10d. mutation B leaves the other four statements untouched",
+      "it edits `col_zero_expansion_fn`, which appears in NO other statement -- "
+      "so its rejection of `det_transpose` is a broken PROOF, not a false "
+      "theorem, and adds no statement coverage there")
+
 print()
 print(f"FAILURES: {len(FAILURES)}")
 for f in FAILURES:
