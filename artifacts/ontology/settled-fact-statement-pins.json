@@ -11736,6 +11736,13 @@
       "kernel_theorem": "Nat.fermatNumber_zero"
     },
     {
+      "fact_id": "F:ml430-nat-fib-add-81ea2485",
+      "language": "lean4-surface",
+      "statement_sha256": "1640833eb30b4b588ba05c9d90300c1135852554fb0247a56655eb3b355e7d4e",
+      "prose_sha256": "3c462fab8d346b272519f60b4d22eae21ed9bc4b99f63bc042886763ab975917",
+      "kernel_theorem": "Nat.fib_add"
+    },
+    {
       "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
       "language": "lean4-surface",
       "statement_sha256": "d02d345e47fd89371e0929cde30b602d0105750679d230d9675546e468d6a1ab",
@@ -11831,6 +11838,13 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-fib-lt-fib-succ-b4305b68",
+      "language": "lean4-surface",
+      "statement_sha256": "f33a4f3c5a4e386111eb420897ad8405828a8a0e425eb078f09399e9f2486fc6",
+      "prose_sha256": "805dabf970e796be83b95243250d00c45004e921e3c903015cd4bb7e82f8b2a7",
+      "kernel_theorem": "Nat.fib_lt_fib_succ"
+    },
+    {
       "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
       "language": "lean4-surface",
       "statement_sha256": "34de7fbbaf1cb9166f7d04bd585c50d2b08ed22623e0f09488efa88dee4604b8",
@@ -11843,6 +11857,13 @@
           "prose_sha256": "0f079b38d04697a000fdd46a9fc70037f6982d72bf72a9a91d8916f4a5c0e405"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-one-02785c52",
+      "language": "lean4-surface",
+      "statement_sha256": "d5a90b60902157fbc0b31956f5bda0f38b89cb56df68b9386273716b72bd8c0e",
+      "prose_sha256": "7a66563f688c29fc3baacdcd8dd5f6e4258be7a8034db1d6ec5d90ac07bdd53f",
+      "kernel_theorem": "Nat.fib_one"
     },
     {
       "fact_id": "F:ml430-nat-fib-pos-9e67bd8e",
@@ -11869,6 +11890,13 @@
           "prose_sha256": "a99436c9cf0dc9ad270873ce9998b28ca26244f17a286ba7e89b1d9de6e50d9f"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-two-2f3715f3",
+      "language": "lean4-surface",
+      "statement_sha256": "089b2064f2f6a7b01bb8aa38be28cfb6924d703c0a3fd2cd8e053667317a8236",
+      "prose_sha256": "fda31c7683cd84efeff196aed9bfd6f391f31e6b4904500ac9fe9b08ccedfb68",
+      "kernel_theorem": "Nat.fib_two"
     },
     {
       "fact_id": "F:ml430-nat-gcd-dvd-mul-81cb13df",

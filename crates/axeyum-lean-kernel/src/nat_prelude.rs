@@ -182,6 +182,7 @@ mod fermat;
 mod fermat_number;
 mod fermat_number_mirrors;
 mod fermat_witness;
+mod fib_extra;
 mod fibonacci;
 mod find_greatest;
 mod finite;
@@ -342,6 +343,7 @@ use fermat::declare_fermat;
 use fermat_number::declare_fermat_number_all;
 use fermat_number_mirrors::{declare_fermat_number_easy_all, declare_fermat_number_mirrors_all};
 use fermat_witness::declare_fermat_witness_all;
+use fib_extra::declare_fib_extra_all;
 use fibonacci::declare_fib_all;
 use find_greatest::declare_find_greatest_all;
 use finite::{
@@ -2890,6 +2892,14 @@ pub struct NatPrelude {
     /// `Le (fib n) (fib m)`, which contradicts the hypothesis `Lt (fib m)
     /// (fib n)` via `lt_of_lt_of_le` + `lt_irrefl`.
     pub fib_lt_fib: NameId,
+    /// `Nat.fib_one : Eq (fib 1) 1` — `refl`. See `nat_prelude::fib_extra`.
+    pub fib_one: NameId,
+    /// `Nat.fib_two : Eq (fib 2) 1` — `refl`. See `nat_prelude::fib_extra`.
+    pub fib_two: NameId,
+    /// `Nat.fib_lt_fib_succ : ∀ n, Le 2 n → Lt (fib n) (fib (succ n))` —
+    /// Mathlib's `Nat.fib_lt_fib_succ`, one application of
+    /// [`Self::fib_lt_fib`] at `(n, succ n)`. See `nat_prelude::fib_extra`.
+    pub fib_lt_fib_succ: NameId,
     /// `Nat.le_fib_self : ∀ n, Le 5 n → Le n (fib n)` — Mathlib's
     /// `Nat.le_fib_self` (`5 ≤ n → n ≤ fib n`). Proved from an unexposed,
     /// index-shifted helper `∀ k, Le (5+k) (fib (5+k))` (pair-induction on
@@ -5843,6 +5853,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fib_add_two_strictmono: kernel.name_str(nat, "fib_add_two_strictmono"),
             fib_strictmonoon: kernel.name_str(nat, "fib_strictmonoOn"),
             fib_lt_fib: kernel.name_str(nat, "fib_lt_fib"),
+            fib_one: kernel.name_str(nat, "fib_one"),
+            fib_two: kernel.name_str(nat, "fib_two"),
+            fib_lt_fib_succ: kernel.name_str(nat, "fib_lt_fib_succ"),
             le_fib_self: kernel.name_str(nat, "le_fib_self"),
             le_fib_add_one: kernel.name_str(nat, "le_fib_add_one"),
             reflexive_on: kernel.name_str(nat, "reflexiveOn"),
@@ -6528,6 +6541,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_size_extra_all(&mut d, &p)?;
         declare_zero_of_test_bit(&mut d, &p)?;
         declare_fib_all(&mut d, &p)?;
+        // Three closed `ml430` mirrors over `Nat.fib`; `fib_lt_fib_succ`
+        // consumes `fib_lt_fib`, declared by `declare_fib_all` just above.
+        declare_fib_extra_all(&mut d, &p)?;
         declare_relation_properties(&mut d, &p)?;
         declare_eq_equivalence_on(&mut d, &p)?;
         declare_mod_eq_equivalence_on(&mut d, &p)?;
@@ -7294,6 +7310,9 @@ mod bit_extra_tests;
 
 #[cfg(test)]
 mod size_extra_tests;
+
+#[cfg(test)]
+mod fib_extra_tests;
 
 #[cfg(test)]
 mod choose_factorial_add_tests;

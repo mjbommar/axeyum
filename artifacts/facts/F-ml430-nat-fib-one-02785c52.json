@@ -6,15 +6,64 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "Nat.fib 1 = 1",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fib_one",
+    "kernel_statement": "Eq.{1} AxNat (AxNat.fib (AxNat.succ AxNat.zero)) (AxNat.succ AxNat.zero)"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/fib_extra.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory fib_one 2>/dev/null | awk -F'\\t' '$1 == \"Nat.fib_one\" && $3 == \"Eq.{1} AxNat (AxNat.fib (AxNat.succ AxNat.zero)) (AxNat.succ AxNat.zero)\"' | wc -l)\" -ge 1",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "id": "kernel-Nat.fib_one",
+      "kind": "kernel-term",
+      "supports": "`Nat.fib_one` is admitted as a Theorem with EXACTLY the mirror's shape, pinned verbatim via the kernel's own renderer. Proof is `Eq.refl`: `fib 1` unfolds to `fibAux 1 0 1` and reduces by delta/iota to `1`. The RENDERED (unreduced) type is what discriminates this from `Nat.fib_two` -- both statements REDUCE to `Eq 1 1`, so a def_eq check cannot separate them, and this checker matches `AxNat.fib (succ zero)` syntactically. Mutation-verified 2026-08-31: restating `fib_one` as `Eq (fib 2) 1` is ADMITTED and passes the unit test, and this checker is what kills it."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/fib_extra_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::fib_extra_tests::fib_one_and_fib_two_state_their_equations_and_are_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude::fib_extra_tests::fib_one_and_fib_two_state_their_equations_and_are_axiom_free"
+      ],
+      "id": "instance-Nat.fib_one",
+      "kind": "kernel-term",
+      "supports": "Checks the inferred type states `Eq (fib 1) 1`, that `fib 1` genuinely REDUCES to `1`, and that the axiom footprint is empty. Negative controls: `fib 3` is not defeq to `1` (so the statement is not passing for a reason unrelated to its argument) and `fib 2` is not defeq to `2` (so def_eq is not vacuously true on small numerals). It does NOT separate `fib_one` from `fib_two` -- both reduce to `Eq 1 1` -- which is why the kernel-term evidence above matches the rendered type instead."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free nat",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free (reads Kernel::axiom_footprint for every listed Nat declaration and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free nat (independently sums the whole nat prelude's trusted surface and fails nonzero)"
+      ],
+      "id": "footprint-Nat.fib_one",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Nat.fib_one`. The `nat` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "id": "coverage-Nat.fib_one",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Nat.fib_one` derived from `kernel.environment()` directly, not from an inventory list -- a Nat-namespace declaration missing from `theorem_names` fails this test by name."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane mirror-frontier-2 (2026-08-31): declared in the new file nat_prelude/fib_extra.rs as `Eq.refl` over the existing `Nat.fib`. Verified against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that `Nat.fib` there is `((fun p => (p.snd, p.fst + p.snd))^[n] (0, 1)).fst` (Mathlib/Data/Nat/Fib/Basic.lean:57) -- the SAME accumulator-pair iteration from the SAME seed (0,1) that this kernel's `fib n := fibAux n 0 1` runs, curried across two argument slots because this kernel has no tuple type. Same function, same algorithm, different representation of the pair, so the mirror is our statement and flipping it is honest under the mirror-flip criterion. Mathlib proves its own fib_zero/fib_one/fib_two by `rfl` (Basic.lean:61-69), so those are definitional on its side exactly as here -- the Stirling precedent. This corrects ADR-0840's point 4, which described Mathlib's `fib` as a two-step Nat.rec/well-founded recurrence; that half of the ADR cited only this repository's own module doc, not the pinned source. The mirror-divergence registry agrees: `Nat.fastFib` is a registered divergence, `Nat.fib` is not.",
     "source": "statement-only extraction of `Nat.fib_one` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +75,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is UNCHANGED and remains a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

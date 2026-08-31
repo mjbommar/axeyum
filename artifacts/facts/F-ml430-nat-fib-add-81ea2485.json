@@ -6,15 +6,64 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (m n : ℕ), Nat.fib (m + n + 1) = Nat.fib m * Nat.fib n + Nat.fib (m + 1) * Nat.fib (n + 1)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fib_add",
+    "kernel_statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.fib (AxNat.succ (AxNat.add x0 x1))) (AxNat.add (AxNat.mul (AxNat.fib x0) (AxNat.fib x1)) (AxNat.mul (AxNat.fib (AxNat.succ x0)) (AxNat.fib (AxNat.succ x1))))))"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:nat-add-right-comm", "F:nat-fib-add-two", "F:nat-left-distrib", "F:nat-mul-one", "F:nat-mul-zero", "F:nat-zero-add"],
+  "evidence": [
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory fib_add 2>/dev/null | awk -F'\\t' '$1 == \"Nat.fib_add\" && $3 == \"((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.fib (AxNat.succ (AxNat.add x0 x1))) (AxNat.add (AxNat.mul (AxNat.fib x0) (AxNat.fib x1)) (AxNat.mul (AxNat.fib (AxNat.succ x0)) (AxNat.fib (AxNat.succ x1))))))\"' | wc -l)\" -ge 1",
+      "checkers": [
+        "nat_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "id": "kernel-Nat.fib_add",
+      "kind": "kernel-term",
+      "supports": "`Nat.fib_add` is admitted as a Theorem with EXACTLY the mirror's shape, pinned verbatim via the kernel's own renderer (`fib (succ (m + n))` is Mathlib's `fib (m + n + 1)`; `fib (succ m)` is `fib (m + 1)`). Declared in `fibonacci.rs` by an induction that proves the statement at `n` and `succ n` together, the successor step folding two `fib_add_two` applications."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/fib_extra_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::fib_extra_tests::fib_add_states_the_addition_formula_symbolically_and_evaluates_concretely -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude::fib_extra_tests::fib_add_states_the_addition_formula_symbolically_and_evaluates_concretely"
+      ],
+      "id": "instance-Nat.fib_add",
+      "kind": "kernel-term",
+      "supports": "Checks the statement at genuinely FREE `m` and `n` in an explicit `LocalContext` -- the discriminating check, since at concrete numerals both sides collapse to one literal -- with a symbolic negative control replacing the second product's first factor by `fib m`. Also evaluates concretely at `(3, 4)`: `fib 8 = 21 = 2*3 + 3*5`. Records what the concrete point does NOT rule out: at `(3,4)` the transposed product order also evaluates to 21, so only the symbolic check separates the orderings."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free nat",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free (reads Kernel::axiom_footprint for every listed Nat declaration and requires the empty set)",
+        "nat_axiom_inventory --include-constructed --require-axiom-free nat (independently sums the whole nat prelude's trusted surface and fails nonzero)"
+      ],
+      "id": "footprint-Nat.fib_add",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Nat.fib_add`. The `nat` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient."
+    },
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "checkers": [
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "id": "coverage-Nat.fib_add",
+      "kind": "kernel-term",
+      "supports": "Coverage for `Nat.fib_add` derived from `kernel.environment()` directly, not from an inventory list -- a Nat-namespace declaration missing from `theorem_names` fails this test by name."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "lane mirror-frontier-2 (2026-08-31): the declaration already existed in nat_prelude/fibonacci.rs; this lane compared its RENDERED kernel type against the mirror's formal.statement, added the missing instantiation test, and flipped the status. No proof work. Verified against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that `Nat.fib` there is `((fun p => (p.snd, p.fst + p.snd))^[n] (0, 1)).fst` (Mathlib/Data/Nat/Fib/Basic.lean:57) -- the SAME accumulator-pair iteration from the SAME seed (0,1) that this kernel's `fib n := fibAux n 0 1` runs, curried across two argument slots because this kernel has no tuple type. Same function, same algorithm, different representation of the pair, so the mirror is our statement and flipping it is honest under the mirror-flip criterion. Mathlib proves its own fib_zero/fib_one/fib_two by `rfl` (Basic.lean:61-69), so those are definitional on its side exactly as here -- the Stirling precedent. This corrects ADR-0840's point 4, which described Mathlib's `fib` as a two-step Nat.rec/well-founded recurrence; that half of the ADR cited only this repository's own module doc, not the pinned source. The mirror-divergence registry agrees: `Nat.fastFib` is a registered divergence, `Nat.fib` is not.",
     "source": "statement-only extraction of `Nat.fib_add` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +75,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is UNCHANGED and remains a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
