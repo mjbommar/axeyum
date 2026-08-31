@@ -94,11 +94,22 @@ in the type rather than as hypotheses.
 
 The spectral theorem, dimension theory proper, and anything quantifying over
 arbitrary vector spaces or fields are Lean-horizon (Mathlib `LinearAlgebra`).
-**"Anything quantifying over all dimensions" is no longer accurate** and used to
-stand here: general `n` is reachable for scalar-valued conclusions and is
-already used (`Rat.dotN`). What is genuinely unbuilt is the matrix layer over
-`Nat → Nat → Rat` — see the graded-family note below, which sizes it as
-assembly over `sumRange_swap` rather than new mathematics.
+
+**Two sentences that used to stand here are now both false, and the second went
+stale within a day of being written.** The first was "anything quantifying over
+all dimensions": general `n` is reachable for scalar-valued conclusions and is
+already used (`Rat.dotN_cauchy_schwarz`). The second was "what is genuinely
+unbuilt is the matrix layer over `Nat → Nat → Rat`" — that layer landed:
+`Rat.matMul`, `Rat.matId`, `Rat.matTranspose`, with `matMul_assoc`,
+`matMul_id_left`/`_right`, `matMul_add_left`/`_right`, `matMul_smul_left`,
+`matTranspose_mul` ((AB)ᵀ = BᵀAᵀ) and `matTranspose_transpose`, all axiom-free
+and all stated pointwise as the absence of `funext` requires. `Rat.cramer2_*`
+and the 2×2 adjugate inverse (`inv2_*`, `mul_adj2_*`) are landed too.
+
+Measured 2026-08-31, this destination attributes **55 kernel declarations**
+(ADR-1075). The remaining genuine gaps are the determinant at general `n` — a
+cofactor recursion over the bound, since a permutation sum needs data this
+kernel has no type for — and everything spectral.
 
 ## Graded-family treatment
 

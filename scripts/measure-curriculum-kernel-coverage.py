@@ -93,10 +93,13 @@ BUCKETS: list[tuple[str, str]] = [
     # a dimension, since there is no `List` or product type). A `--name-like
     # matrix` probe reports ABSENT and is correct and useless -- the exact
     # empty-grep-as-negative-result trap. `docs/curriculum/03-destinations/
-    # linear-algebra.md` had the right names on 2026-08-30 and this script's
-    # first draft did not read it.
+    # linear-algebra.md` had `det2`/`det3`/`dotN` on 2026-08-30 and this
+    # script's first draft did not read it -- and that page in turn says the
+    # matrix layer is unbuilt, which was true when written and is not now
+    # (`Rat.matMul`, `matMul_assoc`, `matTranspose_mul` are all landed).
+    # Two readers, two stale negatives, same direction. Re-measure.
     ("linear-algebra",
-     r"^Rat\.(det2|det3|dotN)"),
+     r"^Rat\.(det2|det3|dotN|mat(Id|Mul|Transpose)|cramer|inv2_|mul_adj2_)"),
     # layer 2 structures
     ("divisibility-and-euclid",
      r"^(Nat|Int)\.(gcd|Gcd|lcm|dvd|Dvd|bezout|Bezout|xgcd|"
