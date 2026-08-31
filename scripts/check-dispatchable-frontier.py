@@ -121,6 +121,23 @@ Partitions are read from the v1 nursery AND from `nursery-v2-extension.json`
 would otherwise be counted as dispatchable, which is the precise mistake the
 extension exists to avoid.
 
+`held_out` in this script's output is NOT the full held-out partition --
+`scripts/check-autogenesis-holdout-isolation.py`'s `held_out=` counts that
+(every manifest row with `partition: "held-out"`, unconditionally, because
+its job is to protect the WHOLE declared population from settlement or
+leakage). This script additionally routes any `-mutation-`-named id into the
+separate `mutation` bucket before the held-out check ever runs, because those
+rows are synthetic outcome-blind fixtures for testing the pipeline itself
+(see `TEST_FACT_ID` in `scripts/check-credit-transaction-ledger.py` for the
+same convention), not real blind-evaluation candidates -- so a mutation
+fixture that happens to be filed under `partition: "held-out"` (to sit beside
+the real proposition it mutated) is counted in `mutation`, not `held_out`,
+here. Measured 2026-08-31: 146 manifest-declared held-out rows, 145 of them
+real ml430 mirrors and 1 (`F:ml430-mutation-2086302b3a338591b3179871`) a
+mutation fixture -- both counts are correct for what they measure, and
+`held_out_manifest_total` in `--json` output carries the 146 for comparison
+against the isolation gate's number without re-running it.
+
 Usage:
     python3 scripts/check-dispatchable-frontier.py
     python3 scripts/check-dispatchable-frontier.py --screen candidates.json
@@ -905,7 +922,13 @@ def main() -> int:
     if args.json:
         print(json.dumps({
             "open_mirrors": total_open,
+            # `held_out` here EXCLUDES mutation fixtures filed under the
+            # held-out partition (see the module docstring); the full
+            # manifest-declared held-out population -- what
+            # check-autogenesis-holdout-isolation.py's `held_out=` counts --
+            # is `held_out_manifest_total`.
             "held_out": sorted(buckets["held-out"]),
+            "held_out_manifest_total": len(held),
             "mutation": sorted(buckets["mutation"]),
             "blocked": [{"fact": i, "blockers": [
                 {"construction": c, "class": k} for c, k in b]}
@@ -918,7 +941,11 @@ def main() -> int:
     else:
         print(f"open ml430 mirrors: {total_open}")
         print(f"  held-out (blind evaluation, do not dispatch): "
-              f"{len(buckets['held-out'])}")
+              f"{len(buckets['held-out'])}"
+              + (f"  [manifest declares {len(held)}; the difference is "
+                 f"mutation fixture(s) filed under held-out -- see mutation "
+                 f"negative controls below]"
+                 if len(held) != len(buckets["held-out"]) else ""))
         print(f"  mutation negative controls (never closable):  "
               f"{len(buckets['mutation'])}")
         print(f"  structurally blocked by a divergence:         "
