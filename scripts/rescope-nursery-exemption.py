@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Re-scope a cross-population component-split exemption to the live component.
+
+ADR-0850's exemption names the EXACT closed fact-id set of a dependency
+component and stops matching the moment that component changes. That property
+is what makes it safe, and it is not negotiable -- it has caught two genuinely
+different upstream causes already.
+
+It also means ordinary theorem work re-triggers it. Measured 2026-08-31: the
+same component went 206 -> 228 -> 230 -> 238 in one day as lanes closed facts
+that connect into it through `add_comm`/`add_assoc`. Re-scoping by hand three
+times invites the shortcut nobody should take -- keying the exemption on
+something looser so it stops firing.
+
+So this automates the MECHANICAL half and refuses to automate the REVIEW:
+
+  * It re-scopes only when the live component contains ZERO held-out members.
+    A held-out member is contamination, and this script exits 2 naming the rows
+    rather than writing anything. That question is the entire safety property
+    and a human has to see it.
+  * It recomputes `extension_sha256` with the GENERATOR'S OWN `digest()`, never
+    a hand-rolled hash -- a hand-rolled one that happens to differ is
+    indistinguishable from tampering.
+  * It records the partition census in the reason, so the next reader sees what
+    was true when it was re-scoped rather than taking it on faith.
+
+Exit 0 re-scoped (or already current), 1 usage/parse error, 2 REFUSED because a
+held-out row is in the component.
+"""
+
+from __future__ import annotations
+
+import collections
+import importlib.util
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+EXTENSION = ROOT / "artifacts/autogenesis/nursery-v2-extension.json"
+GATE = ROOT / "scripts/check-autogenesis-nursery.py"
+GENERATOR = ROOT / "scripts/gen-autogenesis-nursery-refill.py"
+
+
+def load_generator_digest():
+    """Reuse the generator's own digest so the two cannot disagree."""
+    spec = importlib.util.spec_from_file_location("_gen", GENERATOR)
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except SystemExit:
+        pass
+    return module.digest
+
+
+def live_component() -> tuple[list[str], dict[str, int], list[str]]:
+    """Members, partition census, and held-out members, read from the GATE."""
+    proc = subprocess.run(
+        [sys.executable, str(GATE)], capture_output=True, text=True, cwd=ROOT
+    )
+    text = proc.stdout + proc.stderr
+    rows = re.findall(r"^\s+(F:[^\s]+)\s+->\s+(\S+)", text, re.M)
+    if not rows:
+        print("RESCOPE|no crossing component reported -- nothing to re-scope")
+        return [], {}, []
+    census = collections.Counter(partition for _, partition in rows)
+    held_out = sorted({fid for fid, partition in rows if partition == "held-out"})
+    return sorted({fid for fid, _ in rows}), dict(census), held_out
+
+
+def main() -> int:
+    members, census, held_out = live_component()
+    if not members:
+        return 0
+
+    if held_out:
+        print(
+            f"RESCOPE|REFUSED|{len(held_out)} HELD-OUT row(s) are inside the crossing "
+            f"component: {held_out[:5]}. That is contamination, not routine growth -- "
+            "it is a finding for a human to review, and this script will not paper "
+            "over it by re-scoping.",
+            file=sys.stderr,
+        )
+        return 2
+
+    manifest = json.loads(EXTENSION.read_text(encoding="utf-8"))
+    exemptions = manifest.get("cross_population_component_split_exemptions") or []
+    if not exemptions:
+        print("RESCOPE|no exemptions present", file=sys.stderr)
+        return 1
+
+    target = max(exemptions, key=lambda e: len(e.get("component_fact_ids", [])))
+    before = len(target.get("component_fact_ids", []))
+    if target.get("component_fact_ids") == members:
+        print(f"RESCOPE|already current at {before} members")
+        return 0
+
+    target["component_fact_ids"] = members
+    base = str(target.get("reason", "")).split(" RE-SCOPED")[0]
+    target["reason"] = (
+        f"{base} RE-SCOPED {before} -> {len(members)} members by "
+        "`rescope-nursery-exemption.py`, which refuses when any member is held-out. "
+        f"Partition census at re-scope: {census}. Zero held-out members, so the "
+        "crossing stays benign under ADR-0542."
+    )
+
+    digest = load_generator_digest()
+    body = {k: v for k, v in manifest.items() if k != "extension_sha256"}
+    manifest["extension_sha256"] = digest(body)
+    EXTENSION.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"RESCOPE|{before} -> {len(members)} members|census={census}|held_out=0|"
+        f"digest={manifest['extension_sha256'][:16]}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

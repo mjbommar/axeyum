@@ -98,6 +98,8 @@
         "F:ml430-nat-and-or-distrib-left-fe131f64",
         "F:ml430-nat-and-or-distrib-right-0daaa284",
         "F:ml430-nat-base-induction-83561d4c",
+        "F:ml430-nat-bit-add-b1edcc8e",
+        "F:ml430-nat-bit-ne-zero-181bd65c",
         "F:ml430-nat-bitwise-bit-4c4b28a8",
         "F:ml430-nat-bitwise-comm-1a273bae",
         "F:ml430-nat-bitwise-swap-7175e90e",
@@ -120,8 +122,11 @@
         "F:ml430-nat-coprime-coprime-mul-left-right-910d7d8f",
         "F:ml430-nat-coprime-coprime-mul-right-70e4e946",
         "F:ml430-nat-coprime-coprime-mul-right-right-9599ecd3",
+        "F:ml430-nat-coprime-dvd-mul-left-e799d04c",
+        "F:ml430-nat-coprime-dvd-mul-right-7cd1c3c8",
         "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
         "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+        "F:ml430-nat-coprime-lcm-eq-mul-edf52888",
         "F:ml430-nat-coprime-odd-of-left-ed80ab44",
         "F:ml430-nat-coprime-odd-of-right-8dc1decc",
         "F:ml430-nat-coprime-of-dvd-18fcd09f",
@@ -155,6 +160,8 @@
         "F:ml430-nat-dvd-add-iff-left-332cbe04",
         "F:ml430-nat-dvd-add-iff-right-bf79c0cd",
         "F:ml430-nat-dvd-antisymm-507f9026",
+        "F:ml430-nat-dvd-dvd-nat-lcm-left-6143311e",
+        "F:ml430-nat-dvd-dvd-nat-lcm-right-d05db50b",
         "F:ml430-nat-dvd-gcd-e5184fc5",
         "F:ml430-nat-dvd-gcd-iff-b8485987",
         "F:ml430-nat-dvd-gcd-mul-gcd-iff-dvd-mul-07fec722",
@@ -259,6 +266,7 @@
         "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
         "F:ml430-nat-prime-pred-pos-4e67ac4c",
         "F:ml430-nat-self-le-factorial-cfdffc69",
+        "F:ml430-nat-size-eq-zero-020ad98c",
         "F:ml430-nat-totient-coprime-totient-iff-3932cf83",
         "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
         "F:ml430-nat-totient-eq-one-iff-68d883a0",
@@ -268,7 +276,7 @@
         "F:nat-zero-add"
       ],
       "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 2026-08-30 by coordinator: 228 -> 230 members. ADR-0950's amendment moved `natural-bit-decode`'s 10 rows out of held-out, which changed this component's membership and so correctly stopped the previous exemption matching -- the self-invalidating property doing its job twice in one session, for two different upstream causes. Verified 0 held-out members (development 278, train 178, longitudinal 4), so the crossing stays benign under ADR-0542."
+      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 230 -> 238 members by `rescope-nursery-exemption.py`, which refuses when any member is held-out. Partition census at re-scope: {'development': 294, 'train': 178, 'longitudinal': 4}. Zero held-out members, so the crossing stays benign under ADR-0542."
     },
     {
       "authority": "ADR-0855",
@@ -12317,7 +12325,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "aca25777925a943c707f33bf4820237927f8e9ddad01b0b17b6d6e4c7633c7fc",
+  "extension_sha256": "2cbc51780c6eeda864e7f136942ee42a7d86b80f171432c2b93b2d3c6a35f5a7",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
