@@ -761,3 +761,28 @@ This closes the A0 portion of the reader-facing Python machine interface. It
 does not close the whole Python plan: RV64, x86-64, cross-machine relations,
 book-example bindings, clean-checkout installation, and the nine aggregate
 knowledge/autogenesis failures remain open.
+
+## 2026-08-30 — preserve semantic identity across error presentation
+
+The first full book replay after binding the Chapter 6 Python example exposed
+a failure that the focused Python gates could not see. All twelve A0 producers
+exited with `semantic-package-mismatch`, while the four real-ISA routes passed.
+The pinned A0 package expected source SHA-256
+`6c57ccf27e25f6ec1c24f25c32599715bd9f725ff8dd03ff2da1f4d8354cb79a`;
+the current `a0.rs` hashed to
+`6659f24e1710b4feebcc6f56d12565f39490e9cbd47b946522ee57c6cade701d`.
+
+The only difference from the pinned semantic source was the reader-facing
+`Display` and `Error` implementation added for Python exceptions. No word,
+memory, decode, step, or trace rule had changed. Regenerating twelve semantic
+artifacts would therefore have assigned a new semantic identity to a message
+change. Instead, moved that presentation implementation into the private
+`a0_error` module and kept the public error type in `a0.rs`. The semantic
+source now reproduces the exact pinned digest while Python retains the same
+messages and Rust error trait.
+
+Twenty-six direct A0 tests pass, including the reader-facing message controls.
+Strict all-target, all-feature Clippy passes for `axeyum-machine` and
+`axeyum-py`. Most importantly, the book's live replay now accepts all sixteen
+routes again: twelve A0, two RV64, and two x86-64, each with its negative
+control. The boundary repair landed as `4548f3dda`.
