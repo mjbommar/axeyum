@@ -1,7 +1,7 @@
 //! Tests for the rational prelude.
 
 use super::{RatPrelude, build_rat_prelude};
-use crate::expr::ExprId;
+use crate::expr::{ExprId, ExprNode};
 use crate::{Declaration, Kernel};
 
 fn built() -> (Kernel, RatPrelude) {
@@ -154,6 +154,21 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("det3_example_singular", p.det3_example_singular),
         ("bernoulli", p.bernoulli),
         ("bernoulli_harmonic_bound", p.bernoulli_harmonic_bound),
+        ("matSkip", p.mat_skip),
+        ("matMinor", p.mat_minor),
+        ("altSign", p.alt_sign),
+        ("altSign_zero", p.alt_sign_zero),
+        ("altSign_succ", p.alt_sign_succ),
+        ("det", p.det),
+        ("det_zero", p.det_zero),
+        ("det_succ", p.det_succ),
+        ("det_one", p.det_one),
+        ("det_eq_det2", p.det_eq_det2),
+        ("det_eq_det3", p.det_eq_det3),
+        ("matMinor_eval_example", p.mat_minor_eval_example),
+        ("det_eval_example", p.det_eval_example),
+        ("det_eval_singular", p.det_eval_singular),
+        ("det_eval_example4", p.det_eval_example4),
     ]
 }
 
@@ -6684,4 +6699,175 @@ fn rat_mat_mul_id_laws_hold_at_a_concrete_instance() {
         "the inferred statement must not be defeq to a false equation, or the \
          two checks above cannot fail"
     );
+}
+
+// --- `Rat.det`: the determinant at general `n` (`rat_prelude::matrix_det`) ---
+
+/// Every declaration `matrix_det::declare_matrix_det` adds is a **checked**
+/// definition or theorem with an empty axiom footprint, read out of the
+/// kernel rather than off the diff -- same discipline as
+/// [`the_matrix_toolkit_is_axiom_free`].
+#[test]
+fn the_determinant_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("matSkip", p.mat_skip, false),
+        ("matMinor", p.mat_minor, false),
+        ("altSign", p.alt_sign, false),
+        ("altSign_zero", p.alt_sign_zero, true),
+        ("altSign_succ", p.alt_sign_succ, true),
+        ("det", p.det, false),
+        ("det_zero", p.det_zero, true),
+        ("det_succ", p.det_succ, true),
+        ("det_one", p.det_one, true),
+        ("det_eq_det2", p.det_eq_det2, true),
+        ("det_eq_det3", p.det_eq_det3, true),
+        ("matMinor_eval_example", p.mat_minor_eval_example, true),
+        ("det_eval_example", p.det_eval_example, true),
+        ("det_eval_singular", p.det_eval_singular, true),
+        ("det_eval_example4", p.det_eval_example4, true),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `det_eq_det2`'s statement rendered verbatim, plus the shape of
+/// `det_eq_det3`.
+///
+/// The point of the pin is that the left-hand side is `Rat.det <A> <numeral>`
+/// -- the dimension is an ARGUMENT -- and the right-hand side is the
+/// fixed-dimension `Rat.det2`/`Rat.det3` applied to entries of the SAME
+/// universally quantified `A`. An edit that quietly restated either at a
+/// concrete matrix, or dropped the `∀ A`, would leave `matrix_det`'s module
+/// doc describing something no longer true, and would turn this file's
+/// strongest correctness evidence into an evaluation example. Same discipline
+/// as [`the_matrix_associativity_statement_is_pointwise`].
+#[test]
+fn the_determinant_agreement_statements_quantify_over_the_matrix() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let two = rendered(&mut kernel, p.det_eq_det2);
+    assert_eq!(
+        two,
+        "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> \
+         Eq.{1} Rat \
+         (Rat.det x0 (AxNat.succ (AxNat.succ AxNat.zero))) \
+         (Rat.det2 (x0 AxNat.zero AxNat.zero) \
+         (x0 AxNat.zero (AxNat.succ AxNat.zero)) \
+         (x0 (AxNat.succ AxNat.zero) AxNat.zero) \
+         (x0 (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))))"
+    );
+    let three = rendered(&mut kernel, p.det_eq_det3);
+    assert!(
+        three.starts_with(
+            "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> Eq.{1} Rat (Rat.det x0 "
+        ),
+        "det_eq_det3 must still be `∀ (A : Nat → Nat → Rat), det A 3 = …`, got {three}"
+    );
+    assert!(
+        three.contains("Rat.det3 (x0 AxNat.zero AxNat.zero)"),
+        "det_eq_det3's right-hand side must be `Rat.det3` on entries of the same A, got {three}"
+    );
+}
+
+/// The determinant recursion **computes**, and computes the right numbers --
+/// with a negative control on every case, so the check can fail.
+///
+/// The trusted gate cannot tell you a `Definition` is wrong: it type-checks a
+/// stated type, and `(Nat → Nat → Rat) → Nat → Rat` is that type whatever the
+/// function returns. The four `*_eval_*` theorems are admitted only because
+/// `Kernel::add_declaration` reduced `Rat.det` at a concrete matrix and
+/// matched the normal form against a hand-computed numeral -- that is the
+/// positive half, and it is already enforced by the prelude building at all.
+///
+/// This test adds the half that is easy to omit: it pulls each theorem's
+/// left-hand side straight out of the checked statement and asserts it is
+/// **not** `def_eq` to a deliberately wrong value. Without that, a
+/// `Definition` returning a constant would still make every `Eq.refl` above
+/// succeed at whatever constant it returns.
+///
+/// Two details that decide whether these controls are worth having:
+///
+/// - The wrong value differs in a **small** term (`Rat.neg` of the true one,
+///   or `Rat.one`), never by transposing a determinant. A *failing* `def_eq`
+///   has no early exit, so a large one is unbounded; here both sides are
+///   closed and reduce to numerals.
+/// - `det_eval_singular`'s true value is `0`, and `neg 0 = 0`, so negating it
+///   would be a control that **cannot fail**. It uses `Rat.one` instead.
+#[test]
+fn the_determinant_evaluation_examples_reject_the_wrong_value() {
+    // `Eq.{1} Rat lhs rhs` is `App(App(App(Eq, Rat), lhs), rhs)`.
+    fn equation(kernel: &Kernel, ty: ExprId) -> (ExprId, ExprId) {
+        let ExprNode::App(without_rhs, rhs) = *kernel.expr_node(ty) else {
+            panic!("the statement must be an application")
+        };
+        let ExprNode::App(_, lhs) = *kernel.expr_node(without_rhs) else {
+            panic!("the statement must be an `Eq` application")
+        };
+        (lhs, rhs)
+    }
+
+    let (mut kernel, p) = built();
+
+    let one = kernel.const_(p.one, vec![]);
+    let neg = kernel.const_(p.int.rat_neg, vec![]);
+
+    for (label, name, negate) in [
+        ("matMinor_eval_example", p.mat_minor_eval_example, true),
+        ("det_eval_example", p.det_eval_example, true),
+        // true value is `0`, and `neg 0` reduces to `0`: negating would be a
+        // control that cannot fail, so this one is separated from `1`.
+        ("det_eval_singular", p.det_eval_singular, false),
+        ("det_eval_example4", p.det_eval_example4, true),
+    ] {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } => *ty,
+            other => panic!("Rat.{label}: {other:?} is not a theorem"),
+        };
+        let (lhs, rhs) = equation(&kernel, ty);
+
+        // Positive: the checked statement is what it claims to be.
+        assert!(
+            kernel.def_eq(lhs, rhs),
+            "Rat.{label}: the checked left- and right-hand sides must agree"
+        );
+
+        // Negative: a different value must NOT be reachable.
+        let wrong = if negate { kernel.app(neg, rhs) } else { one };
+        assert!(
+            !kernel.def_eq(lhs, wrong),
+            "Rat.{label}: the evaluation accepted a WRONG value, so it checks nothing"
+        );
+    }
 }
