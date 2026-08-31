@@ -64,6 +64,7 @@ Exit status:
 
 from __future__ import annotations
 
+import argparse
 import json
 import pathlib
 import subprocess
@@ -71,11 +72,6 @@ import sys
 from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-FACTS_DIR = ROOT / "artifacts" / "facts"
-OUT_DIR = ROOT / "artifacts" / "obstruction-producers"
-OBSTRUCTIONS_PATH = OUT_DIR / "obstructions.json"
-PRODUCERS_DIR = OUT_DIR / "producers"
-GEN_SCRIPT = ROOT / "scripts" / "gen-obstruction-producers.py"
 
 REMOVABILITY = {"producer", "new-construction", "not-removable"}
 
@@ -95,11 +91,11 @@ def contains_key(doc: Any, key: str) -> bool:
     return False
 
 
-def load_facts() -> dict[str, dict[str, Any]]:
-    if not FACTS_DIR.is_dir():
-        die(f"no fact directory at {FACTS_DIR}")
+def load_facts(facts_dir: pathlib.Path) -> dict[str, dict[str, Any]]:
+    if not facts_dir.is_dir():
+        die(f"no fact directory at {facts_dir}")
     out: dict[str, dict[str, Any]] = {}
-    for path in sorted(FACTS_DIR.glob("*.json")):
+    for path in sorted(facts_dir.glob("*.json")):
         fact = json.loads(path.read_text())
         ident = fact.get("id")
         if isinstance(ident, str):
@@ -108,37 +104,58 @@ def load_facts() -> dict[str, dict[str, Any]]:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--root", type=pathlib.Path, default=ROOT,
+                        help="repository root to check (testing only; production "
+                             "runs use the real tree)")
+    parser.add_argument("--skip-freshness", action="store_true",
+                        help="skip G1 (testing only: exercises G2-G10 against a "
+                             "synthetic fixture that has no real gen script to "
+                             "re-derive from)")
+    args = parser.parse_args()
+
+    root = args.root
+    facts_dir = root / "artifacts" / "facts"
+    out_dir = root / "artifacts" / "obstruction-producers"
+    obstructions_path = out_dir / "obstructions.json"
+    producers_dir = out_dir / "producers"
+    gen_script = root / "scripts" / "gen-obstruction-producers.py"
+
     fails: list[str] = []
 
     # --- absence checks (exit 2: the gate cannot even evaluate) ----------
-    if not GEN_SCRIPT.is_file():
-        die(f"no generator at {GEN_SCRIPT} -- this gate has nothing to "
+    if not args.skip_freshness and not gen_script.is_file():
+        die(f"no generator at {gen_script} -- this gate has nothing to "
             f"re-verify freshness against")
-    if not OBSTRUCTIONS_PATH.is_file():
-        die(f"no {OBSTRUCTIONS_PATH} -- classification did not run "
+    if not obstructions_path.is_file():
+        die(f"no {obstructions_path} -- classification did not run "
             f"(python3 scripts/gen-obstruction-producers.py)")
-    if not PRODUCERS_DIR.is_dir() or not list(PRODUCERS_DIR.glob("*.json")):
-        die(f"no producer contracts under {PRODUCERS_DIR} -- the compiler "
+    if not producers_dir.is_dir() or not list(producers_dir.glob("*.json")):
+        die(f"no producer contracts under {producers_dir} -- the compiler "
             f"has never compiled anything")
 
-    facts = load_facts()
+    facts = load_facts(facts_dir)
     if not facts:
         die("fact ledger is empty; nothing to check contracts against")
 
     # G1 -- freshness.
-    proc = subprocess.run(
-        [sys.executable, str(GEN_SCRIPT), "--check"],
-        cwd=ROOT, capture_output=True, text=True, timeout=120,
-    )
-    if proc.returncode != 0:
-        fails.append(
-            f"G1 stale-classification: `gen-obstruction-producers.py --check` "
-            f"exited {proc.returncode}:\n{proc.stdout}{proc.stderr}")
+    if args.skip_freshness:
+        print("G1 SKIPPED (--skip-freshness; testing only)")
+    else:
+        proc = subprocess.run(
+            [sys.executable, str(gen_script), "--check"],
+            cwd=root, capture_output=True, text=True, timeout=120,
+        )
+        if proc.returncode != 0:
+            fails.append(
+                f"G1 stale-classification: `gen-obstruction-producers.py --check` "
+                f"exited {proc.returncode}:\n{proc.stdout}{proc.stderr}")
 
-    obstructions_doc = json.loads(OBSTRUCTIONS_PATH.read_text())
+    obstructions_doc = json.loads(obstructions_path.read_text())
     obstructions = obstructions_doc.get("obstructions")
     if not isinstance(obstructions, list):
-        die(f"{OBSTRUCTIONS_PATH}: no `obstructions` list")
+        die(f"{obstructions_path}: no `obstructions` list")
 
     # G2 -- nonempty classification.
     if not obstructions:
@@ -171,7 +188,7 @@ def main() -> int:
                     if not isinstance(e, str):
                         continue
                     path_part = e.split("#", 1)[0].strip()
-                    if path_part and (ROOT / path_part).exists():
+                    if path_part and (root / path_part).exists():
                         backed = True
                 if not backed:
                     fails.append(
@@ -184,7 +201,7 @@ def main() -> int:
 
     # --- producer contracts -------------------------------------------
     live_producer_found = False
-    for path in sorted(PRODUCERS_DIR.glob("*.json")):
+    for path in sorted(producers_dir.glob("*.json")):
         doc = json.loads(path.read_text())
         pid = doc.get("id", path.stem)
 
@@ -269,7 +286,7 @@ def main() -> int:
     # this is not a guard, it is the headline number D4 asks this phase to
     # report without spin.
     sizes = []
-    for path in sorted(PRODUCERS_DIR.glob("*.json")):
+    for path in sorted(producers_dir.glob("*.json")):
         doc = json.loads(path.read_text())
         if doc.get("kind") == "producer":
             sizes.append(len(doc.get("applicability", {}).get("fact_ids") or []))
@@ -290,7 +307,7 @@ def main() -> int:
             print(f"  - {f}")
         return 1
     print(f"OK -- {len(obstructions)} obstruction(s) classified, "
-          f"{len(list(PRODUCERS_DIR.glob('*.json')))} producer contract(s) "
+          f"{len(list(producers_dir.glob('*.json')))} producer contract(s) "
           f"compiled, all guards passed.")
     return 0
 
