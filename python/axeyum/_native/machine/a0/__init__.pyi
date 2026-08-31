@@ -4,8 +4,221 @@
 import builtins
 import typing
 __all__ = [
+    "Conditions",
+    "Instruction",
+    "Memory",
+    "Outcome",
+    "Program",
+    "State",
+    "Trace",
+    "Trap",
     "Word",
+    "run",
+    "run_prefix",
+    "step",
 ]
+
+@typing.final
+class Conditions:
+    r"""
+    A0's zero, negative, carry/no-borrow, and overflow conditions.
+    """
+    @property
+    def zero(self) -> builtins.bool: ...
+    @property
+    def negative(self) -> builtins.bool: ...
+    @property
+    def carry(self) -> builtins.bool: ...
+    @property
+    def overflow(self) -> builtins.bool: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls, zero: builtins.bool = False, negative: builtins.bool = False, carry: builtins.bool = False, overflow: builtins.bool = False) -> Conditions: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class Instruction:
+    r"""
+    One decoded A0 instruction, constructed only through typed factories.
+    """
+    @property
+    def kind(self) -> builtins.str: ...
+    @property
+    def rd(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def rs1(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def rs2(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def base(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def source(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def immediate(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def condition(self) -> typing.Optional[builtins.str]: ...
+    @property
+    def offset(self) -> typing.Optional[builtins.int]: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    @staticmethod
+    def mov(rd: builtins.int, rs1: builtins.int) -> Instruction: ...
+    @staticmethod
+    def mov_immediate(rd: builtins.int, immediate: builtins.int) -> Instruction: ...
+    @staticmethod
+    def load(rd: builtins.int, base: builtins.int, offset: builtins.int) -> Instruction: ...
+    @staticmethod
+    def store(base: builtins.int, source: builtins.int, offset: builtins.int) -> Instruction: ...
+    @staticmethod
+    def add(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def sub(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def and_(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def or_(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def xor(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def shift_left(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def shift_right(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def arithmetic_shift_right(rd: builtins.int, rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def not_(rd: builtins.int, rs1: builtins.int) -> Instruction: ...
+    @staticmethod
+    def compare(rs1: builtins.int, rs2: builtins.int) -> Instruction: ...
+    @staticmethod
+    def branch(condition: builtins.str, offset: builtins.int) -> Instruction: ...
+    @staticmethod
+    def jump(offset: builtins.int) -> Instruction: ...
+    @staticmethod
+    def halt() -> Instruction: ...
+    @staticmethod
+    def decode(bytes: typing.Sequence[builtins.int]) -> Instruction: ...
+    def encode(self) -> bytes: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class Memory:
+    r"""
+    Finite, byte-addressed A0 data memory.
+    """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    @staticmethod
+    def zeroed(length: builtins.int) -> Memory:
+        r"""
+        Construct dense, zero-filled memory.
+        """
+    @staticmethod
+    def from_bytes(bytes: typing.Sequence[builtins.int]) -> Memory:
+        r"""
+        Construct dense memory whose first byte has address zero.
+        """
+    @staticmethod
+    def from_entries(entries: typing.Sequence[tuple[builtins.int, builtins.int]]) -> Memory:
+        r"""
+        Construct a sparse finite map; duplicate addresses are rejected.
+        """
+    def __len__(self) -> builtins.int: ...
+    def __bool__(self) -> builtins.bool: ...
+    def byte_at(self, address: builtins.int) -> typing.Optional[builtins.int]:
+        r"""
+        Read a mapped byte, or `None` when the address is outside the domain.
+        """
+    def entries(self) -> builtins.list[tuple[builtins.int, builtins.int]]:
+        r"""
+        Canonically sorted `(address, byte)` pairs.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class Outcome:
+    r"""
+    Running, halted, or trapped A0 outcome.
+    """
+    @property
+    def kind(self) -> builtins.str: ...
+    @property
+    def trap(self) -> typing.Optional[Trap]: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class Program:
+    r"""
+    Immutable A0 code bytes and their word-valued base address.
+    """
+    @property
+    def entry(self) -> Word: ...
+    @property
+    def code(self) -> bytes: ...
+    def __new__(cls, width: builtins.int, base: Word, code: typing.Sequence[builtins.int]) -> Program: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class State:
+    r"""
+    Complete, owned A0 architectural state snapshot.
+    """
+    @property
+    def width(self) -> builtins.int: ...
+    @property
+    def registers(self) -> builtins.list[Word]: ...
+    @property
+    def memory(self) -> Memory: ...
+    @property
+    def pc(self) -> Word: ...
+    @property
+    def conditions(self) -> Conditions: ...
+    @property
+    def outcome(self) -> Outcome: ...
+    def __new__(cls, width: builtins.int, memory: Memory, pc: Word) -> State: ...
+    @staticmethod
+    def decode(encoded: typing.Sequence[builtins.int]) -> State: ...
+    def register(self, index: builtins.int) -> Word: ...
+    def with_register(self, index: builtins.int, value: Word) -> State:
+        r"""
+        Return a validated snapshot with one register replaced.
+        """
+    def with_conditions(self, conditions: Conditions) -> State:
+        r"""
+        Return a snapshot with the four condition bits replaced.
+        """
+    def encode(self) -> bytes:
+        r"""
+        Canonical complete-state artifact bytes.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class Trace:
+    r"""
+    Replayable bounded sequence of complete A0 states.
+    """
+    @property
+    def states(self) -> builtins.list[State]: ...
+    @property
+    def stop(self) -> builtins.str: ...
+    def __len__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class Trap:
+    r"""
+    One categorized A0 execution trap.
+    """
+    @property
+    def kind(self) -> builtins.str: ...
+    @property
+    def pc(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def address(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def access_bytes(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def memory_len(self) -> typing.Optional[builtins.int]: ...
+    @property
+    def encoding(self) -> typing.Optional[bytes]: ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class Word:
@@ -60,4 +273,19 @@ class Word:
         """
     def __repr__(self) -> builtins.str: ...
     def __int__(self) -> builtins.int: ...
+
+def run(program: Program, initial: State, max_steps: builtins.int) -> Trace:
+    r"""
+    Run at most `max_steps`, classifying a running last state as exhausted.
+    """
+
+def run_prefix(program: Program, initial: State, requested_steps: builtins.int) -> Trace:
+    r"""
+    Run a caller-requested prefix without calling its running end exhaustion.
+    """
+
+def step(program: Program, state: State) -> State:
+    r"""
+    Advance one state through fetch, decode, and execution.
+    """
 
