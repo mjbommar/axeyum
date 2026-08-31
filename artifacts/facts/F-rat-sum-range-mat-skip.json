@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-sum-range-mat-skip",
+  "title": "Rat.sumRange_matSkip: summing along the injection that misses j, plus f j, is the whole sum",
+  "statement": "Rat.sumRange f n is the finite sum of f over [0,n) in the constructed rationals, and Rat.matSkip j is the order-preserving injection [0,n) -> [0,n+1) whose image misses j. This fact records that if j <= n then sumRange (fun k => f (matSkip j k)) n + f j = sumRange f (succ n), for every f. In words: reindexing a sum by the injection that deletes index j, and then adding the deleted value back, recovers the sum over the full range. The hypothesis is necessary -- at j = 2, n = 1 the deleted index is outside the range, nothing is deleted, and adding f j over-counts; the identity fails at 180 of 400 random instances with j > n. This is the RANGE half of a Laplace expansion: a cofactor sum runs over a range one short, reindexed by matSkip, and this lemma is what fills it back to the full range so that a double cofactor expansion is a plain rectangle and the ordinary order-of-summation swap Rat.sumRange_swap applies, with no triangle decomposition and no Nat.sub.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.sumRange_matSkip : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> ((x3 : Eq.{1} Bool (AxNat.ble x2 x0) Bool.true) -> Eq.{1} Rat (Rat.add (Rat.sumRange (fun (x4 : AxNat) => x1 (Rat.matSkip x2 x4)) x0) (x1 x2)) (Rat.sumRange x1 (AxNat.succ x0))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Rat.sumRange_matSkip"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-mat-skip-comm",
+    "F:rat-sumrange-congr",
+    "F:rat-add-assoc",
+    "F:rat-add-comm",
+    "F:rat-sum-range-peel-head"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.sumRange_matSkip",
+      "kind": "kernel-term",
+      "supports": "Rat.sumRange_matSkip is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.sumRange_matSkip 2>/dev/null | grep -cE '^Rat\\.sumRange_matSkip[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.sumRange_matSkip",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-Rat.sumRange_matSkip",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.sumRange_matSkip.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-sumRange-matSkip-hypothesis-is-necessary",
+      "kind": "kernel-term",
+      "supports": "The ble hypothesis is load-bearing, and Rat.sumRange_peel_head's tail really is shifted -- both checked at ground instances differing in one index.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_laplace_index_layer_hypotheses_are_load_bearing"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib the_laplace_index_layer_hypotheses_are_load_bearing 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The count is tested, not just the exit status: `1 passed` fails if the test is renamed away or filtered out. Against a row of Rat.matId that is nonzero at exactly index 2, the identity holds at (j, n) = (2, 2) where ble 2 2 = true and FAILS at (2, 1) where ble 2 1 = false -- 1 against 0. Same def_eq call, one index apart. What it does NOT check: the ORDER of summation, any sign convention (there are no signs in this statement), and matSkip's branch order beyond a single shift."
+    },
+    {
+      "id": "control-adr-1155-numeric-sweep",
+      "kind": "exhaustive-enumeration",
+      "supports": "The identity holds at every sampled instance with j <= n and FAILS at 180 of 400 random instances with j > n, so the premise is not discardable.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1155-laplace-route-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1155-laplace-route-checks.py",
+      "checker_seconds": 20,
+      "notes": "Simulates Rat.sumRange, Rat.matSkip and Rat.det over Fraction at the definitions rat_prelude/matrix_det.rs uses, exits 1 if any claim fails, and REQUIRES a nonzero count of counterexamples in the j > n region so that a discardable premise would be reported. Verified to fail: swapping the simulated matSkip's branches makes it exit 1 at the first control. Independent of the kernel proof."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane det-row-expansion, against ADR-1135's third open law over the general-n determinant. Design note: ADR-1155."
+  },
+  "notes": "Two shape choices are load-bearing. The dimension is quantified OUTERMOST and f lives UNDER the Nat.rec motive, because the successor step at j = succ j' applies the induction hypothesis at the SHIFTED function fun k => f (succ k) rather than at f -- a motive with f fixed gives an unusable hypothesis. That is exactly ADR-1135's finding about Rat.det_congr's matrices, one layer down. The hypothesis is the boolean Nat.ble j n = true rather than Nat.le j n so that both degenerate cases invert by iota alone. The step at n = succ m splits on j: at j = 0 the reindexed summand fun k => f (matSkip 0 k) is DEFINITIONALLY the shifted summand (ble zero k is definitionally true), so the goal is Rat.sumRange_peel_head after one add_comm and no induction hypothesis is used; at j = succ j' the head of the reindexed sum is f 0 definitionally (ble (succ j') zero is definitionally false), the tail moves across Rat.matSkip_succ_succ by Rat.sumRange_congr, and one add_assoc exposes the induction hypothesis. Rat.sumRange_peel_head had to be built first: Rat.sumRange peels from the RIGHT, so this prelude's defining equations hand you the LAST summand, and F:rat-sum-range-head-of-tail-zero only reaches the case where everything past index 0 vanishes."
+}

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-minor-col-comm",
+  "title": "Rat.det_minor_col_comm: the two orders of deleting a pair of columns give the same determinant",
+  "statement": "Rat.matMinor A i j r c = A (matSkip i r) (matSkip j c) deletes a row and a column of a matrix encoded as a function Nat -> Nat -> Rat, and Rat.det is the determinant at general n (F:rat-det-general-n-eq-det2). This fact records that deleting columns a then b reaches the same determinant as deleting succ b then a, when a <= b: for every m, A, i, j, a and b with Nat.ble a b = true, det (matMinor (matMinor A i a) j b) m = det (matMinor (matMinor A i (succ b)) j a) m. The two doubly-deleted matrices are POINTWISE equal (Rat.matMinor_col_comm) and are not the same term, so the step from the pointwise identity to the determinants must go through Rat.det_congr (F:rat-det-congr-pointwise) -- this kernel has no funext. The row indices i and j are the same on both sides deliberately: a cofactor expansion of a cofactor expansion deletes row 0 and then row 0 of the minor, so the row half of the double deletion is already identical term-for-term and only the columns are exchanged.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_minor_col_comm : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : Eq.{1} Bool (AxNat.ble x4 x5) Bool.true) -> Eq.{1} Rat (Rat.det (Rat.matMinor (Rat.matMinor x1 x2 x4) x3 x5) x0) (Rat.det (Rat.matMinor (Rat.matMinor x1 x2 (AxNat.succ x5)) x3 x4) x0))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "kernel_theorem": "Rat.det_minor_col_comm"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-mat-skip-comm",
+    "F:rat-det-congr-pointwise"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_minor_col_comm",
+      "kind": "kernel-term",
+      "supports": "Rat.det_minor_col_comm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_minor_col_comm 2>/dev/null | grep -cE '^Rat\\.det_minor_col_comm[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.det_minor_col_comm",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-Rat.det_minor_col_comm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_minor_col_comm.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-underlying-index-identity-is-conditional",
+      "kind": "kernel-term",
+      "supports": "The ble hypothesis this theorem inherits from Rat.matSkip_comm is load-bearing at the index level, checked at a ground witness.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_laplace_index_layer_hypotheses_are_load_bearing"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib the_laplace_index_layer_hypotheses_are_load_bearing 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The count is tested, not just the exit status. matSkip 1 (matSkip 0 0) is 2 while matSkip 1 (matSkip 1 0) is 0, so the index identity this theorem rests on is false when the premise fails; the paired positive at a = 0, b = 1 is true, so the negative is not vacuous. What it does NOT check: this theorem's own statement at the determinant level (the numeric sweep below does that), and no sign convention, since no sign appears here. A determinant control at the det level is deliberately NOT reused from ADR-1135's suite: det (matMinor matId 0 1) 2 has value 0, and a 0 separates neither a sign flip nor a transposed column."
+    },
+    {
+      "id": "control-adr-1155-numeric-sweep",
+      "kind": "exhaustive-enumeration",
+      "supports": "The determinant-level identity is TRUE at every checked instance with a <= b, and the underlying pointwise identity is FALSE at 36 of the triples with a > b, so the premise is not discardable.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1155-laplace-route-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1155-laplace-route-checks.py",
+      "checker_seconds": 20,
+      "notes": "Simulates Rat.matSkip, Rat.matMinor and Rat.det over Fraction at the definitions rat_prelude/matrix_det.rs uses, and exits 1 if any claim fails. It also checks that this theorem is the step the Laplace argument needs: the double expansion along row 0 then row i-1 and the row-i expansion are indexed by the SAME ordered distinct column pairs and agree TERMWISE across 225 (n, i, matrix) cases, which is only true because the two doubly-deleted matrices have equal determinants. Verified to fail: swapping the simulated matSkip's branches makes it exit 1."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane det-row-expansion, against ADR-1135's third open law over the general-n determinant. Design note: ADR-1155."
+  },
+  "notes": "This is the step a Laplace expansion needs at the bottom of its double sum: for a pair of distinct columns, the two orders of deletion produce the two determinants whose alternating signs then have to cancel, and this theorem says they are equal. Its proof is Rat.matMinor_col_comm -- itself Rat.matSkip_comm transported into the entry by nat_eq_to_rat, with the row index carried as an opaque term because only the columns move -- fed to Rat.det_congr at the two matrices. Measured under ADR-1120's matSkip branch-swap mutation, this statement is FALSE at 125 of 400 random instances, so it is a genuine discriminator for that bug class, though the declaration's rejection under that mutation is confounded by the upstream Rat.matSkip_succ_succ having already failed. ADR-1155 records the full per-declaration mutation table and the distinction between a rejected declaration and a false statement."
+}
