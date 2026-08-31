@@ -137,6 +137,9 @@ now. Nothing was deleted.
 | 2026-08-31 | `2594cd1e8` | `calculus.md`'s Lean-horizon paragraph named continuity, differentiability, the MVT, the FTC and series convergence as out of reach — every one is landed and axiom-free over `CReal`. Replaced with a 24-row measured table (every declaration name verified present) plus a "Still Lean-horizon" section naming what genuinely is: non-constructive limit reasoning, multivariable/metric calculus, measure theory, transcendence. |
 | 2026-08-31 | `fba163147` | `curriculum.toml` gains a measured `kernel_decls` per node, the regeneration command in its header, and four repaired summaries (`calculus` said "ε–δ is Lean-horizon"; `sequences-and-limits` said "the ε–N definition is Lean-horizon" against a declared `CReal.Converges`/`Cauchy`/`limit`; `complex` said "analysis is Lean-horizon" without its 263 declarations; `cardinality` omitted `Nat.countRange`). No `status` or `family` value changed. |
 | 2026-08-31 | `722ce2edd` | `scripts/measure-curriculum-kernel-coverage.py`: attributes the kernel's full declaration surface (all kinds — the theorem inventories cannot see `CReal.integral`) to the 23 curriculum nodes. Exit status depends on the finding: `--expect-attributed`, `--require-node` and an unknown node id each verified to exit 1. |
+| 2026-08-31 | `e6c3f1265` | Repair `nursery-v2-extension.json`'s self-digest. The generator could not run at all on `main` — not `--check`, not a regeneration. `b81f22780` hand-edited the `cross_population_component_split_exemptions` reason string without re-pinning the digest, and the guard fired exactly as its docstring says it should. One line; the writer asserts the reloaded body equals the body it read, and the exemption list is an authored key `stored_cross_population_exemptions()` carries across a regen, so the content is preserved verbatim. Generator now reproduces the manifest: `entries=380 env=2593 development=150 held-out=130 train=100`. |
+| 2026-08-31 | `fab0bd201` | R12 could not see a ground PREDICATE, only a ground equation. `is_closed_evaluation` split into `_is_ground_equation` (unchanged) + `_is_ground_predicate` (new), with the numeral requirement separating `Nat.Abundant 12` from the genuinely blind `Monotone Nat.fermatNumber`. Mutation-verified on a scratch copy with `__pycache__` cleared: numeral guard killed by 2 fixtures, head guard by exactly 1, whole branch by 3, baseline 0. Discriminating evidence, R12's body called directly on the candidate entries: REFUSED with both rows named, against `no violation` from the pre-extension classifier. Gate stays `held_out=146 closed_shaped=0 violations=0 PASS`. |
+| 2026-08-31 | `9d45cb5b4` | Draw 14's two disclosure sweeps, recorded with what was actually found. `natural-avg-pair` is a `reviews` row (clean; verified live both ways — `clean` as recorded, `refused` when the count is perturbed to 2), and it records two things the stem mechanism structurally cannot reach: `Nat.pair` is a subject of one drawn row but sits below `SUBJECT_FRACTION` so no `pair` stem is swept (16 declarations enumerated by hand), and all ten rows carry binders. `natural-factorisation-properties` is deliberately NOT a review row — a review row is a licence to draw — and goes in a new top-level `refused` list that `load_reviews` ignores by construction, recording that the sweep does not reach `Nat.sumDivisors` (through which all three predicates are defined; `Nat.sumDivisors_prime` makes three drawn rows cheap rather than open). `Mathlib.Data.Nat.Count` recorded there too, labelled as carried forward from ADR-1100 rather than verified here. |
 | 2026-08-31 | `757afb706` | New `nat_prelude/draw11_mirrors.rs`: 4 theorems (coprime_dvd_mul_left/right, coprime_eq_of_mul_eq_zero, add_one_mul_choose_eq), each with a discriminating concrete-instance test. |
 | 2026-08-31 | `e00c2500e` | Close 3 ml430 lcm/coprime mirrors already proved under another name (fact-ledger evidence only). |
 | 2026-08-31 | `5410c49f9` | Close 4 ml430 mirrors with the new draw11_mirrors.rs proofs (fact-ledger evidence). |
@@ -36662,6 +36665,42 @@ changed, and they read the Rust `NODES` mirror rather than the TOML. Checks that
 did run: `validate-foundational-concepts.py` (137 rows), `validate-claims.py`
 (104 claims, 0 errors), `gen-adr-index.py --check` (692 rows, no new
 duplicates), `check-links.sh` (all links ok).
+
+**Draw 14 is DECLINED, and the finding is mechanised rather than argued**
+(`DONE`, draw-14, 2026-08-31). ADR-1100 enabled two four-family layouts and left
+the R11 disclosure to a draw lane. Both sweeps were performed.
+`natural-avg-pair` is clean and its review is recorded and live. The other
+held-out family — `natural-factorisation-properties`, the only late-sorting
+held-out-viable candidate in the space, re-confirmed by running the real
+`select()` over all 38 un-owned modules — draws `Nat.Abundant 12` and
+`Nat.Deficient 1`, which the committed `abundant_evaluates_at_twelve` `def_eq`
+test already shows unfold to `Lt 24 28` and `Lt 1 2`. Decided by reduction the
+instant ADR-1100's construction landed, so not blind.
+
+**R12 said `0 of 10` because `is_closed_evaluation` required an `=`, and a
+ground PREDICATE application has none.** Every family the gate had screened
+stated its ground rows as equations, so the `=` looked like part of the
+definition of "closed evaluation" rather than an artefact of the sample. Widened
+to a disjunction of `_is_ground_equation` and `_is_ground_predicate`; blast
+radius measured at **0 of 146** committed held-out rows before any code was
+written, mutation-verified, and the redundant `"=" not in text` guard removed
+because zero fixtures die without it. With the gap closed R12 names both rows.
+
+Accepting and recording the spend was considered and rejected on the empirical
+record: draw 11's `natural-bit-decode` was drawn at the same 2-of-10 and then
+amended **out of held-out entirely** (ADR-0542, `7296730d6`). Enlarging the
+family so the two rows fall outside the alphabetical ten is available and is
+disqualified on principle — it is choosing the family set to obtain an outcome.
+
+Also repaired en route: **`gen-autogenesis-nursery-refill.py` was RED on `main`**
+and nothing reported it. `nursery-v2-extension.json` did not match its own
+`extension_sha256`, so `frozen_partitions()` raised before a single row was
+selected and no draw lane could have got past step one. Bisected to `b81f22780`,
+each candidate checked with that commit's own copy of the generator.
+
+Held-out isolation `held_out=146 files_scanned=1110 settled=0 references=0
+PASS` before and after; no fact moved partition and no manifest row changed.
+Full reasoning and every number: [ADR-1115](docs/research/09-decisions/adr-1115-draw-14-is-declined-r12-could-not-see-a-ground-predicate.md).
 
 **7 ml430 mirror facts closed, session complete** (`WIP`, draw11-theorems-b,
 2026-08-31). Frontier measured at start
