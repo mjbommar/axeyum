@@ -546,6 +546,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
         p.count_range_union_add_inter,
+        p.coprime_dvd_mul_left,
+        p.coprime_dvd_mul_right,
+        p.coprime_eq_of_mul_eq_zero,
+        p.add_one_mul_choose_eq,
         p.count_range_le_of_subset,
         p.count_range_compl,
         p.count_range_congr_lt,
