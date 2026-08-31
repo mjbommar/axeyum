@@ -5857,6 +5857,12 @@
       "kernel_theorem": "Eq.symm"
     },
     {
+      "fact_id": "F:evt-mathlib-import-compact-exists-is-max-on",
+      "language": "lean4",
+      "statement_sha256": "af137a394273cc6b5f0869b9214702e1b884246b92835462ca9b85de4edcb5ac",
+      "prose_sha256": "b9215526814eeaa2d3697f65b2b439bd7d47232041ed671554fe2a43ce36fea4"
+    },
+    {
       "fact_id": "F:ex-falso-quodlibet",
       "language": "smtlib2",
       "statement_sha256": "d1c37d9ce1af43ce7d9526df9ff2ea8d41624b27d4445ccb09ba65cf17a5b98b",
@@ -7978,6 +7984,12 @@
       "statement_sha256": "bc0177b3e98c5010978863be8bf81399a0b59cee3eb1dcff57630dbf15ff8074",
       "prose_sha256": "0a77d5b6273e6ca2dca74f4e6878fb89bfd209c9fe13fa9c2d1ae4ad36a2fc09",
       "kernel_theorem": "Int.zero_subNatNat"
+    },
+    {
+      "fact_id": "F:ivt-mathlib-import-intermediate-value-icc",
+      "language": "lean4",
+      "statement_sha256": "210db133eb79fcc182391a6c2eebbaa908e7aa79615091479174cc92c11385a9",
+      "prose_sha256": "8e10c5c025c730879904bad95905a83c12e26b56b3fa61d239997fb84e8dc76d"
     },
     {
       "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
