@@ -9,6 +9,24 @@
   },
   "amendments": [
     {
+      "fact_id": "F:creal-evt-attained-max-decides-sign",
+      "date": "2026-08-31",
+      "from_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
+      "to_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
+      "from_prose_sha256": "0f7a0cadfded5e45948d25e248961652430ca132303e0464a632a997162aa911",
+      "to_prose_sha256": "f2e5ace030cf42f7d6788fab929c01ecfc9f65edb5d10ae1d2b129c36dd72a62",
+      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256) and `drifted=0` throughout. The reader-facing text changed for two reasons, both narrowing the claim rather than widening it. (1) Non-vacuity for row 2 is now evidenced IN THIS LEDGER (lane `evt-row2-nonvacuity`, 2026-08-31): the old text said this fact supplies no such evidence and parenthetically conceded 'it plainly is' satisfiable, which is precisely the unfalsifiable form -- an assertion with no checker behind it. Two evidence rows now cite tests that fail when broken. (2) The old text cited `creal/supremum.rs`'s module documentation as saying `CReal.supOn` is 'still not landed'. That phrase occurs ZERO times in that file (control: 32 mentions of `supOn`), and the same stale citation was corrected the same day in `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`. What the new text must NOT be read as: an upgrade of EVT's standing. It still says, and this is the substantive remaining gap, that no operator here PRODUCES an attaining maximiser; `F:creal-evt-approx-max` supplies only the approximate row-1 substitute. The fact remains a refutation of the classical conclusion."
+    },
+    {
+      "fact_id": "F:int-euler-totient-theorem",
+      "date": "2026-08-31",
+      "from_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
+      "to_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
+      "from_prose_sha256": "9f8c5db1259ba0ded328ca7733404cd7dd7a8f9cbd1c68ef14412f1666b9b63b",
+      "to_prose_sha256": "c5e55c25f548b53f0901e61e425c8483bde08bd34d32efe4af3afafc42e5f979",
+      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256). The generated prose opened by declaring that it 'deliberately makes NO mathematical characterisation of the theorem', which is the correct default for a mechanically registered fact and the wrong resting state for a headline classical result that will be quoted. Replaced with a characterisation checked against the RENDERED TYPE, not against the declaration name: the totient is this kernel's own `countRange` predicate rather than an imported or axiomatised phi, which is the substantive claim and is invisible from the name alone. `external_status` set to `proved` (Euler, classical) and curation to `curated`. The new prose states its own limits -- no efficiency claim, no decision procedure, no converse, and both hypotheses load-bearing -- so curating it cannot be read as widening the claim."
+    },
+    {
       "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
       "date": "2026-08-30",
       "from_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2",
@@ -36,24 +54,6 @@
       "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
       "recorded_by": "coordinator",
       "recorded_in": "da61dcef9"
-    },
-    {
-      "fact_id": "F:creal-evt-attained-max-decides-sign",
-      "date": "2026-08-31",
-      "from_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
-      "to_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
-      "from_prose_sha256": "0f7a0cadfded5e45948d25e248961652430ca132303e0464a632a997162aa911",
-      "to_prose_sha256": "f2e5ace030cf42f7d6788fab929c01ecfc9f65edb5d10ae1d2b129c36dd72a62",
-      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256) and `drifted=0` throughout. The reader-facing text changed for two reasons, both narrowing the claim rather than widening it. (1) Non-vacuity for row 2 is now evidenced IN THIS LEDGER (lane `evt-row2-nonvacuity`, 2026-08-31): the old text said this fact supplies no such evidence and parenthetically conceded 'it plainly is' satisfiable, which is precisely the unfalsifiable form -- an assertion with no checker behind it. Two evidence rows now cite tests that fail when broken. (2) The old text cited `creal/supremum.rs`'s module documentation as saying `CReal.supOn` is 'still not landed'. That phrase occurs ZERO times in that file (control: 32 mentions of `supOn`), and the same stale citation was corrected the same day in `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`. What the new text must NOT be read as: an upgrade of EVT's standing. It still says, and this is the substantive remaining gap, that no operator here PRODUCES an attaining maximiser; `F:creal-evt-approx-max` supplies only the approximate row-1 substitute. The fact remains a refutation of the classical conclusion."
-    },
-    {
-      "fact_id": "F:int-euler-totient-theorem",
-      "date": "2026-08-31",
-      "from_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
-      "to_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
-      "from_prose_sha256": "9f8c5db1259ba0ded328ca7733404cd7dd7a8f9cbd1c68ef14412f1666b9b63b",
-      "to_prose_sha256": "c5e55c25f548b53f0901e61e425c8483bde08bd34d32efe4af3afafc42e5f979",
-      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256). The generated prose opened by declaring that it 'deliberately makes NO mathematical characterisation of the theorem', which is the correct default for a mechanically registered fact and the wrong resting state for a headline classical result that will be quoted. Replaced with a characterisation checked against the RENDERED TYPE, not against the declaration name: the totient is this kernel's own `countRange` predicate rather than an imported or axiomatised phi, which is the substantive claim and is invisible from the name alone. `external_status` set to `proved` (Euler, classical) and curation to `curated`. The new prose states its own limits -- no efficiency claim, no decision procedure, no converse, and both hypotheses load-bearing -- so curating it cannot be read as widening the claim."
     }
   ],
   "pins": [
@@ -17925,6 +17925,13 @@
       "kernel_theorem": "Rat.det_minor_col_comm"
     },
     {
+      "fact_id": "F:rat-det-row-expansion",
+      "language": "lean4",
+      "statement_sha256": "a408cf34895739c61256fdb80813b1a4d6428893a3873a5c4eaeda8945eb2137",
+      "prose_sha256": "8236bf361c8335e179ce90bbe42445413d3075cf1e06cb6c47f8728593aaab5f",
+      "kernel_theorem": "Rat.det_row_expansion"
+    },
+    {
       "fact_id": "F:rat-det2-eq-zero-of-lin-dep",
       "language": "lean4",
       "statement_sha256": "3ed29cad7e483dc7a1874cd535784e2afc1d03968e29f6f1efec81e94ee2c60c",
@@ -18455,6 +18462,13 @@
       "statement_sha256": "7aec5129191f78b5ef65c4a2e841537b8a0e82302f223864ebce0881c6ee0959",
       "prose_sha256": "c54d9966ec810ee924d3195d9f73336608f13d8ba48df6305e4e4bc6ad0fd5d5",
       "kernel_theorem": "Rat.inv2_top_right"
+    },
+    {
+      "fact_id": "F:rat-laplace-summand-row-i",
+      "language": "lean4",
+      "statement_sha256": "f00c1593da3cb3ca313152eb19eba21a780724c13cfcb76ed250da08379fcced",
+      "prose_sha256": "3ef649622b7f953441f24cf69d4ac956d93d1ff63a74c60b79d80ef0c8c2d07a",
+      "kernel_theorem": "Rat.laplaceSummand_rowI"
     },
     {
       "fact_id": "F:rat-le-abs-self",
@@ -20022,6 +20036,13 @@
       "statement_sha256": "a60c1571be1c9b84b724ee97f3c9bc1002b4a5fe5afef23444088757027ab89b",
       "prose_sha256": "17aacf1296d92f1c9975d5a18b0ee2799d523fc54487646ca636daf5b42644c1",
       "kernel_theorem": "Rat.uniform_is_distribution"
+    },
+    {
+      "fact_id": "F:rat-unskip-mat-skip",
+      "language": "lean4",
+      "statement_sha256": "2b2f98e73a4fcefcf17e0c4d410eaaeccdfacf78899ee6aa8512c9e60a3ab6eb",
+      "prose_sha256": "c91695536a5f0116612205787d1b03748cf860459f47330dd7d07fb1b2b7cd48",
+      "kernel_theorem": "Rat.unskip_matSkip"
     },
     {
       "fact_id": "F:rat-variance-add-eq",

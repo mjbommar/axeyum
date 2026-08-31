@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-laplace-summand-row-i",
+  "title": "Rat.laplaceSummand_rowI: one function on the square is BOTH cofactor parametrisations",
+  "statement": "Rat.laplaceSummand A i m p q is a function defined on the whole square [0,n) x [0,n), returning 0 on the diagonal and otherwise altSign p * (A 0 p * (altSign (unskip p q + i) * (A (succ i) q * det (matMinor (matMinor A 0 p) i (unskip p q)) m))). This fact records that it agrees with the row-(succ i)-then-row-0 parametrisation of a double cofactor expansion: laplaceSummand A i m (matSkip q k) q = altSign (q + succ i) * (A (succ i) q * (altSign k * (A 0 (matSkip q k) * det (matMinor (matMinor A (succ i) q) 0 k) m))). Together with the companion Rat.laplaceSummand_rowZero, which says the same function is the row-0-then-row-i parametrisation, this is why general-row determinant expansion is a plain order-of-summation swap: two double sums that appear to be indexed differently are the two orders of ONE function on a square. This half is the harder one and needs a case split on Nat.ble q k -- which of the two columns is larger -- because that decides what matSkip q k is (succ k or k) and hence which altSign carries the extra Rat.neg, what unskip (matSkip q k) q is, and which of the two orientations of the double minor exchange applies.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.laplaceSummand_rowI : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> Eq.{1} Rat (Rat.laplaceSummand x0 x1 x2 (Rat.matSkip x3 x4) x3) (Rat.mul (Rat.altSign (AxNat.add x3 (AxNat.succ x1))) (Rat.mul (x0 (AxNat.succ x1) x3) (Rat.mul (Rat.altSign x4) (Rat.mul (x0 AxNat.zero (Rat.matSkip x3 x4)) (Rat.det (Rat.matMinor (Rat.matMinor x0 (AxNat.succ x1) x3) AxNat.zero x4) x2))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Rat.laplaceSummand_rowI"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:ml430-nat-ble-succ-eq-true-000a69f4", "F:rat-neg-mul", "F:rat-neg-neg"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.laplaceSummand_rowI",
+      "kind": "kernel-term",
+      "supports": "Rat.laplaceSummand_rowI is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.laplaceSummand_rowI 2>/dev/null | grep -cE '^Rat\\.laplaceSummand_rowI[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.laplaceSummand_rowI",
+      "notes": "Two independent failure modes: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. ONE name per invocation -- this tool silently keeps only its first. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-Rat.laplaceSummand_rowI",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.laplaceSummand_rowI.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-laplace-summand-computes",
+      "kind": "kernel-term",
+      "supports": "Rat.laplaceSummand is a DEFINITION, which the trusted gate cannot check for correctness. It is reduced at concrete arguments over a pinned non-symmetric 3x3, including the entry that carries two altSign factors (value 12, with -12 asserted NOT to be it) and the diagonal entries (0). Rat.unskip likewise, at a pair chosen so that a definition taking either branch everywhere fails one of them.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_laplace_summand_layer_computes"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib the_laplace_summand_layer_computes 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The count is tested, not just the exit status. unskip 2 1 = 1 and unskip 2 3 = 2 are one pair on purpose -- identity branch and Nat.pred branch -- and NEITHER ALONE would separate a one-branch definition; unskip 2 3 is separately asserted not to be 3. What it does NOT check: the guard order in Rat.matSkip (Rat.det_eq_det2 does), or that the summand is the right function at symbolic arguments (this fact's own statement does)."
+    },
+    {
+      "id": "control-adr-1185-summand-sweep",
+      "kind": "exhaustive-enumeration",
+      "supports": "Both identifications hold at 0 of 2600 instances tried, over four inner dimensions and every row index below each; and under the Rat.matSkip branch-swap mutation this one is FALSE at 166 of 300 random instances, so it carries real index content rather than holding by construction.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1185-laplace-summand-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1185-laplace-summand-checks.py 2>&1 | grep -cE '^  laplaceSummand_rowI +FALSE'",
+      "checker_seconds": 20,
+      "notes": "grep -c on a tested count, consuming the whole pipe: the line only appears when the mutation actually falsifies the statement, so a mutation that changed nothing would report 0 and fail. The script also asserts the unmutated identification at 2600 instances and exits 1 on any failure. It re-derives the summand THIS lane builds rather than inheriting ADR-1155's W, whose inner minor names row 0 where the double expansion needs row i."
+    },
+    {
+      "id": "control-row-i-declaration-mutation",
+      "kind": "kernel-term",
+      "supports": "Under the Rat.matSkip branch-swap mutation the DECLARATION is refused on its own merits (TypeMismatch, not an UnknownConst from an absent upstream), so the rejection is not confounded.",
+      "check_status": "checked",
+      "checkers": [
+        "declare_matrix_det reporting run (ADR-1185, mutation A)"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1185-laplace-summand-checks.py",
+      "checker_seconds": 20,
+      "notes": "The declaration column was measured once in an isolated worktree with declare_matrix_det rewritten to REPORT each rejection instead of short-circuiting -- three of the seven rejections in ADR-1155's own table were confounded by an absent upstream declaration, which is why the per-step report matters and why the statement column exists at all. The command re-runnable here is the statement half; the declaration half is recorded in ADR-1185's table."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane laplace-summand, closing ADR-1155's named remainder. Design note: ADR-1185."
+  },
+  "notes": "ADR-1155 sized both identifications as a case split each; only this one needs one. The companion Rat.laplaceSummand_rowZero is two rewrites and no split, because Rat.beq_matSkip and Rat.unskip_matSkip are both UNCONDITIONAL along the reindexing. The split here uses a Bool.rec that KEEPS the equation (each branch is handed Eq Bool (ble q k) true or false) rather than the device that abstracts the scrutinee out of the goal: the two branches take different lemmas rather than reducing one term two ways. The = false branch splits again on q, because Nat.pred q is only q'' once q is exposed as succ q''; that second split costs nothing, since Nat.ble zero k reduces to true and so q = 0 makes the branch hypothesis true = false. The final algebra is the same permutation of five factors on both sides (Rat.mul_perm4), differing only in where the Rat.neg sits: outside on the true side via neg_mul, absorbed by Rat.altSign_succ_add plus neg_neg on the false side."
+}

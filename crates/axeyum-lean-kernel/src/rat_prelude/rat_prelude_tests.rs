@@ -180,6 +180,27 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("det_minor_col_comm", p.det_minor_col_comm),
         ("sumRange_peel_head", p.sum_range_peel_head),
         ("sumRange_matSkip", p.sum_range_mat_skip),
+        ("unskip", p.unskip),
+        ("unskip_zero", p.unskip_zero),
+        ("unskip_succ_zero", p.unskip_succ_zero),
+        ("unskip_succ_succ", p.unskip_succ_succ),
+        ("unskip_matSkip", p.unskip_mat_skip),
+        ("beq_matSkip", p.beq_mat_skip),
+        ("beq_matSkip_left", p.beq_mat_skip_left),
+        ("altSign_succ_add", p.alt_sign_succ_add),
+        ("ble_flip_of_false", p.ble_flip_of_false),
+        ("unskip_le", p.unskip_le),
+        ("unskip_gt", p.unskip_gt),
+        ("matMinor_double_comm_lo", p.mat_minor_double_comm_lo),
+        ("matMinor_double_comm_hi", p.mat_minor_double_comm_hi),
+        ("det_double_comm_lo", p.det_double_comm_lo),
+        ("det_double_comm_hi", p.det_double_comm_hi),
+        ("mul_perm4", p.mul_perm4),
+        ("laplaceSummand", p.laplace_summand),
+        ("laplaceSummand_rowZero", p.laplace_summand_row_zero),
+        ("laplaceSummand_rowI", p.laplace_summand_row_i),
+        ("laplaceSummand_diag", p.laplace_summand_diag),
+        ("det_row_expansion", p.det_row_expansion),
     ]
 }
 
@@ -6752,6 +6773,27 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("det_minor_col_comm", p.det_minor_col_comm, true),
         ("sumRange_peel_head", p.sum_range_peel_head, true),
         ("sumRange_matSkip", p.sum_range_mat_skip, true),
+        ("unskip", p.unskip, false),
+        ("unskip_zero", p.unskip_zero, true),
+        ("unskip_succ_zero", p.unskip_succ_zero, true),
+        ("unskip_succ_succ", p.unskip_succ_succ, true),
+        ("unskip_matSkip", p.unskip_mat_skip, true),
+        ("beq_matSkip", p.beq_mat_skip, true),
+        ("beq_matSkip_left", p.beq_mat_skip_left, true),
+        ("altSign_succ_add", p.alt_sign_succ_add, true),
+        ("ble_flip_of_false", p.ble_flip_of_false, true),
+        ("unskip_le", p.unskip_le, true),
+        ("unskip_gt", p.unskip_gt, true),
+        ("matMinor_double_comm_lo", p.mat_minor_double_comm_lo, true),
+        ("matMinor_double_comm_hi", p.mat_minor_double_comm_hi, true),
+        ("det_double_comm_lo", p.det_double_comm_lo, true),
+        ("det_double_comm_hi", p.det_double_comm_hi, true),
+        ("mul_perm4", p.mul_perm4, true),
+        ("laplaceSummand", p.laplace_summand, false),
+        ("laplaceSummand_rowZero", p.laplace_summand_row_zero, true),
+        ("laplaceSummand_rowI", p.laplace_summand_row_i, true),
+        ("laplaceSummand_diag", p.laplace_summand_diag, true),
+        ("det_row_expansion", p.det_row_expansion, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -7244,4 +7286,197 @@ fn the_laplace_index_layer_hypotheses_are_load_bearing() {
         "peeling the head without SHIFTING the tail was accepted, so \
          Rat.sumRange_peel_head's reindexing checks nothing"
     );
+}
+
+/// `Rat.unskip` and `Rat.laplaceSummand` are **`Definition`s**, so the trusted
+/// gate says only that they are well-formed. `Nat → Nat → Nat` is that type
+/// whatever the function returns. These reduce both at concrete arguments
+/// chosen to DISCRIMINATE, against values computed independently in
+/// `docs/research/09-decisions/adr-1185-laplace-summand-checks.py`.
+///
+/// What each check separates, and what it does not:
+///
+/// - `unskip 2 1 = 1` and `unskip 2 3 = 2` are one pair on purpose: the first
+///   is the identity branch and the second the `Nat.pred` branch, so a
+///   definition that took either branch everywhere fails one of them. Neither
+///   alone would.
+/// - `laplaceSummand` at `(1, 2)` is the only entry of the pinned matrix's
+///   summand that is neither `0` nor `1`, and it carries TWO `Rat.altSign`
+///   factors, so it is where a sign convention shows. Its value `12` is
+///   asserted, and `-12` is asserted NOT to be it.
+/// - The diagonal entries are `0` — the branch that makes both cofactor ranges
+///   fillable to the whole square.
+///
+/// None of these separates a wrong `Nat.ble` **guard order** in `matSkip`;
+/// `det_eval_example` (value `13`) and `det_eq_det2` do that, and
+/// [`the_laplace_index_layer_hypotheses_are_load_bearing`] covers the
+/// premises.
+#[test]
+fn the_laplace_summand_layer_computes() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::matrix_det::{const_matrix, rq};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    // --- `Rat.unskip`, both branches ---------------------------------------
+    let cases: [(u32, u32, u32); 5] = [(2, 1, 1), (2, 3, 2), (0, 3, 2), (3, 0, 0), (2, 2, 2)];
+    for (at, q, expected) in cases {
+        let at_n = d.num(at);
+        let q_n = d.num(q);
+        let lhs = d.const_app(p.unskip, &[at_n, q_n]);
+        let rhs = d.num(expected);
+        assert!(
+            d.kernel().def_eq(lhs, rhs),
+            "Rat.unskip {at} {q} must reduce to {expected}"
+        );
+    }
+    {
+        // The `Nat.pred` branch actually fires: without it `unskip 2 3` is `3`.
+        let two_n = d.num(2);
+        let three_n = d.num(3);
+        let lhs = d.const_app(p.unskip, &[two_n, three_n]);
+        assert!(
+            !d.kernel().def_eq(lhs, three_n),
+            "Rat.unskip 2 3 accepted 3, so the shift-down branch is unreachable \
+             and `unskip` is the identity"
+        );
+    }
+
+    // --- `Rat.laplaceSummand` over the pinned 3x3 --------------------------
+    //
+    //   A = [[1, 2, 0],
+    //        [0, 1, 3],
+    //        [2, 0, 1]]        det A 3 = 13   (`Rat.det_eval_example`)
+    //
+    // at `i = 0` (so the expansion row is `succ 0 = 1`) and `m = 1`.
+    let mat = const_matrix(&mut d, p, 3, &[1, 2, 0, 0, 1, 3, 2, 0, 1]);
+    let zero_n = d.num(0);
+    let one_n = d.num(1);
+    let two_n = d.num(2);
+
+    let entries: [(u32, u32, i64); 6] = [
+        (0, 1, 1),
+        (1, 2, 12),
+        (1, 1, 0),
+        (0, 0, 0),
+        (1, 0, 0),
+        (2, 1, 0),
+    ];
+    for (col0, coli, expected) in entries {
+        let a = d.num(col0);
+        let b = d.num(coli);
+        let lhs = d.const_app(p.laplace_summand, &[mat, zero_n, one_n, a, b]);
+        let rhs = rq(&mut d, p, expected);
+        assert!(
+            d.kernel().def_eq(lhs, rhs),
+            "laplaceSummand A 0 1 {col0} {coli} must reduce to {expected}"
+        );
+    }
+    {
+        // The sign is real: `(1, 2)` carries `altSign 1` and `altSign (1 + 0)`.
+        let lhs = d.const_app(p.laplace_summand, &[mat, zero_n, one_n, one_n, two_n]);
+        let wrong = rq(&mut d, p, -12);
+        assert!(
+            !d.kernel().def_eq(lhs, wrong),
+            "laplaceSummand A 0 1 1 2 accepted -12, so nothing here separates a \
+             sign convention"
+        );
+    }
+}
+
+/// `Rat.det_row_expansion` is the cofactor expansion along a **general** row,
+/// and this evaluates its right-hand side at EVERY row of the pinned 3x3 —
+/// the check no index-layer statement can make, because no sign appears in any
+/// of them.
+///
+/// Each row's expansion must come out at `13`, the value
+/// `Rat.det_eval_example` pins for the same matrix. The negative control is the
+/// same sum with the alternating sign shifted by one, which comes out at
+/// `-13`; it is asserted POSITIVELY (`= -13`) rather than as a failed
+/// `def_eq`, since a failing `def_eq` has no early exit.
+///
+/// Then the theorem itself is APPLIED at row `1` and its inferred type
+/// compared against the statement built independently here — so this is not
+/// only a check that the identity is true of `Rat.det`, but that the admitted
+/// theorem says it.
+#[test]
+fn det_row_expansion_evaluates_at_every_row_and_pins_the_sign() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::matrix_det::{const_matrix, row_expansion_fn, rq};
+    use crate::rat_prelude::ops::{req, rmul, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let mat = const_matrix(&mut d, p, 3, &[1, 2, 0, 0, 1, 3, 2, 0, 1]);
+    let two_n = d.num(2);
+    let three_n = d.num(3);
+    let thirteen = rq(&mut d, p, 13);
+
+    for row in 0..3u32 {
+        let i = d.num(row);
+        let summand = row_expansion_fn(&mut d, p, mat, i, two_n);
+        let total = rsum_range(&mut d, p, summand, three_n);
+        assert!(
+            d.kernel().def_eq(total, thirteen),
+            "expanding the pinned matrix along row {row} must give 13"
+        );
+    }
+
+    {
+        // The same sum with the sign shifted by one: `-13`, so the alternation
+        // is load-bearing and this family of checks can fail.
+        let nat = d.nat_ty();
+        let one_n = d.num(1);
+        let summand = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let index = {
+                let base = d.add(q, one_n);
+                d.succ(base)
+            };
+            let sign = d.const_app(p.alt_sign, &[index]);
+            let entry = d.apply(mat, &[one_n, q]);
+            let minor = d.const_app(p.mat_minor, &[mat, one_n, q]);
+            let sub = d.const_app(p.det, &[minor, two_n]);
+            let product = rmul(&mut d, entry, sub);
+            let body = rmul(&mut d, sign, product);
+            d.lam_fv(q_fv, nat, body)
+        };
+        let total = rsum_range(&mut d, p, summand, three_n);
+        let negative = rq(&mut d, p, -13);
+        assert!(
+            d.kernel().def_eq(total, negative),
+            "shifting the alternating sign by one must give -13, or the three \
+             checks above hold for a reason other than the sign"
+        );
+    }
+
+    {
+        // The admitted theorem, applied at row 1 of a 3x3.
+        let one_n = d.num(1);
+        let true_ = d.bool_true();
+        // `Nat.ble 1 2` iota-reduces to `true`.
+        let hble = d.bool_refl(true_);
+        let instance = d.const_app(p.det_row_expansion, &[two_n, mat, one_n, hble]);
+        let inferred = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("det_row_expansion at row 1 should infer: {e:?}"));
+
+        let summand = row_expansion_fn(&mut d, p, mat, one_n, two_n);
+        let expected = {
+            let lhs = d.const_app(p.det, &[mat, three_n]);
+            let rhs = rsum_range(&mut d, p, summand, three_n);
+            req(&mut d, lhs, rhs)
+        };
+        assert!(
+            d.kernel().def_eq(inferred, expected),
+            "the admitted `det_row_expansion` does not state the row-1 expansion \
+             this test built independently"
+        );
+    }
 }
