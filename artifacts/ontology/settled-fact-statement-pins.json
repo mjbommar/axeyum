@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1987,
+    "min_identity_bound": 1991,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -7705,6 +7705,20 @@
       "kernel_theorem": "Int.pow_mul"
     },
     {
+      "fact_id": "F:int-pow-neg-one-of-even",
+      "language": "lean4",
+      "statement_sha256": "7365cb91e95453e287f8e24176fd08dfbddb7c33e19d1007f98a3b48e8651b55",
+      "prose_sha256": "f2af67172fa40ed0d612ea4310168d84847c22912ec7c0053f2c2ef5bc4406bb",
+      "kernel_theorem": "Int.pow_neg_one_of_even"
+    },
+    {
+      "fact_id": "F:int-pow-neg-one-of-odd",
+      "language": "lean4",
+      "statement_sha256": "a76681741ef977a7f9c308b8923414a3781e24bb256ae280c59787850e6b670d",
+      "prose_sha256": "9862440f1c2528bdcb08401d0f1b87a09580052f85ef2f893039e1b0379c027c",
+      "kernel_theorem": "Int.pow_neg_one_of_odd"
+    },
+    {
       "fact_id": "F:int-pow-prime-sub-one-modeq-one",
       "language": "lean4",
       "statement_sha256": "eea30a2632212c7f55ea1aa3af842e5f679a715349db3d02231703a4049a0e82",
@@ -7871,6 +7885,13 @@
       "statement_sha256": "d6d051ba3230b64c8b621141f6e888842ae28623ecb0a4591e3b38440f6cc143",
       "prose_sha256": "9213f31f5b5088b54ffb5d9c714635284eeb725c75c2c85d189ae48078160c30",
       "kernel_theorem": "Int.prodRangeIf_zero"
+    },
+    {
+      "fact_id": "F:int-secondsupplementarylaw",
+      "language": "lean4",
+      "statement_sha256": "aca6292c22f86248a927f190657cd92f81bc8cccc963f8a6446a10dcdbce061c",
+      "prose_sha256": "5b270c42194a6553bae7450bf6f4f58521a1cbdaed28f839630850edc847e6bd",
+      "kernel_theorem": "Int.secondSupplementaryLaw"
     },
     {
       "fact_id": "F:int-self-inverse-mod-prime",
@@ -14607,6 +14628,13 @@
       "statement_sha256": "67fe9859f060e5f2e8ca497b563e6b4f83a376d3afd9f10544029ab8d82734a9",
       "prose_sha256": "bc695be20f843f61de05782cf048f2ed0ae4d8f51d1175041b41391af5be4aa3",
       "kernel_theorem": "Nat.group_left_cancel"
+    },
+    {
+      "fact_id": "F:nat-half-ceil-parity",
+      "language": "lean4",
+      "statement_sha256": "579e0214d0c851c88b202457e01ea67637d66e45d4c30e076cd035e6a2a1aa89",
+      "prose_sha256": "c778e0c4ec83ab20a7826356d4a4c9d4b8fd347a3e4b34de61169b99c9fb1a15",
+      "kernel_theorem": "Nat.half_ceil_parity"
     },
     {
       "fact_id": "F:nat-injective-on-comp",

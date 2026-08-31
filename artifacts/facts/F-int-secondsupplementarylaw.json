@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:int-secondsupplementarylaw",
+  "title": "The second supplementary law of quadratic reciprocity, over the constructed integers",
+  "statement": "The second supplementary law of quadratic reciprocity, in its Legendre-symbol (power-residue) form. For an odd modulus p = 2m+1 satisfying this kernel's PrimeCond, 2^m is congruent to +1 modulo p exactly when p is congruent to 1 or 7 modulo 8, and to -1 exactly when p is congruent to 3 or 5 modulo 8. The residue class is stated structurally rather than through a `mod 8` term: with q := div (div m 2) 2, the theorem's disjunction names m = 4q, 4q+1, 4q+2, 4q+3 (equivalently p = 8q+1, 8q+3, 8q+5, 8q+7) as the four shapes, and because those four are exhaustive and pairwise distinct the single disjunction gives BOTH directions of each line. Nothing here is imported or axiomatised: the modulus, the power and the count are this kernel's own constructions, the congruence is `Int.ModEq` over the constructed integers, and `Kernel::axiom_footprint` for this declaration is EMPTY. WHAT THIS DOES NOT CLAIM. It is the POWER-RESIDUE form, not the classical `IsQuadraticResidue` form. Half of that classical statement follows and is a separate proposition -- Euler's criterion's -1 detector (`Int.euler_criterion_neg_one_imp_not_residue`) turns the `= -1` line into `2 is NOT a quadratic residue mod p` for p congruent to 3 or 5 mod 8. The other half (p congruent to +-1 mod 8 implies 2 IS a residue) needs the CONVERSE of Euler's criterion, which needs a primitive root or a root-counting argument over a polynomial ring this kernel has no List/Finset to state; `int_prelude/qr_criterion.rs`'s module doc records that gap and this theorem does not close it. Primality is load-bearing and is not discharged: it is what Gauss's lemma needs to make m! invertible mod p. Coprimality of the multiplier is NOT a hypothesis -- p = succ (mul 2 m) is odd by construction, so gcd 2 p = 1 is derived in-proof from `Nat.coprime_two_left`.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.secondSupplementaryLaw : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))) -> Or (And (Or (Eq.{1} AxNat x0 (AxNat.add (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))) (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))))) (Eq.{1} AxNat x0 (AxNat.succ (AxNat.add (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))) (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))))))) (Int.ModEq (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (Int.pow (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) x0) Int.one)) (And (Or (Eq.{1} AxNat x0 (AxNat.succ (AxNat.add (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))) (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))))) (Eq.{1} AxNat x0 (AxNat.add (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))) (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))))))) (Int.ModEq (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (Int.pow (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) x0) (Int.neg Int.one)))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Int.secondSupplementaryLaw"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-gausslemmasigncount",
+    "F:int-pow-neg-one-of-even",
+    "F:int-pow-neg-one-of-odd",
+    "F:logic-and-left",
+    "F:logic-and-right",
+    "F:logic-iff-mpr",
+    "F:ml430-nat-coprime-two-left-1b47e7c4",
+    "F:nat-mul-comm",
+    "F:nat-zero-add",
+    "F:nat-half-ceil-parity"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.secondSupplementaryLaw",
+      "kind": "kernel-term",
+      "supports": "Int.secondSupplementaryLaw is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.secondSupplementaryLaw 2>/dev/null | grep -cE '^Int\\.secondSupplementaryLaw[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Int.secondSupplementaryLaw",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.secondSupplementaryLaw",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.secondSupplementaryLaw.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it, including Int.secondSupplementaryLaw. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "generated-unreviewed",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored. `title`, `statement` and `notes` were then REPLACED by hand (lane second-supplementary-law, ADR-1150); every other field is the generator's output unmodified."
+  },
+  "notes": "Route (`int_prelude/second_supplementary.rs`), three landed theorems plus one new arithmetic fact: Gauss's lemma `Int.gaussLemmaSignCount` (ADR-1130) gives 2^m = (-1)^N mod p with N := gaussNegCount p 2 m; `Nat.gaussNegCountTwoClosedForm` evaluates that count to `sub m (div m 2)`; and `Nat.half_ceil_parity` (F:nat-half-ceil-parity, new here) decides the parity of that count from m mod 4. `Int.pow_neg_one_of_even`/`_of_odd` turn the parity into the sign. THE HANDOFF'S SIZING WAS WRONG IN THE USEFUL DIRECTION. ADR-1130 recorded this as blocked on 'a p mod 8 case split' that did not exist, and it does not: `Nat.div`/`Nat.mod` are stuck at a symbolic argument, so a mod-8 HYPOTHESIS could not have been evaluated anyway. What the proof needs is a DOUBLE even/odd split, and `Nat.even_or_odd` already supports it directly -- applied at m and then at div m 2, it PRODUCES the four classes with computed halves and no division ever having to reduce. Nothing new about mod 8 was built. NOTHING WAS RE-DERIVED. `pow_neg_one_add_self` and `pow_neg_one_succ` already existed as private helpers inside `int_prelude/fibonacci.rs` (built for Cassini's identity); they were exposed rather than rebuilt, and `succ_double_eq` likewise from `nat_prelude/parity.rs`. CONCRETE CHECK, disjoint from the symbolic one: `second_supplementary_law_classifies_all_four_residues_mod_eight` instantiates at ALL FOUR residue classes, every one an actual odd prime (m = 1, 2, 3, 8; p = 3, 5, 7, 17; p mod 8 = 3, 5, 7, 1), checking per row that the class shape the law names IS m, that the other three are NOT (so the four classes separate), and that 2^m mod p is the claimed sign's residue and NOT the other's. It then applies the theorem at a genuinely FREE m and compares the inferred type against an independently rebuilt statement, with a sign-swap control that must not be defeq."
+}

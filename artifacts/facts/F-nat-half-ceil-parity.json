@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-half-ceil-parity",
+  "title": "The parity of the rounded-up half is decided by m mod 4",
+  "statement": "For every natural m, the parity of m - div m 2 (that is, of the rounded-up half of m) is decided by m modulo 4: it is EVEN when m is 4q or 4q+3, and ODD when m is 4q+1 or 4q+2, where q := div (div m 2) 2. The residue class is stated structurally as an equation on m rather than through a `mod 4` term, because `Nat.div`/`Nat.mod` are stuck at a symbolic argument; the four shapes named are exhaustive and pairwise distinct, so the disjunction determines the parity in both directions. Parity is `Nat.Even`/`Nat.Odd`, this kernel's existential predicates. `Kernel::axiom_footprint` for this declaration is EMPTY. WHY IT MATTERS. At p := 2m+1 the four shapes are p = 8q+1, 8q+3, 8q+5, 8q+7, so this is exactly the p mod 8 classification the SECOND SUPPLEMENTARY LAW of quadratic reciprocity needs: Gauss's lemma reduces 2^m mod p to (-1)^(m - div m 2), and this theorem decides that sign (F:int-secondsupplementarylaw).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.half_ceil_parity : ((x0 : AxNat) -> Or (And (Or (Eq.{1} AxNat x0 (AxNat.add (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))) (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))))) (Eq.{1} AxNat x0 (AxNat.succ (AxNat.add (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))) (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))))))) (AxNat.Even (AxNat.sub x0 (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero)))))) (And (Or (Eq.{1} AxNat x0 (AxNat.succ (AxNat.add (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))) (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))))) (Eq.{1} AxNat x0 (AxNat.add (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))))) (AxNat.succ (AxNat.add (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.div (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))))))) (AxNat.Odd (AxNat.sub x0 (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero)))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Nat.half_ceil_parity"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-sub-cancel-left",
+    "F:nat-add-succ",
+    "F:nat-even-or-odd",
+    "F:nat-succ-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.half_ceil_parity",
+      "kind": "kernel-term",
+      "supports": "Nat.half_ceil_parity is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.half_ceil_parity 2>/dev/null | grep -cE '^Nat\\.half_ceil_parity[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Nat.half_ceil_parity",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Nat.half_ceil_parity",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the nat prelude's trusted surface is empty, which bounds Nat.half_ceil_parity.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it, including Nat.half_ceil_parity. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "generated-unreviewed",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored. `title`, `statement` and `notes` were then REPLACED by hand (lane second-supplementary-law, ADR-1150); every other field is the generator's output unmodified."
+  },
+  "notes": "Route (`nat_prelude/half_ceil_parity.rs`): `Nat.even_or_odd` applied twice, at m and then at the computed half h := div m 2, with q := div h 2. That PRODUCES the four classes -- m = h+h or succ (h+h), each with h = q+q or succ (q+q) -- so no division ever has to reduce, which is the point: a mod-4 hypothesis could not have been evaluated at a symbolic m. Both count evaluations are one application of `Nat.add_sub_cancel_left` (sub (add x y) x = y). Even m: at (h, h), giving sub (add h h) h = h. Odd m: at (h, succ h), whose statement is sub (add h (succ h)) h = succ h -- and add h (succ h) is DEFINITIONALLY succ (add h h), because Nat.add recurses on its right argument and the literal succ there reduces with no succ_add rewrite. That is why the symbolic side is kept on the left throughout the file. The m = 4q+3 case is the only one needing a real lemma: succ (succ (q+q)) is add (succ q) (succ q) only up to `nat_prelude/parity.rs`'s `succ_double_eq`, which was already there (private) and was exposed rather than rebuilt. The classification table was re-derived in Python before any Rust was written, not inherited from a plan: python3 -c \"import collections; agg=collections.defaultdict(set); [agg[m%4].add(((2*m+1)%8, (m-(m//2))%2)) for m in range(200)]; print([(k, sorted(agg[k])) for k in sorted(agg)])\" gives 0->(1,even), 1->(3,odd), 2->(5,odd), 3->(7,even)."
+}
