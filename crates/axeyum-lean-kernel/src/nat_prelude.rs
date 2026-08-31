@@ -4918,6 +4918,13 @@ pub struct NatPrelude {
     /// both satisfied by the signed fold on `[0, m)`, no separate bijection
     /// or partner-index construction needed.
     pub gauss_fold_shift_injective_on: NameId,
+    /// `Nat.coprime_factorial_of_lt_prime : ∀ pp m, PrimeCond pp → Lt m pp →
+    ///   Eq (gcd pp (factorial m)) one` (`gauss_lemma.rs`) — item 2 of the
+    /// connecting theorem (ADR-1070): every factor `1..m` of `m!` is below
+    /// `pp` and hence coprime to it (`coprime_of_lt_prime`), so `m!` itself
+    /// is, by induction combining factors with `coprime_mul_of_coprime`.
+    /// Needed to cancel `m!` from the final congruence in item 3.
+    pub coprime_factorial_of_lt_prime: NameId,
 
     // -- `avg-pair-constructions` lane: `avg_pair.rs` --
     // `docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md`
@@ -5944,6 +5951,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_in_range: kernel.name_str(nat, "gauss_fold_in_range"),
             gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
+            coprime_factorial_of_lt_prime: kernel.name_str(nat, "coprime_factorial_of_lt_prime"),
             avg: kernel.name_str(nat, "avg"),
             pair_fn: kernel.name_str(nat, "pair"),
             abundant: kernel.name_str(nat, "Abundant"),

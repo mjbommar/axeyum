@@ -27,7 +27,7 @@ use super::ops::IntDev;
 use crate::ExprId;
 use crate::env::Declaration;
 use crate::nat_prelude::NatOps;
-use crate::{BinderInfo, IntPrelude, Kernel, build_int_prelude};
+use crate::{BinderInfo, IntPrelude, Kernel, LocalContext, LocalDecl, build_int_prelude};
 
 /// A fixture: a kernel with the integer prelude plus an abstract point `x : Z`;
 /// hypotheses are added per-test.
@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 229] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 231] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -253,6 +253,8 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 229] {
         p.prod_range_const_pow,
         p.prod_range_scaled_index_eq_pow_mul_factorial,
         p.gauss_sign_prod_eq_pow_neg_one_of_count,
+        p.factorial_eq_of_nat_factorial,
+        p.coprime_factorial_of_lt_prime,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -1505,6 +1507,98 @@ fn prod_range_scaled_index_eq_pow_mul_factorial_matches_direct_computation_at_a_
         k.def_eq(inferred, expected),
         "prod_range_scaled_index_eq_pow_mul_factorial's instantiated type \
          must match the direct prodRange/pow/factorial computation"
+    );
+}
+
+/// `Int.factorial_eq_of_nat_factorial` (ADR-1070, connecting-theorem item 2)
+/// at `m := 4`: `Int.factorial` (this prelude's `prodRange`-built recursion)
+/// and `Nat.factorial` (`nat_prelude`'s independent `Nat.mul` recursion) both
+/// reduce to `ofNat 24` at a concrete witness, not merely by the induction's
+/// own internal logic.
+#[test]
+fn factorial_eq_of_nat_factorial_matches_direct_computation_at_m_4() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    let four = d.num(4);
+    let fact_int_4 = d.const_app(p.factorial, &[four]);
+    let fact_nat_4 = NatOps::factorial(&mut d, four);
+    let of_nat_fact_nat_4 = d.of_nat(fact_nat_4);
+
+    let twenty_four = numeral(d.kernel(), &p, 24);
+    assert!(
+        d.kernel().def_eq(fact_int_4, twenty_four),
+        "sanity: Int.factorial 4 must reduce to ofNat 24"
+    );
+    assert!(
+        d.kernel().def_eq(of_nat_fact_nat_4, twenty_four),
+        "sanity: ofNat (Nat.factorial 4) must reduce to ofNat 24"
+    );
+
+    let applied = d.lemma(p.factorial_eq_of_nat_factorial, &[four]);
+    let inferred = d
+        .kernel()
+        .infer(applied)
+        .expect("factorial_eq_of_nat_factorial must apply at m := 4");
+    let expected = d.ieq(fact_int_4, of_nat_fact_nat_4);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "factorial_eq_of_nat_factorial's instantiated type must match the \
+         direct Int.factorial/Nat.factorial computation"
+    );
+}
+
+/// `Int.coprime_factorial_of_lt_prime` (ADR-1070, connecting-theorem item 2)
+/// at `pp := 7`, `m := 4`. `PrimeCond` is left as a free variable registered
+/// in a `LocalContext` (the conclusion's type does not depend on which proof
+/// inhabits that hypothesis); the `Lt m pp` bound is a genuine witness via
+/// `le_add_right`, mirroring `nat_prelude/gauss_lemma.rs`'s own concrete
+/// test of the Nat-typed half this theorem wraps.
+#[test]
+fn coprime_factorial_of_lt_prime_computes_at_pp_seven_m_four() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    let pp = d.num(7);
+    let m = d.num(4);
+
+    let big_pp = d.of_nat(pp);
+    let fact_int_m = d.const_app(p.factorial, &[m]);
+    let coprime_ty = d.const_app(p.coprime, &[fact_int_m, big_pp]);
+
+    let prime_ty = super::wilson::prime_condition(&mut d, pp);
+    let prime_fv = d.fresh_fvar();
+    let prime_proof = d.kernel().fvar(prime_fv);
+
+    // Lt m pp = Lt 4 7 = Le 5 7 = Le 5 (add 5 2), via le_add_right(5, 2).
+    let five = d.num(5);
+    let two = d.num(2);
+    let bound_proof = d.lemma(p.nat.le_add_right, &[five, two]);
+
+    let lemma_fn = d.lemma(p.coprime_factorial_of_lt_prime, &[pp, m]);
+    let applied = d.apply(lemma_fn, &[prime_proof, bound_proof]);
+
+    // `prime_proof` is a bare free variable and needs a `LocalContext`
+    // registration before a top-level `infer` can resolve it (an empty
+    // context would reject it with `UnboundFVar`).
+    let anon = d.anon_name();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: prime_fv,
+        name: anon,
+        ty: prime_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .expect("coprime_factorial_of_lt_prime must apply at pp := 7, m := 4");
+    assert!(
+        d.kernel().def_eq(inferred, coprime_ty),
+        "coprime_factorial_of_lt_prime's instantiated type must match \
+         Int.Coprime (factorial m) (ofNat pp)"
     );
 }
 

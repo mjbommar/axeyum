@@ -93,6 +93,7 @@ mod euler_unit_preserve;
 mod euler_unit_range;
 mod exists_gcd_one;
 mod fibonacci;
+mod gauss_factorial_coprime;
 mod gauss_factorial_product;
 mod gauss_sign_product;
 mod gcd;
@@ -536,6 +537,16 @@ pub struct IntPrelude {
     /// sign-product identity, a one-line corollary of
     /// `prod_range_if_const_eq_pow_count`. `gauss_sign_product.rs`.
     pub gauss_sign_prod_eq_pow_neg_one_of_count: NameId,
+    /// `factorialEqOfNatFactorial : ∀ m, Eq Int (factorial m) (ofNat
+    ///   (Nat.factorial m))` — item 2 of the connecting theorem (ADR-1070):
+    /// bridges `Int.factorial` (this prelude's `prodRange`-built version)
+    /// with `Nat.factorial`, by induction. `gauss_factorial_coprime.rs`.
+    pub factorial_eq_of_nat_factorial: NameId,
+    /// `coprimeFactorialOfLtPrime : ∀ pp m, Nat.PrimeCond pp → Lt m pp →
+    ///   Coprime (factorial m) (ofNat pp)` — item 2 of the connecting
+    /// theorem (ADR-1070), the `Int`-typed form `Int.ModEq.cancel` needs in
+    /// item 3's final assembly. `gauss_factorial_coprime.rs`.
+    pub coprime_factorial_of_lt_prime: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1666,6 +1677,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
         prod_range_if_permute: child(kernel, "prodRangeIf_permute"),
         gauss_sign_prod_eq_pow_neg_one_of_count: child(kernel, "gaussSignProdEqPowNegOneOfCount"),
+        factorial_eq_of_nat_factorial: child(kernel, "factorialEqOfNatFactorial"),
+        coprime_factorial_of_lt_prime: child(kernel, "coprimeFactorialOfLtPrime"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -2017,6 +2030,12 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;
         gauss_factorial_product::declare_prod_range_scaled_index_eq_pow_mul_factorial(&mut d)?;
+        // Item 2 of Gauss's-lemma connecting theorem (ADR-1070): the
+        // `Int.factorial`/`Nat.factorial` bridge. Needs only `Int.factorial`,
+        // `Nat.factorial` (far above) and `Int.one := ofNat 1` defeq --
+        // nothing from `natAbs`/`gcd`/`Coprime`, so it can sit here rather
+        // than waiting for them.
+        gauss_factorial_coprime::declare_factorial_eq_of_nat_factorial(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         // Needs `Int.natAbs`, just declared above -- `declare_emod_lt_of_pos`
         // (built well before `natAbs` exists) is why this sign-general bound
@@ -2071,6 +2090,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_gcd_div_gcd_div_gcd(&mut d)?;
         gcd::declare_gcd_div(&mut d)?;
         gcd::declare_coprime(&mut d)?;
+        // Item 2 of Gauss's-lemma connecting theorem (ADR-1070): the
+        // `Int`-typed coprimality of `m!` with `pp`, needed by item 3's
+        // `Int.ModEq.cancel`. Needs `Int.Coprime`/`Int.natAbs`, just declared.
+        gauss_factorial_coprime::declare_coprime_factorial_of_lt_prime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
         gcd::declare_dvd_of_dvd_mul_right_of_gcd_one(&mut d)?;

@@ -1363,6 +1363,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gauss_fold_in_range,
         p.gauss_fold_shift_maps_into,
         p.gauss_fold_shift_injective_on,
+        // Item 2 of the connecting theorem (ADR-1070): gcd(m!, pp) = 1.
+        p.coprime_factorial_of_lt_prime,
     ]
 }
 
