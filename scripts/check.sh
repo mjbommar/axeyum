@@ -1613,3 +1613,4 @@ step checked-interchange-tests     python3 scripts/tests/test-checked-interchang
 step lean-adapter                  python3 scripts/check-lean-adapter.py
 step lean-adapter-mutations        bash scripts/tests/test-lean-adapter-mutations.sh
 step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py
+step declaration-spec python3 scripts/check-declaration-spec.py

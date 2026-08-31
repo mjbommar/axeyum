@@ -4677,5 +4677,61 @@ SUITES["nursery-refill-adjacency"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# declaration-spec (L3 phase D1, ADR-0965): the four pre-construction guards
+# gen-declaration-spec.py runs over a declaration-spec file BEFORE any kernel
+# construction is attempted, plus the dependency-consistency and
+# empty-corpus checks added alongside them. Each mutation disables exactly
+# one guard's reporting (not its surrounding control flow, which several
+# guards share), so a mutation that "succeeds" here means one specific
+# adversarial fixture (artifacts/declaration-spec/negative-fixtures/*.json)
+# would silently validate.
+# --------------------------------------------------------------------------
+
+SUITES["declaration-spec"] = (
+    "scripts/gen-declaration-spec.py",
+    "scripts.tests.test_declaration_spec",
+    [
+        (
+            "in-corpus duplicate name guard",
+            "        violations.extend(check_in_corpus_duplicates(specs))\n",
+            "        pass\n",
+        ),
+        (
+            "cross-prelude duplicate name guard",
+            "            violations.extend(check_cross_prelude_duplicates(specs, args.snapshot))\n",
+            "            pass\n",
+        ),
+        (
+            "dependency cycle guard",
+            "        violations.extend(check_dependency_cycles(specs))\n",
+            "        pass\n",
+        ),
+        (
+            "phase order guard",
+            "        violations.extend(check_phase_order(specs))\n",
+            "        pass\n",
+        ),
+        (
+            "dependency/const_ref consistency guard",
+            "        violations.extend(check_dependency_consistency(specs))\n",
+            "        pass\n",
+        ),
+        (
+            "missing-phase guard (the reporting line, not the `if`, which a "
+            "downstream KeyError would otherwise turn into a build failure "
+            "rather than a silent pass)",
+            '            violations.append(Violation("MISSING_PHASE", f"{where}: no \'phase\' field"))\n',
+            "            pass\n",
+        ),
+        (
+            "empty-corpus guard (zero spec files found)",
+            '        print("GUARD:EMPTY_CORPUS no spec files found -- nothing was checked", file=sys.stderr)\n',
+            '        print("GUARD:MUTATED this text deliberately omits the phrase this test checks for", file=sys.stderr)\n',
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

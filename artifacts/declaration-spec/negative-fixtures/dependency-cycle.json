@@ -1,0 +1,48 @@
+{
+  "spec_version": 1,
+  "subsystem": "negative-fixture-dependency-cycle",
+  "prelude": "nat",
+  "declarations": [
+    {
+      "local_name": "fixtureCycleA",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "phase": 0,
+      "universe_params": [],
+      "binders": [ { "name": "n", "type": { "op": "nat_ty" } } ],
+      "type": { "op": "arrow", "dom": { "op": "nat_ty" }, "cod": { "op": "nat_ty" } },
+      "value": {
+        "op": "lam", "param": "n", "domain": { "op": "nat_ty" },
+        "body": {
+          "op": "apply",
+          "func": { "op": "const_ref", "name": "fixtureCycleB" },
+          "args": [ { "op": "var", "name": "n" } ]
+        }
+      },
+      "reducibility_hint": "Regular(0)",
+      "dependencies": [ { "name": "fixtureCycleB", "extern": false } ],
+      "equations": []
+    },
+    {
+      "local_name": "fixtureCycleB",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "phase": 1,
+      "universe_params": [],
+      "binders": [ { "name": "n", "type": { "op": "nat_ty" } } ],
+      "type": { "op": "arrow", "dom": { "op": "nat_ty" }, "cod": { "op": "nat_ty" } },
+      "value": {
+        "op": "lam", "param": "n", "domain": { "op": "nat_ty" },
+        "body": {
+          "op": "apply",
+          "func": { "op": "const_ref", "name": "fixtureCycleA" },
+          "args": [ { "op": "var", "name": "n" } ]
+        }
+      },
+      "reducibility_hint": "Regular(0)",
+      "dependencies": [ { "name": "fixtureCycleA", "extern": false } ],
+      "equations": []
+    }
+  ],
+  "_comment": "Adversarial fixture: fixtureCycleA depends on fixtureCycleB and vice versa, both non-extern. The phase numbers (0, 1) are individually well-formed and even monotone in array order, so a guard that only checked 'phase >= max(dependency phases) in array order' without an actual graph cycle detector would miss this -- B's dependency on A (phase 0 < phase 1) looks fine on its own; A's dependency on B (phase 0 depending on phase 1) is the one that must be caught, and a correct cycle detector catches the pair regardless of which direction the phase check looks first."
+}

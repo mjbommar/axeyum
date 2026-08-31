@@ -1,0 +1,41 @@
+{
+  "spec_version": 1,
+  "subsystem": "negative-fixture-dep-mismatch",
+  "prelude": "nat",
+  "declarations": [
+    {
+      "local_name": "fixtureBase",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "phase": 0,
+      "universe_params": [],
+      "binders": [ { "name": "n", "type": { "op": "nat_ty" } } ],
+      "type": { "op": "arrow", "dom": { "op": "nat_ty" }, "cod": { "op": "nat_ty" } },
+      "value": { "op": "lam", "param": "n", "domain": { "op": "nat_ty" }, "body": { "op": "var", "name": "n" } },
+      "reducibility_hint": "Regular(0)",
+      "dependencies": [],
+      "equations": []
+    },
+    {
+      "local_name": "fixtureUsesBaseUndeclared",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "phase": 1,
+      "universe_params": [],
+      "binders": [ { "name": "n", "type": { "op": "nat_ty" } } ],
+      "type": { "op": "arrow", "dom": { "op": "nat_ty" }, "cod": { "op": "nat_ty" } },
+      "value": {
+        "op": "lam", "param": "n", "domain": { "op": "nat_ty" },
+        "body": {
+          "op": "apply",
+          "func": { "op": "const_ref", "name": "fixtureBase" },
+          "args": [ { "op": "var", "name": "n" } ]
+        }
+      },
+      "reducibility_hint": "Regular(0)",
+      "dependencies": [],
+      "equations": []
+    }
+  ],
+  "_comment": "Adversarial fixture: fixtureUsesBaseUndeclared's value recipe const_refs 'fixtureBase' but its 'dependencies' list is empty -- drift between declared and used dependencies. Isolates the dependency-consistency guard, which is a stronger check than the cycle/phase guards alone can provide (they only see the DECLARED list, which here is simply wrong)."
+}

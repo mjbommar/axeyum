@@ -1,0 +1,34 @@
+{
+  "spec_version": 1,
+  "subsystem": "negative-fixture-dup-name-in-corpus",
+  "prelude": "nat",
+  "declarations": [
+    {
+      "local_name": "fixtureDup",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "phase": 0,
+      "universe_params": [],
+      "binders": [ { "name": "n", "type": { "op": "nat_ty" } } ],
+      "type": { "op": "arrow", "dom": { "op": "nat_ty" }, "cod": { "op": "nat_ty" } },
+      "value": { "op": "lam", "param": "n", "domain": { "op": "nat_ty" }, "body": { "op": "var", "name": "n" } },
+      "reducibility_hint": "Regular(0)",
+      "dependencies": [],
+      "equations": []
+    },
+    {
+      "local_name": "fixtureDup",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "phase": 1,
+      "universe_params": [],
+      "binders": [ { "name": "n", "type": { "op": "nat_ty" } } ],
+      "type": { "op": "arrow", "dom": { "op": "nat_ty" }, "cod": { "op": "nat_ty" } },
+      "value": { "op": "lam", "param": "n", "domain": { "op": "nat_ty" }, "body": { "op": "succ", "arg": { "op": "var", "name": "n" } } },
+      "reducibility_hint": "Regular(0)",
+      "dependencies": [],
+      "equations": []
+    }
+  ],
+  "_comment": "Adversarial fixture: two DIFFERENT declarations in the same file both claim 'Nat.fixtureDup'. Isolates the in-corpus duplicate guard from the cross-prelude one (this name is not in the real kernel at all)."
+}

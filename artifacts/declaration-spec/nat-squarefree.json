@@ -1,0 +1,303 @@
+{
+  "spec_version": 1,
+  "subsystem": "nat-squarefree",
+  "prelude": "nat",
+  "declarations": [
+    {
+      "local_name": "squarefreeAux",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "phase": 0,
+      "universe_params": [],
+      "binders": [
+        {
+          "name": "n",
+          "type": {
+            "op": "nat_ty"
+          }
+        },
+        {
+          "name": "fuel",
+          "type": {
+            "op": "nat_ty"
+          }
+        }
+      ],
+      "type": {
+        "op": "arrow",
+        "dom": {
+          "op": "nat_ty"
+        },
+        "cod": {
+          "op": "arrow",
+          "dom": {
+            "op": "nat_ty"
+          },
+          "cod": {
+            "op": "arrow",
+            "dom": {
+              "op": "nat_ty"
+            },
+            "cod": {
+              "op": "bool_ty"
+            }
+          }
+        }
+      },
+      "value": {
+        "op": "lam",
+        "param": "n",
+        "domain": {
+          "op": "nat_ty"
+        },
+        "body": {
+          "op": "lam",
+          "param": "fuel",
+          "domain": {
+            "op": "nat_ty"
+          },
+          "body": {
+            "op": "lam",
+            "param": "k2",
+            "domain": {
+              "op": "nat_ty"
+            },
+            "body": {
+              "op": "apply",
+              "func": {
+                "op": "nat_rec",
+                "motive_codomain": {
+                  "op": "arrow",
+                  "dom": {
+                    "op": "nat_ty"
+                  },
+                  "cod": {
+                    "op": "bool_ty"
+                  }
+                },
+                "base": {
+                  "op": "lam",
+                  "param": "k",
+                  "domain": {
+                    "op": "nat_ty"
+                  },
+                  "body": {
+                    "op": "bool_true"
+                  }
+                },
+                "step": {
+                  "op": "lam",
+                  "param": "predFuel",
+                  "domain": {
+                    "op": "nat_ty"
+                  },
+                  "body": {
+                    "op": "lam",
+                    "param": "ih",
+                    "domain": {
+                      "op": "arrow",
+                      "dom": {
+                        "op": "nat_ty"
+                      },
+                      "cod": {
+                        "op": "bool_ty"
+                      }
+                    },
+                    "body": {
+                      "op": "lam",
+                      "param": "k",
+                      "domain": {
+                        "op": "nat_ty"
+                      },
+                      "body": {
+                        "op": "bool_ite",
+                        "cond": {
+                          "op": "beq",
+                          "lhs": {
+                            "op": "mod",
+                            "dividend": {
+                              "op": "var",
+                              "name": "n"
+                            },
+                            "divisor": {
+                              "op": "mul",
+                              "lhs": {
+                                "op": "var",
+                                "name": "k"
+                              },
+                              "rhs": {
+                                "op": "var",
+                                "name": "k"
+                              }
+                            }
+                          },
+                          "rhs": {
+                            "op": "zero"
+                          }
+                        },
+                        "then": {
+                          "op": "bool_false"
+                        },
+                        "else": {
+                          "op": "apply",
+                          "func": {
+                            "op": "var",
+                            "name": "ih"
+                          },
+                          "args": [
+                            {
+                              "op": "succ",
+                              "arg": {
+                                "op": "var",
+                                "name": "k"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "target": {
+                  "op": "var",
+                  "name": "fuel"
+                }
+              },
+              "args": [
+                {
+                  "op": "var",
+                  "name": "k2"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "reducibility_hint": "Regular(5)",
+      "dependencies": [],
+      "equations": [],
+      "mirrors_existing": true
+    },
+    {
+      "local_name": "Squarefree",
+      "namespace": "",
+      "kind": "Definition",
+      "phase": 1,
+      "universe_params": [],
+      "binders": [
+        {
+          "name": "n",
+          "type": {
+            "op": "nat_ty"
+          }
+        }
+      ],
+      "type": {
+        "op": "arrow",
+        "dom": {
+          "op": "nat_ty"
+        },
+        "cod": {
+          "op": "bool_ty"
+        }
+      },
+      "value": {
+        "op": "lam",
+        "param": "n",
+        "domain": {
+          "op": "nat_ty"
+        },
+        "body": {
+          "op": "bool_ite",
+          "cond": {
+            "op": "beq",
+            "lhs": {
+              "op": "var",
+              "name": "n"
+            },
+            "rhs": {
+              "op": "zero"
+            }
+          },
+          "then": {
+            "op": "bool_false"
+          },
+          "else": {
+            "op": "apply",
+            "func": {
+              "op": "const_ref",
+              "name": "squarefreeAux"
+            },
+            "args": [
+              {
+                "op": "var",
+                "name": "n"
+              },
+              {
+                "op": "var",
+                "name": "n"
+              },
+              {
+                "op": "num",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "reducibility_hint": "Regular(6)",
+      "dependencies": [
+        {
+          "name": "squarefreeAux",
+          "extern": false
+        }
+      ],
+      "equations": [
+        {
+          "args": [
+            0
+          ],
+          "expect": false
+        },
+        {
+          "args": [
+            1
+          ],
+          "expect": true
+        },
+        {
+          "args": [
+            2
+          ],
+          "expect": true
+        },
+        {
+          "args": [
+            4
+          ],
+          "expect": false
+        },
+        {
+          "args": [
+            6
+          ],
+          "expect": true
+        },
+        {
+          "args": [
+            9
+          ],
+          "expect": false
+        },
+        {
+          "args": [
+            12
+          ],
+          "expect": false
+        }
+      ],
+      "mirrors_existing": true
+    }
+  ],
+  "_comment": "Every declaration in this file sets mirrors_existing:true because this spec deliberately describes an ALREADY-LANDED subsystem (nat_prelude/squarefree.rs) for the D1 digest-parity pilot -- see declaration_spec_pilot.rs's module doc. mirrors_existing exempts a declaration from the cross-prelude duplicate guard (it is SUPPOSED to already exist); it must never be set on a spec proposing new work, and none of the three negative fixtures set it."
+}
