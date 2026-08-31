@@ -784,3 +784,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1150](adr-1150-the-second-supplementary-law-needed-a-double-parity-split-not-a-mod-8-one.md) | **The second supplementary law of quadratic reciprocity is | accepted |
 | [1160](adr-1160-the-index-3-slot-is-filled-mathlib-data-nat-find.md) | Four draws declined in a row on one constraint — cycle index 3 | accepted |
 | [1165](adr-1165-the-cost-model-re-measured-two-gates-moved-one-stayed-flat.md) | Re-measured every checkable claim in | accepted |
+| [1175](adr-1175-draw-15-is-authored-layout-a-and-two-disclosures-that-found-something.md) | Draws 10, 12, 13 and 14 declined in a row on one constraint; | accepted |
