@@ -48,6 +48,7 @@ mod crossing;
 mod density;
 mod deriv_unique;
 mod derivative;
+mod evt_row1;
 mod exp_fn;
 mod exponential;
 mod extreme_value;
@@ -99,6 +100,7 @@ pub(crate) fn all_entries(
     all.extend(density::entries(p));
     all.extend(deriv_unique::entries(p));
     all.extend(derivative::entries(p));
+    all.extend(evt_row1::entries(p));
     all.extend(exp_fn::entries(p));
     all.extend(exponential::entries(p));
     all.extend(extreme_value::entries(p));

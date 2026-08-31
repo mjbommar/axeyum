@@ -112,7 +112,8 @@ fn declare_evt_approx_max_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
 
     // `1/(n+1)`, and the value `supOn F a b hab u` this whole theorem is
     // about.
-    let eps = embed(d, p, div_succ(d, p, 1, n));
+    let eps_rat = div_succ(d, p, 1, n);
+    let eps = embed(d, p, eps_rat);
     let sup_val = d.const_app(p.sup_on, &[f, a, b, hab, u]);
 
     // `hex : Exists CReal (fun x => le a x /\ (le x b /\ le sup_val (F x + eps)))`
