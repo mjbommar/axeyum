@@ -204,6 +204,7 @@ now. Nothing was deleted.
 | 2026-08-30 | `ebcbfc618` | Project the complete source-pinned seventeen-form x86-64 single-step slice through Python: variable-length decode, explicit undefined flags, complete state, traps, stack effects, projection, source identity, generated stubs, and reader controls. Real-ISA bounded traces and cross-machine interfaces remain open. |
 | 2026-08-30 | l4-c3-thin-lean-adapter | ADR-0935 + `axeyum_lean_import::thin_adapter` (protocol/grading, 9 unit tests) + `thin_lean_adapter_goal_pack.rs` (8-category goal pack run live against real pinned Lean) + `scripts/check-lean-adapter.py`/`test-lean-adapter.py`/`test-lean-adapter-mutations.sh` (7 guards, mutation-verified 1:1) + `just lean-adapter` / `scripts/check.sh` gate registration |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
+| 2026-08-30 | holdout-closed-evaluation-amendment | ADR-0950 written; amendment and R12 screen in progress |
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
 | 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
 | 2026-08-30 | `094e80a21` | Lean-replay coverage per subject, with a control of the opposite verdict |
@@ -36835,6 +36836,60 @@ with a positive control of the same declaration kind before being trusted.
 
 No facts were registered, no declarations were built, nothing under
 `crates/` was touched (measurement/documentation task per brief).
+
+**Your lane's block (`WIP`, holdout-closed-evaluation-amendment, 2026-08-30).**
+ADR-0950 written. In progress: amending `natural-bit-decode` out of held-out
+in `mathlib-nursery-split-policy-v1.json` and `nursery-v2-extension.json`,
+plus an R12 draw-time screen in `gen-autogenesis-nursery-refill.py`. This
+commit is a checkpoint (docs only) landed early per process rules; the
+manifest/generator edits and gate re-runs follow.
+
+**Track:** the fact ledger / autogenesis nursery held-out isolation
+**Phase:** repairing the second closed-evaluation breach (ADR-0695 was the
+first, `fermat-numbers`)
+**Date:** 2026-08-30
+
+## Summary
+
+`check-holdout-closed-evaluation.py` reported `natural-bit-decode` held-out
+with 2 of 10 rows (`Nat.bit false 0 = 0`, `Nat.size 1 = 1`) already decided by
+reduction over `Nat.bit` (2026-08-28) and `Nat.size` (2026-08-24), both landed
+days before draw 11 preregistered the family (2026-08-30). Measured over the
+whole held-out population (156 rows, both manifests, current snapshot): these
+are the ONLY two closed-shaped rows; no other family is affected.
+
+## Delivered (see commits for exact set)
+
+- ADR-0950 — the amendment and the draw-time fix, mirroring ADR-0695's shape.
+- Amendment ledger row in `mathlib-nursery-split-policy-v1.json` for
+  `natural-bit-decode` (held-out -> development).
+- `nursery-v2-extension.json`: the 10 `natural-bit-decode` entries' partition
+  flipped to `development`, `family_partitions["natural-bit-decode"]` updated
+  to match, `extension_sha256` recomputed. `preregistered_family_partitions`
+  left untouched (still `held-out`), per R10's contract.
+- R12 in `scripts/gen-autogenesis-nursery-refill.py`: a draw-time screen that
+  runs the standing closed-evaluation classifier against every NEW held-out
+  row before the manifest is written.
+- Tests in `scripts/tests/test_gen_autogenesis_nursery_refill.py`
+  (`ClosedEvaluationScreenTests`) replaying the real spent statements against
+  the real committed kernel-environment snapshot.
+
+## Measured (fill in after the amendment lands — see commit for final numbers)
+
+| gate | result |
+|---|---|
+| `check-holdout-closed-evaluation.py` | see commit message |
+| `check-autogenesis-nursery.py` | see commit message |
+| `check-autogenesis-holdout-isolation.py` | see commit message |
+| `check-dispatchable-frontier.py` | see commit message |
+| `validate-facts.py` | see commit message |
+
+## Next
+
+- Land the manifest/ledger edits and R12, re-run all five gates, record exact
+  output in this file's final revision and in the commit message.
+- Mutation-verify the R12 addition and the amendment guard: delete each new
+  guard, confirm exactly one test dies, record the kill table.
 
 **Closed five of doc 292's eleven declined `Int.ModEq` facts** (`DONE`,
 int-modeq-kernel, 2026-08-27). Doc 292's batched flywheel turn declined
