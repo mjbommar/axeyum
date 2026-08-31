@@ -793,3 +793,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1210](adr-1210-transpose-invariance-needs-the-column-law-not-the-row-law.md) | `Rat.det_transpose` — `det (matTranspose A) n = det A n` at a | accepted |
 | [1215](adr-1215-a-mis-attributed-bucket-is-invisible-so-guard-the-name-family-not-the-pattern.md) | The curriculum classifier's residual counter catches a | accepted |
 | [1220](adr-1220-index-0-is-now-the-binding-slot.md) | Draw 15 consumed the last three free early-sorting families, and | accepted |
+| [1225](adr-1225-prelude-inventory-ownership-comes-from-the-build-order-diff.md) | Every "every X is checked and axiom-free" kernel test filters the | accepted |
