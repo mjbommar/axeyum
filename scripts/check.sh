@@ -1508,6 +1508,19 @@ step graph-join-mutations bash scripts/tests/test-graph-join-mutations.sh
 step infrastructure-frontier           python3 scripts/check-infrastructure-frontier.py
 step infrastructure-frontier-mutations bash scripts/tests/test-infrastructure-frontier-mutations.sh
 
+# L4 phase C2 -- universal checked interchange for credited roots
+# (docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md section C2,
+# ADR-0915). Validates artifacts/checked-interchange/census/*.census.json
+# against the committed population snapshot AND a fresh read of the live
+# graph-join. Needs no Lean toolchain and no cargo run -- regeneration
+# (scripts/gen-checked-interchange.py) needs both and is deliberately NOT
+# part of this gate. Seven guards (MISSING, STALE_POPULATION, ACCOUNTING,
+# MANDATORY_MISSING_ZERO, BARE_NAME_ACCEPT, BARE_TYPE_ACCEPT,
+# DECLINE_PROBE_VACUOUS), all mutation-verified 1:1 by the third step below.
+step checked-interchange           python3 scripts/check-checked-interchange.py
+step checked-interchange-tests     python3 scripts/tests/test-checked-interchange.py
+step checked-interchange-mutations bash scripts/tests/test-checked-interchange-mutations.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0

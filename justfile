@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier checked-interchange
 
 fmt:
     cargo fmt --all --check
@@ -2202,3 +2202,19 @@ graph-join:
 infrastructure-frontier:
     python3 scripts/check-infrastructure-frontier.py
     bash scripts/tests/test-infrastructure-frontier-mutations.sh
+
+# L4 phase C2 -- universal checked interchange for credited roots
+# (docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md section C2,
+# ADR-0915). Validates artifacts/checked-interchange/census/*.census.json
+# against the committed population snapshot AND a fresh read of the live
+# graph-join (never the snapshot's own fields). Needs no Lean toolchain and
+# no cargo run -- regeneration (which does need both) is
+# `scripts/gen-checked-interchange.py`, deliberately NOT part of this gate,
+# matching declaration-graph/graph-join's own gen/check split. Seven guards
+# (MISSING, STALE_POPULATION, ACCOUNTING, MANDATORY_MISSING_ZERO,
+# BARE_NAME_ACCEPT, BARE_TYPE_ACCEPT, DECLINE_PROBE_VACUOUS), all
+# mutation-verified 1:1 in test-checked-interchange-mutations.sh.
+checked-interchange:
+    python3 scripts/check-checked-interchange.py
+    python3 scripts/tests/test-checked-interchange.py
+    bash scripts/tests/test-checked-interchange-mutations.sh
