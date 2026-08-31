@@ -1,5 +1,6 @@
 //! Replay and mutation controls for the typed cross-ISA relation.
 
+use std::collections::BTreeSet;
 use std::fs;
 
 use axeyum_machine_evidence::{
@@ -11,6 +12,15 @@ use axeyum_machine_evidence::{
 fn report_replays_both_paths_and_the_signed_minimum_boundary() {
     let report = cross_isa_absolute_value_report().unwrap();
     assert_eq!(report.cases.len(), 10);
+    assert_eq!(
+        report
+            .cases
+            .iter()
+            .map(|case| case.input)
+            .collect::<BTreeSet<_>>()
+            .len(),
+        report.cases.len()
+    );
     assert!(report.cases.iter().any(|case| case.path == "keep"));
     assert!(report.cases.iter().any(|case| case.path == "negate"));
     assert_eq!(

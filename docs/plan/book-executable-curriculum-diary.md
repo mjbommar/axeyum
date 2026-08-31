@@ -885,11 +885,17 @@ leaving the relation checker unchanged. Input seven then reaches x86 address 8
 instead of the shared exit at 11, and the route rejects the trace at the exit
 `ControlPoint` clause. Direct production and replay report ten passing cases
 with result SHA-256
-`f3e5f28428becf039d484b5ba28f42ccf3286e7e5e433f260b402850a24f3cd3`;
+`75f1e5d688a694861ee4b397938174b5c122d64998155a9ce2c2f36598e7ad4d`;
 the control exits nonzero with `semantic-mismatch`. Strict all-target Clippy
 passes for both machine crates, and the direct relation tests cover the two
 paths, signed boundaries, stable point order, first-failure diagnosis, replay,
 and malformed-report rejection.
+
+The first artifact-generation pass caught that `u64::MAX` and signed `-1`
+named the same bit pattern, so the advertised ten cases contained only nine
+distinct inputs. Replaced the duplicate with `0x8000000000000001` and added a
+set-cardinality assertion. The digest above is from the corrected ten-distinct-
+input report.
 
 This implements the first concrete A0-to-RV64 and A0-to-x86-64 relation route.
 The book object and artifact still need to bind it before the obligation can
