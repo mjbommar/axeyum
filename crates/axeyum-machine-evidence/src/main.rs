@@ -16,15 +16,16 @@ use axeyum_machine_evidence::{
     check_state_codec_trailing_byte_control, check_step_coverage, check_step_hidden_write_control,
     check_step_mutation_suite_control, check_symbolic_addition,
     check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
-    check_symbolic_memory_partial_store_control, check_word_package,
+    check_symbolic_memory_partial_store_control, check_three_machine_xor,
+    check_three_machine_xor_pointer_control, check_word_package,
     check_word_package_signed_zero_extension_control, check_word_roundtrip,
     check_word_roundtrip_reversed_control, check_x64_branch_base_control, check_x64_execution,
     check_x64_source, check_x64_source_digest_control, cross_isa_absolute_value_report,
     decoder_roundtrip_report, memory_trace_report, observation_separation_report,
     run_classification_report, rv64_execution_report, rv64_source_report, semantic_package,
     state_codec_report, step_coverage_report, symbolic_addition_report, symbolic_memory_report,
-    word_package_report, word_roundtrip_report, write_json, x64_execution_report,
-    x64_source_report,
+    three_machine_xor_report, word_package_report, word_roundtrip_report, write_json,
+    x64_execution_report, x64_source_report,
 };
 
 fn main() {
@@ -510,6 +511,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_a0_minimality_language_omission_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: incomplete A0 minimality language was accepted".into());
         }
+        [command, output] if command == "emit-three-machine-xor" => {
+            let report = three_machine_xor_report()?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "three-machine-xor: PASS: cases={} programs=44/36/21 result_sha256={}",
+                report.cases.len(),
+                report.result_sha256
+            );
+        }
+        [command, report] if command == "check-three-machine-xor" => {
+            let checked = check_three_machine_xor(Path::new(report))?;
+            println!(
+                "three-machine-xor: PASS: cases={} programs=44/36/21 result_sha256={}",
+                checked.cases.len(),
+                checked.result_sha256
+            );
+        }
+        [command, report] if command == "control-three-machine-xor-pointer" => {
+            check_three_machine_xor_pointer_control(Path::new(report))?;
+            return Err(
+                "control-failure: mutated three-machine XOR pointer step was accepted".into(),
+            );
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -557,7 +581,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  emit-a0-minimality PACKAGE OUTPUT | \
                  check-a0-minimality PACKAGE REPORT | \
                  control-a0-minimality-witness PACKAGE REPORT | \
-                 control-a0-minimality-language-omission PACKAGE REPORT"
+                 control-a0-minimality-language-omission PACKAGE REPORT | \
+                 emit-three-machine-xor OUTPUT | \
+                 check-three-machine-xor REPORT | \
+                 control-three-machine-xor-pointer REPORT"
                 .into());
         }
     }

@@ -970,3 +970,51 @@ not a solver certificate, a search over arbitrary A0 programs, a theorem for
 all widths, or a minimality result for RV64I or x86-64. The book object and
 manifest still need to bind the report before the chapter obligation can move
 from open to computed.
+
+## 2026-08-31 — complete concrete Chapter 15 three-machine XOR route
+
+Audited the Chapter 15 A0, RV64I, and x86-64 XOR-reduction listings against the
+current typed executors. Every printed form was already supported, including
+A0 load, XOR, arithmetic, conditions, and halt; RV64I LD, XOR, ADDI, branches,
+and JALR; and x86-64's fused memory-source XOR, arithmetic flags, short
+branches, and RET. The missing layer was not another decoder. It was a typed
+relation over the exact complete programs.
+
+Added that relation without introducing a shared instruction semantics. It
+binds the exact printed 44-, 36-, and 21-byte images and executes each through
+its existing architecture-specific step function. Entry, loop-head,
+after-combine, and terminal cut points retain all three complete states. Nine
+stable clauses check control location, outcome class, harness input mapping,
+prefix accumulator, pointer, remaining count, A0 helper constants, complete
+memory frame, and architecture-specific halt or return convention. The x86
+memory-source XOR remains one transition; the relation compares it with the
+two A0 and RV64I load-plus-XOR transitions only after the logical combine.
+
+The evidence report replays eight named cases: empty, zero, all ones, the high
+bit, an endian-sensitive word, equal-word cancellation, overlapping one bits,
+and a three-word mixture. List lengths range from zero through three. Every
+case reaches all applicable cut points, agrees with the direct 64-bit XOR fold,
+and preserves memory. Dynamic counts match the chapter formulas exactly:
+A0 6+5n, RV64I 4+5n, and x86-64 4+4n. The harness rejects more than 96 words
+before the data region can overlap the x86 return stack.
+
+The report also retains the exact static counts of 11, 9, and 8 instructions
+and the three program-byte digests. Its cost scope explicitly labels these as
+descriptive instruction and byte accounting, not an optimization or
+minimality result. This matches the Chapter 15 research contract and master
+outline; the stale ledger phrase "bounded-optimization package" did not.
+
+The load-bearing control changes only RV64I's pointer increment from eight to
+one. The two-word overlapping-bits case rejects it at the second loop head in
+the pointer clause. Direct production and checking pass with result SHA-256
+04935cb96fa6631d2dfb0dbc3b3b053ad3efc7c966c3cb993edbae3aba955d9d;
+the serialized report SHA-256 is
+7edd5fb12fe7d86d60f01c3e6d799f2da7b9659c16ce6a1df27b507c1ffd9cb3.
+Strict Clippy passes for both crates, with four core relation tests and one
+evidence replay test.
+
+This is finite concrete evidence for eight declared memory cases, not a
+universal loop theorem, solver certificate, arbitrary-address theorem, timing
+claim, or minimality result for any of the three listings. The reader invariant
+and local movement proofs remain the universal argument. The book object and
+manifest still need to bind this report.

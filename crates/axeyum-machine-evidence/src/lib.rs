@@ -20,6 +20,7 @@ mod cross_isa;
 mod rv64;
 mod symbolic_addition;
 mod symbolic_memory;
+mod three_machine_xor;
 mod x64;
 
 pub use a0_equivalence::{
@@ -49,6 +50,10 @@ pub use symbolic_addition::{
 pub use symbolic_memory::{
     PartialStoreCounterexample, SymbolicMemoryReport, SymbolicMemoryWidthProof,
     check_symbolic_memory, check_symbolic_memory_partial_store_control, symbolic_memory_report,
+};
+pub use three_machine_xor::{
+    ThreeMachineXorCase, ThreeMachineXorReport, check_three_machine_xor,
+    check_three_machine_xor_pointer_control, three_machine_xor_report,
 };
 pub use x64::{
     X64EncodingRecord, X64ExecutionReport, X64SourceReport, check_x64_branch_base_control,
