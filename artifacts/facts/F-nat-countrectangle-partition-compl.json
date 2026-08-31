@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrectangle-partition-compl",
+  "title": "The rectangle partition at complementary predicates, with no hypothesis",
+  "statement": "`Nat.countRectangle_partition` specialised to `R := setCompl Q`, so no hypothesis remains. It exists for two reasons and the second is the load-bearing one. First, it is the form a consumer wants whenever the two halves are complementary everywhere. Second, and this is why it is registered separately: it PROVES THE GENERAL THEOREM'S HYPOTHESIS IS SATISFIABLE. A theorem whose hypothesis nothing can discharge is vacuous, and no axiom-footprint check, prelude build or inventory sweep can see that -- deriving this corollary constructs an actual inhabitant of that hypothesis inside the kernel, at a genuinely free `Q`. The per-point witness was not re-derived: `finite_set::compl_sum_eq` was already built there for `Nat.countRange_compl`'s induction step and was private; it is exported instead. WHAT THIS DOES NOT CLAIM: the ARGUMENT ORDER of the two `Nat` binders is not pinned by any numeric test -- swapping them consistently gives a true, admitted theorem and the partition totals `m*n` either way. That mutation SURVIVES, is recorded in ADR-1260's mutation table, and is caught only by reading the declared type.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRectangle_partition_compl : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.sumRange (fun (x3 : AxNat) => AxNat.countRange (fun (x4 : AxNat) => x0 x3 x4) x2) x1) (AxNat.sumRange (fun (x3 : AxNat) => AxNat.countRange (AxNat.setCompl (fun (x4 : AxNat) => x0 x4 x3)) x1) x2)) (AxNat.mul x2 x1))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Nat.countRectangle_partition_compl"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-countrectangle-partition"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.countRectangle_partition_compl",
+      "kind": "kernel-term",
+      "supports": "Nat.countRectangle_partition_compl is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.countRectangle_partition_compl 2>/dev/null | grep -cE '^Nat\\.countRectangle_partition_compl[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.countRectangle_partition_compl",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Run both ways for this declaration: the real name prints 1 and exits 0, a one-letter misspelling prints 0 and exits 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.countRectangle_partition_compl",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds Nat.countRectangle_partition_compl.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row. Measured 2026-08-31: `ok: nat trusted surface = 0`."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs)",
+    "source": "formal.statement, axiom_footprint and depends_on are taken verbatim from `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, whose TSV rows are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). depends_on is the direct-theorem column intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane quadratic-reciprocity, ADR-1260)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs`, admitted by the trusted gate on the FIRST attempt. The decision, the numeric verification (8 claims, 10 controls, two of them recorded as deliberately surviving) and the mutation table are in ADR-1260.",
+  "external_status": "proved"
+}
