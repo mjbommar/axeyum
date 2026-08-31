@@ -8,13 +8,47 @@
     "statement": "∀ {a b : ℕ}, (a &&& b) / 2 = a / 2 &&& b / 2",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:ml430-nat-le-of-succ-le-succ-a180a72c", "F:nat-add-lt-add-left", "F:nat-add-zero", "F:nat-div-mod-exec", "F:nat-div-mod-lt-mul-iff", "F:nat-div-mod-unique", "F:nat-land-zero-left", "F:nat-land-zero-right", "F:nat-le-succ-succ", "F:nat-lt-of-lt-of-le", "F:nat-lt-or-eq-of-le", "F:nat-mod-lt", "F:nat-one-mul", "F:nat-succ-mul", "F:nat-zero-div", "F:nat-zero-le", "F:nat-zero-mul"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.land_div_two",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_div_two",
+      "supports": "∀ {a b : ℕ}, (a &&& b) / 2 = a / 2 &&& b / 2",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- land_div_two 2>/dev/null | grep -Ec '^Nat\\.land_div_two[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.land_div_two` (`nat_prelude/land_div_two.rs`) through the trusted `Kernel::add_declaration` gate. `nat_theorem_inventory`'s rendered type is `(x0 x1 : AxNat) -> Eq (div (land x0 x1) 2) (land (div x0 2) (div x1 2))`, matching this fact's `formal.statement` up to variable naming. Anchored with `^Nat\\.land_div_two[[:space:]]`; `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof). Mathlib's `&&&` for `Nat` is the SAME function as `Nat.land`, so reconciling this mirror against a NEW `Nat.land_div_two` theorem is honest under the mirror-flip criterion in CLAUDE.md."
+    },
+    {
+      "id": "compute-Nat.land_div_two",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.land_div_two",
+      "supports": "land(13, 11) = 9 (0b1101 & 0b1011 = 0b1001), 9/2 = 4, and land(13/2, 11/2) = land(6, 5) = 4 -- a DISCRIMINATING pair with distinct nonzero operands.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_div_two_applies_at_a_concrete_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ]
+    },
+    {
+      "id": "footprint-Nat.land_div_two",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.land_div_two`'s footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane draw9-second-theorems",
     "source": "statement-only extraction of `Nat.and_div_two` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +60,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum by a NEW kernel theorem, `Nat.land_div_two` (`nat_prelude/land_div_two.rs`), dualizing `land_low_bit.rs`'s `land_mod_two_eq_mul` technique: that proof erases the higher recursive term by taking `mod _ 2` of the succ-row's `2*rec+bit` shape; this one erases the LOW bit by taking `div _ 2` of the SAME shape (`div_two_mul_add_of_lt`, sharing `parity.rs`'s `mod_two_mul_add_of_lt`'s `div_mod_unique` witness construction but projecting the quotient component instead of the remainder). What remained was showing the erased recursive term (fuel = the succ-row's predecessor) equals the CANONICAL `land (div a 2) (div b 2)` (fuel = the half itself) via the already-proved fuel-irrelevance lemma `Nat.land_aux_agree_of_fuel`, needing only `Le half_a pa`, which `half_le_predecessor_of_succ` gives directly at `k := pa` via `le_refl`. Mathlib's `&&&` for `Nat` is `Nat.land`, so reconciling this `and_div_two` mirror to `Nat.land_div_two` is honest under the mirror-flip criterion in CLAUDE.md.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -7771,6 +7771,12 @@
       "prose_sha256": "e5074c4f15316feb5da0ef2aa3669ce907b062117bbf16188b84c46d8530eb0f"
     },
     {
+      "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
+      "language": "lean4-surface",
+      "statement_sha256": "e71de1fcd97cd07bd87796c4b648b7721c3dfbf40f4a7c5176859bd82e5eaabb",
+      "prose_sha256": "21b99aa0dca10c0d57ebfe02fb36ae1bc58072e0e0ff5466841cde3099087e38"
+    },
+    {
       "fact_id": "F:ml430-nat-and-le-left-6d04acb7",
       "language": "lean4-surface",
       "statement_sha256": "2df607b9c5cc4b08a0a5e7fd036940da40edffe711663838ac1b08de9c89dc3d",
