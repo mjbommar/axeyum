@@ -7660,6 +7660,12 @@
       "prose_sha256": "b42573df3a75a6ec9404433d3710aad7a1b69396c1cb7df32e1896f12604f524"
     },
     {
+      "fact_id": "F:ml430-nat-add-choose-eb49fa11",
+      "language": "lean4-surface",
+      "statement_sha256": "eba2ad694c5bdbc45527369ea8043021a844fd8d1a422c8ee914346fd708efd7",
+      "prose_sha256": "9feed951bf7731c88d22065e91a836093cdc24c260a9afd01ae6da816170badd"
+    },
+    {
       "fact_id": "F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef",
       "language": "lean4-surface",
       "statement_sha256": "ea0c24662ffe819744eec113ecefa37eda85b47bc592d7e281e83f0bc8290554",
@@ -7670,6 +7676,12 @@
       "language": "lean4-surface",
       "statement_sha256": "50cf83163399903358d23447f8d7bb955a5c71844f2e1b210dcdc474663648a2",
       "prose_sha256": "fe006a6f3a7e28d636883578f078abfd616beb0c4c31479de7d7a31ff0ad0547"
+    },
+    {
+      "fact_id": "F:ml430-nat-add-descfactorial-eq-ascfactorial-5faac784",
+      "language": "lean4-surface",
+      "statement_sha256": "1d43b9dba065a7f2397745298e9ee5100aced57cfef58f33c03e99bc2c5465cc",
+      "prose_sha256": "51b25330d0d3c9726c5676f7b7131a188da825a91dbbcbff8e4a23106a4af0f5"
     },
     {
       "fact_id": "F:ml430-nat-add-div-left-1b15b2b2",
@@ -7857,6 +7869,12 @@
       "language": "lean4-surface",
       "statement_sha256": "66f0f85e7e5901e171abc5e8f8b1260e7414e2a1e28c47e9f341437c9e48e984",
       "prose_sha256": "2c6d8c8af98db40819ba2c0c072254e9c120869fba7232d5a800fb597bce8a88"
+    },
+    {
+      "fact_id": "F:ml430-nat-ascfactorial-eq-div-87d768e8",
+      "language": "lean4-surface",
+      "statement_sha256": "97eb98965604075ac65f1d61e48923774d0a09bd79cce4c5cc6fc21f0774cba5",
+      "prose_sha256": "e679e4b7a200fa9814343918c3e6fb671c16a8f27f6f078e367383552aebcea9"
     },
     {
       "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
