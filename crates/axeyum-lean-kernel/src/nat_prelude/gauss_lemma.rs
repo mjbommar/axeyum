@@ -3061,4 +3061,130 @@ mod tests {
              the direct gcd/factorial computation"
         );
     }
+
+    /// The two per-term branch lemmas (ADR-1130, connecting-theorem item 1)
+    /// at `pp := 7`, `a := 3`, one instantiation per branch -- they share no
+    /// proof step, so exercising one says nothing about the other.
+    ///
+    /// Recomputed independently (`r := (3k) mod 7`, `half := 3`, negative iff
+    /// `r > half`): `k = 1` gives `r = 3`, NOT negative, `gaussFold = 3`;
+    /// `k = 2` gives `r = 6`, negative, `gaussFold = 7 - 6 = 1`.
+    ///
+    /// `Nat.modEq` is an existential and does not compute, so each branch is
+    /// checked twice: the instantiated TYPE against a directly-built
+    /// `modEq`, and the arithmetic the statement asserts, by reduction --
+    /// `mod (3*1) 7 = mod 3 7` on the false branch, and `mod (3*2 +
+    /// gaussFold) 7 = 0` on the true one. The negative control replaces the
+    /// true branch's fold with `3`, giving `mod 9 7 = 2`, which the kernel
+    /// must refuse to identify with `0`.
+    #[test]
+    fn gauss_fold_branch_congruences_compute_at_pp_seven_a_three() {
+        let mut k = Kernel::new();
+        let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+        assert!(
+            k.axiom_footprint(p.gauss_fold_modeq_of_sign_false).is_empty(),
+            "Nat.gauss_fold_modeq_of_sign_false must rest on no axiom"
+        );
+        assert!(
+            k.axiom_footprint(p.gauss_fold_add_modeq_zero_of_sign_true)
+                .is_empty(),
+            "Nat.gauss_fold_add_modeq_zero_of_sign_true must rest on no axiom"
+        );
+        let mut d = super::NatDev::new(&mut k, p);
+
+        let pp = d.num(7);
+        let a = d.num(3);
+        let zero = d.zero();
+
+        // Lt 0 7 = Le 1 7 = Le 1 (add 1 6), via le_add_right(1, 6).
+        let one_n = d.num(1);
+        let six = d.num(6);
+        let pos_pp = d.lemma(p.le_add_right, &[one_n, six]);
+
+        // ---- branch `gaussSignNeg = false`, at k := 1 --------------------
+        {
+            let k1 = d.num(1);
+            let sign = gauss_sign_neg(&mut d, &p, pp, a, k1);
+            let false_ = d.bool_false();
+            assert!(
+                d.kernel().def_eq(sign, false_),
+                "gaussSignNeg 7 3 1 must compute to false"
+            );
+            let fold = gauss_fold(&mut d, &p, pp, a, k1);
+            let three = d.num(3);
+            assert!(
+                d.kernel().def_eq(fold, three),
+                "gaussFold 7 3 1 must compute to 3"
+            );
+
+            let ak = d.mul(a, k1);
+            let mod_ak = d.modulo(ak, pp);
+            let mod_fold = d.modulo(fold, pp);
+            assert!(
+                d.kernel().def_eq(mod_ak, mod_fold),
+                "3*1 and gaussFold 7 3 1 must have the same residue mod 7"
+            );
+
+            let sign_proof = d.bool_refl(false_);
+            let lemma_fn = d.lemma(p.gauss_fold_modeq_of_sign_false, &[pp, a, k1]);
+            let applied = d.apply(lemma_fn, &[pos_pp, sign_proof]);
+            let inferred = d
+                .kernel()
+                .infer(applied)
+                .expect("gauss_fold_modeq_of_sign_false must apply at pp := 7, a := 3, k := 1");
+            let expected = d.mod_eq(pp, ak, fold);
+            assert!(
+                d.kernel().def_eq(inferred, expected),
+                "the false-branch congruence's instantiated type must be \
+                 modEq 7 (3*1) (gaussFold 7 3 1)"
+            );
+        }
+
+        // ---- branch `gaussSignNeg = true`, at k := 2 ---------------------
+        {
+            let k2 = d.num(2);
+            let sign = gauss_sign_neg(&mut d, &p, pp, a, k2);
+            let true_ = d.bool_true();
+            assert!(
+                d.kernel().def_eq(sign, true_),
+                "gaussSignNeg 7 3 2 must compute to true"
+            );
+            let fold = gauss_fold(&mut d, &p, pp, a, k2);
+            let one_f = d.num(1);
+            assert!(
+                d.kernel().def_eq(fold, one_f),
+                "gaussFold 7 3 2 must compute to 7 - 6 = 1"
+            );
+
+            let ak = d.mul(a, k2);
+            let sum = d.add(ak, fold);
+            let mod_sum = d.modulo(sum, pp);
+            assert!(
+                d.kernel().def_eq(mod_sum, zero),
+                "3*2 + gaussFold 7 3 2 = 7 must be 0 mod 7"
+            );
+
+            // Control: the fold genuinely has to be `pp - r`, not `r`.
+            let three = d.num(3);
+            let wrong_sum = d.add(ak, three);
+            let mod_wrong = d.modulo(wrong_sum, pp);
+            assert!(
+                !d.kernel().def_eq(mod_wrong, zero),
+                "control: 3*2 + 3 = 9 is 2 mod 7, not 0"
+            );
+
+            let sign_proof = d.bool_refl(true_);
+            let lemma_fn = d.lemma(p.gauss_fold_add_modeq_zero_of_sign_true, &[pp, a, k2]);
+            let applied = d.apply(lemma_fn, &[pos_pp, sign_proof]);
+            let inferred = d.kernel().infer(applied).expect(
+                "gauss_fold_add_modeq_zero_of_sign_true must apply at pp := 7, a := 3, k := 2",
+            );
+            let expected = d.mod_eq(pp, sum, zero);
+            assert!(
+                d.kernel().def_eq(inferred, expected),
+                "the true-branch congruence's instantiated type must be \
+                 modEq 7 (3*2 + gaussFold 7 3 2) 0"
+            );
+        }
+    }
 }
