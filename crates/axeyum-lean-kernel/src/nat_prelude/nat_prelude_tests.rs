@@ -1397,6 +1397,18 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.add_min_add_right,
         p.add_eq_max_iff,
         p.add_eq_min_iff,
+        // `stirling_lemmas.rs` -- the ten
+        // `Mathlib.Combinatorics.Enumerative.Stirling` mirrors.
+        p.stirling_first_zero,
+        p.stirling_first_zero_succ,
+        p.stirling_first_succ_zero,
+        p.stirling_first_succ_succ,
+        p.stirling_first_eq_zero_of_lt,
+        p.stirling_first_self,
+        p.stirling_first_succ_self_left,
+        p.stirling_first_one_right,
+        p.stirling_second_eq_zero_of_lt,
+        p.stirling_second_one_right,
     ]
 }
 

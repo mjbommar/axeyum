@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2010,
+    "min_identity_bound": 2017,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -13017,6 +13017,76 @@
           "prose_sha256": "a5288b078b34015766d5e9708625e77493c7ece0e7827fd4fe2fb1e72616e9fc"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-eq-zero-of-lt-6f46764f",
+      "language": "lean4-surface",
+      "statement_sha256": "4f25fda8d8202412f54cb97a0524549f11e883336477dcae52904443063eaac7",
+      "prose_sha256": "edd949859b164331a733e09de5cae234b31d2edbf788844418cf28f4c5af75e5",
+      "kernel_theorem": "Nat.stirlingFirst_eq_zero_of_lt"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-one-right-84dfc371",
+      "language": "lean4-surface",
+      "statement_sha256": "19d507c6e5c608f5f748deadd92ce1e6ec3e811333f2e196f41e4b5e8767306a",
+      "prose_sha256": "08e2181c0451b905d3d5c74b0a05b2779936857e2f058c7f555df7118e129dfe",
+      "kernel_theorem": "Nat.stirlingFirst_one_right"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-self-4d06a0eb",
+      "language": "lean4-surface",
+      "statement_sha256": "9602f2cdffa7c3631c6127567c06137987f4c0f9ebd69e2bc206813db99bef19",
+      "prose_sha256": "d20da7ece808a491bc88c85ec6916e823772abfd6219366672b6aa693a850c19",
+      "kernel_theorem": "Nat.stirlingFirst_self"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf",
+      "language": "lean4-surface",
+      "statement_sha256": "dd07f71bfbf5b2388dd12a271fdd406e4a04145aebce87bd33779dcbb2f2075d",
+      "prose_sha256": "a12cfa65e3d02accc64deca1e2ea69ef50c492276c1ba19df503c3fb044c01c8",
+      "kernel_theorem": "Nat.stirlingFirst_succ_self_left"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-succ-succ-61c94738",
+      "language": "lean4-surface",
+      "statement_sha256": "da44e5baacc937a549b52770871e72ca9f9368347d524171eb680cbe8d7b011c",
+      "prose_sha256": "9dcc66552ba782ca363e39a91d06c2b85c5228a7c5f7d7fc5a843906aa18ed91",
+      "kernel_theorem": "Nat.stirlingFirst_succ_succ"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-succ-zero-a58c6f3c",
+      "language": "lean4-surface",
+      "statement_sha256": "d5d00110a38c8e865472aed7bf145963dab94ebd7433006a269a792358ecd392",
+      "prose_sha256": "aaeaeda2bb2e260042ac6a637a06c6e6f40bd8118d552b4d22e4c38c614ea67f",
+      "kernel_theorem": "Nat.stirlingFirst_succ_zero"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-zero-ae5f4939",
+      "language": "lean4-surface",
+      "statement_sha256": "c27a4370868880bb66d6f91371538e95af54f5ad156daaa97220795621286a1f",
+      "prose_sha256": "4fa5b0db81011cc7ce9a9b9a4acfda902e87ebc9a79720f4b965818926e07ebc",
+      "kernel_theorem": "Nat.stirlingFirst_zero"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingfirst-zero-succ-d25889f3",
+      "language": "lean4-surface",
+      "statement_sha256": "fad62286ff19eee353e5fa19c7138af2d896ff7af597f230c638a469ec478f63",
+      "prose_sha256": "267e997f4b7b82f9ac0f28d3f6a621c8e0e1f4ca98053b489e934ccd33a9b67c",
+      "kernel_theorem": "Nat.stirlingFirst_zero_succ"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingsecond-eq-zero-of-lt-f3caf8bd",
+      "language": "lean4-surface",
+      "statement_sha256": "ce9188c22bdc346686a227193a5d7a91b9f3fb1f9d3dcb4f4da75773ebf2835a",
+      "prose_sha256": "0bd44dc08b0e350c2554808d4bf8047b0b9f653a8feebc9cf2c294cc0533c8db",
+      "kernel_theorem": "Nat.stirlingSecond_eq_zero_of_lt"
+    },
+    {
+      "fact_id": "F:ml430-nat-stirlingsecond-one-right-ef2ad447",
+      "language": "lean4-surface",
+      "statement_sha256": "10f590a953ecad2e156f0825d6c36ae09618757e0d842c0c81f221171a5b2155",
+      "prose_sha256": "9daa4892e7c15dfe9af8050da58d09bb6f554491ee3a96f11dc53017a7aa5e6a",
+      "kernel_theorem": "Nat.stirlingSecond_one_right"
     },
     {
       "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",

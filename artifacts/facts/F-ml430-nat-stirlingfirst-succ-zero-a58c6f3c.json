@@ -6,15 +6,45 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n : ℕ), n.succ.stirlingFirst 0 = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.stirlingFirst_succ_zero"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.stirlingFirst_succ_zero",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- stirlingFirst_succ_zero 2>/dev/null | grep -Ec '^Nat\\.stirlingFirst_succ_zero[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.stirlingFirst_succ_zero` through the trusted `Kernel::add_declaration` gate, declared in `nat_prelude/stirling_lemmas.rs`. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> Eq.{1} AxNat (AxNat.stirlingFirst (AxNat.succ x0) AxNat.zero) AxNat.zero)`, matching this fact's `formal.statement` modulo binder info. The flip is honest under the def-vs-theorem criterion, checked at Mathlib's own source at the pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f` (`Mathlib/Combinatorics/Enumerative/Stirling.lean:51` and `:113`) rather than from a paraphrase. Mathlib's `def stirlingFirst` / `def stirlingSecond` are `| 0, 0 => 1 | 0, _+1 => 0 | _+1, 0 => 0 | n+1, k+1 => c * f n (k+1) + f n k` with `c := n` for the first kind and `c := k+1` for the second -- which is `nat_prelude/stirling.rs`'s body verbatim, an outer recursion on the row index yielding a whole row and an inner one selecting the column, the shape Lean's equation compiler produces for those four cases. The strongest evidence that the two are the SAME function rather than merely extensionally equal is that Mathlib proves its own `stirlingFirst_zero`, `stirlingFirst_zero_succ`, `stirlingFirst_succ_zero` and `stirlingFirst_succ_succ` by **`rfl`**: the four defining equations are definitional on Mathlib's side exactly as they are on ours. This is the opposite of `Nat.multichoose`, where our body is Mathlib's THEOREM about a structurally different `def` and the mirrors must stay open. Construction: `Eq.refl 0`. This is the entry where the Stirling triangles differ from `Nat.choose`: the successor row's column zero is `0`, where `choose (n+1) 0` is `1`. Mathlib proves this one by `rfl` as well. The tool exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, consuming the pipe, never `grep -q`) requires the admitted declaration to be printed. Verified both ways, and the negative control is a REAL Mathlib theorem rather than an invented name: this command exits 0 for all ten declared mirrors and exits 1 for `stirlingSecond_self`, which Mathlib proves and this prelude does not declare. Note that `nat_theorem_inventory` matches by PREFIX, so `stirlingFirst_zero` also prints `stirlingFirst_zero_succ`; the grep is anchored `^Nat.<name>[[:space:]]` for exactly that reason. Note also that it keeps only its LAST name argument, so this command passes exactly one, and `[[:space:]]` is used rather than `\\t` because GNU grep reads `\\t` in ERE as a literal `t`.",
+      "supports": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.stirlingFirst (AxNat.succ x0) AxNat.zero) AxNat.zero)"
+    },
+    {
+      "id": "instantiation-Nat.stirlingFirst_succ_zero",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::stirling_lemmas_tests",
+      "notes": "The kernel gate says the proof term checks; it does not say the STATEMENT is the intended one. `stirling_lemmas_tests.rs` infers each applied theorem's type with `Kernel::infer`/`infer_in` and compares it against an independently built expectation -- symbolically at genuinely free variables in a `LocalContext`, where nothing reduces, AND concretely at the hand-computed entries in `stirling_tests.rs`'s table, because numerals reduce and the two checks fail on disjoint defects. Every negative control was re-derived for the statement it guards rather than copied from a neighbour, and the file records the three that do NOT discriminate: the cross-kind swap is vacuous for `_self` (both triangles are all ones on the diagonal) and for `_succ_self_left` (Mathlib proves the same `choose (n+1) 2` identity for both kinds), and -- caught by the suite on its first run, not by review -- the transposed index `stirlingFirst (k+1) 0 = 0` is vacuous against `stirlingFirst_zero_succ` because BOTH sides reduce to the literal `0` even at a free `k`, so they are one proposition up to defeq. Going symbolic is the usual rescue and does not work here, the collapse being driven by constructor shapes rather than numerals. The controls used instead drop the `succ` (`stirlingFirst 0 k = 0`, `stirlingFirst n 0 = 0`), each false at `0` and each stuck at a free variable, and the suite asserts the counterexample (`stirlingFirst 0 0 = 1`) so a control that stopped discriminating would fail rather than pass quietly. The suite is ungated (no `#![cfg(feature ...)]`) and reports 6 tests.",
+      "supports": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.stirlingFirst (AxNat.succ x0) AxNat.zero) AxNat.zero)"
+    },
+    {
+      "id": "footprint-Nat.stirlingFirst_succ_zero",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no `Axiom`, `Opaque` or `Quotient` declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally derives its coverage from `kernel.environment()` -- not from a hand list -- and it FIRED on the first run of this lane, naming all ten of these theorems as live but unlisted; they were added to `theorem_names`, where each one's own `Kernel::axiom_footprint` is now checked directly. `prelude_theorem_inventory --include-constructed` prints `nat  Nat.stirling...  0` (empty footprint) for all ten.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "established_by": "the `stirling-mirrors` lane, 2026-08-31 (`nat_prelude/stirling_lemmas.rs`)",
     "source": "statement-only extraction of `Nat.stirlingFirst_succ_zero` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +56,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-08-31 in this ledger by the `stirling-mirrors` lane: a fresh local construction in `nat_prelude/stirling_lemmas.rs`, not a transcription of Mathlib's proof (the pinned extraction is statement-only and exposes no proof value). The flip is honest under the def-vs-theorem criterion, checked at Mathlib's own source at the pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f` (`Mathlib/Combinatorics/Enumerative/Stirling.lean:51` and `:113`) rather than from a paraphrase. Mathlib's `def stirlingFirst` / `def stirlingSecond` are `| 0, 0 => 1 | 0, _+1 => 0 | _+1, 0 => 0 | n+1, k+1 => c * f n (k+1) + f n k` with `c := n` for the first kind and `c := k+1` for the second -- which is `nat_prelude/stirling.rs`'s body verbatim, an outer recursion on the row index yielding a whole row and an inner one selecting the column, the shape Lean's equation compiler produces for those four cases. The strongest evidence that the two are the SAME function rather than merely extensionally equal is that Mathlib proves its own `stirlingFirst_zero`, `stirlingFirst_zero_succ`, `stirlingFirst_succ_zero` and `stirlingFirst_succ_succ` by **`rfl`**: the four defining equations are definitional on Mathlib's side exactly as they are on ours. This is the opposite of `Nat.multichoose`, where our body is Mathlib's THEOREM about a structurally different `def` and the mirrors must stay open. Construction: `Eq.refl 0`. This is the entry where the Stirling triangles differ from `Nat.choose`: the successor row's column zero is `0`, where `choose (n+1) 0` is `1`. Mathlib proves this one by `rfl` as well. Nothing in the module forms a numeral larger than `2`, so the unary-numeral cost this repository documents never comes into play. Preregistered in artifacts/autogenesis/nursery-v2-extension.json under family `natural-stirling-numbers`, partition `train`; that manifest, not this file, is the split authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

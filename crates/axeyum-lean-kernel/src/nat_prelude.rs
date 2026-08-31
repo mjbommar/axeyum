@@ -241,6 +241,7 @@ mod size_extra;
 mod sqrt;
 mod squarefree;
 mod stirling;
+mod stirling_lemmas;
 mod subset_product;
 mod testbit_bitwise;
 mod totient;
@@ -432,6 +433,7 @@ use size_extra::declare_size_extra_all;
 use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
+use stirling_lemmas::declare_stirling_lemmas_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -5092,6 +5094,42 @@ pub struct NatPrelude {
     /// `Nat.add_eq_min_iff : ∀ m n,
     /// Iff (Eq (add m n) (Min.min m n)) (And (Eq m 0) (Eq n 0))`.
     pub add_eq_min_iff: NameId,
+
+    // -- `stirling-mirrors` lane: `stirling_lemmas.rs` --
+    // The equation and boundary theory of `Nat.stirlingFirst`/
+    // `Nat.stirlingSecond`. Mathlib names verbatim: at the pinned commit
+    // `c5ea0035…` Mathlib's `def stirlingFirst`/`def stirlingSecond` ARE this
+    // prelude's bodies (`Mathlib/Combinatorics/Enumerative/Stirling.lean:51`
+    // and `:113`), and Mathlib proves the four defining equations by `rfl`
+    // just as this module does — so each of these states the pinned `ml430`
+    // proposition. See `stirling_lemmas.rs`'s module doc.
+    /// `Nat.stirlingFirst_zero : Eq (stirlingFirst 0 0) 1`.
+    pub stirling_first_zero: NameId,
+    /// `Nat.stirlingFirst_zero_succ : ∀ k, Eq (stirlingFirst 0 (succ k)) 0`.
+    pub stirling_first_zero_succ: NameId,
+    /// `Nat.stirlingFirst_succ_zero : ∀ n, Eq (stirlingFirst (succ n) 0) 0`.
+    pub stirling_first_succ_zero: NameId,
+    /// `Nat.stirlingFirst_succ_succ : ∀ n k,
+    /// Eq (stirlingFirst (succ n) (succ k))
+    ///    (add (mul n (stirlingFirst n (succ k))) (stirlingFirst n k))`.
+    pub stirling_first_succ_succ: NameId,
+    /// `Nat.stirlingFirst_eq_zero_of_lt : ∀ n k, Lt n k →
+    /// Eq (stirlingFirst n k) 0`.
+    pub stirling_first_eq_zero_of_lt: NameId,
+    /// `Nat.stirlingFirst_self : ∀ n, Eq (stirlingFirst n n) 1`.
+    pub stirling_first_self: NameId,
+    /// `Nat.stirlingFirst_succ_self_left : ∀ n,
+    /// Eq (stirlingFirst (succ n) n) (choose (succ n) 2)`.
+    pub stirling_first_succ_self_left: NameId,
+    /// `Nat.stirlingFirst_one_right : ∀ n,
+    /// Eq (stirlingFirst (succ n) 1) (factorial n)`.
+    pub stirling_first_one_right: NameId,
+    /// `Nat.stirlingSecond_eq_zero_of_lt : ∀ n k, Lt n k →
+    /// Eq (stirlingSecond n k) 0`.
+    pub stirling_second_eq_zero_of_lt: NameId,
+    /// `Nat.stirlingSecond_one_right : ∀ n,
+    /// Eq (stirlingSecond (succ n) 1) 1`.
+    pub stirling_second_one_right: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6090,6 +6128,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             add_min_add_right: kernel.name_str(nat, "add_min_add_right"),
             add_eq_max_iff: kernel.name_str(nat, "add_eq_max_iff"),
             add_eq_min_iff: kernel.name_str(nat, "add_eq_min_iff"),
+            stirling_first_zero: kernel.name_str(nat, "stirlingFirst_zero"),
+            stirling_first_zero_succ: kernel.name_str(nat, "stirlingFirst_zero_succ"),
+            stirling_first_succ_zero: kernel.name_str(nat, "stirlingFirst_succ_zero"),
+            stirling_first_succ_succ: kernel.name_str(nat, "stirlingFirst_succ_succ"),
+            stirling_first_eq_zero_of_lt: kernel.name_str(nat, "stirlingFirst_eq_zero_of_lt"),
+            stirling_first_self: kernel.name_str(nat, "stirlingFirst_self"),
+            stirling_first_succ_self_left: kernel.name_str(nat, "stirlingFirst_succ_self_left"),
+            stirling_first_one_right: kernel.name_str(nat, "stirlingFirst_one_right"),
+            stirling_second_eq_zero_of_lt: kernel.name_str(nat, "stirlingSecond_eq_zero_of_lt"),
+            stirling_second_one_right: kernel.name_str(nat, "stirlingSecond_one_right"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -7004,6 +7052,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `add_eq_right` characterisations, all far above. Closes the twelve
         // `Init.Data.Nat.MinMax` mirrors. Nothing needs it, so it goes last.
         declare_minmax_lemmas_all(&mut d, &p)?;
+        // The ten `Mathlib.Combinatorics.Enumerative.Stirling` mirrors
+        // (`stirling_lemmas.rs`): needs `declare_stirling_all` (far above),
+        // plus `Nat.choose`'s Pascal rule/`choose_one_right`,
+        // `Nat.factorial_succ`, `Nat.mul_comm`/`mul_one` and the `Nat.le`
+        // successor inversions, all far above. Nothing needs it, so it goes
+        // last.
+        declare_stirling_lemmas_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -7036,6 +7091,9 @@ mod avg_pair_tests;
 
 #[cfg(test)]
 mod stirling_tests;
+
+#[cfg(test)]
+mod stirling_lemmas_tests;
 
 #[cfg(test)]
 mod minmax_tests;
