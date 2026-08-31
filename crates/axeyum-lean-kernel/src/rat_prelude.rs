@@ -2141,6 +2141,31 @@ pub struct RatPrelude {
     /// other, and the two double minors are related by DIFFERENT orientations
     /// of [`Self::mat_skip_comm`].
     pub laplace_summand_row_i: NameId,
+    /// `Rat.laplaceSummand_diag : ∀ A i m p, laplaceSummand A i m p p = 0` —
+    /// the diagonal branch. What makes both cofactor ranges fillable to the
+    /// full square by [`Self::sum_range_mat_skip`] at no cost.
+    pub laplace_summand_diag: NameId,
+    /// `Rat.det_row_expansion : ∀ m A i, Nat.ble i m = true →
+    /// det A (succ m) = sumRange (fun q => altSign (q + i) *
+    /// (A i q * det (matMinor A i q) m)) (succ m)` — **cofactor expansion
+    /// along a GENERAL row**, the second of the four laws ADR-1120 named over
+    /// [`Self::det`] and the one ADR-1135 left unsized.
+    ///
+    /// [`Self::det_succ`] is the `i = 0` case, definitionally: `Nat.add`
+    /// recurses on its right argument, so `add q 0 ≡ q` and the two statements
+    /// are the same term.
+    ///
+    /// ONE induction on the dimension, whose step case-splits on the row.
+    /// **Not** the classical route** — no walk to the top by adjacent row
+    /// swaps and so no row antisymmetry, which ADR-1155 measured to be off the
+    /// critical path: the row-`0`-then-row-`i-1` double sum and the
+    /// row-`i`-then-row-`0` double sum are indexed by the same ordered pairs
+    /// of distinct columns and agree TERMWISE for every `i` at once. They are
+    /// therefore the two orders of summation of ONE function on the square,
+    /// [`Self::laplace_summand`], and [`Self::sum_range_swap`] is the whole
+    /// reindexing step — no triangle decomposition, no `Nat.sub` in any
+    /// summation bound, and no aggregate type this kernel lacks.
+    pub det_row_expansion: NameId,
 }
 
 impl RatPrelude {
@@ -2545,6 +2570,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         laplace_summand: child(kernel, "laplaceSummand"),
         laplace_summand_row_zero: child(kernel, "laplaceSummand_rowZero"),
         laplace_summand_row_i: child(kernel, "laplaceSummand_rowI"),
+        laplace_summand_diag: child(kernel, "laplaceSummand_diag"),
+        det_row_expansion: child(kernel, "det_row_expansion"),
     }
 }
 

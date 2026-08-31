@@ -86,7 +86,7 @@ use super::ops::{
     nat_eq_to_rat, nat_rewrite_prop, radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg,
     rone, rrefl, rsum_range, rtrans, rzero,
 };
-use super::probability::{bool_select_rat, select_rat_false};
+use super::probability::{bool_select_rat, select_rat_false, select_rat_true};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{BinderInfo, ExprId};
@@ -150,7 +150,9 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_mul_perm4(d, p)?;
     declare_laplace_summand(d, p)?;
     declare_laplace_summand_row_zero(d, p)?;
-    declare_laplace_summand_row_i(d, p)
+    declare_laplace_summand_row_i(d, p)?;
+    declare_laplace_summand_diag(d, p)?;
+    declare_det_row_expansion(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -4209,4 +4211,586 @@ fn declare_laplace_summand_row_i(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
         d.lam_fv(a_fv, mty, over_i)
     };
     d.declare_theorem(p.laplace_summand_row_i, ty, value)
+}
+
+/// Admit `Rat.laplaceSummand_diag : ∀ A i m p, laplaceSummand A i m p p = 0`.
+///
+/// The diagonal branch, one `Nat.beq_refl` away. It is what makes both
+/// cofactor ranges fillable to the full square for free: adding the value at
+/// the missing index adds `0`.
+fn declare_laplace_summand_diag(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let p_fv = d.fresh_fvar();
+    let col = d.kernel().fvar(p_fv);
+
+    let lhs = rsummand(d, p, mat, i, m, col, col);
+    let zero_r = rzero(d, p);
+    let stmt = req(d, lhs, zero_r);
+
+    let inner = runskip(d, p, col, col);
+    let body = summand_body_at(d, p, mat, i, m, col, col, inner);
+    let guard = d.beq(col, col);
+    let hguard = {
+        let name = d.prelude().beq_refl;
+        d.const_app(name, &[col])
+    };
+    let proof = select_rat_true(d, guard, zero_r, body, hguard);
+
+    let ty = {
+        let over_p = d.pi_fv(p_fv, nat, stmt);
+        let over_m = d.pi_fv(m_fv, nat, over_p);
+        let over_i = d.pi_fv(i_fv, nat, over_m);
+        d.pi_fv(a_fv, mty, over_i)
+    };
+    let value = {
+        let over_p = d.lam_fv(p_fv, nat, proof);
+        let over_m = d.lam_fv(m_fv, nat, over_p);
+        let over_i = d.lam_fv(i_fv, nat, over_m);
+        d.lam_fv(a_fv, mty, over_i)
+    };
+    d.declare_theorem(p.laplace_summand_diag, ty, value)
+}
+
+/// `fun q => laplaceSummand A i m p q` — the summand's row at a fixed first
+/// column, the function the row-`0` expansion's inner sum runs over.
+fn summand_row_fn(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    i: ExprId,
+    m: ExprId,
+    col0: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let body = rsummand(d, p, mat, i, m, col0, q);
+    d.lam_fv(q_fv, nat, body)
+}
+
+/// `fun p => laplaceSummand A i m p q` — the summand's COLUMN at a fixed
+/// second index, the function the row-`i` expansion's inner sum runs over.
+fn summand_col_fn(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    i: ExprId,
+    m: ExprId,
+    coli: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let p_fv = d.fresh_fvar();
+    let col0 = d.kernel().fvar(p_fv);
+    let body = rsummand(d, p, mat, i, m, col0, coli);
+    d.lam_fv(p_fv, nat, body)
+}
+
+/// `fun q => altSign (q + i) * (A i q * det (matMinor A i q) m)` — the
+/// summand of a cofactor expansion along row `i`.
+fn row_expansion_fn(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    i: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let index = d.add(q, i);
+    let sign = ralt_sign(d, p, index);
+    let entry = d.apply(mat, &[i, q]);
+    let minor = rmat_minor_of(d, p, mat, i, q);
+    let sub = rdet(d, p, minor, m);
+    let product = rmul(d, entry, sub);
+    let body = rmul(d, sign, product);
+    d.lam_fv(q_fv, nat, body)
+}
+
+/// From `hlt : Nat.Lt x (succ n)`, derive `Nat.ble x n = true`.
+///
+/// `Nat.Lt a b` is `Nat.Le (succ a) b`, so this is `le_of_succ_le_succ`
+/// followed by `ble_eq_true_of_le` — the bridge from the bound
+/// `Rat.sumRange_congr_lt` supplies to the premise
+/// [`declare_sum_range_mat_skip`] wants.
+fn ble_of_lt_succ(d: &mut IntDev<'_>, x: ExprId, n: ExprId, hlt: ExprId) -> ExprId {
+    let le_of_succ = d.prelude().le_of_succ_le_succ;
+    let le = d.const_app(le_of_succ, &[x, n, hlt]);
+    let ble_of_le = d.prelude().ble_eq_true_of_le;
+    d.const_app(ble_of_le, &[x, n, le])
+}
+
+/// `sumRange (fun k => f (matSkip j k)) n = sumRange f (succ n)`, given
+/// `hble : Nat.ble j n = true` and `hdiag : f j = 0`.
+///
+/// [`declare_sum_range_mat_skip`] with the value at the missing index added
+/// back — and it is `0`, so `Rat.add_zero` absorbs it. This is the step that
+/// turns a cofactor sum over a range ONE SHORT into a sum over the full range,
+/// on both sides, which is what makes the double sum a plain rectangle.
+fn fill_range(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    f: ExprId,
+    n: ExprId,
+    j: ExprId,
+    hble: ExprId,
+    hdiag: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let reindexed = skip_fn(d, p, f, j);
+    let start = rsum_range(d, p, reindexed, n);
+    let zero_r = rzero(d, p);
+
+    let mid1 = radd(d, start, zero_r);
+    let s1 = {
+        let pf = d.lemma(p.add_zero, &[start]);
+        super::ops::rsymm(d, mid1, start, pf)
+    };
+    let fj = d.apply(f, &[j]);
+    let mid2 = radd(d, start, fj);
+    let s2 = {
+        let flipped = super::ops::rsymm(d, fj, zero_r, hdiag);
+        rcongr(d, zero_r, fj, flipped, &|d, t| radd(d, start, t))
+    };
+    let sn = d.succ(n);
+    let end = rsum_range(d, p, f, sn);
+    let s3 = d.lemma(p.sum_range_mat_skip, &[n, f, j, hble]);
+
+    let (_e, proof) = rchain(d, start, &[(mid1, s1), (mid2, s2), (end, s3)]);
+    (start, end, proof)
+}
+
+/// Admit `Rat.det_row_expansion : ∀ m A i, Nat.ble i m = true →
+/// det A (succ m) = sumRange (fun q => altSign (q + i) *
+/// (A i q * det (matMinor A i q) m)) (succ m)` — **cofactor expansion along a
+/// GENERAL row**.
+///
+/// The second of the four laws ADR-1120 named over [`declare_det`], and the
+/// one ADR-1135 declined to size. `Rat.det_succ` is the `i = 0` case
+/// definitionally, since `Nat.add` recurses on its right argument and
+/// `add q 0 ≡ q`.
+///
+/// **One induction on the dimension, whose step splits on the row**, and no
+/// row-swap ladder anywhere. The classical proof proves the row-`1` case and
+/// walks a general row to the top by adjacent transpositions, each negating
+/// the determinant, which costs row antisymmetry. ADR-1155 measured that none
+/// of that is needed: the double sums obtained by expanding along row `0` then
+/// each minor's row `i-1`, and along row `i` then each minor's row `0`, are
+/// indexed by the SAME ordered pairs of distinct columns and agree TERMWISE,
+/// for every `i` at once. So they are the two orders of summation of ONE
+/// function on the square — [`declare_laplace_summand`] — and the reindexing
+/// is `Rat.sumRange_swap`.
+///
+/// The step, at `m = succ m'` and `i = succ i'`:
+///
+/// 1. `det_succ` opens the outer expansion along row `0`.
+/// 2. Under `Rat.sumRange_congr_lt`, the induction hypothesis expands each
+///    minor along ITS row `i'`, two `Rat.mul_sumRange` pulls take the
+///    cofactor's coefficients inside, and
+///    [`declare_laplace_summand_row_zero`] identifies the result as the
+///    summand along `matSkip p`.
+/// 3. [`fill_range`] fills that inner range out to the whole square.
+/// 4. `Rat.sumRange_swap` — the ENTIRE reindexing step.
+/// 5. The same three moves on the other side, with
+///    [`declare_laplace_summand_row_i`] and `det_succ` swapping roles.
+///
+/// The bound is `sumRange_congr_lt` rather than `sumRange_congr` because the
+/// summand identity needs `Nat.ble p m' = true`, which only holds below the
+/// bound; [`ble_of_lt_succ`] is the bridge.
+fn declare_det_row_expansion(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let motive = |d: &mut IntDev<'_>, m: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hyp = ble_true_ty(d, i, m);
+        let sm = d.succ(m);
+        let lhs = rdet(d, p, mat, sm);
+        let summand = row_expansion_fn(d, p, mat, i, m);
+        let rhs = rsum_range(d, p, summand, sm);
+        let eq = req(d, lhs, rhs);
+        let arr = d.arrow(hyp, eq);
+        let over_i = d.pi_fv(i_fv, nat, arr);
+        d.pi_fv(a_fv, mty, over_i)
+    };
+
+    // At `i = 0` the goal IS `det_succ`: `Nat.add q 0 ≡ q`, so the two
+    // statements are the same term.
+    let at_row_zero = |d: &mut IntDev<'_>, mat: ExprId, m: ExprId| -> ExprId {
+        d.lemma(p.det_succ, &[mat, m])
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let nat = d.nat_ty();
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+
+        let motive_i = |d: &mut IntDev<'_>, i: ExprId| -> ExprId {
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, i, zero_n);
+            let one_n = d.succ(zero_n);
+            let lhs = rdet(d, p, mat, one_n);
+            let summand = row_expansion_fn(d, p, mat, i, zero_n);
+            let rhs = rsum_range(d, p, summand, one_n);
+            let eq = req(d, lhs, rhs);
+            d.arrow(hyp, eq)
+        };
+        let i_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, zero_n, zero_n);
+            let h_fv = d.fresh_fvar();
+            let pf = at_row_zero(d, mat, zero_n);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+        let i_at_succ = |d: &mut IntDev<'_>, ip: ExprId| -> ExprId {
+            // `ble (succ i') zero ≡ false`.
+            let zero_n = d.zero();
+            let sip = d.succ(ip);
+            let hyp = ble_true_ty(d, sip, zero_n);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let one_n = d.succ(zero_n);
+            let lhs = rdet(d, p, mat, one_n);
+            let summand = row_expansion_fn(d, p, mat, sip, zero_n);
+            let rhs = rsum_range(d, p, summand, one_n);
+            let target = req(d, lhs, rhs);
+            let pf = d.false_true_elim(target, h);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let per_i = d.induct(&motive_i, &i_at_zero, &|d, ip, _ih| i_at_succ(d, ip), i);
+        let over_i = d.lam_fv(i_fv, nat, per_i);
+        d.lam_fv(a_fv, mty, over_i)
+    };
+
+    let step = |d: &mut IntDev<'_>, mp: ExprId, ih: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let smp = d.succ(mp);
+
+        let motive_i = |d: &mut IntDev<'_>, i: ExprId| -> ExprId {
+            let hyp = ble_true_ty(d, i, smp);
+            let ssmp = d.succ(smp);
+            let lhs = rdet(d, p, mat, ssmp);
+            let summand = row_expansion_fn(d, p, mat, i, smp);
+            let rhs = rsum_range(d, p, summand, ssmp);
+            let eq = req(d, lhs, rhs);
+            d.arrow(hyp, eq)
+        };
+
+        let i_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, zero_n, smp);
+            let h_fv = d.fresh_fvar();
+            let pf = at_row_zero(d, mat, smp);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let i_at_succ = |d: &mut IntDev<'_>, ip: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let sip = d.succ(ip);
+            let n1 = d.succ(mp);
+            let n2 = d.succ(n1);
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, sip, n1);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            // --- the row-0 side ---------------------------------------------
+            let outer_fn = {
+                // `fun p => altSign p * (A 0 p * det (matMinor A 0 p) n1)`,
+                // `det_succ`'s own summand at `m := n1`.
+                let q_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(q_fv);
+                let sign = ralt_sign(d, p, col);
+                let entry = d.apply(mat, &[zero_n, col]);
+                let minor = rmat_minor_of(d, p, mat, zero_n, col);
+                let sub = rdet(d, p, minor, n1);
+                let product = rmul(d, entry, sub);
+                let body = rmul(d, sign, product);
+                d.lam_fv(q_fv, nat, body)
+            };
+            let filled_rows = {
+                let q_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(q_fv);
+                let row = summand_row_fn(d, p, mat, ip, mp, col);
+                let body = rsum_range(d, p, row, n2);
+                d.lam_fv(q_fv, nat, body)
+            };
+
+            let pointwise_rows = {
+                let q_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(q_fv);
+                let lt_ty = d.lt(col, n2);
+                let hl_fv = d.fresh_fvar();
+                let hl = d.kernel().fvar(hl_fv);
+                let hble = ble_of_lt_succ(d, col, n1, hl);
+
+                let sign = ralt_sign(d, p, col);
+                let entry = d.apply(mat, &[zero_n, col]);
+                let minor = rmat_minor_of(d, p, mat, zero_n, col);
+                let sub = rdet(d, p, minor, n1);
+                let start = {
+                    let product = rmul(d, entry, sub);
+                    rmul(d, sign, product)
+                };
+
+                // 1. the induction hypothesis expands the minor along ITS row `i'`.
+                let inner_summand = row_expansion_fn(d, p, minor, ip, mp);
+                let inner_sum = rsum_range(d, p, inner_summand, n1);
+                let mid1 = {
+                    let product = rmul(d, entry, inner_sum);
+                    rmul(d, sign, product)
+                };
+                let s1 = {
+                    let pf = d.apply(ih, &[minor, ip, h]);
+                    rcongr(d, sub, inner_sum, pf, &|d, t| {
+                        let product = rmul(d, entry, t);
+                        rmul(d, sign, product)
+                    })
+                };
+
+                // 2. two `mul_sumRange` pulls take the coefficients inside.
+                let scaled_fn = {
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let at_c = d.apply(inner_summand, &[c]);
+                    let body = rmul(d, entry, at_c);
+                    d.lam_fv(c_fv, nat, body)
+                };
+                let scaled_sum = rsum_range(d, p, scaled_fn, n1);
+                let mid2 = rmul(d, sign, scaled_sum);
+                let s2 = {
+                    let pf = d.lemma(p.mul_sum_range, &[entry, inner_summand, n1]);
+                    let from = rmul(d, entry, inner_sum);
+                    rcongr(d, from, scaled_sum, pf, &|d, t| rmul(d, sign, t))
+                };
+                let signed_fn = {
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let at_c = d.apply(scaled_fn, &[c]);
+                    let body = rmul(d, sign, at_c);
+                    d.lam_fv(c_fv, nat, body)
+                };
+                let mid3 = rsum_range(d, p, signed_fn, n1);
+                let s3 = d.lemma(p.mul_sum_range, &[sign, scaled_fn, n1]);
+
+                // 3. that summand IS the Laplace summand along `matSkip p`.
+                let row = summand_row_fn(d, p, mat, ip, mp, col);
+                let reindexed = skip_fn(d, p, row, col);
+                let mid4 = rsum_range(d, p, reindexed, n1);
+                let s4 = {
+                    let pointwise = {
+                        let c_fv = d.fresh_fvar();
+                        let c = d.kernel().fvar(c_fv);
+                        let skipped = rmat_skip(d, p, col, c);
+                        let lhs = rsummand(d, p, mat, ip, mp, col, skipped);
+                        let rhs = summand_body_at(d, p, mat, ip, mp, col, skipped, c);
+                        let base = d.const_app(p.laplace_summand_row_zero, &[mat, ip, mp, col, c]);
+                        let flipped = super::ops::rsymm(d, lhs, rhs, base);
+                        d.lam_fv(c_fv, nat, flipped)
+                    };
+                    d.lemma(p.sum_range_congr, &[signed_fn, reindexed, n1, pointwise])
+                };
+
+                // 4. fill the inner range out to the whole square.
+                let hdiag = d.const_app(p.laplace_summand_diag, &[mat, ip, mp, col]);
+                let (_from, end, s5) = fill_range(d, p, row, n1, col, hble, hdiag);
+
+                let (_e, pf) = rchain(
+                    d,
+                    start,
+                    &[(mid1, s1), (mid2, s2), (mid3, s3), (mid4, s4), (end, s5)],
+                );
+                let with_h = d.lam_fv(hl_fv, lt_ty, pf);
+                d.lam_fv(q_fv, nat, with_h)
+            };
+
+            // --- the row-`succ i'` side --------------------------------------
+            let target_fn = row_expansion_fn(d, p, mat, sip, n1);
+            let filled_cols = {
+                let q_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(q_fv);
+                let column = summand_col_fn(d, p, mat, ip, mp, col);
+                let body = rsum_range(d, p, column, n2);
+                d.lam_fv(q_fv, nat, body)
+            };
+
+            let pointwise_cols = {
+                let q_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(q_fv);
+                let lt_ty = d.lt(col, n2);
+                let hl_fv = d.fresh_fvar();
+                let hl = d.kernel().fvar(hl_fv);
+                let hble = ble_of_lt_succ(d, col, n1, hl);
+
+                let index = d.add(col, sip);
+                let sign = ralt_sign(d, p, index);
+                let entry = d.apply(mat, &[sip, col]);
+                let minor = rmat_minor_of(d, p, mat, sip, col);
+                let sub = rdet(d, p, minor, n1);
+                let start = {
+                    let product = rmul(d, entry, sub);
+                    rmul(d, sign, product)
+                };
+
+                // 1. `det_succ` expands the minor along ITS row `0`.
+                let inner_summand = {
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let inner_sign = ralt_sign(d, p, c);
+                    let inner_entry = d.apply(minor, &[zero_n, c]);
+                    let inner_minor = rmat_minor_of(d, p, minor, zero_n, c);
+                    let inner_sub = rdet(d, p, inner_minor, mp);
+                    let product = rmul(d, inner_entry, inner_sub);
+                    let body = rmul(d, inner_sign, product);
+                    d.lam_fv(c_fv, nat, body)
+                };
+                let inner_sum = rsum_range(d, p, inner_summand, n1);
+                let mid1 = {
+                    let product = rmul(d, entry, inner_sum);
+                    rmul(d, sign, product)
+                };
+                let s1 = {
+                    let pf = d.lemma(p.det_succ, &[minor, mp]);
+                    rcongr(d, sub, inner_sum, pf, &|d, t| {
+                        let product = rmul(d, entry, t);
+                        rmul(d, sign, product)
+                    })
+                };
+
+                // 2. the same two `mul_sumRange` pulls.
+                let scaled_fn = {
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let at_c = d.apply(inner_summand, &[c]);
+                    let body = rmul(d, entry, at_c);
+                    d.lam_fv(c_fv, nat, body)
+                };
+                let scaled_sum = rsum_range(d, p, scaled_fn, n1);
+                let mid2 = rmul(d, sign, scaled_sum);
+                let s2 = {
+                    let pf = d.lemma(p.mul_sum_range, &[entry, inner_summand, n1]);
+                    let from = rmul(d, entry, inner_sum);
+                    rcongr(d, from, scaled_sum, pf, &|d, t| rmul(d, sign, t))
+                };
+                let signed_fn = {
+                    let c_fv = d.fresh_fvar();
+                    let c = d.kernel().fvar(c_fv);
+                    let at_c = d.apply(scaled_fn, &[c]);
+                    let body = rmul(d, sign, at_c);
+                    d.lam_fv(c_fv, nat, body)
+                };
+                let mid3 = rsum_range(d, p, signed_fn, n1);
+                let s3 = d.lemma(p.mul_sum_range, &[sign, scaled_fn, n1]);
+
+                // 3. that summand IS the Laplace summand along `matSkip q`.
+                let column = summand_col_fn(d, p, mat, ip, mp, col);
+                let reindexed = skip_fn(d, p, column, col);
+                let mid4 = rsum_range(d, p, reindexed, n1);
+                let s4 = {
+                    let pointwise = {
+                        let c_fv = d.fresh_fvar();
+                        let c = d.kernel().fvar(c_fv);
+                        let skipped = rmat_skip(d, p, col, c);
+                        let lhs = rsummand(d, p, mat, ip, mp, skipped, col);
+                        let rhs = {
+                            let entry_top = d.apply(mat, &[zero_n, skipped]);
+                            let inner_minor = {
+                                let outer = rmat_minor_of(d, p, mat, sip, col);
+                                rmat_minor_of(d, p, outer, zero_n, c)
+                            };
+                            let inner_sub = rdet(d, p, inner_minor, mp);
+                            let sign_c = ralt_sign(d, p, c);
+                            let t1 = rmul(d, entry_top, inner_sub);
+                            let t2 = rmul(d, sign_c, t1);
+                            let t3 = rmul(d, entry, t2);
+                            rmul(d, sign, t3)
+                        };
+                        let base = d.const_app(p.laplace_summand_row_i, &[mat, ip, mp, col, c]);
+                        let flipped = super::ops::rsymm(d, lhs, rhs, base);
+                        d.lam_fv(c_fv, nat, flipped)
+                    };
+                    d.lemma(p.sum_range_congr, &[signed_fn, reindexed, n1, pointwise])
+                };
+
+                // 4. fill this inner range out too.
+                let hdiag = d.const_app(p.laplace_summand_diag, &[mat, ip, mp, col]);
+                let (_from, end, s5) = fill_range(d, p, column, n1, col, hble, hdiag);
+
+                let (_e, pf) = rchain(
+                    d,
+                    start,
+                    &[(mid1, s1), (mid2, s2), (mid3, s3), (mid4, s4), (end, s5)],
+                );
+                let with_h = d.lam_fv(hl_fv, lt_ty, pf);
+                d.lam_fv(q_fv, nat, with_h)
+            };
+
+            // --- the two orders of summation --------------------------------
+            let start = rdet(d, p, mat, n2);
+            let l1 = rsum_range(d, p, outer_fn, n2);
+            let s1 = d.lemma(p.det_succ, &[mat, n1]);
+
+            let l2 = rsum_range(d, p, filled_rows, n2);
+            let s2 = d.lemma(
+                p.sum_range_congr_lt,
+                &[outer_fn, filled_rows, n2, pointwise_rows],
+            );
+
+            let l3 = rsum_range(d, p, filled_cols, n2);
+            let s3 = {
+                let square = {
+                    let p_fv = d.fresh_fvar();
+                    let col0 = d.kernel().fvar(p_fv);
+                    let row = summand_row_fn(d, p, mat, ip, mp, col0);
+                    d.lam_fv(p_fv, nat, row)
+                };
+                d.lemma(p.sum_range_swap, &[square, n2, n2])
+            };
+
+            let target = rsum_range(d, p, target_fn, n2);
+            let s4 = {
+                let pf = d.lemma(
+                    p.sum_range_congr_lt,
+                    &[target_fn, filled_cols, n2, pointwise_cols],
+                );
+                super::ops::rsymm(d, target, l3, pf)
+            };
+
+            let (_e, pf) = rchain(d, start, &[(l1, s1), (l2, s2), (l3, s3), (target, s4)]);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let per_i = d.induct(&motive_i, &i_at_zero, &|d, ip, _ih| i_at_succ(d, ip), i);
+        let over_i = d.lam_fv(i_fv, nat, per_i);
+        d.lam_fv(a_fv, mty, over_i)
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let stmt = motive(d, m);
+    let proof = d.induct(&motive, &base, &step, m);
+    let ty = d.pi_fv(m_fv, nat, stmt);
+    let value = d.lam_fv(m_fv, nat, proof);
+    let _ = mty;
+    d.declare_theorem(p.det_row_expansion, ty, value)
 }
