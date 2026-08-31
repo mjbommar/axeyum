@@ -182,7 +182,8 @@ pub(super) fn declare_coprime_eq_of_mul_eq_zero(
             let gcd0n_eq_one = d.trans(gcd_0n, gcd_mn, one, gcd0n_eq_gcdmn, c); // Eq(gcd_0n, 1)
             let n_eq_gcd0n = d.symm(gcd_0n, n, gzl); // Eq(n, gcd_0n)
             let n_eq_one = d.trans(n, gcd_0n, one, n_eq_gcd0n, gcd0n_eq_one); // Eq(n, 1)
-            let and_proof = d.const_app(p.logic.and_intro, &[m_eq_zero_ty, n_eq_one_ty, h, n_eq_one]);
+            let and_proof =
+                d.const_app(p.logic.and_intro, &[m_eq_zero_ty, n_eq_one_ty, h, n_eq_one]);
             let or_proof = d.const_app(p.logic.or_inl, &[left_and, right_and, and_proof]);
             d.lam_fv(h_fv, m_eq_zero_ty, or_proof)
         };
@@ -199,12 +200,12 @@ pub(super) fn declare_coprime_eq_of_mul_eq_zero(
             let gcd_0m = d.gcd(zero, m);
             let comm_eq = d.lemma(p.gcd_comm, &[m, zero]); // Eq(gcd_m0, gcd_0m)
             let gcd_0m_eq_gcd_m0 = d.symm(gcd_m0, gcd_0m, comm_eq); // Eq(gcd_0m, gcd_m0)
-            let gcd_0m_eq_one =
-                d.trans(gcd_0m, gcd_m0, one, gcd_0m_eq_gcd_m0, gcd_m0_eq_one); // Eq(gcd_0m, 1)
+            let gcd_0m_eq_one = d.trans(gcd_0m, gcd_m0, one, gcd_0m_eq_gcd_m0, gcd_m0_eq_one); // Eq(gcd_0m, 1)
             let gzl_m = d.lemma(p.gcd_zero_left, &[m]); // Eq(gcd_0m, m)
             let m_eq_gcd0m = d.symm(gcd_0m, m, gzl_m); // Eq(m, gcd_0m)
             let m_eq_one = d.trans(m, gcd_0m, one, m_eq_gcd0m, gcd_0m_eq_one); // Eq(m, 1)
-            let and_proof = d.const_app(p.logic.and_intro, &[m_eq_one_ty, n_eq_zero_ty, m_eq_one, h]);
+            let and_proof =
+                d.const_app(p.logic.and_intro, &[m_eq_one_ty, n_eq_zero_ty, m_eq_one, h]);
             let or_proof = d.const_app(p.logic.or_inr, &[left_and, right_and, and_proof]);
             d.lam_fv(h_fv, n_eq_zero_ty, or_proof)
         };
