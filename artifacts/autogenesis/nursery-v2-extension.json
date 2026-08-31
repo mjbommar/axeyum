@@ -34,7 +34,7 @@
       "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified); every member is either ADR-0850's already-exempted v1 crossing (merged here with v2-internal members via cross-file edges) or a v2-internal crossing. See ADR-0855 and docs/plan/status/nursery-v2-component-coverage.md."
     },
     {
-      "authority": "ADR-0855",
+      "authority": "ADR-0855 (mechanism); ADR-0940 (this re-scoping)",
       "component_fact_ids": [
         "F:ml430-int-add-assoc-749cb0ff",
         "F:ml430-int-add-comm-c5722728",
@@ -88,7 +88,17 @@
         "F:ml430-nat-add-mod-right-c047c67a",
         "F:ml430-nat-add-mul-div-left-e20827dd",
         "F:ml430-nat-add-pos-right-e43374dc",
+        "F:ml430-nat-and-assoc-273b60d8",
+        "F:ml430-nat-and-comm-7525d05a",
+        "F:ml430-nat-and-div-two-1a2f7c33",
+        "F:ml430-nat-and-le-left-6d04acb7",
+        "F:ml430-nat-and-le-right-a3f80076",
+        "F:ml430-nat-and-mod-two-eq-one-3e873792",
+        "F:ml430-nat-and-one-is-mod-d861e96b",
         "F:ml430-nat-base-induction-83561d4c",
+        "F:ml430-nat-bitwise-bit-4c4b28a8",
+        "F:ml430-nat-bitwise-comm-1a273bae",
+        "F:ml430-nat-bitwise-swap-7175e90e",
         "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
         "F:ml430-nat-choose-le-add-9c463139",
         "F:ml430-nat-choose-le-choose-907b5042",
@@ -129,6 +139,14 @@
         "F:ml430-nat-descfactorial-le-2b8cc09a",
         "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
         "F:ml430-nat-descfactorial-self-899fc0e0",
+        "F:ml430-nat-dist-add-add-left-92fa4403",
+        "F:ml430-nat-dist-add-add-right-6e5d8bbb",
+        "F:ml430-nat-dist-comm-1fa29a04",
+        "F:ml430-nat-dist-eq-intro-294b44ad",
+        "F:ml430-nat-dist-eq-zero-5ae5b706",
+        "F:ml430-nat-dist-pos-of-ne-00f5e22f",
+        "F:ml430-nat-dist-self-0cfa5426",
+        "F:ml430-nat-dist-triangle-inequality-b35e82d3",
         "F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82",
         "F:ml430-nat-div-two-mul-two-of-even-9ccc5340",
         "F:ml430-nat-dvd-add-0c5bcc91",
@@ -178,6 +196,9 @@
         "F:ml430-nat-fib-strictmonoon-905810a9",
         "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
         "F:ml430-nat-gcd-mul-lcm-b7217ace",
+        "F:ml430-nat-land-assoc-ad4775b8",
+        "F:ml430-nat-land-bit-b9ab7475",
+        "F:ml430-nat-land-comm-7e6ad72e",
         "F:ml430-nat-lcm-assoc-cb00bb43",
         "F:ml430-nat-lcm-comm-d5f8aae0",
         "F:ml430-nat-lcm-div-eb5d8892",
@@ -188,6 +209,7 @@
         "F:ml430-nat-le-of-lt-succ-120bd6db",
         "F:ml430-nat-le-of-succ-le-succ-a180a72c",
         "F:ml430-nat-le-refl-fd7d9e15",
+        "F:ml430-nat-lor-comm-2666d7ef",
         "F:ml430-nat-lt-of-mul-lt-mul-left-234e8530",
         "F:ml430-nat-mod-lcm-ee6bdd41",
         "F:ml430-nat-mod-mul-beaccbad",
@@ -244,7 +266,7 @@
         "F:nat-zero-add"
       ],
       "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified); every member is either ADR-0850's already-exempted v1 crossing (merged here with v2-internal members via cross-file edges) or a v2-internal crossing. See ADR-0855 and docs/plan/status/nursery-v2-component-coverage.md."
+      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED to 228 members: the live component grew by exactly the 22 facts below between ADR-0855's exemption and this review, all landed by ordinary hand development (draw-9 status flips + census closes for the natural-bitwise/natural-and/natural-distance families), none referenced by any autogenesis operation, all epistemic_status proved, connected into this component only via already-member arithmetic lemmas (F:ml430-nat-add-comm-56a2d614, F:ml430-nat-add-assoc-8c87a1f1) -- the same shape ADR-0850/ADR-0855 already accepted, not a new pattern. Independently re-derived, not inherited from any prior lane's report. New members: F:ml430-nat-and-assoc-273b60d8, F:ml430-nat-and-comm-7525d05a, F:ml430-nat-and-div-two-1a2f7c33, F:ml430-nat-and-le-left-6d04acb7, F:ml430-nat-and-le-right-a3f80076, F:ml430-nat-and-mod-two-eq-one-3e873792, F:ml430-nat-and-one-is-mod-d861e96b, F:ml430-nat-bitwise-bit-4c4b28a8, F:ml430-nat-bitwise-comm-1a273bae, F:ml430-nat-bitwise-swap-7175e90e, F:ml430-nat-dist-add-add-left-92fa4403, F:ml430-nat-dist-add-add-right-6e5d8bbb, F:ml430-nat-dist-comm-1fa29a04, F:ml430-nat-dist-eq-intro-294b44ad, F:ml430-nat-dist-eq-zero-5ae5b706, F:ml430-nat-dist-pos-of-ne-00f5e22f, F:ml430-nat-dist-self-0cfa5426, F:ml430-nat-dist-triangle-inequality-b35e82d3, F:ml430-nat-land-assoc-ad4775b8, F:ml430-nat-land-bit-b9ab7475, F:ml430-nat-land-comm-7e6ad72e, F:ml430-nat-lor-comm-2666d7ef. See ADR-0940 and docs/plan/status/nursery-exemption-regrown.md."
     },
     {
       "authority": "ADR-0855",
@@ -12293,7 +12315,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "d501a101984c9996abafe610e8acff3abc8228c15e52bd7a47bd2733b70ef4ed",
+  "extension_sha256": "d443f557bcb98c007b28563ea08bb4e971b57ba3ec9a242cfee6e684d8ba008e",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
