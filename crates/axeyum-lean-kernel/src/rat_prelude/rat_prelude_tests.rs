@@ -382,6 +382,11 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.mat_id_off_diag,
         p.mat_mul_id_left,
         p.mat_mul_id_right,
+        p.mat_transpose,
+        p.mat_transpose_transpose,
+        p.mat_transpose_mul,
+        p.mat_transpose_eval_example,
+        p.mat_transpose_mul_example,
         p.is_distribution,
         p.prob_le_one,
         p.prob_complement,
@@ -5930,6 +5935,183 @@ fn the_matrix_associativity_statement_is_pointwise() {
          ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> \
          Eq.{1} Rat (Rat.matMul (Rat.matMul x0 x1 x3) x2 x4 x5 x6) \
          (Rat.matMul x0 (Rat.matMul x1 x2 x4) x3 x5 x6))))))))"
+    );
+}
+
+// --- `Rat.matTranspose`: matrix transpose at symbolic dimension
+// (`rat_prelude::matrix_transpose`) -- graded family (ADR-0603, ADR-0716,
+// ADR-0825): row 1 `matTranspose_mul` (general n), no row 2 (the statement
+// has no comparison or search, ADR-0716), row 3 `matTranspose_mul_example`
+// (the SAME declaration applied at concrete numerals, ADR-0825's collapse).
+
+/// Every declaration `matrix_transpose::declare_matrix_transpose` adds is a
+/// **checked** definition or theorem with an empty axiom footprint, read out
+/// of the kernel rather than off the diff -- same discipline as
+/// [`the_matrix_toolkit_is_axiom_free`].
+#[test]
+fn the_matrix_transpose_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("matTranspose", p.mat_transpose, false),
+        ("matTranspose_transpose", p.mat_transpose_transpose, true),
+        ("matTranspose_mul", p.mat_transpose_mul, true),
+        (
+            "matTranspose_eval_example",
+            p.mat_transpose_eval_example,
+            true,
+        ),
+        (
+            "matTranspose_mul_example",
+            p.mat_transpose_mul_example,
+            true,
+        ),
+    ];
+    for (label, name, is_theorem) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        if is_theorem {
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "Rat.{label} must be a checked Theorem, found a different kind"
+            );
+        } else {
+            assert!(
+                matches!(declaration, Declaration::Definition { .. }),
+                "Rat.{label} must be a Definition, found a different kind"
+            );
+        }
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// `matTranspose_transpose`'s statement rendered verbatim -- pins that the
+/// involution law is stated pointwise too (`… i j = A i j`, `A` applied
+/// directly, never an `Eq` between two matrices).
+#[test]
+fn the_matrix_transpose_involution_statement_is_pointwise() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let statement = rendered(&mut kernel, p.mat_transpose_transpose);
+    assert_eq!(
+        statement,
+        "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> \
+         ((x1 : AxNat) -> ((x2 : AxNat) -> \
+         Eq.{1} Rat (Rat.matTranspose (Rat.matTranspose x0) x1 x2) (x0 x1 x2))))"
+    );
+}
+
+/// `matTranspose_mul`'s statement rendered verbatim, pinning that it is
+/// **pointwise** -- the conclusion is an `Eq` at `Rat` between two *applied*
+/// scalar entries, never an `Eq` between two `AxNat -> AxNat -> Rat` values.
+/// Same discipline as [`the_matrix_associativity_statement_is_pointwise`],
+/// for the same reason: this kernel has no `funext`.
+#[test]
+fn the_matrix_transpose_mul_statement_is_pointwise() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let statement = rendered(&mut kernel, p.mat_transpose_mul);
+    assert_eq!(
+        statement,
+        "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> \
+         ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> \
+         ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> \
+         Eq.{1} Rat (Rat.matTranspose (Rat.matMul x0 x1 x2) x3 x4) \
+         (Rat.matMul (Rat.matTranspose x1) (Rat.matTranspose x0) x2 x3 x4))))))"
+    );
+}
+
+/// The kernel's unary-`Nat` rendering of `succ^n zero`, e.g. `n = 2` renders
+/// as `AxNat.succ (AxNat.succ AxNat.zero)` -- every numeral in this prelude
+/// is unary (no `funext`, no binary literal fast path in the source
+/// preludes), so a pinned numeral must be built the same way rather than as
+/// a decimal string.
+fn nat_succ_chain(n: u32) -> String {
+    if n == 0 {
+        "AxNat.zero".to_string()
+    } else if n == 1 {
+        "AxNat.succ AxNat.zero".to_string()
+    } else {
+        format!("AxNat.succ ({})", nat_succ_chain(n - 1))
+    }
+}
+
+/// `(Rat.ofInt (Int.ofNat succ^n zero))`, as it appears when this expression
+/// is itself a compound argument to a surrounding application (e.g. the RHS
+/// of a top-level `Eq`) -- both examples below place it exactly there.
+fn rat_of_int_numeral(n: u32) -> String {
+    format!("(Rat.ofInt (Int.ofNat ({})))", nat_succ_chain(n))
+}
+
+/// `matTranspose_eval_example` and `matTranspose_mul_example` are admitted
+/// with the CONCRETE numeral types their module doc claims -- catches a
+/// silently-vacuous statement (e.g. an `expected` that got rewritten to
+/// match whatever the term happens to reduce to) that a footprint check
+/// cannot see, since a wrong concrete numeral has exactly the same empty
+/// footprint as the right one.
+#[test]
+fn the_matrix_transpose_examples_state_the_expected_numerals() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    // `nat_succ_chain(k)` is a literal PREFIX of `nat_succ_chain(n)` for any
+    // `k < n` (unary numerals nest), so the only sound discriminating check
+    // is the POSITIVE one: if the kernel had reduced to the wrong value (3,
+    // the un-swapped entry; 121, the wrong transpose-of-product order), the
+    // LONGER correct chain (5; 174) could not appear as a substring of the
+    // SHORTER wrong one. A `!contains(3)`-style negative check would be
+    // unsound here (chain(3) is a genuine substring of chain(5)), which is
+    // why there is no such assertion below.
+    let eval_example = rendered(&mut kernel, p.mat_transpose_eval_example);
+    let expected_five = rat_of_int_numeral(5);
+    assert!(
+        eval_example.contains(&expected_five),
+        "matTranspose_eval_example must state its RHS as the numeral 5 \
+         (A(1,0), not A(0,1) = 3 -- the discriminating pair): {eval_example}"
+    );
+    let mul_example = rendered(&mut kernel, p.mat_transpose_mul_example);
+    let expected_174 = rat_of_int_numeral(174);
+    assert!(
+        mul_example.contains(&expected_174),
+        "matTranspose_mul_example must state its RHS as the numeral 174, \
+         independently computed as A(1,0)*B(0,0) + A(1,1)*B(1,0) = \
+         5*11 + 7*17 (and not 121, A^T B^T's wrong-order (0,1) entry): \
+         {mul_example}"
     );
 }
 

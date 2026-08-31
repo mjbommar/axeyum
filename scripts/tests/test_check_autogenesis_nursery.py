@@ -555,5 +555,58 @@ class CrossPopulationTests(unittest.TestCase):
         self.assertEqual(unused[0]["component_fact_ids"], ["F:v1-a", "F:v2-a"])
 
 
+class LiveManifestTests(unittest.TestCase):
+    """Runs the CLI's own checks against the REAL committed
+    `nursery-v1.json` / `nursery-v2-extension.json`, not a synthetic
+    fixture -- every other test in this file builds its own tiny
+    population precisely so it does not depend on what happens to be
+    committed today.
+
+    This is the regression this suite was missing. `check-autogenesis-
+    nursery.py` went red on `main` for at least a day (ADR-0850) because a
+    real dependency-edge repair grew an already-exempted cross-population
+    component by 22 members and nobody re-ran the CLI. Every exemption
+    mechanism test above proves the SELF-INVALIDATION property in the
+    abstract, against a fixture built to demonstrate it; none of them would
+    have caught the committed exemption itself going stale, because none
+    of them ever loads the committed files. This class closes that gap: it
+    is exactly `main()`'s own sequence, so a future growth of any exempted
+    component reproduces here before it reaches the CLI.
+    """
+
+    def test_committed_nursery_files_pass_both_gates(self) -> None:
+        facts = MODULE.load_facts()
+        nursery = MODULE.load_object(MODULE.NURSERY)
+        result = MODULE.load_object(MODULE.RESULT)
+        # No exception == no unexempted crossing, exactly `main()`'s check.
+        report = MODULE.build_report(nursery, facts, result)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        self.assertEqual(
+            report["controls"]["evaluation_longitudinal_component_overlap"], []
+        )
+
+        v2 = MODULE.load_object(MODULE.NURSERY_V2)
+        cross_report = MODULE.build_cross_population_report(nursery, v2, facts)
+        self.assertEqual(cross_report["controls"]["component_split_leaks"], [])
+        self.assertEqual(
+            cross_report["controls"][
+                "evaluation_longitudinal_component_overlap"
+            ],
+            [],
+        )
+        # A recorded exemption that no longer matches ANY live component is
+        # exactly the silent-drift shape this class exists to catch (an
+        # exemption can go stale in either direction: the component it
+        # names can grow past it, as ADR-0850/ADR-0855 measured, or the
+        # dependency edge that once formed it can disappear, leaving a
+        # dead entry nobody would notice removing).
+        self.assertEqual(
+            cross_report["controls"][
+                "cross_population_component_split_exemptions_unused"
+            ],
+            [],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

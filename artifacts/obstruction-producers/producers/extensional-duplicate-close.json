@@ -1,0 +1,74 @@
+{
+  "applicability": {
+    "evidence_routes": [],
+    "fact_ids": []
+  },
+  "declined": [
+    {
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "why_declines": "SAME predicate symbols (minFac, gcd/Coprime) as the already-proved F:nat-coprime-of-lt-minfac, which made this look like a duplicate at first pass. It is not: nat_prelude/min_fac.rs's own module doc and F-nat-coprime-of-lt-minfac.json's own `notes` field BOTH state explicitly this is NOT a flip of this mirror, because Nat.minFac is registered as an algorithmic divergence from Mathlib's. Syntactic similarity is not propositional identity; this entry exists to keep that correction load-bearing rather than silent."
+    }
+  ],
+  "id": "extensional-duplicate-close",
+  "kind": "fulfilled",
+  "negative_controls": [
+    {
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "why_declines": "SAME predicate symbols (minFac, gcd/Coprime) as the already-proved F:nat-coprime-of-lt-minfac, which made this look like a duplicate at first pass. It is not: nat_prelude/min_fac.rs's own module doc and F-nat-coprime-of-lt-minfac.json's own `notes` field BOTH state explicitly this is NOT a flip of this mirror, because Nat.minFac is registered as an algorithmic divergence from Mathlib's. Syntactic similarity is not propositional identity; this entry exists to keep that correction load-bearing rather than silent."
+    }
+  ],
+  "obstruction_ids": [
+    "nat-bitwise-extensional-duplicate"
+  ],
+  "outcome": "All 8 hypotheses closed. The predicted route was correct and was executed BY HAND in two theorem lanes, not by running this producer -- so this is an exhausted population, NOT a validated producer run. Recorded as fulfilled so the distinction survives; a future duplicate of this shape needs a fresh hypothesis table.",
+  "spent": [
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-comm-7525d05a",
+      "native_declaration": "land_comm",
+      "twin_mirror": "F:ml430-nat-land-comm-7e6ad72e"
+    },
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-assoc-273b60d8",
+      "native_declaration": "land_assoc",
+      "twin_mirror": "F:ml430-nat-land-assoc-ad4775b8"
+    },
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-le-left-6d04acb7",
+      "native_declaration": "land_le_left",
+      "twin_mirror": null
+    },
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-le-right-a3f80076",
+      "native_declaration": "land_le_right",
+      "twin_mirror": null
+    },
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-self-06a84ccc",
+      "native_declaration": "land_self",
+      "twin_mirror": null
+    },
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
+      "native_declaration": "land_div_two",
+      "twin_mirror": null
+    },
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-mod-two-eq-one-3e873792",
+      "native_declaration": "land_mod_two_eq_one",
+      "twin_mirror": null
+    },
+    {
+      "closed_status": "proved",
+      "fact_id": "F:ml430-nat-and-one-is-mod-d861e96b",
+      "native_declaration": "land_one_is_mod",
+      "twin_mirror": null
+    }
+  ]
+}

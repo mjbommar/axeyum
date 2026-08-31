@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter
 
 fmt:
     cargo fmt --all --check
@@ -207,6 +207,12 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-holdout-contamination.py
     bash scripts/tests/test-dispatchable-frontier.sh
     python3 scripts/check-dispatchable-frontier.py
+    # L3 D4: does an open obstruction actually compile into a falsifiable,
+    # plural producer contract, or does classification stop at "blocked"?
+    # `gen-obstruction-producers.py --check` re-derives both the
+    # classification and every contract from primary sources on each run.
+    bash scripts/tests/test-obstruction-producers.sh
+    python3 scripts/check-obstruction-producers.py
     # ...and the artifact S2/S3/S4 constrain. Those three pin every field of the
     # statable vocabulary to one value, so it is DERIVED (`--write`) rather than
     # maintained. This checks what no other gate reads: the row digest, which is
@@ -2277,3 +2283,21 @@ checked-interchange:
     python3 scripts/check-checked-interchange.py
     python3 scripts/tests/test-checked-interchange.py
     bash scripts/tests/test-checked-interchange-mutations.sh
+
+# L4 phase C3 -- the thin Lean adapter
+# (docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md section C3).
+# Validates artifacts/lean-adapter/results/*.result.json against the
+# committed goal pack AND a fresh read of the live checked-interchange
+# census's Lean toolchain identity (never this result's own fields). Needs
+# no Lean toolchain and no cargo run -- regeneration (which needs both) is
+# `cargo test --release -p axeyum-lean-import --test
+# thin_lean_adapter_goal_pack`, deliberately NOT part of this gate, matching
+# checked-interchange's own gen/check split. Seven guards (ABSENCE,
+# LEAN_ACTUALLY_RAN, SUCCESS_ACCEPTED, MUTATIONS_REJECTED,
+# DECLINES_TYPED_NONVACUOUS, EXPECTED_MATCHES_OBSERVED,
+# ENVIRONMENT_TOOLCHAIN_STALE), all mutation-verified 1:1 in
+# test-lean-adapter-mutations.sh.
+lean-adapter:
+    python3 scripts/check-lean-adapter.py
+    python3 scripts/tests/test-lean-adapter.py
+    bash scripts/tests/test-lean-adapter-mutations.sh

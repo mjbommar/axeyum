@@ -53,6 +53,7 @@ mod source_delta_trace;
 mod statement_goal_record;
 mod theorem_composition;
 mod theorem_specialization;
+pub mod thin_adapter;
 mod trace_contract_receipt;
 mod trace_contract_theorem_receipt;
 mod trusted_substitution;

@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-mattranspose-mul",
+  "title": "Matrix transpose over the constructed rationals reverses a product at symbolic dimension, stated pointwise -- (AB)^T = B^T A^T",
+  "statement": "For matrices A, B over the constructed rationals -- each a function Nat -> Nat -> Rat -- and inner dimension k, the (i, j) entry of the transpose of (A*B) equals the (i, j) entry of (transpose B)*(transpose A), for every i and j. The dimension k is a UNIVERSALLY QUANTIFIED variable, not fixed at 2 or 3, matching F:rat-matmul-assoc's symbolic-dimension setting. The statement is POINTWISE and that is forced rather than chosen -- `funext` is absent from this kernel (positive control of the same kind, present: `congrFun'`), so an Eq between two `Nat -> Nat -> Rat` values is not available and a matrix equation must conclude at a scalar entry. Rat.matTranspose A i j is defined as A j i, and Rat.matMul A B k i j as sumRange (fun t => A i t * B t j) k.\n\nGRADED STATEMENT FAMILY (ADR-0603, ADR-0716, ADR-0825; see ADR-0930). Row 1 is this theorem, at symbolic dimension. Row 2 does not apply: the statement has no comparison and no unbounded search to reduce to a boundary, and ADR-0716 measures that for ℚ the analysis-style row-2 mechanism (order totality) is already a proved, axiom-free theorem here regardless. Row 3 is the SAME declaration, matTranspose_mul, applied at a concrete numeral instance (`Rat.matTranspose_mul_example`, evidence row below) and bridged to a plain numeral by the kernel's own computation, per ADR-0825's collapse -- no separate CAS producer/verifier pair. Row 4 (labeled import) is not attempted.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matTranspose_mul : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> Eq.{1} Rat (Rat.matTranspose (Rat.matMul x0 x1 x2) x3 x4) (Rat.matMul (Rat.matTranspose x1) (Rat.matTranspose x0) x2 x3 x4))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-mul-comm",
+    "F:rat-sumrange-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matTranspose_mul",
+      "kind": "kernel-term",
+      "supports": "Rat.matTranspose_mul is admitted by the trusted kernel gate with the type recorded in formal.statement. The proof is ONE sum_range_congr around ONE mul_comm, applied pointwise to the summand: matTranspose (matMul A B k) i j unfolds to sumRange (fun t => A j t * B t i) k, matMul (matTranspose B) (matTranspose A) k i j unfolds to sumRange (fun t => B t i * A j t) k, and the two summands differ by exactly Rat.mul_comm. Unlike matMul_assoc, no sumRange_swap interchange is needed, because transpose only swaps the two INDEX arguments, never which two values are being summed over.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time; a rejected proof makes build_rat_prelude return Err)",
+        "rat_prelude_tests::the_matrix_transpose_toolkit_is_axiom_free (kind + empty axiom_footprint, read from the kernel)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_matrix_transpose_toolkit_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_transpose.rs",
+      "notes": "The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "statement-pin-Rat.matTranspose_mul",
+      "kind": "kernel-term",
+      "supports": "The statement is POINTWISE and stays pointwise -- the conclusion is an Eq at Rat between two applied scalar entries, never an Eq between two Nat -> Nat -> Rat values, which this kernel's absent funext makes unprovable. `the_matrix_transpose_mul_statement_is_pointwise` asserts the kernel-rendered type verbatim with assert_eq!, same discipline as F:rat-matmul-assoc's pin.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_matrix_transpose_mul_statement_is_pointwise (asserts the rendered type verbatim)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_matrix_transpose_mul_statement_is_pointwise -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "A footprint check cannot carry this claim: a theorem stating something weaker, or with the two transposed factors in the wrong order, has exactly the same empty footprint."
+    },
+    {
+      "id": "row3-ADR-0825-collapse-Rat.matTranspose_mul_example",
+      "kind": "instance-pin",
+      "supports": "Row 3 of the graded family: Rat.matTranspose_mul_example applies Rat.matTranspose_mul -- the SAME row-1 declaration -- at two concrete 2x2 matrices A := [[2,3],[5,7]], B := [[11,13],[17,19]] and dimension/index (2, 0, 1), with the conclusion bridged to the plain numeral `ofInt 174` by the kernel's own delta/beta/iota computation. 174 is independently computed as A(1,0)*B(0,0) + A(1,1)*B(1,0) = 5*11 + 7*17 = 174, and discriminates the WRONG transpose-of-product law (AB)^T = A^T B^T, which gives 121 at the same entry (A(0,0)*B(0,1) + A(1,0)*B(1,1) = 2*13 + 5*19 = 121). No separate axeyum-cas producer/verifier pair is built, per ADR-0825's collapse.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the concrete instance is itself a kernel declaration, admitted at build time)",
+        "rat_prelude_tests::the_matrix_transpose_examples_state_the_expected_numerals (asserts the RHS numeral is exactly the unary succ-chain for 174, not 121)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_matrix_transpose_examples_state_the_expected_numerals -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_transpose.rs",
+      "notes": "The check reads the kernel-rendered numeral, not a Rust-side computed value, so a bug that made the general theorem's PROOF admit but the concrete instantiation reduce to the wrong number would still be caught."
+    },
+    {
+      "id": "footprint-rat-matrix-transpose",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for Rat.matTranspose, matTranspose_transpose, matTranspose_mul, matTranspose_eval_example and matTranspose_mul_example -- the rat prelude's trusted surface remains 0.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free (environment-derived coverage: every live Rat definition/theorem is listed somewhere it gets kind+footprint checked)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "notes": "This test reads kernel.environment().iter() directly and fails naming anything live and unlisted -- it caught all five new matTranspose declarations on the first run of this lane's test suite before they were added to unnamed_but_live_declarations, which is exactly the CLAUDE.md-documented failure mode this test exists to close."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane graded-families-linear-algebra, Rat.matTranspose_mul in crates/axeyum-lean-kernel/src/rat_prelude/matrix_transpose.rs",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "standard linear algebra (e.g. Boyd & Vandenberghe, Introduction to Applied Linear Algebra, ch. 1)",
+        "what": "the transpose of a matrix product reverses the order of the factors: (AB)^T = B^T A^T",
+        "attribution": "standard textbook identity; this lane did not consult a primary source."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) There is no Eq between matrices anywhere here, for the same funext reason F:rat-matmul-assoc records. (2) No dimension consistency is enforced by the types -- matTranspose and matMul are total functions on all of Nat, so the identity holds for every i, j regardless of whether they are 'in bounds' for any intended m x n shape. (3) This is one operation (transpose) of the many a linear-algebra library needs: general-n determinant, rank, and Ax=b solvability at symbolic dimension remain open (see docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md sections LA-1/LA-2/LA-3, and ADR-0930)."
+}

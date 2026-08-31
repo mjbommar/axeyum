@@ -541,6 +541,14 @@ step autogenesis-nursery-refill python3 scripts/gen-autogenesis-nursery-refill.p
 # construction-level divergences before they are preregistered.
 step dispatchable-frontier-tests bash scripts/tests/test-dispatchable-frontier.sh
 step dispatchable-frontier python3 scripts/check-dispatchable-frontier.py
+# L3 D4: does an open obstruction actually compile into a falsifiable,
+# plural producer contract (ADR-0602's `applicability.fact_ids` >= 2), or
+# does classification stop at "blocked"? Re-derives both the classification
+# and every contract from the fact ledger, the divergence registry, and
+# nat_prelude/ source on each run; fails on drift, an empty classification,
+# a `proved` field anywhere, or a single-target contract claiming generality.
+step obstruction-producers-tests bash scripts/tests/test-obstruction-producers.sh
+step obstruction-producers python3 scripts/check-obstruction-producers.py
 # ...and the artifact S2/S3/S4 constrain. Those three pin EVERY field of the
 # statable vocabulary to one value -- S2 bounds `bridge` from below, S3 from
 # above, S4 pins the row set to the ledger both ways -- so nothing in it was
@@ -1602,3 +1610,6 @@ step structural-index-mutations bash scripts/tests/test-structural-index-mutatio
 step checked-interchange           python3 scripts/check-checked-interchange.py
 step checked-interchange-mutations bash scripts/tests/test-checked-interchange-mutations.sh
 step checked-interchange-tests     python3 scripts/tests/test-checked-interchange.py
+step lean-adapter                  python3 scripts/check-lean-adapter.py
+step lean-adapter-mutations        bash scripts/tests/test-lean-adapter-mutations.sh
+step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py

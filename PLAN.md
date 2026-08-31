@@ -198,6 +198,11 @@ now. Nothing was deleted.
 | 2026-08-30 | `5ad3bbfcd` | Add replayable x86-64 source-pin and decoder/step reports. Six manuscript programs execute across all seventeen forms; three trap classes and four semantic mutations are checked; source-digest and following-RIP branch-base controls fail closed. Book manifests remain pending. |
 | 2026-08-30 | `d75cd25bf` | Begin the faithful PyO3 machine projection with A0 words, dotted imports, generated stubs, and runtime/static-type controls. The focused surface passes; the aggregate Python suite separately exposes one stale agent fixture and a deterministic prelude-build segfault that remain full-gate blockers. |
 | 2026-08-30 | `055536b5b` | Repair the deterministic Python prelude segfault by moving the grown CReal and Complex builders to the existing bounded deep-stack boundary; replace the stale fixed retrieval-miss fact with a derived live control. The full suite now completes (1,846 passed, 34 skipped) and exposes nine separate knowledge/autogenesis drift failures on the superseded pre-rebase snapshot. |
+| 2026-08-30 | `4e93f9d62` | Complete the reader-facing A0 Python surface: memory, state codec, all seventeen typed instruction families, step, bounded traces, categorized traps, generated stubs, and thirteen direct reader controls. Rust, runtime/stub, static-type, lint, and formatting gates pass; RV64, x86-64, cross-machine, and book bindings remain open. |
+| 2026-08-30 | `4548f3dda` | Move reader-facing A0 error formatting outside the source-pinned semantic file. The exact v10 digest is restored without relabeling message-only changes as new semantics; all sixteen book routes replay successfully again. |
+| 2026-08-30 | `3884b8d04` | Project the complete source-pinned twelve-form RV64I single-step slice through Python: typed instructions, canonical encoding, complete state, traps, memory, projection, source identity, generated stubs, and reader controls. Bounded RV64 traces and cross-machine interfaces remain open. |
+| 2026-08-30 | `ebcbfc618` | Project the complete source-pinned seventeen-form x86-64 single-step slice through Python: variable-length decode, explicit undefined flags, complete state, traps, stack effects, projection, source identity, generated stubs, and reader controls. Real-ISA bounded traces and cross-machine interfaces remain open. |
+| 2026-08-30 | l4-c3-thin-lean-adapter | ADR-0935 + `axeyum_lean_import::thin_adapter` (protocol/grading, 9 unit tests) + `thin_lean_adapter_goal_pack.rs` (8-category goal pack run live against real pinned Lean) + `scripts/check-lean-adapter.py`/`test-lean-adapter.py`/`test-lean-adapter-mutations.sh` (7 guards, mutation-verified 1:1) + `just lean-adapter` / `scripts/check.sh` gate registration |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
 | 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
@@ -34735,10 +34740,47 @@ explicit extension and truncation, complete states have a canonical binary
 artifact codec, and the source-derived symbolic memory-frame route covers all
 eight supported widths. Next: independently pinned RV64I and x86-64 teaching
 slices, broader semantic relations, manifests, the remaining Python machine
-projection, and clean-checkout book gates. The first PyO3 slice now projects A0
-words faithfully; state, instruction, trace, and real-ISA bindings remain. A0 addition has fixed-width symbolic certificates;
+projection, and clean-checkout book gates. The PyO3 layer now projects the
+complete A0 word, state, memory, instruction, step, and trace surface. The
+source-pinned RV64I and x86-64 slices now have complete reader-facing
+single-step Python projections; real-ISA bounded traces and cross-machine relations remain.
+A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
+
+**Your lane's block (`DONE`, l4-c3-thin-lean-adapter, 2026-08-30).** C3 is
+landed: `axeyum_lean_import::thin_adapter` (a ~150-line grading module, ADR-0935)
+composes C2's two already-checked paths (real pinned Lean replay via
+`scripts/lean/replay-lean4export.lean`, unchanged; independent reimport via
+`import_ndjson`, unchanged) rather than reimplementing either. A preregistered
+8-category goal pack (`artifacts/lean-adapter/goal-pack/thin-adapter-v1.json`)
+runs live against real pinned Lean 4.30.0 in
+`crates/axeyum-lean-import/tests/thin_lean_adapter_goal_pack.rs`: success,
+unknown, timeout, unsupported, malformed_response, wrong_goal,
+wrong_environment, mutated_proof -- all eight graded correctly (1 accepted, 4
+declined, 3 rejected), with success/wrong_goal/mutated_proof each confirmed to
+have actually invoked real Lean rather than being decided from the envelope
+alone. `scripts/check-lean-adapter.py` validates the committed result with 7
+guards, each mutation-verified 1:1 in
+`scripts/tests/test-lean-adapter-mutations.sh`; registered in both `justfile`
+(`just lean-adapter`, appended to the `check:` dependency line) and
+`scripts/check.sh` (appended after the `checked-interchange` steps).
+
+Bounded and stated as such: this covers 8 representative categories over 1
+subject (`Nat.add_comm`) drawn from C2's own 9-credited-root population, not
+all 9 re-verified under the adapter and not a general goal population. The
+new trust assumption, named in ADR-0935: the "environment identity" is a
+plain string comparison, not a cryptographic binding -- it catches a stale or
+substituted identity string but does not defend against a sidecar that
+fabricates a matching string while running elsewhere; the actual soundness
+rests entirely on the post-Lean grading step, which never reads a
+sidecar-controlled field. No in-Lean `#tactic`/command was built (a Rust-side
+orchestration around the same two C2 paths, per ADR-0935's alternatives
+section) -- that is a deliberate C5-adjacent scope call, not an oversight.
+
+C4 (demand-gated elaboration features) remains blocked on a preregistered
+high-value population per the roadmap; nothing in this lane's work unblocks
+or blocks that separately.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
@@ -36461,6 +36503,154 @@ Open, deliberately not done here: the `justfile`'s ~90 `check` recipes still
 take no slot (only `check.sh` is wired); `sccache` is the sound version of
 shared build artifacts and needs its own evaluation; and gating the always-on
 solver steps on a derived reverse-dependency closure is a real but narrow win.
+
+Status: DONE for this session. One complete graded family landed (rows 1
++ 3, row 2 argued absent via ADR-0716, row 3 via ADR-0825's collapse), two
+declarations proved axiom-free, two facts registered and validated, ADR-0930
+records the reasoning.
+
+## Step 0 findings — what already exists (read this before assuming anything below is open)
+
+- **The symbolic-dimension matrix layer already exists**, landed by a prior
+  lane the same session, BEFORE this lane started:
+  `crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs` (`Rat.matMul` at
+  symbolic dimension, `matMul_assoc`/`_add_left`/`_add_right`/`_smul_left`,
+  `Rat.matId` and both unit laws) and `crates/axeyum-lean-kernel/src/rat_prelude/vector.rs`
+  (`Rat.dotN`, general-dimension inner product, Cauchy-Schwarz). Facts
+  `F:rat-matmul-assoc`, `F:rat-matmul-id-left`, `F:rat-matmul-id-right`
+  already registered and `proved`. `matrix.rs` separately carries the
+  FIXED-size (2x2, 3x3) determinant family (`det2`, `det3`,
+  multiplicativity, Cramer's rule forward direction), landed earlier.
+  **This saved real work**: the curriculum note's own "three targets a lane
+  could start tomorrow" named the matrix layer as the highest-yield OPEN
+  target; it was closed before this lane's first tool call.
+- **`Rat.matTranspose` did not exist** -- confirmed via a freshly built
+  `--release` `shape_search --include-constructed --name-like matTranspose`
+  (2,507 declarations indexed): `verdict: ABSENT`, with `--name-like matMul`
+  (`FOUND 9`) as the positive control confirming the search itself works.
+  Transpose is the one basic matrix operation `matrix_n.rs` did not yet
+  cover, and it needed no interchange-of-summation-order argument
+  (`sumRange_swap`) the way `matMul_assoc` did, because transpose only
+  swaps INDEX arguments, never which two values are summed.
+- **General-`n` determinant, rank, and `Ax = b` solvability at symbolic
+  dimension are genuinely open** (curriculum note LA-1/LA-2/LA-3) and were
+  correctly sized by the brief as multi-session work (a recursive
+  cofactor determinant, a minor-by-index-shift, and Cauchy's argument for
+  multiplicativity). Not attempted here -- picking a smaller, honestly
+  bounded target over a stalled attempt at a larger one.
+
+## Family landed: matrix transpose over ℚ at symbolic dimension
+
+New file: `crates/axeyum-lean-kernel/src/rat_prelude/matrix_transpose.rs`.
+ADR-0930 records the design; `docs/research/09-decisions/adr-0930-matrix-transpose-lands-as-a-two-row-family.md`.
+
+1. `Rat.matTranspose : (Nat -> Nat -> Rat) -> Nat -> Nat -> Rat := fun A i j
+   => A j i` -- `Definition`, no bound argument, matching `Rat.matId`'s shape.
+2. `Rat.matTranspose_transpose : forall A i j, matTranspose (matTranspose A)
+   i j = A i j` -- the involution law, `Eq.refl`.
+3. `Rat.matTranspose_mul : forall A B k i j, matTranspose (matMul A B k) i j
+   = matMul (matTranspose B) (matTranspose A) k i j` -- **row 1**,
+   `(AB)^T = B^T A^T` at symbolic dimension, stated pointwise (`funext` is
+   absent). Proved from ONE `Rat.sum_range_congr` around ONE `Rat.mul_comm`
+   applied pointwise to the summand -- no new induction, no `sumRange_swap`.
+4. **Row 2: none.** Argued from shape per ADR-0603 Amendment 4's discipline
+   (never inferred from a failed search): the statement has no comparison
+   and no unbounded search to reduce to a boundary, so citing ADR-0716 §1
+   (ℚ's order totality is already a proved theorem here) is sufficient --
+   there is nothing to extract even in principle.
+5. `Rat.matTranspose_eval_example` -- the discriminating concrete
+   evaluation test the new `Definition` needs regardless of the family's
+   grading (the kernel cannot tell a well-typed `Definition` is wrong).
+   `A := [[2,3],[5,7]]` has DISTINCT off-diagonal entries, so a transpose
+   that forgot to swap its index arguments would produce `3` where the
+   theorem demands `5`, and the trusted gate would refuse the declaration.
+6. `Rat.matTranspose_mul_example` -- **row 3, the ADR-0825 collapse.**
+   `Rat.matTranspose_mul` ITSELF (the row-1 declaration), applied at
+   `A := [[2,3],[5,7]]`, `B := [[11,13],[17,19]]`, dimension 2, indices
+   `(0,1)`, with its conclusion bridged to the plain numeral `ofInt 174` by
+   the kernel's own delta/beta/iota computation. `174` is independently
+   computed by hand (`A(1,0)*B(0,0) + A(1,1)*B(1,0) = 5*11 + 7*17 = 174`)
+   and discriminates the WRONG law `(AB)^T = A^T B^T`, which gives `121` at
+   the same entry. **No separate `axeyum-cas` producer/verifier pair was
+   built** -- exactly the check ADR-0825 asks for before reaching for one.
+7. Row 4: not attempted, consistent with the neighbouring facts in this
+   family (`F:rat-matmul-assoc`, `F:cramer-rule-forward-direction-...`).
+
+**Axiom footprint, read from the kernel**
+(`rat_prelude_tests::the_matrix_transpose_toolkit_is_axiom_free`, iterates
+`kernel.axiom_footprint` per declaration): all five new declarations
+`footprint=[]`.
+
+**Rows 1 and 3 pinned verbatim, not merely footprint-checked**:
+`the_matrix_transpose_mul_statement_is_pointwise` and
+`the_matrix_transpose_involution_statement_is_pointwise` assert the exact
+kernel-rendered type with `assert_eq!` (same discipline as
+`the_matrix_associativity_statement_is_pointwise`), and
+`the_matrix_transpose_examples_state_the_expected_numerals` asserts the
+concrete examples' RHS is the exact unary succ-chain for 5/174, discriminating
+against the un-swapped/wrong-order values (3/121) a bug would produce. Both
+hand-derived pins were accepted by the kernel on the FIRST attempt.
+
+**Environment-derived coverage.** All five new declarations added to
+`unnamed_but_live_declarations` in `rat_prelude_tests.rs` --
+`every_rat_declaration_is_checked_and_axiom_free` (reads
+`kernel.environment().iter()` directly, not a hand list) caught all five as
+unlisted on the first run of this lane's suite, exactly the failure mode
+CLAUDE.md documents for `every_creal_declaration_is_checked_and_axiom_free`.
+
+`cargo test -p axeyum-lean-kernel --lib rat_prelude::`: 141 passed, 0 failed
+(full sweep, confirmed nonzero). Targeted `the_matrix_transpose*` sweep: 4
+passed, 0 failed. `cargo clippy -p axeyum-lean-kernel --lib -- -D warnings`:
+clean.
+
+Facts: `F:rat-mattranspose-mul`, `F:rat-mattranspose-transpose`.
+`depends_on` verified with `scripts/check-fact-depends-derived.py --fix`
+(`nothing to fix`). `python3 scripts/validate-facts.py`: 0 errors, 2324
+facts. `python3 scripts/check-settled-fact-statements.py --write`: wrote the
+missing pins for these two facts into
+`artifacts/ontology/settled-fact-statement-pins.json` (purely additive --
+`git diff` confirms no existing fact's pin changed), then reran to confirm
+`PASS`, `unpinned=0`.
+
+## Holdout isolation
+
+Before and after (identical -- this lane never touches
+`artifacts/autogenesis/`):
+
+    python3 scripts/check-autogenesis-holdout-isolation.py
+    AUTOGENESIS_HOLDOUT_ISOLATION|held_out=136|files_scanned=1110|settled=0|references=0|verdict=PASS
+
+## What a Mathlib reader would say is still missing
+
+This family covers ONE operation (transpose) of the many a linear-algebra
+library needs. General-dimension determinant, rank, linear independence,
+and `Ax = b` solvability at symbolic dimension all remain open (curriculum
+note LA-1/LA-2/LA-3; ADR-0930 names the specific missing pieces for
+determinant: a minor-by-index-shift, a recursive cofactor determinant, and
+Cauchy's multiplicativity argument). `matMul`/`matId`/`matTranspose`
+together give the algebraic skeleton (associativity, identity, transpose
+laws) that a Mathlib reader would recognise as "the basics of a matrix
+ring", not yet "linear algebra" in the sense of solving systems or
+computing invariants at general dimension.
+
+## Next steps for a successor lane
+
+1. **General-`n` determinant** (LA-1): needs a recursive cofactor
+   definition over the `Nat -> Nat -> Rat` encoding (a minor is `fun i j =>
+   if i < r then A i (adjust j) else A (i+1) (adjust j)`-shaped index
+   arithmetic) and Cauchy's product-of-determinants argument generalising
+   `det2_mul`'s linearity-plus-repeated-row proof. Sized as genuinely
+   multi-session; do not attempt as a single slice.
+2. **`Ax = b` solvability at symbolic dimension** (LA-2): the CAS/simplex
+   route (`axeyum-solver::lra`/`simplex`) already has the best row-3 story
+   in either subject (two independent Farkas re-checkers, kernel
+   reconstruction) -- a kernel-side row 1 at symbolic dimension is the
+   remaining gap, and would need the determinant work above for Cramer's
+   rule to generalise, or a Gaussian-elimination route instead.
+3. **Rank / linear independence** (LA-3): `Rat.det2_eq_zero_of_lin_dep` is
+   the 2x2 case; a symbolic-dimension notion of rank needs a row-reduction
+   or a maximal-nonsingular-submatrix definition, neither of which exists
+   yet over this encoding.
 
 Status: DONE for this session. One complete graded family landed (rows 1
 + 3, row 2 argued absent), both declarations axiom-free, both facts
@@ -38327,6 +38517,95 @@ every guard here. Closing that gap needs the screen to execute the real
 kernel declarations (via a prelude build), which D3's exit criterion does
 not require and this lane did not attempt.
 
+**Your lane's block (`DONE`, l3-d4-obstruction-producer, 2026-08-30).** See
+the detail below.
+
+**Track:** L3 definition-discovery-efficiency-roadmap — phase D4
+**Phase:** compiler built, two producer contracts compiled and mutation-tested; gate registered
+**Date:** 2026-08-30
+
+## Summary
+
+## What landed
+
+- `scripts/gen-obstruction-producers.py` — the compiler. Classifies every
+  open obstruction it can find primary-source evidence for into
+  `producer` / `new-construction` / `not-removable` (ADR-0602), and
+  compiles a falsifiable producer contract ONLY for the `producer` class.
+  `--check` re-derives everything from the fact ledger, the mirror-
+  divergence registry, and `nat_prelude/` source on every run and fails on
+  drift.
+- `scripts/check-obstruction-producers.py` — the gate (G1-G10): freshness,
+  nonempty classification, at least one live plural producer, no `proved`
+  field anywhere (recursive scan), applicability nonempty, plurality
+  enforced per-contract (kind=producer needs >= 2 targets or must be
+  `capsule`), targets exist and are `open`, negative controls present and
+  real, obstruction schema + evidence for `not-removable` claims,
+  applicability bounded by its own obstruction's population.
+- `artifacts/obstruction-producers/obstructions.json` — 7 obstruction
+  records: `nat-testbit-bool-codomain` (new-construction, 5 facts),
+  `nat-testbit-list-bool-getI` (not-removable, 1 fact),
+  `nat-multichoose-definitional-divergence` (not-removable, 3 facts),
+  `nat-minfac-algorithmic-divergence` (not-removable, 1 fact),
+  `nat-fastfib-recursion-principle` (not-removable, 1 fact, corrected
+  mid-session per ADR-0840), `nat-bitwise-cross-operator-proof-gap`
+  (producer, 2 facts), `nat-bitwise-extensional-duplicate` (producer,
+  3 facts).
+- `artifacts/obstruction-producers/producers/extensional-duplicate-close.json`
+  and `.../pointwise-bit-extensionality.json` — the two compiled producer
+  contracts. Applicability sizes 3 and 2, mean 2.5.
+- `scripts/tests/test-obstruction-producers.sh` — 13 cases, one per guard
+  (plus co-firing consequences), mutation-verified by hand (see commit
+  `12e77ee91`'s kill table).
+- `docs/research/09-decisions/adr-0920-obstruction-to-producer-compiler-classifies-before-it-compiles.md`.
+- Gate registered in `justfile` (`check:` recipe) and `scripts/check.sh`
+  (additive lines only).
+
+## Corrections made mid-session (kept in the compiler's own comments)
+
+- `Nat.minFac`'s coprime mirror looked like a fourth
+  `extensional-duplicate-close` target (same predicate symbols as an
+  already-proved native analogue) and is explicitly excluded: both
+  `nat_prelude/min_fac.rs`'s module doc and the native fact's own `notes`
+  field say flipping it would not be honest. Kept as a denylist entry and
+  a negative control.
+- `nat-fastfib-recursion-principle` was drafted as `new-construction`
+  (needs a well-founded `binaryRec`), then corrected to `not-removable`
+  after CLAUDE.md's Gotchas surfaced ADR-0840 mid-session: Mathlib's
+  `fastFibAux` only needs a non-dependent motive (the fuel `binaryRec`
+  already here suffices), and the real, un-removable blocker is that
+  `Nat.fib` itself independently diverges from Mathlib's recurrence.
+  Independently re-verified by reading `fibonacci.rs` before writing the
+  correction back into the classifier. Commit `66bf497f4`.
+
+## Absence checks
+
+`python3 scripts/check-autogenesis-holdout-isolation.py` before and after:
+`held_out=136, files_scanned=1110, references=0, verdict=PASS` both times
+-- unchanged, no held-out contamination introduced.
+
+## What was refused
+
+A producer for `Nat.testBit`'s Bool-codomain mirrors and for `Nat.fastFib`
+was refused: both are real capability gaps but not yet buildable
+(`Nat.testBitBool` and a reconciled `fastFib`/`fib` pair don't exist), so
+no producer is evaluable today. Compiling one anyway would have been
+exactly ADR-0602's dispatch-table failure mode. `Nat.multichoose` (3
+facts) and `Nat.minFac`'s remaining mirror were refused outright: both are
+documented, in-tree, as different propositions from Mathlib's.
+
+## Next steps for a future lane
+
+- Once `Nat.testBitBool` (Bool-valued codomain) is built, re-run the
+  compiler to check whether a producer becomes evaluable for the 5
+  remaining `Nat.testBit` mirrors.
+- Once a reconciled `fastFib`/`Nat.fib` pair exists as new local facts
+  (per ADR-0840's sizing), re-run to check the same for `fastFib`.
+- The `extensional-duplicate-close` shape (restate via an already-proved
+  twin or bare declaration) likely generalizes beyond the `land` family
+  once other prelude modules are scanned the same way; not attempted here
+  for scope.
+
 **Lane `l4-c2-checked-interchange`.** DONE for the bounded credited-root
 population this lane scoped; wider population growth is future work, not a
 gap in what landed.
@@ -38505,6 +38784,132 @@ whether `Nat.nthRoot.lt_pow_go_succ_aux` — a Mathlib-internal auxiliary
 about ITS OWN Newton iteration, not ours — is a fair blind target) before
 drawing either module.
 
+**Status: DONE — `check-autogenesis-nursery.py` is green again, and it is
+green because the enlarged component was reviewed, not because the checker
+was weakened.**
+
+Decision record:
+[ADR-0940](docs/research/09-decisions/adr-0940-cross-population-exemption-re-scoped-to-228-members.md).
+
+## The task
+
+`python3 scripts/check-autogenesis-nursery.py` was red on `main` on a
+cross-population declared-dependency-component crossing. ADR-0850/ADR-0855
+built this check to be self-invalidating by design: an exemption names the
+exact closed fact-id set of one component, and if the live `depends_on` graph
+later grows that component, the recorded digest stops matching and the gate
+goes red again, naming the enlarged component in full. That is exactly what
+had happened — the job was to review the growth, not to make the gate green
+by any means.
+
+## What I re-derived, independently
+
+Computed weakly-connected components over the union of `nursery-v1.json` and
+`nursery-v2-extension.json` against the current fact ledger, from scratch
+(not inherited from ADR-0925's report, though it agrees):
+
+- 3 components cross evaluation partitions. Two (3 members, 4 members) are
+  unchanged and their exemptions still match.
+- The third grew **206 -> 228 members**, all `train`/`development`/
+  `longitudinal`.
+
+**Held-out involvement: zero, in all three components** — checked directly
+against each member's `partition` field, not inferred from family name.
+
+**Why it grew (routine, not a partition-drawing error):** the 22 new members
+are `Nat.and*`/`Nat.bitwise*`/`Nat.land*`/`Nat.lor_comm`/`Nat.dist*` facts, all
+`epistemic_status: proved`, 0 of 22 referenced by any of the 29 recorded
+autogenesis operations, each landed by an ordinary hand-development commit
+(`ddb1c6bcd`, `f0ad7113c`, `ef8855a89`, `79d9691c6` — draw-9 status flips and
+census closes, all visible in `git log`). They connect into the pre-existing
+component only through two already-member arithmetic lemmas
+(`F:ml430-nat-add-comm-56a2d614`, `F:ml430-nat-add-assoc-8c87a1f1`) — the
+same shape ADR-0850/ADR-0855 already accepted, not a new failure pattern.
+
+ADR-0925 (nursery draw 11) had already measured this exact staleness with
+three independent controls and correctly judged the repair out of its own
+scope, naming it for "whoever owns that gate next." This lane is that repair.
+
+## What changed
+
+- `artifacts/autogenesis/nursery-v2-extension.json`: the stale 206-member
+  `cross_population_component_split_exemptions` entry re-scoped to the exact
+  228-member set (`reason`/`authority` updated to record what grew and why;
+  `extension_sha256` recomputed with the generator's own digest function).
+  The two unaffected exemptions (3 members, 4 members) are untouched. No
+  fact, partition, or `epistemic_status` was touched anywhere.
+- `scripts/tests/test_check_autogenesis_nursery.py`: new `LiveManifestTests`
+  class running `build_report`/`build_cross_population_report` against the
+  REAL committed manifests (every other test in the suite is a synthetic
+  fixture, deliberately, and none of them would ever catch the committed
+  exemption itself going stale — this closes that gap). Also asserts
+  `cross_population_component_split_exemptions_unused == []`, catching the
+  opposite failure (a dead exemption matching nothing live).
+- ADR-0940, recording the full re-derivation, the self-invalidation proof,
+  and the draw-11 closed-evaluation review below.
+
+## Self-invalidation proof (not just asserted)
+
+Dropped one member (`F:ml430-nat-dist-comm-1fa29a04`) from the new 228-entry
+exemption and re-ran the CLI: it reproduced the full, unexempted 228-member
+violation report. Reverted. The mechanism is exactly as fail-closed after
+this edit as before it.
+
+## Mutation-verified guard -> test table
+
+| mutation | tests killed |
+| --- | --- |
+| Revert `nursery-v2-extension.json` to the pre-fix committed state (stale 206-member exemption), leave the new test in place | exactly 1: `LiveManifestTests.test_committed_nursery_files_pass_both_gates` |
+
+Confirmed by running the full 30-test suite both ways
+(`python3 -m unittest scripts.tests.test_check_autogenesis_nursery`): 30
+passed with the fix in place, 29 passed / 1 error with the stale file
+restored, and the one failure is the new test.
+
+## Draw 11's two accepted closed-evaluation violations — checked, not repaired
+
+Confirmed real and checked against the cited precedent (full detail in
+ADR-0940):
+
+- `Nat.bit_false_zero`/`Nat.size_one` are genuinely in `natural-bit-decode`,
+  which is **held-out** — this is a real spend, and ADR-0925 already says so
+  plainly.
+- `check-holdout-closed-evaluation.py` (registered in `just check` per
+  ADR-0695) is currently RED on this tree: `verdict=FAIL`, `violations=2`,
+  naming exactly these two facts. This is a SEPARATE red gate from the one
+  this lane fixes, red by design (draw 11 knowingly introduced it and chose
+  to document rather than repair).
+- The `383-nursery-draw-8.md` citation is accurate but was written for a
+  narrower case (a *quantified* statement invisible to the binder-free
+  classifier); the general "accept and record" option it states is real, but
+  draw 11's phrasing reads more specific to this exact case than the source
+  is.
+- ADR-0695's own `fermat-numbers` precedent went further than draw 11's
+  action: it amended the spent facts OUT of held-out (ADR-0542), not merely
+  documented them. Draw 11 explicitly takes the weaker half and defers the
+  amendment to a future lane — transparently, not hidden.
+- Not repaired here: `check-holdout-closed-evaluation.py`, `artifacts/facts/`,
+  and any ADR-0542 amendment are all outside this lane's assigned paths.
+
+## Gates — before and after
+
+| check | before | after |
+| --- | --- | --- |
+| `python3 scripts/check-autogenesis-nursery.py` | exit 1, cross-population component crossing | exit 0, `AUTOGENESIS_NURSERY_OK\|...\|ready=true\|evaluation=214\|blockers=0` + `AUTOGENESIS_NURSERY_CROSS_POPULATION_OK\|...\|v1=216\|v2=380\|components=317` |
+| `python3 scripts/gen-autogenesis-nursery-refill.py --check` | exit 0 | exit 0 (unaffected; `extension_sha256` recomputed correctly) |
+| `python3 -m unittest scripts.tests.test_check_autogenesis_nursery` | 29 tests, 0 failures | 30 tests, 0 failures |
+| `scripts/gen-adr-index.py --check` | — | fails until regenerated (new ADR file); regenerated, `rows=676, duplicate_numbers=0166,0167` (grandfathered only) |
+| `check-holdout-closed-evaluation.py` | exit 1, `violations=2` | unchanged — not this lane's path, reported above |
+
+## What this gate still cannot see
+
+It answers "does the declared-dependency graph respect partition
+boundaries", and nothing about whether a partition boundary was drawn well
+in the first place — a family that is genuinely contaminated from the start
+(the wrong kind of problem entirely, the `Nat.dist` R9 incident's shape)
+would pass this exact check as cleanly as the routine growth reviewed here,
+because R9/R11/closed-evaluation are separate screens this gate does not run.
+
 **Done** (`WIP`, nursery-partition-leak, 2026-08-30). `check-autogenesis-nursery.py`
 went from `EXIT=1` with a bare, un-actionable header to `EXIT=0` naming every
 crossing it forgives and why.
@@ -38592,6 +38997,144 @@ the pinned inventory here is `Nat`/`Int`-scoped only.
 | `check-autogenesis-holdout-isolation.py` | exit 0, `held_out=136 files_scanned=1110 settled=0 references=0 verdict=PASS` |
 | `validate-facts.py` | exit 0, `2318 facts checked, 0 errors` |
 | `gen-adr-index.py --check` | exit 0 |
+
+**Status: DONE — draw 11 is AUTHORED.** The dispatchable frontier clears its
+floor (10 -> 23 against floor 10). ADR-0910's `Nat.nthRoot`/`Squarefree`
+construction-only unblock opens exactly the two modules it predicted, but
+R11 (landed as code the same day, never previously run against this pair)
+hard-refuses `Squarefree` for held-out on vocabulary overlap — substituted a
+below-floor `Mathlib.Data.Nat.{Size,Bits}` combination instead.
+
+Decision record:
+[ADR-0925](docs/research/09-decisions/adr-0925-nursery-draw-11-authored-with-one-documented-closed-evaluation-spend.md).
+
+## What changed
+
+`scripts/gen-autogenesis-nursery-refill.py`: four new families in
+`FAMILY_MODULES`/`FAMILY_ROUTES`, plus a real bugfix
+(`stored_cross_population_exemptions`, see below).
+
+| family | partition | modules | rows |
+| --- | --- | --- | --- |
+| `natural-nth-root` | held-out | `Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas` | 10 of 13 |
+| `natural-gcd-and-bitwise-basics` | development | `Mathlib.Data.Int.GCD`, `Mathlib.Data.Nat.GCD.Basic`, `Batteries.Data.Nat.Bitwise.Lemmas` | 10 of 57 |
+| `natural-factorial-choose-and-squarefree` | train | `Mathlib.Data.Nat.Choose.Basic`, `Mathlib.Data.Nat.Factorial.Basic`, `Mathlib.Data.Nat.Squarefree` | 10 of 55 |
+| `natural-bit-decode` | held-out | `Mathlib.Data.Nat.Size`, `Mathlib.Data.Nat.Bits` | 10 of 12 |
+
+Regenerated: `artifacts/autogenesis/kernel-environment-snapshot-v1.json`
+(2383 -> 2507 declarations, a fresh release build), `artifacts/autogenesis/
+nursery-v2-extension.json` (340 -> 380 entries), `artifacts/autogenesis/
+holdout-adjacency-review-v1.json` (2 new disclosure reviews — the first ever
+written to that file). 40 new fact files under `artifacts/facts/F-ml430-*.json`.
+
+## Screening trail — every family, including rejections
+
+- **`Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas`** (13 rows) — R9
+  0/10 clean. R11: no topic/vocabulary hit, but a non-empty environment sweep
+  (stems `root`/`nth`/`nthroot` hit `CReal.ivt_exact_root*`,
+  `Complex.root_of_unity*`, `Nat.nth`/`nthAux` — unrelated mathematics
+  sharing a word) required a recorded disclosure review. **Drawn, held-out.**
+- **`Mathlib.Data.Nat.Squarefree`** (11 rows) — R9 0/10 clean, but **R11
+  REFUSES it for held-out**: 6 of its drawn 10 rows mention
+  `Nat.Coprime`/`Nat.Prime`/`Nat.gcd`, over the vocabulary allowance of 5.
+  This is new information beyond ADR-0910's measurement — ADR-0910 declared
+  the construction but never ran the real `guard()`/R5 simulation, and R11's
+  code landed only today. **Not drawn as held-out; placed in `train`
+  instead** (R11 does not screen non-held-out partitions), combined with
+  Choose.Basic and Factorial.Basic.
+- **`Mathlib.Data.Nat.GCD.Basic`** (26), **`Factorial.Basic`** (26, R9
+  1/10 — `Nat.ascFactorial_succ`), **`Batteries.Data.Nat.Bitwise.Lemmas`**
+  (21), **`Choose.Basic`** (18), **`Mathlib.Data.Int.GCD`** (10, R9 1/10 —
+  `Nat.gcd_eq_gcd_ab`) — all R9-clean-or-near, all R11-adjacent to a
+  published development/train family (`natural-gcd`, `natural-factorial`,
+  `natural-bitwise`, `natural-binomial`, `integer-gcd`). Safe for
+  development/train (contamination there is a feature, ADR-0653), not
+  held-out. **Drawn as `natural-gcd-and-bitwise-basics`
+  (development)/`natural-factorial-choose-and-squarefree` (train)**, not as
+  independent families — merged specifically to make the cycle land the two
+  held-out slots on `natural-nth-root` and `natural-bit-decode`.
+- **`Mathlib.Data.Nat.{Bits,Size}` combined** (12 rows) — R9 0/10 clean. R11:
+  topic 0, vocabulary 0/10, but a non-empty environment sweep (this kernel's
+  own extensive `Nat.bit`/`Nat.testBit`/`Nat.bitwise`/`Nat.size` development)
+  required a disclosure review — the same shape as `natural-nth-root`'s.
+  **Drawn, held-out** — the ADR-0900-identified substitute for `Squarefree`.
+- **34 other below-floor un-owned modules, all pairs and triples** (Fib+Int.Fib,
+  BinaryRec combinations, Bertrand, Factorization variants, prime/choose/gcd
+  sub-modules, …) — screened for R9 + `check-holdout-closed-evaluation.py` +
+  R11 topic/vocabulary together. **Zero clean alternatives found.**
+  Reproduces ADR-0900's own exhaustive conclusion from a different angle.
+
+## The two brief-named caveats, weighed
+
+- **`Nat.nthRoot_zero_left : forall a, Nat.nthRoot 0 a = 1`** (drawn, in
+  `natural-nth-root`) is very likely `Eq.refl` the instant ADR-0910's
+  construction exists (its `n = 0` branch returns `1` unconditionally,
+  independent of `a`). `check-holdout-closed-evaluation.py`'s classifier
+  requires a binder-free statement and this has `forall (a : Nat)`, so it is
+  invisible to that gate by design — confirmed by running it: `violations=2`,
+  neither of which is this row. `Nat.nthRoot_one_right : n.nthRoot 1 = 1` is
+  judged NOT free by the same reasoning (`Nat.pow` recurses on its symbolic
+  exponent here). Flagged, not excluded — no mechanism in this generator's
+  scope removes one named row from an alphabetically-drawn pool.
+- **`Nat.nthRoot.lt_pow_go_succ_aux`** (drawn) restates Mathlib's
+  Newton-iteration auxiliary; our construction is a fuel-bounded linear
+  search with no counterpart. May be unprovable here for reasons unrelated
+  to mathematical difficulty. Flagged for a dispatch lane to judge before
+  attempting, not resolved here.
+
+## A third caveat, found by measurement, not named in the brief
+
+`check-holdout-closed-evaluation.py` reports `verdict=FAIL`, `violations=2`
+against the finished draw: `Nat.bit false 0 = 0`
+(`F:ml430-nat-bit-false-zero-d996adbf`) and `Nat.size 1 = 1`
+(`F:ml430-nat-size-one-e23e5f71`), both in `natural-bit-decode`, both
+binder-free ground equations decided by reduction over `Nat.bit`/`Nat.size`
+— native constructions this kernel declared long before this draw. Confirmed
+the pre-draw baseline passes this same gate at `violations=0`, so these two
+are introduced by this draw specifically.
+
+**Accepted, not excluded**, per the exact rule 383-nursery-draw-8.md already
+states for this shape ("accept and record the spend, but do not read
+closed-eval 0 as nothing is spent") and the `fermat-numbers` precedent
+(3 of 10 closed, drawn before the checker existed, repaired afterward by
+ADR-0542 amendment). Full reasoning in ADR-0925.
+
+## An unrelated defect found and fixed
+
+Running the real (non-`--check`) generator silently dropped
+`cross_population_component_split_exemptions` from `nursery-v2-extension.json`
+— exactly the residual ADR-0900 named and left unfixed. This un-exempted
+three previously-reviewed cross-population components (ADR-0855), none
+touching this draw's facts. Fixed with `stored_cross_population_exemptions()`
+(mirrors `stored_surface_validation()`'s existing pattern). One of the three
+exemptions turned out to be independently STALE (grown by 22 members from
+draw 9's later work) — confirmed pre-existing by three controls (stash-based
+reproduction with this draw entirely removed; draw-11 `FAMILY_MODULES` block
+removed with the fix kept; exhaustive check that none of this draw's 40 new
+fact ids appear in either violation block). Reported in ADR-0925, not fixed
+— out of this lane's scope (a 200+-member component spanning a dozen
+unrelated families).
+
+## Gates
+
+| check | result |
+| --- | --- |
+| `check-dispatchable-frontier.py` | exit 0, **23** dispatchable (floor 10) |
+| `check-autogenesis-nursery.py` | exit 1 — **pre-existing**, reproduced identically with this draw's entire diff removed |
+| `check-autogenesis-holdout-isolation.py` | `held_out=156 files_scanned=1110 settled=0 references=0 verdict=PASS` (136 -> 156) |
+| `validate-facts.py` | `2362 facts checked, 0 errors` |
+| `check-holdout-closed-evaluation.py` (not one of the four required) | exit 1, `violations=2` (documented above, accepted) |
+
+Three of the four required gates pass; the fourth fails for a reason proven
+pre-existing to this draw (see above and ADR-0925 Step 4).
+
+## Honest sentence on how long this draw lasts
+
+23 dispatchable against a floor of 10 and draw 9 was drained in one day by
+two theorem lanes — this buys roughly the same runway as draw 9 did, not
+materially more, and the un-owned Nat/Int inventory below the current floor
+is now measured (not assumed) to be exhausted of clean held-out-safe supply;
+the next draw needs a wider inventory or a third construction.
 
 **Status: DONE — draw 9 is AUTHORED. The dispatchable frontier clears its
 floor (1 -> 21 against floor 10) with ZERO new kernel constructions**, against
