@@ -67,6 +67,11 @@ mirror facts (still `open` — this lane's own `F:nat-logaux-le-fuel` /
 `F:nat-log-le-self` are new, separate kernel-lean facts, not a hand flip of
 the mirrors, per the standing rule against claiming a Mathlib statement
 without a reconciliation route).
+*(Corrected 2026-08-31, kernel-measured: `Nat.clog` now exists as a `nat`-
+prelude `Definition`, landed by the sibling lane this paragraph deferred to.
+"which does not exist on this branch" is a historical record of that branch,
+not a live claim about the current tree.)*
+<!-- was-absent: Nat.clog -- landed by the sibling lane this paragraph deferred to -->
 
 **Gates run:** `rustfmt --edition 2024 --check` on all three touched files
 (clean); `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings`

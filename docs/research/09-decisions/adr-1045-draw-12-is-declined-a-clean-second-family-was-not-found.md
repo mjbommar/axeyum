@@ -135,7 +135,7 @@ new bridge constant would unlock. Two things this surfaced:
 `Nat.instMax`/`instMinNat` are admissible)** is the single largest
 opportunity and a genuinely fresh, unclaimed topic (`Nat.max`/`Nat.min` do
 not exist in this kernel -- `CReal.max`/`CReal.min`/`Rat.min` do, plain
-`Nat.max`/`Nat.min` do not). It is NOT a simple construction, though:
+`Nat.max`/`Nat.min` do not). <!-- absent: Nat.max, Nat.min --> It is NOT a simple construction, though:
 Mathlib states every MinMax lemma through the `Max`/`Min` typeclass, so the
 missing constants are literally `Max.max`, `Min.min`, `Nat.instMax`,
 `instMinNat` -- typeclass-elaborated names this generator's `admissible()`

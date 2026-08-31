@@ -103,6 +103,7 @@ does it with no special case.
 
 `Rat.one_mul` and `Rat.zero_mul` **do not exist in this prelude**; both are
 derived here from `mul_comm` plus `mul_one`/`mul_zero`.
+<!-- absent: Rat.one_mul, Rat.zero_mul -->
 
 **Three of my first drafts had a rewrite backwards**, and the fix was to
 recover each direction from the parent module's own call sites rather than

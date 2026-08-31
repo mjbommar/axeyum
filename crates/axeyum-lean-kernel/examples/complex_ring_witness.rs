@@ -33,7 +33,9 @@
 //!    `fun _ _ => zero`. `ofReal_mul` pins the operation on the whole embedded
 //!    ℝ; `I_sq` pins it at the one point `ofReal` cannot reach; and
 //! 7. **`Complex.le` and `Complex.lt` do not exist, and
-//!    `Complex.no_compatible_order` says why.** Omitting an order proves
+//!    `Complex.no_compatible_order` says why.**
+//!    <!-- absent: Complex.le, Complex.lt -->
+//!    Omitting an order proves
 //!    nothing — a development that simply never got round to it looks
 //!    identical. The theorem quantifies over both relations and derives
 //!    `False` from seven of the `AxReal` package's 13 order laws, so this is a

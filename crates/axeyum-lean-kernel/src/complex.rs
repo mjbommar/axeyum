@@ -874,6 +874,14 @@ pub struct ComplexPrelude {
     /// Archimedean development's `k/(j+1)` embedding at index `0` rather than
     /// a three-deep integer/rational cast that was never built.
     ///
+    /// **Corrected 2026-08-31, kernel-measured:** `Rat.ofInt` now exists (a
+    /// `rat`-prelude `Definition`, landed after this doc comment was
+    /// written). The chain built here is unaffected -- `ofReal ∘
+    /// CReal.ofNat` never routed through `Rat.ofInt` and still does not --
+    /// this note only corrects the "does not exist anywhere in this kernel"
+    /// claim above, which is now false.
+    /// <!-- was-absent: Rat.ofInt -- landed after this doc comment was written; the direct ofReal . CReal.ofNat route this file uses is unaffected -->
+    ///
     /// Induction on `n`, entirely at the `Complex.Equiv`/`CReal.Equiv` level
     /// (never touching `re`/`im` except inside the one local `ofReal`
     /// congruence this file has to build by hand, since `ComplexPrelude` has
@@ -9148,6 +9156,9 @@ fn of_real_congr_local(
 /// cast chain is `ofReal ∘ CReal.ofNat`, not the three-deep
 /// `ofReal ∘ CReal.ofRat ∘ Rat.ofInt ∘ Int.ofNat` chain [`declare_of_nat`]'s
 /// own doc comment names (`Rat.ofInt` does not exist in this kernel).
+/// Corrected 2026-08-31: `Rat.ofInt` now exists; this file's chain still
+/// does not use it (see the corrected note on [`ComplexPrelude::of_nat_eq_cast`]).
+/// <!-- was-absent: Rat.ofInt -- landed after this doc comment was written -->
 fn declare_of_nat_eq_cast(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let creal = p.creal;

@@ -1007,6 +1007,7 @@ pub struct IntPrelude {
     /// `G ∣ C*H`, cancel the shared positive factor `C`). `Nat.dvd_antisymm`
     /// closes it. `c = 0` is separate and degenerate (`c∣a → a=0`, `c∣b →
     /// b=0`, both sides collapse to `0` via `gcd_zero_right`/`Nat.div_zero`).
+    /// <!-- absent: Nat.gcd_mul_left -->
     pub gcd_div: NameId,
     /// `Int.Coprime a b := Eq Nat (gcd a b) 1` — the converse of Bézout
     /// (Elements VII, Def. 12), stated over the `Nat`-valued `gcd`.

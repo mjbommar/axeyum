@@ -109,7 +109,6 @@ Checked against local `main` @ `aee64cc17` merged into this worktree
   exactly three `declare_*` functions (`neg_one_pow_double`,
   `alternating_e_le_o`, `alternating_bracket`); no dual/upper-bound variant
   anywhere in `creal/`.
-
 *(All five names above are since landed — `CReal.uniform_converges_add`,
 `Nat.even_or_odd`, and the three `CReal.alternating*` declarations all now
 exist in the kernel. This section is a historical record of the merged-tree

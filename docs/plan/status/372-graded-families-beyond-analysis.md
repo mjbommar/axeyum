@@ -14,7 +14,7 @@ untreated destinations.
 
 `Nat.le_total`, `Int.le_total`, `Rat.le_total` and `Rat.le_or_lt` are **proved,
 axiom-free theorems**, while `CReal.le_total`/`lt_total` are absent (controls:
-`CReal.lt_cotrans`, `CReal.apart_cotrans`, FOUND). So the decision principle
+`CReal.lt_cotrans`, `CReal.apart_cotrans`, FOUND). <!-- absent: CReal.le_total --> So the decision principle
 that every real-analysis row 2 extracts is *already in the environment* for
 ℕ/ℤ/ℚ, and no number-theoretic or rational-linear-algebra statement can have a
 row 2 of that kind. That is a positive measurement of emptiness, not a failure
