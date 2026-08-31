@@ -35,11 +35,7 @@ fn the_matrix_invertibility_toolkit_is_axiom_free() {
             true,
         ),
         ("matMul_matInv2_top_left", p.matmul_matinv2_top_left, true),
-        (
-            "matMul_matInv2_top_right",
-            p.matmul_matinv2_top_right,
-            true,
-        ),
+        ("matMul_matInv2_top_right", p.matmul_matinv2_top_right, true),
         (
             "matMul_matInv2_bottom_left",
             p.matmul_matinv2_bottom_left,
@@ -151,7 +147,9 @@ fn mat_inv2_eval_example_discriminates_a_swapped_diagonal() {
     let neg2 = literal(&mut d, -2);
     let claim = req(&mut d, wrong_top_left, neg2);
     let proof = rrefl(&mut d, neg2);
-    let name = d.kernel().name_str(anon, "Check.wrong_top_left_reduces_to_neg2");
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.wrong_top_left_reduces_to_neg2");
     let accepted = d.kernel().add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
@@ -166,7 +164,9 @@ fn mat_inv2_eval_example_discriminates_a_swapped_diagonal() {
     let neg7 = literal(&mut d, -7);
     let claim_wrong_is_right = req(&mut d, wrong_top_left, neg7);
     let proof_wrong_is_right = rrefl(&mut d, neg7);
-    let name2 = d.kernel().name_str(anon, "Check.wrong_top_left_equals_neg7");
+    let name2 = d
+        .kernel()
+        .name_str(anon, "Check.wrong_top_left_equals_neg7");
     let refused = d.kernel().add_declaration(Declaration::Theorem {
         name: name2,
         uparams: vec![],
@@ -227,7 +227,9 @@ fn matmul_matinv2_needs_its_hypothesis_the_unrestricted_claim_is_false_at_det_ze
     let zero_r = rzero(&mut d, p);
     let claim_true = req(&mut d, lhs, zero_r);
     let proof_true = rrefl(&mut d, zero_r);
-    let name_true = d.kernel().name_str(anon, "Check.matinv2_at_det_zero_is_zero");
+    let name_true = d
+        .kernel()
+        .name_str(anon, "Check.matinv2_at_det_zero_is_zero");
     let accepted_true = d.kernel().add_declaration(Declaration::Theorem {
         name: name_true,
         uparams: vec![],
@@ -245,7 +247,9 @@ fn matmul_matinv2_needs_its_hypothesis_the_unrestricted_claim_is_false_at_det_ze
     };
     let claim_false = req(&mut d, lhs, one_r);
     let proof_false = rrefl(&mut d, one_r);
-    let name_false = d.kernel().name_str(anon, "Check.matinv2_at_det_zero_equals_one");
+    let name_false = d
+        .kernel()
+        .name_str(anon, "Check.matinv2_at_det_zero_equals_one");
     let refused = d.kernel().add_declaration(Declaration::Theorem {
         name: name_false,
         uparams: vec![],

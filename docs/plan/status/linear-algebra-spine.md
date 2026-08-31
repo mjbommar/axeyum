@@ -1,77 +1,56 @@
-# linear-algebra-spine — status
+# Lane: linear-algebra-spine — deepen the ADR-0603 linear-algebra spine over the constructed rationals
 
-Lane: `linear-algebra-spine`. Started 2026-08-31.
+<!-- plan-section: lane-status -->
 
-## Step 0 (mandatory inventory) — result
+**`WIP`, linear-algebra-spine, 2026-08-31.** Step 0 (mandatory before
+building) found that the task brief's three candidate rungs — determinant
+multiplicativity, invertibility, `Ax=b` solvability, all at fixed small `n`
+— were ALREADY LANDED at `n = 2` in `rat_prelude/matrix.rs` (`det2_mul`,
+`inv2_*`, `cramer2_*`), before this lane touched anything. The genuine gap:
+`matrix.rs`'s inverse family used four raw `Rat` scalars, never
+`matrix_n.rs`'s general `Nat → Nat → Rat` `matMul`/`matId` encoding — two
+disconnected islands — and only ONE direction of invertibility (`A⁻¹·A = I`)
+was proven at all; `A·A⁻¹ = I` was not, only its unscaled cousin
+`A·adj(A) = det(A)·I`.
 
-Before starting, confirmed via `shape_search --include-constructed --name-like mat`
-and `--name-like det`, and by reading
-`docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
-§3 and ADR-0930, that the following already exist in
-`crates/axeyum-lean-kernel/src/rat_prelude/{matrix.rs,matrix_n.rs,matrix_transpose.rs}`,
-all axiom-free:
+Landed: `Rat.matInv2` (`rat_prelude/matrix_invertible.rs`, new module, 11
+declarations) — a genuine `Definition` over the general matrix encoding, plus
+BOTH directions of invertibility stated through `Rat.matMul`/`Rat.matId` at
+every `(i,j)` entry. `Rat.matInv2_matMul_*` (A⁻¹·A = I) bridges the existing
+`inv2_*` family into the general encoding; `Rat.matMul_matInv2_*` (A·A⁻¹ = I)
+is the genuinely new direction, built by pulling `invD` out of each product
+term to match the existing (unscaled) `mul_adj2_*` family, then scaling by
+`mul_inv_cancel_of_ne_zero` (diagonal) or `mul_zero` (off-diagonal). Row 2:
+none (ADR-0716). Row 3: the ADR-0825 collapse, `Rat.matInv2_example`. All 11
+declarations measured axiom-free from the kernel.
 
-- `Rat.matMul` at symbolic dimension (`matrix_n.rs`): associativity, both
-  unit laws, additivity/scalar-linearity in each argument.
-- `Rat.matId`, `Rat.matTranspose`, `matTranspose_transpose`,
-  `matTranspose_mul` (`(AB)^T = B^T A^T` at symbolic dimension, ADR-0930).
-- `Rat.det2`/`Rat.det3` (`matrix.rs`) — **determinant multiplicativity is
-  ALREADY LANDED at n=2** (`det2_mul`), plus `det2_eq_zero_of_lin_dep`,
-  `mul_adj2_*` (A·adj(A) = det·I, all four entries), `inv2_*` (A⁻¹·A = I,
-  all four entries, one direction), and `cramer2_x/y` + `cramer2_solves` +
-  `cramer_two_unique_x/y` — **both existence and uniqueness of the n=2
-  linear-system solution are already landed** (LA-2's row 1 at fixed n=2).
-  `det3` has cofactor expansion, `det3_id`, `det3_scale_row`, `det3_ofInt`,
-  three worked examples — no `det3_mul` yet.
+A bug (two `rsymm` calls with reversed `(a,b)` arguments) was found and fixed
+by the mandatory bisect-by-toggling-declarations method — isolated to exactly
+one of the eight entry theorems before the fix, by rebuilding the whole `rat`
+prelude and testing after each toggle.
 
-So the task brief's three "candidates" (determinant multiplicativity,
-invertibility, solvability, all at fixed small n) are **already landed at
-n=2** except for one genuine gap: `inv2_*` only proves ONE direction
-(A⁻¹·A = I via raw scalar entries); there is no statement connecting the
-fixed-size (`det2`/`inv2`) family to the general `matMul`/`matId` pointwise
-encoding `matrix_n.rs` builds, and the OTHER inverse order (A·A⁻¹ = I) is
-not proven as a named entry-wise family at all (only implicit via
-`mul_adj2_*`, unscaled).
+New: ADR-1040
+(`docs/research/09-decisions/adr-1040-both-sided-2x2-invertibility-bridges-the-fixed-size-and-symbolic-matrix-families.md`),
+two facts (`F:rat-matinv2-matmul-top-left`, `F:rat-matmul-matinv2-top-left`),
+a curriculum-doc update (LA-1 section), and a new test file
+(`matrix_invertible_tests.rs`: axiom-footprint sweep, a statement-shape
+check, a discriminating eval-example control, and a negative control showing
+the `det ≠ 0` hypothesis is load-bearing — the unrestricted claim is FALSE,
+not merely unprovable, at a singular matrix).
 
-## What I am building
+`unnamed_but_live_declarations` in the shared `rat_prelude_tests.rs` was
+updated in the same commit as the 11 new declarations, per the standing rule
+`every_rat_declaration_is_checked_and_axiom_free` enforces.
 
-`Rat.matInv2 : (Nat → Nat → Rat) → Nat → Nat → Rat` — the adjugate-based
-2×2 inverse taking a general matrix `A` (in `matrix_n.rs`'s
-`Nat → Nat → Rat` encoding, not four separate scalars), plus the full
-BOTH-SIDED invertibility family stated through `Rat.matMul`/`Rat.matId`
-(the general pointwise encoding), at each of the four `(i,j)` entries:
-`matMul A (matInv2 A) 2 i j = matId i j` and
-`matMul (matInv2 A) A 2 i j = matId i j`. This connects the two previously
-disconnected islands (symbolic-dimension `matMul`/`matId`, and fixed-size
-`det2`/`inv2`/`mul_adj2`) rather than adding a third isolated fact family.
+Holdout isolation: `scripts/check-autogenesis-holdout-isolation.py` run
+before starting and after landing — `held_out=146, references=0,
+verdict=PASS` both times (this lane never touched `artifacts/autogenesis/`).
 
-In progress. Updated further below as work lands.
+Not attempted: general-`n` determinant, invertibility, or `Ax=b` solvability
+(remain open, `docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
+LA-1/LA-2/LA-3). A Mathlib reader would correctly say this lane covers one
+fixed dimension (`n = 2`) of invertibility, not general linear algebra.
 
-## Landed (in progress, update continues after full sweep + facts)
+<!-- plan-section: landed-changes -->
 
-`crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible.rs` (new module),
-registered in `rat_prelude.rs`. 11 declarations:
-
-- `Rat.matInv2` (Definition, general A : Nat -> Nat -> Rat)
-- `Rat.matInv2_matMul_top_left/_top_right/_bottom_left/_bottom_right`
-  (A^-1 * A = I, all four entries, bridging `super::matrix`'s existing
-  `inv2_*` family into the general `matMul`/`matId` encoding)
-- `Rat.matMul_matInv2_top_left/_top_right/_bottom_left/_bottom_right`
-  (A * A^-1 = I, all four entries -- the genuinely NEW direction, via
-  `mul_adj2_*` scaled by invD)
-- `Rat.matInv2_eval_example` (discriminating Definition check)
-- `Rat.matInv2_example` (row 3, ADR-0825 collapse)
-
-Bug found and fixed during self-check: `right_entry_proof`'s two
-`middle_swap`-reversal steps had `rsymm`'s (a,b) arguments backwards
-(`rsymm(d, term0, invd_xy, ms1)` when `ms1 : Eq invd_xy term0`, needing
-`rsymm(d, invd_xy, term0, ms1)`) -- caught by the mandatory bisect-by-
-toggling-declarations method (CLAUDE.md), isolated to
-`declare_matmul_matinv2_top_left` specifically before the fix.
-
-New ADR: `docs/research/09-decisions/adr-1040-both-sided-2x2-invertibility-bridges-the-fixed-size-and-symbolic-matrix-families.md`.
-Curriculum doc updated: LA-1 section in
-`docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`.
-New test file: `crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible_tests.rs`.
-`unnamed_but_live_declarations` in the shared `rat_prelude_tests.rs` updated
-in the same commit (11 new names).
+| 2026-08-31 | `961e65b80` | `Rat.matInv2` and both-sided 2×2 invertibility, bridged into `matMul`/`matId` (ADR-1040). |

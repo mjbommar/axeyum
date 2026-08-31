@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-matmul-matinv2-top-left",
+  "title": "The 2x2 adjugate inverse over the constructed rationals satisfies A * A^-1 = I at every entry -- the direction matrix.rs never proved -- stated through the general matMul/matId encoding",
+  "statement": "Continuing F:rat-matinv2-matmul-top-left: before this fact, matrix.rs proved A^-1*A = I (inv2_top_left/etc) and, unscaled, A*adj(A) = det(A)*I (mul_adj2_top_left/etc), but never A*A^-1 = I itself. Rat.matMul_matInv2_top_left, _top_right, _bottom_left, _bottom_right each state matMul A (matInv2 A) 2 i j = matId i j at one concrete (i,j), for any A with det2 (A 0 0) (A 0 1) (A 1 0) (A 1 1) nonzero. Unlike the A^-1*A direction (F:rat-matinv2-matmul-top-left), this needs genuinely new algebra: matInv2 A i j multiplies A's row on the LEFT of the already-scaled adjugate entry rather than the right, so each of the two summands in the entry sum needs invD pulled out from the middle of a product (x*(invD*y) = invD*(x*y), one mul_assoc + one mul_comm each) before Rat.left_distrib (reversed) combines them into EXACTLY matrix.rs's existing unscaled mul_adj2_top_left/top_right/bottom_left/bottom_right statement, which is then scaled by invD via Rat.mul_inv_cancel_of_ne_zero (diagonal entries, needing the det != 0 hypothesis) or Rat.mul_zero (off-diagonal entries, since mul_adj2_top_right/mul_adj2_bottom_left already equal Rat.zero unconditionally -- no determinant needed there at all).\n\nGRADED STATEMENT FAMILY (ADR-0603, ADR-0716, ADR-0825; see ADR-1040). Row 1 is this fact's four theorems. Row 2: none, same argument as the sibling fact (a pure identity conditioned on a disequality, no comparison or unbounded search). Row 3 is Rat.matInv2_example (evidence row below): Rat.matMul_matInv2_top_left itself, applied at the concrete matrix A := [[2,1],[1,1]] (det = 1) and the same D != 0 construction matrix.rs's own cramer2_solves_computes_an_explicit_two_by_two_system test uses, bridged to the plain numeral Rat.one by the kernel's own delta/beta/iota computation -- no separate axeyum-cas producer/verifier pair, per ADR-0825's collapse. Row 4 (labeled import) is not attempted.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matMul_matInv2_top_left : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : Not (Eq.{1} Rat (Rat.det2 (x0 AxNat.zero AxNat.zero) (x0 AxNat.zero (AxNat.succ AxNat.zero)) (x0 (AxNat.succ AxNat.zero) AxNat.zero) (x0 (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) Rat.zero)) -> Eq.{1} Rat (Rat.matMul x0 (Rat.matInv2 x0) (AxNat.succ (AxNat.succ AxNat.zero)) AxNat.zero AxNat.zero) (Rat.matId AxNat.zero AxNat.zero)))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-mul-adj2-top-left",
+    "F:rat-mul-adj2-top-right",
+    "F:rat-mul-adj2-bottom-left",
+    "F:rat-mul-adj2-bottom-right",
+    "F:rat-mul-inv-cancel-of-ne-zero",
+    "F:rat-left-distrib",
+    "F:rat-zero-add",
+    "F:rat-matinv2-matmul-top-left"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matMul_matInv2-family",
+      "kind": "kernel-term",
+      "supports": "Rat.matMul_matInv2_top_left, _top_right, _bottom_left, _bottom_right are all admitted by the trusted kernel gate with the types recorded (top_left's verbatim in formal.statement; the other three are the same shape at (0,1)/(1,0)/(1,1)). Each proof bridges the matMul unfold, strips the leading Rat.zero via Rat.zero_add, reassociates both summands to pull invD out (two middle_swap-style steps, each one mul_assoc + one mul_comm), combines via Rat.left_distrib reversed, rewrites the resulting sum via the matching mul_adj2_* lemma, and finishes with Rat.mul_inv_cancel_of_ne_zero (top_left/bottom_right, the diagonal) or Rat.mul_zero (top_right/bottom_left, off-diagonal).",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks every proof term against its stated type at build time; a rejected proof makes build_rat_prelude return Err)",
+        "rat_prelude::matrix_invertible_tests::the_matrix_invertibility_toolkit_is_axiom_free (kind + empty axiom_footprint, read from the kernel, for all 11 declarations in the module)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::matrix_invertible_tests::the_matrix_invertibility_toolkit_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible.rs",
+      "notes": "The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success. A bug found and fixed while landing this family: right_entry_proof's two middle_swap-reversal steps originally had rsymm's (a,b) arguments backwards, isolated to exactly Rat.matMul_matInv2_top_left by toggling declarations one at a time before the fix."
+    },
+    {
+      "id": "statement-shape-Rat.matMul_matInv2_top_left",
+      "kind": "kernel-term",
+      "supports": "An empty axiom footprint on a theorem named this way says nothing about which statement it proves (CLAUDE.md's standing discipline). matmul_matinv2_top_left_is_the_stated_a_times_a_inverse_entry checks the rendered type mentions Rat.matMul x0 (Rat.matInv2 x0) (the A * A^-1 order specifically, not the reverse), Rat.matId, and the Not(...) hypothesis.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude::matrix_invertible_tests::matmul_matinv2_top_left_is_the_stated_a_times_a_inverse_entry"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::matrix_invertible_tests::matmul_matinv2_top_left_is_the_stated_a_times_a_inverse_entry -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible_tests.rs",
+      "notes": "A footprint check cannot carry this claim on its own: a theorem stating the wrong order (Rat.matInv2 x0 applied first) or omitting the hypothesis would have the same empty footprint."
+    },
+    {
+      "id": "row3-ADR-0825-collapse-Rat.matInv2_example",
+      "kind": "instance-pin",
+      "supports": "Row 3 of the graded family: Rat.matInv2_example applies Rat.matMul_matInv2_top_left -- the SAME row-1 declaration -- at the concrete 2x2 matrix A := [[2,1],[1,1]] and dimension/index (2, 0, 0), discharging the D != 0 hypothesis via the same construction (0 < D, D reduces to natDivSucc 1 0, Rat.nat_div_succ_pos gives the positivity directly) matrix.rs's own cramer2_solves_computes_an_explicit_two_by_two_system test uses, with the conclusion bridged to the plain numeral Rat.one by the kernel's own delta/beta/iota computation. No separate axeyum-cas producer/verifier pair is built, per ADR-0825's collapse.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the concrete instance is itself a kernel declaration, admitted at build time)",
+        "rat_prelude::matrix_invertible_tests::the_matrix_invertibility_toolkit_is_axiom_free (kind + empty axiom_footprint for Rat.matInv2_example)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::matrix_invertible_tests::the_matrix_invertibility_toolkit_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible.rs",
+      "notes": "The negative control matmul_matinv2_needs_its_hypothesis_the_unrestricted_claim_is_false_at_det_zero checks the D != 0 hypothesis is load-bearing: at a SINGULAR matrix (det = 0), the unrestricted claim is not merely unprovable, it is FALSE (Rat.inv 0 = 0 by totality, so matMul A (matInv2 A) 2 0 0 reduces to Rat.zero, not Rat.one, and the kernel refuses the false claim outright)."
+    },
+    {
+      "id": "eval-example-discriminates-Rat.matInv2",
+      "kind": "instance-pin",
+      "supports": "Rat.matInv2's new Definition needs a discriminating evaluation test (Hard Rules: a well-typed Definition is admitted whatever it computes). Rat.matInv2_eval_example: at A := [[2,3],[5,7]] (four distinct entries, det = -1), matInv2 A 0 0 reduces to -7. mat_inv2_eval_example_discriminates_a_swapped_diagonal separately checks a WRONG (no-swap) candidate invD * A 0 0 reduces to -2, not -7, so a lane that forgot the diagonal swap would produce a value the kernel visibly refuses to equate with -7.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude::matrix_invertible_tests::mat_inv2_eval_example_discriminates_a_swapped_diagonal"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::matrix_invertible_tests::mat_inv2_eval_example_discriminates_a_swapped_diagonal -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible_tests.rs",
+      "notes": "Checked both ways in the same test: the wrong candidate DOES reduce to -2 (sanity, so the control is not vacuous) and does NOT reduce to -7 (the kernel refuses that declaration)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "lane linear-algebra-spine, Rat.matMul_matInv2_top_left/top_right/bottom_left/bottom_right in crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible.rs",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "standard linear algebra (e.g. Boyd & Vandenberghe, Introduction to Applied Linear Algebra, ch. 11)",
+        "what": "for an invertible square matrix A, the inverse A^-1 satisfies A^-1 A = A A^-1 = I",
+        "attribution": "standard textbook identity; this lane did not consult a primary source."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) There is no Eq between matrices anywhere here, same funext reason F:rat-matmul-assoc records. (2) General n is not attempted; this is fixed at n=2 -- general-n determinant, invertibility and Ax=b solvability at symbolic dimension remain open (docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md LA-1/LA-2/LA-3; general-n determinant specifically needs a minor-by-index-shift, a recursive cofactor determinant, and Cauchy's argument, per that note's own sizing). (3) Uniqueness of the matrix inverse is not stated. See F:rat-matinv2-matmul-top-left for the A^-1 * A direction and ADR-1040 for the full family and step-0 inventory of what already existed before this lane (det2_mul, cramer2_*, inv2_* were all landed at n=2 before this fact; the genuine gap closed here is the bridge into matMul/matId plus the A*A^-1 direction)."
+}

@@ -85,7 +85,7 @@
 
 use super::RatPrelude;
 use super::ops::{
-    rat_theorem, rat_ty, rchain, rcongr, req, rmul, radd, rneg, rone, rrefl, rsymm, rtrans, rzero,
+    radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rrefl, rsymm, rtrans, rzero,
 };
 use super::probability::bool_select_rat;
 use crate::KernelError;
@@ -183,7 +183,13 @@ fn det2_ne_zero(d: &mut IntDev<'_>, p: RatPrelude, det: ExprId) -> ExprId {
 /// [`super::matrix::inv_det2_cancel`] (private there): `D*invD = 1` is
 /// `Rat.mul_inv_cancel_of_ne_zero` verbatim; this reads it through one
 /// `mul_comm`.
-fn inv_det2_cancel(d: &mut IntDev<'_>, p: RatPrelude, det: ExprId, inv_d: ExprId, h: ExprId) -> ExprId {
+fn inv_det2_cancel(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    det: ExprId,
+    inv_d: ExprId,
+    h: ExprId,
+) -> ExprId {
     let start = rmul(d, inv_d, det);
     let comm = d.lemma(p.mul_comm, &[inv_d, det]); // invD*D = D*invD
     let flipped = rmul(d, det, inv_d);
@@ -417,7 +423,11 @@ fn left_entry_proof(
     let (_, proof) = rchain(
         d,
         lhs_named,
-        &[(padded, bridge), (unpadded, step2), (final_target, final_pf)],
+        &[
+            (padded, bridge),
+            (unpadded, step2),
+            (final_target, final_pf),
+        ],
     );
     proof
 }
@@ -449,7 +459,16 @@ fn declare_matinv2_matmul_top_left(d: &mut IntDev<'_>, p: RatPrelude) -> Result<
             let term0 = rmul(d, e00, a); // (invD*d)*a
             let term1 = rmul(d, e01, c); // (invD*(-b))*c
             let one = rone(d, p);
-            left_entry_proof(d, p, lhs, term0, term1, one, p.inv2_top_left, &[a, b, c, dd, h])
+            left_entry_proof(
+                d,
+                p,
+                lhs,
+                term0,
+                term1,
+                one,
+                p.inv2_top_left,
+                &[a, b, c, dd, h],
+            )
         },
     )
 }

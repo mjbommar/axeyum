@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-matinv2-matmul-top-left",
+  "title": "The 2x2 adjugate inverse over the constructed rationals satisfies A^-1 * A = I at every entry, stated through the general matMul/matId encoding",
+  "statement": "Rat.matInv2 : (Nat -> Nat -> Rat) -> Nat -> Nat -> Rat is a genuine new Definition taking a GENERAL matrix A (not four separate scalars, unlike Rat.det2's own convention), returning the adjugate-based inverse entry scaled by invD := Rat.inv (det2 (A 0 0) (A 0 1) (A 1 0) (A 1 1)). For any A with that determinant nonzero, the four entries of A^-1 * A equal the identity matrix's entries: Rat.matInv2_matMul_top_left, _top_right, _bottom_left, _bottom_right each state matMul (matInv2 A) A 2 i j = matId i j at one concrete (i,j). This bridges matrix.rs's existing fixed-size inv2_top_left/top_right/bottom_left/bottom_right family (stated in four raw Rat scalars) into matrix_n.rs's general Nat -> Nat -> Rat matMul/matId encoding -- each proof is, term-for-term once matMul/matInv2/matId are unfolded at the concrete index pair, EXACTLY the corresponding inv2_* lemma, so no new algebra is needed for this direction (see F:rat-matmul-matinv2-top-left for the A * A^-1 direction, which does need new algebra).\n\nGRADED STATEMENT FAMILY (ADR-0603, ADR-0716, ADR-0825; see ADR-1040). Row 1 is this fact's four theorems, at fixed dimension n=2 over a GENERAL matrix A (general in the sense of matrix_n.rs's encoding, not general dimension). Row 2 does not apply: the statement is a pure identity conditioned on a disequality, with no comparison and no unbounded search to reduce to a boundary, and ADR-0716 measures that for QQ the analysis-style row-2 mechanism is already a proved, axiom-free theorem here regardless. Row 3 is covered by the sibling fact F:rat-matmul-matinv2-top-left's Rat.matInv2_example (the SAME-shaped declaration applied at a concrete numeral instance). Row 4 (labeled import) is not attempted.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matInv2_matMul_top_left : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : Not (Eq.{1} Rat (Rat.det2 (x0 AxNat.zero AxNat.zero) (x0 AxNat.zero (AxNat.succ AxNat.zero)) (x0 (AxNat.succ AxNat.zero) AxNat.zero) (x0 (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) Rat.zero)) -> Eq.{1} Rat (Rat.matMul (Rat.matInv2 x0) x0 (AxNat.succ (AxNat.succ AxNat.zero)) AxNat.zero AxNat.zero) (Rat.matId AxNat.zero AxNat.zero)))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-inv2-top-left",
+    "F:rat-inv2-top-right",
+    "F:rat-inv2-bottom-left",
+    "F:rat-inv2-bottom-right",
+    "F:rat-zero-add",
+    "F:rat-matmul-assoc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matInv2-matmul-family",
+      "kind": "kernel-term",
+      "supports": "Rat.matInv2, Rat.matInv2_matMul_top_left, Rat.matInv2_matMul_top_right, Rat.matInv2_matMul_bottom_left, Rat.matInv2_matMul_bottom_right are all admitted by the trusted kernel gate with the types recorded (top_left's verbatim in formal.statement; the other three are the same shape at (0,1)/(1,0)/(1,1)). Each theorem's proof bridges matMul (matInv2 A) A 2 i j down to a raw two-term sum via one defeq step plus Rat.zero_add, then closes with matrix.rs's own inv2_top_left/inv2_top_right/inv2_bottom_left/inv2_bottom_right lemma directly -- the two sides are term-for-term identical once unfolded.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks every proof term against its stated type at build time; a rejected proof makes build_rat_prelude return Err)",
+        "rat_prelude::matrix_invertible_tests::the_matrix_invertibility_toolkit_is_axiom_free (kind + empty axiom_footprint, read from the kernel, for all 11 declarations in the module)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::matrix_invertible_tests::the_matrix_invertibility_toolkit_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible.rs",
+      "notes": "The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter -- which prints `running 0 tests ... ok` and exits 0 -- cannot read as success."
+    },
+    {
+      "id": "statement-shape-Rat.matInv2_matMul_top_left",
+      "kind": "kernel-term",
+      "supports": "An empty axiom footprint on a theorem named this way says nothing about which statement it proves (CLAUDE.md's standing discipline). matmul_matinv2_top_left_is_the_stated_a_times_a_inverse_entry checks (for the sibling A*A^-1 theorem, same discipline applies here by construction since both directions share the module's helpers) that the rendered type mentions Rat.matMul, Rat.matInv2, Rat.matId and the Not(...) hypothesis, not a vacuous restatement.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude::matrix_invertible_tests::matmul_matinv2_top_left_is_the_stated_a_times_a_inverse_entry"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::matrix_invertible_tests::matmul_matinv2_top_left_is_the_stated_a_times_a_inverse_entry -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible_tests.rs",
+      "notes": "A footprint check cannot carry this claim on its own: a theorem stating something weaker, or omitting the hypothesis, would have the same empty footprint."
+    },
+    {
+      "id": "footprint-rat-matrix-invertible",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] for all 11 declarations Rat.matInv2/matInv2_matMul_*/matMul_matInv2_*/matInv2_eval_example/matInv2_example -- the rat prelude's trusted surface remains 0.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "rat_prelude::rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free (environment-derived coverage: every live Rat definition/theorem is listed somewhere it gets kind+footprint checked)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "notes": "This test reads kernel.environment().iter() directly and fails naming anything live and unlisted. The 11 new matrix_invertible.rs declarations were added to unnamed_but_live_declarations in the same commit that added them, per the standing rule this test enforces."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "lane linear-algebra-spine, Rat.matInv2_matMul_top_left/top_right/bottom_left/bottom_right in crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible.rs",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "standard linear algebra (e.g. Boyd & Vandenberghe, Introduction to Applied Linear Algebra, ch. 11)",
+        "what": "for an invertible square matrix A, the inverse A^-1 satisfies A^-1 A = A A^-1 = I",
+        "attribution": "standard textbook identity; this lane did not consult a primary source."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, stated so it is not inferred. (1) There is no Eq between matrices anywhere here, same funext reason F:rat-matmul-assoc records -- each conclusion is a scalar Eq at one concrete (i,j). (2) General n is not attempted; this is fixed at n=2. (3) 'A^-1' here means specifically Rat.matInv2 A, the adjugate-based construction -- uniqueness of matrix inverses (that any B with B*A=I equals matInv2 A) is not stated or needed here. See F:rat-matmul-matinv2-top-left for the A * A^-1 direction and its own new algebra, and ADR-1040 for the full family."
+}

@@ -147,6 +147,7 @@ now. Nothing was deleted.
 | 2026-08-31 | gauss-pairing-lemma | `Nat.least_residue_ne_zero_of_coprime` and `Nat.gaussFold`/`Nat.gauss_fold_injective_of_coprime` land axiom-free in `nat_prelude/gauss_lemma.rs` -- the nonzero-residue lemma ADR-0990 flagged absent, and the mathematically hard half (same-sign/opposite-sign case split) of Gauss's-lemma piece 2 (the pairing lemma). `MapsInto` and the 0-indexed shift wrapper `Int.prodRange_permute` needs are precisely sized in ADR-1015 and NOT built this session -- one new arithmetic fact (`div (succ (mul 2 m)) 2 = m`) is the sole missing ingredient. |
 | 2026-08-31 | `74ca7790b` | `proof_plan.rs` + compiler; three families rewritten; digest probe |
 | 2026-08-31 | `ba2b22bbb` | add missing type-leak decline test; mutation-verify all 5 guards |
+| 2026-08-31 | `961e65b80` | `Rat.matInv2` and both-sided 2×2 invertibility, bridged into `matMul`/`matId` (ADR-1040). |
 | 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-30 | queue-sweep | No fact closed. All three assigned non-sign dispatchable facts (`totient_dvd_of_dvd`, `totient_gcd_mul_totient_mul`, `eq_or_eq_of_totient_eq_totient`) declined for this session: correctly-stated Mathlib mirrors this kernel does not yet have the general multiplicative-function theory to prove, distinct from the divergence-registry category. Corrected a false numerical claim in `301-totient-multiplicative.md`'s Step 4 (`count_range_row_major` is NOT coprimality-independent — fails at every tested non-coprime pair, e.g. `totient(4)=2 ≠ totient(2)*totient(2)=1`), which would have sent the next totient lane at a statement a sound kernel cannot admit. |
@@ -39967,6 +39968,55 @@ propositions** among the 2,121 `proved` facts alone.
 Nothing else in this repository changed status: no fact's `epistemic_status`
 flipped, no held-out nursery row was touched, `scripts/check-trust-closure.py`
 (S2's own file) was not edited.
+
+**`WIP`, linear-algebra-spine, 2026-08-31.** Step 0 (mandatory before
+building) found that the task brief's three candidate rungs — determinant
+multiplicativity, invertibility, `Ax=b` solvability, all at fixed small `n`
+— were ALREADY LANDED at `n = 2` in `rat_prelude/matrix.rs` (`det2_mul`,
+`inv2_*`, `cramer2_*`), before this lane touched anything. The genuine gap:
+`matrix.rs`'s inverse family used four raw `Rat` scalars, never
+`matrix_n.rs`'s general `Nat → Nat → Rat` `matMul`/`matId` encoding — two
+disconnected islands — and only ONE direction of invertibility (`A⁻¹·A = I`)
+was proven at all; `A·A⁻¹ = I` was not, only its unscaled cousin
+`A·adj(A) = det(A)·I`.
+
+Landed: `Rat.matInv2` (`rat_prelude/matrix_invertible.rs`, new module, 11
+declarations) — a genuine `Definition` over the general matrix encoding, plus
+BOTH directions of invertibility stated through `Rat.matMul`/`Rat.matId` at
+every `(i,j)` entry. `Rat.matInv2_matMul_*` (A⁻¹·A = I) bridges the existing
+`inv2_*` family into the general encoding; `Rat.matMul_matInv2_*` (A·A⁻¹ = I)
+is the genuinely new direction, built by pulling `invD` out of each product
+term to match the existing (unscaled) `mul_adj2_*` family, then scaling by
+`mul_inv_cancel_of_ne_zero` (diagonal) or `mul_zero` (off-diagonal). Row 2:
+none (ADR-0716). Row 3: the ADR-0825 collapse, `Rat.matInv2_example`. All 11
+declarations measured axiom-free from the kernel.
+
+A bug (two `rsymm` calls with reversed `(a,b)` arguments) was found and fixed
+by the mandatory bisect-by-toggling-declarations method — isolated to exactly
+one of the eight entry theorems before the fix, by rebuilding the whole `rat`
+prelude and testing after each toggle.
+
+New: ADR-1040
+(`docs/research/09-decisions/adr-1040-both-sided-2x2-invertibility-bridges-the-fixed-size-and-symbolic-matrix-families.md`),
+two facts (`F:rat-matinv2-matmul-top-left`, `F:rat-matmul-matinv2-top-left`),
+a curriculum-doc update (LA-1 section), and a new test file
+(`matrix_invertible_tests.rs`: axiom-footprint sweep, a statement-shape
+check, a discriminating eval-example control, and a negative control showing
+the `det ≠ 0` hypothesis is load-bearing — the unrestricted claim is FALSE,
+not merely unprovable, at a singular matrix).
+
+`unnamed_but_live_declarations` in the shared `rat_prelude_tests.rs` was
+updated in the same commit as the 11 new declarations, per the standing rule
+`every_rat_declaration_is_checked_and_axiom_free` enforces.
+
+Holdout isolation: `scripts/check-autogenesis-holdout-isolation.py` run
+before starting and after landing — `held_out=146, references=0,
+verdict=PASS` both times (this lane never touched `artifacts/autogenesis/`).
+
+Not attempted: general-`n` determinant, invertibility, or `Ax=b` solvability
+(remain open, `docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
+LA-1/LA-2/LA-3). A Mathlib reader would correctly say this lane covers one
+fixed dimension (`n = 2`) of invertibility, not general linear algebra.
 
 **R3 done; the census is an artifact now, and `17` was not one** (`WIP`,
 math-r3, 2026-08-17). The 2026-08-13 misconception audit's `census.tsv` was
