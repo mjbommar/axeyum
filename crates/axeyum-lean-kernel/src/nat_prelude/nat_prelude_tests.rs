@@ -1326,6 +1326,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // theorem, piece 1): least-residue map injectivity given positivity
         // + coprimality.
         p.least_residue_injective_of_coprime,
+        // `gauss-pairing-lemma` lane (ADR-0990, piece 2): the nonzero-
+        // residue lemma the pairing route needs.
+        p.least_residue_ne_zero_of_coprime,
     ]
 }
 

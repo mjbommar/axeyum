@@ -4822,6 +4822,13 @@ pub struct NatPrelude {
     /// prime, `0 < a < pp`; this theorem itself needs only positivity and
     /// coprimality, not primality).
     pub least_residue_injective_of_coprime: NameId,
+    /// `Nat.least_residue_ne_zero_of_coprime : ∀ pp a k, gcd a pp = 1 →
+    ///   0 < k → k < pp → 0 < leastResidue pp a k` (`gauss_lemma.rs`) — the
+    /// one lemma ADR-0990 flagged as genuinely absent while sizing piece 2
+    /// (the pairing lemma): `leastResidue` never lands on `0` for an index
+    /// strictly between `0` and `pp` when `a` is coprime to `pp`, needed so
+    /// the signed-fold self-map's two branches land in `[1, pp)`.
+    pub least_residue_ne_zero_of_coprime: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5762,6 +5769,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_neg_count_two_closed_form: kernel.name_str(nat, "gaussNegCountTwoClosedForm"),
             least_residue_injective_of_coprime: kernel
                 .name_str(nat, "least_residue_injective_of_coprime"),
+            least_residue_ne_zero_of_coprime: kernel
+                .name_str(nat, "least_residue_ne_zero_of_coprime"),
         };
 
         let mut d = NatDev::new(kernel, p);

@@ -60,7 +60,7 @@
 
 use super::NatPrelude;
 use super::group::{mod_eq_of_mod_eq_rel, mod_self_congr};
-use super::helpers::{and_left, and_right};
+use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -1100,6 +1100,95 @@ pub(super) fn declare_least_residue_injective_of_coprime(
     Ok(())
 }
 
+/// `Nat.least_residue_ne_zero_of_coprime : ∀ pp a k, gcd a pp = 1 → 0 < k →
+/// k < pp → 0 < leastResidue pp a k`.
+///
+/// The one lemma ADR-0990 flagged as genuinely absent while sizing piece 2
+/// of the connecting theorem (the pairing lemma / signed-fold self-map): it
+/// needs `leastResidue pp a k ≠ 0` so both of `gaussFold`'s branches
+/// (`leastResidue pp a k` itself, or `pp - leastResidue pp a k`) land in
+/// `[1, pp)`.
+///
+/// Route: assume `heq : leastResidue pp a k = 0` (defeq `mod (mul a k) pp =
+/// 0`, matching `least_residue_injective_of_coprime`'s own no-congruence-
+/// step idiom). `Nat.dvd_iff_mod_eq_zero`'s reverse direction turns that
+/// into `pp ∣ (a*k)`; `Nat.gauss_lemma` (the EXISTING, unrelated
+/// Euclid-cancellation theorem `gcd x y = 1 → x ∣ y*z → x ∣ z` — not this
+/// module's target, see `nat_prelude/lcm.rs`) cancels the coprime factor
+/// `a` (after flipping `gcd a pp = 1` to `gcd pp a = 1` via `gcd_comm`),
+/// giving `pp ∣ k`. `Nat.le_of_dvd` (fed `0 < k`, defeq `1 ≤ k`) then gives
+/// `pp ≤ k`, contradicting `k < pp` via `Nat.lt_of_le_of_lt`/`Nat.lt_irrefl`
+/// — the identical three-lemma contradiction shape `bezout.rs`'s
+/// `declare_euclid_lemma`-adjacent proof already uses at
+/// `p.le_of_dvd`/`p.lt_of_le_of_lt`/`p.lt_irrefl`. `Nat.zero_lt_of_ne_zero`
+/// closes the `Not (Eq lr zero) → Lt zero lr` step.
+pub(super) fn declare_least_residue_ne_zero_of_coprime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.least_residue_ne_zero_of_coprime, 3, &|d, v| {
+        let (pp, a, k) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let zero = d.zero();
+
+        let gcd_ap = d.gcd(a, pp);
+        let coprime_ty = d.eq(gcd_ap, one);
+        let pos_k_ty = d.lt(zero, k);
+        let k_lt_ty = d.lt(k, pp);
+        let lr = least_residue(d, &p, pp, a, k);
+        let concl = d.lt(zero, lr);
+
+        let stmt = {
+            let inner = d.arrow(k_lt_ty, concl);
+            let inner2 = d.arrow(pos_k_ty, inner);
+            d.arrow(coprime_ty, inner2)
+        };
+
+        let coprime_fv = d.fresh_fvar();
+        let coprime = d.kernel().fvar(coprime_fv);
+        let pos_k_fv = d.fresh_fvar();
+        let pos_k = d.kernel().fvar(pos_k_fv);
+        let k_lt_fv = d.fresh_fvar();
+        let k_lt = d.kernel().fvar(k_lt_fv);
+
+        // gcd pp a = 1, via gcd_comm (gauss_lemma needs the modulus first).
+        let gcd_pa = d.gcd(pp, a);
+        let comm = d.lemma(p.gcd_comm, &[a, pp]); // Eq (gcd a pp) (gcd pp a)
+        let comm_rev = d.symm(gcd_ap, gcd_pa, comm); // Eq (gcd pp a) (gcd a pp)
+        let coprime_pa = d.trans(gcd_pa, gcd_ap, one, comm_rev, coprime); // Eq (gcd pp a) one
+
+        // Assume heq : Eq lr zero (defeq Eq (mod (mul a k) pp) zero).
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let heq_ty = d.eq(lr, zero);
+
+        let ak = d.mul(a, k);
+        let mod_ak_pp = d.modulo(ak, pp);
+        let dvd_ty = d.dvd(pp, ak);
+        let eq_ty = d.eq(mod_ak_pp, zero);
+        let iff_pf = d.lemma(p.dvd_iff_mod_eq_zero, &[pp, ak]); // Iff dvd_ty eq_ty
+        let rev = iff_reverse(d, dvd_ty, eq_ty, iff_pf); // eq_ty -> dvd_ty
+        let dvd_pp_ak = d.apply(rev, &[heq]); // dvd pp ak, via defeq heq : eq_ty
+
+        let dvd_pp_k = d.lemma(p.gauss_lemma, &[pp, a, k, coprime_pa, dvd_pp_ak]); // dvd pp k
+
+        let le_pp_k = d.lemma(p.le_of_dvd, &[pp, k, pos_k, dvd_pp_k]); // Le pp k
+        let lt_pp_pp = d.lemma(p.lt_of_le_of_lt, &[pp, k, pp, le_pp_k, k_lt]); // Lt pp pp
+        let lt_irrefl_pp = d.lemma(p.lt_irrefl, &[pp]);
+        let false_proof = d.apply(lt_irrefl_pp, &[lt_pp_pp]);
+
+        let not_heq = d.lam_fv(heq_fv, heq_ty, false_proof); // Not (Eq lr zero)
+        let concl_pf = d.lemma(p.zero_lt_of_ne_zero, &[lr, not_heq]); // Lt zero lr
+
+        let with_k_lt = d.lam_fv(k_lt_fv, k_lt_ty, concl_pf);
+        let with_pos_k = d.lam_fv(pos_k_fv, pos_k_ty, with_k_lt);
+        let proof = d.lam_fv(coprime_fv, coprime_ty, with_pos_k);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order. Goes last in
 /// `build_nat_prelude`: it needs only `Nat.countRange`
 /// (`declare_totient_all`), `Nat.mod_eq_self_of_lt` (`declare_size_all`, via
@@ -1134,6 +1223,10 @@ pub(super) fn declare_gauss_lemma_all(
     // Piece 1 of the connecting theorem (ADR-0970/ADR-0985): the
     // least-residue map's injectivity given only positivity + coprimality.
     declare_least_residue_injective_of_coprime(d, p)?;
+    // The one lemma ADR-0990 flagged as genuinely absent while sizing
+    // piece 2 (the pairing lemma): `leastResidue` never lands on `0` for
+    // an in-range index when `a` is coprime to `pp`.
+    declare_least_residue_ne_zero_of_coprime(d, p)?;
     Ok(())
 }
 
