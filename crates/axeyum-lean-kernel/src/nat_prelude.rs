@@ -4726,6 +4726,25 @@ pub struct NatPrelude {
     /// `gaussNegCount 7 3 3 = 1` (`gauss_lemma.rs`) — confirms the count
     /// depends on `a`, not only on `pp` (contrast `gauss_neg_count_seven_two`).
     pub gauss_neg_count_seven_three: NameId,
+    /// `Nat.gaussCountBleClosedFormDisj : ∀ half n,
+    ///   Or (And (Eq (countRange (fun j => ble (succ half) (mul 2 (succ j))) n) 0)
+    ///           (Le n (div half 2)))
+    ///      (And (Le (div half 2) n)
+    ///           (Eq (add (countRange (fun j => ble (succ half) (mul 2 (succ j))) n)
+    ///                    (div half 2))
+    ///               n))`
+    /// (`gauss_lemma.rs`) — by induction on `n` with `half` (and
+    /// `t := div half 2`) held fixed as an outer parameter. Below `t` the
+    /// count is exactly `0`; at or above `t` the count plus `t`
+    /// reconstructs `n` exactly. The disjunctive shape avoids `Nat.sub`'s
+    /// truncation inside the induction itself (ADR-0970/ADR-0985).
+    pub gauss_count_ble_closed_form_disj: NameId,
+    /// `Nat.gaussNegCountTwoClosedForm : ∀ m,
+    ///   Eq (gaussNegCount (succ (mul 2 m)) 2 m) (sub m (div m 2))`
+    /// (`gauss_lemma.rs`) — the symbolic closed form for `gaussNegCount` at
+    /// `a := 2` and `pp := 2*m+1` (the classical odd-prime shape), landing
+    /// the closed form ADR-0970 sized and left open (ADR-0985).
+    pub gauss_neg_count_two_closed_form: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5645,6 +5664,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_neg_count_twentythree_two: kernel
                 .name_str(nat, "gauss_neg_count_twentythree_two"),
             gauss_neg_count_seven_three: kernel.name_str(nat, "gauss_neg_count_seven_three"),
+            gauss_count_ble_closed_form_disj: kernel.name_str(nat, "gaussCountBleClosedFormDisj"),
+            gauss_neg_count_two_closed_form: kernel.name_str(nat, "gaussNegCountTwoClosedForm"),
         };
 
         let mut d = NatDev::new(kernel, p);

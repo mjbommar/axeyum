@@ -59,7 +59,9 @@
 //! `docs/plan/status/gauss-lemma-countrange.md` for exact sizing.
 
 use super::NatPrelude;
+use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::env::ReducibilityHint;
@@ -292,6 +294,682 @@ fn declare_gauss_neg_count_instance(
     Ok(())
 }
 
+/// `fun j => Nat.ble (Nat.succ half) (Nat.mul 2 (Nat.succ j))` -- the
+/// generic sign predicate the closed-form induction counts, with `half`
+/// captured as an outer parameter (not the induction variable).
+fn closed_form_pred(d: &mut NatDev<'_>, half: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let two = d.num(2);
+    let sj = d.succ(j);
+    let two_sj = d.mul(two, sj);
+    let succ_half = d.succ(half);
+    let body = d.ble(succ_half, two_sj);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `Nat.mul 2 (Nat.succ x)`.
+fn mul2succ(d: &mut NatDev<'_>, x: ExprId) -> ExprId {
+    let two = d.num(2);
+    let sx = d.succ(x);
+    d.mul(two, sx)
+}
+
+/// `Nat.countRange(f, n)`.
+fn count_range_of(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, n: ExprId) -> ExprId {
+    d.const_app(p.count_range, &[f, n])
+}
+
+/// `h : Eq Bool a b |- Eq Nat (f a) (f b)` -- local copy of the `Bool`-
+/// scrutinee, `Nat`-conclusion congruence `bitwise.rs`/`xor_algebra.rs` each
+/// carry privately ([`NatOps::congr`]'s `eq_motive`/`transport` are
+/// hardcoded to a `Nat`-typed hypothesis carrier, so it cannot express a
+/// `Bool` hypothesis).
+fn congr_bool_to_nat(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = d.bool_eq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        d.eq(fa, fx)
+    });
+    let refl_case = d.refl(fa);
+    d.bool_transport(a, motive, refl_case, b, h)
+}
+
+/// `h : Eq Nat a b |- Eq Bool (f a) (f b)` -- local copy of
+/// `subset_product.rs`'s private helper of the same shape ([`NatOps::congr`]
+/// always closes into `Eq Nat`, so it cannot be reused for a `Bool`-valued
+/// `f`).
+fn congr_nat_to_bool(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = d.eq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        d.bool_eq(fa, fx)
+    });
+    let refl_case = d.bool_refl(fa);
+    d.transport(a, motive, refl_case, b, h)
+}
+
+/// `h1 : Eq Bool a b`, `h2 : Eq Bool b c |- Eq Bool a c` -- the `Bool`-carrier
+/// twin of [`NatOps::trans`] (hardcoded to a `Nat`-typed equality carrier).
+fn bool_trans(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let motive = d.bool_eq_motive(b, &|d, x| d.bool_eq(a, x));
+    d.bool_transport(b, motive, h1, c, h2)
+}
+
+/// `And.intro left_ty right_ty left right`.
+fn and_intro2(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    left: ExprId,
+    right: ExprId,
+) -> ExprId {
+    d.const_app(p.logic.and_intro, &[left_ty, right_ty, left, right])
+}
+
+/// Two-way `Or` elimination: `ih : Or(left_ty, right_ty)`, and each branch
+/// closure receives the branch's own hypothesis and must produce a proof of
+/// `goal`. Mirrors `ops.rs`'s `cases_lt_bound`/`cases_lt_or_ge`, generalized
+/// to an arbitrary (not necessarily `n`-indexed) `goal`.
+#[allow(clippy::too_many_arguments)]
+fn or_elim2(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    ih: ExprId,
+    left_branch: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    right_branch: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let h_fv1 = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h_fv1);
+    let lb_body = left_branch(d, h1);
+    let lb = d.lam_fv(h_fv1, left_ty, lb_body);
+    let h_fv2 = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h_fv2);
+    let rb_body = right_branch(d, h2);
+    let rb = d.lam_fv(h_fv2, right_ty, rb_body);
+    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let or_motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(or_rec, &[left_ty, right_ty, or_motive, lb, rb, ih])
+}
+
+/// Shared arithmetic scaffolding for the closed-form induction, computed
+/// once per `half` and threaded through the base case and both step
+/// branches: `t := div half 2`, and `lt_half_mul2_succt : Lt half
+/// (mul 2 (succ t))` (ADR-0970's "established once, reused in A2 and B").
+#[derive(Clone, Copy)]
+struct ClosedFormCtx {
+    half: ExprId,
+    two: ExprId,
+    one: ExprId,
+    t: ExprId,
+    mt: ExprId,
+    mod_half_two: ExprId,
+    sum_eq_half: ExprId,
+    lt_half_mul2_succt: ExprId,
+}
+
+fn build_closed_form_ctx(d: &mut NatDev<'_>, p: &NatPrelude, half: ExprId) -> ClosedFormCtx {
+    let p = *p;
+    let two = d.num(2);
+    let one = d.num(1);
+    let t = d.div(half, two);
+    let mt = d.mul(two, t);
+    let mod_half_two = d.modulo(half, two);
+
+    let dme = d.lemma(p.div_mod_exec, &[one, half]);
+    let sum = d.add(mt, mod_half_two);
+    let dme_left_ty = d.eq(half, sum);
+    let dme_right_ty = d.lt(mod_half_two, two);
+    let dme_left = and_left(d, dme_left_ty, dme_right_ty, dme);
+    let dme_right = and_right(d, dme_left_ty, dme_right_ty, dme);
+
+    let mod_le_one = d.lemma(p.le_of_lt_succ, &[mod_half_two, one, dme_right]);
+    let mt_add_one = d.add(mt, one);
+    let sum_le = d.lemma(p.add_le_add_left, &[mt, mod_half_two, one, mod_le_one]);
+    let sum_eq_half = d.symm(half, sum, dme_left);
+    let half_le_mt_add_one = {
+        let motive = d.eq_motive(sum, &|d, x| d.le(x, mt_add_one));
+        d.transport(sum, motive, sum_le, half, sum_eq_half)
+    };
+    let lt_half_mul2_succt = d.lemma(p.lt_succ_of_le, &[half, mt_add_one, half_le_mt_add_one]);
+
+    ClosedFormCtx {
+        half,
+        two,
+        one,
+        t,
+        mt,
+        mod_half_two,
+        sum_eq_half,
+        lt_half_mul2_succt,
+    }
+}
+
+/// Base case (`x = 0`): left disjunct, `countRange f 0 = 0` by `refl` and
+/// `0 <= t` by `zero_le`.
+fn closed_form_base(d: &mut NatDev<'_>, p: &NatPrelude, ctx: ClosedFormCtx) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let f = closed_form_pred(d, ctx.half);
+    let cf0 = count_range_of(d, &p, f, zero);
+    let eq_ty = d.eq(cf0, zero);
+    let le_ty = d.le(zero, ctx.t);
+    let eq_proof = d.refl(zero);
+    let le_proof = d.lemma(p.zero_le, &[ctx.t]);
+    let left_ty = d.const_app(p.logic.and, &[eq_ty, le_ty]);
+    let left_proof = and_intro2(d, &p, eq_ty, le_ty, eq_proof, le_proof);
+    let right_le_ty = d.le(ctx.t, zero);
+    let right_sum = d.add(cf0, ctx.t);
+    let right_e_ty = d.eq(right_sum, zero);
+    let right_ty = d.const_app(p.logic.and, &[right_le_ty, right_e_ty]);
+    d.const_app(p.logic.or_inl, &[left_ty, right_ty, left_proof])
+}
+
+/// Step branch A1: `ih_a : Eq cj 0 /\ Le j t` and `hlt : Lt j t`. Shows
+/// `f j = false` (the least residue of `2*(j+1)` stays below `half+1`), so
+/// `countRange f (succ j) = countRange f j = 0` and the LEFT disjunct
+/// survives to `succ j`.
+fn closed_form_step_a1(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    ctx: ClosedFormCtx,
+    j: ExprId,
+    cj: ExprId,
+    cj_eq0: ExprId,
+    hlt: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sj = d.succ(j);
+    let f = closed_form_pred(d, ctx.half);
+    let fj = d.apply(f, &[j]);
+    let m2sj = mul2succ(d, j);
+
+    let mul_le = d.lemma(p.mul_le_mul_left, &[ctx.two, sj, ctx.t, hlt]);
+    let le_add = d.lemma(p.le_add_right, &[ctx.mt, ctx.mod_half_two]);
+    let sum = d.add(ctx.mt, ctx.mod_half_two);
+    let le_mt_half = {
+        let mt = ctx.mt;
+        let motive = d.eq_motive(sum, &|d, x| d.le(mt, x));
+        d.transport(sum, motive, le_add, ctx.half, ctx.sum_eq_half)
+    };
+    let chain1 = d.lemma(p.le_trans, &[m2sj, ctx.mt, ctx.half, mul_le, le_mt_half]);
+    let lt_succ = d.lemma(p.lt_succ_of_le, &[m2sj, ctx.half, chain1]);
+    let succ_half = d.succ(ctx.half);
+    let fj_false = d.lemma(p.ble_eq_false_of_lt, &[succ_half, m2sj, lt_succ]);
+
+    let zero = d.zero();
+    let one = ctx.one;
+    let bfalse = d.bool_false();
+    let sel_eq0 = congr_bool_to_nat(d, fj, bfalse, fj_false, &|d, x| {
+        let one = d.num(1);
+        let zero = d.zero();
+        d.bool_select_nat(x, one, zero)
+    });
+    let sel = d.bool_select_nat(fj, one, zero);
+    let start = d.add(cj, sel);
+    let step1 = d.congr(cj, zero, cj_eq0, &|d, x| d.add(x, sel));
+    let mid1 = d.add(zero, sel);
+    let step2 = d.congr(sel, zero, sel_eq0, &|d, x| d.add(zero, x));
+    let mid2 = d.add(zero, zero);
+    let (_end, csj_eq0) = d.chain(start, &[(mid1, step1), (mid2, step2)]);
+
+    let csj = count_range_of(d, &p, f, sj);
+    let e_ty = d.eq(csj, zero);
+    let le_ty = d.le(sj, ctx.t);
+    let left_ty = d.const_app(p.logic.and, &[e_ty, le_ty]);
+    let left_proof = and_intro2(d, &p, e_ty, le_ty, csj_eq0, hlt);
+
+    let right_le_ty = d.le(ctx.t, sj);
+    let right_sum = d.add(csj, ctx.t);
+    let right_e_ty = d.eq(right_sum, sj);
+    let right_ty = d.const_app(p.logic.and, &[right_le_ty, right_e_ty]);
+
+    d.const_app(p.logic.or_inl, &[left_ty, right_ty, left_proof])
+}
+
+/// Step branch A2: `ih_a : Eq cj 0 /\ Le j t` and `heq : Eq j t`. Shows
+/// `f j = true`, so `countRange f (succ j) = 1` and the RIGHT disjunct opens
+/// at `succ j` (`1 + t = succ j`, since `j = t`).
+fn closed_form_step_a2(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    ctx: ClosedFormCtx,
+    j: ExprId,
+    cj: ExprId,
+    cj_eq0: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sj = d.succ(j);
+    let f = closed_form_pred(d, ctx.half);
+    let fj = d.apply(f, &[j]);
+
+    let st = d.succ(ctx.t);
+    let sj_eq_st = d.congr(j, ctx.t, heq, &|d, x| d.succ(x));
+    let m2st = mul2succ(d, ctx.t);
+    let m2sj = mul2succ(d, j);
+    let m2sj_eq_m2st = d.congr(j, ctx.t, heq, &|d, x| mul2succ(d, x));
+    let symm_m2 = d.symm(m2sj, m2st, m2sj_eq_m2st);
+    let lt_half_m2sj = {
+        let half = ctx.half;
+        let motive = d.eq_motive(m2st, &|d, x| d.lt(half, x));
+        d.transport(m2st, motive, ctx.lt_half_mul2_succt, m2sj, symm_m2)
+    };
+    let succ_half = d.succ(ctx.half);
+    let fj_true = d.lemma(p.ble_eq_true_of_le, &[succ_half, m2sj, lt_half_m2sj]);
+
+    let zero = d.zero();
+    let one = ctx.one;
+    let btrue = d.bool_true();
+    let sel_eq1 = congr_bool_to_nat(d, fj, btrue, fj_true, &|d, x| {
+        let one = d.num(1);
+        let zero = d.zero();
+        d.bool_select_nat(x, one, zero)
+    });
+    let sel = d.bool_select_nat(fj, one, zero);
+    let start = d.add(cj, sel);
+    let step1 = d.congr(cj, zero, cj_eq0, &|d, x| d.add(x, sel));
+    let mid1 = d.add(zero, sel);
+    let step2 = d.congr(sel, one, sel_eq1, &|d, x| d.add(zero, x));
+    let mid2 = d.add(zero, one);
+    let (_end, csj_eq1) = d.chain(start, &[(mid1, step1), (mid2, step2)]);
+
+    let csj = count_range_of(d, &p, f, sj);
+
+    let le_succ_t = d.lemma(p.le_succ, &[ctx.t]);
+    let heq_symm = d.symm(j, ctx.t, heq);
+    let t_le_sj = {
+        let t = ctx.t;
+        let motive = d.eq_motive(t, &|d, x| {
+            let sx = d.succ(x);
+            d.le(t, sx)
+        });
+        d.transport(t, motive, le_succ_t, j, heq_symm)
+    };
+
+    let add_comm_1t = d.lemma(p.add_comm, &[one, ctx.t]);
+    let add1t = d.add(one, ctx.t);
+    let addt1 = d.add(ctx.t, one);
+    let symm_sj_eq_st = d.symm(sj, st, sj_eq_st);
+    let (_end2, add1t_eq_sj) = d.chain(add1t, &[(addt1, add_comm_1t), (sj, symm_sj_eq_st)]);
+
+    let final_start = d.add(csj, ctx.t);
+    let step_a = d.congr(csj, one, csj_eq1, &|d, x| d.add(x, ctx.t));
+    let mid_f = d.add(one, ctx.t);
+    let (_end3, final_eq) = d.chain(final_start, &[(mid_f, step_a), (sj, add1t_eq_sj)]);
+
+    let right_le_ty = d.le(ctx.t, sj);
+    let right_sum = d.add(csj, ctx.t);
+    let right_e_ty = d.eq(right_sum, sj);
+    let right_proof = and_intro2(d, &p, right_le_ty, right_e_ty, t_le_sj, final_eq);
+    let right_ty = d.const_app(p.logic.and, &[right_le_ty, right_e_ty]);
+
+    let left_e_ty = d.eq(csj, zero);
+    let left_le_ty = d.le(sj, ctx.t);
+    let left_ty = d.const_app(p.logic.and, &[left_e_ty, left_le_ty]);
+
+    d.const_app(p.logic.or_inr, &[left_ty, right_ty, right_proof])
+}
+
+/// Step branch B: `ih_b : Le t j /\ Eq (add cj t) j`. Shows `f j = true`
+/// directly from `Le t j` (no need for `Eq j t`), so the RIGHT disjunct
+/// survives to `succ j` unconditionally.
+fn closed_form_step_b(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    ctx: ClosedFormCtx,
+    j: ExprId,
+    cj: ExprId,
+    ih_b: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sj = d.succ(j);
+    let f = closed_form_pred(d, ctx.half);
+    let fj = d.apply(f, &[j]);
+
+    let le_ty = d.le(ctx.t, j);
+    let sum_j = d.add(cj, ctx.t);
+    let e_ty = d.eq(sum_j, j);
+    let t_le_j = and_left(d, le_ty, e_ty, ih_b);
+    let cj_add_t_eq_j = and_right(d, le_ty, e_ty, ih_b);
+
+    let succ_le = d.lemma(p.le_succ_succ, &[ctx.t, j, t_le_j]);
+    let st = d.succ(ctx.t);
+    let m2st = mul2succ(d, ctx.t);
+    let m2sj = mul2succ(d, j);
+    let mul_le = d.lemma(p.mul_le_mul_left, &[ctx.two, st, sj, succ_le]);
+    let lt_half_m2sj = d.lemma(
+        p.lt_of_lt_of_le,
+        &[ctx.half, m2st, m2sj, ctx.lt_half_mul2_succt, mul_le],
+    );
+    let succ_half = d.succ(ctx.half);
+    let fj_true = d.lemma(p.ble_eq_true_of_le, &[succ_half, m2sj, lt_half_m2sj]);
+
+    let zero = d.zero();
+    let one = ctx.one;
+    let btrue = d.bool_true();
+    let sel_eq1 = congr_bool_to_nat(d, fj, btrue, fj_true, &|d, x| {
+        let one = d.num(1);
+        let zero = d.zero();
+        d.bool_select_nat(x, one, zero)
+    });
+    let sel = d.bool_select_nat(fj, one, zero);
+    let cf_succ_eq = d.congr(sel, one, sel_eq1, &|d, x| d.add(cj, x));
+
+    let le_succ_j = d.lemma(p.le_succ, &[j]);
+    let t_le_sj = d.lemma(p.le_trans, &[ctx.t, j, sj, t_le_j, le_succ_j]);
+
+    let s1_start = d.add(cj, sel);
+    let s1_mid1 = d.add(cj, one);
+    let start = d.add(s1_start, ctx.t);
+    let mid1 = d.add(s1_mid1, ctx.t);
+    let step_a = d.congr(s1_start, s1_mid1, cf_succ_eq, &|d, x| d.add(x, ctx.t));
+    let s2 = d.add(cj, ctx.t);
+    let mid2 = d.add(s2, one);
+    let step_b = d.lemma(p.add_right_comm, &[cj, one, ctx.t]);
+    let mid3 = d.add(j, one);
+    let step_c = d.congr(s2, j, cj_add_t_eq_j, &|d, x| d.add(x, one));
+    let (_end, final_eq) = d.chain(start, &[(mid1, step_a), (mid2, step_b), (mid3, step_c)]);
+
+    let csj = count_range_of(d, &p, f, sj);
+
+    let right_le_ty = d.le(ctx.t, sj);
+    let right_sum = d.add(csj, ctx.t);
+    let right_e_ty = d.eq(right_sum, sj);
+    let right_proof = and_intro2(d, &p, right_le_ty, right_e_ty, t_le_sj, final_eq);
+    let right_ty = d.const_app(p.logic.and, &[right_le_ty, right_e_ty]);
+
+    let left_e_ty = d.eq(csj, zero);
+    let left_le_ty = d.le(sj, ctx.t);
+    let left_ty = d.const_app(p.logic.and, &[left_e_ty, left_le_ty]);
+
+    d.const_app(p.logic.or_inr, &[left_ty, right_ty, right_proof])
+}
+
+/// The general closed-form counting invariant, by induction on `n` with
+/// `half` (and `t := div half 2`) held fixed. See the `NatPrelude` field
+/// doc for the exact statement (ADR-0970/ADR-0985).
+pub(super) fn declare_gauss_count_ble_closed_form_disj(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.gauss_count_ble_closed_form_disj, 2, &|d, v| {
+        let (half, n) = (v[0], v[1]);
+        let ctx = build_closed_form_ctx(d, &p, half);
+        let f = closed_form_pred(d, ctx.half);
+
+        let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+            let cx = count_range_of(d, &p, f, x);
+            let zero = d.zero();
+            let e = d.eq(cx, zero);
+            let le = d.le(x, ctx.t);
+            let left = d.const_app(p.logic.and, &[e, le]);
+            let le2 = d.le(ctx.t, x);
+            let sum = d.add(cx, ctx.t);
+            let e2 = d.eq(sum, x);
+            let right = d.const_app(p.logic.and, &[le2, e2]);
+            d.const_app(p.logic.or, &[left, right])
+        };
+        let stmt = motive(d, n);
+
+        let proof = d.induct(
+            &motive,
+            &|d| closed_form_base(d, &p, ctx),
+            &|d, j, ih| {
+                let sj = d.succ(j);
+                let cj = count_range_of(d, &p, f, j);
+                let csj = count_range_of(d, &p, f, sj);
+                let zero = d.zero();
+
+                let ih_left_eq_ty = d.eq(cj, zero);
+                let ih_left_le_ty = d.le(j, ctx.t);
+                let ih_left_ty = d.const_app(p.logic.and, &[ih_left_eq_ty, ih_left_le_ty]);
+                let ih_right_le_ty = d.le(ctx.t, j);
+                let ih_right_sum = d.add(cj, ctx.t);
+                let ih_right_eq_ty = d.eq(ih_right_sum, j);
+                let ih_right_ty = d.const_app(p.logic.and, &[ih_right_le_ty, ih_right_eq_ty]);
+
+                let goal_left_eq_ty = d.eq(csj, zero);
+                let goal_left_le_ty = d.le(sj, ctx.t);
+                let goal_left_ty = d.const_app(p.logic.and, &[goal_left_eq_ty, goal_left_le_ty]);
+                let goal_right_le_ty = d.le(ctx.t, sj);
+                let goal_right_sum = d.add(csj, ctx.t);
+                let goal_right_eq_ty = d.eq(goal_right_sum, sj);
+                let goal_right_ty = d.const_app(p.logic.and, &[goal_right_le_ty, goal_right_eq_ty]);
+                let goal = d.const_app(p.logic.or, &[goal_left_ty, goal_right_ty]);
+
+                or_elim2(
+                    d,
+                    &p,
+                    ih_left_ty,
+                    ih_right_ty,
+                    goal,
+                    ih,
+                    &|d, ih_a| {
+                        let cj_eq_ty = d.eq(cj, zero);
+                        let j_le_t_ty = d.le(j, ctx.t);
+                        let cj_eq0 = and_left(d, cj_eq_ty, j_le_t_ty, ih_a);
+                        let j_le_t = and_right(d, cj_eq_ty, j_le_t_ty, ih_a);
+                        let disj = d.lemma(p.lt_or_eq_of_le, &[j, ctx.t, j_le_t]);
+                        let lt_ty = d.lt(j, ctx.t);
+                        let eq_ty = d.eq(j, ctx.t);
+                        or_elim2(
+                            d,
+                            &p,
+                            lt_ty,
+                            eq_ty,
+                            goal,
+                            disj,
+                            &|d, hlt| closed_form_step_a1(d, &p, ctx, j, cj, cj_eq0, hlt),
+                            &|d, heq| closed_form_step_a2(d, &p, ctx, j, cj, cj_eq0, heq),
+                        )
+                    },
+                    &|d, ih_b| closed_form_step_b(d, &p, ctx, j, cj, ih_b),
+                )
+            },
+            n,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// From `disj : Disj(x, x, t)` (i.e. `Or(And(Eq cf 0, Le x t), And(Le t x,
+/// Eq (add cf t) x))` for a fixed `cf`), derive `Eq cf (sub x t)`. Below `t`
+/// the count is `0` and `sub x t` truncates to `0`
+/// (`sub_eq_zero_of_le`); at or above `t`, `cf = sub x t` follows from
+/// `add cf t = x` via `add_comm` + `add_sub_cancel_left`.
+fn disj_to_sub_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    cf: ExprId,
+    x: ExprId,
+    t: ExprId,
+    disj: ExprId,
+) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    let eq_ty = d.eq(cf, zero);
+    let le_ty = d.le(x, t);
+    let left_ty = d.const_app(p.logic.and, &[eq_ty, le_ty]);
+    let le_ty2 = d.le(t, x);
+    let sum = d.add(cf, t);
+    let e_ty2 = d.eq(sum, x);
+    let right_ty = d.const_app(p.logic.and, &[le_ty2, e_ty2]);
+
+    let sub_xt = d.sub(x, t);
+    let goal = d.eq(cf, sub_xt);
+
+    or_elim2(
+        d,
+        &p,
+        left_ty,
+        right_ty,
+        goal,
+        disj,
+        &|d, ih_a| {
+            let cf_eq0 = and_left(d, eq_ty, le_ty, ih_a);
+            let x_le_t = and_right(d, eq_ty, le_ty, ih_a);
+            let sub_eq0 = d.lemma(p.sub_eq_zero_of_le, &[x, t, x_le_t]);
+            let symm_sub = d.symm(sub_xt, zero, sub_eq0);
+            d.trans(cf, zero, sub_xt, cf_eq0, symm_sub)
+        },
+        &|d, ih_b| {
+            let cf_add_t_eq_x = and_right(d, le_ty2, e_ty2, ih_b);
+            let symm_x = d.symm(sum, x, cf_add_t_eq_x);
+            let sub_congr = d.congr(x, sum, symm_x, &|d, v| d.sub(v, t));
+
+            let add_comm_cft = d.lemma(p.add_comm, &[cf, t]);
+            let addtc = d.add(t, cf);
+            let sub_comm_congr = d.congr(sum, addtc, add_comm_cft, &|d, v| d.sub(v, t));
+            let cancel = d.lemma(p.add_sub_cancel_left, &[t, cf]);
+            let sub_sum_t = d.sub(sum, t);
+            let sub_addtc_t = d.sub(addtc, t);
+            let (_end, unfold_eq) =
+                d.chain(sub_sum_t, &[(sub_addtc_t, sub_comm_congr), (cf, cancel)]);
+
+            let final_eq_rev = d.trans(sub_xt, sub_sum_t, cf, sub_congr, unfold_eq);
+            d.symm(sub_xt, cf, final_eq_rev)
+        },
+    )
+}
+
+/// The symbolic closed form for `gaussNegCount` at `a := 2` and
+/// `pp := 2*m+1` (the classical odd-prime shape): `gaussNegCount
+/// (succ (mul 2 m)) 2 m = sub m (div m 2)`. Establishes `div pp 2 = m` via
+/// `div_mod_unique`, bridges `gaussNegCount pp 2 m` to the general closed
+/// form's `countRange` (`gauss_residue_two_eq_double_of_lt` +
+/// `countRange_congr_lt`), then reads the value off the general closed-form
+/// disjunction specialized at `half := m, n := m` (ADR-0970/ADR-0985).
+pub(super) fn declare_gauss_neg_count_two_closed_form(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.gauss_neg_count_two_closed_form, 1, &|d, v| {
+        let m = v[0];
+        let two = d.num(2);
+        let one = d.num(1);
+        let mul_two_m = d.mul(two, m);
+        let pp = d.succ(mul_two_m);
+
+        // `divMod 2 pp m 1` via a direct witness: `pp` is literally
+        // `add (mul two m) 1` up to defeq, and `Lt 1 2 = Le 2 2` (`le_refl`).
+        let sum_pp = d.add(mul_two_m, one);
+        let eq_ty = d.eq(pp, sum_pp);
+        let lt_ty = d.lt(one, two);
+        let eq_proof = d.refl(pp);
+        let le22 = d.lemma(p.le_refl, &[two]);
+        let witness = and_intro2(d, &p, eq_ty, lt_ty, eq_proof, le22);
+
+        let dme = d.lemma(p.div_mod_exec, &[one, pp]);
+        let dpp = d.div(pp, two);
+        let mpp = d.modulo(pp, two);
+        let unique = d.lemma(p.div_mod_unique, &[two, pp, dpp, mpp, m, one, dme, witness]);
+        let q_eq_ty = d.eq(dpp, m);
+        let r_eq_ty = d.eq(mpp, one);
+        let dpp_eq_m = and_left(d, q_eq_ty, r_eq_ty, unique);
+
+        let f = {
+            let nat = d.nat_ty();
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let sj = d.succ(j);
+            let body = gauss_sign_neg(d, &p, pp, two, sj);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let g = closed_form_pred(d, m);
+
+        // `pp = succ (mul two m)` gives `Lt (mul two m) pp` directly.
+        let lt_mul2m_pp = d.lemma(p.le_refl, &[pp]);
+
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lt_im = d.lt(i, m);
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let eq_bool_ty = d.bool_eq(fi, gi);
+        let hyp_body_ty = d.arrow(lt_im, eq_bool_ty);
+        let hyp_pred = d.pi_fv(i_fv, nat, hyp_body_ty);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let si = d.succ(i);
+        let m2si = mul2succ(d, i);
+        let m2m = d.mul(two, m);
+        let mul_le = d.lemma(p.mul_le_mul_left, &[two, si, m, h]);
+        let lt_m2si_pp = d.lemma(p.lt_of_le_of_lt, &[m2si, m2m, pp, mul_le, lt_mul2m_pp]);
+        let residue_eq = d.lemma(p.gauss_residue_two_eq_double_of_lt, &[pp, si, lt_m2si_pp]);
+
+        let mod_val = d.modulo(m2si, pp);
+        let succ_m = d.succ(m);
+        let succ_dpp = d.succ(dpp);
+        let step1 = congr_nat_to_bool(d, dpp, m, dpp_eq_m, &|d, x| {
+            let sx = d.succ(x);
+            d.ble(sx, mod_val)
+        });
+        let ble_succdpp_modval = d.ble(succ_dpp, mod_val);
+        let ble_succm_modval = d.ble(succ_m, mod_val);
+        let step2 = congr_nat_to_bool(d, mod_val, m2si, residue_eq, &|d, x| d.ble(succ_m, x));
+        let ble_succm_m2si = d.ble(succ_m, m2si);
+        let chained = bool_trans(
+            d,
+            ble_succdpp_modval,
+            ble_succm_modval,
+            ble_succm_m2si,
+            step1,
+            step2,
+        );
+
+        let hyp_body = d.lam_fv(h_fv, lt_im, chained);
+        let hyp_proof = d.lam_fv(i_fv, nat, hyp_body);
+        let _ = hyp_pred;
+
+        let bridge = d.lemma(p.count_range_congr_lt, &[f, g, m, hyp_proof]);
+        let gnc_pp2m = gauss_neg_count(d, &p, pp, two, m);
+        let cg_m = count_range_of(d, &p, g, m);
+
+        let t2 = d.div(m, two);
+        let disj_mm = d.lemma(p.gauss_count_ble_closed_form_disj, &[m, m]);
+        let sub_eq = disj_to_sub_eq(d, &p, cg_m, m, t2, disj_mm);
+
+        let sub_m_t2 = d.sub(m, t2);
+        let result = d.trans(gnc_pp2m, cg_m, sub_m_t2, bridge, sub_eq);
+
+        let stmt = d.eq(gnc_pp2m, sub_m_t2);
+        (stmt, result)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order. Goes last in
 /// `build_nat_prelude`: it needs only `Nat.countRange`
 /// (`declare_totient_all`), `Nat.mod_eq_self_of_lt` (`declare_size_all`, via
@@ -318,6 +996,11 @@ pub(super) fn declare_gauss_lemma_all(
     // a := 3 at pp := 7, to confirm the count genuinely depends on `a`, not
     // only on `pp` (the a := 2 instance at the same prime gave 2, not 1).
     declare_gauss_neg_count_instance(d, p, p.gauss_neg_count_seven_three, 7, 3, 3, 1)?;
+    // The general closed form (ADR-0970/ADR-0985): needs only `Nat.countRange`
+    // and the arithmetic/order lemmas already declared far above, plus
+    // `gauss_residue_two_eq_double_of_lt` just above.
+    declare_gauss_count_ble_closed_form_disj(d, p)?;
+    declare_gauss_neg_count_two_closed_form(d, p)?;
     Ok(())
 }
 
@@ -389,6 +1072,45 @@ mod tests {
         assert!(
             !d.kernel().def_eq(count_a1, expected_a2),
             "negative control: the two instances above must NOT collapse to the same value"
+        );
+    }
+
+    /// The symbolic closed form (`gauss_neg_count_two_closed_form`),
+    /// instantiated at `m := 3` (so `pp := succ(mul 2 3) = 7`), agrees with
+    /// the independently landed `gauss_neg_count_seven_two` instance (`= 2`)
+    /// -- both sides evaluated by the kernel's own reduction, not merely
+    /// admitted. Per this repository's standing rule that a `Theorem`'s
+    /// content must be spot-checked at concrete arguments, not just trusted
+    /// because the kernel accepted the symbolic proof term.
+    #[test]
+    fn gauss_neg_count_two_closed_form_matches_the_landed_seven_two_instance() {
+        let mut k = Kernel::new();
+        let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+        let mut d = super::NatDev::new(&mut k, p);
+
+        let three = d.num(3);
+        // The theorem itself applies at a concrete argument -- this is the
+        // kernel-checked term, not merely a claim about it.
+        let _proof = d.lemma(p.gauss_neg_count_two_closed_form, &[three]);
+
+        let two = d.num(2);
+        let mt = d.mul(two, three);
+        let pp = d.succ(mt);
+        let lhs = gauss_neg_count(&mut d, &p, pp, two, three);
+        let t = d.div(three, two);
+        let rhs = d.sub(three, t);
+        let expected = d.num(2);
+        assert!(
+            d.kernel().def_eq(lhs, expected),
+            "gaussNegCount (succ (mul 2 3)) 2 3 must reduce to 2 (matches gauss_neg_count_seven_two)"
+        );
+        assert!(
+            d.kernel().def_eq(rhs, expected),
+            "sub 3 (div 3 2) must reduce to 2"
+        );
+        assert!(
+            d.kernel().def_eq(lhs, rhs),
+            "the closed form's two sides must agree at m := 3"
         );
     }
 }
