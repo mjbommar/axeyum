@@ -566,6 +566,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         // `unblock-draw-15` lane (ADR-1160): `find_greatest.rs`. A
         // definition only, deliberately (ADR-0653).
         p.find_greatest,
+        // `unblock-index-three` lane (ADR-1245): `factorization_root.rs`.
+        // Definitions only, deliberately (ADR-0653).
+        p.floor_root,
+        p.ceil_root,
         // `unblock-four-families` lane (ADR-1095/ADR-1100):
         // `abundant_deficient.rs`. Definitions only, deliberately
         // (ADR-0653).

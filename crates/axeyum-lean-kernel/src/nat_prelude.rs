@@ -177,6 +177,7 @@ mod euler;
 mod even_add_family;
 mod even_div;
 mod factorization;
+mod factorization_root;
 mod fermat;
 mod fermat_number;
 mod fermat_number_mirrors;
@@ -336,6 +337,7 @@ use even_add_family::declare_even_add_family_all;
 use even_div::declare_even_div;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use fermat::declare_fermat;
+use factorization_root::declare_factorization_root_all;
 use fermat_number::declare_fermat_number_all;
 use fermat_number_mirrors::{declare_fermat_number_easy_all, declare_fermat_number_mirrors_all};
 use fermat_witness::declare_fermat_witness_all;
@@ -5070,6 +5072,22 @@ pub struct NatPrelude {
     /// [`crate::LogicPrelude::decidable_by_cases`] in place of `ite`; see
     /// `find_greatest.rs` for why the `ml430` mirror stays `open`.
     pub find_greatest: NameId,
+
+    // -- `unblock-index-three` lane: `factorization_root.rs` --
+    // (ADR-1245. Opens `Mathlib.Data.Nat.Factorization.Root` for cycle index
+    // 3, the second held-out slot draw 16 needs; ADR-1240 filled index 0.
+    // Construction only, ADR-0653 -- no theorem about either is declared.)
+    /// `Nat.floorRoot : Nat → Nat → Nat` -- the greatest `b` with
+    /// `b ^ n ∣ a`, and `0` at `n = 0`. Mathlib defines it as a product over
+    /// `Nat.factorization`, a `Finsupp` this kernel cannot state; ours is the
+    /// extensionally equal bounded search, so the `ml430` mirror stays `open`.
+    /// See `factorization_root.rs`.
+    pub floor_root: NameId,
+    /// `Nat.ceilRoot : Nat → Nat → Nat` -- the least `b ≥ 1` with
+    /// `a ∣ b ^ n`, and `0` at `n = 0` or `a = 0`. The divisibility-lattice
+    /// adjoint of [`Self::floor_root`], and NOT the numeric root
+    /// [`Self::nth_root`] computes. See `factorization_root.rs`.
+    pub ceil_root: NameId,
     /// `Nat.stirlingSecond (n k : Nat) : Nat` -- the Stirling numbers of
     /// the second kind, `S(n+1,k+1) = (k+1) * S(n,k+1) + S(n,k)`. Differs
     /// from [`Self::stirling_first`] ONLY in that coefficient.
@@ -6164,6 +6182,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             primrec_comp: kernel.name_str(primrec, "comp"),
             primrec_prec: kernel.name_str(primrec, "prec"),
             find_greatest: kernel.name_str(nat, "findGreatest"),
+            floor_root: kernel.name_str(nat, "floorRoot"),
+            ceil_root: kernel.name_str(nat, "ceilRoot"),
             abundant: kernel.name_str(nat, "Abundant"),
             deficient: kernel.name_str(nat, "Deficient"),
             stirling_first: kernel.name_str(nat, "stirlingFirst"),
@@ -7117,6 +7137,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // autogenesis screen at cycle index 3 (ADR-1160). Nothing needs it,
         // so it goes last.
         declare_find_greatest_all(&mut d, &p)?;
+        // `Nat.floorRoot`/`Nat.ceilRoot` (`factorization_root.rs`): needs
+        // only `Nat.rec`, `Nat.pow`, `Nat.mod`, `Nat.beq` and `Bool.rec`, all
+        // far above. Opens `Mathlib.Data.Nat.Factorization.Root` for the
+        // autogenesis screen at cycle index 3 (ADR-1245). Nothing needs it,
+        // so it goes last.
+        declare_factorization_root_all(&mut d, &p)?;
         // `Nat.half_ceil_parity` (`half_ceil_parity.rs`): needs
         // `Nat.even_or_odd` (`powsq.rs`, far above), `Nat.Even`/`Nat.Odd` and
         // `succ_double_eq` (`declare_parity_all`, far above), and
@@ -7168,6 +7194,9 @@ mod abundant_deficient_tests;
 
 #[cfg(test)]
 mod find_greatest_tests;
+
+#[cfg(test)]
+mod factorization_root_tests;
 
 #[cfg(test)]
 mod avg_pair_tests;
