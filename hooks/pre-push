@@ -15,6 +15,9 @@
 #
 #   cargo check --workspace          0s     (free once the cache is warm)
 #   cargo fmt --all --check          3s
+#   clippy --workspace (all targets) 1s warm (759 targets; cold pays a full
+#                                     workspace clippy build — added 2026-08-31,
+#                                     see the step's own comment)
 #   corpus :status sweep            13s
 #   cargo test --workspace --lib   224s
 #   solver unit sweep (full)        31s   (1008 tests; --skip reconstruct::)
@@ -333,6 +336,23 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   step_seconds "cargo check --workspace --all-targets" \
     env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --all-targets --quiet
   step_seconds "cargo fmt --all --check" cargo fmt --all --check
+  # clippy -D warnings over the whole workspace. Until 2026-08-31 this hook had
+  # NO clippy step at all — the word appeared exactly once, in this file's own
+  # comments, never in an invocation — so a workspace clippy failure (exit 101,
+  # measured against `main`) went through the hook clean, twice, before it was
+  # caught by hand and repaired (579d3e02).
+  #
+  # `scripts/check-clippy-complete.sh`, not the bare `cargo clippy` command:
+  # cargo decides freshness by mtime, so a source file OLDER than the cached
+  # artifact is invisible to clippy and a bare `-D warnings` can exit 0 over
+  # code it never recompiled (measured 2026-08-14, see the script's own header
+  # and CLAUDE.md). The wrapper touches changed content first via
+  # `check-source-freshness.sh`, then reports how many workspace targets it
+  # actually linted and fails if that count is zero — the same
+  # nonzero-count discipline `gated_test` applies to test suites, done here for
+  # a lint pass instead.
+  step_seconds "clippy --workspace --all-targets --all-features -D warnings" \
+    env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh ./scripts/check-clippy-complete.sh
   # The oracle-free :status corpus sweep (~6s warm): CI's copy caught a
   # vacuous-sat harness hole (f5b00c72) only AFTER the SHA was public —
   # a wrong verdict must never leave the machine when a 6-second local
