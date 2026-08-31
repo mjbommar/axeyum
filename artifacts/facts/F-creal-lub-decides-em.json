@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-lub-decides-em",
+  "title": "CReal.lub_decides_em: a supremum for an arbitrary inhabited bounded set decides an arbitrary proposition",
+  "statement": "CReal.lub_decides_em is the least-upper-bound property's ADR-0603 row 2 (Spivak Calculus ch. 8), the row docs/curriculum/graded-statement-families.md recorded on 2026-08-27 as PURE ABSENCE -- 'the unavailability is asserted, not proved'. Spivak's P13 quantifies over an arbitrary inhabited set of reals that is bounded above, so the faithful counterexample family is a set carved out by an arbitrary proposition: CReal.lubSet A := fun x => Or (le x zero) (And A (le x one)), the set (-inf, 0] union ((-inf, 1] if A). It is inhabited at 0 (CReal.lubSet_inhabited, an exhibited witness rather than an Exists) and bounded above by 1 (CReal.lubSet_bounded, an explicit bound rather than an Exists), both PROVED here rather than asserted, so the family is machine-checked to lie inside classical LUB's hypothesis class. Given a supremum s in BISHOP's sense -- an upper bound plus the approximation property, for every t < s some x in the set exceeds t -- one CReal.lt_cotrans call on the fixed strict pair zero < one at z := s yields Or A (Not A) for an ARBITRARY Prop. That is UNRESTRICTED EXCLUDED MIDDLE, which this kernel does not contain: only Decidable.em, which takes a Decidable instance, and the conditional em_of_dne / em_of_peirce / dne_of_em / peirce_of_em, which take unrestricted em as a HYPOTHESIS and never assert it (ADR-0716 section 2 measures that absence with controls). So this is a STRICTLY STRONGER boundary than F:creal-evt-attained-max-decides-sign and F:creal-ivt-exact-root-decides-sign, which both land on analytic LLPO -- a principle consistent with Bishop's constructive mathematics, where unrestricted excluded middle is not. What this is NOT: a proof that Or A (Not A) is false. Excluded middle is consistent with this kernel's type theory, so the conclusion is UNPROVABLE here, not refutable; 'refuted' means exactly what it means for the IVT and EVT rows -- the classical conclusion is proved at least as strong as a decision principle this kernel demonstrably does not have. It is falsifiable: land an unrestricted em and this stops being a refutation and becomes a route to LUB. Nor does it contradict LUB's row 1: CReal.supOn / CReal.supOn_approx_lub (F:creal-supon, F:creal-supon-approx-lub) construct the supremum of a UNIFORMLY CONTINUOUS FUNCTION on a compact interval, where the modulus supplies the locatedness a general set lacks, and creal/completeness.rs's Bishop completeness constructs the limit of a REGULAR SEQUENCE, which carries its own rate. lubSet A is a set, not a function's range and not a regular sequence, and it is exactly as un-located as A is undecided.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.lub_decides_em : ((x0 : Prop) -> ((x1 : CReal) -> ((x2 : ((x2 : CReal) -> ((x3 : CReal.lubSet x0 x2) -> CReal.le x2 x1))) -> ((x3 : ((x3 : CReal) -> ((x4 : CReal.lt x3 x1) -> Exists.{1} CReal (fun (x5 : CReal) => And (CReal.lubSet x0 x5) (CReal.lt x3 x5))))) -> Or x0 (Not x0)))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "kernel_theorem": "CReal.lub_decides_em"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-le-of-lt",
+    "F:creal-le-refl",
+    "F:creal-le-trans",
+    "F:creal-lt-cotrans",
+    "F:creal-lt-irrefl",
+    "F:creal-lt-of-le-of-lt",
+    "F:creal-lt-of-lt-of-le",
+    "F:creal-zero-lt-one"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.lub_decides_em",
+      "kind": "kernel-term",
+      "supports": "CReal.lub_decides_em is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.lub_decides_em 2>/dev/null | grep -cE '^CReal\\.lub_decides_em[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "CReal.lub_decides_em",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently discards every argument after the first."
+    },
+    {
+      "id": "family-CReal.lubSet-is-inside-LUB-hypothesis-class",
+      "kind": "kernel-term",
+      "supports": "The counterexample family is a Definition the kernel holds, and BOTH of classical LUB's hypotheses about it are kernel theorems rather than assertions: CReal.lubSet_inhabited (inhabited, at the exhibited witness 0) and CReal.lubSet_bounded (bounded above, at the explicit bound 1).",
+      "check_status": "checked",
+      "checkers": [
+        "kernel_declaration_projection --require-declaration --require-kind"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.lubSet --require-kind definition",
+      "checker_seconds": 30,
+      "kernel_declaration": "CReal.lubSet",
+      "notes": "The theorem inventories filter to Declaration::Theorem and cannot answer 'does this Definition exist' at all -- CReal.lubSet returns zero rows from prelude_theorem_inventory, exactly as CReal.integral and Nat.add do. --require-declaration is the flag that fails on absence for ANY kind; verified discriminating in this lane by asking for CReal.lubSet_nonexistent_control, which exits 1 with an explicit error. The two hypothesis-class theorems are checked by the same tool with --require-kind theorem, and by creal_tests::every_creal_declaration_is_checked_and_axiom_free, which derives its coverage from kernel.environment() rather than from a list."
+    },
+    {
+      "id": "nonvacuity-CReal.lub_decides_em",
+      "kind": "kernel-term",
+      "supports": "The two supremum hypotheses are JOINTLY SATISFIABLE, so the row-2 implication is not vacuous. At A := True the set is (-inf, 1], whose supremum genuinely is 1: the upper-bound half is CReal.lubSet_bounded at A := True verbatim, and the approximation half takes the witness x := 1 itself. Kernel::infer accepts the fully discharged instance and its conclusion is pinned verbatim against an independently built Or True (Not True).",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::infer on a fully discharged instance",
+        "verbatim render_lean comparison against an independently built conclusion",
+        "a negative control differing in one small term"
+      ],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib creal::lub_boundary_tests",
+      "checker_seconds": 400,
+      "notes": "ADR-0603 Amendment 2 makes this control mandatory: a refutation shaped as an implication whose hypotheses have no models would be unfalsifiable, which is the checker-that-cannot-fail defect arriving as a theorem rather than as a script. Four tests, none feature-gated, so a NONZERO count is the confirmation the run was real. The negative control changes ONE small term -- Or.inl for Or.inr, putting an And True (le 1 1) proof into a le 1 0 slot -- and carries its own positive control in the same test; it is deliberately a head-constant mismatch rather than transposed real arguments, because a FAILING def_eq has no early exit and swapping two CReals would unfold CReal.le's sequence definition without bound. Exhibiting a discharge at a DECIDABLE A does not weaken the boundary: at such an A the conclusion Or A (Not A) is available anyway, which is precisely why no analogous discharge exists for an arbitrary Prop."
+    },
+    {
+      "id": "footprint-CReal.lub_decides_em",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.lub_decides_em and the three declarations beneath it.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty creal surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for all four rows in this lane."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/lub_boundary.rs)",
+    "source": "formal.statement is the Kernel::render_lean(declaration.ty()) column of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, verbatim; depends_on is that emit's direct-theorem column intersected with this ledger's registered facts; axiom_footprint is its footprint-size column (0), cross-checked by the whole-prelude nat_axiom_inventory run recorded in the last evidence row. No type or dependency was hand-transcribed."
+  },
+  "notes": "Lane lub-row2-counterexample, 2026-08-31. Before this, LUB was the one family in docs/curriculum/graded-statement-families.md whose row 2 was pure absence rather than a refutation, and row 2 is the axis on which ADR-0603's dominance argument rests -- an asserted unavailability cannot fail, so it is not evidence. Note the scope: ADR-0716 measures row 2 as provably EMPTY over the DISCRETE carriers (Nat, Int, Rat all have le_total as a proved axiom-free theorem), and that finding does not transfer to CReal, where CReal.le_total and CReal.lt_total are both absent by design. Source: crates/axeyum-lean-kernel/src/creal/lub_boundary.rs; tests in crates/axeyum-lean-kernel/src/creal/lub_boundary_tests.rs."
+}
