@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrectangle-partition",
+  "title": "A rectangle of lattice points, partitioned by two complementary predicates, with no set of lattice points",
+  "statement": "Given two predicates `Q`, `R` on pairs whose selectors sum to `1` at every point of `[0,m) x [0,n)`, counting the rectangle ROW BY ROW under `Q` and COLUMN BY COLUMN under `R` totals `mul n m`. This is Eisenstein's lattice-point count as a COUNTING statement: no primality, no division, no `Nat.div` and no `Nat.mod` appear anywhere in it. WHAT MAKES IT WORTH REGISTERING: this kernel has no `Finset`, no `List` and no `Prod`, and ADR-1135 measured that absence as the wall the determinant's multiplicativity runs into. The rectangle here never has to exist as an object -- a finite family is a function plus a bound -- so Eisenstein's route to quadratic reciprocity does NOT hit that wall (ADR-1260). WHY THE HYPOTHESIS IS A PAIR OF PREDICATES rather than `R = setCompl Q`: Eisenstein's two predicates are the strict inequalities `p*(y+1) < q*(x+1)` and `q*(x+1) < p*(y+1)`, complementary only because no lattice point sits on the line `p*y = q*x` -- which holds only inside the rectangle, for distinct primes. So the complementarity arrives as a BOUNDED hypothesis the consumer discharges by one Bool case split per point, and the primality-dependent side condition stays in the consumer. WHAT THIS DOES NOT CLAIM: quadratic reciprocity is NOT proved, and neither of Eisenstein's two steps is. Identifying the row count with a floor, and Eisenstein's lemma relating `Nat.gaussNegCount` to a sum of floors mod 2, are separate and open; ADR-1260 names the obstruction.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRectangle_partition : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Bool))) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Bool))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.lt x4 x2) -> ((x7 : AxNat.lt x5 x3) -> Eq.{1} AxNat (AxNat.add (Bool.rec.{1} (fun (x8 : Bool) => AxNat) AxNat.zero (AxNat.succ AxNat.zero) (x0 x4 x5)) (Bool.rec.{1} (fun (x8 : Bool) => AxNat) AxNat.zero (AxNat.succ AxNat.zero) (x1 x4 x5))) (AxNat.succ AxNat.zero)))))) -> Eq.{1} AxNat (AxNat.add (AxNat.sumRange (fun (x5 : AxNat) => AxNat.countRange (fun (x6 : AxNat) => x0 x5 x6) x3) x2) (AxNat.sumRange (fun (x5 : AxNat) => AxNat.countRange (fun (x6 : AxNat) => x1 x6 x5) x2) x3)) (AxNat.mul x3 x2))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8"
+    ],
+    "kernel_theorem": "Nat.countRectangle_partition"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-one-mul",
+    "F:nat-sumrange-add",
+    "F:nat-sumrange-congr",
+    "F:nat-sumrange-congr-lt",
+    "F:nat-countrange-eq-sumrange",
+    "F:nat-sumrange-const",
+    "F:nat-sumrange-swap"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.countRectangle_partition",
+      "kind": "kernel-term",
+      "supports": "Nat.countRectangle_partition is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.countRectangle_partition 2>/dev/null | grep -cE '^Nat\\.countRectangle_partition[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.countRectangle_partition",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Run both ways for this declaration: the real name prints 1 and exits 0, a one-letter misspelling prints 0 and exits 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.countRectangle_partition",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds Nat.countRectangle_partition.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row. Measured 2026-08-31: `ok: nat trusted surface = 0`."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs)",
+    "source": "formal.statement, axiom_footprint and depends_on are taken verbatim from `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, whose TSV rows are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). depends_on is the direct-theorem column intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane quadratic-reciprocity, ADR-1260)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs`, admitted by the trusted gate on the FIRST attempt. The decision, the numeric verification (8 claims, 10 controls, two of them recorded as deliberately surviving) and the mutation table are in ADR-1260.",
+  "external_status": "proved"
+}

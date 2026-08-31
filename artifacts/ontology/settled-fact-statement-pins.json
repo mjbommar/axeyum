@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2030,
+    "min_identity_bound": 2035,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -14035,6 +14035,13 @@
       "kernel_theorem": "Nat.countRange_eq_pred_of_only_zero_false"
     },
     {
+      "fact_id": "F:nat-countrange-eq-sumrange",
+      "language": "lean4",
+      "statement_sha256": "5f70204e93edf28944b8449271b0ed10a6d0778d2e325fae6ad7c78e33f60675",
+      "prose_sha256": "99c7c87aba8844b4abe13a66695aa50507ed7a3a8e2eb3acb016a810fd2bcb07",
+      "kernel_theorem": "Nat.countRange_eq_sumRange"
+    },
+    {
       "fact_id": "F:nat-countrange-le",
       "language": "lean4",
       "statement_sha256": "039ca6451dcbdbba25a5b829d876b08d02561ee3bd2c8e15f1309e8a13ca74a6",
@@ -14075,6 +14082,20 @@
       "statement_sha256": "36e1a23e27b6cb30d4b935ff3cb19e4413c48a18a66bff38aea50685b4292cde",
       "prose_sha256": "20a94271c8406b2b59e8771b8ba3fefa4b1680965411d4c9c7863581aa461f6f",
       "kernel_theorem": "Nat.countRange_zero"
+    },
+    {
+      "fact_id": "F:nat-countrectangle-partition",
+      "language": "lean4",
+      "statement_sha256": "710e0fd9f9e71ba9a634dd7a51a40ad141f115f29935b46bcffdb8d1cfaffe2e",
+      "prose_sha256": "fedb64c299240229209fdc0c8877dbdf08c443fb68e2b0b3072d2799ff82438a",
+      "kernel_theorem": "Nat.countRectangle_partition"
+    },
+    {
+      "fact_id": "F:nat-countrectangle-partition-compl",
+      "language": "lean4",
+      "statement_sha256": "b5a1479b86bcc2706fa659cf74dcba74398014d3fd9fa6cf583c98e949caea10",
+      "prose_sha256": "4574cb7a1dfe14d99ac5c8a8ad3d52410bc00514269ec8ba041c95792d0c7c42",
+      "kernel_theorem": "Nat.countRectangle_partition_compl"
     },
     {
       "fact_id": "F:nat-crt-self-map-injective-on",
@@ -17013,6 +17034,13 @@
       "kernel_theorem": "Nat.sumRange_congr_lt"
     },
     {
+      "fact_id": "F:nat-sumrange-const",
+      "language": "lean4",
+      "statement_sha256": "e4212f1511e327d0602910f2f060e2ac390d51656b5379ff3ec9012eb2b8dbd1",
+      "prose_sha256": "aa96826786ed5e493d96ac2634d9040663eff0a61d99fba04e10f36c99d674cc",
+      "kernel_theorem": "Nat.sumRange_const"
+    },
+    {
       "fact_id": "F:nat-sumrange-diagonal",
       "language": "lean4",
       "statement_sha256": "4fb6b58b4f0a0ac68f9f497be0bc278b02f89ff3e0a88527ba0e0797c10b54b6",
@@ -17046,6 +17074,13 @@
       "statement_sha256": "c597316ec7823a5b207cb51cc2adae5d153a022b9d1a8525f2ed2ac58f3f3e21",
       "prose_sha256": "d9c78e55642c514f74dd6e8607d0858d2fdf72619d4ec3e6b6beaec6c90d40cd",
       "kernel_theorem": "Nat.sumRange_succ"
+    },
+    {
+      "fact_id": "F:nat-sumrange-swap",
+      "language": "lean4",
+      "statement_sha256": "c50db9884995515ef255a77b13e46b942f5b85de5fa2a169701b124486afe30f",
+      "prose_sha256": "235afbbaa32f3f642f59e64a1b62bffc0f5da61f3ac427b4e6a7edf483326d5a",
+      "kernel_theorem": "Nat.sumRange_swap"
     },
     {
       "fact_id": "F:nat-sumrange-zero",

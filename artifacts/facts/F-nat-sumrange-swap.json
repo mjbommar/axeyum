@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-sumrange-swap",
+  "title": "Fubini for finite sums over the constructed naturals",
+  "statement": "A doubly-indexed family of naturals may be summed row by row or column by column: `sum_{i<m} sum_{j<n} F i j = sum_{j<n} sum_{i<m} F i j`. Proved by induction on the OUTER bound `m` with `n` held fixed; the step is one congruence by the induction hypothesis followed by `Nat.sumRange_add` read backwards, and the base case needs a pointwise congruence collapsing `n` empty inner sums. `Kernel::axiom_footprint` is EMPTY. WHY IT IS NEW: `Rat.sumRange_swap` has existed since the Laplace double cofactor expansion, and the naturals did not have it -- checked against the Nat prelude's own name registry (900 registered names; no `sumRange_swap`, with `sumRange*` returning 11 names as a positive control). It is general Fubini and has no connection to the quadratic-reciprocity work that motivated it. WHAT IT DOES NOT CLAIM: the two BOUNDS must be swapped along with the summation order; the statement with the order swapped and the bounds left alone is false, and a test pins that at an asymmetric family.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.sumRange_swap : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x3 : AxNat) => AxNat.sumRange (fun (x4 : AxNat) => x0 x3 x4) x2) x1) (AxNat.sumRange (fun (x3 : AxNat) => AxNat.sumRange (fun (x4 : AxNat) => x0 x4 x3) x1) x2))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Nat.sumRange_swap"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-sumrange-add",
+    "F:nat-sumrange-congr",
+    "F:nat-zero-mul",
+    "F:nat-sumrange-const"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.sumRange_swap",
+      "kind": "kernel-term",
+      "supports": "Nat.sumRange_swap is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.sumRange_swap 2>/dev/null | grep -cE '^Nat\\.sumRange_swap[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.sumRange_swap",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Run both ways for this declaration: the real name prints 1 and exits 0, a one-letter misspelling prints 0 and exits 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.sumRange_swap",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, which bounds Nat.sumRange_swap.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row. Measured 2026-08-31: `ok: nat trusted surface = 0`."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs)",
+    "source": "formal.statement, axiom_footprint and depends_on are taken verbatim from `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, whose TSV rows are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). depends_on is the direct-theorem column intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane quadratic-reciprocity, ADR-1260)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs`, admitted by the trusted gate on the FIRST attempt. The decision, the numeric verification (8 claims, 10 controls, two of them recorded as deliberately surviving) and the mutation table are in ADR-1260.",
+  "external_status": "proved"
+}
