@@ -40,6 +40,7 @@
         "F:ml430-int-add-comm-c5722728",
         "F:ml430-int-add-le-add-left-4a766697",
         "F:ml430-int-add-left-neg-c1bf80e1",
+        "F:ml430-int-add-mul-66aa025b",
         "F:ml430-int-add-neg-eq-sub-32f34729",
         "F:ml430-int-add-one-ediv-two-mul-two-of-odd-3c9ef32f",
         "F:ml430-int-dvd-coe-gcd-6bda035e",
@@ -56,12 +57,15 @@
         "F:ml430-int-even-add-3c4536e3",
         "F:ml430-int-even-add-bc8e1394",
         "F:ml430-int-even-add-one-af33da18",
+        "F:ml430-int-exists-gcd-one-657db3e2",
+        "F:ml430-int-exists-gcd-one-d8820780",
         "F:ml430-int-fib-add-one-33f1b748",
         "F:ml430-int-fib-add-two-739358dd",
         "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
         "F:ml430-int-fib-natcast-d5886be4",
         "F:ml430-int-gcd-div-5e01872f",
         "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+        "F:ml430-int-gcd-dvd-iff-66fa03b3",
         "F:ml430-int-gcd-eq-gcd-ab-63005aef",
         "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
         "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
@@ -88,7 +92,9 @@
         "F:ml430-nat-add-eq-two-iff-25385c65",
         "F:ml430-nat-add-eq-zero-64233539",
         "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
+        "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
         "F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb",
+        "F:ml430-nat-add-factorial-succ-lt-factorial-add-succ-ec0fa8d3",
         "F:ml430-nat-add-mod-left-6b337077",
         "F:ml430-nat-add-mod-right-c047c67a",
         "F:ml430-nat-add-mul-div-left-e20827dd",
@@ -133,6 +139,7 @@
         "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
         "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
         "F:ml430-nat-coprime-lcm-eq-mul-edf52888",
+        "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
         "F:ml430-nat-coprime-odd-of-left-ed80ab44",
         "F:ml430-nat-coprime-odd-of-right-8dc1decc",
         "F:ml430-nat-coprime-of-dvd-18fcd09f",
@@ -282,7 +289,7 @@
         "F:nat-zero-add"
       ],
       "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 238 -> 244 members by `rescope-nursery-exemption.py`, which refuses when any member is held-out. Partition census at re-scope: {'development': 294, 'train': 190, 'longitudinal': 4}. Zero held-out members, so the crossing stays benign under ADR-0542."
+      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 244 -> 251 members by `rescope-nursery-exemption.py`, which refuses when any member is held-out. Partition census at re-scope: {'development': 304, 'train': 194, 'longitudinal': 4}. Zero held-out members, so the crossing stays benign under ADR-0542."
     },
     {
       "authority": "ADR-0855",
@@ -12331,7 +12338,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "41f5f6babc35b9801641cf5b89822987ce70805e324ead65c10847fcbf67f261",
+  "extension_sha256": "bb7e6f725b351a4021eaf93e41e36a8b95bdb7cc42feffc15be9269e610a6cf4",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
