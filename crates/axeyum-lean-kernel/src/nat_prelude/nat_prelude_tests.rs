@@ -1317,6 +1317,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // closed form and its specialization to the odd-prime shape.
         p.gauss_count_ble_closed_form_disj,
         p.gauss_neg_count_two_closed_form,
+        // `gauss-lemma-connecting-b` lane (ADR-0970/ADR-0985 connecting
+        // theorem, piece 1): least-residue map injectivity given positivity
+        // + coprimality.
+        p.least_residue_injective_of_coprime,
     ]
 }
 

@@ -131,6 +131,7 @@ now. Nothing was deleted.
 | 2026-08-31 | `5410c49f9` | Close 4 ml430 mirrors with the new draw11_mirrors.rs proofs (fact-ledger evidence). |
 | 2026-08-31 | five-risk-coverage-audit | Per-risk audit of the L0 safety programme: contamination reaches ~1,956 facts but 28% of those subjects are regex-chosen; vacuity reaches 8 of 2,167; `independent_replay` at 7 is mismeasured in both directions; 539 facts hold a prelude-wide sweep or nothing; no L0 gate runs in CI or pre-push (ADR-1000). Report only — nothing repaired. |
 | 2026-08-31 | gauss-lemma-closed-form-b | `Nat.gaussCountBleClosedFormDisj` (general `countRange` closed-form invariant) and `Nat.gaussNegCountTwoClosedForm` (`gaussNegCount (succ (mul 2 m)) 2 m = sub m (div m 2)`, the classical odd-prime closed form) land axiom-free in `nat_prelude/gauss_lemma.rs` (ADR-0985), executing the route ADR-0970 sized and left open; agreement with all six landed `a := 2` concrete instances recomputed independently; the connecting theorem to `a^m mod p` stays open, unchanged sizing. |
+| 2026-08-31 | gauss-lemma-connecting-b | `Nat.least_residue_injective_of_coprime` (least-residue map injectivity given positivity + coprimality, no case split) lands axiom-free in `nat_prelude/gauss_lemma.rs` — piece 1 of the Gauss's-lemma connecting theorem ADR-0970/ADR-0985 sized. Piece 2 (the pairing lemma) is re-sized with a genuine simplification (self-map `InjectiveOn`/`MapsInto`, matching `Int.prodRange_permute`'s exact hypothesis shape — no bijection witness needed) and checked lemma-by-lemma against the tree (ADR-0990); piece 3 (product cancellation, Nat/Int bridge) stays open, unchanged sizing. |
 | 2026-08-31 | gauss-lemma-countrange | `Nat.leastResidue`/`Nat.gaussSignNeg`/`Nat.gaussNegCount` (least-residue sign counting over `Nat.countRange`) plus the `a := 2` mod-bypass theorem and eight concrete instances land axiom-free in new `nat_prelude/gauss_lemma.rs` (ADR-0970), toward Gauss's lemma / the second supplementary law; the general closed form and the connecting theorem to `a^m mod p` stay open, fully routed for the next lane. |
 | 2026-08-31 | `74ca7790b` | `proof_plan.rs` + compiler; three families rewritten; digest probe |
 | 2026-08-31 | `ba2b22bbb` | add missing type-leak decline test; mutation-verify all 5 guards |
@@ -36846,6 +36847,72 @@ nat_prelude::` (243 passed, 0 failed — nonzero count confirmed), `cargo
 clippy -p axeyum-lean-kernel --lib -- -D warnings` (clean), `python3
 scripts/check-autogenesis-holdout-isolation.py` (PASS before and after —
 `artifacts/autogenesis/` untouched this session, `held_out=146`).
+
+**Your lane's block (`WIP`, gauss-lemma-connecting-b, 2026-08-31).**
+Verified the three-piece sizing ADR-0970/ADR-0985 left open (least-residue
+injectivity, a pairing lemma, product cancellation over `Int.prodRange`)
+against the tree before starting — all citations confirmed present on
+`origin/main`. Landed piece 1 in full:
+
+- `Nat.least_residue_injective_of_coprime : ∀ pp a k k', 0 < pp -> gcd a pp
+  = 1 -> k < pp -> k' < pp -> leastResidue pp a k = leastResidue pp a k' ->
+  k = k'` (`nat_prelude/gauss_lemma.rs`) — no case split needed. Stated over
+  bare positivity + coprimality, strictly more general than "restricted to
+  `{1,…,m}`, `a` coprime to prime `p`" — a caller in the classical setting
+  supplies coprimality via the already-landed `Nat.coprime_of_lt_prime`.
+  Axiom footprint, read from the kernel
+  (`theorem_axiom_footprint -- least_residue_injective_of_coprime`): `0`.
+- Exposed two previously module-private `group.rs` helpers (`mod_self_congr`,
+  `mod_eq_of_mod_eq_rel`) as `pub(super)`, reused rather than duplicated.
+
+**Piece 2 (the pairing lemma) was NOT built this session, but its route is
+simplified and precisely re-sized**, checked signature-by-signature against
+the tree. Key finding: `Int.prodRange_permute`'s actual hypothesis shape is
+`InjectiveOn σ n -> MapsInto σ n` on a **self-map** of `[0,n)` — no explicit
+bijection witness or partner-index construction is needed, contrary to
+ADR-0970's original "construct a partner `k'`" framing. So piece 2 reduces
+to: the signed-fold map `gaussFold pp a k := if gaussSignNeg pp a k then sub
+pp (leastResidue pp a k) else leastResidue pp a k` is `InjectiveOn`/
+`MapsInto` on `[0,m)`. Same-sign collisions close via piece 1 (already
+landed); opposite-sign collisions are shown VACUOUS via a modular-cancellation
+argument (no partner construction) — every lemma name that route depends on
+was checked present except a `leastResidue`-nonzero lemma, itself sized as
+~40-60 lines structurally similar to `coprime_of_lt_prime`. Full route:
+[ADR-0990](docs/research/09-decisions/adr-0990-gauss-lemma-least-residue-injectivity-lands-pairing-route-simplified-and-sized.md).
+
+**Piece 3 (product cancellation over `Int.prodRange`, the Nat/Int carrier
+bridge, and connecting to `a^m mod p`) is unchanged from ADR-0970's sizing
+and was not attempted** — genuinely deserving its own session.
+
+**The `F:nat-gauss-lemma` collision was avoided**: no fact was added this
+session (kernel declarations only), and the new name
+`least_residue_injective_of_coprime` is unambiguously distinct from
+`Nat.gauss_lemma` (`lcm.rs`, an unrelated divisibility cancellation
+theorem) — checked against the full source tree and `artifacts/facts/`
+before landing.
+
+Verification this session: `cargo check -p axeyum-lean-kernel --lib`
+(clean); `cargo test -p axeyum-lean-kernel --lib nat_prelude::` (252
+passed, 0 failed, up from 250 before this session — nonzero count
+confirmed); `cargo clippy -p axeyum-lean-kernel --lib -- -D warnings`
+(clean); `cargo run --release -p axeyum-lean-kernel --example
+theorem_axiom_footprint -- least_residue_injective_of_coprime` (footprint
+`0`); `python3 scripts/check-autogenesis-holdout-isolation.py` (PASS,
+`held_out=146`, `artifacts/autogenesis/` untouched, checked before and
+after).
+
+**Is the full connecting theorem reachable here?** Yes in principle — every
+lemma name piece 2's route needs was checked present except one small
+nonzero-residue lemma, and piece 2's `InjectiveOn`/`MapsInto` deliverable
+plugs directly into `Int.prodRange_permute`'s exact hypothesis shape with
+no adapter needed. But piece 3 alone (the product identity, a
+`modEq`-over-a-product lemma, a sign-product-equals-`(-1)^count` lemma, and
+the Nat/Int carrier bridge) is a materially larger, multi-lemma
+construction than pieces 1+2 combined, and was not sized further than
+ADR-0970 already did. Landing pieces 1+2 with a precise piece-3 handoff
+across two sessions, rather than a rushed single-session attempt at all
+three, is consistent with how ADR-0970/ADR-0985 each scoped their own
+sessions.
 
 **Your lane's block (`WIP`, gauss-lemma-countrange, 2026-08-31).** Landed the
 `Nat.countRange`-shaped least-residue sign-counting primitive ADR-0960 sized

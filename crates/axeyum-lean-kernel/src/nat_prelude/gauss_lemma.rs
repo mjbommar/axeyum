@@ -59,6 +59,7 @@
 //! `docs/plan/status/gauss-lemma-countrange.md` for exact sizing.
 
 use super::NatPrelude;
+use super::group::{mod_eq_of_mod_eq_rel, mod_self_congr};
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
@@ -970,6 +971,135 @@ pub(super) fn declare_gauss_neg_count_two_closed_form(
     Ok(())
 }
 
+/// `Nat.least_residue_injective_of_coprime : ∀ pp a k k', Lt 0 pp → Eq (gcd a
+/// pp) 1 → Lt k pp → Lt k' pp → Eq (leastResidue pp a k) (leastResidue pp a
+/// k') → Eq k k'`.
+///
+/// Piece 1 of the connecting theorem to `a^m mod pp` (ADR-0970/ADR-0985):
+/// the least-residue map is injective on `[0, pp)` whenever `a` is coprime
+/// to `pp`. Stated over bare positivity + coprimality rather than
+/// primality directly — a caller in the classical Gauss's-lemma setting
+/// (`pp` prime, `0 < a < pp`) supplies `gcd a pp = 1` via
+/// `Nat.coprime_of_lt_prime` (`primes.rs`), which this theorem does not
+/// need to know about.
+///
+/// Route (no case split): `leastResidue pp a k` unfolds definitionally to
+/// `mod (mul a k) pp`. `mod_self_congr` (`group.rs`, exposed `pub(super)`
+/// for this file) gives `modEq pp (a*k) (mod (a*k) pp)` and symmetrically
+/// for `k'`; the hypothesis `heq` (defeq to `Eq (mod (a*k) pp) (mod (a*k')
+/// pp)`) transports the second into `modEq pp (mod (a*k) pp) (a*k')` via a
+/// custom `Eq.rec` motive (`fun x => modEq pp x (a*k')`); `mod_eq_trans`
+/// chains that with the first to `modEq pp (a*k) (a*k')`; `Nat.mod_eq_cancel`
+/// (`euler.rs`) cancels the shared coprime factor `a` to `modEq pp k k'`;
+/// `mod_eq_of_mod_eq_rel` (`group.rs`) turns that back into `mod k pp = mod
+/// k' pp`; `Nat.mod_eq_self_of_lt` collapses each side to `k`/`k'` using the
+/// bound hypotheses, and a three-step `d.chain` closes `k = k'`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_least_residue_injective_of_coprime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.least_residue_injective_of_coprime, 4, &|d, v| {
+        let (pp, a, k, k2) = (v[0], v[1], v[2], v[3]);
+        let one = d.num(1);
+        let zero = d.zero();
+
+        let pos_pp_ty = d.lt(zero, pp);
+        let gcd_ap = d.gcd(a, pp);
+        let coprime_ty = d.eq(gcd_ap, one);
+        let k_lt_ty = d.lt(k, pp);
+        let k2_lt_ty = d.lt(k2, pp);
+        let lr_k = least_residue(d, &p, pp, a, k);
+        let lr_k2 = least_residue(d, &p, pp, a, k2);
+        let heq_ty = d.eq(lr_k, lr_k2);
+        let concl = d.eq(k, k2);
+
+        let stmt = {
+            let inner = d.arrow(heq_ty, concl);
+            let inner2 = d.arrow(k2_lt_ty, inner);
+            let inner3 = d.arrow(k_lt_ty, inner2);
+            let inner4 = d.arrow(coprime_ty, inner3);
+            d.arrow(pos_pp_ty, inner4)
+        };
+
+        let pos_pp_fv = d.fresh_fvar();
+        let pos_pp = d.kernel().fvar(pos_pp_fv);
+        let coprime_fv = d.fresh_fvar();
+        let coprime = d.kernel().fvar(coprime_fv);
+        let k_lt_fv = d.fresh_fvar();
+        let k_lt = d.kernel().fvar(k_lt_fv);
+        let k2_lt_fv = d.fresh_fvar();
+        let k2_lt = d.kernel().fvar(k2_lt_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let ak = d.mul(a, k);
+        let ak2 = d.mul(a, k2);
+        let mod_ak_pp = d.modulo(ak, pp);
+        let mod_ak2_pp = d.modulo(ak2, pp);
+
+        // modEq pp ak (mod ak pp), modEq pp ak2 (mod ak2 pp)
+        let modeq_ak = mod_self_congr(d, &p, pp, pos_pp, ak);
+        let modeq_ak2 = mod_self_congr(d, &p, pp, pos_pp, ak2);
+
+        // modEq pp (mod ak2 pp) ak2
+        let modeq_ak2_symm = d.lemma(p.mod_eq_symm, &[pp, ak2, mod_ak2_pp, modeq_ak2]);
+
+        // heq : Eq lr_k lr_k2, defeq to Eq mod_ak_pp mod_ak2_pp (leastResidue
+        // unfolds definitionally, matching declare_gauss_residue_two_eq_double_of_lt's
+        // own no-congruence-step idiom). Reversed: Eq mod_ak2_pp mod_ak_pp.
+        let heq_rev = d.symm(lr_k, lr_k2, heq);
+
+        // Transport modeq_ak2_symm's first argument along heq_rev:
+        // modEq pp (mod ak2 pp) ak2  ~>  modEq pp (mod ak_pp) ak2
+        let motive = d.eq_motive(mod_ak2_pp, &|d, x| d.mod_eq(pp, x, ak2));
+        let modeq_akpp_ak2 = d.transport(mod_ak2_pp, motive, modeq_ak2_symm, mod_ak_pp, heq_rev);
+
+        // modEq pp ak ak2, via mod_eq_trans through the shared mod_ak_pp point
+        let modeq_ak_ak2 = d.lemma(
+            p.mod_eq_trans,
+            &[pp, ak, mod_ak_pp, ak2, modeq_ak, modeq_akpp_ak2],
+        );
+
+        // modEq pp k k2, cancelling the shared coprime factor a
+        let modeq_k_k2 = d.lemma(p.mod_eq_cancel, &[pp, a, k, k2, coprime, modeq_ak_ak2]);
+
+        // mod k pp = mod k2 pp
+        let mod_eq_rel = mod_eq_of_mod_eq_rel(d, &p, pp, pos_pp, k, k2, modeq_k_k2);
+
+        // mod k pp = k, mod k2 pp = k2
+        let mod_eq_self_k = d.lemma(p.mod_eq_self_of_lt, &[k, pp, k_lt]);
+        let mod_eq_self_k2 = d.lemma(p.mod_eq_self_of_lt, &[k2, pp, k2_lt]);
+
+        let mod_k_pp = d.modulo(k, pp);
+        let mod_k2_pp = d.modulo(k2, pp);
+        let k_eq_mod_k = d.symm(mod_k_pp, k, mod_eq_self_k);
+
+        let (_end, result) = d.chain(
+            k,
+            &[
+                (mod_k_pp, k_eq_mod_k),
+                (mod_k2_pp, mod_eq_rel),
+                (k2, mod_eq_self_k2),
+            ],
+        );
+
+        let with_heq = d.lam_fv(heq_fv, heq_ty, result);
+        let with_k2 = d.lam_fv(k2_lt_fv, k2_lt_ty, with_heq);
+        let with_k = d.lam_fv(k_lt_fv, k_lt_ty, with_k2);
+        let with_coprime = d.lam_fv(coprime_fv, coprime_ty, with_k);
+        let proof = d.lam_fv(pos_pp_fv, pos_pp_ty, with_coprime);
+
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order. Goes last in
 /// `build_nat_prelude`: it needs only `Nat.countRange`
 /// (`declare_totient_all`), `Nat.mod_eq_self_of_lt` (`declare_size_all`, via
@@ -1001,6 +1131,9 @@ pub(super) fn declare_gauss_lemma_all(
     // `gauss_residue_two_eq_double_of_lt` just above.
     declare_gauss_count_ble_closed_form_disj(d, p)?;
     declare_gauss_neg_count_two_closed_form(d, p)?;
+    // Piece 1 of the connecting theorem (ADR-0970/ADR-0985): the
+    // least-residue map's injectivity given only positivity + coprimality.
+    declare_least_residue_injective_of_coprime(d, p)?;
     Ok(())
 }
 
@@ -1111,6 +1244,37 @@ mod tests {
         assert!(
             d.kernel().def_eq(lhs, rhs),
             "the closed form's two sides must agree at m := 3"
+        );
+    }
+
+    /// Independent Rust-side recomputation for
+    /// `least_residue_injective_of_coprime` -- re-run, not inherited, per
+    /// this repository's standing rule that a "verified numerically" claim
+    /// must be re-executed. At `pp := 7, a := 3` (coprime), the least-residue
+    /// map `k ↦ (a*k) mod pp` is injective on `{0,…,6}` -- brute force.
+    /// Negative control: at `a := pp` (NOT coprime, `gcd(7,7)=7≠1`), the map
+    /// collapses -- `k=1` and `k=2` collide -- confirming the coprimality
+    /// hypothesis is genuinely load-bearing, not vacuous.
+    #[test]
+    fn least_residue_map_is_injective_at_a_coprime_witness_and_collides_without_coprimality() {
+        let pp: u32 = 7;
+        let a: u32 = 3;
+        let residues: Vec<u32> = (0..pp).map(|k| (a * k) % pp).collect();
+        let mut sorted = residues.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            residues.len(),
+            "leastResidue(pp:=7, a:=3, ·) must be injective on [0,7) -- gcd(3,7)=1"
+        );
+
+        let a_bad: u32 = 7; // gcd(7,7) = 7, not coprime to pp
+        assert_eq!(
+            (a_bad * 1) % pp,
+            (a_bad * 2) % pp,
+            "negative control: without coprimality the map collides at k=1,k=2 \
+             (both give residue 0) -- the coprimality hypothesis is not vacuous"
         );
     }
 }
