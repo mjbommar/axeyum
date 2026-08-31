@@ -196,6 +196,7 @@ now. Nothing was deleted.
 | 2026-08-30 | `eac21f4d4` | Add replayable RV64I source-pin and decoder/step reports. The route executes all twelve selected forms, all nine XOR words, five trap classes, and three semantic mutations; source-digest and branch-base controls fail closed. Book manifests remain pending. |
 | 2026-08-30 | `3c5d2cafb` | Add the source-pinned seventeen-form x86-64 decoder, encoder, complete step profile, flags, memory and implicit stack control, plus canonical projection. Eight tests execute all six manuscript listings; book evidence remains pending. |
 | 2026-08-30 | `5ad3bbfcd` | Add replayable x86-64 source-pin and decoder/step reports. Six manuscript programs execute across all seventeen forms; three trap classes and four semantic mutations are checked; source-digest and following-RIP branch-base controls fail closed. Book manifests remain pending. |
+| 2026-08-30 | l4-c3-thin-lean-adapter | ADR-0935 + `axeyum_lean_import::thin_adapter` (protocol/grading, 9 unit tests) + `thin_lean_adapter_goal_pack.rs` (8-category goal pack run live against real pinned Lean) + `scripts/check-lean-adapter.py`/`test-lean-adapter.py`/`test-lean-adapter-mutations.sh` (7 guards, mutation-verified 1:1) + `just lean-adapter` / `scripts/check.sh` gate registration |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
 | 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
@@ -34736,6 +34737,40 @@ slices, broader semantic relations, manifests, Python
 projection, and clean-checkout book gates. A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
+
+**Your lane's block (`DONE`, l4-c3-thin-lean-adapter, 2026-08-30).** C3 is
+landed: `axeyum_lean_import::thin_adapter` (a ~150-line grading module, ADR-0935)
+composes C2's two already-checked paths (real pinned Lean replay via
+`scripts/lean/replay-lean4export.lean`, unchanged; independent reimport via
+`import_ndjson`, unchanged) rather than reimplementing either. A preregistered
+8-category goal pack (`artifacts/lean-adapter/goal-pack/thin-adapter-v1.json`)
+runs live against real pinned Lean 4.30.0 in
+`crates/axeyum-lean-import/tests/thin_lean_adapter_goal_pack.rs`: success,
+unknown, timeout, unsupported, malformed_response, wrong_goal,
+wrong_environment, mutated_proof -- all eight graded correctly (1 accepted, 4
+declined, 3 rejected), with success/wrong_goal/mutated_proof each confirmed to
+have actually invoked real Lean rather than being decided from the envelope
+alone. `scripts/check-lean-adapter.py` validates the committed result with 7
+guards, each mutation-verified 1:1 in
+`scripts/tests/test-lean-adapter-mutations.sh`; registered in both `justfile`
+(`just lean-adapter`, appended to the `check:` dependency line) and
+`scripts/check.sh` (appended after the `checked-interchange` steps).
+
+Bounded and stated as such: this covers 8 representative categories over 1
+subject (`Nat.add_comm`) drawn from C2's own 9-credited-root population, not
+all 9 re-verified under the adapter and not a general goal population. The
+new trust assumption, named in ADR-0935: the "environment identity" is a
+plain string comparison, not a cryptographic binding -- it catches a stale or
+substituted identity string but does not defend against a sidecar that
+fabricates a matching string while running elsewhere; the actual soundness
+rests entirely on the post-Lean grading step, which never reads a
+sidecar-controlled field. No in-Lean `#tactic`/command was built (a Rust-side
+orchestration around the same two C2 paths, per ADR-0935's alternatives
+section) -- that is a deliberate C5-adjacent scope call, not an oversight.
+
+C4 (demand-gated elaboration features) remains blocked on a preregistered
+high-value population per the roadmap; nothing in this lane's work unblocks
+or blocks that separately.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

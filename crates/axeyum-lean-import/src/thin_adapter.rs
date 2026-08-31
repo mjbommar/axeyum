@@ -233,9 +233,8 @@ pub fn pre_lean_verdict(goal: &GoalDescriptor, raw_response: &[u8]) -> PreLeanSt
         Ok(value) => value,
         Err(_) => return PreLeanStage::Final(AdapterVerdict::Declined(MALFORMED_RESPONSE.into())),
     };
-    let response = match parse_response(&value) {
-        Ok(response) => response,
-        Err(_) => return PreLeanStage::Final(AdapterVerdict::Declined(MALFORMED_RESPONSE.into())),
+    let Ok(response) = parse_response(&value) else {
+        return PreLeanStage::Final(AdapterVerdict::Declined(MALFORMED_RESPONSE.into()));
     };
     match response {
         SidecarResponse::Declined { reason } => {
@@ -249,10 +248,10 @@ pub fn pre_lean_verdict(goal: &GoalDescriptor, raw_response: &[u8]) -> PreLeanSt
             environment_id,
             stream_path,
         } => {
-            if environment_id != goal.environment_id {
-                PreLeanStage::Final(AdapterVerdict::Rejected(WRONG_ENVIRONMENT.into()))
-            } else {
+            if environment_id == goal.environment_id {
                 PreLeanStage::NeedsLeanCheck { stream_path }
+            } else {
+                PreLeanStage::Final(AdapterVerdict::Rejected(WRONG_ENVIRONMENT.into()))
             }
         }
     }

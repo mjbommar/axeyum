@@ -1602,3 +1602,6 @@ step structural-index-mutations bash scripts/tests/test-structural-index-mutatio
 step checked-interchange           python3 scripts/check-checked-interchange.py
 step checked-interchange-mutations bash scripts/tests/test-checked-interchange-mutations.sh
 step checked-interchange-tests     python3 scripts/tests/test-checked-interchange.py
+step lean-adapter                  python3 scripts/check-lean-adapter.py
+step lean-adapter-mutations        bash scripts/tests/test-lean-adapter-mutations.sh
+step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py
