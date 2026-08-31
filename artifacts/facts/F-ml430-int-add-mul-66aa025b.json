@@ -69,8 +69,5 @@
   },
   "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Established in Axeyum, not merely matched against Mathlib's prior statement. Confirmed against the pinned Mathlib v4.30.0 source (commit c5ea00351c28e24afc9f0f84379aa41082b1188f) that `Int.add_mul` is a standard additive-group lemma about the SAME Int.add/Int.neg/Int.sub this kernel already has (no new definition introduced), so mirroring it is honest under the mirror-flip criterion. depends_on projects only direct upstream theorem uses whose endpoints both survived review; it grants no dispatch, proof, or admission authority.",
   "proof_route": "kernel-lean",
-  "axiom_footprint": [],
-  "equivalent_to": [
-    "F:rat-int-right-distrib"
-  ]
+  "axiom_footprint": []
 }

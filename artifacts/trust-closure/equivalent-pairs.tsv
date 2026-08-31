@@ -17,4 +17,5 @@ F:ml430-nat-log-monotone-52fad774	Nat.log_monotone	Nat.log_mono_right
 F:nat-peano-succ-injective	Nat.Peano.succ_injective	Nat.succ_injective
 F:nat-succ-le-succ	Nat.succ_le_succ	Nat.le_succ_succ
 F:nat-succ-sub-succ-eq-sub	Nat.succ_sub_succ_eq_sub	Nat.succ_sub_succ
+F:rat-int-right-distrib	Rat.int_right_distrib	Int.add_mul
 F:rat-weak-law-of-large-numbers	Rat.weak_law_of_large_numbers	Rat.chebyshev_sampleMean_uncorrelated
