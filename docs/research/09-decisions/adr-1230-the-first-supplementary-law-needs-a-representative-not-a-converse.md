@@ -173,29 +173,41 @@ What exists already:
 - `Int.prodRange_scaledIndexEqPowMulFactorial` at `a := -1` — collapses
   `∏_{k<m} ((-1)·(k+1))` to `(-1)^m · m!` in one step, no induction.
 
-What does **not** exist, and is the single blocker:
+What did **not** exist and was the blocker — **now landed, this lane**:
 
-> **a `prodRange` SPLIT** —
-> `prodRange f (add a b) = mul (prodRange f a) (prodRange (fun k => f (add a k)) b)`
+> `Int.prodRange_split : ∀ f a b,`
+> `  prodRange f (add a b) = mul (prodRange f a) (prodRange (fun k => f (add a k)) b)`
 
-`prod.rs` has `prodRange_shiftFront` (peels one FRONT term) and
-`prodRange_succ` (peels one BACK term); neither splits at a symbolic point.
-It is an induction on `b` with `prodRange_succ`, and `add a (succ b)` reduces to
-`succ (add a b)` definitionally because `Nat.add` recurses on its right
-argument, so no `add_assoc` is needed.
+Axiom-free, admitted on the first attempt, fact `F:int-prodrange-split`. What
+does **not** exist, and is now the single blocker:
 
-For the reflection's `InjectiveOn`, one thing WAS checked and is worth the next
-lane's attention: `nat_prelude/transposition.rs` carries a private
-`injective_of_involutive` — "any involution is injective", three lines, generic
-over the map. The reflection `k -> pred m - k` is an involution on `[0,m)`, so
-that argument applies verbatim; it needs promoting to `pub(super)`, not
-rebuilding. `Nat.conjugate_injective` in the same file is the already-public
-form if the involution law can be supplied. The reflection's `MapsInto` was NOT
-checked and should not be assumed — `Nat.sub`'s truncation is exactly where that
-kind of bound gets fiddly.
+> **`InjectiveOn` and `MapsInto` for the reflection `k -> sub (pred m) k` on
+> `[0,m)`**, which `Int.prodRange_permute` needs to supply the reversal.
 
-This lane did not attempt the split. The claim here is only that the route
-avoids the converse, and C5a/C5b are the evidence for that.
+That was checked rather than assumed, and neither exists.
+`nat_prelude/count_range_reversal.rs` is about that exact reflection and does
+**not** go through a permutation at all — it runs its own well-founded
+induction on the range length, so it has no `InjectiveOn`/`MapsInto` to reuse.
+
+What DOES exist and should not be rebuilt: `nat_prelude/transposition.rs`
+carries a private `injective_of_involutive` — "any involution is injective",
+three lines, generic over the map. `k -> sub (pred m) k` is an involution on
+`[0,m)`, so that argument applies verbatim; it needs promoting to `pub(super)`.
+`Nat.conjugate_injective` in the same file is the already-public form if the
+involution law can be supplied. `MapsInto` is the genuinely new piece and is
+where `Nat.sub`'s truncation will bite.
+
+On the split itself, one thing is worth carrying: **no `Nat.add_assoc` is
+needed anywhere in it, and that is a choice rather than luck.** `Nat.add`
+recurses on its RIGHT argument, so with the induction variable `b` on the
+right, `add a (succ j)` iota-reduces to `succ (add a j)` and the index
+arithmetic is pure defeq. Inducting on the LEFT summand would have made every
+step need associativity.
+
+This lane landed the split and stopped there. The claim here is that the route
+avoids the converse — C5a/C5b are the evidence — and that after the split the
+remaining gap is the reflection's two permutation predicates plus the
+assembly, not anything about primitive roots.
 
 ## Consequences
 

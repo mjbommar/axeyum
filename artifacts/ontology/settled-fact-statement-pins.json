@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2026,
+    "min_identity_bound": 2027,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -7836,6 +7836,13 @@
       "statement_sha256": "fbf8bbf47e1530c3f4660d2ef7076b6e740effa66f3c5a9fe2a724b236f39da1",
       "prose_sha256": "3ac75d4ef3bd103be7aedefe525ebd385679fa20319fb71add4ddee01b15e813",
       "kernel_theorem": "Int.prodRange_shiftFront"
+    },
+    {
+      "fact_id": "F:int-prodrange-split",
+      "language": "lean4",
+      "statement_sha256": "07bfa3d01e79a13e6c14f90ebf238b0dd54c0cf6def98b990f6cd2815cbc9f7c",
+      "prose_sha256": "c463fc93fa9401a6895dec19673d2b42283f26fec7040560227e93e26fc22484",
+      "kernel_theorem": "Int.prodRange_split"
     },
     {
       "fact_id": "F:int-prodrange-succ",

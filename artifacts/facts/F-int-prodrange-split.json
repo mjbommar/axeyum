@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:int-prodrange-split",
+  "title": "A finite product over the constructed integers splits at a symbolic point",
+  "statement": "For any f from naturals to integers and any naturals a and b, the product of f over [0, a+b) equals the product of f over [0, a) times the product of the SHIFTED function k -> f (a+k) over [0, b). `Int.prodRange` is this prelude's own fold, defined by prodRange f zero = one and prodRange f (succ n) = prodRange f n * f n; nothing here is imported or axiomatised and `Kernel::axiom_footprint` for this declaration is EMPTY. The offset in the tail function is the content: without it the identity is false (over [0,5) of k+1, the split at a=2 gives 2! * (3*4*5) = 120 with the offset and 2! * 3! = 12 without it).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.prodRange_split : ((x0 : ((x0 : AxNat) -> Int)) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.prodRange x0 (AxNat.add x1 x2)) (Int.mul (Int.prodRange x0 x1) (Int.prodRange (fun (x3 : AxNat) => x0 (AxNat.add x1 x3)) x2)))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Int.prodRange_split"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-mul-assoc",
+    "F:int-mul-one"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.prodRange_split",
+      "kind": "kernel-term",
+      "supports": "Int.prodRange_split is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.prodRange_split 2>/dev/null | grep -cE '^Int\\.prodRange_split[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Int.prodRange_split",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.prodRange_split",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.prodRange_split.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it, including Int.prodRange_split. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "generated-unreviewed",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored. `title`, `statement` and `notes` were then REPLACED by hand (lane first-supplementary-law, ADR-1230); every other field is the generator's output unmodified."
+  },
+  "notes": "Built for ADR-1230's handoff -- the Wilson-theorem route to the first supplementary law's residue half needs (p-1)! written as m! times the product over the upper half, and no lemma in `int_prelude/prod.rs` cut a range in two at a symbolic point. `Int.prodRange_shiftFront` peels one term off the FRONT and `Int.prodRange_succ` one off the BACK; both are single steps, not a split. NO `Nat.add_assoc` IS NEEDED ANYWHERE, AND THAT IS A CHOICE. `Nat.add` recurses on its RIGHT argument, so with the induction variable b on the right, `add a (succ j)` iota-reduces to `succ (add a j)` and the induction's own index arithmetic is pure defeq. Inducting on the LEFT summand instead would have made every step need associativity. The base case is `Int.mul_one` reversed and the successor case is the induction hypothesis under `mul _ (f (add a j))` followed by one `Int.mul_assoc`; the tail factor `(fun k => f (add a k)) j` beta-reduces to `f (add a j)`, so no rewrite is needed between the two spellings. Admitted on the first attempt. THE NEGATIVE CONTROL IS CONCRETE ON PURPOSE. A symbolic `!def_eq` between two prodRanges at a free bound forces the kernel to unfold `Nat.rec` with no early exit -- the pathology a `creal` riemann-sum control hit at 3.1 GB -- while at concrete numerals every side reduces and the same discrimination is free. `prod_range_split_cuts_at_the_offset_and_not_merely_somewhere` (int_prelude_tests.rs) checks both sides reduce to ofNat 120 at f k = ofNat (succ k), a = 2, b = 3, asserts the UN-shifted tail does NOT (12, not 120), and separately applies the lemma at genuinely free f, a and b, comparing the inferred type against an independently rebuilt statement."
+}

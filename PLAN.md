@@ -38119,6 +38119,7 @@ axiom-free. The residue direction is NOT, and the blocker is named precisely.
 | --- | --- | --- |
 | `Int.firstSupplementaryLawNotResidue` | `∀ m, PrimeCond (succ (mul 2 m)) → Nat.Odd m → Not (IsQuadraticResidue (ofNat (succ (mul 2 m))) (neg one))` | 0 |
 | `Int.isQuadraticResidue_of_modEq` | `∀ n a b, ModEq n a b → IsQuadraticResidue n a → IsQuadraticResidue n b` | 0 |
+| `Int.prodRange_split` | `∀ f a b, prodRange f (add a b) = prodRange f a * prodRange (fun k => f (add a k)) b` | 0 |
 
 `crates/axeyum-lean-kernel/src/int_prelude/first_supplementary.rs`.
 ADR-1230. Facts `F:int-firstsupplementarylawnotresidue` and
@@ -38154,21 +38155,27 @@ Present already: `Int.wilson`, `Int.prodRange_permute` (the reversal),
 `Int.prodRange_scaledIndexEqPowMulFactorial` at `a := -1` (collapses
 `∏ (-1)·(k+1)` to `(-1)^m · m!` in one step).
 
-**Missing, and it is the only blocker: a `prodRange` SPLIT** —
-`prodRange f (add a b) = mul (prodRange f a) (prodRange (fun k => f (add a k)) b)`.
-`prod.rs` peels one front term (`prodRange_shiftFront`) and one back term
-(`prodRange_succ`); neither splits at a symbolic point. It is an induction on
-`b`, and `add a (succ b)` reduces to `succ (add a b)` definitionally, so no
-`add_assoc` is needed.
+The blocker that was missing — a `prodRange` SPLIT at a symbolic point —
+**is now landed** (`Int.prodRange_split`, above). `prod.rs` peeled one front
+term (`prodRange_shiftFront`) and one back term (`prodRange_succ`); neither cut
+the range in two.
 
-For the reflection's `InjectiveOn`, one thing was checked: `transposition.rs`
-has a private `injective_of_involutive` ("any involution is injective", three
-lines, generic), and `k -> pred m - k` is an involution on `[0,m)`. Promote it,
-do not rebuild it. The reflection's `MapsInto` was **not** checked.
+**The remaining blocker, checked rather than assumed: `InjectiveOn` and
+`MapsInto` for the reflection `k -> sub (pred m) k` on `[0,m)`**, which
+`Int.prodRange_permute` needs. Neither exists. `count_range_reversal.rs` is
+about that exact reflection and does NOT go through a permutation — it runs its
+own well-founded induction on the range length, so there is nothing to reuse
+there.
+
+What DOES exist: `transposition.rs`'s private `injective_of_involutive` ("any
+involution is injective", three lines, generic). `k -> sub (pred m) k` is an
+involution on `[0,m)`, so promote it rather than rebuilding.
+`Nat.conjugate_injective` is the public form. `MapsInto` is the genuinely new
+piece, and `Nat.sub`'s truncation is where it will bite.
 
 ## Verification
 
-- `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 62 passed, 0 failed.
+- `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 63 passed, 0 failed.
 - `python3 docs/research/09-decisions/adr-1230-first-supplementary-checks.py` —
   six claims over 94 odd primes, every control refuted.
 - Eight mutations, both columns, none surviving: 4 kernel-rejected,
