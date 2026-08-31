@@ -335,11 +335,11 @@ use fermat_number::declare_fermat_number_all;
 use fermat_number_mirrors::{declare_fermat_number_easy_all, declare_fermat_number_mirrors_all};
 use fermat_witness::declare_fermat_witness_all;
 use fibonacci::declare_fib_all;
+use find_greatest::declare_find_greatest_all;
 use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
-use find_greatest::declare_find_greatest_all;
 use finite_set::declare_finite_set_all;
 use gauss_lemma::declare_gauss_lemma_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};

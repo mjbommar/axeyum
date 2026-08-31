@@ -158,9 +158,7 @@ pub(super) fn declare_find_greatest_all(
             let false_const = d.kernel().const_(p.logic.false_, vec![]);
             d.arrow(p_at_sm, false_const)
         };
-        let on_false = d
-            .kernel()
-            .lam(anon, refutation_ty, ih, BinderInfo::Default);
+        let on_false = d.kernel().lam(anon, refutation_ty, ih, BinderInfo::Default);
 
         let by_cases = d.kernel().const_(p.logic.decidable_by_cases, vec![one]);
         let body = d.apply(by_cases, &[p_at_sm, nat, decision, on_true, on_false]);

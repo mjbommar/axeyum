@@ -23,9 +23,8 @@
 //! the kernel's binary literal fast path never fires and a large argument
 //! would cost more than the whole prelude (`CLAUDE.md`).
 
-use crate::{Kernel, NatOps, NatPrelude, NatState, build_nat_prelude};
-use crate::BinderInfo;
 use crate::expr::ExprId;
+use crate::{Kernel, NatOps, NatPrelude, NatState, build_nat_prelude};
 
 struct Fixture {
     k: Kernel,
@@ -64,7 +63,6 @@ impl Fixture {
     fn beq_predicate(&mut self, target: u32) -> (ExprId, ExprId) {
         let p = self.p;
         let nat = self.nat_ty();
-        let anon = self.anon_name();
         let bool_true = self.bool_true();
         let bool_false = self.bool_false();
 
@@ -98,8 +96,7 @@ impl Fixture {
                 let hf = self.k.fvar(hf_fv);
                 let hp = self.k.fvar(hp_fv);
                 let flipped = self.bool_symm(test, bool_false, hf);
-                let contradiction =
-                    self.bool_trans(bool_false, test, bool_true, flipped, hp);
+                let contradiction = self.bool_trans(bool_false, test, bool_true, flipped, hp);
                 let false_ty = self.k.const_(p.logic.false_, vec![]);
                 let elim = self.false_true_elim(false_ty, contradiction);
                 let inner = self.lam_fv(hp_fv, claim, elim);
@@ -125,7 +122,6 @@ impl Fixture {
             self.k.def_eq(inferred, expected),
             "the fixture witness is not a `DecidablePred Nat P`"
         );
-        let _ = anon;
         (pred, witness)
     }
 
@@ -144,7 +140,6 @@ fn decidable_pred_unfolds_to_a_pi_over_decidable() {
     let mut f = Fixture::new();
     let p = f.p;
     let nat = f.nat_ty();
-    let anon = f.anon_name();
     let one = f.level_one();
 
     let pred = {
@@ -188,7 +183,6 @@ fn decidable_pred_unfolds_to_a_pi_over_decidable() {
         !f.k.def_eq(applied, wrong),
         "the unfolding must depend on the bound argument"
     );
-    let _ = anon;
 }
 
 /// The search walks DOWN from `n` and stops at the greatest witness.
@@ -286,10 +280,7 @@ fn find_greatest_at_zero_is_zero_even_when_the_predicate_holds_there() {
 
     let got = f.find_greatest(pred, witness, 0);
     let zero = f.zero();
-    assert!(
-        f.k.def_eq(got, zero),
-        "findGreatest (· = 0) 0 must be 0"
-    );
+    assert!(f.k.def_eq(got, zero), "findGreatest (· = 0) 0 must be 0");
 
     // ... and the SAME predicate at a positive bound still finds nothing,
     // because `0` is never tested. `findGreatest (· = 0) 3 = 0` too, which
@@ -368,5 +359,4 @@ fn find_greatest_picks_the_largest_of_several_witnesses() {
             "findGreatest (· <= 3) 6 must not be {wrong} ({why})"
         );
     }
-    let _ = BinderInfo::Default;
 }
