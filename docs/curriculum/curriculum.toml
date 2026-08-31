@@ -19,6 +19,26 @@
 #   axeyum_theory the theory whose testable fragment this node maps to
 #   family        the axeyum-scenarios Family that exercises it ("" = not yet)
 #   status        covered | planned | lean-horizon
+#   kernel_decls  MEASURED count of axeyum-lean-kernel declarations (all kinds)
+#                 attributed to this node -- a SECOND, INDEPENDENT axis
+#
+# `status`/`family` are the SCENARIO axis and nothing else. `Status::Covered`
+# in crates/axeyum-scenarios/src/mathtour.rs is defined as "has a self-checking
+# exercise family today", and a test enforces exactly that; `LeanHorizon` means
+# "primarily a proof-reconstruction target, not a benchmark". Neither value
+# says anything about what the Lean-core kernel has PROVED, and reading them as
+# if they did inverts the truth for two of the three destinations (ADR-1075):
+# `calculus` is `lean-horizon` with 349 kernel declarations, `linear-algebra`
+# is `covered` with 0. `kernel_decls` is that second axis, stated separately so
+# neither can be mistaken for the other. It is a measurement, not a judgement:
+#
+#   cargo run --release -p axeyum-lean-kernel \
+#     --example kernel_declaration_projection > /tmp/proj.tsv
+#   python3 scripts/measure-curriculum-kernel-coverage.py /tmp/proj.tsv
+#
+# Measured 2026-08-31 over 2,562 distinct declarations, every one axiom-free.
+# The counts below are that run. Re-measure rather than adjust by hand; the
+# script's attribution table is auditable and its residual is printed.
 
 [meta]
 title = "Formal Mathematics Tour"
@@ -41,6 +61,7 @@ decidability = "decidable"
 axeyum_theory = "Bool / SAT"
 family = "Logic"
 status = "covered"
+kernel_decls = 64
 summary = "Boolean variables, connectives, validity and satisfiability."
 
 [[node]]
@@ -54,6 +75,7 @@ decidability = "bounded"
 axeyum_theory = "Quantifiers (finite domain)"
 family = "Predicate"
 status = "covered"
+kernel_decls = 3
 summary = "Quantifiers over a domain; validity is undecidable in general, decidable over finite domains."
 
 [[node]]
@@ -67,6 +89,7 @@ decidability = "bounded"
 axeyum_theory = "Refutation (negate-and-decide)"
 family = "ProofMethods"
 status = "covered"
+kernel_decls = 0
 summary = "Direct, contrapositive, and contradiction proofs; refutation is exactly what a solver does."
 
 [[node]]
@@ -80,6 +103,7 @@ decidability = "bounded"
 axeyum_theory = "LIA / BV (base + step instances)"
 family = "Induction"
 status = "covered"
+kernel_decls = 18
 summary = "The induction schema is undecidable; individual base/step obligations are decidable."
 
 [[node]]
@@ -93,6 +117,7 @@ decidability = "bounded"
 axeyum_theory = "BV / enumeration (finite sets)"
 family = "Sets"
 status = "covered"
+kernel_decls = 6
 summary = "Membership, subset, union/intersection; finite-set identities are exhaustively checkable."
 
 [[node]]
@@ -106,6 +131,7 @@ decidability = "bounded"
 axeyum_theory = "BV / EUF (finite domains)"
 family = "Relation"
 status = "covered"
+kernel_decls = 29
 summary = "Relations, equivalence, functions; properties (injective/surjective) decidable on finite domains."
 
 [[node]]
@@ -119,7 +145,8 @@ decidability = "bounded"
 axeyum_theory = "Counting / enumeration"
 family = ""
 status = "lean-horizon"
-summary = "Counting and bijections; finite cardinality is checkable, infinite cardinality is Lean-horizon."
+kernel_decls = 19
+summary = "Counting and bijections. The kernel constructs Nat.countRange with split/union-inter/complement/permutation-invariance and a point-change lemma; infinite cardinality has no carrier here and stays Lean-horizon."
 
 # ---------------------------------------------------------------------------
 # Layer 1 — Number systems
@@ -136,6 +163,7 @@ decidability = "bounded"
 axeyum_theory = "LIA / BV"
 family = "NumberSystem"
 status = "covered"
+kernel_decls = 525
 summary = "Peano successor arithmetic; concrete arithmetic decidable, the induction axiom is not."
 
 [[node]]
@@ -149,6 +177,7 @@ decidability = "computable"
 axeyum_theory = "LIA / BV"
 family = "NumberSystem"
 status = "covered"
+kernel_decls = 189
 summary = "Signed arithmetic and ordering; linear integer facts decided by simplex + branch-and-bound."
 
 [[node]]
@@ -162,6 +191,7 @@ decidability = "computable"
 axeyum_theory = "LRA (exact rationals)"
 family = "Rational"
 status = "covered"
+kernel_decls = 306
 summary = "Exact fractions; linear rational facts decided by the exact-rational simplex."
 
 [[node]]
@@ -175,6 +205,7 @@ decidability = "bounded"
 axeyum_theory = "LRA / NRA (real-closed fields)"
 family = "RealAlgebra"
 status = "covered"
+kernel_decls = 201
 summary = "Ordered complete field; the elementary (algebraic) theory is decidable (Tarski), completeness is not."
 
 [[node]]
@@ -188,7 +219,8 @@ decidability = "bounded"
 axeyum_theory = "NRA over pairs"
 family = ""
 status = "lean-horizon"
-summary = "Pairs of reals with field structure; algebraic identities checkable, analysis is Lean-horizon."
+kernel_decls = 263
+summary = "Pairs of constructed reals with field structure. The kernel has the Complex ring and the CPoint plane (collinearity, circles, Varignon); complex ANALYSIS -- holomorphy, contour integration -- is untouched and stays Lean-horizon."
 
 # ---------------------------------------------------------------------------
 # Layer 2 — Core structures & tools
@@ -205,6 +237,7 @@ decidability = "computable"
 axeyum_theory = "BV / LIA + GCD test"
 family = "NumberTheory"
 status = "covered"
+kernel_decls = 153
 summary = "Divisibility, gcd, Bézout's identity, unique factorization; gcd/Bézout are compute-and-check."
 
 [[node]]
@@ -218,6 +251,7 @@ decidability = "bounded"
 axeyum_theory = "BV / LIA"
 family = "NumberTheory"
 status = "covered"
+kernel_decls = 104
 summary = "Congruences mod n, inverses, CRT; modular identities exhaustively checkable over fixed moduli."
 
 [[node]]
@@ -231,6 +265,7 @@ decidability = "bounded"
 axeyum_theory = "BV / enumeration (finite groups)"
 family = "Algebra"
 status = "covered"
+kernel_decls = 10
 summary = "Closure/associativity/identity/inverse; finite-group axiom checks via Cayley tables."
 
 [[node]]
@@ -244,6 +279,7 @@ decidability = "bounded"
 axeyum_theory = "BV / enumeration"
 family = "Algebra"
 status = "covered"
+kernel_decls = 0
 summary = "Two operations with distributivity; finite-ring identities checkable; ℤ as the motivating ring."
 
 [[node]]
@@ -257,6 +293,7 @@ decidability = "bounded"
 axeyum_theory = "LRA (ℚ) / BV (𝔽ₚ)"
 family = "Algebra"
 status = "covered"
+kernel_decls = 0
 summary = "Rings with multiplicative inverses; ℚ and 𝔽ₚ give concrete, checkable arithmetic."
 
 [[node]]
@@ -270,6 +307,7 @@ decidability = "computable"
 axeyum_theory = "BV (fixed-degree) / NRA"
 family = "Polynomial"
 status = "covered"
+kernel_decls = 16
 summary = "Polynomial arithmetic, identities, roots, factoring; fixed-degree identities are decidable."
 
 [[node]]
@@ -283,7 +321,8 @@ decidability = "bounded"
 axeyum_theory = "LRA / NRA"
 family = ""
 status = "lean-horizon"
-summary = "Convergence and limits; specific algebraic limit values are checkable, the ε–N definition is Lean-horizon."
+kernel_decls = 33
+summary = "Convergence and limits. The ε–N definition is NOT a horizon: the kernel declares CReal.Converges, CReal.Cauchy and CReal.limit with uniqueness, squeeze, the algebra of limits, and Bishop completeness (limitSeq). What stays open is non-constructive limit reasoning, which this carrier cannot state."
 
 [[node]]
 id = "counting"
@@ -296,6 +335,7 @@ decidability = "computable"
 axeyum_theory = "LIA / enumeration"
 family = "Counting"
 status = "covered"
+kernel_decls = 66
 summary = "Permutations, combinations, the pigeonhole principle; finite counting identities are checkable."
 
 # ---------------------------------------------------------------------------
@@ -313,6 +353,7 @@ decidability = "bounded"
 axeyum_theory = "BV / LIA"
 family = "NumberTheory"
 status = "covered"
+kernel_decls = 79
 summary = "Primes, factorization, congruences, Diophantine equations; bounded instances are self-checkable."
 
 [[node]]
@@ -326,6 +367,7 @@ decidability = "computable"
 axeyum_theory = "BV (fixed-size) / LRA / NRA"
 family = "LinearAlgebra"
 status = "covered"
+kernel_decls = 0
 summary = "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over ℚ are decidable."
 
 [[node]]
@@ -339,4 +381,5 @@ decidability = "bounded"
 axeyum_theory = "NRA"
 family = ""
 status = "lean-horizon"
-summary = "Limits, derivatives, integrals, series; derivative-rule and polynomial-identity checks are decidable, ε–δ is Lean-horizon."
+kernel_decls = 349
+summary = "Limits, derivatives, integrals, series. ε–δ is NOT a horizon: the kernel has HasDerivativeOn with an explicit modulus, sum/product/chain/power rules, CReal.integral over uniformly continuous functions with additivity and integration by parts, the fundamental theorem (integral_eq_antideriv_diff), Rolle, the mean value theorem, IVT with an exact root, EVT, supOn, uniform convergence and the Weierstrass M-test, exp/sin/cos and sqrt. It is `lean-horizon` in the SCENARIO sense only -- a reconstruction target rather than a bounded benchmark family."
