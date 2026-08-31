@@ -73,7 +73,7 @@ statements; axioms are `guard_forbidden_trust`'s business.
 It respects the carrier asymmetry [ADR-0716](adr-0716-row-two-of-a-decidable-subject.md)
 depends on. `Nat.le_total`, `Int.le_total` and `Rat.le_total` render with three
 different carriers and land in three different classes; `CReal.le_total` is
-absent. A map that normalized carriers would collapse them and start rejecting
+absent. <!-- absent: CReal.le_total --> A map that normalized carriers would collapse them and start rejecting
 correct facts, so `scripts/tests/test-trust-closure.sh` pins the property
 against the **real** environment rather than a fixture — a fixture's types are
 whatever the suite writes.

@@ -47,7 +47,7 @@ formula applied to shared prime-power structure between `a` and `b` — i.e.
 multiplicativity extended via a full prime-factorization / arithmetic-function
 framework, which does not exist in this kernel (no `Nat.factorization`,
 no general multiplicative-function machinery, no unique-factorization
-induction). `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
+induction). <!-- absent: Nat.factorization --> `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
 classification argument. `301` names this explicitly ("further work beyond
 the coprime case") and neither prior lane attempted it. I did not either —
 sizing it honestly, it is at minimum comparable to the entire `287`→`313`

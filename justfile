@@ -394,6 +394,11 @@ facts:
     # ...and its controls: 17 guards, each verified to kill EXACTLY ONE test
     # when gutted in a scratch copy.
     python3 -m unittest scripts.tests.test_falsification_screen
+    # ...and the mutation-kill verification ITSELF (registered 2026-08-31,
+    # absence-and-orphans lane): it existed and passed since this section was
+    # written but nothing had ever invoked it -- "a control nobody invokes
+    # cannot fail, so it is not a control." ~2s, no cargo.
+    ./scripts/tests/test-falsification-screen-mutation-verify.sh
     # S2 of the same roadmap: the universal trust and circularity audit, read
     # from the admitted term rather than from authored `depends_on`. Every
     # kernel-route settled fact is checked against its own transitive
@@ -1199,10 +1204,14 @@ check-scope base="main":
 # 0 when the filter matches nothing, so the count is the discriminator.
 #
 # The mutation sweep that measures whether each guard is load-bearing is
-# `scripts/tests/test-ntheory-certificate-guards.sh` (~23 incremental builds),
-# deliberately NOT in this chain; run it when a guard changes.
+# `scripts/tests/test-ntheory-certificate-guards.sh` (~23 incremental builds,
+# ~50s uncontended). Registered here 2026-08-31 (absence-and-orphans lane):
+# it existed and passed since this recipe was written but nothing had ever
+# invoked it automatically -- "a control nobody invokes cannot fail, so it is
+# not a control."
 ntheory-certificates:
     ./scripts/check-ntheory-certificates.sh
+    ./scripts/tests/test-ntheory-certificate-guards.sh
 
 # The order-255 certified-moment proofs (squared_binomial_{,falling_}moment_...),
 # kept OFF the per-iteration hot path via #[ignore] (~15 min each). The `check`

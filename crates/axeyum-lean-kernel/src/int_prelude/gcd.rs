@@ -191,6 +191,10 @@ pub(super) fn declare_gcd(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 // `gcd_zero_right`, neither of which has a ready-made `Nat.gcd_comm` or
 // `Nat.gcd_zero_right` to transport (this development has no such lemma; only
 // `gcd_zero_left`, `gcd_dvd_left/right`, and `dvd_gcd`).
+// Corrected 2026-08-31, kernel-measured: `Nat.gcd_comm` now exists (landed
+// after this comment was written); `Nat.gcd_zero_right` still does not.
+// <!-- was-absent: Nat.gcd_comm -->
+// <!-- absent: Nat.gcd_zero_right -->
 // ---------------------------------------------------------------------------
 
 /// `fun (h1 : ty1) (h2 : ty2) => body(h1, h2)`.

@@ -19,7 +19,7 @@ number to move" is unchanged at 28.
 | WZ (Wilf–Zeilberger) | 9 | **multivariate** polynomial identity checking |
 | gf2 | 4 | GF(2) polynomial arithmetic, absent entirely |
 | real-algebraic | 4 | (not sized this pass) |
-| partial fractions | 1 | 3 of 4 coefficients are non-integer rationals; needs a `Rat.ofRat`-style cast that does not exist |
+| partial fractions | 1 | 3 of 4 coefficients are non-integer rationals; needs a `Rat.ofRat`-style cast that does not exist <!-- absent: Rat.ofRat --> |
 
 **Every existing CAS→kernel bridge is explicitly univariate-only.** So a single
 piece of infrastructure — multivariate polynomial identity checking over the

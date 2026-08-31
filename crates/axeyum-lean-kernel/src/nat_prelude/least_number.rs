@@ -14,7 +14,9 @@
 //! (ADR-0716) measured that row 2 is **empty for ℕ, ℤ and ℚ**: the decision
 //! principle every analysis row 2 extracts is `le_total`, and
 //! `Nat.le_total` / `Int.le_total` / `Rat.le_total` are all already proved and
-//! axiom-free here, while `CReal.le_total` is absent. So nothing stated over
+//! axiom-free here, while `CReal.le_total` is absent.
+//! <!-- absent: CReal.le_total -->
+//! So nothing stated over
 //! ℕ can reduce to *that* obstruction.
 //!
 //! One boundary survives, and it is **strictly stronger** than the analysis

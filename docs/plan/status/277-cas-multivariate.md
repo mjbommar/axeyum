@@ -126,6 +126,7 @@ actually decided the design:
    eight-factor product with **six `Rat.one`s**, each a `mul_one` rewrite. At
    24 monomials that is ~150 rewrites of pure padding, and `Rat.prodRange` does
    not exist, so it would also mean a new `Definition` plus its equations.
+   <!-- absent: Rat.prodRange -->
 4. The `polyEval` design principle is **preserved exactly**: term count,
    variable support and every exponent come from the translator, and nothing in
    the kernel ever computes a degree or a support.
@@ -216,7 +217,7 @@ ledger cannot miss them:
 | what | count | needs |
 | --- | --- | --- |
 | geometry, non-constant cofactors | 8 | **polynomial × polynomial**: a `prove_mul` emitting `mul_assoc`/`mul_comm` proofs to sort a product of two monomials into canonical variable order, then reusing `prove_merge`. The atoms stop being opaque here — this is the one genuinely new piece. `parallelogram-diagonals-bisect` (2–4-term cofactors, 47 terms total) is the cheapest; `simson-line` (1992 terms, 324-term cofactors) is the hardest by two orders of magnitude and should not be attempted until the cost curve is measured on the small ones. |
-| geometry, `medians-concurrent` | 1 | constant cofactors, so `prove_scale`/`prove_merge` suffice — but **all coefficients are ±1/2**, so it needs a general fractional-literal builder (`Rat.ofRat`-style), the same missing piece `F:cas-partial-fractions-mixed-general-case` is blocked on. Doing that once unblocks both. |
+| geometry, `medians-concurrent` | 1 | constant cofactors, so `prove_scale`/`prove_merge` suffice — but **all coefficients are ±1/2**, so it needs a general fractional-literal builder (`Rat.ofRat`-style), the same missing piece `F:cas-partial-fractions-mixed-general-case` is blocked on. Doing that once unblocks both. <!-- absent: Rat.ofRat --> |
 | geometry, `varignon` + `thales` | (2, already counted above) | nothing worth doing on this route: the certificate identity is `0 = 0` and `refl` respectively. If they are to be reconstructed at all, the honest target is the *normalisation* step, which the certificate does not carry. |
 | WZ | 9 | bivariate/4-ary polynomial identity checking (the linear-over-opaque-atoms trick does **not** apply — the shift quotients multiply polynomials, so `prove_mul` is a prerequisite here too), PLUS the three steps listed above that the identity does not reach. Sizing this at "one dependency" would overstate it. |
 | gf2 | 4 | GF(2) polynomial arithmetic; nothing modular or characteristic-2 exists anywhere in `rat_prelude`/`int_prelude`. Untouched. |

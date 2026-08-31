@@ -68,6 +68,8 @@ Extracted 3269 checker commands from all facts (2 per fact, with some variation)
 - `nat_axiom_inventory --require-axiom-free axreal`: exit 1 (axreal has 30 axioms, as expected)
 - `theorem_dependency_inventory -- Rat.abs_zero`: exit 0 (theorem exists)
 - `theorem_dependency_inventory -- Rat.abs_zero_WRONG`: exit 1 (theorem does not exist)
+  <!-- absent: Rat.abs_zero_WRONG -- a deliberately-nonexistent synthetic name used to demonstrate the failure mode; never expected to be declared -->
+
 
 **Demonstration of failure modes:** All four tests behaved as expected. The two axiom_inventory checkers showed the expected difference between an axiom-free prelude (exit 0) and one with axioms (exit 1). The two dependency_inventory checkers demonstrated that name-based selection works correctly, failing on non-existent names and passing on real ones.
 

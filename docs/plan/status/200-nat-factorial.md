@@ -27,6 +27,11 @@ definitions plus their base-case facts (`F-ml430-nat-ascfactorial-zero-…`,
 `F-ml430-nat-descfactorial-zero-…`, etc. — eight open facts already sit in the
 ledger for this family) is out of scope for an import-backlog lane and is the
 next lane's task if picked up.
+*(Corrected 2026-08-31, kernel-measured: `Nat.ascFactorial` and
+`Nat.descFactorial` now both exist as `nat`-prelude `Definition`s, landed by a
+later lane. This paragraph's "do not exist in this kernel" is a historical
+record of the 2026-08-28 snapshot, not a live claim.)*
+<!-- was-absent: Nat.ascFactorial, Nat.descFactorial -- both landed after this lane's 2026-08-28 snapshot -->
 
 `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 98 passed, 0 failed
 (347 → 351 theorems; `the_build_is_deterministic`'s pin recounted by reading

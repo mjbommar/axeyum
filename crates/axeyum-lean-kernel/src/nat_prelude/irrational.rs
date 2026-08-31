@@ -6,6 +6,13 @@
 //! irrational" would need it plus a rational embedding. The content of the
 //! classical theorem is entirely captured by
 //!
+//! Corrected 2026-08-31, kernel-measured: `CReal.sqrt` now exists (landed
+//! 2026-08-23, `creal/sqrt.rs`, total, axiom-free). This file's route below
+//! is unaffected -- it deliberately proves the `Nat`-only statement rather
+//! than composing `CReal.sqrt` with a rational embedding, so nothing here
+//! needed to change.
+//! <!-- was-absent: CReal.sqrt -- landed 2026-08-23, this file's Nat-only route is unaffected -->
+//!
 //! ```text
 //! Nat.no_rational_sqrt_two : ∀ p q, q ≠ 0 → p·p ≠ 2·(q·q)
 //! ```
