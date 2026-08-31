@@ -86,6 +86,7 @@ mod dvd_gcd_mirrors;
 mod dvd_mul_split;
 mod euclid;
 mod euler;
+mod euler_prod_coprime;
 mod euler_prod_pow;
 mod euler_theorem;
 mod euler_totient;
@@ -1530,6 +1531,12 @@ pub struct IntPrelude {
     /// induction pairing `Int.pow` with `Nat.countRange`
     /// (`euler_prod_pow.rs`).
     pub prod_range_if_const_eq_pow_count: NameId,
+    /// `prod_range_if_coprime : ∀ pred f n m, 0 < m →
+    /// (∀ k, k < n → pred k = true → Coprime (f k) m) →
+    /// Coprime (prodRange (selector pred f) n) m` -- a restricted product of
+    /// `m`-coprime factors stays coprime to `m`, part of item 3 of the
+    /// Fermat -> Euler handoff (`euler_prod_coprime.rs`).
+    pub prod_range_if_coprime: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1823,6 +1830,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         euler_unit_perm_injective: child(kernel, "euler_unit_perm_injective"),
         euler_unit_perm_maps_into: child(kernel, "euler_unit_perm_maps_into"),
         prod_range_if_const_eq_pow_count: child(kernel, "prodRangeIf_const_eq_pow_count"),
+        prod_range_if_coprime: child(kernel, "prodRangeIf_coprime"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
@@ -2114,6 +2122,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_unit_range::declare_euler_unit_perm_maps_into(&mut d)?;
         euler_theorem::declare_prod_range_if_all(&mut d)?;
         euler_prod_pow::declare_prod_range_if_const_eq_pow_count(&mut d)?;
+        euler_prod_coprime::declare_prod_range_if_coprime(&mut d)?;
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;

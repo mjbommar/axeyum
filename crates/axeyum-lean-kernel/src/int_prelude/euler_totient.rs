@@ -335,6 +335,114 @@ pub(super) fn coprime_of_modeq_inverse(
     idvd_elim(d, n, diff, coprime_ty, dvd_diff, minor)
 }
 
+/// From `h_cop_x : Coprime x n`, `h_cop_y : Coprime y n`, derive
+/// `Coprime (mul x y) n` — multiplicativity of coprimality-to-`n`. Extracted
+/// from [`declare_euler_unit_coprime`]'s own inline derivation (its `cop_ak`
+/// step, below): both inverses' product is `x*y`'s inverse after a pure ring
+/// regroup ([`mul_swap_inner`]), turned into coprimality by
+/// [`coprime_of_modeq_inverse`]. `pub(super)`: reused by
+/// `euler_prod_coprime.rs` to show a restricted product of coprime-to-`n`
+/// factors stays coprime to `n` (item 3 of the Fermat -> Euler handoff).
+pub(super) fn coprime_mul(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    x: ExprId,
+    y: ExprId,
+    h_pos: ExprId,
+    h_cop_x: ExprId,
+    h_cop_y: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let int_ty = d.int_ty();
+    let one_i = d.ione();
+
+    let ex_b = d.lemma(p.mod_eq_inverse_exists, &[n, x, h_pos, h_cop_x]);
+    let ex_c = d.lemma(p.mod_eq_inverse_exists, &[n, y, h_pos, h_cop_y]);
+
+    let goal = {
+        let xy = d.imul(x, y);
+        d.const_app(p.coprime, &[xy, n])
+    };
+
+    let outer_pred = {
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let xb = d.imul(x, b);
+        let body = imodeq(d, n, xb, one_i);
+        d.lam_fv(b_fv, int_ty, body)
+    };
+    let outer_minor = {
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let xb = d.imul(x, b);
+        let hb_ty = imodeq(d, n, xb, one_i);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let inner_pred = {
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let yc = d.imul(y, c);
+            let body = imodeq(d, n, yc, one_i);
+            d.lam_fv(c_fv, int_ty, body)
+        };
+        let inner_minor = {
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let yc = d.imul(y, c);
+            let hc_ty = imodeq(d, n, yc, one_i);
+            let hc_fv = d.fresh_fvar();
+            let hc = d.kernel().fvar(hc_fv);
+
+            let hbc = d.lemma(p.mod_eq_mul, &[n, xb, one_i, yc, one_i, h_pos, hb, hc]);
+
+            let xb_yc = d.imul(xb, yc);
+            let bc = d.imul(b, c);
+            let xy = d.imul(x, y);
+            let xy_bc = d.imul(xy, bc);
+            let ring_eq = mul_swap_inner(d, x, b, y, c);
+            let oo = d.imul(one_i, one_i);
+            let hbc_lhs = d.int_eq_rewrite(xb_yc, xy_bc, ring_eq, hbc, &|d, t| imodeq(d, n, t, oo));
+
+            let mul_one_pf = d.const_app(p.mul_one, &[one_i]);
+            let h_final = d.int_eq_rewrite(oo, one_i, mul_one_pf, hbc_lhs, &|d, t| {
+                imodeq(d, n, xy_bc, t)
+            });
+
+            let cop_xy = coprime_of_modeq_inverse(d, n, xy, bc, h_pos, h_final);
+            let with_hc = d.lam_fv(hc_fv, hc_ty, cop_xy);
+            d.lam_fv(c_fv, int_ty, with_hc)
+        };
+        let inner_elim = int_exists_elim(d, inner_pred, goal, ex_c, inner_minor);
+        let with_hb = d.lam_fv(hb_fv, hb_ty, inner_elim);
+        d.lam_fv(b_fv, int_ty, with_hb)
+    };
+    int_exists_elim(d, outer_pred, goal, ex_b, outer_minor)
+}
+
+/// `Coprime one m`, unconditional — no positivity of `m` needed: `Int.gcd
+/// one m` unfolds to `Nat.gcd (natAbs one) (natAbs m)`, `natAbs one` reduces
+/// to the `Nat` literal `1` by iota (`Int.one` delta-unfolds to `ofNat 1`),
+/// and `Nat.coprime_one_left_iff` at `natAbs m` closes `Nat.gcd 1 (natAbs m)
+/// = 1` unconditionally (its `mpr` at `True.intro`). `pub(super)`: the base
+/// case of `euler_prod_coprime.rs`'s induction (`prodRangeIf pred f 0 = one`
+/// is always coprime to the modulus, regardless of `pred`/`f`).
+pub(super) fn coprime_one(d: &mut IntDev<'_>, m: ExprId) -> ExprId {
+    let p = d.int();
+    let nabs_m = {
+        let f = p.nat_abs;
+        d.const_app(f, &[m])
+    };
+    let one_nat = d.num(1);
+    let gcd_one_m = d.gcd(one_nat, nabs_m);
+    let cop_ty = d.eq(gcd_one_m, one_nat);
+    let true_ty = d.lemma(p.logic.true_, &[]);
+    let true_intro = d.lemma(p.logic.true_intro, &[]);
+    let iff1 = d.lemma(p.nat.coprime_one_left_iff, &[nabs_m]);
+    let mpr = d.lemma(p.logic.iff_mpr, &[cop_ty, true_ty, iff1]);
+    d.apply(mpr, &[true_intro])
+}
+
 // ============================================================================
 // `Int.euler_unit_coprime` — MapsInto.
 // ============================================================================

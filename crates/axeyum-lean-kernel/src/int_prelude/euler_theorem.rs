@@ -283,7 +283,11 @@ pub(super) fn declare_prod_range_if_defining_equations(
 /// (`subset_product.rs`, which also lets the payload change) because
 /// [`declare_prod_range_if_permute`] only ever needs the condition to move —
 /// the "true" payload is the same `f (σ i)` term on both sides.
-fn bool_select_int_congr_cond(
+///
+/// `pub(super)`: reused unchanged by `euler_prod_coprime.rs` to rewrite a
+/// `selector`-folded term's condition to a literal once a `Bool` equation is
+/// in hand (item 3 of the Fermat -> Euler handoff).
+pub(super) fn bool_select_int_congr_cond(
     d: &mut IntDev<'_>,
     a: ExprId,
     b: ExprId,
