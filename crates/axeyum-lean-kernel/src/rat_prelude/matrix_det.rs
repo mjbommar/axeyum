@@ -924,7 +924,7 @@ fn int_numeral(d: &mut IntDev<'_>, n: i64) -> ExprId {
 }
 
 /// `Rat.ofInt n` for a small integer `n`.
-fn rq(d: &mut IntDev<'_>, p: RatPrelude, n: i64) -> ExprId {
+pub(super) fn rq(d: &mut IntDev<'_>, p: RatPrelude, n: i64) -> ExprId {
     let z = int_numeral(d, n);
     d.const_app(p.of_int, &[z])
 }
@@ -935,7 +935,7 @@ fn rq(d: &mut IntDev<'_>, p: RatPrelude, n: i64) -> ExprId {
 ///
 /// Out-of-range indices fall into the last row/column; every use below stays
 /// inside the bound, and the determinant never reads outside it.
-fn const_matrix(d: &mut IntDev<'_>, p: RatPrelude, k: usize, rows: &[i64]) -> ExprId {
+pub(super) fn const_matrix(d: &mut IntDev<'_>, p: RatPrelude, k: usize, rows: &[i64]) -> ExprId {
     assert_eq!(rows.len(), k * k, "row-major entries must fill the square");
     let nat = d.nat_ty();
 
@@ -4295,7 +4295,7 @@ fn summand_col_fn(
 
 /// `fun q => altSign (q + i) * (A i q * det (matMinor A i q) m)` — the
 /// summand of a cofactor expansion along row `i`.
-fn row_expansion_fn(
+pub(super) fn row_expansion_fn(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     mat: ExprId,
