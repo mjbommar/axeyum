@@ -1749,7 +1749,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         is_quadratic_residue_mul: child(kernel, "is_quadratic_residue_mul"),
         euler_criterion_pm_one: child(kernel, "euler_criterion_pm_one"),
         euler_criterion_residue_imp_one: child(kernel, "euler_criterion_residue_imp_one"),
-        euler_criterion_neg_one_imp_not_residue: child(kernel, "euler_criterion_neg_one_imp_not_residue"),
+        euler_criterion_neg_one_imp_not_residue: child(
+            kernel,
+            "euler_criterion_neg_one_imp_not_residue",
+        ),
         euler_unit_coprime: child(kernel, "euler_unit_coprime"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),

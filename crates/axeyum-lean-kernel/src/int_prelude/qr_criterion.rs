@@ -7,9 +7,9 @@
 //! which sign holds or relating either sign to residue-hood. This module
 //! closes the gap in the direction Fermat's little theorem *can* decide:
 //!
-//! - [`declare_euler_criterion_residue_imp_one`]: if `a` is a quadratic
+//! - [`declare_euler_criterion_residue_imp_one`][]: if `a` is a quadratic
 //!   residue mod `p`, its half-power is `≡ 1` (not merely `≡ ±1`).
-//! - [`declare_euler_criterion_neg_one_imp_not_residue`]: contrapositive-ish
+//! - [`declare_euler_criterion_neg_one_imp_not_residue`][]: contrapositive-ish
 //!   corollary — for an ODD prime (`2 < p`), a half-power `≡ -1` rules out
 //!   `a` being a residue, since a residue's half-power is forced to be `≡ 1`,
 //!   and `1 ≡ -1 [p]` would force `p ∣ 2`, contradicting `p > 2`.
@@ -334,7 +334,8 @@ pub(super) fn declare_euler_criterion_residue_imp_one(
         let x = d.kernel().fvar(x_fv);
         let hx_fv = d.fresh_fvar();
         let hx = d.kernel().fvar(hx_fv);
-        let hx_ty = super::modeq::imodeq(d, big_p, d.imul(x, x), big_a);
+        let xx_for_hx = d.imul(x, x);
+        let hx_ty = super::modeq::imodeq(d, big_p, xx_for_hx, big_a);
 
         // --- body given (x, hx) ------------------------------------------
         let (r, mag, mag_pos, mag_lt_pp, _sq_modeq_r_a, modeq_x_r, bridge) =

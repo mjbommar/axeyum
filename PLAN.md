@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-31 | quadratic-residue-two | `Int.euler_criterion_residue_imp_one` + `Int.euler_criterion_neg_one_imp_not_residue` land axiom-free in new `int_prelude/qr_criterion.rs`, extending Euler's criterion toward the second supplementary law (ADR-0960); the law itself stays open, sized for the next lane. |
 | 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-30 | queue-sweep | No fact closed. All three assigned non-sign dispatchable facts (`totient_dvd_of_dvd`, `totient_gcd_mul_totient_mul`, `eq_or_eq_of_totient_eq_totient`) declined for this session: correctly-stated Mathlib mirrors this kernel does not yet have the general multiplicative-function theory to prove, distinct from the divergence-registry category. Corrected a false numerical claim in `301-totient-multiplicative.md`'s Step 4 (`count_range_row_major` is NOT coprimality-independent — fails at every tested non-coprime pair, e.g. `totient(4)=2 ≠ totient(2)*totient(2)=1`), which would have sent the next totient lane at a statement a sound kernel cannot admit. |
@@ -34781,6 +34782,31 @@ section) -- that is a deliberate C5-adjacent scope call, not an oversight.
 C4 (demand-gated elaboration features) remains blocked on a preregistered
 high-value population per the roadmap; nothing in this lane's work unblocks
 or blocks that separately.
+
+**Your lane's block (`WIP`, quadratic-residue-two, 2026-08-31).** Landed
+`Int.euler_criterion_residue_imp_one` (residue ⟹ half-power `≡ 1`, not
+merely `≡ ±1`) and `Int.euler_criterion_neg_one_imp_not_residue` (odd-prime
+non-residue detector), both axiom-free, in a new
+`crates/axeyum-lean-kernel/src/int_prelude/qr_criterion.rs`. Full details,
+route, and exact remaining work in
+[ADR-0960](../research/09-decisions/adr-0960-euler-criterion-necessary-direction-lands-second-supplementary-law-stays-open.md).
+
+**The second supplementary law (2 is a QR mod `p` iff `p ≡ ±1 mod 8`) is NOT
+reached and is not reachable from what landed here alone.** It needs one of:
+(1) the full converse of Euler's criterion — a primitive root or an
+`x^m - 1`-has-at-most-`m`-roots argument, neither buildable with this
+kernel's inductive list (no `List`/`Finset`/polynomial carrier); or (2)
+Gauss's lemma — a `Nat.countRange`-shaped least-residue sign-count, also
+absent. Either route, once built, still needs a four-way case split on
+`p mod 8` to pin the sign for `a := 2` specifically. None of this was
+attempted; it is real, multi-session work, sized (not just gestured at) in
+ADR-0960's "What remains" section for whichever lane picks it up next.
+
+Verification run this session: `cargo test -p axeyum-lean-kernel --lib
+int_prelude::` (52 passed, 0 failed), `cargo clippy -p axeyum-lean-kernel
+--lib -- -D warnings` (clean), `theorem_axiom_footprint --release` on both
+new names (0 each), `python3 scripts/check-autogenesis-holdout-isolation.py`
+(PASS before and after — `artifacts/autogenesis/` untouched this session).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
