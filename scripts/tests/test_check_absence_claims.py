@@ -471,6 +471,97 @@ class SurfaceGuards(Harness):
         self.assertIn("docs/split.md", out)
 
 
+class MultiLineMarkerGuards(Harness):
+    """A marker is an HTML comment, so it may legitimately span lines.
+
+    Found 2026-08-31 (ADR-1250) on the real tree: a correctly-named
+    `was-absent:` marker on a resolved claim was written across three lines --
+    the natural thing to do, since a marker carrying a note wraps at the same
+    column as the prose it sits in -- and the gate did not see it AT ALL.
+    `MARKER_RE`'s body was `.*?` without `re.DOTALL`, applied one line at a
+    time in all three readers, so the marker was invisible rather than merely
+    unattached: not checked against the kernel, not silencing its claim, and
+    reported nowhere. The claim stayed BARE and the only remaining way to
+    retire it was `--update-budget`, which is the laundering this gate exists
+    to prevent. A marker that cannot attach is the mirror of a checker that
+    cannot fail.
+    """
+
+    MULTI_LINE_MARKER = (
+        "<!-- was-absent: CReal.weierstrassMTest -- a note long enough that it\n"
+        "     wraps across three separate source lines of running prose -->\n"
+    )
+
+    def test_G25_a_marker_written_across_lines_is_read_and_attaches(self) -> None:
+        """G25: both directions of a multi-line marker, in one run.
+
+        Deliberately one test for the two halves. Checking a marker against
+        the kernel and letting it silence its claim are separate code paths
+        but ONE guard (`re.DOTALL`), and splitting them would report that
+        guard as killing two tests without measuring anything more.
+        """
+        self.seed_baseline_claim()
+        # (a) it attaches: the claim in this block is annotated, not bare.
+        self.write(
+            "docs/resolved.md",
+            "A lemma about `CReal.weierstrassMTest` does not exist.\n"
+            + self.MULTI_LINE_MARKER,
+        )
+        # (b) it is checked: this one has EXPIRED and the gate must say so.
+        self.write(
+            "docs/live.md",
+            "<!-- absent: CReal.integral -- wrapped across two lines, and the\n"
+            "     declaration it names is present, so this claim has rotted -->\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("EXPIRED", out)
+        self.assertIn("docs/live.md", out)
+        self.assertNotIn("BARE  docs/resolved.md", out)
+
+    def test_G26_a_multi_line_marker_inside_a_rust_doc_comment_parses(self) -> None:
+        """G26: `//!` on the continuation lines is comment syntax, not a name.
+
+        The NAMES LIST is what wraps here, not the note. A marker whose note
+        wraps parses either way -- `//!` lands harmlessly after the ` -- `
+        separator -- so a fixture built that way looks like a control and
+        measures nothing. This one puts the second name on the wrapped line,
+        where an unstripped `//!` becomes part of it and the whole marker is
+        rejected as malformed (exit 2) instead of checked (exit 1).
+        """
+        self.seed_baseline_claim()
+        self.write(
+            "crates/a/src/lib.rs",
+            "//! <!-- absent: CReal.integral,\n"
+            "//!      CReal.weierstrassMTest -->\n",
+        )
+        status, out = self.run_gate()
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("EXPIRED", out)
+        self.assertIn("crates/a/src/lib.rs", out)
+
+    def test_G27_a_claim_after_a_multi_line_marker_keeps_its_line_number(
+        self,
+    ) -> None:
+        """G27: stripping the marker must not shift the lines below it.
+
+        Deliberately independent of `re.DOTALL`: without it the marker is not
+        stripped at all, so the body keeps every line and the number stays
+        right. Only collapsing an N-line marker to one space moves it.
+        """
+        self.seed_baseline_claim()
+        self.write(
+            "docs/shifted.md",
+            self.MULTI_LINE_MARKER
+            + "Alpha beta gamma.\n"
+            + "A lemma about `Nat.add` does not exist.\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("docs/shifted.md:4", out)
+        self.assertNotIn("docs/shifted.md:2", out)
+
+
 class AuthoritySubprocessGuards(Harness):
     """The DEFAULT path -- no `--projection-file` -- shells out to the tool.
 

@@ -115,10 +115,28 @@ DEFAULT_CENSUS = REPO_ROOT / "scripts" / "absence-claim-census.json"
 # anchored so `was-absent` cannot be read as `absent` (the two mean opposite
 # things and one is a substring of the other, which is the `AxNat`/`Nat`
 # hazard in miniature).
+#
+# `re.DOTALL` is load-bearing, not tidiness. An HTML comment is a MULTI-LINE
+# construct and a marker carrying a note wraps at the same 79 columns as the
+# prose around it, so writing one across three lines is the natural thing to
+# do. Without `DOTALL` the body's `.*?` stops at the newline and the marker
+# matches NOTHING -- it is not merely unattached, it is invisible to all three
+# readers (the file-level marker pass, the block-level name harvest, and the
+# body strip). That is the exact mirror of a checker that cannot fail: a
+# marker that cannot attach, failing silently, leaving `--update-budget` --
+# the laundering this gate exists to prevent -- as the only way to retire a
+# resolved claim. Measured 2026-08-31 across 4,695 scanned files: 68 per-line
+# matches against 69 real markers, and the one it could not see was a
+# correctly-written `was-absent:` on a resolved claim.
 MARKER_RE = re.compile(
     r"<!--\s*(?P<kind>was-absent|absent)\s*:\s*(?P<body>.*?)\s*-->",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
+# A leading Rust comment prefix. Stripped from each line ONLY when assembling
+# the text a marker is parsed out of: a marker wrapped inside a `//!` doc
+# comment carries `//!` at the head of every continuation line, which would
+# otherwise land inside the names field and read as a malformed marker.
+RUST_COMMENT_PREFIX_RE = re.compile(r"^\s*(?://[/!]?|/\*|\*/?)\s?")
 # Names are split off the optional note by a ` -- ` separator.
 NOTE_SPLIT_RE = re.compile(r"\s+--\s+")
 # A kernel declaration name: a namespace root, a dot, then an identifier.
@@ -383,6 +401,37 @@ def parse_marker(path: str, lineno: int, match: re.Match[str]) -> Marker:
     return Marker(path, lineno, kind, names, note)
 
 
+def marker_scan_line(path: str, line: str) -> str:
+    """One source line, prepared for MARKER parsing.
+
+    Two transformations, both of which must be identical everywhere a marker
+    is read or a marker attaches in one place and is checked in another:
+
+    * code spans are blanked, so a marker QUOTED in backticks is documentation
+      of the grammar and neither checked nor able to silence a claim;
+    * in Rust, a leading `//` / `//!` / `*` prefix is dropped, so a marker
+      wrapped inside a doc comment does not carry comment syntax into its
+      names field.
+
+    Length is not preserved -- only the LINE, which is all the callers need
+    since they locate a match by counting newlines.
+    """
+    masked = CODE_SPAN_RE.sub(" ", line)
+    if path.endswith(".rs"):
+        masked = RUST_COMMENT_PREFIX_RE.sub("", masked)
+    return masked
+
+
+def blank_marker(match: re.Match[str]) -> str:
+    """Replace a marker with a space, KEEPING its newlines.
+
+    The census locates a claim by index into the marker-stripped body, so
+    collapsing a three-line marker to one space would shift every following
+    line number in that block by two and print the wrong source text.
+    """
+    return " " + "\n" * match.group(0).count("\n")
+
+
 def is_prose_line(path: str, line: str) -> bool:
     """Rust: comments only. Markdown: every line."""
     if path.endswith(".rs"):
@@ -448,12 +497,24 @@ def scan(
         except OSError:
             continue
         lines = text.splitlines()
+        # A marker may span lines, so it cannot be read one line at a time.
+        # `scan_text` keeps one entry PER SOURCE LINE -- blanked wherever a
+        # marker cannot legitimately live -- so `"\n".join(...)` preserves the
+        # line numbering exactly while letting the DOTALL regex run across it.
+        scan_text: list[str] = []
+        fence_runs: list[list[str]] = []
+        fence_run: list[str] = []
         in_fence = False
-        for i, line in enumerate(lines, start=1):
+        for line in lines:
             if FENCE_RE.match(line):
                 in_fence = not in_fence
+                if not in_fence and fence_run:
+                    fence_runs.append(fence_run)
+                    fence_run = []
+                scan_text.append("")
                 continue
             if not is_prose_line(rel, line):
+                scan_text.append("")
                 continue
             # A marker QUOTED in a code span or a code fence is documentation
             # of the grammar, not a claim. Without this, the ADR that defines
@@ -464,14 +525,22 @@ def scan(
             # reported, never silently dropped -- a swallowed marker is a false
             # green, which is the one outcome this gate must not produce.
             if in_fence:
-                quoted += len(MARKER_RE.findall(line))
+                fence_run.append(line)
+                scan_text.append("")
                 continue
             quoted += len(MARKER_RE.findall("".join(CODE_SPAN_RE.findall(line))))
-            for match in MARKER_RE.finditer(CODE_SPAN_RE.sub(" ", line)):
-                try:
-                    markers.append(parse_marker(rel, i, match))
-                except MarkerError as exc:
-                    errors.append(exc)
+            scan_text.append(marker_scan_line(rel, line))
+        if fence_run:
+            fence_runs.append(fence_run)
+        for run in fence_runs:
+            quoted += len(MARKER_RE.findall("\n".join(run)))
+        joined = "\n".join(scan_text)
+        for match in MARKER_RE.finditer(joined):
+            lineno = joined.count("\n", 0, match.start()) + 1
+            try:
+                markers.append(parse_marker(rel, lineno, match))
+            except MarkerError as exc:
+                errors.append(exc)
         for start, block in blocks(rel, lines):
             # A marker attaches to its BLOCK, but it only silences the claims
             # it actually NAMES. With one site per block that distinction was
@@ -479,18 +548,26 @@ def scan(
             # several independent claims, and a marker for one of them must
             # not read as an answer to the others. Measured 2026-08-31: four
             # sites were covered by a marker naming something else.
+            #
+            # Read from the same per-line-blanked assembly the marker pass
+            # uses, so a marker that wraps across lines silences its claim
+            # exactly as a single-line one does. Reading raw block lines here
+            # instead would reintroduce the defect one level down: the marker
+            # would be CHECKED against the kernel and still fail to attach.
             marker_names: set[str] = set()
-            for line in block:
-                for match in MARKER_RE.finditer(line):
-                    try:
-                        parsed = parse_marker(rel, 0, match)
-                    except MarkerError:
-                        continue  # reported by the marker pass above
-                    marker_names |= set(parsed.names)
+            marker_scan = "\n".join(marker_scan_line(rel, line) for line in block)
+            for match in MARKER_RE.finditer(marker_scan):
+                try:
+                    parsed = parse_marker(rel, 0, match)
+                except MarkerError:
+                    continue  # reported by the marker pass above
+                marker_names |= set(parsed.names)
             # The marker's own text is stripped before the claim phrases are
             # matched, so a marker's note can quote a claim without the block
-            # counting itself as a fresh claim.
-            body = MARKER_RE.sub(" ", "\n".join(block))
+            # counting itself as a fresh claim. `blank_marker` keeps the
+            # marker's newlines so every later `body_lines[offset]` and
+            # `start + offset` still names the source line it came from.
+            body = MARKER_RE.sub(blank_marker, "\n".join(block))
             body_lines = body.splitlines()
             for offset, unit in claim_units(rel, body):
                 if CLAIM_RE.search(unit) is None:

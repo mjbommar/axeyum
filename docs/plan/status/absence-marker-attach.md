@@ -5,9 +5,8 @@
 ## Finding (measured, not guessed)
 
 `docs/plan/status/first-supplementary-law.md:50` carries a claim whose harvested
-subject is exactly `Int.prodRange_split`, and a `<!-- was-absent:
-Int.prodRange_split -- ... -->` marker sits in the same block. The site was
-still reported BARE.
+subject is exactly `Int.prodRange_split`, and a `was-absent:` marker naming that
+same declaration sits in the same block. The site was still reported BARE.
 
 The cause is neither of the two hypotheses in the brief. The marker is written
 across **three lines**, and `MARKER_RE`'s body group is `.*?` **without
