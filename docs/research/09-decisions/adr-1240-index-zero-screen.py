@@ -129,12 +129,24 @@ def main() -> int:
             failures.append(label)
 
     env, inv, vocab, reg, cat = context()
+    landed = PRIMREC <= env
     print(f"environment: {len(env)} declarations "
-          f"({'live dump' if ENV_DUMP else 'committed snapshot'})")
+          f"({'live dump' if ENV_DUMP else 'committed snapshot'}); "
+          f"constructions {'LANDED' if landed else 'not yet declared'}")
 
-    # 1. Without the constructions the module yields nothing.
-    before, _ = pool_for((MODULE,), env, inv, vocab, reg, cat)
-    check("pool without constructions is 0", len(before) == 0, f"got {len(before)}")
+    # 1. The CONTROL, and it must hold whether or not the constructions have
+    #    landed yet: with `Nat.Primrec`/`Nat.casesOn` absent the module yields
+    #    NOTHING, so the pool this ADR reports is caused by them and by nothing
+    #    else. Before the declaration that is the ambient environment; after it,
+    #    the constants have to be removed to ask the same question.
+    without = {c for c in env if c not in PRIMREC}
+    vocab_without = R.read_vocabulary(
+        without, inv, R.load_json(R.CATALOG),
+        {json.loads(f.read_text())["id"]: json.loads(f.read_text())
+         for f in sorted(R.FACTS.glob("*.json"))})
+    before, _ = pool_for((MODULE,), without, inv, vocab_without, reg, cat)
+    check("control: pool WITHOUT the constructions is 0",
+          len(before) == 0, f"got {len(before)}")
 
     # 2. `Nat.Primrec` and `Nat.casesOn` are the ONLY missing constants, and
     #    `Nat.unpaired` (ADR-1220) is already admissible.
