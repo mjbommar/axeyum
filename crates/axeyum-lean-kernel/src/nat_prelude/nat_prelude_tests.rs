@@ -546,6 +546,9 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.least_residue,
         p.gauss_sign_neg,
         p.gauss_neg_count,
+        // `gauss-pairing-lemma` lane (ADR-0990, piece 2): the signed-fold
+        // self-map.
+        p.gauss_fold,
     ]
 }
 
@@ -1327,8 +1330,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // + coprimality.
         p.least_residue_injective_of_coprime,
         // `gauss-pairing-lemma` lane (ADR-0990, piece 2): the nonzero-
-        // residue lemma the pairing route needs.
+        // residue lemma the pairing route needs, and the signed-fold's
+        // injectivity on `[1, m]`.
         p.least_residue_ne_zero_of_coprime,
+        p.gauss_fold_injective_of_coprime,
     ]
 }
 
