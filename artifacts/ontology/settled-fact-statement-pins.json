@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2022,
+    "min_identity_bound": 2027,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -6737,11 +6737,25 @@
       ]
     },
     {
+      "fact_id": "F:int-euler-criterion-neg-one-imp-not-residue",
+      "language": "lean4",
+      "statement_sha256": "faa74ae26fdf4967414523feadaff9d1c0bc23fc83d4745b2e4508d8dd080e89",
+      "prose_sha256": "654c826579140191499bb84666237f652b4f8007674e2759519f8d3b3d9af288",
+      "kernel_theorem": "Int.euler_criterion_neg_one_imp_not_residue"
+    },
+    {
       "fact_id": "F:int-euler-criterion-pm-one",
       "language": "lean4",
       "statement_sha256": "e1001b37943a59f4cd37a3dec86830bcfe0299b7d674fdc45062e36e34523d5f",
       "prose_sha256": "eac34600714215d2945c35caf99d95ed22bb024d3991b817878f0473313696fa",
       "kernel_theorem": "Int.euler_criterion_pm_one"
+    },
+    {
+      "fact_id": "F:int-euler-criterion-residue-imp-one",
+      "language": "lean4",
+      "statement_sha256": "e7b057ca3d3147d1325675d88cf9f930e77a225566fc893abcd5b48c0c9016b2",
+      "prose_sha256": "1a688bc4e2aa7bc5fd1bae28b42aded0e543d2c1fd7033e0a92191257d33d58a",
+      "kernel_theorem": "Int.euler_criterion_residue_imp_one"
     },
     {
       "fact_id": "F:int-euler-totient-theorem",
@@ -6849,6 +6863,13 @@
       "kernel_theorem": "Int.fib_rec"
     },
     {
+      "fact_id": "F:int-firstsupplementarylawnotresidue",
+      "language": "lean4",
+      "statement_sha256": "614554c300cbcdda132852f8391e7c0dab87d9fc66fa0a25c167bcb4dad308c6",
+      "prose_sha256": "d7f8723383782bf8b5949097f82a5087ed4c2a28605923f87ba749dadbce5037",
+      "kernel_theorem": "Int.firstSupplementaryLawNotResidue"
+    },
+    {
       "fact_id": "F:int-gauss-lemma",
       "language": "lean4",
       "statement_sha256": "301916642cdf35183a5b13969ad18e7f4a310300c263c78fe9205c865883c43f",
@@ -6945,6 +6966,13 @@
       "statement_sha256": "b37e6e54bf28081036d7d1fa186dc129d872ee636b544625e3c270fe65842612",
       "prose_sha256": "99c899f586ee3eb007d978a217183cdaa5259b2411887f435cc7b065e1ccbd9c",
       "kernel_theorem": "Int.is_quadratic_residue_one"
+    },
+    {
+      "fact_id": "F:int-isquadraticresidue-of-modeq",
+      "language": "lean4",
+      "statement_sha256": "72936b02d2f82a3473d04841a226933d8e8316fb4513a0f052551bcd6efcf239",
+      "prose_sha256": "ea145aad313a978a4ad2a2e08c55e0c82a3b09fe959be94105357457fcd7bb74",
+      "kernel_theorem": "Int.isQuadraticResidue_of_modEq"
     },
     {
       "fact_id": "F:int-le-antisymm",
@@ -7808,6 +7836,13 @@
       "statement_sha256": "fbf8bbf47e1530c3f4660d2ef7076b6e740effa66f3c5a9fe2a724b236f39da1",
       "prose_sha256": "3ac75d4ef3bd103be7aedefe525ebd385679fa20319fb71add4ddee01b15e813",
       "kernel_theorem": "Int.prodRange_shiftFront"
+    },
+    {
+      "fact_id": "F:int-prodrange-split",
+      "language": "lean4",
+      "statement_sha256": "07bfa3d01e79a13e6c14f90ebf238b0dd54c0cf6def98b990f6cd2815cbc9f7c",
+      "prose_sha256": "c463fc93fa9401a6895dec19673d2b42283f26fec7040560227e93e26fc22484",
+      "kernel_theorem": "Int.prodRange_split"
     },
     {
       "fact_id": "F:int-prodrange-succ",
