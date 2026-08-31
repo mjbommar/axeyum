@@ -39,6 +39,7 @@ carrier, and nothing structural blocks it.
 | `compl_sum_eq` exported (`pub(super)`) rather than re-derived — it was built inline for `countRange_compl` and was private | `crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs` |
 | the decision, the obstruction, the mutation table, and what the controls do not catch | `docs/research/09-decisions/adr-1260-eisenstein-routes-around-the-missing-aggregate-wall.md` |
 | re-runnable numeric verification: 8 claims, 10 controls, two of them recorded as deliberately SURVIVING | `docs/research/09-decisions/adr-1260-eisenstein-checks.py` |
+| five ledger facts, statements taken verbatim from `kernel_declaration_projection` | `artifacts/facts/F-nat-{sumrange-const,countrange-eq-sumrange,sumrange-swap,countrectangle-partition,countrectangle-partition-compl}.json` |
 
 ## Verification run in this lane
 
@@ -47,14 +48,20 @@ carrier, and nothing structural blocks it.
 - `cargo clippy -p axeyum-lean-kernel --lib --tests -- -D warnings` — clean
 - `python3 docs/research/09-decisions/adr-1260-eisenstein-checks.py` — PASS
 - the three prior QR lanes' scripts (ADR-1230, ADR-1235) re-run — PASS
+- `python3 scripts/validate-facts.py` — exit 0
+- `python3 scripts/check-settled-fact-statements.py` — PASS, 2258 pinned, drifted 0
+- `python3 scripts/check-absence-claims.py` — OK, 44 markers, every claim still holds
+- `scripts/check-merge-hygiene.sh` — PASS
 
-## Not done, deliberately
 
-**No facts were registered for the five new declarations.** A fact's
-`formal.statement` must be the machine-rendered type from
-`kernel_declaration_projection --release`, never hand-transcribed, and that
-release build did not fit in this lane's budget. This is the one piece of
-follow-up the work needs.
+## Mutation table
+
+Six mutations of `lattice_count.rs`, each run against the whole `nat_prelude::`
+sweep with the file restored afterwards: **five REJECTED, one
+ADMITTED-and-SURVIVED**. The survivor is the corollary's two `Nat` binders in
+the opposite order — true, admitted, and not the theorem meant, and no numeric
+test can catch it because the partition totals `m·n` either way. Full table and
+the two self-corrections it forced are in ADR-1260.
 
 ## What a next lane should take
 
