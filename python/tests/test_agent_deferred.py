@@ -291,12 +291,28 @@ def test_an_unresolvable_export_is_recorded_as_a_retrieval_miss(root, tmp_path) 
     measured defect: the outcome list was appended to only on the accepted
     branch, so the supervisor could not tell a decline from a tool that never
     ran, and an honest retrieval miss was written as a broken harness."""
-    fact_id = "F:ml430-int-fib-add-181b6a2c"
+    fact_id = next(
+        (
+            candidate
+            for candidate in tools.eligible_fact_ids(root)
+            if _export_is_unavailable(root, candidate)
+        ),
+        None,
+    )
+    assert fact_id is not None, "the retrieval-miss control needs one eligible fact with no export"
     state = a4_state(root, tmp_path, fact_id=fact_id)
     document = json.loads(run_episode(state).read_text())
     assert document["outcome"]["verdict"] == "declined"
     assert document["outcome"]["decline_class"] == "retrieval-miss"
     assert document["outcome"]["checker_runs"] == []
+
+
+def _export_is_unavailable(root: Path, fact_id: str) -> bool:
+    try:
+        tools.resolve_export(root, fact_id)
+    except tools.ExportUnavailable:
+        return True
+    return False
 
 
 # ----------------------------------------------------------------- the replay

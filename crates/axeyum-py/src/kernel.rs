@@ -1421,10 +1421,11 @@ impl PyKernel {
 
 /// The stack a `build_*_prelude` recursion is run on.
 ///
-/// The default 8 MB main-thread stack is not enough for `build_cpoint_prelude`
-/// (measured 2026-08-25: SIGSEGV at 8 MB, returns at 16 MB). 64 MB is a factor
-/// of four above the last size measured to fail, on a thread that lives only
-/// for the duration of one call.
+/// The default 8 MB main-thread stack is not enough for the deepest constructed
+/// numeric preludes. `cpoint` failed there in the original 2026-08-25 audit;
+/// `creal` and `complex` independently reproduced SIGSEGV there on 2026-08-30
+/// after their libraries grew. 64 MB is a factor of four above the last size
+/// measured to pass, on a thread that lives only for the duration of one call.
 const DEEP_STACK_BYTES: usize = 64 * 1024 * 1024;
 
 /// Runs `work` on a thread with [`DEEP_STACK_BYTES`] of stack, turning a panic
@@ -1633,7 +1634,12 @@ impl PyKernel {
     /// package.
     fn build_creal_prelude(&mut self, py: Python<'_>) -> PyResult<Py<PyPrelude>> {
         let kernel = &mut self.inner;
-        let built = py.detach(move || build_creal_prelude(kernel));
+        let built = py.detach(move || on_deep_stack(move || build_creal_prelude(kernel)));
+        let built = built.map_err(|detail| {
+            InternalError::new_err(format!(
+                "axeyum_lean_kernel::build_creal_prelude panicked: {detail}"
+            ))
+        })?;
         let package = built.map_err(|error| self.kernel_error(py, &error))?;
         make_prelude(
             py,
@@ -1653,7 +1659,12 @@ impl PyKernel {
     /// package.
     fn build_complex_prelude(&mut self, py: Python<'_>) -> PyResult<Py<PyPrelude>> {
         let kernel = &mut self.inner;
-        let built = py.detach(move || build_complex_prelude(kernel));
+        let built = py.detach(move || on_deep_stack(move || build_complex_prelude(kernel)));
+        let built = built.map_err(|detail| {
+            InternalError::new_err(format!(
+                "axeyum_lean_kernel::build_complex_prelude panicked: {detail}"
+            ))
+        })?;
         let package = built.map_err(|error| self.kernel_error(py, &error))?;
         make_prelude(
             py,
@@ -1677,8 +1688,8 @@ impl PyKernel {
         // `Kernel().build_cpoint_prelude()` on the 8 MB main-thread stack kills
         // CPython with SIGSEGV -- silently, no traceback, no `PanicException`,
         // nothing an `except` of any kind can see -- while the same call on a
-        // 16 MB stack returns a 106-name prelude. It is the only one of the nine
-        // builders that does this; the other eight return on the default stack.
+        // 16 MB stack returns a 106-name prelude. CReal and Complex now use the
+        // same boundary because they also outgrew the default stack.
         //
         // NO PREFLIGHT IS POSSIBLE HERE. The input is the empty kernel: there is
         // no argument to screen and no caller mistake to report, so the only fix
