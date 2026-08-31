@@ -129,10 +129,14 @@ use crate::build_logic_prelude;
 use crate::name::NameId;
 
 mod add_basics;
+mod add_choose_div;
+mod add_desc_factorial_asc_factorial;
+mod add_factorial_le;
 mod add_pos;
 mod algebra;
 mod and_or_distrib;
 mod asc_factorial;
+mod asc_factorial_div;
 mod base_induction;
 mod bezout;
 mod binary;
@@ -249,6 +253,11 @@ mod xor_trichotomy;
 pub use ops::{NatDev, NatOps, NatState};
 
 use add_basics::declare_add_basics;
+use add_choose_div::declare_add_choose;
+use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factorial;
+use add_factorial_le::{
+    declare_add_factorial_le_factorial_add, declare_add_factorial_succ_le_factorial_add_succ,
+};
 use add_pos::declare_add_pos;
 use algebra::{
     declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
@@ -257,6 +266,7 @@ use algebra::{
 };
 use and_or_distrib::declare_and_or_distrib_all;
 use asc_factorial::declare_asc_factorial_all;
+use asc_factorial_div::declare_asc_factorial_eq_div;
 use base_induction::declare_base_induction;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
@@ -525,6 +535,11 @@ pub struct NatPrelude {
     /// `Nat.add_choose_mul_factorial_mul_factorial : ∀ i j, (i+j).choose j *
     /// i! * j! = (i+j)!`. See `nat_prelude::choose_factorial_add`.
     pub add_choose_mul_factorial_mul_factorial: NameId,
+    /// `Nat.add_choose : ∀ i j, (i+j).choose j = (i+j)! / (i! * j!)`.
+    /// Division-normal form of
+    /// [`Self::add_choose_mul_factorial_mul_factorial`]. Closes
+    /// `F:ml430-nat-add-choose-eb49fa11`. See `nat_prelude::add_choose_div`.
+    pub add_choose: NameId,
     /// `factorial_dvd_descFactorial : ∀ n k, k! ∣ n.descFactorial k`.
     /// Closes `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`. Immediate
     /// from [`Self::desc_factorial_eq_factorial_mul_choose`] plus `dvd_mul`.
@@ -580,6 +595,16 @@ pub struct NatPrelude {
     /// needs only `dvd_refl`); `n = succ m` via
     /// [`Self::asc_factorial_succ_eq_factorial_mul_choose`] + `dvd_mul`.
     pub factorial_dvd_asc_factorial: NameId,
+    /// `Nat.add_descFactorial_eq_ascFactorial : ∀ n k, (n+k).descFactorial k
+    /// = (n+1).ascFactorial k`. Closes
+    /// `F:ml430-nat-add-descfactorial-eq-ascfactorial-5faac784`. Two lemma
+    /// applications chained through the shared RHS `k! * choose (n+k) k`
+    /// (no induction). See `nat_prelude::add_desc_factorial_asc_factorial`.
+    pub add_desc_factorial_eq_asc_factorial: NameId,
+    /// `Nat.ascFactorial_eq_div : ∀ n k, (n+1).ascFactorial k = (n+k)! /
+    /// n!`. Closes `F:ml430-nat-ascfactorial-eq-div-87d768e8`. See
+    /// `nat_prelude::asc_factorial_div`.
+    pub asc_factorial_eq_div: NameId,
     /// `Nat.multichoose n k` — the number of size-`k` multisets from an
     /// `n`-element type, defined directly as `choose (pred (add n k)) k`
     /// (i.e. `(n + k - 1).choose k`) rather than by a fresh recursion. See
@@ -1441,6 +1466,16 @@ pub struct NatPrelude {
     /// hypothetical `factorial n = zero` into `Le 1 zero`, refuted by
     /// [`not_succ_le_zero`](Self::not_succ_le_zero).
     pub factorial_ne_zero: NameId,
+    /// `Nat.add_factorial_le_factorial_add : ∀ i n, Le 1 n → Le (i + n!)
+    /// ((i+n)!)`. Closes
+    /// `F:ml430-nat-add-factorial-le-factorial-add-b0400cf6`. See
+    /// `nat_prelude::add_factorial_le`.
+    pub add_factorial_le_factorial_add: NameId,
+    /// `Nat.add_factorial_succ_le_factorial_add_succ : ∀ i n, Le (i +
+    /// (succ n)!) ((i + succ n)!)`. Closes
+    /// `F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb`.
+    /// Corollary of [`Self::add_factorial_le_factorial_add`].
+    pub add_factorial_succ_le_factorial_add_succ: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -4865,6 +4900,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "descFactorial_eq_factorial_mul_choose"),
             add_choose_mul_factorial_mul_factorial: kernel
                 .name_str(nat, "add_choose_mul_factorial_mul_factorial"),
+            add_choose: kernel.name_str(nat, "add_choose"),
             factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),
             desc_factorial_self: kernel.name_str(nat, "descFactorial_self"),
             desc_factorial_le: kernel.name_str(nat, "descFactorial_le"),
@@ -4877,6 +4913,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             asc_factorial_succ_eq_factorial_mul_choose: kernel
                 .name_str(nat, "ascFactorial_succ_eq_factorial_mul_choose"),
             factorial_dvd_asc_factorial: kernel.name_str(nat, "factorial_dvd_ascFactorial"),
+            add_desc_factorial_eq_asc_factorial: kernel
+                .name_str(nat, "add_descFactorial_eq_ascFactorial"),
+            asc_factorial_eq_div: kernel.name_str(nat, "ascFactorial_eq_div"),
             multichoose: kernel.name_str(nat, "multichoose"),
             multichoose_zero_right: kernel.name_str(nat, "multichoose_zero_right"),
             multichoose_one: kernel.name_str(nat, "multichoose_one"),
@@ -5147,6 +5186,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             factorial_le: kernel.name_str(nat, "factorial_le"),
             factorial_lt_of_lt: kernel.name_str(nat, "factorial_lt_of_lt"),
             factorial_ne_zero: kernel.name_str(nat, "factorial_ne_zero"),
+            add_factorial_le_factorial_add: kernel.name_str(nat, "add_factorial_le_factorial_add"),
+            add_factorial_succ_le_factorial_add_succ: kernel
+                .name_str(nat, "add_factorial_succ_le_factorial_add_succ"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
             le_of_dvd: kernel.name_str(nat, "le_of_dvd"),
@@ -5807,6 +5849,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // conceptually belonging there — see `declare_factorial_order`'s doc
         // comment.
         declare_factorial_order(&mut d, &p)?;
+        // Needs `Nat.one_le_factorial` (`declare_euclid`, just above),
+        // `Nat.one_le_mul` (`declare_divisibility`, far above), and
+        // `zero_add`/`succ_add`/`add_comm`/`le_refl`/`le_succ_succ`/
+        // `le_add_right`/`add_le_add_left`/`le_trans` (all basic
+        // algebra/order theorems, far above); nothing needs these closed
+        // `ml430` mirrors, so they go here.
+        declare_add_factorial_le_factorial_add(&mut d, &p)?;
+        declare_add_factorial_succ_le_factorial_add_succ(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;
         declare_combinatorial_identities(&mut d, &p)?;
@@ -6060,6 +6110,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // just above) plus `mul_comm`/`mul_assoc`/`one_mul`/`factorial_succ`,
         // all far above; nothing needs this closed `ml430` mirror.
         declare_add_choose_mul_factorial_mul_factorial(&mut d, &p)?;
+        // Needs `Nat.add_choose_mul_factorial_mul_factorial` (just above)
+        // plus `Nat.div`/`div_mul_cancel_of_dvd`/`dvd_mul`
+        // (`declare_euclidean_division`, far above),
+        // `mul_assoc`/`mul_comm`/`mul_left_cancel_of_pos`/`one_le_factorial`/
+        // `one_le_mul`, all far above; nothing needs this closed `ml430`
+        // division-normal-form mirror.
+        declare_add_choose(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul`/`Nat.beq` (`declare_arithmetic`/
         // `declare_boolean_equality`) and `Nat.div`/`Nat.mod`
         // (`declare_executable_division`), all far above; nothing needs
@@ -6245,6 +6302,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.
         declare_asc_factorial_all(&mut d, &p)?;
+        // Needs `Nat.descFactorial_eq_factorial_mul_choose`
+        // (`declare_desc_factorial_all`, far above) and
+        // `Nat.ascFactorial_succ_eq_factorial_mul_choose`
+        // (`declare_asc_factorial_all`, just above); nothing needs this
+        // closed `ml430` mirror.
+        declare_add_desc_factorial_eq_asc_factorial(&mut d, &p)?;
+        // Needs `Nat.add_descFactorial_eq_ascFactorial` (just above),
+        // `choose_factorial_add::desc_factorial_add_eq_factorial_at`
+        // (`declare_add_choose_mul_factorial_mul_factorial`'s home module,
+        // far above) and `Nat.div`/`div_mul_cancel_of_dvd`/`dvd_mul`
+        // (`declare_euclidean_division`, far above); nothing needs this
+        // closed `ml430` mirror.
+        declare_asc_factorial_eq_div(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.pred`/`Nat.choose`, all far above (`choose`'s
         // own `choose_zero_right`/`choose_self`/`choose_one_right`, all
         // declared by `declare_choose_all`); nothing needs `Nat.multichoose`,
@@ -6582,3 +6652,15 @@ mod size_extra_tests;
 
 #[cfg(test)]
 mod choose_factorial_add_tests;
+
+#[cfg(test)]
+mod add_choose_div_tests;
+
+#[cfg(test)]
+mod add_desc_factorial_asc_factorial_tests;
+
+#[cfg(test)]
+mod asc_factorial_div_tests;
+
+#[cfg(test)]
+mod add_factorial_le_tests;
