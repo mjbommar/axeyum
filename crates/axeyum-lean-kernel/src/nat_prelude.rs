@@ -138,6 +138,7 @@ mod algebra;
 mod and_or_distrib;
 mod asc_factorial;
 mod asc_factorial_div;
+mod avg_pair;
 mod base_induction;
 mod bezout;
 mod binary;
@@ -272,6 +273,7 @@ use algebra::{
 use and_or_distrib::declare_and_or_distrib_all;
 use asc_factorial::declare_asc_factorial_all;
 use asc_factorial_div::declare_asc_factorial_eq_div;
+use avg_pair::declare_avg_pair_all;
 use base_induction::declare_base_induction;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
@@ -4911,6 +4913,24 @@ pub struct NatPrelude {
     /// both satisfied by the signed fold on `[0, m)`, no separate bijection
     /// or partner-index construction needed.
     pub gauss_fold_shift_injective_on: NameId,
+
+    // -- `avg-pair-constructions` lane: `avg_pair.rs` --
+    // `docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md`
+    // (ADR-1045's named unblock: two typeclass-free, `Prod`-free
+    // definitions that open `Batteries.Data.Nat.Bisect` +
+    // `Mathlib.Data.Nat.Pairing` as one held-out family for the
+    // autogenesis screen). Construction only, ADR-0653 — no theorem about
+    // either is declared here.
+    /// `Nat.avg (a b : Nat) : Nat := div (add a b) 2` — the floored
+    /// average. See `avg_pair.rs`'s module doc for why `Nat.div`'s
+    /// truncation matters here.
+    pub avg: NameId,
+    /// `Nat.pair (a b : Nat) : Nat := if a < b then add (mul b b) a else
+    /// add (add (mul a a) a) b` — the one-directional Cantor-style
+    /// pairing (Mathlib's/Lean core's own `Nat.pair`). `Nat.unpair` is NOT
+    /// reachable this way (needs `Prod`, absent from this kernel); see
+    /// `avg_pair.rs`'s module doc.
+    pub pair: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5864,6 +5884,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_in_range: kernel.name_str(nat, "gauss_fold_in_range"),
             gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
+            avg: kernel.name_str(nat, "avg"),
+            pair: kernel.name_str(nat, "pair"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -6737,6 +6759,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.zero_lt_of_ne_zero`, `Nat.one_le_mul`, `Nat.lt_irrefl` (all
         // above). Nothing later needs it, so it goes last.
         declare_coprime_mul_add_mul_ne_mul(&mut d, &p)?;
+        // `Nat.avg`/`Nat.pair` (`avg_pair.rs`): needs only `Nat.add`/
+        // `Nat.mul`/`Nat.div`/`Nat.ble`/`Nat.succ`/`bool_select_nat`, all
+        // far above. Opens `Batteries.Data.Nat.Bisect` +
+        // `Mathlib.Data.Nat.Pairing` for the autogenesis screen
+        // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
+        declare_avg_pair_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -6757,6 +6785,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
 
 #[cfg(test)]
 mod nat_prelude_tests;
+
+#[cfg(test)]
+mod avg_pair_tests;
 
 #[cfg(test)]
 mod bit_extra_tests;
