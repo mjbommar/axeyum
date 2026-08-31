@@ -210,6 +210,27 @@ def main() -> int:
             fails.append(f"G4 proved-field-present: {path.name} contains a "
                          f"'proved' key -- ADR-0602 forbids this structurally")
 
+        # A FULFILLED record is a retired producer whose whole population
+        # closed. It has no open targets by definition, so G6's plurality and
+        # G7's open-target rule do not apply -- but it must name what closed and
+        # what it achieved, which G6F enforces instead.
+        kind = doc.get("kind")
+        if kind == "fulfilled":
+            if not doc.get("spent"):
+                fails.append(f"G6F fulfilled-without-spent: {path.name} is "
+                             f"kind=fulfilled but names no spent hypotheses")
+            if not doc.get("outcome"):
+                fails.append(f"G6F fulfilled-without-outcome: {path.name} is "
+                             f"kind=fulfilled but records no outcome")
+            for e in doc.get("spent") or []:
+                sid = e.get("fact_id")
+                if sid and sid in facts and facts[sid].get("epistemic_status") == "open":
+                    fails.append(
+                        f"G6F fulfilled-target-still-open: {path.name} lists "
+                        f"{sid} as spent, but it is still open -- a fulfilled "
+                        f"record may not retire live work")
+            continue
+
         applicability = doc.get("applicability", {})
         fact_ids = applicability.get("fact_ids") if isinstance(applicability, dict) else None
 
@@ -219,8 +240,8 @@ def main() -> int:
                          f"applicability.fact_ids")
             fact_ids = []
 
+
         # G6 -- plurality.
-        kind = doc.get("kind")
         if kind == "producer" and len(fact_ids) < 2:
             fails.append(
                 f"G6 single-target-producer: {path.name} claims kind=producer "

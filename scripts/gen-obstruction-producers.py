@@ -412,13 +412,31 @@ def compile_extensional_duplicate_close(
 ) -> dict[str, Any]:
     applicable: list[dict[str, Any]] = []
     declined: list[dict[str, Any]] = []
+    spent: list[dict[str, Any]] = []
     for h in P1_HYPOTHESES:
         fid = h["fact_id"]
         if fid not in facts:
             die(f"P1 hypothesis names {fid}, which is not in the fact ledger")
+        # A hypothesis whose fact has since CLOSED is SPENT, not stale. Dying
+        # here was right while some were still open -- a producer must never
+        # name settled work -- but it makes a producer whose WHOLE population
+        # closed indistinguishable from a broken table, and it turns success
+        # into a red gate.
+        #
+        # Measured 2026-08-30: two theorem lanes closed all eight of P1's
+        # hypotheses in one day, by exactly the route P1 predicted, executed by
+        # hand rather than by running the producer. That is a population
+        # exhausted, and the honest record is FULFILLED with the closing route
+        # per target -- not a producer still claiming prospective work it no
+        # longer has.
         if status_of(facts[fid]) != "open":
-            die(f"P1 hypothesis {fid} is not open (status={status_of(facts[fid])}); "
-                f"the hypothesis table is stale, re-derive it")
+            spent.append({
+                "fact_id": fid,
+                "closed_status": status_of(facts[fid]),
+                "twin_mirror": h.get("twin_mirror") or None,
+                "native_declaration": h.get("native_declaration"),
+            })
+            continue
         twin = h["twin_mirror"]
         twin_ok = bool(twin) and twin in facts and status_of(facts[twin]) in ("proved", "computed")
         decl_ok = h["native_declaration"] in declared_names
@@ -451,10 +469,35 @@ def compile_extensional_duplicate_close(
                 "exists to keep that correction load-bearing rather than silent."
             ),
         })
+    if len(applicable) < 2 and spent and not applicable:
+        # Every hypothesis closed: the population is EXHAUSTED, not broken.
+        # Emit a fulfilled record so the outcome is on the record and the gate
+        # tells the truth, rather than dying and leaving a red gate that reads
+        # as a defect.
+        return {
+            "id": "extensional-duplicate-close",
+            "kind": "fulfilled",
+            "obstruction_ids": ["nat-bitwise-extensional-duplicate"],
+            "applicability": {"fact_ids": [], "evidence_routes": []},
+            "spent": spent,
+            "outcome": (
+                f"All {len(spent)} hypotheses closed. The predicted route was "
+                "correct and was executed BY HAND in two theorem lanes, not by "
+                "running this producer -- so this is an exhausted population, "
+                "NOT a validated producer run. Recorded as fulfilled so the "
+                "distinction survives; a future duplicate of this shape needs a "
+                "fresh hypothesis table."
+            ),
+            "declined": declined,
+            # The declines were produced by the SAME mechanism as the positive
+            # claims, so they remain the negative controls after fulfilment.
+            "negative_controls": declined,
+        }
     if len(applicable) < 2:
-        die("extensional-duplicate-close verified fewer than 2 applicable targets; "
-            "would have to be labeled a capsule, not compiled as this phase's "
-            "headline producer", code=1)
+        die("extensional-duplicate-close verified fewer than 2 applicable targets "
+            f"({len(applicable)} applicable, {len(spent)} spent); would have to be "
+            "labeled a capsule, not compiled as this phase's headline producer",
+            code=1)
     return {
         "id": "extensional-duplicate-close",
         "kind": "producer",
@@ -749,7 +792,16 @@ def build_producers(facts: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any
         if "proved" in p:
             die(f"producer {p['id']} carries a 'proved' field -- ADR-0602 "
                 f"forbids this structurally", code=1)
-        if not p.get("applicability", {}).get("fact_ids"):
+        # A FULFILLED record is allowed an empty applicability set -- that is
+        # precisely what fulfilled means -- but it must then carry the spent
+        # list and an outcome, or it is an empty producer wearing a new label.
+        if p.get("kind") == "fulfilled":
+            if not p.get("spent"):
+                die(f"{p['id']} is kind=fulfilled with no spent hypotheses; a "
+                    f"fulfilled record must name what closed", code=1)
+            if not p.get("outcome"):
+                die(f"{p['id']} is kind=fulfilled with no outcome", code=1)
+        elif not p.get("applicability", {}).get("fact_ids"):
             die(f"producer {p['id']} has an empty applicability set", code=1)
         if p["kind"] == "producer" and len(p["applicability"]["fact_ids"]) < 2:
             die(f"producer {p['id']} claims kind=producer with "
