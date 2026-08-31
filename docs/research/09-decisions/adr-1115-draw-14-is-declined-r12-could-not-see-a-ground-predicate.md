@@ -9,8 +9,8 @@ family, `natural-factorisation-properties` — the ONLY late-sorting
 held-out-viable candidate in the whole space, re-confirmed here by running the
 real `select()` over every un-owned module — draws
 `Nat.abundant_twelve : Nat.Abundant 12` and `Nat.deficient_one :
-Nat.Deficient 1`, which the committed `abundant_evaluates_at_twelve` `def_eq`
-test already shows unfold to the ground inequalities `Lt 24 28` and `Lt 1 2`.
+Nat.Deficient 1`, which committed `def_eq` tests already show unfold to ground
+inequalities — `Abundant 12` to `Lt 24 28`, `Deficient 8` to `Lt 15 16`.
 They are decided by reduction the instant the ADR-1100 construction landed, so
 they are not blind. **R12 reported a clean 0 of 10 because
 `is_closed_evaluation` required an `=` and a ground PREDICATE application has
@@ -110,15 +110,26 @@ ADR-1100 says.
 
 **Two of them are not propositions anybody has to prove.** `Nat.Abundant 12`
 unfolds to `Lt 24 28` and `Nat.Deficient 1` to `Lt 1 2`, both ground numeric
-inequalities over a definition declared hours earlier. This is measured, not
-reasoned: `nat_prelude/abundant_deficient_tests.rs` — written by ADR-1100's own
-lane, as CLAUDE.md requires of every new `Definition` — already asserts
-
-    def_eq(Nat.Abundant 12, Lt 24 28)
-
-with `Lt 28 24` and `Lt 12 28` as negative controls. `Nat.lt x y` is
+inequalities over a definition declared hours earlier. `Nat.lt x y` is
 definitionally `Nat.le (succ x) y`, so what remains after the unfold is a
 constructor tower, not an argument.
+
+That the predicates unfold this way is measured rather than reasoned, by tests
+`nat_prelude/abundant_deficient_tests.rs` already carries — written by
+ADR-1100's own lane, as CLAUDE.md requires of every new `Definition`:
+
+    def_eq(Nat.Abundant 12, Lt 24 28)     with Lt 28 24 / Lt 12 28 as controls
+    def_eq(Nat.Deficient 8, Lt 15 16)     with Lt 16 15 / Lt 15 8  as controls
+    def_eq(Nat.Abundant 0,  Lt 0 0)       and sumDivisors 0 reduces to 0
+
+**Be precise about which of the two drawn rows is directly witnessed.**
+`Nat.Abundant 12` is, at exactly its drawn argument. `Nat.Deficient 1` is not
+tested at `1`; what is established for it is the mechanism at `8` and `0`, plus
+`Nat.sumDivisors_one`, a declared theorem whose module doc records that
+`sumDivisors 1` "is a closed numeral and the whole computation is
+definitional". Either row alone is enough to refuse the family, so nothing here
+turns on the difference — but a reader should not be told a test exists that
+does not.
 
 That is precisely ADR-0695's spend, and ADR-0695's gate said nothing.
 
