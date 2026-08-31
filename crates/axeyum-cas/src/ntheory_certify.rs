@@ -98,6 +98,48 @@ pub(crate) fn pow_mod_for_tests(base: u128, exp: u128, m: u128) -> u128 {
     pow_mod(base, exp, m)
 }
 
+/// `gcd(a, b)` via the Euclidean algorithm, over `i128` magnitudes.
+///
+/// Written here rather than reused from [`crate::ntheory::gcd`], for the same
+/// reason as the modular arithmetic above: a defect shared between producer
+/// and checker would be invisible to both. This one specifically backs the
+/// CRT checker's leastness (R4) and conflict (R6) guards below, which used to
+/// call `ntheory::gcd`/`ntheory::lcm` directly -- correct today, but not
+/// independent of the crate whose routines this module exists to check.
+fn checker_gcd(a: i128, b: i128) -> u128 {
+    let (mut a, mut b) = (a.unsigned_abs(), b.unsigned_abs());
+    while b != 0 {
+        let t = a % b;
+        a = b;
+        b = t;
+    }
+    a
+}
+
+/// `lcm(a, b)` for `a, b != 0`, or `None` on overflow. Independent of
+/// [`crate::ntheory::lcm`]; see [`checker_gcd`].
+fn checker_lcm(a: i128, b: i128) -> Option<i128> {
+    let g = checker_gcd(a, b);
+    if g == 0 {
+        return Some(0);
+    }
+    let product = (a.unsigned_abs() / g).checked_mul(b.unsigned_abs())?;
+    i128::try_from(product).ok()
+}
+
+/// Test-only access to [`checker_gcd`]/[`checker_lcm`], so the adversarial
+/// suite can compare this module's independent gcd/lcm against
+/// [`crate::ntheory`]'s the same way it already does for [`pow_mod`].
+#[cfg(test)]
+pub(crate) fn checker_gcd_for_tests(a: i128, b: i128) -> u128 {
+    checker_gcd(a, b)
+}
+
+#[cfg(test)]
+pub(crate) fn checker_lcm_for_tests(a: i128, b: i128) -> Option<i128> {
+    checker_lcm(a, b)
+}
+
 /// Checked `∏ base^exp` over `(base, exponent)` pairs, as `u128`.
 /// Returns `None` on overflow. The empty product is `1`.
 fn checked_prod_pow(factors: &[(i128, u32)]) -> Option<u128> {
@@ -532,10 +574,10 @@ pub fn check_crt_certificate(residues: &[(i128, i128)], cert: &CrtCertificate) -
                 return false;
             }
             // R4: the modulus must be the LEAST common multiple, not merely a
-            // common one.
+            // common one. `checker_lcm`, not `ntheory::lcm` -- see its doc.
             let mut acc: i128 = 1;
             for &(_, m) in residues {
-                let Some(next) = ntheory::lcm(acc, m) else {
+                let Some(next) = checker_lcm(acc, m) else {
                     return false;
                 };
                 acc = next;
@@ -549,8 +591,9 @@ pub fn check_crt_certificate(residues: &[(i128, i128)], cert: &CrtCertificate) -
             else {
                 return false;
             };
-            // R6: the conflict must be real.
-            let common = ntheory::gcd(m_left, m_right);
+            // R6: the conflict must be real. `checker_gcd`, not
+            // `ntheory::gcd` -- see its doc.
+            let common = i128::try_from(checker_gcd(m_left, m_right)).unwrap_or(i128::MAX);
             if common == 0 {
                 return false;
             }

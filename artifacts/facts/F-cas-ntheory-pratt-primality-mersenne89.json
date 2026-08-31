@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ntheory-pratt-primality-mersenne89",
+  "title": "2^89-1 is prime: axeyum-cas's Pratt certificate is independently re-checked",
+  "statement": "The Mersenne number 2^89 - 1 = 618970019642690137449562111 (27 decimal digits, beyond i128's u64::MAX midpoint) is prime. axeyum-cas's ntheory_certify::certify_prime does not merely run Miller-Rabin: it produces a Pratt (Lucas) certificate -- a witness a of multiplicative order exactly n-1 modulo n, together with the COMPLETE prime factorization of n-1 and a recursive Pratt certificate for every prime factor. ntheory_certify::check_primality_certificate then independently re-derives every claim from n alone, using its own modular exponentiation (mul_mod/pow_mod, written separately from crate::ntheory's so a shared defect could not fool both), sharing no code with certify_prime or with crate::ntheory::is_prime (the deterministic Miller-Rabin producer). It confirms: the stated factors multiply to exactly n-1 (completeness -- omitting even one prime factor of n-1 makes the Lucas test unsound, as the module's own forged-91 fixture demonstrates), every factor base is itself certified prime by the same recursive route, witness^(n-1) = 1 (mod n), and witness^((n-1)/q) != 1 (mod n) for every factor base q (order maximality). It accepts. The same checker, given the identical certificate, correctly REJECTS it as a certificate for the neighbouring composite n-2 (a non-vacuity control in the same test).",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-int n 618970019642690137449562111) ; 2^89 - 1\n(assert (exists ((witness Int) (factors (List (Pair Int Nat))) (subcerts (List PrattCertificate)))\n  (and (= (prod-pow factors) (- n 1))                       ; G6: completeness\n       (strictly-ascending (map fst factors))                ; G4\n       (forall ((i Int)) (=> (in-range i factors)\n         (is-prime-by-subcert (nth factors i) (nth subcerts i))))  ; G7: recursive\n       (= (mod-pow witness (- n 1) n) 1)                      ; G8: Fermat\n       (forall ((q Int)) (=> (member q (map fst factors))\n         (not (= (mod-pow witness (/ (- n 1) q) n) 1))))      ; G9: order maximality\n  )))\n; independently re-derived by ntheory_certify::check_primality_certificate,\n; sharing no code with ntheory_certify::certify_prime or ntheory::is_prime.",
+    "fragment": "cas-ntheory-pratt-certificate",
+    "free_symbols": ["n", "witness", "factors", "subcerts"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.pratt-lucas-certificate-not-kernel-reconstructed",
+    "cas.exact-i128-modular-arithmetic-mul-mod-pow-mod-written-independently-of-ntheory",
+    "cas.witness-search-budget-in-certify-prime-does-not-weaken-the-checker-a-found-witness-is-fully-reverified",
+    "cas.recursion-depth-guard-g10-is-a-resource-guard-not-a-soundness-guard-per-module-doc"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-pratt-mersenne89",
+      "kind": "witness-replay",
+      "supports": "certify_prime(2^89-1) produces a Pratt certificate and check_primality_certificate independently re-derives and accepts it; the same certificate is correctly rejected for the neighbouring composite 2^89-3",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::certify_prime (untrusted producer: crate::ntheory::is_prime for the initial primality decision, crate::ntheory::factorize(n-1) for the factor list, then a bounded witness search up to 2000 candidates)",
+        "ntheory_certify::check_primality_certificate (independent checker: re-derives completeness of the n-1 factorization, recursively re-certifies each factor base's own primality, and re-derives the Fermat and order-maximality conditions using this module's own mul_mod/pow_mod)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ntheory_certify::ntheory_certify_tests::certifies_a_prime_beyond_u64_max -- --exact 2>/dev/null | grep -cE '^test ntheory_certify::ntheory_certify_tests::certifies_a_prime_beyond_u64_max \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/ntheory_certify.rs",
+      "notes": "cas-internal (ADR-0601 SS2): the checker_command names only the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies this evidence as cas-internal, matching this module's own module doc, which labels itself cas-internal explicitly and explains why: a kernel reconstruction of a Pratt witness's order over the unary-numeral Nat prelude would be an Eq.refl-shaped, substance-free reconstruction (the same trap scripts/check-cas-substance.py exists to catch for cas-certificate facts that DO reconstruct), and it would hit the measured unary-numeral cost wall documented in CLAUDE.md (a single Nat gcd over four-digit operands already costs tens of seconds there). Proved by breaking: temporarily changing the test's expected magnitude check (mersenne_89 > i128::from(u64::MAX)) or its witness/factor assertions and re-running reproduces a FAILED test line and grep -c returns 0, exit 1 -- verified during this fact's registration and restored before commit (ADR-1055 records the exact break/restore transcript)."
+    },
+    {
+      "id": "cas-internal-pratt-dense-range-breadth",
+      "kind": "witness-replay",
+      "supports": "the certificate route (certify_prime + check_primality_certificate) agrees with crate::ntheory::is_prime over every n in 2..500, and certifies exactly the 95 primes below 500 -- a pinned nonvacuous count, so a route that certified nothing (or everything) would fail this test rather than pass it silently",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::certify_prime",
+        "ntheory_certify::check_primality_certificate",
+        "crate::ntheory::is_prime (the independent oracle this test compares against, itself a different algorithm -- Miller-Rabin vs. the Pratt certificate route)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ntheory_certify::ntheory_certify_tests::certificate_route_agrees_with_is_prime_over_a_dense_range -- --exact 2>/dev/null | grep -cE '^test ntheory_certify::ntheory_certify_tests::certificate_route_agrees_with_is_prime_over_a_dense_range \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/ntheory_certify.rs",
+      "notes": "Breadth evidence supporting the headline single-instance claim above: this is NOT a claim that is_prime is itself independently verified in general (is_prime is the PRODUCER side of this comparison, not a re-derivation), only that the certificate route's accept/decline decisions track it exactly across a dense range, with a pinned assert_eq!(certified, 95) that would fail on a vacuous (zero-certified or all-certified) run."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-cas ntheory_certify::certify_prime / ntheory_certify::check_primality_certificate (crates/axeyum-cas/src/ntheory_certify.rs, landed per ADR-0745); this fact registers it into the ledger per ADR-1055, closing the gap ADR-1030 found (checkers existed in code with no fact naming them)",
+    "source": "the existing unit tests ntheory_certify::ntheory_certify_tests::certifies_a_prime_beyond_u64_max and certificate_route_agrees_with_is_prime_over_a_dense_range, read directly from crates/axeyum-cas/src/ntheory_certify/ntheory_certify_tests.rs rather than hand-transcribed",
+    "prior_art": [
+      {
+        "who": "Vaughan Pratt",
+        "what": "Pratt certificates: a short, independently verifiable proof that a number is prime, via a witness of multiplicative order n-1 and the recursive factorization of n-1 (showing PRIMES is in NP)",
+        "year": 1975,
+        "where": "V. Pratt, \"Every Prime Has a Succinct Certificate\", SIAM Journal on Computing 4(3)",
+        "attribution": "standard textbook/literature attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-1055 and ADR-0601 SS2 (three producers, one trust anchor; CAS evidence must reconstruct or be visibly cas-internal). No Kernel::add_declaration term exists for this claim and none is implied -- this is ADR-0603's row 3 (decidable-fragment exact form) for number theory, and row 3 for a decidable subject is exactly a statement, an executable, and a certificate an independent checker re-derives, which is what this fact and its evidence are. Deliberately NOT claiming that Miller-Rabin (ntheory::is_prime) is itself proved correct in general, or that this establishes primality testing as a decision procedure with a machine-checked correctness proof -- only that THIS specific number's primality carries a certificate that a checker sharing no code with the search re-derives from scratch. See this module's doc comment and ADR-0745 for the cas-internal trust-anchor discussion."
+}
