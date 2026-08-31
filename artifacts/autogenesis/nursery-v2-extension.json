@@ -95,6 +95,8 @@
         "F:ml430-nat-and-le-right-a3f80076",
         "F:ml430-nat-and-mod-two-eq-one-3e873792",
         "F:ml430-nat-and-one-is-mod-d861e96b",
+        "F:ml430-nat-and-or-distrib-left-fe131f64",
+        "F:ml430-nat-and-or-distrib-right-0daaa284",
         "F:ml430-nat-base-induction-83561d4c",
         "F:ml430-nat-bitwise-bit-4c4b28a8",
         "F:ml430-nat-bitwise-comm-1a273bae",
@@ -266,7 +268,7 @@
         "F:nat-zero-add"
       ],
       "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED to 228 members: the live component grew by exactly the 22 facts below between ADR-0855's exemption and this review, all landed by ordinary hand development (draw-9 status flips + census closes for the natural-bitwise/natural-and/natural-distance families), none referenced by any autogenesis operation, all epistemic_status proved, connected into this component only via already-member arithmetic lemmas (F:ml430-nat-add-comm-56a2d614, F:ml430-nat-add-assoc-8c87a1f1) -- the same shape ADR-0850/ADR-0855 already accepted, not a new pattern. Independently re-derived, not inherited from any prior lane's report. New members: F:ml430-nat-and-assoc-273b60d8, F:ml430-nat-and-comm-7525d05a, F:ml430-nat-and-div-two-1a2f7c33, F:ml430-nat-and-le-left-6d04acb7, F:ml430-nat-and-le-right-a3f80076, F:ml430-nat-and-mod-two-eq-one-3e873792, F:ml430-nat-and-one-is-mod-d861e96b, F:ml430-nat-bitwise-bit-4c4b28a8, F:ml430-nat-bitwise-comm-1a273bae, F:ml430-nat-bitwise-swap-7175e90e, F:ml430-nat-dist-add-add-left-92fa4403, F:ml430-nat-dist-add-add-right-6e5d8bbb, F:ml430-nat-dist-comm-1fa29a04, F:ml430-nat-dist-eq-intro-294b44ad, F:ml430-nat-dist-eq-zero-5ae5b706, F:ml430-nat-dist-pos-of-ne-00f5e22f, F:ml430-nat-dist-self-0cfa5426, F:ml430-nat-dist-triangle-inequality-b35e82d3, F:ml430-nat-land-assoc-ad4775b8, F:ml430-nat-land-bit-b9ab7475, F:ml430-nat-land-comm-7e6ad72e, F:ml430-nat-lor-comm-2666d7ef. See ADR-0940 and docs/plan/status/nursery-exemption-regrown.md."
+      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 2026-08-30 by coordinator: 228 -> 230 members. ADR-0950's amendment moved `natural-bit-decode`'s 10 rows out of held-out, which changed this component's membership and so correctly stopped the previous exemption matching -- the self-invalidating property doing its job twice in one session, for two different upstream causes. Verified 0 held-out members (development 278, train 178, longitudinal 4), so the crossing stays benign under ADR-0542."
     },
     {
       "authority": "ADR-0855",
@@ -12315,7 +12317,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "5aeec725d038eb76e61ed477aa501c55edd7834afa2bd4458112661935dfc843",
+  "extension_sha256": "aca25777925a943c707f33bf4820237927f8e9ddad01b0b17b6d6e4c7633c7fc",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
