@@ -17,7 +17,17 @@ MODE="${1:---write}"
 BASE="${AXEYUM_FMT_BASE:-origin/main}"
 git rev-parse --verify -q "$BASE" > /dev/null || BASE="$(git rev-parse HEAD~1)"
 
-mapfile -t FILES < <(git diff --name-only "$BASE...HEAD" -- '*.rs'; git diff --name-only -- '*.rs')
+# TEST FIXTURES ARE VERBATIM BY CONSTRUCTION -- NEVER FORMAT THEM.
+# `scripts/tests/fixtures/absence-stale-claims/*.rs` holds prose cut byte-for-byte
+# out of pre-correction commits, so `check-absence-claims.py` can be proven to
+# still catch each known-stale claim. Measured 2026-08-31: this script rewrote
+# **38 of 76 lines** of one such fixture. rustfmt was working correctly; the
+# fixture simply is not source, and reformatting it would have quietly weakened
+# the regression suite that proves a gate can fail.
+#
+# The push guard caught it, which is the only reason it did not land.
+mapfile -t FILES < <( { git diff --name-only "$BASE...HEAD" -- '*.rs'; git diff --name-only -- '*.rs'; } \
+  | /usr/bin/grep -v '^scripts/tests/fixtures/' )
 COUNT=0
 TOUCHED=0
 for f in $(printf '%s\n' "${FILES[@]}" | sort -u); do
