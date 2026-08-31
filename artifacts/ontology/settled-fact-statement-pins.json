@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2017,
+    "min_identity_bound": 2022,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -17953,6 +17953,13 @@
       ]
     },
     {
+      "fact_id": "F:rat-det-col-expansion",
+      "language": "lean4",
+      "statement_sha256": "972c28e81c2b88f67c629c6d53b835ea2119121a587e7c8fed272b03d154ece4",
+      "prose_sha256": "838e29287fd804290c4b85621e72f9320de5259446a2de3862657c88fc7dc2b8",
+      "kernel_theorem": "Rat.det_col_expansion"
+    },
+    {
       "fact_id": "F:rat-det-congr-pointwise",
       "language": "lean4",
       "statement_sha256": "ed647094fece513b0215a30743eefdc9070b463e1ed4144f2e621377c0c60913",
@@ -18000,6 +18007,13 @@
       "statement_sha256": "a408cf34895739c61256fdb80813b1a4d6428893a3873a5c4eaeda8945eb2137",
       "prose_sha256": "8236bf361c8335e179ce90bbe42445413d3075cf1e06cb6c47f8728593aaab5f",
       "kernel_theorem": "Rat.det_row_expansion"
+    },
+    {
+      "fact_id": "F:rat-det-transpose",
+      "language": "lean4",
+      "statement_sha256": "7bc38e0c7ef82b717150e55ebf28bd6fc78fc29acd4c622f70be796509aa1dee",
+      "prose_sha256": "48a4cd44b80e042f5f1497426936ddc31e003a460ef628ec2c83b957945b81cd",
+      "kernel_theorem": "Rat.det_transpose"
     },
     {
       "fact_id": "F:rat-det2-eq-zero-of-lin-dep",

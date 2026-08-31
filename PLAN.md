@@ -36682,6 +36682,74 @@ remaining construction value (ADR-0840 has the precise plan). The
 `testbit_eq_inth`/`List` gap and the `multichoose`/`minFac` divergences are
 permanent — do not re-derive them; cite ADR-0840 and this file instead.
 
+**A bucket MIS-attribution is now loud, not just an unattributed one** (`COMPLETE`, classifier-fail-loud, 2026-08-31). ADR-1215.
+
+`scripts/measure-curriculum-kernel-coverage.py`'s residual counter catches a
+declaration attributed to NOTHING and structurally cannot catch one attributed
+to the wrong REAL bucket — the node's pinned count stays unchanged and wrong.
+That happened twice in two days (ADR-1140 `det2|det3`, ADR-1205
+`gauss_fold_injective`), both times because a pattern named INSTANCES and the
+family grew past it.
+
+Three ratcheted guards over name FAMILIES (first word of the local name,
+camelCase and snake_case folded, trailing digits stripped) against
+`artifacts/curriculum/bucket-cohesion-pin.tsv`:
+
+- **G1 SPLIT** — a family attributing to an unpinned node SET. Both incidents.
+- **G2 FAMILY** — a family of >= 8 declarations entirely inside a catch-all,
+  unpinned. The case G1 cannot see: a family with no partial match never splits.
+- **G3 STALE** — a pinned row matching no measured family, so the pin cannot rot.
+
+Plus two input refusals: a projection under 2,500 declarations is refused
+(a short index makes a new family look like it was always in the catch-all),
+and `--require-pin` refuses a missing pin before the projection is even read.
+
+### What was measured
+
+- **The projection does NOT carry a source module.** It emits
+  `kernel.environment()`, which stores no provenance. Recovering the module by
+  scanning Rust source reaches **76.7%** (2,022 of 2,636) and needs a hand-kept
+  table of which per-prelude helper DECLARES vs CONSUMES — I got `.lemma` wrong
+  in one command (57.3% with 628 spurious ambiguities). And module cohesion
+  would have missed ADR-1140 anyway: `Rat.det2` is in `matrix.rs` and `Rat.det`
+  in `matrix_det.rs`, so each module was internally cohesive and wrong.
+- **Both incidents replay RED** against a 124-row slice of the real projection
+  with the pattern tables `git show`n at `d2bb38a1e^` and `bd382566b^`, each
+  naming the affected declarations; the same slice with the shipped table gives
+  0 findings.
+- **Mutation sweep: 9 mutations, all KILLED, 0 survivors.** The first run had
+  three survivors, each a real hole (a floor test that read the constant it was
+  testing; a `--require-pin` test passing on a different refusal; one equivalent
+  mutant).
+- **False positives on the current tree: ZERO, measured.** The pin was cut from
+  2,636 declarations; a projection built from `main` an hour later carries
+  2,675 — 39 new declarations of ordinary lane work — and the gate reports 0
+  findings on it.
+- **The classifier was registered in NEITHER gate.** Now both, as the CHECKER
+  and not only its tests.
+
+### Handed on, not fixed here
+
+- `docs/curriculum/curriculum.toml`'s `kernel_decls` pins are not a snapshot of
+  any single tree state: `naturals` 518 matches, `rationals` is pinned 206
+  against a measured 221 and `linear-algebra` 90 against 96. Left alone because
+  the `curriculum-spines` lane is actively editing that file;
+  `--expect-node-counts docs/curriculum/curriculum.toml` re-derives it.
+- `artifacts/autogenesis/kernel-dependency-projection-v1.json` is badly stale:
+  1,644 declarations against a live 2,675, missing `Rat.det`, `Nat.gaussFold`
+  and `CReal.integral`. It cannot be used as a cheap gate input by anything.
+
+## Landed changes
+
+| change | files |
+| --- | --- |
+| the three cohesion guards, the projection floor, `--require-pin`, `--run-projection`, `--expect-node-counts` | `scripts/measure-curriculum-kernel-coverage.py` |
+| the pin (27 splits + 59 catch-all families) | `artifacts/curriculum/bucket-cohesion-pin.tsv` |
+| controls, incl. both historical replays against real data | `scripts/tests/test_curriculum_bucket_cohesion.py`, `scripts/tests/fixtures/curriculum-projection-slice.tsv` |
+| mutation sweep `curriculum-bucket-cohesion` | `scripts/tests/mutation_controls.py` |
+| the CHECKER registered, not only its tests | `scripts/check.sh`, `justfile` |
+| the decision | `docs/research/09-decisions/adr-1215-…md` |
+
 **ADR-0521: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
 one-constructor pair of `CReal`s with equality the *defined* relation
@@ -37043,6 +37111,73 @@ The summand identification, named exactly in ADR-1155's "What remains": a
 case-split proofs that the two parametrisations hit `W`, an `altSign` parity
 step, and then `sumRange_matSkip` twice plus `Rat.sumRange_swap`. Bulk is in
 the two identifications. Nothing in it needs a type this kernel lacks.
+
+Status: **done** (2026-08-31). `Rat.det_transpose` — `det (matTranspose A) n =
+det A n` at a symbolic dimension — is admitted axiom-free, together with
+cofactor expansion along the first COLUMN. Five declarations, all admitted on
+the first attempt. Three of ADR-1120's four determinant laws are now proved;
+only multiplicativity remains, and ADR-1135 established that it is blocked on
+an aggregate type this kernel does not have rather than on effort.
+
+**ADR-1185's closing sizing is corrected.** It said transpose invariance was
+"strictly downstream" of `Rat.det_row_expansion`. The row law is not used and
+cannot be: expansion along a column of `A` IS expansion along a row of `Aᵀ`, so
+reaching for it is circular. What it constrains is one summand at a time — the
+`p`-th column summand is the `c = 0` slice of the row-`p` expansion — so it
+relates each summand to its siblings across `c` and never the sum across `p`.
+
+The column law is nevertheless **cheaper** than the row law, not merely
+independent of it: five declarations against twenty. Because one expansion
+deletes a row and the other a column, the two exchanges never compete for one
+index space, so `matMinor_row_col_comm` is `matSkip_succ_succ` once per axis
+with **no `Nat.ble` hypothesis and no case split**. The route has no
+`laplaceSummand`, no `unskip`, no `Nat.beq` diagonal guard and no
+`sumRange_congr_lt`, and declares no new `Definition` at all.
+
+## Landed changes
+
+| change | where |
+| --- | --- |
+| `Rat.matMinor_row_col_comm`, `Rat.det_minor_row_col_comm`, `Rat.det_col_expansion`, `Rat.matMinor_transpose`, `Rat.det_transpose` | `crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs` |
+| the five names, in both inventories | `crates/axeyum-lean-kernel/src/rat_prelude.rs`, `.../rat_prelude_tests.rs` |
+| `det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign`, `the_transpose_and_column_statements_quantify_over_matrix_and_dimension` | `.../rat_prelude_tests.rs` |
+| `F:rat-det-col-expansion`, `F:rat-det-transpose` | `artifacts/facts/` |
+| the route checks, re-runnable | `docs/research/09-decisions/adr-1210-det-transpose-checks.py` |
+| ADR-1210 | `docs/research/09-decisions/adr-1210-transpose-invariance-needs-the-column-law-not-the-row-law.md` |
+
+## Measurements
+
+- `cargo test -p axeyum-lean-kernel --lib rat_prelude::` — **156 passed, 0
+  failed, 213.70 s**.
+- `rat` prelude build, A/B by disabling exactly these five declarations on the
+  same machine minutes apart: **14.19 s → 14.57 s**. Four runs on the identical
+  tree ranged 13.96–14.57 s, so 0.38 s is an **upper bound within run-to-run
+  spread**, not a resolved effect.
+- `python3 docs/research/09-decisions/adr-1210-det-transpose-checks.py` — 0
+  failures, 22 checks, six negative controls each measured rather than
+  asserted.
+- `python3 scripts/validate-facts.py` — 2,449 facts, 0 errors.
+- `scripts/check-settled-fact-statements.py` — PASS, `unpinned=0`.
+
+## Mutation, both columns
+
+Under the `matSkip` branch swap, **four of the five declarations report
+`UnknownConst`** (confounded by `matSkip_succ_succ` failing upstream), so that
+probe says nothing about them on the declaration axis — it does falsify four of
+the five statements. A second probe was designed: transposing the column
+summand's entry index refuses exactly `det_col_expansion` and `det_transpose`,
+both naming their own type error, with all 41 other declarations in the file
+correctly admitted. But it leaves `det_transpose`'s **statement** true, so its
+rejection there is a broken proof rather than a false theorem. Neither probe
+covers both declarations on both axes; the pair does.
+
+## Not done, and deliberately
+
+`the_determinant_toolkit_is_axiom_free` still iterates its own hand-maintained
+list, so it cannot see a declaration nobody added to it — the defect `CLAUDE.md`
+records for `every_creal_declaration_is_checked_and_axiom_free`. Fixing it needs
+an environment-derived filter for the names this one file owns, and the `Rat.`
+namespace is shared by the whole prelude, so it is a separate task.
 
 **Landed.** One of the four laws ADR-1120 left open over `Rat.det` (the
 determinant at general `n`) is proved at a symbolic dimension, together with

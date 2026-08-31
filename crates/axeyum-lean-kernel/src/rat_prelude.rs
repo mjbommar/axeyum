@@ -2166,6 +2166,57 @@ pub struct RatPrelude {
     /// reindexing step — no triangle decomposition, no `Nat.sub` in any
     /// summation bound, and no aggregate type this kernel lacks.
     pub det_row_expansion: NameId,
+
+    // --- transpose invariance (`matrix_det`, ADR-1210) ----------------------
+    /// `Rat.matMinor_row_col_comm : ∀ A p q r c,
+    /// matMinor (matMinor A 0 (succ q)) p 0 r c =
+    /// matMinor (matMinor A (succ p) 0) 0 q r c` — deleting row `0` then
+    /// column `succ q`, then row `p` and column `0`, reaches the same
+    /// submatrix as deleting row `succ p` then column `0`, then row `0` and
+    /// column `q`. POINTWISE, and **unconditionally**: unlike
+    /// [`Self::mat_minor_col_comm`] it carries no `Nat.ble` hypothesis,
+    /// because the two exchanges happen on DIFFERENT axes and never have to
+    /// be ordered against each other. It is [`Self::mat_skip_succ_succ`] on
+    /// each axis and nothing else.
+    pub mat_minor_row_col_comm: NameId,
+    /// `Rat.det_minor_row_col_comm : ∀ m A p q,
+    /// det (matMinor (matMinor A 0 (succ q)) p 0) m =
+    /// det (matMinor (matMinor A (succ p) 0) 0 q) m` —
+    /// [`Self::mat_minor_row_col_comm`] carried through [`Self::det_congr`],
+    /// which is the only route a pointwise matrix identity has to a `det` in
+    /// a kernel with no `funext`.
+    pub det_minor_row_col_comm: NameId,
+    /// `Rat.det_col_expansion : ∀ m A, det A (succ m) =
+    /// sumRange (fun p => altSign p * (A p 0 * det (matMinor A p 0) m))
+    /// (succ m)` — **cofactor expansion along the first COLUMN**.
+    ///
+    /// The crux of transpose invariance, and it does NOT follow from
+    /// [`Self::det_row_expansion`]: each column summand is the `c = 0` slice
+    /// of the row-`p` expansion, so the row law constrains each summand's
+    /// SIBLINGS and never the column sum itself (ADR-1210 §9). One induction
+    /// on the dimension. Both sides peel their head — and the two heads are
+    /// the SAME term — leaving a double sum that agrees termwise after one
+    /// [`Self::sum_range_swap`]. The pointwise identity is unrestricted, so
+    /// this needs [`Self::sum_range_congr`] rather than
+    /// [`Self::sum_range_congr_lt`], and there is no diagonal guard, no
+    /// [`Self::unskip`] and no `Nat.beq` anywhere in it.
+    pub det_col_expansion: NameId,
+    /// `Rat.matMinor_transpose : ∀ A q r c,
+    /// matMinor (matTranspose A) 0 q r c = matTranspose (matMinor A q 0) r c`
+    /// — the minor of a transpose is the transpose of the mirrored minor,
+    /// POINTWISE. `Eq.refl`: both sides delta-beta-reduce to
+    /// `A (matSkip q c) (matSkip 0 r)`.
+    pub mat_minor_transpose: NameId,
+    /// `Rat.det_transpose : ∀ n A, det (matTranspose A) n = det A n` — the
+    /// determinant is invariant under transpose, at a **symbolic** dimension.
+    /// The third of the four laws ADR-1120 named over [`Self::det`].
+    ///
+    /// Induction on the dimension with the matrix under the motive:
+    /// `det_succ` on the transpose is expansion along `A`'s first COLUMN
+    /// entry by entry, [`Self::mat_minor_transpose`] plus
+    /// [`Self::det_congr`] turns each minor into a transpose the induction
+    /// hypothesis can consume, and [`Self::det_col_expansion`] closes it.
+    pub det_transpose: NameId,
 }
 
 impl RatPrelude {
@@ -2572,6 +2623,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         laplace_summand_row_i: child(kernel, "laplaceSummand_rowI"),
         laplace_summand_diag: child(kernel, "laplaceSummand_diag"),
         det_row_expansion: child(kernel, "det_row_expansion"),
+        mat_minor_row_col_comm: child(kernel, "matMinor_row_col_comm"),
+        det_minor_row_col_comm: child(kernel, "det_minor_row_col_comm"),
+        det_col_expansion: child(kernel, "det_col_expansion"),
+        mat_minor_transpose: child(kernel, "matMinor_transpose"),
+        det_transpose: child(kernel, "det_transpose"),
     }
 }
 

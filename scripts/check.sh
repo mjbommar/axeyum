@@ -365,6 +365,16 @@ step absence-claims-tests python3 -m unittest scripts.tests.test_check_absence_c
 # Shells out to `cargo run --release --example kernel_declaration_projection`,
 # which `shape-duplicates` above has already warmed.
 step absence-claims python3 scripts/check-absence-claims.py
+# ADR-1215: the curriculum bucket-cohesion guards. THE CHECKER, not only its
+# tests -- ADR-1170 and ADR-1190 are both retrospectives on registering a
+# suite of synthetic fixtures while the real subject went unexamined, and
+# `scripts/tests/test_curriculum_bucket_cohesion` on its own would be the
+# third. `--run-projection` reads the live kernel (`shape-duplicates` and
+# `absence-claims` above have already warmed the release build);
+# `--require-pin` refuses to run with a missing pin file, because an absent
+# pin makes every guard examine an empty table and exit 0.
+step curriculum-bucket-cohesion python3 scripts/measure-curriculum-kernel-coverage.py --run-projection --require-pin
+step curriculum-bucket-cohesion-tests python3 -m unittest scripts.tests.test_curriculum_bucket_cohesion
 # ADR-0745: the number-theory certificate checkers. Asserts a ratcheted NONZERO
 # fixture count, because a bare `cargo test --lib <filter>` exits 0 when the
 # filter matches nothing. The guard-kill mutation sweep is
