@@ -10,8 +10,9 @@ explicit extension and truncation, complete states have a canonical binary
 artifact codec, and the source-derived symbolic memory-frame route covers all
 eight supported widths. Next: independently pinned RV64I and x86-64 teaching
 slices, broader semantic relations, manifests, the remaining Python machine
-projection, and clean-checkout book gates. The first PyO3 slice now projects A0
-words faithfully; state, instruction, trace, and real-ISA bindings remain. A0 addition has fixed-width symbolic certificates;
+projection, and clean-checkout book gates. The PyO3 layer now projects the
+complete A0 word, state, memory, instruction, step, and trace surface; real-ISA
+bindings and cross-machine relations remain. A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
 
@@ -40,3 +41,4 @@ interfaces as implemented until those routes run and their controls fire.
 | 2026-08-30 | `5ad3bbfcd` | Add replayable x86-64 source-pin and decoder/step reports. Six manuscript programs execute across all seventeen forms; three trap classes and four semantic mutations are checked; source-digest and following-RIP branch-base controls fail closed. Book manifests remain pending. |
 | 2026-08-30 | `d75cd25bf` | Begin the faithful PyO3 machine projection with A0 words, dotted imports, generated stubs, and runtime/static-type controls. The focused surface passes; the aggregate Python suite separately exposes one stale agent fixture and a deterministic prelude-build segfault that remain full-gate blockers. |
 | 2026-08-30 | `055536b5b` | Repair the deterministic Python prelude segfault by moving the grown CReal and Complex builders to the existing bounded deep-stack boundary; replace the stale fixed retrieval-miss fact with a derived live control. The full suite now completes (1,846 passed, 34 skipped) and exposes nine separate knowledge/autogenesis drift failures on the superseded pre-rebase snapshot. |
+| 2026-08-30 | `4e93f9d62` | Complete the reader-facing A0 Python surface: memory, state codec, all seventeen typed instruction families, step, bounded traces, categorized traps, generated stubs, and thirteen direct reader controls. Rust, runtime/stub, static-type, lint, and formatting gates pass; RV64, x86-64, cross-machine, and book bindings remain open. |

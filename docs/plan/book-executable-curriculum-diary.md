@@ -718,3 +718,46 @@ The current-base rerun completed in 563.08 seconds with the same exact result:
 1,846 passed, 34 skipped, and the nine named knowledge/autogenesis failures.
 The machine projection, prelude crash repair, and retrieval control all passed
 inside that run; the aggregate gate remains accurately red.
+
+## 2026-08-30 — complete reader-facing A0 Python execution surface
+
+Expanded the first word-only projection into the complete A0 surface needed by
+a reader to construct and execute the teaching machine. The Python layer now
+wraps the Rust `Conditions`, finite dense or sparse `Memory`, immutable
+`Program`, categorized `Trap`, `Outcome`, canonical `State`, all seventeen
+typed `Instruction` families, and bounded `Trace`. `step`, `run`, and
+`run_prefix` delegate directly to `axeyum_machine::a0`; no instruction
+semantics or state transition is reimplemented in Python.
+
+The first draft did not compile under current PyO3 because it expanded helper
+macros inside a `#[pymethods]` block, a pattern PyO3 now rejects. Replaced the
+macro-generated arithmetic and shift factories with explicit methods. Every
+factory now runs the Rust canonical encoder before returning, so an invalid
+register is rejected at construction rather than surviving until a later
+`encode()`. Added explicit PyO3 object-extraction policy to every cloned class,
+borrowed trap inspection instead of moving variants, and exposed instruction
+operands so decoded bytes are inspectable rather than identified only by an
+opcode-family string.
+
+Added six end-to-end Python controls beyond the existing seven word controls.
+They cover dense and sparse memories plus duplicate rejection; immutable state
+updates, width validation, and canonical state-codec replay; canonical
+encode/decode for all seventeen instruction families and malformed factories;
+the exact overflowing eight-bit addition transition including destination,
+frame, PC, and four flags; little-endian store/load plus a trapped store with
+no partial write; and the distinct `bound-exhausted`, `prefix-returned`, and
+`halted` trace outcomes including terminal stuttering.
+
+The built editable extension passes all 13 machine tests. Strict all-target,
+all-feature Clippy passes for `axeyum-py`. Generated stubs describe the new
+surface and agree with the imported extension: 25 modules, 1,783 symbols, five
+intentional aliases, and 301 synthesized dunders. The typed-stub gate reports
+1,588 typed parameters and 131 explicitly allowlisted `Any` uses; `stubtest`
+passes; the Python type check retains its four-diagnostic budget with its
+control firing; and Ruff lint and formatting pass for the expanded test file.
+The implementation and generated reader contract landed as `4e93f9d62`.
+
+This closes the A0 portion of the reader-facing Python machine interface. It
+does not close the whole Python plan: RV64, x86-64, cross-machine relations,
+book-example bindings, clean-checkout installation, and the nine aggregate
+knowledge/autogenesis failures remain open.
