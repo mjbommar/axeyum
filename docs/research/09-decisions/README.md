@@ -736,3 +736,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0845](adr-0845-the-infrastructure-frontier-curates-candidates-and-validates-them-live.md) | L2 phase G3 publishes four frozen queues (missing language | accepted |
 | [0850](adr-0850-nursery-split-exemption-mechanism.md) | Adds a component-scoped exemption mechanism to the nursery | accepted |
 | [0855](adr-0855-nursery-v2-cross-population-component-check.md) | check-autogenesis-nursery.py's declared-dependency component | accepted |
+| [0900](adr-0900-draw-10-is-declined-the-below-floor-held-out-safe-supply-is-exhausted.md) | Dispatched to author draw 10 against a reported "3 dispatchable | accepted |
