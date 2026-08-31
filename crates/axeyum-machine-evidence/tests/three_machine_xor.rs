@@ -11,6 +11,14 @@ use axeyum_machine_evidence::{
 fn report_replays_all_cases_and_pointer_control_fires() {
     let report = three_machine_xor_report().unwrap();
     assert_eq!(report.cases.len(), 8);
+    assert_eq!(
+        (
+            report.a0_static_instructions,
+            report.rv64_static_instructions,
+            report.x64_static_instructions,
+        ),
+        (11, 9, 8)
+    );
     assert_eq!(report.cases[0].name, "empty");
     assert_eq!(report.cases[5].result, 0);
     let path = std::env::temp_dir().join(format!(

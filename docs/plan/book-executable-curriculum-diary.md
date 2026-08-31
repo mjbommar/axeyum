@@ -998,12 +998,18 @@ and preserves memory. Dynamic counts match the chapter formulas exactly:
 A0 6+5n, RV64I 4+5n, and x86-64 4+4n. The harness rejects more than 96 words
 before the data region can overlap the x86 return stack.
 
+The report also retains the exact static counts of 11, 9, and 8 instructions
+and the three program-byte digests. Its cost scope explicitly labels these as
+descriptive instruction and byte accounting, not an optimization or
+minimality result. This matches the Chapter 15 research contract and master
+outline; the stale ledger phrase "bounded-optimization package" did not.
+
 The load-bearing control changes only RV64I's pointer increment from eight to
 one. The two-word overlapping-bits case rejects it at the second loop head in
 the pointer clause. Direct production and checking pass with result SHA-256
 04935cb96fa6631d2dfb0dbc3b3b053ad3efc7c966c3cb993edbae3aba955d9d;
 the serialized report SHA-256 is
-6e27101c016ce9adf10826a13c88dbd0e4a9b43c448b6a55ba15218a7078a869.
+7edd5fb12fe7d86d60f01c3e6d799f2da7b9659c16ce6a1df27b507c1ffd9cb3.
 Strict Clippy passes for both crates, with four core relation tests and one
 evidence replay test.
 
