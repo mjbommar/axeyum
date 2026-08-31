@@ -73,11 +73,20 @@ BUCKETS: list[tuple[str, str]] = [
      r"^CReal\.(Converges|Cauchy|converges|cauchy|limit|Limit|"
      r"RegularSeq|scaledCauchy|regular_of_scaled|archimedean|density)"),
     ("complex", r"^(Complex|CPoint)\."),
+    # The `.*` alternatives are deliberate: a prefix-only pattern leaves
+    # `Nat.exists_prime_gt`, `Nat.pow_prime_modeq_self` and
+    # `Nat.least_residue_ne_zero_of_coprime` to fall through to the `naturals`
+    # carrier bucket, which understates the destination it is measuring.
     ("number-theory",
      r"^(Nat|Int)\.(prime|Prime|totient|fib|Fib|fastFib|perfect|Perfect|"
      r"Squarefree|squarefree|wilson|Wilson|euler|Euler|"
-     r"sumOfDivisors|sigma|nth|minFac|factorization|"
-     r"legendre|quadratic|sum_two_squares)"),
+     r"sumOfDivisors|sumDivisors|sigma|nth|minFac|factorization|"
+     r"legendre|quadratic|sum_two_squares|"
+     r"exists_prime|pow_prime|not_prime|succ_pred_prime|"
+     r"dvd_of_forall_prime|coprime_fermatNumber|least_divisor|least_residue|"
+     r"pow_mul_prime|pow_two_ne_pow_two_mul_prime|pow_of_pow_add_prime|"
+     r"self_inverse_mod_prime|factorial_interior_modeq|factorial_sq_modeq|"
+     r"add_pow_modeq_prime|gauss_fold_injective)"),
     # NOT `matrix|determinant|eigen`. That pattern returns ZERO, and the zero
     # is an artefact of the query: this kernel spells its linear algebra
     # `Rat.det2` / `Rat.det3` / `Rat.dotN` (a vector is a finite function plus

@@ -29,13 +29,16 @@
 # says anything about what the Lean-core kernel has PROVED, and reading them as
 # if they did the two axes disagree in opposite directions (ADR-1075):
 # `calculus` is `lean-horizon` with 349 kernel declarations, `linear-algebra`
-# is `covered` with 25. `kernel_decls` is that second axis, stated separately
+# is `covered` with 25. 2,433 of 2,562 declarations attribute to a node; the
+# 129 that do not are the 30 legacy `AxReal` axioms and the 94-declaration
+# string package, neither of which is a curriculum subject. `kernel_decls` is that second axis, stated separately
 # so neither can be mistaken for the other. It is a measurement, not a
 # judgement:
 #
 #   cargo run --release -p axeyum-lean-kernel \
 #     --example kernel_declaration_projection > /tmp/proj.tsv
-#   python3 scripts/measure-curriculum-kernel-coverage.py /tmp/proj.tsv
+#   python3 scripts/measure-curriculum-kernel-coverage.py /tmp/proj.tsv \
+#     --expect-attributed 2433
 #
 # Measured 2026-08-31 over 2,562 distinct declarations, every one axiom-free.
 # The counts below are that run. Re-measure rather than adjust by hand; the
@@ -164,7 +167,7 @@ decidability = "bounded"
 axeyum_theory = "LIA / BV"
 family = "NumberSystem"
 status = "covered"
-kernel_decls = 525
+kernel_decls = 505
 summary = "Peano successor arithmetic; concrete arithmetic decidable, the induction axiom is not."
 
 [[node]]
@@ -178,7 +181,7 @@ decidability = "computable"
 axeyum_theory = "LIA / BV"
 family = "NumberSystem"
 status = "covered"
-kernel_decls = 189
+kernel_decls = 185
 summary = "Signed arithmetic and ordering; linear integer facts decided by simplex + branch-and-bound."
 
 [[node]]
@@ -238,7 +241,7 @@ decidability = "computable"
 axeyum_theory = "BV / LIA + GCD test"
 family = "NumberTheory"
 status = "covered"
-kernel_decls = 153
+kernel_decls = 151
 summary = "Divisibility, gcd, Bézout's identity, unique factorization; gcd/Bézout are compute-and-check."
 
 [[node]]
@@ -354,7 +357,7 @@ decidability = "bounded"
 axeyum_theory = "BV / LIA"
 family = "NumberTheory"
 status = "covered"
-kernel_decls = 79
+kernel_decls = 105
 summary = "Primes, factorization, congruences, Diophantine equations; bounded instances are self-checkable."
 
 [[node]]
