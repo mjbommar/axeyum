@@ -226,7 +226,7 @@ fn lub_decides_em_states_excluded_middle_over_the_counterexample_family() {
 }
 
 fn lub_decides_em_states_excluded_middle_over_the_counterexample_family_body() {
-    let (mut kernel, p) = built();
+    let (kernel, p) = built();
     let declaration = kernel
         .environment()
         .get(p.lub_decides_em)
