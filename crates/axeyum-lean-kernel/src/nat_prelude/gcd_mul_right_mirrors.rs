@@ -46,67 +46,14 @@ use super::helpers::and_right;
 use super::ops::{NatDev, NatOps};
 use crate::KernelError;
 use crate::expr::ExprId;
+use crate::proof_plan::{self, Template};
 
-/// `eq(a,b) -> Iff (pred a) (pred b)`, for an arbitrary one-argument
-/// proposition-valued `pred`. `Eq.rec` at the reflexive instance. Local copy
-/// of the combinator in `gcd_dvd_mirrors.rs` -- see this development's
-/// established convention (`mod_mul_lemmas.rs`'s module doc) of copying such
-/// small proof-term combinators per file rather than sharing them.
-fn pred_iff_of_eq(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    a: ExprId,
-    b: ExprId,
-    eq_ab: ExprId,
-    pred: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
-) -> ExprId {
-    let p = *p;
-    let pa = pred(d, a);
-    let motive = d.eq_motive(a, &|d, x| {
-        let px = pred(d, x);
-        d.const_app(p.logic.iff, &[pa, px])
-    });
-    let refl_case = {
-        let x_fv = d.fresh_fvar();
-        let x = d.kernel().fvar(x_fv);
-        let id = d.lam_fv(x_fv, pa, x);
-        d.const_app(p.logic.iff_intro, &[pa, pa, id, id])
-    };
-    d.transport(a, motive, refl_case, b, eq_ab)
-}
-
-/// `h1 : Iff A B, h2 : Iff B C  ⊢  Iff A C`. Local copy.
-fn iff_trans(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    a_ty: ExprId,
-    b_ty: ExprId,
-    c_ty: ExprId,
-    h1: ExprId,
-    h2: ExprId,
-) -> ExprId {
-    let p = *p;
-    let mp = {
-        let a_fv = d.fresh_fvar();
-        let a = d.kernel().fvar(a_fv);
-        let h1_mp = d.const_app(p.logic.iff_mp, &[a_ty, b_ty, h1]);
-        let b_from_a = d.apply(h1_mp, &[a]);
-        let h2_mp = d.const_app(p.logic.iff_mp, &[b_ty, c_ty, h2]);
-        let c_from_b = d.apply(h2_mp, &[b_from_a]);
-        d.lam_fv(a_fv, a_ty, c_from_b)
-    };
-    let mpr = {
-        let c_fv = d.fresh_fvar();
-        let c = d.kernel().fvar(c_fv);
-        let h2_mpr = d.const_app(p.logic.iff_mpr, &[b_ty, c_ty, h2]);
-        let b_from_c = d.apply(h2_mpr, &[c]);
-        let h1_mpr = d.const_app(p.logic.iff_mpr, &[a_ty, b_ty, h1]);
-        let a_from_b = d.apply(h1_mpr, &[b_from_c]);
-        d.lam_fv(c_fv, c_ty, a_from_b)
-    };
-    d.const_app(p.logic.iff_intro, &[a_ty, c_ty, mp, mpr])
-}
-
+/// The `Eq -> Iff` lift, the `Iff` chains, and the `Iff` flip below used to
+/// be local `pred_iff_of_eq`/`iff_trans` copies (this file's module doc used
+/// to cite `mod_mul_lemmas.rs`'s convention of keeping one per file); they
+/// now go through [`crate::proof_plan`] (L3 D5), which builds the identical
+/// term shape — see `proof_plan::tests::rewrite_iff_matches_pred_iff_of_eq`.
+///
 /// `Iff (dvd k (mul (gcd a b) c)) (dvd k (mul b c))`, given
 /// `k_dvd_ac : dvd k (mul a c)` (always true at every call site here, via
 /// `dvd_mul`). See the module doc for the derivation.
@@ -132,7 +79,8 @@ fn dvd_gcd_scaled_iff(
 
     let dvd_k_gab_c = d.dvd(k, gab_c);
     let dvd_k_gac_bc = d.dvd(k, gac_bc);
-    let iff1 = pred_iff_of_eq(d, &p, gab_c, gac_bc, gm_rev, &|d, v| d.dvd(k, v));
+    let dvd_k_ctx = Template::App(p.dvd, vec![Template::Fixed(k), Template::Hole]);
+    let iff1 = proof_plan::iff_lift(d, dvd_k_ctx, gab_c, gac_bc, gm_rev);
     // iff1 : Iff (dvd k gab_c) (dvd k gac_bc)
 
     let iff2 = d.lemma(p.dvd_gcd_iff, &[k, ac, bc]);
@@ -157,8 +105,11 @@ fn dvd_gcd_scaled_iff(
         d.const_app(p.logic.iff_intro, &[and_ty, dvd_k_bc, mp, mpr])
     };
 
-    let combined = iff_trans(d, &p, dvd_k_gab_c, dvd_k_gac_bc, and_ty, iff1, iff2);
-    iff_trans(d, &p, dvd_k_gab_c, and_ty, dvd_k_bc, combined, iff3)
+    proof_plan::iff_chain(
+        d,
+        dvd_k_gab_c,
+        &[(dvd_k_gac_bc, iff1), (and_ty, iff2), (dvd_k_bc, iff3)],
+    )
 }
 
 /// Declares `Nat.dvd_gcd_mul_iff_dvd_mul`, `Nat.dvd_mul_gcd_iff_dvd_mul`, and
@@ -207,38 +158,35 @@ pub(super) fn declare_gcd_mul_right_mirrors(
         let mn = d.mul(m, n);
         let nm = d.mul(n, m);
 
+        let dvd_k_ctx = Template::App(p.dvd, vec![Template::Fixed(k), Template::Hole]);
+
         // Left side: mul (gcd k m) n = mul n (gcd k m).
         let comm_left = d.lemma(p.mul_comm, &[gkm, n]); // Eq gkm_n n_gkm
-        let left_iff = pred_iff_of_eq(d, &p, gkm_n, n_gkm, comm_left, &|d, v| d.dvd(k, v));
+        let left_iff = proof_plan::iff_lift(d, dvd_k_ctx.clone(), gkm_n, n_gkm, comm_left);
         // left_iff : Iff (dvd k gkm_n) (dvd k n_gkm)
-        let left_iff_rev = {
-            let dvd_gkm_n = d.dvd(k, gkm_n);
-            let dvd_n_gkm = d.dvd(k, n_gkm);
-            let mp = d.const_app(p.logic.iff_mpr, &[dvd_gkm_n, dvd_n_gkm, left_iff]);
-            let mpr = d.const_app(p.logic.iff_mp, &[dvd_gkm_n, dvd_n_gkm, left_iff]);
-            d.const_app(p.logic.iff_intro, &[dvd_n_gkm, dvd_gkm_n, mp, mpr])
-        };
+        let dvd_gkm_n = d.dvd(k, gkm_n);
+        let dvd_n_gkm = d.dvd(k, n_gkm);
+        let left_iff_rev = proof_plan::iff_flip(d, dvd_gkm_n, dvd_n_gkm, left_iff);
         // left_iff_rev : Iff (dvd k n_gkm) (dvd k gkm_n)
 
         // Right side: mul m n = mul n m.
         let comm_right = d.lemma(p.mul_comm, &[m, n]); // Eq mn nm
-        let right_iff = pred_iff_of_eq(d, &p, mn, nm, comm_right, &|d, v| d.dvd(k, v));
+        let right_iff = proof_plan::iff_lift(d, dvd_k_ctx, mn, nm, comm_right);
         // right_iff : Iff (dvd k mn) (dvd k nm)
 
         let dvd_n_gkm_ty = d.dvd(k, n_gkm);
         let dvd_gkm_n_ty = d.dvd(k, gkm_n);
         let dvd_mn_ty = d.dvd(k, mn);
         let dvd_nm_ty = d.dvd(k, nm);
-        let step1 = iff_trans(
+        let result = proof_plan::iff_chain(
             d,
-            &p,
             dvd_n_gkm_ty,
-            dvd_gkm_n_ty,
-            dvd_mn_ty,
-            left_iff_rev,
-            base,
+            &[
+                (dvd_gkm_n_ty, left_iff_rev),
+                (dvd_mn_ty, base),
+                (dvd_nm_ty, right_iff),
+            ],
         );
-        let result = iff_trans(d, &p, dvd_n_gkm_ty, dvd_mn_ty, dvd_nm_ty, step1, right_iff);
 
         (d.const_app(p.logic.iff, &[dvd_n_gkm_ty, dvd_nm_ty]), result)
     })?;
@@ -264,7 +212,7 @@ pub(super) fn declare_gcd_mul_right_mirrors(
         let lhs = d.dvd(k, gkn_gkm);
         let mid = d.dvd(k, n_gkm);
         let rhs = d.dvd(k, nm);
-        let result = iff_trans(d, &p, lhs, mid, rhs, base, tail);
+        let result = proof_plan::iff_chain(d, lhs, &[(mid, base), (rhs, tail)]);
 
         (d.const_app(p.logic.iff, &[lhs, rhs]), result)
     })?;

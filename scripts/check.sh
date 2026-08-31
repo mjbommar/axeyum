@@ -1614,3 +1614,5 @@ step lean-adapter                  python3 scripts/check-lean-adapter.py
 step lean-adapter-mutations        bash scripts/tests/test-lean-adapter-mutations.sh
 step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py
 step declaration-spec python3 scripts/check-declaration-spec.py
+step proof-plan                    python3 scripts/check-proof-plan.py
+step proof-plan-tests              python3 scripts/tests/test-proof-plan-check.py

@@ -8,69 +8,19 @@
 //! along `add_comm n m : Eq (n+m) (m+n)` turns `n+m` into the `m+n` this
 //! fact's conclusion actually names. No new case split or induction: this is
 //! pure composition of `dvd_add_iff_right` and `add_comm`.
+//!
+//! The `Eq -> Iff` lift and the two-step `Iff` chain go through
+//! [`crate::proof_plan`] (L3 D5) rather than a local `pred_iff_of_eq`/
+//! `iff_trans` pair — this file used to carry its own copy of both (the
+//! convention `gcd_mul_right_mirrors.rs`'s module doc used to describe),
+//! duplicated in at least two other files. `proof_plan::iff_lift`/
+//! `iff_chain` build the identical term shape; see
+//! `proof_plan::tests::rewrite_iff_matches_pred_iff_of_eq`.
 
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
 use crate::KernelError;
-use crate::expr::ExprId;
-
-/// `h : Eq Nat a b  ⊢  Iff (pred a) (pred b)`, for an arbitrary `Nat -> Prop`.
-/// `Eq.rec` at the reflexive instance. Local copy of the combinator this
-/// development keeps per file (see `gcd_mul_right_mirrors.rs`'s module doc).
-fn pred_iff_of_eq(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    a: ExprId,
-    b: ExprId,
-    eq_ab: ExprId,
-    pred: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
-) -> ExprId {
-    let p = *p;
-    let pa = pred(d, a);
-    let motive = d.eq_motive(a, &|d, x| {
-        let px = pred(d, x);
-        d.const_app(p.logic.iff, &[pa, px])
-    });
-    let refl_case = {
-        let x_fv = d.fresh_fvar();
-        let x = d.kernel().fvar(x_fv);
-        let id = d.lam_fv(x_fv, pa, x);
-        d.const_app(p.logic.iff_intro, &[pa, pa, id, id])
-    };
-    d.transport(a, motive, refl_case, b, eq_ab)
-}
-
-/// `h1 : Iff A B, h2 : Iff B C  ⊢  Iff A C`. Local copy.
-fn iff_trans(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    a_ty: ExprId,
-    b_ty: ExprId,
-    c_ty: ExprId,
-    h1: ExprId,
-    h2: ExprId,
-) -> ExprId {
-    let p = *p;
-    let mp = {
-        let a_fv = d.fresh_fvar();
-        let a = d.kernel().fvar(a_fv);
-        let h1_mp = d.const_app(p.logic.iff_mp, &[a_ty, b_ty, h1]);
-        let b_from_a = d.apply(h1_mp, &[a]);
-        let h2_mp = d.const_app(p.logic.iff_mp, &[b_ty, c_ty, h2]);
-        let c_from_b = d.apply(h2_mp, &[b_from_a]);
-        d.lam_fv(a_fv, a_ty, c_from_b)
-    };
-    let mpr = {
-        let c_fv = d.fresh_fvar();
-        let c = d.kernel().fvar(c_fv);
-        let h2_mpr = d.const_app(p.logic.iff_mpr, &[b_ty, c_ty, h2]);
-        let b_from_c = d.apply(h2_mpr, &[c]);
-        let h1_mpr = d.const_app(p.logic.iff_mpr, &[a_ty, b_ty, h1]);
-        let a_from_b = d.apply(h1_mpr, &[b_from_c]);
-        d.lam_fv(c_fv, c_ty, a_from_b)
-    };
-    d.const_app(p.logic.iff_intro, &[a_ty, c_ty, mp, mpr])
-}
+use crate::proof_plan::{self, Template};
 
 /// Declares `Nat.dvd_add_iff_left`. Must run after `declare_divisibility`
 /// (`Nat.dvd_add_iff_right`) and `declare_arithmetic` (`Nat.add_comm`), both
@@ -100,13 +50,14 @@ pub(super) fn declare_dvd_add_iff_left(
         let n_plus_m = d.add(n, m);
         let m_plus_n = d.add(m, n);
         let comm = d.lemma(p.add_comm, &[n, m]); // Eq Nat (n+m) (m+n)
-        let right_iff = pred_iff_of_eq(d, &p, n_plus_m, m_plus_n, comm, &|d, v| d.dvd(k, v));
+        let ctx = Template::App(p.dvd, vec![Template::Fixed(k), Template::Hole]);
+        let right_iff = proof_plan::iff_lift(d, ctx, n_plus_m, m_plus_n, comm);
         // right_iff : Iff (dvd k (n+m)) (dvd k (m+n))
 
         let dvd_np_m = d.dvd(k, n_plus_m);
         let dvd_mp_n = d.dvd(k, m_plus_n);
 
-        let result = iff_trans(d, &p, dvd_m_ty, dvd_np_m, dvd_mp_n, base, right_iff);
+        let result = proof_plan::iff_chain(d, dvd_m_ty, &[(dvd_np_m, base), (dvd_mp_n, right_iff)]);
         let final_iff = d.const_app(p.logic.iff, &[dvd_m_ty, dvd_mp_n]);
         let proof = d.lam_fv(h_fv, dvd_n_ty, result);
         (d.arrow(dvd_n_ty, final_iff), proof)
