@@ -61,6 +61,33 @@ check "json scalar disagreement refused" 1 'disagree|REFUSED' cfg.json \
   '{"k":1}' '{"k":2}' '{"k":3}'
 
 # 3. Rust cut mid-item: keeping both sides would not compile.
+# 2b. THE 2026-08-31 RATCHET: two lanes each land facts, so BOTH raise
+# `coverage_floor.min_identity_bound` correctly against their own bases, and the
+# pair conflicts. It only ever moves up, so max is the answer -- and the VALUE
+# matters, not just the exit code, so this case asserts 102 rather than trusting
+# "merged structurally". Hand-resolved twice before it was automated.
+D=$(fixture floor.json \
+  '{"coverage_floor":{"min_identity_bound":100,"max_header_exempt":5},"pins":[]}' \
+  '{"coverage_floor":{"min_identity_bound":102,"max_header_exempt":5},"pins":[]}' \
+  '{"coverage_floor":{"min_identity_bound":101,"max_header_exempt":5},"pins":[]}')
+( cd "$D" && python3 "$SCRIPT" >/dev/null 2>&1 )
+if python3 -c "import json,sys;d=json.load(open('$D/floor.json'));
+sys.exit(0 if d['coverage_floor']['min_identity_bound']==102 else 1)" 2>/dev/null; then
+  say "ratchet floor takes the max" "ok"; PASS=$((PASS+1))
+else
+  say "ratchet floor takes the max" "FAIL"; FAIL=$((FAIL+1))
+fi
+rm -rf "$D"
+
+# 2c. AND THE RULE MUST NOT LEAK. A `max_*` floor has no fixed direction --
+# `max_header_exempt` was deliberately RAISED 30 -> 67 once -- so it must still
+# refuse. Without this, the narrow rule could be widened to all of
+# `coverage_floor` and nothing would die.
+check "non-min floor key still refused" 1 'disagree|REFUSED' floor2.json \
+  '{"coverage_floor":{"max_header_exempt":30},"pins":[]}' \
+  '{"coverage_floor":{"max_header_exempt":67},"pins":[]}' \
+  '{"coverage_floor":{"max_header_exempt":40},"pins":[]}'
+
 check "rust cut mid-item refused" 1 'cut mid-item|REFUSED' a.rs \
 'fn base() {}
 ' 'fn base() {}
@@ -117,8 +144,15 @@ check "shell duplicate assignment refused" 1 'both sides define|REFUSED' g.sh \
 
 # --- mutations: each guard must be killed by exactly one case ---------------
 echo "  mutations (each must kill exactly one case):"
-for m in "json_no_parse|resolve_json|CUT" "balance_off|if cut:|if False and cut:" "dupdef_off|if dupes:|if False and dupes:" "prose_off|if prose:|if False and prose:"; do
-  NAME="${m%%|*}"; REST="${m#*|}"; FROM="${REST%%|*}"; TO="${REST#*|}"
+# Each entry is NAME|FROM|TO|EXPECTED_KILLS. The expectation is per-mutation
+# because the fixture list is shared: `json_no_parse` disables JSON handling
+# entirely, so it necessarily kills BOTH json fixtures (cfg.json and floor2.json).
+# The invariant this table enforces is that removing a guard is DETECTED and that
+# guards do not all reject through one shared check -- not that exactly one test
+# dies regardless of how many fixtures exercise the same code path.
+for m in "json_no_parse|resolve_json|CUT|2" "balance_off|if cut:|if False and cut:|1" "dupdef_off|if dupes:|if False and dupes:|1" "prose_off|if prose:|if False and prose:|1" "ratchet_leak|startswith(\"min_\")|startswith(\"\")|1"; do
+  NAME="${m%%|*}"; REST="${m#*|}"; FROM="${REST%%|*}"; REST="${REST#*|}"
+  TO="${REST%|*}"; WANT="${REST##*|}"
   T=$(mktemp -d); cp "$SCRIPT" "$T/mutant.py"
   if [ "$TO" = "CUT" ]; then
     python3 - "$T/mutant.py" <<'PY'
@@ -172,11 +206,21 @@ reads a third way entirely.
 ')
   ( cd "$D" && python3 "$T/mutant.py" >/dev/null 2>&1; echo $? > c )
   [ "$(cat "$D/c")" != "1" ] && KILLED=$((KILLED+1))
+  rm -rf "$D"
+  # A `max_*` floor must still refuse. Widening the ratchet rule to every
+  # `coverage_floor` key makes this resolve silently, which would pick a
+  # direction for an allowance that has none.
+  D=$(fixture floor2.json \
+    '{"coverage_floor":{"max_header_exempt":30},"pins":[]}' \
+    '{"coverage_floor":{"max_header_exempt":67},"pins":[]}' \
+    '{"coverage_floor":{"max_header_exempt":40},"pins":[]}')
+  ( cd "$D" && python3 "$T/mutant.py" >/dev/null 2>&1; echo $? > c )
+  [ "$(cat "$D/c")" != "1" ] && KILLED=$((KILLED+1))
   rm -rf "$D" "$T"
-  if [ "$KILLED" = "1" ]; then
-    say "    $NAME" "killed exactly 1"; PASS=$((PASS+1))
+  if [ "$KILLED" = "$WANT" ]; then
+    say "    $NAME" "killed exactly $WANT"; PASS=$((PASS+1))
   else
-    say "    $NAME" "FAIL (killed $KILLED, want 1)"; FAIL=$((FAIL+1))
+    say "    $NAME" "FAIL (killed $KILLED, want $WANT)"; FAIL=$((FAIL+1))
   fi
 done
 

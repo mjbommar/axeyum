@@ -163,6 +163,28 @@ def resolve_json(path: str) -> tuple[bool, str]:
                     byk[r[key]] = r
             return [byk[k] for k in sorted(byk)]
         if a != b:
+            # A RATCHET FLOOR IS THE ONE SCALAR WITH A RULE. `coverage_floor.min_*`
+            # only ever moves UP -- it records progress so a later regression to
+            # the old level fails instead of passing. Two lanes that each land
+            # facts therefore BOTH raise it, correctly, against their own bases,
+            # and every such pair conflicts here. Measured twice on 2026-08-31
+            # (1977 vs 1976, then 1984 vs 1983); both hand-resolutions took the
+            # max and both were right.
+            #
+            # Scoped deliberately narrow: only under a `coverage_floor` trail,
+            # only a `min_` key, only when BOTH sides are ints. Everything else
+            # still refuses, because "no rule says which wins" is the safe
+            # default and is what makes this file worth having. In particular
+            # `max_*` floors are NOT ratcheted here -- `max_header_exempt` was
+            # deliberately RAISED 30 -> 67 once, so it has no fixed direction and
+            # a wrong guess would silently widen an allowance.
+            if (
+                "coverage_floor" in trail
+                and trail.rsplit(".", 1)[-1].startswith("min_")
+                and isinstance(a, int) and isinstance(b, int)
+                and not isinstance(a, bool) and not isinstance(b, bool)
+            ):
+                return max(a, b)
             conflicts.append(f"{trail or '<root>'}: {a!r} vs {b!r}")
         return b
 
