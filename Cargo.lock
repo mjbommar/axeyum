@@ -204,6 +204,7 @@ dependencies = [
  "axeyum-ir",
  "axeyum-lean-import",
  "axeyum-lean-kernel",
+ "axeyum-machine",
  "axeyum-query",
  "axeyum-smtlib",
  "axeyum-solver",

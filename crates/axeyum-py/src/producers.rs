@@ -1670,6 +1670,11 @@ mod stub_variables {
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "APPLICATION_MAX_TERMS", usize);
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "MAX_BINDERS", usize);
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "MAX_INDUCTIONS", usize);
+    pyo3_stub_gen::module_variable!(
+        "axeyum._native.producers",
+        "MAX_RETRIEVED_DECLARATIONS",
+        usize
+    );
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "MODEQ_MAX_BINDERS", usize);
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "FORMAT_VERSION", String);
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "IDENTITY_VERSION", String);

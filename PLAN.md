@@ -196,6 +196,12 @@ now. Nothing was deleted.
 | 2026-08-30 | `eac21f4d4` | Add replayable RV64I source-pin and decoder/step reports. The route executes all twelve selected forms, all nine XOR words, five trap classes, and three semantic mutations; source-digest and branch-base controls fail closed. Book manifests remain pending. |
 | 2026-08-30 | `3c5d2cafb` | Add the source-pinned seventeen-form x86-64 decoder, encoder, complete step profile, flags, memory and implicit stack control, plus canonical projection. Eight tests execute all six manuscript listings; book evidence remains pending. |
 | 2026-08-30 | `5ad3bbfcd` | Add replayable x86-64 source-pin and decoder/step reports. Six manuscript programs execute across all seventeen forms; three trap classes and four semantic mutations are checked; source-digest and following-RIP branch-base controls fail closed. Book manifests remain pending. |
+| 2026-08-30 | `d75cd25bf` | Begin the faithful PyO3 machine projection with A0 words, dotted imports, generated stubs, and runtime/static-type controls. The focused surface passes; the aggregate Python suite separately exposes one stale agent fixture and a deterministic prelude-build segfault that remain full-gate blockers. |
+| 2026-08-30 | `055536b5b` | Repair the deterministic Python prelude segfault by moving the grown CReal and Complex builders to the existing bounded deep-stack boundary; replace the stale fixed retrieval-miss fact with a derived live control. The full suite now completes (1,846 passed, 34 skipped) and exposes nine separate knowledge/autogenesis drift failures on the superseded pre-rebase snapshot. |
+| 2026-08-30 | `4e93f9d62` | Complete the reader-facing A0 Python surface: memory, state codec, all seventeen typed instruction families, step, bounded traces, categorized traps, generated stubs, and thirteen direct reader controls. Rust, runtime/stub, static-type, lint, and formatting gates pass; RV64, x86-64, cross-machine, and book bindings remain open. |
+| 2026-08-30 | `4548f3dda` | Move reader-facing A0 error formatting outside the source-pinned semantic file. The exact v10 digest is restored without relabeling message-only changes as new semantics; all sixteen book routes replay successfully again. |
+| 2026-08-30 | `3884b8d04` | Project the complete source-pinned twelve-form RV64I single-step slice through Python: typed instructions, canonical encoding, complete state, traps, memory, projection, source identity, generated stubs, and reader controls. Bounded RV64 traces and cross-machine interfaces remain open. |
+| 2026-08-30 | `ebcbfc618` | Project the complete source-pinned seventeen-form x86-64 single-step slice through Python: variable-length decode, explicit undefined flags, complete state, traps, stack effects, projection, source identity, generated stubs, and reader controls. Real-ISA bounded traces and cross-machine interfaces remain open. |
 | 2026-08-30 | l4-c3-thin-lean-adapter | ADR-0935 + `axeyum_lean_import::thin_adapter` (protocol/grading, 9 unit tests) + `thin_lean_adapter_goal_pack.rs` (8-category goal pack run live against real pinned Lean) + `scripts/check-lean-adapter.py`/`test-lean-adapter.py`/`test-lean-adapter-mutations.sh` (7 guards, mutation-verified 1:1) + `just lean-adapter` / `scripts/check.sh` gate registration |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
@@ -34733,8 +34739,12 @@ complete A0 concrete execution. The reusable word layer exposes and audits
 explicit extension and truncation, complete states have a canonical binary
 artifact codec, and the source-derived symbolic memory-frame route covers all
 eight supported widths. Next: independently pinned RV64I and x86-64 teaching
-slices, broader semantic relations, manifests, Python
-projection, and clean-checkout book gates. A0 addition has fixed-width symbolic certificates;
+slices, broader semantic relations, manifests, the remaining Python machine
+projection, and clean-checkout book gates. The PyO3 layer now projects the
+complete A0 word, state, memory, instruction, step, and trace surface. The
+source-pinned RV64I and x86-64 slices now have complete reader-facing
+single-step Python projections; real-ISA bounded traces and cross-machine relations remain.
+A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
 

@@ -51,6 +51,7 @@ axeyum-fp = { path = "../axeyum-fp", version = "0.1.0" }
 axeyum-ir.workspace = true
 axeyum-lean-import = { path = "../axeyum-lean-import", version = "0.1.0" }
 axeyum-lean-kernel = { path = "../axeyum-lean-kernel", version = "0.1.0" }
+axeyum-machine = { path = "../axeyum-machine", version = "0.1.0" }
 axeyum-query = { path = "../axeyum-query", version = "0.1.0" }
 axeyum-smtlib = { path = "../axeyum-smtlib", version = "0.1.0" }
 # `full` is the profile the SMT-LIB front door (ADR-0052) needs; it is pure Rust

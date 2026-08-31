@@ -639,3 +639,217 @@ both negative controls exit nonzero with `semantic-mismatch`. The evidence
 routes landed as `5ad3bbfcd`. The Axeyum half is complete, but the book objects
 remain open until their manifests, saved reports, digests, prose bindings, and
 full `make check-run` replay land.
+
+## 2026-08-30 — first reader-facing PyO3 machine projection
+
+Started the Python lesson surface at the lowest reusable boundary: A0 words.
+Added `axeyum.machine.a0.Word` as a direct wrapper around
+`axeyum_machine::a0::Word`; construction, signed and unsigned readings, high
+bit, little-endian bytes, zero extension, sign extension, and truncation all
+delegate to the Rust value. Python does not carry duplicate bit arithmetic.
+The constructor preserves the Rust contract and reduces an admitted `u64`
+modulo the selected width; unsupported widths and wrong-direction conversions
+raise `ValueError` with messages supplied by a new `Display` implementation on
+`A0Error`.
+
+Added the normal `axeyum.machine` forwarding module, nested dotted imports,
+generated stubs, and seven direct Python controls. The audit caught two
+interface defects before publication. PyO3 exposes `Vec<u8>` as Python
+`bytes`, while the generated stub claimed `list[int]`; the binding now returns
+`PyBytes` explicitly so runtime and static type agree. Stub regeneration also
+revealed that the existing runtime constant
+`producers.MAX_RETRIEVED_DECLARATIONS` had no generator declaration. Added the
+missing module-variable record instead of preserving a hand-written stub.
+
+Focused evidence passes: 26 A0, 7 RV64, and 8 x86 machine tests; 8 native
+binding tests; 24 machine/import Python tests; strict Clippy for
+`axeyum-machine` and `axeyum-py`; generated-stub/runtime comparison; the
+94.7-percent typed-stub gate; `mypy.stubtest`; the type-diagnostic budget;
+Ruff lint; and Ruff formatting.
+
+The aggregate `just py-check` is not green for reasons reproduced outside the
+new machine tests. `test_an_unresolvable_export_is_recorded_as_a_retrieval_miss`
+uses fact `F:ml430-int-fib-add-181b6a2c`, which is no longer in the current
+eligible population. Separately,
+`test_agent_tools.py::test_every_declared_prelude_builds` deterministically
+segfaults by itself in `agent/tools.py::_kernel_for` while building every
+prelude. These are full-gate blockers, not evidence against the focused word
+projection, and must be repaired before this lane can claim the complete
+Python gate.
+
+This slice is intentionally not called the Python machine interface complete.
+States, memory, instructions, decode/encode, step, trace, RV64, x86-64, and the
+cross-machine relation remain unbound.
+
+## 2026-08-30 — Python full-gate crash and stale-control repair
+
+Investigated the aggregate Python failures rather than excluding the agent
+tests. The prelude crash was reproducible without pytest: a fresh interpreter
+built `nat`, `int`, `logic`, and `rat`, then `build_creal_prelude()` exited 139;
+a second fresh interpreter did the same in `build_complex_prelude()`. Both had
+outgrown the main thread's 8 MB stack. The existing `cpoint` binding already
+documented and solved the same failure by building on a scoped 64 MB thread.
+Moved `creal` and `complex` across that boundary, retaining GIL release, panic
+conversion, and the returned kernel. The seven-prelude census now passes in
+115.75 seconds instead of killing CPython.
+
+The retrieval-miss control named a fact that had left the live eligible
+population. It now derives an eligible fact for which the authoritative export
+resolver returns `ExportUnavailable`, and fails explicitly if the corpus no
+longer contains such a control case. The focused test reaches the intended
+`retrieval-miss` outcome again.
+
+After those repairs, the complete suite runs to completion rather than
+segfaulting: 1,846 pass and 34 skip. Nine failures remain in unrelated,
+already-drifted knowledge/autogenesis checks: two bounded-application census
+expectations, one changed dependency count, three parsers that assume an older
+validator output grammar, one clean fixture rejected by the current validator,
+one nursery population mismatch, and one standard-library-only scripts rule
+breached by a tracked generator. This lane does not reinterpret those nine as
+machine-binding failures, but the aggregate `just py-check` remains red until
+their owning artifacts are reconciled.
+
+Those nine results came from the lane's superseded base. Before integration,
+`origin/main` was fetched and found 1,825 commits ahead; the four lane commits
+were rebased cleanly onto that authoritative head. The current-base gates must
+therefore be rerun before retaining or clearing any of the nine diagnoses.
+
+The current-base rerun completed in 563.08 seconds with the same exact result:
+1,846 passed, 34 skipped, and the nine named knowledge/autogenesis failures.
+The machine projection, prelude crash repair, and retrieval control all passed
+inside that run; the aggregate gate remains accurately red.
+
+## 2026-08-30 — complete reader-facing A0 Python execution surface
+
+Expanded the first word-only projection into the complete A0 surface needed by
+a reader to construct and execute the teaching machine. The Python layer now
+wraps the Rust `Conditions`, finite dense or sparse `Memory`, immutable
+`Program`, categorized `Trap`, `Outcome`, canonical `State`, all seventeen
+typed `Instruction` families, and bounded `Trace`. `step`, `run`, and
+`run_prefix` delegate directly to `axeyum_machine::a0`; no instruction
+semantics or state transition is reimplemented in Python.
+
+The first draft did not compile under current PyO3 because it expanded helper
+macros inside a `#[pymethods]` block, a pattern PyO3 now rejects. Replaced the
+macro-generated arithmetic and shift factories with explicit methods. Every
+factory now runs the Rust canonical encoder before returning, so an invalid
+register is rejected at construction rather than surviving until a later
+`encode()`. Added explicit PyO3 object-extraction policy to every cloned class,
+borrowed trap inspection instead of moving variants, and exposed instruction
+operands so decoded bytes are inspectable rather than identified only by an
+opcode-family string.
+
+Added six end-to-end Python controls beyond the existing seven word controls.
+They cover dense and sparse memories plus duplicate rejection; immutable state
+updates, width validation, and canonical state-codec replay; canonical
+encode/decode for all seventeen instruction families and malformed factories;
+the exact overflowing eight-bit addition transition including destination,
+frame, PC, and four flags; little-endian store/load plus a trapped store with
+no partial write; and the distinct `bound-exhausted`, `prefix-returned`, and
+`halted` trace outcomes including terminal stuttering.
+
+The built editable extension passes all 13 machine tests. Strict all-target,
+all-feature Clippy passes for `axeyum-py`. Generated stubs describe the new
+surface and agree with the imported extension: 25 modules, 1,783 symbols, five
+intentional aliases, and 301 synthesized dunders. The typed-stub gate reports
+1,588 typed parameters and 131 explicitly allowlisted `Any` uses; `stubtest`
+passes; the Python type check retains its four-diagnostic budget with its
+control firing; and Ruff lint and formatting pass for the expanded test file.
+The implementation and generated reader contract landed as `4e93f9d62`.
+
+This closes the A0 portion of the reader-facing Python machine interface. It
+does not close the whole Python plan: RV64, x86-64, cross-machine relations,
+book-example bindings, clean-checkout installation, and the nine aggregate
+knowledge/autogenesis failures remain open.
+
+## 2026-08-30 — preserve semantic identity across error presentation
+
+The first full book replay after binding the Chapter 6 Python example exposed
+a failure that the focused Python gates could not see. All twelve A0 producers
+exited with `semantic-package-mismatch`, while the four real-ISA routes passed.
+The pinned A0 package expected source SHA-256
+`6c57ccf27e25f6ec1c24f25c32599715bd9f725ff8dd03ff2da1f4d8354cb79a`;
+the current `a0.rs` hashed to
+`6659f24e1710b4feebcc6f56d12565f39490e9cbd47b946522ee57c6cade701d`.
+
+The only difference from the pinned semantic source was the reader-facing
+`Display` and `Error` implementation added for Python exceptions. No word,
+memory, decode, step, or trace rule had changed. Regenerating twelve semantic
+artifacts would therefore have assigned a new semantic identity to a message
+change. Instead, moved that presentation implementation into the private
+`a0_error` module and kept the public error type in `a0.rs`. The semantic
+source now reproduces the exact pinned digest while Python retains the same
+messages and Rust error trait.
+
+Twenty-six direct A0 tests pass, including the reader-facing message controls.
+Strict all-target, all-feature Clippy passes for `axeyum-machine` and
+`axeyum-py`. Most importantly, the book's live replay now accepts all sixteen
+routes again: twelve A0, two RV64, and two x86-64, each with its negative
+control. The boundary repair landed as `4548f3dda`.
+
+## 2026-08-30 — reader-facing RV64I Python projection
+
+Added `axeyum.machine.rv64` as a direct projection of the source-pinned Rust
+teaching slice. It exposes the official source release, source digest, RV64I
+version, exact twelve-form selection, typed constructors for every admitted
+form, canonical encode/decode, immutable program bytes, complete integer state,
+finite A0 memory, categorized outcomes and traps, canonical state projection,
+and one-step execution. The normal forwarding module and dotted native import
+both expose the same objects.
+
+Every instruction constructor validates through the Rust canonical encoder.
+Register access checks `x0..x31` before calling the underlying state method, so
+an invalid Python index becomes `ValueError` instead of reaching a Rust array
+panic. Immutable `with_register` preserves the architectural x0 rule. Python
+does not implement instruction behavior, fetch, target arithmetic, memory
+access, or traps; `step` delegates to `axeyum_machine::rv64::step`.
+
+Four reader-facing test groups cover all twelve constructor/round-trip forms
+and invalid operands; x0 plus the instruction-PC-relative branch base; aligned
+little-endian store/load, canonical projection, duplicate rejection, and an
+atomic missing-byte store; and the pinned source identity plus all five trap
+classes with terminal stuttering. The existing seven native RV64 tests and
+eight PyO3 library tests also pass. Strict all-target, all-feature Clippy
+passes. Runtime/stub parity now covers 26 modules and 1,804 symbols; the typed
+stub gate reaches 95.1 percent, `stubtest` passes, the existing type-diagnostic
+budget remains unchanged, and Ruff lint and formatting pass.
+
+This is a single-step concrete projection, matching the current Rust API. It
+does not invent a Python-only runner. RV64 bounded traces, x86-64, instruction
+effect sets, symbolic execution, and cross-machine relations remain open.
+The implementation and generated reader contract landed as `3884b8d04`.
+
+## 2026-08-30 — reader-facing x86-64 Python projection
+
+Added `axeyum.machine.x64` as the direct projection of the source-pinned Intel
+teaching slice. It exposes the pinned source revision and digest, the exact
+seventeen selected form families, typed constructors for all fifteen Rust
+instruction variants including the three admitted short conditions, variable-
+length canonical encode/decode with consumed length, immutable program bytes,
+six three-valued flags, complete state, finite memory, categorized traps,
+canonical state projection, and one-step execution.
+
+Instruction factories validate through the Rust canonical encoder. Short-jump
+conditions accept a small documented spelling set and return one canonical
+name. Flag values are `clear`, `set`, or `undefined`; the Python surface does
+not collapse an architecturally undefined flag to false. Register reads and
+immutable updates check the selected low-eight boundary before calling Rust.
+All instruction behavior, variable-length fetch, following-RIP arithmetic,
+partial-register behavior, implicit stack access, and trapping remain in
+`axeyum_machine::x64::step`.
+
+Four new reader test groups cover all seventeen selected forms and exact decode
+lengths; EAX upper-half clearing, logical flag definitions, undefined AF, and
+taken following-RIP-relative branches; CALL/RET continuation and RSP effects
+plus atomic failed PUSH; and source identity, canonical projection, duplicate
+rejection, incomplete fetch, illegal instruction, and terminal stuttering.
+The eight native x86 tests still execute all six printed manuscript listings.
+Eight PyO3 library tests also pass. Strict all-target, all-feature Clippy
+passes. Runtime/stub parity now covers 27 modules and 1,828 symbols; typed-stub
+coverage reaches 95.2 percent, `stubtest` passes, the type budget is unchanged,
+and Ruff lint and formatting pass.
+
+Like RV64, this is a complete selected single-step projection, not a new
+Python-only runner. Real-ISA bounded trace types, instruction effect sets,
+symbolic execution, and cross-machine relations remain open.
+The implementation and generated reader contract landed as `ebcbfc618`.

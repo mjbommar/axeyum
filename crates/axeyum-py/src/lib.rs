@@ -23,6 +23,7 @@ mod convert;
 mod error;
 mod ir;
 mod kernel;
+mod machine;
 mod producers;
 mod smt;
 mod solver;
@@ -74,6 +75,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         ("solver", solver::register(module)?),
         ("cas", cas::register(module)?),
         ("kernel", kernel::register(module)?),
+        ("machine", machine::register(module)?),
         ("producers", producers::register(module)?),
     ] {
         sys_modules.set_item(format!("axeyum._native.{name}"), &submodule)?;
