@@ -88,6 +88,7 @@ mod euclid;
 mod euler;
 mod euler_theorem;
 mod euler_totient;
+mod euler_unit_preserve;
 mod fibonacci;
 mod gcd;
 mod gcd_scaled_mirrors;
@@ -1283,6 +1284,15 @@ pub struct IntPrelude {
     /// `[0,n)` (of which injectivity on the coprime-residue subset is a free
     /// corollary, restricting `i,j` to that subset).
     pub euler_unit_injective: NameId,
+    /// `euler_unit_coprime_iff : ∀ n a k, 0 < n → 0 ≤ k → k < n →
+    /// Coprime a n → (Coprime k n ↔ Coprime (emod (mul a k) n) n)` — the full
+    /// predicate-preservation step `Int.prodRangeIf_permute`'s `preserve`
+    /// hypothesis needs (both directions, not only `euler_unit_coprime`'s
+    /// forward half): item 2 of `euler_theorem.rs`'s "what does NOT land
+    /// here" list, closed by `euler_unit_preserve.rs`. Still not Euler's
+    /// theorem itself — see that file's module doc for what remains (items 1
+    /// and 3).
+    pub euler_unit_coprime_iff: NameId,
     /// `fib_cassini : ∀ n, Eq Int (sub (mul (ofNat (Nat.fib (n+2))) (ofNat
     /// (Nat.fib n))) (mul (ofNat (Nat.fib (n+1))) (ofNat (Nat.fib (n+1)))))
     /// (pow (neg one) (succ n))` — Cassini's identity, shifted so every index
@@ -1755,6 +1765,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         ),
         euler_unit_coprime: child(kernel, "euler_unit_coprime"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
+        euler_unit_coprime_iff: child(kernel, "euler_unit_coprime_iff"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
         fib_two_mul_add_one_pos: child(kernel, "fib_two_mul_add_one_pos"),
@@ -2035,6 +2046,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         qr_criterion::declare_euler_criterion_neg_one_imp_not_residue(&mut d)?;
         euler_totient::declare_euler_unit_coprime(&mut d)?;
         euler_totient::declare_euler_unit_injective(&mut d)?;
+        euler_unit_preserve::declare_euler_unit_coprime_iff(&mut d)?;
         euler_theorem::declare_prod_range_if_all(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
