@@ -1597,3 +1597,5 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 echo "check: all $ran gates passed"
+step structural-index           python3 scripts/check-structural-index.py
+step structural-index-mutations bash scripts/tests/test-structural-index-mutations.sh

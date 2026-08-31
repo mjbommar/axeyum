@@ -152,6 +152,7 @@ dependencies = [
  "axeyum-cas",
  "axeyum-ir",
  "num-bigint",
+ "sha2",
 ]
 
 [[package]]

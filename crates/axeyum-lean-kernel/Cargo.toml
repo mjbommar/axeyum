@@ -28,6 +28,13 @@ axeyum-cas.workspace = true
 # `axeyum-cas` does not re-export it, so this needs to be named directly.
 # Same dev-only, no-cycle reasoning as `axeyum-cas` above.
 axeyum-ir.workspace = true
+# `examples/structural_index_extract.rs` (L3 phase D2, ADR-0905) hashes
+# sorted lists of declaration names into a stable content fingerprint for a
+# retrieval index -- not security-sensitive, just a cheap way to compare two
+# dependency sets by digest instead of by full list. Pure Rust, already
+# resolved transitively in Cargo.lock via other workspace crates, so this
+# adds no new C/C++ surface (ADR-0002) and no new network-visible version.
+sha2 = "0.11"
 
 [lints]
 workspace = true
