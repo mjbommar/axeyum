@@ -5,7 +5,7 @@
   "coverage_floor": {
     "max_unpinned_settled": 0,
     "min_identity_bound": 1300,
-    "max_header_exempt": 30
+    "max_header_exempt": 67
   },
   "amendments": [
     {
@@ -15247,5 +15247,6 @@
         }
       ]
     }
-  ]
+  ],
+  "coverage_floor_note": "`max_header_exempt` RAISED 30 -> 67 on 2026-08-31, deliberately. This floor exists so a NEW bare-type statement gets noticed, and none was added: the run reports `drifted=0` over all 2,174 pinned statements, so no statement text changed. What changed is that ADR-1005 bound `formal.kernel_theorem` on 660 facts whose subject had been resolved by text extraction; 37 of those carry bare-type statements with no `theorem NAME :` header, so the name check now has them in scope and correctly cannot apply. They are pre-existing statements newly VISIBLE to this check, not new exemptions. Raising a `max_` floor weakens a gate, so the next raise needs its own argument -- and if one ever comes with `drifted != 0`, that is a different situation and should be refused."
 }
