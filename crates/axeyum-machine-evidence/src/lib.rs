@@ -17,6 +17,7 @@ use sha2::{Digest, Sha256};
 mod rv64;
 mod symbolic_addition;
 mod symbolic_memory;
+mod x64;
 
 pub use rv64::{
     Rv64EncodingRecord, Rv64ExecutionReport, Rv64SourceReport, check_rv64_branch_base_control,
@@ -31,6 +32,11 @@ pub use symbolic_addition::{
 pub use symbolic_memory::{
     PartialStoreCounterexample, SymbolicMemoryReport, SymbolicMemoryWidthProof,
     check_symbolic_memory, check_symbolic_memory_partial_store_control, symbolic_memory_report,
+};
+pub use x64::{
+    X64EncodingRecord, X64ExecutionReport, X64SourceReport, check_x64_branch_base_control,
+    check_x64_execution, check_x64_source, check_x64_source_digest_control, x64_execution_report,
+    x64_source_report,
 };
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
