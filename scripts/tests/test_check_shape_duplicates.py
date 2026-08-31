@@ -177,10 +177,29 @@ class LoadAllowlistTests(unittest.TestCase):
 
     def test_the_committed_allowlist_is_itself_valid(self):
         # The actual file this gate ships with must load cleanly.
+        #
+        # This used to pin the length at exactly 10, and that pin measured
+        # nothing the gate does not already measure: `check-shape-duplicates`
+        # FAILS on any reported group missing from this file and on any entry
+        # here no longer reported, so the list cannot grow silently -- every
+        # addition is a group someone had to read and write a reason for. What
+        # the exact number DID do was make a legitimate adjudication fail an
+        # unrelated control (it went 10 -> 15 the first time the gate was ever
+        # run automatically, 2026-08-31, ADR-1170), which is the maintenance
+        # shape CLAUDE.md's pinned-inventory entry warns about.
+        #
+        # Replaced with a floor -- so an emptied or truncated file cannot pass
+        # -- plus the per-entry structure the count never checked. `source`
+        # and `adjudicated` are what separate a record from a rubber stamp:
+        # `load_allowlist` requires only `reason`, so without these two lines
+        # nothing anywhere requires an entry to say WHEN it was read or WHERE
+        # the reading is written down.
         allowed = MODULE.load_allowlist(MODULE.DEFAULT_ALLOWLIST)
-        self.assertEqual(len(allowed), 10)
-        for entry in allowed.values():
-            self.assertTrue(entry["reason"].strip())
+        self.assertGreaterEqual(len(allowed), 10)
+        for names, entry in allowed.items():
+            self.assertTrue(entry["reason"].strip(), sorted(names))
+            self.assertTrue(str(entry.get("source", "")).strip(), sorted(names))
+            self.assertTrue(str(entry.get("adjudicated", "")).strip(), sorted(names))
 
 
 class EvaluateTests(unittest.TestCase):

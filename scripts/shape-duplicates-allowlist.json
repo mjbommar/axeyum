@@ -58,5 +58,35 @@
     "reason": "Corpus-name alias, by design: nat_prelude/order_extra.rs restates a fixed list of lemmas (F:nat-order-lemma-census) under Lean-core's exact flat names, because an imported corpus's proofs resolve against Lean-core spelling. succ_le_succ's body is a one-line forward to le_succ_succ's proof term.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
+  },
+  {
+    "names": ["Int.add_mul", "Rat.int_right_distrib"],
+    "reason": "Fixed 2026-08-31 (retrieval-gate lane), was accidental: two independent re-derivations of right-distributivity over Int, in two preludes, running the SAME mul_comm-thrice-plus-left_distrib chain -- Int.add_mul in int_prelude/add_basics.rs and Rat.int_right_distrib in rat_prelude/laws.rs. int_right_distrib keeps its name (20 call sites across rat_prelude/ and creal/sqrt.rs) but its body is now d.lemma(int.add_mul, ...). One proof term, two names. Verified: cargo test -p axeyum-lean-kernel --lib rat_prelude:: 151 passed, 0 failed.",
+    "adjudicated": "2026-08-31",
+    "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
+  },
+  {
+    "names": ["Nat.dvd_of_dvd_mul_left", "Nat.gauss_lemma"],
+    "reason": "Mathlib-name alias, by design: nat_prelude/coprime_lemmas.rs declares Nat.dvd_of_dvd_mul_left (Mathlib spells it Nat.Coprime.dvd_of_dvd_mul_left) whose body is a one-line forward to Nat.gauss_lemma's proof term -- verified by reading declare_dvd_of_dvd_mul_left, whose whole result is d.lemma(p.gauss_lemma, &[k, m, n, cop_hyp, dvd_hyp]). One proof term, two names.",
+    "adjudicated": "2026-08-31",
+    "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
+  },
+  {
+    "names": ["Nat.coprime_dvd_left", "Nat.coprime_of_dvd_left"],
+    "reason": "Mathlib-name alias, by design: nat_prelude/coprime_lemmas.rs declares Nat.coprime_dvd_left (Mathlib spells it Nat.Coprime.coprime_dvd_left) forwarding to primes.rs's Nat.coprime_of_dvd_left, which carries the real gcd_dvd_left/dvd_trans/dvd_gcd/eq_one_of_dvd_one argument. One proof term, two names.",
+    "adjudicated": "2026-08-31",
+    "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
+  },
+  {
+    "names": ["Nat.clog_mono_right", "Nat.clog_monotone"],
+    "reason": "Monotone-mirror alias, by design: Mathlib's Nat.clog_monotone is stated as Monotone (clog b), and Monotone f is Mathlib's own definition of the pointwise form, so the core rendering of the two statements coincides. declare_clog_monotone's body forwards to p.clog_mono_right. Same treatment as Nat.choose_mono. One proof term, two names.",
+    "adjudicated": "2026-08-31",
+    "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
+  },
+  {
+    "names": ["Nat.log_mono_right", "Nat.log_monotone"],
+    "reason": "Mirror of the clog_mono_right/clog_monotone entry above -- same Monotone-unfolds-to-pointwise reason, same forwarding body (declare_log_monotone calls d.lemma(p.log_mono_right, ...)), floor log instead of ceiling log.",
+    "adjudicated": "2026-08-31",
+    "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
   }
 ]

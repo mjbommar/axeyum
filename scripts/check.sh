@@ -345,6 +345,15 @@ step facts  python3 scripts/validate-facts.py
 step validate-facts-tests python3 -m unittest scripts.tests.test_validate_facts
 step validate-facts-allowlist-tests python3 -m unittest scripts.tests.test_validate_facts_allowlist
 step shape-duplicates-tests python3 -m unittest scripts.tests.test_check_shape_duplicates
+# ...AND THE CHECKER ITSELF, which for four days this line's neighbour did not
+# run (ADR-1170). Registering only a checker's UNIT TESTS is the quietest form
+# of the checker-that-cannot-fail defect: the suite passes, the step name
+# contains the checker's name, and the real environment is never examined. Its
+# first automatic run (2026-08-31) reported FIVE unadjudicated duplicate
+# groups accumulated since the 2026-08-27 adjudication -- one of them a real
+# independent re-derivation of right-distributivity over Int. ~110s: shells
+# out to `cargo run --release --example shape_search -- --duplicates`.
+step shape-duplicates python3 scripts/check-shape-duplicates.py
 step theorem-inventory-completeness-tests python3 -m unittest scripts.tests.test_theorem_inventory_completeness
 step absence-claims-tests python3 -m unittest scripts.tests.test_check_absence_claims
 # ADR-0745: the number-theory certificate checkers. Asserts a ratcheted NONZERO

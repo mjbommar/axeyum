@@ -104,7 +104,7 @@ export PREPUSH_BASE PREPUSH_TIP
 # L0 trusted-library safety gates (ADR-1050).
 #
 # These run BEFORE the Rust/TOML early exit below, and that placement is the
-# whole point. The seven L0 gates guard `artifacts/facts/`, the proposition
+# whole point. The eight L0 gates guard `artifacts/facts/`, the proposition
 # corpus, the credit ledger and the blind-evaluation partition -- JSON and
 # documentation content, none of which is `*.rs`, `*.toml` or `Cargo.lock`. A
 # push touching only those files exits at the "no cargo gate needed" line and

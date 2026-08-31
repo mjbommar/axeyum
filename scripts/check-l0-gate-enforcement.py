@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-1050: the seven L0 safety gates must run in an AUTOMATED context.
+"""ADR-1050: the eight L0 safety gates must run in an AUTOMATED context.
 
 Measured 2026-08-31, with positive controls in the same run so a zero could
 not be a broken query (`ci.yml` names `scripts/` 44 times, `hooks/pre-push` 28,
@@ -22,7 +22,7 @@ Eight guards, each of which fails naming the gate it is about:
   G5  the pre-push L0 block runs BEFORE the Rust/TOML early exit
   G6  the pre-push block reacts to a nonzero exit (it must not be a bare call
       whose failure `set -e` alone might not surface through the loop)
-  G7  all seven gates appear in `scripts/local-ci.sh` -- the file ci.yml
+  G7  all eight gates appear in `scripts/local-ci.sh` -- the file ci.yml
       itself calls "the authoritative gate for main"
   G8  every L0 line in `scripts/local-ci.sh` actually feeds `rc` (`|| rc=$?`)
       rather than being a bare call `set -uo pipefail` won't catch, or a
@@ -64,7 +64,17 @@ CI = ROOT / ".github/workflows/ci.yml"
 PREPUSH = ROOT / "hooks/pre-push"
 LOCAL_CI = ROOT / "scripts/local-ci.sh"
 
-# The seven L0 trusted-library safety gates (ADR-0717 and successors).
+# The eight L0 trusted-library safety gates (ADR-0717 and successors).
+#
+# `check-shape-duplicates` joined 2026-08-31 (ADR-1170). It is the RETRIEVAL
+# gate: it reports declarations whose admitted types are identical up to
+# binder naming, which is precisely what a lane that could not find an
+# existing lemma produces. It belongs at L0 for the same reason
+# `check-proposition-duplication` does -- both guard the trusted library
+# against two proofs of one proposition that must stay in sync while the
+# kernel happily verifies both -- and it qualified the hard way: it had
+# existed for four days, `check.sh` registered only its UNIT TESTS, and its
+# first automatic run found five unadjudicated duplicate groups.
 L0_GATES = (
     "check-trust-closure",
     "check-settled-fact-statements",
@@ -73,6 +83,7 @@ L0_GATES = (
     "check-credit-transaction-ledger",
     "check-proposition-duplication",
     "check-holdout-closed-evaluation",
+    "check-shape-duplicates",
 )
 
 # The subset cheap enough to run in front of every push. Measured warm on s4:
@@ -190,7 +201,7 @@ def check(ci_text: str, prepush_text: str, local_ci_text: str) -> list[str]:
             "fails the push on a nonzero gate exit.")
 
     # scripts/local-ci.sh -- the file ci.yml calls "the authoritative gate for
-    # main" -- must run all seven, and each must feed `rc` the same way every
+    # main" -- must run all eight, and each must feed `rc` the same way every
     # other step in that file does.
     lci_code = strip_comments(local_ci_text)
     lci_lines = lci_code.splitlines()
