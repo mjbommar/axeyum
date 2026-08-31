@@ -390,7 +390,7 @@ decidability = "computable"
 axeyum_theory = "LIA / enumeration"
 family = "Counting"
 status = "covered"
-kernel_decls = 66
+kernel_decls = 78
 summary = "Permutations, combinations, the pigeonhole principle; finite counting identities are checkable."
 
 # ---------------------------------------------------------------------------

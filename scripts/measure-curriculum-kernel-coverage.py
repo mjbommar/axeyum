@@ -153,8 +153,19 @@ BUCKETS: list[tuple[str, str]] = [
      r"bijective_on_perm)"),
     ("polynomials", r"^(Rat|CReal|Int)\.(poly|Poly)"),
     ("counting",
+     # `stirling` added 2026-08-31 after the cohesion guard's FIRST live run
+     # flagged `G2 FAMILY Nat.stirling* -- 12 declarations, all in the catch-all
+     # `naturals``. Stirling numbers of both kinds are combinatorics, not
+     # arithmetic on the naturals, and the ten `ml430` mirrors closed that hour
+     # (ADR-1175's draw) had silently landed in the carrier bucket. That is the
+     # ADR-1140 / ADR-1205 failure a THIRD time -- and the first time a gate
+     # caught it instead of a human being told to check by name.
+     #
+     # Written as a family stem, not as instances: `det2|det3` and
+     # `gauss_fold_injective` are exactly the literal-instance patterns that
+     # went stale when their families grew.
      r"^Nat\.(choose|Choose|factorial|Factorial|ascFactorial|descFactorial|"
-     r"multichoose|pigeonhole|prodRange|sumRange|catalan)"),
+     r"multichoose|pigeonhole|prodRange|sumRange|catalan|stirling)"),
     ("rings", r"^\x00NO_ABSTRACT_RING_CARRIER$"),
     ("fields", r"^\x00NO_ABSTRACT_FIELD_CARRIER$"),
     # layer 0 foundations -- MUST precede the carrier buckets below
