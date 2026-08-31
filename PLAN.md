@@ -198,6 +198,12 @@ now. Nothing was deleted.
 | 2026-08-30 | `5ad3bbfcd` | Add replayable x86-64 source-pin and decoder/step reports. Six manuscript programs execute across all seventeen forms; three trap classes and four semantic mutations are checked; source-digest and following-RIP branch-base controls fail closed. Book manifests remain pending. |
 | 2026-08-30 | `d75cd25bf` | Begin the faithful PyO3 machine projection with A0 words, dotted imports, generated stubs, and runtime/static-type controls. The focused surface passes; the aggregate Python suite separately exposes one stale agent fixture and a deterministic prelude-build segfault that remain full-gate blockers. |
 | 2026-08-30 | `055536b5b` | Repair the deterministic Python prelude segfault by moving the grown CReal and Complex builders to the existing bounded deep-stack boundary; replace the stale fixed retrieval-miss fact with a derived live control. The full suite now completes (1,846 passed, 34 skipped) and exposes nine separate knowledge/autogenesis drift failures on the superseded pre-rebase snapshot. |
+| 2026-08-30 | `4e93f9d62` | Complete the reader-facing A0 Python surface: memory, state codec, all seventeen typed instruction families, step, bounded traces, categorized traps, generated stubs, and thirteen direct reader controls. Rust, runtime/stub, static-type, lint, and formatting gates pass; RV64, x86-64, cross-machine, and book bindings remain open. |
+| 2026-08-30 | `4548f3dda` | Move reader-facing A0 error formatting outside the source-pinned semantic file. The exact v10 digest is restored without relabeling message-only changes as new semantics; all sixteen book routes replay successfully again. |
+| 2026-08-30 | `3884b8d04` | Project the complete source-pinned twelve-form RV64I single-step slice through Python: typed instructions, canonical encoding, complete state, traps, memory, projection, source identity, generated stubs, and reader controls. Bounded RV64 traces and cross-machine interfaces remain open. |
+| 2026-08-30 | `ebcbfc618` | Project the complete source-pinned seventeen-form x86-64 single-step slice through Python: variable-length decode, explicit undefined flags, complete state, traps, stack effects, projection, source identity, generated stubs, and reader controls. Real-ISA bounded traces and cross-machine interfaces remain open. |
+| 2026-08-30 | draw11-theorems | `bb96b6a44` `Nat.and_or_distrib_left`/`_right` kernel theorems, axiom-free, new module `and_or_distrib.rs` |
+| 2026-08-30 | draw11-theorems | `8822d5033` flip both facts to `proved`, evidence + depends_on attached, ledger validates clean |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | `136998127` | `ivt_evt_vacuity_probe`: EVT row 1 composed from `supOn_ub` + `supOn_approx_lub` and admitted axiom-free; vacuity witnesses for IVT and EVT at concrete families |
 | 2026-08-30 | `69d4c9b4a` | `CReal.supOn` is indexed by the modulus (`UniformlyContinuousOn : Sort 1`); modulus-independence derived and admitted |
@@ -34735,10 +34741,78 @@ explicit extension and truncation, complete states have a canonical binary
 artifact codec, and the source-derived symbolic memory-frame route covers all
 eight supported widths. Next: independently pinned RV64I and x86-64 teaching
 slices, broader semantic relations, manifests, the remaining Python machine
-projection, and clean-checkout book gates. The first PyO3 slice now projects A0
-words faithfully; state, instruction, trace, and real-ISA bindings remain. A0 addition has fixed-width symbolic certificates;
+projection, and clean-checkout book gates. The PyO3 layer now projects the
+complete A0 word, state, memory, instruction, step, and trace surface. The
+source-pinned RV64I and x86-64 slices now have complete reader-facing
+single-step Python projections; real-ISA bounded traces and cross-machine relations remain.
+A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
+
+**Done (`DONE`, draw11-theorems, 2026-08-30).** The frontier at start of this
+session (`python3 scripts/check-dispatchable-frontier.py`) showed only **3**
+dispatchable mirrors, not the 23 the brief described — draw 11's queue had
+already been drawn down by other lanes before this one started. Closed both
+bitwise ones axiom-free on the first kernel attempt:
+
+- `Nat.and_or_distrib_left`/`Nat.and_or_distrib_right`
+  (`F:ml430-nat-and-or-distrib-left-fe131f64`,
+  `F:ml430-nat-and-or-distrib-right-0daaa284`) — bitwise AND distributes over
+  bitwise OR, both sides. New module `crates/axeyum-lean-kernel/src/nat_prelude/
+  and_or_distrib.rs`. Route: `Nat.eq_of_testBit_eq` extensionality
+  (`xor_algebra.rs`'s recipe) + `Nat.testBit_land`/`Nat.testBit_lor` twice per
+  side, reduced to the bit-level identity `mul a (max b c) = max (mul a b)
+  (mul a c)`, closed by a new helper `cases_le_one` (the value-bounded twin of
+  `ops::cases_mod_two`) doing a nested `{0,1}` case split — 8 leaves per
+  theorem, each `refl`, confirmed against a Python truth table before writing
+  any Rust. Both admitted first try; `axiom_footprint: []` for both (read from
+  `nat_axiom_inventory --require-axiom-free nat`, exit 0). Discriminating
+  concrete instances `(6,3,5)` / `(3,5,6)` plus symbolic instantiation, each
+  with two negative controls (inner-operator swap, outer-operator swap), added
+  to `nat_prelude_tests.rs` and to `theorem_names` (the environment-derived
+  coverage assertion caught the omission on first run, as designed). Both
+  facts flipped to `proved` with evidence (kernel-term / concrete-instance /
+  axiom-footprint) and `depends_on` derived via
+  `check-fact-depends-derived.py --fix`.
+
+**Third dispatchable target sized and declined — `F:ml430-nat-fermat-
+primefactors-one-lt-58343c6f` (Lucas 1878: every prime factor `p` of the
+Fermat number `F_n = 2^(2^n)+1`, `n > 1`, satisfies `p = k·2^(n+2)+1`).**
+This is a genuine, provable-in-principle classical result — NOT a mirror-flip
+divergence like the 11 rows the frontier already marks structurally blocked —
+but it needs infrastructure this prelude does not have at all:
+
+1. The multiplicative order of `2` mod `p` (order divides any exponent `m`
+   with `2^m ≡ 1`, and divides `p-1` via Fermat's little theorem, which DOES
+   exist here — `nat_prelude/fermat.rs`'s `declare_fermat`/
+   `pow_prime_modeq_self`). Buildable, moderate effort.
+2. The second supplementary law of quadratic reciprocity (`2` is a QR mod `p`
+   iff `p ≡ ±1 (mod 8)`), needed for the `2^(n+2)` refinement (vs. the easier
+   `2^(n+1)` bound from order theory alone). `int_prelude/euler.rs` has only
+   `IsQuadraticResidue`'s definition and closure under multiplication — its
+   own module doc says the sign criterion "needs" more, and nothing resembling
+   Gauss's lemma or either supplementary law exists anywhere in `nat_prelude/`
+   or `int_prelude/` (checked: no `order_of`, no `quadratic` hit beyond
+   `euler.rs`/`euler_totient.rs`'s trivial definitions).
+
+Both pieces are real number theory, not machinery this lane could stand up in
+one session without crowding out correctness. Left `open`; the next lane
+should budget it as a multi-step build (order theory first, landing local
+facts, before attempting the QR supplement) rather than a single dispatch.
+
+Holdout isolation: `python3 scripts/check-autogenesis-holdout-isolation.py`
+→ `PASS` (`held_out=136`), run after landing; `artifacts/autogenesis/` was
+never touched (confirmed via `git status`/`git diff` — zero files under that
+path in this lane's changes).
+
+Hardest thing hit: none of the kernel machinery was the hard part this time —
+`Nat.testBit_land`/`Nat.testBit_lor`/`Nat.eq_of_testBit_eq` were already
+landed and the per-bit case split transported cleanly on the first attempt.
+The actual work was recognizing that the bit-level identity did not need
+`Nat.le_total`'s general order-theoretic proof (which would need extra care
+at the `b = c` boundary of `max`'s two branches) — restricting to `{0,1}` via
+`Nat.testBit_le_one` and a fresh `cases_le_one` split made both proofs
+8-leaf-`refl` trivial instead.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
