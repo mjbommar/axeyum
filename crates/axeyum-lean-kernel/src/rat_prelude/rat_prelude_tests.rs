@@ -201,6 +201,11 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("laplaceSummand_rowI", p.laplace_summand_row_i),
         ("laplaceSummand_diag", p.laplace_summand_diag),
         ("det_row_expansion", p.det_row_expansion),
+        ("matMinor_row_col_comm", p.mat_minor_row_col_comm),
+        ("det_minor_row_col_comm", p.det_minor_row_col_comm),
+        ("det_col_expansion", p.det_col_expansion),
+        ("matMinor_transpose", p.mat_minor_transpose),
+        ("det_transpose", p.det_transpose),
     ]
 }
 
@@ -6794,6 +6799,11 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("laplaceSummand_rowI", p.laplace_summand_row_i, true),
         ("laplaceSummand_diag", p.laplace_summand_diag, true),
         ("det_row_expansion", p.det_row_expansion, true),
+        ("matMinor_row_col_comm", p.mat_minor_row_col_comm, true),
+        ("det_minor_row_col_comm", p.det_minor_row_col_comm, true),
+        ("det_col_expansion", p.det_col_expansion, true),
+        ("matMinor_transpose", p.mat_minor_transpose, true),
+        ("det_transpose", p.det_transpose, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -7479,4 +7489,235 @@ fn det_row_expansion_evaluates_at_every_row_and_pins_the_sign() {
              this test built independently"
         );
     }
+}
+
+/// `Rat.det_transpose` and `Rat.det_col_expansion` evaluated at a pinned,
+/// **non-symmetric** 3x3, with the two things a transpose test can be vacuous
+/// about checked explicitly.
+///
+/// Vacuity hazard 1: **the matrix could be symmetric**, in which case
+/// `matTranspose A` is `A` and `det Aᵀ = det A` says nothing. So the first
+/// assertion is that `matTranspose A 0 1` is `0` while `A 0 1` is `2` — the
+/// transpose really moves this matrix.
+///
+/// Vacuity hazard 2: **the column expansion could be the row expansion.** For
+/// this matrix both total `13`, and the multiset of summands is `{1, 0, 12}`
+/// either way, so a total alone cannot separate them. What does: the row
+/// summand at index `1` is `12` and at index `2` is `0`, while the COLUMN
+/// summand at those indices is `0` and `12`. Both directions are pinned, so
+/// swapping the two builders fails this test rather than passing it.
+///
+/// The sign is separated the way
+/// [`det_row_expansion_evaluates_at_every_row_and_pins_the_sign`] separates
+/// it — by the same column sum with the alternation shifted by one, asserted
+/// POSITIVELY at `-13` rather than as a failed `def_eq` (a failing `def_eq`
+/// has no early exit and is a documented pathology here).
+///
+/// What this does NOT catch: a wrong `Nat.ble` **guard order** inside
+/// `Rat.matSkip`. `det_eval_example` (value `13`) and `det_eq_det2` remain the
+/// discriminators for that, exactly as ADR-1135 said.
+#[test]
+fn det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::matrix_det::{
+        col_zero_expansion_fn, const_matrix, row_zero_expansion_fn, rq,
+    };
+    use crate::rat_prelude::ops::{req, rmul, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    //   A = [[1, 2, 0],
+    //        [0, 1, 3],
+    //        [2, 0, 1]]        det A 3 = 13   (`Rat.det_eval_example`)
+    let mat = const_matrix(&mut d, p, 3, &[1, 2, 0, 0, 1, 3, 2, 0, 1]);
+    let zero_n = d.num(0);
+    let one_n = d.num(1);
+    let two_n = d.num(2);
+    let three_n = d.num(3);
+    let thirteen = rq(&mut d, p, 13);
+
+    // --- the transpose actually moves this matrix --------------------------
+    {
+        let transposed = d.const_app(p.mat_transpose, &[mat]);
+        let at01 = d.apply(transposed, &[zero_n, one_n]);
+        let zero_q = rq(&mut d, p, 0);
+        let two_q = rq(&mut d, p, 2);
+        assert!(
+            d.kernel().def_eq(at01, zero_q),
+            "matTranspose A 0 1 must be A 1 0 = 0"
+        );
+        assert!(
+            !d.kernel().def_eq(at01, two_q),
+            "matTranspose A 0 1 accepted 2 = A 0 1, so this matrix is symmetric \
+             under the transpose and every check below is vacuous"
+        );
+    }
+
+    // --- `det (matTranspose A) 3 = 13` -------------------------------------
+    {
+        let transposed = d.const_app(p.mat_transpose, &[mat]);
+        let lhs = d.const_app(p.det, &[transposed, three_n]);
+        assert!(
+            d.kernel().def_eq(lhs, thirteen),
+            "det (matTranspose A) 3 must be 13"
+        );
+    }
+
+    // --- the column expansion totals 13, and is NOT the row expansion ------
+    {
+        let summand = col_zero_expansion_fn(&mut d, p, mat, two_n);
+        let total = rsum_range(&mut d, p, summand, three_n);
+        assert!(
+            d.kernel().def_eq(total, thirteen),
+            "expanding the pinned matrix along column 0 must give 13"
+        );
+    }
+    {
+        // Row summand: (1, 12, 0). Column summand: (1, 0, 12). The totals
+        // agree and the per-index values do not, which is the only thing here
+        // that separates the two builders.
+        let col_fn = col_zero_expansion_fn(&mut d, p, mat, two_n);
+        let row_fn = row_zero_expansion_fn(&mut d, p, mat, two_n);
+        let pins: [(u32, i64, i64); 3] = [(0, 1, 1), (1, 0, 12), (2, 12, 0)];
+        for (index, col_value, row_value) in pins {
+            let i = d.num(index);
+            let col_at = d.apply(col_fn, &[i]);
+            let expected_col = rq(&mut d, p, col_value);
+            assert!(
+                d.kernel().def_eq(col_at, expected_col),
+                "the column-0 summand at {index} must be {col_value}"
+            );
+            let row_at = d.apply(row_fn, &[i]);
+            let expected_row = rq(&mut d, p, row_value);
+            assert!(
+                d.kernel().def_eq(row_at, expected_row),
+                "the row-0 summand at {index} must be {row_value}"
+            );
+        }
+    }
+
+    // --- the sign is load-bearing ------------------------------------------
+    {
+        let nat = d.nat_ty();
+        let summand = {
+            let r_fv = d.fresh_fvar();
+            let row = d.kernel().fvar(r_fv);
+            let index = d.succ(row);
+            let sign = d.const_app(p.alt_sign, &[index]);
+            let entry = d.apply(mat, &[row, zero_n]);
+            let minor = d.const_app(p.mat_minor, &[mat, row, zero_n]);
+            let sub = d.const_app(p.det, &[minor, two_n]);
+            let product = rmul(&mut d, entry, sub);
+            let body = rmul(&mut d, sign, product);
+            d.lam_fv(r_fv, nat, body)
+        };
+        let total = rsum_range(&mut d, p, summand, three_n);
+        let negative = rq(&mut d, p, -13);
+        assert!(
+            d.kernel().def_eq(total, negative),
+            "shifting the column expansion's alternating sign by one must give \
+             -13, or the checks above hold for a reason other than the sign"
+        );
+    }
+
+    // --- `Rat.matMinor_transpose`'s content, at a NON-symmetric submatrix ---
+    {
+        // `matMinor Aᵀ 0 2` is [[2, 1], [0, 3]], which is not symmetric, so a
+        // transposed index here is visible. `matMinor Aᵀ 0 1` would be
+        // [[2, 0], [0, 1]] and would NOT separate it.
+        let transposed = d.const_app(p.mat_transpose, &[mat]);
+        let minor = d.const_app(p.mat_minor, &[transposed, zero_n, two_n]);
+        let pins: [(u32, u32, i64); 4] = [(0, 0, 2), (0, 1, 1), (1, 0, 0), (1, 1, 3)];
+        for (r, c, expected) in pins {
+            let r_n = d.num(r);
+            let c_n = d.num(c);
+            let lhs = d.apply(minor, &[r_n, c_n]);
+            let rhs = rq(&mut d, p, expected);
+            assert!(
+                d.kernel().def_eq(lhs, rhs),
+                "matMinor (matTranspose A) 0 2 {r} {c} must be {expected}"
+            );
+        }
+    }
+
+    // --- the admitted theorems say what this test built independently ------
+    {
+        let instance = d.const_app(p.det_col_expansion, &[two_n, mat]);
+        let inferred = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("det_col_expansion at m = 2 should infer: {e:?}"));
+        let summand = col_zero_expansion_fn(&mut d, p, mat, two_n);
+        let expected = {
+            let lhs = d.const_app(p.det, &[mat, three_n]);
+            let rhs = rsum_range(&mut d, p, summand, three_n);
+            req(&mut d, lhs, rhs)
+        };
+        assert!(
+            d.kernel().def_eq(inferred, expected),
+            "the admitted `det_col_expansion` does not state the column-0 \
+             expansion this test built independently"
+        );
+    }
+    {
+        let instance = d.const_app(p.det_transpose, &[three_n, mat]);
+        let inferred = d
+            .kernel()
+            .infer(instance)
+            .unwrap_or_else(|e| panic!("det_transpose at n = 3 should infer: {e:?}"));
+        let expected = {
+            let transposed = d.const_app(p.mat_transpose, &[mat]);
+            let lhs = d.const_app(p.det, &[transposed, three_n]);
+            let rhs = d.const_app(p.det, &[mat, three_n]);
+            req(&mut d, lhs, rhs)
+        };
+        assert!(
+            d.kernel().def_eq(inferred, expected),
+            "the admitted `det_transpose` does not state transpose invariance \
+             at the dimension this test supplied"
+        );
+    }
+}
+
+/// `Rat.det_transpose` quantifies over the MATRIX and over the DIMENSION, and
+/// the dimension is an argument of `Rat.det` rather than a numeral.
+///
+/// The pin that a later edit cannot quietly weaken: an instance at a concrete
+/// matrix, or at a fixed dimension, would leave `matrix_det`'s module doc
+/// describing a law it no longer proves — the same failure mode
+/// [`the_determinant_agreement_statements_quantify_over_the_matrix`] guards
+/// for `det_eq_det2`.
+#[test]
+fn the_transpose_and_column_statements_quantify_over_matrix_and_dimension() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel.render_lean(ty)
+    };
+
+    let transpose = rendered(&mut kernel, p.det_transpose);
+    assert_eq!(
+        transpose,
+        "((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> \
+         Eq.{1} Rat (Rat.det (Rat.matTranspose x1) x0) (Rat.det x1 x0)))",
+        "Rat.det_transpose no longer states transpose invariance at a symbolic \
+         dimension for an arbitrary matrix"
+    );
+
+    let column = rendered(&mut kernel, p.det_col_expansion);
+    assert_eq!(
+        column,
+        "((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> \
+         Eq.{1} Rat (Rat.det x1 (AxNat.succ x0)) \
+         (Rat.sumRange (fun (x2 : AxNat) => Rat.mul (Rat.altSign x2) \
+         (Rat.mul (x1 x2 AxNat.zero) \
+         (Rat.det (Rat.matMinor x1 x2 AxNat.zero) x0))) (AxNat.succ x0))))",
+        "Rat.det_col_expansion no longer states cofactor expansion along the \
+         first column"
+    );
 }

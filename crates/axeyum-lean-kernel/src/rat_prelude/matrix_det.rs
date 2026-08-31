@@ -4791,7 +4791,7 @@ fn declare_det_row_expansion(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 
 /// `fun c => altSign c * (M 0 c * det (matMinor M 0 c) m)` — the summand
 /// `Rat.det_succ` unfolds `det M (succ m)` to, expansion along the FIRST ROW.
-fn row_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
+pub(super) fn row_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let zero_n = d.zero();
     let c_fv = d.fresh_fvar();
@@ -4808,7 +4808,7 @@ fn row_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: Expr
 /// `fun r => altSign r * (M r 0 * det (matMinor M r 0) m)` — expansion along
 /// the FIRST COLUMN, the summand [`declare_det_col_expansion`] proves equal to
 /// `det M (succ m)`.
-fn col_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
+pub(super) fn col_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let zero_n = d.zero();
     let r_fv = d.fresh_fvar();
