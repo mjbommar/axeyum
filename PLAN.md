@@ -37497,6 +37497,22 @@ with the real `select()` / `assign_partitions()` / `screen_family()` /
 | `check-shape-duplicates.py` | exit 0, 15 groups, all allowlisted |
 | `validate-facts.py` | exit 0 |
 | `check-settled-fact-statements.py` | `settled=2253 pinned=2253 drifted=0 PASS` |
+| `check-merge-hygiene.sh` | `markers=0 adr_index=ok generated=current PASS` |
+| `check-links.sh` | `all links ok` |
+| `check-absence-claims.py` | exit 0, **122 against a budget of 122** |
+| `check-dispatchable-frontier.py` | **`DISPATCHABLE: 24`** — G7 was 4 against a floor of 10 |
+
+**G7 `queue-below-floor` is the point of the draw and it is fixed**: 4 -> **24**
+dispatchable, all twenty new `development`/`train` rows plus the four that were
+already there.
+
+`check-absence-claims.py` needed one edit: a sentence of the ADR read
+"`--const Nat.nthRoot` is ABSENT", which the census classifies as a bare
+absence claim naming a declaration that is in fact PRESENT (the claim is about
+what mentions it, which the marker grammar cannot express). Reworded to name
+the probe's result instead. The brief's report that this gate is red on `main`
+at 123/122 is **stale** — ADR-1250 landed the fix during this lane's run, and
+the gate is green at 122 both on `main` and here.
 
 ## Landed changes
 
