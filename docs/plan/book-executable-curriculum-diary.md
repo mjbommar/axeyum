@@ -603,3 +603,39 @@ This closes the first Axeyum semantic layer, not the two x86-64 book
 obligations. The source report, independently replayed decoder/step report,
 length and implicit-effect mutations, pinned manifest, and book bindings still
 need to land and pass `make check-run`.
+
+## 2026-08-30 — replayable x86-64 source and execution evidence
+
+Added source-pin and decoder/step evidence producers for the complete selected
+x86-64 slice. The source report records Intel order number 325383-092US, June
+2026, official URL, PDF digest, byte and page counts, all seventeen form
+families, the compiled semantic-source digest, profile choices, and exclusions.
+Changing one nibble of the official PDF digest produces the required
+`semantic-mismatch`.
+
+The execution report binds twenty-eight manuscript or resolved teaching-fixture
+encodings. It checks each decoded length and canonical re-encoding, then runs
+the six manuscript programs. The 21-byte XOR routine returns `0`,
+`0x0123456789abcdef`, and `7`; the count loop reaches zero; the leaf returns
+42; both signs of the absolute-value fixture produce 7; and the non-leaf
+fixture returns 7 while restoring RBX and the expected stack position. The two
+write-zero forms both execute, produce the same RAX value, and retain their
+different flag effects. Taken and untaken inputs ensure that all three selected
+short conditions execute rather than merely decode.
+
+The report separately checks canonical state projection and three trap classes:
+incomplete variable-length fetch, illegal instruction, and missing data bytes.
+Four load-bearing mutations are distinguished: using instruction RIP instead
+of following RIP as a short-branch base, failing to clear the upper half on an
+EAX write, treating logical AF as defined-clear, and omitting CALL's implicit
+stack write or RSP change. The branch mutation is the external negative-control
+command. It executes the printed `jne` at address 18 with displacement -13;
+the correct following-RIP target is 7, while the mutated instruction-RIP target
+is 5.
+
+The focused machine and evidence suites pass 55 integration tests. Strict
+all-target Clippy passes. Direct CLI generation and replay accept both reports;
+both negative controls exit nonzero with `semantic-mismatch`. The evidence
+routes landed as `5ad3bbfcd`. The Axeyum half is complete, but the book objects
+remain open until their manifests, saved reports, digests, prose bindings, and
+full `make check-run` replay land.

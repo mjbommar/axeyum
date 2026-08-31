@@ -14,11 +14,12 @@ use axeyum_machine_evidence::{
     check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
     check_symbolic_memory_partial_store_control, check_word_package,
     check_word_package_signed_zero_extension_control, check_word_roundtrip,
-    check_word_roundtrip_reversed_control, decoder_roundtrip_report, memory_trace_report,
-    observation_separation_report, run_classification_report, rv64_execution_report,
-    rv64_source_report, semantic_package, state_codec_report, step_coverage_report,
-    symbolic_addition_report, symbolic_memory_report, word_package_report, word_roundtrip_report,
-    write_json,
+    check_word_roundtrip_reversed_control, check_x64_branch_base_control, check_x64_execution,
+    check_x64_source, check_x64_source_digest_control, decoder_roundtrip_report,
+    memory_trace_report, observation_separation_report, run_classification_report,
+    rv64_execution_report, rv64_source_report, semantic_package, state_codec_report,
+    step_coverage_report, symbolic_addition_report, symbolic_memory_report, word_package_report,
+    word_roundtrip_report, write_json, x64_execution_report, x64_source_report,
 };
 
 fn main() {
@@ -371,6 +372,56 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_rv64_branch_base_control(Path::new(report))?;
             return Err("control-failure: sequential-PC RV64 branch base was accepted".into());
         }
+        [command, output] if command == "emit-x64-source" => {
+            let report = x64_source_report();
+            write_json(Path::new(output), &report)?;
+            println!(
+                "x64-source: PASS: revision={} forms={} source_sha256={}",
+                report.source_revision,
+                report.selected_forms.len(),
+                report.source_sha256
+            );
+        }
+        [command, report] if command == "check-x64-source" => {
+            let checked = check_x64_source(Path::new(report))?;
+            println!(
+                "x64-source: PASS: revision={} forms={} source_sha256={}",
+                checked.source_revision,
+                checked.selected_forms.len(),
+                checked.source_sha256
+            );
+        }
+        [command, report] if command == "control-x64-source-digest" => {
+            check_x64_source_digest_control(Path::new(report))?;
+            return Err("control-failure: corrupt x86-64 source digest was accepted".into());
+        }
+        [command, output] if command == "emit-x64-execution" => {
+            let report = x64_execution_report()?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "x64-execution: PASS: forms={} encodings={} traps={} mutations={} xor={:?}",
+                report.forms_executed,
+                report.book_encodings.len(),
+                report.trap_classes_checked,
+                report.mutations_rejected,
+                report.xor_results
+            );
+        }
+        [command, report] if command == "check-x64-execution" => {
+            let checked = check_x64_execution(Path::new(report))?;
+            println!(
+                "x64-execution: PASS: forms={} encodings={} traps={} mutations={} xor={:?}",
+                checked.forms_executed,
+                checked.book_encodings.len(),
+                checked.trap_classes_checked,
+                checked.mutations_rejected,
+                checked.xor_results
+            );
+        }
+        [command, report] if command == "control-x64-branch-base" => {
+            check_x64_branch_base_control(Path::new(report))?;
+            return Err("control-failure: instruction-RIP x86-64 branch base was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -404,7 +455,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  control-symbolic-memory-partial-store PACKAGE REPORT | \
                  emit-rv64-source OUTPUT | check-rv64-source REPORT | \
                  control-rv64-source-digest REPORT | emit-rv64-execution OUTPUT | \
-                 check-rv64-execution REPORT | control-rv64-branch-base REPORT"
+                 check-rv64-execution REPORT | control-rv64-branch-base REPORT | \
+                 emit-x64-source OUTPUT | check-x64-source REPORT | \
+                 control-x64-source-digest REPORT | emit-x64-execution OUTPUT | \
+                 check-x64-execution REPORT | control-x64-branch-base REPORT"
                 .into());
         }
     }
