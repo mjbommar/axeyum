@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-row-expansion",
+  "title": "Rat.det_row_expansion: cofactor expansion along a GENERAL row, at symbolic dimension",
+  "statement": "Rat.det A n is the determinant of the matrix A (a function Nat -> Nat -> Rat plus an explicit bound) defined by cofactor expansion along the FIRST row. This fact records that the same value is obtained by expanding along ANY row: if i <= m then det A (succ m) = sum over q < succ m of altSign (q + i) * (A i q * det (matMinor A i q) m). The row index i is universally quantified and the dimension is symbolic, so this is the general law and not a fixed-dimension instance. Rat.det_succ is the i = 0 case definitionally, since Nat.add recurses on its right argument and add q 0 reduces to q. This is the second of the four laws ADR-1120 named over the general-n determinant, and the one ADR-1135 declined to size; ADR-1155 sized it and landed its index and range layers, and ADR-1185 closes it. The proof is ONE induction on the dimension whose step splits on the row -- not the classical route, which proves the row-1 case and walks a general row to the top by adjacent transpositions, each negating the determinant, and so needs row antisymmetry. None of that machinery appears: the row-0-then-row-(i-1) double sum and the row-i-then-row-0 double sum are indexed by the same ordered pairs of distinct columns and agree termwise for every i at once, so they are the two orders of summation of one function on the square (Rat.laplaceSummand) and Rat.sumRange_swap is the entire reindexing step. No triangle decomposition, no Nat.sub in any summation bound, and no aggregate type this kernel lacks.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_row_expansion : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : AxNat) -> ((x3 : Eq.{1} Bool (AxNat.ble x2 x0) Bool.true) -> Eq.{1} Rat (Rat.det x1 (AxNat.succ x0)) (Rat.sumRange (fun (x4 : AxNat) => Rat.mul (Rat.altSign (AxNat.add x4 x2)) (Rat.mul (x1 x2 x4) (Rat.det (Rat.matMinor x1 x2 x4) x0))) (AxNat.succ x0))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Rat.det_row_expansion"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:ml430-nat-le-of-succ-le-succ-a180a72c", "F:rat-add-zero", "F:rat-laplace-summand-row-i", "F:rat-mul-sumrange", "F:rat-sum-range-mat-skip", "F:rat-sumrange-congr", "F:rat-sumrange-congr-lt", "F:rat-sumrange-swap"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_row_expansion",
+      "kind": "kernel-term",
+      "supports": "Rat.det_row_expansion is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_row_expansion 2>/dev/null | grep -cE '^Rat\\.det_row_expansion[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.det_row_expansion",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- GNU grep reads \\t as a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation: this tool silently consumes only its FIRST name argument. --release is MANDATORY; in debug the example SIGABRTs on a stack overflow, which reads like an absent declaration."
+    },
+    {
+      "id": "footprint-Rat.det_row_expansion",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_row_expansion.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-det-row-expansion-pins-the-sign",
+      "kind": "kernel-term",
+      "supports": "The right-hand side evaluates to 13 at EVERY row of a pinned non-symmetric 3x3 whose determinant Rat.det_eval_example independently pins at 13, and the same sum with the alternating sign shifted by one evaluates to -13. The admitted theorem is then APPLIED at row 1 and its inferred type compared against the statement rebuilt independently in the test.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::det_row_expansion_evaluates_at_every_row_and_pins_the_sign"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib det_row_expansion_evaluates_at_every_row_and_pins_the_sign 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The count is tested, not just the exit status: `1 passed` fails if the test is renamed away or filtered out. This is the ONLY check in this cluster that separates a sign convention -- no index-layer statement in rat_prelude/matrix_det.rs mentions a sign at all, which ADR-1155 recorded about its own seven theorems. The -13 control is asserted POSITIVELY rather than as a failed def_eq, because a failing def_eq has no early exit and a pathological control is a documented hazard here. What it does NOT check: Nat.ble's guard ORDER inside Rat.matSkip, which Rat.det_eq_det2 separates."
+    },
+    {
+      "id": "control-adr-1185-numeric-sweep",
+      "kind": "exhaustive-enumeration",
+      "supports": "General-row expansion agrees with this det at every row for n = 1..5 over 30 random matrices each; the double sum equals it in BOTH orders of summation; and removing the summand's diagonal guard breaks the assembly at 126 of 150 cases.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1185-laplace-summand-checks.py",
+        "adr-1155-laplace-route-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1185-laplace-summand-checks.py",
+      "checker_seconds": 20,
+      "notes": "Simulates Rat.matSkip, Rat.unskip, Rat.matMinor, Rat.det and Rat.laplaceSummand over Fraction at exactly the definitions rat_prelude/matrix_det.rs uses, and exits 1 if any claim fails. It re-derives the summand THIS lane builds rather than inheriting ADR-1155's W, whose inner minor names row 0 where the double expansion needs row i -- and that is how the discrepancy was found. Carries controls in both directions: a wrong unskip recursion must differ (49 of 64 pairs) and removing the diagonal guard must break the assembly. Verified to FAIL -- 10 of its 13 checks -- when the simulated matSkip's branches are swapped. Independent of the kernel proof."
+    },
+    {
+      "id": "control-det-row-expansion-mutation",
+      "kind": "exhaustive-enumeration",
+      "supports": "Under the Rat.matSkip branch-swap mutation the statement is FALSE at 105 of 120 instances and the declaration is refused; under the Rat.unskip succ-row mutation the declaration is refused as well. Both columns are recorded, since a rejected declaration and a false statement are different findings.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1185-laplace-summand-checks.py (statement column)",
+        "declare_matrix_det reporting run (declaration column, ADR-1185)"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1185-laplace-summand-checks.py 2>&1 | grep -cE '^  det_row_expansion +FALSE'",
+      "checker_seconds": 20,
+      "notes": "grep -c on a tested count, consuming the whole pipe. The statement column is what this command re-derives; the declaration column was measured once in an isolated worktree with declare_matrix_det rewritten to REPORT each rejection instead of short-circuiting, and is recorded in ADR-1185's table rather than re-run here. Both are needed: a declaration rejected while its theorem stays true adds no coverage, which is exactly what nine of this lane's twenty declarations do under the matSkip mutation."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane laplace-summand, closing ADR-1155's named remainder. Design note: ADR-1185."
+  },
+  "notes": "The sign is written altSign (q + i) rather than altSign (i + q) and that choice is load-bearing: Nat.add recurses on its RIGHT argument, so add q 0 reduces to q and the i = 0 branch is Rat.det_succ verbatim, at the base case and again in the step. The mirrored form would need Nat.zero_add in both places. The step, at m = succ m' and i = succ i', is five moves on each side: det_succ (respectively the induction hypothesis) opens the inner expansion, two Rat.mul_sumRange pulls take the cofactor coefficients inside, Rat.laplaceSummand_rowZero (respectively _rowI) identifies the result as the summand along Rat.matSkip, and the inner range is filled out to the whole square by Rat.sumRange_matSkip plus the diagonal zero. Then Rat.sumRange_swap, once. The outer level uses Rat.sumRange_congr_lt rather than sumRange_congr because the fill needs Nat.ble p m' = true, which holds only below the bound. Transpose invariance is now strictly downstream: it expands along a column of A, its inner sums are matSkip-reindexed, and filling them to the full range is the same move -- and a column of A is a row of its transpose, which is what this law now supplies."
+}

@@ -18,7 +18,8 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:int-left-distrib",
-    "F:int-mul-comm"
+    "F:int-mul-comm",
+    "F:ml430-int-add-mul-66aa025b"
   ],
   "axiom_footprint": [],
   "evidence": [

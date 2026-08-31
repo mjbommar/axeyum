@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1991,
+    "min_identity_bound": 1998,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -17841,6 +17841,13 @@
       "kernel_theorem": "Rat.det_minor_col_comm"
     },
     {
+      "fact_id": "F:rat-det-row-expansion",
+      "language": "lean4",
+      "statement_sha256": "a408cf34895739c61256fdb80813b1a4d6428893a3873a5c4eaeda8945eb2137",
+      "prose_sha256": "8236bf361c8335e179ce90bbe42445413d3075cf1e06cb6c47f8728593aaab5f",
+      "kernel_theorem": "Rat.det_row_expansion"
+    },
+    {
       "fact_id": "F:rat-det2-eq-zero-of-lin-dep",
       "language": "lean4",
       "statement_sha256": "3ed29cad7e483dc7a1874cd535784e2afc1d03968e29f6f1efec81e94ee2c60c",
@@ -18371,6 +18378,13 @@
       "statement_sha256": "7aec5129191f78b5ef65c4a2e841537b8a0e82302f223864ebce0881c6ee0959",
       "prose_sha256": "c54d9966ec810ee924d3195d9f73336608f13d8ba48df6305e4e4bc6ad0fd5d5",
       "kernel_theorem": "Rat.inv2_top_right"
+    },
+    {
+      "fact_id": "F:rat-laplace-summand-row-i",
+      "language": "lean4",
+      "statement_sha256": "f00c1593da3cb3ca313152eb19eba21a780724c13cfcb76ed250da08379fcced",
+      "prose_sha256": "3ef649622b7f953441f24cf69d4ac956d93d1ff63a74c60b79d80ef0c8c2d07a",
+      "kernel_theorem": "Rat.laplaceSummand_rowI"
     },
     {
       "fact_id": "F:rat-le-abs-self",
@@ -19938,6 +19952,13 @@
       "statement_sha256": "a60c1571be1c9b84b724ee97f3c9bc1002b4a5fe5afef23444088757027ab89b",
       "prose_sha256": "17aacf1296d92f1c9975d5a18b0ee2799d523fc54487646ca636daf5b42644c1",
       "kernel_theorem": "Rat.uniform_is_distribution"
+    },
+    {
+      "fact_id": "F:rat-unskip-mat-skip",
+      "language": "lean4",
+      "statement_sha256": "2b2f98e73a4fcefcf17e0c4d410eaaeccdfacf78899ee6aa8512c9e60a3ab6eb",
+      "prose_sha256": "c91695536a5f0116612205787d1b03748cf860459f47330dd7d07fb1b2b7cd48",
+      "kernel_theorem": "Rat.unskip_matSkip"
     },
     {
       "fact_id": "F:rat-variance-add-eq",

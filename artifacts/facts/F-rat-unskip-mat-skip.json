@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-unskip-mat-skip",
+  "title": "Rat.unskip_matSkip: unskip p is a left inverse of the injection matSkip p, unconditionally",
+  "statement": "Rat.matSkip p is the order-preserving injection [0,n) -> [0,n+1) whose image misses p. Rat.unskip p is declared here as its left inverse: unskip p q is q's position in [0,n+1) minus {p}. This fact records that unskip p (matSkip p k) = k for every p and k, with NO hypothesis -- unlike every other lemma in this cluster, which carries a Nat.ble premise. It is unconditional because matSkip p never produces p, so its whole image lies where unskip p inverts it, and the two branches of the guard are covered by the two branches of the recursion rather than by a case split. This is the index lemma that lets a Laplace double-expansion summand be defined as a function of the two COLUMNS: the inner cofactor column is k, but the summand has to be a function of (p, q), and k = unskip p q is how it is recovered.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.unskip_matSkip : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (Rat.unskip x0 (Rat.matSkip x0 x1)) x1))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "Rat.unskip_matSkip"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.unskip_matSkip",
+      "kind": "kernel-term",
+      "supports": "Rat.unskip_matSkip is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.unskip_matSkip 2>/dev/null | grep -cE '^Rat\\.unskip_matSkip[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.unskip_matSkip",
+      "notes": "Two independent failure modes: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. ONE name per invocation. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-Rat.unskip_matSkip",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.unskip_matSkip.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-unskip-computes-both-branches",
+      "kind": "kernel-term",
+      "supports": "Rat.unskip is a DEFINITION, so the trusted gate says only that it is well-formed: Nat -> Nat -> Nat is that type whatever the function returns. It is reduced at concrete arguments hitting BOTH branches -- unskip 2 1 = 1 (identity) and unskip 2 3 = 2 (shift down) -- and unskip 2 3 is separately asserted NOT to be 3.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_laplace_summand_layer_computes"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib the_laplace_summand_layer_computes 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The count is tested, not just the exit status. The two arguments are one pair on purpose: a definition that took the identity branch everywhere passes the first and fails the second, and one that took the shift branch everywhere does the reverse -- NEITHER ALONE separates them. What it does NOT check: any behaviour at symbolic arguments, which this fact's own statement covers, or Rat.matSkip's guard order, which Rat.det_eq_det2 separates."
+    },
+    {
+      "id": "control-adr-1185-unskip-sweep",
+      "kind": "exhaustive-enumeration",
+      "supports": "The declared double-Nat.rec form agrees with the ble/pred closed form at all 64 pairs below 8; the left-inverse identity holds at all 81 pairs below 9; and under the Rat.matSkip branch-swap mutation it is FALSE at 72 of 81, so it carries real index content.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1185-laplace-summand-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1185-laplace-summand-checks.py 2>&1 | grep -cE '^  unskip_matSkip +FALSE'",
+      "checker_seconds": 20,
+      "notes": "grep -c on a tested count, consuming the whole pipe: the line only appears when the mutation actually falsifies the statement, so a mutation that changed nothing would report 0 and fail. The script separately carries a NEGATIVE control on the recursion itself -- a succ row that forgets its own succ must differ, and does at 49 of 64 pairs -- and exits 1 on any failure."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane laplace-summand, closing ADR-1155's named remainder. Design note: ADR-1185."
+  },
+  "notes": "The SHAPE of Rat.unskip is the finding, and it is forced. ADR-1155 names the closed form, unskip p q := if Nat.ble (succ p) q then Nat.pred q else q. That form computes the right function -- checked at all 64 pairs below 8 -- and is the wrong shape to reason with: unskip p (matSkip p c) then carries TWO stuck Nat.ble guards, and a Bool.rec split on the inner one does not reach the outer, because reducing ble (succ p) (succ c) RE-CREATES ble p c, the very scrutinee the split had abstracted away. Declared instead as a double Nat.rec -- the construction Nat.ble and Nat.beq already use -- all three rows hold by iota alone (unskip 0 q = Nat.pred q, unskip (succ p) 0 = 0, unskip (succ p) (succ q) = succ (unskip p q)) and this lemma is a two-level induction with no case split at all. That is Rat.matSkip_succ_succ's finding arriving from the other side: there a succ could not be pushed through a stuck recursor and the answer was a Bool.rec; here a Bool.rec cannot reach a guard that reduction regenerates and the answer is to make the definition structural. The same preference decides the sibling Rat.unskip_gt, stated at succ q rather than as unskip p q = Nat.pred q: the pred form's successor step ends at succ (pred q') = q' and needs a further inversion, while this form's successor step is the induction hypothesis."
+}

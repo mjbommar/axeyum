@@ -231,6 +231,137 @@ for m_ in range(1, 4):
                 BAD_NC += 1
 check("  (control) removing the `beq p q` guard BREAKS it", BAD_NC > 0, f"{BAD_NC} broken")
 
+# --- 7. the STATEMENT column of the mutation table -------------------------
+#
+# ADR-1155's standard: a rejected declaration and a false statement are
+# DIFFERENT findings, and only the pair is honest.  A declaration whose proof
+# breaks under a mutation while its theorem stays TRUE adds no coverage against
+# that mutation -- its proof merely names the branches in order.
+#
+# The mutation is the same one ADR-1135 and ADR-1155 use: `Rat.matSkip`'s two
+# `bool_select_nat` branches swapped.  Everything downstream is re-simulated
+# against it, `Rat.det` included, because `det` is built on `matSkip` too.
+
+
+def mat_skip_mut(p, x):
+    "matSkip with its branches swapped"
+    return x if ble(p, x) else x + 1
+
+
+def minor_mut(a, i, j):
+    return lambda r, c: a(mat_skip_mut(i, r), mat_skip_mut(j, c))
+
+
+def det_mut(a, n):
+    if n == 0:
+        return F(1)
+    return sum(alt_sign(j) * (a(0, j) * det_mut(minor_mut(a, 0, j), n - 1))
+               for j in range(n))
+
+
+def summand_mut(a, ip, m, p, q):
+    if beq(p, q):
+        return F(0)
+    u = unskip_rec(p, q)
+    return alt_sign(p) * (a(0, p) * (alt_sign(u + ip) * (
+        a(ip + 1, q) * det_mut(minor_mut(minor_mut(a, 0, p), ip, u), m))))
+
+
+print()
+print("statement column, under the `matSkip` branch swap "
+      "(counterexamples out of instances tried):")
+
+ROWS = []
+
+
+def survey(label, bad, total):
+    ROWS.append((label, bad, total))
+    verdict = "TRUE (no coverage)" if bad == 0 else f"FALSE ({bad} of {total})"
+    print(f"  {label:<26} {verdict}")
+
+
+survey("unskip_matSkip",
+       sum(1 for p_ in range(9) for c_ in range(9)
+           if unskip_rec(p_, mat_skip_mut(p_, c_)) != c_), 81)
+survey("beq_matSkip",
+       sum(1 for j_ in range(9) for k_ in range(9) if beq(j_, mat_skip_mut(j_, k_))), 81)
+survey("beq_matSkip_left",
+       sum(1 for j_ in range(9) for k_ in range(9) if beq(mat_skip_mut(j_, k_), j_)), 81)
+
+BAD = TOT = 0
+for ip_ in range(4):
+    for u_ in range(6):
+        for v_ in range(6):
+            if not ble(u_, v_):
+                continue
+            for r_ in range(5):
+                for c_ in range(5):
+                    TOT += 1
+                    LEFT = (mat_skip_mut(0, mat_skip_mut(ip_, r_)),
+                            mat_skip_mut(u_, mat_skip_mut(v_, c_)))
+                    RIGHT = (mat_skip_mut(ip_ + 1, mat_skip_mut(0, r_)),
+                             mat_skip_mut(mat_skip_mut(0, v_), mat_skip_mut(u_, c_)))
+                    if LEFT != RIGHT:
+                        BAD += 1
+survey("matMinor_double_comm_lo", BAD, TOT)
+
+BAD = TOT = 0
+random.seed(1185)
+for _ in range(300):
+    m_ = random.randint(0, 2)
+    n_ = m_ + 2
+    ip_ = random.randint(0, m_)
+    A = rand_mat(n_ + 2)
+    p_ = random.randint(0, n_ - 1)
+    c_ = random.randint(0, n_ - 2)
+    TOT += 1
+    LHS = summand_mut(A, ip_, m_, p_, mat_skip_mut(p_, c_))
+    RHS = alt_sign(p_) * (A(0, p_) * (alt_sign(c_ + ip_) * (
+        A(ip_ + 1, mat_skip_mut(p_, c_))
+        * det_mut(minor_mut(minor_mut(A, 0, p_), ip_, c_), m_))))
+    if LHS != RHS:
+        BAD += 1
+survey("laplaceSummand_rowZero", BAD, TOT)
+
+BAD = TOT = 0
+for _ in range(300):
+    m_ = random.randint(0, 2)
+    n_ = m_ + 2
+    ip_ = random.randint(0, m_)
+    A = rand_mat(n_ + 2)
+    q_ = random.randint(0, n_ - 1)
+    c_ = random.randint(0, n_ - 2)
+    TOT += 1
+    LHS = summand_mut(A, ip_, m_, mat_skip_mut(q_, c_), q_)
+    RHS = alt_sign(q_ + ip_ + 1) * (A(ip_ + 1, q_) * (alt_sign(c_) * (
+        A(0, mat_skip_mut(q_, c_))
+        * det_mut(minor_mut(minor_mut(A, ip_ + 1, q_), 0, c_), m_))))
+    if LHS != RHS:
+        BAD += 1
+survey("laplaceSummand_rowI", BAD, TOT)
+
+BAD = TOT = 0
+for m_ in range(0, 3):
+    n_ = m_ + 1
+    for i_ in range(0, m_ + 1):
+        for _ in range(20):
+            A = rand_mat(n_ + 1)
+            TOT += 1
+            LHS = det_mut(A, n_ + 1)
+            RHS = sum(alt_sign(q_ + i_) * (A(i_, q_) * det_mut(minor_mut(A, i_, q_), m_))
+                      for q_ in range(n_ + 1))
+            if LHS != RHS:
+                BAD += 1
+survey("det_row_expansion", BAD, TOT)
+
+print("  (unskip_zero/_succ_zero/_succ_succ, unskip_le, unskip_gt,")
+print("   ble_flip_of_false, altSign_succ_add, mul_perm4, laplaceSummand_diag")
+print("   mention no `matSkip` at all, so all stay TRUE and add no coverage)")
+
+MUT_COVERAGE = sum(1 for _lbl, bad, _tot in ROWS if bad > 0)
+check("the mutation is discriminating on at least half the surveyed statements",
+      MUT_COVERAGE * 2 >= len(ROWS), f"{MUT_COVERAGE} of {len(ROWS)}")
+
 print()
 print(f"FAILURES: {len(FAILS)}" + ("  " + ", ".join(FAILS) if FAILS else ""))
 raise SystemExit(1 if FAILS else 0)
