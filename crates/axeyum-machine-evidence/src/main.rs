@@ -9,12 +9,13 @@ use axeyum_machine_evidence::{
     check_observation_omission_control, check_observation_separation, check_run_classification,
     check_run_false_halt_control, check_state_codec, check_state_codec_trailing_byte_control,
     check_step_coverage, check_step_hidden_write_control, check_step_mutation_suite_control,
-    check_symbolic_addition, check_symbolic_addition_inverted_carry_control, check_word_package,
+    check_symbolic_addition, check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
+    check_symbolic_memory_partial_store_control, check_word_package,
     check_word_package_signed_zero_extension_control, check_word_roundtrip,
     check_word_roundtrip_reversed_control, decoder_roundtrip_report, memory_trace_report,
     observation_separation_report, run_classification_report, semantic_package, state_codec_report,
-    step_coverage_report, symbolic_addition_report, word_package_report, word_roundtrip_report,
-    write_json,
+    step_coverage_report, symbolic_addition_report, symbolic_memory_report, word_package_report,
+    word_roundtrip_report, write_json,
 };
 
 fn main() {
@@ -290,6 +291,31 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_symbolic_addition_inverted_carry_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: inverted symbolic carry was accepted".into());
         }
+        [command, package, output] if command == "emit-symbolic-memory" => {
+            let report = symbolic_memory_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "symbolic-memory: PASS: widths={} partial-store-replayed={}",
+                report.proofs.len(),
+                report
+                    .partial_store_counterexample
+                    .correct_store_preserved_memory
+            );
+        }
+        [command, package, report] if command == "check-symbolic-memory" => {
+            let checked = check_symbolic_memory(Path::new(package), Path::new(report))?;
+            println!(
+                "symbolic-memory: PASS: widths={} LRAT=all partial-store-replayed={}",
+                checked.proofs.len(),
+                checked
+                    .partial_store_counterexample
+                    .correct_store_preserved_memory
+            );
+        }
+        [command, package, report] if command == "control-symbolic-memory-partial-store" => {
+            check_symbolic_memory_partial_store_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: partial trapped store was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -318,7 +344,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  control-step-mutation-suite PACKAGE REPORT | \
                  emit-symbolic-addition PACKAGE OUTPUT | \
                  check-symbolic-addition PACKAGE REPORT | \
-                 control-symbolic-addition-inverted-carry PACKAGE REPORT"
+                 control-symbolic-addition-inverted-carry PACKAGE REPORT | \
+                 emit-symbolic-memory PACKAGE OUTPUT | check-symbolic-memory PACKAGE REPORT | \
+                 control-symbolic-memory-partial-store PACKAGE REPORT"
                 .into());
         }
     }

@@ -14,7 +14,7 @@ publish = false
 [dependencies]
 axeyum-ir.workspace = true
 axeyum-machine.workspace = true
-axeyum-solver = { path = "../axeyum-solver", default-features = false, features = ["qfbv"] }
+axeyum-solver = { path = "../axeyum-solver", default-features = false, features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.11"
