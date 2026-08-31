@@ -1108,6 +1108,31 @@ mod tests {
         );
     }
 
+    /// The sibling case: the leak is in the STATEMENT, not the proof. A
+    /// distinct guard (`site: "final theorem type"`), so it needs its own
+    /// witness — the value-leak test above cannot exercise it.
+    #[test]
+    fn theorem_plan_declines_a_leaked_free_variable_in_the_type() {
+        let (mut k, p) = dev();
+        let mut d = NatDev::new(&mut k, p);
+        let anon = d.anon_name();
+        let name = d.kernel().name_str(anon, "proof_plan_type_leak_probe");
+        let outcome = theorem_plan(&mut d, name, 0, &|d, _v| {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            // The STATEMENT mentions `q`, which nothing ever binds; the
+            // proof itself is closed.
+            let zero = d.zero();
+            (q, Plan::Constructor(Ctor::Refl(zero)))
+        });
+        assert_eq!(
+            outcome,
+            Err(PlanOutcome::Declined(PlanError::UnboundFreeVariable {
+                site: "final theorem type"
+            }))
+        );
+    }
+
     /// The positive control for the guard above: a genuine, closed
     /// `theorem_plan` declaration succeeds and is admitted by the kernel.
     #[test]
