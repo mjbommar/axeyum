@@ -4929,8 +4929,11 @@ pub struct NatPrelude {
     /// add (add (mul a a) a) b` — the one-directional Cantor-style
     /// pairing (Mathlib's/Lean core's own `Nat.pair`). `Nat.unpair` is NOT
     /// reachable this way (needs `Prod`, absent from this kernel); see
-    /// `avg_pair.rs`'s module doc.
-    pub pair: NameId,
+    /// `avg_pair.rs`'s module doc. Rust field named `pair_fn`, not `pair`
+    /// — `pair` is already the `Nat.Pair` product TYPE from
+    /// `binary_rec.rs` (a different, capitalized kernel name; only the
+    /// Rust identifiers collide).
+    pub pair_fn: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5885,7 +5888,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
             avg: kernel.name_str(nat, "avg"),
-            pair: kernel.name_str(nat, "pair"),
+            pair_fn: kernel.name_str(nat, "pair"),
         };
 
         let mut d = NatDev::new(kernel, p);

@@ -131,7 +131,7 @@ pub(super) fn declare_avg_pair_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
             d.arrow(nat, inner)
         };
         d.kernel().add_declaration(Declaration::Definition {
-            name: p.pair,
+            name: p.pair_fn,
             uparams: vec![],
             ty,
             value,

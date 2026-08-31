@@ -138,22 +138,22 @@ fn pair_evaluates_correctly() {
     let seven = f.num(7);
     let eight = f.num(8);
 
-    let pair_0_0 = f.const_app(p.pair, &[zero, zero]);
+    let pair_0_0 = f.const_app(p.pair_fn, &[zero, zero]);
     assert!(f.k.def_eq(pair_0_0, zero), "pair 0 0 must be 0");
 
-    let pair_0_1 = f.const_app(p.pair, &[zero, one]);
+    let pair_0_1 = f.const_app(p.pair_fn, &[zero, one]);
     assert!(f.k.def_eq(pair_0_1, one), "pair 0 1 must be 1");
 
-    let pair_1_0 = f.const_app(p.pair, &[one, zero]);
+    let pair_1_0 = f.const_app(p.pair_fn, &[one, zero]);
     assert!(f.k.def_eq(pair_1_0, two), "pair 1 0 must be 2");
 
-    let pair_1_1 = f.const_app(p.pair, &[one, one]);
+    let pair_1_1 = f.const_app(p.pair_fn, &[one, one]);
     assert!(f.k.def_eq(pair_1_1, three), "pair 1 1 must be 3");
 
-    let pair_0_2 = f.const_app(p.pair, &[zero, two]);
+    let pair_0_2 = f.const_app(p.pair_fn, &[zero, two]);
     assert!(f.k.def_eq(pair_0_2, four), "pair 0 2 must be 4");
 
-    let pair_1_2 = f.const_app(p.pair, &[one, two]);
+    let pair_1_2 = f.const_app(p.pair_fn, &[one, two]);
     assert!(f.k.def_eq(pair_1_2, five), "pair 1 2 must be 5");
     assert!(
         !f.k.def_eq(pair_1_2, three),
@@ -169,20 +169,20 @@ fn pair_evaluates_correctly() {
          Cantor pairing (a+b)*(a+b+1)/2 + a)"
     );
 
-    let pair_2_0 = f.const_app(p.pair, &[two, zero]);
+    let pair_2_0 = f.const_app(p.pair_fn, &[two, zero]);
     assert!(f.k.def_eq(pair_2_0, six), "pair 2 0 must be 6");
 
-    let pair_2_1 = f.const_app(p.pair, &[two, one]);
+    let pair_2_1 = f.const_app(p.pair_fn, &[two, one]);
     assert!(f.k.def_eq(pair_2_1, seven), "pair 2 1 must be 7");
     assert!(
         !f.k.def_eq(pair_2_1, five),
         "negative control: pair 2 1 must NOT equal pair 1 2 (5) -- pair is not symmetric"
     );
 
-    let pair_2_2 = f.const_app(p.pair, &[two, two]);
+    let pair_2_2 = f.const_app(p.pair_fn, &[two, two]);
     assert!(f.k.def_eq(pair_2_2, eight), "pair 2 2 must be 8");
 
-    for name in [p.pair] {
+    for name in [p.pair_fn] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{} must rest on zero axioms",

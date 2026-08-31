@@ -549,6 +549,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         // `gauss-pairing-lemma` lane (ADR-0990, piece 2): the signed-fold
         // self-map.
         p.gauss_fold,
+        // `avg-pair-constructions` lane (ADR-1045/ADR-1060): `avg_pair.rs`.
+        // Definitions only, deliberately (ADR-0653).
+        p.avg,
+        p.pair_fn,
     ]
 }
 
