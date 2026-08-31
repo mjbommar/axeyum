@@ -792,3 +792,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1205](adr-1205-the-bucket-bug-recurred-one-layer-over-the-depth-spine-stays-a-proposal.md) | Third re-measurement of `curriculum.toml`'s `kernel_decls` | accepted |
 | [1210](adr-1210-transpose-invariance-needs-the-column-law-not-the-row-law.md) | `Rat.det_transpose` — `det (matTranspose A) n = det A n` at a | accepted |
 | [1215](adr-1215-a-mis-attributed-bucket-is-invisible-so-guard-the-name-family-not-the-pattern.md) | The curriculum classifier's residual counter catches a | accepted |
+| [1225](adr-1225-prelude-inventory-ownership-comes-from-the-build-order-diff.md) | Every "every X is checked and axiom-free" kernel test filters the | accepted |

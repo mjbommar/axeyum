@@ -531,8 +531,7 @@ fn inventory_report(groups: &[Group], own: &BTreeMap<&'static str, BTreeSet<Stri
         let allowed = ASSUMED_BY
             .iter()
             .find(|(l, _)| *l == label)
-            .map(|(_, n)| *n)
-            .unwrap_or(0);
+            .map_or(0, |(_, n)| *n);
         let (mut checked, mut structural, mut trusted) = (0usize, 0usize, 0usize);
         for name in names {
             match group.kinds.get(name) {
