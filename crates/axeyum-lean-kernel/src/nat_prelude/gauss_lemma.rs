@@ -59,6 +59,7 @@
 //! `docs/plan/status/gauss-lemma-countrange.md` for exact sizing.
 
 use super::NatPrelude;
+use super::fermat_number_mirrors::pos_of_lt_add_left;
 use super::group::{mod_eq_of_mod_eq_rel, mod_self_congr};
 use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps, bool_true_or_false};
@@ -1353,6 +1354,28 @@ fn two_mul_eq_add(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
     result
 }
 
+/// `Lt a b ⊢ Lt zero (sub b a)` — a per-file copy of `dist_more2.rs`'s
+/// private `sub_pos_of_lt` (that one is not `pub(super)`, so not
+/// importable): from `Lt a b`, `sub_add_cancel` gives `b = add (sub b a)
+/// a`, rewritten via `add_comm` to `b = add a (sub b a)`; transporting
+/// `hlt` along that equation gives `Lt a (add a (sub b a))`, and
+/// `pos_of_lt_add_left` finishes.
+fn sub_pos_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId {
+    let p = *p;
+    let h_le = le_of_lt(d, &p, a, b, hlt);
+    let sub_ba = d.sub(b, a);
+    let h_cancel = d.lemma(p.sub_add_cancel, &[a, b, h_le]); // Eq (add sub_ba a) b
+    let add_a_subba = d.add(a, sub_ba);
+    let add_subba_a = d.add(sub_ba, a);
+    let h_comm = d.lemma(p.add_comm, &[sub_ba, a]); // Eq add_subba_a add_a_subba
+    let h_comm_rev = d.symm(add_subba_a, add_a_subba, h_comm); // Eq add_a_subba add_subba_a
+    let h_eq = d.trans(add_a_subba, add_subba_a, b, h_comm_rev, h_cancel); // Eq add_a_subba b
+    let h_eq_rev = d.symm(add_a_subba, b, h_eq); // Eq b add_a_subba
+    let motive = d.eq_motive(b, &|d, x| d.lt(a, x));
+    let hlt2 = d.transport(b, motive, hlt, add_a_subba, h_eq_rev); // Lt a (add a sub_ba)
+    pos_of_lt_add_left(d, &p, a, sub_ba, hlt2)
+}
+
 /// Same-sign, IDENTITY branch (`test_k = test_k' = false`): `heq` transports
 /// directly to `Eq (leastResidue pp a k) (leastResidue pp a k')`, closed by
 /// `least_residue_injective_of_coprime` (piece 1).
@@ -1783,6 +1806,484 @@ pub(super) fn declare_gauss_fold_injective_of_coprime(
     Ok(())
 }
 
+/// `Nat.div_succ_two_mul_eq_self : ∀ m, Eq (div (succ (mul 2 m)) 2) m`.
+///
+/// Route (ADR-1015): `add_mul_div_left` at `(x, z, y) := (1, m, 2)` gives
+/// `Eq (div (add 1 (mul 2 m)) 2) (add (div 1 2) m)`; `div 1 2 = 0` closes by
+/// the kernel's own unary reduction (`Eq.refl`, well under the numeral cost
+/// cliff), and `zero_add` collapses the RHS to `m`. The LHS needs `add 1
+/// (mul 2 m)` bridged to `pp`'s actual `succ (mul 2 m)` shape: `Nat.add`
+/// recurses on its RIGHT argument, so `add 1 (mul 2 m)` (literal on the
+/// LEFT, `mul 2 m` symbolic on the RIGHT) is stuck, but `add_comm` flips it
+/// to `add (mul 2 m) 1`, whose right argument is now the literal `1` --
+/// `add (mul 2 m) 1` IS defeq `succ (mul 2 m)` by two iota steps
+/// (`add x (succ zero) = succ (add x zero) = succ x`), regardless of `mul 2
+/// m` itself being stuck (it is carried along unreduced, not matched on).
+pub(super) fn declare_div_succ_two_mul_eq_self(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.div_succ_two_mul_eq_self, 1, &|d, v| {
+        let m = v[0];
+        let one = d.num(1);
+        let two = d.num(2);
+        let zero = d.zero();
+        let mul2m = d.mul(two, m);
+        let pp = d.succ(mul2m);
+
+        let div_pp_two = d.div(pp, two);
+        let concl = d.eq(div_pp_two, m);
+
+        let pos_two = d.lemma(p.zero_lt_succ, &[one]); // Lt zero (succ one) ~ Lt zero two
+
+        // add_mul_div_left(1, m, 2, pos_two) : Eq (div (add 1 mul2m) 2) (add (div 1 2) m)
+        let step1 = d.lemma(p.add_mul_div_left, &[one, m, two, pos_two]);
+
+        let add_one_mul2m = d.add(one, mul2m);
+        let div_add_one_mul2m_two = d.div(add_one_mul2m, two);
+        let div_one_two = d.div(one, two);
+        let add_div12_m = d.add(div_one_two, m);
+
+        // add_comm(1, mul2m) : Eq (add 1 mul2m) (add mul2m 1)
+        let add_comm_pf = d.lemma(p.add_comm, &[one, mul2m]);
+        let add_mul2m_one = d.add(mul2m, one);
+        // add(mul2m, 1) is defeq succ(mul2m) = pp (literal 1 on the right).
+        let add_mul2m_one_eq_pp = d.refl(pp);
+        let add_one_mul2m_eq_pp = d.trans(
+            add_one_mul2m,
+            add_mul2m_one,
+            pp,
+            add_comm_pf,
+            add_mul2m_one_eq_pp,
+        );
+
+        // Rewrite div(add 1 mul2m, 2) to div(pp, 2), then take the reverse
+        // direction to anchor the chain at div_pp_two.
+        let congr_lhs = d.congr(add_one_mul2m, pp, add_one_mul2m_eq_pp, &|d, x| {
+            d.div(x, two)
+        });
+        let lhs_rewrite = d.symm(div_add_one_mul2m_two, div_pp_two, congr_lhs);
+        // lhs_rewrite : Eq div_pp_two div_add_one_mul2m_two
+
+        // div 1 2 = 0, by the kernel's own reduction.
+        let div_one_two_eq_zero = d.refl(zero);
+        let congr_rhs = d.congr(div_one_two, zero, div_one_two_eq_zero, &|d, x| {
+            d.add(x, m)
+        });
+        let add_zero_m = d.add(zero, m);
+        // congr_rhs : Eq add_div12_m add_zero_m
+
+        let zero_add_m = d.lemma(p.zero_add, &[m]); // Eq (add zero m) m
+
+        let (_e, proof) = d.chain(
+            div_pp_two,
+            &[
+                (div_add_one_mul2m_two, lhs_rewrite),
+                (add_div12_m, step1),
+                (add_zero_m, congr_rhs),
+                (m, zero_add_m),
+            ],
+        );
+
+        (concl, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.gauss_fold_in_range : ∀ m a k, gcd a (succ (mul 2 m)) = 1 → 0 < k →
+///   Le k m → And (0 < gaussFold (succ (mul 2 m)) a k) (Le (gaussFold
+///   (succ (mul 2 m)) a k) m)`.
+///
+/// The `MapsInto` range bound (ADR-1015). By cases on `gaussSignNeg pp a
+/// k`:
+///
+/// - **Not negative** (`false`, fold = `leastResidue pp a k`): positivity
+///   is [`declare_least_residue_ne_zero_of_coprime`] at `k < pp` (derived
+///   exactly as in [`declare_gauss_fold_injective_of_coprime`]). The upper
+///   bound comes from `test = false`, i.e. `Not (ble succ_half lr = true)`
+///   (`bool_false_ne_true`), hence `Not (Le succ_half lr)`
+///   (`not_le_of_not_ble_eq_true`), hence `Lt lr succ_half`
+///   (`lt_of_not_le`), hence `Le lr half` (`le_of_lt_succ`), and `half = m`
+///   ([`declare_div_succ_two_mul_eq_self`]) finishes.
+/// - **Negative** (`true`, fold = `sub pp (leastResidue pp a k)`):
+///   positivity is [`sub_pos_of_lt`] from `leastResidue pp a k < pp`
+///   (`mod_lt`). The upper bound comes from `test = true`, i.e. `Le
+///   succ_half lr` (`le_of_ble_eq_true`), rewritten via `half = m` to `Le
+///   (succ m) lr`; `add_le_add_left` at `m` gives `Le (add m (succ m)) (add
+///   m lr)`, and `add m (succ m)` is defeq `pp` (two iota steps, same shape
+///   as [`declare_div_succ_two_mul_eq_self`]'s bridge), so `sub_le_iff_le_
+///   add`'s reverse direction turns `Le pp (add m lr)` into `Le (sub pp lr)
+///   m`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_gauss_fold_in_range(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.gauss_fold_in_range, 3, &|d, v| {
+        let (m, a, k) = (v[0], v[1], v[2]);
+        let two = d.num(2);
+        let one = d.num(1);
+        let zero = d.zero();
+        let mul2m = d.mul(two, m);
+        let pp = d.succ(mul2m);
+
+        let gcd_a_pp = d.gcd(a, pp);
+        let coprime_ty = d.eq(gcd_a_pp, one);
+        let pos_k_ty = d.lt(zero, k);
+        let le_k_m_ty = d.le(k, m);
+
+        let fold_k = gauss_fold(d, &p, pp, a, k);
+        let pos_fold_ty = d.lt(zero, fold_k);
+        let le_fold_m_ty = d.le(fold_k, m);
+        let concl = d.const_app(p.logic.and, &[pos_fold_ty, le_fold_m_ty]);
+
+        let stmt = {
+            let inner = d.arrow(le_k_m_ty, concl);
+            let inner2 = d.arrow(pos_k_ty, inner);
+            d.arrow(coprime_ty, inner2)
+        };
+
+        let coprime_fv = d.fresh_fvar();
+        let coprime = d.kernel().fvar(coprime_fv);
+        let pos_k_fv = d.fresh_fvar();
+        let pos_k = d.kernel().fvar(pos_k_fv);
+        let le_k_m_fv = d.fresh_fvar();
+        let le_k_m = d.kernel().fvar(le_k_m_fv);
+
+        let pos_pp = d.zero_lt_succ(mul2m);
+
+        // k < pp, exactly as in gauss_fold_injective_of_coprime's proof.
+        let pos_m = d.lemma(p.lt_of_lt_of_le, &[zero, k, m, pos_k, le_k_m]); // Lt zero m
+        let lt_m_2m = d.lemma(p.lt_two_mul_of_pos, &[m, pos_m]); // Lt m mul2m
+        let le_2m_pp = d.lemma(p.le_succ, &[mul2m]); // Le mul2m pp
+        let lt_m_pp = d.lemma(p.lt_of_lt_of_le, &[m, mul2m, pp, lt_m_2m, le_2m_pp]); // Lt m pp
+        let lt_k_pp = d.lemma(p.lt_of_le_of_lt, &[k, m, pp, le_k_m, lt_m_pp]); // Lt k pp
+
+        let half = d.div(pp, two);
+        let succ_half = d.succ(half);
+        let lr = least_residue(d, &p, pp, a, k);
+        let test = gauss_sign_neg(d, &p, pp, a, k);
+        let true_ = d.bool_true();
+        let false_ = d.bool_false();
+        let ty_true = d.bool_eq(test, true_);
+        let ty_false = d.bool_eq(test, false_);
+        let case = bool_true_or_false(d, &p, test);
+
+        let half_eq_m = d.lemma(p.div_succ_two_mul_eq_self, &[m]); // Eq half m
+
+        // Branch: test = true (negative).
+        let branch_true = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let neg_k = d.sub(pp, lr);
+            let eq_fold_neg = fold_eq_branch(d, &p, pp, a, k, true_, h); // Eq fold_k neg_k
+
+            let ak = d.mul(a, k);
+            let lr_lt_pp = d.lemma(p.mod_lt, &[ak, pp, pos_pp]); // Lt lr pp
+            let pos_neg_k = sub_pos_of_lt(d, &p, lr, pp, lr_lt_pp); // Lt zero (sub pp lr)
+
+            let le_succ_half_lr = d.lemma(p.le_of_ble_eq_true, &[succ_half, lr, h]); // Le succ_half lr
+            let succ_m = d.succ(m);
+            let succ_half_eq_succ_m = d.congr(half, m, half_eq_m, &|d, x| d.succ(x)); // Eq succ_half succ_m
+            let le_motive = d.eq_motive(succ_half, &|d, x| d.le(x, lr));
+            let le_succ_m_lr =
+                d.transport(succ_half, le_motive, le_succ_half_lr, succ_m, succ_half_eq_succ_m); // Le succ_m lr
+
+            let add_mono = d.lemma(p.add_le_add_left, &[m, succ_m, lr, le_succ_m_lr]); // Le (add m succ_m) (add m lr)
+            let add_m_succm = d.add(m, succ_m);
+            let add_m_lr = d.add(m, lr);
+            // add m succ_m is defeq pp (two iota steps: add x (succ y) = succ
+            // (add x y), then the outer succ matches pp's own succ mul2m
+            // shape once add m m = mul2m -- built via two_mul_eq_add).
+            let add_m_m_eq_mul2m = {
+                let e = two_mul_eq_add(d, &p, m); // Eq mul2m (add m m)
+                let add_m_m = d.add(m, m);
+                d.symm(mul2m, add_m_m, e) // Eq (add m m) mul2m
+            };
+            let add_m_m = d.add(m, m);
+            let congr_succ = d.congr(add_m_m, mul2m, add_m_m_eq_mul2m, &|d, x| d.succ(x)); // Eq (succ (add m m)) pp, defeq-usable as Eq add_m_succm pp
+            let le_motive2 = d.eq_motive(add_m_succm, &|d, x| d.le(x, add_m_lr));
+            let le_pp_addmlr = d.transport(add_m_succm, le_motive2, add_mono, pp, congr_succ); // Le pp (add m lr)
+
+            let sub_iff = d.lemma(p.sub_le_iff_le_add, &[pp, lr, m]); // Iff (Le (sub pp lr) m) (Le pp (add m lr))
+            let sub_target = d.le(neg_k, m);
+            let add_target = d.le(pp, add_m_lr);
+            let reverse = iff_reverse(d, sub_target, add_target, sub_iff);
+            let le_negk_m = d.apply(reverse, &[le_pp_addmlr]); // Le neg_k m
+
+            let pos_neg_k_ty = d.lt(zero, neg_k);
+            let le_negk_m_ty = d.le(neg_k, m);
+            let and_pf = and_intro2(d, &p, pos_neg_k_ty, le_negk_m_ty, pos_neg_k, le_negk_m);
+            let eq_fold_neg_rev = d.symm(fold_k, neg_k, eq_fold_neg); // Eq neg_k fold_k
+            let motive = d.eq_motive(neg_k, &|d, x| {
+                let pos_x = d.lt(zero, x);
+                let le_x_m = d.le(x, m);
+                d.const_app(p.logic.and, &[pos_x, le_x_m])
+            });
+            let result = d.transport(neg_k, motive, and_pf, fold_k, eq_fold_neg_rev);
+            d.lam_fv(h_fv, ty_true, result)
+        };
+
+        // Branch: test = false (not negative, identity).
+        let branch_false = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let eq_fold_id = fold_eq_branch(d, &p, pp, a, k, false_, h); // Eq fold_k lr
+
+            let pos_lr = d.lemma(
+                p.least_residue_ne_zero_of_coprime,
+                &[pp, a, k, coprime, pos_k, lt_k_pp],
+            ); // Lt zero lr
+
+            let htrue_fv = d.fresh_fvar();
+            let htrue = d.kernel().fvar(htrue_fv);
+            let hf_sym = d.symm(test, false_, h); // Eq false_ test
+            let combined = d.trans(false_, test, true_, hf_sym, htrue); // Eq false_ true_
+            let bool_false_ne_true = d.kernel().const_(p.logic.bool_false_ne_true, vec![]);
+            let false_val = d.apply(bool_false_ne_true, &[combined]);
+            let not_htrue = d.lam_fv(htrue_fv, ty_true, false_val); // Not (Eq test true_)
+
+            let not_le = d.lemma(p.not_le_of_not_ble_eq_true, &[succ_half, lr, not_htrue]); // Not (Le succ_half lr)
+            let lt_pf = d.lemma(p.lt_of_not_le, &[succ_half, lr, not_le]); // Lt lr succ_half
+            let le_lr_half = d.lemma(p.le_of_lt_succ, &[lr, half, lt_pf]); // Le lr half
+
+            let le_motive = d.eq_motive(half, &|d, x| d.le(lr, x));
+            let le_lr_m = d.transport(half, le_motive, le_lr_half, m, half_eq_m); // Le lr m
+
+            let pos_lr_ty = d.lt(zero, lr);
+            let le_lr_m_ty = d.le(lr, m);
+            let and_pf = and_intro2(d, &p, pos_lr_ty, le_lr_m_ty, pos_lr, le_lr_m);
+            let eq_fold_id_rev = d.symm(fold_k, lr, eq_fold_id); // Eq lr fold_k
+            let motive = d.eq_motive(lr, &|d, x| {
+                let pos_x = d.lt(zero, x);
+                let le_x_m = d.le(x, m);
+                d.const_app(p.logic.and, &[pos_x, le_x_m])
+            });
+            let result = d.transport(lr, motive, and_pf, fold_k, eq_fold_id_rev);
+            d.lam_fv(h_fv, ty_false, result)
+        };
+
+        let result = or_elim(d, &p, ty_true, ty_false, concl, branch_true, branch_false, case);
+
+        let with_le_k = d.lam_fv(le_k_m_fv, le_k_m_ty, result);
+        let with_pos_k = d.lam_fv(pos_k_fv, pos_k_ty, with_le_k);
+        let proof = d.lam_fv(coprime_fv, coprime_ty, with_pos_k);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.gaussFoldShift(pp, a, j) := pred (gaussFold pp a (succ j))` -- the
+/// 0-indexed shift ADR-1015 sizes: `Int.prodRange_permute` needs a self-map
+/// of `[0, m)`, not `[1, m]`.
+fn gauss_fold_shift(d: &mut NatDev<'_>, p: &NatPrelude, pp: ExprId, a: ExprId, j: ExprId) -> ExprId {
+    let sj = d.succ(j);
+    let fold = gauss_fold(d, p, pp, a, sj);
+    d.pred(fold)
+}
+
+/// `Nat.gauss_fold_shift_maps_into : ∀ m a, gcd a (succ (mul 2 m)) = 1 →
+///   MapsInto (fun j => pred (gaussFold (succ (mul 2 m)) a (succ j))) m`.
+///
+/// The shift wrapper's first half (ADR-1015). For `i < m`: `Lt i m` is
+/// defeq `Le (succ i) m`, exactly [`declare_gauss_fold_in_range`]'s
+/// hypothesis shape at `k := succ i`, so `hi` is reused directly with no
+/// bridging lemma. `gauss_fold_in_range` gives `0 < gaussFold pp a (succ
+/// i)` and `gaussFold pp a (succ i) ≤ m`; `succ_pred_of_pos` rewrites the
+/// bound's LEFT side to `succ (pred (gaussFold pp a (succ i)))`, which is
+/// defeq `Lt (pred (gaussFold pp a (succ i))) m` -- the goal, with no
+/// further step.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_gauss_fold_shift_maps_into(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.gauss_fold_shift_maps_into, 2, &|d, v| {
+        let (m, a) = (v[0], v[1]);
+        let two = d.num(2);
+        let one = d.num(1);
+        let nat = d.nat_ty();
+        let mul2m = d.mul(two, m);
+        let pp = d.succ(mul2m);
+
+        let gcd_a_pp = d.gcd(a, pp);
+        let coprime_ty = d.eq(gcd_a_pp, one);
+
+        let sigma = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = gauss_fold_shift(d, &p, pp, a, j);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let concl = d.const_app(p.maps_into, &[sigma, m]);
+        let stmt = d.arrow(coprime_ty, concl);
+
+        let coprime_fv = d.fresh_fvar();
+        let coprime = d.kernel().fvar(coprime_fv);
+
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.lt(i, m);
+
+        let succ_i = d.succ(i);
+        let pos_succ_i = d.zero_lt_succ(i);
+        let fold_si = gauss_fold(d, &p, pp, a, succ_i);
+
+        let zero = d.zero();
+        let and_pf = d.lemma(
+            p.gauss_fold_in_range,
+            &[m, a, succ_i, coprime, pos_succ_i, hi],
+        ); // And (0 < fold_si) (Le fold_si m)  -- `hi` reused as `Le succ_i m`
+        let pos_fold_si_ty = d.lt(zero, fold_si);
+        let le_fold_si_m_ty = d.le(fold_si, m);
+        let pos_fold_si = and_left(d, pos_fold_si_ty, le_fold_si_m_ty, and_pf);
+        let le_fold_si_m = and_right(d, pos_fold_si_ty, le_fold_si_m_ty, and_pf);
+
+        let succ_pred_eq = d.lemma(p.succ_pred_of_pos, &[fold_si, pos_fold_si]); // Eq fold_si (succ (pred fold_si))
+        let pred_fold_si = d.pred(fold_si);
+        let succ_pred_fold_si = d.succ(pred_fold_si);
+        let motive = d.eq_motive(fold_si, &|d, x| d.le(x, m));
+        let le_succpred_m =
+            d.transport(fold_si, motive, le_fold_si_m, succ_pred_fold_si, succ_pred_eq);
+        // le_succpred_m : Le (succ (pred fold_si)) m, defeq `Lt (pred fold_si) m`.
+
+        let with_hi = d.lam_fv(hi_fv, hi_ty, le_succpred_m);
+        let with_i = d.lam_fv(i_fv, nat, with_hi);
+        let proof = d.lam_fv(coprime_fv, coprime_ty, with_i);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.gauss_fold_shift_injective_on : ∀ m a, gcd a (succ (mul 2 m)) = 1 →
+///   InjectiveOn (fun j => pred (gaussFold (succ (mul 2 m)) a (succ j))) m`.
+///
+/// The shift wrapper's second half (ADR-1015), completing piece 2:
+/// `succ_pred_of_pos` lifts `heq : Eq (σ i) (σ j)` to `Eq (gaussFold pp a
+/// (succ i)) (gaussFold pp a (succ j))` (positivity from
+/// [`declare_gauss_fold_in_range`], same as
+/// [`declare_gauss_fold_shift_maps_into`]);
+/// [`declare_gauss_fold_injective_of_coprime`] gives `Eq (succ i) (succ
+/// j)`; `succ_injective` strips the outer `succ`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_gauss_fold_shift_injective_on(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.gauss_fold_shift_injective_on, 2, &|d, v| {
+        let (m, a) = (v[0], v[1]);
+        let two = d.num(2);
+        let one = d.num(1);
+        let nat = d.nat_ty();
+        let mul2m = d.mul(two, m);
+        let pp = d.succ(mul2m);
+
+        let gcd_a_pp = d.gcd(a, pp);
+        let coprime_ty = d.eq(gcd_a_pp, one);
+
+        let sigma = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = gauss_fold_shift(d, &p, pp, a, j);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let concl = d.const_app(p.injective_on, &[sigma, m]);
+        let stmt = d.arrow(coprime_ty, concl);
+
+        let coprime_fv = d.fresh_fvar();
+        let coprime = d.kernel().fvar(coprime_fv);
+
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.lt(i, m);
+        let hj_fv = d.fresh_fvar();
+        let hj = d.kernel().fvar(hj_fv);
+        let hj_ty = d.lt(j, m);
+
+        let sig_i = gauss_fold_shift(d, &p, pp, a, i);
+        let sig_j = gauss_fold_shift(d, &p, pp, a, j);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let heq_ty = d.eq(sig_i, sig_j);
+
+        let succ_i = d.succ(i);
+        let succ_j = d.succ(j);
+        let pos_succ_i = d.zero_lt_succ(i);
+        let pos_succ_j = d.zero_lt_succ(j);
+        let fold_si = gauss_fold(d, &p, pp, a, succ_i);
+        let fold_sj = gauss_fold(d, &p, pp, a, succ_j);
+
+        let zero = d.zero();
+        let and_pf_i = d.lemma(
+            p.gauss_fold_in_range,
+            &[m, a, succ_i, coprime, pos_succ_i, hi],
+        );
+        let pos_fold_si_ty = d.lt(zero, fold_si);
+        let le_fold_si_m_ty = d.le(fold_si, m);
+        let pos_fold_si = and_left(d, pos_fold_si_ty, le_fold_si_m_ty, and_pf_i);
+
+        let and_pf_j = d.lemma(
+            p.gauss_fold_in_range,
+            &[m, a, succ_j, coprime, pos_succ_j, hj],
+        );
+        let pos_fold_sj_ty = d.lt(zero, fold_sj);
+        let le_fold_sj_m_ty = d.le(fold_sj, m);
+        let pos_fold_sj = and_left(d, pos_fold_sj_ty, le_fold_sj_m_ty, and_pf_j);
+
+        let succ_pred_i = d.lemma(p.succ_pred_of_pos, &[fold_si, pos_fold_si]); // Eq fold_si (succ sig_i)
+        let succ_pred_j = d.lemma(p.succ_pred_of_pos, &[fold_sj, pos_fold_sj]); // Eq fold_sj (succ sig_j)
+        let succ_sig_i = d.succ(sig_i);
+        let succ_sig_j = d.succ(sig_j);
+        let succ_heq = d.congr(sig_i, sig_j, heq, &|d, x| d.succ(x)); // Eq succ_sig_i succ_sig_j
+        let succ_pred_j_rev = d.symm(fold_sj, succ_sig_j, succ_pred_j); // Eq succ_sig_j fold_sj
+
+        let (_e, fold_eq) = d.chain(
+            fold_si,
+            &[
+                (succ_sig_i, succ_pred_i),
+                (succ_sig_j, succ_heq),
+                (fold_sj, succ_pred_j_rev),
+            ],
+        ); // Eq fold_si fold_sj
+
+        let eq_succ = d.lemma(
+            p.gauss_fold_injective_of_coprime,
+            &[m, a, succ_i, succ_j, coprime, pos_succ_i, hi, pos_succ_j, hj, fold_eq],
+        ); // Eq succ_i succ_j
+        let eq_ij = d.lemma(p.succ_injective, &[i, j, eq_succ]); // Eq i j
+
+        let with_heq = d.lam_fv(heq_fv, heq_ty, eq_ij);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_heq);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        let with_i = d.lam_fv(i_fv, nat, with_j);
+        let proof = d.lam_fv(coprime_fv, coprime_ty, with_i);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order. Goes last in
 /// `build_nat_prelude`: it needs only `Nat.countRange`
 /// (`declare_totient_all`), `Nat.mod_eq_self_of_lt` (`declare_size_all`, via
@@ -1825,6 +2326,14 @@ pub(super) fn declare_gauss_lemma_all(
     // `[1, m]`.
     declare_gauss_fold(d, p)?;
     declare_gauss_fold_injective_of_coprime(d, p)?;
+    // ADR-1015: the MapsInto range bound's one missing arithmetic fact, the
+    // range bound itself, and the 0-indexed shift wrapper -- completing
+    // piece 2 (InjectiveOn + MapsInto on [0, m), directly what
+    // Int.prodRange_permute consumes).
+    declare_div_succ_two_mul_eq_self(d, p)?;
+    declare_gauss_fold_in_range(d, p)?;
+    declare_gauss_fold_shift_maps_into(d, p)?;
+    declare_gauss_fold_shift_injective_on(d, p)?;
     Ok(())
 }
 

@@ -4848,6 +4848,48 @@ pub struct NatPrelude {
     /// vacuous — `pp = k + k'` would force `pp ∣ (k+k')` at a value strictly
     /// below `pp`, contradiction.
     pub gauss_fold_injective_of_coprime: NameId,
+    /// `Nat.div_succ_two_mul_eq_self : ∀ m, div (succ (mul 2 m)) 2 = m`
+    /// (`gauss_lemma.rs`) — the one new arithmetic fact ADR-1015 flagged as
+    /// absent while sizing the `MapsInto` range bound: the classical
+    /// modulus `pp := 2m+1`'s half, truncated, is exactly `m`. Via
+    /// `add_mul_div_left` at `(x,z,y) := (1,m,2)` giving `(1+2m)/2 = 1/2+m`,
+    /// bridged to `pp`'s actual `succ (mul 2 m)` shape by `add_comm` (`1 +
+    /// 2m = 2m + 1`, and `2m + 1` is defeq `succ (mul 2 m)` since the
+    /// literal `1` sits on `Nat.add`'s right-recursing side).
+    pub div_succ_two_mul_eq_self: NameId,
+    /// `Nat.gauss_fold_in_range : ∀ m a k, gcd a (succ (mul 2 m)) = 1 →
+    ///   0 < k → Le k m → And (0 < gaussFold (succ (mul 2 m)) a k) (Le
+    ///   (gaussFold (succ (mul 2 m)) a k) m)` (`gauss_lemma.rs`) — the
+    /// `MapsInto` range bound ADR-1015 sized and left open: `gaussFold`
+    /// never leaves `[1, m]` on the restricted domain. By cases on
+    /// `gaussSignNeg pp a k`: the identity branch bounds `leastResidue`
+    /// above by `div pp 2 = m` (`div_succ_two_mul_eq_self`) via the
+    /// boolean-`≤` false witness; the negated branch bounds `pp -
+    /// leastResidue` above by `m` via `sub_le_iff_le_add` once
+    /// `leastResidue ≥ succ m` is in hand from the boolean-`≤` true
+    /// witness, and below by `0` via a local `sub_pos_of_lt`.
+    pub gauss_fold_in_range: NameId,
+    /// `Nat.gauss_fold_shift_maps_into : ∀ m a, gcd a (succ (mul 2 m)) = 1 →
+    ///   MapsInto (fun j => pred (gaussFold (succ (mul 2 m)) a (succ j))) m`
+    /// (`gauss_lemma.rs`) — the 0-indexed shift wrapper's first half
+    /// (ADR-1015): `σ(j) := pred (gaussFold pp a (succ j))` stays in `[0,
+    /// m)`, directly from [`Self::gauss_fold_in_range`] plus
+    /// `succ_pred_of_pos` (`Lt i m` is defeq `Le (succ i) m`, matching
+    /// `gauss_fold_in_range`'s hypothesis shape with no bridging lemma
+    /// needed).
+    pub gauss_fold_shift_maps_into: NameId,
+    /// `Nat.gauss_fold_shift_injective_on : ∀ m a, gcd a (succ (mul 2 m)) =
+    ///   1 → InjectiveOn (fun j => pred (gaussFold (succ (mul 2 m)) a (succ
+    ///   j))) m` (`gauss_lemma.rs`) — the shift wrapper's second half
+    /// (ADR-1015): lifts the shifted map's injectivity from
+    /// [`Self::gauss_fold_injective_of_coprime`] via `succ_pred_of_pos` (on
+    /// both sides, to strip the `pred`) and `succ_injective` (to strip the
+    /// outer `succ`). Completes piece 2 of the connecting theorem — with
+    /// this and [`Self::gauss_fold_shift_maps_into`] landed,
+    /// `Int.prodRange_permute`'s `InjectiveOn`/`MapsInto` hypotheses are
+    /// both satisfied by the signed fold on `[0, m)`, no separate bijection
+    /// or partner-index construction needed.
+    pub gauss_fold_shift_injective_on: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5793,6 +5835,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold: kernel.name_str(nat, "gaussFold"),
             gauss_fold_injective_of_coprime: kernel
                 .name_str(nat, "gauss_fold_injective_of_coprime"),
+            div_succ_two_mul_eq_self: kernel.name_str(nat, "div_succ_two_mul_eq_self"),
+            gauss_fold_in_range: kernel.name_str(nat, "gauss_fold_in_range"),
+            gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
+            gauss_fold_shift_injective_on: kernel
+                .name_str(nat, "gauss_fold_shift_injective_on"),
         };
 
         let mut d = NatDev::new(kernel, p);
