@@ -121,6 +121,7 @@ now. Nothing was deleted.
 | 2026-08-31 | `757afb706` | New `nat_prelude/draw11_mirrors.rs`: 4 theorems (coprime_dvd_mul_left/right, coprime_eq_of_mul_eq_zero, add_one_mul_choose_eq), each with a discriminating concrete-instance test. |
 | 2026-08-31 | `e00c2500e` | Close 3 ml430 lcm/coprime mirrors already proved under another name (fact-ledger evidence only). |
 | 2026-08-31 | `5410c49f9` | Close 4 ml430 mirrors with the new draw11_mirrors.rs proofs (fact-ledger evidence). |
+| 2026-08-31 | gauss-lemma-countrange | `Nat.leastResidue`/`Nat.gaussSignNeg`/`Nat.gaussNegCount` (least-residue sign counting over `Nat.countRange`) plus the `a := 2` mod-bypass theorem and eight concrete instances land axiom-free in new `nat_prelude/gauss_lemma.rs` (ADR-0970), toward Gauss's lemma / the second supplementary law; the general closed form and the connecting theorem to `a^m mod p` stay open, fully routed for the next lane. |
 | 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-30 | queue-sweep | No fact closed. All three assigned non-sign dispatchable facts (`totient_dvd_of_dvd`, `totient_gcd_mul_totient_mul`, `eq_or_eq_of_totient_eq_totient`) declined for this session: correctly-stated Mathlib mirrors this kernel does not yet have the general multiplicative-function theory to prove, distinct from the divergence-registry category. Corrected a false numerical claim in `301-totient-multiplicative.md`'s Step 4 (`count_range_row_major` is NOT coprimality-independent — fails at every tested non-coprime pair, e.g. `totient(4)=2 ≠ totient(2)*totient(2)=1`), which would have sent the next totient lane at a statement a sound kernel cannot admit. |
@@ -36655,6 +36656,41 @@ Open, deliberately not done here: the `justfile`'s ~90 `check` recipes still
 take no slot (only `check.sh` is wired); `sccache` is the sound version of
 shared build artifacts and needs its own evaluation; and gating the always-on
 solver steps on a derived reverse-dependency closure is a real but narrow win.
+
+**Your lane's block (`WIP`, gauss-lemma-countrange, 2026-08-31).** Landed the
+`Nat.countRange`-shaped least-residue sign-counting primitive ADR-0960 sized
+as "this prelude does not build" — it does, and the 19 `countRange`
+declarations `shape_search` reported are real, general machinery (subset/
+union/compl/congr/split laws in `finite_set.rs`/`totient.rs`), not just
+names attached to totient's one use.
+
+New `crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs`:
+`Nat.leastResidue`/`Nat.gaussSignNeg`/`Nat.gaussNegCount` (three plain,
+non-recursive `Definition`s), `Nat.gauss_residue_two_eq_double_of_lt` (the
+`a := 2` mod-bypass: since `2k` never reaches `p` for `k <= m = (p-1)/2`, the
+least-residue map is just doubling, no real reduction), and eight concrete
+`gaussNegCount` instances (`p ∈ {7,11,13,17,19,23}` at `a := 2`, one at
+`a := 3`) numerically confirming the classical `p mod 8` pattern before any
+general theorem was attempted. All axiom-free, read from the kernel.
+
+**The general symbolic closed form
+(`gaussNegCount p 2 m = m - div m 2`) and the connecting theorem to
+`a^m mod p` (Gauss's lemma's actual content) are NOT reached.** Both are
+fully routed lemma-by-lemma in
+[ADR-0970](docs/research/09-decisions/adr-0970-gauss-lemma-counting-primitive-lands-connecting-theorem-stays-open.md)
+— every lemma name and signature the closed-form induction needs was
+confirmed to exist in-tree before writing the route down, on the standing
+rule that a handoff's prerequisites must be verified, not guessed. This was
+a deliberate stopping point: the route is long (~150-250 lines of
+`congr`/`transport`/`or_elim` proof-term construction) and was judged more
+likely to cost a full session in `TypeMismatch` debugging without a REPL
+than a precisely sized route the next lane can execute mechanically.
+
+Verification run this session: `cargo test -p axeyum-lean-kernel --lib
+nat_prelude::` (242 passed, 0 failed), `cargo test -p axeyum-lean-kernel
+--lib gauss_lemma::` (2 passed), `cargo clippy -p axeyum-lean-kernel --lib
+-- -D warnings` (clean), `python3 scripts/check-autogenesis-holdout-isolation.py`
+(PASS before and after — `artifacts/autogenesis/` untouched this session).
 
 Status: DONE for this session. One complete graded family landed (rows 1
 + 3, row 2 argued absent via ADR-0716, row 3 via ADR-0825's collapse), two

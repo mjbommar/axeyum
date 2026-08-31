@@ -540,6 +540,12 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.nth_root,
         p.squarefree_aux,
         p.squarefree,
+        // `gauss-lemma-countrange` lane (toward Gauss's lemma / the second
+        // supplementary law of quadratic reciprocity, ADR-0970). Definitions
+        // only, deliberately (ADR-0653).
+        p.least_residue,
+        p.gauss_sign_neg,
+        p.gauss_neg_count,
     ]
 }
 
@@ -1289,6 +1295,15 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // `draw11-theorems` lane.
         p.and_or_distrib_left,
         p.and_or_distrib_right,
+        // `gauss-lemma-countrange` lane (ADR-0970).
+        p.gauss_residue_two_eq_double_of_lt,
+        p.gauss_neg_count_seven_two,
+        p.gauss_neg_count_eleven_two,
+        p.gauss_neg_count_thirteen_two,
+        p.gauss_neg_count_seventeen_two,
+        p.gauss_neg_count_nineteen_two,
+        p.gauss_neg_count_twentythree_two,
+        p.gauss_neg_count_seven_three,
     ]
 }
 
