@@ -91,6 +91,7 @@ mod euler_totient;
 mod euler_unit_preserve;
 mod exists_gcd_one;
 mod fibonacci;
+mod gauss_factorial_product;
 mod gauss_sign_product;
 mod gcd;
 mod gcd_dvd_iff;
@@ -497,6 +498,11 @@ pub struct IntPrelude {
     /// — a product of `n` copies of one factor is that factor to the `n`th
     /// power. `prod.rs::declare_prod_range_const_pow`.
     pub prod_range_const_pow: NameId,
+    /// `prodRange_scaledIndexEqPowMulFactorial : ∀ a m, Eq Int (prodRange
+    ///   (fun k => mul a (ofNat (succ k))) m) (mul (pow a m) (factorial m))`
+    /// -- ADR-0990's Gauss's-lemma item A: `∏(a·k) = a^m·m!`.
+    /// `gauss_factorial_product.rs`.
+    pub prod_range_scaled_index_eq_pow_mul_factorial: NameId,
     /// `prodRangeIf : (Nat → Bool) → (Nat → Int) → Nat → Int := fun pred f n
     ///   => prodRange (fun i => bool_select_int (pred i) (f i) one) n` — the
     /// `Int` counterpart of `Nat.prodRangeIf`
@@ -1637,6 +1643,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_permute: child(kernel, "prodRange_permute"),
         prod_range_mul: child(kernel, "prodRange_mul"),
         prod_range_const_pow: child(kernel, "prodRange_constPow"),
+        prod_range_scaled_index_eq_pow_mul_factorial: child(
+            kernel,
+            "prodRange_scaledIndexEqPowMulFactorial",
+        ),
         prod_range_if: child(kernel, "prodRangeIf"),
         prod_range_if_zero: child(kernel, "prodRangeIf_zero"),
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
@@ -1993,6 +2003,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_modeq_prod_range_lt(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;
+        gauss_factorial_product::declare_prod_range_scaled_index_eq_pow_mul_factorial(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         // Needs `Int.natAbs`, just declared above -- `declare_emod_lt_of_pos`
         // (built well before `natAbs` exists) is why this sign-general bound

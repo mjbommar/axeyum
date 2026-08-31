@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 226] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 227] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -248,6 +248,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 226] {
         p.factorial_sq_modeq_one,
         p.prod_range_mul,
         p.prod_range_const_pow,
+        p.prod_range_scaled_index_eq_pow_mul_factorial,
         p.prod_range_if_const_eq_pow_count,
         p.gauss_sign_prod_eq_pow_neg_one_of_count,
         p.mod_eq_prod_range_lt,
@@ -1425,6 +1426,83 @@ fn gauss_sign_prod_eq_pow_neg_one_of_count_matches_direct_computation_at_pp_11_a
         k.def_eq(inferred, expected),
         "gauss_sign_prod_eq_pow_neg_one_of_count's instantiated type must \
          match the direct sign-product/pow computation"
+    );
+}
+
+/// `Int.prodRange_scaledIndexEqPowMulFactorial` at `a := 2, m := 3` --
+/// `∏_{k=1}^3 (2·k) = 2*4*6 = 48`, and independently `2^3 * 3! = 8*6 = 48`.
+/// Checks the general theorem's instantiation against a hand-built direct
+/// `prodRange` computation AND against `Int.factorial`'s own concrete value,
+/// so a defect in either the `prodRange_mul`/`prodRange_const_pow` chaining
+/// or the `factorial`-defeq bridge would surface.
+#[test]
+fn prod_range_scaled_index_eq_pow_mul_factorial_matches_direct_computation_at_a_2_m_3() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    let two = numeral(&mut k, &p, 2);
+    let three_n = numeral_nat(&mut k, &p, 3);
+
+    // scaled := fun k => mul 2 (ofNat (succ k)).
+    let scaled = {
+        let k_fv = 900_600;
+        let kk = k.fvar(k_fv);
+        let succ = k.const_(p.nat.succ, vec![]);
+        let sk = k.app(succ, kk);
+        let of_nat = k.const_(p.of_nat, vec![]);
+        let ofk = k.app(of_nat, sk);
+        let mul_c = k.const_(p.mul, vec![]);
+        let m1 = k.app(mul_c, two);
+        let body = k.app(m1, ofk);
+        let abstracted = k.abstract_fvars(body, &[k_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_scaled = k.app(prod_range_c, scaled);
+    let lhs_direct = k.app(prod_range_scaled, three_n);
+
+    let forty_eight = numeral(&mut k, &p, 48);
+    assert!(
+        k.def_eq(lhs_direct, forty_eight),
+        "prodRange (fun k => 2 * ofNat (succ k)) 3 should compute to 48"
+    );
+
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_two = k.app(pow_c, two);
+    let pow_two_3 = k.app(pow_two, three_n);
+    let factorial_c = k.const_(p.factorial, vec![]);
+    let factorial_3 = k.app(factorial_c, three_n);
+    let mul_c = k.const_(p.mul, vec![]);
+    let m1 = k.app(mul_c, pow_two_3);
+    let rhs_direct = k.app(m1, factorial_3);
+    assert!(
+        k.def_eq(rhs_direct, forty_eight),
+        "pow 2 3 * factorial 3 should compute to 48"
+    );
+
+    let lemma = k.const_(p.prod_range_scaled_index_eq_pow_mul_factorial, vec![]);
+    let l1 = k.app(lemma, two);
+    let applied = k.app(l1, three_n);
+    let inferred = k.infer(applied).expect(
+        "prod_range_scaled_index_eq_pow_mul_factorial must apply at concrete a, m",
+    );
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let int_ty = k.const_(p.z, vec![]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "prod_range_scaled_index_eq_pow_mul_factorial's instantiated type \
+         must match the direct prodRange/pow/factorial computation"
     );
 }
 
