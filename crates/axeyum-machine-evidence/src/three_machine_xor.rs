@@ -58,6 +58,14 @@ pub struct ThreeMachineXorReport {
     pub rv64_program_sha256: String,
     /// SHA-256 of the exact x86-64 bytes.
     pub x64_program_sha256: String,
+    /// Static A0 instruction count.
+    pub a0_static_instructions: u64,
+    /// Static RV64I instruction count.
+    pub rv64_static_instructions: u64,
+    /// Static x86-64 instruction count.
+    pub x64_static_instructions: u64,
+    /// Interpretation boundary for retained costs.
+    pub cost_scope: String,
     /// Exact finite computation scope.
     pub scope: String,
     /// Replayed cases.
@@ -100,6 +108,11 @@ pub fn three_machine_xor_report() -> Result<ThreeMachineXorReport, EvidenceError
         a0_program_sha256: sha256_hex(&A0_XOR_REDUCTION_BYTES),
         rv64_program_sha256: sha256_hex(&RV64_XOR_REDUCTION_BYTES),
         x64_program_sha256: sha256_hex(&X64_XOR_REDUCTION_BYTES),
+        a0_static_instructions: 11,
+        rv64_static_instructions: 9,
+        x64_static_instructions: 8,
+        cost_scope: "exact static bytes and instructions plus concrete dynamic instruction counts; descriptive accounting only, with no optimization or minimality claim"
+            .to_owned(),
         scope: "eight declared finite word lists of length zero through three; exact Chapter 15 A0, RV64I, and x86-64 bytes; concrete 64-bit execution and typed cut-point relations"
             .to_owned(),
         cases,
