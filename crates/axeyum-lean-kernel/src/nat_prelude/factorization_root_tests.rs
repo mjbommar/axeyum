@@ -29,6 +29,7 @@
 //! | `floorRoot 0 5` | `0` | a missing `n = 0` guard, which would give `5` |
 //! | `ceilRoot 0 1` | `0` | a missing `n = 0` guard, which would give `1` |
 //! | `ceilRoot 2 1` | `1` | a fuel bound of `a - 1` rather than `a` |
+//! | `floorRoot 1 5`, `ceilRoot 1 5` | `5`, `5` | a scan bounded by `n` rather than by `a` -- see `the_scan_bound_is_a_not_n` |
 //!
 //! ## The control that does NOT work, and it is measured rather than asserted
 //!
@@ -198,7 +199,10 @@ fn the_two_roots_disagree_with_each_other_and_with_the_numeric_root() {
         floor,
         2,
         &[
-            (12, "the `bool_select_nat` branches swapped, so the first `b` tried wins"),
+            (
+                12,
+                "the `bool_select_nat` branches swapped, so the first `b` tried wins",
+            ),
             (1, "the scan reversed, returning the LEAST such `b` instead"),
             (3, "the numeric root, which this is not"),
         ],
@@ -210,7 +214,10 @@ fn the_two_roots_disagree_with_each_other_and_with_the_numeric_root() {
         ceil,
         6,
         &[
-            (0, "a scan started at `i = 0`, where `a ∣ 0 ^ n` holds vacuously"),
+            (
+                0,
+                "a scan started at `i = 0`, where `a ∣ 0 ^ n` holds vacuously",
+            ),
             (12, "the greatest witness rather than the least"),
             (4, "the numeric root, which this is not"),
         ],
@@ -242,7 +249,10 @@ fn a_perfect_power_makes_the_two_roots_coincide() {
     f.expect(
         floor,
         2,
-        &[(1, "a step testing `b` rather than `succ b`"), (8, "the bound itself")],
+        &[
+            (1, "a step testing `b` rather than `succ b`"),
+            (8, "the bound itself"),
+        ],
         "floorRoot 3 8",
     );
 
@@ -250,7 +260,10 @@ fn a_perfect_power_makes_the_two_roots_coincide() {
     f.expect(
         ceil,
         2,
-        &[(3, "a scan advancing before testing"), (1, "a scan that never advances")],
+        &[
+            (3, "a scan advancing before testing"),
+            (1, "a scan that never advances"),
+        ],
         "ceilRoot 3 8",
     );
 }
@@ -268,22 +281,38 @@ fn the_n_zero_guard_is_live_and_one_obvious_control_is_vacuous() {
     let mut f = Fixture::new();
 
     let floor = f.floor_root(0, 5);
-    f.expect(floor, 0, &[(5, "the unguarded scan's answer")], "floorRoot 0 5");
+    f.expect(
+        floor,
+        0,
+        &[(5, "the unguarded scan's answer")],
+        "floorRoot 0 5",
+    );
     let floor_unguarded = f.unguarded_floor_scan(0, 5);
     f.expect(
         floor_unguarded,
         5,
-        &[(0, "the guarded answer, which would make this control vacuous")],
+        &[(
+            0,
+            "the guarded answer, which would make this control vacuous",
+        )],
         "the unguarded floorRoot scan at (0, 5)",
     );
 
     let ceil = f.ceil_root(0, 1);
-    f.expect(ceil, 0, &[(1, "the unguarded scan's answer")], "ceilRoot 0 1");
+    f.expect(
+        ceil,
+        0,
+        &[(1, "the unguarded scan's answer")],
+        "ceilRoot 0 1",
+    );
     let ceil_unguarded = f.unguarded_ceil_scan(0, 1);
     f.expect(
         ceil_unguarded,
         1,
-        &[(0, "the guarded answer, which would make this control vacuous")],
+        &[(
+            0,
+            "the guarded answer, which would make this control vacuous",
+        )],
         "the unguarded ceilRoot scan at (0, 1)",
     );
 
@@ -300,6 +329,124 @@ fn the_n_zero_guard_is_live_and_one_obvious_control_is_vacuous() {
     );
 }
 
+/// The boundary reading, MEASURED at free variables rather than argued.
+///
+/// ADR-1160's rule is that a drawn row settled by `Eq.refl` against the
+/// construction is spent the moment the construction lands, and that R12
+/// cannot see it because `is_closed_evaluation` is binder-free by
+/// construction — a `∀`-quantified defining equation reports clean. So the
+/// count has to come from a reading, and a reading is a claim. This test
+/// turns it into a gate.
+///
+/// Of the ten rows `Mathlib.Data.Nat.Factorization.Root` draws, exactly ONE
+/// is settled by reduction here:
+///
+/// * `Nat.ceilRoot_zero_left : ∀ a, Nat.ceilRoot 0 a = 0` — the guard is a
+///   `Nat.rec` on `n`, which ι-reduces at `0` however symbolic `a` is.
+///
+/// The two rows that LOOK like boundary rows and are not:
+///
+/// * `Nat.ceilRoot_zero_right : ∀ n, n.ceilRoot 0 = 0` — the guard is stuck
+///   at a symbolic `n`, so this needs a case split (whose two branches are
+///   then each `refl`; it is cheap, not free).
+/// * `Nat.ceilRoot_one_left : ∀ a, Nat.ceilRoot 1 a = a` — the guard reduces
+///   at `n = 1` but the scan's `Nat.rec` on the fuel `a` does not, so the
+///   statement carries the real content "the least `b ≥ 1` with `a ∣ b` is
+///   `a`". ADR-1220 inherited a count of 3 that assumed Mathlib's
+///   `Finsupp` body; this is the row that makes ours 1.
+///
+/// `Nat.floorRoot_zero_left` is `refl` too and is pinned here even though it
+/// falls at position 16 of the 18-row pool, outside the drawn ten by the
+/// alphabet alone. If a later declaration reorders the pool, this assertion
+/// is what says the boundary count has to be re-read.
+///
+/// Every negative below differs in a SMALL term (a numeral against an fvar,
+/// or a stuck `Nat.rec` against `0`), so no failing `def_eq` here can run
+/// away the way ADR-1230's transposed control did.
+#[test]
+fn exactly_one_drawn_row_is_settled_by_reduction() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let a_fv = f.fresh_fvar();
+    let n_fv = f.fresh_fvar();
+    let a = f.k.fvar(a_fv);
+    let n = f.k.fvar(n_fv);
+    let zero = f.zero();
+    let one = f.num(1);
+
+    let ceil_zero_left = f.const_app(p.ceil_root, &[zero, a]);
+    assert!(
+        f.k.def_eq(ceil_zero_left, zero),
+        "ceilRoot_zero_left must be settled by reduction at a FREE `a`: it is \
+         the one boundary row in the drawn ten and the ADR discloses it"
+    );
+
+    let ceil_zero_right = f.const_app(p.ceil_root, &[n, zero]);
+    assert!(
+        !f.k.def_eq(ceil_zero_right, zero),
+        "ceilRoot_zero_right must NOT be settled by reduction at a free `n`; \
+         if it is, the boundary count is 2 and the ADR is wrong"
+    );
+
+    let ceil_one_left = f.const_app(p.ceil_root, &[one, a]);
+    assert!(
+        !f.k.def_eq(ceil_one_left, a),
+        "ceilRoot_one_left must NOT be settled by reduction; if it is, this \
+         construction special-cases `n = 1` and the boundary count is 2"
+    );
+
+    let floor_zero_left = f.const_app(p.floor_root, &[zero, a]);
+    assert!(
+        f.k.def_eq(floor_zero_left, zero),
+        "floorRoot_zero_left is `refl` and sits OUTSIDE the drawn ten"
+    );
+
+    let floor_one_left = f.const_app(p.floor_root, &[one, a]);
+    assert!(
+        !f.k.def_eq(floor_one_left, a),
+        "floorRoot_one_left must NOT be settled by reduction either"
+    );
+}
+
+/// The scan bound is `a`, not `n`.
+///
+/// A `floorRoot` whose inner `Nat.rec` recursed on the exponent rather than on
+/// `a` agrees with the intended definition at every POSITIVE argument the
+/// tests above use — `floorRoot 2 12 = 2 ≤ 2` and `floorRoot 3 8 = 2 ≤ 3` are
+/// both within the mutant's smaller bound, so neither notices. It was
+/// predicted to survive them for that reason and it did not, because
+/// `the_dropped_a_zero_disjunct_is_dead_code` catches it at `a = 0`, where the
+/// mutant scans up to `2` and finds `0 % b² = 0` immediately, returning `2`
+/// instead of `0`. That accident is worth recording rather than glossing: the
+/// mutant is caught by a test written for a different purpose, and one written
+/// for THIS purpose is the one you want if the `a = 0` case is ever changed.
+///
+/// `n = 1` separates them directly and at the smallest possible magnitude,
+/// because the answer `5` exceeds the exponent and `b ^ 1` forms nothing
+/// larger than `b`. `floorRoot 1 5` is the greatest `b` with `b ∣ 5` and
+/// `ceilRoot 1 5` the least `b` with `5 ∣ b`; both are `5`, and both are `1`
+/// under the mutant.
+#[test]
+fn the_scan_bound_is_a_not_n() {
+    let mut f = Fixture::new();
+
+    let floor = f.floor_root(1, 5);
+    f.expect(
+        floor,
+        5,
+        &[(1, "a scan bounded by `n` rather than `a`")],
+        "floorRoot 1 5",
+    );
+
+    let ceil = f.ceil_root(1, 5);
+    f.expect(
+        ceil,
+        5,
+        &[(1, "a scan fuelled by `n` rather than `a`")],
+        "ceilRoot 1 5",
+    );
+}
+
 /// Mathlib guards on `n = 0 ∨ a = 0`; only the first disjunct survives here,
 /// and this is why the second is dead code rather than a dropped case.
 ///
@@ -312,15 +459,35 @@ fn the_dropped_a_zero_disjunct_is_dead_code() {
     let mut f = Fixture::new();
 
     let floor = f.floor_root(2, 0);
-    f.expect(floor, 0, &[(1, "a scan whose base case is not `0`")], "floorRoot 2 0");
+    f.expect(
+        floor,
+        0,
+        &[(1, "a scan whose base case is not `0`")],
+        "floorRoot 2 0",
+    );
 
     let ceil = f.ceil_root(2, 0);
-    f.expect(ceil, 0, &[(1, "a scan given fuel it should not have")], "ceilRoot 2 0");
+    f.expect(
+        ceil,
+        0,
+        &[(1, "a scan given fuel it should not have")],
+        "ceilRoot 2 0",
+    );
 
     // One unit of fuel is enough and is present: the bound is `a`, not `a - 1`.
     let ceil_one = f.ceil_root(2, 1);
-    f.expect(ceil_one, 1, &[(0, "a fuel bound of `a - 1`")], "ceilRoot 2 1");
+    f.expect(
+        ceil_one,
+        1,
+        &[(0, "a fuel bound of `a - 1`")],
+        "ceilRoot 2 1",
+    );
 
     let floor_one = f.floor_root(2, 1);
-    f.expect(floor_one, 1, &[(0, "a scan that never reaches `b = 1`")], "floorRoot 2 1");
+    f.expect(
+        floor_one,
+        1,
+        &[(0, "a scan that never reaches `b = 1`")],
+        "floorRoot 2 1",
+    );
 }

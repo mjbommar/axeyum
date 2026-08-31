@@ -124,7 +124,7 @@ use crate::env::ReducibilityHint;
 
 /// Delta height for both definitions. Strictly above `Nat.pow` (3),
 /// `Nat.mod` (3) and `Nat.beq`, the only `Nat` definitions either one calls.
-const ROOT_HEIGHT: u32 = 6;
+const ROOT_HEIGHT: u16 = 6;
 
 /// Declare `Nat.floorRoot` and `Nat.ceilRoot`. Definitions only — see this
 /// module's doc for why no theorem about either is declared here.
