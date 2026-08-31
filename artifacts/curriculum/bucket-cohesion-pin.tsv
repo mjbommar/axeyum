@@ -76,10 +76,10 @@ family	Nat	eq	naturals	12
 family	Nat	even	naturals	13
 family	Nat	land	naturals	24
 family	Nat	ldiff	naturals	10
-family	Nat	le	naturals	26
+family	Nat	le	naturals	30
 family	Nat	log	naturals	20
 family	Nat	lor	naturals	15
-family	Nat	lt	naturals	18
+family	Nat	lt	naturals	19
 family	Nat	mul	naturals	16
 family	Nat	odd	naturals	8
 family	Nat	set	naturals	18
