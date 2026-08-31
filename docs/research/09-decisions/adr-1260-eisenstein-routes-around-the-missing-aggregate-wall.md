@@ -17,6 +17,7 @@ hypothesis is satisfiable). The remaining obstruction is named precisely and it
 is NOT an aggregate problem: **`Int.sumRange` does not exist**, and Eisenstein's
 lemma — `gaussNegCount p a m ≡ Σ_{k=1}^{m} ⌊ak/p⌋ (mod 2)` — is a signed-sum
 argument. `Int` has `prodRange` and no `sumRange` at all.
+<!-- absent: Int.sumRange -- the obstruction this ADR names; when it lands, Eisenstein's lemma is unblocked and this summary must be rewritten -->
 Index-status: accepted
 
 ## Context
@@ -110,8 +111,13 @@ Three named residues, in the order a next lane should attack them:
    derivation is
    `(a−1)·Σk = p·(F + N) − 2·Σ_{neg} fold`, read mod 2. It needs SUBTRACTION
    inside a finite sum, so it wants `Int.sumRange`. **`Int` has `prodRange` and
-   no `sumRange` at all** — checked by grepping the Int prelude's `pub` name
-   fields, zero hits. That is a real gap, and it is a *different* gap from
+   no `sumRange` at all** — 291 `child(kernel, "...")` name registrations in
+   `int_prelude.rs`, 20 matching `prodRange`, **0 matching `sumRange`**. (The
+   first form of this query, over `pub` fields, returned zero for the control
+   as well as for the subject, which is the trap this repository documents:
+   an empty answer and a wrong query are the same observation. The count above
+   is the one with a live positive control.) That is a real gap, and it is a
+   *different* gap from
    ADR-1135's: it is a missing construction over an existing carrier, not a
    missing carrier. `Nat.sumRange` exists, `Rat.sumRange` exists,
    `CReal.sumRange` exists. Nothing structural stops `Int.sumRange`; it has
@@ -162,7 +168,44 @@ control is vacuous. The tests use `(5,13)`: `7 + 5 = 12` against `7 + 7 = 14`.
 
 ## Mutation table
 
-<!-- MUTATION-TABLE -->
+The subject is `nat_prelude/lattice_count.rs`; each mutation is applied in a
+worktree copy, the whole `nat_prelude::` sweep is run, and the file is restored.
+Three outcomes are distinguished, per the standard the prior QR lanes set:
+**REJECTED** (the trusted gate refuses the proof term), **statement false**, and
+**ADMITTED, TRUE, and not your theorem** — the one nothing mechanical sees.
+
+| mutation | what it changes | outcome | evidence |
+| --- | --- | --- | --- |
+| M1 | `sumRange_const` stated at `mul n c` instead of `mul c n` | **REJECTED** | `TypeMismatch { expected: ExprId(450978), got: ExprId(9522) }` |
+| M2 | the partition's conclusion at `mul m n` instead of `mul n m` | **REJECTED** | `DeclarationValueMismatch { declared: ExprId(453566), inferred: ExprId(456697) }` |
+| M3 | `sumRange_swap`'s step with the peeled row on the LEFT of the `add` | **REJECTED** | `TypeMismatch { expected: ExprId(452517), got: ExprId(452538) }` |
+| M4 | the corollary's two `Nat` binders in the opposite order, consistently in both the type and the value | **ADMITTED — SURVIVED** | `313 passed; 0 failed` |
+| M5 | `row_partition`'s per-row total closed at `m` instead of `n` | **REJECTED** | `TypeMismatch { expected: ExprId(147475), got: ExprId(108453) }` |
+| M6 | the per-point hypothesis asks for `= 0`, which no `Bool` pair satisfies | **REJECTED** | `TypeMismatch { expected: ExprId(456629), got: ExprId(456648) }` |
+
+**M1 and M2 are the pair worth reading together**, because they show the two
+orientations are not the same kind of constraint. M1 fails because `mul n c` is
+not what `Nat.mul`'s own recursion produces — the *statement* is true (`Nat.mul`
+commutes) and the *proof term* cannot reach it. M2 fails the same way one level
+up. Neither is a mathematical error; both are the kernel refusing a defeq that
+does not hold, which is exactly what the standing warning about `Nat.mul`
+recursing on its right argument predicts.
+
+**M6 is the honest report of a mutation that did not do what I designed it to
+do.** It was meant to make the hypothesis FALSE (no two `Bool` selectors sum to
+zero), leaving a vacuously-true theorem the kernel would happily admit. It was
+REJECTED instead, because the proof's `one_mul` step is built at the numeral `1`
+and no longer lines up. So this table contains **no instance of a false-premise
+vacuity**, and that gap is not covered by anything here.
+
+**M4 is the third outcome, and my tests do not catch it.** Swapping the two
+`Nat` binders gives a theorem that is TRUE (it is the same partition with the
+arguments named the other way round) and ADMITTED, and every test still passes.
+The reason no numeric test can catch it is that the partition totals `m·n`
+either way: at the corollary's own test instance the mutated reading asserts
+`12 = 2·6` where the intended one asserts `12 = 6·2`, and both are true. A
+consumer instantiating `partition_compl Q m n` would silently get the identity
+for the rectangle `[0,n) × [0,m)`. Only reading the declared type catches it.
 
 ## Verification
 

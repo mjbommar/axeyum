@@ -27,6 +27,7 @@ from ADR-1135's: **`Int.sumRange` does not exist** (the Int prelude has
 `prodRange`, 0 matching `sumRange`), and Eisenstein's lemma is a signed-sum
 argument. That is a missing construction over an existing carrier, not a missing
 carrier, and nothing structural blocks it.
+<!-- absent: Int.sumRange -- the obstruction; when it lands this paragraph is stale -->
 
 ## Landed changes
 
