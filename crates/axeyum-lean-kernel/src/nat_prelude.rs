@@ -129,6 +129,7 @@ use crate::build_logic_prelude;
 use crate::name::NameId;
 
 mod add_basics;
+mod add_choose_div;
 mod add_pos;
 mod algebra;
 mod and_or_distrib;
@@ -249,6 +250,7 @@ mod xor_trichotomy;
 pub use ops::{NatDev, NatOps, NatState};
 
 use add_basics::declare_add_basics;
+use add_choose_div::declare_add_choose;
 use add_pos::declare_add_pos;
 use algebra::{
     declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
@@ -525,6 +527,11 @@ pub struct NatPrelude {
     /// `Nat.add_choose_mul_factorial_mul_factorial : ∀ i j, (i+j).choose j *
     /// i! * j! = (i+j)!`. See `nat_prelude::choose_factorial_add`.
     pub add_choose_mul_factorial_mul_factorial: NameId,
+    /// `Nat.add_choose : ∀ i j, (i+j).choose j = (i+j)! / (i! * j!)`.
+    /// Division-normal form of
+    /// [`Self::add_choose_mul_factorial_mul_factorial`]. Closes
+    /// `F:ml430-nat-add-choose-eb49fa11`. See `nat_prelude::add_choose_div`.
+    pub add_choose: NameId,
     /// `factorial_dvd_descFactorial : ∀ n k, k! ∣ n.descFactorial k`.
     /// Closes `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`. Immediate
     /// from [`Self::desc_factorial_eq_factorial_mul_choose`] plus `dvd_mul`.
@@ -4836,6 +4843,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "descFactorial_eq_factorial_mul_choose"),
             add_choose_mul_factorial_mul_factorial: kernel
                 .name_str(nat, "add_choose_mul_factorial_mul_factorial"),
+            add_choose: kernel.name_str(nat, "add_choose"),
             factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),
             desc_factorial_self: kernel.name_str(nat, "descFactorial_self"),
             desc_factorial_le: kernel.name_str(nat, "descFactorial_le"),
@@ -6027,6 +6035,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // just above) plus `mul_comm`/`mul_assoc`/`one_mul`/`factorial_succ`,
         // all far above; nothing needs this closed `ml430` mirror.
         declare_add_choose_mul_factorial_mul_factorial(&mut d, &p)?;
+        // Needs `Nat.add_choose_mul_factorial_mul_factorial` (just above)
+        // plus `Nat.div`/`div_mul_cancel_of_dvd`/`dvd_mul`
+        // (`declare_euclidean_division`, far above),
+        // `mul_assoc`/`mul_comm`/`mul_left_cancel_of_pos`/`one_le_factorial`/
+        // `one_le_mul`, all far above; nothing needs this closed `ml430`
+        // division-normal-form mirror.
+        declare_add_choose(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul`/`Nat.beq` (`declare_arithmetic`/
         // `declare_boolean_equality`) and `Nat.div`/`Nat.mod`
         // (`declare_executable_division`), all far above; nothing needs
@@ -6549,3 +6564,6 @@ mod size_extra_tests;
 
 #[cfg(test)]
 mod choose_factorial_add_tests;
+
+#[cfg(test)]
+mod add_choose_div_tests;
