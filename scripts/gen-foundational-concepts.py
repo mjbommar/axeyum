@@ -893,6 +893,12 @@ CURRICULUM_MAP = {
             ),
         ],
     },
+    "probability": {
+        "field_ids": ["probability_theory", "statistics"],
+        "pack": "finite-probability-v0",
+        "slice": "Finite probability distributions, expectation, variance/covariance, and mass-table replay over exact rationals.",
+        "proof": "Rat.sumRange-backed replay now; Rat.IsDistribution/expectation/variance/covariance with Cauchy-Schwarz, Markov, Chebyshev, and the weak law of large numbers are already axiom-free in the kernel (ADR-1082) but have no dedicated self-checking scenario Family yet.",
+    },
 }
 
 FIELD_PACKS = {
