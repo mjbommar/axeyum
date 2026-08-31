@@ -45,6 +45,15 @@
       "from_prose_sha256": "0f7a0cadfded5e45948d25e248961652430ca132303e0464a632a997162aa911",
       "to_prose_sha256": "f2e5ace030cf42f7d6788fab929c01ecfc9f65edb5d10ae1d2b129c36dd72a62",
       "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256) and `drifted=0` throughout. The reader-facing text changed for two reasons, both narrowing the claim rather than widening it. (1) Non-vacuity for row 2 is now evidenced IN THIS LEDGER (lane `evt-row2-nonvacuity`, 2026-08-31): the old text said this fact supplies no such evidence and parenthetically conceded 'it plainly is' satisfiable, which is precisely the unfalsifiable form -- an assertion with no checker behind it. Two evidence rows now cite tests that fail when broken. (2) The old text cited `creal/supremum.rs`'s module documentation as saying `CReal.supOn` is 'still not landed'. That phrase occurs ZERO times in that file (control: 32 mentions of `supOn`), and the same stale citation was corrected the same day in `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`. What the new text must NOT be read as: an upgrade of EVT's standing. It still says, and this is the substantive remaining gap, that no operator here PRODUCES an attaining maximiser; `F:creal-evt-approx-max` supplies only the approximate row-1 substitute. The fact remains a refutation of the classical conclusion."
+    },
+    {
+      "fact_id": "F:int-euler-totient-theorem",
+      "date": "2026-08-31",
+      "from_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
+      "to_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
+      "from_prose_sha256": "9f8c5db1259ba0ded328ca7733404cd7dd7a8f9cbd1c68ef14412f1666b9b63b",
+      "to_prose_sha256": "c5e55c25f548b53f0901e61e425c8483bde08bd34d32efe4af3afafc42e5f979",
+      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256). The generated prose opened by declaring that it 'deliberately makes NO mathematical characterisation of the theorem', which is the correct default for a mechanically registered fact and the wrong resting state for a headline classical result that will be quoted. Replaced with a characterisation checked against the RENDERED TYPE, not against the declaration name: the totient is this kernel's own `countRange` predicate rather than an imported or axiomatised phi, which is the substantive claim and is invisible from the name alone. `external_status` set to `proved` (Euler, classical) and curation to `curated`. The new prose states its own limits -- no efficiency claim, no decision procedure, no converse, and both hypotheses load-bearing -- so curating it cannot be read as widening the claim."
     }
   ],
   "pins": [
@@ -6731,7 +6740,7 @@
       "fact_id": "F:int-euler-totient-theorem",
       "language": "lean4",
       "statement_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
-      "prose_sha256": "9f8c5db1259ba0ded328ca7733404cd7dd7a8f9cbd1c68ef14412f1666b9b63b",
+      "prose_sha256": "c5e55c25f548b53f0901e61e425c8483bde08bd34d32efe4af3afafc42e5f979",
       "kernel_theorem": "Int.euler_totient_theorem"
     },
     {
