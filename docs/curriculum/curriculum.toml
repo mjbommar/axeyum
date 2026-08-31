@@ -29,7 +29,7 @@
 # says anything about what the Lean-core kernel has PROVED, and reading them as
 # if they did the two axes disagree in opposite directions (ADR-1075):
 # `calculus` is `lean-horizon` with 349 kernel declarations, `linear-algebra`
-# is `covered` with 55.
+# is `covered` with 81.
 #
 # `probability` (ADR-1082) is the first node added past the original 23: the
 # same class of measurement found 47 `Rat` declarations (distributions,
@@ -48,17 +48,26 @@
 #   cargo run --release -p axeyum-lean-kernel \
 #     --example kernel_declaration_projection > /tmp/proj.tsv
 #   python3 scripts/measure-curriculum-kernel-coverage.py /tmp/proj.tsv \
-#     --expect-attributed 2454 --require-node probability
+#     --expect-attributed 2483 --require-node probability
 #
-# Measured 2026-08-31 over 2,586 distinct declarations, every one axiom-free
-# (2,454 attribute to a node; the 132 that do not are the 30 legacy `AxReal`
-# axioms, the 94-declaration string package, and 8 newly-landed declarations
-# -- `Nat`/`Int`/`Rat`/`Complex`/`CPoint` the carrier inductives themselves,
-# plus `Max.max`/`Min.min`/`Squarefree`/`instMinNat` -- not yet in any
-# bucket). This total moved from the 2,562/2,433 an earlier run of this same
-# command measured hours earlier the same day, purely from other lanes'
-# commits landing in between -- re-measure rather than trust either number;
-# the script's attribution table is auditable and its residual is printed.
+# Measured 2026-08-31 over 2,615 distinct declarations, every one axiom-free
+# (2,483 attribute to a node; the 132 that do not are the same 30 legacy
+# `AxReal` axioms, the 94-declaration string package, and 8 newly-landed
+# declarations -- `Nat`/`Int`/`Rat`/`Complex`/`CPoint` the carrier inductives
+# themselves, plus `Max.max`/`Min.min`/`Squarefree`/`instMinNat` -- not yet in
+# any bucket). This total moved from the 2,586/2,454 an earlier run of this
+# same command measured hours earlier the same day, purely from other lanes'
+# commits landing in between (`Int.euler_totient_theorem`, ADR-1110; `Rat.det`
+# at general `n`, ADR-1120) -- re-measure rather than trust either number; the
+# script's attribution table is auditable and its residual is printed.
+#
+# The `Rat.det`/`matSkip`/`matMinor`/`altSign`/`matInv2*` declarations ADR-1120
+# landed were themselves briefly mis-measured: the script's `linear-algebra`
+# pattern named `det2`/`det3` literally and did not cover the new general-`n`
+# names, so they fell through to the `rationals` catch-all -- 22 declarations,
+# the exact failure this file's own comment already warns about, recurring on
+# the rung the depth proposal below names as the keystone. Fixed in the same
+# commit that re-measured this table.
 
 [meta]
 title = "Formal Mathematics Tour"
@@ -183,7 +192,7 @@ decidability = "bounded"
 axeyum_theory = "LIA / BV"
 family = "NumberSystem"
 status = "covered"
-kernel_decls = 512
+kernel_decls = 516
 summary = "Peano successor arithmetic; concrete arithmetic decidable, the induction axiom is not."
 
 [[node]]
@@ -197,7 +206,7 @@ decidability = "computable"
 axeyum_theory = "LIA / BV"
 family = "NumberSystem"
 status = "covered"
-kernel_decls = 186
+kernel_decls = 193
 summary = "Signed arithmetic and ordering; linear integer facts decided by simplex + branch-and-bound."
 
 [[node]]
@@ -211,7 +220,7 @@ decidability = "computable"
 axeyum_theory = "LRA (exact rationals)"
 family = "Rational"
 status = "covered"
-kernel_decls = 211
+kernel_decls = 204
 summary = "Exact fractions; linear rational facts decided by the exact-rational simplex."
 
 [[node]]
@@ -257,7 +266,7 @@ decidability = "computable"
 axeyum_theory = "BV / LIA + GCD test"
 family = "NumberTheory"
 status = "covered"
-kernel_decls = 151
+kernel_decls = 153
 summary = "Divisibility, gcd, Bézout's identity, unique factorization; gcd/Bézout are compute-and-check."
 
 [[node]]
@@ -373,7 +382,7 @@ decidability = "bounded"
 axeyum_theory = "BV / LIA"
 family = "NumberTheory"
 status = "covered"
-kernel_decls = 107
+kernel_decls = 108
 summary = "Primes, factorization, congruences, Diophantine equations; bounded instances are self-checkable."
 
 [[node]]
@@ -387,8 +396,8 @@ decidability = "computable"
 axeyum_theory = "BV (fixed-size) / LRA / NRA"
 family = "LinearAlgebra"
 status = "covered"
-kernel_decls = 59
-summary = "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over ℚ are decidable."
+kernel_decls = 81
+summary = "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over ℚ are decidable. The determinant is now proved at general n (ADR-1120, a cofactor recursion over the dimension bound), not just 2x2/3x3; eigenvalues remain unbuilt."
 
 [[node]]
 id = "calculus"

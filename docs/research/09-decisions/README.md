@@ -778,3 +778,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1110](adr-1110-euler-totient-theorem-lands-axiom-free-first-attempt.md) | Closes the Fermat -> Euler handoff | accepted |
 | [1115](adr-1115-draw-14-is-declined-r12-could-not-see-a-ground-predicate.md) | ADR-1100 enabled two four-family layouts for draw 14 and left | accepted |
 | [1120](adr-1120-the-general-n-determinant-is-a-function-plus-a-bound.md) | `Rat.det : (Nat -> Nat -> Rat) -> Nat -> Rat`, the determinant | accepted |
+| [1140](adr-1140-the-depth-spine-stays-a-proposal-two-of-its-rungs-already-landed.md) | Re-measured `curriculum.toml`'s `kernel_decls` axis | accepted |

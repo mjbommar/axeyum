@@ -2022,7 +2022,7 @@
       "curriculum_status": "covered",
       "curriculum_family": "LinearAlgebra",
       "resource_status": "validated",
-      "summary": "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over \u211a are decidable.",
+      "summary": "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over \u211a are decidable. The determinant is now proved at general n (ADR-1120, a cofactor recursion over the dimension bound), not just 2x2/3x3; eigenvalues remain unbuilt.",
       "prerequisites": [
         "curriculum_fields",
         "curriculum_relations_and_functions",

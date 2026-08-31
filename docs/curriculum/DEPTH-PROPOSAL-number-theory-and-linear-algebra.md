@@ -1,12 +1,36 @@
 # A Spivak-shaped spine for number theory and linear algebra
 
 **Status: a proposal.** Nothing here is in `curriculum.toml`, deliberately —
-adopting it means adding ~30 nodes to a 23-node graph and every consumer of
+adopting it means adding ~30 nodes to a 24-node graph and every consumer of
 that file (`scripts/lib/graph_dispatcher.py`, `scripts/gen-import-backlog.py`,
 `scripts/validate-foundational-concepts.py`, the `mathtour.rs` Rust mirror and
 `artifacts/ontology/foundational-concepts.json`) has to move with it. ADR-1075
 records the decision to write the design first and land the graph change as its
-own reviewed step.
+own reviewed step. ADR-1140 re-measured the two rungs this proposal called the
+open frontier and found both had since landed (below), and reaffirmed the
+decision not to do the ~30-node surgery in that same pass — the two
+`kernel_decls` corrections are in `curriculum.toml`, the graph shape is not.
+
+**Correction, 2026-08-31 (ADR-1140).** Two rungs this proposal named as the
+live frontier landed the same day it was written, in commits that postdate it:
+
+- **L7, the general-`n` determinant, is done.** `Rat.det : (Nat → Nat → Rat) →
+  Nat → Rat` (ADR-1120, `rat_prelude/matrix_det.rs`) is a cofactor recursion
+  over the dimension bound, exactly the route this proposal named, with
+  `det_eq_det2`/`det_eq_det3` proving it agrees with the fixed-size forms at
+  `n = 2, 3`. `linear-algebra`'s `kernel_decls` moves 59 → 81 for this reason
+  (`Rat.det*`, `matSkip`, `matMinor`, `altSign`, `matInv2*` — 22 declarations
+  that a bug in `measure-curriculum-kernel-coverage.py`'s bucket pattern had
+  silently mis-attributed to `rationals` until ADR-1140 fixed it).
+- **N10's Euler's theorem is done.** `Int.euler_totient_theorem : ∀ n a,
+  0 < n → Coprime a n → ModEq n (pow a (totient n)) 1` (ADR-1110,
+  `int_prelude/euler_assembly.rs`) is exactly `a^φ(n) ≡ 1 (mod n)`, axiom-free,
+  assembled from `Int.prodRangeIf_permute` and the residue-permutation
+  ingredients this proposal already listed as landed.
+
+L9 (eigenvalues) and N11 (quadratic reciprocity) remain the genuine open
+frontiers on their respective spines; L3 (span) and N7′ (factorization
+uniqueness, restated) remain as this proposal describes them below.
 
 Every "kernel has it" claim below is grounded in one measurement, not in prose:
 
@@ -95,7 +119,7 @@ proposing work.
 | N7′ | **Factorization — the uniqueness half, restated** | N7, cardinality | **absent, and blocked by type theory, not difficulty.** Multiset equality has no carrier. The expressible form is *multiplicity agreement at each prime*, reachable via `Nat.countRange_permute`. This is a rung the current graph cannot even express the existence of. |
 | N8 | **Congruences and modular arithmetic** | N2 | **have.** `Int.ModEq`, `Nat.modeq`, ~104 declarations |
 | N9 | **CRT** | N5, N8 | **have, twice.** `Nat.crt_unique` (Nat-native) and `Int.crt_exists`/`Int.crt_unique`. Note the two live in `nat_prelude/crt.rs` and `int_prelude/crt.rs`; three separate triages checked only the Int one and concluded it did not transport |
-| N10 | **The multiplicative group mod n** — Fermat, Euler, Wilson | N9, counting | **mostly have.** `Nat.pow_prime_modeq_self` (Fermat, all `a`), `Int.wilson`/`wilson_converse`/`wilson_iff`, `Nat.totient` with `totient_mul_of_coprime`, `totient_prime_pow`, `totient_prime`. **`a^φ(n) ≡ 1 (mod n)` itself is absent**, though both residue-permutation ingredients (`Int.euler_unit_coprime`, `Int.euler_unit_injective`) are landed |
+| N10 | **The multiplicative group mod n** — Fermat, Euler, Wilson | N9, counting | **have.** `Nat.pow_prime_modeq_self` (Fermat, all `a`), `Int.wilson`/`wilson_converse`/`wilson_iff`, `Nat.totient` with `totient_mul_of_coprime`, `totient_prime_pow`, `totient_prime`, and **`Int.euler_totient_theorem` (`a^φ(n) ≡ 1 (mod n)`, ADR-1110)** — landed 2026-08-31, axiom-free, from the residue-permutation ingredients (`Int.prodRangeIf_permute` and friends) this row used to list as the missing piece |
 | N11 | **Quadratic residues** | N10 | **partly.** `Int.euler_criterion_pm_one` and the two implication halves are landed; **quadratic reciprocity is absent** and is the subject's genuine frontier |
 
 Two side spurs the spine should carry as nodes rather than as footnotes,
@@ -113,18 +137,20 @@ because both already have kernel content that nothing in the graph points at:
   accident of naming.
 
 **What the spine changes about dispatch.** Today a lane sent at
-`number-theory` has a four-prerequisite box. Under this spine the three live
-rungs are N7′, N10's Euler theorem, and N11's reciprocity — and each names its
-blocker precisely enough to brief against. That is the whole argument for the
-decomposition.
+`number-theory` has a four-prerequisite box. Under this spine the two
+remaining open rungs are N7′ and N11's reciprocity (N10's Euler theorem
+closed 2026-08-31, ADR-1110) — and each names its blocker precisely enough to
+brief against. That is the whole argument for the decomposition.
 
 ---
 
 ## 2. Linear algebra — a nine-rung spine, and the honest gap
 
 Today: one node, `covered`, `Family::LinearAlgebra`. Measured kernel
-attribution: **55 declarations** — the `Rat.det2`/`det3` fixed-size determinant
-theory, `Rat.dotN` at general `n`, the matrix layer (`matMul`, `matId`,
+attribution (2026-08-31, post-ADR-1120): **81 declarations** — the
+`Rat.det2`/`det3` fixed-size determinant theory plus the **general-`n`
+determinant** (`Rat.det`, `matSkip`, `matMinor`, `altSign`, `matInv2*`,
+ADR-1120), `Rat.dotN` at general `n`, the matrix layer (`matMul`, `matId`,
 `matTranspose`), Cramer's rule at 2×2 and the 2×2 adjugate inverse. Add
 `Rat.sumRange_swap` and `Rat.sumRange_diagonal`, filed under `counting` because
 that is their aggregate but load-bearing here, and `CPoint`'s 116 declarations,
@@ -147,17 +173,18 @@ command at the top of this file rather than quoting any of them.
 | L4 | **Inner product** | L2 | **have,** at general `n`: `Rat.dotN` with `dotN_add_left`, `dotN_smul_left`, `dotN_comm`, `dotN_self_nonneg`, `dotN_succ`, `dotN_two`, `dotN_zero`, and **`Rat.dotN_cauchy_schwarz` at arbitrary `n`**. Reachable precisely because its conclusion is a scalar |
 | L5 | **Matrices as `Nat → Nat → Rat`, and the product** | L2, L3 | **have.** `Rat.matMul`, `Rat.matId` (`matId_diag`, `matId_off_diag`), `matMul_assoc`, `matMul_id_left`/`_right`, `matMul_add_left`/`_right`, `matMul_smul_left`, `matMul_succ`, `matMul_zero`. Stated pointwise (`∀ i j, i < m → j < p → …`), as the absence of `funext` requires. Built on `Rat.sumRange_swap`, exactly as predicted |
 | L6 | **Transpose, and `(AB)ᵀ = BᵀAᵀ`** | L5 | **have.** `Rat.matTranspose`, `matTranspose_mul`, `matTranspose_transpose` |
-| L7 | **Determinant** | L5 | **have at fixed size only.** `Rat.det2` (`det2_mul` multiplicativity, `det2_id`, `det2_swap_rows`, `det2_scale_row`, `det2_row_add`, `det2_eq_zero_of_lin_dep`), `Rat.det3` (`det3_cofactor_row1`, `det3_id`, `det3_scale_row`). **General `n` is the live frontier.** A permutation sum needs permutations as data and there is no `List`; a **cofactor recursion over the bound** is expressible and is the honest route. Nothing else in this spine is blocked on it |
-| L8 | **Linear systems `Ax = b`** | L5, L7 | **have at 2×2 in the kernel** (`Rat.cramer2_x`, `cramer2_y`, `cramer2_solves`, `cramer_two_unique_x`/`_y`, and the adjugate inverse `inv2_*`/`mul_adj2_*`), and **the strongest row in the curriculum outside it**: `simplex::feasible`/`check_farkas`, `lra::FarkasCertificate::verify`, kernel reconstruction through `prove_unsat_to_lean_module`. The *general-`n`* solvability statement is absent and waits on L7 |
+| L7 | **Determinant** | L5 | **have, at general `n` (ADR-1120, landed 2026-08-31).** `Rat.det : (Nat → Nat → Rat) → Nat → Rat`, a **cofactor recursion over the dimension bound** — exactly the route this row named, since a permutation sum needs permutations as data and there is no `List`. `det_zero`/`det_succ` (the recursion equations), `det_one`, and `det_eq_det2`/`det_eq_det3` (symbolic agreement with the fixed-size forms below). Plus the fixed-size theory this row originally described: `Rat.det2` (`det2_mul` multiplicativity, `det2_id`, `det2_swap_rows`, `det2_scale_row`, `det2_row_add`, `det2_eq_zero_of_lin_dep`), `Rat.det3` (`det3_cofactor_row1`, `det3_id`, `det3_scale_row`) |
+| L8 | **Linear systems `Ax = b`** | L5, L7 | **have at 2×2 in the kernel** (`Rat.cramer2_x`, `cramer2_y`, `cramer2_solves`, `cramer_two_unique_x`/`_y`, and the adjugate inverse `inv2_*`/`mul_adj2_*`), and **the strongest row in the curriculum outside it**: `simplex::feasible`/`check_farkas`, `lra::FarkasCertificate::verify`, kernel reconstruction through `prove_unsat_to_lean_module`. **L7's precondition is now met**; the *general-`n`* solvability statement itself is still unbuilt and is the next rung to dispatch |
 | L9 | **Eigenvalues** | L7, polynomials | **absent.** The characteristic polynomial at fixed size is expressible (`Rat.polyEval` exists); the general spectral theory is Mathlib-scale and out of range |
 
-**The one recommendation that changes work rather than documentation:** the
-keystone is now L7 at general `n`, not L5. L3 (span) and L7-general are the two
-open rungs, and L7-general is the one that unblocks L8-general and L9. Its
-route is a cofactor recursion over the dimension bound — the same shape
-`Nat.choose` and `Nat.binaryRec` already use — and *not* a permutation sum,
-which this kernel cannot state for want of a `List`. L3 is a `Rat.sumRange`
-assembly over an indexed family and is cheap.
+**The one recommendation that changed work rather than documentation, and it
+has now landed:** the keystone was L7 at general `n`, not L5, and closing it
+(ADR-1120) was exactly the cofactor-recursion route predicted here — the same
+shape `Nat.choose` and `Nat.binaryRec` already use, not a permutation sum,
+which this kernel cannot state for want of a `List`. **The remaining open
+rungs are L3 (span, a cheap `Rat.sumRange` assembly) and L9 (eigenvalues,
+Mathlib-scale); L8's general-`n` solvability statement is now unblocked and is
+the natural next dispatch.**
 
 An earlier draft of this file named L5 as the keystone and sized it as
 "assembly over `sumRange_swap` rather than new mathematics". That sizing was
@@ -210,12 +237,14 @@ pairwise-uncorrelated hypothesis), and does not know it is missing anything.
   the pattern that works — a *predicate* on a concrete carrier, not a typeclass —
   and the ten declarations it carries are the whole abstract-algebra column.
   A spine for abstract algebra would be a third proposal and this is not it.
-- **No renumbering of the existing 23.** The spines above sit *inside* the two
+- **No renumbering of the existing nodes** (23 when this proposal was written,
+  24 since ADR-1082 added `probability`). The spines above sit *inside* the two
   destination nodes; the layer-0 through layer-2 nodes are unchanged, and
   `divisibility-and-euclid`, `modular-arithmetic` and `counting` are already the
   first six rungs of the number-theory spine under different names. Adopting the
-  spine means promoting rungs to nodes where they earn it (N7′, N10, N11, L5,
-  L7), not rebuilding the graph.
+  spine means promoting rungs to nodes where they earn it (N7′, N11, L3, L9 —
+  N10 and L5/L7 no longer need promoting, having landed as content inside the
+  existing `number-theory`/`linear-algebra` nodes), not rebuilding the graph.
 
 ## See also
 
