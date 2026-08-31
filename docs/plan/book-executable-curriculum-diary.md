@@ -937,3 +937,36 @@ widths, arbitrary memory, multi-instruction programs, or termination. It now
 provides the executable equivalence and counterexample-replay substrate needed
 by the first bounded scalar-minimality route. The book object and manifest
 remain to be bound before `OP.rel.a0-equivalence` can move from open.
+
+## 2026-08-31 — exhaustive bounded A0 scalar minimality
+
+Implemented the first executable minimality route for the Chapter 13 `x + 2`
+example. The candidate language is an exact six-instance alphabet: `mov r0,r0`,
+`mov r0,r1`, and the four `add r0,rs1,rs2` combinations with each source drawn
+from `r0` and the read-only resource register `r1 = 1`. Only `r0` is writable.
+The cost is decoded instruction count, the maximum cost is two, and the
+observation requires both the final `r0` value and running completion.
+
+The executable A0 model supports byte-multiple widths, so this route exhausts
+all 256 inputs at width eight rather than the manuscript's earlier informal
+width-four sketch. It enumerates the complete syntax product at costs zero,
+one, and two: 1, 6, and 36 candidates. Those strata contain 1, 5, and 11
+distinct complete truth tables and respectively 0, 0, and 4 correct syntactic
+candidates. The selected printed witness is two consecutive
+`add r0,r0,r1` instructions. Its report stores the complete 256-entry truth
+table and establishes minimum cost two within this declared language.
+
+Two load-bearing controls fail as required. Replacing the second increment
+with `add r0,r0,r0` produces a concrete mismatch at input one. Omitting the
+last alphabet member changes both the canonical language digest and enumerated
+stratum cardinality. The direct producer and checker agree on result SHA-256
+`06a6550fdf29f7239d0355f8d25a271fb866c641f25452a76fa738e19ab12f30`;
+the serialized report SHA-256 is
+`268bc13e35e606637b5703ddde0ca7a563a39a658793453b930339b653d071ce`.
+Strict all-target Clippy and the focused route test pass.
+
+This is finite direct enumeration over one exact width-eight language. It is
+not a solver certificate, a search over arbitrary A0 programs, a theorem for
+all widths, or a minimality result for RV64I or x86-64. The book object and
+manifest still need to bind the report before the chapter obligation can move
+from open to computed.

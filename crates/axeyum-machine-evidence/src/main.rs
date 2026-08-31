@@ -3,8 +3,10 @@
 use std::{env, path::Path};
 
 use axeyum_machine_evidence::{
-    a0_equivalence_report, add_step_report, branch_trace_report, check_a0_equivalence,
-    check_a0_equivalence_corrupt_model_control, check_a0_equivalence_destination_control,
+    a0_equivalence_report, a0_minimality_report, add_step_report, branch_trace_report,
+    check_a0_equivalence, check_a0_equivalence_corrupt_model_control,
+    check_a0_equivalence_destination_control, check_a0_minimality,
+    check_a0_minimality_language_omission_control, check_a0_minimality_witness_control,
     check_add_step, check_add_wrong_destination_control, check_branch_target_control,
     check_branch_trace, check_cross_isa_absolute_value, check_cross_isa_predicate_control,
     check_decoder_reserved_bit_control, check_decoder_roundtrip, check_memory_byte_order_control,
@@ -469,6 +471,45 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_a0_equivalence_corrupt_model_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: corrupted A0 counterexample model was accepted".into());
         }
+        [command, package, output] if command == "emit-a0-minimality" => {
+            let report = a0_minimality_report(Path::new(package))?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "a0-minimality: PASS: alphabet={} strata={:?} minimum={} witness={} result_sha256={}",
+                report.language.alphabet.len(),
+                report
+                    .strata
+                    .iter()
+                    .map(|stratum| stratum.candidates_checked)
+                    .collect::<Vec<_>>(),
+                report.minimum_cost,
+                report.witness.len(),
+                report.result_sha256
+            );
+        }
+        [command, package, report] if command == "check-a0-minimality" => {
+            let checked = check_a0_minimality(Path::new(package), Path::new(report))?;
+            println!(
+                "a0-minimality: PASS: alphabet={} strata={:?} minimum={} witness={} result_sha256={}",
+                checked.language.alphabet.len(),
+                checked
+                    .strata
+                    .iter()
+                    .map(|stratum| stratum.candidates_checked)
+                    .collect::<Vec<_>>(),
+                checked.minimum_cost,
+                checked.witness.len(),
+                checked.result_sha256
+            );
+        }
+        [command, package, report] if command == "control-a0-minimality-witness" => {
+            check_a0_minimality_witness_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: mutated A0 minimality witness was accepted".into());
+        }
+        [command, package, report] if command == "control-a0-minimality-language-omission" => {
+            check_a0_minimality_language_omission_control(Path::new(package), Path::new(report))?;
+            return Err("control-failure: incomplete A0 minimality language was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -512,7 +553,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  emit-a0-equivalence PACKAGE OUTPUT | \
                  check-a0-equivalence PACKAGE REPORT | \
                  control-a0-equivalence-destination PACKAGE REPORT | \
-                 control-a0-equivalence-corrupt-model PACKAGE REPORT"
+                 control-a0-equivalence-corrupt-model PACKAGE REPORT | \
+                 emit-a0-minimality PACKAGE OUTPUT | \
+                 check-a0-minimality PACKAGE REPORT | \
+                 control-a0-minimality-witness PACKAGE REPORT | \
+                 control-a0-minimality-language-omission PACKAGE REPORT"
                 .into());
         }
     }
