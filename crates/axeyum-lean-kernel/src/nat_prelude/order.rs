@@ -1605,38 +1605,6 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         d.declare_theorem(p.sub_add_cancel, ty, value)?;
     }
 
-    // sub_sub_self : ∀ n k, Le k n → sub n (sub n k) = k
-    //
-    // No induction of its own. `sub_add_cancel` gives `add (sub n k) k = n`;
-    // rewriting only the OUTER `n` of `sub n (sub n k)` along it turns the goal
-    // into `sub (add (sub n k) k) (sub n k) = k`, which is
-    // `add_sub_cancel_left` at `(sub n k, k)`. The `Le k n` hypothesis is
-    // essential and not cosmetic: `Nat.sub` truncates, so the unbounded form is
-    // false (`sub 3 (sub 3 5) = 3`).
-    d.theorem(p.sub_sub_self, 2, &|d, v| {
-        let (n, k) = (v[0], v[1]);
-        let hyp_ty = d.le(k, n);
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-
-        let diff = d.sub(n, k);
-        let lhs = d.sub(n, diff);
-        let stmt = d.eq(lhs, k);
-        let full = d.arrow(hyp_ty, stmt);
-
-        let restored = d.add(diff, k);
-        let cancel = d.lemma(p.sub_add_cancel, &[k, n, h]); // add (sub n k) k = n
-        let base = d.lemma(p.add_sub_cancel_left, &[diff, k]); // sub (add diff k) diff = k
-        let moved = {
-            let motive = d.eq_motive(restored, &|d, z| {
-                let diff = d.sub(n, k);
-                let inner = d.sub(z, diff);
-                d.eq(inner, k)
-            });
-            d.transport(restored, motive, base, n, cancel)
-        };
-        (full, d.lam_fv(h_fv, hyp_ty, moved))
-    })?;
 
     // sub_eq_zero_of_le : ∀ a b, Le a b → sub a b = zero
     d.theorem(p.sub_eq_zero_of_le, 2, &|d, v| {
@@ -1908,6 +1876,39 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         let (_, common_sum) = d.chain(restored, &[(sum, restore), (reordered, commute)]);
         let proof = d.lemma(p.add_right_cancel, &[difference, n, m, common_sum]);
         (d.eq(difference, n), proof)
+    })?;
+
+    // sub_sub_self : ∀ n k, Le k n → sub n (sub n k) = k
+    //
+    // No induction of its own. `sub_add_cancel` gives `add (sub n k) k = n`;
+    // rewriting only the OUTER `n` of `sub n (sub n k)` along it turns the goal
+    // into `sub (add (sub n k) k) (sub n k) = k`, which is
+    // `add_sub_cancel_left` at `(sub n k, k)`. The `Le k n` hypothesis is
+    // essential and not cosmetic: `Nat.sub` truncates, so the unbounded form is
+    // false (`sub 3 (sub 3 5) = 3`).
+    d.theorem(p.sub_sub_self, 2, &|d, v| {
+        let (n, k) = (v[0], v[1]);
+        let hyp_ty = d.le(k, n);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let diff = d.sub(n, k);
+        let lhs = d.sub(n, diff);
+        let stmt = d.eq(lhs, k);
+        let full = d.arrow(hyp_ty, stmt);
+
+        let restored = d.add(diff, k);
+        let cancel = d.lemma(p.sub_add_cancel, &[k, n, h]); // add (sub n k) k = n
+        let base = d.lemma(p.add_sub_cancel_left, &[diff, k]); // sub (add diff k) diff = k
+        let moved = {
+            let motive = d.eq_motive(restored, &|d, z| {
+                let diff = d.sub(n, k);
+                let inner = d.sub(z, diff);
+                d.eq(inner, k)
+            });
+            d.transport(restored, motive, base, n, cancel)
+        };
+        (full, d.lam_fv(h_fv, hyp_ty, moved))
     })?;
     Ok(())
 }

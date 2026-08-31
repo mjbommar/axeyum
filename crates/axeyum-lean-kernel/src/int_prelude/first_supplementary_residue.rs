@@ -254,8 +254,10 @@ fn index_sum_eq_p(d: &mut IntDev<'_>, m: ExprId, k: ExprId, hk: ExprId) -> ExprI
     // `succ (add m (pred m))` is `add m (succ (pred m))` by iota, so
     // `succ_pred_of_pos` lands it on `add m m` under one `succ`.
     let pos_m = pos_of_lt(d, k, m, hk);
-    let succ_pred = d.lemma(np.succ_pred_of_pos, &[m, pos_m]);
+    // `succ_pred_of_pos` states `m = succ (pred m)`, NOT the other direction.
+    let succ_pred_rev = d.lemma(np.succ_pred_of_pos, &[m, pos_m]);
     let s_pm = d.succ(pm);
+    let succ_pred = d.symm(m, s_pm, succ_pred_rev);
     let mm = d.add(m, m);
     let h3 = d.congr(s_pm, m, succ_pred, &|d, x| {
         let inner = d.add(m, x);
