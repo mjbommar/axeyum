@@ -138,6 +138,7 @@ mod algebra;
 mod and_or_distrib;
 mod asc_factorial;
 mod asc_factorial_div;
+mod avg_pair;
 mod base_induction;
 mod bezout;
 mod binary;
@@ -203,6 +204,7 @@ mod log2;
 mod log_clog_order;
 mod lor;
 mod min_fac;
+mod minmax;
 mod mod_mul_lemmas;
 mod modeq_add_cancel;
 mod modeq_add_le_of_lt;
@@ -272,6 +274,7 @@ use algebra::{
 use and_or_distrib::declare_and_or_distrib_all;
 use asc_factorial::declare_asc_factorial_all;
 use asc_factorial_div::declare_asc_factorial_eq_div;
+use avg_pair::declare_avg_pair_all;
 use base_induction::declare_base_induction;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
@@ -356,6 +359,7 @@ use log_clog_order::declare_log_clog_order_all;
 use log2::declare_log2_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
+use minmax::declare_minmax_all;
 use mod_mul_lemmas::declare_mod_mul_family;
 use modeq_add_cancel::declare_mod_eq_add_cancel;
 use modeq_add_le_of_lt::declare_mod_eq_add_le_of_lt;
@@ -4911,6 +4915,51 @@ pub struct NatPrelude {
     /// both satisfied by the signed fold on `[0, m)`, no separate bijection
     /// or partner-index construction needed.
     pub gauss_fold_shift_injective_on: NameId,
+
+    // -- `avg-pair-constructions` lane: `avg_pair.rs` --
+    // `docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md`
+    // (ADR-1045's named unblock: two typeclass-free, `Prod`-free
+    // definitions that open `Batteries.Data.Nat.Bisect` +
+    // `Mathlib.Data.Nat.Pairing` as one held-out family for the
+    // autogenesis screen). Construction only, ADR-0653 — no theorem about
+    // either is declared here.
+    /// `Nat.avg (a b : Nat) : Nat := div (add a b) 2` — the floored
+    /// average. See `avg_pair.rs`'s module doc for why `Nat.div`'s
+    /// truncation matters here.
+    pub avg: NameId,
+    /// `Nat.pair (a b : Nat) : Nat := if a < b then add (mul b b) a else
+    /// add (add (mul a a) a) b` — the one-directional Cantor-style
+    /// pairing (Mathlib's/Lean core's own `Nat.pair`). `Nat.unpair` is NOT
+    /// reachable this way (needs `Prod`, absent from this kernel); see
+    /// `avg_pair.rs`'s module doc. Rust field named `pair_fn`, not `pair`
+    /// — `pair` is already the `Nat.Pair` product TYPE from
+    /// `binary_rec.rs` (a different, capitalized kernel name; only the
+    /// Rust identifiers collide).
+    pub pair_fn: NameId,
+
+    // -- `avg-pair-constructions` lane: `minmax.rs` --
+    // `docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md`
+    // (ADR-1045's named "largest remaining opportunity": four bare-root/
+    // cross-namespace names that open `Init.Data.Nat.MinMax` for the
+    // autogenesis screen). Construction only, ADR-0653.
+    /// `Max.max (a b : Nat) : Nat := if a <= b then b else a`, at the
+    /// bare-root `Max` namespace matching Mathlib's typeclass method name.
+    /// See `minmax.rs`'s module doc for why this is NOT a real typeclass
+    /// method (this kernel has no `Max` class).
+    pub max_max: NameId,
+    /// `Min.min (a b : Nat) : Nat := if a <= b then a else b`, same shape
+    /// as [`Self::max_max`] under the `Min` namespace.
+    pub min_min: NameId,
+    /// `Nat.instMax (a b : Nat) : Nat := Max.max a b` — NOT a real
+    /// typeclass instance (this kernel has no `Max` structure to be an
+    /// instance of); a same-value alias under the exact name Mathlib's
+    /// elaborated statements apply as the instance argument. See
+    /// `minmax.rs`'s module doc.
+    pub nat_inst_max: NameId,
+    /// `instMinNat (a b : Nat) : Nat := Min.min a b`, bare root (Mathlib's
+    /// own instance name for `Min Nat` has no namespace prefix), same
+    /// shape as [`Self::nat_inst_max`].
+    pub inst_min_nat: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5864,6 +5913,23 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_in_range: kernel.name_str(nat, "gauss_fold_in_range"),
             gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
+            avg: kernel.name_str(nat, "avg"),
+            pair_fn: kernel.name_str(nat, "pair"),
+            max_max: {
+                let root = kernel.anon();
+                let max_ns = kernel.name_str(root, "Max");
+                kernel.name_str(max_ns, "max")
+            },
+            min_min: {
+                let root = kernel.anon();
+                let min_ns = kernel.name_str(root, "Min");
+                kernel.name_str(min_ns, "min")
+            },
+            nat_inst_max: kernel.name_str(nat, "instMax"),
+            inst_min_nat: {
+                let root = kernel.anon();
+                kernel.name_str(root, "instMinNat")
+            },
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -6737,6 +6803,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.zero_lt_of_ne_zero`, `Nat.one_le_mul`, `Nat.lt_irrefl` (all
         // above). Nothing later needs it, so it goes last.
         declare_coprime_mul_add_mul_ne_mul(&mut d, &p)?;
+        // `Nat.avg`/`Nat.pair` (`avg_pair.rs`): needs only `Nat.add`/
+        // `Nat.mul`/`Nat.div`/`Nat.ble`/`Nat.succ`/`bool_select_nat`, all
+        // far above. Opens `Batteries.Data.Nat.Bisect` +
+        // `Mathlib.Data.Nat.Pairing` for the autogenesis screen
+        // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
+        declare_avg_pair_all(&mut d, &p)?;
+        // `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` (`minmax.rs`):
+        // needs only `Nat.ble`/`bool_select_nat`, both far above. Opens
+        // `Init.Data.Nat.MinMax` for the autogenesis screen
+        // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
+        declare_minmax_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -6757,6 +6834,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
 
 #[cfg(test)]
 mod nat_prelude_tests;
+
+#[cfg(test)]
+mod avg_pair_tests;
+
+#[cfg(test)]
+mod minmax_tests;
 
 #[cfg(test)]
 mod bit_extra_tests;

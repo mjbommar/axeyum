@@ -128,6 +128,9 @@ now. Nothing was deleted.
 | 2026-08-31 | `8f914f7ca` | facts: flip `Nat.add_choose_mul_factorial_mul_factorial` to proved |
 | 2026-08-31 | row3-citability | fix(ntheory_certify): CRT checker's leastness/conflict guards were not independent (`43e598ead`) |
 | 2026-08-31 | row3-citability | four `cas-internal` facts registered (Pratt primality on 2^89-1, compositeness, factorization, CRT), `settled-fact-statement-pins.json` pinned by hand (not `--write`), ADR-1055, curriculum doc corrections |
+| 2026-08-31 | avg-pair-constructions | `Nat.avg`/`Nat.pair` construction + evaluation tests (ADR-1045's named unblock) |
+| 2026-08-31 | avg-pair-constructions | `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` construction + evaluation tests (second held-out family, ADR-1045's "harder route", taken) |
+| 2026-08-31 | avg-pair-constructions | ADR-1060: both re-screened against the real post-build environment, R9/R11 clean, R5 satisfied |
 | 2026-08-31 | bind-extracted-subjects | 660 facts in `artifacts/facts/` gained `formal.kernel_theorem` (658 verified-correct, 1 corrected, 1 deliberate `null`); ADR-1005 records the method and the 3 guards it caused to newly (and correctly) reject |
 | 2026-08-31 | `757afb706` | New `nat_prelude/draw11_mirrors.rs`: 4 theorems (coprime_dvd_mul_left/right, coprime_eq_of_mul_eq_zero, add_one_mul_choose_eq), each with a discriminating concrete-instance test. |
 | 2026-08-31 | `e00c2500e` | Close 3 ml430 lcm/coprime mirrors already proved under another name (fact-ledger evidence only). |
@@ -36226,6 +36229,43 @@ common_refinement_proof_rejected_at_wrong_type`) — all pass.
 |---|---|
 | (this lane, Task 1) | doc 295 (measurement); no source changes |
 | (this lane, Task 2) | mechanical clippy fixes, 7 files, doc/mut/allow only |
+
+**Status: DONE.** Decision record:
+[ADR-1060](docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md).
+
+Declared both constructions ADR-1045 asked for. `Nat.avg`/`Nat.pair`
+exactly as specified (`avg_pair.rs`), plus a SECOND construction —
+`Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` (`minmax.rs`) — that ADR-1045
+flagged as the "largest remaining opportunity" but sized as the harder
+route (Mathlib states `Init.Data.Nat.MinMax` through a typeclass this
+kernel does not model). Simulated first in both cases, then built,
+construction-only (ADR-0653: definitions and an evaluation test, nothing
+else — verified by grep, no theorem declared in either file).
+
+Re-screened AFTER declaring, against the REAL post-build kernel
+environment (fresh `shape_search --release`, 2572 declarations, not a
+simulated one): both families R9 0/10, R11 clean, R5's two-new-family
+minimum satisfied. `artifacts/autogenesis/` untouched throughout —
+`check-autogenesis-holdout-isolation.py` reports `held_out=146|verdict=PASS`
+identically before and after (necessarily, since nothing it reads changed).
+`gen-autogenesis-nursery-refill.py --check` still reports `entries=380`
+against the committed snapshot, byte-identical to ADR-1045's own report.
+
+`nat_prelude::` sweep: 268 passed, 0 failed (was 264 on the parent commit;
++4 for the two new definitions' coverage in `definition_names`, +5 for the
+new test files, net of the fix that closed a coverage gap the environment-
+derived `every_nat_declaration_is_checked_and_axiom_free` assertion caught
+on the first build). Clippy clean on every file this lane touched
+(4 files: `avg_pair.rs`, `avg_pair_tests.rs`, `minmax.rs`,
+`minmax_tests.rs`); 7 pre-existing clippy errors remain elsewhere in the
+crate, untouched by this lane, out of scope.
+
+**Next draw needs:** author draw 13 — add `natural-avg-pair`/
+`natural-minmax` (or whatever names the drawing lane picks) to
+`FAMILY_MODULES`/`FAMILY_ROUTES` in `gen-autogenesis-nursery-refill.py`,
+regenerate the manifest, reconcile the fact ledger. This lane deliberately
+did not touch that file or `artifacts/autogenesis/` — it enabled a draw,
+it did not author one.
 
 **Done (bind-extracted-subjects, 2026-08-31).** ADR-1000's five-risk audit
 measured that `theorem_of` (`scripts/check-fact-depends-derived.py`) resolves
