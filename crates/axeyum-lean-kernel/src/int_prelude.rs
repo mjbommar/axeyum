@@ -1665,10 +1665,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_zero: child(kernel, "prodRangeIf_zero"),
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
         prod_range_if_permute: child(kernel, "prodRangeIf_permute"),
-        gauss_sign_prod_eq_pow_neg_one_of_count: child(
-            kernel,
-            "gaussSignProdEqPowNegOneOfCount",
-        ),
+        gauss_sign_prod_eq_pow_neg_one_of_count: child(kernel, "gaussSignProdEqPowNegOneOfCount"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),

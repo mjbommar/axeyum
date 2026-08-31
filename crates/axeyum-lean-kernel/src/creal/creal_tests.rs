@@ -11122,3 +11122,77 @@ fn ivt_row_two_derives_a_principle_absent_from_the_environment() {
         "row 2 must be axiom-free"
     );
 }
+
+/// **EVT's own copy of the check above, for `CReal.evt_attained_max_decides_sign`.**
+///
+/// `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`
+/// (§"What would have to land", item 3) records that
+/// `F:creal-evt-attained-max-decides-sign` had no non-vacuity evidence of its
+/// own in the ledger — the environment-absence check above exists only for
+/// `ivt_exact_root_decides_sign`, even though its own doc comment says "the
+/// same check `evt_attained_max_decides_sign`'s non-vacuity rests on". That
+/// was true mathematically (the two theorems render an IDENTICAL conclusion
+/// type, `Or (le v zero) (le zero v)`, so one absence-of-`le_total` fact
+/// bears on both) but nothing checked `evt_attained_max_decides_sign` itself:
+/// a reader auditing this fact alone would find no assertion naming it.
+///
+/// This closes that gap as its own test rather than a bare citation, so it
+/// also re-derives the two per-declaration guards IVT's version carries
+/// (`Theorem` kind, empty axiom footprint) for the EVT declaration
+/// specifically, not only for its IVT sibling.
+///
+/// Both directions are checked, same as the IVT version: a POSITIVE control
+/// of the same declaration kind (`CReal.lt_cotrans`) proves the lookup can
+/// find something that exists, and the four absent-name spellings prove the
+/// lookup is not simply finding nothing because of a broken query.
+#[test]
+fn evt_row_two_derives_a_principle_absent_from_the_environment() {
+    let (kernel, p) = built();
+
+    let declared: Vec<String> = kernel
+        .environment()
+        .iter()
+        .map(|(name, _)| kernel.display_name(*name).to_string())
+        .collect();
+    let present = |wanted: &str| declared.iter().any(|shown| shown == wanted);
+
+    // POSITIVE CONTROL, same kind and same lookup: cotransitivity exists, and
+    // it exists precisely because the total comparison does not.
+    assert!(
+        present("CReal.lt_cotrans"),
+        "the absence check below is meaningless: this lookup cannot even find \
+         a declaration that certainly exists"
+    );
+
+    for absent in [
+        "CReal.le_total",
+        "CReal.lt_total",
+        "CReal.leTotal",
+        "CReal.ltTotal",
+    ] {
+        assert!(
+            !present(absent),
+            "`{absent}` is now in the environment, so \
+             `evt_attained_max_decides_sign` reduces the classical conclusion \
+             to something this kernel already proves and is no longer a \
+             boundary witness. Do not delete this assertion -- rewrite the \
+             row-2 claim."
+        );
+    }
+
+    // And the theorem itself is a checked `Theorem` resting on nothing.
+    let declaration = kernel
+        .environment()
+        .get(p.evt_attained_max_decides_sign)
+        .expect("CReal.evt_attained_max_decides_sign must be declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "row 2 must be a checked Theorem, not an assertion"
+    );
+    assert!(
+        kernel
+            .axiom_footprint(p.evt_attained_max_decides_sign)
+            .is_empty(),
+        "row 2 must be axiom-free"
+    );
+}

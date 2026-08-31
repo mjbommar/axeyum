@@ -81,6 +81,25 @@ check "additive markdown keeps both" 0 'kept both' n.md \
 
 # 5-6. THE SECOND INCIDENT: both sides edited the SAME definition line. Keeping
 # both leaves two, which balances perfectly and breaks the consumer.
+# 4b. THE 2026-08-31 INCIDENT: two lanes rewrote the SAME prose paragraph.
+# Keeping both concatenated two drafts of one paragraph, and the stale half --
+# asserting a row was ABSENT hours after it landed -- survived into a commit
+# and was read as current. Prose is not additive; a bullet list is. This case
+# and the one above must therefore disagree, which is the whole point.
+check "markdown prose paragraph refused" 1 'PROSE on both sides|REFUSED' p.md \
+'# t
+
+The original paragraph said one thing.
+' '# t
+
+Ours rewrote the paragraph and it now says
+something quite different from before.
+' '# t
+
+Theirs rewrote the same paragraph and it says
+a third thing that contradicts ours.
+'
+
 check "justfile duplicate recipe refused" 1 'both sides define|REFUSED' justfile \
 'check: a b
     echo hi
@@ -98,7 +117,7 @@ check "shell duplicate assignment refused" 1 'both sides define|REFUSED' g.sh \
 
 # --- mutations: each guard must be killed by exactly one case ---------------
 echo "  mutations (each must kill exactly one case):"
-for m in "json_no_parse|resolve_json|CUT" "balance_off|if cut:|if False and cut:" "dupdef_off|if dupes:|if False and dupes:"; do
+for m in "json_no_parse|resolve_json|CUT" "balance_off|if cut:|if False and cut:" "dupdef_off|if dupes:|if False and dupes:" "prose_off|if prose:|if False and prose:"; do
   NAME="${m%%|*}"; REST="${m#*|}"; FROM="${REST%%|*}"; TO="${REST#*|}"
   T=$(mktemp -d); cp "$SCRIPT" "$T/mutant.py"
   if [ "$TO" = "CUT" ]; then
@@ -131,6 +150,25 @@ PY
 pub fn m(
 ' 'fn b(){}
 pub fn t(
+')
+  ( cd "$D" && python3 "$T/mutant.py" >/dev/null 2>&1; echo $? > c )
+  [ "$(cat "$D/c")" != "1" ] && KILLED=$((KILLED+1))
+  rm -rf "$D"
+  # The prose fixture: both sides are multi-line running prose, i.e. two drafts
+  # of one paragraph. Without this the prose guard has nothing that kills it and
+  # could be deleted with the suite still green -- the exact failure this file
+  # exists to prevent.
+  D=$(fixture p.md '# t
+
+One original sentence here.
+' '# t
+
+Ours rewrote this paragraph and it
+now reads quite differently.
+' '# t
+
+Theirs rewrote the same paragraph and it
+reads a third way entirely.
 ')
   ( cd "$D" && python3 "$T/mutant.py" >/dev/null 2>&1; echo $? > c )
   [ "$(cat "$D/c")" != "1" ] && KILLED=$((KILLED+1))

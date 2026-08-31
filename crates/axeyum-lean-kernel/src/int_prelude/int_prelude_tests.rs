@@ -1414,9 +1414,9 @@ fn gauss_sign_prod_eq_pow_neg_one_of_count_matches_direct_computation_at_pp_11_a
     let l1 = k.app(lemma, pp);
     let l2 = k.app(l1, a);
     let applied = k.app(l2, m);
-    let inferred = k.infer(applied).expect(
-        "gauss_sign_prod_eq_pow_neg_one_of_count must apply at concrete pp, a, m",
-    );
+    let inferred = k
+        .infer(applied)
+        .expect("gauss_sign_prod_eq_pow_neg_one_of_count must apply at concrete pp, a, m");
     let eq_c = k.const_(p.logic.eq, vec![level_one]);
     let int_ty = k.const_(p.z, vec![]);
     let expected = {
@@ -1487,9 +1487,9 @@ fn prod_range_scaled_index_eq_pow_mul_factorial_matches_direct_computation_at_a_
     let lemma = k.const_(p.prod_range_scaled_index_eq_pow_mul_factorial, vec![]);
     let l1 = k.app(lemma, two);
     let applied = k.app(l1, three_n);
-    let inferred = k.infer(applied).expect(
-        "prod_range_scaled_index_eq_pow_mul_factorial must apply at concrete a, m",
-    );
+    let inferred = k
+        .infer(applied)
+        .expect("prod_range_scaled_index_eq_pow_mul_factorial must apply at concrete a, m");
     let level_one = {
         let z = k.level_zero();
         k.level_succ(z)
