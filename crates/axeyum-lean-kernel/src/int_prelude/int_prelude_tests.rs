@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 225] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 226] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -249,6 +249,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 225] {
         p.prod_range_mul,
         p.prod_range_const_pow,
         p.prod_range_if_const_eq_pow_count,
+        p.gauss_sign_prod_eq_pow_neg_one_of_count,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -1316,6 +1317,114 @@ fn prod_range_if_const_eq_pow_count_computes_and_rejects_an_off_by_one_exponent(
     assert!(
         result.is_err(),
         "the trusted gate accepted a false claim that prodRangeIf (ble _ 1) (fun _ => 2) 5 = 8"
+    );
+}
+
+/// `Int.gaussSignProdEqPowNegOneOfCount` at `pp := 11, a := 2, m := 5` --
+/// `leastResidue 11 2 k` for `k = 1..5` is `2, 4, 6, 8, 10`, and the
+/// threshold is `succ (div 11 2) = 6`, so `gaussSignNeg` is `false, false,
+/// true, true, true` -- `gaussNegCount 11 2 5 = 3` (ODD, so the sign
+/// product genuinely is `-1`, not `+1` as an even count OR an unrelated
+/// wrong formula would give). Checks the intermediate count, the direct
+/// sign-product computation, AND that the general theorem's instantiation
+/// at these same concrete args matches the direct computation exactly.
+#[test]
+fn gauss_sign_prod_eq_pow_neg_one_of_count_matches_direct_computation_at_pp_11_a_2_m_5() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    let pp = numeral_nat(&mut k, &p, 11);
+    let a = numeral_nat(&mut k, &p, 2);
+    let m = numeral_nat(&mut k, &p, 5);
+
+    // pred := fun j => Nat.gaussSignNeg pp a (succ j).
+    let pred = {
+        let j_fv = 900_500;
+        let j = k.fvar(j_fv);
+        let succ = k.const_(p.nat.succ, vec![]);
+        let sj = k.app(succ, j);
+        let gsn = k.const_(p.nat.gauss_sign_neg, vec![]);
+        let g1 = k.app(gsn, pp);
+        let g2 = k.app(g1, a);
+        let body = k.app(g2, sj);
+        let abstracted = k.abstract_fvars(body, &[j_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+
+    let neg_one = numeral(&mut k, &p, -1);
+    let one_i = k.const_(p.one, vec![]);
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+
+    // selector := fun j => bool_select_int (pred j) (-1) 1.
+    let selector = {
+        let j_fv = 900_501;
+        let j = k.fvar(j_fv);
+        let pj = k.app(pred, j);
+        let bool_rec = k.const_(p.logic.bool_rec, vec![level_one]);
+        let bool_ty_local = k.const_(p.logic.bool_, vec![]);
+        let anon2 = k.anon();
+        let int_ty_local = k.const_(p.z, vec![]);
+        let motive = k.lam(anon2, bool_ty_local, int_ty_local, BinderInfo::Default);
+        let with_motive = k.app(bool_rec, motive);
+        let with_false = k.app(with_motive, one_i);
+        let with_true = k.app(with_false, neg_one);
+        let body = k.app(with_true, pj);
+        let abstracted = k.abstract_fvars(body, &[j_fv]);
+        k.lam(anon2, nat_ty, abstracted, BinderInfo::Default)
+    };
+
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_sel = k.app(prod_range_c, selector);
+    let lhs_direct = k.app(prod_range_sel, m);
+
+    let gnc = k.const_(p.nat.gauss_neg_count, vec![]);
+    let gnc1 = k.app(gnc, pp);
+    let gnc2 = k.app(gnc1, a);
+    let count = k.app(gnc2, m);
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_neg1 = k.app(pow_c, neg_one);
+    let rhs_direct = k.app(pow_neg1, count);
+
+    let three_nat = numeral_nat(&mut k, &p, 3);
+    assert!(
+        k.def_eq(count, three_nat),
+        "gaussNegCount 11 2 5 should compute to 3"
+    );
+    assert!(
+        k.def_eq(lhs_direct, neg_one),
+        "the sign product at pp=11, a=2, m=5 should compute to -1"
+    );
+    assert!(
+        k.def_eq(rhs_direct, neg_one),
+        "pow (-1) (gaussNegCount 11 2 5) should compute to -1 (count = 3, odd)"
+    );
+
+    // The general theorem, applied at these same concrete args, must agree
+    // with the direct computation -- not merely that both separately
+    // reduce to -1.
+    let lemma = k.const_(p.gauss_sign_prod_eq_pow_neg_one_of_count, vec![]);
+    let l1 = k.app(lemma, pp);
+    let l2 = k.app(l1, a);
+    let applied = k.app(l2, m);
+    let inferred = k.infer(applied).expect(
+        "gauss_sign_prod_eq_pow_neg_one_of_count must apply at concrete pp, a, m",
+    );
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let int_ty = k.const_(p.z, vec![]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "gauss_sign_prod_eq_pow_neg_one_of_count's instantiated type must \
+         match the direct sign-product/pow computation"
     );
 }
 

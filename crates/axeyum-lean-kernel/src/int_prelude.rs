@@ -91,6 +91,7 @@ mod euler_totient;
 mod euler_unit_preserve;
 mod exists_gcd_one;
 mod fibonacci;
+mod gauss_sign_product;
 mod gcd;
 mod gcd_dvd_iff;
 mod gcd_scaled_mirrors;
@@ -527,6 +528,12 @@ pub struct IntPrelude {
     /// SAME constant `a` collapses to `a` raised to the count of indices
     /// where the predicate holds. `euler_theorem.rs::declare_prod_range_if_const_eq_pow_count`.
     pub prod_range_if_const_eq_pow_count: NameId,
+    /// `gaussSignProdEqPowNegOneOfCount : ∀ pp a m, Eq Int (prodRange (fun j
+    ///   => bool_select_int (Nat.gaussSignNeg pp a (succ j)) (neg one) one)
+    ///   m) (pow (neg one) (Nat.gaussNegCount pp a m))` -- Gauss's lemma's
+    /// sign-product identity, a one-line corollary of
+    /// `prod_range_if_const_eq_pow_count`. `gauss_sign_product.rs`.
+    pub gauss_sign_prod_eq_pow_neg_one_of_count: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1635,6 +1642,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
         prod_range_if_permute: child(kernel, "prodRangeIf_permute"),
         prod_range_if_const_eq_pow_count: child(kernel, "prodRangeIf_constEqPowCount"),
+        gauss_sign_prod_eq_pow_neg_one_of_count: child(
+            kernel,
+            "gaussSignProdEqPowNegOneOfCount",
+        ),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -2076,6 +2087,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_totient::declare_euler_unit_injective(&mut d)?;
         euler_unit_preserve::declare_euler_unit_coprime_iff(&mut d)?;
         euler_theorem::declare_prod_range_if_all(&mut d)?;
+        gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;
