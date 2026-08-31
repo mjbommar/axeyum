@@ -139,6 +139,7 @@ mod binary;
 mod binary_rec;
 mod binomial;
 mod bit_decode;
+mod bit_extra;
 mod bit_order;
 mod bits;
 mod bitwise;
@@ -262,6 +263,7 @@ use binomial::{
 };
 use bit_decode::declare_bit_decode_all;
 use bit_order::declare_bit_order_all;
+use bit_extra::declare_bit_extra_all;
 use bits::declare_bit_all;
 use bitwise::{
     declare_bitwise_all, declare_bitwise_bit, declare_bitwise_comm, declare_bitwise_swap,
@@ -3692,6 +3694,24 @@ pub struct NatPrelude {
     /// sides unfold to `mul 2 n` and `succ (mul 2 n)`, so `le_succ` at
     /// `mul 2 n` is accepted directly by defeq.
     pub bit_false_le_bit_true: NameId,
+    /// `Nat.bit_false_zero : Eq (bit false 0) 0` — `refl`. See
+    /// `nat_prelude::bit_extra`.
+    pub bit_false_zero: NameId,
+    /// `Nat.bit_le : ∀ (b : Bool) {m n}, Le m n → Le (bit b m) (bit b n)`.
+    /// See `nat_prelude::bit_extra`.
+    pub bit_le: NameId,
+    /// `Nat.bit_ne_zero : ∀ (b : Bool) {n}, n ≠ 0 → bit b n ≠ 0`. See
+    /// `nat_prelude::bit_extra`.
+    pub bit_ne_zero: NameId,
+    /// `Nat.bit_lt_bit : ∀ {m n} (a b : Bool), Lt m n → Lt (bit a m) (bit b
+    /// n)`. See `nat_prelude::bit_extra`.
+    pub bit_lt_bit: NameId,
+    /// `Nat.bit_add_left : ∀ (b : Bool) (n m), bit b (n+m) = bit false n +
+    /// bit b m`. See `nat_prelude::bit_extra`.
+    pub bit_add_left: NameId,
+    /// `Nat.bit_add_right : ∀ (b : Bool) (n m), bit b (n+m) = bit b n + bit
+    /// false m`. See `nat_prelude::bit_extra`.
+    pub bit_add_right: NameId,
     /// `Nat.landAux : Nat → Nat → Nat → Nat`, `landAux fuel m n`: structural
     /// recursion on the fuel (like `logAux`/`testBitAux`/`sizeAux`), carrying
     /// `m`/`n` through unchanged except for `div _ 2` at each step.
@@ -5400,6 +5420,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bit_true: kernel.name_str(nat, "bit_true"),
             bit_true_pos: kernel.name_str(nat, "bit_true_pos"),
             bit_false_le_bit_true: kernel.name_str(nat, "bit_false_le_bit_true"),
+            bit_false_zero: kernel.name_str(nat, "bit_false_zero"),
+            bit_le: kernel.name_str(nat, "bit_le"),
+            bit_ne_zero: kernel.name_str(nat, "bit_ne_zero"),
+            bit_lt_bit: kernel.name_str(nat, "bit_lt_bit"),
+            bit_add_left: kernel.name_str(nat, "bit_add_left"),
+            bit_add_right: kernel.name_str(nat, "bit_add_right"),
             land_aux: kernel.name_str(nat, "landAux"),
             land: kernel.name_str(nat, "land"),
             land_zero_left: kernel.name_str(nat, "land_zero_left"),
@@ -5906,6 +5932,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`order_extra`) and the `zero_lt_succ` term-builder, all far above;
         // nothing needs `Nat.bit`, so it goes last too.
         declare_bit_all(&mut d, &p)?;
+        // Needs `Nat.bit` (just above) plus order/algebra machinery far
+        // above (`mul_le_mul_left`, `add_le_add_right`, `zero_lt_of_ne_zero`,
+        // `mul_lt_mul_left`, `add_pos_right`, `lt_succ_self`,
+        // `lt_of_lt_of_le`/`lt_of_le_of_lt`, `left_distrib`, `add_assoc`,
+        // `add_right_comm`); nothing needs these five closed `ml430` mirrors,
+        // so they go right after `Nat.bit` itself.
+        declare_bit_extra_all(&mut d, &p)?;
         // Needs `Nat.sub`/`Nat.mul` (`declare_arithmetic`/`declare_subtraction`,
         // both far above) and the order/algebra theorems (`not_lt_zero`,
         // `le_of_lt_succ`, `lt_or_eq_of_le`, `sub_self`, `zero_mul`,
