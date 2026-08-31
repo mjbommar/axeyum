@@ -1,8 +1,8 @@
 {
   "command": "cargo run --release -p axeyum-lean-kernel --example shape_search -- --include-constructed --limit 999999 --kind axiom --kind definition --kind theorem --kind inductive --kind constructor --kind recursor",
-  "control": "axiom=30 definition=372 theorem=2216 opaque=0 inductive=25 constructor=38 recursor=25 quot=0",
-  "coverage": "groups=[logic,nat,axreal,integer,rat,characterization,string,creal,complex,cpoint] declarations=2706 values_indexed=false build=27.5s",
-  "declaration_count": 2706,
+  "control": "axiom=30 definition=374 theorem=2216 opaque=0 inductive=25 constructor=38 recursor=25 quot=0",
+  "coverage": "groups=[logic,nat,axreal,integer,rat,characterization,string,creal,complex,cpoint] declarations=2708 values_indexed=false build=29.6s",
+  "declaration_count": 2708,
   "declarations": [
     "Acc",
     "Acc.intro",
@@ -1426,6 +1426,7 @@
     "Nat.casesOn",
     "Nat.catalan",
     "Nat.catalan_mul_succ",
+    "Nat.ceilRoot",
     "Nat.choose",
     "Nat.choose_add_convolution",
     "Nat.choose_eq_zero_of_lt",
@@ -1677,6 +1678,7 @@
     "Nat.fib_strictmonoOn",
     "Nat.findGreatest",
     "Nat.five_le_of_ne_two_of_ne_three",
+    "Nat.floorRoot",
     "Nat.gaussCountBleClosedFormDisj",
     "Nat.gaussFold",
     "Nat.gaussNegCount",
