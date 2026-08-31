@@ -208,6 +208,7 @@ mod log_clog_order;
 mod lor;
 mod min_fac;
 mod minmax;
+mod minmax_lemmas;
 mod mod_mul_lemmas;
 mod modeq_add_cancel;
 mod modeq_add_le_of_lt;
@@ -367,6 +368,7 @@ use log2::declare_log2_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use minmax::declare_minmax_all;
+use minmax_lemmas::declare_minmax_lemmas_all;
 use mod_mul_lemmas::declare_mod_mul_family;
 use modeq_add_cancel::declare_mod_eq_add_cancel;
 use modeq_add_le_of_lt::declare_mod_eq_add_le_of_lt;
@@ -5039,6 +5041,57 @@ pub struct NatPrelude {
     /// own instance name for `Min Nat` has no namespace prefix), same
     /// shape as [`Self::nat_inst_max`].
     pub inst_min_nat: NameId,
+
+    // -- `mirror-frontier` lane: `minmax_lemmas.rs` --
+    // The order theory of `Max.max`/`Min.min`. Mathlib/Lean-core names
+    // verbatim: at `Nat` those functions ARE `if a <= b then b else a` /
+    // `if a <= b then a else b` (`Init/Prelude.lean` `maxOfLe`/`minOfLe`,
+    // `Init/Data/Nat/Basic.lean` `Nat.min_def`), so each of these states the
+    // pinned `ml430` proposition. See `minmax_lemmas.rs`'s module doc.
+    /// `Nat.max_eq_right : ∀ a b, Le a b → Eq (Max.max a b) b`.
+    pub max_eq_right: NameId,
+    /// `Nat.max_eq_left : ∀ a b, Le b a → Eq (Max.max a b) a`.
+    pub max_eq_left: NameId,
+    /// `Nat.min_eq_left : ∀ a b, Le a b → Eq (Min.min a b) a`.
+    pub min_eq_left: NameId,
+    /// `Nat.min_eq_right : ∀ a b, Le b a → Eq (Min.min a b) b`.
+    pub min_eq_right: NameId,
+    /// `Nat.le_max_left : ∀ a b, Le a (Max.max a b)`.
+    pub le_max_left: NameId,
+    /// `Nat.le_max_right : ∀ a b, Le b (Max.max a b)`.
+    pub le_max_right: NameId,
+    /// `Nat.min_le_left : ∀ a b, Le (Min.min a b) a`.
+    pub min_le_left: NameId,
+    /// `Nat.min_le_right : ∀ a b, Le (Min.min a b) b`.
+    pub min_le_right: NameId,
+    /// `Nat.max_comm : ∀ a b, Eq (Max.max a b) (Max.max b a)`.
+    pub max_comm: NameId,
+    /// `Nat.le_min_of_le_of_le : ∀ a b c, Le a b → Le a c →
+    /// Le a (Min.min b c)`.
+    pub le_min_of_le_of_le: NameId,
+    /// `Nat.le_min : ∀ a b c, Iff (Le a (Min.min b c)) (And (Le a b) (Le a c))`.
+    pub le_min: NameId,
+    /// `Nat.lt_min : ∀ a b c, Iff (Lt a (Min.min b c)) (And (Lt a b) (Lt a c))`
+    /// — `Nat.lt` unfolds to `Le` at `succ`, so this is `le_min` at `succ a`.
+    pub lt_min: NameId,
+    /// `Nat.add_max_add_left : ∀ a b c,
+    /// Eq (Max.max (add a b) (add a c)) (add a (Max.max b c))`.
+    pub add_max_add_left: NameId,
+    /// `Nat.add_max_add_right : ∀ a b c,
+    /// Eq (Max.max (add a c) (add b c)) (add (Max.max a b) c)`.
+    pub add_max_add_right: NameId,
+    /// `Nat.add_min_add_left : ∀ a b c,
+    /// Eq (Min.min (add a b) (add a c)) (add a (Min.min b c))`.
+    pub add_min_add_left: NameId,
+    /// `Nat.add_min_add_right : ∀ a b c,
+    /// Eq (Min.min (add a c) (add b c)) (add (Min.min a b) c)`.
+    pub add_min_add_right: NameId,
+    /// `Nat.add_eq_max_iff : ∀ m n,
+    /// Iff (Eq (add m n) (Max.max m n)) (Or (Eq m 0) (Eq n 0))`.
+    pub add_eq_max_iff: NameId,
+    /// `Nat.add_eq_min_iff : ∀ m n,
+    /// Iff (Eq (add m n) (Min.min m n)) (And (Eq m 0) (Eq n 0))`.
+    pub add_eq_min_iff: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6019,6 +6072,24 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 let root = kernel.anon();
                 kernel.name_str(root, "instMinNat")
             },
+            max_eq_right: kernel.name_str(nat, "max_eq_right"),
+            max_eq_left: kernel.name_str(nat, "max_eq_left"),
+            min_eq_left: kernel.name_str(nat, "min_eq_left"),
+            min_eq_right: kernel.name_str(nat, "min_eq_right"),
+            le_max_left: kernel.name_str(nat, "le_max_left"),
+            le_max_right: kernel.name_str(nat, "le_max_right"),
+            min_le_left: kernel.name_str(nat, "min_le_left"),
+            min_le_right: kernel.name_str(nat, "min_le_right"),
+            max_comm: kernel.name_str(nat, "max_comm"),
+            le_min_of_le_of_le: kernel.name_str(nat, "le_min_of_le_of_le"),
+            le_min: kernel.name_str(nat, "le_min"),
+            lt_min: kernel.name_str(nat, "lt_min"),
+            add_max_add_left: kernel.name_str(nat, "add_max_add_left"),
+            add_max_add_right: kernel.name_str(nat, "add_max_add_right"),
+            add_min_add_left: kernel.name_str(nat, "add_min_add_left"),
+            add_min_add_right: kernel.name_str(nat, "add_min_add_right"),
+            add_eq_max_iff: kernel.name_str(nat, "add_eq_max_iff"),
+            add_eq_min_iff: kernel.name_str(nat, "add_eq_min_iff"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -6927,6 +6998,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Init.Data.Nat.MinMax` for the autogenesis screen
         // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
         declare_minmax_all(&mut d, &p)?;
+        // The order theory of those two (`minmax_lemmas.rs`): needs
+        // `declare_minmax_all` immediately above plus `Nat.le_total`,
+        // `Nat.le_antisymm`, `Nat.ble_eq_true_of_le` and the `add_eq_left`/
+        // `add_eq_right` characterisations, all far above. Closes the twelve
+        // `Init.Data.Nat.MinMax` mirrors. Nothing needs it, so it goes last.
+        declare_minmax_lemmas_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
