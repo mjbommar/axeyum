@@ -760,3 +760,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0990](adr-0990-gauss-lemma-least-residue-injectivity-lands-pairing-route-simplified-and-sized.md) | `Nat.least_residue_injective_of_coprime : ∀ pp a k k', 0 < pp | accepted |
 | [1000](adr-1000-the-five-risks-are-covered-unevenly-and-vacuity-is-the-thin-one.md) | Audited ADR-0717's five risks against every L0 gate. Contamination | accepted |
 | [1005](adr-1005-extraction-verified-subjects-bound-two-wrong-three-guards-newly-red.md) | 660 kernel-lean settled facts whose subject came from | accepted |
+| [1025](adr-1025-euler-theorem-item-2-closed-item-1-cheaper-than-sized.md) | Of the three pieces `docs/plan/status/374-euler-theorem.md` | accepted |
