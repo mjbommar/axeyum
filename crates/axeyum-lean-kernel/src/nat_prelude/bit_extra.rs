@@ -271,11 +271,17 @@ pub(super) fn declare_bit_lt_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     let succ_succ_mul2m = d.succ(succ_mul2m);
 
     // Lt succ_mul2m succ_succ_mul2m
-    let lt_succ_step = d.lemma(p.lt_succ_self, &[mul2m]);
+    let lt_succ_step = d.lemma(p.lt_succ_self, &[succ_mul2m]);
     // Lt succ_mul2m mul2n
     let lt_succ_mul2n = d.lemma(
         p.lt_of_lt_of_le,
-        &[succ_mul2m, succ_succ_mul2m, mul2n, lt_succ_step, mul2_succm_le_mul2n],
+        &[
+            succ_mul2m,
+            succ_succ_mul2m,
+            mul2n,
+            lt_succ_step,
+            mul2_succm_le_mul2n,
+        ],
     );
 
     // mul2n <= bit b n
@@ -454,10 +460,7 @@ pub(super) fn declare_bit_add_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
     declare_bit_add_left_shared(d, p, name)
 }
 
-pub(super) fn declare_bit_add_right(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_bit_add_right(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let name = p.bit_add_right;
     declare_bit_add_right_shared(d, p, name)
 }

@@ -262,8 +262,8 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use bit_decode::declare_bit_decode_all;
-use bit_order::declare_bit_order_all;
 use bit_extra::declare_bit_extra_all;
+use bit_order::declare_bit_order_all;
 use bits::declare_bit_all;
 use bitwise::{
     declare_bitwise_all, declare_bitwise_bit, declare_bitwise_comm, declare_bitwise_swap,
@@ -5932,13 +5932,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`order_extra`) and the `zero_lt_succ` term-builder, all far above;
         // nothing needs `Nat.bit`, so it goes last too.
         declare_bit_all(&mut d, &p)?;
-        // Needs `Nat.bit` (just above) plus order/algebra machinery far
-        // above (`mul_le_mul_left`, `add_le_add_right`, `zero_lt_of_ne_zero`,
-        // `mul_lt_mul_left`, `add_pos_right`, `lt_succ_self`,
-        // `lt_of_lt_of_le`/`lt_of_le_of_lt`, `left_distrib`, `add_assoc`,
-        // `add_right_comm`); nothing needs these five closed `ml430` mirrors,
-        // so they go right after `Nat.bit` itself.
-        declare_bit_extra_all(&mut d, &p)?;
         // Needs `Nat.sub`/`Nat.mul` (`declare_arithmetic`/`declare_subtraction`,
         // both far above) and the order/algebra theorems (`not_lt_zero`,
         // `le_of_lt_succ`, `lt_or_eq_of_le`, `sub_self`, `zero_mul`,
@@ -6214,6 +6207,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lt_of_mul_lt_mul(&mut d, &p)?;
         declare_mul_lt_mul_iff(&mut d, &p)?;
         declare_div_lt_of_lt_mul(&mut d, &p)?;
+        // Needs `Nat.bit` (`declare_bit_all`, far above) plus order/algebra
+        // machinery from all over this file, the last piece being
+        // `Nat.mul_lt_mul_left` (`declare_mul_lt_mul_iff`, just above) --
+        // that ordering dependency is why these five closed `ml430` mirrors
+        // sit here rather than right after `Nat.bit` itself (a `bit_ne_zero`
+        // draft placed there hit `UnknownConst` on `mul_lt_mul_left`, which
+        // is not declared until here). Nothing needs these theorems, so
+        // moving them later than `Nat.bit` costs nothing.
+        declare_bit_extra_all(&mut d, &p)?;
         declare_gcd_dvd_mirrors(&mut d, &p)?;
         // Needs `Nat.log`/`Nat.clog` (`declare_log_all`/`declare_clog_all`,
         // far above) and `Nat.div_mod_exec`/`Nat.div_mod_lt_mul_iff`/
