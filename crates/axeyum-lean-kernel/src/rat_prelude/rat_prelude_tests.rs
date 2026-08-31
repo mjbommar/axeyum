@@ -6827,8 +6827,6 @@ fn the_determinant_agreement_statements_quantify_over_the_matrix() {
 ///   would be a control that **cannot fail**. It uses `Rat.one` instead.
 #[test]
 fn the_determinant_evaluation_examples_reject_the_wrong_value() {
-    let (mut kernel, p) = built();
-
     // `Eq.{1} Rat lhs rhs` is `App(App(App(Eq, Rat), lhs), rhs)`.
     fn equation(kernel: &Kernel, ty: ExprId) -> (ExprId, ExprId) {
         let ExprNode::App(without_rhs, rhs) = *kernel.expr_node(ty) else {
@@ -6839,6 +6837,8 @@ fn the_determinant_evaluation_examples_reject_the_wrong_value() {
         };
         (lhs, rhs)
     }
+
+    let (mut kernel, p) = built();
 
     let one = kernel.const_(p.one, vec![]);
     let neg = kernel.const_(p.int.rat_neg, vec![]);
@@ -6864,11 +6864,7 @@ fn the_determinant_evaluation_examples_reject_the_wrong_value() {
         );
 
         // Negative: a different value must NOT be reachable.
-        let wrong = if negate {
-            kernel.app(neg, rhs)
-        } else {
-            one
-        };
+        let wrong = if negate { kernel.app(neg, rhs) } else { one };
         assert!(
             !kernel.def_eq(lhs, wrong),
             "Rat.{label}: the evaluation accepted a WRONG value, so it checks nothing"

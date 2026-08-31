@@ -155,13 +155,7 @@ fn rmat_minor(
 }
 
 /// `Rat.matMinor A i j`, partially applied — itself a `Nat → Nat → Rat`.
-fn rmat_minor_of(
-    d: &mut IntDev<'_>,
-    p: RatPrelude,
-    a: ExprId,
-    i: ExprId,
-    j: ExprId,
-) -> ExprId {
+fn rmat_minor_of(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, i: ExprId, j: ExprId) -> ExprId {
     d.const_app(p.mat_minor, &[a, i, j])
 }
 
@@ -672,13 +666,7 @@ fn declare_det_eq_det2(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelEr
     let (_, proof) = rchain(
         d,
         start,
-        &[
-            (mid1, s1),
-            (mid2, s2),
-            (mid3, s3),
-            (mid4, s4),
-            (mid5, s5),
-        ],
+        &[(mid1, s1), (mid2, s2), (mid3, s3), (mid4, s4), (mid5, s5)],
     );
 
     let ty = d.pi_fv(a_fv, mty, stmt);
@@ -964,10 +952,7 @@ fn const_matrix(d: &mut IntDev<'_>, p: RatPrelude, k: usize, rows: &[i64]) -> Ex
 /// axis would give `8` (`A 2 1`) — three distinct answers for the three
 /// mistakes, which is the point of pinning this entry rather than a diagonal
 /// one.
-fn declare_mat_minor_eval_example(
-    d: &mut IntDev<'_>,
-    p: RatPrelude,
-) -> Result<(), KernelError> {
+fn declare_mat_minor_eval_example(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     rat_theorem(d, p.mat_minor_eval_example, 0, &|d, _v| {
         let m = const_matrix(d, p, 3, &[1, 2, 3, 4, 5, 6, 7, 8, 9]);
         let i0 = d.zero();
@@ -1057,12 +1042,7 @@ fn declare_det_eval_singular(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 /// largest magnitude *formed*.
 fn declare_det_eval_example4(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     rat_theorem(d, p.det_eval_example4, 0, &|d, _v| {
-        let m = const_matrix(
-            d,
-            p,
-            4,
-            &[2, 0, 1, 1, 1, 3, 0, 2, 0, 1, 2, 0, 1, 1, 1, 1],
-        );
+        let m = const_matrix(d, p, 4, &[2, 0, 1, 1, 1, 3, 0, 2, 0, 1, 2, 0, 1, 1, 1, 1]);
         let n = d.num(4);
         let lhs = rdet(d, p, m, n);
         let expected = rq(d, p, 2);
