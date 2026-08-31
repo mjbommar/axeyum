@@ -155,6 +155,7 @@ mod defs;
 mod desc_factorial;
 mod diagonal;
 mod dist;
+mod dist_more2;
 mod div_mod_lemmas;
 mod divisibility;
 mod division;
@@ -179,6 +180,9 @@ mod group;
 mod helpers;
 mod irrational;
 mod land;
+mod land_div_two;
+mod land_low_bit;
+mod land_self;
 mod lcm;
 mod lcm_gcd_lemmas;
 mod ldiff;
@@ -278,6 +282,7 @@ use defs::{
 use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
 use dist::{declare_dist_all, declare_dist_more_all};
+use dist_more2::declare_dist_more2_all;
 use div_mod_lemmas::{
     declare_add_div_mod_shift_family, declare_add_div_of_dvd_add_add_one, declare_div_mod_block,
 };
@@ -307,6 +312,9 @@ use gcd_mul_right_mirrors::declare_gcd_mul_right_mirrors;
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
+use land_div_two::declare_land_div_two_all;
+use land_low_bit::declare_land_low_bit_all;
+use land_self::declare_land_self_all;
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd, declare_mod_lcm,
@@ -4088,6 +4096,46 @@ pub struct NatPrelude {
     /// `&&&` is our `Nat.land`, so this is a genuinely new lemma about an
     /// already-proved function, not fresh bitwise machinery).
     pub land_le_right: NameId,
+    /// `Nat.land_aux_self_of_fuel : ∀ fuel a, Le a fuel → Eq (landAux fuel a
+    /// a) a` — fuel induction on a SINGLE generalized value argument (`a`
+    /// used in both the `m` and `n` slots), unlike
+    /// [`Self::land_aux_comm_of_fuel`]'s two independent slots: since
+    /// `land a a := landAux a a a` already puts the same value in the fuel
+    /// slot, no second-fuel bridge is needed, only the ordinary sufficiency
+    /// hypothesis (`nat_prelude::land_self`).
+    pub land_aux_self_of_fuel: NameId,
+    /// `Nat.land_self : ∀ x, Eq (land x x) x` — `F:ml430-nat-and-self-06a84ccc`
+    /// (Mathlib's `&&&` is our `Nat.land`), [`Self::land_aux_self_of_fuel`]
+    /// at `fuel := x`, `a := x` via `le_refl`.
+    pub land_self: NameId,
+    /// `Nat.land_one_is_mod : ∀ x, Eq (land x 1) (mod x 2)` —
+    /// `F:ml430-nat-and-one-is-mod-d861e96b`. Via [`Self::land_comm`]
+    /// (`land x 1 = land 1 x`) then ONE unfold of `landAux` at the now-FIXED
+    /// concrete fuel `1`: the recursive sub-call's fuel becomes the LITERAL
+    /// `0`, collapsing by `refl` with no induction at all
+    /// (`nat_prelude::land_low_bit`).
+    pub land_one_is_mod: NameId,
+    /// `Nat.land_mod_two_eq_mul : ∀ a b, Eq (mod (land a b) 2) (mul (mod a 2)
+    /// (mod b 2))` — the AND analogue of [`Self::even_xor`]'s technique: the
+    /// goal only mentions the LOW BIT of `land a b`, so one unfold of
+    /// `landAux`'s succ-row plus [`super::parity::mod_two_mul_add_of_lt`]
+    /// erases the higher recursive term without any induction. Boundary
+    /// cases (`a = 0`/`b = 0`) via [`Self::land_zero_left`]/
+    /// [`Self::land_zero_right`] (`nat_prelude::land_low_bit`).
+    pub land_mod_two_eq_mul: NameId,
+    /// `Nat.land_mod_two_eq_one : ∀ a b, Iff (Eq (mod (land a b) 2) 1)
+    /// (And (Eq (mod a 2) 1) (Eq (mod b 2) 1))` —
+    /// `F:ml430-nat-and-mod-two-eq-one-3e873792`. [`Self::land_mod_two_eq_mul`]
+    /// reduces this to a purely numeric fact about a product of two `{0,1}`
+    /// values, closed by [`super::ops::cases_mod_two`] twice.
+    pub land_mod_two_eq_one: NameId,
+    /// `Nat.land_div_two : ∀ a b, Eq (div (land a b) 2) (land (div a 2)
+    /// (div b 2))` — `F:ml430-nat-and-div-two-1a2f7c33`. The `div` twin of
+    /// [`Self::land_mod_two_eq_mul`]: one unfold of `landAux`'s succ-row plus
+    /// `div_two_mul_add_of_lt` erases the LOW bit, and fuel-irrelevance
+    /// (`land_aux_agree_of_fuel`) relates the erased recursive term to the
+    /// canonical `land (div a 2) (div b 2)` (`nat_prelude::land_div_two`).
+    pub land_div_two: NameId,
     /// `Nat.bit_div_two : ∀ test n, Eq (div (bit test n) 2) n` — one half of
     /// the `Nat.bit` decode bridge (`nat_prelude::bit_decode`), via
     /// `div_mod_unique` against the executable `div_mod_exec` projections.
@@ -4476,6 +4524,23 @@ pub struct NatPrelude {
     /// [`Self::dist_mul_left`]'s shape, then `mul_comm` again on the
     /// conclusion. Draw 9 (`natural-distance`, ADR-0830).
     pub dist_mul_right: NameId,
+    /// `Nat.dist_pos_of_ne : ∀ i j, Not (Eq i j) → Lt zero (dist i j)` —
+    /// `F:ml430-nat-dist-pos-of-ne-00f5e22f`. Case-split `i`/`j` via
+    /// `lt_or_gt_of_ne_local` (`fermat_number_mirrors.rs`), then in each
+    /// branch route through [`Self::dist_eq_sub_of_le`]/
+    /// [`Self::dist_eq_sub_of_le_right`] and a direct `sub`-positivity
+    /// argument from the strict order. `docs/plan/status/draw9-second-theorems.md`.
+    pub dist_pos_of_ne: NameId,
+    /// `Nat.dist_eq_intro : ∀ n m k l, Eq (add n m) (add k l) → Eq (dist n k)
+    /// (dist l m)` — `F:ml430-nat-dist-eq-intro-294b44ad`. Case-split on
+    /// `Le k n` vs `Le n k`; in each branch, write the larger side as the
+    /// smaller plus a nonnegative excess `e`, cancel `add_left_cancel`
+    /// against the hypothesis to relate `e` to the OTHER pair, and close via
+    /// [`Self::dist_eq_sub_of_le`]/[`Self::dist_eq_sub_of_le_right`].
+    pub dist_eq_intro: NameId,
+    /// `Nat.dist_triangle_inequality : ∀ n m k, Le (dist n k) (add (dist n m)
+    /// (dist m k))` — `F:ml430-nat-dist-triangle-inequality-b35e82d3`.
+    pub dist_triangle_inequality: NameId,
     /// `Nat.nthAux (dec : Nat → Bool) (fuel k n : Nat) : Nat` — fuel-bounded
     /// search for the `n`-th (0-indexed) candidate `≥ k` satisfying `dec`,
     /// `0` if fewer than `n+1` are found within `fuel` steps. See `nth.rs`'s
@@ -5359,6 +5424,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             land_aux_le_left: kernel.name_str(nat, "land_aux_le_left"),
             land_le_left: kernel.name_str(nat, "land_le_left"),
             land_le_right: kernel.name_str(nat, "land_le_right"),
+            land_aux_self_of_fuel: kernel.name_str(nat, "land_aux_self_of_fuel"),
+            land_self: kernel.name_str(nat, "land_self"),
+            land_one_is_mod: kernel.name_str(nat, "land_one_is_mod"),
+            land_mod_two_eq_mul: kernel.name_str(nat, "land_mod_two_eq_mul"),
+            land_mod_two_eq_one: kernel.name_str(nat, "land_mod_two_eq_one"),
+            land_div_two: kernel.name_str(nat, "land_div_two"),
             bit_div_two: kernel.name_str(nat, "bit_div_two"),
             bit_mod_two: kernel.name_str(nat, "bit_mod_two"),
             land_bit: kernel.name_str(nat, "land_bit"),
@@ -5431,6 +5502,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dist_add_add_right: kernel.name_str(nat, "dist_add_add_right"),
             dist_mul_left: kernel.name_str(nat, "dist_mul_left"),
             dist_mul_right: kernel.name_str(nat, "dist_mul_right"),
+            dist_pos_of_ne: kernel.name_str(nat, "dist_pos_of_ne"),
+            dist_eq_intro: kernel.name_str(nat, "dist_eq_intro"),
+            dist_triangle_inequality: kernel.name_str(nat, "dist_triangle_inequality"),
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
             fermat_number: kernel.name_str(nat, "fermatNumber"),
@@ -5912,6 +5986,35 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (all far above); nothing needs it, so it goes last of the
         // `land` family.
         declare_land_assoc_all(&mut d, &p)?;
+        // `Nat.land_aux_self_of_fuel`/`Nat.land_self`: needs only
+        // `Nat.landAux`/`Nat.land` (`declare_land_all`, far above),
+        // `Nat.le_antisymm`/`Nat.zero_le`/`Nat.le_of_succ_le_succ`/
+        // `Nat.le_refl` (order theorems, far above), and
+        // `half_le_predecessor_of_succ` (`rec_agreement.rs`,
+        // `declare_land_fuel_irrelevance_all`'s neighbourhood, far above).
+        // Draw 9 (`natural-bitwise-basics`,
+        // `docs/plan/status/draw9-second-theorems.md`).
+        declare_land_self_all(&mut d, &p)?;
+        // `Nat.land_one_is_mod`/`Nat.land_mod_two_eq_mul`/
+        // `Nat.land_mod_two_eq_one`: needs `Nat.landAux`/`Nat.land`
+        // (`declare_land_all`), `Nat.land_comm` (above),
+        // `Nat.land_zero_left`/`Nat.land_zero_right` (`declare_land_all`),
+        // `Nat.mod_eq_self_of_lt`/`Nat.mod_lt`/`Nat.zero_mod`/`Nat.zero_mul`/
+        // `Nat.one_mul`/`Nat.mul_zero`/`Nat.zero_add` (order/arithmetic, far
+        // above), and `mod_two_mul_add_of_lt` (`parity.rs`, far above).
+        // Draw 9 (`natural-bitwise-basics`,
+        // `docs/plan/status/draw9-second-theorems.md`).
+        declare_land_low_bit_all(&mut d, &p)?;
+        // `Nat.land_div_two`: needs `Nat.landAux`/`Nat.land` (`declare_land_all`,
+        // far above), `Nat.land_zero_left`/`Nat.land_zero_right`
+        // (`declare_land_all`), `Nat.land_aux_agree_of_fuel`
+        // (`declare_land_fuel_irrelevance_all`, far above), and
+        // `half_le_predecessor_of_succ`/`Nat.div_mod_exec`/
+        // `Nat.div_mod_unique`/`Nat.zero_div`/`Nat.zero_mul`/`Nat.one_mul`/
+        // `Nat.mod_lt`/`Nat.le_refl` (all far above). Draw 9
+        // (`natural-bitwise-basics`,
+        // `docs/plan/status/draw9-second-theorems.md`).
+        declare_land_div_two_all(&mut d, &p)?;
         // `Nat.lor_aux_ne_zero_of_right_ne_zero`: needs `Nat.lorAux`
         // (`declare_lor_all`, far above), `Nat.succ_ne_zero`
         // (`declare_no_confusion_all`, far above), `Nat.mul_eq_zero`
@@ -6085,6 +6188,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.mul_comm` (`declare_order`/`declare_multiplicative_
         // theorems`, far above). Draw 9 (`natural-distance`, ADR-0830).
         declare_dist_more_all(&mut d, &p)?;
+        // `Nat.dist_pos_of_ne`/`Nat.dist_eq_intro`/
+        // `Nat.dist_triangle_inequality`: needs `Nat.dist`/`Nat.dist_comm`/
+        // `Nat.dist_eq_sub_of_le`/`Nat.dist_eq_sub_of_le_right`
+        // (`declare_dist_all`, just above), `Nat.dist_add_add_left`
+        // (`declare_dist_more_all`, just above), `Nat.le_total`/
+        // `Nat.lt_or_eq_of_le`/`Nat.not_succ_le_self`/`Nat.add_left_cancel`/
+        // `Nat.add_sub_cancel_left`/`Nat.sub_add_cancel` (order/additive
+        // theorems, far above), and `lt_or_gt_of_ne_local`
+        // (`fermat_number_mirrors.rs`, far above). Draw 9
+        // (`natural-distance`, `docs/plan/status/draw9-second-theorems.md`).
+        declare_dist_more2_all(&mut d, &p)?;
         // `Nat.nthAux`/`Nat.nth`: needs only `Nat.beq`/`Nat.pred`/`Nat.succ`
         // (`declare_boolean_equality`/`declare_defining_equations`, far
         // above) and `bool_select_nat` (an inlined `Bool.rec` application,

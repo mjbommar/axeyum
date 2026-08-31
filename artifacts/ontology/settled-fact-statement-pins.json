@@ -7771,6 +7771,12 @@
       "prose_sha256": "e5074c4f15316feb5da0ef2aa3669ce907b062117bbf16188b84c46d8530eb0f"
     },
     {
+      "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
+      "language": "lean4-surface",
+      "statement_sha256": "e71de1fcd97cd07bd87796c4b648b7721c3dfbf40f4a7c5176859bd82e5eaabb",
+      "prose_sha256": "21b99aa0dca10c0d57ebfe02fb36ae1bc58072e0e0ff5466841cde3099087e38"
+    },
+    {
       "fact_id": "F:ml430-nat-and-le-left-6d04acb7",
       "language": "lean4-surface",
       "statement_sha256": "2df607b9c5cc4b08a0a5e7fd036940da40edffe711663838ac1b08de9c89dc3d",
@@ -7781,6 +7787,24 @@
       "language": "lean4-surface",
       "statement_sha256": "e3ce74db59f1175d88bb2143e35ed28c7d0c7e46fc159e0cd2874221fcdb78cf",
       "prose_sha256": "aa18112d91a563f9103179eb0b5ec36ad7ce876b2e871a289a3c8d576f941094"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-mod-two-eq-one-3e873792",
+      "language": "lean4-surface",
+      "statement_sha256": "a567a605d1542c32bddbe65fef12d9f65adad86f105f54949114e59e7b9c7651",
+      "prose_sha256": "a806133ac0863805d9d6ff0ac0aac20b938a000d6a2e0139214eff7b8210e152"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-one-is-mod-d861e96b",
+      "language": "lean4-surface",
+      "statement_sha256": "99ff66ce36298b9201e9e4fd7298b3cad06ddceca4a3a946f0c0f01c46c73cec",
+      "prose_sha256": "933083b5604b6921818df334490ed214edbe4af9790f31493934f4c7c548173c"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-self-06a84ccc",
+      "language": "lean4-surface",
+      "statement_sha256": "66f0f85e7e5901e171abc5e8f8b1260e7414e2a1e28c47e9f341437c9e48e984",
+      "prose_sha256": "2c6d8c8af98db40819ba2c0c072254e9c120869fba7232d5a800fb597bce8a88"
     },
     {
       "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
@@ -8229,6 +8253,12 @@
       "prose_sha256": "f92599066c5c5d15ce8109ec3b543bcddf233c76c4d638d1659acba800bc23a1"
     },
     {
+      "fact_id": "F:ml430-nat-dist-eq-intro-294b44ad",
+      "language": "lean4-surface",
+      "statement_sha256": "c7f7f121ce6f45d554891e09f709167291a0dc72311db97f135100edbc6d4d70",
+      "prose_sha256": "283c84efe57a54a562f6ce17b7d4c3b633b061d73e59d71b1ddf940399817c0f"
+    },
+    {
       "fact_id": "F:ml430-nat-dist-eq-zero-5ae5b706",
       "language": "lean4-surface",
       "statement_sha256": "69d9e41f571c12d94c1be19614181d9a192907536d38ec15a0b18c0e7b5c267f",
@@ -8247,10 +8277,22 @@
       "prose_sha256": "5383abd750b7758d1c3d06c63e1fd93e0e3568bba39daed36fc92dca70656c3d"
     },
     {
+      "fact_id": "F:ml430-nat-dist-pos-of-ne-00f5e22f",
+      "language": "lean4-surface",
+      "statement_sha256": "ab03ae724a6fb728520f1772430fdfb1add949bed8c5ac9e8b92eee93baea713",
+      "prose_sha256": "52f1c5206e4ef3f9fedc976cb41697f03083a01bd7aa91c7aae8e028c4d1efc4"
+    },
+    {
       "fact_id": "F:ml430-nat-dist-self-0cfa5426",
       "language": "lean4-surface",
       "statement_sha256": "e58e4dcc33014734333c3d8513941f8c3929ffb7d9803bb461e104af8f5342ac",
       "prose_sha256": "152ad11480fd6417567f9f687e39b4ba2832a25f05f5c479fbafb9c480e558c9"
+    },
+    {
+      "fact_id": "F:ml430-nat-dist-triangle-inequality-b35e82d3",
+      "language": "lean4-surface",
+      "statement_sha256": "d1f5fb46955241f02ea5d390ce510d70f50f18f2c5dcd1fa86f26fa6fba6f7d9",
+      "prose_sha256": "943aea16e1cb76fe99cf86259bf7bcfb41ef63041a523be31d8c913bf8886bab"
     },
     {
       "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",

@@ -8,13 +8,47 @@
     "statement": "∀ {i j : ℕ}, i ≠ j → 0 < i.dist j",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-comm-56a2d614", "F:nat-le-total", "F:nat-le-trans", "F:nat-lt-irrefl", "F:nat-lt-or-eq-of-le", "F:nat-sub-add-cancel", "F:nat-zero-le"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.dist_pos_of_ne",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_pos_of_ne",
+      "supports": "∀ {i j : ℕ}, i ≠ j → 0 < i.dist j",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dist_pos_of_ne 2>/dev/null | grep -Ec '^Nat\\.dist_pos_of_ne[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.dist_pos_of_ne` (`nat_prelude/dist_more2.rs`) through the trusted `Kernel::add_declaration` gate. `nat_theorem_inventory`'s rendered type is `(x0 x1 : AxNat) -> (x2 : Not (Eq x0 x1)) -> AxNat.lt AxNat.zero (AxNat.dist x0 x1)`, matching this fact's `formal.statement` up to variable naming. Anchored with `^Nat\\.dist_pos_of_ne[[:space:]]`; `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.dist_pos_of_ne",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_pos_of_ne",
+      "supports": "dist(3, 7) = 4 > 0 and dist(7, 3) = 4 > 0 -- two instances exercising BOTH branches of the internal `Lt i j` / `Lt j i` case split, not just one order.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::dist_pos_of_ne_applies_at_concrete_instances",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ]
+    },
+    {
+      "id": "footprint-Nat.dist_pos_of_ne",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.dist_pos_of_ne`'s footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane draw9-second-theorems",
     "source": "statement-only extraction of `Nat.dist_pos_of_ne` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +60,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum by a NEW kernel theorem, `Nat.dist_pos_of_ne` (`nat_prelude/dist_more2.rs`), over the ALREADY-PROVED `Nat.dist` construction (`dist.rs`, draw9-first-theorems): `Nat.dist n m := Nat.sub n m + Nat.sub m n`, the SAME definition Mathlib's `Nat.dist` states, so mirrors against it are honest under the mirror-flip criterion in CLAUDE.md. The proof case-splits `i ≠ j` into `i < j` / `j < i` (`lt_or_gt_of_ne_local`, `fermat_number_mirrors.rs`), rewrites `dist` to a `sub` via the already-proved `dist_eq_sub_of_le`/`dist_eq_sub_of_le_right`, and shows that `sub` is positive from the strict order directly (`sub_add_cancel` plus `pos_of_lt_add_left`, `fermat_number_mirrors.rs`) -- no new bitwise or induction machinery.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

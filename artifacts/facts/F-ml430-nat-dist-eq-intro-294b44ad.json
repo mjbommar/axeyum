@@ -8,13 +8,47 @@
     "statement": "∀ {n m k l : ℕ}, n + m = k + l → n.dist k = l.dist m",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-dist-comm-1fa29a04", "F:nat-add-left-cancel", "F:nat-add-sub-cancel-left", "F:nat-le-add-right", "F:nat-le-total", "F:nat-sub-add-cancel"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.dist_eq_intro",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_eq_intro",
+      "supports": "∀ {n m k l : ℕ}, n + m = k + l → n.dist k = l.dist m",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dist_eq_intro 2>/dev/null | grep -Ec '^Nat\\.dist_eq_intro[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.dist_eq_intro` (`nat_prelude/dist_more2.rs`) through the trusted `Kernel::add_declaration` gate. `nat_theorem_inventory`'s rendered type is `(x0 x1 x2 x3 : AxNat) -> (x4 : Eq (add x0 x1) (add x2 x3)) -> Eq (dist x0 x2) (dist x3 x1)`, matching this fact's `formal.statement` up to variable naming. Anchored with `^Nat\\.dist_eq_intro[[:space:]]`; `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof)."
+    },
+    {
+      "id": "compute-Nat.dist_eq_intro",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dist_eq_intro",
+      "supports": "n=5, m=2, k=3, l=4 (5+2=3+4=7, a DISCRIMINATING instance with n<>k and m<>l): dist(5,3)=2=dist(4,2).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::dist_eq_intro_applies_at_a_concrete_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ]
+    },
+    {
+      "id": "footprint-Nat.dist_eq_intro",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.dist_eq_intro`'s footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-08-30",
+    "established_by": "lane draw9-second-theorems",
     "source": "statement-only extraction of `Nat.dist_eq_intro` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +60,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum by a NEW kernel theorem, `Nat.dist_eq_intro` (`nat_prelude/dist_more2.rs`), over the ALREADY-PROVED `Nat.dist`. Case-splits `Le k n` vs `Le n k` (`le_total`); in the `Le k n` branch, `e := sub n k` witnesses `n = e + k` (`sub_add_cancel`), substituting into the hypothesis and cancelling `k` on the left (`add_left_cancel`) gives `m = e + l`, and rewriting each side through `dist_eq_sub_of_le_right` shows `dist n k = e = dist l m`. The `Le n k` branch is the identical argument with `(n, k)` and `(k, n)` exchanged, converted back through `dist_comm` twice -- no separate proof was hand-written for it.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

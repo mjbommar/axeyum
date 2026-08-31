@@ -217,8 +217,10 @@ fn pow_mul_eq(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId, x: ExprId, y: ExprI
 }
 
 /// `Not (Eq m n) → Or (Lt m n) (Lt n m)`, via `le_total` then `lt_or_eq_of_le`
-/// on each branch, refuting the equality case against `hne`.
-fn lt_or_gt_of_ne_local(
+/// on each branch, refuting the equality case against `hne`. `pub(super)` so
+/// `dist.rs`'s `dist_pos_of_ne` (draw 9, `natural-distance`) can reuse it
+/// rather than re-deriving the same case split.
+pub(super) fn lt_or_gt_of_ne_local(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     m: ExprId,
@@ -284,7 +286,7 @@ fn lt_or_gt_of_ne_local(
 /// `Lt m (add m t) → Lt zero t`, via `zero_le t` + `lt_or_eq_of_le`: the
 /// `Eq zero t` branch transports `hlt` along it to `Lt m (add m zero)`,
 /// defeq `Lt m m`, refuted by `lt_irrefl`.
-fn pos_of_lt_add_left(
+pub(super) fn pos_of_lt_add_left(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     m: ExprId,
