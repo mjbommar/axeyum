@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-supon-ub",
+  "title": "CReal.supOn_ub: the upper-bound law -- supOn dominates F at every point of [a, b]",
+  "statement": "For a uniformly continuous F on [a, b] (a <= b) and any x with a <= x <= b, F x <= CReal.supOn F a b. This is the upper-bound half of what characterizes CReal.supOn as a supremum (the other half is CReal.supOn_approx_lub); together they are what makes it a supremum rather than merely the limit of a sequence of mesh maxima. This law is at an ARBITRARY point of [a, b], not just a mesh-sampled one -- the negative control (transposing the second hypothesis to le b x) is rejected by the kernel, since a point beyond b need not be dominated by the supremum over [a, b].",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.supOn_ub : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x1 x2) -> ((x4 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x5 : CReal) -> ((x6 : CReal.le x1 x5) -> ((x7 : CReal.le x5 x2) -> CReal.le (x0 x5) (CReal.supOn x0 x1 x2 x3 x4)))))))))",
+    "fragment": "CReal",
+    "free_symbols": ["x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7"],
+    "kernel_theorem": "CReal.supOn_ub"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-supon",
+    "F:creal-le-trans",
+    "F:creal-le-refl",
+    "F:creal-le-congr",
+    "F:creal-le-of-lt",
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-le-add",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-nonneg",
+    "F:creal-mul-one",
+    "F:creal-mul-zero",
+    "F:creal-ofrat-add",
+    "F:creal-ofrat-le",
+    "F:creal-ofrat-pos",
+    "F:creal-abs-le-of-two-sided",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-le-add-of-abs-sub-le",
+    "F:creal-le-of-forall-le-add-rate",
+    "F:creal-left-distrib",
+    "F:creal-mesh-count-width",
+    "F:creal-mesh-le-of-ge",
+    "F:creal-ratuniteqone",
+    "F:creal-riemannsum-sample-in-bounds",
+    "F:creal-uniformlycontinuouson-spec",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-le-refl-fd7d9e15",
+    "F:nat-le-add-right",
+    "F:nat-le-succ-of-le",
+    "F:nat-lt-succ-of-le",
+    "F:nat-one-mul",
+    "F:nat-succ-mul",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-antitone",
+    "F:rat-natdivsucc-halve",
+    "F:rat-natdivsucc-pos",
+    "F:rat-self-normalize",
+    "F:rat-zero-le-natdivsucc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.supOn_ub",
+      "kind": "kernel-term",
+      "supports": "CReal.supOn_ub is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.supOn_ub 2>/dev/null | grep -cE '^CReal\\.supOn_ub[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "theorem_dependency_inventory exits non-zero for a named filter matching nothing, and grep -c (never -q under pipefail) both consumes the pipe and asserts the exact tab-anchored line is present. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack. This theorem shipped under the name CReal.supOn_ub -- ADR-0692's absence probe searched for the guessed name CReal.supOn_upper_bound and found nothing, which is a different, correct observation about a name that never existed; see ADR-0895."
+    },
+    {
+      "id": "footprint-CReal.supOn_ub",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.supOn_ub",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. --release is MANDATORY here."
+    },
+    {
+      "id": "unit-CReal.supOn_ub-not-vacuous",
+      "kind": "instance-pin",
+      "supports": "The stated type is genuinely the ARBITRARY-point upper-bound law and not a weaker variant -- the negative control (transposing le x b to le b x) is rejected.",
+      "check_status": "checked",
+      "checkers": ["cargo test -p axeyum-lean-kernel --lib"],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib creal::sup_laws::sup_laws_tests::sup_on_ub_states_the_arbitrary_point_law 2>&1 | grep -c '1 passed'",
+      "checker_seconds": 30,
+      "notes": "crates/axeyum-lean-kernel/src/creal/sup_laws.rs's own test rebuilds the expected Pi type independently of the declaring function and asserts the kernel accepts the shipped proof term at the ORIGINAL type and REJECTS it at the transposed one -- a small, one-swap negative control, not a whole-subterm transposition (see CLAUDE.md on the unbounded-failing-defeq pathology a large transposed control can trigger)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/sup_laws.rs, declare_sup_on_ub)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode on this lane's own worktree build, filtered to the creal-prelude row for this declaration."
+  },
+  "notes": "Landed before this lane (as part of the CReal.supOn characterization work). Zero facts named it before this registration; ADR-0692 measured that gap directly, having searched for the wrong name (CReal.supOn_upper_bound). See ADR-0895.",
+  "external_status": "proved"
+}

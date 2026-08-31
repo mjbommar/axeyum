@@ -261,3 +261,129 @@ pub(super) fn declare_evt_approx_max(
 ) -> Result<(), KernelError> {
     declare_evt_approx_max_thm(d, p)
 }
+
+#[cfg(test)]
+mod evt_row1_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **`CReal.evt_approx_max` states the SLACK form, not the exact one --
+    /// checked through the trusted gate, not by reading source text.**
+    ///
+    /// The exact form (drop the `1/(n+1)` slack: `le (F y) (F x)` for every
+    /// `y`) is a strictly different, and false, proposition -- it would say
+    /// `x` ATTAINS the maximum, which
+    /// [`CRealPrelude::evt_attained_max_decides_sign`] proves would decide
+    /// the sign of an arbitrary real. The control drops one small subterm
+    /// (`add _ eps` collapses to the bare `F x`) rather than transposing a
+    /// whole subterm, so this stays a cheap, immediate `TypeMismatch` rather
+    /// than the unbounded failing-defeq CLAUDE.md warns a large transposed
+    /// control can become -- neither side ever unfolds `CReal.supOn`'s
+    /// `Definition`.
+    #[test]
+    fn evt_approx_max_needs_the_slack_term() {
+        crate::on_a_deep_stack(evt_approx_max_needs_the_slack_term_body);
+    }
+
+    fn evt_approx_max_needs_the_slack_term_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let anon = d.kernel().anon();
+        let carrier = creal_ty(&mut d, p);
+        let func_ty = d.arrow(carrier, carrier);
+        let nat = d.nat_ty();
+        let logic = p.rat.int.logic;
+        let one_level = d.level_one();
+
+        // Rebuild the shipped type AND the exact-form variant from the same
+        // pieces, differing only in whether `padded` includes `eps`.
+        let build = |d: &mut IntDev<'_>, exact: bool| -> ExprId {
+            let f_fv = d.fresh_fvar();
+            let f = d.kernel().fvar(f_fv);
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let hab_fv = d.fresh_fvar();
+            let _hab = d.kernel().fvar(hab_fv);
+            let hab_ty = cle(d, p, a, b);
+            let u_fv = d.fresh_fvar();
+            let _u = d.kernel().fvar(u_fv);
+            let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let eps_rat = div_succ(d, p, 1, n);
+            let eps = embed(d, p, eps_rat);
+
+            let goal_pred = {
+                let x_fv = d.fresh_fvar();
+                let x = d.kernel().fvar(x_fv);
+                let lo = cle(d, p, a, x);
+                let hi = cle(d, p, x, b);
+                let fx = d.apply(f, &[x]);
+                let target = if exact { fx } else { cadd(d, p, fx, eps) };
+                let forall_y = {
+                    let y_fv = d.fresh_fvar();
+                    let y = d.kernel().fvar(y_fv);
+                    let hay_ty = cle(d, p, a, y);
+                    let hyb_ty = cle(d, p, y, b);
+                    let fy = d.apply(f, &[y]);
+                    let concl = cle(d, p, fy, target);
+                    let out = d.arrow(hyb_ty, concl);
+                    let out = d.arrow(hay_ty, out);
+                    d.pi_fv(y_fv, carrier, out)
+                };
+                let tail = d.and(hi, forall_y);
+                let body = d.and(lo, tail);
+                d.lam_fv(x_fv, carrier, body)
+            };
+            let goal = {
+                let ex = d.kernel().const_(logic.exists_, vec![one_level]);
+                d.apply(ex, &[carrier, goal_pred])
+            };
+            let out = d.pi_fv(n_fv, nat, goal);
+            let out = d.pi_fv(u_fv, u_ty, out);
+            let out = d.pi_fv(hab_fv, hab_ty, out);
+            let out = d.pi_fv(b_fv, carrier, out);
+            let out = d.pi_fv(a_fv, carrier, out);
+            d.pi_fv(f_fv, func_ty, out)
+        };
+
+        let ty_shipped = build(&mut d, false);
+        let ty_exact = build(&mut d, true);
+        assert!(
+            !d.kernel().def_eq(ty_shipped, ty_exact),
+            "negative control must not be vacuous: dropping the 1/(n+1) \
+             slack must change the statement"
+        );
+
+        let shipped_value = d.kernel().const_(p.evt_approx_max, vec![]);
+
+        let name_ok = d.kernel().name_str(anon, "__evtApproxMaxShippedIsSlack");
+        let res_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: ty_shipped,
+            value: shipped_value,
+        });
+        assert!(
+            res_ok.is_ok(),
+            "CReal.evt_approx_max must state the SLACK form: {:?}",
+            res_ok.err()
+        );
+
+        let name_bad = d.kernel().name_str(anon, "__evtApproxMaxExactIsRefused");
+        let res_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: ty_exact,
+            value: shipped_value,
+        });
+        assert!(
+            res_bad.is_err(),
+            "negative control must be REJECTED: the shipped proof term must \
+             not also prove the EXACT (attained-maximum) form"
+        );
+    }
+}

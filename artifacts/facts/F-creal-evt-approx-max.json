@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-evt-approx-max",
+  "title": "CReal.evt_approx_max: the Extreme Value Theorem's honest row 1 -- an approximate maximum",
+  "statement": "Let F be an arbitrary uniformly continuous real function on [a, b] with a <= b. Then for EVERY accuracy index n, there exists x in [a, b] such that for every y in [a, b], F y <= F x + 1/(n+1) -- an APPROXIMATE maximum, exact structural mirror of CReal.ivt_approx (ADR-0603 row 1 for IVT). Pure composition of CReal.supOn_approx_lub (the witness x, within 1/(n+1) of the supremum) and CReal.supOn_ub (every F y is at most the supremum) through CReal.le_trans -- no new supremum machinery. This is NOT an attained maximum and does not narrow CReal.evt_attained_max_decides_sign at all: the witness x moves with n and is never claimed to converge to a limit. F must still be assumed UniformlyContinuousOn [a,b] with an explicit modulus carried as Sort 1 data, the same restriction CReal.ivt_approx and every rung of the supremum construction carries.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.evt_approx_max : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x1 x2) -> ((x4 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x5 : AxNat) -> Exists.{1} CReal (fun (x6 : CReal) => And (CReal.le x1 x6) (And (CReal.le x6 x2) (((x7 : CReal) -> ((x8 : CReal.le x1 x7) -> ((x9 : CReal.le x7 x2) -> CReal.le (x0 x7) (CReal.add (x0 x6) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))))))))))))))",
+    "fragment": "CReal",
+    "free_symbols": ["x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9"],
+    "kernel_theorem": "CReal.evt_approx_max"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-le-trans",
+    "F:creal-supon",
+    "F:creal-supon-approx-lub",
+    "F:creal-supon-ub"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.evt_approx_max",
+      "kind": "kernel-term",
+      "supports": "CReal.evt_approx_max is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.evt_approx_max 2>/dev/null | grep -cE '^CReal\\.evt_approx_max[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "theorem_dependency_inventory exits non-zero for a named filter matching nothing, and grep -c (never -q under pipefail) both consumes the pipe and asserts the exact tab-anchored line is present. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.evt_approx_max",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.evt_approx_max",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. --require-axiom-free <name> errors for a prelude never built by this run. --release is MANDATORY here."
+    },
+    {
+      "id": "coverage-CReal.evt_approx_max",
+      "kind": "instance-pin",
+      "supports": "The declaration is a Theorem with an empty axiom footprint, checked against the ENVIRONMENT rather than a hand-maintained list.",
+      "check_status": "checked",
+      "checkers": ["cargo test -p axeyum-lean-kernel --lib"],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib creal::creal_tests::every_creal_declaration_is_checked_and_axiom_free 2>&1 | grep -c '1 passed'",
+      "checker_seconds": 30,
+      "notes": "creal_tests::every_creal_declaration_is_checked_and_axiom_free enumerates kernel.environment() directly and fails naming any CReal-prefixed declaration absent from every inventory shard -- CReal.evt_approx_max is registered in crates/axeyum-lean-kernel/src/creal/inventory/evt_row1.rs, so this test would fail if that registration were ever dropped, unlike a hand list that cannot notice what is missing from it."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/evt_row1.rs, declare_evt_approx_max)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode on this lane's own worktree build, filtered to the creal-prelude row for this declaration. No field was hand-transcribed from the Rust source."
+  },
+  "notes": "Registered by lane evt-row1-land-and-register, correcting a stale absence claim in ADR-0692 and docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md Section 2: both said EVT's row 1 was missing, but the two theorems this declaration composes (CReal.supOn_ub, CReal.supOn_approx_lub) already existed under those exact names -- the absence probe in both documents searched for a guessed name, CReal.supOn_upper_bound, which never existed. See ADR-0895 for the full history and the negative control (the slack term 1/(n+1) cannot be dropped: the exact form is refuted by CReal.evt_attained_max_decides_sign). This theorem does NOT make EVT Pareto-dominant over Mathlib's IsCompact.exists_isMaxOn: ours concludes an approximate bound, Mathlib's an exact attained maximum, and the two-axis dominance test's verdict on that comparison is left to a future revisit of the axis tables in 08-ivt-and-evt-measured-against-mathlib.md.",
+  "external_status": "proved"
+}

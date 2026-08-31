@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-supon",
+  "title": "CReal.supOn exists as a total, axiom-free CReal function -- the supremum value of a uniformly continuous function on [a, b]",
+  "statement": "There is a total function CReal.supOn taking a function F, endpoints a <= b, and a witness that F is uniformly continuous on [a,b], and returning a CReal -- the limit of the sequence of finite mesh maxima (CReal.supSeq), built as a CReal.mk with a regularity proof. Admitted by the trusted kernel gate with an empty axiom footprint. This is the supremum VALUE only: CReal.supOn_ub and CReal.supOn_approx_lub (registered separately) are what CHARACTERIZE it as a supremum, and CReal.evt_attained_max_decides_sign proves the exact form (an attaining maximiser) is unavailable from these hypotheses alone.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def CReal.supOn : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x1 x2) -> ((x4 : CReal.UniformlyContinuousOn x0 x1 x2) -> CReal)))))",
+    "fragment": "CReal",
+    "free_symbols": ["x0", "x1", "x2", "x3", "x4"],
+    "kernel_theorem": "CReal.supOn"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.supOn",
+      "kind": "kernel-term",
+      "supports": "CReal.supOn is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.supOn --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\\.supOn[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "CReal.supOn is a Declaration::Definition, not a Theorem, and every in-tree theorem inventory (theorem_dependency_inventory, prelude_theorem_inventory, nat_theorem_inventory) deliberately excludes Definitions. kernel_declaration_projection's '--require-declaration <name> --require-kind <kind>' searches every constructed prelude's environment for an EXACT display-name match of the given kind and exits non-zero on no match, so a deleted or renamed CReal.supOn cannot read as present. This is the same route ADR-0692 used to independently re-derive that CReal.supOn exists (as opposed to CReal.supOn_upper_bound, a name that never existed) -- see that ADR and ADR-0895 for the history of why this fact was absent from the ledger until now despite the declaration itself having landed earlier. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.supOn",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.supOn",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.supOn, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/supremum.rs, declare_sup_on)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag) on this lane's own worktree build, filtered to the creal-prelude row for this declaration."
+  },
+  "notes": "depends_on is empty because the construction's own direct building blocks (CReal.supSeq, CReal.speedup, CReal.mk, CReal.regular_of_scaled_cauchy) are either plain Definitions or unregistered internal theorems, matching CReal.integral's own depends_on rationale. CReal.supOn landed before this lane (ADR-0691); this fact registers a construction that already existed but that ZERO facts named -- ADR-0692 measured this gap directly. The propositions ABOUT this construction are the separate facts F:creal-supon-ub, F:creal-supon-approx-lub, and F:creal-evt-approx-max.",
+  "external_status": "proved"
+}
