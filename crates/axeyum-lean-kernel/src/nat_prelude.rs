@@ -150,7 +150,6 @@ mod clog;
 mod coprime_lemmas;
 mod count_range_permute;
 mod count_range_reversal;
-mod draw11_mirrors;
 mod crt;
 mod defs;
 mod desc_factorial;
@@ -160,6 +159,7 @@ mod dist_more2;
 mod div_mod_lemmas;
 mod divisibility;
 mod division;
+mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
 mod euler;
@@ -272,7 +272,6 @@ use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
-use draw11_mirrors::declare_draw11_mirrors_all;
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
     declare_count_range_product,
@@ -293,6 +292,7 @@ use div_mod_lemmas::{
 use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
+use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
 use euler::declare_mod_eq_cancel;
