@@ -74,7 +74,16 @@ so row 2 refutes precisely the generalisation row 1 stops short of.
   at `A := True` BOTH supremum hypotheses are discharged and `Kernel::infer`
   accepts the instance, conclusion pinned verbatim against an independently
   built `Or True (Not True)`.
-- `creal::` full sweep — see the landed-changes row below.
+- `cargo test -p axeyum-lean-kernel --lib creal::` — **206 passed, 0
+  failed**, 411.31 s. The first attempt was 205/1: the recorded build order
+  in `creal_tests::steps_table_matches_recorded_extraction` is a pin a new
+  `BuildStep` is invisible to until it is listed, and that one test was the
+  only failure.
+- `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` — clean
+  for this lane's files. Twelve errors remain on this base, all in
+  `nat_prelude` (`add_factorial_le.rs` 2, `gauss_lemma.rs` 2,
+  `nat_prelude_tests.rs` 8); this lane touched no `nat_prelude` file, so they
+  are reported rather than fixed.
 - `kernel_declaration_projection --require-declaration` discriminates:
   verified by asking for `CReal.lubSet_nonexistent_control`, which exits 1.
 - `python3 scripts/validate-facts.py` — 2365 facts, 0 errors.
@@ -95,3 +104,5 @@ present.
 
 | 2026-08-31 | `a6ccca023` | `creal/lub_boundary.rs`: `CReal.lubSet`, `lubSet_inhabited`, `lubSet_bounded`, `lub_decides_em` — ADR-0603 row 2 for the least upper bound property |
 | 2026-08-31 | `29c593d2a` | `creal/lub_boundary_tests.rs`: non-vacuity discharge at `A := True`, negative control, statement pin, footprint check |
+| 2026-08-31 | `96c5ea9b8` | ADR-1010; `graded-statement-families.md` §2 corrected with the superseded absence quoted in place; `spivak.md` ch. 8 row; `F:creal-lub-decides-em` and its statement pin |
+| 2026-08-31 | `6ff707144` | record `lub_boundary` in the pinned build order — full `creal::` sweep 206 passed, 0 failed |

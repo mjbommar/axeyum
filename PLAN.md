@@ -147,6 +147,8 @@ now. Nothing was deleted.
 | 2026-08-31 | `ba2b22bbb` | add missing type-leak decline test; mutation-verify all 5 guards |
 | 2026-08-31 | `a6ccca023` | `creal/lub_boundary.rs`: `CReal.lubSet`, `lubSet_inhabited`, `lubSet_bounded`, `lub_decides_em` — ADR-0603 row 2 for the least upper bound property |
 | 2026-08-31 | `29c593d2a` | `creal/lub_boundary_tests.rs`: non-vacuity discharge at `A := True`, negative control, statement pin, footprint check |
+| 2026-08-31 | `96c5ea9b8` | ADR-1010; `graded-statement-families.md` §2 corrected with the superseded absence quoted in place; `spivak.md` ch. 8 row; `F:creal-lub-decides-em` and its statement pin |
+| 2026-08-31 | `6ff707144` | record `lub_boundary` in the pinned build order — full `creal::` sweep 206 passed, 0 failed |
 | 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-30 | queue-sweep | No fact closed. All three assigned non-sign dispatchable facts (`totient_dvd_of_dvd`, `totient_gcd_mul_totient_mul`, `eq_or_eq_of_totient_eq_totient`) declined for this session: correctly-stated Mathlib mirrors this kernel does not yet have the general multiplicative-function theory to prove, distinct from the divergence-registry category. Corrected a false numerical claim in `301-totient-multiplicative.md`'s Step 4 (`count_range_row_major` is NOT coprimality-independent — fails at every tested non-coprime pair, e.g. `totient(4)=2 ≠ totient(2)*totient(2)=1`), which would have sent the next totient lane at a statement a sound kernel cannot admit. |
@@ -39880,7 +39882,16 @@ so row 2 refutes precisely the generalisation row 1 stops short of.
   at `A := True` BOTH supremum hypotheses are discharged and `Kernel::infer`
   accepts the instance, conclusion pinned verbatim against an independently
   built `Or True (Not True)`.
-- `creal::` full sweep — see the landed-changes row below.
+- `cargo test -p axeyum-lean-kernel --lib creal::` — **206 passed, 0
+  failed**, 411.31 s. The first attempt was 205/1: the recorded build order
+  in `creal_tests::steps_table_matches_recorded_extraction` is a pin a new
+  `BuildStep` is invisible to until it is listed, and that one test was the
+  only failure.
+- `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` — clean
+  for this lane's files. Twelve errors remain on this base, all in
+  `nat_prelude` (`add_factorial_le.rs` 2, `gauss_lemma.rs` 2,
+  `nat_prelude_tests.rs` 8); this lane touched no `nat_prelude` file, so they
+  are reported rather than fixed.
 - `kernel_declaration_projection --require-declaration` discriminates:
   verified by asking for `CReal.lubSet_nonexistent_control`, which exits 1.
 - `python3 scripts/validate-facts.py` — 2365 facts, 0 errors.
