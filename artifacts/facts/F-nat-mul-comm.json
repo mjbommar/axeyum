@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.mul_comm : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 x1) (AxNat.mul x1 x0)))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.mul_comm",
     "free_symbols": [
       "x0",
       "x1"

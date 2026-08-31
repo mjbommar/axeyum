@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.self_normalize : ((x0 : Rat) -> Eq.{1} Rat (Rat.normalize (Rat.num x0) (Rat.den x0) (Rat.den_pos x0)) x0)",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.self_normalize",
     "free_symbols": [
       "x0"
     ]

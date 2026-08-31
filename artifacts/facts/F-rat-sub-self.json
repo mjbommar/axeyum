@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.sub_self : ((x0 : Rat) -> Eq.{1} Rat (Rat.sub x0 x0) Rat.zero)",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.sub_self",
     "free_symbols": [
       "x0"
     ]

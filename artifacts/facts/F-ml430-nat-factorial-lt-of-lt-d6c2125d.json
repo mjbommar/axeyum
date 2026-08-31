@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "\u2200 {m n : \u2115}, 0 < n \u2192 n < m \u2192 n.factorial < m.factorial",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.factorial_lt_of_lt"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

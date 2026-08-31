@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.gcd_succ : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.gcd (AxNat.succ x0) x1) (AxNat.gcd (AxNat.mod x1 (AxNat.succ x0)) (AxNat.succ x0))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.gcd_succ",
     "free_symbols": [
       "x0",
       "x1"

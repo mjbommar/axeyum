@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.least_divisor_search : ((x0 : AxNat) -> ((x1 : AxNat) -> Or (Exists.{1} AxNat (fun (x2 : AxNat) => And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) (And (AxNat.dvd x2 x1) (((x3 : AxNat) -> ((x4 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x3) -> ((x5 : AxNat.lt x3 x2) -> Not (AxNat.dvd x3 x1)))))))) (((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) -> ((x4 : AxNat.le x2 x0) -> Not (AxNat.dvd x2 x1)))))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.least_divisor_search",
     "free_symbols": [
       "x0",
       "x1",

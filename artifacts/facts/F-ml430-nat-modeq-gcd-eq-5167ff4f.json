@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m a b : ℕ}, a ≡ b [MOD m] → a.gcd m = b.gcd m",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_eq_gcd_eq"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

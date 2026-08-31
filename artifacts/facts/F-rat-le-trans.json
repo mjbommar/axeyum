@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.le_trans : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat.le x0 x1) -> ((x4 : Rat.le x1 x2) -> Rat.le x0 x2)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.le_trans",
     "free_symbols": [
       "x0",
       "x1",

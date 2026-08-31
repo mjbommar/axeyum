@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {x y : ℕ}, x.add y = x + y",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_eq"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

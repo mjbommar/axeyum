@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.zero_add : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.add AxNat.zero x0) x0)",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.zero_add",
     "free_symbols": [
       "x0"
     ]

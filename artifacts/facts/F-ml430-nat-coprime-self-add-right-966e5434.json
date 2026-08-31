@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, m.Coprime (m + n) ↔ m.Coprime n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_self_add_right"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

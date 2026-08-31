@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.natDivSucc_pos : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> Rat.lt Rat.zero (Rat.natDivSucc x0 x1))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.natDivSucc_pos",
     "free_symbols": [
       "x0",
       "x1",

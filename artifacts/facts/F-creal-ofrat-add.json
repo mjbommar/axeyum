@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.ofRat_add : ((x0 : Rat) -> ((x1 : Rat) -> CReal.Equiv (CReal.add (CReal.ofRat x0) (CReal.ofRat x1)) (CReal.ofRat (Rat.add x0 x1))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.ofRat_add",
     "free_symbols": [
       "x0",
       "x1"

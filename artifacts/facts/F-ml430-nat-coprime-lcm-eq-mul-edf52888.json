@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, m.Coprime n → m.lcm n = m * n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_lcm_eq_mul"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

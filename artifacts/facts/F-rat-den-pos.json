@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.den_pos : ((x0 : Rat) -> AxNat.le (AxNat.succ AxNat.zero) (Rat.den x0))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.den_pos",
     "free_symbols": [
       "x0"
     ]

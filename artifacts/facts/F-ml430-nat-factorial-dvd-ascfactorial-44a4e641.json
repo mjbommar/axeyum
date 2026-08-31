@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n k : ℕ), k.factorial ∣ n.ascFactorial k",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.factorial_dvd_ascFactorial"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

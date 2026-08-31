@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.cauchy_schwarz : ((x0 : CPoint) -> ((x1 : CPoint) -> CReal.le (CReal.mul (CPoint.dot x0 x1) (CPoint.dot x0 x1)) (CReal.mul (CPoint.dot x0 x0) (CPoint.dot x1 x1))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.cauchy_schwarz",
     "free_symbols": [
       "x0",
       "x1"

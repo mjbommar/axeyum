@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.neg_add : ((x0 : Rat) -> ((x1 : Rat) -> Eq.{1} Rat (Rat.neg (Rat.add x0 x1)) (Rat.add (Rat.neg x0) (Rat.neg x1))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.neg_add",
     "free_symbols": [
       "x0",
       "x1"

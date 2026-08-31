@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.mul_sub_one_geom : ((x0 : Complex) -> ((x1 : AxNat) -> Complex.Equiv (Complex.mul (Complex.add Complex.one (Complex.neg x0)) (Complex.sumRange (fun (x2 : AxNat) => Complex.pow x0 x2) x1)) (Complex.add Complex.one (Complex.neg (Complex.pow x0 x1)))))",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.mul_sub_one_geom",
     "free_symbols": [
       "x0",
       "x1",

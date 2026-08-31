@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "Nat.bit false 0 = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.bit_false_zero"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

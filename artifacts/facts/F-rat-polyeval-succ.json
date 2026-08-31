@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.polyEval_succ : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : AxNat) -> ((x2 : Rat) -> Eq.{1} Rat (Rat.polyEval x0 (AxNat.succ x1) x2) (Rat.add (Rat.polyEval x0 x1 x2) (Rat.mul (x0 x1) (Rat.pow x2 x1))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.polyEval_succ",
     "free_symbols": [
       "x0",
       "x1",

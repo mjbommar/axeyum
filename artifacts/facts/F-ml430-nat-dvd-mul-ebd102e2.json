@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {k m n : ℕ}, k ∣ m * n ↔ ∃ k₁ k₂, k₁ ∣ m ∧ k₂ ∣ n ∧ k₁ * k₂ = k",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.dvd_mul_split"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

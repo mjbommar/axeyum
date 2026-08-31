@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, n.Coprime 2 ↔ Odd n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_two_right"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

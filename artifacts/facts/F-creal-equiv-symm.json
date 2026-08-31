@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.Equiv.symm : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Equiv x0 x1) -> CReal.Equiv x1 x0)))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.Equiv.symm",
     "free_symbols": [
       "x0",
       "x1",

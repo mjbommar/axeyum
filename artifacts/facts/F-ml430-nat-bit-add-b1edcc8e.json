@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (b : Bool) (n m : ℕ), Nat.bit b (n + m) = Nat.bit false n + Nat.bit b m",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.bit_add_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

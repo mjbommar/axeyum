@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.int_mul_right_cancel : ((x0 : Int) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x2) -> ((x4 : Eq.{1} Int (Int.mul x0 (Int.ofNat x2)) (Int.mul x1 (Int.ofNat x2))) -> Eq.{1} Int x0 x1)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.int_mul_right_cancel",
     "free_symbols": [
       "x0",
       "x1",

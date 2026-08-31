@@ -41,6 +41,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_two_eq_zero_or_one",
     "free_symbols": [],
     "language": "lean4",
     "statement": "((x0 : AxNat) -> Or (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) AxNat.zero) (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero)))"

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.int_zero_le_of_nat : ((x0 : AxNat) -> Int.le Int.zero (Int.ofNat x0))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.int_zero_le_of_nat",
     "free_symbols": [
       "x0"
     ]

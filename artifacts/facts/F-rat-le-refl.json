@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.le_refl : ((x0 : Rat) -> Rat.le x0 x0)",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.le_refl",
     "free_symbols": [
       "x0"
     ]

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, m.Coprime n → m * n = 0 → m = 0 ∧ n = 1 ∨ m = 1 ∧ n = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_eq_of_mul_eq_zero"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

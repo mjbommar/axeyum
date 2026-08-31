@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p : ℕ}, Nat.Prime p → p ≠ 2 → Odd p",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_odd_of_ne_two"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

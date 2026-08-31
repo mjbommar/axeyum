@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.mul_le_mul_of_nonneg_left : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat.le Rat.zero x0) -> ((x4 : Rat.le x1 x2) -> Rat.le (Rat.mul x0 x1) (Rat.mul x0 x2))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.mul_le_mul_of_nonneg_left",
     "free_symbols": [
       "x0",
       "x1",

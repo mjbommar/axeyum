@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.left_distrib : ((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> Complex.Equiv (Complex.mul x0 (Complex.add x1 x2)) (Complex.add (Complex.mul x0 x1) (Complex.mul x0 x2)))))",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.left_distrib",
     "free_symbols": [
       "x0",
       "x1",

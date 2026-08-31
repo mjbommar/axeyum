@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.chebyshev_inequality : ((x0 : Rat) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : Rat.IsDistribution x2 x3) -> ((x5 : Rat.lt Rat.zero x0) -> Rat.le (Rat.mul (Rat.mul x0 x0) (Rat.expectation (Rat.indicator (Rat.mul x0 x0) (fun (x6 : AxNat) => Rat.mul (Rat.sub (x1 x6) (Rat.expectation x1 x2 x3)) (Rat.sub (x1 x6) (Rat.expectation x1 x2 x3)))) x2 x3)) (Rat.variance x1 x2 x3)))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.chebyshev_inequality",
     "free_symbols": [
       "x0",
       "x1",

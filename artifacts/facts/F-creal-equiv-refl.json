@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.Equiv.refl : ((x0 : CReal) -> CReal.Equiv x0 x0)",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.Equiv.refl",
     "free_symbols": [
       "x0"
     ]

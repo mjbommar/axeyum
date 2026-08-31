@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.natDivSucc_mul : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Rat (Rat.mul (Rat.natDivSucc x0 AxNat.zero) (Rat.natDivSucc x1 x2)) (Rat.natDivSucc (AxNat.mul x0 x1) x2))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.natDivSucc_mul",
     "free_symbols": [
       "x0",
       "x1",

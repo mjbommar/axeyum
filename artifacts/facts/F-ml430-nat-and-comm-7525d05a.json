@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "\u2200 (x y : \u2115), x &&& y = y &&& x",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.land_comm"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

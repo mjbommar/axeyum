@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.le_max_right : ((x0 : CReal) -> ((x1 : CReal) -> CReal.le x1 (CReal.max x0 x1)))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.le_max_right",
     "free_symbols": [
       "x0",
       "x1"

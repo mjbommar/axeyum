@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.subNatNat_elim : ((x0 : ((x0 : Int) -> Prop)) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.add x2 x3) x1) -> x0 (Int.ofNat x3)))) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} AxNat (AxNat.add x1 (AxNat.succ x4)) x2) -> x0 (Int.negSucc x4)))) -> x0 (Int.subNatNat x1 x2))))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.subNatNat_elim",
     "free_symbols": [
       "x0",
       "x1",

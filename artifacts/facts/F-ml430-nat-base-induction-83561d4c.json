@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {P : ℕ → Prop} {n : ℕ} (b : ℕ), 1 < b → (∀ m < b, P m) → (∀ (m k : ℕ), k < b → 0 < m → P m → P (b * m + k)) → P n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.base_induction"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

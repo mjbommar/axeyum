@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a : ℤ} (b : ℤ), a ≠ 0 → a / ↑(a.gcd b) ≠ 0",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.ediv_gcd_ne_zero_of_ne_zero_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

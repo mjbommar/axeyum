@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.neg_zero : Eq.{1} Rat (Rat.neg Rat.zero) Rat.zero",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.neg_zero",
     "free_symbols": []
   },
   "epistemic_status": "proved",

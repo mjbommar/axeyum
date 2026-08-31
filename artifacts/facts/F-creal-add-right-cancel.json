@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.add_right_cancel : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.Equiv (CReal.add x0 x2) (CReal.add x1 x2)) -> CReal.Equiv x0 x1))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.add_right_cancel",
     "free_symbols": [
       "x0",
       "x1",

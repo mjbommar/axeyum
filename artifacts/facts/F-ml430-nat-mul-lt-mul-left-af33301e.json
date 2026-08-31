@@ -47,6 +47,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.mul_lt_mul_left",
     "language": "lean4-surface",
     "statement": "∀ {a b c : ℕ}, 0 < a → (a * b < a * c ↔ b < c)"
   },

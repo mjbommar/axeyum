@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.add_zero : ((x0 : Complex) -> Complex.Equiv (Complex.add x0 Complex.zero) x0)",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.add_zero",
     "free_symbols": [
       "x0"
     ]

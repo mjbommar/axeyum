@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n m k : ℕ}, m ∣ k → n ∣ m → k / m ∣ k / n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.div_dvd_div_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

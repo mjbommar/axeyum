@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a : ℕ} (b : ℕ), 0 < a → 0 < a / a.gcd b",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.div_gcd_pos_of_pos_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

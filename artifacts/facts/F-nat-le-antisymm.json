@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.le_antisymm : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> ((x3 : AxNat.le x1 x0) -> Eq.{1} AxNat x0 x1))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.le_antisymm",
     "free_symbols": [
       "x0",
       "x1",

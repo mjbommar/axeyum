@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.sq_nonneg : ((x0 : CReal) -> CReal.le CReal.zero (CReal.mul x0 x0))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.sq_nonneg",
     "free_symbols": [
       "x0"
     ]

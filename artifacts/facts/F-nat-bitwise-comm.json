@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : ((x1 : Bool) -> ((x2 : Bool) -> Eq.{1} Bool (x0 x1 x2) (x0 x2 x1)))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise x0 x2 x3) (AxNat.bitwise x0 x3 x2)))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.bitwise_comm",
     "free_symbols": []
   },
   "epistemic_status": "proved",

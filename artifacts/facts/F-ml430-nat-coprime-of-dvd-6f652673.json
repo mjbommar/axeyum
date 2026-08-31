@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, (∀ (k : ℕ), Nat.Prime k → k ∣ m → k ∣ n → k ∣ 1) → m.Coprime n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_of_forall_prime_dvd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

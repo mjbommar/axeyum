@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, m + n = 3 ↔ m = 0 ∧ n = 3 ∨ m = 1 ∧ n = 2 ∨ m = 2 ∧ n = 1 ∨ m = 3 ∧ n = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_eq_three_iff"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

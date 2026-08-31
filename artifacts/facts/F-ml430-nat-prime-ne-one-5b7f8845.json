@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p : ℕ}, Nat.Prime p → p ≠ 1",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_ne_one"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

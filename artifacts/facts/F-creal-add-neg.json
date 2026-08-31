@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.add_neg : ((x0 : CReal) -> CReal.Equiv (CReal.add x0 (CReal.neg x0)) CReal.zero)",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.add_neg",
     "free_symbols": [
       "x0"
     ]

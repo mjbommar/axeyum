@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {k n : ℕ}, n.gcd k < k → ∃ m < k, n * m % k = n.gcd k",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Nat.exists_mul_mod_eq_gcd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

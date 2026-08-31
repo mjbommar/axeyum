@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.le_antisymm : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat.le x0 x1) -> ((x3 : Rat.le x1 x0) -> Eq.{1} Rat x0 x1))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.le_antisymm",
     "free_symbols": [
       "x0",
       "x1",

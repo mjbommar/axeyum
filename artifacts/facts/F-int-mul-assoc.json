@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.mul_assoc : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul (Int.mul x0 x1) x2) (Int.mul x0 (Int.mul x1 x2)))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.mul_assoc",
     "free_symbols": [
       "x0",
       "x1",

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.le_total : ((x0 : Int) -> ((x1 : Int) -> Or (Int.le x0 x1) (Int.le x1 x0)))",
     "fragment": "Int",
+    "kernel_theorem": "Int.le_total",
     "free_symbols": [
       "x0",
       "x1"

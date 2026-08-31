@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.mul_pos : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat.lt Rat.zero x0) -> ((x3 : Rat.lt Rat.zero x1) -> Rat.lt Rat.zero (Rat.mul x0 x1)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.mul_pos",
     "free_symbols": [
       "x0",
       "x1",

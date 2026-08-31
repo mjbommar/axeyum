@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.pow_zero : ((x0 : Int) -> Eq.{1} Int (Int.pow x0 AxNat.zero) Int.one)",
     "fragment": "Int",
+    "kernel_theorem": "Int.pow_zero",
     "free_symbols": [
       "x0"
     ]

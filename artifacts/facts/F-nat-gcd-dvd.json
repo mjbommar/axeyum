@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.gcd_dvd : ((x0 : AxNat) -> ((x1 : AxNat) -> And (AxNat.dvd (AxNat.gcd x0 x1) x0) (AxNat.dvd (AxNat.gcd x0 x1) x1)))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.gcd_dvd",
     "free_symbols": [
       "x0",
       "x1"

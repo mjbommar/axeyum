@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℤ}, Odd (m * n) → Odd m",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.odd_of_mul_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

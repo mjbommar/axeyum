@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.mul_zero : ((x0 : CReal) -> CReal.Equiv (CReal.mul x0 CReal.zero) CReal.zero)",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.mul_zero",
     "free_symbols": [
       "x0"
     ]

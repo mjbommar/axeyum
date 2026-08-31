@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.markov_constructed : ((x0 : Rat) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : Rat.IsDistribution x2 x3) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat.lt x5 x3) -> Rat.le Rat.zero (x1 x5)))) -> ((x6 : Rat.lt Rat.zero x0) -> Rat.le (Rat.mul x0 (Rat.expectation (Rat.indicator x0 x1) x2 x3)) (Rat.expectation x1 x2 x3))))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.markov_constructed",
     "free_symbols": [
       "x0",
       "x1",

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n a b : ℤ}, a ≡ b [ZMOD n] → (n ∣ a ↔ n ∣ b)",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.modEq_dvd_iff"
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",

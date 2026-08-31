@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.lagrange_identity : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> CReal.Equiv (CReal.add (CReal.mul (CReal.add (CReal.mul x0 x0) (CReal.mul x1 x1)) (CReal.add (CReal.mul x2 x2) (CReal.mul x3 x3))) (CReal.neg (CReal.mul (CReal.add (CReal.mul x0 x2) (CReal.mul x1 x3)) (CReal.add (CReal.mul x0 x2) (CReal.mul x1 x3))))) (CReal.mul (CReal.add (CReal.mul x0 x3) (CReal.neg (CReal.mul x1 x2))) (CReal.add (CReal.mul x0 x3) (CReal.neg (CReal.mul x1 x2))))))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.lagrange_identity",
     "free_symbols": [
       "x0",
       "x1",

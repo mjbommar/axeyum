@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.euclid_neg_succ : ((x0 : AxNat) -> ((x1 : AxNat) -> Exists.{1} Int (fun (x2 : Int) => Exists.{1} Int (fun (x3 : Int) => And (Eq.{1} Int (Int.negSucc x0) (Int.add (Int.mul (Int.ofNat (AxNat.succ x1)) x2) x3)) (And (Int.le Int.zero x3) (Int.lt x3 (Int.ofNat (AxNat.succ x1))))))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.euclid_neg_succ",
     "free_symbols": [
       "x0",
       "x1"

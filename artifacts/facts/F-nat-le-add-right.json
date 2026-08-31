@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.le_add_right : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le x0 (AxNat.add x0 x1)))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.le_add_right",
     "free_symbols": [
       "x0",
       "x1"

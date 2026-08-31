@@ -28,6 +28,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.ble_eq_false_of_lt",
     "free_symbols": [
       "x0",
       "x1",

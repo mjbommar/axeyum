@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.variance_nonneg : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> ((x3 : Rat.IsDistribution x1 x2) -> Rat.le Rat.zero (Rat.variance x0 x1 x2)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.variance_nonneg",
     "free_symbols": [
       "x0",
       "x1",

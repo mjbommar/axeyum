@@ -45,6 +45,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.bitwise_or_eq_lor",
     "free_symbols": [],
     "language": "lean4",
     "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x2 : Bool) => fun (x3 : Bool) => Bool.rec.{1} (fun (x4 : Bool) => Bool) x3 Bool.true x2) x0 x1) (AxNat.lor x0 x1)))"

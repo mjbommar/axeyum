@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b : ℕ} (c : ℕ), a ≤ b → a.choose c ≤ b.choose c",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.choose_le_choose"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (x : ℕ), x &&& x = x",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.land_self"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

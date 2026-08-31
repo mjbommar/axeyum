@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "For each fixture F, reconstruct(F, RingSignature { r := CReal, equality := Defined CReal.Equiv, .. }) yields a term of type False whose Kernel::axiom_footprint, intersected with the abstracted ordered-ring telescope, is empty. Carrier axioms are MEASURED as footprint intersect telescope, not selected by name prefix. The generalized (carrier-free) form has 39 ring binders, an empty footprint, and zero kernel-Eq constants in the proof term.",
     "fragment": "QF_LRA",
+    "kernel_theorem": null,
     "free_symbols": [
       "CReal",
       "CReal.Equiv",

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.covariance_sq_le_variance_mul_of_pos : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : Rat.IsDistribution x2 x3) -> ((x5 : Rat.lt Rat.zero (Rat.variance x0 x2 x3)) -> Rat.le (Rat.mul (Rat.covariance x0 x1 x2 x3) (Rat.covariance x0 x1 x2 x3)) (Rat.mul (Rat.variance x0 x2 x3) (Rat.variance x1 x2 x3))))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.covariance_sq_le_variance_mul_of_pos",
     "free_symbols": [
       "x0",
       "x1",

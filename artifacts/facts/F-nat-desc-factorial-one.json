@@ -44,6 +44,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.descFactorial_one",
     "free_symbols": [
       "x0"
     ],

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.dot_neg_left : ((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.dot (CPoint.neg x0) x1) (CReal.neg (CPoint.dot x0 x1))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.dot_neg_left",
     "free_symbols": [
       "x0",
       "x1"

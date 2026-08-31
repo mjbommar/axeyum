@@ -40,6 +40,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.clog_one_left",
     "free_symbols": [
       "x0"
     ],

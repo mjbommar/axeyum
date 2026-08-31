@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.choose_le_two_pow : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x1 x0) -> AxNat.le (AxNat.choose x0 x1) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.choose_le_two_pow",
     "free_symbols": [
       "x0",
       "x1"

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a : ℤ} {m n : ℕ}, a.gcd (↑m * ↑n) = 1 → a.gcd ↑m = 1",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.gcd_eq_one_of_gcd_mul_right_eq_one_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

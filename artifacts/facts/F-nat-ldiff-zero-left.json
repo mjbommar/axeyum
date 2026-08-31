@@ -41,6 +41,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.ldiff_zero_left",
     "free_symbols": [
       "x0"
     ],

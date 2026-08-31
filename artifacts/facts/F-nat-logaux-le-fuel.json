@@ -44,6 +44,7 @@
   ],
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.logAux_le_fuel",
     "free_symbols": [
       "x0",
       "x1",

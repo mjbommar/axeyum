@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "StrictMono fun n => Nat.fib (n + 2)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fib_add_two_strictmono"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

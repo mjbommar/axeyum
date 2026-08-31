@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.left_distrib : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> Eq.{1} Rat (Rat.mul x0 (Rat.add x1 x2)) (Rat.add (Rat.mul x0 x1) (Rat.mul x0 x2)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.left_distrib",
     "free_symbols": [
       "x0",
       "x1",

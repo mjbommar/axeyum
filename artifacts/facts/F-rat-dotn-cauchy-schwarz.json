@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.dotN_cauchy_schwarz : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> Rat.le (Rat.mul (Rat.dotN x0 x1 x2) (Rat.dotN x0 x1 x2)) (Rat.mul (Rat.dotN x0 x0 x2) (Rat.dotN x1 x1 x2)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.dotN_cauchy_schwarz",
     "free_symbols": [
       "x0",
       "x1",

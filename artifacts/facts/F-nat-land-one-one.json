@@ -41,6 +41,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.land_one_one",
     "free_symbols": [],
     "language": "lean4",
     "statement": "theorem Nat.land_one_one : Eq.{1} AxNat (AxNat.land (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)) (AxNat.succ AxNat.zero)"

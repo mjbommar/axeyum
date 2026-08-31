@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.one_le_of_dvd_pos : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.le (AxNat.succ AxNat.zero) x0))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.one_le_of_dvd_pos",
     "free_symbols": [
       "x0",
       "x1",

@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p n : ℕ}, Nat.Prime p → (p.Coprime n ↔ ¬p ∣ n)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_coprime_iff_not_dvd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

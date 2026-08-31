@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.normalize_add_normalize : ((x0 : Int) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> ((x3 : Int) -> ((x4 : AxNat) -> ((x5 : AxNat.le (AxNat.succ AxNat.zero) x4) -> Eq.{1} Rat (Rat.add (Rat.normalize x0 x1 x2) (Rat.normalize x3 x4 x5)) (Rat.normalize (Int.add (Int.mul x0 (Int.ofNat x4)) (Int.mul x3 (Int.ofNat x1))) (AxNat.mul x1 x4) (AxNat.one_le_mul x1 x4 x2 x5))))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.normalize_add_normalize",
     "free_symbols": [
       "x0",
       "x1",

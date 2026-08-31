@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.add_zero : ((x0 : Int) -> Eq.{1} Int (Int.add x0 Int.zero) x0)",
     "fragment": "Int",
+    "kernel_theorem": "Int.add_zero",
     "free_symbols": [
       "x0"
     ]

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.dvd_mul_right_of_dvd : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.dvd x0 (AxNat.mul x1 x2)))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.dvd_mul_right_of_dvd",
     "free_symbols": [
       "x0",
       "x1",

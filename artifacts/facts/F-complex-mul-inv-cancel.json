@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.mul_inv_cancel : ((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound (Complex.normSq x0) x1) -> Complex.Equiv (Complex.mul x0 (Complex.inv x0 x1 x2)) Complex.one)))",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.mul_inv_cancel",
     "free_symbols": [
       "x0",
       "x1",

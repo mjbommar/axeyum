@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.natDivSucc_le_scaled : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Rat.le (Rat.natDivSucc x0 (AxNat.add (AxNat.mul (AxNat.succ x1) x2) x1)) (Rat.natDivSucc x0 x2))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.natDivSucc_le_scaled",
     "free_symbols": [
       "x0",
       "x1",

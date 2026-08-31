@@ -40,6 +40,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.multichoose_one_right",
     "free_symbols": [
       "x0"
     ],

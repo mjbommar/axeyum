@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p : ℕ}, Nat.Prime p → ∀ (m : ℕ), m ∣ p → m = 1 ∨ m = p",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_eq_one_or_self_of_dvd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

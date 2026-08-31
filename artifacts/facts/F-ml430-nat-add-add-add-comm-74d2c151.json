@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (a b c d : ℕ), a + b + (c + d) = a + c + (b + d)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_add_add_comm"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

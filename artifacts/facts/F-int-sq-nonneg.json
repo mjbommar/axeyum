@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.sq_nonneg : ((x0 : Int) -> Int.le Int.zero (Int.mul x0 x0))",
     "fragment": "Int",
+    "kernel_theorem": "Int.sq_nonneg",
     "free_symbols": [
       "x0"
     ]

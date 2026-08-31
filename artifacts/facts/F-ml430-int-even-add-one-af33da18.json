@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℤ}, Even (n + 1) ↔ ¬Even n",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.even_add_one"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

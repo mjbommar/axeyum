@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.lt_irrefl : ((x0 : AxNat) -> ((x1 : AxNat.lt x0 x0) -> False))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.lt_irrefl",
     "free_symbols": [
       "x0",
       "x1"

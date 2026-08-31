@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.le_congr : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.Equiv x0 x1) -> ((x5 : CReal.Equiv x2 x3) -> ((x6 : CReal.le x0 x2) -> CReal.le x1 x3)))))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.le_congr",
     "free_symbols": [
       "x0",
       "x1",

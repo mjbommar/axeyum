@@ -41,6 +41,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.bit_false",
     "free_symbols": [
       "x0"
     ],

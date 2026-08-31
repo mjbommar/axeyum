@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p : ℕ}, Nat.Prime p → p.pred.succ = p",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.succ_pred_prime"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

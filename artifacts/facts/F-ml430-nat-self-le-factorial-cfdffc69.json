@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n : ℕ), n ≤ n.factorial",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.self_le_factorial"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

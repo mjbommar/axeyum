@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.Scalar.threePosBound : CReal.PosBound CPoint.Scalar.three AxNat.zero",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.Scalar.threePosBound",
     "free_symbols": []
   },
   "epistemic_status": "proved",

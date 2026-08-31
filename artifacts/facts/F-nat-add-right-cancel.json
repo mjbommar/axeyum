@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.add_right_cancel : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.add x0 x2) (AxNat.add x1 x2)) -> Eq.{1} AxNat x0 x1))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.add_right_cancel",
     "free_symbols": [
       "x0",
       "x1",

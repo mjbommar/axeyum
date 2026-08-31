@@ -27,6 +27,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.choose_eq_zero_of_lt",
     "language": "lean4-surface",
     "statement": "\u2200 {n k : \u2115}, n < k \u2192 n.choose k = 0"
   },

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.add_le_add : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat.le x0 x1) -> ((x5 : Rat.le x2 x3) -> Rat.le (Rat.add x0 x2) (Rat.add x1 x3)))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.add_le_add",
     "free_symbols": [
       "x0",
       "x1",

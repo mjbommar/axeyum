@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.bounds_neg : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat.le (Rat.neg x1) x0) -> ((x3 : Rat.le x0 x1) -> And (Rat.le (Rat.neg x1) (Rat.neg x0)) (Rat.le (Rat.neg x0) x1)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.bounds_neg",
     "free_symbols": [
       "x0",
       "x1",

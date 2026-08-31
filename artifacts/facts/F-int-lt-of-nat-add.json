@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.lt_ofNat_add : ((x0 : Int) -> ((x1 : AxNat) -> Int.lt x0 (Int.add x0 (Int.ofNat (AxNat.succ x1)))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.lt_ofNat_add",
     "free_symbols": [
       "x0",
       "x1"

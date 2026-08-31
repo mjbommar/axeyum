@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.matMul_assoc : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> Eq.{1} Rat (Rat.matMul (Rat.matMul x0 x1 x3) x2 x4 x5 x6) (Rat.matMul x0 (Rat.matMul x1 x2 x4) x3 x5 x6))))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.matMul_assoc",
     "free_symbols": [
       "x0",
       "x1",

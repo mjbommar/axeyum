@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.mod_eq_trans : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> ((x5 : AxNat.modEq x0 x2 x3) -> AxNat.modEq x0 x1 x3))))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_eq_trans",
     "free_symbols": [
       "x0",
       "x1",

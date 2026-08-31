@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Bool.false_ne_true : ((x0 : Eq.{1} Bool Bool.false Bool.true) -> False)",
     "fragment": "Logic",
+    "kernel_theorem": "Bool.false_ne_true",
     "free_symbols": [
       "x0"
     ]

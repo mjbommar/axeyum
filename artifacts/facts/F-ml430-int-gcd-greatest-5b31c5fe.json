@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b d : ℤ}, 0 ≤ d → d ∣ a → d ∣ b → (∀ (e : ℤ), e ∣ a → e ∣ b → e ∣ d) → d = ↑(a.gcd b)",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.gcd_greatest"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
