@@ -8,10 +8,46 @@
     "statement": "∀ (x y z : ℕ), (x ||| y) &&& z = x &&& z ||| y &&& z",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:nat-eq-of-testbit-eq", "F:nat-le-succ-succ", "F:nat-lt-or-eq-of-le", "F:nat-testbit-land", "F:nat-testbit-le-one", "F:nat-testbit-lor", "F:nat-zero-le"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.and_or_distrib_right",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.and_or_distrib_right",
+      "supports": "∀ (x y z : ℕ), (x ||| y) &&& z = x &&& z ||| y &&& z",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- and_or_distrib_right 2>/dev/null | grep -Ec '^Nat\\.and_or_distrib_right[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits `Nat.and_or_distrib_right` (`nat_prelude/and_or_distrib.rs`) through the trusted `Kernel::add_declaration` gate. `nat_theorem_inventory`'s rendered type is `(x0 x1 x2 : AxNat) -> Eq (land (lor x0 x1) x2) (lor (land x0 x2) (land x1 x2))`, matching this fact's `formal.statement` up to variable naming. Anchored with `^Nat\\.and_or_distrib_right[[:space:]]`; `grep -Ec` consumes the pipe so the tested count decides the exit status. Run `--release` -- the debug build of this inventory example SIGABRTs on stack depth (unrelated to this proof). Route: the right-handed twin of `Nat.and_or_distrib_left`'s recipe -- `Nat.eq_of_testBit_eq` plus `Nat.testBit_land`/`Nat.testBit_lor` twice per side, closed by `and_or_distrib.rs`'s `bit_and_or_distrib_right` (same nested `{0,1}` case split, `mul` scaling each operand on the right of `max` instead of the left). Mathlib's `&&&`/`|||` for `Nat` are `Nat.land`/`Nat.lor`, so reconciling this mirror to a NEW `Nat.and_or_distrib_right` theorem is honest under the mirror-flip criterion in CLAUDE.md."
+    },
+    {
+      "id": "compute-Nat.and_or_distrib_right",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.and_or_distrib_right",
+      "supports": "At (x,y,z) = (3,5,6): x|||y = 7, (x|||y)&&&z = 7&&&6 = 6; x&&&z = 2, y&&&z = 4, 2|||4 = 6 -- both sides 6, with two negative controls (inner-operator swap gives 0, outer-operator swap gives 7).",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::and_or_distrib_right_applies_at_a_concrete_discriminating_instance_and_symbolically",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ]
+    },
+    {
+      "id": "footprint-Nat.and_or_distrib_right",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.and_or_distrib_right`'s footprint by []."
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +62,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum by a NEW kernel theorem, `Nat.and_or_distrib_right` (`nat_prelude/and_or_distrib.rs`), draw11-theorems. `formal.statement` was a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type before this proof; it now also matches the kernel's own rendered type (`nat_theorem_inventory`). Route: the right-handed twin of `Nat.and_or_distrib_left`'s recipe -- reduce to a per-bit identity via `Nat.testBit_land`/`Nat.testBit_lor`, close `mul (max a b) c = max (mul a c) (mul b c)` by a nested 0/1 case split (`cases_le_one`, shared with the left-handed proof). Confirmed by a Python truth-table check before writing any Rust. Mathlib's `&&&`/`|||` for `Nat` are `Nat.land`/`Nat.lor`, so this mirror-flip is honest under the mirror-flip criterion in CLAUDE.md."
 }

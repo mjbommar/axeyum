@@ -7829,6 +7829,18 @@
       "prose_sha256": "933083b5604b6921818df334490ed214edbe4af9790f31493934f4c7c548173c"
     },
     {
+      "fact_id": "F:ml430-nat-and-or-distrib-left-fe131f64",
+      "language": "lean4-surface",
+      "statement_sha256": "1252416f68909f80866d2807c0f6a4a1c74832c86b5cd27f55a90ebab034c594",
+      "prose_sha256": "68cd9ec2d932efaf5073419c6f326c76e7c3f10d0df9fb36988589efb58460a2"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-or-distrib-right-0daaa284",
+      "language": "lean4-surface",
+      "statement_sha256": "3cbed89d57352aeec93de3978f841027fc6999d24d47d8c4854bf2ca8b6378e4",
+      "prose_sha256": "a0bfe527524b84eae6aa7e2eebae3c663e6a41b56485812c6b693f73ecf4b1eb"
+    },
+    {
       "fact_id": "F:ml430-nat-and-self-06a84ccc",
       "language": "lean4-surface",
       "statement_sha256": "66f0f85e7e5901e171abc5e8f8b1260e7414e2a1e28c47e9f341437c9e48e984",
