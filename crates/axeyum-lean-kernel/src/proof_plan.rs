@@ -436,6 +436,10 @@ impl Rel {
 /// Returns [`PlanError`] if the plan itself is malformed (see [`PlanError`]'s
 /// variants). Does not call the kernel's trusted gate — that is the caller's
 /// job, exactly as it is for a hand-built term.
+#[allow(clippy::too_many_lines)] // one match arm per Plan node; splitting it
+// would scatter the compiler's cases across several functions for no reader
+// benefit -- see NatOps's own `try_theorem`/`congr`/`transport` neighbors,
+// which take the same trade.
 pub fn compile<D: NatOps>(plan: &Plan, d: &mut D) -> Result<ExprId, PlanError> {
     match plan {
         Plan::Exact(e) => Ok(*e),
@@ -570,14 +574,17 @@ pub fn compile<D: NatOps>(plan: &Plan, d: &mut D) -> Result<ExprId, PlanError> {
     }
 }
 
+#[allow(clippy::similar_names)] // `mp`/`mpr` name the forward/backward
+// halves of an `Iff.intro`, matching `LogicPrelude`'s own `iff_mp`/
+// `iff_mpr` naming; renaming one would obscure the correspondence.
 fn compile_ctor<D: NatOps>(c: &Ctor, d: &mut D) -> Result<ExprId, PlanError> {
     match c {
         Ctor::Refl(a) => Ok(d.refl(*a)),
         Ctor::IffIntro { a, b, mp, mpr } => {
-            let mp_t = compile(mp, d)?;
-            let mpr_t = compile(mpr, d)?;
+            let mp_term = compile(mp, d)?;
+            let mpr_term = compile(mpr, d)?;
             let name = d.prelude().logic.iff_intro;
-            Ok(d.const_app(name, &[*a, *b, mp_t, mpr_t]))
+            Ok(d.const_app(name, &[*a, *b, mp_term, mpr_term]))
         }
         Ctor::AndIntro { a, b, left, right } => {
             let l = compile(left, d)?;
@@ -602,6 +609,9 @@ fn compile_ctor<D: NatOps>(c: &Ctor, d: &mut D) -> Result<ExprId, PlanError> {
 /// Returns [`PlanOutcome::Declined`] if the plan itself was malformed, or
 /// [`PlanOutcome::Rejected`] if the kernel's trusted gate refused the
 /// resulting term.
+#[allow(clippy::type_complexity)] // mirrors `NatOps::try_theorem`'s own
+// `build: &dyn Fn(&mut Self, &[ExprId]) -> (ExprId, ExprId)` signature; a
+// named alias would hide the shape rather than clarify it.
 pub fn theorem_plan<D: NatOps>(
     d: &mut D,
     name: NameId,
@@ -651,6 +661,11 @@ pub fn theorem_plan<D: NatOps>(
 
 /// Lift `eq : Eq from to` through the one-hole `Prop`-valued context `ctx`
 /// into `Iff (ctx from) (ctx to)` — the `pred_iff_of_eq` shape.
+///
+/// # Panics
+///
+/// Never, in practice: `Plan::Rewrite` has no malformed-input case, so
+/// `compile` cannot return `Err` for this shape.
 pub fn iff_lift<D: NatOps>(
     d: &mut D,
     ctx: Template,
@@ -673,6 +688,12 @@ pub fn iff_lift<D: NatOps>(
 
 /// Chain `start ~ s0 ~ s1 ~ … ~ sn` under `Iff` — the `iff_trans` shape,
 /// generalized to any nonzero step count. `steps` must be nonempty.
+///
+/// # Panics
+///
+/// Panics if `steps` is empty — see [`Plan::Transitivity`] /
+/// [`PlanError::EmptyChain`] for the underlying decline this wrapper turns
+/// into a panic for callers that already know their chain is nonempty.
 pub fn iff_chain<D: NatOps>(d: &mut D, start: ExprId, steps: &[(ExprId, ExprId)]) -> ExprId {
     let steps = steps
         .iter()
@@ -690,6 +711,11 @@ pub fn iff_chain<D: NatOps>(d: &mut D, start: ExprId, steps: &[(ExprId, ExprId)]
 }
 
 /// `h : Iff a b ⊢ Iff b a` — the `iff_symm` shape.
+///
+/// # Panics
+///
+/// Never, in practice: `Plan::Symmetry` has no malformed-input case, so
+/// `compile` cannot return `Err` for this shape.
 pub fn iff_flip<D: NatOps>(d: &mut D, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
     compile(
         &Plan::Symmetry {
@@ -733,14 +759,17 @@ impl Plan {
         out
     }
 
+    #[allow(clippy::too_many_lines)] // one match arm per Plan node, same
+    // trade as `compile`'s own allow above.
     fn render_into(&self, k: &Kernel, depth: usize, out: &mut String) {
+        use std::fmt::Write as _;
         let pad = "  ".repeat(depth);
         match self {
             Plan::Exact(e) => {
-                out.push_str(&format!("{pad}Exact: {}\n", k.render_lean(*e)));
+                let _ = writeln!(out, "{pad}Exact: {}", k.render_lean(*e));
             }
             Plan::Apply { name, args } => {
-                out.push_str(&format!("{pad}Apply: {}\n", k.lean_name(*name)));
+                let _ = writeln!(out, "{pad}Apply: {}", k.lean_name(*name));
                 for a in args {
                     a.render_into(k, depth + 1, out);
                 }
@@ -752,20 +781,22 @@ impl Plan {
                 to,
                 eq,
             } => {
-                out.push_str(&format!(
-                    "{pad}Rewrite[{relation:?}]: ctx = fun x => {}, {} -> {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Rewrite[{relation:?}]: ctx = fun x => {}, {} -> {}",
                     ctx.render(k),
                     k.render_lean(*from),
                     k.render_lean(*to)
-                ));
+                );
                 eq.render_into(k, depth + 1, out);
             }
             Plan::Symmetry { relation, a, b, of } => {
-                out.push_str(&format!(
-                    "{pad}Symmetry[{relation:?}]: {} <-> {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Symmetry[{relation:?}]: {} <-> {}",
                     k.render_lean(*a),
                     k.render_lean(*b)
-                ));
+                );
                 of.render_into(k, depth + 1, out);
             }
             Plan::Transitivity {
@@ -773,31 +804,32 @@ impl Plan {
                 start,
                 steps,
             } => {
-                out.push_str(&format!(
-                    "{pad}Transitivity[{relation:?}]: start = {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Transitivity[{relation:?}]: start = {}",
                     k.render_lean(*start)
-                ));
+                );
                 for (next, step) in steps {
-                    out.push_str(&format!("{pad}  -> {}\n", k.render_lean(*next)));
+                    let _ = writeln!(out, "{pad}  -> {}", k.render_lean(*next));
                     step.render_into(k, depth + 2, out);
                 }
             }
             Plan::Constructor(c) => {
-                out.push_str(&format!("{pad}Constructor\n"));
+                let _ = writeln!(out, "{pad}Constructor");
                 match c {
                     Ctor::Refl(a) => {
-                        out.push_str(&format!("{pad}  Refl: {}\n", k.render_lean(*a)));
+                        let _ = writeln!(out, "{pad}  Refl: {}", k.render_lean(*a));
                     }
                     Ctor::IffIntro { mp, mpr, .. } => {
-                        out.push_str(&format!("{pad}  IffIntro.mp\n"));
+                        let _ = writeln!(out, "{pad}  IffIntro.mp");
                         mp.render_into(k, depth + 2, out);
-                        out.push_str(&format!("{pad}  IffIntro.mpr\n"));
+                        let _ = writeln!(out, "{pad}  IffIntro.mpr");
                         mpr.render_into(k, depth + 2, out);
                     }
                     Ctor::AndIntro { left, right, .. } => {
-                        out.push_str(&format!("{pad}  AndIntro.left\n"));
+                        let _ = writeln!(out, "{pad}  AndIntro.left");
                         left.render_into(k, depth + 2, out);
-                        out.push_str(&format!("{pad}  AndIntro.right\n"));
+                        let _ = writeln!(out, "{pad}  AndIntro.right");
                         right.render_into(k, depth + 2, out);
                     }
                 }
@@ -809,15 +841,16 @@ impl Plan {
                 eq,
                 base,
             } => {
-                out.push_str(&format!(
-                    "{pad}Transport: motive = fun x => {}, {} -> {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Transport: motive = fun x => {}, {} -> {}",
                     motive.render(k),
                     k.render_lean(*from),
                     k.render_lean(*to)
-                ));
-                out.push_str(&format!("{pad}  eq:\n"));
+                );
+                let _ = writeln!(out, "{pad}  eq:");
                 eq.render_into(k, depth + 2, out);
-                out.push_str(&format!("{pad}  base:\n"));
+                let _ = writeln!(out, "{pad}  base:");
                 base.render_into(k, depth + 2, out);
             }
             Plan::Eliminate {
@@ -826,14 +859,15 @@ impl Plan {
                 cases,
                 target,
             } => {
-                out.push_str(&format!(
-                    "{pad}Eliminate[{}]: motive = fun x => {}, target = {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Eliminate[{}]: motive = fun x => {}, target = {}",
                     k.lean_name(*recursor),
                     motive.render(k),
                     k.render_lean(*target)
-                ));
+                );
                 for (i, c) in cases.iter().enumerate() {
-                    out.push_str(&format!("{pad}  case {i}:\n"));
+                    let _ = writeln!(out, "{pad}  case {i}:");
                     c.render_into(k, depth + 2, out);
                 }
             }
@@ -843,41 +877,46 @@ impl Plan {
                 target,
                 ..
             } => {
-                out.push_str(&format!(
-                    "{pad}Induction: motive = fun x => {}, target = {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Induction: motive = fun x => {}, target = {}",
                     motive.render(k),
                     k.render_lean(*target)
-                ));
-                out.push_str(&format!("{pad}  base:\n"));
+                );
+                let _ = writeln!(out, "{pad}  base:");
                 base.render_into(k, depth + 2, out);
-                out.push_str(&format!(
-                    "{pad}  step: <bound to j_fv/ih_fv, rendered below>\n"
-                ));
+                let _ = writeln!(out, "{pad}  step: <bound to j_fv/ih_fv, rendered below>");
             }
             Plan::Witness {
                 predicate,
                 value,
                 proof,
             } => {
-                out.push_str(&format!(
-                    "{pad}Witness: predicate = fun x => {}, value = {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Witness: predicate = fun x => {}, value = {}",
                     predicate.render(k),
                     k.render_lean(*value)
-                ));
+                );
                 proof.render_into(k, depth + 1, out);
             }
             Plan::Compute { lhs, rhs } => {
-                out.push_str(&format!(
-                    "{pad}Compute: {} == {}\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}Compute: {} == {}",
                     k.render_lean(*lhs),
                     k.render_lean(*rhs)
-                ));
+                );
             }
         }
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::many_single_char_names, clippy::similar_names)] // `k`/`p`/`d`
+// and `a`/`b`/`c` name kernel/prelude/development handles and the ExprIds
+// under test, matching this crate's own convention throughout `nat_prelude`
+// (e.g. `ipc_soundness.rs`'s identical crate-level allow).
 mod tests {
     use super::*;
     use crate::{NatDev, NatPrelude, build_nat_prelude};

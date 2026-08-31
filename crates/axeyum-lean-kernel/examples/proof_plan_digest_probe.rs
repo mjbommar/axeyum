@@ -17,19 +17,22 @@
 
 use axeyum_lean_kernel::{Declaration, Kernel, NameId, build_nat_prelude};
 use sha2::{Digest, Sha256};
+use std::fmt::Write as _;
 use std::process::ExitCode;
 
 fn digest_of(kernel: &Kernel, name: NameId) -> Option<(usize, String)> {
     let decl = kernel.environment().get(name)?;
-    let (ty, value) = match decl {
-        Declaration::Theorem { ty, value, .. } => (*ty, *value),
-        _ => return None,
+    let Declaration::Theorem { ty, value, .. } = decl else {
+        return None;
     };
-    let rendered = format!("{}|{}", kernel.render_lean(ty), kernel.render_lean(value));
+    let rendered = format!("{}|{}", kernel.render_lean(*ty), kernel.render_lean(*value));
     let mut hasher = Sha256::new();
     hasher.update(rendered.as_bytes());
     let digest = hasher.finalize();
-    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    let hex = digest.iter().fold(String::new(), |mut acc, b| {
+        let _ = write!(acc, "{b:02x}");
+        acc
+    });
     let footprint_len = kernel.axiom_footprint(name).len();
     Some((footprint_len, hex))
 }
@@ -55,14 +58,11 @@ fn main() -> ExitCode {
 
     let mut ok = true;
     for (label, name) in subjects {
-        match digest_of(&kernel, name) {
-            Some((footprint_len, hex)) => {
-                println!("{label}\t{footprint_len}\t{hex}");
-            }
-            None => {
-                eprintln!("MISSING: {label}");
-                ok = false;
-            }
+        if let Some((footprint_len, hex)) = digest_of(&kernel, name) {
+            println!("{label}\t{footprint_len}\t{hex}");
+        } else {
+            eprintln!("MISSING: {label}");
+            ok = false;
         }
     }
 
