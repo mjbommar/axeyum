@@ -131,6 +131,7 @@ use crate::name::NameId;
 mod add_basics;
 mod add_pos;
 mod algebra;
+mod and_or_distrib;
 mod asc_factorial;
 mod base_induction;
 mod bezout;
@@ -249,6 +250,7 @@ use algebra::{
     declare_mul_no_zero_divisors, declare_multiplicative_theorems, declare_subtraction_theorems,
     declare_zero_or_succ,
 };
+use and_or_distrib::declare_and_or_distrib_all;
 use asc_factorial::declare_asc_factorial_all;
 use base_induction::declare_base_induction;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
@@ -4663,6 +4665,21 @@ pub struct NatPrelude {
     /// LLPO the analysis row 2s (`creal/ivt_boundary.rs`,
     /// `creal/extreme_value.rs`) reach. See `least_number.rs`.
     pub lnp_unrestricted_implies_em: NameId,
+
+    // -- `draw11-theorems` lane: `and_or_distrib.rs` --
+    /// `Nat.and_or_distrib_left : ∀ x y z, Eq (land x (lor y z)) (lor (land
+    /// x y) (land x z))` — `F:ml430-nat-and-or-distrib-left-fe131f64`. Via
+    /// `Nat.eq_of_testBit_eq` plus `Nat.testBit_land`/`Nat.testBit_lor`
+    /// twice per side and a per-bit AND-distributes-over-OR case split
+    /// (`and_or_distrib.rs`'s `bit_and_or_distrib`, 8 leaves at `{0,1}`,
+    /// each `refl`). See `nat_prelude::and_or_distrib`.
+    pub and_or_distrib_left: NameId,
+    /// `Nat.and_or_distrib_right : ∀ x y z, Eq (land (lor x y) z) (lor
+    /// (land x z) (land y z))` — `F:ml430-nat-and-or-distrib-right-0daaa284`,
+    /// the right-handed twin of [`Self::and_or_distrib_left`] via
+    /// `and_or_distrib.rs`'s `bit_and_or_distrib_right`. See
+    /// `nat_prelude::and_or_distrib`.
+    pub and_or_distrib_right: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5563,6 +5580,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lnp_decidable: kernel.name_str(nat, "lnp_decidable"),
             em_implies_lnp: kernel.name_str(nat, "em_implies_lnp"),
             lnp_unrestricted_implies_em: kernel.name_str(nat, "lnp_unrestricted_implies_em"),
+            and_or_distrib_left: kernel.name_str(nat, "and_or_distrib_left"),
+            and_or_distrib_right: kernel.name_str(nat, "and_or_distrib_right"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -6355,6 +6374,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // screen, paired with `Nat.nthRoot` above (ADR-0762/ADR-0830).
         // Nothing needs it, so it goes last.
         declare_squarefree_all(&mut d, &p)?;
+        // `Nat.and_or_distrib_left`/`_right` (`and_or_distrib.rs`): needs
+        // `Nat.testBit_land`/`Nat.testBit_lor` (`declare_testbit_bitwise_all`,
+        // far above), `Nat.eq_of_testBit_eq` (`declare_xor_algebra_all`, far
+        // above), `Nat.testBit_le_one` (`declare_binary_all`, far above),
+        // and `Nat.le_succ_succ`/`Nat.lt_two_cases`/`Nat.le_of_lt_succ`/
+        // `Nat.zero_le`/`Nat.le_antisymm`/`Nat.lt_or_eq_of_le` (far above,
+        // via `ops::cases_lt_bound`). Nothing needs it, so it goes last.
+        declare_and_or_distrib_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

@@ -1282,6 +1282,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dist_eq_intro,
         p.dist_triangle_inequality,
         p.land_div_two,
+        // `draw11-theorems` lane.
+        p.and_or_distrib_left,
+        p.and_or_distrib_right,
     ]
 }
 
@@ -22972,5 +22975,164 @@ fn land_div_two_applies_at_a_concrete_instance() {
     assert!(
         f.k.axiom_footprint(p.land_div_two).is_empty(),
         "land_div_two must rest on zero axioms"
+    );
+}
+
+/// `Nat.and_or_distrib_left` (`F:ml430-nat-and-or-distrib-left-fe131f64`,
+/// draw11-theorems) applies at symbolic `x`/`y`/`z` and at a concrete,
+/// DISCRIMINATING instance `(x, y, z) = (6, 3, 5)`: `y ||| z = 7`,
+/// `x &&& (y ||| z) = 6 &&& 7 = 6`; `x &&& y = 2`, `x &&& z = 4`,
+/// `2 ||| 4 = 6` -- both sides `6`. Two negative controls separate this from
+/// plausible transpositions: replacing the inner `|||` with `&&&` gives `0`
+/// (`x &&& (y &&& z) = 6 & 1 = 0`), and swapping the outer `&&&`/`|||` gives
+/// `7` (`x ||| (y &&& z) = 6 | 1 = 7`).
+#[test]
+fn and_or_distrib_left_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: applies at a genuinely FREE (x, y, z) triple.
+    {
+        let name = f.name("and_or_distrib_left_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (x, y, z) = (values[0], values[1], values[2]);
+            let yz = d.const_app(p.lor, &[y, z]);
+            let lhs = d.const_app(p.land, &[x, yz]);
+            let xy = d.const_app(p.land, &[x, y]);
+            let xz = d.const_app(p.land, &[x, z]);
+            let rhs = d.const_app(p.lor, &[xy, xz]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.and_or_distrib_left, &[x, y, z]);
+            (stmt, proof)
+        })
+        .expect("and_or_distrib_left must apply at symbolic x/y/z");
+    }
+
+    // Concrete: (6, 3, 5), both sides compute to 6.
+    {
+        let six = f.num(6);
+        let three = f.num(3);
+        let five = f.num(5);
+        let applied = f.lemma(p.and_or_distrib_left, &[six, three, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("and_or_distrib_left must apply at (x=6, y=3, z=5): {shown}")
+        });
+        let yz = f.const_app(p.lor, &[three, five]);
+        let lhs = f.const_app(p.land, &[six, yz]);
+        let xy = f.const_app(p.land, &[six, three]);
+        let xz = f.const_app(p.land, &[six, five]);
+        let rhs = f.const_app(p.lor, &[xy, xz]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "and_or_distrib_left 6 3 5 must state Eq (6 &&& (3|||5)) ((6&&&3)|||(6&&&5))"
+        );
+        let six_lit = f.num(6);
+        assert!(f.k.def_eq(lhs, six_lit), "6 &&& (3|||5) must compute to 6");
+        assert!(
+            f.k.def_eq(rhs, six_lit),
+            "(6&&&3)|||(6&&&5) must compute to 6"
+        );
+
+        // Negative control 1: replacing the inner `|||` with `&&&` gives 0.
+        let zero = f.num(0);
+        let bad_inner = f.eq(lhs, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad_inner),
+            "negative control: and_or_distrib_left 6 3 5 must not state Eq lhs 0"
+        );
+
+        // Negative control 2: swapping the outer operators gives 7.
+        let seven = f.num(7);
+        let bad_swap = f.eq(lhs, seven);
+        assert!(
+            !f.k.def_eq(inferred, bad_swap),
+            "negative control: and_or_distrib_left 6 3 5 must not state Eq lhs 7"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.and_or_distrib_left).is_empty(),
+        "and_or_distrib_left must rest on zero axioms"
+    );
+}
+
+/// `Nat.and_or_distrib_right` (`F:ml430-nat-and-or-distrib-right-0daaa284`,
+/// draw11-theorems) applies at symbolic `x`/`y`/`z` and at a concrete,
+/// DISCRIMINATING instance `(x, y, z) = (3, 5, 6)`: `x ||| y = 7`,
+/// `(x ||| y) &&& z = 7 &&& 6 = 6`; `x &&& z = 2`, `y &&& z = 4`,
+/// `2 ||| 4 = 6` -- both sides `6`. Same two negative-control shapes as
+/// `and_or_distrib_left`: an inner `&&&` in place of `|||` gives `0`, and
+/// swapping the outer operators gives `7`.
+#[test]
+fn and_or_distrib_right_applies_at_a_concrete_discriminating_instance_and_symbolically() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: applies at a genuinely FREE (x, y, z) triple.
+    {
+        let name = f.name("and_or_distrib_right_restated");
+        f.theorem(name, 3, &|d, values| {
+            let (x, y, z) = (values[0], values[1], values[2]);
+            let xy = d.const_app(p.lor, &[x, y]);
+            let lhs = d.const_app(p.land, &[xy, z]);
+            let xz = d.const_app(p.land, &[x, z]);
+            let yz = d.const_app(p.land, &[y, z]);
+            let rhs = d.const_app(p.lor, &[xz, yz]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.and_or_distrib_right, &[x, y, z]);
+            (stmt, proof)
+        })
+        .expect("and_or_distrib_right must apply at symbolic x/y/z");
+    }
+
+    // Concrete: (3, 5, 6), both sides compute to 6.
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let six = f.num(6);
+        let applied = f.lemma(p.and_or_distrib_right, &[three, five, six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("and_or_distrib_right must apply at (x=3, y=5, z=6): {shown}")
+        });
+        let xy = f.const_app(p.lor, &[three, five]);
+        let lhs = f.const_app(p.land, &[xy, six]);
+        let xz = f.const_app(p.land, &[three, six]);
+        let yz = f.const_app(p.land, &[five, six]);
+        let rhs = f.const_app(p.lor, &[xz, yz]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "and_or_distrib_right 3 5 6 must state Eq ((3|||5)&&&6) ((3&&&6)|||(5&&&6))"
+        );
+        let six_lit = f.num(6);
+        assert!(f.k.def_eq(lhs, six_lit), "(3|||5) &&& 6 must compute to 6");
+        assert!(
+            f.k.def_eq(rhs, six_lit),
+            "(3&&&6)|||(5&&&6) must compute to 6"
+        );
+
+        // Negative control 1: replacing the inner `|||` with `&&&` gives 0.
+        let zero = f.num(0);
+        let bad_inner = f.eq(lhs, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad_inner),
+            "negative control: and_or_distrib_right 3 5 6 must not state Eq lhs 0"
+        );
+
+        // Negative control 2: swapping the outer operators gives 7.
+        let seven = f.num(7);
+        let bad_swap = f.eq(lhs, seven);
+        assert!(
+            !f.k.def_eq(inferred, bad_swap),
+            "negative control: and_or_distrib_right 3 5 6 must not state Eq lhs 7"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.and_or_distrib_right).is_empty(),
+        "and_or_distrib_right must rest on zero axioms"
     );
 }
