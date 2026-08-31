@@ -684,6 +684,68 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
         "Mathlib.Data.Nat.Choose.Basic", "Mathlib.Data.Nat.Factorial.Basic",
         "Mathlib.Data.Nat.Squarefree"),
     "natural-bit-decode": ("Mathlib.Data.Nat.Size", "Mathlib.Data.Nat.Bits"),
+    # --- draw 15, 2026-08-31 (ADR-1175) ---------------------------------------
+    # Draws 12, 13 and 14 all declined on ONE constraint, and each decline
+    # narrowed it. The free supply all sorts EARLY (ADR-1095/ADR-1100), so it
+    # fills cycle index 0 and never index 3; R5 needs two held-out families, so
+    # `ceil(n/3) = 2` forces `n` into {4,5,6} and the LAST family must sit at
+    # index 3. ADR-1115 declined draw 14 because its index-3 candidate
+    # (`natural-factorisation-properties`) draws two ground predicate
+    # applications the widened R12 classifier can now see.
+    #
+    # ADR-1160 filled that slot: `DecidablePred` (logic prelude) and
+    # `Nat.findGreatest` (nat prelude), construction only per ADR-0653 --
+    # verified here independently, `find_greatest.rs` has one
+    # `Declaration::Definition` and zero `.theorem(` call sites -- which opens
+    # `Mathlib.Data.Nat.Find` at 15 screened rows, sorting after every free
+    # candidate.
+    #
+    # LAYOUT CHOSEN: A rather than B, on a MEASUREMENT rather than a
+    # preference. ADR-1160 left two layouts, differing only at index 2:
+    #
+    #   A  Batteries.Data.Nat.Bisect                 natural-avg-pair    held-out
+    #      Init.Data.Nat.MinMax                      natural-minmax      development
+    #      Mathlib.Combinatorics.Enumerative.Stirling natural-stirling-numbers train
+    #      Mathlib.Data.Nat.Find                     natural-find-greatest held-out
+    #
+    #   B  ... with `natural-fib-and-bitwise` (Mathlib.Data.{Int,Nat}.Fib.Basic
+    #      + Mathlib.Data.Nat.Bitwise) at index 2 instead.
+    #
+    # The hypothesis that decided it -- that B's Fib/bitwise vocabulary would
+    # eat screening margin from the EXISTING held-out `natural-bit-decode` --
+    # was measured and is WRONG: under both layouts, zero existing held-out
+    # families' topic or vocabulary counts move at all. Recorded because it was
+    # the reason the choice looked like it mattered, and it does not.
+    #
+    # What DOES separate them is dispatch supply, measured over each drawn ten:
+    #
+    #   natural-stirling-numbers  1 of 10 closed-eval, 0 of 10 already in-env
+    #   natural-fib-and-bitwise   4 of 10 closed-eval (Int.fib_{neg_one,one,
+    #                             two,zero}), 1 already in-env (Nat.fib_add)
+    #
+    # Both sit in TRAIN, where contamination is a fast-closure feature rather
+    # than the ADR-0542 leak (ADR-0653), so neither is unlawful -- A simply
+    # buys 9 rows of real work where B buys 5. `natural-fib-and-bitwise`
+    # remains available for a later draw.
+    #
+    # THE INDEX-3 FAMILY IS `Mathlib.Data.Nat.Find` ALONE, deliberately. Its
+    # pool's rows 12 and 13 are `Nat.findGreatest_succ` and
+    # `Nat.findGreatest_zero` -- this definition's own two equations, both
+    # `refl` against our construction -- and they fall outside the drawn ten BY
+    # THE ALPHABET, with no module added or removed to put them there
+    # (ADR-1160 disclosed this; re-measured here, pool 15, drawn 0..9).
+    # Combining Find with any other module reshuffles the alphabet and would
+    # pull them in, so that combination must be re-screened before it is used.
+    #
+    # No target outcome was consulted. R6 re-derives the assignment from the
+    # module paths and R10 ties it to the preregistered one. Both held-out
+    # families carry a disclosure review in
+    # artifacts/autogenesis/holdout-adjacency-review-v1.json, written from the
+    # live sweep and from reading the named declarations against the drawn ten.
+    "natural-avg-pair": ("Batteries.Data.Nat.Bisect", "Mathlib.Data.Nat.Pairing"),
+    "natural-minmax": ("Init.Data.Nat.MinMax",),
+    "natural-stirling-numbers": ("Mathlib.Combinatorics.Enumerative.Stirling",),
+    "natural-find-greatest": ("Mathlib.Data.Nat.Find",),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -745,6 +807,21 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
     "natural-factorial-choose-and-squarefree": (
         "divisibility-library-application", "kernel-induction"),
     "natural-bit-decode": ("kernel-induction", "kernel-library-application"),
+    # --- draw 15, 2026-08-31 (ADR-1175) ---------------------------------------
+    # `Nat.avg a b = div (add a b) 2` and `Nat.pair` are closed-form Nat
+    # arithmetic whose ten rows are order facts, so induction plus ordinary
+    # library application; `Nat.min`/`Nat.max` likewise. `Nat.stirlingFirst`
+    # and `Nat.stirlingSecond` are two-argument structural recursions and their
+    # ten rows are the recurrence and its boundaries, so the recursive route.
+    # `Nat.findGreatest` is a `Nat.rec` over a `Decidable.byCases` branch, and
+    # eight of its ten rows are ordering/monotonicity facts reached by
+    # induction on the bound with the recursion unfolded once per step.
+    "natural-avg-pair": ("kernel-induction", "kernel-library-application"),
+    "natural-minmax": ("kernel-induction", "kernel-library-application"),
+    "natural-stirling-numbers": (
+        "kernel-induction", "recursive-function-reconstruction"),
+    "natural-find-greatest": (
+        "kernel-induction", "recursive-function-reconstruction"),
 }
 
 PER_FAMILY = 10

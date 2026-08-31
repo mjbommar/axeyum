@@ -137,6 +137,27 @@ fi
 # My first draft of this guard ran the formatter in --check mode and exited 0,
 # because by then the worktree was already formatted. It checked the wrong
 # thing. The state that matters is UNCOMMITTED, not UNFORMATTED.
+# THE CHEAP L0 GATES BELONG IN THE PRE-FLIGHT TOO. `hooks/pre-push` runs them,
+# correctly, and rejects at the END of a 545-second battery. Measured across
+# 2026-08-31 they rejected FOUR of my pushes -- three for unpinned settled facts
+# a lane had landed, once for a SLACK ratchet floor (achieved 1995, floor 1991,
+# which lets the next regression to 1991 pass silently).
+#
+# Every rejection was correct. The cost was the battery, not the finding. These
+# two run in well under a second combined, so there is no reason to learn about
+# them nine minutes in.
+if [ "${LANE_PUSH_SKIP_L0:-0}" != 1 ]; then
+  for g in scripts/check-settled-fact-statements.py scripts/check-holdout-closed-evaluation.py; do
+    [ -f "$g" ] || continue
+    if ! out=$(python3 "$g" 2>&1); then
+      echo "lane-push: DECLINING -- $g fails; the hook would reject this after the battery." >&2
+      printf '%s\n' "$out" | tail -4 | sed 's/^/  /' >&2
+      echo "  Fix it and re-push. LANE_PUSH_SKIP_L0=1 overrides." >&2
+      exit 1
+    fi
+  done
+fi
+
 if [ "${LANE_PUSH_ALLOW_DIRTY:-0}" != 1 ]; then
   dirty=$(git status --porcelain --untracked-files=no)
   if [ -n "$dirty" ]; then

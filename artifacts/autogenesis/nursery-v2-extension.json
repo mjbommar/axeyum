@@ -2,24 +2,24 @@
   "coverage": {
     "attested_cohort_entries": 409,
     "ceiling_authority": "ADR-0615 as amended by ADR-0616. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. The rule on THIS cohort is ADR-0601's 'scaffolding, never headline': the UNATTESTED population may never outweigh the attested one. It is counted by attestation, not by manifest membership -- an extension row Lean accepted as a proof-free axiom against the pinned Mathlib is on the attested side, by the same method and the same command that produced nursery-v1's accepted-214-proof-free-axiom-types. not_elaborable rows count as UNATTESTED: Lean refused them, so they are worse than unchecked and must never buy headroom. When this binds, attest (scripts/attest-nursery-surface.py) rather than raise it.",
-    "combined_evaluation_entries": 594,
-    "entries": 380,
-    "families": 38,
+    "combined_evaluation_entries": 634,
+    "entries": 420,
+    "families": 42,
     "partition_counts": {
-      "development": 150,
-      "held-out": 130,
-      "train": 100
+      "development": 160,
+      "held-out": 150,
+      "train": 110
     },
     "per_family": 10,
     "screen_rejections": {
       "already-catalogued": 134,
       "divergence-registry": 41,
       "held-out-construction": 14,
-      "hygienic-or-generated": 1109,
-      "not-statable-here": 2350
+      "hygienic-or-generated": 1151,
+      "not-statable-here": 2392
     },
     "unattested_cohort_ceiling": 409,
-    "unattested_cohort_entries": 185,
+    "unattested_cohort_entries": 225,
     "v1_evaluation_entries": 214
   },
   "cross_population_component_split_exemptions": [
@@ -5174,6 +5174,290 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "4af701ca86aaef6b68ab720c8945d0d7690532adc33d047d90f77940955a150f",
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "Nat.pair",
+        "instAddNat",
+        "instHAdd",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-add-le-pair-4af701ca",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Pairing",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Pairing",
+      "source_name": "Nat.add_le_pair",
+      "source_statement_sha256": "2d948d32fc5f72bfa7e045b37a5d57b974eea19ddefe534390d1b2e4b8e22ceb",
+      "statement": "∀ (m n : ℕ), m + n ≤ Nat.pair m n",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "7c5dd07e85511eed18b733091e556497c14893ce80119964b88b5a8c904f23a1",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.avg"
+      ],
+      "fact_id": "F:ml430-nat-avg-comm-7c5dd07e",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.avg_comm",
+      "source_statement_sha256": "f8f17b5413c9fb5564d192a1dd4e1d60bfb4ccef6944038dcada262fd43c3632",
+      "statement": "∀ (a b : ℕ), a.avg b = b.avg a",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "4a112778d2579bf3bd4f125ce1913a6f2f8d554008e2db30c45eb4ad8611e85f",
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.avg",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-avg-le-left-4a112778",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.avg_le_left",
+      "source_statement_sha256": "630a605e9c1c549b019b5a1e68cfc1c35747d34e57fc4a2cf8746e71221179b4",
+      "statement": "∀ {b a : ℕ}, b ≤ a → a.avg b ≤ a",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "9fa159da7af06b1ba30cdd31c663131bdac9633dd094ec01d100bb08a84e5239",
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.avg",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-avg-le-right-9fa159da",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.avg_le_right",
+      "source_statement_sha256": "f5cd119ab385524a6547c05ca442b9fb92e7a6cdfd7c1c40fee17e6d6245b4e1",
+      "statement": "∀ {a b : ℕ}, a ≤ b → a.avg b ≤ b",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "14dbe48e8acee196ba57bb0fc37f17e1d26fc5988712af627f8d43a21ff87195",
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.avg",
+        "instLTNat"
+      ],
+      "fact_id": "F:ml430-nat-avg-lt-left-14dbe48e",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.avg_lt_left",
+      "source_statement_sha256": "17c9ddfed22927ae93a12304532c5a3f341b27a6581152bd08b7092a2d1c9be6",
+      "statement": "∀ {b a : ℕ}, b < a → a.avg b < a",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "e1a68d05f97516018cd61ecf6abb6ef11f5a7665196915c5983bb3fa9df7de48",
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.avg",
+        "instLTNat"
+      ],
+      "fact_id": "F:ml430-nat-avg-lt-right-e1a68d05",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.avg_lt_right",
+      "source_statement_sha256": "21a39eff2efedac9330097116735bddb28b98e1a6db50fc1ea5cd84b39d27a5d",
+      "statement": "∀ {a b : ℕ}, a < b → a.avg b < b",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "210e3373ee335ddbc22d9a0568a80463834a682ff526bbb0b5af4f509fa15d9a",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "Nat.avg",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-le-add-one-of-avg-eq-left-210e3373",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.le_add_one_of_avg_eq_left",
+      "source_statement_sha256": "e8f65bcf43eb2e4fe98739e059115b41c0ebd7c6ba4b8c1c66b1b7203d025660",
+      "statement": "∀ {a b : ℕ}, a.avg b = a → b ≤ a + 1",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "58e5e606d2a194be0f879b8bc2960837473c8e5e977001d1cd70e36dd6e64c3e",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "LE.le",
+        "Nat",
+        "Nat.avg",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-le-add-one-of-avg-eq-right-58e5e606",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.le_add_one_of_avg_eq_right",
+      "source_statement_sha256": "72af35204f1b91a401b441052dd8a6d7405ed0ffdc23939d1c64f9452e756168",
+      "statement": "∀ {a b : ℕ}, a.avg b = b → a ≤ b + 1",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "5067bf7f85b4afe6b1d09eece902765af70db07ff8aef4bed6aa5f6e8984aa5b",
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.avg",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-le-avg-left-5067bf7f",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.le_avg_left",
+      "source_statement_sha256": "ac3cab7e184c3e3114982c496dd0b6c3e7e31a45d0183b2e0bac7dc98f65f8ab",
+      "statement": "∀ {a b : ℕ}, a ≤ b → a ≤ a.avg b",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "3a424d9ecc658e8e0b1036ac932328b70f2d7d37b9817c812be97ad85aa9eebe",
+      "constants": [
+        "LE.le",
+        "Nat",
+        "Nat.avg",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-le-avg-right-3a424d9e",
+      "family": "natural-avg-pair",
+      "fragment": "Nat",
+      "module": "Batteries.Data.Nat.Bisect",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-avg-pair:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Batteries.Data.Nat.Bisect",
+      "source_name": "Nat.le_avg_right",
+      "source_statement_sha256": "1a821f188d2949b113ea9ab7ef3a5b7c80bbbc456c7f21137147477771f1f3c9",
+      "statement": "∀ {b a : ℕ}, b ≤ a → b ≤ a.avg b",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "74d2c151202b9a6f91cc1bd136ed6d1c8e9805bb856a27f7205077f569081fe6",
       "constants": [
         "Eq",
@@ -8262,6 +8546,311 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "87c06f0fec11036b10c15a5efb141e446797a59ee8158b6d168c8b916f1fb46f",
+      "constants": [
+        "DecidablePred",
+        "Eq",
+        "Nat",
+        "Nat.findGreatest"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-eq-87c06f0f",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_eq",
+      "source_statement_sha256": "e662bbf4cafa5de3f09e3fa55c6cb4bf86ff60454bdfa0e1de05d7923d80a2d0",
+      "statement": "∀ {P : ℕ → Prop} [inst : DecidablePred P] {n : ℕ}, P n → Nat.findGreatest P n = n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "426770ce2fddd94cf3bf16c79e702731cfcbaf7f5677818f7ff044d9094824b2",
+      "constants": [
+        "And",
+        "DecidablePred",
+        "Eq",
+        "Iff",
+        "LE.le",
+        "LT.lt",
+        "Nat",
+        "Nat.findGreatest",
+        "Ne",
+        "Not",
+        "OfNat.ofNat",
+        "instLENat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-eq-iff-426770ce",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_eq_iff",
+      "source_statement_sha256": "d7ed3453abcac75c59cd04a272ac7d2aadf92ffb5acb1d62c2a7c654b7e8ef5c",
+      "statement": "∀ {m k : ℕ} {P : ℕ → Prop} [inst : DecidablePred P],\n  Nat.findGreatest P k = m ↔ m ≤ k ∧ (m ≠ 0 → P m) ∧ ∀ ⦃n : ℕ⦄, m < n → n ≤ k → ¬P n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "3498d51287b8cb9d32f5e4b4d9070d77eab9e91a5784dafad3c27b75dc2392b6",
+      "constants": [
+        "DecidablePred",
+        "Eq",
+        "Iff",
+        "LE.le",
+        "LT.lt",
+        "Nat",
+        "Nat.findGreatest",
+        "Not",
+        "OfNat.ofNat",
+        "instLENat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-eq-zero-iff-3498d512",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_eq_zero_iff",
+      "source_statement_sha256": "6f56ad554cc7ba3972eb7247dcb10f3297e0f081c081c2f5b8edcbc8ff765ab3",
+      "statement": "∀ {k : ℕ} {P : ℕ → Prop} [inst : DecidablePred P], Nat.findGreatest P k = 0 ↔ ∀ ⦃n : ℕ⦄, 0 < n → n ≤ k → ¬P n",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "27ee7d92f71e568d9c134342b24f96e52dd556412714c7bebf6f3a8dee1ac57c",
+      "constants": [
+        "DecidablePred",
+        "LE.le",
+        "LT.lt",
+        "Nat",
+        "Nat.findGreatest",
+        "Not",
+        "instLENat",
+        "instLTNat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-is-greatest-27ee7d92",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_is_greatest",
+      "source_statement_sha256": "3beb2e3651b4dc94a2429e6d65ddfd95b1e12d0d457120843f80a5499062479e",
+      "statement": "∀ {k : ℕ} {P : ℕ → Prop} [inst : DecidablePred P] {n : ℕ}, Nat.findGreatest P n < k → k ≤ n → ¬P k",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "8e41e6aaf7d317c663f15ce8ad1c9333d0fda699c4dd5e8fa7ece006431c842b",
+      "constants": [
+        "DecidablePred",
+        "LE.le",
+        "Nat",
+        "Nat.findGreatest",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-le-8e41e6aa",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_le",
+      "source_statement_sha256": "d66e97dadf006652e84f253f32fb6dcc5a4f6bb33150ec184a35607fb06e5e67",
+      "statement": "∀ {P : ℕ → Prop} [inst : DecidablePred P] (n : ℕ), Nat.findGreatest P n ≤ n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2566201e999040ab8721419457678bb8c16c85afe96e35cc08b7bb40908f0644",
+      "constants": [
+        "DecidablePred",
+        "LE.le",
+        "Nat",
+        "Nat.findGreatest",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-mono-2566201e",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_mono",
+      "source_statement_sha256": "8772377a7e59dd89a3c1d44222d78d29f14e654f436fcede5f300467e6683914",
+      "statement": "∀ {m : ℕ} {P Q : ℕ → Prop} [inst : DecidablePred P] {n : ℕ} [inst_1 : DecidablePred Q],\n  (∀ (n : ℕ), P n → Q n) → m ≤ n → Nat.findGreatest P m ≤ Nat.findGreatest Q n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "065903afa94e03142ba17ca92963d3b826581170af1f1fe84d4c0c61d476ada2",
+      "constants": [
+        "DecidablePred",
+        "LE.le",
+        "Nat",
+        "Nat.findGreatest",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-mono-left-065903af",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_mono_left",
+      "source_statement_sha256": "32469479053c357fa25615fc23f051e68c121e4e203dc123891eabe8e40cae2f",
+      "statement": "∀ {P Q : ℕ → Prop} [inst : DecidablePred P] [inst_1 : DecidablePred Q],\n  (∀ (n : ℕ), P n → Q n) → ∀ (n : ℕ), Nat.findGreatest P n ≤ Nat.findGreatest Q n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "8d67c0d3129ca1eef96bd03b45012c8844b9f9a01a02864dd8240f5e4baa0962",
+      "constants": [
+        "DecidablePred",
+        "LE.le",
+        "Nat",
+        "Nat.findGreatest",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-mono-right-8d67c0d3",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_mono_right",
+      "source_statement_sha256": "6fdcd75a22b2999297ca5f0a4c34ed26ac4af525f209c64e084da56e0251a378",
+      "statement": "∀ (P : ℕ → Prop) [inst : DecidablePred P] {m n : ℕ}, m ≤ n → Nat.findGreatest P m ≤ Nat.findGreatest P n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "04670c8716a677d7ae292bdaa1647f795f2907f43fabd5837c1846f4cef93cd3",
+      "constants": [
+        "DecidablePred",
+        "Eq",
+        "Nat",
+        "Nat.findGreatest",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-of-ne-zero-04670c87",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_of_ne_zero",
+      "source_statement_sha256": "a8da4a565ceb483ea060a065fab6e9b473e04429b1f982be08e4b9406de27d6c",
+      "statement": "∀ {m : ℕ} {P : ℕ → Prop} [inst : DecidablePred P] {n : ℕ}, Nat.findGreatest P n = m → m ≠ 0 → P m",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "0229e05de1707e2cc000eda4f34fe9a89c0af58556656b08f5db3eab8639f050",
+      "constants": [
+        "DecidablePred",
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.findGreatest",
+        "Not",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-findgreatest-of-not-0229e05d",
+      "family": "natural-find-greatest",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Find",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-find-greatest:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Find",
+      "source_name": "Nat.findGreatest_of_not",
+      "source_statement_sha256": "a0a5db28a81fff74288fe1c3d0813496a5834138924c53fb496d3dd33fec379f",
+      "statement": "∀ {P : ℕ → Prop} [inst : DecidablePred P] {n : ℕ}, ¬P (n + 1) → Nat.findGreatest P (n + 1) = Nat.findGreatest P n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "dd878a3fb6cdc026f2a772675b7d4371c09fda5c5685071f0fea2232bf9eb6f8",
       "constants": [
         "HDiv.hDiv",
@@ -9496,6 +10085,297 @@
       "source_statement_sha256": "7c993e1ac5785815d2c76870f0cd53596dbf278727a8864a06118371a1819fd8",
       "statement": "∀ {m n k : ℕ}, m ∣ k → n ∣ k → m.lcm n ∣ k",
       "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "37eb9f8d0fb4910f9216f154481c9908be49295d93c76d1f0fa8e6d75b7f60ac",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Max.max",
+        "Nat",
+        "Nat.instMax",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "fact_id": "F:ml430-nat-add-max-add-left-37eb9f8d",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.add_max_add_left",
+      "source_statement_sha256": "d210dadc48efb4f7a8a63c2604e4d1ac726c9fdeeae241713f6edd14e0c12319",
+      "statement": "∀ (a b c : ℕ), max (a + b) (a + c) = a + max b c",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "178bc31188336f3302c23b7da407da75e223008e6826bb539f4cd6decb821efc",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Max.max",
+        "Nat",
+        "Nat.instMax",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "fact_id": "F:ml430-nat-add-max-add-right-178bc311",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.add_max_add_right",
+      "source_statement_sha256": "341f7e5dc8802831df6c2636ace617a3609d5c7a394b87a57069eb91e027af77",
+      "statement": "∀ (a b c : ℕ), max (a + c) (b + c) = max a b + c",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "9728864eedeb931546bf15a94c0cda6a3ab9c35e6d5e43e0ecec77a62b93357f",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Min.min",
+        "Nat",
+        "instAddNat",
+        "instHAdd",
+        "instMinNat"
+      ],
+      "fact_id": "F:ml430-nat-add-min-add-left-9728864e",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.add_min_add_left",
+      "source_statement_sha256": "d177f4789371049076376697a37c4600b8822b4415cbea43ebb3dbe2e106f472",
+      "statement": "∀ (a b c : ℕ), min (a + b) (a + c) = a + min b c",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b483207e4672e4d79d4924ccf953544650391818c07a6582941cb6f14eb4eab4",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Min.min",
+        "Nat",
+        "instAddNat",
+        "instHAdd",
+        "instMinNat"
+      ],
+      "fact_id": "F:ml430-nat-add-min-add-right-b483207e",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.add_min_add_right",
+      "source_statement_sha256": "fa7fa486b76160ec2dd06cb3f6dd15cd2cc83353ed43e1df88efc1532c522573",
+      "statement": "∀ (a b c : ℕ), min (a + c) (b + c) = min a b + c",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "685a3331a058562e9a93026e03291e32b2d5861d83e239a730f9fcf027aa2261",
+      "constants": [
+        "LE.le",
+        "Max.max",
+        "Nat",
+        "Nat.instMax",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-le-max-left-685a3331",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.le_max_left",
+      "source_statement_sha256": "5e3d20bfe847bb3dbe5a730d022adca3c2a23f5a475f969f1f901d1598caf186",
+      "statement": "∀ (a b : ℕ), a ≤ max a b",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "3cd92fc9058b535d32eb8834dc19e3488b4988999218a715fa250bd894fd18d7",
+      "constants": [
+        "LE.le",
+        "Max.max",
+        "Nat",
+        "Nat.instMax",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-le-max-right-3cd92fc9",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.le_max_right",
+      "source_statement_sha256": "9508e7cff78bd2daae76105dbcafecca867e9612d550f11e20334b161828162c",
+      "statement": "∀ (a b : ℕ), b ≤ max a b",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "699045906dde64cb62c4a127a3489bd08831338af111fb2231601f5cc97828fd",
+      "constants": [
+        "And",
+        "Iff",
+        "LE.le",
+        "Min.min",
+        "Nat",
+        "instLENat",
+        "instMinNat"
+      ],
+      "fact_id": "F:ml430-nat-le-min-69904590",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.le_min",
+      "source_statement_sha256": "b35c3867345d280cc6562c41545338c753d75133bd49947df6d9a408590b0b02",
+      "statement": "∀ {a b c : ℕ}, a ≤ min b c ↔ a ≤ b ∧ a ≤ c",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "407ecd4be9cb2c6a3d2aa645bf8637b638d8b19b544732af01edc2ae7ef1b38f",
+      "constants": [
+        "LE.le",
+        "Min.min",
+        "Nat",
+        "instLENat",
+        "instMinNat"
+      ],
+      "fact_id": "F:ml430-nat-le-min-of-le-of-le-407ecd4b",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.le_min_of_le_of_le",
+      "source_statement_sha256": "053507d741dc04ab897a3e339d26a378cf8a74d461ff84fbfd5baf573717035a",
+      "statement": "∀ {a b c : ℕ}, a ≤ b → a ≤ c → a ≤ min b c",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "1a7930992214a8b46db36082db16e4f16a680d5299bf8c08cdf9f73d1bf2a2e5",
+      "constants": [
+        "And",
+        "Iff",
+        "LT.lt",
+        "Min.min",
+        "Nat",
+        "instLTNat",
+        "instMinNat"
+      ],
+      "fact_id": "F:ml430-nat-lt-min-1a793099",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.lt_min",
+      "source_statement_sha256": "433cd5c55ce002ecd0a9eadfabc077aeb13b25a9dd6f787509ee1105b17a30e3",
+      "statement": "∀ {a b c : ℕ}, a < min b c ↔ a < b ∧ a < c",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a9a3642bbc20131d05d01e956c7349abc066784979b2d7adf930544dabe6bf09",
+      "constants": [
+        "Eq",
+        "Max.max",
+        "Nat",
+        "Nat.instMax"
+      ],
+      "fact_id": "F:ml430-nat-max-comm-a9a3642b",
+      "family": "natural-minmax",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.MinMax",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-minmax:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.MinMax",
+      "source_name": "Nat.max_comm",
+      "source_statement_sha256": "560b92e1904c93da9f33570b17f03f1224049610e0c395b168e9cea2cfd6c853",
+      "statement": "∀ (a b : ℕ), max a b = max b a",
+      "statement_shape": "unconditional-equality"
     },
     {
       "answer_access": "withheld-during-episode",
@@ -11711,6 +12591,309 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "6f46764f4e0e828cefa19e1faba00aeb801281355d4bc226f62de9af606cf034",
+      "constants": [
+        "Eq",
+        "LT.lt",
+        "Nat",
+        "Nat.stirlingFirst",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-eq-zero-of-lt-6f46764f",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_eq_zero_of_lt",
+      "source_statement_sha256": "4f25fda8d8202412f54cb97a0524549f11e883336477dcae52904443063eaac7",
+      "statement": "∀ {n k : ℕ}, n < k → n.stirlingFirst k = 0",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "84dfc3711cfd8b44328c4c13d4a6724daf9c12e693a2ada06fa8f342326cddcb",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.factorial",
+        "Nat.stirlingFirst",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-one-right-84dfc371",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_one_right",
+      "source_statement_sha256": "19d507c6e5c608f5f748deadd92ce1e6ec3e811333f2e196f41e4b5e8767306a",
+      "statement": "∀ (n : ℕ), (n + 1).stirlingFirst 1 = n.factorial",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "4d06a0eb05964e6c8def00cfbfd936e8b3a86ee7fe8cfa093f8afab5cb4e9e0e",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.stirlingFirst",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-self-4d06a0eb",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_self",
+      "source_statement_sha256": "9602f2cdffa7c3631c6127567c06137987f4c0f9ebd69e2bc206813db99bef19",
+      "statement": "∀ (n : ℕ), n.stirlingFirst n = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "135bbfbf18f44c0c3ed5a609dc63bedb80e2e98084fb846e82e487e2de4a9a22",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.choose",
+        "Nat.stirlingFirst",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_succ_self_left",
+      "source_statement_sha256": "dd07f71bfbf5b2388dd12a271fdd406e4a04145aebce87bd33779dcbb2f2075d",
+      "statement": "∀ (n : ℕ), (n + 1).stirlingFirst n = (n + 1).choose 2",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "61c947387eb2274f94d343081994d875bde11e3f73ecdc49bdef5ffac78abf30",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.stirlingFirst",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instHMul",
+        "instMulNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-succ-succ-61c94738",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_succ_succ",
+      "source_statement_sha256": "da44e5baacc937a549b52770871e72ca9f9368347d524171eb680cbe8d7b011c",
+      "statement": "∀ (n k : ℕ), (n + 1).stirlingFirst (k + 1) = n * n.stirlingFirst (k + 1) + n.stirlingFirst k",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a58c6f3c6e669e4c323020c11d96490853bf0480069e0aea500607a38d636d03",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.stirlingFirst",
+        "Nat.succ",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-succ-zero-a58c6f3c",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_succ_zero",
+      "source_statement_sha256": "d5d00110a38c8e865472aed7bf145963dab94ebd7433006a269a792358ecd392",
+      "statement": "∀ (n : ℕ), n.succ.stirlingFirst 0 = 0",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "ae5f493902981070aaee37f81296e480d6827f2b7bb46a3636113a94d2ad2a46",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.stirlingFirst",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-zero-ae5f4939",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_zero",
+      "source_statement_sha256": "c27a4370868880bb66d6f91371538e95af54f5ad156daaa97220795621286a1f",
+      "statement": "Nat.stirlingFirst 0 0 = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "d25889f30ad462da7f442554c8097a19d55983b4dc104e462b03ea749bbf6b89",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.stirlingFirst",
+        "Nat.succ",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingfirst-zero-succ-d25889f3",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingFirst_zero_succ",
+      "source_statement_sha256": "fad62286ff19eee353e5fa19c7138af2d896ff7af597f230c638a469ec478f63",
+      "statement": "∀ (k : ℕ), Nat.stirlingFirst 0 k.succ = 0",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "f3caf8bdf45184943e39c1eb9c4bc8814ef03871eb84ca6c51c185b1bce215ae",
+      "constants": [
+        "Eq",
+        "LT.lt",
+        "Nat",
+        "Nat.stirlingSecond",
+        "OfNat.ofNat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingsecond-eq-zero-of-lt-f3caf8bd",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingSecond_eq_zero_of_lt",
+      "source_statement_sha256": "ce9188c22bdc346686a227193a5d7a91b9f3fb1f9d3dcb4f4da75773ebf2835a",
+      "statement": "∀ {n k : ℕ}, n < k → n.stirlingSecond k = 0",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "ef2ad447cfe2937dec9e22c348c9704ba21602b219bec2f19e69b15cd1fda0c0",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.stirlingSecond",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-stirlingsecond-one-right-ef2ad447",
+      "family": "natural-stirling-numbers",
+      "fragment": "Nat",
+      "module": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-stirling-numbers:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Combinatorics.Enumerative.Stirling",
+      "source_name": "Nat.stirlingSecond_one_right",
+      "source_statement_sha256": "10f590a953ecad2e156f0825d6c36ae09618757e0d842c0c81f221171a5b2155",
+      "statement": "∀ (n : ℕ), (n + 1).stirlingSecond 1 = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "3642bf3114902b63e481ec3cdaca4623e69974bafdd5968161aa65bf9d71408a",
       "constants": [
         "Dvd.dvd",
@@ -12339,7 +13522,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "45f79e276f2838c28194ae50eb37c9825b2e001685b46167cdf1b400517cc597",
+  "extension_sha256": "1150659bbc82c62b77179beeae965682437b2275e7359580b2ecffd069618501",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
@@ -12398,6 +13581,10 @@
       "Mathlib.Algebra.Group.Int.Even",
       "Mathlib.Algebra.Ring.Int.Parity"
     ],
+    "natural-avg-pair": [
+      "Batteries.Data.Nat.Bisect",
+      "Mathlib.Data.Nat.Pairing"
+    ],
     "natural-basic-arithmetic": [
       "Init.Data.Nat.Basic",
       "Init.Data.Nat.Lemmas"
@@ -12442,6 +13629,9 @@
       "Mathlib.Data.Nat.Factorial.Basic",
       "Mathlib.Data.Nat.Squarefree"
     ],
+    "natural-find-greatest": [
+      "Mathlib.Data.Nat.Find"
+    ],
     "natural-gcd-algorithm": [
       "Init.Data.Nat.Gcd"
     ],
@@ -12455,6 +13645,9 @@
     ],
     "natural-lcm": [
       "Init.Data.Nat.Lcm"
+    ],
+    "natural-minmax": [
+      "Init.Data.Nat.MinMax"
     ],
     "natural-modulus": [
       "Init.Data.Nat.Mod"
@@ -12477,6 +13670,9 @@
     ],
     "natural-prime-characterizations": [
       "Mathlib.Data.Nat.Prime.Defs"
+    ],
+    "natural-stirling-numbers": [
+      "Mathlib.Combinatorics.Enumerative.Stirling"
     ],
     "natural-totient": [
       "Mathlib.Data.Nat.Totient"
@@ -12502,6 +13698,7 @@
     "integer-order": "development",
     "integer-order-inequalities": "train",
     "integer-parity": "train",
+    "natural-avg-pair": "held-out",
     "natural-basic-arithmetic": "train",
     "natural-bit-decode": "development",
     "natural-bitwise-basics": "development",
@@ -12512,10 +13709,12 @@
     "natural-division": "train",
     "natural-elementary-bounds": "held-out",
     "natural-factorial-choose-and-squarefree": "train",
+    "natural-find-greatest": "held-out",
     "natural-gcd-algorithm": "train",
     "natural-gcd-and-bitwise-basics": "development",
     "natural-induction-and-divisibility": "held-out",
     "natural-lcm": "development",
+    "natural-minmax": "development",
     "natural-modulus": "train",
     "natural-nth-root": "held-out",
     "natural-nth-selector": "held-out",
@@ -12523,13 +13722,14 @@
     "natural-parity": "development",
     "natural-prime-arithmetic": "development",
     "natural-prime-characterizations": "train",
+    "natural-stirling-numbers": "train",
     "natural-totient": "development",
     "range-induction": "held-out"
   },
   "kind": "axeyum-autogenesis-nursery-extension",
   "limitations": [
     "Lean surface propositions are not Axeyum kernel-core terms.",
-    "195 of 380 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 182 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
+    "195 of 420 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 222 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
     "Attestation does not make this an evaluation population equivalent to nursery-v1's. v1 freezes partitions against declared dependency weak components (policy.split_component_authority); here source_group is the Mathlib defining module and no dependency-component analysis was run, so a held-out row can share a component with a dispatchable one and nothing in this manifest sees it. Attestation grades the STATEMENT; this is a property of the ROW.",
     "Any depends_on on these facts is ledger-owned and accrued after the fact (ADR-0615), never the preregistered component analysis above.",
     "Mathlib declarations remain external prior art and every Axeyum fact here remains open."
@@ -12551,6 +13751,7 @@
     "integer-order": "development",
     "integer-order-inequalities": "train",
     "integer-parity": "train",
+    "natural-avg-pair": "held-out",
     "natural-basic-arithmetic": "train",
     "natural-bit-decode": "held-out",
     "natural-bitwise-basics": "development",
@@ -12561,10 +13762,12 @@
     "natural-division": "train",
     "natural-elementary-bounds": "held-out",
     "natural-factorial-choose-and-squarefree": "train",
+    "natural-find-greatest": "held-out",
     "natural-gcd-algorithm": "train",
     "natural-gcd-and-bitwise-basics": "development",
     "natural-induction-and-divisibility": "held-out",
     "natural-lcm": "development",
+    "natural-minmax": "development",
     "natural-modulus": "train",
     "natural-nth-root": "held-out",
     "natural-nth-selector": "held-out",
@@ -12572,6 +13775,7 @@
     "natural-parity": "held-out",
     "natural-prime-arithmetic": "development",
     "natural-prime-characterizations": "train",
+    "natural-stirling-numbers": "train",
     "natural-totient": "development",
     "range-induction": "held-out"
   },
@@ -12636,6 +13840,10 @@
       "kernel-library-application",
       "modular-arithmetic-reconstruction"
     ],
+    "natural-avg-pair": [
+      "kernel-induction",
+      "kernel-library-application"
+    ],
     "natural-basic-arithmetic": [
       "kernel-induction",
       "kernel-library-application"
@@ -12676,6 +13884,10 @@
       "divisibility-library-application",
       "kernel-induction"
     ],
+    "natural-find-greatest": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
     "natural-gcd-algorithm": [
       "divisibility-library-application",
       "kernel-induction"
@@ -12691,6 +13903,10 @@
     "natural-lcm": [
       "divisibility-library-application",
       "kernel-induction"
+    ],
+    "natural-minmax": [
+      "kernel-induction",
+      "kernel-library-application"
     ],
     "natural-modulus": [
       "kernel-induction",
@@ -12719,6 +13935,10 @@
     "natural-prime-characterizations": [
       "divisibility-library-application",
       "kernel-induction"
+    ],
+    "natural-stirling-numbers": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
     ],
     "natural-totient": [
       "divisibility-library-application",
@@ -13055,6 +14275,11 @@
       "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
       "F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb",
       "F:ml430-nat-add-factorial-succ-lt-factorial-add-succ-ec0fa8d3",
+      "F:ml430-nat-add-le-pair-4af701ca",
+      "F:ml430-nat-add-max-add-left-37eb9f8d",
+      "F:ml430-nat-add-max-add-right-178bc311",
+      "F:ml430-nat-add-min-add-left-9728864e",
+      "F:ml430-nat-add-min-add-right-b483207e",
       "F:ml430-nat-add-mul-lt-mul-of-lt-of-lt-4d1d3fbc",
       "F:ml430-nat-add-one-mul-choose-eq-d364de16",
       "F:ml430-nat-and-assoc-273b60d8",
@@ -13068,6 +14293,11 @@
       "F:ml430-nat-and-or-distrib-right-0daaa284",
       "F:ml430-nat-and-self-06a84ccc",
       "F:ml430-nat-ascfactorial-eq-div-87d768e8",
+      "F:ml430-nat-avg-comm-7c5dd07e",
+      "F:ml430-nat-avg-le-left-4a112778",
+      "F:ml430-nat-avg-le-right-9fa159da",
+      "F:ml430-nat-avg-lt-left-14dbe48e",
+      "F:ml430-nat-avg-lt-right-e1a68d05",
       "F:ml430-nat-bit-add-b1edcc8e",
       "F:ml430-nat-bit-add-d487108f",
       "F:ml430-nat-bit-false-zero-d996adbf",
@@ -13118,12 +14348,32 @@
       "F:ml430-nat-fermatnumber-strictmono-acbcb8c6",
       "F:ml430-nat-fermatnumber-two-3aa3bfc4",
       "F:ml430-nat-fermatnumber-zero-ca7aac67",
+      "F:ml430-nat-findgreatest-eq-87c06f0f",
+      "F:ml430-nat-findgreatest-eq-iff-426770ce",
+      "F:ml430-nat-findgreatest-eq-zero-iff-3498d512",
+      "F:ml430-nat-findgreatest-is-greatest-27ee7d92",
+      "F:ml430-nat-findgreatest-le-8e41e6aa",
+      "F:ml430-nat-findgreatest-mono-2566201e",
+      "F:ml430-nat-findgreatest-mono-left-065903af",
+      "F:ml430-nat-findgreatest-mono-right-8d67c0d3",
+      "F:ml430-nat-findgreatest-of-ne-zero-04670c87",
+      "F:ml430-nat-findgreatest-of-not-0229e05d",
       "F:ml430-nat-forall-ne-zero-iff-37819136",
+      "F:ml430-nat-le-add-one-of-avg-eq-left-210e3373",
+      "F:ml430-nat-le-add-one-of-avg-eq-right-58e5e606",
+      "F:ml430-nat-le-avg-left-5067bf7f",
+      "F:ml430-nat-le-avg-right-3a424d9e",
+      "F:ml430-nat-le-max-left-685a3331",
+      "F:ml430-nat-le-max-right-3cd92fc9",
+      "F:ml430-nat-le-min-69904590",
+      "F:ml430-nat-le-min-of-le-of-le-407ecd4b",
       "F:ml430-nat-le-nth-of-lt-nth-succ-6d69133f",
       "F:ml430-nat-le-nthroot-iff-82e243be",
       "F:ml430-nat-le-succ-iff-eq-or-le-0cd6331b",
       "F:ml430-nat-le-zero-eq-336b502d",
+      "F:ml430-nat-lt-min-1a793099",
       "F:ml430-nat-lt-pow-nthroot-add-one-7442ac90",
+      "F:ml430-nat-max-comm-a9a3642b",
       "F:ml430-nat-modeq-add-1561afa8",
       "F:ml430-nat-modeq-add-iff-left-b719aac5",
       "F:ml430-nat-modeq-add-iff-right-84daa45f",
@@ -13181,6 +14431,16 @@
       "F:ml430-nat-size-le-size-c4b98f53",
       "F:ml430-nat-size-one-e23e5f71",
       "F:ml430-nat-squarefree-ext-iff-7218327d",
+      "F:ml430-nat-stirlingfirst-eq-zero-of-lt-6f46764f",
+      "F:ml430-nat-stirlingfirst-one-right-84dfc371",
+      "F:ml430-nat-stirlingfirst-self-4d06a0eb",
+      "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf",
+      "F:ml430-nat-stirlingfirst-succ-succ-61c94738",
+      "F:ml430-nat-stirlingfirst-succ-zero-a58c6f3c",
+      "F:ml430-nat-stirlingfirst-zero-ae5f4939",
+      "F:ml430-nat-stirlingfirst-zero-succ-d25889f3",
+      "F:ml430-nat-stirlingsecond-eq-zero-of-lt-f3caf8bd",
+      "F:ml430-nat-stirlingsecond-one-right-ef2ad447",
       "F:ml430-nat-sum-four-squares-5cfacf06"
     ]
   },
