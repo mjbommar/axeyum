@@ -150,6 +150,7 @@ mod clog;
 mod coprime_lemmas;
 mod count_range_permute;
 mod count_range_reversal;
+mod draw11_mirrors;
 mod crt;
 mod defs;
 mod desc_factorial;
@@ -271,6 +272,7 @@ use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
+use draw11_mirrors::declare_draw11_mirrors_all;
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
     declare_count_range_product,
@@ -4663,6 +4665,22 @@ pub struct NatPrelude {
     /// LLPO the analysis row 2s (`creal/ivt_boundary.rs`,
     /// `creal/extreme_value.rs`) reach. See `least_number.rs`.
     pub lnp_unrestricted_implies_em: NameId,
+
+    // -- `draw11-theorems-b` lane: `draw11_mirrors.rs` --
+    /// `Nat.coprime_dvd_mul_left : ∀ k m n, Eq (gcd k m) 1 → Iff (dvd k (mul
+    /// m n)) (dvd k n)` — mirrors `Nat.Coprime.dvd_mul_left`.
+    pub coprime_dvd_mul_left: NameId,
+    /// `Nat.coprime_dvd_mul_right : ∀ k m n, Eq (gcd k n) 1 → Iff (dvd k
+    /// (mul m n)) (dvd k m)` — mirrors `Nat.Coprime.dvd_mul_right`.
+    pub coprime_dvd_mul_right: NameId,
+    /// `Nat.coprime_eq_of_mul_eq_zero : ∀ m n, Eq (gcd m n) 1 → Eq (mul m n)
+    /// 0 → Or (And (Eq m 0) (Eq n 1)) (And (Eq m 1) (Eq n 0))` — mirrors
+    /// `Nat.Coprime.eq_of_mul_eq_zero`.
+    pub coprime_eq_of_mul_eq_zero: NameId,
+    /// `Nat.add_one_mul_choose_eq : ∀ n k, Eq (mul (succ n) (choose n k))
+    /// (mul (choose (succ n) (succ k)) (succ k))` — mirrors
+    /// `Nat.add_one_mul_choose_eq`.
+    pub add_one_mul_choose_eq: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5563,6 +5581,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lnp_decidable: kernel.name_str(nat, "lnp_decidable"),
             em_implies_lnp: kernel.name_str(nat, "em_implies_lnp"),
             lnp_unrestricted_implies_em: kernel.name_str(nat, "lnp_unrestricted_implies_em"),
+            coprime_dvd_mul_left: kernel.name_str(nat, "coprime_dvd_mul_left"),
+            coprime_dvd_mul_right: kernel.name_str(nat, "coprime_dvd_mul_right"),
+            coprime_eq_of_mul_eq_zero: kernel.name_str(nat, "coprime_eq_of_mul_eq_zero"),
+            add_one_mul_choose_eq: kernel.name_str(nat, "add_one_mul_choose_eq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -6355,6 +6377,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // screen, paired with `Nat.nthRoot` above (ADR-0762/ADR-0830).
         // Nothing needs it, so it goes last.
         declare_squarefree_all(&mut d, &p)?;
+        // `draw11-theorems-b` lane mirrors (`draw11_mirrors.rs`): needs
+        // `gauss_lemma`/`dvd_mul`/`dvd_trans`/`mul_comm` (`declare_lcm`/
+        // `declare_gauss_lemma`/`declare_divisibility`, far above),
+        // `gcd_zero_left`/`gcd_comm` (`declare_gcd_semantics`/
+        // `declare_gcd_comm`, far above), `mul_eq_zero`
+        // (`declare_mul_no_zero_divisors`, far above) and
+        // `succ_mul_choose_eq` (`declare_succ_mul_choose_eq`, above).
+        // Nothing later needs it, so it goes last.
+        declare_draw11_mirrors_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
