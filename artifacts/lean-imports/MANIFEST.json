@@ -76,8 +76,38 @@
       "admitted_declarations": 52,
       "fact": null,
       "purpose": "Capability regression fixture, NOT the evidence for a fact. `Nat.add_comm` is already proved in our own kernel (`F:nat-add-comm`, proof_route kernel-lean, and it is one of the 119 theorems `nat_theorem_inventory` prints), so importing it adds no proposition to the ledger -- the same check that made the previous lane withdraw an imported `Nat.not_succ_le_zero`. What it does pin is a kernel capability: this stream is the `Nat.brecOn`/`Nat.below`/`Nat.add.match_1`/`Nat.add._f` compilation of structural recursion, and until `Proj`/`Proj` congruence landed in `def_eq` our kernel could not admit it at all. See crates/axeyum-lean-import/tests/brecon_reduction.rs."
+    },
+    {
+      "file": "ivt-intermediate-value-icc.ndjson",
+      "declaration": "intermediate_value_Icc",
+      "sha256": "4b56ae00ec5f292e371b22e1b2045c001220eac93e6ff9eb6f562e35a04a63ce",
+      "bytes": 9939277,
+      "records": 3142,
+      "admitted_declarations": 3585,
+      "fact": "F:ivt-mathlib-import-intermediate-value-icc",
+      "purpose": "ADR-0603 row 4 (labeled import) for IVT. The FIRST stream in this corpus sourced from Mathlib rather than Lean's own `Init`/`Std` -- exported with the full transitive dependency closure of `intermediate_value_Icc` at mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (general topology: `ConditionallyCompleteLinearOrder`, `OrderTopology`, `DenselyOrdered`, `ContinuousOn`, `Set.image`, ...). All 3585 admitted declarations pass `Kernel::add_declaration` with ZERO declines."
+    },
+    {
+      "file": "evt-is-compact-exists-is-max-on.ndjson",
+      "declaration": "IsCompact.exists_isMaxOn",
+      "sha256": "79141bd00f29dad5c049b320d0dbaf425c6ac87d120d7825665d95129ed639d8",
+      "bytes": 6168964,
+      "records": 2171,
+      "admitted_declarations": 2486,
+      "fact": "F:evt-mathlib-import-compact-exists-is-max-on",
+      "purpose": "ADR-0603 row 4 (labeled import) for EVT. Sourced from Mathlib, same commit as the IVT stream above -- full transitive dependency closure of `IsCompact.exists_isMaxOn` (`IsCompact`, `ClosedIciTopology`, `IsMaxOn`, ...). All 2486 admitted declarations pass `Kernel::add_declaration` with ZERO declines."
     }
   ],
+  "reproduction_mathlib": {
+    "command": "lake env <lean4export binary> <Module> -- <Declaration> > <name>.ndjson",
+    "working_directory": "a mathlib4 checkout at the pinned commit (scripts/provision-lean-import-toolchain.sh), with lean4export built against the same toolchain",
+    "modules": [
+      "Mathlib.Topology.Order.IntermediateValue",
+      "Mathlib.Topology.Order.Compact"
+    ],
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "notes": "Unlike the Init-only streams above, these two need a full mathlib4 build (oleans) and the module argument tells lean4export which file's namespace to resolve the declaration in; the exporter still emits only the requested constant's transitive dependency closure, not the whole module."
+  },
   "checked_by": [
     "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture",
     "scripts/check-imported-fact-lean-axioms.sh"

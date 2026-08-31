@@ -70,6 +70,26 @@ nothing on our side to run it against. §2 below is left as the audit wrote
 it, since it was an accurate account of the ledger and of a mis-aimed name
 search at the time; read it with this note in mind, not as current.
 
+**Correction, 2026-08-31 (lane `row4-labeled-import`, see
+[ADR-1090](../research/09-decisions/adr-1090-ivt-evt-row-4-labeled-import-lands-mathlib-topology-admits-clean.md)).**
+Row 4 (labeled import) was the only row ABSENT for either theorem. It now
+exists for both: `F:ivt-mathlib-import-intermediate-value-icc` and
+`F:evt-mathlib-import-compact-exists-is-max-on`, `proof_route:
+imported-kernel-lean`, sourced from Mathlib at this document's own pinned
+commit rather than invented. `lean4export`'s FULL transitive dependency
+closure of each theorem — 3,142 and 2,171 declaration records, the entire
+general-topology chain both proofs rest on — is admitted by
+`Kernel::add_declaration` with **zero declines**, answering a question this
+document's §3 left open (whether the import pipeline, exercised so far only
+on small `Init` lemmas, could handle a Mathlib-scale closure at all: it can).
+Axiom footprint cross-checked against a real `lean 4.30.0` binary
+independently of the kernel: `[propext, Classical.choice, Quot.sound]` for
+both, matching §3 below exactly. Neither fact is counted as ours or
+axiom-free — ADR-1090 has the full account. The table in §"Summary" below is
+updated; the per-row detail sections ("Row 4 — absent") are left as written,
+with this note, for the same reason the other stale sections above are kept
+rather than rewritten.
+
 ## Summary
 
 The standing goal is: *confirm that the architecture makes results like IVT and
@@ -83,7 +103,7 @@ different for the two theorems**:
 | ADR-0603 row 1 — general constructive form | **present** (`CReal.ivt_approx`) | **present as of 2026-08-30** (`CReal.evt_approx_max`, ADR-0895 — was reported ABSENT here and in ADR-0692, both searching for a name, `CReal.supOn_upper_bound`, that never existed) |
 | row 2 — boundary refutation | **present**, with hypothesis class proved and a discriminating non-vacuity check | **present**, hypothesis class proved, **but no non-vacuity evidence in the ledger** |
 | row 3 — decidable-fragment exact form | present, and the substantive half is `cas-internal` | present, and the substantive half is `cas-internal` |
-| row 4 — labeled import | **ABSENT** | **ABSENT** |
+| row 4 — labeled import | **present as of 2026-08-31** (`F:ivt-mathlib-import-intermediate-value-icc`, ADR-1090) | **present as of 2026-08-31** (`F:evt-mathlib-import-compact-exists-is-max-on`, ADR-1090) |
 
 **IVT is defensibly Pareto-positioned. EVT is not — but the reason is now a
 bookkeeping one, NOT the structural one this paragraph used to assert.**
@@ -117,8 +137,9 @@ that carries the Pareto claim.
 **What actually remains for EVT**, from the table above rather than from prose:
 row 2 is present with its hypothesis class proved but carries **no non-vacuity
 evidence in the ledger** — so nothing rules out its being a refutation of an
-empty class — and row 4 (labeled import) is ABSENT for EVT *and* for IVT. Those
-are closable tasks. Neither is the structural absence claimed here before.
+empty class. Row 4 (labeled import) is now present for EVT *and* IVT as of
+2026-08-31 (ADR-1090); row 2's non-vacuity gap remains the one closable task
+here.
 
 ## Method, and a correction to the survey this lane was given
 
@@ -316,7 +337,12 @@ One further caveat on the substance gate itself: for all of these rows the
 certificate artifact to derive from. The gate checks the block's validity, not
 the shape's truth.
 
-### Row 4 — absent
+### Row 4 — absent (STALE as of 2026-08-31; see ADR-1090)
+
+`F:ivt-mathlib-import-intermediate-value-icc` now exists — Mathlib's own
+`intermediate_value_Icc`, imported with its full dependency closure, labeled
+`imported-kernel-lean`, never counted as ours. What follows is kept verbatim
+as an accurate record of the ledger at the time this section was written.
 
 Zero facts in the ledger mention `intermediate_value` or `exists_isMaxOn`. Five
 facts carry `proof_route = "imported-kernel-lean"`; none is analytic.
@@ -482,7 +508,11 @@ ADR-0603's row 3 "decidable-fragment exact form" the right name for it. But
 the two rows are stating opposite-looking things about EVT and neither fact
 cross-references the other.
 
-### Row 4 — absent.
+### Row 4 — absent. (STALE as of 2026-08-31; see ADR-1090)
+
+`F:evt-mathlib-import-compact-exists-is-max-on` now exists — Mathlib's own
+`IsCompact.exists_isMaxOn`, imported with its full dependency closure, same
+shape and same date as the IVT row above.
 
 ## 3. What Mathlib actually says at `c5ea0035…`
 

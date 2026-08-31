@@ -46,9 +46,10 @@
       "supports": "axiom_footprint: the imported proof term's trusted-declaration footprint inside the imported environment, plus the three import-route assumptions this route always carries.",
       "check_status": "checked",
       "checkers": [
-        "Kernel::axiom_footprint (our kernel, over the imported environment)"
+        "Kernel::axiom_footprint (our kernel, over the imported environment)",
+        "lean 4.30.0 #print axioms (the source system, independently, via lake env inside the pinned mathlib4 checkout)"
       ],
-      "checker_command": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -c 'AXEYUM-IMPORT-FACT|F:evt-mathlib-import-compact-exists-is-max-on|'",
+      "checker_command": "scripts/check-imported-fact-lean-axioms.sh \"IsCompact.exists_isMaxOn\"",
       "notes": "`Kernel::axiom_footprint` over the imported environment reports [Classical.choice, Quot, Quot.lift, Quot.mk, Quot.sound, String.Internal.append, propext, wrapped._@.Mathlib.Topology.Defs.Filter.2998874748._hygCtx._hyg.2] -- eight names, not Lean's own three (`#print axioms` reports [propext, Classical.choice, Quot.sound] for both theorems at this pinned commit, per docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md section 3). The extra five are this kernel's finer-grained classification of the Quotient package (Quot itself, Quot.lift and Quot.mk alongside Quot.sound -- documented in fact.schema.json's proof_route field as 'must not be silently reconciled to Lean's'), plus two names this specific dependency closure reaches that the three hand-picked Init/Std imports never did: a String.Internal.append opaque and a wrapped._@.Mathlib.Topology.Defs.Filter opaque wrapper from a well-founded-recursion definition somewhere in the Filter machinery both theorems' proofs transitively use. Neither is a defect in the translation; both are real trusted declarations Mathlib's own proof rests on for this statement, and Kernel::axiom_footprint is reporting them faithfully. The first three entries in this array are the assumptions the IMPORT ROUTE adds on top: that the exporter faithfully rendered Lean's environment, that this crate's NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export (format 3.1 has no footer, so completion is relative to the bytes handed over)."
     }
   ],
