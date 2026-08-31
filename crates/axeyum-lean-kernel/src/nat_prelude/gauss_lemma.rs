@@ -1246,4 +1246,35 @@ mod tests {
             "the closed form's two sides must agree at m := 3"
         );
     }
+
+    /// Independent Rust-side recomputation for
+    /// `least_residue_injective_of_coprime` -- re-run, not inherited, per
+    /// this repository's standing rule that a "verified numerically" claim
+    /// must be re-executed. At `pp := 7, a := 3` (coprime), the least-residue
+    /// map `k ↦ (a*k) mod pp` is injective on `{0,…,6}` -- brute force.
+    /// Negative control: at `a := pp` (NOT coprime, `gcd(7,7)=7≠1`), the map
+    /// collapses -- `k=1` and `k=2` collide -- confirming the coprimality
+    /// hypothesis is genuinely load-bearing, not vacuous.
+    #[test]
+    fn least_residue_map_is_injective_at_a_coprime_witness_and_collides_without_coprimality() {
+        let pp: u32 = 7;
+        let a: u32 = 3;
+        let residues: Vec<u32> = (0..pp).map(|k| (a * k) % pp).collect();
+        let mut sorted = residues.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            residues.len(),
+            "leastResidue(pp:=7, a:=3, ·) must be injective on [0,7) -- gcd(3,7)=1"
+        );
+
+        let a_bad: u32 = 7; // gcd(7,7) = 7, not coprime to pp
+        assert_eq!(
+            (a_bad * 1) % pp,
+            (a_bad * 2) % pp,
+            "negative control: without coprimality the map collides at k=1,k=2 \
+             (both give residue 0) -- the coprimality hypothesis is not vacuous"
+        );
+    }
 }
