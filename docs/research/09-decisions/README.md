@@ -762,3 +762,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1005](adr-1005-extraction-verified-subjects-bound-two-wrong-three-guards-newly-red.md) | 660 kernel-lean settled facts whose subject came from | accepted |
 | [1015](adr-1015-gauss-lemma-pairing-injectivity-lands-mapsinto-and-shift-wrapper-precisely-sized.md) | `Nat.gauss_fold_injective_of_coprime : ∀ m a k k', gcd a | accepted |
 | [1025](adr-1025-euler-theorem-item-2-closed-item-1-cheaper-than-sized.md) | Of the three pieces `docs/plan/status/374-euler-theorem.md` | accepted |
+| [1045](adr-1045-draw-12-is-declined-a-clean-second-family-was-not-found.md) | Refreshed the environment snapshot (2507 -> 2552 declarations) | accepted |
