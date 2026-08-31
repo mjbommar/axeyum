@@ -76,7 +76,7 @@ pub fn cross_isa_absolute_value_report() -> Result<CrossIsaAbsoluteValueReport, 
         (-1_i64).cast_unsigned(),
         (-7_i64).cast_unsigned(),
         0xffff_ffff_0000_0000,
-        u64::MAX,
+        0x8000_0000_0000_0001,
     ];
     let cases = inputs
         .into_iter()
