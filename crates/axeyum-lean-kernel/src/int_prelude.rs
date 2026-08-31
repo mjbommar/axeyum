@@ -88,6 +88,7 @@ mod euclid;
 mod euler;
 mod euler_theorem;
 mod euler_totient;
+mod exists_gcd_one;
 mod fibonacci;
 mod gcd;
 mod gcd_dvd_iff;
@@ -1418,6 +1419,19 @@ pub struct IntPrelude {
     /// Mathlib v4.30's `Int.gcd_dvd_iff`. Closes
     /// `F:ml430-int-gcd-dvd-iff-66fa03b3`. See `int_prelude::gcd_dvd_iff`.
     pub gcd_dvd_iff: NameId,
+    /// `exists_gcd_one : ∀ m n, Lt zero (gcd m n) → Exists (fun m' => Exists
+    /// (fun n' => And (Eq Nat (gcd m' n') 1) (And (Eq Int m (m'*ofNat (gcd m
+    /// n))) (Eq Int n (n'*ofNat (gcd m n))))))` -- Mathlib v4.30's
+    /// `Int.exists_gcd_one`. Closes `F:ml430-int-exists-gcd-one-d8820780`.
+    /// See `int_prelude::exists_gcd_one`.
+    pub exists_gcd_one: NameId,
+    /// `exists_gcd_one' : ∀ m n, Lt zero (gcd m n) → Exists (fun g => And
+    /// (Lt zero g) (Exists (fun m' => Exists (fun n' => And (Eq Nat (gcd m'
+    /// n') 1) (And (Eq Int m (m'*ofNat g)) (Eq Int n (n'*ofNat g)))))))` --
+    /// Mathlib v4.30's `Int.exists_gcd_one'`. Closes
+    /// `F:ml430-int-exists-gcd-one-657db3e2`. See
+    /// `int_prelude::exists_gcd_one`.
+    pub exists_gcd_one_prime: NameId,
     /// `ediv_gcd_ne_zero_of_ne_zero_left : ∀ a b, a ≠ 0 →
     /// a.ediv (ofNat (gcd a b)) ≠ 0` -- Mathlib's
     /// `Int.ediv_gcd_ne_zero_of_ne_zero_left`.
@@ -1791,6 +1805,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_gcd_nat_iff: child(kernel, "dvd_gcd_nat_iff"),
         dvd_coe_gcd_iff: child(kernel, "dvd_coe_gcd_iff"),
         gcd_dvd_iff: child(kernel, "gcd_dvd_iff"),
+        exists_gcd_one: child(kernel, "exists_gcd_one"),
+        exists_gcd_one_prime: child(kernel, "exists_gcd_one'"),
         ediv_gcd_ne_zero_of_ne_zero_left: child(kernel, "ediv_gcd_ne_zero_of_ne_zero_left"),
         ediv_gcd_ne_zero_if_ne_zero_right: child(kernel, "ediv_gcd_ne_zero_if_ne_zero_right"),
         mod_eq_add: child(kernel, "mod_eq_add"),
@@ -2095,6 +2111,13 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // all declared above. Placed last for the same reason as the mirror
         // modules above it.
         gcd_dvd_iff::declare_gcd_dvd_iff(&mut d)?;
+        // `draw11-theorems-e` lane: `Int.exists_gcd_one`/`exists_gcd_one'`,
+        // two more `ml430` mirrors. Needs `gcd_div_gcd_div_gcd`,
+        // `gcd_dvd_left`/`gcd_dvd_right`, `emod_eq_zero_iff_dvd`,
+        // `ediv_add_emod` (all `gcd.rs`/`dvd.rs`, declared above). Placed
+        // last for the same reason as the mirror modules above it.
+        exists_gcd_one::declare_exists_gcd_one(&mut d)?;
+        exists_gcd_one::declare_exists_gcd_one_prime(&mut d)?;
         Ok(prelude)
     })();
     match built {
