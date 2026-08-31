@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "population_id": "credited-roots-v1",
+  "population_file": "artifacts/checked-interchange/populations/credited-roots-v1.json",
+  "lean_version": "4.30.0",
+  "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+  "credited_roots_replay": {
+    "expected": 9,
+    "attempted": 9,
+    "accepted": 9,
+    "declined_typed": 0,
+    "missing": 0,
+    "extra": 0,
+    "roots": [
+    {
+      "name": "Nat.add_comm",
+      "fact_id": "F:ml430-nat-add-comm-56a2d614",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.add_pos_right",
+      "fact_id": "F:ml430-nat-add-pos-right-e43374dc",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.ble_eq_true_of_le",
+      "fact_id": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.ble_self_eq_true",
+      "fact_id": "F:ml430-nat-ble-self-eq-true-839df126",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.ble_succ_eq_true",
+      "fact_id": "F:ml430-nat-ble-succ-eq-true-000a69f4",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.le_of_ble_eq_true",
+      "fact_id": "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.le_of_lt_succ",
+      "fact_id": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.le_of_succ_le_succ",
+      "fact_id": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    },
+    {
+      "name": "Nat.le_refl",
+      "fact_id": "F:ml430-nat-le-refl-fd7d9e15",
+      "representable": true,
+      "reimport_accepted": true,
+      "reimport_type_matches": true,
+      "lean_accepted_stream": true,
+      "lean_admitted_by_name": true,
+      "status": "accepted"
+    }
+    ]
+  },
+  "decline_mechanism_probe": {
+    "synthetic": true,
+    "subject": "__checked_interchange_non_prop_probe",
+    "status": "declined",
+    "reason": "theorem-type-not-prop"
+  },
+  "lean_report_snippet": "lean4export replay: checker Lean 4.30.0 (githash d024af099ca4bf2c86f649261ebf59565dc8c622)\nlean4export replay: wrote 44 kernel constant names to /data0/axeyum_checked_interchange_3727359/credited_roots_census.names\nlean4export replay: the real Lean kernel accepted 28 declaration records (7 inductive groups, 7 of them also compared field-by-field against Lean's own regeneration over 23 constants), "
+}
