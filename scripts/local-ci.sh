@@ -340,6 +340,14 @@ run python3 scripts/check-credit-transaction-ledger.py || rc=$?
 run python3 scripts/check-kernel-differential.py || rc=$?
 run python3 scripts/check-trust-closure.py --quiet || rc=$?
 run python3 scripts/check-proposition-duplication.py || rc=$?
+# A GENERATED ARTIFACT WITH NO AUTOMATIC RE-DERIVATION DRIFTS SILENTLY.
+# `artifacts/import-backlog.json` went stale at 147 rows while the fact ledger
+# moved to 164, and nobody noticed, because `gen-import-backlog.py --check` was
+# registered ONLY in `check.sh` and the `justfile` -- absent from ci.yml, from
+# hooks/pre-push, and from this file, the one CI itself calls the authoritative
+# gate for main. Pure Python, sub-second; there is no cost argument for leaving
+# it out.
+run python3 scripts/gen-import-backlog.py --check || rc=$?
 # Assert the seven above stay wired -- in ci.yml, hooks/pre-push AND this
 # script. The reason the block above exists at all: prose did not keep them
 # wired, so a gate does.

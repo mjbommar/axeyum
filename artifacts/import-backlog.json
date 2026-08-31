@@ -7,7 +7,7 @@
   ],
   "description": "Facts with epistemic_status=open and external_status=proved: settled in the wider literature, not yet established here (ADR-0601 SS3). Never edit by hand -- regenerate with `python3 scripts/gen-import-backlog.py`.",
   "ordering": "dependency_ready rows before blocked ones; within that, curriculum_node-mapped rows before unmapped ones, ordered by (curriculum_layer, curriculum_node); ties (and the whole unmapped population) broken by fact id ascending. See docs/autogenesis/263-import-backlog-artifact.md.",
-  "count": 164,
+  "count": 166,
   "rows": [
     {
       "id": "F:fol-validity-undecidable",
@@ -768,6 +768,24 @@
     {
       "id": "F:ml430-int-ofnat-zero-0d364f22",
       "statement": "The proposition declared as `Int.ofNat_zero` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-add-eq-max-iff-39576e6d",
+      "statement": "The proposition declared as `Nat.add_eq_max_iff` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-add-eq-min-iff-e60cf432",
+      "statement": "The proposition declared as `Nat.add_eq_min_iff` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,

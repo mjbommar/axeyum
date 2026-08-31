@@ -209,6 +209,44 @@ def main() -> int:
                   f"(for a dependency list, take the UNION).")
             continue
 
+        # PROSE PARAGRAPHS ARE NOT ADDITIVE, AND KEEPING BOTH CORRUPTS THEM.
+        # Measured 2026-08-31 on `08-ivt-and-evt-measured-against-mathlib.md`:
+        # two drafts of one "what actually remains" paragraph were concatenated,
+        # and the surviving tail asserted "row 4 is ABSENT" hours after row 4
+        # landed. A duplicate-heading scan does not see it -- the damage is
+        # mid-paragraph -- so it reached a commit and was quoted as current.
+        #
+        # Keeping both sides is right for an ITEM LIST (bullets, table rows,
+        # headed sections), where two lanes genuinely added different entries.
+        # It is wrong for two revisions of the SAME paragraph, which is what a
+        # hunk looks like when both sides are running prose. Refuse those and
+        # let a human or an agent choose, which is this script's whole stance.
+        if ext == ".md":
+            def is_prose(side: str) -> bool:
+                # `sides` holds each hunk half as a STRING. Splitting is not
+                # cosmetic: iterating the string yields CHARACTERS, every one
+                # of which fails the structural test, so a one-line bullet
+                # ("- mine") reads as multi-line prose and gets refused. That
+                # is exactly how the first draft of this guard broke the
+                # "additive markdown keeps both" control.
+                body = [ln for ln in side.splitlines() if ln.strip()]
+                if len(body) < 2:
+                    return False
+                structural = sum(
+                    1 for ln in body
+                    if ln.lstrip().startswith(("- ", "* ", "#", "|", "> ", "```"))
+                    or re.match(r"\s*\d+[.)] ", ln))
+                return structural == 0
+            prose = [i + 1 for i, (ours, theirs) in enumerate(sides)
+                     if is_prose(ours) and is_prose(theirs)]
+            if prose:
+                refused.append(f)
+                print(f"  {f}: REFUSED — hunk(s) {prose} are PROSE on both "
+                      f"sides, i.e. two drafts of one paragraph. Keeping both "
+                      f"concatenates them and the stale half survives. Read "
+                      f"both and write the paragraph you mean.")
+                continue
+
         if ext in BALANCED:
             cut = [
                 f"hunk {i+1} {label}: " + ", ".join(

@@ -134,16 +134,39 @@ accumulates stale ones by construction, and its authority is exactly what makes
 them expensive. The stale sentence sat in the verdict paragraph of the document
 that carries the Pareto claim.
 
-**What actually remains for EVT**, from the table above rather than from prose:
-row 2 is present with its hypothesis class proved but carries **no non-vacuity
-evidence in the ledger** — so nothing rules out its being a refutation of an
-empty class. Row 4 (labeled import) is now present for EVT *and* IVT as of
-2026-08-31 (ADR-1090); row 2's non-vacuity gap remains the one closable task
-here.
-row 2's non-vacuity gap is now closed (2026-08-31, lane `evt-row2-nonvacuity`
-— see the table above), and row 4 (labeled import) is ABSENT for EVT *and* for
-IVT. That is a closable task. Neither is the structural absence claimed here
-before.
+**Second correction, same day, and it is worth keeping as an exhibit.** The
+paragraph that stood here was itself produced by a bad merge: two overlapping
+"what actually remains" drafts concatenated, whose tail still read *"row 4
+(labeled import) is ABSENT for EVT and for IVT"* — false by then, since row 4
+had landed hours earlier. Written by an author who had, in the paragraph above,
+just finished explaining that stale claims accumulate in files like this one.
+
+The mechanism is specific and reusable: `lane-merge-resolve.py` keeps BOTH
+sides of an additive hunk, which is right for an item list and wrong for prose,
+where two drafts of one paragraph are not additive. A duplicate-heading scan
+does not see it, because the damage is mid-paragraph.
+
+**What actually remains for EVT, as of 2026-08-31**, read from the table above
+rather than from any prose:
+
+| row | IVT | EVT |
+| --- | --- | --- |
+| 1 general constructive | present | present (2026-08-30) |
+| 2 boundary refutation | present, non-vacuity checked | present, **non-vacuity now checked** (2026-08-31) |
+| 3 decidable-fragment exact | present, substantive half `cas-internal` | same |
+| 4 labeled import | present (2026-08-31, ADR-1090) | present (2026-08-31, ADR-1090) |
+
+So all four rows are populated for both theorems, with evidence, and none of
+the bookkeeping gaps this document has tracked remain open.
+
+**The one real gap left is structural and is NOT bookkeeping**, and it should
+not be lost now that the table is full: there is no positive constructive
+substitute for an **attaining** EVT maximiser. `CReal.evt_approx_max` is an
+*approximate* max — for every `n`, a point within `1/(n+1)` of the bound — which
+is the honest constructive statement and is not the classical one. Row 1 being
+"present" means that approximate substitute exists, not that EVT's classical
+conclusion was recovered. Anyone quoting this table for a Pareto claim must
+quote that distinction with it.
 
 ## Method, and a correction to the survey this lane was given
 
