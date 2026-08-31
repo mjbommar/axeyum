@@ -173,6 +173,13 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("det_congr", p.det_congr),
         ("matMinor_matId", p.mat_minor_mat_id),
         ("det_matId", p.det_mat_id),
+        ("matSkip_zero", p.mat_skip_zero),
+        ("matSkip_succ_succ", p.mat_skip_succ_succ),
+        ("matSkip_comm", p.mat_skip_comm),
+        ("matMinor_col_comm", p.mat_minor_col_comm),
+        ("det_minor_col_comm", p.det_minor_col_comm),
+        ("sumRange_peel_head", p.sum_range_peel_head),
+        ("sumRange_matSkip", p.sum_range_mat_skip),
     ]
 }
 
@@ -6738,6 +6745,13 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("det_congr", p.det_congr, true),
         ("matMinor_matId", p.mat_minor_mat_id, true),
         ("det_matId", p.det_mat_id, true),
+        ("matSkip_zero", p.mat_skip_zero, true),
+        ("matSkip_succ_succ", p.mat_skip_succ_succ, true),
+        ("matSkip_comm", p.mat_skip_comm, true),
+        ("matMinor_col_comm", p.mat_minor_col_comm, true),
+        ("det_minor_col_comm", p.det_minor_col_comm, true),
+        ("sumRange_peel_head", p.sum_range_peel_head, true),
+        ("sumRange_matSkip", p.sum_range_mat_skip, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
@@ -7054,5 +7068,180 @@ fn the_determinant_law_ingredients_reject_the_degenerate_reading() {
         !kernel.def_eq(sum_2, one),
         "sumRange (fun _ => 1) 2 accepted 1, so sumRange collapses to its head and \
          Rat.sumRange_head_of_tail_zero's premise is discardable"
+    );
+}
+
+/// The two HYPOTHESES the Laplace index layer carries are load-bearing, and
+/// each control says what it rules out and what it does not.
+///
+/// `Rat.matSkip_comm` and `Rat.sumRange_matSkip` both take `Nat.ble j n =
+/// true`. A premise that could be dropped is the cheapest way to ship a
+/// theorem that reads stronger than it is, so each is paired here: a NEGATIVE
+/// `def_eq` on a ground instance where the premise fails and the conclusion is
+/// false, and a POSITIVE one on an instance differing in a SINGLE index where
+/// the premise holds and the conclusion is true. The same `def_eq` call
+/// returns both answers, which is what makes neither vacuous.
+///
+/// Every value formed here is `0`, `1`, or an index below `4`, so both
+/// directions reduce to closed `Rat` numerals -- a FAILING `def_eq` has no
+/// early exit, and this file's other controls are careful about that for the
+/// same reason (ADR-1135).
+///
+/// What each control rules out, and what it does NOT:
+///
+/// - **`matSkip 1 (matSkip 0 0) != matSkip 1 (matSkip 1 0)`** (`2` against
+///   `0`) rules out an unhypothesized `Rat.matSkip_comm`. It says nothing
+///   about whether `matSkip`'s two branches are the right way round -- at
+///   `a = 0` both readings agree, which is exactly ADR-1135's finding about
+///   `matMinor_matId`, so the branch-swap mutation is separated by
+///   `Rat.matSkip_zero` and by `det_eq_det2`, not by this.
+/// - **`sumRange (matId 2 . matSkip 2) 1 + matId 2 2 != sumRange (matId 2) 2`**
+///   (`1` against `0`) rules out an unhypothesized `Rat.sumRange_matSkip`:
+///   with `j = 2` outside the range `[0, 1)` the deleted index is never
+///   reached, so adding `f j` back over-counts. It does NOT check the
+///   ORDER of summation, and it does not exercise `matSkip`'s shift on more
+///   than one index.
+/// - **`sumRange (matId 2) 3 != matId 2 0 + sumRange (matId 2) 2`** (`1`
+///   against `0`) rules out a `Rat.sumRange_peel_head` that forgot to shift
+///   the tail's index. It says nothing about the head itself, which is `0`
+///   here.
+#[test]
+fn the_laplace_index_layer_hypotheses_are_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, rsum_range};
+
+    let (mut kernel, p) = built();
+
+    let (
+        unordered_left,
+        unordered_right,
+        ordered_left,
+        ordered_right,
+        in_range_reindexed,
+        in_range_full,
+        out_of_range_reindexed,
+        out_of_range_full,
+        peeled_shifted,
+        peeled_unshifted,
+        whole,
+    ) = {
+        let mut d = IntDev::new(&mut kernel, p.int);
+        let nat = d.nat_ty();
+        let zero_n = d.num(0);
+        let one_n = d.num(1);
+        let two_n = d.num(2);
+        let three_n = d.num(3);
+        let mat_id = d.kernel().const_(p.mat_id, vec![]);
+
+        // (a) `matSkip_comm` at `a = 1`, `b = 0`, where `ble 1 0 = false`.
+        let unordered_left = {
+            let inner = d.const_app(p.mat_skip, &[zero_n, zero_n]);
+            d.const_app(p.mat_skip, &[one_n, inner])
+        };
+        let unordered_right = {
+            let inner = d.const_app(p.mat_skip, &[one_n, zero_n]);
+            d.const_app(p.mat_skip, &[one_n, inner])
+        };
+
+        // ... and at `a = 0`, `b = 1`, differing in one index, where it holds.
+        let ordered_left = {
+            let inner = d.const_app(p.mat_skip, &[one_n, zero_n]);
+            d.const_app(p.mat_skip, &[zero_n, inner])
+        };
+        let ordered_right = {
+            let inner = d.const_app(p.mat_skip, &[zero_n, zero_n]);
+            d.const_app(p.mat_skip, &[two_n, inner])
+        };
+
+        // (b) `sumRange_matSkip` at `j = 2` against a row of the identity that
+        //     is nonzero at exactly index 2.
+        let row = d.apply(mat_id, &[two_n]);
+        let at_two = d.apply(row, &[two_n]);
+        let reindexed = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let idx = d.const_app(p.mat_skip, &[two_n, k]);
+            let body = d.apply(row, &[idx]);
+            d.lam_fv(k_fv, nat, body)
+        };
+
+        // `n = 2`: `ble 2 2 = true`, the premise holds and both sides are 1.
+        let in_range_reindexed = {
+            let partial = rsum_range(&mut d, p, reindexed, two_n);
+            radd(&mut d, partial, at_two)
+        };
+        let in_range_full = rsum_range(&mut d, p, row, three_n);
+
+        // `n = 1`: `ble 2 1 = false`, and the conclusion is 1 against 0.
+        let out_of_range_reindexed = {
+            let partial = rsum_range(&mut d, p, reindexed, one_n);
+            radd(&mut d, partial, at_two)
+        };
+        let out_of_range_full = rsum_range(&mut d, p, row, two_n);
+
+        // (c) `sumRange_peel_head`'s tail must be SHIFTED.
+        let shifted_row = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sk = d.succ(k);
+            let body = d.apply(row, &[sk]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let head = d.apply(row, &[zero_n]);
+        let peeled_shifted = {
+            let tail = rsum_range(&mut d, p, shifted_row, two_n);
+            radd(&mut d, head, tail)
+        };
+        let peeled_unshifted = {
+            let tail = rsum_range(&mut d, p, row, two_n);
+            radd(&mut d, head, tail)
+        };
+        let whole = rsum_range(&mut d, p, row, three_n);
+
+        (
+            unordered_left,
+            unordered_right,
+            ordered_left,
+            ordered_right,
+            in_range_reindexed,
+            in_range_full,
+            out_of_range_reindexed,
+            out_of_range_full,
+            peeled_shifted,
+            peeled_unshifted,
+            whole,
+        )
+    };
+
+    assert!(
+        !kernel.def_eq(unordered_left, unordered_right),
+        "matSkip 1 (matSkip 0 0) accepted matSkip 1 (matSkip 1 0), so Rat.matSkip_comm \
+         would hold with no hypothesis at all"
+    );
+    assert!(
+        kernel.def_eq(ordered_left, ordered_right),
+        "matSkip 0 (matSkip 1 0) must equal matSkip 2 (matSkip 0 0) -- the same def_eq \
+         call, one index apart, so the negative above is not vacuous"
+    );
+
+    assert!(
+        kernel.def_eq(in_range_reindexed, in_range_full),
+        "sumRange_matSkip must hold at j = 2, n = 2, where ble 2 2 = true"
+    );
+    assert!(
+        !kernel.def_eq(out_of_range_reindexed, out_of_range_full),
+        "the same identity was accepted at j = 2, n = 1, where ble 2 1 = false, so \
+         Rat.sumRange_matSkip's premise is discardable"
+    );
+
+    assert!(
+        kernel.def_eq(peeled_shifted, whole),
+        "sumRange_peel_head must hold at this row -- the positive instance"
+    );
+    assert!(
+        !kernel.def_eq(peeled_unshifted, whole),
+        "peeling the head without SHIFTING the tail was accepted, so \
+         Rat.sumRange_peel_head's reindexing checks nothing"
     );
 }

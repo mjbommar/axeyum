@@ -1941,6 +1941,59 @@ pub struct RatPrelude {
     /// identity at a **symbolic** dimension, the first of the four laws
     /// ADR-1120 left open over [`Self::det`].
     pub det_mat_id: NameId,
+
+    // --- the index layer of Laplace expansion (`matrix_det`, ADR-1155) ------
+    /// `Rat.matSkip_zero : ∀ x, matSkip 0 x = succ x` — `Eq.refl`, because
+    /// `Nat.ble zero x` iota-reduces to `true` for every `x` (`ble`'s zero row
+    /// is the constant `true` function, with no inner recursion).
+    pub mat_skip_zero: NameId,
+    /// `Rat.matSkip_succ_succ : ∀ p x, matSkip (succ p) (succ x) =
+    /// succ (matSkip p x)` — the shift commutes with `succ` on both indices.
+    /// **Not** `Eq.refl`: `succ (bool_select_nat c a b)` and
+    /// `bool_select_nat c (succ a) (succ b)` are stuck against each other for
+    /// a symbolic condition, so this is a two-branch `Bool.rec`.
+    pub mat_skip_succ_succ: NameId,
+    /// `Rat.matSkip_comm : ∀ a b, Nat.ble a b = true → ∀ x,
+    /// matSkip a (matSkip b x) = matSkip (succ b) (matSkip a x)` — deleting
+    /// index `b` and then `a` hits the same pair as deleting `a` and then the
+    /// shifted `succ b`, **when `a ≤ b`**. The hypothesis is not decoration:
+    /// at `a = 1`, `b = 0`, `x = 0` the two sides are `2` and `0`.
+    ///
+    /// Stated with the BOOLEAN `Nat.ble a b = true` rather than `Nat.le a b`
+    /// so the successor step can invert it by ι-reduction:
+    /// `ble (succ a') zero ≡ false`, so `b = 0` is discharged by
+    /// [`NatOps::false_true_elim`], and `ble (succ a') (succ b') ≡ ble a' b'`
+    /// hands the induction hypothesis its premise with no bridging lemma.
+    pub mat_skip_comm: NameId,
+    /// `Rat.matMinor_col_comm : ∀ A i j a b, Nat.ble a b = true → ∀ r c,
+    /// matMinor (matMinor A i a) j b r c = matMinor (matMinor A i (succ b)) j a r c`
+    /// — deleting columns `a` then `b` reaches the same submatrix as deleting
+    /// `succ b` then `a`, POINTWISE. The row indices are the same on both
+    /// sides deliberately: a cofactor expansion of a cofactor expansion
+    /// deletes row `0` twice, so only the columns are exchanged.
+    pub mat_minor_col_comm: NameId,
+    /// `Rat.det_minor_col_comm : ∀ m A i j a b, Nat.ble a b = true →
+    /// det (matMinor (matMinor A i a) j b) m =
+    /// det (matMinor (matMinor A i (succ b)) j a) m` —
+    /// [`Self::mat_minor_col_comm`] carried through [`Self::det_congr`],
+    /// which is the only way a pointwise matrix identity reaches a `det` in
+    /// this kernel (there is no `funext`).
+    pub det_minor_col_comm: NameId,
+    /// `Rat.sumRange_peel_head : ∀ f n, sumRange f (succ n) =
+    /// add (f 0) (sumRange (fun k => f (succ k)) n)` — peel the FIRST summand.
+    /// [`Self::sum_range_succ`] peels from the right, so every left-side
+    /// reindexing over `Rat.sumRange` starts here.
+    pub sum_range_peel_head: NameId,
+    /// `Rat.sumRange_matSkip : ∀ n f j, Nat.ble j n = true →
+    /// add (sumRange (fun k => f (matSkip j k)) n) (f j) = sumRange f (succ n)`
+    /// — summing over `[0, n)` reindexed by the injection that misses `j`
+    /// recovers the full sum over `[0, n+1)` once `f j` is added back.
+    ///
+    /// The **range half** of a Laplace expansion: it converts a cofactor
+    /// sum over a range one short, reindexed by `matSkip`, into a sum over
+    /// the full range, which is what makes the plain rectangle Fubini
+    /// [`Self::sum_range_swap`] applicable to a double cofactor expansion.
+    pub sum_range_mat_skip: NameId,
 }
 
 impl RatPrelude {
@@ -2319,6 +2372,13 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_congr: child(kernel, "det_congr"),
         mat_minor_mat_id: child(kernel, "matMinor_matId"),
         det_mat_id: child(kernel, "det_matId"),
+        mat_skip_zero: child(kernel, "matSkip_zero"),
+        mat_skip_succ_succ: child(kernel, "matSkip_succ_succ"),
+        mat_skip_comm: child(kernel, "matSkip_comm"),
+        mat_minor_col_comm: child(kernel, "matMinor_col_comm"),
+        det_minor_col_comm: child(kernel, "det_minor_col_comm"),
+        sum_range_peel_head: child(kernel, "sumRange_peel_head"),
+        sum_range_mat_skip: child(kernel, "sumRange_matSkip"),
     }
 }
 

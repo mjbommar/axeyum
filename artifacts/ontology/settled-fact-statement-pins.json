@@ -17834,6 +17834,13 @@
       "kernel_theorem": "Rat.det_matId"
     },
     {
+      "fact_id": "F:rat-det-minor-col-comm",
+      "language": "lean4",
+      "statement_sha256": "13aa0aa6220a64fc93b431284509ffab9eb09658b6df7dfd67f7d2c03c51cb15",
+      "prose_sha256": "f829ec68ed2306a7ecacdea4e91802b9865bc43c57aa1b35e5e42d0fbc357125",
+      "kernel_theorem": "Rat.det_minor_col_comm"
+    },
+    {
       "fact_id": "F:rat-det2-eq-zero-of-lin-dep",
       "language": "lean4",
       "statement_sha256": "3ed29cad7e483dc7a1874cd535784e2afc1d03968e29f6f1efec81e94ee2c60c",
@@ -18623,6 +18630,13 @@
       "statement_sha256": "0348b891056c15a47a5c9b6c6c60b40aca048786a86e83eb30a5c6059a75d6de",
       "prose_sha256": "216e0572f528652e6fe8e46d7fb545942fd9ff880e9f770dfc2bdb7b72747bf3",
       "kernel_theorem": "Rat.markov_inequality"
+    },
+    {
+      "fact_id": "F:rat-mat-skip-comm",
+      "language": "lean4",
+      "statement_sha256": "d2e7e8a588c7b8006625e37061b91722294759152cd94992aeb8f815fd79607e",
+      "prose_sha256": "5658530a58ad4e071efcda1e9ee46bb2ceaa2cfbc6d2a99653edd04980c5e53d",
+      "kernel_theorem": "Rat.matSkip_comm"
     },
     {
       "fact_id": "F:rat-matinv2-matmul-top-left",
@@ -19770,6 +19784,20 @@
       "statement_sha256": "8ca2251f1e29450137864ed07d46124c02e839058c2ba3947b30d8c8b6b60768",
       "prose_sha256": "4cacc9f76590eadbb6e7878cdeb3e27ac78febaba42ff990dd0995b16aa802bb",
       "kernel_theorem": "Rat.sumRange_head_of_tail_zero"
+    },
+    {
+      "fact_id": "F:rat-sum-range-mat-skip",
+      "language": "lean4",
+      "statement_sha256": "668958f2f37076cedd45c5a745cb2f4b689ac772558d4f865e1fe4dad75166af",
+      "prose_sha256": "bdf268c7b889c3ab799879840f6b862adfb45871e8306864200fd30e7d128e41",
+      "kernel_theorem": "Rat.sumRange_matSkip"
+    },
+    {
+      "fact_id": "F:rat-sum-range-peel-head",
+      "language": "lean4",
+      "statement_sha256": "909147aaa0cb0f9c8f62501bd9d63219f7d0ab269b00ca0bcb076a36bb8c6c2c",
+      "prose_sha256": "454f00fdb6917fb259e233c77e75962b2da59f72a5cd41425b0dec4e81f95210",
+      "kernel_theorem": "Rat.sumRange_peel_head"
     },
     {
       "fact_id": "F:rat-sumrange-add",

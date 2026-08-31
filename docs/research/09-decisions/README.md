@@ -782,6 +782,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1135](adr-1135-a-determinant-congruence-is-what-the-absence-of-funext-costs.md) | ADR-1120 left four laws open over `Rat.det` and named the | accepted |
 | [1140](adr-1140-the-depth-spine-stays-a-proposal-two-of-its-rungs-already-landed.md) | Re-measured `curriculum.toml`'s `kernel_decls` axis | accepted |
 | [1150](adr-1150-the-second-supplementary-law-needed-a-double-parity-split-not-a-mod-8-one.md) | **The second supplementary law of quadratic reciprocity is | accepted |
+| [1155](adr-1155-general-row-expansion-is-one-fubini-once-the-range-is-full.md) | ADR-1135 left general-row expansion "not blocked by a missing | accepted |
 | [1160](adr-1160-the-index-3-slot-is-filled-mathlib-data-nat-find.md) | Four draws declined in a row on one constraint — cycle index 3 | accepted |
 | [1165](adr-1165-the-cost-model-re-measured-two-gates-moved-one-stayed-flat.md) | Re-measured every checkable claim in | accepted |
 | [1170](adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md) | Retrieval was identified as the binding gate on marginal cost | accepted |

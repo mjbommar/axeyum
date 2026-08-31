@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-mat-skip-comm",
+  "title": "Rat.matSkip_comm: deleting index b then a hits the same injection as deleting a then succ b, when a <= b",
+  "statement": "Rat.matSkip p x = (if p <= x then x+1 else x) is the order-preserving injection [0,n) -> [0,n+1) whose image misses p, and Rat.matMinor A i j r c = A (matSkip i r) (matSkip j c) is how this kernel deletes a row and a column with no container type (F:rat-det-general-n-eq-det2 records the construction). This fact records that the two injections COMMUTE in the following sense: if a <= b then matSkip a (matSkip b x) = matSkip (succ b) (matSkip a x), for every x. Composing them is what a cofactor expansion of a cofactor expansion does, and the succ on the right is the reindexing that makes the two deletion orders reach the same pair. The hypothesis is necessary: at a = 1, b = 0, x = 0 the two sides are 2 and 0, and the identity fails at 25 of the triples below 6 with a > b. It is carried as the BOOLEAN Nat.ble a b = true rather than Nat.le a b, because the successor step of the induction inverts it by iota-reduction alone -- ble (succ a') zero reduces to false, so b = 0 is a false_true_elim, and ble (succ a') (succ b') reduces to ble a' b', which hands the induction hypothesis its own premise with no bridging lemma.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matSkip_comm : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (AxNat.ble x0 x1) Bool.true) -> ((x3 : AxNat) -> Eq.{1} AxNat (Rat.matSkip x0 (Rat.matSkip x1 x3)) (Rat.matSkip (AxNat.succ x1) (Rat.matSkip x0 x3))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x3"
+    ],
+    "kernel_theorem": "Rat.matSkip_comm"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-det-general-n-eq-det2"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matSkip_comm",
+      "kind": "kernel-term",
+      "supports": "Rat.matSkip_comm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.matSkip_comm 2>/dev/null | grep -cE '^Rat\\.matSkip_comm[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.matSkip_comm",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation -- this tool keeps only its FIRST name argument. --release is MANDATORY (the debug build SIGABRTs on stack)."
+    },
+    {
+      "id": "footprint-Rat.matSkip_comm",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.matSkip_comm.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-matSkip-comm-hypothesis-is-necessary",
+      "kind": "kernel-term",
+      "supports": "The ble hypothesis is load-bearing: the conclusion is FALSE at a ground witness where it fails, and TRUE at one differing in a single index.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_laplace_index_layer_hypotheses_are_load_bearing"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib the_laplace_index_layer_hypotheses_are_load_bearing 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 40,
+      "notes": "The count is tested, not just the exit status: `1 passed` fails if the test is renamed away or silently filtered out (a zero-match filter exits 0 and prints `0 passed`). The control pairs a NEGATIVE def_eq -- matSkip 1 (matSkip 0 0) is 2 while matSkip 1 (matSkip 1 0) is 0, so the unhypothesized statement is false -- with a POSITIVE one differing in a single index, matSkip 0 (matSkip 1 0) and matSkip 2 (matSkip 0 0) both 1. The same def_eq call returns both answers, which is what makes the negative non-vacuous. What it does NOT rule out: a matSkip whose two branches are swapped (at a = 0 both readings agree; Rat.matSkip_zero and Rat.det_eq_det2 separate that), and no sign error, since no sign appears in the statement."
+    },
+    {
+      "id": "control-adr-1155-numeric-sweep",
+      "kind": "exhaustive-enumeration",
+      "supports": "The identity holds at every triple below 6 with a <= b (126 of 126) and FAILS at 25 of the triples with a > b, so the statement is neither vacuous nor unconditionally true.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1155-laplace-route-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1155-laplace-route-checks.py",
+      "checker_seconds": 20,
+      "notes": "Simulates Rat.matSkip, Rat.matMinor and Rat.det over Fraction at the definitions rat_prelude/matrix_det.rs uses, and exits 1 if any claim fails -- including a claim that the premise is discardable, which it detects by REQUIRING a nonzero count of counterexamples in the a > b region. Verified to fail: swapping the simulated matSkip's branches makes it exit 1 at the first control. This is an independent re-derivation of the mathematics, not a re-run of the kernel proof."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane det-row-expansion, against ADR-1135's third open law over the general-n determinant. Design note: ADR-1155."
+  },
+  "notes": "Proved by induction on a with b, the hypothesis and x ALL under the Nat.rec motive, because the successor step applies the induction hypothesis at a different pair (a', b') -- the same shape Rat.det_congr needs and for the same reason. Four cases: a = 0 is Rat.matSkip_succ_succ read backwards and uses no hypothesis; a = succ a' with b = 0 is discharged from the false premise; a = succ a', b = succ b', x = 0 has both sides reduce to 0 because ble (succ _) zero is definitionally false; the remaining case is five rewrites, four of them Rat.matSkip_succ_succ peeling a succ off each nested shift with the induction hypothesis in the middle. Rat.matMinor_col_comm and Rat.det_minor_col_comm lift it pointwise and to the determinant (F:rat-det-minor-col-comm); the second lift must go through Rat.det_congr, because the two doubly-deleted matrices agree at every index pair and are not the same term, and this kernel has no funext."
+}
