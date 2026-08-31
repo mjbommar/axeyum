@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter declaration-spec proof-plan
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter declaration-spec proof-plan absence-claims
 
 fmt:
     cargo fmt --all --check
@@ -1605,13 +1605,23 @@ adr-remote-collisions:
 # exists in `kernel.environment()`; `<!-- was-absent: ... -->` fails in the
 # other direction, when a resolution record starts pointing at nothing.
 #
-# Deliberately NOT part of `check`, for the same reason as `just claims`: the
-# authority is `kernel_declaration_projection --release`, which builds every
-# constructed prelude (~20 s once warm, a full release build cold) and must
-# never be a committed snapshot -- the committed one held 1,644 declarations
-# against a live 1,861 on 2026-08-27, and a stale index reports a
+# The authority is `kernel_declaration_projection --release`, which builds
+# every constructed prelude (~20 s once warm, a full release build cold) and
+# must never be a committed snapshot -- the committed one held 1,644
+# declarations against a live 1,861 on 2026-08-27, and a stale index reports a
 # newly-landed declaration as still absent, which is the exact failure this
 # gate exists to catch.
+#
+# That cost was the stated reason this recipe was "deliberately NOT part of
+# `check`". REVERSED 2026-08-31 (ADR-1190), because the consequence was worse
+# than the cost: `scripts/check.sh` registered only
+# `absence-claims-tests` -- the unit tests, which drive synthetic fixtures --
+# so the 39 markers in the real tree were checked against the kernel only when
+# a human typed this recipe by hand. That is ADR-1170's
+# checker-that-cannot-fail defect exactly, and it was sitting one registration
+# below ADR-1170's own retrospective in `check.sh`. Both gates run the checker
+# now; ~20 s warm is a small price beside a whole expiry mechanism nothing
+# invoked.
 #
 # `--list` prints the adoption worklist: every claim site, annotated or bare.
 absence-claims:

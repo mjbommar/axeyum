@@ -787,3 +787,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1165](adr-1165-the-cost-model-re-measured-two-gates-moved-one-stayed-flat.md) | Re-measured every checkable claim in | accepted |
 | [1170](adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md) | Retrieval was identified as the binding gate on marginal cost | accepted |
 | [1175](adr-1175-draw-15-is-authored-layout-a-and-two-disclosures-that-found-something.md) | Draws 10, 12, 13 and 14 declined in a row on one constraint; | accepted |
+| [1190](adr-1190-a-claim-is-paired-to-its-own-sentence-not-its-whole-block.md) | `scripts/check-absence-claims.py`'s census budget had been | accepted |

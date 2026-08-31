@@ -356,6 +356,15 @@ step shape-duplicates-tests python3 -m unittest scripts.tests.test_check_shape_d
 step shape-duplicates python3 scripts/check-shape-duplicates.py
 step theorem-inventory-completeness-tests python3 -m unittest scripts.tests.test_theorem_inventory_completeness
 step absence-claims-tests python3 -m unittest scripts.tests.test_check_absence_claims
+# ...AND THE CHECKER ITSELF (ADR-1190), which had the identical gap ADR-1170
+# describes six lines above, in the very next registration. `just check` never
+# named `absence-claims` at all and this file registered only the suite, so
+# every absence MARKER in the tree -- 39 of them, the whole expiry mechanism --
+# was checked against the kernel only when a human typed `just absence-claims`.
+# The unit tests drive synthetic fixtures; nothing examined the real prose.
+# Shells out to `cargo run --release --example kernel_declaration_projection`,
+# which `shape-duplicates` above has already warmed.
+step absence-claims python3 scripts/check-absence-claims.py
 # ADR-0745: the number-theory certificate checkers. Asserts a ratcheted NONZERO
 # fixture count, because a bare `cargo test --lib <filter>` exits 0 when the
 # filter matches nothing. The guard-kill mutation sweep is
