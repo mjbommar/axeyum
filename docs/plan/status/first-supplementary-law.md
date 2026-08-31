@@ -1,20 +1,72 @@
 # Lane: first-supplementary-law
 
-Status: **in progress** (opened 2026-08-31)
+<!-- plan-section: lane-status -->
 
-## Target
+Status: **half landed** (2026-08-31). The non-residue direction is proved,
+axiom-free. The residue direction is NOT, and the blocker is named precisely.
 
-The first supplementary law of quadratic reciprocity: for an odd prime
-`p = 2m+1`, `-1` is a quadratic residue mod `p` iff `p ≡ 1 (mod 4)`.
+## What landed
 
-## Route being sized
+| declaration | statement | footprint |
+| --- | --- | --- |
+| `Int.firstSupplementaryLawNotResidue` | `∀ m, PrimeCond (succ (mul 2 m)) → Nat.Odd m → Not (IsQuadraticResidue (ofNat (succ (mul 2 m))) (neg one))` | 0 |
+| `Int.isQuadraticResidue_of_modEq` | `∀ n a b, ModEq n a b → IsQuadraticResidue n a → IsQuadraticResidue n b` | 0 |
 
-The classical Euler-criterion route needs the CONVERSE of Euler's criterion
-(`a^m ≡ 1 → a is a residue`), which `int_prelude/qr_criterion.rs` records as
-absent (needs a primitive root or a root-counting argument).
+`crates/axeyum-lean-kernel/src/int_prelude/first_supplementary.rs`.
+ADR-1230. Facts `F:int-firstsupplementarylawnotresidue` and
+`F:int-isquadraticresidue-of-modeq` (plus the two Euler-criterion facts they
+depend on, which were unregistered).
 
-Candidate that AVOIDS the converse: **Wilson's theorem**, which is proved
-axiom-free here (`Int.wilson`). `(p-1)! ≡ (-1)^m (m!)^2 [p]`, so at even `m`
-(`p ≡ 1 mod 4`) `(m!)^2 ≡ -1 [p]` and `m!` is an explicit residue witness.
+## The route, and the premise that was wrong
 
-Sizing in progress.
+The brief pointed at the converse of Euler's criterion as the likely blocker.
+It is the blocker for the OTHER half. What stood in the way of this half was
+smaller and nobody had named it: **every quadratic-residue theorem in
+`qr_criterion.rs` is stated over a NATURAL representative `ofNat aa` with
+`0 < aa < pp`**, and `-1` is not a natural.
+
+`Int.isQuadraticResidue_of_modEq` closes that — about 25 lines, the witness is
+unchanged so it is `ModEq.trans` plus an `Exists` re-introduction. With it,
+`Int.euler_criterion_neg_one_imp_not_residue` is applied at `aa := 2*m` and the
+conclusion transported back to `-1`.
+
+The hypothesis is `Nat.Odd m`, not `p mod 4 = 3`, for the reason the brief gave
+and it held exactly: `Nat.Odd`'s witness EMITS `m = succ (k+k)`, from which
+`Le 1 m` is `succ_le_succ (zero_le (k+k))` with no division anywhere.
+
+## What remains, and the route sized
+
+`p ≡ 1 (mod 4) ⟹ -1 IS a residue` needs a witness. **Wilson's theorem supplies
+one and needs no converse**: `(p-1)! = (-1)^m (m!)^2`, so at even `m` Wilson
+gives `(m!)^2 = -1 [p]` and `m!` is the witness outright. Verified at 94 and 44
+primes respectively by the ADR's checks script.
+
+Present already: `Int.wilson`, `Int.prodRange_permute` (the reversal),
+`Int.modEq_prodRange_lt` (the pointwise congruence), and
+`Int.prodRange_scaledIndexEqPowMulFactorial` at `a := -1` (collapses
+`∏ (-1)·(k+1)` to `(-1)^m · m!` in one step).
+
+**Missing, and it is the only blocker: a `prodRange` SPLIT** —
+`prodRange f (add a b) = mul (prodRange f a) (prodRange (fun k => f (add a k)) b)`.
+`prod.rs` peels one front term (`prodRange_shiftFront`) and one back term
+(`prodRange_succ`); neither splits at a symbolic point. It is an induction on
+`b`, and `add a (succ b)` reduces to `succ (add a b)` definitionally, so no
+`add_assoc` is needed.
+
+For the reflection's `InjectiveOn`, one thing was checked: `transposition.rs`
+has a private `injective_of_involutive` ("any involution is injective", three
+lines, generic), and `k -> pred m - k` is an involution on `[0,m)`. Promote it,
+do not rebuild it. The reflection's `MapsInto` was **not** checked.
+
+## Verification
+
+- `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 62 passed, 0 failed.
+- `python3 docs/research/09-decisions/adr-1230-first-supplementary-checks.py` —
+  six claims over 94 odd primes, every control refuted.
+- Eight mutations, both columns, none surviving: 4 kernel-rejected,
+  4 test-caught. Table in ADR-1230.
+
+Two of my own numeric claims were WRONG on first run and the checks script
+caught both: `(p-1)! = (-1)^m (m!)^2` had the square dropped in transcription,
+and "all three side conditions fail at `m = 0`" is false — `2m < p` is `0 < 1`
+and holds. Both are corrected in the module doc and the fact `notes`.

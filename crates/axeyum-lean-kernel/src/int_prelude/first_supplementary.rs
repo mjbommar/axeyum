@@ -33,9 +33,12 @@
 //! statement that `IsQuadraticResidue` respects `ModEq` in its second
 //! argument.
 //!
-//! The three side conditions all come from `m` being odd rather than from
-//! primality, which matters because `m = 0` would make every one of them
-//! false (`p` would be `1`):
+//! The side conditions that need `m >= 1` take it from `m` being odd rather
+//! than from primality. At `m = 0` the modulus would be `1`, and TWO of the
+//! three fail there -- `0 < 2*m` and `2 < p`. The third, `2*m < p`, is
+//! `0 < 1` and holds at `m = 0` as well; the first draft of this doc said all
+//! three fail, and `adr-1230-first-supplementary-checks.py`'s C4 row is what
+//! refuted it.
 //!
 //! - `0 < 2*m` and `2 < p` both reduce to `1 ≤ m`, which
 //!   [`one_le_of_odd`] extracts from `Nat.Odd m`'s own witness (`m = succ
@@ -142,8 +145,8 @@ pub(super) fn declare_is_quadratic_residue_of_mod_eq(
 /// `Odd m`'s witness is an EQUATION `m = succ (k+k)`, so `Le 1 m` is
 /// `succ_le_succ` of `zero_le (k+k)` transported backwards along it. Taking
 /// this from oddness rather than from primality is what keeps the `m = 0`
-/// boundary out of the theorem: at `m = 0` the modulus is `1`, and all three
-/// side conditions below would be false.
+/// boundary out of the theorem: at `m = 0` the modulus is `1`, and both
+/// `0 < 2*m` and `2 < p` are false there.
 fn one_le_of_odd(d: &mut IntDev<'_>, m: ExprId, odd_proof: ExprId) -> ExprId {
     let np = d.prelude();
     let nat = d.nat_ty();
@@ -320,8 +323,7 @@ pub(super) fn declare_first_supplementary_law_not_residue(
         let one_le_pp = d.lemma(np.succ_le_succ, &[zero_nat, mul2m, zero_le_2m]);
         let pos_pi = pos_of_nat_succ(d, mul2m);
         let neg_one_to_2m = neg_one_modeq_two_mul(d, m, pos_pi, one_le_pp);
-        let two_m_to_neg_one =
-            d.const_app(p.mod_eq_symm, &[pi, neg_one, ofnat2m, neg_one_to_2m]);
+        let two_m_to_neg_one = d.const_app(p.mod_eq_symm, &[pi, neg_one, ofnat2m, neg_one_to_2m]);
 
         // `(2m)^m ≡ (-1)^m [p]`, then `(-1)^m = -1` since `m` is odd.
         let pow_congr = d.const_app(
@@ -339,15 +341,7 @@ pub(super) fn declare_first_supplementary_law_not_residue(
         let not_res_2m = d.const_app(
             p.euler_criterion_neg_one_imp_not_residue,
             &[
-                pp,
-                mul2m,
-                m,
-                prime,
-                lt_two_pp,
-                half,
-                pos_2m,
-                ub_2m,
-                half_power,
+                pp, mul2m, m, prime, lt_two_pp, half, pos_2m, ub_2m, half_power,
             ],
         );
 
