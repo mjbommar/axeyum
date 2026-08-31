@@ -696,6 +696,35 @@ fn modular_arithmetic_slow_path_is_exercised_above_u64_max() {
     assert_ne!(big, 0);
 }
 
+/// `check_crt_certificate`'s leastness (R4) and conflict (R6) guards used to
+/// call `ntheory::lcm`/`ntheory::gcd` directly -- correct, but not independent
+/// of the crate this module exists to check (found reviewing this module for
+/// ADR-1055; ADR-0745's claim that "the modular arithmetic is this module's
+/// own, not ntheory's" did not in fact cover gcd/lcm). Fixed by adding
+/// `checker_gcd`/`checker_lcm`; this pins that they agree with `ntheory`'s
+/// versions, the same discipline `independent_modular_exponentiation_agrees_
+/// with_ntheory` already applies to `pow_mod`.
+#[test]
+fn independent_gcd_lcm_agree_with_ntheory() {
+    let mut compared = 0_u32;
+    for a in [1_i128, 2, 4, 6, 12, 91, 1_000_003, 2_147_483_647] {
+        for b in [1_i128, 3, 4, 5, 6, 9, 12, 105, 1_000_000_007] {
+            let their_gcd = ntheory::gcd(a, b);
+            let our_gcd = crate::ntheory_certify::checker_gcd_for_tests(a, b);
+            assert_eq!(
+                i128::try_from(our_gcd).unwrap(),
+                their_gcd,
+                "gcd({a}, {b}) disagrees"
+            );
+            let their_lcm = ntheory::lcm(a, b);
+            let our_lcm = crate::ntheory_certify::checker_lcm_for_tests(a, b);
+            assert_eq!(our_lcm, their_lcm, "lcm({a}, {b}) disagrees");
+            compared += 1;
+        }
+    }
+    assert_eq!(compared, 72, "expected 72 comparisons, not a vacuous sweep");
+}
+
 /// The certificate route works on a prime beyond `u64::MAX`, which is where the
 /// slow modular path actually carries a real certificate rather than a synthetic
 /// identity. `2^89 - 1` is a Mersenne prime; `2^89 - 2 = 2 * (2^88 - 1)`
