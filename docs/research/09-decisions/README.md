@@ -782,3 +782,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1135](adr-1135-a-determinant-congruence-is-what-the-absence-of-funext-costs.md) | ADR-1120 left four laws open over `Rat.det` and named the | accepted |
 | [1140](adr-1140-the-depth-spine-stays-a-proposal-two-of-its-rungs-already-landed.md) | Re-measured `curriculum.toml`'s `kernel_decls` axis | accepted |
 | [1165](adr-1165-the-cost-model-re-measured-two-gates-moved-one-stayed-flat.md) | Re-measured every checkable claim in | accepted |
+| [1170](adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md) | Retrieval was identified as the binding gate on marginal cost | accepted |

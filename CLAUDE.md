@@ -2354,6 +2354,44 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   computation, a case split, a direction of transport -- across the whole crate,
   not for what you would have called the finished lemma.
 
+  **DO NOT ASSEMBLE THAT QUERY BY HAND. `just brief <target…>` DOES IT FOR
+  YOU, AND THIS SECTION NEVER SAID SO.** `scripts/brief-step0.py` derives the
+  conclusion and hypothesis heads from the target's `formal.statement`, runs
+  the `shape_search` query, and adds the three things the query alone cannot
+  give: whether a declaration with these constants is ALREADY in the
+  environment (by rendered type, never by name), every module basename the
+  target could mean **in both preludes** when a basename lives in two, and
+  whether the target is held-out / a mutation control / divergence-blocked. It
+  exits 3 when its own built-in control probe fails (so no ABSENT in that run
+  meant anything) and 4 on a stale snapshot -- the two failure modes an
+  ordinary `shape_search` call cannot self-report. Sub-second warm.
+
+  This is the step 0 of a brief, and it belongs to whoever WRITES the brief,
+  not to the lane. Measured 2026-08-31 over 429 lane status documents:
+  `shape_search` appears in 30 (7.0%) against mutation testing's 180 (42.0%),
+  and `brief-step0` in 10 (2.3%). The gap is not emphasis -- this file has
+  argued the point at length for four days -- it is that the harness had no
+  entry point anybody reading about retrieval would encounter.
+
+  **And the OUTCOME is now gated, which it was not.**
+  `scripts/check-shape-duplicates.py` reports declarations whose admitted
+  types are identical up to binder naming -- two proofs of one proposition,
+  which is exactly what a lane that could not find an existing lemma
+  produces -- and refuses any group that is not on record with a reason, in
+  both directions (an unadjudicated group AND an allowlist entry nothing
+  reports any more). It existed from 2026-08-27 and `check.sh` registered
+  only its UNIT TESTS, so the checker itself ran only when a human typed it;
+  its first automatic run found five unadjudicated groups, one a genuine
+  re-derivation of right-distributivity over Int (ADR-1170). It is an L0 gate
+  now, in `local-ci.sh`, `ci.yml` and `check.sh`, held there by
+  `check-l0-gate-enforcement.py`.
+
+  **What that gate does NOT cover, and no name-based or type-based tool can:
+  hiding place 2.** A reusable step built INLINE inside a bigger declaration
+  has no declaration of its own, so it has no type to compare and cannot
+  appear in any duplicate group. Re-deriving such a step is invisible to
+  every gate here. Only reading proof BODIES finds it.
+
   **A STALE PREBUILT `shape_search` REPORTS A FALSE ABSENT, which is the one
   failure this tool exists to prevent.** It indexes the declarations its own
   binary was compiled against, so `target/release/examples/shape_search` left
