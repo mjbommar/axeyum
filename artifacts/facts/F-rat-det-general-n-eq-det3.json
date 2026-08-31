@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-general-n-eq-det3",
+  "title": "Rat.det_eq_det3: the general-n determinant agrees with the fixed 3x3 one, symbolically in the matrix",
+  "statement": "For EVERY matrix A : Nat -> Nat -> Rat, Rat.det A 3 equals Rat.det3 applied to the nine entries A 0 0 ... A 2 2. Rat.det3's body is the independently written first-row expansion (a*(e*i - f*h) - b*(d*i - f*g)) + c*(d*h - e*g), declared long before this construction, so the agreement checks the general-n cofactor recursion against six signed products nobody derived from it. n=3 is the first dimension at which the alternating sign must RETURN to +1 (altSign 2 = neg (neg 1), discharged by Rat.neg_neg), so this fact separates a sign convention that drifts after the first two columns from one that does not -- something agreement at n=2 cannot do.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_eq_det3 : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> Eq.{1} Rat (Rat.det x0 (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))) (Rat.det3 (x0 AxNat.zero AxNat.zero) (x0 AxNat.zero (AxNat.succ AxNat.zero)) (x0 AxNat.zero (AxNat.succ (AxNat.succ AxNat.zero))) (x0 (AxNat.succ AxNat.zero) AxNat.zero) (x0 (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)) (x0 (AxNat.succ AxNat.zero) (AxNat.succ (AxNat.succ AxNat.zero))) (x0 (AxNat.succ (AxNat.succ AxNat.zero)) AxNat.zero) (x0 (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ AxNat.zero)) (x0 (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.succ AxNat.zero)))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Rat.det_eq_det3"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-det-general-n-eq-det2",
+    "F:rat-mul-comm",
+    "F:rat-mul-one",
+    "F:rat-neg-mul",
+    "F:rat-neg-neg",
+    "F:rat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_eq_det3",
+      "kind": "kernel-term",
+      "supports": "Rat.det_eq_det3 is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_eq_det3 2>/dev/null | grep -cE '^Rat\\\\.det_eq_det3[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Rat.det_eq_det3",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation: this tool consumes only its first name argument and silently discards the rest. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Rat.det_eq_det3",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_eq_det3.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty rat surface bounds every declaration in it. The per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    },
+    {
+      "id": "suite-det-eq-det3",
+      "kind": "kernel-term",
+      "supports": "The determinant family is a checked Definition/Theorem with an empty axiom footprint, read out of kernel.environment() rather than off the diff, and the evaluation examples reject a deliberately wrong value.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_determinant_toolkit_is_axiom_free",
+        "rat_prelude_tests::the_determinant_agreement_statements_quantify_over_the_matrix",
+        "rat_prelude_tests::the_determinant_evaluation_examples_reject_the_wrong_value"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib determinant 2>&1 | grep -cE '^test result: ok\\. 3 passed'",
+      "checker_seconds": 60,
+      "notes": "The count is tested, not just the exit status: `3 passed` fails if a test is renamed away or silently filtered out, which a bare `cargo test <filter>` cannot detect (a filter matching nothing prints 'running 0 tests ... ok' and exits 0). Mutation-verified twice on 2026-08-31 in this lane's worktree, each mutation restored afterwards and `git diff` confirmed empty: (a) swapping Rat.matSkip's two branches made build_rat_prelude fail with DeclarationValueMismatch at Rat.det_eq_det2; (b) changing det_eval_example's stated value from 13 to 12 made it fail with DeclarationValueMismatch. So both the agreement theorems and the evaluation examples are load-bearing rather than decorative."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane general-n-determinant, against ADR-1075's depth proposal naming the determinant at general n as linear algebra's keystone."
+  },
+  "notes": "Proved by instantiating F:rat-det-general-n-eq-det2 at each of the three minors matMinor A 0 j -- their entries reduce definitionally to A 1 0, A 1 2, A 2 0, A 2 2 and so on, so the lemma's conclusion is accepted against the reduced form without a separate bridge. The remaining work is the outer three-term alternating sum. This does NOT generalise to an induction: `det A n = <closed form>` at symbolic n is not a statement this kernel can even write down without a notion of permutation, which needs a container type it does not have."
+}

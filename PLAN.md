@@ -167,6 +167,7 @@ now. Nothing was deleted.
 | 2026-08-31 | gauss-mapsinto-bound | `Nat.div_succ_two_mul_eq_self`, `Nat.gauss_fold_in_range`, `Nat.gauss_fold_shift_maps_into` and `Nat.gauss_fold_shift_injective_on` land axiom-free in `nat_prelude/gauss_lemma.rs` -- completing Gauss's-lemma piece 2 (ADR-0970/ADR-0985/ADR-0990/ADR-1015). `Int.prodRange_permute`'s `InjectiveOn`/`MapsInto` hypotheses are now both satisfiable by the signed fold on `[0, m)`. Piece 3 (product cancellation, Nat/Int carrier bridge) is what remains, unchanged in size from ADR-0990/ADR-1015. |
 | 2026-08-31 | gauss-pairing-lemma | `Nat.least_residue_ne_zero_of_coprime` and `Nat.gaussFold`/`Nat.gauss_fold_injective_of_coprime` land axiom-free in `nat_prelude/gauss_lemma.rs` -- the nonzero-residue lemma ADR-0990 flagged absent, and the mathematically hard half (same-sign/opposite-sign case split) of Gauss's-lemma piece 2 (the pairing lemma). `MapsInto` and the 0-indexed shift wrapper `Int.prodRange_permute` needs are precisely sized in ADR-1015 and NOT built this session -- one new arithmetic fact (`div (succ (mul 2 m)) 2 = m`) is the sole missing ingredient. |
 | 2026-08-31 | gauss-piece-3 | `Int.prodRange_const_pow`, `Int.prodRange_scaledIndexEqPowMulFactorial` (Gauss's-lemma item A, `∏(a·k)=a^m·m!`, complete) and `Int.gaussSignProdEqPowNegOneOfCount` (Gauss's-lemma sign-product identity, complete, a corollary of `euler-spine`'s `Int.prodRangeIf_const_eq_pow_count` -- this lane's own independent construction of that shared lemma was dropped as a duplicate on merge, see the merge note above) land axiom-free toward Gauss's lemma's connecting theorem (ADR-1070). Two of ADR-0990's five piece-3 items now closed; three remain, precisely sized in ADR-1070 with two of ADR-0990's own "not confirmed present" citations verified present. |
+| 2026-08-31 | `matrix_det.rs` | `Rat.det`, the determinant at GENERAL `n` by cofactor expansion along row 0 — 15 axiom-free declarations. A matrix stays a function plus a bound (no `List`/`Finset`/`Prod` in this kernel) and the minor is an index reindex; the `Nat.rec` motive is the FUNCTION type `(Nat -> Nat -> Rat) -> Rat`, because the recursive call is at the minor rather than the same matrix. Correctness rests on `det_eq_det2`/`det_eq_det3` — agreement with the independently written fixed-arity determinants, SYMBOLICALLY in a universally quantified matrix — plus four discriminating evaluations. Mutation-verified: swapping `matSkip`'s branches is caught by `det_eq_det2`; a wrong stated numeral is caught by the evaluation. `rat_prelude::` 149 passed, 0 failed. ADR-1120. |
 | 2026-08-31 | `74ca7790b` | `proof_plan.rs` + compiler; three families rewritten; digest probe |
 | 2026-08-31 | `ba2b22bbb` | add missing type-leak decline test; mutation-verify all 5 guards |
 | 2026-08-31 | `961e65b80` | `Rat.matInv2` and both-sided 2×2 invertibility, bridged into `matMul`/`matId` (ADR-1040). |
@@ -37817,6 +37818,58 @@ noting since it cost one wasted invocation this session.
 No fact-ledger entries added this session (kernel declarations only). New
 names checked against the full source tree and `artifacts/facts/` before
 landing -- no collisions.
+
+**Status:** landed — `Rat.det`, the determinant at general `n`, with symbolic
+agreement against `Rat.det2`/`Rat.det3` and four discriminating evaluations.
+
+Target from [ADR-1075](docs/research/09-decisions/adr-1075-the-curriculum-graph-measures-scenarios-not-the-kernel.md)
+and `docs/curriculum/DEPTH-PROPOSAL-number-theory-and-linear-algebra.md`:
+linear algebra's keystone is the determinant at general `n` (cofactor
+recursion over the bound), not the matrix layer, which had already landed.
+Decision recorded in
+[ADR-1120](docs/research/09-decisions/adr-1120-the-general-n-determinant-is-a-function-plus-a-bound.md).
+
+## What landed
+
+`crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs` — 15 declarations,
+every one axiom-free, read from `kernel.environment()`:
+
+| declaration | kind | what it is |
+| --- | --- | --- |
+| `Rat.matSkip` | definition | `if p <= x then x+1 else x`, the injection `[0,n) -> [0,n+1)` missing `p` |
+| `Rat.matMinor` | definition | `A (matSkip i r) (matSkip j c)` — deleting a row and a column as an index reindex |
+| `Rat.altSign` | definition | `(-1)^j` by `Nat.rec`, so both equations are `Eq.refl` |
+| `Rat.altSign_zero` / `_succ` | theorems | the defining equations |
+| `Rat.det` | definition | cofactor expansion along row 0; the `Nat.rec` motive is the FUNCTION type `(Nat -> Nat -> Rat) -> Rat` |
+| `Rat.det_zero` / `det_succ` | theorems | the defining equations |
+| `Rat.det_one` | theorem | `det A 1 = A 0 0` |
+| `Rat.det_eq_det2` | theorem | `forall A, det A 2 = det2 (A 0 0) (A 0 1) (A 1 0) (A 1 1)` |
+| `Rat.det_eq_det3` | theorem | `forall A, det A 3 = det3 (A 0 0) ... (A 2 2)` |
+| four `*_eval_*` | theorems | discriminating evaluations at concrete matrices |
+
+Facts: `F:rat-det-general-n-eq-det2`, `F:rat-det-general-n-eq-det3`,
+`F:rat-det-general-n-evaluates`.
+
+## Verification run in this lane
+
+- `cargo test -p axeyum-lean-kernel --lib rat_prelude::` — **149 passed, 0
+  failed**, 208 s. Prelude build 13.25 s.
+- `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` — clean.
+- `rustfmt --edition 2024 --check` on every touched file — clean.
+- `python3 scripts/validate-facts.py` — 2,385 facts, 0 errors.
+- `python3 scripts/check-settled-fact-statements.py` — PASS, drifted 0.
+- **Mutation-verified**, each restored with `git diff` empty afterwards:
+  swapping `matSkip`'s branches makes the build fail at `Rat.det_eq_det2`;
+  changing `det_eval_example`'s value 13 -> 12 makes it fail there. Both
+  classes of evidence are load-bearing.
+
+## Not proved, and why
+
+Multiplicativity, transpose invariance, expansion along a general row, and
+`det matId n = 1` at symbolic `n` all need an induction relating the minor
+structure across dimensions. A closed Leibniz form is not merely unproved but
+**not expressible** here — it quantifies over permutations of `[0,n)` and this
+kernel has no type in which to write that sum. See ADR-1120.
 
 Status: DONE for this session. One complete graded family landed (rows 1
 + 3, row 2 argued absent via ADR-0716, row 3 via ADR-0825's collapse), two

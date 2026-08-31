@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-general-n-evaluates",
+  "title": "Rat.det_eval_example: the general-n determinant recursion computes, at a non-symmetric 3x3, to an independently derived value",
+  "statement": "Rat.det A 3 reduces to 13 for the concrete non-symmetric A = [[1,2,0],[0,1,3],[2,0,1]], admitted by Eq.refl -- so the kernel itself carried out the cofactor recursion, the index shifts of matMinor and the alternating sign, and matched the normal form against a hand-computed numeral. This is the evidence a Definition needs and cannot get from the trusted gate: Kernel::add_declaration type-checks (Nat -> Nat -> Rat) -> Nat -> Rat against whatever the function returns, so well-typedness says nothing about the value. The witness is chosen to DISCRIMINATE: with the alternating sign inverted the same matrix gives -13, and with the recursion deleting row j instead of row 0 it gives -4. Three sibling theorems in the same module extend the evidence -- Rat.det_eval_singular (a singular, zero-free 3x3 giving 0), Rat.det_eval_example4 (a 4x4, the first dimension no fixed-arity determinant in this prelude reaches), and Rat.matMinor_eval_example (the index shift alone, where a transposed index gives 3 and a shift on the wrong axis gives 8).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_eval_example : Eq.{1} Rat (Rat.det (fun (x0 : AxNat) => fun (x1 : AxNat) => Bool.rec.{1} (fun (x2 : Bool) => Rat) (Bool.rec.{1} (fun (x2 : Bool) => Rat) (Bool.rec.{1} (fun (x2 : Bool) => Rat) (Bool.rec.{1} (fun (x2 : Bool) => Rat) (Rat.ofInt (Int.ofNat (AxNat.succ AxNat.zero))) (Rat.ofInt (Int.ofNat AxNat.zero)) (AxNat.beq x1 (AxNat.succ AxNat.zero))) (Rat.ofInt (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero)))) (AxNat.beq x1 AxNat.zero)) (Bool.rec.{1} (fun (x2 : Bool) => Rat) (Bool.rec.{1} (fun (x2 : Bool) => Rat) (Rat.ofInt (Int.ofNat (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))) (Rat.ofInt (Int.ofNat (AxNat.succ AxNat.zero))) (AxNat.beq x1 (AxNat.succ AxNat.zero))) (Rat.ofInt (Int.ofNat AxNat.zero)) (AxNat.beq x1 AxNat.zero)) (AxNat.beq x0 (AxNat.succ AxNat.zero))) (Bool.rec.{1} (fun (x2 : Bool) => Rat) (Bool.rec.{1} (fun (x2 : Bool) => Rat) (Rat.ofInt (Int.ofNat AxNat.zero)) (Rat.ofInt (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero)))) (AxNat.beq x1 (AxNat.succ AxNat.zero))) (Rat.ofInt (Int.ofNat (AxNat.succ AxNat.zero))) (AxNat.beq x1 AxNat.zero)) (AxNat.beq x0 AxNat.zero)) (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))) (Rat.ofInt (Int.ofNat (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))))))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.det_eval_example"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_eval_example",
+      "kind": "kernel-term",
+      "supports": "Rat.det_eval_example is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_eval_example 2>/dev/null | grep -cE '^Rat\\\\.det_eval_example[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Rat.det_eval_example",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation: this tool consumes only its first name argument and silently discards the rest. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Rat.det_eval_example",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_eval_example.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty rat surface bounds every declaration in it. The per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    },
+    {
+      "id": "suite-det-evaluates",
+      "kind": "kernel-term",
+      "supports": "The determinant family is a checked Definition/Theorem with an empty axiom footprint, read out of kernel.environment() rather than off the diff, and the evaluation examples reject a deliberately wrong value.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_determinant_toolkit_is_axiom_free",
+        "rat_prelude_tests::the_determinant_agreement_statements_quantify_over_the_matrix",
+        "rat_prelude_tests::the_determinant_evaluation_examples_reject_the_wrong_value"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib determinant 2>&1 | grep -cE '^test result: ok\\. 3 passed'",
+      "checker_seconds": 60,
+      "notes": "The count is tested, not just the exit status: `3 passed` fails if a test is renamed away or silently filtered out, which a bare `cargo test <filter>` cannot detect (a filter matching nothing prints 'running 0 tests ... ok' and exits 0). Mutation-verified twice on 2026-08-31 in this lane's worktree, each mutation restored afterwards and `git diff` confirmed empty: (a) swapping Rat.matSkip's two branches made build_rat_prelude fail with DeclarationValueMismatch at Rat.det_eq_det2; (b) changing det_eval_example's stated value from 13 to 12 made it fail with DeclarationValueMismatch. So both the agreement theorems and the evaluation examples are load-bearing rather than decorative."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane general-n-determinant, against ADR-1075's depth proposal naming the determinant at general n as linear algebra's keystone."
+  },
+  "notes": "The singular witness's honest limit is recorded rather than glossed: inverting the alternating sign leaves a singular matrix singular, so det_eval_singular separates a row/column-deletion bug (-6 under deletion of row j) and NOT a sign bug. That is why the sign is carried by this fact's matrix and by the symbolic agreement facts instead. Entries are kept small on purpose: every Nat numeral this prelude builds is unary and the kernel's binary-literal fast path never fires, so evaluation cost is superlinear in the largest magnitude FORMED -- 13 here, 9 in the singular case, 8 in the 4x4."
+}
