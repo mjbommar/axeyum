@@ -1508,6 +1508,17 @@ step graph-join-mutations bash scripts/tests/test-graph-join-mutations.sh
 step infrastructure-frontier           python3 scripts/check-infrastructure-frontier.py
 step infrastructure-frontier-mutations bash scripts/tests/test-infrastructure-frontier-mutations.sh
 
+# L3 phase D2 -- the structural theorem/proof index (docs/plan/definition-
+# discovery-efficiency-roadmap-2026-08-30.md section D2, ADR-0905). Needs no
+# cargo run: `artifacts/structural-index/theorems.json` is a committed
+# extractor output, and the gate re-derives the Mathlib goal-feature join
+# and every fixed query result from it plus the two nursery files. Six
+# guards (EMPTY_INDEX, FIXED_QUERIES, HELD_OUT_EXCLUDED,
+# GOAL_FEATURE_NO_LEAK, SIGNAL_SEPARATION, ABSENCE_UNANSWERABLE), all
+# mutation-verified 1:1 by the second step below.
+step structural-index           python3 scripts/check-structural-index.py
+step structural-index-mutations bash scripts/tests/test-structural-index-mutations.sh
+
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
   exit 0

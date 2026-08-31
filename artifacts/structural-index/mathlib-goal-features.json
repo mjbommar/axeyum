@@ -1,0 +1,2444 @@
+[
+  {
+    "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
+    "family": "integer-gcd",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
+    "family": "integer-gcd",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-fib-add-181b6a2c",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-add-one-33f1b748",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-add-two-739358dd",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-dvd-ffb3c5c1",
+    "family": "integer-fibonacci",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-eq-zero-8193c7cb",
+    "family": "integer-fibonacci",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-gcd-3a8bfdec",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-natcast-d5886be4",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-neg-b4021d37",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-fib-of-odd-66560495",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+    "family": "integer-fibonacci",
+    "goal_head": "Lt",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-gcd-div-5e01872f",
+    "family": "integer-gcd",
+    "goal_head": "Eq",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+    "family": "integer-gcd",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+    "family": "integer-gcd",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+    "family": "integer-gcd",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+    "family": "integer-gcd",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
+    "family": "integer-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-gcd-greatest-5b31c5fe",
+    "family": "integer-gcd",
+    "goal_head": "Eq",
+    "hyp_count": 8
+  },
+  {
+    "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-add-left-6e17c69a",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-comm-1e4bcc07",
+    "family": "integer-modular-equivalence",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+    "family": "integer-modular-equivalence",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-neg-d6ff57b6",
+    "family": "integer-modular-equivalence",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-of-dvd-b9c41fce",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-one-01d9de39",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-refl-30e15520",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-sub-3148f130",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-symm-984a6e67",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-trans-6d7863e0",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+    "family": "integer-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
+    "family": "integer-gcd",
+    "goal_head": "Ne",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-neg-modeq-neg-30d98479",
+    "family": "integer-modular-equivalence",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+    "family": "natural-factorial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 7
+  },
+  {
+    "fact_id": "F:ml430-nat-bitwise-comm-1a273bae",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 6
+  },
+  {
+    "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-le-add-9c463139",
+    "family": "natural-binomial",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-le-choose-907b5042",
+    "family": "natural-binomial",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+    "family": "natural-binomial",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+    "family": "natural-binomial",
+    "goal_head": "Gt",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+    "family": "natural-binomial",
+    "goal_head": "Ne",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
+    "family": "natural-logarithm",
+    "goal_head": "Gt",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-mono-right-8d87a410",
+    "family": "natural-logarithm",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-monotone-48fe50c6",
+    "family": "natural-logarithm",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-one-left-b496af12",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-one-right-1ce3d52f",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-pos-00852cb8",
+    "family": "natural-logarithm",
+    "goal_head": "Lt",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-zero-left-1c61a5bf",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-clog-zero-right-d42d47b1",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+    "family": "natural-gcd",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+    "family": "natural-gcd",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+    "family": "natural-gcd",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
+    "family": "natural-primes",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
+    "family": "natural-primes",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+    "family": "natural-gcd",
+    "goal_head": "other",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
+    "family": "natural-primes",
+    "goal_head": "other",
+    "hyp_count": 6
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+    "family": "natural-gcd",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+    "family": "natural-gcd",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+    "family": "natural-primes",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+    "family": "natural-primes",
+    "goal_head": "other",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+    "family": "natural-gcd",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+    "family": "natural-gcd",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
+    "family": "natural-primes",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-primes-5769049f",
+    "family": "natural-primes",
+    "goal_head": "Iff",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+    "family": "natural-gcd",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-self-add-right-966e5434",
+    "family": "natural-gcd",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+    "family": "natural-gcd",
+    "goal_head": "other",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-two-left-1b47e7c4",
+    "family": "natural-primes",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-two-right-7c5a1850",
+    "family": "natural-primes",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
+    "family": "natural-factorial",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+    "family": "natural-factorial",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+    "family": "natural-factorial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+    "family": "natural-factorial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+    "family": "natural-factorial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+    "family": "natural-gcd",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+    "family": "natural-gcd",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+    "family": "natural-gcd",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+    "family": "natural-primes",
+    "goal_head": "Dvd",
+    "hyp_count": 5
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+    "family": "natural-gcd",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+    "family": "natural-gcd",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-even-xor-78a39432",
+    "family": "natural-bitwise",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e",
+    "family": "integer-gcd",
+    "goal_head": "Lt",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+    "family": "natural-binomial",
+    "goal_head": "Dvd",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+    "family": "natural-binomial",
+    "goal_head": "Dvd",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+    "family": "natural-factorial",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-factorial-le-d0f4a912",
+    "family": "natural-factorial",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+    "family": "natural-factorial",
+    "goal_head": "Lt",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+    "family": "natural-factorial",
+    "goal_head": "Ne",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+    "family": "natural-factorial",
+    "goal_head": "Lt",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+    "family": "natural-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "family": "natural-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+    "family": "natural-fibonacci",
+    "goal_head": "Gt",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+    "family": "natural-fibonacci",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-dvd-f80f3de1",
+    "family": "natural-fibonacci",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-eq-zero-61879073",
+    "family": "natural-fibonacci",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+    "family": "natural-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+    "family": "natural-fibonacci",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-lt-fib-3582b881",
+    "family": "natural-fibonacci",
+    "goal_head": "Iff",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
+    "family": "natural-fibonacci",
+    "goal_head": "other",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-pos-9e67bd8e",
+    "family": "natural-fibonacci",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
+    "family": "natural-fibonacci",
+    "goal_head": "other",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+    "family": "natural-fibonacci",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+    "family": "natural-gcd",
+    "goal_head": "Eq",
+    "hyp_count": 7
+  },
+  {
+    "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
+    "family": "natural-fibonacci",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-le-fib-self-0cbccb4d",
+    "family": "natural-fibonacci",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
+    "family": "natural-logarithm",
+    "goal_head": "Gt",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log-le-clog-ac8ab2d4",
+    "family": "natural-logarithm",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log-le-self-da387172",
+    "family": "natural-logarithm",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log-lt-self-529f89fa",
+    "family": "natural-logarithm",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-log-mono-right-b8939fee",
+    "family": "natural-logarithm",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-log-monotone-52fad774",
+    "family": "natural-logarithm",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log-of-lt-89eaf42e",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-log-one-left-73efc119",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log-one-right-282332ef",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log-zero-right-8ea186db",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-log2-eq-log-two-28085932",
+    "family": "natural-logarithm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
+    "family": "natural-bitwise",
+    "goal_head": "Lt",
+    "hyp_count": 6
+  },
+  {
+    "fact_id": "F:ml430-nat-lt-xor-cases-c43a1e85",
+    "family": "natural-bitwise",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-mod-lcm-ee6bdd41",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+    "family": "natural-modular-equivalence",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-dvd-iff-8f130450",
+    "family": "natural-modular-equivalence",
+    "goal_head": "Iff",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+    "family": "natural-modular-equivalence",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+    "family": "natural-modular-equivalence",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+    "family": "natural-binomial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+    "family": "natural-gcd",
+    "goal_head": "other",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+    "family": "natural-primes",
+    "goal_head": "other",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+    "family": "natural-factorial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+    "family": "natural-primes",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
+    "family": "natural-primes",
+    "goal_head": "Dvd",
+    "hyp_count": 6
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+    "family": "natural-primes",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-even-iff-d068ec82",
+    "family": "natural-primes",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+    "family": "natural-primes",
+    "goal_head": "Le",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+    "family": "natural-primes",
+    "goal_head": "Dvd",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+    "family": "natural-primes",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-pred-pos-4e67ac4c",
+    "family": "natural-primes",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
+    "family": "natural-factorial",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
+    "family": "natural-primes",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+    "family": "natural-factorial",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1",
+    "family": "natural-bitwise",
+    "goal_head": "Eq",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+    "family": "fermat-numbers",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-fermatnumber-mono-b051cee6",
+    "family": "fermat-numbers",
+    "goal_head": "other",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-fermatnumber-ne-one-91232d67",
+    "family": "fermat-numbers",
+    "goal_head": "Ne",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-fermatnumber-one-b1b0798f",
+    "family": "fermat-numbers",
+    "goal_head": "Eq",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-fermatnumber-strictmono-acbcb8c6",
+    "family": "fermat-numbers",
+    "goal_head": "other",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-fermatnumber-two-3aa3bfc4",
+    "family": "fermat-numbers",
+    "goal_head": "Eq",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-fermatnumber-zero-ca7aac67",
+    "family": "fermat-numbers",
+    "goal_head": "Eq",
+    "hyp_count": 0
+  },
+  {
+    "fact_id": "F:ml430-nat-fermat-primefactors-one-lt-58343c6f",
+    "family": "fermat-numbers",
+    "goal_head": "Eq",
+    "hyp_count": 5
+  },
+  {
+    "fact_id": "F:ml430-nat-odd-fermatnumber-251041a5",
+    "family": "fermat-numbers",
+    "goal_head": "other",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
+    "family": "fermat-numbers",
+    "goal_head": "Eq",
+    "hyp_count": 5
+  },
+  {
+    "fact_id": "F:ml430-int-add-assoc-749cb0ff",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-comm-c5722728",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-left-cancel-eca3a10d",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-add-left-comm-519fffa6",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-left-inj-befcca48",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-left-neg-c1bf80e1",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-mul-66aa025b",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-neg-cancel-left-580f2be4",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-neg-cancel-right-98f97323",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-neg-eq-sub-32f34729",
+    "family": "integer-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-add-b805125a",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-add-left-cancel-c1adde5a",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-add-right-fa8f7abe",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-add-right-cancel-d7366811",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-add-right-cancel-f74acb64",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-cancel-left-div-gcd-b2d407e8",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-cancel-right-div-gcd-00cd73fa",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-dvd-1ce6b46e",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-eq-696e85f7",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-modeq-mul-6736aa2e",
+    "family": "integer-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-coe-gcd-6bda035e",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-coe-gcd-iff-143eb02f",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-gcd-aebc8aa1",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-gcd-iff-5c30733d",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-gcd-mul-gcd-iff-dvd-mul-8ea752a5",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-gcd-mul-iff-dvd-mul-12f61b99",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-mul-3a7b94cd",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-dvd-mul-gcd-iff-dvd-mul-22d6488e",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-ediv-gcd-ne-zero-if-ne-zero-right-e1bda815",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Ne",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-ediv-gcd-ne-zero-of-ne-zero-left-2778814c",
+    "family": "integer-gcd-algorithm",
+    "goal_head": "Ne",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-add-a76ad5ce",
+    "family": "integer-order",
+    "goal_head": "Le",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-add-iff-left-83bf44fa",
+    "family": "integer-order",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-add-iff-right-995cbaa5",
+    "family": "integer-order",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-add-left-4a766697",
+    "family": "integer-order",
+    "goal_head": "Le",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-add-right-0c9ed495",
+    "family": "integer-order",
+    "goal_head": "Le",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-add-three-ade2c97e",
+    "family": "integer-order",
+    "goal_head": "Le",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-iff-le-sub-66d51eea",
+    "family": "integer-order",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-of-le-neg-add-6481d6ea",
+    "family": "integer-order",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-of-le-sub-left-b5bfaca2",
+    "family": "integer-order",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-add-le-of-le-sub-right-6cf92559",
+    "family": "integer-order",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-eq-zero-or-eq-zero-of-mul-eq-zero-da702fe4",
+    "family": "integer-order-inequalities",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-le-elim-efa70bfa",
+    "family": "integer-order-inequalities",
+    "goal_head": "other",
+    "hyp_count": 6
+  },
+  {
+    "fact_id": "F:ml430-int-le-of-ofnat-le-ofnat-483e0f18",
+    "family": "integer-order-inequalities",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-lt-elim-35b9d0f8",
+    "family": "integer-order-inequalities",
+    "goal_head": "other",
+    "hyp_count": 6
+  },
+  {
+    "fact_id": "F:ml430-int-lt-of-ofnat-lt-ofnat-968e5a43",
+    "family": "integer-order-inequalities",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-mul-neg-iff-79c18955",
+    "family": "integer-order-inequalities",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-mul-nonneg-iff-4a7185c1",
+    "family": "integer-order-inequalities",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-mul-nonneg-of-nonneg-or-nonpos-79da88c9",
+    "family": "integer-order-inequalities",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-mul-nonpos-iff-4da0d0b9",
+    "family": "integer-order-inequalities",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-mul-pos-iff-e4bfa31d",
+    "family": "integer-order-inequalities",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-odd-of-mul-left-b580971e",
+    "family": "integer-parity",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-odd-of-mul-right-d6d1fc1d",
+    "family": "integer-parity",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-add-one-ediv-two-mul-two-of-odd-3c9ef32f",
+    "family": "integer-parity",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-ediv-two-mul-two-add-one-of-odd-a7ec30d7",
+    "family": "integer-parity",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-ediv-two-mul-two-of-even-0095e2a6",
+    "family": "integer-parity",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-int-emod-two-ne-one-5b930333",
+    "family": "integer-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-emod-two-ne-zero-d07d008f",
+    "family": "integer-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-even-add-3c4536e3",
+    "family": "integer-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-even-add-bc8e1394",
+    "family": "integer-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-int-even-add-one-af33da18",
+    "family": "integer-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-add-add-comm-74d2c151",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-assoc-8c87a1f1",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-comm-56a2d614",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-eq-ab0eab69",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-eq-left-8e12789f",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-eq-one-iff-f8463abc",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-eq-right-9067eb1a",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-eq-three-iff-799a0a8f",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-eq-two-iff-25385c65",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-eq-zero-64233539",
+    "family": "natural-basic-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-assoc-273b60d8",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-comm-7525d05a",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-le-left-6d04acb7",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-le-right-a3f80076",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-mod-two-eq-one-3e873792",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-one-is-mod-d861e96b",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-or-distrib-left-fe131f64",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-or-distrib-right-0daaa284",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-and-self-06a84ccc",
+    "family": "natural-bitwise-basics",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-1561afa8",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-iff-left-b719aac5",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-iff-right-84daa45f",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-le-of-lt-c774015b",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "Le",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-left-cancel-fb96581c",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-add-right-cancel-f0ab48e4",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-cancel-left-div-gcd-57ef8287",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-cancel-left-div-gcd-cfca1225",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-cancel-left-of-coprime-f89af373",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-modeq-cancel-right-div-gcd-22a4f40d",
+    "family": "natural-congruence-lemmas",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-div-left-6f7082bd",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-div-right-7a8ce438",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-dvd-left-2ce391d2",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-dvd-right-4a2670ae",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-mul-left-fb5bd11a",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-mul-left-right-910d7d8f",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-mul-right-70e4e946",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-coprime-mul-right-right-9599ecd3",
+    "family": "natural-coprimality",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-dvd-of-dvd-mul-left-b0608cb9",
+    "family": "natural-coprimality",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-coprime-dvd-of-dvd-mul-right-efc3a4ec",
+    "family": "natural-coprimality",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-triangle-inequality-b35e82d3",
+    "family": "natural-distance",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-add-add-left-92fa4403",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-add-add-right-6e5d8bbb",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-comm-1fa29a04",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-eq-intro-294b44ad",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-eq-zero-5ae5b706",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-mul-left-92624d63",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-mul-right-d4e0c33d",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-pos-of-ne-00f5e22f",
+    "family": "natural-distance",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dist-self-0cfa5426",
+    "family": "natural-distance",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-div-mul-cancel-99799a00",
+    "family": "natural-divisibility",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-add-0c5bcc91",
+    "family": "natural-divisibility",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-add-iff-left-332cbe04",
+    "family": "natural-divisibility",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-add-iff-right-bf79c0cd",
+    "family": "natural-divisibility",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-antisymm-507f9026",
+    "family": "natural-divisibility",
+    "goal_head": "Eq",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-iff-mod-eq-zero-d795bfff",
+    "family": "natural-divisibility",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-mod-iff-2d082f10",
+    "family": "natural-divisibility",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-mul-left-a1a8a4b8",
+    "family": "natural-divisibility",
+    "goal_head": "Dvd",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-mul-left-of-dvd-200e20a4",
+    "family": "natural-divisibility",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-mul-right-a87a83c4",
+    "family": "natural-divisibility",
+    "goal_head": "Dvd",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-div-left-1b15b2b2",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-add-div-right-4b60b393",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-add-mod-left-6b337077",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-mod-right-c047c67a",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-mul-div-left-e20827dd",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-add-mul-div-right-44a689e4",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-add-mul-mod-self-left-108b5fe0",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-add-mul-mod-self-right-ac5b3624",
+    "family": "natural-division",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-base-induction-83561d4c",
+    "family": "natural-division",
+    "goal_head": "other",
+    "hyp_count": 10
+  },
+  {
+    "fact_id": "F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-gcd-e5184fc5",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-gcd-iff-b8485987",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-gcd-mul-gcd-iff-dvd-mul-07fec722",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-mul-ebd102e2",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-mul-gcd-iff-dvd-mul-f9517e6b",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-eq-zero-of-gcd-eq-zero-left-72cc4246",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-eq-zero-of-gcd-eq-zero-right-24054a86",
+    "family": "natural-gcd-algorithm",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-lcm-left-c83bcebc",
+    "family": "natural-lcm",
+    "goal_head": "Dvd",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-lcm-right-18ab8e2f",
+    "family": "natural-lcm",
+    "goal_head": "Dvd",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-eq-zero-of-lcm-eq-zero-d09b7af7",
+    "family": "natural-lcm",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-gcd-dvd-mul-81cb13df",
+    "family": "natural-lcm",
+    "goal_head": "Dvd",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-gcd-le-mul-7e3800f7",
+    "family": "natural-lcm",
+    "goal_head": "Le",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-gcd-mul-lcm-b7217ace",
+    "family": "natural-lcm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-lcm-assoc-cb00bb43",
+    "family": "natural-lcm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-lcm-comm-d5f8aae0",
+    "family": "natural-lcm",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-lcm-div-eb5d8892",
+    "family": "natural-lcm",
+    "goal_head": "Eq",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-lcm-dvd-07899eea",
+    "family": "natural-lcm",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-div-lt-of-lt-mul-818dc4c7",
+    "family": "natural-modulus",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-lt-of-mul-lt-mul-left-234e8530",
+    "family": "natural-modulus",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-lt-of-mul-lt-mul-right-54c1120b",
+    "family": "natural-modulus",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-mod-mul-beaccbad",
+    "family": "natural-modulus",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-mod-mul-left-div-self-0aca6c6e",
+    "family": "natural-modulus",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-mod-mul-left-mod-9b785abc",
+    "family": "natural-modulus",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-mod-mul-right-div-self-900e0b01",
+    "family": "natural-modulus",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-mod-mul-right-mod-a481eff8",
+    "family": "natural-modulus",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-mul-lt-mul-left-af33301e",
+    "family": "natural-modulus",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-mul-lt-mul-right-de5b6046",
+    "family": "natural-modulus",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-add-pos-right-e43374dc",
+    "family": "natural-order-bridging",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "family": "natural-order-bridging",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-ble-self-eq-true-839df126",
+    "family": "natural-order-bridging",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-ble-succ-eq-true-000a69f4",
+    "family": "natural-order-bridging",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "family": "natural-order-bridging",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-le-antisymm-79dccead",
+    "family": "natural-order-bridging",
+    "goal_head": "Eq",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "family": "natural-order-bridging",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "family": "natural-order-bridging",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "family": "natural-order-bridging",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-le-refl-fd7d9e15",
+    "family": "natural-order-bridging",
+    "goal_head": "Le",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-odd-of-mul-left-2c6c2553",
+    "family": "natural-parity",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-odd-of-mul-right-fe6d20ff",
+    "family": "natural-parity",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-add-one-lt-of-even-3464b374",
+    "family": "natural-parity",
+    "goal_head": "Lt",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82",
+    "family": "natural-parity",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-div-two-mul-two-of-even-9ccc5340",
+    "family": "natural-parity",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-even-add-31386639",
+    "family": "natural-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-even-add-39e3bc07",
+    "family": "natural-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-even-add-one-15b5cb18",
+    "family": "natural-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-even-div-395c6b5e",
+    "family": "natural-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-even-iff-024826e9",
+    "family": "natural-parity",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-coprime-pow-of-not-dvd-2752b17f",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "other",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-dvd-iff-eq-b7446896",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-eq-one-of-pow-846d2949",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-eq-two-or-odd-44a91651",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-eq-two-or-odd-25691fc9",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "Eq",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-mod-two-eq-one-iff-ne-two-25c35e73",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-not-prime-pow-d6480abf",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-not-prime-pow-5f14afc6",
+    "family": "natural-prime-arithmetic",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-dvd-mul-59446847",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Iff",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Eq",
+    "hyp_count": 4
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-ne-one-5b7f8845",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Ne",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-ne-zero-b4e8b4d5",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Ne",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-not-dvd-one-be7e780f",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-one-le-03eb3095",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Le",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-one-lt-bc90cfc7",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-prime-pos-85eeeeea",
+    "family": "natural-prime-characterizations",
+    "goal_head": "Lt",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-dvd-two-of-totient-le-one-3642bf31",
+    "family": "natural-totient",
+    "goal_head": "Dvd",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
+    "family": "natural-totient",
+    "goal_head": "Eq",
+    "hyp_count": 3
+  },
+  {
+    "fact_id": "F:ml430-nat-odd-totient-iff-b6a6596f",
+    "family": "natural-totient",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-odd-totient-iff-eq-one-d0491d84",
+    "family": "natural-totient",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-totient-coprime-totient-iff-3932cf83",
+    "family": "natural-totient",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
+    "family": "natural-totient",
+    "goal_head": "Dvd",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-totient-eq-one-iff-68d883a0",
+    "family": "natural-totient",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-totient-eq-zero-3be161d6",
+    "family": "natural-totient",
+    "goal_head": "Iff",
+    "hyp_count": 1
+  },
+  {
+    "fact_id": "F:ml430-nat-totient-even-28e0415f",
+    "family": "natural-totient",
+    "goal_head": "other",
+    "hyp_count": 2
+  },
+  {
+    "fact_id": "F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7",
+    "family": "natural-totient",
+    "goal_head": "Eq",
+    "hyp_count": 1
+  }
+]

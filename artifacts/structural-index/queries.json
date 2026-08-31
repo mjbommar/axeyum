@@ -1,0 +1,121 @@
+[
+  {
+    "description": "Both Int.prodRange_permute and Nat.countRange_permute directly reference Nat.restrict_injective and Nat.restrict_maps_into, even though they live in different namespaces and have different conclusion heads (AxInt.prodRange vs AxNat.countRange in export form) -- the case docs/plan/definition-discovery-efficiency-roadmap-2026-08-30.md D2 names as unreachable by shape_search's --concl/--hyp query.",
+    "expected_names": [
+      "Int.prodRange_permute",
+      "Nat.countRange_permute"
+    ],
+    "expected_rows": [
+      {
+        "identity_match": null,
+        "lexical_score": null,
+        "name": "Int.prodRange_permute",
+        "structural_match": true
+      },
+      {
+        "identity_match": null,
+        "lexical_score": null,
+        "name": "Nat.countRange_permute",
+        "structural_match": true
+      }
+    ],
+    "id": "cross-namespace-shared-machinery",
+    "query": {
+      "has_dependencies": [
+        "Nat.restrict_injective",
+        "Nat.restrict_maps_into"
+      ],
+      "kind": "dependency"
+    }
+  },
+  {
+    "description": "Every direct consumer of the pigeonhole lemma Nat.injective_on_imp_surjective_on, across both the Nat and Int namespaces.",
+    "expected_names": [
+      "Int.prodRange_permute",
+      "Nat.bijective_of_injective_on",
+      "Nat.countRange_permute",
+      "Nat.injective_on_p_imp_surjective_on_p",
+      "Nat.pigeonhole"
+    ],
+    "expected_rows": [
+      {
+        "identity_match": null,
+        "lexical_score": null,
+        "name": "Int.prodRange_permute",
+        "structural_match": true
+      },
+      {
+        "identity_match": null,
+        "lexical_score": null,
+        "name": "Nat.bijective_of_injective_on",
+        "structural_match": true
+      },
+      {
+        "identity_match": null,
+        "lexical_score": null,
+        "name": "Nat.countRange_permute",
+        "structural_match": true
+      },
+      {
+        "identity_match": null,
+        "lexical_score": null,
+        "name": "Nat.injective_on_p_imp_surjective_on_p",
+        "structural_match": true
+      },
+      {
+        "identity_match": null,
+        "lexical_score": null,
+        "name": "Nat.pigeonhole",
+        "structural_match": true
+      }
+    ],
+    "id": "pigeonhole-consumers",
+    "query": {
+      "has_dependencies": [
+        "Nat.injective_on_imp_surjective_on"
+      ],
+      "kind": "dependency"
+    }
+  },
+  {
+    "description": "An EXACT-name guess at the natural snake_case spelling of Nat.crtSelfMap_injectiveOn is ABSENT under identity, precisely because the kernel name is camelCase-in-part. Paired with the lexical query below to demonstrate the two columns disagree.",
+    "expected_names": [],
+    "expected_rows": [],
+    "id": "identity-miss-on-plausible-guess",
+    "query": {
+      "kind": "identity",
+      "name": "Nat.crt_self_map_injective_on"
+    }
+  },
+  {
+    "description": "The SAME snake_case guess as the query above, asked as a spelling-insensitive LEXICAL query, finds the declaration the identity query above could not.",
+    "expected_names": [
+      "Nat.crtSelfMap_injectiveOn"
+    ],
+    "expected_rows": [
+      {
+        "identity_match": false,
+        "lexical_score": 1,
+        "name": "Nat.crtSelfMap_injectiveOn",
+        "structural_match": null
+      }
+    ],
+    "id": "lexical-hit-on-same-guess",
+    "query": {
+      "kind": "lexical",
+      "name_like": "crt_self_map_injective_on"
+    }
+  },
+  {
+    "description": "One of the two named dependencies does not exist anywhere in the index; this must be reported UNANSWERABLE, never a silent empty AND-match, so an absent name cannot be confused with a genuine zero-result query.",
+    "expect_unanswerable": true,
+    "id": "unknown-dependency-is-unanswerable",
+    "query": {
+      "has_dependencies": [
+        "Nat.restrict_injective",
+        "Nat.this_declaration_does_not_exist"
+      ],
+      "kind": "dependency"
+    }
+  }
+]
