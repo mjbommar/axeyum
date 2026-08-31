@@ -110,6 +110,71 @@ sized above), then item 3 (the assembly induction), then wire
 `Int.prodRangeIf_permute` + `Int.euler_unit_coprime_iff` + the item-3
 assembly into a single `Int.euler_totient_theorem` declaration.
 
+## Update (`WIP`, euler-spine, 2026-08-31) — item 1 closed, item 3(a) landed
+
+Dispatched to pick up exactly the "next task" above. Both re-verified
+in-tree first, per the standing rule.
+
+**Item 1 closed, axiom-free.** New file
+`int_prelude/euler_unit_range.rs` declares `Int.euler_unit_perm_injective :
+n a, 0 < n -> Coprime a (ofNat n) -> InjectiveOn (fun k => natAbs (emod
+(a * ofNat k) (ofNat n))) n` and `Int.euler_unit_perm_maps_into : n a,
+0 < n -> MapsInto (fun k => natAbs (emod (a * ofNat k) (ofNat n))) n` (the
+second unconditional in `a`). Confirms ADR-1025's finding exactly: the
+order-coercion half is free by defeq (`Nat.lt i n`/`Nat.zero_le i` are
+used UNCHANGED wherever `Int.lt (ofNat i) (ofNat n)`/`Int.le zero (ofNat
+i)` are expected — no `le_of_ofnat_le_ofnat`/`lt_of_ofnat_lt_ofnat` call
+anywhere in either proof), and the remaining `natAbs`/`Int.of_nat_nat_abs_of_nonneg`
+residue bridging is a direct transplant of `wilson.rs`'s
+`declare_inverse_index_injective`/`declare_inverse_index_maps_into`
+pattern with the `-1` shift removed. No new induction. Both admitted by
+the kernel first attempt.
+
+**Item 3(a) landed — the first slice of the "genuinely new mathematics"
+piece.** New file `int_prelude/euler_prod_pow.rs` declares
+`Int.prodRangeIf_const_eq_pow_count : pred a n, prodRange (selector pred
+(fun _ => a)) n = pow a (countRange pred n)`, by induction on `n` following
+`wilson.rs`'s `prod_range_const_one` shape (the unrestricted `a := one`
+case, already proved there). The successor step's case split on the
+symbolic `pred n : Bool` uses the same "supply the goal at each literal
+constructor, apply `Bool.rec` to the symbolic value" idiom
+`nat_prelude/totient.rs`'s `count_step_le_one` already uses — no fact about
+which branch fires is needed. Fully symbolic proof throughout, admitted
+first attempt.
+
+**Still open in item 3:** pointwise factoring (`prodRangeIf pred (fun k =>
+a * f k) n = mul (prodRangeIf pred (fun _ => a) n) (prodRangeIf pred f
+n)`), termwise `ModEq` transport from `emod (a*k) n` back to `a*k`,
+cancellation of `prodRangeIf pred id n` via `Int.modEq_cancel` (needs that
+product coprime to `n`), and the final wiring of `prodRangeIf_permute` +
+`euler_unit_coprime_iff` + item 3(a) + item 1's `InjectiveOn`/`MapsInto`
+into one `Int.euler_totient_theorem` declaration.
+
+Facts registered: `F:int-euler-unit-perm-injective`,
+`F:int-euler-unit-perm-maps-into`, `F:int-prodrangeif-const-eq-pow-count`
+(`scripts/gen-kernel-facts.py --prelude integer --date 2026-08-31 --emit`;
+the generator surfaced 7 other unregistered `integer`-prelude theorems
+belonging to other lanes' work, same precedent as this file's own prior
+entry — not emitted here). `validate-facts.py`: 0 errors.
+
+Verified: `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 52
+passed, 0 failed, both times (after item 1, and again after item 3(a)),
+including `every_int_declaration_is_checked_and_axiom_free`. `cargo clippy
+-p axeyum-lean-kernel --all-targets --all-features -- -D warnings` — clean
+on both new files; the crate still fails on the same pre-existing errors
+in `nat_prelude/gauss_lemma.rs` and (newly, since the last update)
+`rat_prelude/matrix_invertible.rs`, both unrelated sibling-lane WIP.
+
+**Not run**, same scope reasoning as this file's prior update: the
+workspace-wide gate, `nat_prelude::`/`rat_prelude::` sweeps (no file in
+either touched), `just check`.
+
+**Next task for whoever picks this up:** item 3's remaining three pieces
+(pointwise factoring, termwise `ModEq` transport, cancellation), then the
+final `Int.euler_totient_theorem` assembly wiring everything together.
+
 <!-- plan-section: landed-changes -->
 
 | 2026-08-31 | `b12847d90` | `Int.euler_unit_coprime_iff` — the full predicate-preservation iff, axiom-free, no new induction; closes item 2 of the Fermat->Euler handoff. |
+| 2026-08-31 | `3545fc120` | `Int.euler_unit_perm_injective`/`_maps_into` — the `Nat`-shaped self-map `Int.prodRangeIf_permute` needs; closes item 1 of the Fermat->Euler handoff. |
+| 2026-08-31 | `d71385eeb` | `Int.prodRangeIf_const_eq_pow_count` — a constant-`a` restricted product equals `a` raised to the subset count; item 3(a) of the Fermat->Euler handoff, its first new-induction slice. |
