@@ -27,8 +27,8 @@
 //!     hypothesis).
 //!   - `add_comm` swaps `F + mul F (j+n)` to `mul F (j+n) + F`, and
 //!     `le_trans` chains the two `≤` steps.
-//!   Two local helpers (`le_transport_lhs`/`le_transport_rhs`) thread the
-//!   `succ_add` rewrites back onto the goal's exact shape at the end.
+//!     Two local helpers (`le_transport_lhs`/`le_transport_rhs`) thread the
+//!     `succ_add` rewrites back onto the goal's exact shape at the end.
 
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
