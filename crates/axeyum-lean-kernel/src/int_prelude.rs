@@ -88,6 +88,7 @@ mod euclid;
 mod euler;
 mod euler_prod_coprime;
 mod euler_prod_factor;
+mod euler_prod_modeq;
 mod euler_prod_pow;
 mod euler_theorem;
 mod euler_totient;
@@ -1545,6 +1546,13 @@ pub struct IntPrelude {
     /// part of item 3 of the Fermat -> Euler handoff
     /// (`euler_prod_factor.rs`).
     pub prod_range_if_factor_const_left: NameId,
+    /// `prod_range_if_modeq : ∀ n pred f g m, 0 < n →
+    /// (∀ k, ModEq n (f k) (g k)) →
+    /// ModEq n (prodRange (selector pred f) m) (prodRange (selector pred g) m)`
+    /// -- a restricted product reduces mod `n` factor by factor, the
+    /// termwise `ModEq` transport step of item 3 of the Fermat -> Euler
+    /// handoff (`euler_prod_modeq.rs`).
+    pub prod_range_if_modeq: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1840,6 +1848,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_const_eq_pow_count: child(kernel, "prodRangeIf_const_eq_pow_count"),
         prod_range_if_coprime: child(kernel, "prodRangeIf_coprime"),
         prod_range_if_factor_const_left: child(kernel, "prodRangeIf_factor_const_left"),
+        prod_range_if_modeq: child(kernel, "prodRangeIf_modeq"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
@@ -2133,6 +2142,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_prod_pow::declare_prod_range_if_const_eq_pow_count(&mut d)?;
         euler_prod_coprime::declare_prod_range_if_coprime(&mut d)?;
         euler_prod_factor::declare_prod_range_if_factor_const_left(&mut d)?;
+        euler_prod_modeq::declare_prod_range_if_modeq(&mut d)?;
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
