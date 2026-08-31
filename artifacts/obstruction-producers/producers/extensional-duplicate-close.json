@@ -1,0 +1,120 @@
+{
+  "applicability": {
+    "evidence_routes": [
+      {
+        "evidence_route": "twin mirror F:ml430-nat-land-comm-7e6ad72e (already proved)",
+        "fact_id": "F:ml430-nat-and-comm-7525d05a"
+      },
+      {
+        "evidence_route": "twin mirror F:ml430-nat-land-assoc-ad4775b8 (already proved)",
+        "fact_id": "F:ml430-nat-and-assoc-273b60d8"
+      },
+      {
+        "evidence_route": "kernel declaration Nat.land_le_left",
+        "fact_id": "F:ml430-nat-and-le-left-6d04acb7"
+      }
+    ],
+    "fact_ids": [
+      "F:ml430-nat-and-assoc-273b60d8",
+      "F:ml430-nat-and-comm-7525d05a",
+      "F:ml430-nat-and-le-left-6d04acb7"
+    ],
+    "population_description": "open ml430 Nat.land/lor/ldiff/xor mirrors with an existing same-content declaration under a different name"
+  },
+  "budget": {
+    "estimate": "O(1) per target; zero new kernel proof text",
+    "unit": "lookup"
+  },
+  "candidate_inputs": [
+    {
+      "fact_id": "F:ml430-nat-and-comm-7525d05a",
+      "native_declaration": "land_comm",
+      "twin_mirror": "F:ml430-nat-land-comm-7e6ad72e"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-assoc-273b60d8",
+      "native_declaration": "land_assoc",
+      "twin_mirror": "F:ml430-nat-land-assoc-ad4775b8"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-le-left-6d04acb7",
+      "native_declaration": "land_le_left",
+      "twin_mirror": ""
+    },
+    {
+      "fact_id": "F:ml430-nat-and-le-right-a3f80076",
+      "native_declaration": "land_le_right",
+      "twin_mirror": ""
+    },
+    {
+      "fact_id": "F:ml430-nat-and-self-06a84ccc",
+      "native_declaration": "land_self",
+      "twin_mirror": ""
+    },
+    {
+      "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
+      "native_declaration": "land_div_two",
+      "twin_mirror": ""
+    },
+    {
+      "fact_id": "F:ml430-nat-and-mod-two-eq-one-3e873792",
+      "native_declaration": "land_mod_two_eq_one",
+      "twin_mirror": ""
+    },
+    {
+      "fact_id": "F:ml430-nat-and-one-is-mod-d861e96b",
+      "native_declaration": "land_one_is_mod",
+      "twin_mirror": ""
+    }
+  ],
+  "capability_gap": "equality-transport",
+  "falsifiable_prediction": "Each of ['F:ml430-nat-and-assoc-273b60d8', 'F:ml430-nat-and-comm-7525d05a', 'F:ml430-nat-and-le-left-6d04acb7'] is closable with ZERO new kernel proof text -- only an evidence row citing an existing declaration. This is wrong if any of them turns out, on inspection, to need argument-order or implicit/explicit restructuring that amounts to a real proof (a TypeMismatch on the cited declaration would falsify it for that target).",
+  "id": "extensional-duplicate-close",
+  "kind": "producer",
+  "negative_controls": [
+    {
+      "fact_id": "F:ml430-nat-and-le-right-a3f80076",
+      "why_declines": "neither a twin ml430 mirror nor a kernel declaration named 'land_le_right' exists in nat_prelude source; this fact needs a genuinely new proof, not a restatement"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-self-06a84ccc",
+      "why_declines": "neither a twin ml430 mirror nor a kernel declaration named 'land_self' exists in nat_prelude source; this fact needs a genuinely new proof, not a restatement"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
+      "why_declines": "neither a twin ml430 mirror nor a kernel declaration named 'land_div_two' exists in nat_prelude source; this fact needs a genuinely new proof, not a restatement"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-mod-two-eq-one-3e873792",
+      "why_declines": "neither a twin ml430 mirror nor a kernel declaration named 'land_mod_two_eq_one' exists in nat_prelude source; this fact needs a genuinely new proof, not a restatement"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-one-is-mod-d861e96b",
+      "why_declines": "neither a twin ml430 mirror nor a kernel declaration named 'land_one_is_mod' exists in nat_prelude source; this fact needs a genuinely new proof, not a restatement"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "why_declines": "SAME predicate symbols (minFac, gcd/Coprime) as the already-proved F:nat-coprime-of-lt-minfac, which made this look like a duplicate at first pass. It is not: nat_prelude/min_fac.rs's own module doc and F-nat-coprime-of-lt-minfac.json's own `notes` field BOTH state explicitly this is NOT a flip of this mirror, because Nat.minFac is registered as an algorithmic divergence from Mathlib's. Syntactic similarity is not propositional identity; this entry exists to keep that correction load-bearing rather than silent."
+    }
+  ],
+  "obstruction_ids": [
+    "nat-bitwise-extensional-duplicate"
+  ],
+  "recipe": "Register evidence for F pointing at the existing kernel declaration or the twin fact's proof. No new proof term is authored; the content was already checked once by Kernel::add_declaration under a different name.",
+  "route": "kernel-lane",
+  "shape": {
+    "description": "An open ml430 mirror fact F, over Nat.land/lor/ldiff/xor only (never a construction the divergence registry flags), such that F's exact propositional content is already established under a different name -- a sibling ml430 mirror using the native operator spelling that has already been flipped, or a bare kernel declaration with no ml430 mirror yet.",
+    "predicate": {
+      "checks": [
+        "fact_id is open in the ledger (re-checked, not cached)",
+        "twin_mirror is proved/computed in the ledger, OR native_declaration appears as a `p.<name>` field in crates/axeyum-lean-kernel/src/nat_prelude/*.rs",
+        "fact_id is not in the minfac/multichoose denylist (construction-level divergence overrides syntactic match)"
+      ],
+      "type": "curated-hypothesis-table-reverified-each-run"
+    }
+  },
+  "validation_examples": [
+    "F:ml430-nat-land-comm-7e6ad72e (already closed by exactly this route)",
+    "F:ml430-nat-land-assoc-ad4775b8 (already closed by exactly this route)"
+  ]
+}
