@@ -63,6 +63,7 @@ use super::fermat_number_mirrors::pos_of_lt_add_left;
 use super::group::{mod_eq_of_mod_eq_rel, mod_self_congr};
 use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps, bool_true_or_false};
+use super::primes::prime_condition;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -2309,6 +2310,113 @@ pub(super) fn declare_gauss_fold_shift_injective_on(
     Ok(())
 }
 
+/// `Nat.coprime_factorial_of_lt_prime : ∀ pp m, PrimeCond pp → Lt m pp →
+///   Eq (gcd pp (factorial m)) one` -- item 2 of the connecting theorem
+/// (ADR-1070): `gcd(m!, pp) = 1`.
+///
+/// Induction on `m`, with `pp`/the primality proof held fixed outside the
+/// induction and the bound `Lt x pp` threaded through the motive as an
+/// arrow (`declare_modeq_prod_range_lt`'s style in `int_prelude/prod.rs`,
+/// adapted to one carrier).
+///
+/// Base (`m = 0`): `factorial zero ≡ one` by defeq (`factorial_zero` closes
+/// by `Eq.refl`, per `nat_prelude.rs`'s own comment), so the goal reduces to
+/// `gcd pp one = one` -- `gcd_dvd_right` gives `dvd (gcd pp one) one`, and
+/// `eq_one_of_dvd_one` closes it. No bound hypothesis needed.
+///
+/// Step (`m = succ j`, `ih : Lt j pp → gcd pp (factorial j) = one`): from
+/// `h : Lt (succ j) pp` (defeq `Le (succ (succ j)) pp`), `le_succ (succ j)`
+/// (`Le (succ j) (succ (succ j))`) composed with `h` via `le_trans` gives
+/// `Le (succ j) pp`, i.e. `Lt j pp` -- exactly `ih`'s hypothesis. `factorial
+/// (succ j) ≡ mul (factorial j) (succ j)` by defeq (`factorial_succ` also
+/// closes by `Eq.refl`), so the goal reduces to `gcd pp (mul (factorial j)
+/// (succ j)) = one`: `coprime_mul_of_coprime` combines `ih`'s result (`gcd
+/// pp (factorial j) = one`) with `gcd pp (succ j) = one` (from
+/// `coprime_of_lt_prime pp (succ j)`, fed `h` directly as the upper bound
+/// and `zero_lt_succ j` for positivity, then flipped from `gcd (succ j) pp`
+/// via `gcd_comm`).
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_factorial_of_lt_prime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_factorial_of_lt_prime, 2, &|d, v| {
+        let (pp, m) = (v[0], v[1]);
+        let prime_ty = prime_condition(d, &p, pp);
+        let one = d.num(1);
+
+        let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+            let bound_ty = d.lt(x, pp);
+            let fx = d.factorial(x);
+            let g = d.gcd(pp, fx);
+            let concl = d.eq(g, one);
+            d.arrow(bound_ty, concl)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        let proof_body = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                let bound_ty = d.lt(zero, pp);
+                let hb_fv = d.fresh_fvar();
+                let g_pp_one = d.gcd(pp, one);
+                let dvd_one = d.lemma(p.gcd_dvd_right, &[pp, one]); // dvd (gcd pp one) one
+                let body = d.lemma(p.eq_one_of_dvd_one, &[g_pp_one, dvd_one]);
+                // body : Eq (gcd pp one) one, and `factorial zero` is defeq
+                // `one`, so this checks against motive(zero)'s conclusion.
+                d.lam_fv(hb_fv, bound_ty, body)
+            },
+            &|d, j, ih| {
+                let sj = d.succ(j);
+                let bound_ty = d.lt(sj, pp);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv); // Lt sj pp, defeq Le (succ sj) pp
+
+                // j < pp, from h : sj < pp.
+                let succ_sj = d.succ(sj);
+                let le_sj_ssj = d.lemma(p.le_succ, &[sj]); // Le sj (succ sj)
+                let j_lt_pp = d.lemma(p.le_trans, &[sj, succ_sj, pp, le_sj_ssj, h]); // Le sj pp = Lt j pp
+
+                let ih_applied = d.apply(ih, &[j_lt_pp]); // Eq (gcd pp (factorial j)) one
+
+                let fact_j = d.factorial(j);
+                let pos_sj = d.zero_lt_succ(j); // 0 < succ j
+                let coprime_sj_pp_fn = d.lemma(p.coprime_of_lt_prime, &[pp, sj]);
+                let coprime_sj_pp = d.apply(coprime_sj_pp_fn, &[prime_proof, pos_sj, h]); // gcd sj pp = one
+
+                // Flip to gcd pp sj = one via gcd_comm.
+                let gcd_sj_pp = d.gcd(sj, pp);
+                let gcd_pp_sj = d.gcd(pp, sj);
+                let comm = d.lemma(p.gcd_comm, &[sj, pp]); // Eq (gcd sj pp) (gcd pp sj)
+                let symm_comm = d.symm(gcd_sj_pp, gcd_pp_sj, comm); // Eq (gcd pp sj) (gcd sj pp)
+                let coprime_pp_sj = d.trans(gcd_pp_sj, gcd_sj_pp, one, symm_comm, coprime_sj_pp);
+
+                let combined = d.lemma(
+                    p.coprime_mul_of_coprime,
+                    &[pp, fact_j, sj, ih_applied, coprime_pp_sj],
+                ); // Eq (gcd pp (mul fact_j sj)) one
+                // `factorial (succ j)` is defeq `mul (factorial j) (succ j)`,
+                // so `combined` checks against motive(succ j)'s conclusion.
+                d.lam_fv(h_fv, bound_ty, combined)
+            },
+            m,
+        );
+
+        let motive_at_m = motive(d, m);
+        let stmt = d.arrow(prime_ty, motive_at_m);
+        let proof = d.lam_fv(prime_fv, prime_ty, proof_body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order. Goes last in
 /// `build_nat_prelude`: it needs only `Nat.countRange`
 /// (`declare_totient_all`), `Nat.mod_eq_self_of_lt` (`declare_size_all`, via
@@ -2359,13 +2467,15 @@ pub(super) fn declare_gauss_lemma_all(
     declare_gauss_fold_in_range(d, p)?;
     declare_gauss_fold_shift_maps_into(d, p)?;
     declare_gauss_fold_shift_injective_on(d, p)?;
+    // Item 2 of the connecting theorem (ADR-1070): gcd(m!, pp) = 1.
+    declare_coprime_factorial_of_lt_prime(d, p)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Kernel, build_nat_prelude};
+    use crate::{Kernel, LocalContext, LocalDecl, build_nat_prelude};
 
     /// The Python script whose output the concrete instance theorems above
     /// were transcribed from -- re-run here as a comment, not inherited,
@@ -2700,6 +2810,86 @@ mod tests {
         assert!(
             d.kernel().def_eq(inj_inferred, expect_inj),
             "gauss_fold_shift_injective_on(3,2) at i := j := 0 must give Eq 0 0"
+        );
+    }
+
+    /// `Nat.coprime_factorial_of_lt_prime` (ADR-1070, connecting-theorem item
+    /// 2) applied at `pp := 7`, `m := 4` -- `gcd 7 (factorial 4) = gcd 7 24 =
+    /// 1`, both sides computed by the kernel's own reduction (small enough
+    /// numerals to stay well clear of the unary-magnitude cost cliff). The
+    /// `PrimeCond` hypothesis is left as a fresh free variable: the
+    /// conclusion's TYPE does not depend on which proof inhabits it (props
+    /// are computationally irrelevant here), so this checks the theorem
+    /// applies and its instantiated type matches the direct computation --
+    /// the same "free hypothesis, concrete numerals" idiom the theorem's own
+    /// build (`prime_proof` fed straight from the outer binder) already
+    /// relies on. The `Lt m pp` bound is a genuine witness, not a free
+    /// variable, via `le_add_right` (matching this file's own
+    /// `gauss_fold_injective_of_coprime` test above).
+    #[test]
+    fn coprime_factorial_of_lt_prime_computes_at_pp_seven_m_four() {
+        let mut k = Kernel::new();
+        let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+        let mut d = super::NatDev::new(&mut k, p);
+
+        let pp = d.num(7);
+        let m = d.num(4);
+        let one = d.num(1);
+
+        let fact_m = d.factorial(m);
+        let twenty_four = d.num(24);
+        assert!(
+            d.kernel().def_eq(fact_m, twenty_four),
+            "sanity: factorial 4 must reduce to 24"
+        );
+        let gcd_pp_fm = d.gcd(pp, fact_m);
+        assert!(
+            d.kernel().def_eq(gcd_pp_fm, one),
+            "sanity: gcd 7 (factorial 4) = gcd 7 24 must reduce to 1"
+        );
+
+        let prime_ty = prime_condition(&mut d, &p, pp);
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+
+        // Lt m pp = Lt 4 7 = Le 5 7 = Le 5 (add 5 2), via le_add_right(5, 2).
+        let five = d.num(5);
+        let two = d.num(2);
+        let bound_proof = d.lemma(p.le_add_right, &[five, two]);
+        let bound_ty = d.lt(m, pp);
+        let bound_inferred = d
+            .kernel()
+            .infer(bound_proof)
+            .expect("le_add_right(5, 2) must infer");
+        assert!(
+            d.kernel().def_eq(bound_inferred, bound_ty),
+            "le_add_right(5, 2) must have type Lt 4 7 (defeq Le 5 (add 5 2))"
+        );
+
+        let lemma_fn = d.lemma(p.coprime_factorial_of_lt_prime, &[pp, m]);
+        let applied = d.apply(lemma_fn, &[prime_proof, bound_proof]);
+
+        // `prime_proof` is a bare free variable, so it must be registered in
+        // a `LocalContext` before `infer` can resolve it (a top-level
+        // `Kernel::infer` uses an empty context and would reject this with
+        // `UnboundFVar`, per this file's own standing note on that error).
+        let anon = d.anon_name();
+        let mut ctx = LocalContext::new();
+        ctx.push(LocalDecl {
+            fvar: prime_fv,
+            name: anon,
+            ty: prime_ty,
+            info: crate::BinderInfo::Default,
+        });
+        let inferred = d
+            .kernel()
+            .infer_in(applied, &mut ctx)
+            .expect("coprime_factorial_of_lt_prime must apply at pp := 7, m := 4");
+        let expected = d.eq(gcd_pp_fm, one);
+        assert!(
+            d.kernel().def_eq(inferred, expected),
+            "coprime_factorial_of_lt_prime's instantiated type must match \
+             the direct gcd/factorial computation"
         );
     }
 }
