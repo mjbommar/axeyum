@@ -73,6 +73,60 @@
       ],
       "finding": "The \"bit\" stem's 45 hits are overwhelmingly this kernel's exhaustively-developed native Nat.bit/Nat.bitwise/Nat.testBit family (Nat.bit, Nat.bit_true, Nat.bit_false, Nat.bitwise, Nat.bitwiseAux, Nat.bitwise_and_eq_land, Nat.land_bit, Nat.lor_bit, Nat.ldiff_bit, Nat.testBit and its lemmas, etc.) plus one false positive (CReal.integralSplitArbitrary -- \"bit\" is a substring of \"Arbitrary\", unrelated subject, the same false-positive class ADR-0900 already named). The \"size\" stem's 6 hits are 5 genuine Nat.size declarations (Nat.size, Nat.sizeAux, Nat.size_zero, Nat.size_aux_lt_pow, Nat.lt_pow_size) plus one false positive (CReal.meshLevelCount_ge_of_size, an unrelated CReal integration-mesh construction). Compared against the drawn ten (Nat.bit_add, Nat.bit_add', Nat.bit_false_zero, Nat.bit_le, Nat.bit_lt_bit, Nat.bit_ne_zero, Nat.size_bit, Nat.size_eq_zero, Nat.size_le_size, Nat.size_one): none is a mirror by name, and Mathlib's Nat.bit : Bool -> Nat -> Nat matches our kernel's own Nat.bit signature exactly, so this is a genuine subject-level overlap (this kernel could plausibly prove several of these rows from existing infrastructure) -- the same judgment call ADR-0900 recorded and left unresolved (\"a judgement call, and it does not by itself solve this draw\"), and the same shape as the accepted natural-square-root precedent (Nat.sqrt/sqrt_zero/sqrt_one already declared, none a literal mirror of the held-out rows). Accepted on that precedent: no row is SETTLED by an existing declaration, only the general subject is developed.",
       "authority": "ADR-0925 (nursery draw 11)"
+    },
+    "natural-avg-pair": {
+      "swept": [
+        [
+          "avg",
+          "Nat.avg",
+          1
+        ]
+      ],
+      "finding": "The stem sweep names exactly one declaration and it is the construction itself: Nat.avg, ADR-1060, a Definition with no theorem about it anywhere in the environment (the count of 1 IS that statement -- every declaration whose lowered name contains `avg` was enumerated, and there is only the one). Each of the ten drawn statements (Nat.add_le_pair, Nat.avg_comm, Nat.avg_le_left, Nat.avg_le_right, Nat.avg_lt_left, Nat.avg_lt_right, Nat.le_add_one_of_avg_eq_left, Nat.le_add_one_of_avg_eq_right, Nat.le_avg_left, Nat.le_avg_right) was compared against it by hand: nine are order facts about Nat.avg and none is settled here under any name. Same pattern as the natural-square-root precedent -- the subject exists, no row is settled. TWO THINGS THE STEM SWEEP DOES NOT COVER, checked separately because the screen cannot. (1) Nat.pair is a subject of Nat.add_le_pair but appears in only 1 of 10 rows, below SUBJECT_FRACTION, so no `pair` stem is swept. Enumerated by hand: 16 environment declarations contain `pair`. Nat.pair is ADR-1060's Cantor pairing definition (again, no theorem about it); Nat.Pair/.mk/.fst/.snd/.fst_mk/.snd_mk/.ext/.eta/.rec are the inductive PAIR TYPE added for Nat.binaryRec, a different object; Nat.restrict_pair_injective and Nat.restrict_pair_maps_into are about compact_pair/expand_pair index reindexing from the Gauss-lemma work, an unrelated function sharing a word; Int.prod_range_pairing_collapse, CPoint.cevian_pair_meet, CReal.geom_pair_within and Rat.PairwiseUncorrelated are unrelated mathematics. Nothing states m + n <= Nat.pair m n. (2) All ten rows carry binders, so none is a ground row of either shape R12 classifies -- checked against the ADR-1115 classifier, not assumed. NOTE: draw 14 was DECLINED for a reason unrelated to this family (ADR-1115, natural-factorisation-properties), so this review was performed and never consumed. It remains live: if any declaration matching `avg` lands, the sweep changes and R11 refuses this row as stale rather than passing it.",
+      "authority": "ADR-1115 (nursery draw 14, declined)"
     }
-  }
+  },
+  "refused": [
+    {
+      "family": "natural-factorisation-properties",
+      "modules": [
+        "Mathlib.NumberTheory.FactorisationProperties"
+      ],
+      "swept": [
+        [
+          "prime",
+          "Int.Coprime",
+          99
+        ],
+        [
+          "abundant",
+          "Nat.Abundant",
+          1
+        ],
+        [
+          "deficient",
+          "Nat.Deficient",
+          1
+        ],
+        [
+          "perfect",
+          "Nat.Perfect",
+          1
+        ]
+      ],
+      "verdict": "do-not-draw-held-out",
+      "finding": "Reviewed for draw 14 and REFUSED, so this is deliberately not a `reviews` row: a review row is a licence to draw. R11's three signals are clean and that is not the problem -- topic 0, vocabulary 4 of 10 (allowance 5), and the stem sweep resolves benignly. The 99 hits on stem `prime` are dominated by `coprime`, which merely CONTAINS the substring: read by name, they are the Nat.coprime_* / Nat.prime_* / totient / gcd development, and none states any drawn row, all four of which conclude about Abundant/Deficient/Perfect. The stems `abundant`, `deficient` and `perfect` each resolve to exactly one declaration and it is the Definition itself, with no theorem about it. WHAT REFUSES IT IS R12, once its classifier can see the shape. Nat.abundant_twelve (`Nat.Abundant 12`) and Nat.deficient_one (`Nat.Deficient 1`) are ground predicate applications over constants this kernel declares, decided by reduction with no mathematical content. Measured, not argued: nat_prelude/abundant_deficient_tests.rs already asserts def_eq(Nat.Abundant 12, Lt 24 28). R12 could not classify them because `is_closed_evaluation` required an `=`; ADR-1115 extended it, and R12 now names both rows. Both sort into the alphabetically-first ten, and this generator has no lawful mechanism to drop one row from an alphabetically-drawn pool. TWO FURTHER FINDINGS a future reader needs, neither of which is a refusal on its own. (1) The stem sweep does NOT reach Nat.sumDivisors, because `sumdivisors` is not a stem of Abundant/Deficient/Perfect/Prime -- yet all three predicates are DEFINED through it. Enumerated by hand: Nat.sumDivisors plus four theorems (sumDivisors_one, sumDivisors_prime, sumDivisors_two_pow, sumDivisors_two_pow_eq_geom_sum). Nat.sumDivisors_prime (`Prime p -> sumDivisors p = succ p`) makes Nat.Prime.deficient, Nat.Prime.not_abundant and Nat.Prime.not_perfect cheap rather than open -- each becomes an order fact about p + 1 against 2p, with Nat.prime_one_lt already present. Nothing PROVES them, so the rows are blind in the letter; a reader deciding what a held-out result here would mean needs to know they are much easier than the module name suggests. (2) Nat.Perfect is already declared and our Nat.Abundant / Nat.Deficient are stated against the SAME Nat.sumDivisors, so the family's trichotomy rows (abundant_iff_not_perfect_and_not_deficient and its sibling) are an arithmetic trichotomy on sumDivisors n against 2n rather than a factorisation argument.",
+      "authority": "ADR-1115 (nursery draw 14, declined)"
+    },
+    {
+      "family": "Mathlib.Data.Nat.Count",
+      "modules": [
+        "Mathlib.Data.Nat.Count"
+      ],
+      "swept": [],
+      "verdict": "do-not-draw-held-out",
+      "finding": "NOT reviewed by this lane and NOT screened clean by anything -- recorded here so the screen's clean reading is not mistaken for evidence. ADR-1100 measured it held-out-viable (22 rows, R9 0/10, R12 0/10, R11 clean once Nat.count and DecidablePred exist). It is not viable: Nat.countRange is already in this kernel with countRange_zero, countRange_succ, countRange_le, countRange_const_true and countRange_monotone from the totient work, and Nat.count p n IS that function -- so count_zero, count_succ, count_le, count_true and count_monotone are already proved here under other names. That is R11's documented shape-2 blindness (a differently-named theorem), which no name-based screen can see. Carried forward from ADR-1100 unverified by this lane; the point of recording it is that the screen PASSING this module is a known blind spot, not a result.",
+      "authority": "ADR-1100, restated by ADR-1115"
+    }
+  ]
 }
