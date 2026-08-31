@@ -476,7 +476,8 @@ def check(pins: dict[str, Any], verbose: bool = True) -> int:
             print(f"    {count:4d}  {module}")
         if ready_count > 15:
             print(f"    … and {ready_count - 15} more")
-        print(f"a draw of all {ready_count} would add "
+        print(f"AT MOST -- a draw of all {ready_count} hygiene-clean families "
+              f"would add at most "
               f"{yielded} dispatchable row(s) "
               f"(held-out takes ceil(n/3), not a third)")
         print(f"the frontier floor is {floor}, so a draw needs "
@@ -498,7 +499,21 @@ def check(pins: dict[str, Any], verbose: bool = True) -> int:
         print(f"FAIL: {line}", file=sys.stderr)
     if fails:
         return 1
-    print(f"\nOK -- {ready_count} ready family(ies) available, enough for a "
+    # HYGIENE-CLEAN, NOT READY TO DRAW. This tool mirrors the generator's
+    # HYGIENE screen only; it does not run R9 contamination or R11 adjacency.
+    # The comment on MAX_READY_MODULE_FRACTION above says so in its own words --
+    # "the real screen rejects roughly 70% of candidates" -- and the word
+    # "ready" in this line contradicted it.
+    #
+    # Measured 2026-08-30 by the draw-10 lane running the real `select()`/
+    # `guard()` in memory: this tool reported `Mathlib.Data.Int.Fib.Basic` at 21
+    # and `Mathlib.Data.Nat.Bitwise` at 18; the real screen gives 6 and 6. I
+    # quoted these counts as ready-to-draw before the discrepancy was found.
+    print(f"\nUPPER BOUND -- {ready_count} HYGIENE-CLEAN family(ies). These are "
+          f"NOT screened for R9 contamination or R11 adjacency, and the real "
+          f"screen rejects most of them; draw 10 was DECLINED against this same "
+          f"list (ADR-0900). Treat as a shortlist to screen, never as a count of "
+          f"drawable families. Enough hygiene-clean families for a "
           f"draw of {need} that clears the floor of {floor}. Author it in "
           f"{GENERATOR.name}'s FAMILY_MODULES and FAMILY_ROUTES, then re-run "
           f"the generator.")
