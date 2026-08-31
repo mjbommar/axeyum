@@ -11,3 +11,4 @@ mod a0_error;
 pub mod cross_isa;
 pub mod rv64;
 pub mod x64;
+pub mod xor_reduction;
