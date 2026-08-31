@@ -100,6 +100,7 @@ mod fibonacci;
 mod gauss_factorial_coprime;
 mod gauss_factorial_product;
 mod gauss_sign_product;
+mod gauss_term_congruence;
 mod gcd;
 mod gcd_dvd_iff;
 mod gcd_scaled_mirrors;
@@ -551,6 +552,14 @@ pub struct IntPrelude {
     /// theorem (ADR-1070), the `Int`-typed form `Int.ModEq.cancel` needs in
     /// item 3's final assembly. `gauss_factorial_coprime.rs`.
     pub coprime_factorial_of_lt_prime: NameId,
+    /// `gaussTermModEq : ∀ pp a k, Lt zero pp →
+    ///   ModEq (ofNat pp) (mul (ofNat a) (ofNat k))
+    ///     (mul (bool_select_int (Nat.gaussSignNeg pp a k) (neg one) one)
+    ///          (ofNat (Nat.gaussFold pp a k)))` -- item 1 of Gauss's-lemma
+    /// connecting theorem (ADR-1070/ADR-1130): the per-term congruence, one
+    /// factor of the product the final assembly folds.
+    /// `gauss_term_congruence.rs`.
+    pub gauss_term_mod_eq: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1707,6 +1716,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         gauss_sign_prod_eq_pow_neg_one_of_count: child(kernel, "gaussSignProdEqPowNegOneOfCount"),
         factorial_eq_of_nat_factorial: child(kernel, "factorialEqOfNatFactorial"),
         coprime_factorial_of_lt_prime: child(kernel, "coprimeFactorialOfLtPrime"),
+        gauss_term_mod_eq: child(kernel, "gaussTermModEq"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -2174,6 +2184,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_prod_modeq::declare_prod_range_if_modeq(&mut d)?;
         euler_assembly::declare_euler_totient_theorem(&mut d)?;
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
+        gauss_term_congruence::declare_gauss_term_mod_eq(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;
