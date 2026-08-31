@@ -90,6 +90,7 @@ mod euler_theorem;
 mod euler_totient;
 mod fibonacci;
 mod gcd;
+mod gcd_dvd_iff;
 mod gcd_scaled_mirrors;
 mod modeq;
 mod modeq_cancel_div_gcd;
@@ -1412,6 +1413,11 @@ pub struct IntPrelude {
     /// Iff (c ∣ ofNat (gcd a b)) (And (c ∣ a) (c ∣ b))` -- Mathlib's
     /// `Int.dvd_coe_gcd_iff`.
     pub dvd_coe_gcd_iff: NameId,
+    /// `gcd_dvd_iff : ∀ (a b : Int) (n : Nat), Iff (Nat.dvd (gcd a b) n)
+    /// (Exists (fun x => Exists (fun y => Eq Int (ofNat n) (a*x+b*y))))` --
+    /// Mathlib v4.30's `Int.gcd_dvd_iff`. Closes
+    /// `F:ml430-int-gcd-dvd-iff-66fa03b3`. See `int_prelude::gcd_dvd_iff`.
+    pub gcd_dvd_iff: NameId,
     /// `ediv_gcd_ne_zero_of_ne_zero_left : ∀ a b, a ≠ 0 →
     /// a.ediv (ofNat (gcd a b)) ≠ 0` -- Mathlib's
     /// `Int.ediv_gcd_ne_zero_of_ne_zero_left`.
@@ -1784,6 +1790,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_gcd_nat: child(kernel, "dvd_gcd_nat"),
         dvd_gcd_nat_iff: child(kernel, "dvd_gcd_nat_iff"),
         dvd_coe_gcd_iff: child(kernel, "dvd_coe_gcd_iff"),
+        gcd_dvd_iff: child(kernel, "gcd_dvd_iff"),
         ediv_gcd_ne_zero_of_ne_zero_left: child(kernel, "ediv_gcd_ne_zero_of_ne_zero_left"),
         ediv_gcd_ne_zero_if_ne_zero_right: child(kernel, "ediv_gcd_ne_zero_if_ne_zero_right"),
         mod_eq_add: child(kernel, "mod_eq_add"),
@@ -2081,6 +2088,13 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // `zero_lt_of_ne_zero` (always already built). Placed last for the
         // same reason as the two mirror modules just above.
         dvd_mul_split::declare_dvd_mul_split(&mut d)?;
+        // `draw11-theorems-e` lane: `Int.gcd_dvd_iff`, an `ml430` mirror.
+        // Needs `gcd_eq_gcd_ab_witnesses` (`bezout_witnesses.rs`),
+        // `gcd_dvd_left`/`gcd_dvd_right`/`nat_abs_dvd_nat_abs_of_dvd`
+        // (`gcd.rs`), and `dvd_trans`/`dvd_add`/`dvd_mul_right` (`dvd.rs`),
+        // all declared above. Placed last for the same reason as the mirror
+        // modules above it.
+        gcd_dvd_iff::declare_gcd_dvd_iff(&mut d)?;
         Ok(prelude)
     })();
     match built {
