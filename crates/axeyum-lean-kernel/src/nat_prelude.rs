@@ -4822,6 +4822,32 @@ pub struct NatPrelude {
     /// prime, `0 < a < pp`; this theorem itself needs only positivity and
     /// coprimality, not primality).
     pub least_residue_injective_of_coprime: NameId,
+    /// `Nat.least_residue_ne_zero_of_coprime : ∀ pp a k, gcd a pp = 1 →
+    ///   0 < k → k < pp → 0 < leastResidue pp a k` (`gauss_lemma.rs`) — the
+    /// one lemma ADR-0990 flagged as genuinely absent while sizing piece 2
+    /// (the pairing lemma): `leastResidue` never lands on `0` for an index
+    /// strictly between `0` and `pp` when `a` is coprime to `pp`, needed so
+    /// the signed-fold self-map's two branches land in `[1, pp)`.
+    pub least_residue_ne_zero_of_coprime: NameId,
+    /// `Nat.gaussFold pp a k := if gaussSignNeg pp a k then sub pp
+    /// (leastResidue pp a k) else leastResidue pp a k` (`gauss_lemma.rs`)
+    /// — the signed-fold map ADR-0990 sized piece 2 around: folds a
+    /// "negative" residue (`leastResidue > pp/2`) back to its symmetric
+    /// partner `pp - leastResidue`, landing every value in `[1, pp/2]`.
+    pub gauss_fold: NameId,
+    /// `Nat.gauss_fold_injective_of_coprime : ∀ m a k k', gcd a (succ (mul 2
+    ///   m)) = 1 → 0 < k → Le k m → 0 < k' → Le k' m → gaussFold (succ (mul
+    ///   2 m)) a k = gaussFold (succ (mul 2 m)) a k' → k = k'`
+    /// (`gauss_lemma.rs`) — piece 2 of the connecting theorem (ADR-0970/
+    /// ADR-0985/ADR-0990): `gaussFold` is injective on `[1, m]` (the domain
+    /// restriction to `Le · m` is load-bearing — unrestricted to `[1, pp)`
+    /// the map is 2-to-1, `k` and `pp - k` always colliding). By cases on
+    /// the two indices' signs: same-sign collisions close via
+    /// `least_residue_injective_of_coprime` (piece 1, directly or after
+    /// cancelling a shared `sub pp (·)`); opposite-sign collisions are
+    /// vacuous — `pp = k + k'` would force `pp ∣ (k+k')` at a value strictly
+    /// below `pp`, contradiction.
+    pub gauss_fold_injective_of_coprime: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5762,6 +5788,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_neg_count_two_closed_form: kernel.name_str(nat, "gaussNegCountTwoClosedForm"),
             least_residue_injective_of_coprime: kernel
                 .name_str(nat, "least_residue_injective_of_coprime"),
+            least_residue_ne_zero_of_coprime: kernel
+                .name_str(nat, "least_residue_ne_zero_of_coprime"),
+            gauss_fold: kernel.name_str(nat, "gaussFold"),
+            gauss_fold_injective_of_coprime: kernel
+                .name_str(nat, "gauss_fold_injective_of_coprime"),
         };
 
         let mut d = NatDev::new(kernel, p);
