@@ -1,0 +1,97 @@
+# Bucket-cohesion pin for scripts/measure-curriculum-kernel-coverage.py.
+# ADR-1215. Regenerate with --update-cohesion-pin AFTER deciding the
+# attribution is right -- a mechanical refresh of a WRONG attribution
+# is how this table stops being evidence.
+#
+# split	<carrier>	<stem>	<comma-separated node ids>
+#   one name family that attributes to more than one node. The node
+#   SET is pinned, not the counts, so growth inside known nodes is free.
+# family	<carrier>	<stem>	<node>	<count-when-pinned>
+#   one name family of at least 8 declarations sitting
+#   entirely in a carrier/logic catch-all. The count is informational.
+split	CReal	e	calculus,reals
+split	CReal	nat	calculus,reals
+split	CReal	regular	reals,sequences-and-limits
+split	CReal	two	calculus,reals
+split	Int	factorial	integers,number-theory
+split	Int	gauss	divisibility-and-euclid,number-theory
+split	Int	is	integers,number-theory
+split	Int	pow	integers,number-theory
+split	Nat	add	naturals,number-theory
+split	Nat	bijective	groups,relations-and-functions
+split	Nat	coprime	divisibility-and-euclid,number-theory
+split	Nat	dvd	divisibility-and-euclid,number-theory
+split	Nat	exists	naturals,number-theory
+split	Nat	gauss	divisibility-and-euclid,number-theory
+split	Nat	half	naturals,number-theory
+split	Nat	is	divisibility-and-euclid,groups
+split	Nat	min	naturals,number-theory
+split	Nat	not	naturals,number-theory
+split	Nat	pair	naturals,relations-and-functions
+split	Nat	pow	naturals,number-theory
+split	Nat	succ	naturals,number-theory
+split	Nat	sum	counting,naturals,number-theory
+split	Nat	symmetric	groups,naturals
+split	Rat	inv	linear-algebra,rationals
+split	Rat	is	probability,rationals
+split	Rat	mul	linear-algebra,rationals
+split	Rat	sum	linear-algebra,probability,rationals
+family	CPoint	dist	complex	8
+family	CPoint	dot	complex	14
+family	CPoint	scalar	complex	17
+family	CReal	abs	reals	12
+family	CReal	add	reals	9
+family	CReal	bounded	reals	8
+family	CReal	equiv	reals	11
+family	CReal	le	reals	17
+family	CReal	max	reals	14
+family	CReal	mul	reals	18
+family	CReal	neg	reals	8
+family	CReal	of	reals	12
+family	CReal	pow	reals	17
+family	Complex	abs	complex	8
+family	Complex	add	complex	8
+family	Complex	conj	complex	13
+family	Complex	mul	complex	13
+family	Complex	norm	complex	10
+family	Complex	of	complex	9
+family	Complex	poly	complex	13
+family	Complex	sum	complex	14
+family	Int	add	integers	27
+family	Int	characterization	integers	24
+family	Int	ediv	integers	8
+family	Int	le	integers	10
+family	Int	lt	integers	10
+family	Int	mul	integers	21
+family	Int	neg	integers	10
+family	Int	prod	integers	21
+family	Int	sub	integers	11
+family	Nat	binary	naturals	10
+family	Nat	bit	naturals	13
+family	Nat	bitwise	naturals	18
+family	Nat	clog	naturals	12
+family	Nat	dist	naturals	16
+family	Nat	div	naturals	29
+family	Nat	eq	naturals	12
+family	Nat	even	naturals	13
+family	Nat	land	naturals	24
+family	Nat	ldiff	naturals	10
+family	Nat	le	naturals	30
+family	Nat	log	naturals	20
+family	Nat	lor	naturals	15
+family	Nat	lt	naturals	19
+family	Nat	mul	naturals	16
+family	Nat	odd	naturals	8
+family	Nat	set	naturals	18
+family	Nat	sub	naturals	9
+family	Nat	test	naturals	10
+family	Nat	xor	naturals	8
+family	Nat	zero	naturals	12
+family	Rat	abs	rationals	8
+family	Rat	add	rationals	10
+family	Rat	int	rationals	15
+family	Rat	le	rationals	15
+family	Rat	lt	rationals	8
+family	Rat	nat	rationals	18
+family	Rat	neg	rationals	13
+family	Rat	sub	rationals	9

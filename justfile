@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter declaration-spec proof-plan absence-claims
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls
 
 fmt:
     cargo fmt --all --check
@@ -1626,6 +1626,36 @@ adr-remote-collisions:
 # `--list` prints the adoption worklist: every claim site, annotated or bare.
 absence-claims:
     python3 scripts/check-absence-claims.py
+
+# ADR-1215: is any kernel declaration attributed to the WRONG curriculum node?
+#
+# The residual counter in `measure-curriculum-kernel-coverage.py` catches a
+# declaration attributed to NOTHING. It cannot catch one attributed to the
+# wrong REAL bucket, because that declaration is attributed, counted, and
+# plausible -- and the node's pinned `kernel_decls` stays unchanged and wrong.
+# That happened twice in two days: ADR-1140 (`linear-algebra` matched the
+# literal `det2|det3`, so 22 general-`n` determinant declarations fell into
+# `rationals`) and ADR-1205 (`number-theory`'s only Gauss alternative was the
+# literal `gauss_fold_injective`, so 29 quadratic-residue declarations fell
+# into `naturals`/`integers`). Both were found by a lane told to check by
+# hand; nothing in either gate would have.
+#
+# THE CHECKER runs here, not only its tests -- registering a suite of
+# synthetic fixtures while the real subject goes unexamined is ADR-1170's and
+# ADR-1190's defect, twice over, and this would have been the third.
+# `--require-pin` refuses a missing `artifacts/curriculum/
+# bucket-cohesion-pin.tsv` rather than reading it as "nothing to report".
+curriculum-bucket-cohesion:
+    python3 scripts/measure-curriculum-kernel-coverage.py --run-projection --require-pin
+
+# Its controls, including the two historical incidents replayed against a
+# slice of the REAL projection with the pattern tables `git show`n at
+# `d2bb38a1e^` and `bd382566b^`, each required to fire and to name the
+# affected declarations, plus the same-slice green control that makes those
+# mean something. Mutation sweep:
+#   python3 scripts/tests/mutation_controls.py curriculum-bucket-cohesion
+curriculum-bucket-cohesion-controls:
+    python3 -m unittest scripts.tests.test_curriculum_bucket_cohesion
 
 # The controls for that gate, plus the seeded-claim demonstration: it rewrites
 # `was-absent:` to `absent:` in a SCRATCH copy of the four seeded records --

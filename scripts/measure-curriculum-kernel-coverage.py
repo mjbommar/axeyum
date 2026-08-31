@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import os
 import re
 import sys
 
@@ -187,23 +188,256 @@ NODES = [
 ]
 
 
-def load(path: str) -> dict[str, tuple[str, str]]:
-    rows: dict[str, tuple[str, str]] = {}
-    with open(path, encoding="utf-8") as fh:
+# The carrier and pure-logic buckets. These are the CATCH-ALLS: every pattern
+# above them is a topic that claims its names first, and anything unclaimed
+# lands here. A mis-attribution is invisible to the residual counter precisely
+# because it lands in one of these -- attributed, counted, and wrong.
+CATCHALL_NODES = frozenset({
+    "naturals", "integers", "rationals", "reals", "complex",
+    "propositional-logic", "predicate-logic",
+})
+
+# A single-bucket name family must reach this many declarations before the
+# family guard asks about it. Below the floor, an ordinary new lemma in a
+# carrier bucket is not evidence of anything and must not redden the gate.
+FAMILY_FLOOR = 8
+
+DEFAULT_PIN = "artifacts/curriculum/bucket-cohesion-pin.tsv"
+
+_STEM_WORDS = re.compile(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])")
+
+
+def name_stem(name: str) -> tuple[str, str]:
+    """`Nat.gauss_fold_injective_of_coprime` -> `("Nat", "gauss")`.
+
+    The stem is the FIRST word of the local name, with camelCase and
+    snake_case folded into one vocabulary -- `Nat.gaussFold` and
+    `Nat.gauss_neg_count_succ` share a stem, which is the whole point: this
+    kernel spells one mathematical family both ways (measured over 447 `CReal`
+    names: 315 carry an underscore, 225 an internal capital, 117 both), so a
+    guard keyed on the raw spelling would see two families where there is one.
+    """
+    carrier, _, local = name.partition(".")
+    if not local:
+        carrier, local = "", name
+    first = local.split("_", 1)[0]
+    words = _STEM_WORDS.findall(first)
+    stem = (words[0].lower() if words else first.lower())
+    # Trailing digits are stripped so `det2`, `det3` and `det` are ONE family.
+    # ADR-1140 is exactly a pattern that named the numbered instances while
+    # the general construction grew past them; without this the guard sees
+    # three families and never compares them.
+    return carrier, (stem.rstrip("0123456789") or stem)
+
+
+def assign(rows: dict[str, tuple[str, str]],
+           buckets: list[tuple[str, str]]) -> dict[str, str]:
+    """Declaration name -> node id, for the names some pattern claims."""
+    compiled = [(nid, re.compile(pat)) for nid, pat in buckets]
+    out: dict[str, str] = {}
+    for name in rows:
+        for nid, rx in compiled:
+            if rx.match(name):
+                out[name] = nid
+                break
+    return out
+
+
+def stem_groups(attribution: dict[str, str]) -> dict[
+        tuple[str, str], dict[str, list[str]]]:
+    groups: dict[tuple[str, str], dict[str, list[str]]] = {}
+    for name, nid in attribution.items():
+        groups.setdefault(name_stem(name), {}).setdefault(nid, []).append(name)
+    for by_node in groups.values():
+        for names in by_node.values():
+            names.sort()
+    return groups
+
+
+def read_pin(path: str) -> tuple[dict[tuple[str, str], tuple[str, ...]],
+                                 dict[tuple[str, str], str]]:
+    """Return (split pin, family pin). A missing file is an EMPTY pin, not an
+    error -- but see `--require-pin`, which the gate passes so a deleted or
+    misspelled pin path cannot read as "nothing to report"."""
+    splits: dict[tuple[str, str], tuple[str, ...]] = {}
+    families: dict[tuple[str, str], str] = {}
+    try:
+        fh = open(path, encoding="utf-8")
+    except FileNotFoundError:
+        return splits, families
+    with fh:
         for line in fh:
-            fields = line.rstrip("\n").split("\t")
-            if len(fields) < 3:
+            line = line.rstrip("\n")
+            if not line.strip() or line.lstrip().startswith("#"):
                 continue
-            prelude, kind, name = fields[0], fields[1], fields[2]
-            rows.setdefault(name, (prelude, kind))
+            fields = line.split("\t")
+            if len(fields) < 4:
+                sys.exit(f"error: malformed pin row in {path}: {line!r}")
+            kind, carrier, stem, nodes = fields[0], fields[1], fields[2], fields[3]
+            if kind == "split":
+                splits[(carrier, stem)] = tuple(sorted(nodes.split(",")))
+            elif kind == "family":
+                families[(carrier, stem)] = nodes
+            else:
+                sys.exit(f"error: unknown pin row kind {kind!r} in {path}")
+    return splits, families
+
+
+def render_pin(groups) -> str:
+    lines = [
+        "# Bucket-cohesion pin for scripts/measure-curriculum-kernel-coverage.py.",
+        "# ADR-1215. Regenerate with --update-cohesion-pin AFTER deciding the",
+        "# attribution is right -- a mechanical refresh of a WRONG attribution",
+        "# is how this table stops being evidence.",
+        "#",
+        "# split\t<carrier>\t<stem>\t<comma-separated node ids>",
+        "#   one name family that attributes to more than one node. The node",
+        "#   SET is pinned, not the counts, so growth inside known nodes is free.",
+        "# family\t<carrier>\t<stem>\t<node>\t<count-when-pinned>",
+        "#   one name family of at least " + str(FAMILY_FLOOR) + " declarations sitting",
+        "#   entirely in a carrier/logic catch-all. The count is informational.",
+    ]
+    for (carrier, stem), by_node in sorted(groups.items()):
+        if len(by_node) > 1:
+            lines.append("split\t{}\t{}\t{}".format(
+                carrier, stem, ",".join(sorted(by_node))))
+    for (carrier, stem), by_node in sorted(groups.items()):
+        if len(by_node) == 1:
+            node = next(iter(by_node))
+            size = len(by_node[node])
+            if node in CATCHALL_NODES and size >= FAMILY_FLOOR:
+                lines.append("family\t{}\t{}\t{}\t{}".format(
+                    carrier, stem, node, size))
+    return "\n".join(lines) + "\n"
+
+
+def cohesion_findings(groups, splits, families) -> list[str]:
+    """Every way the pinned cohesion picture and the measured one disagree.
+
+    G1 SPLIT   a name family attributing to a node set the pin does not carry.
+               This is the ADR-1140 / ADR-1205 shape: a pattern that named
+               INSTANCES (`det2|det3`, `gauss_fold_injective`) keeps matching
+               the instances while the family grows past it, so the family
+               splits between its destination node and a catch-all.
+    G2 FAMILY  a name family of at least FAMILY_FLOOR declarations landing
+               ENTIRELY in a catch-all, unpinned. This is the case G1 cannot
+               see: a family with no partial match at all never splits.
+    G3 STALE   a pinned row with no measured group. Without it the pin rots
+               into a list of things that used to be true, and a rotted pin
+               makes G1/G2 progressively weaker with nothing reporting it.
+    """
+    findings: list[str] = []
+    seen_split: set[tuple[str, str]] = set()
+    seen_family: set[tuple[str, str]] = set()
+    for key, by_node in sorted(groups.items()):
+        carrier, stem = key
+        nodes = tuple(sorted(by_node))
+        if len(by_node) > 1:
+            seen_split.add(key)
+            if splits.get(key) != nodes:
+                was = ",".join(splits[key]) if key in splits else "(unpinned)"
+                detail = "; ".join(
+                    "{}: {}".format(n, ", ".join(by_node[n][:6])
+                                    + (" ..." if len(by_node[n]) > 6 else ""))
+                    for n in nodes)
+                findings.append(
+                    "G1 SPLIT {}.{}* attributes to {} (pinned {}) -- {}".format(
+                        carrier, stem, ",".join(nodes), was, detail))
+        else:
+            node = nodes[0]
+            size = len(by_node[node])
+            if node in CATCHALL_NODES and size >= FAMILY_FLOOR:
+                seen_family.add(key)
+                if families.get(key) != node:
+                    was = families.get(key, "(unpinned)")
+                    findings.append(
+                        "G2 FAMILY {}.{}* -- {} declarations, all in the "
+                        "catch-all `{}` (pinned {}): {}".format(
+                            carrier, stem, size, node, was,
+                            ", ".join(by_node[node][:6])
+                            + (" ..." if size > 6 else "")))
+    for key in sorted(set(splits) - seen_split):
+        findings.append(
+            "G3 STALE split pin {}.{}* ({}) matches no measured family".format(
+                key[0], key[1], ",".join(splits[key])))
+    for key in sorted(set(families) - seen_family):
+        findings.append(
+            "G3 STALE family pin {}.{}* ({}) matches no measured family".format(
+                key[0], key[1], families[key]))
+    return findings
+
+
+TOML_NODE_RE = re.compile(
+    r'^id\s*=\s*"([a-z0-9-]+)"|^kernel_decls\s*=\s*(\d+)', re.M)
+
+
+def read_node_counts(path: str) -> dict[str, int]:
+    """`docs/curriculum/curriculum.toml`'s pinned per-node `kernel_decls`."""
+    text = open(path, encoding="utf-8").read()
+    counts: dict[str, int] = {}
+    current: str | None = None
+    for node_id, decls in TOML_NODE_RE.findall(text):
+        if node_id:
+            current = node_id
+        elif current is not None:
+            counts[current] = int(decls)
+            current = None
+    if not counts:
+        sys.exit(f"error: {path} carried no `kernel_decls` pins -- wrong file?")
+    return counts
+
+
+# A projection carrying fewer declarations than this is STALE or truncated, and
+# a short index makes a newly-landed family look like it was always in the
+# catch-all -- the exact failure these guards exist to catch, arriving through
+# the input rather than the table. Same device as
+# `check-absence-claims.py`'s `authority_declaration_floor`.
+PROJECTION_FLOOR = 2500
+
+
+def parse_rows(lines, source: str = "<input>") -> dict[str, tuple[str, str]]:
+    rows: dict[str, tuple[str, str]] = {}
+    for line in lines:
+        fields = line.rstrip("\n").split("\t")
+        if len(fields) < 3:
+            continue
+        prelude, kind, name = fields[0], fields[1], fields[2]
+        rows.setdefault(name, (prelude, kind))
     if not rows:
-        sys.exit(f"error: {path} yielded zero declarations -- wrong file?")
+        sys.exit(f"error: {source} yielded zero declarations -- wrong file?")
+    if len(rows) < PROJECTION_FLOOR:
+        sys.exit(f"error: {source} carries {len(rows)} distinct declarations "
+                 f"against a floor of {PROJECTION_FLOOR} -- this projection is "
+                 "STALE or truncated, and the cohesion guards would report a "
+                 "family that has simply not been built yet. Rebuild it, or "
+                 "lower PROJECTION_FLOOR deliberately.")
     return rows
+
+
+def load(path: str) -> dict[str, tuple[str, str]]:
+    with open(path, encoding="utf-8") as fh:
+        return parse_rows(fh, path)
+
+
+def run_projection(cargo_bin: str = "cargo") -> str:
+    """Run the real tool. `--release` is MANDATORY (debug SIGABRTs)."""
+    import subprocess
+    cmd = [cargo_bin, "run", "--release", "-q", "-p", "axeyum-lean-kernel",
+           "--example", "kernel_declaration_projection"]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3600,
+                          check=False)
+    if proc.returncode != 0:
+        sys.exit(f"error: `{' '.join(cmd)}` exited {proc.returncode} -- the "
+                 "tool itself failed, this is not a finding about any "
+                 f"attribution:\n{proc.stderr[-2000:]}")
+    return proc.stdout
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("projection", help="kernel_declaration_projection TSV")
+    ap.add_argument("projection", nargs="?",
+                    help="kernel_declaration_projection TSV; omit with "
+                         "--run-projection")
     ap.add_argument("--verbose", action="store_true",
                     help="list every unattributed declaration")
     ap.add_argument("--expect-attributed", type=int, default=None,
@@ -211,13 +445,40 @@ def main() -> int:
     ap.add_argument("--require-node", action="append", default=[],
                     help="fail unless this node attributes at least one "
                          "declaration (repeatable)")
+    ap.add_argument("--cohesion-pin", default=DEFAULT_PIN,
+                    help="bucket-cohesion pin TSV (default %(default)s)")
+    ap.add_argument("--no-cohesion", action="store_true",
+                    help="skip the cohesion guards entirely")
+    ap.add_argument("--require-pin", action="store_true",
+                    help="fail when the pin file is missing, so a deleted or "
+                         "misspelled path cannot read as 'nothing to report'")
+    ap.add_argument("--update-cohesion-pin", action="store_true",
+                    help="rewrite the pin from this measurement. Do this only "
+                         "AFTER deciding the attribution is right")
+    ap.add_argument("--expect-node-counts", default=None,
+                    help="fail on any per-node drift against this "
+                         "curriculum.toml's pinned kernel_decls")
+    ap.add_argument("--run-projection", action="store_true",
+                    help="ignore the positional path and run "
+                         "kernel_declaration_projection --release itself")
     args = ap.parse_args()
 
     unknown = [n for n in args.require_node if n not in NODES]
     if unknown:
         sys.exit(f"error: --require-node names no curriculum node: {unknown}")
 
-    rows = load(args.projection)
+    # Checked BEFORE the projection is read. A missing pin means every
+    # cohesion guard would examine an empty table and exit 0, and the gate
+    # must not reach that state for any reason -- including a projection
+    # problem that would otherwise mask it.
+    if args.require_pin and not os.path.isfile(args.cohesion_pin):
+        sys.exit(f"error: --require-pin and {args.cohesion_pin} does not "
+                 "exist -- the cohesion guards would examine nothing")
+
+    if args.run_projection:
+        rows = parse_rows(run_projection().splitlines())
+    else:
+        rows = load(args.projection)
     compiled = [(nid, re.compile(pat)) for nid, pat in BUCKETS]
     counts: dict[str, collections.Counter] = collections.defaultdict(
         collections.Counter)
@@ -253,6 +514,42 @@ def main() -> int:
         if counts[nid]["_total"] == 0:
             print(f"FAIL: --require-node {nid} attributed zero declarations",
                   file=sys.stderr)
+            status = 1
+
+    if args.expect_node_counts:
+        pinned = read_node_counts(args.expect_node_counts)
+        for nid in NODES:
+            want = pinned.get(nid)
+            got = counts[nid]["_total"]
+            if want is None:
+                print(f"FAIL: {args.expect_node_counts} carries no "
+                      f"kernel_decls for node {nid}", file=sys.stderr)
+                status = 1
+            elif want != got:
+                print(f"FAIL: node {nid} pinned at {want}, measured {got}",
+                      file=sys.stderr)
+                status = 1
+
+    if not args.no_cohesion:
+        groups = stem_groups(assign(rows, BUCKETS))
+        if args.update_cohesion_pin:
+            with open(args.cohesion_pin, "w", encoding="utf-8") as fh:
+                fh.write(render_pin(groups))
+            print(f"wrote {args.cohesion_pin}")
+            return status
+        splits, families = read_pin(args.cohesion_pin)
+        findings = cohesion_findings(groups, splits, families)
+        print(f"cohesion: {len(groups)} name families, "
+              f"{len(splits)} split pins, {len(families)} family pins, "
+              f"{len(findings)} findings")
+        for line in findings:
+            print(f"FAIL: {line}", file=sys.stderr)
+        if findings:
+            print("A finding is not automatically a bug: it says a name "
+                  "family moved across bucket boundaries. Decide whether the "
+                  "declarations belong in a destination node (widen that "
+                  "node's pattern) or in the carrier bucket (then, and only "
+                  "then, --update-cohesion-pin).", file=sys.stderr)
             status = 1
     return status
 
