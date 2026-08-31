@@ -746,6 +746,66 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
     "natural-minmax": ("Init.Data.Nat.MinMax",),
     "natural-stirling-numbers": ("Mathlib.Combinatorics.Enumerative.Stirling",),
     "natural-find-greatest": ("Mathlib.Data.Nat.Find",),
+    # --- draw 16, 2026-08-31 (ADR-1255) ---------------------------------------
+    # ADR-1220's LAYOUT RP, with both held-out slots filled by construction-only
+    # unblocks: ADR-1240 declared `Nat.casesOn` + the inductive `Nat.Primrec`,
+    # ADR-1245 declared `Nat.floorRoot` + `Nat.ceilRoot`. Reproduced against a
+    # freshly rebuilt `shape_search --release` at env 2711 by
+    # docs/research/09-decisions/adr-1255-draw-16-screen.py, which loads THIS
+    # module and runs the real select()/assign_partitions()/screen_family():
+    #
+    #   [0] Mathlib.Computability.Primrec.Basic  natural-primitive-recursion held-out
+    #   [1] Mathlib.Data.Int.Fib.Basic           natural-fibonacci-basic     development
+    #   [2] Mathlib.Data.Int.NatPrime            natural-prime-divisibility  train
+    #   [3] Mathlib.Data.Nat.Factorization.Root  natural-integer-root        held-out
+    #
+    # `Mathlib.Computability.*` sorts before every `Mathlib.Data.*`, so index 0
+    # falls out of the alphabet rather than out of an arrangement. No target
+    # outcome was consulted; R6 re-derives the assignment and R10 ties it to the
+    # preregistered one.
+    #
+    # THE TWO FILLERS ARE MULTI-MODULE BY NECESSITY, and that is a measured
+    # change from ADR-1220's table rather than a preference. At env 2711 only
+    # THREE unassigned modules carry a screened pool of 10 or more on their own
+    # -- `Mathlib.Computability.Primrec.Basic` (11),
+    # `Mathlib.Data.Nat.Factorization.Root` (18) and
+    # `Mathlib.NumberTheory.FactorisationProperties` (15, refused for held-out
+    # by ADR-1115 and recorded in the review file's `refused` list). Both
+    # single-module fillers ADR-1220 named are short: `Mathlib.Data.Int.Fib.Basic`
+    # yields 6 and `Mathlib.Data.Int.NatPrime` yields 2, so `select()` RAISES
+    # ("yields 6 screened candidates, fewer than the 10 the refill takes") on the
+    # four-single-module reading of layout RP. ADR-1220's own table already said
+    # "fibonacci (2 modules)" and "prime divisibility (7 modules)"; the bundles
+    # are rebuilt here at today's environment rather than inherited.
+    #
+    #   natural-fibonacci-basic     6 + 8              = 14
+    #   natural-prime-divisibility  2 + 3 + 3 + 2 + 3  = 13
+    #
+    # `Mathlib.Data.Nat.Prime.Nth` (5 more rows, and the bundle does not need
+    # them) is deliberately EXCLUDED: it is the nth-prime module, and
+    # `natural-nth-selector` is a STANDING held-out family whose subject is
+    # `Nat.nth`. R11 would not have seen it -- `cmd_check` scores a held-out
+    # family only against families drawn no later than itself, so a draw-16
+    # train family cannot make a draw-7 held-out family go red however adjacent
+    # it is. That asymmetry is deliberate and it is not a licence to publish a
+    # subject an existing held-out family owns.
+    #
+    # THE INDEX-0 POOL IS 11 AGAINST A `PER_FAMILY` OF 10 -- one row of slack,
+    # the tightest margin any draw has had (ADR-1240). If two of those eleven
+    # ever become catalogued or unstatable, `select()` raises and the whole
+    # refill fails. Re-measured here before authoring: still 11.
+    #
+    # Both held-out families carry a disclosure review in
+    # artifacts/autogenesis/holdout-adjacency-review-v1.json, written from the
+    # live sweep and from reading every named declaration against the drawn ten.
+    "natural-primitive-recursion": ("Mathlib.Computability.Primrec.Basic",),
+    "natural-fibonacci-basic": (
+        "Mathlib.Data.Int.Fib.Basic", "Mathlib.Data.Nat.Fib.Basic"),
+    "natural-prime-divisibility": (
+        "Mathlib.Data.Int.NatPrime", "Mathlib.Data.Nat.GCD.Prime",
+        "Mathlib.Data.Nat.Prime.Factorial", "Mathlib.Data.Nat.Prime.Int",
+        "Mathlib.RingTheory.Int.Basic"),
+    "natural-integer-root": ("Mathlib.Data.Nat.Factorization.Root",),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -822,6 +882,26 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
         "kernel-induction", "recursive-function-reconstruction"),
     "natural-find-greatest": (
         "kernel-induction", "recursive-function-reconstruction"),
+    # --- draw 16, 2026-08-31 (ADR-1255) ---------------------------------------
+    # `Nat.Primrec` is an inductive `Prop` and its ten rows are closure
+    # properties, each of which needs an actual derivation assembled from the
+    # seven constructors -- so the recursive route, plus induction for the ones
+    # quantified over a `Nat` parameter (`const`, `casesOn1`, `prec1`).
+    # `Nat.fib` is a curried-accumulator recursion and the Fibonacci rows are
+    # its boundary values and the addition formula, so induction plus the
+    # recursive route. `natural-prime-divisibility`'s rows are `Nat.Prime`
+    # hypotheses discharged into `dvd`/`Coprime`/`lcm` conclusions, which is
+    # the divisibility library plus ordinary application. `Nat.ceilRoot` and
+    # `Nat.floorRoot` are bounded searches over a divisibility test, so
+    # induction on the scan bound plus the divisibility library.
+    "natural-primitive-recursion": (
+        "kernel-induction", "recursive-function-reconstruction"),
+    "natural-fibonacci-basic": (
+        "kernel-induction", "recursive-function-reconstruction"),
+    "natural-prime-divisibility": (
+        "divisibility-library-application", "kernel-library-application"),
+    "natural-integer-root": (
+        "divisibility-library-application", "kernel-induction"),
 }
 
 PER_FAMILY = 10

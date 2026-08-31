@@ -2,24 +2,24 @@
   "coverage": {
     "attested_cohort_entries": 409,
     "ceiling_authority": "ADR-0615 as amended by ADR-0616. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. The rule on THIS cohort is ADR-0601's 'scaffolding, never headline': the UNATTESTED population may never outweigh the attested one. It is counted by attestation, not by manifest membership -- an extension row Lean accepted as a proof-free axiom against the pinned Mathlib is on the attested side, by the same method and the same command that produced nursery-v1's accepted-214-proof-free-axiom-types. not_elaborable rows count as UNATTESTED: Lean refused them, so they are worse than unchecked and must never buy headroom. When this binds, attest (scripts/attest-nursery-surface.py) rather than raise it.",
-    "combined_evaluation_entries": 634,
-    "entries": 420,
-    "families": 42,
+    "combined_evaluation_entries": 674,
+    "entries": 460,
+    "families": 46,
     "partition_counts": {
-      "development": 160,
-      "held-out": 150,
-      "train": 110
+      "development": 170,
+      "held-out": 170,
+      "train": 120
     },
     "per_family": 10,
     "screen_rejections": {
-      "already-catalogued": 134,
-      "divergence-registry": 41,
+      "already-catalogued": 164,
+      "divergence-registry": 42,
       "held-out-construction": 14,
-      "hygienic-or-generated": 1151,
-      "not-statable-here": 2392
+      "hygienic-or-generated": 1169,
+      "not-statable-here": 2432
     },
     "unattested_cohort_ceiling": 409,
-    "unattested_cohort_entries": 225,
+    "unattested_cohort_entries": 265,
     "v1_evaluation_entries": 214
   },
   "cross_population_component_split_exemptions": [
@@ -8555,6 +8555,312 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "107bdfc66d430a6c56677d2fb133fec044c7ed77035655e663f16b454cad9c04",
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "Int.instNegInt",
+        "Neg.neg",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-fib-neg-one-107bdfc6",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Int.Fib.Basic",
+      "source_name": "Int.fib_neg_one",
+      "source_statement_sha256": "6faf761029f120faf53367a3e96daefa5b34770d78272581238541b8c0bb5524",
+      "statement": "Int.fib (-1) = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "379ecfa0971cd40fa667af789b4433d304dd2c678cab324ce5245d6ea37f54e5",
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "Int.instNegInt",
+        "Neg.neg",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-fib-neg-two-379ecfa0",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Int.Fib.Basic",
+      "source_name": "Int.fib_neg_two",
+      "source_statement_sha256": "c9ed4df020549b085463628700b95c994d749363aab797a3271328aa16ffe37f",
+      "statement": "Int.fib (-2) = -1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "df6c44d89c272b9081548e30ec8d6904139e3fc02532442fb4b5c89bf99f89ae",
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-fib-one-df6c44d8",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Int.Fib.Basic",
+      "source_name": "Int.fib_one",
+      "source_statement_sha256": "00ea8d6a333f8f15c604df1b3a5530feb814176d03a64436336293b9ab79ac7e",
+      "statement": "Int.fib 1 = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "33d7642360af517853920b2b3f90e18976955b9249339742312e40b285adcd91",
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-fib-two-33d76423",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Int.Fib.Basic",
+      "source_name": "Int.fib_two",
+      "source_statement_sha256": "0b1e8c5245b650ca204300ffdcf2bbfaddf281f49e62f305fc286dc9d11eef6b",
+      "statement": "Int.fib 2 = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "61a8342befe3adac35f70dd724df66f9a024945ea2579dd17c994cead2fbd9c9",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "Int",
+        "Int.fib",
+        "Int.instAdd",
+        "Int.instMul",
+        "Int.natAbs",
+        "Nat.cast",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instHAdd",
+        "instHMul",
+        "instNatCastInt",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Int.Fib.Basic",
+      "source_name": "Int.fib_two_mul_add_one_eq_natFib_natAbs",
+      "source_statement_sha256": "7f31453ad2cefe452db3b8d282608d52b4f94ef9c17af05d0af430a8a0bc1301",
+      "statement": "∀ {n : ℤ}, Int.fib (2 * n + 1) = ↑(Nat.fib (2 * n + 1).natAbs)",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "439bfeee53720394d7f8e973e6396a5c3c77ed4fd24f6808f688786b6a4381a8",
+      "constants": [
+        "Eq",
+        "Int",
+        "Int.fib",
+        "OfNat.ofNat",
+        "instOfNat"
+      ],
+      "fact_id": "F:ml430-int-fib-zero-439bfeee",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Int.Fib.Basic",
+      "source_name": "Int.fib_zero",
+      "source_statement_sha256": "def73206b0f1662b63475af07e59ade2d6b8195eac96bff93bb94ae2d11647f4",
+      "statement": "Int.fib 0 = 0",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "81ea248572333821d550e1ecc61803feacf79d39a1fb64c588fb8e4690a427e8",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instHMul",
+        "instMulNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fib-add-81ea2485",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Fib.Basic",
+      "source_name": "Nat.fib_add",
+      "source_statement_sha256": "1640833eb30b4b588ba05c9d90300c1135852554fb0247a56655eb3b355e7d4e",
+      "statement": "∀ (m n : ℕ), Nat.fib (m + n + 1) = Nat.fib m * Nat.fib n + Nat.fib (m + 1) * Nat.fib (n + 1)",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "b4305b68252fe52b5fc072e3a38f022863667c1c201b158056e3df0e5bf7a68a",
+      "constants": [
+        "HAdd.hAdd",
+        "LE.le",
+        "LT.lt",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instLENat",
+        "instLTNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fib-lt-fib-succ-b4305b68",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Fib.Basic",
+      "source_name": "Nat.fib_lt_fib_succ",
+      "source_statement_sha256": "f33a4f3c5a4e386111eb420897ad8405828a8a0e425eb078f09399e9f2486fc6",
+      "statement": "∀ {n : ℕ}, 2 ≤ n → Nat.fib n < Nat.fib (n + 1)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "02785c528f515ce9a3c3de20be88b47448a562d8d2374cebf425129dfaca069a",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fib-one-02785c52",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Fib.Basic",
+      "source_name": "Nat.fib_one",
+      "source_statement_sha256": "d5a90b60902157fbc0b31956f5bda0f38b89cb56df68b9386273716b72bd8c0e",
+      "statement": "Nat.fib 1 = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2f3715f3716f9720ba4290227c712c52b016cd5dcd2b8d46d168fb777c0d236c",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.fib",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-fib-two-2f3715f3",
+      "family": "natural-fibonacci-basic",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Fib.Basic",
+      "mutation_of": null,
+      "partition": "development",
+      "proof_shape": "natural-fibonacci-basic:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Fib.Basic",
+      "source_name": "Nat.fib_two",
+      "source_statement_sha256": "089b2064f2f6a7b01bb8aa38be28cfb6924d703c0a3fd2cd8e053667317a8236",
+      "statement": "Nat.fib 2 = 1",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "87c06f0fec11036b10c15a5efb141e446797a59ee8158b6d168c8b916f1fb46f",
       "constants": [
         "DecidablePred",
@@ -9807,6 +10113,311 @@
       "source_statement_sha256": "1858f1139d7464f1c774f9b3576727ef849480af607c4de2a826218d1ce01aac",
       "statement": "∀ (n : ℕ), ¬2 ∣ 2 * n + 1",
       "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a9d23c479109c45d62a5e19a16ae4c4636eae599d99bbd5d62c404bf0de980ff",
+      "constants": [
+        "Eq",
+        "Iff",
+        "Nat",
+        "Nat.ceilRoot",
+        "OfNat.ofNat",
+        "Or",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-ceilroot-eq-zero-a9d23c47",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.ceilRoot_eq_zero",
+      "source_statement_sha256": "b041f27e882f6e43d3668fb7f6171c2e3b3e0ef7c2cdfeb3fd2cf12eba5e1650",
+      "statement": "∀ {a n : ℕ}, n.ceilRoot a = 0 ↔ n = 0 ∨ a = 0",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "11a8616707118bf3e4f47c725806dc8fe01e3be512345a3e65e3b43027cc50e6",
+      "constants": [
+        "And",
+        "Iff",
+        "Nat",
+        "Nat.ceilRoot",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-ceilroot-ne-zero-11a86167",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.ceilRoot_ne_zero",
+      "source_statement_sha256": "ac73dcfa1d449a87731141481d0996ce45103f4d8e4a38e331b3d61740df6391",
+      "statement": "∀ {a n : ℕ}, n.ceilRoot a ≠ 0 ↔ n ≠ 0 ∧ a ≠ 0",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "fffb7237691035a6440b0ad6b272f2e63d3971cd867e7a9e4360cdd55abe32d1",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ceilRoot",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-ceilroot-one-left-fffb7237",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.ceilRoot_one_left",
+      "source_statement_sha256": "309b9b7ad95e443db3bfc6f28038f607b68f27ae206ec982768a179237656543",
+      "statement": "∀ (a : ℕ), Nat.ceilRoot 1 a = a",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "e08e200c5c2acf36ad8f99954a202f79d7131d9b6df30e43cd7a7f30bb4e6db4",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ceilRoot",
+        "Ne",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-ceilroot-one-right-e08e200c",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.ceilRoot_one_right",
+      "source_statement_sha256": "e4a22287d3739028228a4caf16a0b936ebbc19b0b12b9d1cf97e42b4e165d763",
+      "statement": "∀ {n : ℕ}, n ≠ 0 → n.ceilRoot 1 = 1",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "19e667887befc50988c14751c76ab3292180622b472d755a4f1bd2f343c9ad58",
+      "constants": [
+        "Eq",
+        "HPow.hPow",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.ceilRoot",
+        "Nat.instMonoid",
+        "Ne",
+        "OfNat.ofNat",
+        "instHPow",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-ceilroot-pow-self-19e66788",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.ceilRoot_pow_self",
+      "source_statement_sha256": "4f4606fccc657baaf7b2c33a96a2a09a8406e7097d8eb26917bbb83071ea83a1",
+      "statement": "∀ {n : ℕ}, n ≠ 0 → ∀ (a : ℕ), n.ceilRoot (a ^ n) = a",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "c1253d24358eca9ac56b6d57c6e3c48209434317c0b15423de2890bcc90ed106",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ceilRoot",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-ceilroot-zero-left-c1253d24",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.ceilRoot_zero_left",
+      "source_statement_sha256": "5d12b48cc024bd605f2dbe0f7c94af7bed08c8ecdcf3cec1adec6d9c100adb6a",
+      "statement": "∀ (a : ℕ), Nat.ceilRoot 0 a = 0",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "697fdf9e8d3cfc71b905896846975ef3b320739a19b60a0fe083e6178075f173",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.ceilRoot",
+        "OfNat.ofNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-ceilroot-zero-right-697fdf9e",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.ceilRoot_zero_right",
+      "source_statement_sha256": "2fd0f0e8f2878474f7f542db6dd5db158910a6d432815ef6cbbfded1d97e3fed",
+      "statement": "∀ (n : ℕ), n.ceilRoot 0 = 0",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "80ce502a0e663bf7a930ea4e909a2d1794a42ff289d36e10c43ef7edbf4f8c31",
+      "constants": [
+        "Dvd.dvd",
+        "HPow.hPow",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.ceilRoot",
+        "Nat.instDvd",
+        "Nat.instMonoid",
+        "Ne",
+        "OfNat.ofNat",
+        "instHPow",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-dvd-ceilroot-pow-80ce502a",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.dvd_ceilRoot_pow",
+      "source_statement_sha256": "994475e9d673b1a1aa51226c33386d9daf65b974b954fff039ee61c34e528dc0",
+      "statement": "∀ {a n : ℕ}, n ≠ 0 → a ∣ n.ceilRoot a ^ n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "f00c5188c7acea87b480f9c0981a6246149ba7d651fda12b2e8897d51f5d7965",
+      "constants": [
+        "Dvd.dvd",
+        "HPow.hPow",
+        "Iff",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.ceilRoot",
+        "Nat.instDvd",
+        "Nat.instMonoid",
+        "Ne",
+        "OfNat.ofNat",
+        "instHPow",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-dvd-pow-iff-ceilroot-dvd-f00c5188",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.dvd_pow_iff_ceilRoot_dvd",
+      "source_statement_sha256": "42b0a4e2cb7dbf25821439adc82b6b7852bdd828b1f5565a9e0830634b3131e5",
+      "statement": "∀ {a b n : ℕ}, n ≠ 0 → (a ∣ b ^ n ↔ n.ceilRoot a ∣ b)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a3be4438859e22ef62f3299bc67484e015712fb42a979c54c59a833c0e124e5c",
+      "constants": [
+        "Eq",
+        "Iff",
+        "Nat",
+        "Nat.floorRoot",
+        "OfNat.ofNat",
+        "Or",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-floorroot-eq-zero-a3be4438",
+      "family": "natural-integer-root",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Factorization.Root",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-integer-root:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-induction"
+      ],
+      "source_group": "Mathlib.Data.Nat.Factorization.Root",
+      "source_name": "Nat.floorRoot_eq_zero",
+      "source_statement_sha256": "fdca5fc044370b4ae99fca9af52f7f17e034983a866b1957164fc794cb158813",
+      "statement": "∀ {a n : ℕ}, n.floorRoot a = 0 ↔ n = 0 ∨ a = 0",
+      "statement_shape": "biconditional"
     },
     {
       "answer_access": "withheld-during-episode",
@@ -12600,6 +13211,615 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "90351ba0b086d6e44d0a7f528013fc56677534776503e34e54d79feea4198907",
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Int",
+        "Int.instDvd",
+        "Int.instMul",
+        "Int.natAbs",
+        "Nat",
+        "Nat.Prime",
+        "Nat.cast",
+        "Nat.instDvd",
+        "Or",
+        "instHMul",
+        "instNatCastInt"
+      ],
+      "fact_id": "F:ml430-int-prime-dvd-mul-90351ba0",
+      "family": "natural-prime-divisibility",
+      "fragment": "Int",
+      "module": "Mathlib.RingTheory.Int.Basic",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.RingTheory.Int.Basic",
+      "source_name": "Int.Prime.dvd_mul",
+      "source_statement_sha256": "4e54398b1277326982829c63ab0a0e41003bad6edf12a1411c4df2d63858b42b",
+      "statement": "∀ {m n : ℤ} {p : ℕ}, Nat.Prime p → ↑p ∣ m * n → p ∣ m.natAbs ∨ p ∣ n.natAbs",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "23b73e69ac38d13866ecb498643552b89a9d633a8dc9417dfd265093e3eedd57",
+      "constants": [
+        "Dvd.dvd",
+        "HMul.hMul",
+        "Int",
+        "Int.instDvd",
+        "Int.instMul",
+        "Nat",
+        "Nat.Prime",
+        "Nat.cast",
+        "Or",
+        "instHMul",
+        "instNatCastInt"
+      ],
+      "fact_id": "F:ml430-int-prime-dvd-mul-23b73e69",
+      "family": "natural-prime-divisibility",
+      "fragment": "Int",
+      "module": "Mathlib.RingTheory.Int.Basic",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.RingTheory.Int.Basic",
+      "source_name": "Int.Prime.dvd_mul'",
+      "source_statement_sha256": "b16a96ddaf79d2c4cc2ad8b031d80be358c0a5210e2e848c2c7d71b32d1d0df5",
+      "statement": "∀ {m n : ℤ} {p : ℕ}, Nat.Prime p → ↑p ∣ m * n → ↑p ∣ m ∨ ↑p ∣ n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "ae6099bdf3d9951d22e12678a36980ee5c7529ac7ce7d2342615ea0d95a5f8d6",
+      "constants": [
+        "HMul.hMul",
+        "Iff",
+        "Int",
+        "Int.gcd",
+        "Int.instMul",
+        "Nat",
+        "Nat.cast",
+        "Ne",
+        "OfNat.ofNat",
+        "Or",
+        "instHMul",
+        "instNatCastInt",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-int-gcd-ne-one-iff-gcd-mul-right-ne-one-ae6099bd",
+      "family": "natural-prime-divisibility",
+      "fragment": "Int",
+      "module": "Mathlib.RingTheory.Int.Basic",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.RingTheory.Int.Basic",
+      "source_name": "Int.gcd_ne_one_iff_gcd_mul_right_ne_one",
+      "source_statement_sha256": "376500f1e237824221a30f4cbc6dee74d27fda20614c85bfc9f8ccced38675f8",
+      "statement": "∀ {a : ℤ} {m n : ℕ}, a.gcd (↑m * ↑n) ≠ 1 ↔ a.gcd ↑m ≠ 1 ∨ a.gcd ↑n ≠ 1",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "e3060f5d33ea51fa2c54bf105fe45f69565fd15fbd5b74adbc9ae0e47ce90479",
+      "constants": [
+        "Eq",
+        "HMul.hMul",
+        "Int",
+        "Int.instMul",
+        "Int.natAbs",
+        "Nat",
+        "Nat.Prime",
+        "Nat.cast",
+        "Ne",
+        "Not",
+        "OfNat.ofNat",
+        "instHMul",
+        "instNatCastInt",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-int-not-prime-of-int-mul-e3060f5d",
+      "family": "natural-prime-divisibility",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.NatPrime",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Int.NatPrime",
+      "source_name": "Int.not_prime_of_int_mul",
+      "source_statement_sha256": "94cddc2bf12985a2daeddcccdfbae8070f7e3f3cf7516f051258d57a8797d5c9",
+      "statement": "∀ {a b : ℤ} {c : ℕ}, a.natAbs ≠ 1 → b.natAbs ≠ 1 → a * b = ↑c → ¬Nat.Prime c",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "435a49484aa7098d04092952093814d47c0627ff05cadea89052192da406bafe",
+      "constants": [
+        "Dvd.dvd",
+        "HAdd.hAdd",
+        "HMul.hMul",
+        "HPow.hPow",
+        "Int",
+        "Int.instDvd",
+        "Int.instMul",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Prime",
+        "Nat.cast",
+        "Nat.instMonoid",
+        "OfNat.ofNat",
+        "Or",
+        "instAddNat",
+        "instHAdd",
+        "instHMul",
+        "instHPow",
+        "instNatCastInt",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-int-succ-dvd-or-succ-dvd-of-succ-sum-dvd-mul-435a4948",
+      "family": "natural-prime-divisibility",
+      "fragment": "Int",
+      "module": "Mathlib.Data.Int.NatPrime",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Int.NatPrime",
+      "source_name": "Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul",
+      "source_statement_sha256": "ba808f1adac6b825c22b6e3dfdb09e8bda54c619aeddf5b7bfc047aa8d941f20",
+      "statement": "∀ {p : ℕ},\n  Nat.Prime p →\n    ∀ {m n : ℤ} {k l : ℕ},\n      ↑(p ^ k) ∣ m → ↑(p ^ l) ∣ n → ↑(p ^ (k + l + 1)) ∣ m * n → ↑(p ^ (k + 1)) ∣ m ∨ ↑(p ^ (l + 1)) ∣ n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "716dffc328ae2785ebde02f892dec2b0596560b9ad6846f3325589b8f7094562",
+      "constants": [
+        "LE.le",
+        "LT.lt",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.descFactorial",
+        "instLENat",
+        "instLTNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3",
+      "family": "natural-prime-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Factorial",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Factorial",
+      "source_name": "Nat.Prime.coprime_descFactorial_of_lt_of_le",
+      "source_statement_sha256": "bd670138a54b58e23dca08c8d7af9d8be814c73c588747afe4595a4c46fba5c0",
+      "statement": "∀ {p n k : ℕ}, Nat.Prime p → n < p → k ≤ n → p.Coprime (n.descFactorial k)",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2dbea201f984fbb850969cabe8f499a946590f9562d590ba5ebc58dcf7708234",
+      "constants": [
+        "LT.lt",
+        "Nat",
+        "Nat.Coprime",
+        "Nat.Prime",
+        "Nat.factorial",
+        "instLTNat"
+      ],
+      "fact_id": "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
+      "family": "natural-prime-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Factorial",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Factorial",
+      "source_name": "Nat.Prime.coprime_factorial_of_lt",
+      "source_statement_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
+      "statement": "∀ {p n : ℕ}, Nat.Prime p → n < p → p.Coprime n.factorial",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "5ace903faae29c7c4a7839ff272456d752472680716c9cd7780f8aa113bb3ce5",
+      "constants": [
+        "Dvd.dvd",
+        "Iff",
+        "LE.le",
+        "Nat",
+        "Nat.Prime",
+        "Nat.factorial",
+        "Nat.instDvd",
+        "instLENat"
+      ],
+      "fact_id": "F:ml430-nat-prime-dvd-factorial-5ace903f",
+      "family": "natural-prime-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.Prime.Factorial",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.Prime.Factorial",
+      "source_name": "Nat.Prime.dvd_factorial",
+      "source_statement_sha256": "ffd159309a056461125528f0cb94b77d9ff1fcde5f8278e460282551d8740437",
+      "statement": "∀ {n p : ℕ}, Nat.Prime p → (p ∣ n.factorial ↔ p ≤ n)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "237d267c34c807299a50680b1607744a7715fa7d5dad755f48068a135e598af8",
+      "constants": [
+        "Dvd.dvd",
+        "Iff",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Nat.lcm",
+        "Or"
+      ],
+      "fact_id": "F:ml430-nat-prime-dvd-lcm-237d267c",
+      "family": "natural-prime-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Prime",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.GCD.Prime",
+      "source_name": "Nat.Prime.dvd_lcm",
+      "source_statement_sha256": "e5cd0144e3bba81aca2f6f37c8b6a690756d9a116efdc16f685033303bbb5a66",
+      "statement": "∀ {p a b : ℕ}, Nat.Prime p → (p ∣ a.lcm b ↔ p ∣ a ∨ p ∣ b)",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "58280948dc92e749559d55e7a72bc2b9bbdc4014e1ea97e45322b3acc17beeb7",
+      "constants": [
+        "Dvd.dvd",
+        "Nat",
+        "Nat.Prime",
+        "Nat.instDvd",
+        "Nat.lcm",
+        "Or"
+      ],
+      "fact_id": "F:ml430-nat-prime-dvd-or-dvd-of-dvd-lcm-58280948",
+      "family": "natural-prime-divisibility",
+      "fragment": "Nat",
+      "module": "Mathlib.Data.Nat.GCD.Prime",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-prime-divisibility:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "divisibility-library-application",
+        "kernel-library-application"
+      ],
+      "source_group": "Mathlib.Data.Nat.GCD.Prime",
+      "source_name": "Nat.Prime.dvd_or_dvd_of_dvd_lcm",
+      "source_statement_sha256": "bb023a2e9297cf5c375dd2cc13bd09764c74dd852fbf024d00436a5324a20cd9",
+      "statement": "∀ {p a b : ℕ}, Nat.Prime p → p ∣ a.lcm b → p ∣ a ∨ p ∣ b",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "ea539e2434b1c709d56cd5afb983cc41441a1edf55b4c1ea5faea4403766f0a0",
+      "constants": [
+        "HAdd.hAdd",
+        "Nat",
+        "Nat.Primrec",
+        "Nat.unpaired",
+        "instAddNat",
+        "instHAdd"
+      ],
+      "fact_id": "F:ml430-nat-primrec-add-ea539e24",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.add",
+      "source_statement_sha256": "8970950e676a8405a9c1004cc866596f21d552533bb6395ee15b533ad09d43f2",
+      "statement": "Nat.Primrec (Nat.unpaired fun x1 x2 => x1 + x2)",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "68977e9728c7410ccb63e5a5abdf0336e5d98f681145c2c619fb372e0f9ba1ea",
+      "constants": [
+        "Nat",
+        "Nat.Primrec",
+        "Nat.casesOn",
+        "Nat.pair",
+        "Nat.unpaired"
+      ],
+      "fact_id": "F:ml430-nat-primrec-caseson-68977e97",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.casesOn'",
+      "source_statement_sha256": "65ad840ac091daceb34dd09aa4691cc161d117cb0410db5724fea1d3c13bcf71",
+      "statement": "∀ {f g : ℕ → ℕ},\n  Nat.Primrec f → Nat.Primrec g → Nat.Primrec (Nat.unpaired fun z n => Nat.casesOn n (f z) fun y => g (Nat.pair z y))",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "f533b9fefd01ac534330a7fb6a939dd50b317a8f3d693887184b4a077f3c65af",
+      "constants": [
+        "Nat",
+        "Nat.Primrec",
+        "Nat.casesOn"
+      ],
+      "fact_id": "F:ml430-nat-primrec-caseson1-f533b9fe",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.casesOn1",
+      "source_statement_sha256": "84bb832861d732d610ae1faae91f808e70bbcaec30dc09681ab8576988101dfa",
+      "statement": "∀ {f : ℕ → ℕ} (m : ℕ), Nat.Primrec f → Nat.Primrec fun x => Nat.casesOn x m f",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "a120c9a1a75f7f6d75a3158c421fc577c7f16f21a3acc1d99dbc29c9df531509",
+      "constants": [
+        "Nat",
+        "Nat.Primrec"
+      ],
+      "fact_id": "F:ml430-nat-primrec-const-a120c9a1",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.const",
+      "source_statement_sha256": "0016f8d0f78850d1406b7a2ebb5da4e58ae8d86b51b44e9a228da2de1900f0a1",
+      "statement": "∀ (n : ℕ), Nat.Primrec fun x => n",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "2e55be0ceba8db9df0c0260d8e6ce3cac274e2fbe86bd305187015d6e185f27f",
+      "constants": [
+        "HMul.hMul",
+        "Nat",
+        "Nat.Primrec",
+        "Nat.unpaired",
+        "instHMul",
+        "instMulNat"
+      ],
+      "fact_id": "F:ml430-nat-primrec-mul-2e55be0c",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.mul",
+      "source_statement_sha256": "741b20f7ac298df381486de93d0bb7480ac31eaf81b7939c354fb76ad5e899af",
+      "statement": "Nat.Primrec (Nat.unpaired fun x1 x2 => x1 * x2)",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "d42f5250a82dd1ccffc345c5a2e64c445f456d98c29200d3c08b8346b7b61074",
+      "constants": [
+        "Eq",
+        "Nat",
+        "Nat.Primrec"
+      ],
+      "fact_id": "F:ml430-nat-primrec-of-eq-d42f5250",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.of_eq",
+      "source_statement_sha256": "8d076103a3fc855d6ac226d86616b52dcceef8d3abafc3046f28421fe1a9baba",
+      "statement": "∀ {f g : ℕ → ℕ}, Nat.Primrec f → (∀ (n : ℕ), f n = g n) → Nat.Primrec g",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "cf3df8b087fa6b680aa198cc4e0688d8d6e28763dfb2a36487f3230789f8daa0",
+      "constants": [
+        "HPow.hPow",
+        "Monoid.toPow",
+        "Nat",
+        "Nat.Primrec",
+        "Nat.instMonoid",
+        "Nat.unpaired",
+        "instHPow"
+      ],
+      "fact_id": "F:ml430-nat-primrec-pow-cf3df8b0",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:unconditional-equality",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.pow",
+      "source_statement_sha256": "4b2882d60c6cf2dfc044683ee7fb19a46f1b41004451a432c2380f7291789202",
+      "statement": "Nat.Primrec (Nat.unpaired fun x1 x2 => x1 ^ x2)",
+      "statement_shape": "unconditional-equality"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "61e68b20cc871e141812a2c9db29c86572c9474432f3749a1b21f73c827f8b88",
+      "constants": [
+        "Nat",
+        "Nat.Primrec",
+        "Nat.pair",
+        "Nat.rec"
+      ],
+      "fact_id": "F:ml430-nat-primrec-prec1-61e68b20",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:conditional-proposition",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.prec1",
+      "source_statement_sha256": "2b7d374af3bf798be9a729bf1726b09cbbf12f0b3387204d8b054b3e6327f58b",
+      "statement": "∀ {f : ℕ → ℕ} (m : ℕ), Nat.Primrec f → Nat.Primrec fun n => Nat.rec m (fun y IH => f (Nat.pair y IH)) n",
+      "statement_shape": "conditional-proposition"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "57bf43f2cb4962c76769be72645db12f6f9b748db03332a9c40ab36b79cf234b",
+      "constants": [
+        "Nat.Primrec",
+        "Nat.pred"
+      ],
+      "fact_id": "F:ml430-nat-primrec-pred-57bf43f2",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:unconditional-relation",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.pred",
+      "source_statement_sha256": "910892b80f2313d505c2ce150806c133d2fbce0abddaccd8097027fd77362d4b",
+      "statement": "Nat.Primrec Nat.pred",
+      "statement_shape": "unconditional-relation"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "eab7e86067c38bf0c1d001c06d57cc72ab74dc33258ad0789af5d2ca217f2de8",
+      "constants": [
+        "Function.swap",
+        "Nat",
+        "Nat.Primrec",
+        "Nat.pair",
+        "Nat.unpaired"
+      ],
+      "fact_id": "F:ml430-nat-primrec-swap-eab7e860",
+      "family": "natural-primitive-recursion",
+      "fragment": "Nat",
+      "module": "Mathlib.Computability.Primrec.Basic",
+      "mutation_of": null,
+      "partition": "held-out",
+      "proof_shape": "natural-primitive-recursion:higher-order-property",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "recursive-function-reconstruction"
+      ],
+      "source_group": "Mathlib.Computability.Primrec.Basic",
+      "source_name": "Nat.Primrec.swap",
+      "source_statement_sha256": "0ff5543b641bcd7dbc891aef330db38322c747d449042e53b950d61cb0e6f823",
+      "statement": "Nat.Primrec (Nat.unpaired (Function.swap Nat.pair))",
+      "statement_shape": "higher-order-property"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "6f46764f4e0e828cefa19e1faba00aeb801281355d4bc226f62de9af606cf034",
       "constants": [
         "Eq",
@@ -13531,7 +14751,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "6b8794e8974c4490b1c32fd43577c6378ba8ecc361bb528f7697b436c5bef52b",
+  "extension_sha256": "27ada4ec26c38a941af3ba004d2e888678a84a6580d190a0bf2e350957d36575",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
@@ -13638,6 +14858,10 @@
       "Mathlib.Data.Nat.Factorial.Basic",
       "Mathlib.Data.Nat.Squarefree"
     ],
+    "natural-fibonacci-basic": [
+      "Mathlib.Data.Int.Fib.Basic",
+      "Mathlib.Data.Nat.Fib.Basic"
+    ],
     "natural-find-greatest": [
       "Mathlib.Data.Nat.Find"
     ],
@@ -13651,6 +14875,9 @@
     ],
     "natural-induction-and-divisibility": [
       "Mathlib.Data.Nat.Init"
+    ],
+    "natural-integer-root": [
+      "Mathlib.Data.Nat.Factorization.Root"
     ],
     "natural-lcm": [
       "Init.Data.Nat.Lcm"
@@ -13679,6 +14906,16 @@
     ],
     "natural-prime-characterizations": [
       "Mathlib.Data.Nat.Prime.Defs"
+    ],
+    "natural-prime-divisibility": [
+      "Mathlib.Data.Int.NatPrime",
+      "Mathlib.Data.Nat.GCD.Prime",
+      "Mathlib.Data.Nat.Prime.Factorial",
+      "Mathlib.Data.Nat.Prime.Int",
+      "Mathlib.RingTheory.Int.Basic"
+    ],
+    "natural-primitive-recursion": [
+      "Mathlib.Computability.Primrec.Basic"
     ],
     "natural-stirling-numbers": [
       "Mathlib.Combinatorics.Enumerative.Stirling"
@@ -13718,10 +14955,12 @@
     "natural-division": "train",
     "natural-elementary-bounds": "held-out",
     "natural-factorial-choose-and-squarefree": "train",
+    "natural-fibonacci-basic": "development",
     "natural-find-greatest": "held-out",
     "natural-gcd-algorithm": "train",
     "natural-gcd-and-bitwise-basics": "development",
     "natural-induction-and-divisibility": "held-out",
+    "natural-integer-root": "held-out",
     "natural-lcm": "development",
     "natural-minmax": "development",
     "natural-modulus": "train",
@@ -13731,6 +14970,8 @@
     "natural-parity": "development",
     "natural-prime-arithmetic": "development",
     "natural-prime-characterizations": "train",
+    "natural-prime-divisibility": "train",
+    "natural-primitive-recursion": "held-out",
     "natural-stirling-numbers": "train",
     "natural-totient": "development",
     "range-induction": "held-out"
@@ -13738,7 +14979,7 @@
   "kind": "axeyum-autogenesis-nursery-extension",
   "limitations": [
     "Lean surface propositions are not Axeyum kernel-core terms.",
-    "195 of 420 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 222 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
+    "195 of 460 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 262 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
     "Attestation does not make this an evaluation population equivalent to nursery-v1's. v1 freezes partitions against declared dependency weak components (policy.split_component_authority); here source_group is the Mathlib defining module and no dependency-component analysis was run, so a held-out row can share a component with a dispatchable one and nothing in this manifest sees it. Attestation grades the STATEMENT; this is a property of the ROW.",
     "Any depends_on on these facts is ledger-owned and accrued after the fact (ADR-0615), never the preregistered component analysis above.",
     "Mathlib declarations remain external prior art and every Axeyum fact here remains open."
@@ -13771,10 +15012,12 @@
     "natural-division": "train",
     "natural-elementary-bounds": "held-out",
     "natural-factorial-choose-and-squarefree": "train",
+    "natural-fibonacci-basic": "development",
     "natural-find-greatest": "held-out",
     "natural-gcd-algorithm": "train",
     "natural-gcd-and-bitwise-basics": "development",
     "natural-induction-and-divisibility": "held-out",
+    "natural-integer-root": "held-out",
     "natural-lcm": "development",
     "natural-minmax": "development",
     "natural-modulus": "train",
@@ -13784,6 +15027,8 @@
     "natural-parity": "held-out",
     "natural-prime-arithmetic": "development",
     "natural-prime-characterizations": "train",
+    "natural-prime-divisibility": "train",
+    "natural-primitive-recursion": "held-out",
     "natural-stirling-numbers": "train",
     "natural-totient": "development",
     "range-induction": "held-out"
@@ -13893,6 +15138,10 @@
       "divisibility-library-application",
       "kernel-induction"
     ],
+    "natural-fibonacci-basic": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
     "natural-find-greatest": [
       "kernel-induction",
       "recursive-function-reconstruction"
@@ -13906,6 +15155,10 @@
       "kernel-library-application"
     ],
     "natural-induction-and-divisibility": [
+      "divisibility-library-application",
+      "kernel-induction"
+    ],
+    "natural-integer-root": [
       "divisibility-library-application",
       "kernel-induction"
     ],
@@ -13944,6 +15197,14 @@
     "natural-prime-characterizations": [
       "divisibility-library-application",
       "kernel-induction"
+    ],
+    "natural-prime-divisibility": [
+      "divisibility-library-application",
+      "kernel-library-application"
+    ],
+    "natural-primitive-recursion": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
     ],
     "natural-stirling-numbers": [
       "kernel-induction",
@@ -14252,7 +15513,14 @@
       "F:ml430-int-exists-gcd-one-d8820780",
       "F:ml430-int-exists-greatest-of-bdd-540c90cf",
       "F:ml430-int-exists-least-of-bdd-5b2bde8b",
+      "F:ml430-int-fib-neg-one-107bdfc6",
+      "F:ml430-int-fib-neg-two-379ecfa0",
+      "F:ml430-int-fib-one-df6c44d8",
+      "F:ml430-int-fib-two-33d76423",
+      "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b",
+      "F:ml430-int-fib-zero-439bfeee",
       "F:ml430-int-gcd-dvd-iff-66fa03b3",
+      "F:ml430-int-gcd-ne-one-iff-gcd-mul-right-ne-one-ae6099bd",
       "F:ml430-int-lt-of-sum-four-squares-eq-mul-449dddb6",
       "F:ml430-int-lt-or-eq-of-le-28b5d4e8",
       "F:ml430-int-modeq-add-b805125a",
@@ -14270,11 +15538,15 @@
       "F:ml430-int-mul-eq-one-iff-eq-one-or-neg-one-073ece31",
       "F:ml430-int-not-le-eq-a1aa34a4",
       "F:ml430-int-not-lt-eq-120ae6c2",
+      "F:ml430-int-not-prime-of-int-mul-e3060f5d",
       "F:ml430-int-ofnat-eq-coe-f82fca8a",
       "F:ml430-int-ofnat-eq-natcast-001cc3e2",
       "F:ml430-int-ofnat-one-8ef5badc",
       "F:ml430-int-ofnat-two-20e97f9e",
       "F:ml430-int-ofnat-zero-0d364f22",
+      "F:ml430-int-prime-dvd-mul-23b73e69",
+      "F:ml430-int-prime-dvd-mul-90351ba0",
+      "F:ml430-int-succ-dvd-or-succ-dvd-of-succ-sum-dvd-mul-435a4948",
       "F:ml430-nat-add-choose-eb49fa11",
       "F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef",
       "F:ml430-nat-add-descfactorial-eq-ascfactorial-5faac784",
@@ -14317,6 +15589,13 @@
       "F:ml430-nat-cauchy-induction-fc316053",
       "F:ml430-nat-cauchy-induction-mul-7c7491ec",
       "F:ml430-nat-cauchy-induction-two-mul-d6a1fcd8",
+      "F:ml430-nat-ceilroot-eq-zero-a9d23c47",
+      "F:ml430-nat-ceilroot-ne-zero-11a86167",
+      "F:ml430-nat-ceilroot-one-left-fffb7237",
+      "F:ml430-nat-ceilroot-one-right-e08e200c",
+      "F:ml430-nat-ceilroot-pow-self-19e66788",
+      "F:ml430-nat-ceilroot-zero-left-c1253d24",
+      "F:ml430-nat-ceilroot-zero-right-697fdf9e",
       "F:ml430-nat-coprime-dvd-mul-left-e799d04c",
       "F:ml430-nat-coprime-dvd-mul-right-7cd1c3c8",
       "F:ml430-nat-coprime-eq-of-mul-eq-zero-a2026bd5",
@@ -14336,6 +15615,7 @@
       "F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f",
       "F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c",
       "F:ml430-nat-div-right-comm-ab79d5f8",
+      "F:ml430-nat-dvd-ceilroot-pow-80ce502a",
       "F:ml430-nat-dvd-dvd-nat-lcm-left-6143311e",
       "F:ml430-nat-dvd-dvd-nat-lcm-right-d05db50b",
       "F:ml430-nat-dvd-gcd-e5184fc5",
@@ -14344,6 +15624,7 @@
       "F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a",
       "F:ml430-nat-dvd-mul-ebd102e2",
       "F:ml430-nat-dvd-mul-gcd-iff-dvd-mul-f9517e6b",
+      "F:ml430-nat-dvd-pow-iff-ceilroot-dvd-f00c5188",
       "F:ml430-nat-eq-zero-of-gcd-eq-zero-left-72cc4246",
       "F:ml430-nat-eq-zero-of-gcd-eq-zero-right-24054a86",
       "F:ml430-nat-euler-four-squares-21d8c900",
@@ -14357,6 +15638,10 @@
       "F:ml430-nat-fermatnumber-strictmono-acbcb8c6",
       "F:ml430-nat-fermatnumber-two-3aa3bfc4",
       "F:ml430-nat-fermatnumber-zero-ca7aac67",
+      "F:ml430-nat-fib-add-81ea2485",
+      "F:ml430-nat-fib-lt-fib-succ-b4305b68",
+      "F:ml430-nat-fib-one-02785c52",
+      "F:ml430-nat-fib-two-2f3715f3",
       "F:ml430-nat-findgreatest-eq-87c06f0f",
       "F:ml430-nat-findgreatest-eq-iff-426770ce",
       "F:ml430-nat-findgreatest-eq-zero-iff-3498d512",
@@ -14367,6 +15652,7 @@
       "F:ml430-nat-findgreatest-mono-right-8d67c0d3",
       "F:ml430-nat-findgreatest-of-ne-zero-04670c87",
       "F:ml430-nat-findgreatest-of-not-0229e05d",
+      "F:ml430-nat-floorroot-eq-zero-a3be4438",
       "F:ml430-nat-forall-ne-zero-iff-37819136",
       "F:ml430-nat-le-add-one-of-avg-eq-left-210e3373",
       "F:ml430-nat-le-add-one-of-avg-eq-right-58e5e606",
@@ -14413,11 +15699,16 @@
       "F:ml430-nat-nthroot-zero-left-8560aafb",
       "F:ml430-nat-odd-fermatnumber-251041a5",
       "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
+      "F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3",
+      "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
       "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",
       "F:ml430-nat-prime-coprime-pow-of-not-dvd-2752b17f",
+      "F:ml430-nat-prime-dvd-factorial-5ace903f",
       "F:ml430-nat-prime-dvd-iff-eq-b7446896",
+      "F:ml430-nat-prime-dvd-lcm-237d267c",
       "F:ml430-nat-prime-dvd-mul-59446847",
       "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "F:ml430-nat-prime-dvd-or-dvd-of-dvd-lcm-58280948",
       "F:ml430-nat-prime-eq-one-of-pow-846d2949",
       "F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb",
       "F:ml430-nat-prime-eq-two-or-odd-25691fc9",
@@ -14434,6 +15725,16 @@
       "F:ml430-nat-prime-one-lt-bc90cfc7",
       "F:ml430-nat-prime-pos-85eeeeea",
       "F:ml430-nat-prime-sum-four-squares-a60fd297",
+      "F:ml430-nat-primrec-add-ea539e24",
+      "F:ml430-nat-primrec-caseson-68977e97",
+      "F:ml430-nat-primrec-caseson1-f533b9fe",
+      "F:ml430-nat-primrec-const-a120c9a1",
+      "F:ml430-nat-primrec-mul-2e55be0c",
+      "F:ml430-nat-primrec-of-eq-d42f5250",
+      "F:ml430-nat-primrec-pow-cf3df8b0",
+      "F:ml430-nat-primrec-prec1-61e68b20",
+      "F:ml430-nat-primrec-pred-57bf43f2",
+      "F:ml430-nat-primrec-swap-eab7e860",
       "F:ml430-nat-simproc-le-add-le-bc6f7c5c",
       "F:ml430-nat-size-bit-c601dbf0",
       "F:ml430-nat-size-eq-zero-020ad98c",
