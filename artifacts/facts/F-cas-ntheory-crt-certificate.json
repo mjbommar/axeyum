@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ntheory-crt-certificate",
+  "title": "axeyum-cas's CRT certificate (both the solution and the inconsistency direction) is independently re-checked across six systems",
+  "statement": "For each of the solvable congruence systems x=2(mod 3), x=3(mod 5), x=2(mod 7) (unique solution 23 mod 105); x=1(mod 4), x=3(mod 6) (non-coprime moduli, unique solution 9 mod 12); the empty system (trivial solution 0 mod 1); and x=5(mod 1) (trivial modulus), axeyum-cas's ntheory_certify::certify_crt produces a CrtCertificate::Solution{solution, modulus}, and ntheory_certify::check_crt_certificate independently re-derives and confirms: the solution is canonical (0 <= solution < modulus), every input congruence holds, AND modulus is the LEAST common multiple of the input moduli (not merely a common one -- recording only a common multiple would accept, e.g., 24 as a 'modulus' for the second system, which satisfies both congruences and is a common multiple of 4 and 6, but is not the least one, 12). For each of the inconsistent systems x=0(mod 2), x=1(mod 4) and x=1(mod 6), x=2(mod 9), x=3(mod 4), certify_crt instead produces a CrtCertificate::Inconsistent{left, right} naming a genuinely conflicting pair of congruences, independently re-verified by recomputing gcd(m_left, m_right) and confirming a_left != a_right modulo it.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (and\n  (crt-solution (2 3) (3 5) (2 7)) = (23 . 105)\n  (crt-solution (1 4) (3 6)) = (9 . 12)                 ; non-coprime moduli, LEAST common multiple 12\n  (crt-solution) = (0 . 1)                              ; empty system, trivial\n  (crt-solution (5 1)) = (0 . 1)                        ; trivial modulus\n  (crt-inconsistent (0 2) (1 4))                        ; 0 != 1 (mod gcd(2,4)=2)\n  (crt-inconsistent (1 6) (2 9) (3 4))                  ; a genuinely conflicting pair exists\n))\n; where crt-solution's SECOND component is REQUIRED to be the least common\n; multiple of the input moduli, independently re-derived by\n; check_crt_certificate's R4 guard -- not merely a common multiple.",
+    "fragment": "cas-ntheory-crt-certificate",
+    "free_symbols": ["x"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.crt-certificate-not-kernel-reconstructed",
+    "cas.exact-i128-modular-arithmetic-independent-of-ntheory",
+    "cas.independent-gcd-lcm-checker-gcd-checker-lcm-added-2026-08-31-see-notes"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-crt-six-systems",
+      "kind": "witness-replay",
+      "supports": "certify_crt produces a correct Solution certificate (with the LEAST common multiple, not merely a common one) for four solvable systems, and a correct Inconsistent certificate for two unsolvable systems; check_crt_certificate independently re-derives and confirms each",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::certify_crt (untrusted producer: crate::ntheory::crt, an incremental pairwise-merge via crate::ntheory::extended_gcd)",
+        "ntheory_certify::check_crt_certificate (independent checker: re-derives every congruence directly from `residues`, and re-derives the least-common-multiple/gcd computations via this module's OWN checker_gcd/checker_lcm rather than crate::ntheory::gcd/crate::ntheory::lcm -- see notes)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ntheory_certify::ntheory_certify_tests::certifies_crt_in_both_directions -- --exact 2>/dev/null | grep -cE '^test ntheory_certify::ntheory_certify_tests::certifies_crt_in_both_directions \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/ntheory_certify.rs",
+      "notes": "cas-internal (ADR-0601 SS2): checker_command names only axeyum-cas. FINDING FROM THIS FACT'S OWN REGISTRATION (ADR-1055): as first written, check_crt_certificate's R4 (leastness) and R6 (conflict) guards called crate::ntheory::lcm/crate::ntheory::gcd DIRECTLY -- correct, but not independent of the crate this checker exists to check, and in tension with this module's own stated design principle ('written here rather than reused from ntheory on purpose') and with ADR-0745's claim that 'the modular arithmetic is this module's own, not ntheory's', which as written did not actually cover gcd/lcm. Fixed before this fact was registered: added checker_gcd/checker_lcm (a from-scratch Euclidean algorithm) and routed R4/R6 through them; added ntheory_certify_tests::independent_gcd_lcm_agree_with_ntheory (72 comparisons) pinning agreement with ntheory::gcd/ntheory::lcm the same way the module already does for pow_mod. Re-ran the adversarial mutation sweep (scripts/tests/test-ntheory-certificate-guards.sh) after the fix: R4 and R6 are still each killed by their existing forgery fixtures (forged_crt_modulus_is_a_common_multiple_but_not_the_least; forged_crt_rejects_a_fabricated_conflict_over_a_solvable_system + forged_crt_rejects_out_of_range_conflict_indices), measured=23 survivors=3 unchanged (G1/G5/G10, the three documented resource guards)."
+    },
+    {
+      "id": "cas-internal-crt-gcd-lcm-independence",
+      "kind": "witness-replay",
+      "supports": "the checker_gcd/checker_lcm helpers check_crt_certificate now uses agree with crate::ntheory::gcd/crate::ntheory::lcm across 72 (a,b) pairs, so the independence fix did not change what the checker accepts or rejects, only where its arithmetic comes from",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::checker_gcd_for_tests / ntheory_certify::checker_lcm_for_tests (test-only accessors)",
+        "crate::ntheory::gcd / crate::ntheory::lcm (the independent oracle compared against)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ntheory_certify::ntheory_certify_tests::independent_gcd_lcm_agree_with_ntheory -- --exact 2>/dev/null | grep -cE '^test ntheory_certify::ntheory_certify_tests::independent_gcd_lcm_agree_with_ntheory \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/ntheory_certify.rs",
+      "notes": "cas-internal (ADR-0601 SS2). Supporting evidence for the fix described in the first evidence row's notes, added 2026-08-31 alongside this fact."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-cas ntheory_certify::certify_crt / ntheory_certify::check_crt_certificate (crates/axeyum-cas/src/ntheory_certify.rs, landed per ADR-0745); independence fix (checker_gcd/checker_lcm) and this fact's registration both per ADR-1055",
+    "source": "the existing unit test ntheory_certify::ntheory_certify_tests::certifies_crt_in_both_directions, read directly from crates/axeyum-cas/src/ntheory_certify/ntheory_certify_tests.rs",
+    "prior_art": [
+      {
+        "who": "Sun Tzu (Sunzi); traditionally the Chinese Remainder Theorem",
+        "what": "existence and uniqueness (modulo the LCM) of a simultaneous solution to a system of congruences with pairwise coprime moduli; the non-coprime generalisation used here is a routine extension",
+        "year": 400,
+        "where": "Sunzi Suanjing (Master Sun's Mathematical Manual), circa 3rd-5th century CE",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-1055 and ADR-0601 SS2. No Kernel::add_declaration term exists for this claim. ADR-0603 row 3. This is the one certificate route of the four where registering the fact found and fixed a real independence gap rather than only writing evidence for existing code -- see the first evidence row's notes for the finding and the fix, both landed in the same lane before this fact's status was set to proved."
+}

@@ -252,7 +252,7 @@ was read from the fresh dump with its axiom footprint, not from a report.
 |---|---|
 | **1** | **Landed.** `Nat.exists_prime_gt : ∀ n, ∃ p, n < p ∧ Prime p` (theorem, 0 axioms) and `Int.euclid_infinitude` (theorem, 0 axioms), the ℤ form. |
 | **2** | **None, and argued from the shape** per ADR-0603 Am. 3. Euclid's proof is *fully computational*: it produces the bound `n! + 1` and searches below it, so there is no undecidable comparison and no unbounded search to extract. The decision it would need — order totality on ℕ — is `Nat.le_total`, a theorem here (§1.1). |
-| **3** | Reachable and cheap: `exists_prime_gt` evaluated at a concrete `n`, with `minFac` naming the witness. **Not built as a certificate-producing routine** — `axeyum-cas`'s `is_prime` (`ntheory.rs:436`) returns a bare `bool` with no verifier (§2.8). |
+| **3** | Reachable and cheap: `exists_prime_gt` evaluated at a concrete `n`, with `minFac` naming the witness — that specific kernel-side witness is still not wired to an independent certificate. Separately, as of 2026-08-31 (ADR-1055) a Pratt-certificate route exists and is cited: `ntheory_certify::certify_prime`/`check_primality_certificate`, `F:cas-ntheory-pratt-primality-mersenne89`, `cas-internal` (§2.8). |
 | **4** | Not attempted. `ml430` mirrors exist in the ledger (514 `ml430` facts, 163 number-theory-flavoured). |
 
 This is worth stating loudly because
@@ -334,7 +334,7 @@ reliable; its report of what REMAINS is a hypothesis, and re-verifying a
 | **1** | **Existence landed:** `Nat.exists_prime_factorization` (theorem, 0 axioms), via `prodRange f k`. `Nat.euclid_lemma` (`Prime p → p ∣ ab → p ∣ a ∨ p ∣ b`, 0 axioms) is the uniqueness half's engine and is landed. |
 | **2′** | **Expressiveness, not decision.** No `List`/`Finset`/`Prod`/quotient — see §1.2(b). The multiset statement is unwritable; the multiplicity-agreement statement is writable today with `countRange_permute`. |
 | **2** | **None** in the decision sense: nothing here needs an undecidable comparison. |
-| **3** | Certified factorization of a fixed `n` with an independent verifier — **not built**. `Nat.minFac`/`minFacAuxMinimal` give the kernel side; `axeyum-cas`'s `factorize` (`ntheory.rs:459`) has no certificate (§2.8). |
+| **3** | `Nat.minFac`/`minFacAuxMinimal` give the kernel side; `axeyum-cas`'s `factorize` (`ntheory.rs:459`) itself has no certificate. But as of 2026-08-31 (ADR-1055) a certified factorization route exists and is cited: `ntheory_certify::certify_factorization`/`check_factorization_certificate` — product identity plus per-factor Pratt primality, independently re-derived — `F:cas-ntheory-factorization-certificate`, `cas-internal` (§2.8). |
 | **4** | Not attempted. |
 
 ### 2.5 Family: Wilson's theorem — *complete row 1, both directions*
@@ -425,6 +425,52 @@ computation with no witness type and no verifier:
 > noticing. See
 > [`09-the-dominance-claim-verified-across-three-domains.md`](../formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md)
 > §7.4.
+>
+> **UPDATED 2026-08-31 (lane `row3-citability`, ADR-1055): row 3 is now
+> citable for four of these routes, and the "six, all in `ntheory_certify.rs`"
+> count above double-counts two functions that live elsewhere.** Reading
+> `crates/axeyum-cas/src/ntheory_certify.rs` directly (`^pub fn check_`)
+> finds exactly **four** entry points, not six:
+> `check_primality_certificate`, `check_composite_certificate`,
+> `check_factorization_certificate`, `check_crt_certificate`.
+> `check_irreducible_certificate` and `check_irreducible_certificate_independent`
+> do **not** live in this file — they are the GF(2) polynomial-irreducibility
+> pair this same section already correctly attributes to `gf2.rs:1785` and
+> `gf2_independent.rs:131`, a few paragraphs above. So the "22 distinct
+> verifiers, six number-theoretic, all in `ntheory_certify.rs`" paragraph
+> conflated file attribution while the crate-wide total (22) was right; there
+> are four number-theoretic entries in this file, plus the two GF(2)
+> irreducibility entries the earlier table already named correctly. Confirmed
+> two ways: exact-name grep across `axeyum-cas/src/`, and `git log -S
+> check_irreducible_certificate -- crates/axeyum-cas/` returning nothing (the
+> file's whole history is four commits: the initial certificate types, the
+> adversarial fixtures, the mutation-control tests, and ADR-1055's independence
+> fix below).
+>
+> Reviewing the four entry points for independence (ADR-1055) also found a
+> real gap in one of them: `check_crt_certificate`'s leastness and
+> conflict-detection guards called `ntheory::lcm`/`ntheory::gcd` **directly**,
+> contradicting both this module's own stated design ("written here rather
+> than reused from `ntheory` on purpose") and the claim quoted above that "the
+> modular arithmetic is this module's own" — that claim, as written, did not
+> in fact cover `gcd`/`lcm`. Fixed before any fact was registered: added
+> independent `checker_gcd`/`checker_lcm` (from-scratch Euclidean algorithm),
+> routed the two guards through them, and added an agreement test against
+> `ntheory::gcd`/`ntheory::lcm` (72 comparisons) mirroring the module's
+> existing discipline for `mod_pow`. The adversarial mutation sweep still
+> passes unchanged after the fix (`measured=23 survivors=3`, the same three
+> documented resource guards).
+>
+> **Four facts now name these routes, each with a `checker_command` proven to
+> fail on broken input**: `F:cas-ntheory-pratt-primality-mersenne89`,
+> `F:cas-ntheory-compositeness-certificate`,
+> `F:cas-ntheory-factorization-certificate`, `F:cas-ntheory-crt-certificate`.
+> All four `cas-internal` (ADR-0601 §2) — none reconstructs through the
+> kernel, and none claims to. So the honest current count is **4 of 4** row-3
+> number-theory certificate ROUTES cited (not subjects — see the closing list
+> below, which is unchanged: Legendre symbol, modular inverse, discrete log
+> and the rest of `ntheory_advanced.rs` still have no certificate at all).
+> Full write-up: ADR-1055.
 
 The original assessment, accurate when written:
 
@@ -444,14 +490,18 @@ UNSAT by bounded enumeration), never a `(witness, verifier)` pair. That is a
 legitimate and useful artifact; it is not row 3 in ADR-0603's sense, and
 `number-theory.md` currently presents it as the subject's testable core.
 
-**So the honest position is:** number theory's row 1 is unusually strong and
-almost entirely landed; its row 2 is provably empty in the analysis sense and
-unbuilt in the one sense available to it (§2.7); and its row 3 — the axis §1.3
-moves the dominance argument onto — exists for integer-linear Diophantine
-solvability and essentially nowhere else. Saying that plainly is the price of
-moving the axis, and it converts a vague "we should build row 3" into a
-specific list: primality, factorization, CRT and the Legendre symbol each need
-a witness type and a verifier that shares no code with the producer.
+**So the honest position, updated 2026-08-31 (ADR-1055), is:** number theory's
+row 1 is unusually strong and almost entirely landed; its row 2 is provably
+empty in the analysis sense and unbuilt in the one sense available to it
+(§2.7); and its row 3 — the axis §1.3 moves the dominance argument onto — now
+has a citable certificate route AND a citing fact for four subjects (integer-
+linear Diophantine solvability, primality, factorization, CRT), and remains
+bare computation with neither for the rest: the Legendre/Jacobi symbols,
+modular inverse, `sqrt_mod`, discrete log, and `divisor_sigma` still have no
+witness type and no verifier. Four built-and-cited is real progress from
+"essentially nowhere," and it is still a specific, short list away from
+covering the subject — not a claim that number theory's row 3 as a whole is
+now dominant.
 
 ---
 

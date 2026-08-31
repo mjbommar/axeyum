@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ntheory-compositeness-certificate",
+  "title": "axeyum-cas's compositeness certificate is independently re-checked across five composites, including the smallest Carmichael number",
+  "statement": "For each of n in {4, 15, 91, 561, 1000000}, axeyum-cas's ntheory_certify::certify_composite produces a CompositeCertificate -- a single nontrivial divisor d with 1 < d < n -- and ntheory_certify::check_composite_certificate independently re-derives and confirms it by one division: 1 < d, d < n, and n mod d = 0. For each of n in {-7, 0, 1, 2, 3, 97, 2147483647}, no compositeness certificate is produced (certify_composite returns None). 561 = 3*11*17 is the smallest Carmichael number -- a composite that Fermat's little theorem cannot distinguish from a prime for MOST bases (it passes a^560 = 1 mod 561 for every a coprime to 561). Its inclusion demonstrates that this checker is a plain divisibility check, structurally immune to the Carmichael-number failure mode that afflicts a bare Fermat test: it needs a divisor, not a passed/failed exponentiation.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (and\n  (forall ((n Int)) (=> (member n (4 15 91 561 1000000))\n    (exists ((d Int)) (and (< 1 d) (< d n) (= (mod n d) 0)))))\n  (forall ((n Int)) (=> (member n (-7 0 1 2 3 97 2147483647))\n    (not (exists ((d Int)) (and (< 1 d) (< d n) (= (mod n d) 0))))))))\n; the positive side is what ntheory_certify::certify_composite/check_composite_certificate\n; independently establish for each listed n; the negative side is certify_composite\n; correctly declining every listed prime, unit, zero and negative number.",
+    "fragment": "cas-ntheory-composite-certificate",
+    "free_symbols": ["n", "d"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.compositeness-certificate-not-kernel-reconstructed",
+    "cas.exact-i128-integer-division-and-remainder-no-floating-point"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-compositeness-five-instances",
+      "kind": "witness-replay",
+      "supports": "certify_composite produces a nontrivial divisor for each of 4, 15, 91, 561, 1000000 and check_composite_certificate independently re-derives and confirms each one by one division; certify_composite declines to certify -7, 0, 1, 2, 3, 97 and 2147483647 (the last a Mersenne prime) as composite",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::certify_composite (untrusted producer: crate::ntheory::factorize(n).first() for the divisor)",
+        "ntheory_certify::check_composite_certificate (independent checker: three arithmetic guards -- 1 < divisor, divisor < n, n % divisor == 0 -- no call into crate::ntheory at all)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ntheory_certify::ntheory_certify_tests::certifies_composites_and_declines_primes -- --exact 2>/dev/null | grep -cE '^test ntheory_certify::ntheory_certify_tests::certifies_composites_and_declines_primes \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/ntheory_certify.rs",
+      "notes": "cas-internal (ADR-0601 SS2): checker_command names only axeyum-cas. This is the simplest of the four routes -- the checker is three inequalities and one modulus, with zero calls into crate::ntheory (grepped directly: check_composite_certificate's body contains no `ntheory::` reference), so it is unambiguously independent of its producer. Proved by breaking: see this fact's provenance/notes and ADR-1055 for the break/restore transcript run during registration."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-cas ntheory_certify::certify_composite / ntheory_certify::check_composite_certificate (crates/axeyum-cas/src/ntheory_certify.rs, landed per ADR-0745); this fact registers it into the ledger per ADR-1055",
+    "source": "the existing unit test ntheory_certify::ntheory_certify_tests::certifies_composites_and_declines_primes, read directly from crates/axeyum-cas/src/ntheory_certify/ntheory_certify_tests.rs",
+    "prior_art": [
+      {
+        "who": "R. D. Carmichael",
+        "what": "Carmichael numbers -- composites satisfying Fermat's little theorem for every base coprime to them; 561 is the smallest",
+        "year": 1910,
+        "where": "R. D. Carmichael, \"Note on a new number theory function\", Bulletin of the AMS 16",
+        "attribution": "standard textbook/literature attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-1055 and ADR-0601 SS2. No Kernel::add_declaration term exists for this claim. ADR-0603 row 3 (decidable-fragment exact form) for number theory. This is deliberately the WEAKEST of the four certificate routes by design (one division, per the module's own doc: 'the two directions have entirely different costs and are never interchangeable -- this one is checked by a single division'), included for completeness of the row-3 coverage rather than because it is difficult."
+}

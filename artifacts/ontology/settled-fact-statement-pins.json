@@ -173,6 +173,30 @@
       "prose_sha256": "12ccd65e1d970453eeece296f4906d5e2cf3f9f2b45748a5ee0086dcb9237a7d"
     },
     {
+      "fact_id": "F:cas-ntheory-compositeness-certificate",
+      "language": "cas-term",
+      "statement_sha256": "7a4337443db1856d02b2bb9c227f3eb7d6433c8587d0f8820c1269dea2460b15",
+      "prose_sha256": "70fc7a1fa27740b77e28ef6017a3a1a5ae999d9322be82f3645d217837fb6b92"
+    },
+    {
+      "fact_id": "F:cas-ntheory-crt-certificate",
+      "language": "cas-term",
+      "statement_sha256": "257569cfa2634eafa6bb431de880d34fc7a9c7dcdee240623bf52770e2140838",
+      "prose_sha256": "43d4c8a1eaf6b9153ac313173f88c7b1ee7ff59170d70ad84086cbe5599bd163"
+    },
+    {
+      "fact_id": "F:cas-ntheory-factorization-certificate",
+      "language": "cas-term",
+      "statement_sha256": "8aba7af6c743e779bdcd9c8a7e69763d29fe5ea668dd3f9e610b1cfac6b0f52c",
+      "prose_sha256": "3cce4953ab2569dd7dc048a924c35ad5e3ace5fd5a2266e76a288ee26f4ca035"
+    },
+    {
+      "fact_id": "F:cas-ntheory-pratt-primality-mersenne89",
+      "language": "cas-term",
+      "statement_sha256": "236df8cc35c6fc950b0fa7403c852d7218950df3a5390208478a469b65d837b2",
+      "prose_sha256": "af0e3f9f43de96303b113a9e37e4a8c3b3463d4fe65a4dd6608d99eb65b6e917"
+    },
+    {
       "fact_id": "F:cas-partial-fractions-mixed-general-case",
       "language": "cas-term",
       "statement_sha256": "a22d5b84623414994d16d004c962cceddecfdfe5416e585747273104cb758223",
