@@ -4,7 +4,11 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
+<<<<<<< HEAD
     "min_identity_bound": 1296,
+=======
+    "min_identity_bound": 1300,
+>>>>>>> worktree-agent-aa895f505f1611a83
     "max_header_exempt": 30
   },
   "amendments": [
@@ -2595,6 +2599,13 @@
       "kernel_theorem": "CReal.equivAbsDiffLe"
     },
     {
+      "fact_id": "F:creal-evt-approx-max",
+      "language": "lean4",
+      "statement_sha256": "33f0acadb95df9e1b8a6fc3a70931faecd869a68d40d77d29f547cf9ea0cf883",
+      "prose_sha256": "dc5c541de005ccea5c7443f903eaefcc1825d1d4ffcc7a090a4c90f083c47aca",
+      "kernel_theorem": "CReal.evt_approx_max"
+    },
+    {
       "fact_id": "F:creal-evt-attained-max-decides-sign",
       "language": "lean4",
       "statement_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
@@ -4767,6 +4778,27 @@
       "statement_sha256": "784c64f98443d9aa4451cec28131f01575b6cc65d14865c881d3b7c8cabcca7e",
       "prose_sha256": "257408e7cce2b0f2d40a0426d37c4f4480285c5fd073aa32f5ae582130a3f2b0",
       "kernel_theorem": "CReal.sumRangeRatioTest"
+    },
+    {
+      "fact_id": "F:creal-supon",
+      "language": "lean4",
+      "statement_sha256": "bae7ba8d7b28019ce37c8b558c5c84706aa104e1d9943b7527d4ba1deea65988",
+      "prose_sha256": "2b4c69ef1eebfc5d66e276cbd97d1583d23b56b9ace2c0a27de2a27b6f91d539",
+      "kernel_theorem": "CReal.supOn"
+    },
+    {
+      "fact_id": "F:creal-supon-approx-lub",
+      "language": "lean4",
+      "statement_sha256": "d3df20f281c2fa19f944c7f7fa04d8afef1880ea19f50e56f9be4a65ff55c770",
+      "prose_sha256": "e921777c661d9c635b69dfc182ae83d207ab51caac3f165c6c8cae46cfc66e75",
+      "kernel_theorem": "CReal.supOn_approx_lub"
+    },
+    {
+      "fact_id": "F:creal-supon-ub",
+      "language": "lean4",
+      "statement_sha256": "67145758edb6eaadbfd9f0730422dd3ae0a6fc26ca29985d1e72cd223b4ea3df",
+      "prose_sha256": "fbf49ad5e831f9544938c9aadcb9744dc8d33ace2d2048352477cb68c2a7b9e9",
+      "kernel_theorem": "CReal.supOn_ub"
     },
     {
       "fact_id": "F:creal-trueexpofmodulus-mono",

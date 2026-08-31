@@ -30,6 +30,25 @@ Index-status: accepted
   correct on independent re-derivation (see "What survives unchanged" below).
   **Reclassifies nothing.** No fact, `epistemic_status`, or proof was edited.
 
+**Correction, 2026-08-30 (lane `evt-row1-land-and-register`, see
+[ADR-0895](adr-0895-evt-row-1-lands-and-two-absence-claims-were-wrong.md)).**
+This ADR's own "Re-derivation against the current kernel" section (below)
+reports `CReal.supOn_upper_bound -> ABSENT (no declaration of that name)` and
+concludes from it that EVT's characterizing upper-bound law is missing. The
+name was guessed; the theorem was not missing. It shipped as `CReal.supOn_ub`
+in `crates/axeyum-lean-kernel/src/creal/sup_laws.rs`, present at the time
+this ADR was written, together with `CReal.supOn_approx_lub` (the
+approximate-least-upper-bound half, also present under its stated name — this
+ADR's own re-derivation confirms that one correctly). **An absence probe that
+searches for a guessed name proves nothing about whether the theorem exists,
+only about whether that spelling does** — the general lesson, stated for the
+record so the next absence claim in this repository carries a positive
+control of the same kind rather than a guess. ADR-0895's lane composed the two
+laws into `CReal.evt_approx_max` (EVT's row 1) and registered all four
+declarations as facts; zero facts had named any `CReal.supOn` law before that
+lane. This does not change this ADR's decision — see "What survives
+unchanged" below, itself now qualified by ADR-0895.
+
 ## The charge, restated precisely
 
 `08-…`'s own §4 IVT table records three axes where it says "Mathlib
@@ -200,7 +219,12 @@ All three match both documents exactly. **Not refuted.**
 - ADR-0691's decision — land `supOn`, do not yet claim EVT dominance — is
   correct and this ADR's kernel re-check confirms its stated remaining gap
   (`supOn_upper_bound`-shaped and `evt_approx_max`-shaped declarations both
-  absent) is still accurate post-merge.
+  absent) is still accurate post-merge. **STALE per the correction note above:
+  the `supOn_upper_bound`-shaped law existed under the name `CReal.supOn_ub`
+  at the time this was written; `evt_approx_max` has since landed (ADR-0895).
+  The narrower claim — that EVT was not yet a citable dominance example —
+  remains correct; the claim that the characterizing laws were absent from
+  the kernel does not.**
 - Row 2's `evidence.kind = "exhaustive-enumeration"` overstatement (an
   absence check against four hand-written names, not a derivability proof) is
   unchanged by this ADR and remains open per `08-…` §5 item 4.

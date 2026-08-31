@@ -6560,6 +6560,18 @@ pub struct CRealPrelude {
     /// [`Self::sup_on_ub_at_fine_mesh_point`] bounds the sampled value. See
     /// `creal/sup_laws.rs`.
     pub sup_on_ub: NameId,
+    /// `CReal.evt_approx_max : ∀ F a b (hab : le a b) (u :
+    /// UniformlyContinuousOn F a b) (n : Nat), ∃ x, le a x ∧ (le x b ∧
+    /// ∀ y, le a y → le y b → le (F y) (add (F x) (ofRat (natDivSucc 1
+    /// n))))` — the Extreme Value Theorem's honest row 1: an APPROXIMATE
+    /// maximum, exact structural mirror of [`Self::ivt_approx`].
+    ///
+    /// Pure composition of [`Self::sup_on_approx_lub`] (the witness `x`) and
+    /// [`Self::sup_on_ub`] (bounds every `F y`) through [`Self::le_trans`].
+    /// Adds nothing to the supremum machinery and does not narrow
+    /// [`Self::evt_attained_max_decides_sign`] at all — `x` moves with `n`
+    /// and is never claimed to converge. See `creal/evt_row1.rs`.
+    pub evt_approx_max: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -7333,6 +7345,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max_le_sup_on_add: kernel.name_str(creal, "meshMax_le_supOn_add"),
         sup_on_ub_at_fine_mesh_point: kernel.name_str(creal, "supOn_ub_at_fine_mesh_point"),
         sup_on_ub: kernel.name_str(creal, "supOn_ub"),
+        evt_approx_max: kernel.name_str(creal, "evt_approx_max"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -13222,6 +13235,18 @@ const STEPS: &[BuildStep] = &[
         run: sup_laws::declare_sup_on_ub,
     },
     BuildStep {
+        label: "evt_row1::declare_evt_approx_max",
+        requires: &[
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.sup_on,
+            |p: CRealPrelude| p.sup_on_approx_lub,
+            |p: CRealPrelude| p.sup_on_ub,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.evt_approx_max],
+        run: evt_row1::declare_evt_approx_max,
+    },
+    BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
         requires: &[
             |p: CRealPrelude| p.exp_term,
@@ -14354,6 +14379,7 @@ mod crossing;
 mod density;
 mod deriv_unique;
 mod derivative;
+mod evt_row1;
 mod exp_fn;
 mod exponential;
 mod extreme_value;

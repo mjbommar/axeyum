@@ -50,6 +50,25 @@ substantive error rather than a refinement:
 The audit's verdict is **IVT dominant with three named caveats; EVT not
 dominant, for a bookkeeping reason rather than the structural one this document
 gives.**
+**Second correction, 2026-08-30 (lane `evt-row1-land-and-register`, see
+[ADR-0895](../research/09-decisions/adr-0895-evt-row-1-lands-and-two-absence-claims-were-wrong.md)).**
+§2's "Row 1 — there is none" and ADR-0692's kernel re-derivation both searched
+for a declaration named `CReal.supOn_upper_bound` and correctly found it
+absent — but that name never existed. The theorem shipped as `CReal.supOn_ub`,
+already present in `crates/axeyum-lean-kernel/src/creal/sup_laws.rs` at the
+time both documents were written, together with `CReal.supOn_approx_lub`
+(the least-upper-bound half). **EVT's row 1 was not missing from the kernel;
+it was missing from the ledger and misnamed in the search.** ADR-0895's lane
+composed the two into `CReal.evt_approx_max` — the honest row 1, `∀ n, ∃ x ∈
+[a,b], ∀ y ∈ [a,b], F y ≤ F x + 1/(n+1)` — and registered all four
+declarations (`CReal.supOn`, `CReal.supOn_ub`, `CReal.supOn_approx_lub`,
+`CReal.evt_approx_max`) as facts; zero facts had named any of them before.
+This does **not** flip EVT's dominance verdict to "dominates" — see ADR-0895's
+"What this does NOT change" section — it makes the comparison against
+Mathlib's `IsCompact.exists_isMaxOn` newly RUNNABLE, where before there was
+nothing on our side to run it against. §2 below is left as the audit wrote
+it, since it was an accurate account of the ledger and of a mis-aimed name
+search at the time; read it with this note in mind, not as current.
 
 ## Summary
 
@@ -61,7 +80,7 @@ different for the two theorems**:
 
 | | IVT | EVT |
 | --- | --- | --- |
-| ADR-0603 row 1 — general constructive form | **present** (`CReal.ivt_approx`) | **ABSENT** |
+| ADR-0603 row 1 — general constructive form | **present** (`CReal.ivt_approx`) | **present as of 2026-08-30** (`CReal.evt_approx_max`, ADR-0895 — was reported ABSENT here and in ADR-0692, both searching for a name, `CReal.supOn_upper_bound`, that never existed) |
 | row 2 — boundary refutation | **present**, with hypothesis class proved and a discriminating non-vacuity check | **present**, hypothesis class proved, **but no non-vacuity evidence in the ledger** |
 | row 3 — decidable-fragment exact form | present, and the substantive half is `cas-internal` | present, and the substantive half is `cas-internal` |
 | row 4 — labeled import | **ABSENT** | **ABSENT** |
@@ -277,7 +296,16 @@ facts carry `proof_route = "imported-kernel-lean"`; none is analytic.
 
 ## 2. EVT, row by row — and the missing row
 
-### Row 1 — there is none
+### Row 1 — there is none (STALE as of 2026-08-30; see ADR-0895)
+
+**This section's finding was already false when it was written.** `CReal.supOn_ub`
+and `CReal.supOn_approx_lub` existed under those exact names at the time; the
+probe below searched for `CReal.supOn_upper_bound`, which never existed, and
+correctly reported IT absent. `CReal.evt_approx_max` (ADR-0895) is now the
+constructive substitute this section says is missing — the composition of
+those two theorems through `CReal.le_trans`. What follows is kept verbatim as
+an accurate record of the ledger and of a mis-aimed name search on the date
+this audit ran; do not read it as the current state.
 
 **SUPERSEDED 2026-08-30 by ADR-0875, and the correction matters: the CONTENT
 of row 1 exists today.** `CReal.supOn_ub` (`F y ≤ supOn` for `y ∈ [a,b]`) and
@@ -670,6 +698,16 @@ are still open. **EVT should not be cited as a dominance example until they
 land** — the same conclusion ADR-0675 reached by inventory and ADR-0691 by
 construction, now reached a third way by the axis test itself.
 
+**STALE as of 2026-08-30 (ADR-0895): both characterizing laws named above
+already existed, under `CReal.supOn_ub` rather than the guessed
+`supOn_upper_bound`, and `CReal.evt_approx_max` has now landed as their
+composition.** The two dominance-axis rows above still read "not applicable"
+honestly for a DIFFERENT reason now: `evt_approx_max` is a genuine positive
+statement, but an approximate one against Mathlib's exact attained maximum,
+so a fresh two-axis pass is needed to say whether that counts as dominance,
+narrower-but-comparable, or something else — ADR-0895 does not make that call
+and leaves it for whoever next revisits this table.
+
 ## 5. What would have to land
 
 For **EVT** to reach the position IVT already holds, in dependency order:
@@ -677,11 +715,14 @@ For **EVT** to reach the position IVT already holds, in dependency order:
 1. **`CReal.supOn`** — the supremum value of a uniformly continuous function on
    `[a,b]`, as `creal/supremum.rs` scopes it. The five rungs below it are
    landed and axiom-free; the file characterises the remaining obstruction.
+   **DONE (landed 2026-08-30, ADR-0691; registered as F:creal-supon,
+   ADR-0895).**
 2. **`CReal.evt_approx_max`** — the honest row 1: `∀ n, ∃ x ∈ [a,b], ∀ y ∈
    [a,b], F y ≤ F x + 1/(n+1)`. This is the exact structural mirror of
    `ivt_approx` and it is what makes row 2 a *boundary* rather than a *hole*:
    row 2 says the `∀n` cannot be pushed inside, row 1 says everything short of
-   that is available.
+   that is available. **DONE (landed and registered 2026-08-30, ADR-0895 —
+   see F:creal-evt-approx-max).**
 3. **A fact for `CReal.evtLinear_uniformly_continuous`**, and non-vacuity
    evidence on `F:creal-evt-attained-max-decides-sign` — either its own test or
    an explicit citation of the IVT one, since the conclusion is the same Prop.
