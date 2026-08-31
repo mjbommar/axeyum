@@ -478,6 +478,36 @@ struct Inventory {
     /// in them is empty by construction rather than by measurement (see
     /// [`Group`]'s type doc). Recorded, not assumed.
     axiom_free_environments: Vec<&'static str>,
+    /// **The exhaustiveness finding.** A declaration present in some prelude's
+    /// environment that NO prelude on that prelude's own [`DEPENDS_ON`] chain
+    /// introduces -- i.e. one this gate inspected under no owner at all.
+    ///
+    /// The partition is exhaustive by construction (every chain bottoms out at
+    /// `logic`, whose dependency is `None`, so its introduced set is its whole
+    /// environment), but "by construction" is exactly the kind of reasoning
+    /// this file exists to distrust: a `DEPENDS_ON` edge pointing at something
+    /// that is not an ancestor would silently leave a hole, and the gate would
+    /// still print a large, reassuring `checked` count. Recorded as
+    /// `"<label>: <name>"`.
+    unattributed: Vec<String>,
+    /// A declaration introduced by more than one prelude on one chain. Cannot
+    /// happen for a linear diff, and is checked rather than assumed for the
+    /// same reason as [`Inventory::unattributed`].
+    doubly_attributed: Vec<String>,
+}
+
+/// The `label`, its dependency, its dependency's dependency, ... down to the
+/// base of [`DEPENDS_ON`]. Every declaration in `label`'s environment must be
+/// introduced by exactly one member.
+fn dependency_chain(label: &'static str) -> Vec<&'static str> {
+    let dep_of: BTreeMap<&str, Option<&'static str>> = DEPENDS_ON.iter().copied().collect();
+    let mut chain = vec![label];
+    let mut cursor = label;
+    while let Some(Some(dep)) = dep_of.get(cursor) {
+        chain.push(dep);
+        cursor = dep;
+    }
+    chain
 }
 
 /// Walk every prelude's INTRODUCED declaration set and report what is there.
@@ -537,6 +567,30 @@ fn inventory_report(groups: &[Group], own: &BTreeMap<&'static str, BTreeSet<Stri
         }
         report.checked += checked;
         report.per_label.push((label, checked, structural, trusted));
+
+        // EXHAUSTIVENESS. Everything in this prelude's environment must be
+        // introduced by exactly one prelude on its own dependency chain, or
+        // this gate inspected it under no owner and its large `checked` count
+        // would be describing a partial partition.
+        for name in &group.all {
+            let owners: Vec<&'static str> = dependency_chain(label)
+                .into_iter()
+                .filter(|l| own.get(l).is_some_and(|names| names.contains(name)))
+                .collect();
+            match owners.len() {
+                1 => {}
+                0 => {
+                    // Only a real hole when every chain member was built; a
+                    // partial `groups` (the controls) legitimately omits some.
+                    if dependency_chain(label).iter().all(|l| own.contains_key(l)) {
+                        report.unattributed.push(format!("{label}: {name}"));
+                    }
+                }
+                _ => report
+                    .doubly_attributed
+                    .push(format!("{label}: {name} introduced by {owners:?}")),
+            }
+        }
     }
     report
 }
@@ -611,6 +665,24 @@ fn every_declaration_a_prelude_introduces_is_checked_and_axiom_free() {
         report.resting_on_axioms.is_empty(),
         "these introduced declarations rest on something assumed: {:?}",
         report.resting_on_axioms
+    );
+
+    // The partition really is exhaustive -- asserted, not argued. Without this
+    // a wrong `DEPENDS_ON` edge would leave declarations owned by nobody while
+    // the counts above stayed large and reassuring.
+    assert!(
+        report.unattributed.is_empty(),
+        "these declarations are in a prelude's environment but introduced by no \
+         prelude on its dependency chain, so this gate checked them under no \
+         owner: {:?}. A DEPENDS_ON edge is pointing somewhere that is not an \
+         ancestor.",
+        report.unattributed
+    );
+    assert!(
+        report.doubly_attributed.is_empty(),
+        "these declarations are introduced by more than one prelude on one \
+         chain, which a set difference cannot produce: {:?}",
+        report.doubly_attributed
     );
 }
 
@@ -904,6 +976,72 @@ mod inventory_control {
             by_label["nat"] > 100,
             "the `nat` diff must be the real introduced set, found {}",
             by_label["nat"]
+        );
+    }
+
+    /// A declaration owned by nobody is NAMED, rather than quietly dropped
+    /// while the `checked` count stays large.
+    ///
+    /// The hole is injected into the ownership map, which is what a wrong
+    /// `DEPENDS_ON` edge produces: `own_declarations` returns a set difference,
+    /// so the only way to reach this state for real is an edge pointing at
+    /// something that is not an ancestor -- and that is unreachable from a
+    /// two-prelude fixture, which is exactly why the guard needs a control.
+    #[test]
+    fn a_declaration_no_prelude_introduces_is_reported() {
+        let groups = groups_with_mutated_nat(|_, _| {});
+        let honest = own_declarations(&groups);
+        let baseline = inventory_report(&groups, &honest);
+        assert!(
+            baseline.unattributed.is_empty() && baseline.doubly_attributed.is_empty(),
+            "the UNMUTATED partition must be exhaustive, or the control proves \
+             nothing: {:?} / {:?}",
+            baseline.unattributed,
+            baseline.doubly_attributed
+        );
+
+        let mut holed = honest.clone();
+        let dropped = holed
+            .get_mut("nat")
+            .expect("nat is in the diff")
+            .iter()
+            .next()
+            .expect("nat introduces something")
+            .clone();
+        holed
+            .get_mut("nat")
+            .expect("nat is in the diff")
+            .remove(&dropped);
+        let report = inventory_report(&groups, &holed);
+        assert_eq!(
+            report.unattributed,
+            vec![format!("nat: {dropped}")],
+            "the orphaned declaration must be named with the environment it was \
+             found in"
+        );
+
+        // And the opposite hole: a name claimed by two preludes on one chain.
+        // Take one `logic` INTRODUCES and let `nat` claim it too -- `nat`'s
+        // environment really does contain it (`nat` builds `logic` first), so
+        // this is a double claim rather than a claim about a name nobody has.
+        let mut doubled = honest.clone();
+        let shared = honest["logic"]
+            .iter()
+            .next()
+            .expect("logic introduces something")
+            .clone();
+        doubled
+            .get_mut("nat")
+            .expect("nat is in the diff")
+            .insert(shared.clone());
+        let report = inventory_report(&groups, &doubled);
+        assert!(
+            report
+                .doubly_attributed
+                .iter()
+                .any(|row| row.contains(&shared)),
+            "a name introduced by two preludes on one chain must be named: {:?}",
+            report.doubly_attributed
         );
     }
 }
