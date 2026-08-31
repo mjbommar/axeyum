@@ -86,6 +86,7 @@ mod dvd_gcd_mirrors;
 mod dvd_mul_split;
 mod euclid;
 mod euler;
+mod euler_assembly;
 mod euler_prod_coprime;
 mod euler_prod_factor;
 mod euler_prod_modeq;
@@ -1553,6 +1554,10 @@ pub struct IntPrelude {
     /// termwise `ModEq` transport step of item 3 of the Fermat -> Euler
     /// handoff (`euler_prod_modeq.rs`).
     pub prod_range_if_modeq: NameId,
+    /// `euler_totient_theorem : ∀ n a, 0 < n → Coprime a (ofNat n) →
+    /// ModEq (ofNat n) (pow a (totient n)) one` -- Euler's totient theorem
+    /// (`euler_assembly.rs`).
+    pub euler_totient_theorem: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1849,6 +1854,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_coprime: child(kernel, "prodRangeIf_coprime"),
         prod_range_if_factor_const_left: child(kernel, "prodRangeIf_factor_const_left"),
         prod_range_if_modeq: child(kernel, "prodRangeIf_modeq"),
+        euler_totient_theorem: child(kernel, "euler_totient_theorem"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
@@ -2143,6 +2149,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_prod_coprime::declare_prod_range_if_coprime(&mut d)?;
         euler_prod_factor::declare_prod_range_if_factor_const_left(&mut d)?;
         euler_prod_modeq::declare_prod_range_if_modeq(&mut d)?;
+        euler_assembly::declare_euler_totient_theorem(&mut d)?;
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
