@@ -173,12 +173,38 @@ class HoldoutIsolationTests(unittest.TestCase):
         #                    Nat.fermatNumber admitted 06:48:10 (0065c83b1),
         #                    21m earlier, which decides three rows by REDUCTION.
         #
-        # Composition now 16 in v1 + 100 in the v2 extension. Both are recorded
+        # Composition then 16 in v1 + 100 in the v2 extension. Both are recorded
         # in mathlib-nursery-split-policy-v1.json with commits, and R10 in
         # gen-autogenesis-nursery-refill.py refuses the manifest's move without
         # them -- so this number cannot fall without a ledger row, which is the
         # property that makes pinning it worth anything.
-        self.assertIn("held_out=116", out)
+        #
+        # 116 -> 156 on 2026-08-30 (draw 11, 882ae1a52, ADR-0925): a RISE from
+        # a draw, the ordinary case -- two new held-out families,
+        # `natural-nth-root` and `natural-bit-decode`. The draw's own gate
+        # output is on record in the commit message:
+        # `check-autogenesis-holdout-isolation.py -> held_out=156`.
+        #
+        # 156 -> 146 on 2026-08-30 (7296730d6, ADR-0950, mirrors ADR-0695): a
+        # FALL, licensed by the ledger's 7th amendment (index 6,
+        # `natural-bit-decode`, mathlib-nursery-split-policy-v1.json). Same
+        # defect class as the natural-parity/fermat-numbers amendments above:
+        # `Nat.bit false 0 = 0` and `Nat.size 1 = 1` were already decided by
+        # reduction (Nat.bit: 2facd789, Nat.size: a7ac623d7) before draw 11
+        # preregistered the family that named them. The amendment moved the
+        # family's 10 rows held-out -> development; the amendment commit's own
+        # gate output is on record: `check-autogenesis-holdout-isolation.py ->
+        # held_out=146 settled=0 references=0 PASS`, which is exactly what
+        # this test measures against the committed tree.
+        #
+        # Neither commit touched this file, which is the gap this update
+        # closes, not a new one: 146 was already the ledgered, gate-verified
+        # number for two commits before this pin caught up to it. Composition
+        # now 16 in v1 (unchanged) + 130 in the v2 extension (measured
+        # directly from `artifacts/autogenesis/nursery-v2-extension.json`'s
+        # `entries`, partition `held-out`; its own `coverage.partition_counts`
+        # agrees: `{"held-out": 130, ...}`).
+        self.assertIn("held_out=146", out)
 
     # --- guard 1: a held-out fact must not be settled ---------------------
     def test_a_settled_held_out_fact_is_a_violation(self) -> None:
