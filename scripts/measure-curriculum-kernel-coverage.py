@@ -5,9 +5,10 @@ WHY THIS EXISTS. `docs/curriculum/curriculum.toml` carries a `status` field
 whose vocabulary (`covered` / `planned` / `lean-horizon`) is defined in
 `crates/axeyum-scenarios/src/mathtour.rs` as *scenario* coverage -- "has a
 self-checking exercise family today". It says nothing about what the Lean-core
-kernel has PROVED, and read as if it did it inverts the truth for two of the
-three destinations (measured 2026-08-31: `calculus` is `lean-horizon` with 349
-kernel declarations; `linear-algebra` is `covered` with 0). ADR-1075.
+kernel has PROVED. Measured 2026-08-31: `calculus` is `lean-horizon` with 349
+kernel declarations while `linear-algebra` is `covered` with 25 -- the two
+axes disagree in opposite directions, and neither value is wrong on its own
+axis. ADR-1075.
 
 WHAT IT MEASURES. Input is the TSV emitted by
 
@@ -77,11 +78,16 @@ BUCKETS: list[tuple[str, str]] = [
      r"Squarefree|squarefree|wilson|Wilson|euler|Euler|"
      r"sumOfDivisors|sigma|nth|minFac|factorization|"
      r"legendre|quadratic|sum_two_squares)"),
-    # No kernel construction exists for any of these; the sentinel patterns
-    # cannot match, which is the point -- a zero here is a measured zero and
-    # not a pattern that was never written.
+    # NOT `matrix|determinant|eigen`. That pattern returns ZERO, and the zero
+    # is an artefact of the query: this kernel spells its linear algebra
+    # `Rat.det2` / `Rat.det3` / `Rat.dotN` (a vector is a finite function plus
+    # a dimension, since there is no `List` or product type). A `--name-like
+    # matrix` probe reports ABSENT and is correct and useless -- the exact
+    # empty-grep-as-negative-result trap. `docs/curriculum/03-destinations/
+    # linear-algebra.md` had the right names on 2026-08-30 and this script's
+    # first draft did not read it.
     ("linear-algebra",
-     r"(?i)(matrix|determinant|eigen|vectorSpace|linearMap|rank_|span_)"),
+     r"^Rat\.(det2|det3|dotN)"),
     # layer 2 structures
     ("divisibility-and-euclid",
      r"^(Nat|Int)\.(gcd|Gcd|lcm|dvd|Dvd|bezout|Bezout|xgcd|"

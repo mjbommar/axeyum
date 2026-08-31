@@ -27,10 +27,11 @@
 # exercise family today", and a test enforces exactly that; `LeanHorizon` means
 # "primarily a proof-reconstruction target, not a benchmark". Neither value
 # says anything about what the Lean-core kernel has PROVED, and reading them as
-# if they did inverts the truth for two of the three destinations (ADR-1075):
+# if they did the two axes disagree in opposite directions (ADR-1075):
 # `calculus` is `lean-horizon` with 349 kernel declarations, `linear-algebra`
-# is `covered` with 0. `kernel_decls` is that second axis, stated separately so
-# neither can be mistaken for the other. It is a measurement, not a judgement:
+# is `covered` with 25. `kernel_decls` is that second axis, stated separately
+# so neither can be mistaken for the other. It is a measurement, not a
+# judgement:
 #
 #   cargo run --release -p axeyum-lean-kernel \
 #     --example kernel_declaration_projection > /tmp/proj.tsv
@@ -191,7 +192,7 @@ decidability = "computable"
 axeyum_theory = "LRA (exact rationals)"
 family = "Rational"
 status = "covered"
-kernel_decls = 306
+kernel_decls = 281
 summary = "Exact fractions; linear rational facts decided by the exact-rational simplex."
 
 [[node]]
@@ -367,7 +368,7 @@ decidability = "computable"
 axeyum_theory = "BV (fixed-size) / LRA / NRA"
 family = "LinearAlgebra"
 status = "covered"
-kernel_decls = 0
+kernel_decls = 25
 summary = "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over ℚ are decidable."
 
 [[node]]
