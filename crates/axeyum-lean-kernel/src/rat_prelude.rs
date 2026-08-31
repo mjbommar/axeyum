@@ -66,6 +66,7 @@ pub(crate) mod lattice;
 mod laws;
 mod matrix;
 mod matrix_n;
+mod matrix_transpose;
 mod model;
 pub(crate) mod ops;
 mod polynomial;
@@ -1242,6 +1243,33 @@ pub struct RatPrelude {
     /// j`.
     pub mat_mul_id_right: NameId,
 
+    // --- matrix transpose at symbolic dimension (rat_prelude::matrix_transpose) --
+    /// `Rat.matTranspose : (Nat → Nat → Rat) → Nat → Nat → Rat := fun A i j
+    /// => A j i` — the transpose, at every dimension at once (no bound
+    /// argument, matching [`Self::mat_id`]'s shape).
+    pub mat_transpose: NameId,
+    /// `Rat.matTranspose_transpose : ∀ A i j, matTranspose (matTranspose A)
+    /// i j = A i j` — the involution law, `Eq.refl`.
+    pub mat_transpose_transpose: NameId,
+    /// `Rat.matTranspose_mul : ∀ A B k i j, matTranspose (matMul A B k) i j
+    /// = matMul (matTranspose B) (matTranspose A) k i j` — `(AB)^T = B^T
+    /// A^T`, stated pointwise at symbolic dimension `k`. Row 1 of the graded
+    /// family (`rat_prelude::matrix_transpose`'s module doc); row 2 does not
+    /// apply (ADR-0716, argued from the statement's shape: no comparison, no
+    /// search). Proved from [`Self::sum_range_congr`] and [`Self::mul_comm`]
+    /// alone — no new induction.
+    pub mat_transpose_mul: NameId,
+    /// `Rat.matTranspose_eval_example : matTranspose [[2,3],[5,7]] 0 1 =
+    /// ofInt 5` — the discriminating concrete evaluation test
+    /// [`Self::mat_transpose`]'s new `Definition` needs (the kernel cannot
+    /// tell a `Definition` is wrong from its type alone).
+    pub mat_transpose_eval_example: NameId,
+    /// `Rat.matTranspose_mul_example : matTranspose (matMul [[2,3],[5,7]]
+    /// [[11,13],[17,19]] 2) 0 1 = ofInt 174` — row 3 of the graded family,
+    /// [`Self::mat_transpose_mul`] itself applied at a concrete instance
+    /// rather than a separate producer/verifier pair (ADR-0825's collapse).
+    pub mat_transpose_mul_example: NameId,
+
     // --- finite probability distributions (rat_prelude::probability) -------
     /// `Rat.IsDistribution p n := (∀ k, Lt k n → le zero (p k)) ∧ sumRange p
     /// n = one`.
@@ -2033,6 +2061,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mat_id_off_diag: child(kernel, "matId_off_diag"),
         mat_mul_id_left: child(kernel, "matMul_id_left"),
         mat_mul_id_right: child(kernel, "matMul_id_right"),
+        mat_transpose: child(kernel, "matTranspose"),
+        mat_transpose_transpose: child(kernel, "matTranspose_transpose"),
+        mat_transpose_mul: child(kernel, "matTranspose_mul"),
+        mat_transpose_eval_example: child(kernel, "matTranspose_eval_example"),
+        mat_transpose_mul_example: child(kernel, "matTranspose_mul_example"),
         is_distribution: child(kernel, "IsDistribution"),
         prob_le_one: child(kernel, "prob_le_one"),
         prob_complement: child(kernel, "prob_complement"),
@@ -2167,6 +2200,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         bernoulli::declare_bernoulli(&mut d, prelude)?;
         vector::declare_vector(&mut d, prelude)?;
         matrix_n::declare_matrix_n(&mut d, prelude)?;
+        matrix_transpose::declare_matrix_transpose(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();

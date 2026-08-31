@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-mattranspose-transpose",
+  "title": "Matrix transpose over the constructed rationals is an involution at symbolic dimension, stated pointwise",
+  "statement": "For a matrix A over the constructed rationals -- a function Nat -> Nat -> Rat -- and indices i, j, the (i, j) entry of the transpose of the transpose of A equals the (i, j) entry of A. Stated pointwise for the same funext-absence reason F:rat-mattranspose-mul records. Rat.matTranspose A i j is defined as A j i, so applying it twice swaps the two index arguments twice, which is the identity by pure computation (Eq.refl).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.matTranspose_transpose : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Rat (Rat.matTranspose (Rat.matTranspose x0) x1 x2) (x0 x1 x2))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.matTranspose_transpose",
+      "kind": "kernel-term",
+      "supports": "Rat.matTranspose_transpose is admitted by the trusted kernel gate with the type recorded in formal.statement, proved by Eq.refl alone: matTranspose (matTranspose A) i j unfolds (delta matTranspose twice, beta) to A i j directly, with no algebraic lemma required.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against the stated type at build time)",
+        "rat_prelude_tests::the_matrix_transpose_toolkit_is_axiom_free (kind + empty axiom_footprint, read from the kernel)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_matrix_transpose_toolkit_is_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_transpose.rs",
+      "notes": "The command is anchored on the exact `1 passed; 0 failed` count so an unmatched filter cannot read as success."
+    },
+    {
+      "id": "statement-pin-Rat.matTranspose_transpose",
+      "kind": "kernel-term",
+      "supports": "The statement is pointwise -- assert_eq! on the kernel-rendered type, same discipline as F:rat-matmul-assoc's pin.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_matrix_transpose_involution_statement_is_pointwise"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_matrix_transpose_involution_statement_is_pointwise -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs",
+      "notes": "A footprint check cannot carry this claim on its own."
+    },
+    {
+      "id": "evaluation-Rat.matTranspose",
+      "kind": "instance-pin",
+      "supports": "The DEFINITION Rat.matTranspose swaps its two index arguments and is not, say, the identity function of the same type. Kernel::add_declaration type-checks a Definition and admits it once well-formed; a no-op with the same type would ALSO satisfy matTranspose_transpose (composing a no-op with itself is still a no-op), so the involution law above is not a substitute for this check. Rat.matTranspose_eval_example uses A := [[2,3],[5,7]] (off-diagonal entries 3 and 5, DISTINCT) and states matTranspose A 0 1 = ofInt 5, i.e. A(1,0), not A(0,1) = 3. A forgotten index swap would produce 3 here and the trusted gate would refuse the declaration outright.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-kernel::Kernel::add_declaration (the concrete instance is itself a kernel declaration, admitted at build time)",
+        "rat_prelude_tests::the_matrix_transpose_examples_state_the_expected_numerals (asserts the RHS numeral is exactly the unary succ-chain for 5)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_matrix_transpose_examples_state_the_expected_numerals -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/matrix_transpose.rs",
+      "notes": "Same test also carries F:rat-mattranspose-mul's row-3 evidence; both assertions run in one `cargo test` invocation."
+    },
+    {
+      "id": "footprint-rat-matrix-transpose-shared",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- see F:rat-mattranspose-mul's identical evidence row; both facts are covered by the same environment-derived coverage test.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
+      "notes": "Shared with F:rat-mattranspose-mul: one test, both facts."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-30",
+    "established_by": "lane graded-families-linear-algebra, Rat.matTranspose_transpose in crates/axeyum-lean-kernel/src/rat_prelude/matrix_transpose.rs",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "standard linear algebra",
+        "what": "the transpose is an involution: (A^T)^T = A",
+        "attribution": "standard textbook identity; this lane did not consult a primary source."
+      }
+    ]
+  },
+  "notes": "See F:rat-mattranspose-mul for the graded-family framing (ADR-0930) both facts share."
+}
