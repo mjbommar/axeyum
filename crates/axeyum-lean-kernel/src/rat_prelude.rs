@@ -65,6 +65,7 @@ pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
 mod matrix;
+mod matrix_invertible;
 mod matrix_n;
 mod matrix_transpose;
 mod model;
@@ -1799,6 +1800,60 @@ pub struct RatPrelude {
     /// `Rat.det3_example_singular : det3 (ofInt 1) … (ofInt 9) = ofInt 0` —
     /// the determinant of `[[1,2,3],[4,5,6],[7,8,9]]`.
     pub det3_example_singular: NameId,
+
+    // --- both-sided 2×2 invertibility, bridged into the general `matMul`/
+    // `matId` pointwise encoding (`matrix_invertible.rs`) --------------------
+    /// `Rat.matInv2 : (Nat → Nat → Rat) → Nat → Nat → Rat`,
+    /// `matInv2 A i j := invD * (adjugate entry)`, `invD := Rat.inv (det2 (A
+    /// 0 0) (A 0 1) (A 1 0) (A 1 1))` — the adjugate-based 2×2 inverse taking
+    /// a GENERAL matrix `A` in [`super::matrix_n`]'s `Nat → Nat → Rat`
+    /// encoding, not four separate scalars the way [`Self::det2`]/
+    /// [`Self::inv2_top_left`] do. Bridges the fixed-size `det2`/`inv2`
+    /// family into the symbolic-dimension `matMul`/`matId` family.
+    pub mat_inv2: NameId,
+    /// `Rat.matMul_matInv2_top_left : ∀ A, Not (det2 (A 0 0) (A 0 1) (A 1 0)
+    /// (A 1 1) = 0) → matMul A (matInv2 A) 2 0 0 = matId 0 0` — the `(0,0)`
+    /// entry of `A · A⁻¹ = I`, stated through the general `matMul`/`matId`
+    /// encoding rather than raw scalars.
+    pub matmul_matinv2_top_left: NameId,
+    /// `Rat.matMul_matInv2_top_right : … matMul A (matInv2 A) 2 0 1 = matId
+    /// 0 1` — the `(0,1)` entry of `A · A⁻¹ = I`.
+    pub matmul_matinv2_top_right: NameId,
+    /// `Rat.matMul_matInv2_bottom_left : … matMul A (matInv2 A) 2 1 0 = matId
+    /// 1 0` — the `(1,0)` entry of `A · A⁻¹ = I`.
+    pub matmul_matinv2_bottom_left: NameId,
+    /// `Rat.matMul_matInv2_bottom_right : … matMul A (matInv2 A) 2 1 1 =
+    /// matId 1 1` — the `(1,1)` entry of `A · A⁻¹ = I`.
+    pub matmul_matinv2_bottom_right: NameId,
+    /// `Rat.matInv2_matMul_top_left : ∀ A, Not (det2 … = 0) → matMul
+    /// (matInv2 A) A 2 0 0 = matId 0 0` — the `(0,0)` entry of `A⁻¹ · A = I`,
+    /// stated through `matMul`/`matId`; term-for-term the same statement as
+    /// [`Self::inv2_top_left`] once both sides are unfolded, so its proof is
+    /// [`Self::inv2_top_left`] itself plus the `matMul`/`matId` defeq bridge.
+    pub matinv2_matmul_top_left: NameId,
+    /// `Rat.matInv2_matMul_top_right : … matMul (matInv2 A) A 2 0 1 = matId
+    /// 0 1` — the `(0,1)` entry of `A⁻¹ · A = I`.
+    pub matinv2_matmul_top_right: NameId,
+    /// `Rat.matInv2_matMul_bottom_left : … matMul (matInv2 A) A 2 1 0 =
+    /// matId 1 0` — the `(1,0)` entry of `A⁻¹ · A = I`.
+    pub matinv2_matmul_bottom_left: NameId,
+    /// `Rat.matInv2_matMul_bottom_right : … matMul (matInv2 A) A 2 1 1 =
+    /// matId 1 1` — the `(1,1)` entry of `A⁻¹ · A = I`.
+    pub matinv2_matmul_bottom_right: NameId,
+    /// `Rat.matInv2_eval_example : matInv2 A 0 0 = ofInt (−7)`, for the
+    /// concrete `A := [[2, 3], [5, 7]]` (`det = −1`) — the discriminating
+    /// evaluation test [`Self::mat_inv2`]'s new `Definition` needs (Hard
+    /// Rules: the kernel accepts a well-typed `Definition` regardless of
+    /// whether it computes the intended value). Distinguishes the correct
+    /// adjugate entry from a swapped or sign-dropped one.
+    pub mat_inv2_eval_example: NameId,
+    /// `Rat.matInv2_example : matMul A (matInv2 A) 2 0 0 = ofInt 1`, for the
+    /// concrete `A := [[2, 1], [1, 1]]` (`det = 1`) — **row 3 of the graded
+    /// family, the ADR-0825 collapse**: [`Self::matmul_matinv2_top_left`]
+    /// itself, applied at this concrete matrix, with its conclusion (still
+    /// in named-constant form) bridged to the plain numeral `ofInt 1` by the
+    /// kernel's own delta/beta/iota computation.
+    pub mat_inv2_example: NameId,
 }
 
 impl RatPrelude {
@@ -2147,6 +2202,17 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det3_example_generic: child(kernel, "det3_example_generic"),
         det3_example_diagonal: child(kernel, "det3_example_diagonal"),
         det3_example_singular: child(kernel, "det3_example_singular"),
+        mat_inv2: child(kernel, "matInv2"),
+        matmul_matinv2_top_left: child(kernel, "matMul_matInv2_top_left"),
+        matmul_matinv2_top_right: child(kernel, "matMul_matInv2_top_right"),
+        matmul_matinv2_bottom_left: child(kernel, "matMul_matInv2_bottom_left"),
+        matmul_matinv2_bottom_right: child(kernel, "matMul_matInv2_bottom_right"),
+        matinv2_matmul_top_left: child(kernel, "matInv2_matMul_top_left"),
+        matinv2_matmul_top_right: child(kernel, "matInv2_matMul_top_right"),
+        matinv2_matmul_bottom_left: child(kernel, "matInv2_matMul_bottom_left"),
+        matinv2_matmul_bottom_right: child(kernel, "matInv2_matMul_bottom_right"),
+        mat_inv2_eval_example: child(kernel, "matInv2_eval_example"),
+        mat_inv2_example: child(kernel, "matInv2_example"),
     }
 }
 
@@ -2201,6 +2267,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         vector::declare_vector(&mut d, prelude)?;
         matrix_n::declare_matrix_n(&mut d, prelude)?;
         matrix_transpose::declare_matrix_transpose(&mut d, prelude)?;
+        matrix_invertible::declare_matrix_invertible(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -2215,6 +2282,9 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
 
 #[cfg(test)]
 mod rat_prelude_tests;
+
+#[cfg(test)]
+mod matrix_invertible_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

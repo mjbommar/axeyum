@@ -46,3 +46,32 @@ disconnected islands (symbolic-dimension `matMul`/`matId`, and fixed-size
 `det2`/`inv2`/`mul_adj2`) rather than adding a third isolated fact family.
 
 In progress. Updated further below as work lands.
+
+## Landed (in progress, update continues after full sweep + facts)
+
+`crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible.rs` (new module),
+registered in `rat_prelude.rs`. 11 declarations:
+
+- `Rat.matInv2` (Definition, general A : Nat -> Nat -> Rat)
+- `Rat.matInv2_matMul_top_left/_top_right/_bottom_left/_bottom_right`
+  (A^-1 * A = I, all four entries, bridging `super::matrix`'s existing
+  `inv2_*` family into the general `matMul`/`matId` encoding)
+- `Rat.matMul_matInv2_top_left/_top_right/_bottom_left/_bottom_right`
+  (A * A^-1 = I, all four entries -- the genuinely NEW direction, via
+  `mul_adj2_*` scaled by invD)
+- `Rat.matInv2_eval_example` (discriminating Definition check)
+- `Rat.matInv2_example` (row 3, ADR-0825 collapse)
+
+Bug found and fixed during self-check: `right_entry_proof`'s two
+`middle_swap`-reversal steps had `rsymm`'s (a,b) arguments backwards
+(`rsymm(d, term0, invd_xy, ms1)` when `ms1 : Eq invd_xy term0`, needing
+`rsymm(d, invd_xy, term0, ms1)`) -- caught by the mandatory bisect-by-
+toggling-declarations method (CLAUDE.md), isolated to
+`declare_matmul_matinv2_top_left` specifically before the fix.
+
+New ADR: `docs/research/09-decisions/adr-1040-both-sided-2x2-invertibility-bridges-the-fixed-size-and-symbolic-matrix-families.md`.
+Curriculum doc updated: LA-1 section in
+`docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`.
+New test file: `crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible_tests.rs`.
+`unnamed_but_live_declarations` in the shared `rat_prelude_tests.rs` updated
+in the same commit (11 new names).

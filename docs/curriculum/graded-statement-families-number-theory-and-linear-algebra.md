@@ -530,6 +530,22 @@ fraction-free `bareiss_determinant` (`:522`) — but **ships no certificate and
 no verifier**, so the CAS side is exact computation, not row 3 in ADR-0603's
 sense. Row 4: not attempted.
 
+**Update (ADR-1040): both-sided 2×2 invertibility, bridged into the general
+`matMul`/`matId` encoding.** Before this lane, `matrix.rs`'s `inv2_*` family
+already proved ONE direction (`A⁻¹·A = I`) at fixed `n = 2`, stated in raw
+scalars (four separate `Rat` arguments, not a `Nat → Nat → Rat` matrix) — a
+fixed-size island disconnected from `matrix_n.rs`'s symbolic-dimension
+`matMul`/`matId` encoding. `Rat.matInv2 : (Nat → Nat → Rat) → Nat → Nat →
+Rat` (`rat_prelude/matrix_invertible.rs`) is a genuine new `Definition`
+taking a general matrix, and BOTH `matMul A (matInv2 A) 2 i j = matId i j`
+and `matMul (matInv2 A) A 2 i j = matId i j` are now proved at every `(i,j)`
+entry, conditioned on `det2 (A 0 0) (A 0 1) (A 1 0) (A 1 1) ≠ 0` — the
+missing `A·A⁻¹ = I` direction included, built by pulling `invD` out of each
+product term and matching `matrix.rs`'s existing (unscaled) `mul_adj2_*`
+family. All 11 declarations are 0 axioms. This is the "invertibility" row
+the curriculum note's own "three targets a lane could start tomorrow" §5
+names as a candidate — landed at fixed `n = 2`, general `n` remains open.
+
 **LA-2: `Ax = b` solvability — the best row 3 in either subject.**
 Row 1 (general `n`) not built. Row 2: **none**, same argument. Row 3 is the one
 place a decidable subject already has the complete "statement + procedure +
