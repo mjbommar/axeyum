@@ -235,7 +235,9 @@ pub(super) fn declare_minmax_lemmas_all(
             let inner = max_of_ble_false(d, a, b, e);
             d.lam_fv(e_fv, is_false, inner)
         };
-        let body = or_elim(d, &p, is_true, is_false, concl, true_case, false_case, split);
+        let body = or_elim(
+            d, &p, is_true, is_false, concl, true_case, false_case, split,
+        );
         let stmt = d.arrow(hyp, concl);
         let proof = d.lam_fv(h_fv, hyp, body);
         (stmt, proof)
@@ -272,7 +274,9 @@ pub(super) fn declare_minmax_lemmas_all(
             let inner = min_of_ble_false(d, a, b, e);
             d.lam_fv(e_fv, is_false, inner)
         };
-        let body = or_elim(d, &p, is_true, is_false, concl, true_case, false_case, split);
+        let body = or_elim(
+            d, &p, is_true, is_false, concl, true_case, false_case, split,
+        );
         let stmt = d.arrow(hyp, concl);
         let proof = d.lam_fv(h_fv, hyp, body);
         (stmt, proof)
@@ -758,9 +762,7 @@ pub(super) fn declare_minmax_lemmas_all(
                 });
                 d.lam_fv(g_fv, n_zero, inner)
             };
-            let body = or_elim(
-                d, &p, m_zero, n_zero, lhs_ty, left_case, right_case, h,
-            );
+            let body = or_elim(d, &p, m_zero, n_zero, lhs_ty, left_case, right_case, h);
             d.lam_fv(h_fv, rhs_ty, body)
         };
 
@@ -798,8 +800,7 @@ pub(super) fn declare_minmax_lemmas_all(
                 let m_le_zero = subst_nat(d, n, zero, n_is_zero, g, &|d, x| d.le(m, x));
                 let zero_le_m = d.lemma(p.zero_le, &[m]);
                 let m_is_zero = d.lemma(p.le_antisymm, &[m, zero, m_le_zero, zero_le_m]);
-                let inner =
-                    d.const_app(p.logic.and_intro, &[m_zero, n_zero, m_is_zero, n_is_zero]);
+                let inner = d.const_app(p.logic.and_intro, &[m_zero, n_zero, m_is_zero, n_is_zero]);
                 d.lam_fv(g_fv, left_ty, inner)
             };
             // n <= m: min m n = n, so m+n = n gives m = 0; then n <= 0.
@@ -815,8 +816,7 @@ pub(super) fn declare_minmax_lemmas_all(
                 let n_le_zero = subst_nat(d, m, zero, m_is_zero, g, &|d, x| d.le(n, x));
                 let zero_le_n = d.lemma(p.zero_le, &[n]);
                 let n_is_zero = d.lemma(p.le_antisymm, &[n, zero, n_le_zero, zero_le_n]);
-                let inner =
-                    d.const_app(p.logic.and_intro, &[m_zero, n_zero, m_is_zero, n_is_zero]);
+                let inner = d.const_app(p.logic.and_intro, &[m_zero, n_zero, m_is_zero, n_is_zero]);
                 d.lam_fv(g_fv, right_ty, inner)
             };
             let total = d.lemma(p.le_total, &[m, n]);

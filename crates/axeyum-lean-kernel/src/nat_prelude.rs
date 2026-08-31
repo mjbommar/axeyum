@@ -7041,6 +7041,9 @@ mod stirling_tests;
 mod minmax_tests;
 
 #[cfg(test)]
+mod minmax_lemmas_tests;
+
+#[cfg(test)]
 mod bit_extra_tests;
 
 #[cfg(test)]
