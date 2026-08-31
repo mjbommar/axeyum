@@ -1337,6 +1337,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // injectivity on `[1, m]`.
         p.least_residue_ne_zero_of_coprime,
         p.gauss_fold_injective_of_coprime,
+        // `gauss-mapsinto-bound` lane (ADR-1015): the MapsInto range bound's
+        // one missing arithmetic fact, the range bound itself, and the
+        // 0-indexed shift wrapper -- completing piece 2.
+        p.div_succ_two_mul_eq_self,
+        p.gauss_fold_in_range,
+        p.gauss_fold_shift_maps_into,
+        p.gauss_fold_shift_injective_on,
     ]
 }
 
