@@ -271,3 +271,107 @@ def test_rv64_source_identity_and_all_declared_traps_are_visible() -> None:
         trapped = machine.rv64.step(program, state)
         assert trapped.outcome.trap.kind == expected
         assert machine.rv64.step(program, trapped).registers == trapped.registers
+
+
+def x64_code(*instructions: object) -> bytes:
+    return b"".join(instruction.encode() for instruction in instructions)
+
+
+def test_x64_all_selected_forms_round_trip_with_lengths() -> None:
+    forms = [
+        machine.x64.Instruction.xor32(0, 0),
+        machine.x64.Instruction.move_immediate32(0, 0),
+        machine.x64.Instruction.test64(6, 6),
+        machine.x64.Instruction.jump_short("equal", 13),
+        machine.x64.Instruction.jump_short("not-equal", -13),
+        machine.x64.Instruction.jump_short("not-sign", 3),
+        machine.x64.Instruction.xor64_memory(0, 7),
+        machine.x64.Instruction.add_immediate64(7, 8),
+        machine.x64.Instruction.sub_immediate64(6, 1),
+        machine.x64.Instruction.move64(0, 7),
+        machine.x64.Instruction.negate64(0),
+        machine.x64.Instruction.load_effective_address64(0, 7, 1),
+        machine.x64.Instruction.push64(3),
+        machine.x64.Instruction.pop64(3),
+        machine.x64.Instruction.call_relative(17),
+        machine.x64.Instruction.add64(0, 3),
+        machine.x64.Instruction.return_(),
+    ]
+    assert len(forms) == len(machine.x64.SELECTED_FORMS) == 17
+    for instruction in forms:
+        encoded = instruction.encode()
+        decoded, length = machine.x64.Instruction.decode(encoded + b"trailing")
+        assert decoded == instruction
+        assert length == len(encoded)
+
+    with pytest.raises(ValueError, match="InvalidRegister"):
+        machine.x64.Instruction.xor32(8, 0)
+    with pytest.raises(ValueError, match="condition must be"):
+        machine.x64.Instruction.jump_short("always", 0)
+
+
+def test_x64_partial_register_flags_and_following_rip_branch() -> None:
+    clear = machine.x64.Instruction.xor32(0, 0)
+    branch = machine.x64.Instruction.jump_short("not-equal", -4)
+    program = machine.x64.Program(100, x64_code(clear, branch))
+    state = machine.x64.State(machine.a0.Memory.zeroed(0), 100)
+    state = state.with_register(0, 0xFFFFFFFFFFFFFFFF)
+    cleared = machine.x64.step(program, state)
+    assert cleared.register(0) == 0
+    assert cleared.rip == 102
+    assert cleared.flags.zero == "set"
+    assert cleared.flags.carry == "clear"
+    assert cleared.flags.overflow == "clear"
+    assert cleared.flags.auxiliary == "undefined"
+
+    taken_flags = machine.x64.Flags(zero="clear")
+    taken = machine.x64.step(program, cleared.with_flags(taken_flags))
+    assert taken.rip == 100
+
+
+def test_x64_call_return_stack_effects_and_atomic_fault() -> None:
+    call = machine.x64.Program(0, machine.x64.Instruction.call_relative(7).encode())
+    state = machine.x64.State(machine.a0.Memory.zeroed(64), 0).with_register(4, 32)
+    called = machine.x64.step(call, state)
+    assert called.rip == 12
+    assert called.register(4) == 24
+    return_address = bytes(byte for _, byte in called.memory.entries()[24:32])
+    assert int.from_bytes(return_address, "little") == 5
+
+    returned = machine.x64.step(
+        machine.x64.Program(12, machine.x64.Instruction.return_().encode()), called
+    )
+    assert returned.rip == 5
+    assert returned.register(4) == 32
+
+    failed = machine.x64.State(machine.a0.Memory.zeroed(7), 0)
+    failed = failed.with_register(4, 8).with_register(3, 0xFEED)
+    trapped = machine.x64.step(
+        machine.x64.Program(0, machine.x64.Instruction.push64(3).encode()), failed
+    )
+    assert trapped.outcome.trap.kind == "data-access-fault"
+    assert trapped.register(4) == 8
+    assert trapped.memory.entries() == failed.memory.entries()
+
+
+def test_x64_source_projection_and_decode_traps() -> None:
+    assert machine.x64.SOURCE_REVISION == "325383-092US"
+    assert len(machine.x64.SOURCE_SHA256) == 64
+    state = machine.x64.State(machine.a0.Memory.from_entries([(9, 1), (2, 7)]), 44)
+    state = state.with_register(7, 11).with_register(0, 13)
+    projection = machine.x64.project_state(state, [7, 0])
+    assert projection.registers == [(0, 13), (7, 11)]
+    assert projection.memory == [(2, 7), (9, 1)]
+    with pytest.raises(ValueError, match="DuplicateRegister"):
+        machine.x64.project_state(state, [7, 7])
+
+    for code, expected in [
+        (b"\x48", "incomplete-instruction-fetch"),
+        (b"\x0f", "illegal-instruction"),
+    ]:
+        trapped = machine.x64.step(
+            machine.x64.Program(0, code),
+            machine.x64.State(machine.a0.Memory.zeroed(0), 0),
+        )
+        assert trapped.outcome.trap.kind == expected
+        assert machine.x64.step(machine.x64.Program(0, code), trapped).rip == trapped.rip

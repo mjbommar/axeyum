@@ -3,8 +3,10 @@
 
 from . import a0
 from . import rv64
+from . import x64
 __all__ = [
     "a0",
     "rv64",
+    "x64",
 ]
 
