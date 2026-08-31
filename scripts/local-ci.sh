@@ -348,6 +348,15 @@ run python3 scripts/check-proposition-duplication.py || rc=$?
 # gate for main. Pure Python, sub-second; there is no cost argument for leaving
 # it out.
 run python3 scripts/gen-import-backlog.py --check || rc=$?
+# THE SAME DRIFT, SAME CAUSE, FOUND THE SAME WAY. The dispatch-baseline
+# tripwire (`create-autogenesis-nursery-dispatch-baseline.py --check`) held a
+# hardcoded train/development entry count deliberately -- so an unexplained
+# change to the preregistered evaluation population stops the census instead
+# of silently re-sizing it -- and it was registered ONLY in `check.sh` and the
+# `justfile`, absent from ci.yml, hooks/pre-push, and this file. It drifted
+# 177 -> 198 (one amendment, `natural-logarithm`, held-out -> development,
+# 2026-08-30, ADR-0542) unnoticed for a day. Pure Python, sub-second.
+run python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check || rc=$?
 # Assert the seven above stay wired -- in ci.yml, hooks/pre-push AND this
 # script. The reason the block above exists at all: prose did not keep them
 # wired, so a gate does.
