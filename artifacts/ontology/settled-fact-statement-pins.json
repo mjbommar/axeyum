@@ -7744,6 +7744,18 @@
       "prose_sha256": "bbaf7a1c1816bf88869f42518c9bab2bf59da9cb16956164e2263997d7a58ae6"
     },
     {
+      "fact_id": "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
+      "language": "lean4-surface",
+      "statement_sha256": "e86a0679a0463eee3993087c35a591008c2c4250a92a99808bce6798a6bf8fdc",
+      "prose_sha256": "8d1544e43b390a8835d2fd39f6e47853b532ff3c423a37234f4545c4ddb8f460"
+    },
+    {
+      "fact_id": "F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb",
+      "language": "lean4-surface",
+      "statement_sha256": "bb45cc493d440eebb047ba2d8de578e76f310344af44f368604564182d77506d",
+      "prose_sha256": "1b1bb20d0a0f0796d0ada51384928c4cbe52e2199acf3d11482f342d286fb13b"
+    },
+    {
       "fact_id": "F:ml430-nat-add-mod-left-6b337077",
       "language": "lean4-surface",
       "statement_sha256": "30841c225f6551f4162c77f9590242b25ad64eac3a4ad0bd9289c37306355070",
