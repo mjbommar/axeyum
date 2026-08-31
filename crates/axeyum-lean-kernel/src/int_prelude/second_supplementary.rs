@@ -81,7 +81,7 @@ fn even_predicate(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
 /// predicate; see [`even_predicate`].
 ///
 /// [`Nat.Odd`]: crate::nat_prelude::NatPrelude::odd
-fn odd_predicate(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+pub(super) fn odd_predicate(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
     let kk = d.add(k, k);
@@ -204,7 +204,7 @@ pub(super) fn declare_pow_neg_one_of_odd(d: &mut IntDev<'_>) -> Result<(), Kerne
 /// `mul 2 m` is stuck (`Nat.mul` recurses on its RIGHT argument and `m` is
 /// symbolic); `mul m 2` is not, reducing by iota to `add (add zero m) m`. So
 /// commute first, then discharge the `zero_add`.
-fn two_mul_eq_add_self(d: &mut IntDev<'_>, m: ExprId) -> ExprId {
+pub(super) fn two_mul_eq_add_self(d: &mut IntDev<'_>, m: ExprId) -> ExprId {
     let np = d.prelude();
     let two = d.num(2);
     let start = d.mul(two, m);

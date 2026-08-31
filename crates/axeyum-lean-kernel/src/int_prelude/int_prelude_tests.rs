@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 240] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 242] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -269,6 +269,10 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 240] {
         p.pow_neg_one_of_even,
         p.pow_neg_one_of_odd,
         p.second_supplementary_law,
+        // `first-supplementary-law` lane (ADR-1230): the first supplementary
+        // law's non-residue half and the `ModEq` congruence it needs.
+        p.is_quadratic_residue_of_mod_eq,
+        p.first_supplementary_law_not_residue,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -5483,5 +5487,165 @@ fn second_supplementary_law_classifies_all_four_residues_mod_eight() {
         !d.kernel().def_eq(inferred, swapped),
         "control: the law must not be invariant under swapping +1 and -1, or \
          the sign half of the classification says nothing"
+    );
+}
+
+/// `Int.firstSupplementaryLawNotResidue` states the first supplementary law's
+/// non-residue half — for an odd prime `p = 2m+1` with `m` ODD, i.e.
+/// `p = 3 (mod 4)`, `-1` is not a quadratic residue mod `p` — and this test
+/// measures the two things its statement could get wrong.
+///
+/// The numeric content is re-runnable independently of this test:
+///
+/// ```text
+/// python3 docs/research/09-decisions/adr-1230-first-supplementary-checks.py
+/// ```
+///
+/// Three checks, and the second and third are what make this a measurement
+/// rather than a restatement:
+///
+/// 1. **`Odd m` is load-bearing.** `-1` really is a non-residue mod `3` and
+///    mod `7` (`m` odd) and really IS one mod `5` (`m` even, witness `2`), by
+///    a `Nat.mod` scan the kernel computes. So the theorem is FALSE without
+///    its parity hypothesis; nothing about it is vacuous.
+/// 2. **The symbolic conclusion is the one intended.** The theorem is applied
+///    at a genuinely FREE `m` with free hypotheses and its inferred type
+///    compared against an independently rebuilt `Not (IsQuadraticResidue
+///    (ofNat (succ (mul 2 m))) (neg one))`.
+/// 3. **The negative control is refutable IN-KERNEL, not merely different.**
+///    The same statement at `one` in place of `neg one` is false for every
+///    modulus — `Int.is_quadratic_residue_one` proves `IsQuadraticResidue p
+///    one` outright — so a proof of the mutated statement would contradict an
+///    already-admitted theorem. This is the mutation the shape check alone
+///    could not distinguish from a harmless renaming.
+#[test]
+fn first_supplementary_law_refuses_neg_one_exactly_when_the_half_is_odd() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    for (name, label) in [
+        (
+            p.first_supplementary_law_not_residue,
+            "Int.firstSupplementaryLawNotResidue",
+        ),
+        (
+            p.is_quadratic_residue_of_mod_eq,
+            "Int.isQuadraticResidue_of_modEq",
+        ),
+    ] {
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{label} must rest on no axiom"
+        );
+    }
+
+    let mut d = IntDev::new(&mut k, p);
+    let two_nat = d.num(2);
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+
+    // (1) `Odd m` is load-bearing: `-1` is a residue mod `p` exactly when the
+    // half `m = (p-1)/2` is EVEN, decided here by scanning `x*x + 1 = 0 [p]`
+    // over `[0,p)` with `Nat.mod`. Magnitudes stay under 40 deliberately --
+    // every numeral this prelude builds is unary.
+    for (m_val, p_val, m_is_odd, expect_residue) in [
+        (1_u32, 3_u32, true, false),
+        (2, 5, false, true),
+        (3, 7, true, false),
+    ] {
+        assert_eq!(m_val % 2 == 1, m_is_odd, "the row's own parity must agree");
+        let pp = d.num(p_val);
+        let zero = d.zero();
+        let one_nat = d.num(1);
+        let mut found = None;
+        for x_val in 0..p_val {
+            let x = d.num(x_val);
+            let sq = d.mul(x, x);
+            let shifted = d.add(sq, one_nat);
+            let r = d.modulo(shifted, pp);
+            if d.kernel().def_eq(r, zero) {
+                found = Some(x_val);
+                break;
+            }
+        }
+        assert_eq!(
+            found.is_some(),
+            expect_residue,
+            "at p = {p_val} (m = {m_val}, m odd = {m_is_odd}) `-1` must{} be a \
+             quadratic residue -- if this disagrees, the law's parity \
+             hypothesis is not what decides the conclusion",
+            if expect_residue { "" } else { " NOT" }
+        );
+    }
+
+    // (2) The theorem at a genuinely FREE `m`, with free hypotheses.
+    let m_fv = d.fresh_fvar();
+    let m_sym = d.kernel().fvar(m_fv);
+    let mul2m = d.mul(two_nat, m_sym);
+    let pp_sym = d.succ(mul2m);
+    let pi_sym = d.of_nat(pp_sym);
+    let prime_ty = super::wilson::prime_condition(&mut d, pp_sym);
+    let prime_fv = d.fresh_fvar();
+    let prime_proof = d.kernel().fvar(prime_fv);
+    let nat_prelude = p.nat;
+    let odd_ty = d.const_app(nat_prelude.odd, &[m_sym]);
+    let odd_fv = d.fresh_fvar();
+    let odd_proof = d.kernel().fvar(odd_fv);
+
+    let lemma_fn = d.lemma(p.first_supplementary_law_not_residue, &[m_sym]);
+    let applied = d.apply(lemma_fn, &[prime_proof, odd_proof]);
+
+    let anon = d.anon_name();
+    let nat_ty = d.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: prime_fv,
+        name: anon,
+        ty: prime_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: odd_fv,
+        name: anon,
+        ty: odd_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .unwrap_or_else(|e| panic!("the law must apply at a free m: {e:?}"));
+
+    let qr_neg_one = super::euler::is_quadratic_residue(&mut d, pi_sym, neg_one);
+    let expected = d.not(qr_neg_one);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "the law's symbolic conclusion must be `-1 is not a quadratic residue \
+         mod (2m+1)`"
+    );
+
+    // (3) The negative control, refutable in-kernel rather than merely
+    // different: the same statement at `one` contradicts
+    // `Int.is_quadratic_residue_one`, which holds for EVERY modulus.
+    let qr_one = super::euler::is_quadratic_residue(&mut d, pi_sym, one_i);
+    let mutated = d.not(qr_one);
+    assert!(
+        !d.kernel().def_eq(inferred, mutated),
+        "control: the law must not be invariant under replacing `-1` by `1`"
+    );
+    let one_is_a_residue = d.const_app(p.is_quadratic_residue_one, &[pi_sym]);
+    let one_residue_ty = d
+        .kernel()
+        .infer_in(one_is_a_residue, &mut ctx)
+        .expect("`Int.is_quadratic_residue_one` must apply at any modulus");
+    assert!(
+        d.kernel().def_eq(one_residue_ty, qr_one),
+        "control: `1` IS a quadratic residue mod every modulus, so the mutated \
+         statement is not merely different -- it is refuted by an \
+         already-admitted theorem"
     );
 }

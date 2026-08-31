@@ -97,6 +97,7 @@ mod euler_unit_preserve;
 mod euler_unit_range;
 mod exists_gcd_one;
 mod fibonacci;
+mod first_supplementary;
 mod gauss_assembly;
 mod gauss_factorial_coprime;
 mod gauss_factorial_product;
@@ -595,6 +596,33 @@ pub struct IntPrelude {
     /// `Nat.gaussNegCountTwoClosedForm` and `Nat.half_ceil_parity`
     /// (ADR-1150). `second_supplementary.rs`.
     pub second_supplementary_law: NameId,
+
+    // --- the first supplementary law of quadratic reciprocity (ADR-1230) ---
+    /// `Int.isQuadraticResidue_of_modEq : ∀ (n a b : Int), ModEq n a b →
+    ///   IsQuadraticResidue n a → IsQuadraticResidue n b` — quadratic-residue-
+    /// hood respects `ModEq` in its second argument (the witness is unchanged;
+    /// `Int.ModEq.trans` composes `x*x ≡ a` with `a ≡ b`). Needed because every
+    /// quadratic-residue theorem in `qr_criterion.rs` is stated over a NATURAL
+    /// representative `ofNat aa`, while the supplementary laws are about `-1`.
+    /// `first_supplementary.rs`.
+    pub is_quadratic_residue_of_mod_eq: NameId,
+    /// `Int.firstSupplementaryLawNotResidue : ∀ m,
+    ///   Nat.PrimeCond (succ (mul 2 m)) → Nat.Odd m →
+    ///   Not (IsQuadraticResidue (ofNat (succ (mul 2 m))) (neg one))`
+    /// — **the first supplementary law of quadratic reciprocity, non-residue
+    /// half**: for an odd prime `p = 2m+1` with `m` odd (equivalently
+    /// `p ≡ 3 (mod 4)`), `-1` is not a quadratic residue mod `p`. Over
+    /// `Int.euler_criterion_neg_one_imp_not_residue` at the natural
+    /// representative `aa := 2*m`, transported back to `-1` along
+    /// [`Self::is_quadratic_residue_of_mod_eq`].
+    ///
+    /// The converse half (`p ≡ 1 (mod 4) ⟹ -1 IS a residue`) is NOT proved:
+    /// it needs a witness, and the Euler-criterion route to one requires the
+    /// CONVERSE of Euler's criterion, which this prelude does not build. See
+    /// `first_supplementary.rs`'s module doc for the Wilson-theorem route that
+    /// avoids the converse and for the single `prodRange` split it still
+    /// lacks.
+    pub first_supplementary_law_not_residue: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1757,6 +1785,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         pow_neg_one_of_even: child(kernel, "pow_neg_one_of_even"),
         pow_neg_one_of_odd: child(kernel, "pow_neg_one_of_odd"),
         second_supplementary_law: child(kernel, "secondSupplementaryLaw"),
+        is_quadratic_residue_of_mod_eq: child(kernel, "isQuadraticResidue_of_modEq"),
+        first_supplementary_law_not_residue: child(kernel, "firstSupplementaryLawNotResidue"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -2231,6 +2261,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // `Nat.gaussNegCountTwoClosedForm` and `Nat.coprime_two_left` (all in
         // the Nat prelude), plus `fibonacci.rs`'s `pow_neg_one_*` helpers.
         second_supplementary::declare_second_supplementary_all(&mut d)?;
+        // The first supplementary law of quadratic reciprocity, non-residue
+        // half (ADR-1230): needs `euler_criterion_neg_one_imp_not_residue`
+        // (`qr_criterion.rs`) plus `second_supplementary.rs`'s
+        // `pow_neg_one_of_odd` and `two_mul_eq_add_self`.
+        first_supplementary::declare_first_supplementary_all(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;

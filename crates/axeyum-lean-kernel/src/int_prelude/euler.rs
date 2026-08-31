@@ -72,7 +72,7 @@ fn int_exists(d: &mut IntDev<'_>, predicate: ExprId) -> ExprId {
 }
 
 /// `Exists.intro.{1} Int predicate witness proof`.
-fn int_exists_intro(
+pub(super) fn int_exists_intro(
     d: &mut IntDev<'_>,
     predicate: ExprId,
     witness: ExprId,
