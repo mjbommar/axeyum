@@ -1553,8 +1553,20 @@ fn every_promised_name_is_admitted_with_the_expected_kind() {
 
     // The inductive machinery the definitions and proofs ride on.
     for name in [
-        p.nat, p.zero, p.succ, p.rec, p.le, p.le_refl, p.le_step, p.le_rec, p.fin, p.fin_mk,
-        p.fin_rec, p.pair, p.pair_mk, p.pair_rec,
+        p.nat,
+        p.zero,
+        p.succ,
+        p.rec,
+        p.le,
+        p.le_refl,
+        p.le_step,
+        p.le_rec,
+        p.fin,
+        p.fin_mk,
+        p.fin_rec,
+        p.pair,
+        p.pair_mk,
+        p.pair_rec,
         // `Nat.Primrec` (ADR-1240, `primrec.rs`). An inductive `Prop`, so it
         // is invisible to `every_nat_declaration_is_checked_and_axiom_free`,
         // which is scoped to `Definition`/`Theorem`. All seven constructors

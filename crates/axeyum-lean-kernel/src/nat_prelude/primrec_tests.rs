@@ -58,8 +58,8 @@
 //! reaches 102, which is a 102-deep unary tower in this prelude, and is
 //! avoided for that reason alone.
 
-use crate::{ExprNode, Kernel, NatOps, NatPrelude, NatState, build_nat_prelude};
 use crate::expr::ExprId;
+use crate::{ExprNode, Kernel, NatOps, NatPrelude, NatState, build_nat_prelude};
 
 struct Fixture {
     k: Kernel,
@@ -261,7 +261,10 @@ fn primrec_constructor_indices_are_the_intended_functions() {
         "Nat.Primrec.right must conclude at Nat.unpairRight"
     );
     let applied = f.apply(right_idx, &[num[5]]);
-    assert!(f.k.def_eq(applied, num[2]), "the right index at 5 must be 2");
+    assert!(
+        f.k.def_eq(applied, num[2]),
+        "the right index at 5 must be 2"
+    );
     assert!(
         !f.k.def_eq(applied, num[1]),
         "negative control: the right index at 5 must NOT be 1 (left/right \
@@ -351,11 +354,10 @@ fn primrec_closed_derivations_compose_and_their_functions_evaluate() {
 
     // --- comp succ succ : Primrec (fun n => n + 2) ----------------------
     let comp_term = f.const_app(p.primrec_comp, &[succ_idx, succ_idx, succ_pf, succ_pf]);
-    let comp_ty = f
-        .k
-        .infer(comp_term)
-        .expect("comp succ succ must type-check: its premise shape must match \
-                 what succ concludes");
+    let comp_ty = f.k.infer(comp_term).expect(
+        "comp succ succ must type-check: its premise shape must match \
+                 what succ concludes",
+    );
     let doubled = {
         let n_fv = f.fresh_fvar();
         let n = f.k.fvar(n_fv);
@@ -379,10 +381,9 @@ fn primrec_closed_derivations_compose_and_their_functions_evaluate() {
     // The index is `unpaired (fun z n => Nat.rec 0 (fun y IH =>
     // succ (pair z (pair y IH))) n)`. Values from this file's header table.
     let prec_term = f.const_app(p.primrec_prec, &[zero_idx, succ_idx, zero_pf, succ_pf]);
-    let prec_ty = f
-        .k
-        .infer(prec_term)
-        .expect("prec zero succ must type-check");
+    let prec_ty =
+        f.k.infer(prec_term)
+            .expect("prec zero succ must type-check");
 
     // Rebuild the index here, so the reduction below is against a term this
     // test owns, and tie it to the admitted one by def_eq.

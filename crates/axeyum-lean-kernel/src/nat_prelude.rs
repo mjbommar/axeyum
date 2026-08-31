@@ -232,6 +232,7 @@ mod powsq;
 mod prime_char;
 mod prime_dvd_mirrors;
 mod primes;
+mod primrec;
 mod rec_agreement;
 mod rectangle;
 mod rel_prime;
@@ -253,7 +254,6 @@ mod totient_mul_coprime;
 mod totient_multiplicative;
 mod totient_prime_pow;
 pub(crate) mod transposition;
-mod primrec;
 mod unpair;
 mod vandermonde;
 mod xor;
@@ -414,6 +414,7 @@ use primes::{
     declare_prime_dvd_of_dvd_pow, declare_prime_even_iff, declare_prime_not_dvd_mul,
     declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
+use primrec::declare_primrec_all;
 use rec_agreement::{
     declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
     declare_land_le_left_all, declare_land_le_right_all, declare_land_zero_propagation_all,
@@ -454,7 +455,6 @@ use transposition::{
     declare_transposition_injective, declare_transposition_involutive,
     declare_transposition_maps_into,
 };
-use primrec::declare_primrec_all;
 use unpair::declare_unpair_all;
 use vandermonde::declare_vandermonde_all;
 use xor::declare_xor_all;

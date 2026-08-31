@@ -147,10 +147,7 @@ fn lam_implicit(d: &mut NatDev<'_>, fv: u64, ty: ExprId, body: ExprId) -> ExprId
 /// # Errors
 ///
 /// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_primrec_all(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_primrec_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     declare_cases_on(d, &p)?;
     declare_primrec(d, &p)
@@ -206,10 +203,7 @@ fn declare_cases_on(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
         let step = {
             let n_fv = d.fresh_fvar();
             let n = d.kernel().fvar(n_fv);
-            let ih_ty = {
-                let body = d.apply(motive, &[n]);
-                body
-            };
+            let ih_ty = d.apply(motive, &[n]);
             let body = d.apply(s, &[n]);
             let ih_fv = d.fresh_fvar();
             let inner = d.lam_fv(ih_fv, ih_ty, body);
@@ -371,11 +365,8 @@ fn declare_primrec(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError
             let rec_body = d.apply(rec, &[motive, base, step, n]);
 
             let binary = {
-                let inner = d.arrow(nat, nat);
                 let with_n = d.lam_fv(n_fv, nat, rec_body);
-                let lam = d.lam_fv(z_fv, nat, with_n);
-                let _ = inner;
-                lam
+                d.lam_fv(z_fv, nat, with_n)
             };
             let applied = d.const_app(p.unpaired, &[binary]);
             primrec_ty(d, p, applied)
