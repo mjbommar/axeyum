@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.distSq_comm : ((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.distSq x0 x1) (CPoint.distSq x1 x0)))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.distSq_comm",
     "free_symbols": [
       "x0",
       "x1"

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b c : ℤ}, c ∣ a → c ∣ b → (a / c).gcd (b / c) = a.gcd b / c.natAbs",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.gcd_div"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

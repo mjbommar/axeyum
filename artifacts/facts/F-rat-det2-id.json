@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.det2_id : Eq.{1} Rat (Rat.det2 Rat.one Rat.zero Rat.zero Rat.one) Rat.one",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.det2_id",
     "free_symbols": []
   },
   "epistemic_status": "proved",

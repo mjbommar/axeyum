@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m k n : ℕ}, m ∣ k → k.Coprime n → m.Coprime n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_dvd_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

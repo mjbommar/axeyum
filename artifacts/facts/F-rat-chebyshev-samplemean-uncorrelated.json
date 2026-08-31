@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.chebyshev_sampleMean_uncorrelated : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : Rat) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : Rat.IsDistribution x2 x3) -> ((x6 : Rat.PairwiseUncorrelated x0 x4 x2 x3) -> ((x7 : Rat.lt Rat.zero x1) -> Rat.le (Rat.mul (Rat.mul x1 x1) (Rat.expectation (Rat.indicator (Rat.mul x1 x1) (fun (x8 : AxNat) => Rat.mul (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)) (Rat.sub ((fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x8) (Rat.expectation (fun (x9 : AxNat) => Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.sumVars x0 x4 x9)) x2 x3)))) x2 x3)) (Rat.mul (Rat.mul (Rat.inv (Rat.natDivSucc x4 AxNat.zero)) (Rat.inv (Rat.natDivSucc x4 AxNat.zero))) (Rat.sumRange (fun (x8 : AxNat) => Rat.variance (x0 x8) x2 x3) x4))))))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.chebyshev_sampleMean_uncorrelated",
     "free_symbols": [
       "x0",
       "x1",

@@ -43,6 +43,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.log_le_self",
     "free_symbols": [
       "x0",
       "x1"

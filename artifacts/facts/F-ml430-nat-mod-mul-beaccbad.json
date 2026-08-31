@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b x : ℕ}, x % (a * b) = x % a + a * (x / a % b)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_mul"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

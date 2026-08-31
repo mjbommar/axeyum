@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {i j : ℕ}, i ≠ j → 0 < i.dist j",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.dist_pos_of_ne"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

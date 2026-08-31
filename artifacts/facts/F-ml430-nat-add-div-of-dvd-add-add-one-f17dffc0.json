@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {c a b : ℕ}, c ∣ a + b + 1 → (a + b) / c = a / c + b / c",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_div_of_dvd_add_add_one"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

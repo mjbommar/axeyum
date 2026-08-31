@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p : ℕ}, Nat.Prime p → p = 2 ∨ p % 2 = 1",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_eq_two_or_mod_two_eq_one"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

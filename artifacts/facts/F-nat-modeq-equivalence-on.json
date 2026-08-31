@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.modEq_equivalence_on : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.equivalenceOn (AxNat.modEq x0) x1))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.modEq_equivalence_on",
     "free_symbols": [
       "x0",
       "x1"

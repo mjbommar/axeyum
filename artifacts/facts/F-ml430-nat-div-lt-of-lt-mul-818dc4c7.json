@@ -47,6 +47,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.div_lt_of_lt_mul",
     "language": "lean4-surface",
     "statement": "∀ {m n k : ℕ}, m < n * k → m / n < k"
   },

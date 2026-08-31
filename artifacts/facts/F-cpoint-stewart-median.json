@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.stewart_median : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv (CReal.add (CPoint.distSq x0 (CPoint.midpoint x1 x2)) (CReal.mul CPoint.Scalar.inv2 (CReal.mul CPoint.Scalar.inv2 (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul CPoint.Scalar.inv2 (CPoint.distSq x0 x1)) (CReal.mul CPoint.Scalar.inv2 (CPoint.distSq x0 x2))))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.stewart_median",
     "free_symbols": [
       "x0",
       "x1",

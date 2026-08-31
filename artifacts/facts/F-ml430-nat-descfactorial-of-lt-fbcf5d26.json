@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n k : ℕ}, n < k → n.descFactorial k = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.descFactorial_of_lt"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

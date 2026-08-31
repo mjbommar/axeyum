@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (x y z : ℕ), (x + y * z) % y = x % y",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_mul_mod_self_left"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

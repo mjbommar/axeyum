@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.parallelogram_law : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : CPoint.Equiv (CPoint.sub x1 x0) (CPoint.sub x2 x3)) -> CReal.Equiv (CReal.add (CReal.add (CReal.add (CPoint.distSq x0 x1) (CPoint.distSq x1 x2)) (CPoint.distSq x2 x3)) (CPoint.distSq x3 x0)) (CReal.add (CPoint.distSq x0 x2) (CPoint.distSq x1 x3)))))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.parallelogram_law",
     "free_symbols": [
       "x0",
       "x1",

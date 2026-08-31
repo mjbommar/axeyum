@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (x y z : ℕ), (x ||| y) &&& z = x &&& z ||| y &&& z",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.and_or_distrib_right"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (b : ℕ), Monotone fun a => a.choose b",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.choose_mono"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

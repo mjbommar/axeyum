@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.one_le_mul : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x1) -> AxNat.le (AxNat.succ AxNat.zero) (AxNat.mul x0 x1)))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.one_le_mul",
     "free_symbols": [
       "x0",
       "x1",

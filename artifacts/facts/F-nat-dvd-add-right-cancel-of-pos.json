@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.dvd_add_right_cancel_of_pos : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : AxNat.dvd x0 x1) -> ((x5 : AxNat.dvd x0 (AxNat.add x1 x2)) -> AxNat.dvd x0 x2))))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.dvd_add_right_cancel_of_pos",
     "free_symbols": [
       "x0",
       "x1",

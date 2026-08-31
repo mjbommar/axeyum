@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b : ℕ}, (a &&& b) / 2 = a / 2 &&& b / 2",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.land_div_two"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

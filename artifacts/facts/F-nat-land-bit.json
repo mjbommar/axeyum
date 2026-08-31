@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "((x0 : Bool) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.land (AxNat.bit x0 x1) (AxNat.bit x2 x3)) (AxNat.bit ((fun (x4 : Bool) => fun (x5 : Bool) => Bool.rec.{1} (fun (x6 : Bool) => Bool) Bool.false x5 x4) x0 x2) (AxNat.land x1 x3))))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.land_bit",
     "free_symbols": []
   },
   "epistemic_status": "proved",

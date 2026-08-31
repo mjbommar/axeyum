@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.abs_congr : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Equiv x0 x1) -> CReal.Equiv (CReal.abs x0) (CReal.abs x1))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.abs_congr",
     "free_symbols": [
       "x0",
       "x1",

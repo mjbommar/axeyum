@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.euclidean_decomposition : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt Int.zero x1) -> Exists.{1} Int (fun (x3 : Int) => Exists.{1} Int (fun (x4 : Int) => And (Eq.{1} Int x0 (Int.add (Int.mul x1 x3) x4)) (And (Int.le Int.zero x4) (Int.lt x4 x1)))))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.euclidean_decomposition",
     "free_symbols": [
       "x0",
       "x1",

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m a b c : ℤ}, 0 < m → a * c ≡ b * c [ZMOD m] → a ≡ b [ZMOD m / ↑(m.gcd c)]",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.mod_eq_cancel_right_div_gcd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

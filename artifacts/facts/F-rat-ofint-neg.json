@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.ofInt_neg : ((x0 : Int) -> Eq.{1} Rat (Rat.ofInt (Int.neg x0)) (Rat.neg (Rat.ofInt x0)))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.ofInt_neg",
     "free_symbols": [
       "x0"
     ]

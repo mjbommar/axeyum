@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.ofInt_add : ((x0 : Int) -> ((x1 : Int) -> Eq.{1} Rat (Rat.ofInt (Int.add x0 x1)) (Rat.add (Rat.ofInt x0) (Rat.ofInt x1))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.ofInt_add",
     "free_symbols": [
       "x0",
       "x1"

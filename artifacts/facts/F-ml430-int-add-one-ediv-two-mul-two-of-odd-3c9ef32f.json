@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℤ}, Odd n → 1 + n / 2 * 2 = n",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.add_one_ediv_two_mul_two_of_odd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

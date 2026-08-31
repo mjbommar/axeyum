@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.eq_em : ((x0 : Int) -> ((x1 : Int) -> Or (Eq.{1} Int x0 x1) (Not (Eq.{1} Int x0 x1))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.eq_em",
     "free_symbols": [
       "x0",
       "x1"

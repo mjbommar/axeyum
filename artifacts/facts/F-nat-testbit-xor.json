@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.testBit (AxNat.xor x0 x1) x2) (Bool.rec.{1} (fun (x3 : Bool) => AxNat) AxNat.zero (AxNat.succ AxNat.zero) ((fun (x3 : Bool) => fun (x4 : Bool) => Bool.rec.{1} (fun (x5 : Bool) => Bool) x4 (Bool.rec.{1} (fun (x5 : Bool) => Bool) Bool.true Bool.false x4) x3) (AxNat.beq (AxNat.testBit x0 x2) (AxNat.succ AxNat.zero)) (AxNat.beq (AxNat.testBit x1 x2) (AxNat.succ AxNat.zero)))))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.testBit_xor",
     "free_symbols": []
   },
   "epistemic_status": "proved",

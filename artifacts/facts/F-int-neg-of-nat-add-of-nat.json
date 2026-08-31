@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.negOfNat_add_ofNat : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.add (Int.negOfNat x0) (Int.ofNat x1)) (Int.subNatNat x1 x0)))",
     "fragment": "Int",
+    "kernel_theorem": "Int.negOfNat_add_ofNat",
     "free_symbols": [
       "x0",
       "x1"

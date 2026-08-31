@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.I_sq : Complex.Equiv (Complex.mul Complex.I Complex.I) (Complex.neg Complex.one)",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.I_sq",
     "free_symbols": []
   },
   "epistemic_status": "proved",

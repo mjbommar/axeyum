@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.mul_negOfNat_negSucc : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.mul (Int.negOfNat x0) (Int.negSucc x1)) (Int.ofNat (AxNat.mul x0 (AxNat.succ x1)))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.mul_negOfNat_negSucc",
     "free_symbols": [
       "x0",
       "x1"

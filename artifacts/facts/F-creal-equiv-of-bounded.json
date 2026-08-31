@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.Equiv.of_bounded : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> CReal.Within (Rat.sub (CReal.seq x0 x3) (CReal.seq x1 x3)) (Rat.natDivSucc x2 x3))) -> CReal.Equiv x0 x1))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.Equiv.of_bounded",
     "free_symbols": [
       "x0",
       "x1",

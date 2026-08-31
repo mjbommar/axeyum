@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n p : ℕ}, n ≠ 0 → n < p → Nat.Prime p → p.Coprime n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_of_lt_prime"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

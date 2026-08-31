@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.not_lt_zero : ((x0 : AxNat) -> ((x1 : AxNat.lt x0 AxNat.zero) -> False))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.not_lt_zero",
     "free_symbols": [
       "x0",
       "x1"

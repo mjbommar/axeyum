@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m a b c : ℕ}, 0 < m → a * c ≡ b * c [MOD m] → a ≡ b [MOD m / m.gcd c]",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_eq_cancel_right_div_gcd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

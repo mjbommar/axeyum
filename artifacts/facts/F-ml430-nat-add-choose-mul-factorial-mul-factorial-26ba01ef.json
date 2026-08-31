@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (i j : ℕ), (i + j).choose j * i.factorial * j.factorial = (i + j).factorial",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_choose_mul_factorial_mul_factorial"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

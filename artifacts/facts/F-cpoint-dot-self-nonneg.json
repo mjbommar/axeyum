@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.dot_self_nonneg : ((x0 : CPoint) -> CReal.le CReal.zero (CPoint.dot x0 x0))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.dot_self_nonneg",
     "free_symbols": [
       "x0"
     ]

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.archimedean : ((x0 : CReal) -> Exists.{1} AxNat (fun (x1 : AxNat) => CReal.le x0 (CReal.ofNat x1)))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.archimedean",
     "free_symbols": [
       "x0",
       "x1"

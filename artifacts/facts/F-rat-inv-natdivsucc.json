@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.inv_natDivSucc : ((x0 : AxNat) -> Eq.{1} Rat (Rat.inv (Rat.natDivSucc (AxNat.succ AxNat.zero) x0)) (Rat.natDivSucc (AxNat.succ x0) AxNat.zero))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.inv_natDivSucc",
     "free_symbols": [
       "x0"
     ]

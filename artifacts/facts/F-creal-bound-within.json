@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.bound_within : ((x0 : CReal) -> ((x1 : AxNat) -> CReal.Within (CReal.seq x0 x1) (Rat.natDivSucc (AxNat.succ (CReal.bound x0)) AxNat.zero)))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.bound_within",
     "free_symbols": [
       "x0",
       "x1"

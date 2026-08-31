@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, m.gcd n = 0 → n = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.eq_zero_of_gcd_eq_zero_right"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.sub_self : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.sub x0 x0) AxNat.zero)",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.sub_self",
     "free_symbols": [
       "x0"
     ]

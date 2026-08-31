@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "((x0 : AxNat) -> ((x1 : ((x1 : Eq.{1} AxNat x0 AxNat.zero) -> False)) -> Exists.{1} AxNat (fun (x2 : AxNat) => And (Eq.{1} AxNat (AxNat.testBit x0 x2) (AxNat.succ AxNat.zero)) (((x3 : AxNat) -> ((x4 : AxNat.lt x2 x3) -> Eq.{1} AxNat (AxNat.testBit x0 x3) AxNat.zero))))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.exists_most_significant_bit",
     "free_symbols": []
   },
   "epistemic_status": "proved",

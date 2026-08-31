@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.mul_inv_cancel_of_ne_zero : ((x0 : Rat) -> ((x1 : Not (Eq.{1} Rat x0 Rat.zero)) -> Eq.{1} Rat (Rat.mul x0 (Rat.inv x0)) Rat.one))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.mul_inv_cancel_of_ne_zero",
     "free_symbols": [
       "x0",
       "x1"

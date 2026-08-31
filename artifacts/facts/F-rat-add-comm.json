@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.add_comm : ((x0 : Rat) -> ((x1 : Rat) -> Eq.{1} Rat (Rat.add x0 x1) (Rat.add x1 x0)))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.add_comm",
     "free_symbols": [
       "x0",
       "x1"

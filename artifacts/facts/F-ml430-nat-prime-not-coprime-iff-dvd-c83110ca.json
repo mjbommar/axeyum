@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, ¬m.Coprime n ↔ ∃ p, Nat.Prime p ∧ p ∣ m ∧ p ∣ n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_not_coprime_iff_dvd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

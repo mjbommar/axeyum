@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.mul_nonneg : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le Int.zero x0) -> ((x3 : Int.le Int.zero x1) -> Int.le Int.zero (Int.mul x0 x1)))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.mul_nonneg",
     "free_symbols": [
       "x0",
       "x1",

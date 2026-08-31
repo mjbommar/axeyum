@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.dvd_mod_iff : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 (AxNat.succ x1)) -> Iff (AxNat.dvd x0 (AxNat.mod x2 (AxNat.succ x1))) (AxNat.dvd x0 x2)))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.dvd_mod_iff",
     "free_symbols": [
       "x0",
       "x1",

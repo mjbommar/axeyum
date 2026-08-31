@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.det2_swap_rows : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> Eq.{1} Rat (Rat.det2 x2 x3 x0 x1) (Rat.neg (Rat.det2 x0 x1 x2 x3))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.det2_swap_rows",
     "free_symbols": [
       "x0",
       "x1",

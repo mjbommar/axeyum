@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n m k : ℕ), n.dist k ≤ n.dist m + m.dist k",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.dist_triangle_inequality"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {k n m : ℤ}, k ∣ ↑(k.gcd n) * ↑(k.gcd m) ↔ k ∣ n * m",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.dvd_gcd_mul_gcd_iff_dvd_mul"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

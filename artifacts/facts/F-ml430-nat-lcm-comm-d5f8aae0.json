@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (m n : ℕ), m.lcm n = n.lcm m",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.lcm_comm"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

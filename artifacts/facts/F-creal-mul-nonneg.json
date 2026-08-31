@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.mul_nonneg : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le CReal.zero x0) -> ((x3 : CReal.le CReal.zero x1) -> CReal.le CReal.zero (CReal.mul x0 x1)))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.mul_nonneg",
     "free_symbols": [
       "x0",
       "x1",

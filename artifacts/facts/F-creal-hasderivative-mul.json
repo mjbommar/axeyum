@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.hasDerivative_mul : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : ((x2 : CReal) -> CReal)) -> ((x3 : ((x3 : CReal) -> CReal)) -> ((x4 : CReal) -> ((x5 : CReal) -> ((x6 : CReal.HasDerivativeOn x0 x1 x4 x5) -> ((x7 : CReal.HasDerivativeOn x2 x3 x4 x5) -> ((x8 : CReal.UniformlyContinuousOn x0 x4 x5) -> ((x9 : AxNat) -> ((x10 : AxNat) -> ((x11 : AxNat) -> ((x12 : ((x12 : CReal) -> ((x13 : CReal.le x4 x12) -> ((x14 : CReal.le x12 x5) -> CReal.le (CReal.abs (x0 x12)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ x9) AxNat.zero)))))) -> ((x13 : ((x13 : CReal) -> ((x14 : CReal.le x4 x13) -> ((x15 : CReal.le x13 x5) -> CReal.le (CReal.abs (x2 x13)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ x10) AxNat.zero)))))) -> ((x14 : ((x14 : CReal) -> ((x15 : CReal.le x4 x14) -> ((x16 : CReal.le x14 x5) -> CReal.le (CReal.abs (x3 x14)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ x11) AxNat.zero)))))) -> CReal.HasDerivativeOn (fun (x15 : CReal) => CReal.mul (x0 x15) (x2 x15)) (fun (x15 : CReal) => CReal.add (CReal.mul (x1 x15) (x2 x15)) (CReal.mul (x0 x15) (x3 x15))) x4 x5)))))))))))))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.hasDerivative_mul",
     "free_symbols": [
       "x0",
       "x1",

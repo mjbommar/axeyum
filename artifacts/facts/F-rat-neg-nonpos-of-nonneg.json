@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.neg_nonpos_of_nonneg : ((x0 : Rat) -> ((x1 : Rat.le Rat.zero x0) -> Rat.le (Rat.neg x0) Rat.zero))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.neg_nonpos_of_nonneg",
     "free_symbols": [
       "x0",
       "x1"

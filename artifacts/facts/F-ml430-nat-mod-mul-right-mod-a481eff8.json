@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (a b c : ℕ), a % (b * c) % b = a % b",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_mul_right_mod"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

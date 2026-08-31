@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.int_mul_le_mul_right : ((x0 : Int) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : Int.le x0 x1) -> Int.le (Int.mul x0 (Int.ofNat x2)) (Int.mul x1 (Int.ofNat x2))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.int_mul_le_mul_right",
     "free_symbols": [
       "x0",
       "x1",

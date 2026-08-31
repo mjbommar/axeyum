@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p1 p2 n : ℕ}, p1 ≠ p2 → Nat.Prime p1 → Nat.Prime p2 → p1 ∣ n → p2 ∣ n → p1 * p2 ∣ n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_dvd_mul_of_dvd_ne"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

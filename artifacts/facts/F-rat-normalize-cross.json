@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.normalize_cross : ((x0 : Int) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> Eq.{1} Int (Int.mul (Rat.num (Rat.normalize x0 x1 x2)) (Int.ofNat x1)) (Int.mul x0 (Int.ofNat (Rat.den (Rat.normalize x0 x1 x2)))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.normalize_cross",
     "free_symbols": [
       "x0",
       "x1",

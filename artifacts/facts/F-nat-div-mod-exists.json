@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.div_mod_exists : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> Exists.{1} AxNat (fun (x3 : AxNat) => Exists.{1} AxNat (fun (x4 : AxNat) => AxNat.divMod x0 x1 x3 x4)))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.div_mod_exists",
     "free_symbols": [
       "x0",
       "x1"

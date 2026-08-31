@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n m k : ℕ), n + m + k = n + (m + k)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_assoc"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

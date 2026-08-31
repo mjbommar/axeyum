@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.gcd_mul_lcm : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.gcd x0 x1) (AxNat.lcm x0 x1)) (AxNat.mul x0 x1)))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.gcd_mul_lcm",
     "free_symbols": [
       "x0",
       "x1"

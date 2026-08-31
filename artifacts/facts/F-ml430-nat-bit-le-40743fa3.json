@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (b : Bool) {m n : ℕ}, m ≤ n → Nat.bit b m ≤ Nat.bit b n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.bit_le"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

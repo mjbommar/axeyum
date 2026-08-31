@@ -28,6 +28,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Int",
+    "kernel_theorem": "Int.modEq_of_mul_right",
     "language": "lean4-surface",
     "statement": "∀ {n a b : ℤ} (m : ℤ), a ≡ b [ZMOD n * m] → a ≡ b [ZMOD n]"
   },

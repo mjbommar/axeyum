@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.mul_one : ((x0 : Int) -> Eq.{1} Int (Int.mul x0 Int.one) x0)",
     "fragment": "Int",
+    "kernel_theorem": "Int.mul_one",
     "free_symbols": [
       "x0"
     ]

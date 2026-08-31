@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.ofNat_mul_subNatNat : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.mul (Int.ofNat x0) (Int.subNatNat x1 x2)) (Int.subNatNat (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.ofNat_mul_subNatNat",
     "free_symbols": [
       "x0",
       "x1",

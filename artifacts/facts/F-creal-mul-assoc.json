@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.mul_assoc : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> CReal.Equiv (CReal.mul (CReal.mul x0 x1) x2) (CReal.mul x0 (CReal.mul x1 x2)))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.mul_assoc",
     "free_symbols": [
       "x0",
       "x1",

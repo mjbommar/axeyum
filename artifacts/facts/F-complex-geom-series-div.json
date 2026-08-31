@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.geom_series_div : ((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq (Complex.add Complex.one (Complex.neg x0))) x2) -> Complex.Equiv (Complex.sumRange (fun (x4 : AxNat) => Complex.pow x0 x4) x1) (Complex.div (Complex.add Complex.one (Complex.neg (Complex.pow x0 x1))) (Complex.add Complex.one (Complex.neg x0)) x2 x3)))))",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.geom_series_div",
     "free_symbols": [
       "x0",
       "x1",

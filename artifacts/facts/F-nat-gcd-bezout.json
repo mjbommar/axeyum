@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.gcd_bezout : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.bezout x0 x1 (AxNat.gcd x0 x1)))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.gcd_bezout",
     "free_symbols": [
       "x0",
       "x1"

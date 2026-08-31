@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b c : ℤ}, a + b ≤ c ↔ a ≤ c - b",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.add_le_iff_le_sub"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

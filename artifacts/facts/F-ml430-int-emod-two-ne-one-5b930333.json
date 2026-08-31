@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℤ}, ¬n % 2 = 1 ↔ n % 2 = 0",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.emod_two_ne_one"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

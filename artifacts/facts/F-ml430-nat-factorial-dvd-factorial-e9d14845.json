@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "\u2200 {m n : \u2115}, m \u2264 n \u2192 m.factorial \u2223 n.factorial",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.factorial_dvd_factorial"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b c : ℤ}, c ∣ a → c ∣ b → c ∣ ↑(a.gcd b)",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.dvd_gcd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

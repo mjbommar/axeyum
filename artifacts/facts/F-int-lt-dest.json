@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.lt_dest : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt x0 x1) -> Exists.{1} AxNat (fun (x3 : AxNat) => Eq.{1} Int x1 (Int.add x0 (Int.ofNat (AxNat.succ x3)))))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.lt_dest",
     "free_symbols": [
       "x0",
       "x1",

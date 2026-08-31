@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (x y : ℕ) {z : ℕ}, 0 < z → (x + y * z) / z = x / z + y",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_mul_div_right"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

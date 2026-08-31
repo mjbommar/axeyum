@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {x y p : ℕ}, Nat.Prime p → x ≠ 1 → y ≠ 1 → (x * y = p ^ 2 ↔ x = p ∧ y = p)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_mul_eq_prime_sq_iff"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

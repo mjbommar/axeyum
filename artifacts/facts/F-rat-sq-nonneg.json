@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.sq_nonneg : ((x0 : Rat) -> Rat.le Rat.zero (Rat.mul x0 x0))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.sq_nonneg",
     "free_symbols": [
       "x0"
     ]

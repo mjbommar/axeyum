@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.nat_index_compose : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.mul (AxNat.succ x0) (AxNat.add (AxNat.mul (AxNat.succ x1) x2) x1)) x0) (AxNat.add (AxNat.mul (AxNat.succ (AxNat.add (AxNat.mul (AxNat.succ x0) x1) x0)) x2) (AxNat.add (AxNat.mul (AxNat.succ x0) x1) x0)))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.nat_index_compose",
     "free_symbols": [
       "x0",
       "x1",

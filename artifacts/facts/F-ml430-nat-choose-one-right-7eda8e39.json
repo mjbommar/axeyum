@@ -34,6 +34,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.choose_one_right",
     "language": "lean4-surface",
     "statement": "\u2200 (n : \u2115), n.choose 1 = n"
   },

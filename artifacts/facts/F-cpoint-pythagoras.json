@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.pythagoras : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal.Equiv (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x1 x2)) CReal.zero) -> CReal.Equiv (CPoint.dot (CPoint.sub x0 x1) (CPoint.sub x0 x1)) (CReal.add (CPoint.dot (CPoint.sub x0 x2) (CPoint.sub x0 x2)) (CPoint.dot (CPoint.sub x1 x2) (CPoint.sub x1 x2)))))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.pythagoras",
     "free_symbols": [
       "x0",
       "x1",

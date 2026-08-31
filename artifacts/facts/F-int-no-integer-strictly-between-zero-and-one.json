@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.no_int_between : ((x0 : Int) -> Not (And (Int.lt Int.zero x0) (Int.lt x0 Int.one)))",
     "fragment": "Int",
+    "kernel_theorem": "Int.no_int_between",
     "free_symbols": [
       "x0"
     ]

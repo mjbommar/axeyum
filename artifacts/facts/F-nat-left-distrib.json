@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.left_distrib : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.add x1 x2)) (AxNat.add (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.left_distrib",
     "free_symbols": [
       "x0",
       "x1",

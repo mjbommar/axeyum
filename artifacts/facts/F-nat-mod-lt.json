@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.mod_lt : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero x1) -> AxNat.lt (AxNat.mod x0 x1) x1)))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_lt",
     "free_symbols": [
       "x0",
       "x1"

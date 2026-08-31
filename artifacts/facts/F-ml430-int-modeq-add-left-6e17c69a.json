@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n a b : ℤ} (c : ℤ), a ≡ b [ZMOD n] → c + a ≡ c + b [ZMOD n]",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.modEq_add_left"
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.add_assoc : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.add (Int.add x0 x1) x2) (Int.add x0 (Int.add x1 x2)))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.add_assoc",
     "free_symbols": [
       "x0",
       "x1",

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Int.mul_neg : ((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.mul x0 (Int.neg x1)) (Int.neg (Int.mul x0 x1))))",
     "fragment": "Int",
+    "kernel_theorem": "Int.mul_neg",
     "free_symbols": [
       "x0",
       "x1"

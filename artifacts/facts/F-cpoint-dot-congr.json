@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.dot_congr : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> ((x4 : CPoint.Equiv x0 x1) -> ((x5 : CPoint.Equiv x2 x3) -> CReal.Equiv (CPoint.dot x0 x2) (CPoint.dot x1 x3)))))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.dot_congr",
     "free_symbols": [
       "x0",
       "x1",

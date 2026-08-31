@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.euler_line : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CPoint.Equiv (CPoint.add (CPoint.sub (CPoint.add (CPoint.add x1 x2) x3) (CPoint.add x0 x0)) (CPoint.add x0 x0)) (CPoint.add (CPoint.add (CPoint.centroid x1 x2 x3) (CPoint.centroid x1 x2 x3)) (CPoint.centroid x1 x2 x3))))))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.euler_line",
     "free_symbols": [
       "x0",
       "x1",

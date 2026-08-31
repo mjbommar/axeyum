@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.mul_conj : ((x0 : Complex) -> Complex.Equiv (Complex.mul x0 (Complex.conj x0)) (Complex.ofReal (Complex.normSq x0)))",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.mul_conj",
     "free_symbols": [
       "x0"
     ]

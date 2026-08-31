@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "\u2200 (n m : \u2115), n.dist m = m.dist n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.dist_comm"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

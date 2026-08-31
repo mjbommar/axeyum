@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.nonneg_of_int_nonneg : ((x0 : Rat) -> ((x1 : Int.le Int.zero (Rat.num x0)) -> Rat.le Rat.zero x0))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.nonneg_of_int_nonneg",
     "free_symbols": [
       "x0",
       "x1"

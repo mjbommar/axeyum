@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.add_assoc : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal) -> CReal.Equiv (CReal.add (CReal.add x0 x1) x2) (CReal.add x0 (CReal.add x1 x2)))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.add_assoc",
     "free_symbols": [
       "x0",
       "x1",

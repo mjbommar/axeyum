@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℤ}, 0 < Int.fib (2 * n + 1)",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.fib_two_mul_add_one_pos"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

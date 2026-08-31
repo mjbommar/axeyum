@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.matMul_id_right : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x1) -> Eq.{1} Rat (Rat.matMul x0 Rat.matId x1 x2 x3) (x0 x2 x3))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.matMul_id_right",
     "free_symbols": [
       "x0",
       "x1",

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.neg_le_abs : ((x0 : CReal) -> CReal.le (CReal.neg x0) (CReal.abs x0))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.neg_le_abs",
     "free_symbols": [
       "x0"
     ]

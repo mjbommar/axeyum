@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.one_mul : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.succ AxNat.zero) x0) x0)",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.one_mul",
     "free_symbols": [
       "x0"
     ]

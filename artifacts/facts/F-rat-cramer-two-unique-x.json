@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.cramer_two_unique_x : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat) -> ((x4 : Rat) -> ((x5 : Rat) -> ((x6 : Rat) -> ((x7 : Rat) -> ((x8 : Eq.{1} Rat (Rat.add (Rat.mul x0 x4) (Rat.mul x1 x5)) x6) -> ((x9 : Eq.{1} Rat (Rat.add (Rat.mul x2 x4) (Rat.mul x3 x5)) x7) -> ((x10 : Not (Eq.{1} Rat (Rat.det2 x0 x1 x2 x3) Rat.zero)) -> Eq.{1} Rat x4 (Rat.div (Rat.det2 x6 x1 x7 x3) (Rat.det2 x0 x1 x2 x3)))))))))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.cramer_two_unique_x",
     "free_symbols": [
       "x0",
       "x1",

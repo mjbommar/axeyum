@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, ↑m ≤ ↑n → m ≤ n",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.le_of_ofNat_le_ofNat"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CPoint.lerp_half_is_midpoint : ((x0 : CPoint) -> ((x1 : CPoint) -> CPoint.Equiv (CPoint.lerp x0 x1 CPoint.Scalar.inv2) (CPoint.midpoint x0 x1)))",
     "fragment": "CPoint",
+    "kernel_theorem": "CPoint.lerp_half_is_midpoint",
     "free_symbols": [
       "x0",
       "x1"

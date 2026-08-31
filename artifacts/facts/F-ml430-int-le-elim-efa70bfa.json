@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b : ℤ}, a ≤ b → ∀ {P : Prop}, (∀ (n : ℕ), a + ↑n = b → P) → P",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.le.elim"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

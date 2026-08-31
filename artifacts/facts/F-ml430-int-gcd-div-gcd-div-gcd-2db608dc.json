@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {i j : ℤ}, 0 < i.gcd j → (i / ↑(i.gcd j)).gcd (j / ↑(i.gcd j)) = 1",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.gcd_div_gcd_div_gcd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

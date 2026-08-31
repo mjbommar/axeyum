@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.sub_le_of_le : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Rat) -> ((x3 : Rat.le x0 (Rat.add x1 x2)) -> Rat.le (Rat.sub x0 x1) x2))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.sub_le_of_le",
     "free_symbols": [
       "x0",
       "x1",

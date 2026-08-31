@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (x y : ℤ), ↑(x.gcd y) = x * x.gcdA y + y * x.gcdB y",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.gcd_eq_gcd_ab_witnesses"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

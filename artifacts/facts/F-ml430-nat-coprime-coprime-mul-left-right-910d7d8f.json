@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m k n : ℕ}, m.Coprime (k * n) → m.Coprime n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_mul_left_right"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

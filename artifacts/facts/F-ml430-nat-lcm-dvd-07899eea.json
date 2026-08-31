@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n k : ℕ}, m ∣ k → n ∣ k → m.lcm n ∣ k",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.lcm_dvd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

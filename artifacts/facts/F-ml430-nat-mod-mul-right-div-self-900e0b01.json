@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (m n k : ℕ), m % (n * k) / n = m / n % k",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_mul_right_div_self"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

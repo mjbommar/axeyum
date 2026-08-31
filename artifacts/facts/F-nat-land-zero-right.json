@@ -43,6 +43,7 @@
   "external_status": "proved",
   "formal": {
     "fragment": "Nat",
+    "kernel_theorem": "Nat.land_zero_right",
     "free_symbols": [
       "x0"
     ],

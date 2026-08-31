@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {x y : ℤ}, x.gcd y ≠ 0 → x ≠ 0 ∨ y ≠ 0",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.ne_zero_of_gcd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

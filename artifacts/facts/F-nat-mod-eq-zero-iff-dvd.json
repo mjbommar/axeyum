@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.mod_eq_zero_iff_dvd : ((x0 : AxNat) -> ((x1 : AxNat) -> Iff (AxNat.modEq x0 x1 AxNat.zero) (AxNat.dvd x0 x1)))",
     "fragment": "Nat",
+    "kernel_theorem": "Nat.mod_eq_zero_iff_dvd",
     "free_symbols": [
       "x0",
       "x1"

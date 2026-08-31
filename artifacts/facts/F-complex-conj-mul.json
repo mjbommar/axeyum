@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Complex.conj_mul : ((x0 : Complex) -> ((x1 : Complex) -> Complex.Equiv (Complex.conj (Complex.mul x0 x1)) (Complex.mul (Complex.conj x0) (Complex.conj x1))))",
     "fragment": "Complex",
+    "kernel_theorem": "Complex.conj_mul",
     "free_symbols": [
       "x0",
       "x1"

@@ -7,7 +7,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a₁ a₂ b₁ b₂ : ℕ}, a₁ ∣ a₂ → b₁ ∣ b₂ → a₂.Coprime b₂ → a₁.Coprime b₁",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.coprime_of_dvd"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

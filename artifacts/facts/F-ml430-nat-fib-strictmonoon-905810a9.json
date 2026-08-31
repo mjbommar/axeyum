@@ -6,7 +6,8 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "StrictMonoOn Nat.fib (Set.Ici 2)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.fib_strictmonoOn"
   },
   "epistemic_status": "proved",
   "external_status": "proved",

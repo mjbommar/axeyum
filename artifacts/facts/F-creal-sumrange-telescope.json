@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.sumRange_telescope : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> CReal.Equiv (CReal.sumRange (fun (x2 : AxNat) => CReal.add (x0 (AxNat.succ x2)) (CReal.neg (x0 x2))) x1) (CReal.add (x0 x1) (CReal.neg (x0 AxNat.zero)))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.sumRange_telescope",
     "free_symbols": [
       "x0",
       "x1",

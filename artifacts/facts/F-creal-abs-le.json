@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem CReal.abs_le : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le x0 x1) -> ((x3 : CReal.le (CReal.neg x0) x1) -> CReal.le (CReal.abs x0) x1))))",
     "fragment": "CReal",
+    "kernel_theorem": "CReal.abs_le",
     "free_symbols": [
       "x0",
       "x1",

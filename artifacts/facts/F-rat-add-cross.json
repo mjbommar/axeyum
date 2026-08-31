@@ -7,6 +7,7 @@
     "language": "lean4",
     "statement": "theorem Rat.add_cross : ((x0 : Rat) -> ((x1 : Rat) -> Eq.{1} Int (Int.mul (Rat.num (Rat.add x0 x1)) (Int.ofNat (AxNat.mul (Rat.den x0) (Rat.den x1)))) (Int.mul (Int.add (Int.mul (Rat.num x0) (Int.ofNat (Rat.den x1))) (Int.mul (Rat.num x1) (Int.ofNat (Rat.den x0)))) (Int.ofNat (Rat.den (Rat.add x0 x1))))))",
     "fragment": "Rat",
+    "kernel_theorem": "Rat.add_cross",
     "free_symbols": [
       "x0",
       "x1"
