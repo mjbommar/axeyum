@@ -207,6 +207,12 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-holdout-contamination.py
     bash scripts/tests/test-dispatchable-frontier.sh
     python3 scripts/check-dispatchable-frontier.py
+    # L3 D4: does an open obstruction actually compile into a falsifiable,
+    # plural producer contract, or does classification stop at "blocked"?
+    # `gen-obstruction-producers.py --check` re-derives both the
+    # classification and every contract from primary sources on each run.
+    bash scripts/tests/test-obstruction-producers.sh
+    python3 scripts/check-obstruction-producers.py
     # ...and the artifact S2/S3/S4 constrain. Those three pin every field of the
     # statable vocabulary to one value, so it is DERIVED (`--write`) rather than
     # maintained. This checks what no other gate reads: the row digest, which is
