@@ -797,3 +797,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1230](adr-1230-the-first-supplementary-law-needs-a-representative-not-a-converse.md) | The `p = 3 (mod 4)` half of the first supplementary law was | accepted |
 | [1235](adr-1235-wilson-supplies-the-residue-witness-and-the-first-supplementary-law-closes.md) | The `p = 1 (mod 4)` half of the first supplementary law is | accepted |
 | [1240](adr-1240-index-zero-is-filled-an-inductive-prop-gives-up-the-evaluation-test.md) | ADR-1220 measured that cycle index 0 was the binding slot for | accepted |
+| [1250](adr-1250-a-marker-that-cannot-attach-is-the-mirror-of-a-checker-that-cannot-fail.md) | `scripts/check-absence-claims.py` (ADR-0611) makes a prose | accepted |

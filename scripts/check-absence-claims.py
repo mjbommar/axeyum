@@ -46,6 +46,41 @@ Two directions, both checked, neither able to pass by the run completing:
 So correcting a stale claim is a one-word edit (`absent` -> `was-absent`)
 that *keeps* the claim under the gate rather than removing it from it.
 
+# Where to put one, and what shape it may take
+
+This is the only place the convention is written down, so it is written in
+full. Three rules, and the third is the one that cost a lane (ADR-1250):
+
+1. **Put the marker in the same BLOCK as the claim** -- the same
+   blank-line-separated Markdown paragraph or list item, or the same run of
+   consecutive Rust comment lines. One blank line between them is one block
+   too far and the claim stays bare.
+2. **NAME the claim's subject in the marker.** A marker silences only the
+   claims whose own sentence (or table row, or list item) names one of the
+   declarations the marker names, exactly or up to spelling. A marker for `X`
+   is not an answer about `Y` in the paragraph next to it.
+3. **A marker MAY be written across several lines.** It is an HTML comment,
+   so wrapping it at the column the surrounding prose wraps at is correct, and
+   a marker carrying a note usually has to. Names may wrap too, including
+   inside a `//!` doc comment -- the comment prefix on a continuation line is
+   stripped before the names are read.
+
+Rule 3 held only from 2026-08-31. Before that, the body's `.*?` was matched
+one line at a time, so a wrapped marker matched NOTHING -- not merely
+unattached, invisible: unchecked against the kernel, silencing nothing, and
+absent from the marker count. That is the exact mirror of a checker that
+cannot fail. Its practical cost is that the ONLY remaining way to retire a
+resolved claim was `--update-budget`, which is the laundering this gate
+exists to prevent, so a lane that followed this convention correctly was left
+with no honest move at all.
+
+One caveat that follows from rule 3, and it is the reverse hazard: a code
+SPAN cannot quote a multi-line marker, because a span is matched within one
+line. **Quote a multi-line example in a fenced block**, never in wrapping
+backticks -- otherwise the documentation of the grammar is read as a live
+marker, which is the defect the code-span rule was added to prevent, arriving
+from the other side.
+
 # Spelling
 
 There is no single spelling. Measured 2026-08-27 over the 483 `CReal`
