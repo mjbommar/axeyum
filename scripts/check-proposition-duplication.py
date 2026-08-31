@@ -247,12 +247,19 @@ def guard_shared_declaration_pair(facts: dict) -> GuardResult:
     legitimately cites several declarations that narrower facts also cite. The
     STATEMENTS must match too, up to bound-variable naming.
     """
+    # A fact records its declaration in EITHER place, and reading one is a
+    # blind spot: measured 2026-08-30 over 2,149 settled facts, 189 name it only
+    # in `formal.kernel_theorem`, 193 only in evidence, 1,111 in both. This
+    # guard originally read evidence alone and so could not see a duplicate
+    # among those 189 -- and I found that only because a query of my own,
+    # written the same way, reported 0 facts for a family that had 4.
     by_decl: dict[str, set[str]] = {}
     for fid, fact in facts.items():
         if fact.get("epistemic_status") not in ("proved", "computed"):
             continue
-        for ev in fact.get("evidence") or []:
-            decl = ev.get("kernel_declaration")
+        decls = {(fact.get("formal") or {}).get("kernel_theorem")}
+        decls |= {ev.get("kernel_declaration") for ev in fact.get("evidence") or []}
+        for decl in decls:
             if decl:
                 by_decl.setdefault(decl, set()).add(fid)
 
