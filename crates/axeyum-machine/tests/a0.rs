@@ -843,3 +843,20 @@ fn every_instruction_exposes_implicit_effects_without_duplicates() {
     assert_eq!(aliased.reads, vec![P, O, R(1)]);
     assert_eq!(aliased.writes, vec![P, R(1), C]);
 }
+
+#[test]
+fn construction_errors_have_reader_facing_messages() {
+    let width = Word::new(7, 0).expect_err("seven bits is outside the A0 profile");
+    assert_eq!(
+        width.to_string(),
+        "invalid A0 word width 7; expected 8, 16, ..., or 64"
+    );
+    let conversion = Word::new(16, 1)
+        .expect("supported word")
+        .zero_extend(8)
+        .expect_err("zero extension cannot narrow");
+    assert_eq!(
+        conversion.to_string(),
+        "invalid width conversion from 16 to 8"
+    );
+}

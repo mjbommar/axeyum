@@ -29,7 +29,7 @@ class Declaration:
     r"""
     One declaration — the unit `add_declaration` admits and the environment
     stores.
-    
+
     The **trusted surface is `Axiom | Opaque | Quotient`**, not `Axiom` alone:
     an `Opaque` has no proof body available for definitional unfolding and the
     quotient package admits `Quot.sound`. Do not test `kind == "axiom"` to decide
@@ -71,23 +71,23 @@ class Declaration:
     def axiom(name: NameId, uparams: typing.Sequence[NameId], ty: ExprId) -> Declaration:
         r"""
         `axiom name : ty` — an asserted constant with no definitional value.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handles come from different kernels.
         """
     @staticmethod
     def definition(name: NameId, uparams: typing.Sequence[NameId], ty: ExprId, value: ExprId, hint: builtins.str = 'regular', height: builtins.int = 0) -> Declaration:
         r"""
         `def name : ty := value`.
-        
+
         `hint` is the reducibility hint driving lazy-delta unfolding order:
         `"regular"` (with `height`), `"abbrev"` (always unfold first) or
         `"opaque"` (never preferred). It is a performance-shaped choice, not a
         soundness one.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handles come from different kernels, and
         `ValueError` for an unknown `hint`.
         """
@@ -95,18 +95,18 @@ class Declaration:
     def theorem(name: NameId, uparams: typing.Sequence[NameId], ty: ExprId, value: ExprId) -> Declaration:
         r"""
         `theorem name : ty := value`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handles come from different kernels.
         """
     @staticmethod
     def opaque(name: NameId, uparams: typing.Sequence[NameId], ty: ExprId, value: ExprId) -> Declaration:
         r"""
         `opaque name : ty := value` — checked at admission, never unfolded.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handles come from different kernels.
         """
     def __repr__(self) -> builtins.str: ...
@@ -140,12 +140,12 @@ class ExprId:
 class ExprNode:
     r"""
     One destructured expression node, copied out of the kernel arena.
-    
+
     The Rust `expr_node` returns a **borrow** into the kernel; a borrow cannot
     cross into Python, and holding one would pin the kernel against the `&mut
     self` every constructor needs. So this is an owned copy: reading it can never
     observe a later mutation, which is the honest shape for a snapshot.
-    
+
     Accessors that do not apply to `kind` return `None` rather than raising —
     `node.name if node.kind == "const" else ...` is the intended idiom, and
     [`Self::args`] gives the whole payload as a tuple for destructuring.
@@ -229,9 +229,9 @@ class ExprNode:
     def args(self) -> tuple:
         r"""
         The variant's payload, in the order the Rust variant declares it.
-        
+
         # Errors
-        
+
         Propagates any Python error raised while building the tuple.
         """
     def __repr__(self) -> builtins.str: ...
@@ -240,11 +240,11 @@ class ExprNode:
 class Kernel:
     r"""
     An independent Lean kernel: term language, environment, type checker.
-    
+
     Every constructor interns (`&mut self` in Rust) and every query reads
     (`&self`), so Python gets a real reader/writer discipline: a `Kernel` cannot
     be mutated while a query is in flight.
-    
+
     Handles this kernel returns are stamped with its `epoch` and refused by any
     other kernel — see the module docstring.
     """
@@ -260,10 +260,10 @@ class Kernel:
     def fork(self) -> Kernel:
         r"""
         A full snapshot of this kernel, under a **new** epoch.
-        
+
         `Kernel` derives `Clone` over plain owned data, so a fork is a genuine
         independent copy — the snapshot primitive this binding has.
-        
+
         The fork **rejects this kernel's handles**, and that is deliberate. The
         two kernels agree on every id at the instant of the fork, so accepting
         them would work right up until either side interns something new, after
@@ -274,36 +274,36 @@ class Kernel:
     def build_logic_prelude(self) -> Prelude:
         r"""
         Builds the logic prelude (`Eq`, `And`, `Or`, decidability, …).
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
     def build_nat_prelude(self) -> Prelude:
         r"""
         Builds the computational `Nat` prelude.
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
     def build_int_prelude(self) -> Prelude:
         r"""
         Builds the `Int` prelude.
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
     def build_rat_prelude(self) -> Prelude:
         r"""
         Builds the `Rat` prelude.
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
@@ -311,7 +311,7 @@ class Kernel:
         r"""
         Builds the **axiomatized** ordered field `AxReal` (prelude key
         `axreal`).
-        
+
         This is the repository's only nonzero axiom row: **30 declared axioms**,
         and 30 is a floor rather than a dial — `AxReal`'s carrier is opaque, so
         nothing over it is definable and every operation and law must be
@@ -319,12 +319,12 @@ class Kernel:
         `Sos` and `IntFarkas` all reconstruct over constructed carriers. Quote
         the pair — "30 declared, none reached" — because "we have 30 axioms"
         ignores the second half and "our proofs rest on 30 axioms" is false.
-        
+
         For the constructed reals, which measure 0, use
         [`Self::build_creal_prelude`].
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
@@ -332,53 +332,53 @@ class Kernel:
         r"""
         Builds the **constructed** reals `CReal` — a Bishop setoid over the
         constructed rationals, trusted surface 0 (ADR-0512).
-        
+
         `CReal` and `AxReal` are different things and one is a substring of the
         other: a `"Real."` test matches `"CReal."`. Decide which package you mean
         by its declaration, never by a substring.
-        
+
         This is the expensive one — a debug build was measured at **44 s**
         against `AxReal`'s 5.6 ms — which is what the process-wide prelude cache
         exists for. The call releases the GIL.
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
     def build_complex_prelude(self) -> Prelude:
         r"""
         Builds the complex-number prelude over the constructed reals.
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
     def build_cpoint_prelude(self) -> Prelude:
         r"""
         Builds the constructed-real plane-geometry prelude.
-        
+
         # Errors
-        
+
         Raises `KernelError` if the kernel refuses any declaration in the
         package.
         """
     def build_string_prelude(self, logic: Prelude, num_chars: builtins.int) -> Prelude:
         r"""
         Builds the string prelude over `num_chars` characters.
-        
+
         This is the one builder that takes a caller-held package: it needs the
         exact `LogicPrelude` this kernel was built with, so it can never start
         from a pristine kernel and deliberately has no template in the process
         cache. Pass the object returned by [`Self::build_logic_prelude`].
-        
+
         `num_chars` is the alphabet size and is **required**: it selects the
         `axeyum.string.<size>` namespace, so a default here would silently pick
         which string theory you get.
-        
+
         # Errors
-        
+
         Raises `EpochError` if `logic` came from another kernel, `ValueError` if
         it is not a logic package, and `KernelError` if the kernel refuses the
         build (including a `PreludePackageConflict` when `logic` is not the
@@ -391,30 +391,30 @@ class Kernel:
     def name_str(self, parent: NameId, component: builtins.str) -> NameId:
         r"""
         Appends a string component to `parent`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if `parent` came from another kernel.
         """
     def name_num(self, parent: NameId, component: builtins.int) -> NameId:
         r"""
         Appends a numeric component to `parent`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if `parent` came from another kernel.
         """
     def name(self, dotted: builtins.str, *, must_exist: builtins.bool = False) -> NameId:
         r"""
         Interns a dotted name such as `"Nat.add_comm"`.
-        
+
         With `must_exist=True` the name must already denote a declaration in this
         kernel; interning succeeds for any well-formed dotted string otherwise,
         because building a *new* declaration needs a name before the declaration
         exists.
-        
+
         # Errors
-        
+
         Raises `ValueError` for a malformed dotted string and `KeyError` when
         `must_exist=True` and nothing is declared under that name.
         """
@@ -422,35 +422,35 @@ class Kernel:
         r"""
         The dotted rendering of a name (`a.b.1`; the anonymous root prints as
         `[anonymous]`).
-        
+
         This is what the kernel's own inventories print. It is **not** what a
         generated Lean module spells — see [`Self::lean_name`].
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def lean_name(self, name: NameId) -> builtins.str:
         r"""
         The name as an **emitted Lean module** spells it.
-        
+
         Two rules diverge from [`Self::display_name`], and both bite anything
         matching a footprint against `axiom` lines in a module: a numeric
         component is not a legal Lean identifier, so `x.0` is emitted `x._0`;
         and the kernel's computational naturals are rooted at `AxNat` so they do
         not shadow Lean's `Nat`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def name_node(self, name: NameId) -> tuple:
         r"""
         The structural node of a name: `("anonymous",)`, `("str", parent, s)`,
         or `("num", parent, n)`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel, and
         propagates any Python error raised while building the tuple.
         """
@@ -461,108 +461,108 @@ class Kernel:
     def level_succ(self, level: LevelId) -> LevelId:
         r"""
         One level above `level`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def level_max(self, left: LevelId, right: LevelId) -> LevelId:
         r"""
         The larger of two levels.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def level_imax(self, left: LevelId, right: LevelId) -> LevelId:
         r"""
         The impredicative max: `0` when `right` is `0`, else `max`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def level_param(self, name: NameId) -> LevelId:
         r"""
         A universe parameter (variable) named `name`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def level_offset(self, level: LevelId, offset: builtins.int) -> LevelId:
         r"""
         `level + offset`, as `offset` nested `succ`s.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def level_succs(self, level: LevelId) -> tuple[LevelId, builtins.int]:
         r"""
         Splits a `succ` chain into `(base, height)`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def simplify_level(self, level: LevelId) -> LevelId:
         r"""
         The normal form of a level.
-        
+
         Named `simplify_level`, not `simplify`: a bare `simplify` on a kernel
         reads as term simplification, which this is not.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def level_leq(self, left: LevelId, right: LevelId) -> builtins.bool:
         r"""
         Whether `left <= right` holds for every universe assignment.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def level_is_equiv(self, left: LevelId, right: LevelId) -> builtins.bool:
         r"""
         Whether two levels are equivalent for every universe assignment.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def level_is_zero(self, level: LevelId) -> builtins.bool:
         r"""
         Whether the level is definitely `0`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def level_is_nonzero(self, level: LevelId) -> builtins.bool:
         r"""
         Whether the level is definitely nonzero.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def substitute_level(self, level: LevelId, subst: typing.Sequence[tuple[NameId, LevelId]]) -> LevelId:
         r"""
         Substitutes universe parameters in a level.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def substitute_expr_levels(self, expr: ExprId, subst: typing.Sequence[tuple[NameId, LevelId]]) -> ExprId:
         r"""
         Substitutes universe parameters throughout an expression.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def bvar(self, index: builtins.int) -> ExprId:
@@ -576,9 +576,9 @@ class Kernel:
     def sort(self, level: LevelId) -> ExprId:
         r"""
         The type universe at `level`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def sort_zero(self) -> ExprId:
@@ -588,52 +588,52 @@ class Kernel:
     def const_(self, name: NameId, levels: typing.Sequence[LevelId]) -> ExprId:
         r"""
         A constant reference with universe arguments.
-        
+
         Named `const_` because `const` is not a Python identifier hazard but is a
         Rust keyword; the Rust method is `const_` too.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def proj(self, type_name: NameId, field_index: builtins.int, structure: ExprId) -> ExprId:
         r"""
         A structure projection by zero-based field index (parameters excluded).
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def app(self, fun: ExprId, arg: ExprId) -> ExprId:
         r"""
         Function application `fun arg`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def lam(self, name: NameId, ty: ExprId, body: ExprId, info: BinderInfo = BinderInfo.Default) -> ExprId:
         r"""
         `fun (name : ty) => body`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def pi(self, name: NameId, ty: ExprId, body: ExprId, info: BinderInfo = BinderInfo.Default) -> ExprId:
         r"""
         `(name : ty) -> body`, the dependent function type.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def let_(self, name: NameId, ty: ExprId, value: ExprId, body: ExprId) -> ExprId:
         r"""
         `let name : ty := value; body`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def lit(self, lit: Lit) -> ExprId:
@@ -643,97 +643,97 @@ class Kernel:
     def expr_node(self, expr: ExprId) -> ExprNode:
         r"""
         The destructured node of an expression, copied out of the arena.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def lam_body(self, expr: ExprId) -> typing.Optional[ExprId]:
         r"""
         A lambda's body, or `None` if the expression is not a lambda.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def pi_body(self, expr: ExprId) -> typing.Optional[ExprId]:
         r"""
         A pi's body, or `None` if the expression is not a pi.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def num_loose_bvars(self, expr: ExprId) -> builtins.int:
         r"""
         One more than the largest loose de Bruijn index escaping the expression.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def has_loose_bvars(self, expr: ExprId) -> builtins.bool:
         r"""
         Whether any loose de Bruijn variable escapes the expression.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def loose_bvar_range(self, expr: ExprId) -> tuple[builtins.int, builtins.int]:
         r"""
         The half-open range of loose de Bruijn indices, as `(start, end)`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def has_fvars(self, expr: ExprId) -> builtins.bool:
         r"""
         Whether any free variable occurs in the expression.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def instantiate(self, expr: ExprId, subst: typing.Sequence[ExprId]) -> ExprId:
         r"""
         Instantiates the outermost loose de Bruijn variables with `subst`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def abstract_fvars(self, expr: ExprId, fvars: typing.Sequence[builtins.int]) -> ExprId:
         r"""
         Abstracts the listed free variables into de Bruijn binders.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def close_scoped_fvars(self, expr: ExprId, binders: typing.Sequence[tuple[ExprId, builtins.int]]) -> ExprId:
         r"""
         Closes marked `(lambda, fvar)` binder scopes in one traversal.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def lift_loose_bvars(self, expr: ExprId, cutoff: builtins.int, amount: builtins.int) -> ExprId:
         r"""
         Lifts loose de Bruijn variables at or above `cutoff` by `amount`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def infer(self, expr: ExprId) -> ExprId:
         r"""
         Infers the type of an expression.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel, and
         `KernelError` for any rejection — a non-function applied, a binder domain
         that is not a type, a loose `bvar`, an unknown constant, and so on. The
@@ -742,35 +742,35 @@ class Kernel:
     def def_eq(self, left: ExprId, right: ExprId) -> builtins.bool:
         r"""
         Definitional equality.
-        
+
         `False` means "this kernel could not identify them", which for a total
         decision procedure over a checked environment is a genuine negative; it
         is not an error and not an `unknown`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def whnf(self, expr: ExprId) -> ExprId:
         r"""
         Weak-head normal form.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def add_declaration(self, declaration: Declaration) -> None:
         r"""
         Admits one declaration — **the trusted gate**.
-        
+
         Every check is genuine and none is skipped: a wrong answer here admits a
         false theorem. The call releases the GIL.
-        
+
         `Declaration.quotient` is deliberately not constructible: the quotient
         package is admitted atomically as four declarations, not one at a time.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the declaration names another kernel's handles,
         and `KernelError` on rejection — `DeclarationExists` for a duplicate
         name, `DeclarationValueMismatch` when the value's inferred type is not
@@ -780,9 +780,9 @@ class Kernel:
         r"""
         Admits an inductive type together with its constructors, generating its
         recursor and ι-reduction rules.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel and
         `KernelError` on rejection (positivity, malformed constructor type, an
         unsupported shape).
@@ -791,7 +791,7 @@ class Kernel:
         r"""
         An owned snapshot of the environment, `[(rendered name, Declaration)]`,
         in the kernel's deterministic id order.
-        
+
         A snapshot, not a live view: the Rust `environment()` returns a borrow,
         and holding one would pin the kernel against the `&mut self` every
         constructor needs.
@@ -799,7 +799,7 @@ class Kernel:
     def declaration_names(self) -> builtins.list[builtins.str]:
         r"""
         Just the declaration NAMES, in environment order.
-        
+
         [`declarations`](Self::declarations) clones every `Declaration` -- the
         whole expression tree of every theorem's type AND proof -- into a Python
         object, which for a built prelude is hundreds of them. A caller that only
@@ -816,9 +816,9 @@ class Kernel:
     def contains(self, name: builtins.str  |  NameId) -> builtins.bool:
         r"""
         Whether `name` (a `NameId` or a dotted string) is declared.
-        
+
         # Errors
-        
+
         Raises `EpochError` for a foreign handle, `TypeError` for anything that
         is neither a `NameId` nor a string, and `ValueError` for a malformed
         dotted name.
@@ -826,9 +826,9 @@ class Kernel:
     def get_declaration(self, name: builtins.str  |  NameId) -> typing.Optional[Declaration]:
         r"""
         The declaration named `name`, or `None`.
-        
+
         # Errors
-        
+
         Raises `EpochError` for a foreign handle, `TypeError` for anything that
         is neither a `NameId` nor a string, and `ValueError` for a malformed
         dotted name.
@@ -837,41 +837,41 @@ class Kernel:
         r"""
         This kernel's `#print axioms`: every trusted declaration `name` rests on,
         rendered and sorted.
-        
+
         An **empty list means axiom-free**, which is a strictly stronger claim
         than "we did not find any". That is why an absent name raises `KeyError`
         here rather than returning `[]` the way the Rust function does.
-        
+
         # Errors
-        
+
         Raises `KeyError` if nothing is declared under `name`.
         """
     def axiom_footprint_ids(self, name: builtins.str  |  NameId) -> builtins.list[NameId]:
         r"""
         [`Self::axiom_footprint`] as handles rather than rendered names.
-        
+
         # Errors
-        
+
         Raises `KeyError` if nothing is declared under `name`.
         """
     def is_axiom_free(self, name: builtins.str  |  NameId) -> builtins.bool:
         r"""
         Whether `name` rests on no trusted declaration at all.
-        
+
         Defined **only** through [`Self::axiom_footprint`], never by a variant
         test: the trusted surface is `Axiom | Opaque | Quotient`, since `Opaque`
         has no proof body and the quotient package admits `Quot.sound`.
-        
+
         # Errors
-        
+
         Raises `KeyError` if nothing is declared under `name`.
         """
     def declaration_dependency_closure(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
         r"""
         Every declaration reachable from `name`, rendered and sorted.
-        
+
         # Errors
-        
+
         Raises `KeyError` if nothing is declared under `name`.
         """
     def declaration_dependencies(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
@@ -893,65 +893,65 @@ class Kernel:
     def theorem_dependencies(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
         r"""
         The theorem declarations `name` refers to directly (self-reference dropped).
-        
+
         # Errors
-        
+
         Raises `KeyError` if nothing is declared under `name`.
         """
     def declarations_reached(self, roots: typing.Sequence[ExprId]) -> builtins.list[builtins.str]:
         r"""
         Every declaration the given expressions mention.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def render_lean(self, expr: ExprId) -> builtins.str:
         r"""
         The expression in Lean-ish source syntax.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the handle came from another kernel.
         """
     def render_lean_decl(self, declaration: Declaration) -> builtins.str:
         r"""
         The declaration as a Lean command.
-        
+
         # Errors
-        
+
         Raises `EpochError` if the declaration names another kernel's handles.
         """
     def render_lean_module(self, theorem_name: builtins.str, goal: ExprId, proof: ExprId) -> builtins.str:
         r"""
         A self-contained Lean module proving `theorem_name : goal := proof`.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def render_lean_module_compact(self, theorem_name: builtins.str, goal: ExprId, proof: ExprId) -> builtins.str:
         r"""
         [`Self::render_lean_module`] with shared closed sub-DAGs hoisted.
-        
+
         Semantically equivalent and often far smaller for a hash-consed proof
         whose tree rendering re-expands shared subterms.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel.
         """
     def render_lean4export_ndjson_roots(self, lean_version: builtins.str, roots: typing.Sequence[NameId]) -> builtins.str:
         r"""
         The declaration closure of `roots` as official `lean4export` NDJSON
         (format 3.1.0).
-        
+
         `lean_version` is the Lean release the stream targets. The producer
         label is fixed to `axeyum-lean-kernel` rather than a plausible-looking
         Lean commit hash, because nothing in this stream came from a Lean binary.
-        
+
         # Errors
-        
+
         Raises `EpochError` if a handle came from another kernel, and
         `AxeyumError` for an empty root set, a root absent from the environment,
         or a construct the format cannot carry.
@@ -1017,22 +1017,22 @@ class Lit:
     def value(self) -> typing.Any:
         r"""
         The literal's value: a Python `int` for a natural, a `str` for a string.
-        
+
         # Errors
-        
+
         Propagates any Python error raised while building the value.
         """
     @staticmethod
     def nat(value: typing.Any) -> Lit:
         r"""
         A natural-number literal, with no fixed-width ceiling.
-        
+
         The value crosses the boundary as its canonical base-10 spelling, so a
         Python `int` of any size round-trips exactly; there is no `u64` step to
         silently truncate at.
-        
+
         # Errors
-        
+
         Raises `ValueError` for a negative value.
         """
     @staticmethod
@@ -1067,7 +1067,7 @@ class Prelude:
     r"""
     A prelude package: the bundle of interned names a `build_*_prelude` call
     returns.
-    
+
     The Rust packages are plain structs with up to 244 `NameId` fields each
     (1,207 across the nine), so the Python view is a flat, ordered
     `{field name -> NameId}` table reached by attribute access:
@@ -1081,7 +1081,7 @@ class Prelude:
         r"""
         The package's kind: `logic`, `nat`, `int`, `rat`, `axreal`, `creal`,
         `complex`, `cpoint`, or `string`.
-        
+
         `axreal` — never `real`. The axiomatized ordered field `AxReal` is this
         repository's only nonzero axiom row (30 declared, none reached by a
         shipped route); the constructed reals `CReal` measure 0. A substring test
@@ -1111,25 +1111,25 @@ class Prelude:
     def to_dict(self) -> dict:
         r"""
         The scalar fields as an insertion-ordered `{field: NameId}` dictionary.
-        
+
         # Errors
-        
+
         Propagates any Python error raised while building the dictionary.
         """
     def __getattr__(self, name: builtins.str) -> typing.Any:
         r"""
         Field lookup: a `NameId`, a sub-`Prelude`, or a `list[NameId]`.
-        
+
         # Errors
-        
+
         Raises `AttributeError` for a field this package does not have.
         """
     def __getitem__(self, name: builtins.str) -> typing.Any:
         r"""
         Field lookup by subscript, identical to attribute access.
-        
+
         # Errors
-        
+
         Raises `KeyError` for a field this package does not have.
         """
     def __contains__(self, name: builtins.str) -> builtins.bool:
@@ -1146,7 +1146,7 @@ class Prelude:
 class PreludeCacheStats:
     r"""
     The process-wide prelude reuse counters (ADR-0464).
-    
+
     These exist so a gate can distinguish "reuse changed nothing" from "reuse
     never ran" — indistinguishable from output alone, and this repository has
     shipped several gates that passed over zero work.
@@ -1172,7 +1172,7 @@ class PreludeCacheStats:
 class BinderInfo(enum.Enum):
     r"""
     The binder annotation on a `lam`/`pi` binder.
-    
+
     These mirror Lean's binder brackets. They are elaboration and printing
     metadata: they do **not** affect type checking or definitional equality, so
     two terms differing only here are `def_eq`.
@@ -1203,7 +1203,7 @@ def prelude_cache_enabled() -> builtins.bool:
 def prelude_cache_stats() -> PreludeCacheStats:
     r"""
     The process-wide prelude reuse counters (ADR-0464).
-    
+
     `hits` rising between two `Kernel()` builds of the same prelude is the only
     evidence the cache actually ran; equal timings prove nothing.
     """

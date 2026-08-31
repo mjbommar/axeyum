@@ -7,6 +7,7 @@ import typing
 from . import cas
 from . import ir
 from . import kernel
+from . import machine
 from . import producers
 from . import smt
 from . import solver
@@ -26,6 +27,7 @@ __all__ = [
     "cas",
     "ir",
     "kernel",
+    "machine",
     "producers",
     "smt",
     "solver",

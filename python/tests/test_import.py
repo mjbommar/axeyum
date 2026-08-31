@@ -33,6 +33,8 @@ def test_public_names_are_all_present() -> None:
 def test_every_submodule_is_importable_by_dotted_name() -> None:
     # `add_submodule` sets the attribute but not `sys.modules`. Both routes
     # must work or every consumer hits the split exactly once.
+    import axeyum.machine.a0
+
     import axeyum._native.ir
     import axeyum._native.ir.bits
     import axeyum._native.ir.bv
@@ -45,6 +47,7 @@ def test_every_submodule_is_importable_by_dotted_name() -> None:
     assert axeyum._native.ir is axeyum.ir
     assert axeyum._native.solver is axeyum.solver
     assert axeyum.ir.__name__ == "axeyum._native.ir"
+    assert axeyum.machine.a0.Word(8, 1).unsigned == 1
 
 
 def test_each_submodule_names_its_trust_tier_first() -> None:
@@ -70,7 +73,17 @@ import sys
 
 import pytest
 
-DOCUMENTED_SUBMODULES = ["smt", "ir", "solver", "cas", "kernel", "producers", "knowledge", "agent"]
+DOCUMENTED_SUBMODULES = [
+    "smt",
+    "ir",
+    "solver",
+    "cas",
+    "kernel",
+    "producers",
+    "machine",
+    "knowledge",
+    "agent",
+]
 
 
 @pytest.mark.parametrize("name", DOCUMENTED_SUBMODULES)
