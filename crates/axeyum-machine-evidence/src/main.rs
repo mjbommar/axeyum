@@ -4,22 +4,23 @@ use std::{env, path::Path};
 
 use axeyum_machine_evidence::{
     add_step_report, branch_trace_report, check_add_step, check_add_wrong_destination_control,
-    check_branch_target_control, check_branch_trace, check_decoder_reserved_bit_control,
-    check_decoder_roundtrip, check_memory_byte_order_control, check_memory_trace,
-    check_observation_omission_control, check_observation_separation, check_run_classification,
-    check_run_false_halt_control, check_rv64_branch_base_control, check_rv64_execution,
-    check_rv64_source, check_rv64_source_digest_control, check_state_codec,
-    check_state_codec_trailing_byte_control, check_step_coverage, check_step_hidden_write_control,
-    check_step_mutation_suite_control, check_symbolic_addition,
-    check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
+    check_branch_target_control, check_branch_trace, check_cross_isa_absolute_value,
+    check_cross_isa_predicate_control, check_decoder_reserved_bit_control, check_decoder_roundtrip,
+    check_memory_byte_order_control, check_memory_trace, check_observation_omission_control,
+    check_observation_separation, check_run_classification, check_run_false_halt_control,
+    check_rv64_branch_base_control, check_rv64_execution, check_rv64_source,
+    check_rv64_source_digest_control, check_state_codec, check_state_codec_trailing_byte_control,
+    check_step_coverage, check_step_hidden_write_control, check_step_mutation_suite_control,
+    check_symbolic_addition, check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
     check_symbolic_memory_partial_store_control, check_word_package,
     check_word_package_signed_zero_extension_control, check_word_roundtrip,
     check_word_roundtrip_reversed_control, check_x64_branch_base_control, check_x64_execution,
-    check_x64_source, check_x64_source_digest_control, decoder_roundtrip_report,
-    memory_trace_report, observation_separation_report, run_classification_report,
-    rv64_execution_report, rv64_source_report, semantic_package, state_codec_report,
-    step_coverage_report, symbolic_addition_report, symbolic_memory_report, word_package_report,
-    word_roundtrip_report, write_json, x64_execution_report, x64_source_report,
+    check_x64_source, check_x64_source_digest_control, cross_isa_absolute_value_report,
+    decoder_roundtrip_report, memory_trace_report, observation_separation_report,
+    run_classification_report, rv64_execution_report, rv64_source_report, semantic_package,
+    state_codec_report, step_coverage_report, symbolic_addition_report, symbolic_memory_report,
+    word_package_report, word_roundtrip_report, write_json, x64_execution_report,
+    x64_source_report,
 };
 
 fn main() {
@@ -422,6 +423,27 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_x64_branch_base_control(Path::new(report))?;
             return Err("control-failure: instruction-RIP x86-64 branch base was accepted".into());
         }
+        [command, output] if command == "emit-cross-isa-absolute-value" => {
+            let report = cross_isa_absolute_value_report()?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "cross-isa-absolute-value: PASS: cases={} result_sha256={}",
+                report.cases.len(),
+                report.result_sha256
+            );
+        }
+        [command, report] if command == "check-cross-isa-absolute-value" => {
+            let checked = check_cross_isa_absolute_value(Path::new(report))?;
+            println!(
+                "cross-isa-absolute-value: PASS: cases={} result_sha256={}",
+                checked.cases.len(),
+                checked.result_sha256
+            );
+        }
+        [command, report] if command == "control-cross-isa-predicate" => {
+            check_cross_isa_predicate_control(Path::new(report))?;
+            return Err("control-failure: mutated cross-ISA predicate was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -458,7 +480,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  check-rv64-execution REPORT | control-rv64-branch-base REPORT | \
                  emit-x64-source OUTPUT | check-x64-source REPORT | \
                  control-x64-source-digest REPORT | emit-x64-execution OUTPUT | \
-                 check-x64-execution REPORT | control-x64-branch-base REPORT"
+                 check-x64-execution REPORT | control-x64-branch-base REPORT | \
+                 emit-cross-isa-absolute-value OUTPUT | \
+                 check-cross-isa-absolute-value REPORT | \
+                 control-cross-isa-predicate REPORT"
                 .into());
         }
     }
