@@ -100,6 +100,7 @@ mod fibonacci;
 mod gauss_factorial_coprime;
 mod gauss_factorial_product;
 mod gauss_sign_product;
+mod gauss_assembly;
 mod gauss_term_congruence;
 mod gcd;
 mod gcd_dvd_iff;
@@ -560,6 +561,19 @@ pub struct IntPrelude {
     /// factor of the product the final assembly folds.
     /// `gauss_term_congruence.rs`.
     pub gauss_term_mod_eq: NameId,
+    /// `gaussLemmaSignCount : ∀ m a, Nat.PrimeCond (succ (mul 2 m)) →
+    ///   Eq Nat (gcd a (succ (mul 2 m))) one →
+    ///   ModEq (ofNat (succ (mul 2 m))) (pow (ofNat a) m)
+    ///     (pow (neg one) (Nat.gaussNegCount (succ (mul 2 m)) a m))`
+    /// — **Gauss's lemma** (the quadratic-residue one), the connecting
+    /// theorem ADR-0990 sized in five pieces and ADR-1070 reduced to two.
+    /// `gauss_assembly.rs`.
+    ///
+    /// NOT to be confused with [`Self::gauss_lemma`], which despite its name
+    /// is EUCLID's lemma (`Coprime a b → a ∣ b*c → a ∣ c`) — the same
+    /// misnomer `Nat.gauss_lemma` carries, and the reason this declaration is
+    /// spelled out rather than taking the bare name.
+    pub gauss_lemma_sign_count: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1717,6 +1731,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         factorial_eq_of_nat_factorial: child(kernel, "factorialEqOfNatFactorial"),
         coprime_factorial_of_lt_prime: child(kernel, "coprimeFactorialOfLtPrime"),
         gauss_term_mod_eq: child(kernel, "gaussTermModEq"),
+        gauss_lemma_sign_count: child(kernel, "gaussLemmaSignCount"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -2185,6 +2200,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_assembly::declare_euler_totient_theorem(&mut d)?;
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         gauss_term_congruence::declare_gauss_term_mod_eq(&mut d)?;
+        gauss_assembly::declare_gauss_lemma(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;
