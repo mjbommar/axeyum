@@ -113,6 +113,7 @@ fn declare_dist_pos_of_ne(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
 
 /// `Le k n`, `hyp : Eq (add n m) (add k l) ⊢ Eq (dist n k) (dist l m)`.
 /// See the module doc's `dist_eq_intro` section.
+#[allow(clippy::too_many_arguments)]
 fn dist_eq_intro_half(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -305,7 +306,7 @@ fn sub_le_dist_sum(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: 
         &[b, add_c_subbc, add_c_d2, b_le_addc_subbc, mono2],
     );
 
-    let mono3 = d.lemma(p.add_le_add_right, &[b, add_c_d2, d1, b_le_addc_d2]); // Le (add b d1)(add add_c_d2 d1)
+    let mono3 = d.lemma(p.add_le_add_right, &[d1, b, add_c_d2, b_le_addc_d2]); // Le add_b_d1 add_addcd2_d1
     let add_addcd2_d1 = d.add(add_c_d2, d1);
     let a_le_addcd2_d1 = d.lemma(
         p.le_trans,
@@ -335,7 +336,6 @@ fn sub_le_dist_sum(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: 
     let mpr = d.const_app(p.logic.iff_mpr, &[sub_ac_ty, a_le_sc_ty, iff_lemma]);
     d.apply(mpr, &[a_le_s_c])
 }
-
 /// `Nat.dist_triangle_inequality : ∀ n m k, Le (dist n k) (add (dist n m)
 /// (dist m k))`.
 fn declare_dist_triangle_inequality(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {

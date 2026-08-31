@@ -159,14 +159,36 @@ fn declare_land_one_is_mod(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ker
                     super::rec_agreement::guarded(d, one, sx, zero, zero, zero, hole_bit_n)
                 });
 
-                let one_mul_eq = d.lemma(p.one_mul, &[bit_n]); // Eq (mul one bit_n) bit_n
-                let mid3 = bit_n;
-                let step3 = d.congr(one_bit_n, bit_n, one_mul_eq, &|d, hole| {
-                    super::rec_agreement::guarded(d, one, sx, zero, zero, zero, hole)
-                });
+                // `mid2` is still wrapped in `guarded`'s `bool_select_nat`
+                // scaffolding; bridge it (via `refl`, both guards literal
+                // `false`) to the raw `add (mul two zero) one_bit_n`, then
+                // simplify algebraically: `mul two zero = zero` (refl),
+                // `add zero one_bit_n = one_bit_n` (`zero_add`), `mul one
+                // bit_n = bit_n` (`one_mul`).
+                let mul_two_zero = d.mul(two, zero);
+                let add_form1 = d.add(mul_two_zero, one_bit_n);
+                let bridge_mid2 = d.refl(mid2); // Eq mid2 add_form1, bridged by defeq
 
-                let step_ab = d.trans(start, mid1, mid2, step1, step2);
-                let land_1_sx_eq_bitn = d.trans(start, mid2, mid3, step_ab, step3);
+                let mul_two_zero_is_zero = d.refl(mul_two_zero); // Eq mul_two_zero zero
+                let add_form2 = d.add(zero, one_bit_n);
+                let cong_a = d.congr(mul_two_zero, zero, mul_two_zero_is_zero, &|d, h| {
+                    d.add(h, one_bit_n)
+                }); // Eq add_form1 add_form2
+
+                let zero_add_eq = d.lemma(p.zero_add, &[one_bit_n]); // Eq add_form2 one_bit_n
+                let one_mul_eq = d.lemma(p.one_mul, &[bit_n]); // Eq one_bit_n bit_n
+
+                let (_, land_1_sx_eq_bitn) = d.chain(
+                    start,
+                    &[
+                        (mid1, step1),
+                        (mid2, step2),
+                        (add_form1, bridge_mid2),
+                        (add_form2, cong_a),
+                        (one_bit_n, zero_add_eq),
+                        (bit_n, one_mul_eq),
+                    ],
+                );
                 // `start` is defeq `land 1 sx` -- bridge, then chain with `comm`.
                 let land_1_sx_is_start = d.refl(land_1_sx); // Eq land_1_sx start
                 let land_1_sx_eq_bitn2 = d.trans(
@@ -337,10 +359,10 @@ fn land_bit_leaf(
             // absorbing case is a lemma, not `refl`) and `y = 0` needs
             // `mul_zero` (the right case, refl-adjacent but stated as a
             // lemma here for uniformity).
-            let mxy_eq_zero = if !x_is_one {
-                d.lemma(p.zero_mul, &[y])
-            } else {
+            let mxy_eq_zero = if x_is_one {
                 d.lemma(p.mul_zero, &[x])
+            } else {
+                d.lemma(p.zero_mul, &[y])
             };
             let not_eq_zero_one_ty = not_eq_zero_one(d, &p);
             let h_fv = d.fresh_fvar();
@@ -352,12 +374,12 @@ fn land_bit_leaf(
             let false_proof = d.apply(not_eq_zero_one_ty, &[zero_eq_one]);
             d.lam_fv(h_fv, mxy_eq_one_ty, false_proof)
         };
-        let not_and = if !x_is_one {
-            let not_x = not_eq_zero_one(d, &p);
-            not_and_of_left_false(d, &p, x_eq_one_ty, y_eq_one_ty, not_x)
-        } else {
+        let not_and = if x_is_one {
             let not_y = not_eq_zero_one(d, &p);
             not_and_of_right_false(d, &p, x_eq_one_ty, y_eq_one_ty, not_y)
+        } else {
+            let not_x = not_eq_zero_one(d, &p);
+            not_and_of_left_false(d, &p, x_eq_one_ty, y_eq_one_ty, not_x)
         };
         iff_of_false_false(d, &p, mxy_eq_one_ty, and_ty, not_mxy, not_and)
     }

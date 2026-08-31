@@ -1265,6 +1265,15 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.lnp_decidable,
         p.em_implies_lnp,
         p.lnp_unrestricted_implies_em,
+        // `draw9-second-theorems` lane (`docs/plan/status/draw9-second-theorems.md`).
+        p.land_aux_self_of_fuel,
+        p.land_self,
+        p.land_one_is_mod,
+        p.land_mod_two_eq_mul,
+        p.land_mod_two_eq_one,
+        p.dist_pos_of_ne,
+        p.dist_eq_intro,
+        p.dist_triangle_inequality,
     ]
 }
 
@@ -22340,5 +22349,390 @@ fn not_prime_of_pow_mod_ne_certifies_four_composite_and_is_rejected_at_five_prim
         result.is_err(),
         "the trusted gate must REFUSE `Eq (beq (3^5 mod 5) (3 mod 5)) false` \
          at the real prime 5, since beq reduces to `true` there"
+    );
+}
+
+/// `Nat.land_self` (`F:ml430-nat-and-self-06a84ccc`, draw9-second-theorems)
+/// applies at symbolic `x` and at a concrete instance (`land 5 5 = 5`).
+#[test]
+fn land_self_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    {
+        let name = f.name("land_self_restated");
+        f.theorem(name, 1, &|d, values| {
+            let x = values[0];
+            let lhs = d.const_app(p.land, &[x, x]);
+            let stmt = d.eq(lhs, x);
+            let proof = d.lemma(p.land_self, &[x]);
+            (stmt, proof)
+        })
+        .expect("land_self must apply at symbolic x");
+    }
+
+    {
+        let five = f.num(5);
+        let lhs = f.const_app(p.land, &[five, five]);
+        let applied = f.lemma(p.land_self, &[five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_self must apply at x=5: {shown}")
+        });
+        let want = f.eq(lhs, five);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_self 5 must state Eq (land 5 5) 5"
+        );
+        assert!(f.k.def_eq(lhs, five), "land 5 5 must compute to 5");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_aux_self_of_fuel).is_empty(),
+        "land_aux_self_of_fuel must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_self).is_empty(),
+        "land_self must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_one_is_mod` (`F:ml430-nat-and-one-is-mod-d861e96b`,
+/// draw9-second-theorems) applies at symbolic `x` and at two DISCRIMINATING
+/// concrete instances (an odd `x` giving `1` and an even `x` giving `0`).
+#[test]
+fn land_one_is_mod_applies_at_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    {
+        let name = f.name("land_one_is_mod_restated");
+        f.theorem(name, 1, &|d, values| {
+            let x = values[0];
+            let one = d.num(1);
+            let two = d.num(2);
+            let lhs = d.const_app(p.land, &[x, one]);
+            let rhs = d.modulo(x, two);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.land_one_is_mod, &[x]);
+            (stmt, proof)
+        })
+        .expect("land_one_is_mod must apply at symbolic x");
+    }
+
+    {
+        let five = f.num(5);
+        let one = f.num(1);
+        let two = f.num(2);
+        let lhs = f.const_app(p.land, &[five, one]);
+        let applied = f.lemma(p.land_one_is_mod, &[five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_one_is_mod must apply at x=5: {shown}")
+        });
+        let rhs = f.modulo(five, two);
+        let want = f.eq(lhs, rhs);
+        assert!(f.k.def_eq(inferred, want));
+        assert!(
+            f.k.def_eq(lhs, one),
+            "land 5 1 must compute to 1 (5 is odd)"
+        );
+    }
+    {
+        let four = f.num(4);
+        let one = f.num(1);
+        let two = f.num(2);
+        let lhs = f.const_app(p.land, &[four, one]);
+        let applied = f.lemma(p.land_one_is_mod, &[four]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_one_is_mod must apply at x=4: {shown}")
+        });
+        let rhs = f.modulo(four, two);
+        let want = f.eq(lhs, rhs);
+        assert!(f.k.def_eq(inferred, want));
+        let zero = f.zero();
+        assert!(
+            f.k.def_eq(lhs, zero),
+            "land 4 1 must compute to 0 (4 is even)"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_one_is_mod).is_empty(),
+        "land_one_is_mod must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_mod_two_eq_one` (`F:ml430-nat-and-mod-two-eq-one-3e873792`,
+/// draw9-second-theorems) applies at symbolic `a`/`b` and at a concrete,
+/// DISCRIMINATING instance (`land 3 5 = 1`, both operands odd).
+#[test]
+fn land_mod_two_eq_one_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    {
+        let name = f.name("land_mod_two_eq_one_restated");
+        f.theorem(name, 2, &|d, values| {
+            let a = values[0];
+            let b = values[1];
+            let two = d.num(2);
+            let one = d.num(1);
+            let land_ab = d.const_app(p.land, &[a, b]);
+            let mod_land_ab = d.modulo(land_ab, two);
+            let lhs = d.eq(mod_land_ab, one);
+            let mod_a = d.modulo(a, two);
+            let mod_b = d.modulo(b, two);
+            let a1 = d.eq(mod_a, one);
+            let b1 = d.eq(mod_b, one);
+            let rhs = d.const_app(p.logic.and, &[a1, b1]);
+            let stmt = d.const_app(p.logic.iff, &[lhs, rhs]);
+            let proof = d.lemma(p.land_mod_two_eq_one, &[a, b]);
+            (stmt, proof)
+        })
+        .expect("land_mod_two_eq_one must apply at symbolic a/b");
+    }
+
+    {
+        let three = f.num(3);
+        let five = f.num(5);
+        let two = f.num(2);
+        let one = f.num(1);
+        let land_35 = f.const_app(p.land, &[three, five]);
+        let mod_land_35 = f.modulo(land_35, two);
+        let mod_3 = f.modulo(three, two);
+        let mod_5 = f.modulo(five, two);
+        let applied = f.lemma(p.land_mod_two_eq_one, &[three, five]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_mod_two_eq_one must apply at (a=3, b=5): {shown}")
+        });
+        let lhs = f.eq(mod_land_35, one);
+        let a1 = f.eq(mod_3, one);
+        let b1 = f.eq(mod_5, one);
+        let rhs = f.const_app(p.logic.and, &[a1, b1]);
+        let want = f.const_app(p.logic.iff, &[lhs, rhs]);
+        assert!(f.k.def_eq(inferred, want));
+        assert!(
+            f.k.def_eq(mod_land_35, one),
+            "land 3 5 = 1 (011 & 101 = 001), mod 1 2 = 1"
+        );
+        assert!(f.k.def_eq(mod_3, one), "3 is odd");
+        assert!(f.k.def_eq(mod_5, one), "5 is odd");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_mod_two_eq_mul).is_empty(),
+        "land_mod_two_eq_mul must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_mod_two_eq_one).is_empty(),
+        "land_mod_two_eq_one must rest on zero axioms"
+    );
+}
+
+/// `Nat.dist_pos_of_ne` (`F:ml430-nat-dist-pos-of-ne-00f5e22f`,
+/// draw9-second-theorems) applies at symbolic `i`/`j` and at concrete
+/// instances on BOTH sides of the strict order (`i < j` and `j < i`).
+#[test]
+fn dist_pos_of_ne_applies_at_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    {
+        let name = f.name("dist_pos_of_ne_restated");
+        f.theorem(name, 2, &|d, values| {
+            let i = values[0];
+            let j = values[1];
+            let eq_ij = d.eq(i, j);
+            let hyp = d.const_app(p.logic.not, &[eq_ij]);
+            let dist_ij = d.const_app(p.dist, &[i, j]);
+            let zero = d.zero();
+            let concl = d.lt(zero, dist_ij);
+            let stmt = d.arrow(hyp, concl);
+            let proof = d.lemma(p.dist_pos_of_ne, &[i, j]);
+            (stmt, proof)
+        })
+        .expect("dist_pos_of_ne must apply at symbolic i/j");
+    }
+
+    {
+        let three = f.num(3);
+        let seven = f.num(7);
+        let bfalse = f.bool_false();
+        let refl_false = f.bool_refl(bfalse);
+        let ne_3_7 = f.const_app(p.ne_of_beq_eq_false, &[three, seven, refl_false]);
+        let applied = f.lemma(p.dist_pos_of_ne, &[three, seven, ne_3_7]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_pos_of_ne must apply at (i=3, j=7): {shown}")
+        });
+        let dist_37 = f.const_app(p.dist, &[three, seven]);
+        let zero = f.zero();
+        let want = f.lt(zero, dist_37);
+        assert!(f.k.def_eq(inferred, want));
+        let four = f.num(4);
+        assert!(f.k.def_eq(dist_37, four), "dist 3 7 must compute to 4");
+    }
+
+    {
+        let seven = f.num(7);
+        let three = f.num(3);
+        let bfalse = f.bool_false();
+        let refl_false = f.bool_refl(bfalse);
+        let ne_7_3 = f.const_app(p.ne_of_beq_eq_false, &[seven, three, refl_false]);
+        let applied = f.lemma(p.dist_pos_of_ne, &[seven, three, ne_7_3]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_pos_of_ne must apply at (i=7, j=3): {shown}")
+        });
+        let dist_73 = f.const_app(p.dist, &[seven, three]);
+        let zero = f.zero();
+        let want = f.lt(zero, dist_73);
+        assert!(f.k.def_eq(inferred, want));
+        let four = f.num(4);
+        assert!(f.k.def_eq(dist_73, four), "dist 7 3 must compute to 4");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.dist_pos_of_ne).is_empty(),
+        "dist_pos_of_ne must rest on zero axioms"
+    );
+}
+
+/// `Nat.dist_eq_intro` (`F:ml430-nat-dist-eq-intro-294b44ad`,
+/// draw9-second-theorems) applies at symbolic `n`/`m`/`k`/`l` and at a
+/// concrete, DISCRIMINATING instance (`n=5, m=2, k=3, l=4`, `5+2=3+4`).
+#[test]
+fn dist_eq_intro_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    {
+        let name = f.name("dist_eq_intro_restated");
+        f.theorem(name, 4, &|d, values| {
+            let n = values[0];
+            let m = values[1];
+            let k = values[2];
+            let l = values[3];
+            let add_nm = d.add(n, m);
+            let add_kl = d.add(k, l);
+            let hyp = d.eq(add_nm, add_kl);
+            let dist_nk = d.const_app(p.dist, &[n, k]);
+            let dist_lm = d.const_app(p.dist, &[l, m]);
+            let concl = d.eq(dist_nk, dist_lm);
+            let stmt = d.arrow(hyp, concl);
+            let proof = d.lemma(p.dist_eq_intro, &[n, m, k, l]);
+            (stmt, proof)
+        })
+        .expect("dist_eq_intro must apply at symbolic n/m/k/l");
+    }
+
+    {
+        let five = f.num(5);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let add_52 = f.add(five, two);
+        // `add_52` and `add(3,4)` both compute to `7`; `refl` bridges the
+        // two syntactically different (but defeq) constructions.
+        let hyp_eq = f.refl(add_52);
+        let applied = f.lemma(p.dist_eq_intro, &[five, two, three, four, hyp_eq]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_eq_intro must apply at (n=5,m=2,k=3,l=4): {shown}")
+        });
+        let dist_53 = f.const_app(p.dist, &[five, three]);
+        let dist_42 = f.const_app(p.dist, &[four, two]);
+        let want = f.eq(dist_53, dist_42);
+        assert!(f.k.def_eq(inferred, want));
+        let two_val = f.num(2);
+        assert!(f.k.def_eq(dist_53, two_val), "dist 5 3 must compute to 2");
+        assert!(f.k.def_eq(dist_42, two_val), "dist 4 2 must compute to 2");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.dist_eq_intro).is_empty(),
+        "dist_eq_intro must rest on zero axioms"
+    );
+}
+
+/// `Nat.dist_triangle_inequality` (`F:ml430-nat-dist-triangle-inequality-b35e82d3`,
+/// draw9-second-theorems) applies at symbolic `n`/`m`/`k` and at concrete
+/// instances exercising BOTH branches of the internal `Le n k`/`Le k n`
+/// case split.
+#[test]
+fn dist_triangle_inequality_applies_at_concrete_instances() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    {
+        let name = f.name("dist_triangle_inequality_restated");
+        f.theorem(name, 3, &|d, values| {
+            let n = values[0];
+            let m = values[1];
+            let k = values[2];
+            let dist_nm = d.const_app(p.dist, &[n, m]);
+            let dist_mk = d.const_app(p.dist, &[m, k]);
+            let s = d.add(dist_nm, dist_mk);
+            let dist_nk = d.const_app(p.dist, &[n, k]);
+            let stmt = d.le(dist_nk, s);
+            let proof = d.lemma(p.dist_triangle_inequality, &[n, m, k]);
+            (stmt, proof)
+        })
+        .expect("dist_triangle_inequality must apply at symbolic n/m/k");
+    }
+
+    // n=1, m=5, k=2: n < k, exercises the `Le n k` branch.
+    {
+        let one = f.num(1);
+        let five = f.num(5);
+        let two = f.num(2);
+        let applied = f.lemma(p.dist_triangle_inequality, &[one, five, two]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_triangle_inequality must apply at (n=1,m=5,k=2): {shown}")
+        });
+        let dist_15 = f.const_app(p.dist, &[one, five]);
+        let dist_52 = f.const_app(p.dist, &[five, two]);
+        let s = f.add(dist_15, dist_52);
+        let dist_12 = f.const_app(p.dist, &[one, two]);
+        let want = f.le(dist_12, s);
+        assert!(f.k.def_eq(inferred, want));
+        let seven = f.num(7);
+        assert!(
+            f.k.def_eq(s, seven),
+            "dist(1,5)+dist(5,2) must compute to 7"
+        );
+        let one_val = f.num(1);
+        assert!(f.k.def_eq(dist_12, one_val), "dist(1,2) must compute to 1");
+    }
+
+    // n=8, m=1, k=3: k < n, exercises the `Le k n` branch.
+    {
+        let eight = f.num(8);
+        let one = f.num(1);
+        let three = f.num(3);
+        let applied = f.lemma(p.dist_triangle_inequality, &[eight, one, three]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("dist_triangle_inequality must apply at (n=8,m=1,k=3): {shown}")
+        });
+        let dist_81 = f.const_app(p.dist, &[eight, one]);
+        let dist_13 = f.const_app(p.dist, &[one, three]);
+        let s = f.add(dist_81, dist_13);
+        let dist_83 = f.const_app(p.dist, &[eight, three]);
+        let want = f.le(dist_83, s);
+        assert!(f.k.def_eq(inferred, want));
+        let nine = f.num(9);
+        assert!(f.k.def_eq(s, nine), "dist(8,1)+dist(1,3) must compute to 9");
+        let five = f.num(5);
+        assert!(f.k.def_eq(dist_83, five), "dist(8,3) must compute to 5");
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.dist_triangle_inequality).is_empty(),
+        "dist_triangle_inequality must rest on zero axioms"
     );
 }

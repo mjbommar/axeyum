@@ -5984,7 +5984,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `declare_land_fuel_irrelevance_all`'s neighbourhood, far above).
         // Draw 9 (`natural-bitwise-basics`,
         // `docs/plan/status/draw9-second-theorems.md`).
-        declare_land_self_all(&mut d, &p)?;
+                declare_land_self_all(&mut d, &p)?;
         // `Nat.land_one_is_mod`/`Nat.land_mod_two_eq_mul`/
         // `Nat.land_mod_two_eq_one`: needs `Nat.landAux`/`Nat.land`
         // (`declare_land_all`), `Nat.land_comm` (above),
@@ -5994,7 +5994,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // above), and `mod_two_mul_add_of_lt` (`parity.rs`, far above).
         // Draw 9 (`natural-bitwise-basics`,
         // `docs/plan/status/draw9-second-theorems.md`).
-        declare_land_low_bit_all(&mut d, &p)?;
+                declare_land_low_bit_all(&mut d, &p)?;
         // `Nat.lor_aux_ne_zero_of_right_ne_zero`: needs `Nat.lorAux`
         // (`declare_lor_all`, far above), `Nat.succ_ne_zero`
         // (`declare_no_confusion_all`, far above), `Nat.mul_eq_zero`
