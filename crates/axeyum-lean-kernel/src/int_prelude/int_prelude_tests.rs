@@ -5655,6 +5655,289 @@ fn first_supplementary_law_refuses_neg_one_exactly_when_the_half_is_odd() {
     );
 }
 
+/// `Int.wilsonHalfSplit` states `(p-1)! = m! · ((-1)^m · m!)` mod `p` for
+/// BOTH parities of `m`, and this test measures the SIGN, which is the whole
+/// content — the unsigned form is a different, and false, proposition.
+///
+/// The numeric content is re-runnable independently of this test:
+///
+/// ```text
+/// python3 docs/research/09-decisions/adr-1235-first-supplementary-residue-checks.py
+/// ```
+///
+/// Three checks:
+///
+/// 1. **The symbolic statement is the one intended**, read from the kernel at
+///    a genuinely FREE `m` and compared against an independently rebuilt
+///    `ModEq (ofNat (2m+1)) (m! * ((-1)^m * m!)) (-1)`.
+/// 2. **Dropping the `(-1)^m` factor is not a renaming.** The unsigned
+///    statement is not `def_eq` to the real one, AND at `m = 3` the kernel
+///    computes the two sides to different residues mod `7`, so the mutant is
+///    refuted rather than merely distinguished.
+/// 3. **The identity computes.** `emod` of both sides agrees at `(m,p) =
+///    (2,5)` and `(3,7)` — one even `m`, one odd — which is what makes the
+///    theorem's parity-generality a measured claim rather than a stated one.
+#[test]
+fn wilson_half_split_carries_the_sign_and_the_unsigned_form_is_refuted() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    for (name, label) in [
+        (p.wilson_half_split, "Int.wilsonHalfSplit"),
+        (
+            p.first_supplementary_law_residue,
+            "Int.firstSupplementaryLawResidue",
+        ),
+        (p.nat.sub_sub_self, "Nat.sub_sub_self"),
+    ] {
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{label} must rest on no axiom"
+        );
+    }
+
+    let mut d = IntDev::new(&mut k, p);
+    let two_nat = d.num(2);
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+
+    // (1) the theorem at a genuinely FREE `m`, with a free primality proof.
+    let m_fv = d.fresh_fvar();
+    let m_sym = d.kernel().fvar(m_fv);
+    let mul2m = d.mul(two_nat, m_sym);
+    let pp_sym = d.succ(mul2m);
+    let pi_sym = d.of_nat(pp_sym);
+    let prime_ty = super::wilson::prime_condition(&mut d, pp_sym);
+    let prime_fv = d.fresh_fvar();
+    let prime_proof = d.kernel().fvar(prime_fv);
+
+    let lemma_fn = d.lemma(p.wilson_half_split, &[m_sym]);
+    let applied = d.apply(lemma_fn, &[prime_proof]);
+
+    let anon = d.anon_name();
+    let nat_ty = d.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: prime_fv,
+        name: anon,
+        ty: prime_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .unwrap_or_else(|e| panic!("the split must apply at a free m: {e:?}"));
+
+    let fact_m = d.const_app(p.factorial, &[m_sym]);
+    let pow_m = d.ipow(neg_one, m_sym);
+    let signed_inner = d.imul(pow_m, fact_m);
+    let signed = d.imul(fact_m, signed_inner);
+    let expected = super::modeq::imodeq(&mut d, pi_sym, signed, neg_one);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "the split's symbolic statement must be `m! * ((-1)^m * m!) = -1 [2m+1]`"
+    );
+
+    // (2) the unsigned mutant is a different proposition.
+    let unsigned = d.imul(fact_m, fact_m);
+    let mutated = super::modeq::imodeq(&mut d, pi_sym, unsigned, neg_one);
+    assert!(
+        !d.kernel().def_eq(inferred, mutated),
+        "control: dropping the `(-1)^m` factor must change the statement"
+    );
+
+    // (3) both sides compute, and the mutant is refuted at an odd `m`.
+    for (m_val, p_val, unsigned_also_holds) in [(2_u32, 5_u32, true), (3, 7, false)] {
+        let m_c = d.num(m_val);
+        let pp_c = d.num(p_val);
+        let pi_c = d.of_nat(pp_c);
+        let fact_c = d.const_app(p.factorial, &[m_c]);
+        let pow_c = d.ipow(neg_one, m_c);
+        let inner_c = d.imul(pow_c, fact_c);
+        let signed_c = d.imul(fact_c, inner_c);
+        let unsigned_c = d.imul(fact_c, fact_c);
+
+        let target = d.iemod(neg_one, pi_c);
+        let signed_mod = d.iemod(signed_c, pi_c);
+        assert!(
+            d.kernel().def_eq(signed_mod, target),
+            "at m = {m_val} (p = {p_val}) the signed product must be `-1` mod p"
+        );
+        let unsigned_mod = d.iemod(unsigned_c, pi_c);
+        assert_eq!(
+            d.kernel().def_eq(unsigned_mod, target),
+            unsigned_also_holds,
+            "at m = {m_val} (p = {p_val}) the UNSIGNED product must{} be `-1` \
+             mod p -- the odd row is what refutes the dropped-sign mutant, and \
+             the even row is what shows the control is not vacuous",
+            if unsigned_also_holds { "" } else { " NOT" }
+        );
+    }
+}
+
+/// `Int.firstSupplementaryLawResidue` states the first supplementary law's
+/// RESIDUE half — for an odd prime `p = 2m+1` with `m` EVEN, i.e.
+/// `p = 1 (mod 4)`, `-1` IS a quadratic residue mod `p`.
+///
+/// The mutation this test exists for is ADR-1230's M5: a conclusion the kernel
+/// admits, which is TRUE, and which is not this law. Concluding at
+/// `IsQuadraticResidue p (ofNat (2m))` instead of at `neg one` is exactly that
+/// — `2m` is `-1`'s natural representative mod `p`, so the statement holds —
+/// and no axiom footprint, prelude build, or inventory check can see the
+/// difference. Only check (2) can.
+///
+/// The numeric content is re-runnable independently of this test:
+///
+/// ```text
+/// python3 docs/research/09-decisions/adr-1235-first-supplementary-residue-checks.py
+/// ```
+#[test]
+fn first_supplementary_law_residue_concludes_at_neg_one_not_its_representative() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+    let two_nat = d.num(2);
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+
+    // (1) `Even m` is load-bearing: `-1` is a residue mod `p` exactly when the
+    // half `m = (p-1)/2` is EVEN, decided here by scanning `x*x + 1 = 0 [p]`
+    // over `[0,p)` with `Nat.mod`. Magnitudes stay small deliberately -- every
+    // numeral this prelude builds is unary.
+    for (m_val, p_val, m_is_even, expect_residue) in [
+        (1_u32, 3_u32, false, false),
+        (2, 5, true, true),
+        (3, 7, false, false),
+        (6, 13, true, true),
+    ] {
+        assert_eq!(m_val % 2 == 0, m_is_even, "the row's own parity must agree");
+        let pp = d.num(p_val);
+        let zero = d.zero();
+        let one_nat = d.num(1);
+        let mut found = None;
+        for x_val in 0..p_val {
+            let x = d.num(x_val);
+            let sq = d.mul(x, x);
+            let shifted = d.add(sq, one_nat);
+            let r = d.modulo(shifted, pp);
+            if d.kernel().def_eq(r, zero) {
+                found = Some(x_val);
+                break;
+            }
+        }
+        assert_eq!(
+            found.is_some(),
+            expect_residue,
+            "at p = {p_val} (m = {m_val}, m even = {m_is_even}) `-1` must{} be \
+             a quadratic residue -- if this disagrees, the law's parity \
+             hypothesis is not what decides the conclusion",
+            if expect_residue { "" } else { " NOT" }
+        );
+    }
+
+    // (2) the theorem at a genuinely FREE `m`, with free hypotheses -- and the
+    // M5 control, which is the reason this check exists.
+    let m_fv = d.fresh_fvar();
+    let m_sym = d.kernel().fvar(m_fv);
+    let mul2m = d.mul(two_nat, m_sym);
+    let pp_sym = d.succ(mul2m);
+    let pi_sym = d.of_nat(pp_sym);
+    let prime_ty = super::wilson::prime_condition(&mut d, pp_sym);
+    let prime_fv = d.fresh_fvar();
+    let prime_proof = d.kernel().fvar(prime_fv);
+    let nat_prelude = p.nat;
+    let even_ty = d.const_app(nat_prelude.even, &[m_sym]);
+    let even_fv = d.fresh_fvar();
+    let even_proof = d.kernel().fvar(even_fv);
+
+    let lemma_fn = d.lemma(p.first_supplementary_law_residue, &[m_sym]);
+    let applied = d.apply(lemma_fn, &[prime_proof, even_proof]);
+
+    let anon = d.anon_name();
+    let nat_ty = d.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: prime_fv,
+        name: anon,
+        ty: prime_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: even_fv,
+        name: anon,
+        ty: even_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .unwrap_or_else(|e| panic!("the law must apply at a free m: {e:?}"));
+
+    let qr_neg_one = super::euler::is_quadratic_residue(&mut d, pi_sym, neg_one);
+    assert!(
+        d.kernel().def_eq(inferred, qr_neg_one),
+        "the law's symbolic conclusion must be `-1 IS a quadratic residue mod \
+         (2m+1)`"
+    );
+
+    // The M5 mutation: `ofNat (2m)` is `-1`'s natural representative mod `p`,
+    // so a proof concluding there is admitted AND true -- and is not this law.
+    let ofnat_2m = d.of_nat(mul2m);
+    let representative = super::euler::is_quadratic_residue(&mut d, pi_sym, ofnat_2m);
+    assert!(
+        !d.kernel().def_eq(inferred, representative),
+        "control (ADR-1230 M5): concluding at `-1`'s natural representative \
+         `ofNat (2m)` gives a statement the kernel admits and that is TRUE, \
+         but is not the first supplementary law"
+    );
+
+    // (3) the parity hypothesis is refutable IN-KERNEL, not merely different:
+    // the same statement with `Odd m` in place of `Even m` composes with
+    // `Int.firstSupplementaryLawNotResidue` to give `False`.
+    let odd_ty = d.const_app(nat_prelude.odd, &[m_sym]);
+    let odd_fv = d.fresh_fvar();
+    let odd_proof = d.kernel().fvar(odd_fv);
+    let mutant_fv = d.fresh_fvar();
+    let mutant_proof = d.kernel().fvar(mutant_fv);
+    ctx.push(LocalDecl {
+        fvar: odd_fv,
+        name: anon,
+        ty: odd_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: mutant_fv,
+        name: anon,
+        ty: qr_neg_one,
+        info: BinderInfo::Default,
+    });
+    let not_residue_fn = d.lemma(p.first_supplementary_law_not_residue, &[m_sym]);
+    let not_residue = d.apply(not_residue_fn, &[prime_proof, odd_proof]);
+    let contradiction = d.apply(not_residue, &[mutant_proof]);
+    let false_ty = d.false_ty();
+    let got = d
+        .kernel()
+        .infer_in(contradiction, &mut ctx)
+        .expect("the odd-parity mutant must compose with the non-residue half");
+    assert!(
+        d.kernel().def_eq(got, false_ty),
+        "control: with `Odd m` the SAME conclusion contradicts \
+         `Int.firstSupplementaryLawNotResidue`, so swapping the parity \
+         hypothesis produces a refutable statement rather than a variant"
+    );
+}
+
 /// `Int.prodRange_split` cuts a finite product at a symbolic point, and this
 /// test measures that the cut is at the RIGHT point rather than merely that
 /// some identity type-checks.
