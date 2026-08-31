@@ -553,6 +553,11 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         // Definitions only, deliberately (ADR-0653).
         p.avg,
         p.pair_fn,
+        // `unblock-four-families` lane (ADR-1095/ADR-1100):
+        // `abundant_deficient.rs`. Definitions only, deliberately
+        // (ADR-0653).
+        p.abundant,
+        p.deficient,
         // `avg-pair-constructions` lane (ADR-1045/ADR-1060): `minmax.rs`.
         // Definitions only, deliberately (ADR-0653).
         p.max_max,
