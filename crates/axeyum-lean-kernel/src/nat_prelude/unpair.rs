@@ -7,9 +7,9 @@
 //! **unreachable here**, and that reading is correct as far as it goes:
 //! Mathlib's `Nat.unpair : Nat → Nat × Nat` returns a `Prod`, and this
 //! kernel has no `Prod` (the complete inductive list is `True`/`False`/
-//! `And`/`Or`/`Iff`/`Eq`/`Exists`/`Acc`/`Bool`/`Nat`/`Decidable` + `Nat.le`
-//! + `Nat.Fin` + `Char` + `Nat.Pair`). So `Nat.unpair` itself stays out of
-//! reach, and every `ml430` mirror stated over it stays `open`.
+//! `And`/`Or`/`Iff`/`Eq`/`Exists`/`Acc`/`Bool`/`Nat`/`Decidable`, plus
+//! `Nat.le`, `Nat.Fin`, `Char` and `Nat.Pair`). So `Nat.unpair` itself stays
+//! out of reach, and every `ml430` mirror stated over it stays `open`.
 //!
 //! What does NOT follow is that the *unpairing* is out of reach. The
 //! standing workaround for a pair in this prelude is to split the
