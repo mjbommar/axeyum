@@ -1868,9 +1868,7 @@ pub(super) fn declare_div_succ_two_mul_eq_self(
 
         // div 1 2 = 0, by the kernel's own reduction.
         let div_one_two_eq_zero = d.refl(zero);
-        let congr_rhs = d.congr(div_one_two, zero, div_one_two_eq_zero, &|d, x| {
-            d.add(x, m)
-        });
+        let congr_rhs = d.congr(div_one_two, zero, div_one_two_eq_zero, &|d, x| d.add(x, m));
         let add_zero_m = d.add(zero, m);
         // congr_rhs : Eq add_div12_m add_zero_m
 
@@ -1992,8 +1990,13 @@ pub(super) fn declare_gauss_fold_in_range(
             let succ_m = d.succ(m);
             let succ_half_eq_succ_m = d.congr(half, m, half_eq_m, &|d, x| d.succ(x)); // Eq succ_half succ_m
             let le_motive = d.eq_motive(succ_half, &|d, x| d.le(x, lr));
-            let le_succ_m_lr =
-                d.transport(succ_half, le_motive, le_succ_half_lr, succ_m, succ_half_eq_succ_m); // Le succ_m lr
+            let le_succ_m_lr = d.transport(
+                succ_half,
+                le_motive,
+                le_succ_half_lr,
+                succ_m,
+                succ_half_eq_succ_m,
+            ); // Le succ_m lr
 
             let add_mono = d.lemma(p.add_le_add_left, &[m, succ_m, lr, le_succ_m_lr]); // Le (add m succ_m) (add m lr)
             let add_m_succm = d.add(m, succ_m);
@@ -2044,8 +2047,8 @@ pub(super) fn declare_gauss_fold_in_range(
 
             let htrue_fv = d.fresh_fvar();
             let htrue = d.kernel().fvar(htrue_fv);
-            let hf_sym = d.symm(test, false_, h); // Eq false_ test
-            let combined = d.trans(false_, test, true_, hf_sym, htrue); // Eq false_ true_
+            let hf_sym = d.bool_symm(test, false_, h); // Eq false_ test
+            let combined = d.bool_trans(false_, test, true_, hf_sym, htrue); // Eq false_ true_
             let bool_false_ne_true = d.kernel().const_(p.logic.bool_false_ne_true, vec![]);
             let false_val = d.apply(bool_false_ne_true, &[combined]);
             let not_htrue = d.lam_fv(htrue_fv, ty_true, false_val); // Not (Eq test true_)
@@ -2070,7 +2073,16 @@ pub(super) fn declare_gauss_fold_in_range(
             d.lam_fv(h_fv, ty_false, result)
         };
 
-        let result = or_elim(d, &p, ty_true, ty_false, concl, branch_true, branch_false, case);
+        let result = or_elim(
+            d,
+            &p,
+            ty_true,
+            ty_false,
+            concl,
+            branch_true,
+            branch_false,
+            case,
+        );
 
         let with_le_k = d.lam_fv(le_k_m_fv, le_k_m_ty, result);
         let with_pos_k = d.lam_fv(pos_k_fv, pos_k_ty, with_le_k);
@@ -2083,7 +2095,13 @@ pub(super) fn declare_gauss_fold_in_range(
 /// `Nat.gaussFoldShift(pp, a, j) := pred (gaussFold pp a (succ j))` -- the
 /// 0-indexed shift ADR-1015 sizes: `Int.prodRange_permute` needs a self-map
 /// of `[0, m)`, not `[1, m]`.
-fn gauss_fold_shift(d: &mut NatDev<'_>, p: &NatPrelude, pp: ExprId, a: ExprId, j: ExprId) -> ExprId {
+fn gauss_fold_shift(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pp: ExprId,
+    a: ExprId,
+    j: ExprId,
+) -> ExprId {
     let sj = d.succ(j);
     let fold = gauss_fold(d, p, pp, a, sj);
     d.pred(fold)
@@ -2156,8 +2174,13 @@ pub(super) fn declare_gauss_fold_shift_maps_into(
         let pred_fold_si = d.pred(fold_si);
         let succ_pred_fold_si = d.succ(pred_fold_si);
         let motive = d.eq_motive(fold_si, &|d, x| d.le(x, m));
-        let le_succpred_m =
-            d.transport(fold_si, motive, le_fold_si_m, succ_pred_fold_si, succ_pred_eq);
+        let le_succpred_m = d.transport(
+            fold_si,
+            motive,
+            le_fold_si_m,
+            succ_pred_fold_si,
+            succ_pred_eq,
+        );
         // le_succpred_m : Le (succ (pred fold_si)) m, defeq `Lt (pred fold_si) m`.
 
         let with_hi = d.lam_fv(hi_fv, hi_ty, le_succpred_m);
@@ -2269,7 +2292,9 @@ pub(super) fn declare_gauss_fold_shift_injective_on(
 
         let eq_succ = d.lemma(
             p.gauss_fold_injective_of_coprime,
-            &[m, a, succ_i, succ_j, coprime, pos_succ_i, hi, pos_succ_j, hj, fold_eq],
+            &[
+                m, a, succ_i, succ_j, coprime, pos_succ_i, hi, pos_succ_j, hj, fold_eq,
+            ],
         ); // Eq succ_i succ_j
         let eq_ij = d.lemma(p.succ_injective, &[i, j, eq_succ]); // Eq i j
 
@@ -2569,6 +2594,110 @@ mod tests {
         assert!(
             d.kernel().def_eq(inferred, expected),
             "the applied instance's type must be Eq k1 k1"
+        );
+    }
+    /// `Nat.div_succ_two_mul_eq_self`, `Nat.gauss_fold_in_range`,
+    /// `Nat.gauss_fold_shift_maps_into` and
+    /// `Nat.gauss_fold_shift_injective_on` (ADR-1015, piece 2's completion)
+    /// each apply at a concrete instance -- `pp := 7` (`m := 3`), `a := 2`,
+    /// mirroring the existing `pp := 7` instance above so the two tests'
+    /// numerals cross-check each other.
+    #[test]
+    fn gauss_fold_range_bound_and_shift_wrapper_apply_at_pp_seven() {
+        let mut k = Kernel::new();
+        let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+        let mut d = super::NatDev::new(&mut k, p);
+
+        let pp = d.num(7);
+        let a = d.num(2);
+        let m = d.num(3);
+        let k1 = d.num(1);
+        let zero = d.zero();
+        let two = d.num(2);
+
+        // div_succ_two_mul_eq_self: Eq (div pp 2) m, i.e. div 7 2 = 3.
+        let div_eq = d.lemma(p.div_succ_two_mul_eq_self, &[m]);
+        let div_pp_two = d.div(pp, two);
+        let div_inferred = d
+            .kernel()
+            .infer(div_eq)
+            .expect("div_succ_two_mul_eq_self must apply at m := 3");
+        let expect_div_eq = d.eq(div_pp_two, m);
+        assert!(
+            d.kernel().def_eq(div_inferred, expect_div_eq),
+            "div_succ_two_mul_eq_self(3) must state Eq (div 7 2) 3"
+        );
+        assert!(
+            d.kernel().def_eq(div_pp_two, m),
+            "sanity: div 7 2 must reduce to 3"
+        );
+
+        // Reusable witnesses at k1 := 1 -- Lt zero k1 (le_refl(1)) and
+        // Le k1 m (le_add_right(1, 2)); the latter is ALSO exactly `Lt zero
+        // m` by defeq (succ zero = k1), reused below for i0 := zero.
+        let coprime_gcd = d.gcd(a, pp);
+        let one = d.num(1);
+        let coprime = d.refl(one);
+        assert!(
+            d.kernel().def_eq(coprime_gcd, one),
+            "sanity: gcd 2 7 must reduce to 1"
+        );
+        let pos_k1 = d.lemma(p.le_refl, &[k1]);
+        let le_k1_m = d.lemma(p.le_add_right, &[k1, two]);
+
+        // gauss_fold_in_range: And (0 < gaussFold 7 2 1) (Le (gaussFold 7 2 1) 3).
+        let fold1 = gauss_fold(&mut d, &p, pp, a, k1);
+        let range_pf = d.lemma(p.gauss_fold_in_range, &[m, a, k1, coprime, pos_k1, le_k1_m]);
+        let range_inferred = d
+            .kernel()
+            .infer(range_pf)
+            .expect("gauss_fold_in_range must apply at a concrete instance");
+        let expect_range = {
+            let pos_ty = d.lt(zero, fold1);
+            let le_ty = d.le(fold1, m);
+            d.const_app(p.logic.and, &[pos_ty, le_ty])
+        };
+        assert!(
+            d.kernel().def_eq(range_inferred, expect_range),
+            "gauss_fold_in_range(3,2,1) must give And (0 < gaussFold 7 2 1) (gaussFold 7 2 1 <= 3)"
+        );
+
+        // gauss_fold_shift_maps_into applied at i0 := 0 (hi0 := le_k1_m,
+        // which IS `Lt zero m` by defeq): Lt (pred (gaussFold 7 2 1)) 3,
+        // i.e. Lt 1 3 (pred 2 = 1).
+        let maps_into_pf = d.lemma(p.gauss_fold_shift_maps_into, &[m, a, coprime]);
+        let i0 = zero;
+        let hi0 = le_k1_m;
+        let maps_into_applied = d.apply(maps_into_pf, &[i0, hi0]);
+        let sigma_i0 = d.pred(fold1);
+        let maps_into_inferred = d
+            .kernel()
+            .infer(maps_into_applied)
+            .expect("gauss_fold_shift_maps_into must apply at i0 := 0");
+        let expect_maps_into = d.lt(sigma_i0, m);
+        assert!(
+            d.kernel().def_eq(maps_into_inferred, expect_maps_into),
+            "gauss_fold_shift_maps_into(3,2) at i0 := 0 must give Lt (pred (gaussFold 7 2 1)) 3"
+        );
+        let one_lit = d.num(1);
+        assert!(
+            d.kernel().def_eq(sigma_i0, one_lit),
+            "sanity: pred (gaussFold 7 2 1) = pred 2 = 1"
+        );
+
+        // gauss_fold_shift_injective_on applied at i := j := 0, heq := refl:
+        // Eq 0 0.
+        let inj_pf = d.lemma(p.gauss_fold_shift_injective_on, &[m, a, coprime]);
+        let heq_refl = d.refl(sigma_i0);
+        let inj_applied = d.apply(inj_pf, &[i0, i0, hi0, hi0, heq_refl]);
+        let inj_inferred = d
+            .kernel()
+            .infer(inj_applied)
+            .expect("gauss_fold_shift_injective_on must apply at i := j := 0");
+        let expect_inj = d.eq(i0, i0);
+        assert!(
+            d.kernel().def_eq(inj_inferred, expect_inj),
+            "gauss_fold_shift_injective_on(3,2) at i := j := 0 must give Eq 0 0"
         );
     }
 }

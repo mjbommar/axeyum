@@ -5838,8 +5838,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_succ_two_mul_eq_self: kernel.name_str(nat, "div_succ_two_mul_eq_self"),
             gauss_fold_in_range: kernel.name_str(nat, "gauss_fold_in_range"),
             gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
-            gauss_fold_shift_injective_on: kernel
-                .name_str(nat, "gauss_fold_shift_injective_on"),
+            gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
         };
 
         let mut d = NatDev::new(kernel, p);
