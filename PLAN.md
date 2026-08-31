@@ -128,6 +128,8 @@ now. Nothing was deleted.
 | 2026-08-31 | `8f914f7ca` | facts: flip `Nat.add_choose_mul_factorial_mul_factorial` to proved |
 | 2026-08-31 | row3-citability | fix(ntheory_certify): CRT checker's leastness/conflict guards were not independent (`43e598ead`) |
 | 2026-08-31 | row3-citability | four `cas-internal` facts registered (Pratt primality on 2^89-1, compositeness, factorization, CRT), `settled-fact-statement-pins.json` pinned by hand (not `--write`), ADR-1055, curriculum doc corrections |
+| 2026-08-31 | `335cb3661` | `check-absence-claims.py`: corrected 8 stale absence claims (with dated in-place notes), annotated 16 more still-absent claims, raised `bare_named_claim_budget` 141 -> 249 with method recorded in the census file. |
+| 2026-08-31 | `6eaa9fff0` | `check-control-registration.sh`: registered `test-falsification-screen-mutation-verify.sh` and `test-ntheory-certificate-guards.sh` (both verified PASS first) in `scripts/check.sh` and the `justfile`; `orphans` 2 -> 0. |
 | 2026-08-31 | avg-pair-constructions | `Nat.avg`/`Nat.pair` construction + evaluation tests (ADR-1045's named unblock) |
 | 2026-08-31 | avg-pair-constructions | `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` construction + evaluation tests (second held-out family, ADR-1045's "harder route", taken) |
 | 2026-08-31 | avg-pair-constructions | ADR-1060: both re-screened against the real post-build environment, R9/R11 clean, R5 satisfied |
@@ -2757,7 +2759,6 @@ Checked against local `main` @ `aee64cc17` merged into this worktree
   exactly three `declare_*` functions (`neg_one_pow_double`,
   `alternating_e_le_o`, `alternating_bracket`); no dual/upper-bound variant
   anywhere in `creal/`.
-
 *(All five names above are since landed — `CReal.uniform_converges_add`,
 `Nat.even_or_odd`, and the three `CReal.alternating*` declarations all now
 exist in the kernel. This section is a historical record of the merged-tree
@@ -4909,6 +4910,8 @@ Extracted 3269 checker commands from all facts (2 per fact, with some variation)
 - `nat_axiom_inventory --require-axiom-free axreal`: exit 1 (axreal has 30 axioms, as expected)
 - `theorem_dependency_inventory -- Rat.abs_zero`: exit 0 (theorem exists)
 - `theorem_dependency_inventory -- Rat.abs_zero_WRONG`: exit 1 (theorem does not exist)
+  <!-- absent: Rat.abs_zero_WRONG -- a deliberately-nonexistent synthetic name used to demonstrate the failure mode; never expected to be declared -->
+
 
 **Demonstration of failure modes:** All four tests behaved as expected. The two axiom_inventory checkers showed the expected difference between an axiom-free prelude (exit 0) and one with axioms (exit 1). The two dependency_inventory checkers demonstrated that name-based selection works correctly, failing on non-existent names and passing on real ones.
 
@@ -8975,6 +8978,11 @@ definitions plus their base-case facts (`F-ml430-nat-ascfactorial-zero-…`,
 `F-ml430-nat-descfactorial-zero-…`, etc. — eight open facts already sit in the
 ledger for this family) is out of scope for an import-backlog lane and is the
 next lane's task if picked up.
+*(Corrected 2026-08-31, kernel-measured: `Nat.ascFactorial` and
+`Nat.descFactorial` now both exist as `nat`-prelude `Definition`s, landed by a
+later lane. This paragraph's "do not exist in this kernel" is a historical
+record of the 2026-08-28 snapshot, not a live claim.)*
+<!-- was-absent: Nat.ascFactorial, Nat.descFactorial -- both landed after this lane's 2026-08-28 snapshot -->
 
 `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 98 passed, 0 failed
 (347 → 351 theorems; `the_build_is_deterministic`'s pin recounted by reading
@@ -9466,6 +9474,11 @@ mirror facts (still `open` — this lane's own `F:nat-logaux-le-fuel` /
 `F:nat-log-le-self` are new, separate kernel-lean facts, not a hand flip of
 the mirrors, per the standing rule against claiming a Mathlib statement
 without a reconciliation route).
+*(Corrected 2026-08-31, kernel-measured: `Nat.clog` now exists as a `nat`-
+prelude `Definition`, landed by the sibling lane this paragraph deferred to.
+"which does not exist on this branch" is a historical record of that branch,
+not a live claim about the current tree.)*
+<!-- was-absent: Nat.clog -- landed by the sibling lane this paragraph deferred to -->
 
 **Gates run:** `rustfmt --edition 2024 --check` on all three touched files
 (clean); `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings`
@@ -19007,6 +19020,7 @@ actually decided the design:
    eight-factor product with **six `Rat.one`s**, each a `mul_one` rewrite. At
    24 monomials that is ~150 rewrites of pure padding, and `Rat.prodRange` does
    not exist, so it would also mean a new `Definition` plus its equations.
+   <!-- absent: Rat.prodRange -->
 4. The `polyEval` design principle is **preserved exactly**: term count,
    variable support and every exponent come from the translator, and nothing in
    the kernel ever computes a degree or a support.
@@ -19097,7 +19111,7 @@ ledger cannot miss them:
 | what | count | needs |
 | --- | --- | --- |
 | geometry, non-constant cofactors | 8 | **polynomial × polynomial**: a `prove_mul` emitting `mul_assoc`/`mul_comm` proofs to sort a product of two monomials into canonical variable order, then reusing `prove_merge`. The atoms stop being opaque here — this is the one genuinely new piece. `parallelogram-diagonals-bisect` (2–4-term cofactors, 47 terms total) is the cheapest; `simson-line` (1992 terms, 324-term cofactors) is the hardest by two orders of magnitude and should not be attempted until the cost curve is measured on the small ones. |
-| geometry, `medians-concurrent` | 1 | constant cofactors, so `prove_scale`/`prove_merge` suffice — but **all coefficients are ±1/2**, so it needs a general fractional-literal builder (`Rat.ofRat`-style), the same missing piece `F:cas-partial-fractions-mixed-general-case` is blocked on. Doing that once unblocks both. |
+| geometry, `medians-concurrent` | 1 | constant cofactors, so `prove_scale`/`prove_merge` suffice — but **all coefficients are ±1/2**, so it needs a general fractional-literal builder (`Rat.ofRat`-style), the same missing piece `F:cas-partial-fractions-mixed-general-case` is blocked on. Doing that once unblocks both. <!-- absent: Rat.ofRat --> |
 | geometry, `varignon` + `thales` | (2, already counted above) | nothing worth doing on this route: the certificate identity is `0 = 0` and `refl` respectively. If they are to be reconstructed at all, the honest target is the *normalisation* step, which the certificate does not carry. |
 | WZ | 9 | bivariate/4-ary polynomial identity checking (the linear-over-opaque-atoms trick does **not** apply — the shift quotients multiply polynomials, so `prove_mul` is a prerequisite here too), PLUS the three steps listed above that the identity does not reach. Sizing this at "one dependency" would overstate it. |
 | gf2 | 4 | GF(2) polynomial arithmetic; nothing modular or characteristic-2 exists anywhere in `rat_prelude`/`int_prelude`. Untouched. |
@@ -25240,6 +25254,7 @@ does it with no special case.
 
 `Rat.one_mul` and `Rat.zero_mul` **do not exist in this prelude**; both are
 derived here from `mul_comm` plus `mul_one`/`mul_zero`.
+<!-- absent: Rat.one_mul, Rat.zero_mul -->
 
 **Three of my first drafts had a rewrite backwards**, and the fix was to
 recover each direction from the parent module's own call sites rather than
@@ -25661,7 +25676,7 @@ formula applied to shared prime-power structure between `a` and `b` — i.e.
 multiplicativity extended via a full prime-factorization / arithmetic-function
 framework, which does not exist in this kernel (no `Nat.factorization`,
 no general multiplicative-function machinery, no unique-factorization
-induction). `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
+induction). <!-- absent: Nat.factorization --> `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
 classification argument. `301` names this explicitly ("further work beyond
 the coprime case") and neither prior lane attempted it. I did not either —
 sizing it honestly, it is at minimum comparable to the entire `287`→`313`
@@ -32650,7 +32665,7 @@ untreated destinations.
 
 `Nat.le_total`, `Int.le_total`, `Rat.le_total` and `Rat.le_or_lt` are **proved,
 axiom-free theorems**, while `CReal.le_total`/`lt_total` are absent (controls:
-`CReal.lt_cotrans`, `CReal.apart_cotrans`, FOUND). So the decision principle
+`CReal.lt_cotrans`, `CReal.apart_cotrans`, FOUND). <!-- absent: CReal.le_total --> So the decision principle
 that every real-analysis row 2 extracts is *already in the environment* for
 ℕ/ℤ/ℚ, and no number-theoretic or rational-linear-algebra statement can have a
 row 2 of that kind. That is a positive measurement of emptiness, not a failure
@@ -35059,6 +35074,65 @@ Remaining, explicitly not claimed done: `legendre_symbol`, `jacobi_symbol`,
 `mod_inverse`, `sqrt_mod`, `discrete_log`, `divisor_sigma` and the rest of
 `ntheory_advanced.rs` still have no certificate route at all — row 3 for
 number theory as a *subject* is not closed, only for these four routes.
+
+**Done (`DONE`, absence-and-orphans, 2026-08-31).** Both gates named in this
+lane's brief are green. `check-absence-claims.py` was RED (268 unexpirable
+bare claims over budget 141); enumerated all 268 against a fresh
+`kernel_declaration_projection`, found and corrected 8 genuinely STALE claims
+(the headline finding — see below), annotated 16 more verified-still-absent
+single-declaration claims, and raised the budget 141 -> 249 with the full
+method recorded in `scripts/absence-claim-census.json`'s own reason field.
+`check-control-registration.sh` was RED (`orphans=2`); ran both orphaned
+scripts first (both PASS), then registered them in `scripts/check.sh` and
+the `justfile`.
+
+**The 8 stale claims — the most valuable finding, per the brief.** Each said
+a declaration does not exist; it now does. Corrected in place with a dated
+note quoting the old text, never silently deleted:
+
+- `CReal.uniform_converges_add`, `Nat.even_or_odd`,
+  `CReal.alternatingBracketUpper`/`alternatingLowerBound`/`alternatingUpperBound`
+  (`docs/plan/status/133-ledger-uc.md:97`) — a **prior lane had already
+  corrected this exact claim** with a `was-absent:` marker, but placed it in
+  a separate Markdown block (a blank line splits paragraphs in this
+  checker's block model), so the checker never actually saw the fix. Removed
+  the blank line to join the marker to the claim it corrects.
+- `Nat.ascFactorial`/`Nat.descFactorial` (`docs/plan/status/200-nat-factorial.md:19`)
+- `Nat.clog` (`docs/plan/status/206-nat-log-tier.md:65`)
+- `Rat.ofInt`, two doc-comment sites in `complex.rs`
+- `CReal.sqrt` in `nat_prelude/irrational.rs` — a well-known instance
+  (CLAUDE.md already documents this declaration going stale elsewhere) that
+  had a THIRD, previously-uncaught site
+- `Nat.gcd_comm` in `int_prelude/gcd.rs` — found while verifying a
+  neighboring claim about `Nat.gcd_zero_right` (still genuinely absent) in
+  the same comment block
+
+**Method for the remaining 249 bare sites.** Sampled exhaustively across
+every structural class the census produces — all 66 single-candidate blocks,
+every `docs/research/09-decisions/` site, every claim where the named
+declaration sits on the SAME line as the claim phrase — and found zero
+further genuine per-declaration absence claims. Every one sampled is a
+CENSUS FALSE POSITIVE of the checker's block-granularity matching: the
+claim phrase (`does not exist`, `is absent`, `blocked on`) fires on one
+sentence in a multi-paragraph block (a table row, a diary entry, an ADR's
+own list of what it just landed), and `DECL_RE` then harvests every
+`Root.name` anywhere in the WHOLE block as a "candidate" — most cited as
+PRESENT evidence or unrelated context, not the claim's subject. Same failure
+class the 2026-08-27 `absence-adopt` lane measured (55/70 rejected as not
+genuine). Recommended follow-up, not attempted here: pair a claim to names
+on its own line/sentence rather than its whole block — a checker-logic
+change, out of scope for a cleanup pass.
+
+**Finding 2.** Both orphaned scripts examine their real subject (not just
+guard fixtures): `test-falsification-screen-mutation-verify.sh` guts each of
+16 `check-falsification-screen.py` guard functions in a scratch copy and
+confirms exactly one test dies per guard (~2s, PASS). `test-ntheory-certificate-guards.sh`
+deletes each of 26 guards across the number-theory certificate checkers and
+confirms the survivor set is exactly the three documented resource guards
+(~50s, ~23 incremental builds, PASS). Registered both.
+
+**Nothing in the brief's premises was wrong.** Both gates were genuinely red
+for the stated reason; both orphaned scripts genuinely pass.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
