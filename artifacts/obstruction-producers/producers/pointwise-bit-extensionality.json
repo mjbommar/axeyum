@@ -1,0 +1,67 @@
+{
+  "applicability": {
+    "fact_ids": [
+      "F:ml430-nat-and-or-distrib-left-fe131f64",
+      "F:ml430-nat-and-or-distrib-right-0daaa284"
+    ],
+    "population_description": "open ml430 mirrors stating a pure bitwise (land/lor/ldiff/xor) Nat equality with no existing cross-operator machinery in the tree (re-verified absent on every run of this compiler)"
+  },
+  "budget": {
+    "estimate": "one Nat.rec-free proof per target: 1 extensionality application + up to 3 rewrite chains + an 8-case split for a 3-variable identity, 4-case for 2 variables",
+    "unit": "kernel-proof"
+  },
+  "candidate_inputs": [
+    {
+      "fact_id": "F-nat-eq-of-testbit-eq",
+      "lemma": "eq_of_testbit_eq"
+    },
+    {
+      "fact_id": "F-nat-testbit-land",
+      "lemma": "testbit_land"
+    },
+    {
+      "fact_id": "F-nat-testbit-lor",
+      "lemma": "testbit_lor"
+    },
+    {
+      "fact_id": "F-nat-testbit-le-one",
+      "lemma": "testbit_le_one"
+    }
+  ],
+  "capability_gap": "pointwise-extensionality-with-finite-case-exhaustion",
+  "falsifiable_prediction": "Both ['F:ml430-nat-and-or-distrib-left-fe131f64', 'F:ml430-nat-and-or-distrib-right-0daaa284'] are closable by this exact 4-step recipe with no induction beyond the finite case split. This is wrong if the testBit rewrite chain fails to reach a closed arithmetic goal (e.g. if AxNat.mul/AxNat.ble do not reduce at the bound {0,1} values without further lemmas).",
+  "id": "pointwise-bit-extensionality",
+  "kind": "producer",
+  "negative_controls": [
+    {
+      "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+      "why_declines": "same two-operator bitwise shape (lor n m = land n m) but mathematically FALSE (n=1,m=2: lor=3, land=0) -- a deliberate mutation. The recipe's finite case-split reaches a bit assignment where the two sides differ and correctly fails to close, rather than fabricating a proof."
+    },
+    {
+      "fact_id": "F:ml430-nat-and-mod-two-eq-one-3e873792",
+      "why_declines": "top-level connective is Iff, not Eq -- the recipe's first step (Nat.eq_of_testbit_eq) does not even type-check against an Iff goal, so the shape predicate must exclude it rather than let the recipe fail late."
+    }
+  ],
+  "obstruction_ids": [
+    "nat-bitwise-cross-operator-proof-gap"
+  ],
+  "recipe": "1. Apply Nat.eq_of_testbit_eq to reduce the goal to 'forall i, lhs.testBit i = rhs.testBit i'. 2. Rewrite both sides to a Nat.testBit-headed normal form using testbit_land / testbit_lor / testbit_ldiff / testbit_xor. 3. Bound each testBit i term to {0,1} via testbit_le_one and case -split (finite exhaustion). 4. Each of the resulting closed arithmetic goals over {0,1} closes by evaluation.",
+  "route": "kernel-lane",
+  "shape": {
+    "description": "An equality between two Nat-valued expressions built purely from land/lor/ldiff/xor (no arithmetic mixed in), whose top-level connective is Eq, not Iff.",
+    "predicate": {
+      "requires_all_of": [
+        "only bitwise operators on both sides",
+        "top connective is Eq"
+      ],
+      "requires_none_of": [
+        "arithmetic operators (+, *, /, %)",
+        "Iff as the top connective"
+      ],
+      "type": "syntactic"
+    }
+  },
+  "validation_examples": [
+    "F-nat-testbit-land, F-nat-testbit-lor, F-nat-eq-of-testbit-eq, F-nat-testbit-le-one are the proved kernel lemmas this recipe composes; none of them is new work"
+  ]
+}

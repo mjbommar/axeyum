@@ -1,0 +1,106 @@
+{
+  "generated_by": "scripts/gen-obstruction-producers.py",
+  "obstructions": [
+    {
+      "blocked_fact_ids": [
+        "F:ml430-nat-and-or-distrib-left-fe131f64",
+        "F:ml430-nat-and-or-distrib-right-0daaa284"
+      ],
+      "capability_gap": "pointwise-extensionality-with-finite-case-exhaustion",
+      "evidence": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/ (grep, no and_or_distrib or joint_induction token)",
+        "F-nat-eq-of-testbit-eq.json, F-nat-testbit-land.json, F-nat-testbit-lor.json, F-nat-testbit-le-one.json (all proved)"
+      ],
+      "id": "nat-bitwise-cross-operator-proof-gap",
+      "reason": "and_or_distrib_left/right need a cross-operator (land distributing over lor) argument. No joint-induction machinery for this exists in nat_prelude/ (re-verified: no 'and_or_distrib' or 'joint_induction' token anywhere in the tree), but the smallest missing capability is not a new induction at all -- both operators already have per-bit characterizations (testbit_land, testbit_lor) and an extensionality principle (eq_of_testbit_eq), so the identity reduces to a finite case split over {0,1}-valued bits.",
+      "removability": "producer"
+    },
+    {
+      "blocked_fact_ids": [
+        "F:ml430-nat-and-comm-7525d05a",
+        "F:ml430-nat-and-assoc-273b60d8",
+        "F:ml430-nat-and-le-left-6d04acb7"
+      ],
+      "capability_gap": "equality-transport",
+      "evidence": [
+        "F-ml430-nat-land-comm-7e6ad72e.json, F-ml430-nat-land-assoc-ad4775b8.json (both proved, same content as the open and_* twins)",
+        "crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs (land_le_left declared; land_le_right/land_self absent)"
+      ],
+      "id": "nat-bitwise-extensional-duplicate",
+      "reason": "Several open ml430 Nat.land mirrors (and_comm, and_assoc, and_le_left) restate content this kernel already established under a different name -- a sibling ml430 mirror using the native spelling (land_comm, land_assoc, both already flipped), or a bare kernel declaration (land_le_left) with no mirror yet. Nat.land/lor/ldiff/xor are not registered as diverging from Mathlib's constructions, unlike minFac/multichoose, so a same-content restatement is an honest flip, not a manufactured one. and_le_right/and_self/and_div_two/and_mod_two_eq_one/and_one_is_mod were hypothesized by the same table and verified ABSENT -- no matching declaration exists -- so they remain genuinely open and serve as this producer's negative controls.",
+      "removability": "producer"
+    },
+    {
+      "blocked_fact_ids": [
+        "F:ml430-nat-fastfib-eq-cde11774"
+      ],
+      "capability_gap": "induction-motive",
+      "evidence": [
+        "artifacts/autogenesis/mirror-divergence-registry.json#Nat.fastFib",
+        "crates/axeyum-lean-kernel/src/nat_prelude/binary_rec.rs ('Is this Mathlib's binaryRec? No.')",
+        "crates/axeyum-lean-kernel/src/prelude.rs (well_founded_fix_eq)"
+      ],
+      "id": "nat-fastfib-recursion-principle",
+      "reason": "Mathlib's binaryRec is WellFounded.fix with a DEPENDENT motive. This kernel's Nat.binaryRec (nat_prelude/binary_rec.rs) is a fuel encoding with a motive CONSTANT in n, which is forced for a fuel encoding (the exhaustion row must return a value for an arbitrary n with only motive 0 in hand) -- confirmed by reading the module's own 'Is this Mathlib's binaryRec? No.' section. But this kernel already has a general WellFounded.fix with a checked WellFounded.fix_eq (prelude.rs, already used by gcd/bezout/modeq/wilson), so a dependent binaryRec built THAT way is ordinary construction work, not a foundational gap. No producer is evaluable until it exists.",
+      "removability": "new-construction"
+    },
+    {
+      "blocked_fact_ids": [
+        "F:ml430-nat-coprime-of-lt-minfac-0f79bdba"
+      ],
+      "capability_gap": "definitional-non-equivalence",
+      "evidence": [
+        "artifacts/autogenesis/mirror-divergence-registry.json#Nat.minFac"
+      ],
+      "id": "nat-minfac-algorithmic-divergence",
+      "reason": "Nat.minFac's registry entry (class=definitional/algorithmic) records that this kernel's construction computes the same VALUES as Mathlib's by a DIFFERENT recursion/algorithm, and per the project's own mirror-flip criterion a theorem about Mathlib's construction is a different proposition from one about ours. Verified independently this session against the module doc and/or the already-proved native analogue's own `notes` field, both of which say explicitly that flipping the mirror would NOT be honest.",
+      "removability": "not-removable"
+    },
+    {
+      "blocked_fact_ids": [
+        "F:ml430-nat-multichoose-one-b210386a",
+        "F:ml430-nat-multichoose-one-right-7755072d",
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "capability_gap": "definitional-non-equivalence",
+      "evidence": [
+        "artifacts/autogenesis/mirror-divergence-registry.json#Nat.multichoose"
+      ],
+      "id": "nat-multichoose-definitional-divergence",
+      "reason": "Nat.multichoose's registry entry (class=definitional/algorithmic) records that this kernel's construction computes the same VALUES as Mathlib's by a DIFFERENT recursion/algorithm, and per the project's own mirror-flip criterion a theorem about Mathlib's construction is a different proposition from one about ours. Verified independently this session against the module doc and/or the already-proved native analogue's own `notes` field, both of which say explicitly that flipping the mirror would NOT be honest.",
+      "removability": "not-removable"
+    },
+    {
+      "blocked_fact_ids": [
+        "F:ml430-nat-lt-of-testbit-72f64ab8",
+        "F:ml430-nat-testbit-land-dfef7ca4",
+        "F:ml430-nat-testbit-ldiff-16f94162",
+        "F:ml430-nat-testbit-lor-7644e067",
+        "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+      ],
+      "capability_gap": "codomain-transport",
+      "evidence": [
+        "artifacts/autogenesis/mirror-divergence-registry.json#Nat.testBit",
+        "each fact's formal.statement uses Bool literals (=true/=false) or Bool connectives (&&, ||, !) applied to testBit's result"
+      ],
+      "id": "nat-testbit-bool-codomain",
+      "reason": "Mathlib's Nat.testBit : Nat -> Nat -> Bool; this kernel's returns a Nat in {0,1}. Bool exists as a kernel inductive type, so a Bool-valued Nat.testBitBool plus a bridge theorem to the existing testBit is buildable in principle, but neither is built. No producer is evaluable until that construction lands -- compiling one now would assert a strategy that cannot be run, which is exactly the defect this phase is scored against.",
+      "removability": "new-construction"
+    },
+    {
+      "blocked_fact_ids": [
+        "F:ml430-nat-testbit-eq-inth-ffa07392"
+      ],
+      "capability_gap": "missing-inductive-type",
+      "evidence": [
+        "artifacts/autogenesis/mirror-divergence-registry.json#Nat.testBit",
+        "fact statement contains '.bits.getI'",
+        "CLAUDE.md's authoritative inductive-type inventory has no List"
+      ],
+      "id": "nat-testbit-list-bool-getI",
+      "reason": "This mirror's statement (n.testBit i = n.bits.getI i) needs Nat.bits : Nat -> List Bool and List.getI. This kernel's closed inductive-type set (True/False/And/Or/Iff/Eq/Exists/Acc/Bool/Nat/Decidable, plus Nat.le/Nat.Fin/Char/Nat.Pair) has no List type at all. Adding one is foundational type-system work, out of scope for a producer or an ordinary new-construction; not removable on this route.",
+      "removability": "not-removable"
+    }
+  ],
+  "schema_version": 1
+}
