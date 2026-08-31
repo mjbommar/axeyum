@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 237] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 240] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -264,6 +264,11 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 237] {
         // connecting theorem (ADR-1130), i.e. Gauss's lemma itself.
         p.gauss_term_mod_eq,
         p.gauss_lemma_sign_count,
+        // `second-supplementary-law` lane (ADR-1150): the second supplementary
+        // law of quadratic reciprocity and the two sign lemmas it consumes.
+        p.pow_neg_one_of_even,
+        p.pow_neg_one_of_odd,
+        p.second_supplementary_law,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
