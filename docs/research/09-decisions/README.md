@@ -772,3 +772,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1070](adr-1070-gauss-lemma-piece-3-two-of-five-items-land-generically-reusable-with-euler.md) | Three theorems land axiom-free toward Gauss's lemma's | accepted |
 | [1075](adr-1075-the-curriculum-graph-measures-scenarios-not-the-kernel.md) | `docs/curriculum/curriculum.toml`'s `status` field is the | accepted |
 | [1082](adr-1082-add-a-probability-node-the-kernel-had-the-spine-the-map-did-not.md) | Adds `probability` (layer 3, destinations) to | accepted |
+| [1095](adr-1095-draw-13-is-declined-two-constructions-are-not-four-families.md) | ADR-1060 built BOTH of draw 12's named unblocks | accepted |
