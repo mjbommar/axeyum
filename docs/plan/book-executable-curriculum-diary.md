@@ -786,3 +786,35 @@ Strict all-target, all-feature Clippy passes for `axeyum-machine` and
 `axeyum-py`. Most importantly, the book's live replay now accepts all sixteen
 routes again: twelve A0, two RV64, and two x86-64, each with its negative
 control. The boundary repair landed as `4548f3dda`.
+
+## 2026-08-30 — reader-facing RV64I Python projection
+
+Added `axeyum.machine.rv64` as a direct projection of the source-pinned Rust
+teaching slice. It exposes the official source release, source digest, RV64I
+version, exact twelve-form selection, typed constructors for every admitted
+form, canonical encode/decode, immutable program bytes, complete integer state,
+finite A0 memory, categorized outcomes and traps, canonical state projection,
+and one-step execution. The normal forwarding module and dotted native import
+both expose the same objects.
+
+Every instruction constructor validates through the Rust canonical encoder.
+Register access checks `x0..x31` before calling the underlying state method, so
+an invalid Python index becomes `ValueError` instead of reaching a Rust array
+panic. Immutable `with_register` preserves the architectural x0 rule. Python
+does not implement instruction behavior, fetch, target arithmetic, memory
+access, or traps; `step` delegates to `axeyum_machine::rv64::step`.
+
+Four reader-facing test groups cover all twelve constructor/round-trip forms
+and invalid operands; x0 plus the instruction-PC-relative branch base; aligned
+little-endian store/load, canonical projection, duplicate rejection, and an
+atomic missing-byte store; and the pinned source identity plus all five trap
+classes with terminal stuttering. The existing seven native RV64 tests and
+eight PyO3 library tests also pass. Strict all-target, all-feature Clippy
+passes. Runtime/stub parity now covers 26 modules and 1,804 symbols; the typed
+stub gate reaches 95.1 percent, `stubtest` passes, the existing type-diagnostic
+budget remains unchanged, and Ruff lint and formatting pass.
+
+This is a single-step concrete projection, matching the current Rust API. It
+does not invent a Python-only runner. RV64 bounded traces, x86-64, instruction
+effect sets, symbolic execution, and cross-machine relations remain open.
+The implementation and generated reader contract landed as `3884b8d04`.
