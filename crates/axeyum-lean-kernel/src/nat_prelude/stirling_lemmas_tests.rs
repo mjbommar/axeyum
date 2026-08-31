@@ -39,6 +39,26 @@
 //! Where the two kinds DO separate, the cross-kind control is used, because
 //! it is the strongest available: column 1 is `n!` for the first kind and all
 //! ones for the second, so `c(4,1) = 6` against `S(4,1) = 1`.
+//!
+//! **A third vacuous control was written here and CAUGHT BY THE SUITE**, not
+//! by review, and it is worth recording because it is not the shape the
+//! warning above predicts. The obvious control for `stirlingFirst_zero_succ`
+//! is the transposed index `stirlingFirst (k+1) 0 = 0` — a different-looking
+//! proposition, both indices free of numerals, apparently safe. It is not:
+//! `stirlingFirst 0 (succ k)` reduces through the ZERO row's inner recursor
+//! at a `succ` scrutinee, and `stirlingFirst (succ k) 0` reduces through the
+//! SUCC row's inner recursor at a literal `0` — **both land on the literal
+//! `0` even at a free `k`**, so the two statements are one statement up to
+//! defeq and nothing could distinguish them.
+//!
+//! Going symbolic is what usually rescues a control (it is what rescued the
+//! min/max lane's `max 7 2`), and here it does not, because the reduction
+//! that collapses the distinction is driven by the CONSTRUCTOR shapes rather
+//! than by any numeral. The controls used instead drop the `succ` —
+//! `stirlingFirst 0 k = 0` and `stirlingFirst n 0 = 0`, each false at `0` and
+//! each STUCK at a free variable — and the suite additionally asserts the
+//! counterexample (`stirlingFirst 0 0 = 1`), so a control that stopped
+//! discriminating would fail rather than pass quietly.
 
 use crate::expr::ExprId;
 use crate::{
@@ -139,15 +159,28 @@ fn the_four_defining_equations_state_mathlibs_recurrence() {
         f.k.def_eq_in(inferred, expected, &mut ctx),
         "stirlingFirst_zero_succ must state stirlingFirst 0 (k+1) = 0"
     );
-    // The transposed index: the ROW is the one fixed at 0, not the column.
-    let lhs_transposed = f.first(sk, zero);
+    // NOT the transposed index `stirlingFirst (k+1) 0`: see this file's doc.
+    // Both reduce to the literal `0` even at a free `k`, so that control is
+    // VACUOUS -- the two propositions are one proposition up to defeq.
+    //
+    // What discriminates is dropping the `succ`: `stirlingFirst 0 k = 0` is
+    // FALSE at k = 0, and at a free `k` the inner recursor is stuck, so it is
+    // a genuinely different term.
+    let lhs_unguarded = f.first(zero, k_free);
     let zero3 = f.zero();
-    let transposed = f.eq(lhs_transposed, zero3);
+    let unguarded = f.eq(lhs_unguarded, zero3);
     assert!(
-        !f.k.def_eq_in(inferred, transposed, &mut ctx),
-        "negative control: stirlingFirst_zero_succ must NOT be about \
-         stirlingFirst (k+1) 0 -- true too, but it is a different theorem, \
-         and at a free variable the two terms are distinct"
+        !f.k.def_eq_in(inferred, unguarded, &mut ctx),
+        "negative control: the column must be a SUCCESSOR -- \
+         stirlingFirst 0 0 is 1, so the unguarded form is false"
+    );
+    // ...and confirm that control is not vacuous the other way: the unguarded
+    // form really does fail at k = 0.
+    let at_0_0 = f.first(zero, zero);
+    let one2 = f.num(1);
+    assert!(
+        f.k.def_eq(at_0_0, one2),
+        "the control's counterexample must be real: stirlingFirst 0 0 = 1"
     );
 
     // stirlingFirst_succ_zero : ∀ n, stirlingFirst (succ n) 0 = 0
@@ -174,6 +207,16 @@ fn the_four_defining_equations_state_mathlibs_recurrence() {
         !f.k.def_eq_in(inferred, wrong, &mut ctx),
         "negative control: stirlingFirst (n+1) 0 is 0, NOT 1 -- 1 is what \
          choose (n+1) 0 gives"
+    );
+    // And the row must be a SUCCESSOR: `stirlingFirst n 0 = 0` is false at
+    // n = 0, and at a free `n` the outer recursor is stuck.
+    let lhs_unguarded = f.first(n_free, zero);
+    let zero3 = f.zero();
+    let unguarded = f.eq(lhs_unguarded, zero3);
+    assert!(
+        !f.k.def_eq_in(inferred, unguarded, &mut ctx),
+        "negative control: the row must be a SUCCESSOR -- stirlingFirst 0 0 \
+         is 1, so the unguarded form is false"
     );
 
     // stirlingFirst_succ_succ : ∀ n k,

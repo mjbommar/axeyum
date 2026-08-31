@@ -70,7 +70,8 @@ use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
-use crate::expr::{ExprId, NameId};
+use crate::expr::ExprId;
+use crate::name::NameId;
 
 /// Which of the two triangles a shared proof is being built for. The two
 /// definitions differ ONLY in the recursive column's coefficient, so every
