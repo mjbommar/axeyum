@@ -781,3 +781,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1130](adr-1130-gauss-lemma-closes-and-the-handoffs-remaining-blockers-were-not-needed.md) | **Gauss's lemma is proved, axiom-free, in this kernel**: | accepted |
 | [1135](adr-1135-a-determinant-congruence-is-what-the-absence-of-funext-costs.md) | ADR-1120 left four laws open over `Rat.det` and named the | accepted |
 | [1140](adr-1140-the-depth-spine-stays-a-proposal-two-of-its-rungs-already-landed.md) | Re-measured `curriculum.toml`'s `kernel_decls` axis | accepted |
+| [1160](adr-1160-the-index-3-slot-is-filled-mathlib-data-nat-find.md) | Four draws declined in a row on one constraint — cycle index 3 | accepted |
