@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:evt-mathlib-import-compact-exists-is-max-on",
+  "title": "Mathlib's Extreme Value Theorem, imported (labeled scaffolding, not ours)",
+  "statement": "The proposition Mathlib states as IsCompact.exists_isMaxOn: for a nonempty compact set s in a topological space and f continuous on s into a linear order with closed Ici topology, there exists x in s attaining the maximum of f on s. Imported as Mathlib's own statement and proof term, not established by this project -- see proof_route.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((α : Sort (u_2+1)) -> ((β : Sort (u_3+1)) -> ((inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._6 : LinearOrder.{u_2} α) -> ((inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._9 : TopologicalSpace.{u_2} α) -> ((inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._12 : TopologicalSpace.{u_3} β) -> ((inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._18 : ClosedIciTopology.{u_2} α inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._9 (PartialOrder.toPreorder.{u_2} α (SemilatticeInf.toPartialOrder.{u_2} α (Lattice.toSemilatticeInf.{u_2} α (DistribLattice.toLattice.{u_2} α (instDistribLatticeOfLinearOrder.{u_2} α inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._6)))))) -> ((s : Set.{u_3} β) -> ((hs : IsCompact.{u_3} β inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._12 s) -> ((ne_s : Set.Nonempty.{u_3} β s) -> ((f : ((a._@._internal._hyg._0 : β) -> α)) -> ((hf : ContinuousOn.{u_3, u_2} β α inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._12 inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._9 f s) -> Exists.{u_3+1} β (fun (x : β) => And (Membership.mem.{u_3, u_3} β (Set.{u_3} β) (Set.instMembership.{u_3} β) s x) (IsMaxOn.{u_3, u_2} β α (PartialOrder.toPreorder.{u_2} α (SemilatticeInf.toPartialOrder.{u_2} α (Lattice.toSemilatticeInf.{u_2} α (DistribLattice.toLattice.{u_2} α (instDistribLatticeOfLinearOrder.{u_2} α inst._@.Mathlib.Topology.Order.Compact._3966579681._hygCtx._hyg._6))))) f s x)))))))))))))",
+    "fragment": "none"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "imported-kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [
+    "lean4export-3.1.0-stream-faithfulness",
+    "axeyum-lean-import-wire-translation",
+    "lean4export-3.1.0-delivered-bytes-are-the-intended-export",
+    "Classical.choice",
+    "Quot",
+    "Quot.lift",
+    "Quot.mk",
+    "Quot.sound",
+    "String.Internal.append",
+    "propext",
+    "wrapped._@.Mathlib.Topology.Defs.Filter.2998874748._hygCtx._hyg.2"
+  ],
+  "evidence": [
+    {
+      "id": "import-IsCompact.exists_isMaxOn",
+      "kind": "kernel-term",
+      "supports": "`IsCompact.exists_isMaxOn`'s Lean proof term type-checks against this statement in the independent Axeyum kernel.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-import fail-closed translation",
+        "Kernel::add_declaration (independent re-derivation of the type from the proof term)",
+        "SHA-256 pin of the exported stream bytes"
+      ],
+      "checker_command": "test \"$(cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -c 'AXEYUM-IMPORT-FACT|F:evt-mathlib-import-compact-exists-is-max-on|')\" -ge 1",
+      "artifact": "artifacts/lean-imports/evt-is-compact-exists-is-max-on.ndjson",
+      "notes": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. `lean4export_census` reports 2171 declaration records / 2486 admitted declarations for the transitive dependency closure of `IsCompact.exists_isMaxOn` at Mathlib commit c5ea00351c28e24afc9f0f84379aa41082b1188f (module: see MANIFEST.json), all admitted by `Kernel::add_declaration` with ZERO declines. `Kernel::render_lean` of the admitted type is `formal.statement` verbatim. the constructive substitute (approximate, non-attaining) is F:creal-evt-approx-max (row 1), the boundary reduction is F:creal-evt-attained-max-decides-sign (row 2)."
+    },
+    {
+      "id": "footprint-IsCompact.exists_isMaxOn",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: the imported proof term's trusted-declaration footprint inside the imported environment, plus the three import-route assumptions this route always carries.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint (our kernel, over the imported environment)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -c 'AXEYUM-IMPORT-FACT|F:evt-mathlib-import-compact-exists-is-max-on|'",
+      "notes": "`Kernel::axiom_footprint` over the imported environment reports [Classical.choice, Quot, Quot.lift, Quot.mk, Quot.sound, String.Internal.append, propext, wrapped._@.Mathlib.Topology.Defs.Filter.2998874748._hygCtx._hyg.2] -- eight names, not Lean's own three (`#print axioms` reports [propext, Classical.choice, Quot.sound] for both theorems at this pinned commit, per docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md section 3). The extra five are this kernel's finer-grained classification of the Quotient package (Quot itself, Quot.lift and Quot.mk alongside Quot.sound -- documented in fact.schema.json's proof_route field as 'must not be silently reconciled to Lean's'), plus two names this specific dependency closure reaches that the three hand-picked Init/Std imports never did: a String.Internal.append opaque and a wrapped._@.Mathlib.Topology.Defs.Filter opaque wrapper from a well-founded-recursion definition somewhere in the Filter machinery both theorems' proofs transitively use. Neither is a defect in the translation; both are real trusted declarations Mathlib's own proof rests on for this statement, and Kernel::axiom_footprint is reporting them faithfully. The first three entries in this array are the assumptions the IMPORT ROUTE adds on top: that the exporter faithfully rendered Lean's environment, that this crate's NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export (format 3.1 has no footer, so completion is relative to the bytes handed over)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-import, lane row4-labeled-import -- our independent kernel ADMITTED Mathlib's proof term, together with the whole transitive dependency closure the export pulled in. This project did NOT construct the proof; see proof_route. This is ADR-0603 row 4 (labeled import) for this statement family.",
+    "source": "official lean4export NDJSON 3.1.0 stream artifacts/lean-imports/evt-is-compact-exists-is-max-on.ndjson, declaration `IsCompact.exists_isMaxOn` from mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f under Lean 4.30.0",
+    "prior_art": [
+      {
+        "who": "the Mathlib community",
+        "what": "`IsCompact.exists_isMaxOn` in mathlib4",
+        "where": "leanprover-community/mathlib4, commit c5ea00351c28e24afc9f0f84379aa41082b1188f",
+        "year": 2026,
+        "attribution": "read directly from the pinned lean4export stream this fact cites, and independently admitted by Kernel::add_declaration; this lane did not consult a paper or a secondary source."
+      }
+    ]
+  },
+  "notes": "ADR-0603 row 4 (labeled import) for this statement family. NOT a claim that this project proved this theorem, and NOT counted in any axiom-free or originated headline: proof_route is imported-kernel-lean and axiom_footprint is non-empty by construction (the validator rejects an empty footprint on this route). Compare against the general constructive form this ledger DOES claim as ours: the constructive substitute (approximate, non-attaining) is F:creal-evt-approx-max (row 1), the boundary reduction is F:creal-evt-attained-max-decides-sign (row 2). See ADR-1090 and docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md."
+}

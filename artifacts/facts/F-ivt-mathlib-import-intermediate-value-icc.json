@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:ivt-mathlib-import-intermediate-value-icc",
+  "title": "Mathlib's Intermediate Value Theorem, imported (labeled scaffolding, not ours)",
+  "statement": "The proposition Mathlib states as intermediate_value_Icc: for a conditionally complete densely ordered linear order alpha with the order topology, a linear order delta with an order-closed topology, a <= b, and f continuous on [a,b], the interval [f a, f b] is a subset of f's image of [a,b]. Imported as Mathlib's own statement and proof term, not established by this project -- see proof_route.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((α : Sort (u+1)) -> ((inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._3 : TopologicalSpace.{u} α) -> ((inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._6 : ConditionallyCompleteLinearOrder.{u} α) -> ((inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._9 : OrderTopology.{u} α inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._3 (PartialOrder.toPreorder.{u} α (ConditionallyCompletePartialOrderSup.toPartialOrder.{u} α (ConditionallyCompletePartialOrder.toConditionallyCompletePartialOrderSup.{u} α (ConditionallyCompleteLattice.toConditionallyCompletePartialOrder.{u} α (ConditionallyCompleteLinearOrder.toConditionallyCompleteLattice.{u} α inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._6)))))) -> ((inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._12 : DenselyOrdered.{u} α (Preorder.toLT.{u} α (PartialOrder.toPreorder.{u} α (ConditionallyCompletePartialOrderSup.toPartialOrder.{u} α (ConditionallyCompletePartialOrder.toConditionallyCompletePartialOrderSup.{u} α (ConditionallyCompleteLattice.toConditionallyCompletePartialOrder.{u} α (ConditionallyCompleteLinearOrder.toConditionallyCompleteLattice.{u} α inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._6))))))) -> ((δ : Sort (u_1+1)) -> ((inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._18 : LinearOrder.{u_1} δ) -> ((inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._21 : TopologicalSpace.{u_1} δ) -> ((inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._24 : OrderClosedTopology.{u_1} δ inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._21 (PartialOrder.toPreorder.{u_1} δ (SemilatticeInf.toPartialOrder.{u_1} δ (Lattice.toSemilatticeInf.{u_1} δ (DistribLattice.toLattice.{u_1} δ (instDistribLatticeOfLinearOrder.{u_1} δ inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._18)))))) -> ((a : α) -> ((b : α) -> ((hab : LE.le.{u} α (Preorder.toLE.{u} α (PartialOrder.toPreorder.{u} α (ConditionallyCompletePartialOrderSup.toPartialOrder.{u} α (ConditionallyCompletePartialOrder.toConditionallyCompletePartialOrderSup.{u} α (ConditionallyCompleteLattice.toConditionallyCompletePartialOrder.{u} α (ConditionallyCompleteLinearOrder.toConditionallyCompleteLattice.{u} α inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._6)))))) a b) -> ((f : ((a._@._internal._hyg._0 : α) -> δ)) -> ((hf : ContinuousOn.{u, u_1} α δ inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._3 inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._21 f (Set.Icc.{u} α (PartialOrder.toPreorder.{u} α (ConditionallyCompletePartialOrderSup.toPartialOrder.{u} α (ConditionallyCompletePartialOrder.toConditionallyCompletePartialOrderSup.{u} α (ConditionallyCompleteLattice.toConditionallyCompletePartialOrder.{u} α (ConditionallyCompleteLinearOrder.toConditionallyCompleteLattice.{u} α inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._6))))) a b)) -> HasSubset.Subset.{u_1} (Set.{u_1} δ) (Set.instHasSubset.{u_1} δ) (Set.Icc.{u_1} δ (PartialOrder.toPreorder.{u_1} δ (SemilatticeInf.toPartialOrder.{u_1} δ (Lattice.toSemilatticeInf.{u_1} δ (DistribLattice.toLattice.{u_1} δ (instDistribLatticeOfLinearOrder.{u_1} δ inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._18))))) (f a) (f b)) (Set.image.{u, u_1} α δ f (Set.Icc.{u} α (PartialOrder.toPreorder.{u} α (ConditionallyCompletePartialOrderSup.toPartialOrder.{u} α (ConditionallyCompletePartialOrder.toConditionallyCompletePartialOrderSup.{u} α (ConditionallyCompleteLattice.toConditionallyCompletePartialOrder.{u} α (ConditionallyCompleteLinearOrder.toConditionallyCompleteLattice.{u} α inst._@.Mathlib.Topology.Order.IntermediateValue._3882871496._hygCtx._hyg._6))))) a b))))))))))))))))",
+    "fragment": "none"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "imported-kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [
+    "lean4export-3.1.0-stream-faithfulness",
+    "axeyum-lean-import-wire-translation",
+    "lean4export-3.1.0-delivered-bytes-are-the-intended-export",
+    "Classical.choice",
+    "Quot",
+    "Quot.lift",
+    "Quot.mk",
+    "Quot.sound",
+    "String.Internal.append",
+    "propext",
+    "wrapped._@.Mathlib.Topology.Defs.Filter.2998874748._hygCtx._hyg.2"
+  ],
+  "evidence": [
+    {
+      "id": "import-intermediate_value_Icc",
+      "kind": "kernel-term",
+      "supports": "`intermediate_value_Icc`'s Lean proof term type-checks against this statement in the independent Axeyum kernel.",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-lean-import fail-closed translation",
+        "Kernel::add_declaration (independent re-derivation of the type from the proof term)",
+        "SHA-256 pin of the exported stream bytes"
+      ],
+      "checker_command": "test \"$(cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -c 'AXEYUM-IMPORT-FACT|F:ivt-mathlib-import-intermediate-value-icc|')\" -ge 1",
+      "artifact": "artifacts/lean-imports/ivt-intermediate-value-icc.ndjson",
+      "notes": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. `lean4export_census` reports 3142 declaration records / 3585 admitted declarations for the transitive dependency closure of `intermediate_value_Icc` at Mathlib commit c5ea00351c28e24afc9f0f84379aa41082b1188f (module: see MANIFEST.json), all admitted by `Kernel::add_declaration` with ZERO declines. `Kernel::render_lean` of the admitted type is `formal.statement` verbatim. the constructive general form is F:creal-ivt-approx (row 1), the boundary refutation is F:creal-ivt-exact-root-decides-sign (row 2)."
+    },
+    {
+      "id": "footprint-intermediate_value_Icc",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: the imported proof term's trusted-declaration footprint inside the imported environment, plus the three import-route assumptions this route always carries.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint (our kernel, over the imported environment)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -c 'AXEYUM-IMPORT-FACT|F:ivt-mathlib-import-intermediate-value-icc|'",
+      "notes": "`Kernel::axiom_footprint` over the imported environment reports [Classical.choice, Quot, Quot.lift, Quot.mk, Quot.sound, String.Internal.append, propext, wrapped._@.Mathlib.Topology.Defs.Filter.2998874748._hygCtx._hyg.2] -- eight names, not Lean's own three (`#print axioms` reports [propext, Classical.choice, Quot.sound] for both theorems at this pinned commit, per docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md section 3). The extra five are this kernel's finer-grained classification of the Quotient package (Quot itself, Quot.lift and Quot.mk alongside Quot.sound -- documented in fact.schema.json's proof_route field as 'must not be silently reconciled to Lean's'), plus two names this specific dependency closure reaches that the three hand-picked Init/Std imports never did: a String.Internal.append opaque and a wrapped._@.Mathlib.Topology.Defs.Filter opaque wrapper from a well-founded-recursion definition somewhere in the Filter machinery both theorems' proofs transitively use. Neither is a defect in the translation; both are real trusted declarations Mathlib's own proof rests on for this statement, and Kernel::axiom_footprint is reporting them faithfully. The first three entries in this array are the assumptions the IMPORT ROUTE adds on top: that the exporter faithfully rendered Lean's environment, that this crate's NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export (format 3.1 has no footer, so completion is relative to the bytes handed over)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-import, lane row4-labeled-import -- our independent kernel ADMITTED Mathlib's proof term, together with the whole transitive dependency closure the export pulled in. This project did NOT construct the proof; see proof_route. This is ADR-0603 row 4 (labeled import) for this statement family.",
+    "source": "official lean4export NDJSON 3.1.0 stream artifacts/lean-imports/ivt-intermediate-value-icc.ndjson, declaration `intermediate_value_Icc` from mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f under Lean 4.30.0",
+    "prior_art": [
+      {
+        "who": "the Mathlib community",
+        "what": "`intermediate_value_Icc` in mathlib4",
+        "where": "leanprover-community/mathlib4, commit c5ea00351c28e24afc9f0f84379aa41082b1188f",
+        "year": 2026,
+        "attribution": "read directly from the pinned lean4export stream this fact cites, and independently admitted by Kernel::add_declaration; this lane did not consult a paper or a secondary source."
+      }
+    ]
+  },
+  "notes": "ADR-0603 row 4 (labeled import) for this statement family. NOT a claim that this project proved this theorem, and NOT counted in any axiom-free or originated headline: proof_route is imported-kernel-lean and axiom_footprint is non-empty by construction (the validator rejects an empty footprint on this route). Compare against the general constructive form this ledger DOES claim as ours: the constructive general form is F:creal-ivt-approx (row 1), the boundary refutation is F:creal-ivt-exact-root-decides-sign (row 2). See ADR-1090 and docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md."
+}
