@@ -1,5 +1,7 @@
 # Lane: quadratic-reciprocity
 
+<!-- plan-section: lane-status -->
+
 Status: **the routing question is answered; the law is NOT proved** (2026-08-31)
 
 ## What this lane was asked
