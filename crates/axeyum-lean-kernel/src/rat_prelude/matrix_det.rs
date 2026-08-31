@@ -2855,13 +2855,7 @@ fn declare_alt_sign_succ_add(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 /// `nat_prelude::finite`'s is `pub(super)` there and `int_prelude`'s two are
 /// private, so `int_prelude/wilson.rs` and `int_prelude/prod.rs` each keep
 /// their own as well.
-fn select_nat_true(
-    d: &mut IntDev<'_>,
-    cond: ExprId,
-    a: ExprId,
-    b: ExprId,
-    heq: ExprId,
-) -> ExprId {
+fn select_nat_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
     let true_value = d.bool_true();
     let flipped = d.bool_symm(cond, true_value, heq);
     let motive = d.bool_eq_motive(true_value, &|d, value| {
@@ -2873,13 +2867,7 @@ fn select_nat_true(
 }
 
 /// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
-fn select_nat_false(
-    d: &mut IntDev<'_>,
-    cond: ExprId,
-    a: ExprId,
-    b: ExprId,
-    heq: ExprId,
-) -> ExprId {
+fn select_nat_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
     let false_value = d.bool_false();
     let flipped = d.bool_symm(cond, false_value, heq);
     let motive = d.bool_eq_motive(false_value, &|d, value| {
@@ -3406,9 +3394,7 @@ fn declare_double_minor_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
                 let inner = rmat_skip(d, p, u, c);
                 rmat_skip(d, p, sv, inner)
             };
-            let forward = nat_eq_to_rat(d, low, high, comm_at, &|d, t| {
-                d.apply(mat, &[row_to, t])
-            });
+            let forward = nat_eq_to_rat(d, low, high, comm_at, &|d, t| d.apply(mat, &[row_to, t]));
             let at_low = d.apply(mat, &[row_to, low]);
             let at_high = d.apply(mat, &[row_to, high]);
             if hi {
@@ -3736,10 +3722,7 @@ fn declare_laplace_summand(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kern
 /// the guard is false along the reindexing — `matSkip p` misses `p` — and
 /// [`declare_unskip_mat_skip`] recovers the inner column, in one step for both
 /// of its occurrences.
-fn declare_laplace_summand_row_zero(
-    d: &mut IntDev<'_>,
-    p: RatPrelude,
-) -> Result<(), KernelError> {
+fn declare_laplace_summand_row_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let mty = mat_ty(d);
 
@@ -3975,7 +3958,10 @@ fn declare_laplace_summand_row_i(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
         let permuted = rmul(d, sign_qi, tail);
         let negged_right = rneg(d, permuted);
         let s5 = {
-            let pf = d.lemma(p.mul_perm4, &[sign_k, entry_top, sign_qi, entry_row, det_to]);
+            let pf = d.lemma(
+                p.mul_perm4,
+                &[sign_k, entry_top, sign_qi, entry_row, det_to],
+            );
             rcongr(d, signed_prod, permuted, pf, &|d, t| rneg(d, t))
         };
 
@@ -4137,7 +4123,10 @@ fn declare_laplace_summand_row_i(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
                 let t3 = rmul(d, entry_row, t2);
                 rmul(d, sign_qi, t3)
             };
-            let s4 = d.lemma(p.mul_perm4, &[sign_k, entry_top, sign_qi, entry_row, det_to]);
+            let s4 = d.lemma(
+                p.mul_perm4,
+                &[sign_k, entry_top, sign_qi, entry_row, det_to],
+            );
 
             // 5. `altSign (succ q'' + succ i) = altSign (q'' + i)`, which is
             //    `altSign_succ_add` under a `neg` followed by `neg_neg`.
@@ -4182,9 +4171,8 @@ fn declare_laplace_summand_row_i(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
             );
 
             let flipped = NatOps::symm(d, skipped_q, k, hsel);
-            let moved = nat_rewrite_prop(d, k, skipped_q, flipped, at_k, &|d, t| {
-                goal_at(d, t, sqp)
-            });
+            let moved =
+                nat_rewrite_prop(d, k, skipped_q, flipped, at_k, &|d, t| goal_at(d, t, sqp));
             d.lam_fv(hs_fv, hyp, moved)
         };
 
@@ -4428,9 +4416,8 @@ fn declare_det_row_expansion(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 
     // At `i = 0` the goal IS `det_succ`: `Nat.add q 0 ≡ q`, so the two
     // statements are the same term.
-    let at_row_zero = |d: &mut IntDev<'_>, mat: ExprId, m: ExprId| -> ExprId {
-        d.lemma(p.det_succ, &[mat, m])
-    };
+    let at_row_zero =
+        |d: &mut IntDev<'_>, mat: ExprId, m: ExprId| -> ExprId { d.lemma(p.det_succ, &[mat, m]) };
 
     let base = |d: &mut IntDev<'_>| -> ExprId {
         let nat = d.nat_ty();
