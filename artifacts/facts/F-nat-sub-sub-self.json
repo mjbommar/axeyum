@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-sub-sub-self",
+  "title": "Subtracting a truncated difference recovers the subtrahend, over the constructed naturals",
+  "statement": "For constructed naturals n and k with k <= n, n - (n - k) = k, where `-` is this kernel's truncating `Nat.sub`. `Kernel::axiom_footprint` for this declaration is EMPTY. WHAT THIS DOES NOT CLAIM. The bound k <= n is essential and the unbounded form is FALSE: `Nat.sub` truncates, so at n = 3, k = 5 the left side is 3 and the right side is 5. Equivalently: the reflection k -> n - k is an involution ON [0,n] and not globally, which is why the injectivity argument it feeds must be the bounded one.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.sub_sub_self : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x1 x0) -> Eq.{1} AxNat (AxNat.sub x0 (AxNat.sub x0 x1)) x1)))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Nat.sub_sub_self"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-sub-cancel-left",
+    "F:nat-sub-add-cancel"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.sub_sub_self",
+      "kind": "kernel-term",
+      "supports": "Nat.sub_sub_self is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.sub_sub_self 2>/dev/null | grep -cE '^Nat\\.sub_sub_self[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Nat.sub_sub_self",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Nat.sub_sub_self",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the nat prelude's trusted surface is empty, which bounds Nat.sub_sub_self.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it, including Nat.sub_sub_self. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "generated-unreviewed",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored. `title`, `statement` and `notes` were then REPLACED by hand (lane first-supplementary-residue, ADR-1235); every other field is the generator's output unmodified."
+  },
+  "notes": "Declared in `nat_prelude/order.rs` for ADR-1235, immediately after `Nat.add_sub_cancel_left`, which it consumes -- declaring it earlier produced `UnknownConst` across all 297 nat_prelude tests, naming neither lemma. No induction of its own: `Nat.sub_add_cancel` gives (n - k) + k = n, rewriting only the OUTER n of n - (n - k) along it turns the goal into ((n - k) + k) - (n - k) = k, and `Nat.add_sub_cancel_left` closes that. ITS CONSUMER is the reflection k -> (m-1) - k on [0,m), whose `Nat.injectiveOn` follows from this lemma alone through `int_prelude/wilson.rs`'s `injective_of_involutive_local` -- any BOUNDED involution is injective on its own domain. `Nat.conjugate_injective` cannot be used for that: its hypothesis is an UNBOUNDED involution law, which this map does not satisfy. `Nat.mapsInto` for the same reflection is a separate two-line bound (`Nat.sub_le` then `Nat.sub_lt`) and does not use this lemma. The bound's necessity is exercised by the C3 control of `docs/research/09-decisions/adr-1235-first-supplementary-residue-checks.py`."
+}
