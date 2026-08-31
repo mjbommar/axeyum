@@ -5,7 +5,7 @@
 **Your lane's block (`PARTIAL`, gauss-piece-3, 2026-08-31).** Verified
 ADR-0990's five-item piece-3 sizing against the tree before starting (all
 citations confirmed present or absent as ADR-0990 said, plus two items
-found already de-risked by unrelated same-day work -- see ADR-1050).
+found already de-risked by unrelated same-day work -- see ADR-1070).
 Landed two of the five items in full, both axiom-free, both admitted by
 the kernel on the FIRST attempt:
 
@@ -16,14 +16,29 @@ the kernel on the FIRST attempt:
   `prodRange_mul` + `prodRange_const_pow` + `factorial`'s own defeq unfold,
   no induction of its own).
 - **The sign-product item** (ADR-0990: "no existing analogue found"):
-  `Int.prodRangeIf_constEqPowCount` (`prodRangeIf pred (fun _ => a) n =
-  pow a (Nat.countRange pred n)`, built GENERICALLY in `euler_theorem.rs`
-  because Euler's theorem's own module doc names the identical shape as
-  its remaining gap -- one lemma serves both targets) plus its one-line
-  Gauss corollary `Int.gaussSignProdEqPowNegOneOfCount`.
+  `Int.prodRangeIf_const_eq_pow_count` (`prodRangeIf pred (fun _ => a) n =
+  pow a (Nat.countRange pred n)`) plus its one-line Gauss corollary
+  `Int.gaussSignProdEqPowNegOneOfCount`.
 
-Full route, citations, and the precise sizing of what remains: **ADR-1050**
-(`docs/research/09-decisions/adr-1050-gauss-lemma-piece-3-two-of-five-items-land-generically-reusable-with-euler.md`).
+**Merge note (2026-08-31, post-report):** this lane built
+`prodRangeIf_const_eq_pow_count` independently, inline in
+`euler_theorem.rs`, on the same reasoning as `euler-spine`'s own module
+doc (Euler's theorem needs the identical shape). The `euler-spine` lane
+had landed the SAME theorem on `main` first, in its own file
+`euler_prod_pow.rs`, with a fact already registered
+(`F:int-prodrangeif-const-eq-pow-count`) -- invisible to this lane until
+`git merge main` pulled it in, because the two declarations sat far
+enough apart in `IntPrelude`'s struct to merge textually clean under one
+Rust field name with two different kernel name strings. Verified the two
+statements are the identical proposition (same arity, same `pred`/`a`/`n`
+binder order, same `selector` construction) before resolving: dropped
+this lane's duplicate construction and its four private helpers, kept
+`euler_prod_pow.rs`'s. `Int.gaussSignProdEqPowNegOneOfCount` needed no
+change (arity/order matched). Full account: ADR-1070's "Landed: the
+sign-product item" section.
+
+Full route, citations, and the precise sizing of what remains: **ADR-1070**
+(`docs/research/09-decisions/adr-1070-gauss-lemma-piece-3-two-of-five-items-land-generically-reusable-with-euler.md`).
 Read it before starting the next session on this -- it verifies against
 the tree two things ADR-0990 could not have known: `Int.modEq_prodRange`/
 `Int.modEq_prodRange_lt` and `Int.mod_eq_of_nat_mod_eq` (the `Nat`/`Int`
@@ -31,7 +46,7 @@ the tree two things ADR-0990 could not have known: `Int.modEq_prodRange`/
 item 1 and item 3 below.
 
 **What remains -- three items, NOT attempted this session**, each sized in
-ADR-1050 with the exact lemma names checked or flagged unchecked:
+ADR-1070 with the exact lemma names checked or flagged unchecked:
 
 1. The per-term congruence `a·k ≡ ε_k · gaussFold(pp,a,k) [pp]` for `k =
    1..m` -- a `Bool`-case-split proof comparable in size to
@@ -50,7 +65,7 @@ ADR-1050 with the exact lemma names checked or flagged unchecked:
    land, since every structural piece (induction, permutation, sign
    product, scaled-product identity) now exists.
 
-**Verify each of ADR-1050's citations in-tree before treating them as
+**Verify each of ADR-1070's citations in-tree before treating them as
 real** (the standing rule: a handoff's "what remains" is a lower bound on
 one route's cost, not a fact about the cheapest route) -- this session
 found two of ADR-0990's own citations already stale in the OTHER
@@ -76,4 +91,4 @@ landing -- no collisions.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-31 | gauss-piece-3 | `Int.prodRange_const_pow`, `Int.prodRange_scaledIndexEqPowMulFactorial` (Gauss's-lemma item A, `∏(a·k)=a^m·m!`, complete) and `Int.prodRangeIf_constEqPowCount` (built generically for both Euler's theorem and Gauss's lemma) + `Int.gaussSignProdEqPowNegOneOfCount` (Gauss's-lemma sign-product identity, complete) land axiom-free toward Gauss's lemma's connecting theorem (ADR-1050). Two of ADR-0990's five piece-3 items now closed; three remain, precisely sized in ADR-1050 with two of ADR-0990's own "not confirmed present" citations verified present. |
+| 2026-08-31 | gauss-piece-3 | `Int.prodRange_const_pow`, `Int.prodRange_scaledIndexEqPowMulFactorial` (Gauss's-lemma item A, `∏(a·k)=a^m·m!`, complete) and `Int.gaussSignProdEqPowNegOneOfCount` (Gauss's-lemma sign-product identity, complete, a corollary of `euler-spine`'s `Int.prodRangeIf_const_eq_pow_count` -- this lane's own independent construction of that shared lemma was dropped as a duplicate on merge, see the merge note above) land axiom-free toward Gauss's lemma's connecting theorem (ADR-1070). Two of ADR-0990's five piece-3 items now closed; three remain, precisely sized in ADR-1070 with two of ADR-0990's own "not confirmed present" citations verified present. |

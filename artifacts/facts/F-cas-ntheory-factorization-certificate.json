@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ntheory-factorization-certificate",
+  "title": "axeyum-cas's prime factorization certificate is independently re-checked across eight instances, including negatives and units",
+  "statement": "For each n in {1, -1, 12, -12, 360, 1024, 2147483647, 1999966} (the last = 999983 * 2, a large prime times two), axeyum-cas's ntheory_certify::certify_factorization produces a FactorizationCertificate -- the (prime, exponent) list together with a Pratt certificate per prime base -- and ntheory_certify::check_factorization_certificate independently re-derives and confirms: the bases are strictly ascending (canonical, duplicate-free), every exponent is at least one, the product prod(base^exponent) equals |n| exactly, and every base is itself certified prime via the independent Pratt route (F:cas-ntheory-pratt-primality-mersenne89's checker, check_primality_certificate). n=0 has no certificate -- the empty product is 1 and no finite product of primes is 0, so certify_factorization(0) correctly returns None.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(assert (and\n  (forall ((n Int)) (=> (member n (1 -1 12 -12 360 1024 2147483647 1999966))\n    (exists ((factors (List (Pair Int Nat))))\n      (and (strictly-ascending (map fst factors))\n           (forall ((e Nat)) (=> (member e (map snd factors)) (>= e 1)))\n           (= (prod-pow factors) (abs n))\n           (forall ((p Int)) (=> (member p (map fst factors)) (is-prime p)))))))\n  (not (exists ((factors (List (Pair Int Nat)))) (certifies-factorization 0 factors)))))\n; independently re-derived by ntheory_certify::check_factorization_certificate,\n; which itself calls check_primality_certificate (not certify_prime) per factor base.",
+    "fragment": "cas-ntheory-factorization-certificate",
+    "free_symbols": ["n", "factors"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cas-ntheory-pratt-primality-mersenne89"
+  ],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.factorization-certificate-not-kernel-reconstructed",
+    "cas.exact-i128-modular-arithmetic-mul-mod-pow-mod-written-independently-of-ntheory",
+    "cas.reuses-the-pratt-primality-checker-per-factor-base-not-the-pratt-producer"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-factorization-eight-instances",
+      "kind": "witness-replay",
+      "supports": "certify_factorization produces a canonical prime factorization for eight instances spanning negatives, units, a large-prime-times-two, and a Mersenne prime, and check_factorization_certificate independently re-derives the product identity plus per-factor primality; certify_factorization(0) correctly declines",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::certify_factorization (untrusted producer: crate::ntheory::factorize(n))",
+        "ntheory_certify::check_factorization_certificate (independent checker: re-derives the strictly-ascending/exponent-positivity/product-identity guards directly, and re-certifies each base's primality via check_primality_certificate rather than trusting the producer's own factor list)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ntheory_certify::ntheory_certify_tests::certifies_factorizations_including_negatives_and_units -- --exact 2>/dev/null | grep -cE '^test ntheory_certify::ntheory_certify_tests::certifies_factorizations_including_negatives_and_units \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/ntheory_certify.rs",
+      "notes": "cas-internal (ADR-0601 SS2): checker_command names only axeyum-cas. check_factorization_certificate's per-factor primality check calls check_primality_certificate (the CHECKER), not certify_prime (the PRODUCER) -- grepped directly at the F5 guard site -- so this route does not silently trust the factorization's own primality claim about its bases; it re-derives it via the same independent Pratt route as F:cas-ntheory-pratt-primality-mersenne89. Proved by breaking: see ADR-1055 for the break/restore transcript run during registration."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-cas ntheory_certify::certify_factorization / ntheory_certify::check_factorization_certificate (crates/axeyum-cas/src/ntheory_certify.rs, landed per ADR-0745); this fact registers it into the ledger per ADR-1055",
+    "source": "the existing unit test ntheory_certify::ntheory_certify_tests::certifies_factorizations_including_negatives_and_units, read directly from crates/axeyum-cas/src/ntheory_certify/ntheory_certify_tests.rs",
+    "prior_art": [
+      {
+        "who": "Euclid; Gauss",
+        "what": "existence and uniqueness of prime factorization (the Fundamental Theorem of Arithmetic)",
+        "year": -300,
+        "where": "Euclid's Elements, Book IX (existence); Gauss's Disquisitiones Arithmeticae, 1801 (the modern uniqueness statement)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-1055 and ADR-0601 SS2. No Kernel::add_declaration term exists for this claim. ADR-0603 row 3. This fact certifies EXISTENCE and CANONICALITY of the factorization for eight specific integers, not uniqueness of factorization in general -- CLAUDE.md's own gotcha on nat_prelude/factorization.rs notes that this kernel has no List/Finset/product type in which multiset-uniqueness of a general factorization could even be stated; that is a separate, harder question this fact does not touch. depends_on F:cas-ntheory-pratt-primality-mersenne89 because check_factorization_certificate's per-factor primality guard is literally the same check_primality_certificate route that fact establishes."
+}

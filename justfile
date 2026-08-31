@@ -428,6 +428,13 @@ facts:
     # ...and its controls: 9 cases, then 8 guard deletions each required to
     # kill EXACTLY ONE.
     bash scripts/tests/test-proposition-duplication.sh
+    # ADR-1050: the seven L0 gates must be wired to something that runs
+    # on its own. Measured 2026-08-31 they were in NO automated context
+    # -- not ci.yml, not hooks/pre-push, not scripts/local-ci.sh.
+    python3 scripts/check-l0-gate-enforcement.py
+    # ...and its controls: 11 cases, six guards each required to kill
+    # the test that names it.
+    python3 -m unittest scripts.tests.test_l0_gate_enforcement
     # ADR-0810: the above engine wired into the REAL write set (measured, not
     # assumed) -- artifacts/facts/<id>.json, the pins manifest, and the
     # safety-matrix TSV/MD, all full rebuilds reusing validate-facts.py's

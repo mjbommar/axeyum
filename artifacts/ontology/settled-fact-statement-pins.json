@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1967,
+    "min_identity_bound": 1973,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -171,6 +171,30 @@
       "language": "cas-term",
       "statement_sha256": "bba2e01dcdd50715f6fa51042d2893a6a1c79d760b68c59029a30731dccdefac",
       "prose_sha256": "12ccd65e1d970453eeece296f4906d5e2cf3f9f2b45748a5ee0086dcb9237a7d"
+    },
+    {
+      "fact_id": "F:cas-ntheory-compositeness-certificate",
+      "language": "cas-term",
+      "statement_sha256": "7a4337443db1856d02b2bb9c227f3eb7d6433c8587d0f8820c1269dea2460b15",
+      "prose_sha256": "70fc7a1fa27740b77e28ef6017a3a1a5ae999d9322be82f3645d217837fb6b92"
+    },
+    {
+      "fact_id": "F:cas-ntheory-crt-certificate",
+      "language": "cas-term",
+      "statement_sha256": "257569cfa2634eafa6bb431de880d34fc7a9c7dcdee240623bf52770e2140838",
+      "prose_sha256": "43d4c8a1eaf6b9153ac313173f88c7b1ee7ff59170d70ad84086cbe5599bd163"
+    },
+    {
+      "fact_id": "F:cas-ntheory-factorization-certificate",
+      "language": "cas-term",
+      "statement_sha256": "8aba7af6c743e779bdcd9c8a7e69763d29fe5ea668dd3f9e610b1cfac6b0f52c",
+      "prose_sha256": "3cce4953ab2569dd7dc048a924c35ad5e3ace5fd5a2266e76a288ee26f4ca035"
+    },
+    {
+      "fact_id": "F:cas-ntheory-pratt-primality-mersenne89",
+      "language": "cas-term",
+      "statement_sha256": "236df8cc35c6fc950b0fa7403c852d7218950df3a5390208478a469b65d837b2",
+      "prose_sha256": "af0e3f9f43de96303b113a9e37e4a8c3b3463d4fe65a4dd6608d99eb65b6e917"
     },
     {
       "fact_id": "F:cas-partial-fractions-mixed-general-case",
@@ -6710,6 +6734,20 @@
       "kernel_theorem": "Int.euler_unit_injective"
     },
     {
+      "fact_id": "F:int-euler-unit-perm-injective",
+      "language": "lean4",
+      "statement_sha256": "53d350ce1a50a12c9a13d1936a683450ab2d319b8e30165c9a649bcda11d0b74",
+      "prose_sha256": "457b28a2ba4a41541c4ff0210878d5c56ae192829534337fc99ad7a36c1e571f",
+      "kernel_theorem": "Int.euler_unit_perm_injective"
+    },
+    {
+      "fact_id": "F:int-euler-unit-perm-maps-into",
+      "language": "lean4",
+      "statement_sha256": "58454a0840243ca4698bc2644fe4d4a4baffedc19afea8f40f652e9a761bc25d",
+      "prose_sha256": "889c1aa5e9a790537bd6f8b9f08d08db209abef4a52e9f3de5242f85f14366b1",
+      "kernel_theorem": "Int.euler_unit_perm_maps_into"
+    },
+    {
       "fact_id": "F:int-even",
       "language": "lean4",
       "statement_sha256": "d7db4c092f6952fc3669d6a3bc2cd1722900fd769fbecae922a77dca3e01e252",
@@ -6771,6 +6809,13 @@
       "statement_sha256": "301916642cdf35183a5b13969ad18e7f4a310300c263c78fe9205c865883c43f",
       "prose_sha256": "9796ccdb23565661b5bd07433f755f538b7481c5fd1d7d15f8643bb37d3a62f2",
       "kernel_theorem": "Int.gauss_lemma"
+    },
+    {
+      "fact_id": "F:int-gausssignprodeqpownegoneofcount",
+      "language": "lean4",
+      "statement_sha256": "de767430d001f9b8705fc3a40da878977a61f60fa3519e844e75ec3932d6d669",
+      "prose_sha256": "562478be6f3ab607f5eb5cf7e3b41da1576e0e54b4c1e46ddac3f01271f5db66",
+      "kernel_theorem": "Int.gaussSignProdEqPowNegOneOfCount"
     },
     {
       "fact_id": "F:int-gcd-comm",
@@ -7657,6 +7702,13 @@
       "kernel_theorem": "Int.prodRange_congr_lt"
     },
     {
+      "fact_id": "F:int-prodrange-constpow",
+      "language": "lean4",
+      "statement_sha256": "106b56a63b90942389f62e68ade9075543b40e163783c01e2cdd937d3275d587",
+      "prose_sha256": "fde81f6dd71116a380362ae506e5bfd4b05899a1885e30d535bfbdb1ae7fdc33",
+      "kernel_theorem": "Int.prodRange_constPow"
+    },
+    {
       "fact_id": "F:int-prodrange-mul",
       "language": "lean4",
       "statement_sha256": "73adc18d62392fda66b5cef058ce83c6a4efe77a51f360c898bfcac8f31f7eea",
@@ -7669,6 +7721,13 @@
       "statement_sha256": "a5a18c87bf67edb47eaf563a9c8d1d0b02a021aae5136a566418175cb8617c25",
       "prose_sha256": "50346e09d132a632b9304a1e5db38fe729f187b1b9d908ccf14a2eeb8aed9174",
       "kernel_theorem": "Int.prodRange_permute"
+    },
+    {
+      "fact_id": "F:int-prodrange-scaledindexeqpowmulfactorial",
+      "language": "lean4",
+      "statement_sha256": "9369cff44aed45d0fca755436102f7e12a4b20e101ad975d00d907b5faa7044e",
+      "prose_sha256": "27e8d8fc850a2e31151ce052b9e5d832ae02739059c684998a92af236ba5bc45",
+      "kernel_theorem": "Int.prodRange_scaledIndexEqPowMulFactorial"
     },
     {
       "fact_id": "F:int-prodrange-shiftfront",
@@ -7704,6 +7763,13 @@
       "statement_sha256": "f49de680fe365a31fa4e9858188a146f7a81e21b9360545a65ff685866328746",
       "prose_sha256": "86f353c640240e400ce8edf83b52a09fd1a56e6475b56f26a151361b38c7fa48",
       "kernel_theorem": "Int.prodRange_zero"
+    },
+    {
+      "fact_id": "F:int-prodrangeif-const-eq-pow-count",
+      "language": "lean4",
+      "statement_sha256": "55a94bd8d0c52597086b7ccaeb3179a777a93fe5ae05816b24da6ce6e96b0099",
+      "prose_sha256": "4415647a389b510aeddc60f21cda2d1cb1ecb244dbbcdc7b13df9b103e103467",
+      "kernel_theorem": "Int.prodRangeIf_const_eq_pow_count"
     },
     {
       "fact_id": "F:int-prodrangeif-permute",
@@ -18410,6 +18476,12 @@
       "kernel_theorem": "Rat.markov_inequality"
     },
     {
+      "fact_id": "F:rat-matinv2-matmul-top-left",
+      "language": "lean4",
+      "statement_sha256": "7118f264718caeb9e84e8b5e07292026d0f14a943fdf748c4e4ca1fd6b1590cc",
+      "prose_sha256": "0e9de7748a07a830a1e59fc101c15d3e18f220aee32cd8eb560069e990890071"
+    },
+    {
       "fact_id": "F:rat-matmul-assoc",
       "language": "lean4",
       "statement_sha256": "edd80215de9e0e5035dedeee7dda9ec7862dbdc2ab900b9267a4299986b1c77c",
@@ -18450,6 +18522,12 @@
           "prose_sha256": "ec72fad855adca45a3eead315e61de558ab864077d7a1e3776203c67818369c5"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-matmul-matinv2-top-left",
+      "language": "lean4",
+      "statement_sha256": "244932d7e46e42f6de3de5140ec2fc0637eb2392afe687255e929c3ad3907f46",
+      "prose_sha256": "a98c851e61d6b533dedaa737b2c3e54516e295bc9f6e0380bba2e29a696d5fe4"
     },
     {
       "fact_id": "F:rat-mattranspose-mul",

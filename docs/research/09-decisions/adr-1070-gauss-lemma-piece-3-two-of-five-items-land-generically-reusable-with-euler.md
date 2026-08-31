@@ -1,4 +1,4 @@
-# ADR-1050: Gauss's lemma piece 3 -- two of five connecting-theorem items land, one shared with Euler's theorem
+# ADR-1070: Gauss's lemma piece 3 -- two of five connecting-theorem items land, one shared with Euler's theorem
 
 Status: accepted
 Date: 2026-08-31
@@ -6,14 +6,19 @@ Index-summary: Three theorems land axiom-free toward Gauss's lemma's
 connecting theorem (`a^m ≡ (-1)^gaussNegCount [pp]`, ADR-0970/ADR-0985/
 ADR-0990's five-item piece-3 sizing): `Int.prodRange_const_pow` and
 `Int.prodRange_scaledIndexEqPowMulFactorial` close item A
-(`∏(a·k) = a^m·m!`) in full; `Int.prodRangeIf_constEqPowCount` (built
-generically, in `euler_theorem.rs`, because Euler's theorem needs the
-identical shape) plus its one-line Gauss corollary
-`Int.gaussSignProdEqPowNegOneOfCount` close the "product of signs equals
-`(-1)^count`" item ADR-0990 flagged as having "no existing analogue
-found". The remaining three items (a per-term `Nat`/`Int` congruence
-bridge, `gcd(m!,pp)=1`, and the final assembly/cancellation) are NOT
-attempted -- precisely sized below.
+(`∏(a·k) = a^m·m!`) in full. The "product of signs equals `(-1)^count`"
+item ADR-0990 flagged as having "no existing analogue found" closes via
+`Int.gaussSignProdEqPowNegOneOfCount`, a one-line corollary of
+`Int.prodRangeIf_const_eq_pow_count` -- this lane built that lemma
+independently (as `Int.prodRangeIf_constEqPowCount` in `euler_theorem.rs`)
+before discovering the `euler-spine` lane had landed the SAME proposition
+on `main` first, in its own file `euler_prod_pow.rs`; the two statements
+were confirmed identical (same arity, same `pred`/`a`/`n` binder order,
+same `selector`/`prodRange` construction) and this lane's duplicate was
+dropped in favor of the already-landed, already fact-registered one -- see
+"Merge resolution" below. The remaining three items (a per-term `Nat`/`Int`
+congruence bridge, `gcd(m!,pp)=1`, and the final assembly/cancellation)
+are NOT attempted -- precisely sized below.
 Index-status: accepted
 
 ## Context
@@ -80,44 +85,80 @@ Two theorems, `int_prelude/prod.rs` and the new
 Both admitted by the kernel on the FIRST attempt -- no `TypeMismatch`
 iteration needed for either.
 
-### Landed: the sign-product item, generically, alongside Euler's theorem
+### Landed: the sign-product item -- and a same-day collision with `euler-spine`
 
 `euler_theorem.rs`'s own module doc names its "final assembly" gap's first
 bullet as `prodRangeIf pred (fun _ => a) n = pow a (countRange pred n)`,
 needed for Euler's theorem. Reading `nat_prelude/gauss_lemma.rs`'s module
 doc alongside it, this is the EXACT shape Gauss's lemma needs at `a := -1`
--- so it was built once, generically, in `euler_theorem.rs` rather than
-twice under two names:
+-- so this lane built it once, generically, inline in `euler_theorem.rs`,
+intending it to serve both targets rather than duplicating it. Admitted by
+the kernel on the first attempt after one scratch draft was discarded.
 
-- `Int.prodRangeIf_constEqPowCount : ∀ pred a n, Eq Int (prodRangeIf pred
-  (fun _ => a) n) (pow a (Nat.countRange pred n))`. Induction on `n`,
-  case-splitting the successor step on the symbolic `pred j` via a local
-  `Or (pred j = true) (pred j = false)` eliminator (`IntDev` has none
-  pre-built; `nat_prelude/ops.rs`'s `bool_true_or_false` is hardcoded to
-  `&mut NatDev<'_>`). Each branch collapses `bool_select_int`/
-  `bool_select_nat` via `prod.rs`'s existing `select_int_true`/
-  `select_int_false` plus two new local `Nat`-target copies of the same
-  shape, then chains through the induction hypothesis and `Nat.add`'s own
-  right-recursion defeq (`add C 1 ~ succ C`, `add C 0 ~ C`).
-- `Int.gaussSignProdEqPowNegOneOfCount` (new file
-  `int_prelude/gauss_sign_product.rs`): a one-line corollary, applying the
-  above at `pred := fun j => Nat.gaussSignNeg pp a (succ j)` (the identical
-  lambda `Nat.gaussNegCount`'s own `Definition` uses, so
-  `Nat.countRange pred m` is defeq `gaussNegCount pp a m`) and `a := neg
-  one`.
+**That construction was a genuine duplicate.** The `euler-spine` lane had
+independently built and landed the SAME theorem on `main` (branched before
+this session started, merged to `main` afterward, not visible until this
+session's `git merge main` pulled it in): `Int.prodRangeIf_const_eq_pow_count`
+in its own file `int_prelude/euler_prod_pow.rs`, with a fact already
+registered (`F:int-prodrangeif-const-eq-pow-count`). Same Rust struct
+field name (`prod_range_if_const_eq_pow_count`), two different kernel name
+strings (`euler-spine`'s `"prodRangeIf_const_eq_pow_count"` vs. this
+lane's `"prodRangeIf_constEqPowCount"`) -- a `DeclarationExists` collision
+on merge, invisible to `git` because the two declarations sat far enough
+apart in the struct to merge textually clean.
 
-Both admitted by the kernel on the first attempt after one scratch draft
-was discarded (an initial hand-derivation left placeholder/`unreachable!()`
-code mid-construction and was rewritten cleanly before compiling).
+**Resolution, checked signature-by-signature before deciding, not assumed
+from the name:** `euler_prod_pow.rs`'s statement is `∀ pred a n, Eq Int
+(prodRange (selector pred (fun _ => a)) n) (pow a (countRange pred n))`
+-- IDENTICAL proposition to this lane's (same `selector`/`bool_select_int`
+construction, same `Int.pow`/`Nat.countRange` pairing), same arity (3:
+`pred`, `a`, `n`), same Pi-binder order (`pred` outermost, `a`, `n`
+innermost -- confirmed by reading the `Pi`/`lam` nesting in `declare_theorem`'s
+`ty`/`value` construction, not inferred from the argument list). So this
+lane's inline construction (the helpers `bool_true_or_false_int`,
+`select_nat_true_local`, `select_nat_false_local`, `const_int_fn`, and the
+function `declare_prod_range_if_const_eq_pow_count`, all in
+`euler_theorem.rs`) was DELETED in favor of `euler_prod_pow.rs`'s already-
+landed, already fact-registered version -- along with the now-unused
+`select_int_true`/`select_int_false` import. `int_prelude.rs`'s field now
+points at `euler-spine`'s kernel name string,
+`"prodRangeIf_const_eq_pow_count"`.
 
-### Verification
+Because the arity and binder order matched exactly, every downstream
+consumer needed NO changes: `Int.gaussSignProdEqPowNegOneOfCount`'s
+`d.lemma(p.prod_range_if_const_eq_pow_count, &[pred, neg_one, m])` call and
+this lane's own test applying the theorem at concrete `pred`/`a`/`n`
+continued to work unchanged against the surviving declaration.
+
+`Int.gaussSignProdEqPowNegOneOfCount` itself (new file
+`int_prelude/gauss_sign_product.rs`) is unchanged: a one-line corollary,
+applying `Int.prodRangeIf_const_eq_pow_count` at `pred := fun j =>
+Nat.gaussSignNeg pp a (succ j)` (the identical lambda `Nat.gaussNegCount`'s
+own `Definition` uses, so `Nat.countRange pred m` is defeq `gaussNegCount
+pp a m`) and `a := neg one`.
+
+### Verification (post-merge, against `main` including `euler-spine`)
 
 `cargo test -p axeyum-lean-kernel --lib int_prelude::` -- 56 passed, 0
-failed (up from 53 at session start), including four new concrete
-instantiation tests (one per landed theorem, each checked against a
-hand-built direct computation AND the general theorem's own instantiation,
-per the standing rule that a symbolic accept and a concrete check fail on
-disjoint defect classes):
+failed (this lane's four tests all present and green; the count is a
+coincidence of this merge -- `euler-spine`'s own commits added tests
+elsewhere in the crate that are not all under the `int_prelude::` prefix,
+and this lane's duplicate-construction deletion removed no test of its
+own, since the surviving `euler_prod_pow.rs` carries no dedicated test and
+this lane's `prod_range_if_const_eq_pow_count_computes_and_rejects_an_off_by_one_exponent`
+remains the only direct coverage of the shared theorem). `derived_laws`
+pinned array recounted 227 -> 229 post-merge via
+`scripts/recount-pinned-inventory.py` (two entries: `euler-spine`'s own
+addition plus this lane's now-single, no-longer-duplicated entry for the
+shared theorem). `cargo test -p axeyum-lean-kernel --lib nat_prelude::` --
+268 passed, 0 failed (up from 263 pre-merge, `main`'s `avg_pair`/`minmax`
+additions; `gauss_lemma.rs` itself was touched by `main`'s workspace
+clippy repair, `579db7e02`, and merged with no conflict and no test
+regression). Four concrete instantiation tests remain (one per this
+lane's landed theorem, each checked against a hand-built direct
+computation AND the general theorem's own instantiation, per the standing
+rule that a symbolic accept and a concrete check fail on disjoint defect
+classes):
 
 - `prod_range_const_pow_matches_direct_computation` (`a := 3, n := 4`, both
   sides = 81).
@@ -133,13 +174,13 @@ disjoint defect classes):
 - `prod_range_scaled_index_eq_pow_mul_factorial_matches_direct_computation_at_a_2_m_3`
   (`2*4*6 = 8*3! = 48`).
 
-`cargo test -p axeyum-lean-kernel --lib nat_prelude::` -- 263 passed, 0
-failed (unaffected, sanity check). `derived_laws` pinned array recounted
-223 -> 227 across four commits, via `scripts/recount-pinned-inventory.py`
-each time (never hand-incremented). `cargo clippy -p axeyum-lean-kernel
---lib -- -D warnings` reports the same 8 pre-existing errors before and
-after this session's four commits, none in touched files (confirmed by
-`git log -1 -- <file>` on each, all pre-dating this session).
+`derived_laws` pinned array recounted 223 -> 227 across this lane's four
+pre-merge commits, then 227 -> 229 once more after the merge (above), via
+`scripts/recount-pinned-inventory.py` every time (never hand-incremented).
+`cargo clippy -p axeyum-lean-kernel --lib -- -D warnings` is CLEAN
+post-merge -- the 8 pre-existing errors this lane's earlier commits noted
+(none in this lane's own files) were fixed by `main`'s own workspace
+clippy repair, `579db7e02`, pulled in by this merge.
 
 ## What remains -- three items, precisely sized
 
@@ -248,7 +289,7 @@ cargo test -p axeyum-lean-kernel --lib nat_prelude::
 # snake_case form silently matches nothing and prints an empty result.
 cargo run --release -p axeyum-lean-kernel --example theorem_axiom_footprint -- prodRange_constPow
 cargo run --release -p axeyum-lean-kernel --example theorem_axiom_footprint -- prodRange_scaledIndexEqPowMulFactorial
-cargo run --release -p axeyum-lean-kernel --example theorem_axiom_footprint -- prodRangeIf_constEqPowCount
+cargo run --release -p axeyum-lean-kernel --example theorem_axiom_footprint -- prodRangeIf_const_eq_pow_count
 cargo run --release -p axeyum-lean-kernel --example theorem_axiom_footprint -- gaussSignProdEqPowNegOneOfCount
 # Each prints `integer\tInt.<Name>\t0\t` -- footprint size 0, confirmed
 # 2026-08-31 for all four.

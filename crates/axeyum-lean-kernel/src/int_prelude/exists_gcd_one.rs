@@ -187,9 +187,7 @@ pub(super) fn declare_exists_gcd_one(d: &mut IntDev<'_>) -> Result<(), KernelErr
     Ok(())
 }
 
-/// `Int.exists_gcd_one' : ∀ m n, Lt zero (gcd m n) → Exists (fun g => And
-/// (Lt zero g) (Exists (fun m' => Exists (fun n' => And (Eq Nat (gcd m' n')
-/// 1) (And (Eq Int m (m'*ofNat g)) (Eq Int n (n'*ofNat g)))))))`.
+/// `Int.exists_gcd_one' : ∀ m n, Lt zero (gcd m n) → Exists (fun g => And (Lt zero g) (Exists (fun m' => Exists (fun n' => And (Eq Nat (gcd m' n') 1) (And (Eq Int m (m'*ofNat g)) (Eq Int n (n'*ofNat g)))))))`.
 ///
 /// Reuses [`declare_exists_gcd_one`]'s construction at `g := gcd m n`; `h`
 /// itself is the `Lt zero g` conjunct.

@@ -126,7 +126,17 @@ now. Nothing was deleted.
 | 2026-08-31 | `ea4c884ae` | facts: flip `Nat.size_one`/`Nat.size_eq_zero` to proved |
 | 2026-08-31 | `5018725f7` | feat: `Nat.add_choose_mul_factorial_mul_factorial`, with test (248 pass) |
 | 2026-08-31 | `8f914f7ca` | facts: flip `Nat.add_choose_mul_factorial_mul_factorial` to proved |
+| 2026-08-31 | row3-citability | fix(ntheory_certify): CRT checker's leastness/conflict guards were not independent (`43e598ead`) |
+| 2026-08-31 | row3-citability | four `cas-internal` facts registered (Pratt primality on 2^89-1, compositeness, factorization, CRT), `settled-fact-statement-pins.json` pinned by hand (not `--write`), ADR-1055, curriculum doc corrections |
+| 2026-08-31 | avg-pair-constructions | `Nat.avg`/`Nat.pair` construction + evaluation tests (ADR-1045's named unblock) |
+| 2026-08-31 | avg-pair-constructions | `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` construction + evaluation tests (second held-out family, ADR-1045's "harder route", taken) |
+| 2026-08-31 | avg-pair-constructions | ADR-1060: both re-screened against the real post-build environment, R9/R11 clean, R5 satisfied |
 | 2026-08-31 | bind-extracted-subjects | 660 facts in `artifacts/facts/` gained `formal.kernel_theorem` (658 verified-correct, 1 corrected, 1 deliberate `null`); ADR-1005 records the method and the 3 guards it caused to newly (and correctly) reject |
+| 2026-08-31 | `7c8adedb9` | ADR-1075: the curriculum graph measures scenarios, not the kernel. Records why the repair is a second axis rather than a status flip, that `lean-horizon` does **not** suppress dispatch (`graph_dispatcher.py` never reads `status`), three stale negatives found along the way (two of them this lane's — `--name-like matrix\|determinant\|eigen` returned a correct and useless ABSENT for a kernel that spells linear algebra `Rat.det2`/`det3`/`dotN`/`matMul`), and 47 axiom-free probability declarations the 23-node graph has no node for. |
+| 2026-08-31 | `448368dea` | Spivak-shaped depth proposal: an eleven-rung spine for `number-theory` and a nine-rung one for `linear-algebra`, every "kernel has it" claim checked against `kernel_declaration_projection`. Not applied to `curriculum.toml` — ~30 new nodes moves five consumers plus the Rust mirror. Also corrects `linear-algebra.md`, whose "the matrix layer is unbuilt" was true on 2026-08-30 and false now (`Rat.matMul`, `matMul_assoc`, `matTranspose_mul`, `cramer2_*` all landed), moving the destination from a measured 25 to 55. |
+| 2026-08-31 | `2594cd1e8` | `calculus.md`'s Lean-horizon paragraph named continuity, differentiability, the MVT, the FTC and series convergence as out of reach — every one is landed and axiom-free over `CReal`. Replaced with a 24-row measured table (every declaration name verified present) plus a "Still Lean-horizon" section naming what genuinely is: non-constructive limit reasoning, multivariable/metric calculus, measure theory, transcendence. |
+| 2026-08-31 | `fba163147` | `curriculum.toml` gains a measured `kernel_decls` per node, the regeneration command in its header, and four repaired summaries (`calculus` said "ε–δ is Lean-horizon"; `sequences-and-limits` said "the ε–N definition is Lean-horizon" against a declared `CReal.Converges`/`Cauchy`/`limit`; `complex` said "analysis is Lean-horizon" without its 263 declarations; `cardinality` omitted `Nat.countRange`). No `status` or `family` value changed. |
+| 2026-08-31 | `722ce2edd` | `scripts/measure-curriculum-kernel-coverage.py`: attributes the kernel's full declaration surface (all kinds — the theorem inventories cannot see `CReal.integral`) to the 23 curriculum nodes. Exit status depends on the finding: `--expect-attributed`, `--require-node` and an unknown node id each verified to exit 1. |
 | 2026-08-31 | `757afb706` | New `nat_prelude/draw11_mirrors.rs`: 4 theorems (coprime_dvd_mul_left/right, coprime_eq_of_mul_eq_zero, add_one_mul_choose_eq), each with a discriminating concrete-instance test. |
 | 2026-08-31 | `e00c2500e` | Close 3 ml430 lcm/coprime mirrors already proved under another name (fact-ledger evidence only). |
 | 2026-08-31 | `5410c49f9` | Close 4 ml430 mirrors with the new draw11_mirrors.rs proofs (fact-ledger evidence). |
@@ -148,13 +158,15 @@ now. Nothing was deleted.
 | 2026-08-31 | `0b488679f` | feat: `Nat.Coprime.mul_add_mul_ne_mul` (nat 257 pass); rustfmt catch-up |
 | 2026-08-31 | `4c8a81d76` | facts: flip `Nat.coprime_mul_add_mul_ne_mul` to proved |
 | 2026-08-31 | `b12847d90` | `Int.euler_unit_coprime_iff` — the full predicate-preservation iff, axiom-free, no new induction; closes item 2 of the Fermat->Euler handoff. |
+| 2026-08-31 | `3545fc120` | `Int.euler_unit_perm_injective`/`_maps_into` — the `Nat`-shaped self-map `Int.prodRangeIf_permute` needs; closes item 1 of the Fermat->Euler handoff. |
+| 2026-08-31 | `d71385eeb` | `Int.prodRangeIf_const_eq_pow_count` — a constant-`a` restricted product equals `a` raised to the subset count; item 3(a) of the Fermat->Euler handoff, its first new-induction slice. |
 | 2026-08-31 | five-risk-coverage-audit | Per-risk audit of the L0 safety programme: contamination reaches ~1,956 facts but 28% of those subjects are regex-chosen; vacuity reaches 8 of 2,167; `independent_replay` at 7 is mismeasured in both directions; 539 facts hold a prelude-wide sweep or nothing; no L0 gate runs in CI or pre-push (ADR-1000). Report only — nothing repaired. |
 | 2026-08-31 | gauss-lemma-closed-form-b | `Nat.gaussCountBleClosedFormDisj` (general `countRange` closed-form invariant) and `Nat.gaussNegCountTwoClosedForm` (`gaussNegCount (succ (mul 2 m)) 2 m = sub m (div m 2)`, the classical odd-prime closed form) land axiom-free in `nat_prelude/gauss_lemma.rs` (ADR-0985), executing the route ADR-0970 sized and left open; agreement with all six landed `a := 2` concrete instances recomputed independently; the connecting theorem to `a^m mod p` stays open, unchanged sizing. |
 | 2026-08-31 | gauss-lemma-connecting-b | `Nat.least_residue_injective_of_coprime` (least-residue map injectivity given positivity + coprimality, no case split) lands axiom-free in `nat_prelude/gauss_lemma.rs` — piece 1 of the Gauss's-lemma connecting theorem ADR-0970/ADR-0985 sized. Piece 2 (the pairing lemma) is re-sized with a genuine simplification (self-map `InjectiveOn`/`MapsInto`, matching `Int.prodRange_permute`'s exact hypothesis shape — no bijection witness needed) and checked lemma-by-lemma against the tree (ADR-0990); piece 3 (product cancellation, Nat/Int bridge) stays open, unchanged sizing. |
 | 2026-08-31 | gauss-lemma-countrange | `Nat.leastResidue`/`Nat.gaussSignNeg`/`Nat.gaussNegCount` (least-residue sign counting over `Nat.countRange`) plus the `a := 2` mod-bypass theorem and eight concrete instances land axiom-free in new `nat_prelude/gauss_lemma.rs` (ADR-0970), toward Gauss's lemma / the second supplementary law; the general closed form and the connecting theorem to `a^m mod p` stay open, fully routed for the next lane. |
 | 2026-08-31 | gauss-mapsinto-bound | `Nat.div_succ_two_mul_eq_self`, `Nat.gauss_fold_in_range`, `Nat.gauss_fold_shift_maps_into` and `Nat.gauss_fold_shift_injective_on` land axiom-free in `nat_prelude/gauss_lemma.rs` -- completing Gauss's-lemma piece 2 (ADR-0970/ADR-0985/ADR-0990/ADR-1015). `Int.prodRange_permute`'s `InjectiveOn`/`MapsInto` hypotheses are now both satisfiable by the signed fold on `[0, m)`. Piece 3 (product cancellation, Nat/Int carrier bridge) is what remains, unchanged in size from ADR-0990/ADR-1015. |
 | 2026-08-31 | gauss-pairing-lemma | `Nat.least_residue_ne_zero_of_coprime` and `Nat.gaussFold`/`Nat.gauss_fold_injective_of_coprime` land axiom-free in `nat_prelude/gauss_lemma.rs` -- the nonzero-residue lemma ADR-0990 flagged absent, and the mathematically hard half (same-sign/opposite-sign case split) of Gauss's-lemma piece 2 (the pairing lemma). `MapsInto` and the 0-indexed shift wrapper `Int.prodRange_permute` needs are precisely sized in ADR-1015 and NOT built this session -- one new arithmetic fact (`div (succ (mul 2 m)) 2 = m`) is the sole missing ingredient. |
-| 2026-08-31 | gauss-piece-3 | `Int.prodRange_const_pow`, `Int.prodRange_scaledIndexEqPowMulFactorial` (Gauss's-lemma item A, `∏(a·k)=a^m·m!`, complete) and `Int.prodRangeIf_constEqPowCount` (built generically for both Euler's theorem and Gauss's lemma) + `Int.gaussSignProdEqPowNegOneOfCount` (Gauss's-lemma sign-product identity, complete) land axiom-free toward Gauss's lemma's connecting theorem (ADR-1050). Two of ADR-0990's five piece-3 items now closed; three remain, precisely sized in ADR-1050 with two of ADR-0990's own "not confirmed present" citations verified present. |
+| 2026-08-31 | gauss-piece-3 | `Int.prodRange_const_pow`, `Int.prodRange_scaledIndexEqPowMulFactorial` (Gauss's-lemma item A, `∏(a·k)=a^m·m!`, complete) and `Int.gaussSignProdEqPowNegOneOfCount` (Gauss's-lemma sign-product identity, complete, a corollary of `euler-spine`'s `Int.prodRangeIf_const_eq_pow_count` -- this lane's own independent construction of that shared lemma was dropped as a duplicate on merge, see the merge note above) land axiom-free toward Gauss's lemma's connecting theorem (ADR-1070). Two of ADR-0990's five piece-3 items now closed; three remain, precisely sized in ADR-1070 with two of ADR-0990's own "not confirmed present" citations verified present. |
 | 2026-08-31 | `74ca7790b` | `proof_plan.rs` + compiler; three families rewritten; digest probe |
 | 2026-08-31 | `ba2b22bbb` | add missing type-leak decline test; mutation-verify all 5 guards |
 | 2026-08-31 | `961e65b80` | `Rat.matInv2` and both-sided 2×2 invertibility, bridged into `matMul`/`matId` (ADR-1040). |
@@ -35014,6 +35026,24 @@ flipping any fact status is what caught both bugs; a narrower check would
 have missed the second one entirely (`bit_lt_bit`'s own concrete test,
 written afterward, would have caught it too, but the sweep came first).
 
+**Your lane's block (`DONE`, row3-citability, 2026-08-31).** ADR-1030 found
+`crates/axeyum-cas/src/ntheory_certify.rs` has four independent certificate
+checkers (Pratt primality, compositeness, factorization, CRT) with zero facts
+naming them. Closed: reviewed all four entry points, found and fixed a real
+independence gap in `check_crt_certificate` (it called `ntheory::gcd`/
+`ntheory::lcm` directly), registered four `cas-internal` facts each with a
+`checker_command` proven to fail on broken input (break/restore log in
+ADR-1055), corrected a stale count in ADR-1030 and the curriculum doc (this
+module has 4 entry points, not 6 — the other 2 named live in `gf2.rs`/
+`gf2_independent.rs`), and updated
+`docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
+§2.1/§2.4/§2.8. Full write-up: ADR-1055.
+
+Remaining, explicitly not claimed done: `legendre_symbol`, `jacobi_symbol`,
+`mod_inverse`, `sqrt_mod`, `discrete_log`, `divisor_sigma` and the rest of
+`ntheory_advanced.rs` still have no certificate route at all — row 3 for
+number theory as a *subject* is not closed, only for these four routes.
+
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
 F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).
@@ -36209,6 +36239,43 @@ common_refinement_proof_rejected_at_wrong_type`) — all pass.
 | (this lane, Task 1) | doc 295 (measurement); no source changes |
 | (this lane, Task 2) | mechanical clippy fixes, 7 files, doc/mut/allow only |
 
+**Status: DONE.** Decision record:
+[ADR-1060](docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md).
+
+Declared both constructions ADR-1045 asked for. `Nat.avg`/`Nat.pair`
+exactly as specified (`avg_pair.rs`), plus a SECOND construction —
+`Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` (`minmax.rs`) — that ADR-1045
+flagged as the "largest remaining opportunity" but sized as the harder
+route (Mathlib states `Init.Data.Nat.MinMax` through a typeclass this
+kernel does not model). Simulated first in both cases, then built,
+construction-only (ADR-0653: definitions and an evaluation test, nothing
+else — verified by grep, no theorem declared in either file).
+
+Re-screened AFTER declaring, against the REAL post-build kernel
+environment (fresh `shape_search --release`, 2572 declarations, not a
+simulated one): both families R9 0/10, R11 clean, R5's two-new-family
+minimum satisfied. `artifacts/autogenesis/` untouched throughout —
+`check-autogenesis-holdout-isolation.py` reports `held_out=146|verdict=PASS`
+identically before and after (necessarily, since nothing it reads changed).
+`gen-autogenesis-nursery-refill.py --check` still reports `entries=380`
+against the committed snapshot, byte-identical to ADR-1045's own report.
+
+`nat_prelude::` sweep: 268 passed, 0 failed (was 264 on the parent commit;
++4 for the two new definitions' coverage in `definition_names`, +5 for the
+new test files, net of the fix that closed a coverage gap the environment-
+derived `every_nat_declaration_is_checked_and_axiom_free` assertion caught
+on the first build). Clippy clean on every file this lane touched
+(4 files: `avg_pair.rs`, `avg_pair_tests.rs`, `minmax.rs`,
+`minmax_tests.rs`); 7 pre-existing clippy errors remain elsewhere in the
+crate, untouched by this lane, out of scope.
+
+**Next draw needs:** author draw 13 — add `natural-avg-pair`/
+`natural-minmax` (or whatever names the drawing lane picks) to
+`FAMILY_MODULES`/`FAMILY_ROUTES` in `gen-autogenesis-nursery-refill.py`,
+regenerate the manifest, reconcile the fact ledger. This lane deliberately
+did not touch that file or `artifacts/autogenesis/` — it enabled a draw,
+it did not author one.
+
 **Done (bind-extracted-subjects, 2026-08-31).** ADR-1000's five-risk audit
 measured that `theorem_of` (`scripts/check-fact-depends-derived.py`) resolves
 1,320 settled facts authoritatively via `formal.kernel_theorem`, 664 by
@@ -36548,6 +36615,52 @@ whole trusted surface **0**:
 Detail and older landed rows moved to [`../notes/creal.md`](docs/plan/notes/creal.md).
 
 Detail and older landed rows moved to [`../notes/creal.md`](docs/plan/notes/creal.md).
+
+**The graph's `status` field is the SCENARIO axis, and reading it as the kernel
+axis inverts two of three destinations** (`COMPLETE`, curriculum-graph-truth,
+2026-08-31). `mathtour.rs` defines `Status::Covered` as "has a self-checking
+exercise family today" and a test enforces exactly that; `LeanHorizon` means
+"primarily a proof-reconstruction target, not a benchmark". Measured over 2,562
+axiom-free declarations, `calculus` is `lean-horizon` with **349** kernel
+declarations — the largest node after `naturals`, carrying the FTC, MVT, Rolle,
+IVT with an exact root, EVT, `supOn` and the Weierstrass M-test — while
+`linear-algebra` is `covered` with 55 and is the thinnest destination.
+
+So the repair is a second axis, not a status flip: flipping `calculus` to
+`covered` would assert a scenario family that does not exist and break
+`covered_nodes_have_a_family_realized_by_a_self_checking_scenario`. `kernel_decls`
+is now measured per node by `scripts/measure-curriculum-kernel-coverage.py`,
+whose `--expect-attributed` / `--require-node` guards each fail (exit 1) when
+violated. Four summaries that were false rather than incomplete are repaired,
+and `calculus.md` — missed by the 2026-08-30 sweep that fixed both siblings —
+now carries a 24-row measured table. Decision and the full retrospective:
+[ADR-1075](docs/research/09-decisions/adr-1075-the-curriculum-graph-measures-scenarios-not-the-kernel.md).
+
+**Two corrections for whoever reads this next.** `graph_dispatcher.py` does
+**not** read `status` — it loads the field and never uses it, ranking
+destinations by published infrastructure-frontier rows because ranking by
+curriculum status "would be fabricating priority the data does not support". The
+defect was documentation integrity, not dispatch. And `python3
+scripts/gen-import-backlog.py --check` is **RED on `main`** and is not this
+lane's: the fact ledger moved 147 → 164 qualifying rows without
+`artifacts/import-backlog.json` being regenerated, confirmed independent (the
+regenerated diff touches only fact rows). Deliberately left alone.
+
+**Live work this measurement names.** Linear algebra's keystone is the
+determinant at **general `n`** (cofactor recursion over the dimension bound; a
+permutation sum needs data this kernel has no type for) — the matrix layer it
+was previously blocked on has landed. Number theory's three live rungs are
+factorization uniqueness restated as multiplicity agreement, Euler's theorem
+`a^φ(n) ≡ 1 (mod n)`, and quadratic reciprocity. And **probability has 47
+axiom-free `Rat` declarations through the weak law of large numbers with no
+curriculum node at all**.
+
+Rust `mathtour` tests were **not run** (cold worktree build) and are unaffected
+by construction: no `status`, `family`, `prerequisites` or `unlocks` value
+changed, and they read the Rust `NODES` mirror rather than the TOML. Checks that
+did run: `validate-foundational-concepts.py` (137 rows), `validate-claims.py`
+(104 claims, 0 errors), `gen-adr-index.py --check` (692 rows, no new
+duplicates), `check-links.sh` (all links ok).
 
 **7 ml430 mirror facts closed, session complete** (`WIP`, draw11-theorems-b,
 2026-08-31). Frontier measured at start
@@ -37085,6 +37198,69 @@ sized above), then item 3 (the assembly induction), then wire
 `Int.prodRangeIf_permute` + `Int.euler_unit_coprime_iff` + the item-3
 assembly into a single `Int.euler_totient_theorem` declaration.
 
+## Update (`WIP`, euler-spine, 2026-08-31) — item 1 closed, item 3(a) landed
+
+Dispatched to pick up exactly the "next task" above. Both re-verified
+in-tree first, per the standing rule.
+
+**Item 1 closed, axiom-free.** New file
+`int_prelude/euler_unit_range.rs` declares `Int.euler_unit_perm_injective :
+n a, 0 < n -> Coprime a (ofNat n) -> InjectiveOn (fun k => natAbs (emod
+(a * ofNat k) (ofNat n))) n` and `Int.euler_unit_perm_maps_into : n a,
+0 < n -> MapsInto (fun k => natAbs (emod (a * ofNat k) (ofNat n))) n` (the
+second unconditional in `a`). Confirms ADR-1025's finding exactly: the
+order-coercion half is free by defeq (`Nat.lt i n`/`Nat.zero_le i` are
+used UNCHANGED wherever `Int.lt (ofNat i) (ofNat n)`/`Int.le zero (ofNat
+i)` are expected — no `le_of_ofnat_le_ofnat`/`lt_of_ofnat_lt_ofnat` call
+anywhere in either proof), and the remaining `natAbs`/`Int.of_nat_nat_abs_of_nonneg`
+residue bridging is a direct transplant of `wilson.rs`'s
+`declare_inverse_index_injective`/`declare_inverse_index_maps_into`
+pattern with the `-1` shift removed. No new induction. Both admitted by
+the kernel first attempt.
+
+**Item 3(a) landed — the first slice of the "genuinely new mathematics"
+piece.** New file `int_prelude/euler_prod_pow.rs` declares
+`Int.prodRangeIf_const_eq_pow_count : pred a n, prodRange (selector pred
+(fun _ => a)) n = pow a (countRange pred n)`, by induction on `n` following
+`wilson.rs`'s `prod_range_const_one` shape (the unrestricted `a := one`
+case, already proved there). The successor step's case split on the
+symbolic `pred n : Bool` uses the same "supply the goal at each literal
+constructor, apply `Bool.rec` to the symbolic value" idiom
+`nat_prelude/totient.rs`'s `count_step_le_one` already uses — no fact about
+which branch fires is needed. Fully symbolic proof throughout, admitted
+first attempt.
+
+**Still open in item 3:** pointwise factoring (`prodRangeIf pred (fun k =>
+a * f k) n = mul (prodRangeIf pred (fun _ => a) n) (prodRangeIf pred f
+n)`), termwise `ModEq` transport from `emod (a*k) n` back to `a*k`,
+cancellation of `prodRangeIf pred id n` via `Int.modEq_cancel` (needs that
+product coprime to `n`), and the final wiring of `prodRangeIf_permute` +
+`euler_unit_coprime_iff` + item 3(a) + item 1's `InjectiveOn`/`MapsInto`
+into one `Int.euler_totient_theorem` declaration.
+
+Facts registered: `F:int-euler-unit-perm-injective`,
+`F:int-euler-unit-perm-maps-into`, `F:int-prodrangeif-const-eq-pow-count`
+(`scripts/gen-kernel-facts.py --prelude integer --date 2026-08-31 --emit`;
+the generator surfaced 7 other unregistered `integer`-prelude theorems
+belonging to other lanes' work, same precedent as this file's own prior
+entry — not emitted here). `validate-facts.py`: 0 errors.
+
+Verified: `cargo test -p axeyum-lean-kernel --lib int_prelude::` — 52
+passed, 0 failed, both times (after item 1, and again after item 3(a)),
+including `every_int_declaration_is_checked_and_axiom_free`. `cargo clippy
+-p axeyum-lean-kernel --all-targets --all-features -- -D warnings` — clean
+on both new files; the crate still fails on the same pre-existing errors
+in `nat_prelude/gauss_lemma.rs` and (newly, since the last update)
+`rat_prelude/matrix_invertible.rs`, both unrelated sibling-lane WIP.
+
+**Not run**, same scope reasoning as this file's prior update: the
+workspace-wide gate, `nat_prelude::`/`rat_prelude::` sweeps (no file in
+either touched), `just check`.
+
+**Next task for whoever picks this up:** item 3's remaining three pieces
+(pointwise factoring, termwise `ModEq` transport, cancellation), then the
+final `Int.euler_totient_theorem` assembly wiring everything together.
+
 **Status: DONE.** Acted on an independent audit's finding that the published
 "EVT row 1 — there is none" claim (`08-ivt-and-evt-measured-against-mathlib.md`
 §2, ADR-0692) was stale and wrong: `CReal.supOn_ub` and `CReal.supOn_approx_lub`
@@ -37557,7 +37733,7 @@ sizing but cost only ~15 lines once identified.
 **Your lane's block (`PARTIAL`, gauss-piece-3, 2026-08-31).** Verified
 ADR-0990's five-item piece-3 sizing against the tree before starting (all
 citations confirmed present or absent as ADR-0990 said, plus two items
-found already de-risked by unrelated same-day work -- see ADR-1050).
+found already de-risked by unrelated same-day work -- see ADR-1070).
 Landed two of the five items in full, both axiom-free, both admitted by
 the kernel on the FIRST attempt:
 
@@ -37568,14 +37744,29 @@ the kernel on the FIRST attempt:
   `prodRange_mul` + `prodRange_const_pow` + `factorial`'s own defeq unfold,
   no induction of its own).
 - **The sign-product item** (ADR-0990: "no existing analogue found"):
-  `Int.prodRangeIf_constEqPowCount` (`prodRangeIf pred (fun _ => a) n =
-  pow a (Nat.countRange pred n)`, built GENERICALLY in `euler_theorem.rs`
-  because Euler's theorem's own module doc names the identical shape as
-  its remaining gap -- one lemma serves both targets) plus its one-line
-  Gauss corollary `Int.gaussSignProdEqPowNegOneOfCount`.
+  `Int.prodRangeIf_const_eq_pow_count` (`prodRangeIf pred (fun _ => a) n =
+  pow a (Nat.countRange pred n)`) plus its one-line Gauss corollary
+  `Int.gaussSignProdEqPowNegOneOfCount`.
 
-Full route, citations, and the precise sizing of what remains: **ADR-1050**
-(`docs/research/09-decisions/adr-1050-gauss-lemma-piece-3-two-of-five-items-land-generically-reusable-with-euler.md`).
+**Merge note (2026-08-31, post-report):** this lane built
+`prodRangeIf_const_eq_pow_count` independently, inline in
+`euler_theorem.rs`, on the same reasoning as `euler-spine`'s own module
+doc (Euler's theorem needs the identical shape). The `euler-spine` lane
+had landed the SAME theorem on `main` first, in its own file
+`euler_prod_pow.rs`, with a fact already registered
+(`F:int-prodrangeif-const-eq-pow-count`) -- invisible to this lane until
+`git merge main` pulled it in, because the two declarations sat far
+enough apart in `IntPrelude`'s struct to merge textually clean under one
+Rust field name with two different kernel name strings. Verified the two
+statements are the identical proposition (same arity, same `pred`/`a`/`n`
+binder order, same `selector` construction) before resolving: dropped
+this lane's duplicate construction and its four private helpers, kept
+`euler_prod_pow.rs`'s. `Int.gaussSignProdEqPowNegOneOfCount` needed no
+change (arity/order matched). Full account: ADR-1070's "Landed: the
+sign-product item" section.
+
+Full route, citations, and the precise sizing of what remains: **ADR-1070**
+(`docs/research/09-decisions/adr-1070-gauss-lemma-piece-3-two-of-five-items-land-generically-reusable-with-euler.md`).
 Read it before starting the next session on this -- it verifies against
 the tree two things ADR-0990 could not have known: `Int.modEq_prodRange`/
 `Int.modEq_prodRange_lt` and `Int.mod_eq_of_nat_mod_eq` (the `Nat`/`Int`
@@ -37583,7 +37774,7 @@ the tree two things ADR-0990 could not have known: `Int.modEq_prodRange`/
 item 1 and item 3 below.
 
 **What remains -- three items, NOT attempted this session**, each sized in
-ADR-1050 with the exact lemma names checked or flagged unchecked:
+ADR-1070 with the exact lemma names checked or flagged unchecked:
 
 1. The per-term congruence `a·k ≡ ε_k · gaussFold(pp,a,k) [pp]` for `k =
    1..m` -- a `Bool`-case-split proof comparable in size to
@@ -37602,7 +37793,7 @@ ADR-1050 with the exact lemma names checked or flagged unchecked:
    land, since every structural piece (induction, permutation, sign
    product, scaled-product identity) now exists.
 
-**Verify each of ADR-1050's citations in-tree before treating them as
+**Verify each of ADR-1070's citations in-tree before treating them as
 real** (the standing rule: a handoff's "what remains" is a lower bound on
 one route's cost, not a fact about the cheapest route) -- this session
 found two of ADR-0990's own citations already stale in the OTHER
@@ -38364,6 +38555,96 @@ it stays fresh) —
 `multi_target_operations=4` (was 3). `python3 scripts/gen-adr-index.py
 --check` — unchanged (ADR-0602's front matter was not touched, only its
 body).
+
+**Status:** complete — all seven L0 gates wired, each proved able to fail, and
+an enforcement gate added so the wiring cannot silently regress (ADR-1050).
+
+## The deficiency, confirmed and worse than briefed
+
+All seven L0 trusted-library safety gates ran in NO automated context. Measured
+with positive controls in the same run, so a zero could not be a broken query:
+
+| file | L0 gates named | control (`scripts/` refs) |
+| --- | --- | --- |
+| `.github/workflows/ci.yml` | **0** | 44 |
+| `hooks/pre-push` | **0** | 28 |
+| `scripts/local-ci.sh` | **0** | 10 |
+
+The third row was not in the brief. `ci.yml`'s own comment calls
+`scripts/local-ci.sh` "the authoritative gate for main"; it runs none of the
+seven either. Three automated contexts, gates in none of them.
+
+## Measured cost (foreground, this host, uncontended)
+
+| gate | first run | warm | needs |
+| --- | --- | --- | --- |
+| holdout-closed-evaluation | 0.06s | — | pure Python |
+| settled-fact-statements | 0.09s | — | pure Python |
+| semantic-control-fixtures | 1.09s | — | pure Python |
+| credit-transaction-ledger | 10.6s | — | pure Python |
+| kernel-differential | 27s | 7s | `cargo test` + pinned Lean |
+| proposition-duplication | 54.7s | 72s | pure Python |
+| trust-closure | 103s | 58s | `cargo run --release` |
+
+**The obvious split is wrong.** "Pure Python is cheap, cargo is expensive" fails
+in both directions: `proposition-duplication` is pure Python and costs more than
+`kernel-differential`, which builds and runs real Lean.
+
+## Wiring decision, per gate
+
+| gate | where | why |
+| --- | --- | --- |
+| settled-fact-statements | pre-push + CI | 0.09s |
+| holdout-closed-evaluation | pre-push + CI | 0.06s |
+| semantic-control-fixtures | pre-push + CI | 1.09s |
+| credit-transaction-ledger | CI only | 10.6s — 10x the whole pre-push block |
+| proposition-duplication | CI only | 55–72s |
+| trust-closure | CI only, NEW `l0-trust-closure` job | needs `cargo run --release`; no CI job did a release build |
+| kernel-differential | CI only, `lean-inductive-crosscheck` | `AXEYUM_REQUIRE_LEAN=1` makes a missing toolchain a hard failure; that job already installs the pin |
+
+Added to a push: **~1.2s** against a documented ~545s battery. The pre-push
+block sits ABOVE the Rust/TOML early exit, because every L0 gate guards non-Rust
+content and a docs/artifacts-only push takes that exit.
+
+## Proof each wired gate can fail
+
+Broken and restored in an isolated `/data0` snapshot, never in `artifacts/`:
+
+| gate | clean | broken | restored |
+| --- | --- | --- | --- |
+| settled-fact-statements | 0 | **1** | 0 |
+| semantic-control-fixtures | 0 | **1** | 0 |
+| holdout-closed-evaluation | 0 | **1** | 0 |
+| trust-closure | 0 | **1** | 0 |
+| proposition-duplication | 0 | **1** | 0 |
+| credit-transaction-ledger | 0 | **1** (both vacuity controls) | 0 |
+| kernel-differential | 0 | G1–G6 each fire | 0 |
+
+Pre-push block proved to fail the push: `CONTROL HOOK EXIT = 0`,
+`MUTANT HOOK EXIT = 1`.
+
+## Honest negatives
+
+- Deleting `_verify_staged_integrity` from `credit-transaction-ledger.py`'s
+  `apply()` does NOT fail its gate — a surviving mutant. Out of scope to fix
+  (this lane must not edit the seven gate scripts); recorded in ADR-1050.
+- `scripts/local-ci.sh` still runs none of the seven. Out of briefed scope.
+- The gate most worth wiring that could not be: `kernel-differential` in
+  pre-push. It is the only L0 gate comparing this kernel against real Lean and
+  costs 7s warm, but `AXEYUM_REQUIRE_LEAN=1` hard-fails without a toolchain, and
+  Lean is on one fleet host of five — every other lane would be unable to push.
+
+## Landed
+
+| commit | what |
+| --- | --- |
+| `2a74c42b0` | measurements: gates in no automated context, two are slow |
+| `d29f29a28` | pre-push: three sub-2s gates, above the early exit |
+| `0b46deff8` | CI: all seven wired + `check-l0-gate-enforcement.py` |
+| `ccac03e56` | 11 controls, mutation-verified, registered in the suite table |
+
+Holdout isolation, before and after, byte-identical:
+`held_out=146|files_scanned=1110|settled=0|references=0|verdict=PASS`.
 
 **Done, l0-s6-credit-transaction, 2026-08-30.** [ADR-0785](docs/research/09-decisions/adr-0785-credit-transactions-two-phase-commit-with-a-crash-sweep-that-actually-crashes.md)
 records the full measurement. Summary:

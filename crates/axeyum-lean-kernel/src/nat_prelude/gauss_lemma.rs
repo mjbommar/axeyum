@@ -2388,7 +2388,8 @@ mod tests {
     fn gauss_neg_count_matches_an_independent_python_recomputation() {
         fn d_ref(pp: u32, a: u32, m: u32) -> u32 {
             let half = pp / 2;
-            (1..=m).filter(|k| (a * k) % pp > half).count() as u32
+            u32::try_from((1..=m).filter(|k| (a * k) % pp > half).count())
+                .expect("the count is bounded by m, a u32")
         }
         assert_eq!(d_ref(7, 2, 3), 2);
         assert_eq!(d_ref(11, 2, 5), 3);
@@ -2495,9 +2496,10 @@ mod tests {
         );
 
         let a_bad: u32 = 7; // gcd(7,7) = 7, not coprime to pp
+        let (k1, k2): (u32, u32) = (1, 2);
         assert_eq!(
-            (a_bad * 1) % pp,
-            (a_bad * 2) % pp,
+            (a_bad * k1) % pp,
+            (a_bad * k2) % pp,
             "negative control: without coprimality the map collides at k=1,k=2 \
              (both give residue 0) -- the coprimality hypothesis is not vacuous"
         );

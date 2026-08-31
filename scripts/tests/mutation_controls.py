@@ -4733,5 +4733,67 @@ SUITES["declaration-spec"] = (
     ],
 )
 
+SUITES["l0-gate-enforcement"] = (
+    "scripts/check-l0-gate-enforcement.py",
+    "scripts.tests.test_l0_gate_enforcement",
+    [
+        # Measured 2026-08-31: all seven L0 safety gates ran in NO automated
+        # context -- 0 references in ci.yml, hooks/pre-push and local-ci.sh
+        # against positive controls of 44, 28 and 10 `scripts/` references in
+        # those same files. Each guard below must be killed by exactly the one
+        # test that names it; the acceptance test
+        # (`test_committed_tree_passes`) is what kills a guard rewritten so it
+        # can never fire, and must keep passing for every mutation here.
+        (
+            "a gate absent from CI is refused",
+            "        if not hits:                                              # GUARD:G1",
+            "        if False:",
+        ),
+        (
+            "an L0 step with continue-on-error is refused",
+            "            if coe:                                               # GUARD:G2",
+            "            if False:",
+        ),
+        (
+            "an L0 command spelled `|| true` is refused",
+            "            if SWALLOW.search(block):                             # GUARD:G3",
+            "            if False:",
+        ),
+        (
+            "a cheap gate absent from pre-push is refused",
+            "        if gate not in code:                                      # GUARD:G4",
+            "        if False:",
+        ),
+        # G5 is the finding this lane exists for: below the Rust/TOML early
+        # exit, a push touching only artifacts/ or docs/ -- exactly what these
+        # gates protect -- is gated by nothing.
+        (
+            "an L0 block below the pre-push early exit is refused",
+            "        if last > exit_at:                                        # GUARD:G5",
+            "        if False:",
+        ),
+        (
+            "a pre-push block with no failure branch is refused",
+            "    if SWALLOW.search(prepush_text) or \"L0 gate rejected this push\" not in prepush_text:",
+            "    if False:",
+        ),
+        # G7/G8 close the third context this lane's own task named:
+        # scripts/local-ci.sh -- ci.yml calls it "the authoritative gate for
+        # main" and it ran none of the seven either, until this lane wired
+        # them in with the file's own `run <cmd> || rc=$?` idiom.
+        (
+            "a gate absent from local-ci.sh is refused",
+            "        if not gate_lines:                                        # GUARD:G7",
+            "        if False:",
+        ),
+        (
+            "a local-ci.sh gate call missing `|| rc=$?` is refused",
+            "        if not any(RC_CAPTURE.search(ln) for ln in gate_lines):    # GUARD:G8",
+            "        if False:",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
+

@@ -43,6 +43,10 @@
 //! cargo run --release -p axeyum-lean-kernel --example ivt_evt_vacuity_probe
 //! ```
 
+#![allow(clippy::many_single_char_names)]
+// ^ This probe reasons about `CReal` functions on `[a,b]` and points `x`/`y`.
+// Those ARE the mathematical names; renaming them to satisfy the lint would
+// make the probe harder to check against the statements it audits.
 #![allow(clippy::similar_names, clippy::too_many_lines)]
 
 use axeyum_lean_kernel::{
@@ -844,10 +848,10 @@ fn report_representability(s: &mut Probe) {
             continue;
         };
         let mut verdict = String::from("representable");
-        if let Declaration::Theorem { ty, .. } = decl {
-            if !is_a_proposition(&mut s.kernel, ty) {
-                verdict = String::from("NOT-PROP (outside the replay)");
-            }
+        if let Declaration::Theorem { ty, .. } = decl
+            && !is_a_proposition(&mut s.kernel, ty)
+        {
+            verdict = String::from("NOT-PROP (outside the replay)");
         }
         if verdict == "representable" {
             let closure = s.kernel.declaration_dependency_closure(name);

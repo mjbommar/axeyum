@@ -86,9 +86,11 @@ mod dvd_gcd_mirrors;
 mod dvd_mul_split;
 mod euclid;
 mod euler;
+mod euler_prod_pow;
 mod euler_theorem;
 mod euler_totient;
 mod euler_unit_preserve;
+mod euler_unit_range;
 mod exists_gcd_one;
 mod fibonacci;
 mod gauss_factorial_product;
@@ -528,12 +530,6 @@ pub struct IntPrelude {
     /// — see `euler_theorem.rs`'s module doc for the route and for the
     /// precise remaining gap to Euler's totient theorem.
     pub prod_range_if_permute: NameId,
-    /// `prodRangeIf_const_eq_pow_count : ∀ pred a n, Eq Int (prodRangeIf pred
-    ///   (fun _ => a) n) (pow a (Nat.countRange pred n))` — a
-    /// predicate-restricted product where every contributing factor is the
-    /// SAME constant `a` collapses to `a` raised to the count of indices
-    /// where the predicate holds. `euler_theorem.rs::declare_prod_range_if_const_eq_pow_count`.
-    pub prod_range_if_const_eq_pow_count: NameId,
     /// `gaussSignProdEqPowNegOneOfCount : ∀ pp a m, Eq Int (prodRange (fun j
     ///   => bool_select_int (Nat.gaussSignNeg pp a (succ j)) (neg one) one)
     ///   m) (pow (neg one) (Nat.gaussNegCount pp a m))` -- Gauss's lemma's
@@ -1515,7 +1511,25 @@ pub struct IntPrelude {
     /// → ModEq (m.ediv (ofNat (m.gcd c))) a b` -- Mathlib's
     /// `Int.ModEq.cancel_right_div_gcd` (`modeq_cancel_div_gcd.rs`).
     pub mod_eq_cancel_right_div_gcd: NameId,
+    /// `euler_unit_coprime_iff : ∀ n a k, 0 < n → 0 ≤ k → k < n → Coprime a n → (Coprime k n ↔ Coprime (emod (a*k) n) n)`
+    /// -- the predicate-preservation step Euler's theorem needs
+    /// (`euler_unit_preserve.rs`).
     pub euler_unit_coprime_iff: NameId,
+    /// `euler_unit_perm_injective : ∀ n a, 0 < n → Coprime a (ofNat n) →
+    /// InjectiveOn (fun k => natAbs (emod (a * ofNat k) (ofNat n))) n` --
+    /// the `Nat`-shaped self-map `Int.prodRangeIf_permute` needs, item 1 of
+    /// the Fermat -> Euler handoff (`euler_unit_range.rs`).
+    pub euler_unit_perm_injective: NameId,
+    /// `euler_unit_perm_maps_into : ∀ n a, 0 < n →
+    /// MapsInto (fun k => natAbs (emod (a * ofNat k) (ofNat n))) n` --
+    /// unconditional in `a`, `euler_unit_range.rs`.
+    pub euler_unit_perm_maps_into: NameId,
+    /// `prod_range_if_const_eq_pow_count : ∀ pred a n, Eq Int
+    /// (prodRange (selector pred (fun _ => a)) n) (pow a (countRange pred n))`
+    /// -- item 3(a) of the Fermat -> Euler handoff, a genuinely new
+    /// induction pairing `Int.pow` with `Nat.countRange`
+    /// (`euler_prod_pow.rs`).
+    pub prod_range_if_const_eq_pow_count: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1651,7 +1665,6 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_zero: child(kernel, "prodRangeIf_zero"),
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
         prod_range_if_permute: child(kernel, "prodRangeIf_permute"),
-        prod_range_if_const_eq_pow_count: child(kernel, "prodRangeIf_constEqPowCount"),
         gauss_sign_prod_eq_pow_neg_one_of_count: child(
             kernel,
             "gaussSignProdEqPowNegOneOfCount",
@@ -1810,6 +1823,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         ),
         euler_unit_coprime: child(kernel, "euler_unit_coprime"),
         euler_unit_coprime_iff: child(kernel, "euler_unit_coprime_iff"),
+        euler_unit_perm_injective: child(kernel, "euler_unit_perm_injective"),
+        euler_unit_perm_maps_into: child(kernel, "euler_unit_perm_maps_into"),
+        prod_range_if_const_eq_pow_count: child(kernel, "prodRangeIf_const_eq_pow_count"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
@@ -2097,7 +2113,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_totient::declare_euler_unit_coprime(&mut d)?;
         euler_totient::declare_euler_unit_injective(&mut d)?;
         euler_unit_preserve::declare_euler_unit_coprime_iff(&mut d)?;
+        euler_unit_range::declare_euler_unit_perm_injective(&mut d)?;
+        euler_unit_range::declare_euler_unit_perm_maps_into(&mut d)?;
         euler_theorem::declare_prod_range_if_all(&mut d)?;
+        euler_prod_pow::declare_prod_range_if_const_eq_pow_count(&mut d)?;
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;

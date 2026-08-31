@@ -21,7 +21,10 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 # Ratchet, not a pin: raise it when tests are added, never lower it silently.
-MIN_TESTS=33
+# 33 -> 34 (2026-08-31, ADR-1055): added independent_gcd_lcm_agree_with_ntheory,
+# pinning that the new checker_gcd/checker_lcm (added so check_crt_certificate
+# no longer calls ntheory::gcd/ntheory::lcm directly) agree with ntheory's.
+MIN_TESTS=34
 
 out="$(scripts/cargo-serialized.sh test -p axeyum-cas --lib ntheory_certify 2>&1)"
 status=$?

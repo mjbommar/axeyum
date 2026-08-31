@@ -97,6 +97,54 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
 done
 export PREPUSH_BASE PREPUSH_TIP
 
+# ---------------------------------------------------------------------------
+# L0 trusted-library safety gates (ADR-1050).
+#
+# These run BEFORE the Rust/TOML early exit below, and that placement is the
+# whole point. The seven L0 gates guard `artifacts/facts/`, the proposition
+# corpus, the credit ledger and the blind-evaluation partition -- JSON and
+# documentation content, none of which is `*.rs`, `*.toml` or `Cargo.lock`. A
+# push touching only those files exits at the "no cargo gate needed" line and
+# would be gated by NOTHING. That is exactly the hole this block closes, so
+# do not move it below the early exit.
+#
+# Only the sub-two-second gates run here. Measured warm on s4, single run:
+#
+#   check-settled-fact-statements     0.09s
+#   check-holdout-closed-evaluation   0.06s
+#   check-semantic-control-fixtures   1.09s
+#   ------------------------------------------
+#   total                             ~1.2s
+#
+# The other four L0 gates are deliberately NOT here and run in CI instead:
+# `credit-transaction-ledger` (10.6s), `kernel-differential` (7-27s, and it
+# hard-requires a pinned Lean toolchain), `proposition-duplication` (55-72s)
+# and `trust-closure` (58s warm, and it shells out to a `cargo run --release`
+# kernel example). Adding those here would put ~2.5 minutes in front of every
+# push -- including the docs-only pushes that currently cost zero -- and a
+# gate people reach for `--no-verify` to escape is worse than no gate.
+#
+# Fail-closed and unconditional: no `|| true`, no skip switch. If one of these
+# exits nonzero the push does not happen.
+echo "pre-push: L0 trusted-library safety gates (always, incl. docs-only pushes)" >&2
+l0_start=$(date +%s)
+for l0_gate in \
+  "scripts/check-settled-fact-statements.py" \
+  "scripts/check-holdout-closed-evaluation.py" \
+  "scripts/check-semantic-control-fixtures.py --check"
+do
+  l0_step_start=$(date +%s)
+  # Word-splitting is intended: the entries above carry their own flags.
+  # shellcheck disable=SC2086
+  if ! python3 $l0_gate; then
+    echo "pre-push: FAILED - L0 gate rejected this push: $l0_gate" >&2
+    exit 1
+  fi
+  echo "pre-push:   ok $(( $(date +%s) - l0_step_start ))s  $l0_gate" >&2
+done
+echo "pre-push: L0 safety gates passed in $(( $(date +%s) - l0_start ))s" >&2
+# ---------------------------------------------------------------------------
+
 if [ "${#shas_to_gate[@]}" -eq 0 ]; then
   exit 0 # docs/bench-results/scripts-only push — no cargo gate needed
 fi

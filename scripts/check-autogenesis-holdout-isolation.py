@@ -34,6 +34,20 @@ This gate closes that hole from both directions:
 FAIL-CLOSED. An unreadable manifest, or a held-out population that has somehow
 become empty, is an error rather than a quiet pass -- a guard whose subject has
 vanished reports the same "no violations" as a guard that works.
+
+`held_out=` in this gate's output line is the FULL held-out partition as the
+manifests declare it -- every row with `partition: "held-out"` in either
+`nursery-v1.json` or `nursery-v2-extension.json`, unconditionally. That
+deliberately includes the small number of `-mutation-`-named scratch fixtures
+(outcome-blind pipeline test controls, never real evaluation subjects) that
+happen to be filed under held-out to sit beside the real proposition they
+mutated -- this gate's job is to protect the WHOLE declared bookkeeping
+population, fixtures included, so it does not exclude them the way
+`scripts/check-dispatchable-frontier.py`'s narrower `held_out` (real
+ml430-mirror dispatch candidates only) does. Measured 2026-08-31: this gate's
+146 vs. the frontier gate's 145 is exactly that one fixture
+(`F:ml430-mutation-2086302b3a338591b3179871`), not a disagreement about the
+same population -- see the frontier script's docstring for the other side.
 """
 
 from __future__ import annotations
