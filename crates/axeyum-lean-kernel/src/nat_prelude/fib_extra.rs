@@ -108,10 +108,7 @@ pub(super) fn declare_fib_lt_fib_succ(
 }
 
 /// Declare every theorem in this module.
-pub(super) fn declare_fib_extra_all(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_fib_extra_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_fib_one(d, p)?;
     declare_fib_two(d, p)?;
     declare_fib_lt_fib_succ(d, p)?;
