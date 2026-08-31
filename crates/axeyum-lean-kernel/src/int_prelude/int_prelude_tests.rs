@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 226] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 229] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -250,6 +250,9 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 226] {
         p.inverse_index_involutive,
         p.factorial_sq_modeq_one,
         p.prod_range_mul,
+        p.prod_range_const_pow,
+        p.prod_range_scaled_index_eq_pow_mul_factorial,
+        p.gauss_sign_prod_eq_pow_neg_one_of_count,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -1037,6 +1040,71 @@ fn prod_range_computes_and_rejects_a_false_product() {
     );
 }
 
+/// `Int.prodRange_const_pow` applied at concrete `a := 3, n := 4` proves a
+/// statement that itself computes to `81 = 81` on both sides -- the
+/// symbolic proof term (fully general over `a`, `n`) is checked by kernel
+/// admission (the general theorem is declared axiom-free), and this test is
+/// the complementary concrete-instantiation check the standing rule asks
+/// for: a symbolic accept can hide a defeq-shaped gap that only a concrete
+/// reduction exposes, and a concrete-only check can hide a chain that does
+/// not compose symbolically. Both together, per CLAUDE.md's Gotchas.
+#[test]
+fn prod_range_const_pow_matches_direct_computation() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+    let three = numeral(&mut k, &p, 3);
+    let four_n = numeral_nat(&mut k, &p, 4);
+
+    let lemma = k.const_(p.prod_range_const_pow, vec![]);
+    let lemma_a = k.app(lemma, three);
+    let applied = k.app(lemma_a, four_n);
+    let inferred = k
+        .infer(applied)
+        .expect("prod_range_const_pow must apply at concrete a, n");
+
+    // The instantiated statement is `Eq Int (prodRange (fun _ => 3) 4) (pow
+    // 3 4)`; build that expected shape directly and confirm the general
+    // theorem's application infers exactly it.
+    let three_lambda = k.lam(anon, nat_ty, three, BinderInfo::Default);
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_f = k.app(prod_range_c, three_lambda);
+    let lhs_direct = k.app(prod_range_f, four_n);
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_a = k.app(pow_c, three);
+    let rhs_direct = k.app(pow_a, four_n);
+    let int_ty = k.const_(p.z, vec![]);
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "prod_range_const_pow's instantiated type must match the direct \
+         prodRange/pow application at a := 3, n := 4"
+    );
+
+    // And both sides genuinely compute to the SAME concrete numeral --
+    // 3*3*3*3 = 81 = 3^4 -- so this is not merely a defeq-shaped statement
+    // that could paper over a wrong `pow`/`prodRange` pairing.
+    let eighty_one = numeral(&mut k, &p, 81);
+    assert!(
+        k.def_eq(lhs_direct, eighty_one),
+        "prodRange (fun _ => 3) 4 should compute to 81"
+    );
+    assert!(
+        k.def_eq(rhs_direct, eighty_one),
+        "pow 3 4 should compute to 81"
+    );
+}
+
 /// `Int.prodRangeIf` computes its normal form -- and, unlike a constant `f`
 /// or an always-true/always-false predicate, this one MIXES both branches of
 /// `bool_select_int` in one run, so a definition that dropped the predicate
@@ -1121,6 +1189,322 @@ fn prod_range_if_computes_and_rejects_a_false_value() {
     assert!(
         result.is_err(),
         "the trusted gate accepted a false claim that prodRangeIf (beq _ 2) (ofNat . succ) 4 = 2"
+    );
+}
+
+/// `Int.prodRangeIf_constEqPowCount` applied at a DISCRIMINATING concrete
+/// instance -- `pred i := Nat.ble i 1` (true at `i ∈ {0,1}`, false at
+/// `i ∈ {2,3,4}`), `a := 2`, `n := 5` -- so the count is `2`, not `1`: an
+/// off-by-one in the exponent (the single most likely defect in an
+/// induction pairing `Int.pow`/`Nat.countRange`) would be caught, unlike a
+/// count-of-1 instance where `pow a 1 = a` coincides with `a` itself.
+/// `prodRangeIf pred (fun _ => 2) 5` folds `2 * 2 * 1 * 1 * 1 = 4`, and
+/// `pow 2 (countRange pred 5) = pow 2 2 = 4` independently. The trusted gate
+/// must also REFUSE the false claim that the same product is `8` (`pow 2
+/// 3`, the off-by-one this instance is chosen to catch) -- the same
+/// discriminating-negative-control pattern as
+/// [`prod_range_if_computes_and_rejects_a_false_value`].
+#[test]
+fn prod_range_if_const_eq_pow_count_computes_and_rejects_an_off_by_one_exponent() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    // pred := fun i => Nat.ble i 1.
+    let pred = {
+        let i_fv = 900_400;
+        let i = k.fvar(i_fv);
+        let one_nat = numeral_nat(&mut k, &p, 1);
+        let ble = k.const_(p.nat.ble, vec![]);
+        let applied = k.app(ble, i);
+        let body = k.app(applied, one_nat);
+        let abstracted = k.abstract_fvars(body, &[i_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+    let two_int = numeral(&mut k, &p, 2);
+    let five = numeral_nat(&mut k, &p, 5);
+
+    let lemma = k.const_(p.prod_range_if_const_eq_pow_count, vec![]);
+    let lemma_pred = k.app(lemma, pred);
+    let lemma_pred_a = k.app(lemma_pred, two_int);
+    let applied = k.app(lemma_pred_a, five);
+    let inferred = k
+        .infer(applied)
+        .expect("prod_range_if_const_eq_pow_count must apply at concrete pred, a, n");
+
+    // Build the statement's LHS/RHS directly and confirm the general
+    // theorem's application infers exactly that shape, then confirm both
+    // sides compute to the SAME concrete numeral (4), independently.
+    let two_lambda = k.lam(anon, nat_ty, two_int, BinderInfo::Default);
+    let one_i = k.const_(p.one, vec![]);
+    let selector = {
+        let i_fv = 900_401;
+        let i = k.fvar(i_fv);
+        let pred_i = k.app(pred, i);
+        let two_val = k.app(two_lambda, i);
+        let level_one_local = {
+            let z = k.level_zero();
+            k.level_succ(z)
+        };
+        let bool_rec = k.const_(p.logic.bool_rec, vec![level_one_local]);
+        let bool_ty_local = k.const_(p.logic.bool_, vec![]);
+        let anon2 = k.anon();
+        let int_ty_local = k.const_(p.z, vec![]);
+        let motive = k.lam(anon2, bool_ty_local, int_ty_local, BinderInfo::Default);
+        let with_motive = k.app(bool_rec, motive);
+        let with_false = k.app(with_motive, one_i);
+        let with_true = k.app(with_false, two_val);
+        let body = k.app(with_true, pred_i);
+        let abstracted = k.abstract_fvars(body, &[i_fv]);
+        k.lam(anon2, nat_ty, abstracted, BinderInfo::Default)
+    };
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_sel = k.app(prod_range_c, selector);
+    let lhs_direct = k.app(prod_range_sel, five);
+
+    let count_range_c = k.const_(p.nat.count_range, vec![]);
+    let count_range_pred = k.app(count_range_c, pred);
+    let count5 = k.app(count_range_pred, five);
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_a = k.app(pow_c, two_int);
+    let rhs_direct = k.app(pow_a, count5);
+
+    let int_ty = k.const_(p.z, vec![]);
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "prod_range_if_const_eq_pow_count's instantiated type must match the \
+         direct prodRangeIf/pow application"
+    );
+
+    let four = numeral(&mut k, &p, 4);
+    assert!(
+        k.def_eq(lhs_direct, four),
+        "prodRangeIf (ble _ 1) (fun _ => 2) 5 should compute to 4"
+    );
+    assert!(
+        k.def_eq(rhs_direct, four),
+        "pow 2 (countRange (ble _ 1) 5) should compute to 4"
+    );
+
+    // Negative control: the trusted gate must REFUSE the false claim that
+    // the same product is `8` (the off-by-one exponent `pow 2 3` would give).
+    let eight = numeral(&mut k, &p, 8);
+    let false_stmt = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, eight)
+    };
+    let refl = k.const_(p.logic.eq_refl, vec![level_one]);
+    let false_proof = {
+        let r = k.app(refl, int_ty);
+        k.app(r, four)
+    };
+    let scratch_name = k.name_str(anon, "prod_range_if_const_eq_pow_count_false_claim_scratch");
+    let result = k.add_declaration(Declaration::Theorem {
+        name: scratch_name,
+        uparams: vec![],
+        ty: false_stmt,
+        value: false_proof,
+    });
+    assert!(
+        result.is_err(),
+        "the trusted gate accepted a false claim that prodRangeIf (ble _ 1) (fun _ => 2) 5 = 8"
+    );
+}
+
+/// `Int.gaussSignProdEqPowNegOneOfCount` at `pp := 11, a := 2, m := 5` --
+/// `leastResidue 11 2 k` for `k = 1..5` is `2, 4, 6, 8, 10`, and the
+/// threshold is `succ (div 11 2) = 6`, so `gaussSignNeg` is `false, false,
+/// true, true, true` -- `gaussNegCount 11 2 5 = 3` (ODD, so the sign
+/// product genuinely is `-1`, not `+1` as an even count OR an unrelated
+/// wrong formula would give). Checks the intermediate count, the direct
+/// sign-product computation, AND that the general theorem's instantiation
+/// at these same concrete args matches the direct computation exactly.
+#[test]
+fn gauss_sign_prod_eq_pow_neg_one_of_count_matches_direct_computation_at_pp_11_a_2_m_5() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    let pp = numeral_nat(&mut k, &p, 11);
+    let a = numeral_nat(&mut k, &p, 2);
+    let m = numeral_nat(&mut k, &p, 5);
+
+    // pred := fun j => Nat.gaussSignNeg pp a (succ j).
+    let pred = {
+        let j_fv = 900_500;
+        let j = k.fvar(j_fv);
+        let succ = k.const_(p.nat.succ, vec![]);
+        let sj = k.app(succ, j);
+        let gsn = k.const_(p.nat.gauss_sign_neg, vec![]);
+        let g1 = k.app(gsn, pp);
+        let g2 = k.app(g1, a);
+        let body = k.app(g2, sj);
+        let abstracted = k.abstract_fvars(body, &[j_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+
+    let neg_one = numeral(&mut k, &p, -1);
+    let one_i = k.const_(p.one, vec![]);
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+
+    // selector := fun j => bool_select_int (pred j) (-1) 1.
+    let selector = {
+        let j_fv = 900_501;
+        let j = k.fvar(j_fv);
+        let pj = k.app(pred, j);
+        let bool_rec = k.const_(p.logic.bool_rec, vec![level_one]);
+        let bool_ty_local = k.const_(p.logic.bool_, vec![]);
+        let anon2 = k.anon();
+        let int_ty_local = k.const_(p.z, vec![]);
+        let motive = k.lam(anon2, bool_ty_local, int_ty_local, BinderInfo::Default);
+        let with_motive = k.app(bool_rec, motive);
+        let with_false = k.app(with_motive, one_i);
+        let with_true = k.app(with_false, neg_one);
+        let body = k.app(with_true, pj);
+        let abstracted = k.abstract_fvars(body, &[j_fv]);
+        k.lam(anon2, nat_ty, abstracted, BinderInfo::Default)
+    };
+
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_sel = k.app(prod_range_c, selector);
+    let lhs_direct = k.app(prod_range_sel, m);
+
+    let gnc = k.const_(p.nat.gauss_neg_count, vec![]);
+    let gnc1 = k.app(gnc, pp);
+    let gnc2 = k.app(gnc1, a);
+    let count = k.app(gnc2, m);
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_neg1 = k.app(pow_c, neg_one);
+    let rhs_direct = k.app(pow_neg1, count);
+
+    let three_nat = numeral_nat(&mut k, &p, 3);
+    assert!(
+        k.def_eq(count, three_nat),
+        "gaussNegCount 11 2 5 should compute to 3"
+    );
+    assert!(
+        k.def_eq(lhs_direct, neg_one),
+        "the sign product at pp=11, a=2, m=5 should compute to -1"
+    );
+    assert!(
+        k.def_eq(rhs_direct, neg_one),
+        "pow (-1) (gaussNegCount 11 2 5) should compute to -1 (count = 3, odd)"
+    );
+
+    // The general theorem, applied at these same concrete args, must agree
+    // with the direct computation -- not merely that both separately
+    // reduce to -1.
+    let lemma = k.const_(p.gauss_sign_prod_eq_pow_neg_one_of_count, vec![]);
+    let l1 = k.app(lemma, pp);
+    let l2 = k.app(l1, a);
+    let applied = k.app(l2, m);
+    let inferred = k.infer(applied).expect(
+        "gauss_sign_prod_eq_pow_neg_one_of_count must apply at concrete pp, a, m",
+    );
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let int_ty = k.const_(p.z, vec![]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "gauss_sign_prod_eq_pow_neg_one_of_count's instantiated type must \
+         match the direct sign-product/pow computation"
+    );
+}
+
+/// `Int.prodRange_scaledIndexEqPowMulFactorial` at `a := 2, m := 3` --
+/// `∏_{k=1}^3 (2·k) = 2*4*6 = 48`, and independently `2^3 * 3! = 8*6 = 48`.
+/// Checks the general theorem's instantiation against a hand-built direct
+/// `prodRange` computation AND against `Int.factorial`'s own concrete value,
+/// so a defect in either the `prodRange_mul`/`prodRange_const_pow` chaining
+/// or the `factorial`-defeq bridge would surface.
+#[test]
+fn prod_range_scaled_index_eq_pow_mul_factorial_matches_direct_computation_at_a_2_m_3() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    let two = numeral(&mut k, &p, 2);
+    let three_n = numeral_nat(&mut k, &p, 3);
+
+    // scaled := fun k => mul 2 (ofNat (succ k)).
+    let scaled = {
+        let k_fv = 900_600;
+        let kk = k.fvar(k_fv);
+        let succ = k.const_(p.nat.succ, vec![]);
+        let sk = k.app(succ, kk);
+        let of_nat = k.const_(p.of_nat, vec![]);
+        let ofk = k.app(of_nat, sk);
+        let mul_c = k.const_(p.mul, vec![]);
+        let m1 = k.app(mul_c, two);
+        let body = k.app(m1, ofk);
+        let abstracted = k.abstract_fvars(body, &[k_fv]);
+        k.lam(anon, nat_ty, abstracted, BinderInfo::Default)
+    };
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_scaled = k.app(prod_range_c, scaled);
+    let lhs_direct = k.app(prod_range_scaled, three_n);
+
+    let forty_eight = numeral(&mut k, &p, 48);
+    assert!(
+        k.def_eq(lhs_direct, forty_eight),
+        "prodRange (fun k => 2 * ofNat (succ k)) 3 should compute to 48"
+    );
+
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_two = k.app(pow_c, two);
+    let pow_two_3 = k.app(pow_two, three_n);
+    let factorial_c = k.const_(p.factorial, vec![]);
+    let factorial_3 = k.app(factorial_c, three_n);
+    let mul_c = k.const_(p.mul, vec![]);
+    let m1 = k.app(mul_c, pow_two_3);
+    let rhs_direct = k.app(m1, factorial_3);
+    assert!(
+        k.def_eq(rhs_direct, forty_eight),
+        "pow 2 3 * factorial 3 should compute to 48"
+    );
+
+    let lemma = k.const_(p.prod_range_scaled_index_eq_pow_mul_factorial, vec![]);
+    let l1 = k.app(lemma, two);
+    let applied = k.app(l1, three_n);
+    let inferred = k.infer(applied).expect(
+        "prod_range_scaled_index_eq_pow_mul_factorial must apply at concrete a, m",
+    );
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let int_ty = k.const_(p.z, vec![]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "prod_range_scaled_index_eq_pow_mul_factorial's instantiated type \
+         must match the direct prodRange/pow/factorial computation"
     );
 }
 

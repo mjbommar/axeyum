@@ -93,6 +93,8 @@ mod euler_unit_preserve;
 mod euler_unit_range;
 mod exists_gcd_one;
 mod fibonacci;
+mod gauss_factorial_product;
+mod gauss_sign_product;
 mod gcd;
 mod gcd_dvd_iff;
 mod gcd_scaled_mirrors;
@@ -494,6 +496,15 @@ pub struct IntPrelude {
     /// closing the successor step with a `mul_assoc`/`mul_comm`
     /// rearrangement of the four factors (`prod.rs`'s `mul_swap_inner`).
     pub prod_range_mul: NameId,
+    /// `prodRange_const_pow : ∀ a n, Eq Int (prodRange (fun _ => a) n) (pow a n)`
+    /// — a product of `n` copies of one factor is that factor to the `n`th
+    /// power. `prod.rs::declare_prod_range_const_pow`.
+    pub prod_range_const_pow: NameId,
+    /// `prodRange_scaledIndexEqPowMulFactorial : ∀ a m, Eq Int (prodRange
+    ///   (fun k => mul a (ofNat (succ k))) m) (mul (pow a m) (factorial m))`
+    /// -- ADR-0990's Gauss's-lemma item A: `∏(a·k) = a^m·m!`.
+    /// `gauss_factorial_product.rs`.
+    pub prod_range_scaled_index_eq_pow_mul_factorial: NameId,
     /// `prodRangeIf : (Nat → Bool) → (Nat → Int) → Nat → Int := fun pred f n
     ///   => prodRange (fun i => bool_select_int (pred i) (f i) one) n` — the
     /// `Int` counterpart of `Nat.prodRangeIf`
@@ -519,6 +530,12 @@ pub struct IntPrelude {
     /// — see `euler_theorem.rs`'s module doc for the route and for the
     /// precise remaining gap to Euler's totient theorem.
     pub prod_range_if_permute: NameId,
+    /// `gaussSignProdEqPowNegOneOfCount : ∀ pp a m, Eq Int (prodRange (fun j
+    ///   => bool_select_int (Nat.gaussSignNeg pp a (succ j)) (neg one) one)
+    ///   m) (pow (neg one) (Nat.gaussNegCount pp a m))` -- Gauss's lemma's
+    /// sign-product identity, a one-line corollary of
+    /// `prod_range_if_const_eq_pow_count`. `gauss_sign_product.rs`.
+    pub gauss_sign_prod_eq_pow_neg_one_of_count: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -1639,10 +1656,19 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_swap: child(kernel, "prodRange_swap"),
         prod_range_permute: child(kernel, "prodRange_permute"),
         prod_range_mul: child(kernel, "prodRange_mul"),
+        prod_range_const_pow: child(kernel, "prodRange_constPow"),
+        prod_range_scaled_index_eq_pow_mul_factorial: child(
+            kernel,
+            "prodRange_scaledIndexEqPowMulFactorial",
+        ),
         prod_range_if: child(kernel, "prodRangeIf"),
         prod_range_if_zero: child(kernel, "prodRangeIf_zero"),
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
         prod_range_if_permute: child(kernel, "prodRangeIf_permute"),
+        gauss_sign_prod_eq_pow_neg_one_of_count: child(
+            kernel,
+            "gaussSignProdEqPowNegOneOfCount",
+        ),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -1988,10 +2014,12 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range_swap(&mut d)?;
         prod::declare_prod_range_permute(&mut d)?;
         prod::declare_prod_range_mul(&mut d)?;
+        prod::declare_prod_range_const_pow(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
         prod::declare_modeq_prod_range_lt(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;
+        gauss_factorial_product::declare_prod_range_scaled_index_eq_pow_mul_factorial(&mut d)?;
         nat_abs::declare_nat_abs(&mut d)?;
         // Needs `Int.natAbs`, just declared above -- `declare_emod_lt_of_pos`
         // (built well before `natAbs` exists) is why this sign-general bound
@@ -2089,6 +2117,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_unit_range::declare_euler_unit_perm_maps_into(&mut d)?;
         euler_theorem::declare_prod_range_if_all(&mut d)?;
         euler_prod_pow::declare_prod_range_if_const_eq_pow_count(&mut d)?;
+        gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;
