@@ -1,6 +1,6 @@
 {
   "coverage": {
-    "attested_cohort_entries": 411,
+    "attested_cohort_entries": 409,
     "ceiling_authority": "ADR-0615 as amended by ADR-0616. nursery-v1's policy.evaluation_fact_count 100..300 governs nursery-v1, which check-autogenesis-nursery.py checks against its 214 entries alone. The rule on THIS cohort is ADR-0601's 'scaffolding, never headline': the UNATTESTED population may never outweigh the attested one. It is counted by attestation, not by manifest membership -- an extension row Lean accepted as a proof-free axiom against the pinned Mathlib is on the attested side, by the same method and the same command that produced nursery-v1's accepted-214-proof-free-axiom-types. not_elaborable rows count as UNATTESTED: Lean refused them, so they are worse than unchecked and must never buy headroom. When this binds, attest (scripts/attest-nursery-surface.py) rather than raise it.",
     "combined_evaluation_entries": 594,
     "entries": 380,
@@ -16,10 +16,10 @@
       "divergence-registry": 41,
       "held-out-construction": 14,
       "hygienic-or-generated": 1109,
-      "not-statable-here": 2380
+      "not-statable-here": 2350
     },
-    "unattested_cohort_ceiling": 411,
-    "unattested_cohort_entries": 183,
+    "unattested_cohort_ceiling": 409,
+    "unattested_cohort_entries": 185,
     "v1_evaluation_entries": 214
   },
   "cross_population_component_split_exemptions": [
@@ -5320,6 +5320,74 @@
     },
     {
       "answer_access": "withheld-during-episode",
+      "candidate_id": "39576e6d420dbcbded4335479103b5a2713c7f4b033d94800eb1641ad73f73ec",
+      "constants": [
+        "Eq",
+        "HAdd.hAdd",
+        "Iff",
+        "Max.max",
+        "Nat",
+        "Nat.instMax",
+        "OfNat.ofNat",
+        "Or",
+        "instAddNat",
+        "instHAdd",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-add-eq-max-iff-39576e6d",
+      "family": "natural-basic-arithmetic",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Lemmas",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-basic-arithmetic:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Lemmas",
+      "source_name": "Nat.add_eq_max_iff",
+      "source_statement_sha256": "0f35e693e23551d62145e270df4ad8bd7869d4476775637718e534d704cfebeb",
+      "statement": "∀ {m n : ℕ}, m + n = max m n ↔ m = 0 ∨ n = 0",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
+      "candidate_id": "e60cf4324590f09da587d0ec855ba2dd644f7e781a698bd8e49184e2217a0ead",
+      "constants": [
+        "And",
+        "Eq",
+        "HAdd.hAdd",
+        "Iff",
+        "Min.min",
+        "Nat",
+        "OfNat.ofNat",
+        "instAddNat",
+        "instHAdd",
+        "instMinNat",
+        "instOfNatNat"
+      ],
+      "fact_id": "F:ml430-nat-add-eq-min-iff-e60cf432",
+      "family": "natural-basic-arithmetic",
+      "fragment": "Nat",
+      "module": "Init.Data.Nat.Lemmas",
+      "mutation_of": null,
+      "partition": "train",
+      "proof_shape": "natural-basic-arithmetic:biconditional",
+      "provenance_class": "external-transcribed",
+      "route_hypotheses": [
+        "kernel-induction",
+        "kernel-library-application"
+      ],
+      "source_group": "Init.Data.Nat.Lemmas",
+      "source_name": "Nat.add_eq_min_iff",
+      "source_statement_sha256": "9c8ae58a72f3f9850633fab68c9fee5680f61bc73a88b08d308e34cd68bf0921",
+      "statement": "∀ {m n : ℕ}, m + n = min m n ↔ m = 0 ∧ n = 0",
+      "statement_shape": "biconditional"
+    },
+    {
+      "answer_access": "withheld-during-episode",
       "candidate_id": "f8463abc18ccc51f319f8de1c332659d1e87e8020ca4fd77e9db1e72cb5fd533",
       "constants": [
         "And",
@@ -5413,71 +5481,6 @@
       "source_name": "Nat.add_eq_three_iff",
       "source_statement_sha256": "e82d56481f097e46cadaa4b9360bf23254a83b529410abe0ec74ef3d75528b12",
       "statement": "∀ {m n : ℕ}, m + n = 3 ↔ m = 0 ∧ n = 3 ∨ m = 1 ∧ n = 2 ∨ m = 2 ∧ n = 1 ∨ m = 3 ∧ n = 0",
-      "statement_shape": "biconditional"
-    },
-    {
-      "answer_access": "withheld-during-episode",
-      "candidate_id": "25385c654d87f1679eed0186ad89f36894969d18564bc189077e83818fc61464",
-      "constants": [
-        "And",
-        "Eq",
-        "HAdd.hAdd",
-        "Iff",
-        "Nat",
-        "OfNat.ofNat",
-        "Or",
-        "instAddNat",
-        "instHAdd",
-        "instOfNatNat"
-      ],
-      "fact_id": "F:ml430-nat-add-eq-two-iff-25385c65",
-      "family": "natural-basic-arithmetic",
-      "fragment": "Nat",
-      "module": "Init.Data.Nat.Lemmas",
-      "mutation_of": null,
-      "partition": "train",
-      "proof_shape": "natural-basic-arithmetic:biconditional",
-      "provenance_class": "external-transcribed",
-      "route_hypotheses": [
-        "kernel-induction",
-        "kernel-library-application"
-      ],
-      "source_group": "Init.Data.Nat.Lemmas",
-      "source_name": "Nat.add_eq_two_iff",
-      "source_statement_sha256": "6f5c19a0753f2efb5308731d684c7e73d944f9a7b1f331f6dd8a67906e2a8e75",
-      "statement": "∀ {m n : ℕ}, m + n = 2 ↔ m = 0 ∧ n = 2 ∨ m = 1 ∧ n = 1 ∨ m = 2 ∧ n = 0",
-      "statement_shape": "biconditional"
-    },
-    {
-      "answer_access": "withheld-during-episode",
-      "candidate_id": "642335398f4b0e59a574f5edc2b527f241e5ea5fd4b2d8eacee24eec12cac47e",
-      "constants": [
-        "And",
-        "Eq",
-        "HAdd.hAdd",
-        "Iff",
-        "Nat",
-        "OfNat.ofNat",
-        "instAddNat",
-        "instHAdd",
-        "instOfNatNat"
-      ],
-      "fact_id": "F:ml430-nat-add-eq-zero-64233539",
-      "family": "natural-basic-arithmetic",
-      "fragment": "Nat",
-      "module": "Init.Data.Nat.Lemmas",
-      "mutation_of": null,
-      "partition": "train",
-      "proof_shape": "natural-basic-arithmetic:biconditional",
-      "provenance_class": "external-transcribed",
-      "route_hypotheses": [
-        "kernel-induction",
-        "kernel-library-application"
-      ],
-      "source_group": "Init.Data.Nat.Lemmas",
-      "source_name": "Nat.add_eq_zero",
-      "source_statement_sha256": "3c89073ae441870092cf1d11c6013eaa170a02c931edd77d1f266198935f9c97",
-      "statement": "∀ {m n : ℕ}, m + n = 0 ↔ m = 0 ∧ n = 0",
       "statement_shape": "biconditional"
     },
     {
@@ -12338,7 +12341,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "bb7e6f725b351a4021eaf93e41e36a8b95bdb7cc42feffc15be9269e610a6cf4",
+  "extension_sha256": "c95c961a516d3d13b40a883422a606ab57c8acde63531d64b4f3d8993d59ad47",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
@@ -12528,7 +12531,7 @@
   "kind": "axeyum-autogenesis-nursery-extension",
   "limitations": [
     "Lean surface propositions are not Axeyum kernel-core terms.",
-    "197 of 380 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 180 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
+    "195 of 380 statements carry the same real-Lean round-trip attestation as nursery-v1's 214; 182 have had no run and 3 were REFUSED by Lean. Only the attested rows may be reported beside v1's as one attested population; see surface_validation for which is which.",
     "Attestation does not make this an evaluation population equivalent to nursery-v1's. v1 freezes partitions against declared dependency weak components (policy.split_component_authority); here source_group is the Mathlib defining module and no dependency-component analysis was run, so a held-out row can share a component with a dispatchable one and nothing in this manifest sees it. Attestation grades the STATEMENT; this is a property of the ROW.",
     "Any depends_on on these facts is ledger-owned and accrued after the fact (ADR-0615), never the preregistered component analysis above.",
     "Mathlib declarations remain external prior art and every Axeyum fact here remains open."
@@ -12859,8 +12862,6 @@
       "F:ml430-nat-add-eq-one-iff-f8463abc",
       "F:ml430-nat-add-eq-right-9067eb1a",
       "F:ml430-nat-add-eq-three-iff-799a0a8f",
-      "F:ml430-nat-add-eq-two-iff-25385c65",
-      "F:ml430-nat-add-eq-zero-64233539",
       "F:ml430-nat-add-mod-left-6b337077",
       "F:ml430-nat-add-mod-right-c047c67a",
       "F:ml430-nat-add-mul-div-left-e20827dd",
@@ -13050,6 +13051,8 @@
       "F:ml430-nat-add-choose-eb49fa11",
       "F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef",
       "F:ml430-nat-add-descfactorial-eq-ascfactorial-5faac784",
+      "F:ml430-nat-add-eq-max-iff-39576e6d",
+      "F:ml430-nat-add-eq-min-iff-e60cf432",
       "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
       "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
       "F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb",
