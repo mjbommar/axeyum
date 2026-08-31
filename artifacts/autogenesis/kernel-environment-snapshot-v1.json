@@ -1,8 +1,8 @@
 {
   "command": "cargo run --release -p axeyum-lean-kernel --example shape_search -- --include-constructed --limit 999999 --kind axiom --kind definition --kind theorem --kind inductive --kind constructor --kind recursor",
-  "control": "axiom=30 definition=356 theorem=2124 opaque=0 inductive=24 constructor=31 recursor=24 quot=0",
-  "coverage": "groups=[logic,nat,axreal,integer,rat,characterization,string,creal,complex,cpoint] declarations=2589 values_indexed=false build=44.5s",
-  "declaration_count": 2589,
+  "control": "axiom=30 definition=358 theorem=2124 opaque=0 inductive=24 constructor=31 recursor=24 quot=0",
+  "coverage": "groups=[logic,nat,axreal,integer,rat,characterization,string,creal,complex,cpoint] declarations=2591 values_indexed=false build=30.0s",
+  "declaration_count": 2591,
   "declarations": [
     "Acc",
     "Acc.intro",
@@ -1244,6 +1244,8 @@
     "Max.max",
     "Min.min",
     "Nat",
+    "Nat.Abundant",
+    "Nat.Deficient",
     "Nat.Even",
     "Nat.Fin",
     "Nat.Fin.isLt",
