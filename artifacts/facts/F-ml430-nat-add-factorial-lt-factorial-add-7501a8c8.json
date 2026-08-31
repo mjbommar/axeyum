@@ -6,12 +6,39 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {i n : ℕ}, 2 ≤ i → 1 ≤ n → i + n.factorial < (i + n).factorial",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_factorial_lt_factorial_add"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-factorial-le-d0f4a912", "F:ml430-nat-factorial-lt-of-lt-d6c2125d", "F:nat-add-le-add-left", "F:nat-add-le-add-right", "F:nat-le-add-right", "F:nat-le-dest", "F:nat-le-succ-succ", "F:nat-le-trans", "F:nat-lt-succ-self", "F:nat-mul-le-mul-left", "F:nat-mul-one", "F:nat-one-le-factorial", "F:nat-one-le-mul", "F:nat-succ-add", "F:nat-zero-add"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.add_factorial_lt_factorial_add",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Nat.add_factorial_lt_factorial_add` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free",
+        "nat_prelude_tests::the_nat_prelude_declares_no_axioms"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::",
+      "notes": "`declare_add_factorial_lt_factorial_add` (`crates/axeyum-lean-kernel/src/nat_prelude/add_factorial_lt.rs`): `le_dest`+`Exists.rec` peel `Le 2 i` into a witness `k` with `i = add 2 k`, then a `k`-indexed strict induction on `Lt (add (add 2 k) n!) (factorial (add (add 2 k) n))` with `n`/`Le 1 n` held fixed. The base case (`k=0`, reducing via `add 2 0 ≡ 2` by pure δ/ι) is proved directly via `factorial_lt_of_lt` + `factorial_le` (at `factorial 2 ≡ 2`, also pure δ/ι) + `mul_le_mul_left`; the step case is `add_factorial_le_factorial_add`'s own step function applied to an IH that is already one `succ` ahead (since `Lt a b` unfolds definitionally to `Le (succ a) b`), landing on the required shape with no extra slack needed."
+    },
+    {
+      "id": "footprint-Nat.add_factorial_lt_factorial_add",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Nat.add_factorial_lt_factorial_add 2>/dev/null | grep -Ec 'nat[[:space:]]Nat\\.add_factorial_lt_factorial_add[[:space:]]0[[:space:]]*$')\" -ge 1",
+      "notes": "The matched row's trailing footprint column is EMPTY, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Pass exactly one name per invocation -- this tool keeps only the first."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED via the `draw11-theorems-e` lane, 2026-08-31, as `Nat.add_factorial_lt_factorial_add` in `nat_prelude/add_factorial_lt.rs` -- axiom-free, statement identical to Mathlib's.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -132,6 +132,7 @@ mod add_basics;
 mod add_choose_div;
 mod add_desc_factorial_asc_factorial;
 mod add_factorial_le;
+mod add_factorial_lt;
 mod add_pos;
 mod algebra;
 mod and_or_distrib;
@@ -155,6 +156,7 @@ mod choose;
 mod choose_factorial_add;
 mod clog;
 mod coprime_lemmas;
+mod coprime_mul_add_mul_ne_mul;
 mod count_range_permute;
 mod count_range_reversal;
 mod crt;
@@ -258,6 +260,9 @@ use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factoria
 use add_factorial_le::{
     declare_add_factorial_le_factorial_add, declare_add_factorial_succ_le_factorial_add_succ,
 };
+use add_factorial_lt::{
+    declare_add_factorial_lt_factorial_add, declare_add_factorial_succ_lt_factorial_add_succ,
+};
 use add_pos::declare_add_pos;
 use algebra::{
     declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
@@ -290,6 +295,7 @@ use choose::declare_choose_all;
 use choose_factorial_add::declare_add_choose_mul_factorial_mul_factorial;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
+use coprime_mul_add_mul_ne_mul::declare_coprime_mul_add_mul_ne_mul;
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
     declare_count_range_product,
@@ -1476,6 +1482,16 @@ pub struct NatPrelude {
     /// `F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb`.
     /// Corollary of [`Self::add_factorial_le_factorial_add`].
     pub add_factorial_succ_le_factorial_add_succ: NameId,
+    /// `Nat.add_factorial_lt_factorial_add : ∀ i n, Le 2 i → Le 1 n → Lt (i +
+    /// n!) ((i+n)!)`. Closes
+    /// `F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8`. See
+    /// `nat_prelude::add_factorial_lt`.
+    pub add_factorial_lt_factorial_add: NameId,
+    /// `Nat.add_factorial_succ_lt_factorial_add_succ : ∀ i n, Le 2 i → Lt (i
+    /// + (n+1)!) ((i+n+1)!)`. Closes
+    /// `F:ml430-nat-add-factorial-succ-lt-factorial-add-succ-ec0fa8d3`.
+    /// Corollary of [`Self::add_factorial_lt_factorial_add`].
+    pub add_factorial_succ_lt_factorial_add_succ: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -1699,6 +1715,11 @@ pub struct NatPrelude {
     /// `gcd_dvd_right` both orderings plus `dvd_gcd`), so `dvd_antisymm`
     /// gives `gcd a b = gcd b a` and the hypothesis transports along it.
     pub coprime_symmetric: NameId,
+    /// `Nat.Coprime.mul_add_mul_ne_mul : ∀ m n a b, Coprime m n → a ≠ 0 → b ≠
+    /// 0 → a*m + b*n ≠ m*n`. Closes
+    /// `F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70`. See
+    /// `nat_prelude::coprime_mul_add_mul_ne_mul`.
+    pub coprime_mul_add_mul_ne_mul: NameId,
     /// `Nat.not_coprime_zero_zero : Not (Eq (gcd zero zero) one)`. `gcd 0 0 =
     /// 0` (`gcd_zero_left`), so `gcd 0 0 = 1` would give `0 = 1`, refuted by
     /// `succ_ne_zero`.
@@ -5215,6 +5236,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             add_factorial_le_factorial_add: kernel.name_str(nat, "add_factorial_le_factorial_add"),
             add_factorial_succ_le_factorial_add_succ: kernel
                 .name_str(nat, "add_factorial_succ_le_factorial_add_succ"),
+            add_factorial_lt_factorial_add: kernel.name_str(nat, "add_factorial_lt_factorial_add"),
+            add_factorial_succ_lt_factorial_add_succ: kernel
+                .name_str(nat, "add_factorial_succ_lt_factorial_add_succ"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
             le_of_dvd: kernel.name_str(nat, "le_of_dvd"),
@@ -5248,6 +5272,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_lt_min_fac: kernel.name_str(nat, "coprime_of_lt_min_fac"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
+            coprime_mul_add_mul_ne_mul: kernel.name_str(nat, "coprime_mul_add_mul_ne_mul"),
             not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
             coprime_one_left_iff: kernel.name_str(nat, "coprime_one_left_iff"),
             coprime_one_right_iff: kernel.name_str(nat, "coprime_one_right_iff"),
@@ -5888,6 +5913,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `ml430` mirrors, so they go here.
         declare_add_factorial_le_factorial_add(&mut d, &p)?;
         declare_add_factorial_succ_le_factorial_add_succ(&mut d, &p)?;
+        // Same dependency footprint as the `≤` pair just above, plus
+        // `Nat.factorial_lt_of_lt`/`Nat.factorial_le`/`Nat.mul_le_mul_left`/
+        // `Nat.mul_one`/`Nat.le_succ`/`Nat.lt_succ_self` (`declare_factorial_order`
+        // and the general order/algebra block, both far above `declare_euclid`).
+        declare_add_factorial_lt_factorial_add(&mut d, &p)?;
+        declare_add_factorial_succ_lt_factorial_add_succ(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;
         declare_combinatorial_identities(&mut d, &p)?;
@@ -6654,6 +6685,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // and `Nat.mod`/`Nat.mul`/`Nat.div`/`Nat.ble` (all far above). Nothing
         // needs it, so it goes last.
         declare_gauss_lemma_all(&mut d, &p)?;
+        // `draw11-theorems-e` lane: `Nat.Coprime.mul_add_mul_ne_mul`, an
+        // `ml430` mirror. Needs `Nat.gauss_lemma`, `Nat.coprime_symmetric`,
+        // `Nat.dvd_add_iff_left`/`_right`, `Nat.le_of_dvd`,
+        // `Nat.zero_lt_of_ne_zero`, `Nat.one_le_mul`, `Nat.lt_irrefl` (all
+        // above). Nothing later needs it, so it goes last.
+        declare_coprime_mul_add_mul_ne_mul(&mut d, &p)?;
         Ok(p)
     })();
     match built {

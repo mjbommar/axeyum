@@ -6,12 +6,39 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {i : ℕ} (n : ℕ), 2 ≤ i → i + (n + 1).factorial < (i + n + 1).factorial",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.add_factorial_succ_lt_factorial_add_succ"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8", "F:nat-le-succ-succ", "F:nat-zero-le"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.add_factorial_succ_lt_factorial_add_succ",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Nat.add_factorial_succ_lt_factorial_add_succ` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free",
+        "nat_prelude_tests::the_nat_prelude_declares_no_axioms"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::",
+      "notes": "`declare_add_factorial_succ_lt_factorial_add_succ` (`crates/axeyum-lean-kernel/src/nat_prelude/add_factorial_lt.rs`): immediate corollary of `Nat.add_factorial_lt_factorial_add` at `n := succ n`, discharging its `Le 1 (succ n)` hypothesis with `NatOps::zero_lt_succ`; `(n+1)!` and `(i+n+1)!` both reduce to `factorial (succ n)`/`factorial (succ (add i n))` by pure δ/ι (the literal `1` sits on the RIGHT of `add`'s right-recursion, so it is free), so no extra rewrite is needed beyond the parent theorem's application."
+    },
+    {
+      "id": "footprint-Nat.add_factorial_succ_lt_factorial_add_succ",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Nat.add_factorial_succ_lt_factorial_add_succ 2>/dev/null | grep -Ec 'nat[[:space:]]Nat\\.add_factorial_succ_lt_factorial_add_succ[[:space:]]0[[:space:]]*$')\" -ge 1",
+      "notes": "The matched row's trailing footprint column is EMPTY, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Pass exactly one name per invocation -- this tool keeps only the first."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED via the `draw11-theorems-e` lane, 2026-08-31, as `Nat.add_factorial_succ_lt_factorial_add_succ` in `nat_prelude/add_factorial_lt.rs` -- axiom-free, statement identical to Mathlib's.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

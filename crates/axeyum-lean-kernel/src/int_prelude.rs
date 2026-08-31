@@ -89,8 +89,10 @@ mod euler;
 mod euler_theorem;
 mod euler_totient;
 mod euler_unit_preserve;
+mod exists_gcd_one;
 mod fibonacci;
 mod gcd;
+mod gcd_dvd_iff;
 mod gcd_scaled_mirrors;
 mod modeq;
 mod modeq_cancel_div_gcd;
@@ -1284,15 +1286,6 @@ pub struct IntPrelude {
     /// `[0,n)` (of which injectivity on the coprime-residue subset is a free
     /// corollary, restricting `i,j` to that subset).
     pub euler_unit_injective: NameId,
-    /// `euler_unit_coprime_iff : ∀ n a k, 0 < n → 0 ≤ k → k < n →
-    /// Coprime a n → (Coprime k n ↔ Coprime (emod (mul a k) n) n)` — the full
-    /// predicate-preservation step `Int.prodRangeIf_permute`'s `preserve`
-    /// hypothesis needs (both directions, not only `euler_unit_coprime`'s
-    /// forward half): item 2 of `euler_theorem.rs`'s "what does NOT land
-    /// here" list, closed by `euler_unit_preserve.rs`. Still not Euler's
-    /// theorem itself — see that file's module doc for what remains (items 1
-    /// and 3).
-    pub euler_unit_coprime_iff: NameId,
     /// `fib_cassini : ∀ n, Eq Int (sub (mul (ofNat (Nat.fib (n+2))) (ofNat
     /// (Nat.fib n))) (mul (ofNat (Nat.fib (n+1))) (ofNat (Nat.fib (n+1)))))
     /// (pow (neg one) (succ n))` — Cassini's identity, shifted so every index
@@ -1422,6 +1415,24 @@ pub struct IntPrelude {
     /// Iff (c ∣ ofNat (gcd a b)) (And (c ∣ a) (c ∣ b))` -- Mathlib's
     /// `Int.dvd_coe_gcd_iff`.
     pub dvd_coe_gcd_iff: NameId,
+    /// `gcd_dvd_iff : ∀ (a b : Int) (n : Nat), Iff (Nat.dvd (gcd a b) n)
+    /// (Exists (fun x => Exists (fun y => Eq Int (ofNat n) (a*x+b*y))))` --
+    /// Mathlib v4.30's `Int.gcd_dvd_iff`. Closes
+    /// `F:ml430-int-gcd-dvd-iff-66fa03b3`. See `int_prelude::gcd_dvd_iff`.
+    pub gcd_dvd_iff: NameId,
+    /// `exists_gcd_one : ∀ m n, Lt zero (gcd m n) → Exists (fun m' => Exists
+    /// (fun n' => And (Eq Nat (gcd m' n') 1) (And (Eq Int m (m'*ofNat (gcd m
+    /// n))) (Eq Int n (n'*ofNat (gcd m n))))))` -- Mathlib v4.30's
+    /// `Int.exists_gcd_one`. Closes `F:ml430-int-exists-gcd-one-d8820780`.
+    /// See `int_prelude::exists_gcd_one`.
+    pub exists_gcd_one: NameId,
+    /// `exists_gcd_one' : ∀ m n, Lt zero (gcd m n) → Exists (fun g => And
+    /// (Lt zero g) (Exists (fun m' => Exists (fun n' => And (Eq Nat (gcd m'
+    /// n') 1) (And (Eq Int m (m'*ofNat g)) (Eq Int n (n'*ofNat g)))))))` --
+    /// Mathlib v4.30's `Int.exists_gcd_one'`. Closes
+    /// `F:ml430-int-exists-gcd-one-657db3e2`. See
+    /// `int_prelude::exists_gcd_one`.
+    pub exists_gcd_one_prime: NameId,
     /// `ediv_gcd_ne_zero_of_ne_zero_left : ∀ a b, a ≠ 0 →
     /// a.ediv (ofNat (gcd a b)) ≠ 0` -- Mathlib's
     /// `Int.ediv_gcd_ne_zero_of_ne_zero_left`.
@@ -1481,6 +1492,7 @@ pub struct IntPrelude {
     /// → ModEq (m.ediv (ofNat (m.gcd c))) a b` -- Mathlib's
     /// `Int.ModEq.cancel_right_div_gcd` (`modeq_cancel_div_gcd.rs`).
     pub mod_eq_cancel_right_div_gcd: NameId,
+    pub euler_unit_coprime_iff: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1764,8 +1776,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
             "euler_criterion_neg_one_imp_not_residue",
         ),
         euler_unit_coprime: child(kernel, "euler_unit_coprime"),
-        euler_unit_injective: child(kernel, "euler_unit_injective"),
         euler_unit_coprime_iff: child(kernel, "euler_unit_coprime_iff"),
+        euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
         fib_two_mul_add_one_pos: child(kernel, "fib_two_mul_add_one_pos"),
@@ -1795,6 +1807,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_gcd_nat: child(kernel, "dvd_gcd_nat"),
         dvd_gcd_nat_iff: child(kernel, "dvd_gcd_nat_iff"),
         dvd_coe_gcd_iff: child(kernel, "dvd_coe_gcd_iff"),
+        gcd_dvd_iff: child(kernel, "gcd_dvd_iff"),
+        exists_gcd_one: child(kernel, "exists_gcd_one"),
+        exists_gcd_one_prime: child(kernel, "exists_gcd_one'"),
         ediv_gcd_ne_zero_of_ne_zero_left: child(kernel, "ediv_gcd_ne_zero_of_ne_zero_left"),
         ediv_gcd_ne_zero_if_ne_zero_right: child(kernel, "ediv_gcd_ne_zero_if_ne_zero_right"),
         mod_eq_add: child(kernel, "mod_eq_add"),
@@ -2093,6 +2108,20 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // `zero_lt_of_ne_zero` (always already built). Placed last for the
         // same reason as the two mirror modules just above.
         dvd_mul_split::declare_dvd_mul_split(&mut d)?;
+        // `draw11-theorems-e` lane: `Int.gcd_dvd_iff`, an `ml430` mirror.
+        // Needs `gcd_eq_gcd_ab_witnesses` (`bezout_witnesses.rs`),
+        // `gcd_dvd_left`/`gcd_dvd_right`/`nat_abs_dvd_nat_abs_of_dvd`
+        // (`gcd.rs`), and `dvd_trans`/`dvd_add`/`dvd_mul_right` (`dvd.rs`),
+        // all declared above. Placed last for the same reason as the mirror
+        // modules above it.
+        gcd_dvd_iff::declare_gcd_dvd_iff(&mut d)?;
+        // `draw11-theorems-e` lane: `Int.exists_gcd_one`/`exists_gcd_one'`,
+        // two more `ml430` mirrors. Needs `gcd_div_gcd_div_gcd`,
+        // `gcd_dvd_left`/`gcd_dvd_right`, `emod_eq_zero_iff_dvd`,
+        // `ediv_add_emod` (all `gcd.rs`/`dvd.rs`, declared above). Placed
+        // last for the same reason as the mirror modules above it.
+        exists_gcd_one::declare_exists_gcd_one(&mut d)?;
+        exists_gcd_one::declare_exists_gcd_one_prime(&mut d)?;
         Ok(prelude)
     })();
     match built {

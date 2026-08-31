@@ -6,12 +6,39 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b : ℤ} {n : ℕ}, a.gcd b ∣ n ↔ ∃ x y, ↑n = a * x + b * y",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.gcd_dvd_iff"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:int-dvd-add", "F:int-dvd-mul-right", "F:int-dvd-trans", "F:int-gcd-dvd-left", "F:int-gcd-dvd-right", "F:int-mul-assoc", "F:int-nat-abs-dvd-nat-abs-of-dvd", "F:ml430-int-add-mul-66aa025b", "F:ml430-int-gcd-eq-gcd-ab-63005aef"],
+  "evidence": [
+    {
+      "id": "kernel-Int.gcd_dvd_iff",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.gcd_dvd_iff` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`declare_gcd_dvd_iff` (`crates/axeyum-lean-kernel/src/int_prelude/gcd_dvd_iff.rs`): both directions route through the already-checked Bezout identity at the named computable witnesses `Int.gcdA`/`Int.gcdB` (`gcd_eq_gcd_ab_witnesses`), so only the fact's own quantifiers need elimination/introduction -- two nested `Exists.rec` applications for the reverse direction (`mpr`), and `Nat.dvd`'s own witness scaling both Bezout coefficients for the forward direction (`mp`), closed by `dvd_trans`/`dvd_add`/`nat_abs_dvd_nat_abs_of_dvd` and `add_mul`/`mul_assoc` respectively."
+    },
+    {
+      "id": "footprint-Int.gcd_dvd_iff",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.gcd_dvd_iff 2>/dev/null | grep -Ec 'integer[[:space:]]Int\\.gcd_dvd_iff[[:space:]]0[[:space:]]*$')\" -ge 1",
+      "notes": "The matched row's trailing footprint column is EMPTY, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Pass exactly one name per invocation -- this tool keeps only the first."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +53,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED via the `draw11-theorems-e` lane, 2026-08-31, as `Int.gcd_dvd_iff` in `int_prelude/gcd_dvd_iff.rs` -- axiom-free, statement identical to Mathlib's.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
