@@ -199,6 +199,7 @@ mod land;
 mod land_div_two;
 mod land_low_bit;
 mod land_self;
+mod lattice_count;
 mod lcm;
 mod lcm_gcd_lemmas;
 mod ldiff;
@@ -424,6 +425,7 @@ use rec_agreement::{
     declare_lor_aux_ne_zero_of_right_ne_zero_all, declare_lor_comm,
     declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
 };
+use lattice_count::declare_lattice_count;
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
 use relation::{
@@ -2608,6 +2610,49 @@ pub struct NatPrelude {
     /// regrouping via `sumRange_add`, then replacing the row-major half by
     /// the triangle via [`Self::sum_range_diagonal`].
     pub sum_range_rect_eq_diag_add_corner: NameId,
+
+    // --- counting a rectangle of lattice points (`lattice_count.rs`) --------
+    /// `Nat.sumRange_const : ∀ c n, sumRange (fun _ => c) n = mul c n`.
+    /// The orientation is forced by `Nat.mul` recursing on its RIGHT
+    /// argument: `mul c (succ j) ≡ add (mul c j) c` is exactly
+    /// `sumRange (fun _ => c) (succ j)`'s own reduct, while `mul n c` would
+    /// need a commutation step that buys nothing.
+    pub sum_range_const: NameId,
+    /// `Nat.countRange_eq_sumRange : ∀ f n,
+    ///   countRange f n = sumRange (fun k => bool_select_nat (f k) 1 0) n`
+    /// — by `Eq.refl`: `Nat.countRange` (`totient.rs`) and `Nat.sumRange`
+    /// (`defs.rs`) are the SAME `Nat.rec`, base `zero` and step
+    /// `fun j ih => add ih (g j)`, differing only in what `g` is. Stating it
+    /// by name is what lets a proof move between the counting and the summing
+    /// worlds.
+    pub count_range_eq_sum_range: NameId,
+    /// `Nat.sumRange_swap : ∀ F m n,
+    ///   sumRange (fun i => sumRange (fun j => F i j) n) m
+    ///     = sumRange (fun j => sumRange (fun i => F i j) m) n`
+    /// — Fubini over ℕ, by induction on the OUTER bound `m` with `n` held
+    /// fixed. `Rat.sumRange_swap` has existed since the Laplace expansion
+    /// work; ℕ did not have it.
+    pub sum_range_swap: NameId,
+    /// `Nat.countRectangle_partition : ∀ Q R m n,
+    ///   (∀ x y, Lt x m → Lt y n →
+    ///      add (bool_select_nat (Q x y) 1 0) (bool_select_nat (R x y) 1 0) = 1) →
+    ///   add (sumRange (fun x => countRange (fun y => Q x y) n) m)
+    ///       (sumRange (fun y => countRange (fun x => R x y) m) n)
+    ///     = mul n m`
+    /// — the rectangle of lattice points `[0,m) × [0,n)`, counted row-wise
+    /// under `Q` and column-wise under `R`, with no set of lattice points
+    /// anywhere: a finite family here is a function plus a bound. This is the
+    /// step Eisenstein's route to quadratic reciprocity needs, and it is what
+    /// establishes that route does NOT hit the missing-aggregate wall
+    /// ADR-1135 named for the determinant's multiplicativity.
+    ///
+    /// The complementarity of `Q` and `R` arrives as a BOUNDED hypothesis on
+    /// the selectors rather than as `R = setCompl Q`, because Eisenstein's two
+    /// predicates (`p*(y+1) < q*(x+1)` and `q*(x+1) < p*(y+1)`) are
+    /// complementary only where no lattice point sits on the line `p*y = q*x`
+    /// — a side condition that belongs in the consumer, not here. Nothing in
+    /// this theorem knows about primality or division.
+    pub count_rectangle_partition: NameId,
 
     // --- Vandermonde's convolution (`vandermonde.rs`) -----------------------
     /// `Nat.choose_add_convolution : ∀ m n k, choose (add m n) k = sumRange
@@ -5749,6 +5794,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_range_split: kernel.name_str(nat, "sumRange_split"),
             sum_range_rect_eq_diag_add_corner: kernel
                 .name_str(nat, "sumRange_rect_eq_diag_add_corner"),
+            sum_range_const: kernel.name_str(nat, "sumRange_const"),
+            count_range_eq_sum_range: kernel.name_str(nat, "countRange_eq_sumRange"),
+            sum_range_swap: kernel.name_str(nat, "sumRange_swap"),
+            count_rectangle_partition: kernel.name_str(nat, "countRectangle_partition"),
             choose_add_convolution: kernel.name_str(nat, "choose_add_convolution"),
             sum_choose_sq: kernel.name_str(nat, "sum_choose_sq"),
             restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),
@@ -6451,6 +6500,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_restrict_pair_maps_into(&mut d, &p)?;
         declare_diagonal(&mut d, &p)?;
         declare_rectangle(&mut d, &p)?;
+        declare_lattice_count(&mut d, &p)?;
         // `Nat.sumDivisors_two_pow{,_eq_geom_sum}` (`perfect.rs`) need
         // `Nat.sumRange_split`, just declared by `declare_rectangle` above —
         // `declare_perfect_all` runs much earlier in this pipeline, before
