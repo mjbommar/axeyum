@@ -56,7 +56,7 @@ use super::ops::IntDev;
 /// `Int.natAbs` applied -- a per-file local copy of the same one-line
 /// helper every other file in this development that touches `natAbs`
 /// re-derives locally (`gcd.rs`, `wilson.rs`, `fibonacci.rs`, …).
-fn nat_abs(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
+pub(super) fn nat_abs(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
     let name = d.int().nat_abs;
     d.const_app(name, &[a])
 }
@@ -64,7 +64,7 @@ fn nat_abs(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
 /// `fun k => natAbs (emod (mul a (ofNat k)) (ofNat n))` -- the residue index
 /// map, `Nat -> Nat`, folded `Int.prodRangeIf_permute` needs its self-map
 /// argument to be.
-fn sigma_term(d: &mut IntDev<'_>, a: ExprId, n_int: ExprId) -> ExprId {
+pub(super) fn sigma_term(d: &mut IntDev<'_>, a: ExprId, n_int: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);

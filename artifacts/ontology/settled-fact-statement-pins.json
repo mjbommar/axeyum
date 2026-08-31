@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1973,
+    "min_identity_bound": 1977,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -6728,6 +6728,13 @@
       "kernel_theorem": "Int.euler_criterion_pm_one"
     },
     {
+      "fact_id": "F:int-euler-totient-theorem",
+      "language": "lean4",
+      "statement_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
+      "prose_sha256": "9f8c5db1259ba0ded328ca7733404cd7dd7a8f9cbd1c68ef14412f1666b9b63b",
+      "kernel_theorem": "Int.euler_totient_theorem"
+    },
+    {
       "fact_id": "F:int-euler-unit-coprime",
       "language": "lean4",
       "statement_sha256": "d1560117aaa7e65b671cc315361a9677d47dc948a97696d9ee6514b88daa4e1f",
@@ -7785,6 +7792,27 @@
       "statement_sha256": "55a94bd8d0c52597086b7ccaeb3179a777a93fe5ae05816b24da6ce6e96b0099",
       "prose_sha256": "4415647a389b510aeddc60f21cda2d1cb1ecb244dbbcdc7b13df9b103e103467",
       "kernel_theorem": "Int.prodRangeIf_const_eq_pow_count"
+    },
+    {
+      "fact_id": "F:int-prodrangeif-coprime",
+      "language": "lean4",
+      "statement_sha256": "01f7af56bd06ae4cdf88c635d3500e11b5441e3bcd10df493ef0d5bf431f9e49",
+      "prose_sha256": "3f89d0b4761645356ea9829d64fedb67cefa3b3ee52da133c21cb546aab0d45d",
+      "kernel_theorem": "Int.prodRangeIf_coprime"
+    },
+    {
+      "fact_id": "F:int-prodrangeif-factor-const-left",
+      "language": "lean4",
+      "statement_sha256": "42693a96f9b2fd31129b2c215fb59e063fe7ffbcc08c228fcfe91ee1ecabe005",
+      "prose_sha256": "3112ee7fa48656dd9bc4ace5583c186df4d9401317b7935c23c4dfd566e40244",
+      "kernel_theorem": "Int.prodRangeIf_factor_const_left"
+    },
+    {
+      "fact_id": "F:int-prodrangeif-modeq",
+      "language": "lean4",
+      "statement_sha256": "58332b9c55eff1280c5c79fe88eae5cdc4d9367a7f064cde279dd2f86fd0bb48",
+      "prose_sha256": "18efcdcdc4e880a7d5c1d70caaacd2016b7444f5e6252e71729fccf513f043c0",
+      "kernel_theorem": "Int.prodRangeIf_modeq"
     },
     {
       "fact_id": "F:int-prodrangeif-permute",

@@ -86,6 +86,10 @@ mod dvd_gcd_mirrors;
 mod dvd_mul_split;
 mod euclid;
 mod euler;
+mod euler_assembly;
+mod euler_prod_coprime;
+mod euler_prod_factor;
+mod euler_prod_modeq;
 mod euler_prod_pow;
 mod euler_theorem;
 mod euler_totient;
@@ -1541,6 +1545,30 @@ pub struct IntPrelude {
     /// induction pairing `Int.pow` with `Nat.countRange`
     /// (`euler_prod_pow.rs`).
     pub prod_range_if_const_eq_pow_count: NameId,
+    /// `prod_range_if_coprime : ∀ pred f n m, 0 < m →
+    /// (∀ k, k < n → pred k = true → Coprime (f k) m) →
+    /// Coprime (prodRange (selector pred f) n) m` -- a restricted product of
+    /// `m`-coprime factors stays coprime to `m`, part of item 3 of the
+    /// Fermat -> Euler handoff (`euler_prod_coprime.rs`).
+    pub prod_range_if_coprime: NameId,
+    /// `prod_range_if_factor_const_left : ∀ pred a f n,
+    /// prodRange (selector pred (fun k => a * f k)) n =
+    /// (prodRange (selector pred (fun _ => a)) n) * (prodRange (selector pred f) n)`
+    /// -- pointwise factoring of a constant out of a restricted product,
+    /// part of item 3 of the Fermat -> Euler handoff
+    /// (`euler_prod_factor.rs`).
+    pub prod_range_if_factor_const_left: NameId,
+    /// `prod_range_if_modeq : ∀ n pred f g m, 0 < n →
+    /// (∀ k, ModEq n (f k) (g k)) →
+    /// ModEq n (prodRange (selector pred f) m) (prodRange (selector pred g) m)`
+    /// -- a restricted product reduces mod `n` factor by factor, the
+    /// termwise `ModEq` transport step of item 3 of the Fermat -> Euler
+    /// handoff (`euler_prod_modeq.rs`).
+    pub prod_range_if_modeq: NameId,
+    /// `euler_totient_theorem : ∀ n a, 0 < n → Coprime a (ofNat n) →
+    /// ModEq (ofNat n) (pow a (totient n)) one` -- Euler's totient theorem
+    /// (`euler_assembly.rs`).
+    pub euler_totient_theorem: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1836,6 +1864,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         euler_unit_perm_injective: child(kernel, "euler_unit_perm_injective"),
         euler_unit_perm_maps_into: child(kernel, "euler_unit_perm_maps_into"),
         prod_range_if_const_eq_pow_count: child(kernel, "prodRangeIf_const_eq_pow_count"),
+        prod_range_if_coprime: child(kernel, "prodRangeIf_coprime"),
+        prod_range_if_factor_const_left: child(kernel, "prodRangeIf_factor_const_left"),
+        prod_range_if_modeq: child(kernel, "prodRangeIf_modeq"),
+        euler_totient_theorem: child(kernel, "euler_totient_theorem"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
@@ -2137,6 +2169,10 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         euler_unit_range::declare_euler_unit_perm_maps_into(&mut d)?;
         euler_theorem::declare_prod_range_if_all(&mut d)?;
         euler_prod_pow::declare_prod_range_if_const_eq_pow_count(&mut d)?;
+        euler_prod_coprime::declare_prod_range_if_coprime(&mut d)?;
+        euler_prod_factor::declare_prod_range_if_factor_const_left(&mut d)?;
+        euler_prod_modeq::declare_prod_range_if_modeq(&mut d)?;
+        euler_assembly::declare_euler_totient_theorem(&mut d)?;
         gauss_sign_product::declare_gauss_sign_prod_eq_pow_neg_one_of_count(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
