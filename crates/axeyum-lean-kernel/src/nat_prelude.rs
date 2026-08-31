@@ -204,6 +204,7 @@ mod log2;
 mod log_clog_order;
 mod lor;
 mod min_fac;
+mod minmax;
 mod mod_mul_lemmas;
 mod modeq_add_cancel;
 mod modeq_add_le_of_lt;
@@ -358,6 +359,7 @@ use log_clog_order::declare_log_clog_order_all;
 use log2::declare_log2_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
+use minmax::declare_minmax_all;
 use mod_mul_lemmas::declare_mod_mul_family;
 use modeq_add_cancel::declare_mod_eq_add_cancel;
 use modeq_add_le_of_lt::declare_mod_eq_add_le_of_lt;
@@ -4934,6 +4936,30 @@ pub struct NatPrelude {
     /// `binary_rec.rs` (a different, capitalized kernel name; only the
     /// Rust identifiers collide).
     pub pair_fn: NameId,
+
+    // -- `avg-pair-constructions` lane: `minmax.rs` --
+    // `docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md`
+    // (ADR-1045's named "largest remaining opportunity": four bare-root/
+    // cross-namespace names that open `Init.Data.Nat.MinMax` for the
+    // autogenesis screen). Construction only, ADR-0653.
+    /// `Max.max (a b : Nat) : Nat := if a <= b then b else a`, at the
+    /// bare-root `Max` namespace matching Mathlib's typeclass method name.
+    /// See `minmax.rs`'s module doc for why this is NOT a real typeclass
+    /// method (this kernel has no `Max` class).
+    pub max_max: NameId,
+    /// `Min.min (a b : Nat) : Nat := if a <= b then a else b`, same shape
+    /// as [`Self::max_max`] under the `Min` namespace.
+    pub min_min: NameId,
+    /// `Nat.instMax (a b : Nat) : Nat := Max.max a b` — NOT a real
+    /// typeclass instance (this kernel has no `Max` structure to be an
+    /// instance of); a same-value alias under the exact name Mathlib's
+    /// elaborated statements apply as the instance argument. See
+    /// `minmax.rs`'s module doc.
+    pub nat_inst_max: NameId,
+    /// `instMinNat (a b : Nat) : Nat := Min.min a b`, bare root (Mathlib's
+    /// own instance name for `Min Nat` has no namespace prefix), same
+    /// shape as [`Self::nat_inst_max`].
+    pub inst_min_nat: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5889,6 +5915,21 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
             avg: kernel.name_str(nat, "avg"),
             pair_fn: kernel.name_str(nat, "pair"),
+            max_max: {
+                let root = kernel.anon();
+                let max_ns = kernel.name_str(root, "Max");
+                kernel.name_str(max_ns, "max")
+            },
+            min_min: {
+                let root = kernel.anon();
+                let min_ns = kernel.name_str(root, "Min");
+                kernel.name_str(min_ns, "min")
+            },
+            nat_inst_max: kernel.name_str(nat, "instMax"),
+            inst_min_nat: {
+                let root = kernel.anon();
+                kernel.name_str(root, "instMinNat")
+            },
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -6768,6 +6809,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Mathlib.Data.Nat.Pairing` for the autogenesis screen
         // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
         declare_avg_pair_all(&mut d, &p)?;
+        // `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` (`minmax.rs`):
+        // needs only `Nat.ble`/`bool_select_nat`, both far above. Opens
+        // `Init.Data.Nat.MinMax` for the autogenesis screen
+        // (ADR-1045/ADR-1060). Nothing needs it, so it goes last.
+        declare_minmax_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -6791,6 +6837,9 @@ mod nat_prelude_tests;
 
 #[cfg(test)]
 mod avg_pair_tests;
+
+#[cfg(test)]
+mod minmax_tests;
 
 #[cfg(test)]
 mod bit_extra_tests;
