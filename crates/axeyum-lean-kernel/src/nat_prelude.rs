@@ -130,6 +130,7 @@ use crate::name::NameId;
 
 mod add_basics;
 mod add_choose_div;
+mod add_desc_factorial_asc_factorial;
 mod add_pos;
 mod algebra;
 mod and_or_distrib;
@@ -251,6 +252,7 @@ pub use ops::{NatDev, NatOps, NatState};
 
 use add_basics::declare_add_basics;
 use add_choose_div::declare_add_choose;
+use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factorial;
 use add_pos::declare_add_pos;
 use algebra::{
     declare_add_no_zero_summands, declare_additive_theorems, declare_finite_sum_theorems,
@@ -587,6 +589,12 @@ pub struct NatPrelude {
     /// needs only `dvd_refl`); `n = succ m` via
     /// [`Self::asc_factorial_succ_eq_factorial_mul_choose`] + `dvd_mul`.
     pub factorial_dvd_asc_factorial: NameId,
+    /// `Nat.add_descFactorial_eq_ascFactorial : ∀ n k, (n+k).descFactorial k
+    /// = (n+1).ascFactorial k`. Closes
+    /// `F:ml430-nat-add-descfactorial-eq-ascfactorial-5faac784`. Two lemma
+    /// applications chained through the shared RHS `k! * choose (n+k) k`
+    /// (no induction). See `nat_prelude::add_desc_factorial_asc_factorial`.
+    pub add_desc_factorial_eq_asc_factorial: NameId,
     /// `Nat.multichoose n k` — the number of size-`k` multisets from an
     /// `n`-element type, defined directly as `choose (pred (add n k)) k`
     /// (i.e. `(n + k - 1).choose k`) rather than by a fresh recursion. See
@@ -4856,6 +4864,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             asc_factorial_succ_eq_factorial_mul_choose: kernel
                 .name_str(nat, "ascFactorial_succ_eq_factorial_mul_choose"),
             factorial_dvd_asc_factorial: kernel.name_str(nat, "factorial_dvd_ascFactorial"),
+            add_desc_factorial_eq_asc_factorial: kernel
+                .name_str(nat, "add_descFactorial_eq_ascFactorial"),
             multichoose: kernel.name_str(nat, "multichoose"),
             multichoose_zero_right: kernel.name_str(nat, "multichoose_zero_right"),
             multichoose_one: kernel.name_str(nat, "multichoose_one"),
@@ -6227,6 +6237,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.
         declare_asc_factorial_all(&mut d, &p)?;
+        // Needs `Nat.descFactorial_eq_factorial_mul_choose`
+        // (`declare_desc_factorial_all`, far above) and
+        // `Nat.ascFactorial_succ_eq_factorial_mul_choose`
+        // (`declare_asc_factorial_all`, just above); nothing needs this
+        // closed `ml430` mirror.
+        declare_add_desc_factorial_eq_asc_factorial(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.pred`/`Nat.choose`, all far above (`choose`'s
         // own `choose_zero_right`/`choose_self`/`choose_one_right`, all
         // declared by `declare_choose_all`); nothing needs `Nat.multichoose`,
@@ -6567,3 +6583,6 @@ mod choose_factorial_add_tests;
 
 #[cfg(test)]
 mod add_choose_div_tests;
+
+#[cfg(test)]
+mod add_desc_factorial_asc_factorial_tests;
