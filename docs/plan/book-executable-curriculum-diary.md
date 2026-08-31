@@ -520,3 +520,36 @@ memory domain. Strict Clippy passes.
 This code slice does not yet close either RV64 obligation. The book-facing
 source manifest, independently replayed decoder/step evidence, mutation suite,
 and pinned Axeyum revision still need to land and run.
+
+## 2026-08-30 — replayable RV64I source and execution evidence
+
+Added two book-facing evidence producers and checkers. The source route emits
+the official document URL, release 20260120, PDF digest, byte and page counts,
+RV64I version 2.1, the exact twelve selected forms, the compiled implementation
+digest, profile choices, and exclusions. Its negative control changes the
+official-source digest and the checker rejects the result.
+
+The decoder/step route decodes and canonically re-encodes thirteen words printed
+in Chapters 6, 12, and 15, including every word of the XOR program. It also
+executes each of the twelve selected forms as a real transition and checks the
+form's architectural effect. The same executor runs the complete nine-word XOR
+program on empty, singleton, and three-word inputs and obtains `0`,
+`0x0123456789abcdef`, and `7`. Separate checks exercise `x0`, canonical state
+projection, five distinct trap classes, and three load-bearing semantic
+mutations.
+
+During review, the first draft's `forms_executed` count was found to cover only
+encode/decode round trips. That was not a truthful execution claim. The final
+route now steps all twelve forms and checks register, memory, PC, link, or
+branch effects as appropriate. The branch-base control likewise executes the
+book's taken `BNE` at PC 28 and observes target 12 before comparing it with the
+mutated sequential-PC target 16; it no longer relies on a handwritten target
+constant alone.
+
+The focused machine and evidence run passes 47 integration tests, including the
+two new end-to-end RV64 route tests. Strict all-target Clippy passes. Direct CLI
+replay accepts both generated reports; the source-digest and sequential-PC
+controls each exit nonzero with `semantic-mismatch`. The implementation landed
+as `eac21f4d4`. This closes the Axeyum producer/checker side, but the two book
+objects remain open until their manifests, saved reports, wrapper checks, and
+`make check-run` bindings land in the book repository.
