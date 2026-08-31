@@ -2047,6 +2047,100 @@ pub struct RatPrelude {
     /// and `add (succ n) k` does NOT; this is the missing half, and it is one
     /// `Nat.succ_add` followed by [`Self::alt_sign_succ`] (itself `Eq.refl`).
     pub alt_sign_succ_add: NameId,
+    /// `Rat.ble_flip_of_false : ∀ x y, Nat.ble (succ x) y = false →
+    /// Nat.ble y x = true` — the ONE `Nat.ble` inversion this development
+    /// needs and `nat_prelude/ble.rs` does not carry. Declared in the `Rat`
+    /// namespace, alongside `Rat.matSkip`/[`Self::unskip`], rather than into
+    /// `Nat` from here: a prelude declaring into another prelude's namespace
+    /// is what made `Nat.inverseIndex` collide across two files.
+    pub ble_flip_of_false: NameId,
+    /// `Rat.unskip_le : ∀ p q, Nat.ble q p = true → unskip p q = q` — below
+    /// the deleted index, `unskip` is the identity.
+    pub unskip_le: NameId,
+    /// `Rat.unskip_gt : ∀ p q, Nat.ble p q = true → unskip p (succ q) = q` —
+    /// above it, `unskip` shifts down by one. Stated at `succ q` rather than
+    /// as `unskip p q = Nat.pred q` deliberately: the `pred` form's successor
+    /// step needs `succ (pred q') = q'`, which is a further inversion, while
+    /// this form's is the induction hypothesis verbatim.
+    pub unskip_gt: NameId,
+    /// `Rat.matMinor_double_comm_lo : ∀ A i a b, Nat.ble a b = true → ∀ r c,
+    /// matMinor (matMinor A 0 a) i b r c =
+    /// matMinor (matMinor A (succ i) (succ b)) 0 a r c` — the DOUBLE minor
+    /// exchange, moving the rows as well as the columns.
+    ///
+    /// [`Self::mat_minor_col_comm`] keeps the rows fixed, which is what a
+    /// double expansion along one row needs. Relating the row-`0` expansion to
+    /// the row-`i` expansion moves them: `(0, i)` becomes `(succ i, 0)`. The
+    /// row half is [`Self::mat_skip_comm`] at `a = 0` (whose premise
+    /// `ble 0 i = true` is `Eq.refl`), the column half is the same lemma at
+    /// `(a, b)`.
+    pub mat_minor_double_comm_lo: NameId,
+    /// `Rat.matMinor_double_comm_hi : ∀ A i a b, Nat.ble a b = true → ∀ r c,
+    /// matMinor (matMinor A 0 (succ b)) i a r c =
+    /// matMinor (matMinor A (succ i) a) 0 b r c` —
+    /// [`Self::mat_minor_double_comm_lo`]'s mirror, for the case where the
+    /// row-`0` expansion took the LARGER of the two columns first.
+    pub mat_minor_double_comm_hi: NameId,
+    /// `Rat.det_double_comm_lo : ∀ m A i a b, Nat.ble a b = true →
+    /// det (matMinor (matMinor A 0 a) i b) m =
+    /// det (matMinor (matMinor A (succ i) (succ b)) 0 a) m` —
+    /// [`Self::mat_minor_double_comm_lo`] through [`Self::det_congr`].
+    pub det_double_comm_lo: NameId,
+    /// `Rat.det_double_comm_hi : ∀ m A i a b, Nat.ble a b = true →
+    /// det (matMinor (matMinor A 0 (succ b)) i a) m =
+    /// det (matMinor (matMinor A (succ i) a) 0 b) m` —
+    /// [`Self::mat_minor_double_comm_hi`] through [`Self::det_congr`].
+    pub det_double_comm_hi: NameId,
+    /// `Rat.mul_perm4 : ∀ x a y b d, x * (a * (y * (b * d))) =
+    /// y * (b * (x * (a * d)))` — the one product permutation both halves of
+    /// the summand identification need, factored out because it is the same
+    /// permutation on both sides of the sign.
+    pub mul_perm4: NameId,
+    /// `Rat.laplaceSummand : (Nat → Nat → Rat) → Nat → Nat → Nat → Nat → Rat`
+    /// — `laplaceSummand A i m p q`, the Laplace double-expansion summand,
+    /// defined on the WHOLE square `[0, n) × [0, n)`:
+    ///
+    /// ```text
+    /// laplaceSummand A i m p q :=
+    ///   if Nat.beq p q then 0
+    ///   else altSign p * (A 0 p * (altSign (unskip p q + i)
+    ///          * (A (succ i) q * det (matMinor (matMinor A 0 p) i (unskip p q)) m)))
+    /// ```
+    ///
+    /// `p` is the column the row-`0` expansion takes and `q` the column the
+    /// row-`succ i` expansion takes. Neither cofactor sum defines a value on
+    /// the diagonal — each runs over a range one short — and `0` is what makes
+    /// the two ranges fillable to the full square by
+    /// [`Self::sum_range_mat_skip`], after which the double sum is a plain
+    /// rectangle and [`Self::sum_range_swap`] is the whole reindexing.
+    ///
+    /// The trusted gate cannot tell you this is the right function; the
+    /// evidence is [`Self::laplace_summand_row_zero`] and
+    /// [`Self::laplace_summand_row_i`], which say it agrees with each
+    /// parametrisation's own summand, plus the concrete evaluation in
+    /// `rat_prelude_tests`.
+    pub laplace_summand: NameId,
+    /// `Rat.laplaceSummand_rowZero : ∀ A i m p k,
+    /// laplaceSummand A i m p (matSkip p k) = altSign p * (A 0 p *
+    /// (altSign (k + i) * (A (succ i) (matSkip p k) *
+    /// det (matMinor (matMinor A 0 p) i k) m)))` — the summand agrees with the
+    /// row-`0`-then-row-`i` parametrisation. Two rewrites and no case split:
+    /// [`Self::beq_mat_skip`] kills the guard and
+    /// [`Self::unskip_mat_skip`] recovers the inner column.
+    pub laplace_summand_row_zero: NameId,
+    /// `Rat.laplaceSummand_rowI : ∀ A i m q k,
+    /// laplaceSummand A i m (matSkip q k) q = altSign (q + succ i) *
+    /// (A (succ i) q * (altSign k * (A 0 (matSkip q k) *
+    /// det (matMinor (matMinor A (succ i) q) 0 k) m)))` — the summand agrees
+    /// with the row-`i`-then-row-`0` parametrisation.
+    ///
+    /// **The bulk of ADR-1155's named remainder.** Unlike
+    /// [`Self::laplace_summand_row_zero`] this needs a case split on
+    /// `Nat.ble q k` — which of the two columns is the larger — because
+    /// `unskip (matSkip q k) q` is `q` in one order and `Nat.pred q` in the
+    /// other, and the two double minors are related by DIFFERENT orientations
+    /// of [`Self::mat_skip_comm`].
+    pub laplace_summand_row_i: NameId,
 }
 
 impl RatPrelude {
@@ -2440,6 +2534,17 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         beq_mat_skip: child(kernel, "beq_matSkip"),
         beq_mat_skip_left: child(kernel, "beq_matSkip_left"),
         alt_sign_succ_add: child(kernel, "altSign_succ_add"),
+        ble_flip_of_false: child(kernel, "ble_flip_of_false"),
+        unskip_le: child(kernel, "unskip_le"),
+        unskip_gt: child(kernel, "unskip_gt"),
+        mat_minor_double_comm_lo: child(kernel, "matMinor_double_comm_lo"),
+        mat_minor_double_comm_hi: child(kernel, "matMinor_double_comm_hi"),
+        det_double_comm_lo: child(kernel, "det_double_comm_lo"),
+        det_double_comm_hi: child(kernel, "det_double_comm_hi"),
+        mul_perm4: child(kernel, "mul_perm4"),
+        laplace_summand: child(kernel, "laplaceSummand"),
+        laplace_summand_row_zero: child(kernel, "laplaceSummand_rowZero"),
+        laplace_summand_row_i: child(kernel, "laplaceSummand_rowI"),
     }
 }
 

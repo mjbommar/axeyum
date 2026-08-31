@@ -143,7 +143,11 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_unskip_equations(d, p)?;
     declare_unskip_mat_skip(d, p)?;
     declare_beq_mat_skip(d, p)?;
-    declare_alt_sign_succ_add(d, p)
+    declare_alt_sign_succ_add(d, p)?;
+    declare_ble_flip_of_false(d, p)?;
+    declare_unskip_bounds(d, p)?;
+    declare_double_minor_comm(d, p)?;
+    declare_mul_perm4(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -2837,4 +2841,760 @@ fn declare_alt_sign_succ_add(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
         d.lam_fv(n_fv, nat, over_k)
     };
     d.declare_theorem(p.alt_sign_succ_add, ty, value)
+}
+
+/// `heq : Eq Bool cond true ⊢ Eq Nat (bool_select_nat cond a b) a`.
+///
+/// A local copy of the `Nat` analogue of
+/// [`select_rat_true`](super::probability::select_rat_true);
+/// `nat_prelude::finite`'s is `pub(super)` there and `int_prelude`'s two are
+/// private, so `int_prelude/wilson.rs` and `int_prelude/prod.rs` each keep
+/// their own as well.
+fn select_nat_true(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let true_value = d.bool_true();
+    let flipped = d.bool_symm(cond, true_value, heq);
+    let motive = d.bool_eq_motive(true_value, &|d, value| {
+        let selected = d.bool_select_nat(value, a, b);
+        NatOps::eq(d, selected, a)
+    });
+    let refl_case = NatOps::refl(d, a);
+    d.bool_transport(true_value, motive, refl_case, cond, flipped)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
+fn select_nat_false(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let false_value = d.bool_false();
+    let flipped = d.bool_symm(cond, false_value, heq);
+    let motive = d.bool_eq_motive(false_value, &|d, value| {
+        let selected = d.bool_select_nat(value, a, b);
+        NatOps::eq(d, selected, b)
+    });
+    let refl_case = NatOps::refl(d, b);
+    d.bool_transport(false_value, motive, refl_case, cond, flipped)
+}
+
+/// A `Bool` case split that KEEPS the equation: given proofs of
+/// `Eq Bool cond true → target` and `Eq Bool cond false → target`, produce
+/// `target`.
+///
+/// [`bool_cases`] is the other device and it is not interchangeable with this
+/// one. That one abstracts the scrutinee out of the goal and replaces it by
+/// each constructor, which works when every occurrence is *syntactically* the
+/// scrutinee. It does not work when reduction RE-CREATES the scrutinee — the
+/// reason [`declare_unskip`] is a double `Nat.rec` rather than the closed
+/// `Nat.ble` form. This device leaves the goal alone and hands each branch the
+/// hypothesis instead, which is what the summand identification needs: the two
+/// branches differ in which `Rat.matSkip_comm` orientation applies, not in the
+/// shape of the goal.
+fn bool_cases_eq(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    target: ExprId,
+    at_true: ExprId,
+    at_false: ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let motive = {
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let equation = d.bool_eq(cond, b);
+        let body = d.arrow(equation, target);
+        d.lam_fv(b_fv, bool_ty, body)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.prelude().logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![level_zero]);
+    let dispatched = d.apply(rec, &[motive, at_false, at_true, cond]);
+    let reflexive = d.bool_refl(cond);
+    d.apply(dispatched, &[reflexive])
+}
+
+/// Admit `Rat.ble_flip_of_false : ∀ x y, Nat.ble (succ x) y = false →
+/// Nat.ble y x = true`.
+///
+/// The one `Nat.ble` inversion this development needs and `nat_prelude/ble.rs`
+/// does not carry: it has the two positive bridges to `Nat.le` and the negated
+/// `Prop` form, but nothing turning a `= false` into the *other* comparison's
+/// `= true`, which is the shape a `Bool.rec` branch hands you.
+///
+/// Induction on `x` with `y` under the motive, case-splitting on `y` in each
+/// arm. Every case is ι: `ble (succ _) zero ≡ false`, `ble zero _ ≡ true`, and
+/// `ble (succ a) (succ b) ≡ ble a b`, so the two impossible corners are a
+/// [`NatOps::false_true_elim`] after one `bool_symm` and the live corner is the
+/// induction hypothesis verbatim.
+fn declare_ble_flip_of_false(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let sx = d.succ(x);
+        let hyp = {
+            let lhs = d.ble(sx, y);
+            let false_ = d.bool_false();
+            d.bool_eq(lhs, false_)
+        };
+        let concl = {
+            let lhs = d.ble(y, x);
+            let true_ = d.bool_true();
+            d.bool_eq(lhs, true_)
+        };
+        let arr = d.arrow(hyp, concl);
+        d.pi_fv(y_fv, nat, arr)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let nat = d.nat_ty();
+        let zero_n = d.zero();
+        let one_n = d.succ(zero_n);
+
+        let motive_y = |d: &mut IntDev<'_>, y: ExprId| -> ExprId {
+            let hyp = {
+                let lhs = d.ble(one_n, y);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let concl = {
+                let lhs = d.ble(y, zero_n);
+                let true_ = d.bool_true();
+                d.bool_eq(lhs, true_)
+            };
+            d.arrow(hyp, concl)
+        };
+
+        let y_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            // `ble 0 0 ≡ true`; the hypothesis is not used.
+            let zero_n = d.zero();
+            let one_n = d.succ(zero_n);
+            let hyp = {
+                let lhs = d.ble(one_n, zero_n);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let h_fv = d.fresh_fvar();
+            let true_ = d.bool_true();
+            let pf = d.bool_refl(true_);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let y_at_succ = |d: &mut IntDev<'_>, yp: ExprId| -> ExprId {
+            // `ble 1 (succ y') ≡ ble 0 y' ≡ true`, so the premise is
+            // `true = false`.
+            let zero_n = d.zero();
+            let one_n = d.succ(zero_n);
+            let syp = d.succ(yp);
+            let hyp = {
+                let lhs = d.ble(one_n, syp);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let true_ = d.bool_true();
+            let false_ = d.bool_false();
+            let flipped = d.bool_symm(true_, false_, h);
+            let target = {
+                let lhs = d.ble(syp, zero_n);
+                d.bool_eq(lhs, true_)
+            };
+            let pf = d.false_true_elim(target, flipped);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let per_y = d.induct(&motive_y, &y_at_zero, &|d, yp, _ih| y_at_succ(d, yp), y);
+        d.lam_fv(y_fv, nat, per_y)
+    };
+
+    let step = |d: &mut IntDev<'_>, xp: ExprId, ih: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let sxp = d.succ(xp);
+        let ssxp = d.succ(sxp);
+
+        let motive_y = |d: &mut IntDev<'_>, y: ExprId| -> ExprId {
+            let hyp = {
+                let lhs = d.ble(ssxp, y);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let concl = {
+                let lhs = d.ble(y, sxp);
+                let true_ = d.bool_true();
+                d.bool_eq(lhs, true_)
+            };
+            d.arrow(hyp, concl)
+        };
+
+        let y_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            // `ble 0 (succ x') ≡ true`.
+            let zero_n = d.zero();
+            let hyp = {
+                let lhs = d.ble(ssxp, zero_n);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let h_fv = d.fresh_fvar();
+            let true_ = d.bool_true();
+            let pf = d.bool_refl(true_);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let y_at_succ = |d: &mut IntDev<'_>, yp: ExprId| -> ExprId {
+            // The premise ι-reduces to `ble (succ x') y' = false` and the goal
+            // to `ble y' x' = true`, which is the induction hypothesis at `y'`.
+            let syp = d.succ(yp);
+            let hyp = {
+                let lhs = d.ble(ssxp, syp);
+                let false_ = d.bool_false();
+                d.bool_eq(lhs, false_)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let pf = d.apply(ih, &[yp, h]);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let per_y = d.induct(&motive_y, &y_at_zero, &|d, yp, _ih| y_at_succ(d, yp), y);
+        d.lam_fv(y_fv, nat, per_y)
+    };
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let stmt = motive(d, x);
+    let proof = d.induct(&motive, &base, &step, x);
+    let ty = d.pi_fv(x_fv, nat, stmt);
+    let value = d.lam_fv(x_fv, nat, proof);
+    d.declare_theorem(p.ble_flip_of_false, ty, value)
+}
+
+/// Admit `Rat.unskip_le : ∀ p q, Nat.ble q p = true → unskip p q = q` and
+/// `Rat.unskip_gt : ∀ p q, Nat.ble p q = true → unskip p (succ q) = q`.
+///
+/// The two halves of what `unskip` does, split by which side of the deleted
+/// index `q` falls on. Both are the same two-level induction as
+/// [`declare_unskip_mat_skip`] and every case is ι.
+///
+/// `unskip_gt` is stated at `succ q` rather than as
+/// `Nat.ble (succ p) q = true → unskip p q = Nat.pred q`, which is the form
+/// the closed definition suggests. The `pred` form's successor step ends at
+/// `succ (Nat.pred q') = q'` and needs `q' > 0` — a further inversion — where
+/// this form's successor step IS the induction hypothesis.
+fn declare_unskip_bounds(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    // unskip_le : ∀ p q, ble q p = true → unskip p q = q
+    {
+        let motive = |d: &mut IntDev<'_>, at: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let hyp = ble_true_ty(d, q, at);
+            let lhs = runskip(d, p, at, q);
+            let concl = NatOps::eq(d, lhs, q);
+            let arr = d.arrow(hyp, concl);
+            d.pi_fv(q_fv, nat, arr)
+        };
+
+        let base = |d: &mut IntDev<'_>| -> ExprId {
+            let nat = d.nat_ty();
+            let zero_n = d.zero();
+
+            let motive_q = |d: &mut IntDev<'_>, q: ExprId| -> ExprId {
+                let zero_n = d.zero();
+                let hyp = ble_true_ty(d, q, zero_n);
+                let lhs = runskip(d, p, zero_n, q);
+                let concl = NatOps::eq(d, lhs, q);
+                d.arrow(hyp, concl)
+            };
+            let q_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+                // `unskip 0 0 ≡ Nat.pred 0 ≡ 0`.
+                let zero_n = d.zero();
+                let hyp = ble_true_ty(d, zero_n, zero_n);
+                let h_fv = d.fresh_fvar();
+                let pf = NatOps::refl(d, zero_n);
+                d.lam_fv(h_fv, hyp, pf)
+            };
+            let q_at_succ = |d: &mut IntDev<'_>, qp: ExprId| -> ExprId {
+                // `ble (succ q') zero ≡ false`.
+                let zero_n = d.zero();
+                let sqp = d.succ(qp);
+                let hyp = ble_true_ty(d, sqp, zero_n);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let lhs = runskip(d, p, zero_n, sqp);
+                let target = NatOps::eq(d, lhs, sqp);
+                let pf = d.false_true_elim(target, h);
+                d.lam_fv(h_fv, hyp, pf)
+            };
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let per_q = d.induct(&motive_q, &q_at_zero, &|d, qp, _ih| q_at_succ(d, qp), q);
+            let _ = zero_n;
+            d.lam_fv(q_fv, nat, per_q)
+        };
+
+        let step = |d: &mut IntDev<'_>, pp: ExprId, ih: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let spp = d.succ(pp);
+
+            let motive_q = |d: &mut IntDev<'_>, q: ExprId| -> ExprId {
+                let hyp = ble_true_ty(d, q, spp);
+                let lhs = runskip(d, p, spp, q);
+                let concl = NatOps::eq(d, lhs, q);
+                d.arrow(hyp, concl)
+            };
+            let q_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+                // `unskip (succ p') 0 ≡ 0`.
+                let zero_n = d.zero();
+                let hyp = ble_true_ty(d, zero_n, spp);
+                let h_fv = d.fresh_fvar();
+                let pf = NatOps::refl(d, zero_n);
+                d.lam_fv(h_fv, hyp, pf)
+            };
+            let q_at_succ = |d: &mut IntDev<'_>, qp: ExprId| -> ExprId {
+                let sqp = d.succ(qp);
+                let hyp = ble_true_ty(d, sqp, spp);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                // `ble (succ q') (succ p') ≡ ble q' p'`, the hypothesis `ih`
+                // wants; the goal ι-reduces to `succ (unskip p' q') = succ q'`.
+                let inner = runskip(d, p, pp, qp);
+                let ih_at = d.apply(ih, &[qp, h]);
+                let pf = NatOps::congr(d, inner, qp, ih_at, &|d, t| d.succ(t));
+                d.lam_fv(h_fv, hyp, pf)
+            };
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let per_q = d.induct(&motive_q, &q_at_zero, &|d, qp, _ih| q_at_succ(d, qp), q);
+            d.lam_fv(q_fv, nat, per_q)
+        };
+
+        let p_fv = d.fresh_fvar();
+        let at = d.kernel().fvar(p_fv);
+        let stmt = motive(d, at);
+        let proof = d.induct(&motive, &base, &step, at);
+        let ty = d.pi_fv(p_fv, nat, stmt);
+        let value = d.lam_fv(p_fv, nat, proof);
+        d.declare_theorem(p.unskip_le, ty, value)?;
+    }
+
+    // unskip_gt : ∀ p q, ble p q = true → unskip p (succ q) = q
+    {
+        let motive = |d: &mut IntDev<'_>, at: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let hyp = ble_true_ty(d, at, q);
+            let sq = d.succ(q);
+            let lhs = runskip(d, p, at, sq);
+            let concl = NatOps::eq(d, lhs, q);
+            let arr = d.arrow(hyp, concl);
+            d.pi_fv(q_fv, nat, arr)
+        };
+
+        let base = |d: &mut IntDev<'_>| -> ExprId {
+            // `unskip 0 (succ q) ≡ Nat.pred (succ q) ≡ q`, hypothesis unused.
+            let nat = d.nat_ty();
+            let zero_n = d.zero();
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let hyp = ble_true_ty(d, zero_n, q);
+            let h_fv = d.fresh_fvar();
+            let pf = NatOps::refl(d, q);
+            let with_h = d.lam_fv(h_fv, hyp, pf);
+            d.lam_fv(q_fv, nat, with_h)
+        };
+
+        let step = |d: &mut IntDev<'_>, pp: ExprId, ih: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let spp = d.succ(pp);
+
+            let motive_q = |d: &mut IntDev<'_>, q: ExprId| -> ExprId {
+                let hyp = ble_true_ty(d, spp, q);
+                let sq = d.succ(q);
+                let lhs = runskip(d, p, spp, sq);
+                let concl = NatOps::eq(d, lhs, q);
+                d.arrow(hyp, concl)
+            };
+            let q_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+                // `ble (succ p') zero ≡ false`.
+                let zero_n = d.zero();
+                let hyp = ble_true_ty(d, spp, zero_n);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let one_n = d.succ(zero_n);
+                let lhs = runskip(d, p, spp, one_n);
+                let target = NatOps::eq(d, lhs, zero_n);
+                let pf = d.false_true_elim(target, h);
+                d.lam_fv(h_fv, hyp, pf)
+            };
+            let q_at_succ = |d: &mut IntDev<'_>, qp: ExprId| -> ExprId {
+                let sqp = d.succ(qp);
+                let hyp = ble_true_ty(d, spp, sqp);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                // Goal ι-reduces to `succ (unskip p' (succ q')) = succ q'`.
+                let ssqp = d.succ(sqp);
+                let _ = ssqp;
+                let inner = {
+                    let arg = d.succ(qp);
+                    runskip(d, p, pp, arg)
+                };
+                let ih_at = d.apply(ih, &[qp, h]);
+                let pf = NatOps::congr(d, inner, qp, ih_at, &|d, t| d.succ(t));
+                d.lam_fv(h_fv, hyp, pf)
+            };
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let per_q = d.induct(&motive_q, &q_at_zero, &|d, qp, _ih| q_at_succ(d, qp), q);
+            d.lam_fv(q_fv, nat, per_q)
+        };
+
+        let p_fv = d.fresh_fvar();
+        let at = d.kernel().fvar(p_fv);
+        let stmt = motive(d, at);
+        let proof = d.induct(&motive, &base, &step, at);
+        let ty = d.pi_fv(p_fv, nat, stmt);
+        let value = d.lam_fv(p_fv, nat, proof);
+        d.declare_theorem(p.unskip_gt, ty, value)?;
+    }
+
+    let _ = nat;
+    Ok(())
+}
+
+/// Admit the two DOUBLE minor exchanges, pointwise and at `det`.
+///
+/// [`declare_mat_minor_col_comm`] keeps the row indices fixed, which is what a
+/// double expansion along ONE row needs. Relating the row-`0` expansion to the
+/// row-`succ i` expansion moves the rows too — `(0, i)` on one side becomes
+/// `(succ i, 0)` on the other — so these are separate statements and neither
+/// follows from that one.
+///
+/// The row half is [`declare_mat_skip_comm`] at `a = 0`, whose premise
+/// `Nat.ble 0 i = true` is `Eq.refl` since `ble zero _ ≡ true`. The column half
+/// is the same lemma at `(a, b)`, in the `_lo` orientation as stated and in the
+/// `_hi` orientation reversed — which is the whole difference between the two,
+/// and why the summand identification needs a case split on `Nat.ble q k` and
+/// nothing weaker.
+fn declare_double_minor_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    // The two pointwise statements share everything but their column terms.
+    let mut pointwise = |name, hi: bool| -> Result<(), KernelError> {
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let v_fv = d.fresh_fvar();
+        let v = d.kernel().fvar(v_fv);
+        let hyp = ble_true_ty(d, u, v);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+
+        let zero_n = d.zero();
+        let si = d.succ(i);
+        let sv = d.succ(v);
+
+        let (lhs, rhs) = if hi {
+            let left = {
+                let outer = rmat_minor_of(d, p, mat, zero_n, sv);
+                rmat_minor(d, p, outer, i, u, r, c)
+            };
+            let right = {
+                let outer = rmat_minor_of(d, p, mat, si, u);
+                rmat_minor(d, p, outer, zero_n, v, r, c)
+            };
+            (left, right)
+        } else {
+            let left = {
+                let outer = rmat_minor_of(d, p, mat, zero_n, u);
+                rmat_minor(d, p, outer, i, v, r, c)
+            };
+            let right = {
+                let outer = rmat_minor_of(d, p, mat, si, sv);
+                rmat_minor(d, p, outer, zero_n, u, r, c)
+            };
+            (left, right)
+        };
+        let stmt = req(d, lhs, rhs);
+
+        // Both sides δβ-reduce to `A <row> <column>`; the row halves are
+        // identical up to `matSkip_comm` at `a = 0` and only the columns differ.
+        let row_from = {
+            let inner = rmat_skip(d, p, i, r);
+            rmat_skip(d, p, zero_n, inner)
+        };
+        let row_to = {
+            let inner = rmat_skip(d, p, zero_n, r);
+            rmat_skip(d, p, si, inner)
+        };
+        let (col_from, col_to) = if hi {
+            let from = {
+                let inner = rmat_skip(d, p, u, c);
+                rmat_skip(d, p, sv, inner)
+            };
+            let to = {
+                let inner = rmat_skip(d, p, v, c);
+                rmat_skip(d, p, u, inner)
+            };
+            (from, to)
+        } else {
+            let from = {
+                let inner = rmat_skip(d, p, v, c);
+                rmat_skip(d, p, u, inner)
+            };
+            let to = {
+                let inner = rmat_skip(d, p, u, c);
+                rmat_skip(d, p, sv, inner)
+            };
+            (from, to)
+        };
+
+        let start = d.apply(mat, &[row_from, col_from]);
+        let mid = d.apply(mat, &[row_to, col_from]);
+        let end = d.apply(mat, &[row_to, col_to]);
+
+        let row_step = {
+            let true_ = d.bool_true();
+            let h_zero = d.bool_refl(true_);
+            let comm = d.lemma(p.mat_skip_comm, &[zero_n, i, h_zero]);
+            let comm_at = d.apply(comm, &[r]);
+            nat_eq_to_rat(d, row_from, row_to, comm_at, &|d, t| {
+                d.apply(mat, &[t, col_from])
+            })
+        };
+        let col_step = {
+            // `matSkip_comm u v h c : matSkip u (matSkip v c) =
+            //  matSkip (succ v) (matSkip u c)`; the `_lo` orientation reads it
+            // forwards and the `_hi` one backwards.
+            let comm = d.lemma(p.mat_skip_comm, &[u, v, h]);
+            let comm_at = d.apply(comm, &[c]);
+            let low = {
+                let inner = rmat_skip(d, p, v, c);
+                rmat_skip(d, p, u, inner)
+            };
+            let high = {
+                let inner = rmat_skip(d, p, u, c);
+                rmat_skip(d, p, sv, inner)
+            };
+            let forward = nat_eq_to_rat(d, low, high, comm_at, &|d, t| {
+                d.apply(mat, &[row_to, t])
+            });
+            let at_low = d.apply(mat, &[row_to, low]);
+            let at_high = d.apply(mat, &[row_to, high]);
+            if hi {
+                super::ops::rsymm(d, at_low, at_high, forward)
+            } else {
+                forward
+            }
+        };
+
+        let (_e, proof) = rchain(d, start, &[(mid, row_step), (end, col_step)]);
+
+        let ty = {
+            let over_c = d.pi_fv(c_fv, nat, stmt);
+            let over_r = d.pi_fv(r_fv, nat, over_c);
+            let with_h = d.pi_fv(h_fv, hyp, over_r);
+            let over_v = d.pi_fv(v_fv, nat, with_h);
+            let over_u = d.pi_fv(u_fv, nat, over_v);
+            let over_i = d.pi_fv(i_fv, nat, over_u);
+            d.pi_fv(a_fv, mty, over_i)
+        };
+        let value = {
+            let over_c = d.lam_fv(c_fv, nat, proof);
+            let over_r = d.lam_fv(r_fv, nat, over_c);
+            let with_h = d.lam_fv(h_fv, hyp, over_r);
+            let over_v = d.lam_fv(v_fv, nat, with_h);
+            let over_u = d.lam_fv(u_fv, nat, over_v);
+            let over_i = d.lam_fv(i_fv, nat, over_u);
+            d.lam_fv(a_fv, mty, over_i)
+        };
+        d.declare_theorem(name, ty, value)
+    };
+    pointwise(p.mat_minor_double_comm_lo, false)?;
+    pointwise(p.mat_minor_double_comm_hi, true)?;
+
+    // The `det` lifts, each one `det_congr` applied to the pointwise identity.
+    let mut at_det = |name, pointwise_name, hi: bool| -> Result<(), KernelError> {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let v_fv = d.fresh_fvar();
+        let v = d.kernel().fvar(v_fv);
+        let hyp = ble_true_ty(d, u, v);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let zero_n = d.zero();
+        let si = d.succ(i);
+        let sv = d.succ(v);
+        let (left, right) = if hi {
+            let l = {
+                let outer = rmat_minor_of(d, p, mat, zero_n, sv);
+                rmat_minor_of(d, p, outer, i, u)
+            };
+            let r = {
+                let outer = rmat_minor_of(d, p, mat, si, u);
+                rmat_minor_of(d, p, outer, zero_n, v)
+            };
+            (l, r)
+        } else {
+            let l = {
+                let outer = rmat_minor_of(d, p, mat, zero_n, u);
+                rmat_minor_of(d, p, outer, i, v)
+            };
+            let r = {
+                let outer = rmat_minor_of(d, p, mat, si, sv);
+                rmat_minor_of(d, p, outer, zero_n, u)
+            };
+            (l, r)
+        };
+        let lhs = rdet(d, p, left, m);
+        let rhs = rdet(d, p, right, m);
+        let stmt = req(d, lhs, rhs);
+
+        let pw = d.const_app(pointwise_name, &[mat, i, u, v, h]);
+        let proof = d.lemma(p.det_congr, &[m, left, right, pw]);
+
+        let ty = {
+            let with_h = d.pi_fv(h_fv, hyp, stmt);
+            let over_v = d.pi_fv(v_fv, nat, with_h);
+            let over_u = d.pi_fv(u_fv, nat, over_v);
+            let over_i = d.pi_fv(i_fv, nat, over_u);
+            let over_a = d.pi_fv(a_fv, mty, over_i);
+            d.pi_fv(m_fv, nat, over_a)
+        };
+        let value = {
+            let with_h = d.lam_fv(h_fv, hyp, proof);
+            let over_v = d.lam_fv(v_fv, nat, with_h);
+            let over_u = d.lam_fv(u_fv, nat, over_v);
+            let over_i = d.lam_fv(i_fv, nat, over_u);
+            let over_a = d.lam_fv(a_fv, mty, over_i);
+            d.lam_fv(m_fv, nat, over_a)
+        };
+        d.declare_theorem(name, ty, value)
+    };
+    at_det(p.det_double_comm_lo, p.mat_minor_double_comm_lo, false)?;
+    at_det(p.det_double_comm_hi, p.mat_minor_double_comm_hi, true)
+}
+
+/// Admit `Rat.mul_perm4 : ∀ x a y b d,
+/// x * (a * (y * (b * d))) = y * (b * (x * (a * d)))`.
+///
+/// The one product permutation the summand identification needs, and it is
+/// needed on both sides of a `Rat.neg`: the two cofactor parametrisations
+/// order the same five factors — two signs, two entries, one determinant —
+/// differently, and the sign difference between them is a single `neg` that
+/// [`super::ops`]'s `neg_mul` moves outside first. Six steps of
+/// `mul_assoc`/`mul_comm`; this prelude has no `mul_left_comm`.
+fn declare_mul_perm4(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.mul_perm4, 5, &|d, v| {
+        let (x, a, y, b, dd) = (v[0], v[1], v[2], v[3], v[4]);
+
+        let bd = rmul(d, b, dd);
+        let ybd = rmul(d, y, bd);
+        let xa = rmul(d, x, a);
+        let ad = rmul(d, a, dd);
+
+        let start = {
+            let inner = rmul(d, a, ybd);
+            rmul(d, x, inner)
+        };
+        let target = {
+            let inner = rmul(d, x, ad);
+            let outer = rmul(d, b, inner);
+            rmul(d, y, outer)
+        };
+        let stmt = req(d, start, target);
+
+        // 1. `x * (a * P) -> (x * a) * P`
+        let m1 = rmul(d, xa, ybd);
+        let s1 = {
+            let pf = d.lemma(p.mul_assoc, &[x, a, ybd]);
+            super::ops::rsymm(d, m1, start, pf)
+        };
+        // 2. commute the two halves
+        let m2 = rmul(d, ybd, xa);
+        let s2 = d.lemma(p.mul_comm, &[xa, ybd]);
+        // 3. `(y * Q) * R -> y * (Q * R)`
+        let bdxa = rmul(d, bd, xa);
+        let m3 = rmul(d, y, bdxa);
+        let s3 = d.lemma(p.mul_assoc, &[y, bd, xa]);
+        // 4. inside: `(b * d) * (x * a) -> b * (d * (x * a))`
+        let dxa = rmul(d, dd, xa);
+        let m4 = {
+            let inner = rmul(d, b, dxa);
+            rmul(d, y, inner)
+        };
+        let s4 = {
+            let pf = d.lemma(p.mul_assoc, &[b, dd, xa]);
+            let b_dxa = rmul(d, b, dxa);
+            rcongr(d, bdxa, b_dxa, pf, &|d, t| rmul(d, y, t))
+        };
+        // 5. inside: `d * (x * a) -> (x * a) * d`
+        let xad = rmul(d, xa, dd);
+        let m5 = {
+            let inner = rmul(d, b, xad);
+            rmul(d, y, inner)
+        };
+        let s5 = {
+            let pf = d.lemma(p.mul_comm, &[dd, xa]);
+            rcongr(d, dxa, xad, pf, &|d, t| {
+                let inner = rmul(d, b, t);
+                rmul(d, y, inner)
+            })
+        };
+        // 6. inside: `(x * a) * d -> x * (a * d)`
+        let s6 = {
+            let pf = d.lemma(p.mul_assoc, &[x, a, dd]);
+            let xad_target = rmul(d, x, ad);
+            rcongr(d, xad, xad_target, pf, &|d, t| {
+                let inner = rmul(d, b, t);
+                rmul(d, y, inner)
+            })
+        };
+
+        let (_e, proof) = rchain(
+            d,
+            start,
+            &[
+                (m1, s1),
+                (m2, s2),
+                (m3, s3),
+                (m4, s4),
+                (m5, s5),
+                (target, s6),
+            ],
+        );
+        (stmt, proof)
+    })
 }
