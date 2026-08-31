@@ -419,4 +419,9 @@ jobs:
       - run: python3 scripts/check-semantic-control-fixtures.py --check
       - run: python3 scripts/check-credit-transaction-ledger.py
       - run: python3 scripts/check-proposition-duplication.py
+      # ADR-1050: assert the seven above stay wired. This gate is the
+      # reason the block exists at all -- prose did not keep them wired,
+      # so a gate does. ~0.1s, pure Python, no build.
+      - run: python3 scripts/check-l0-gate-enforcement.py
+      - run: python3 -m unittest scripts.tests.test_l0_gate_enforcement
       - run: ./scripts/check-links.sh
