@@ -361,8 +361,7 @@ fn declare_mat_inv2_eval_example(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     })
 }
 
-/// Declare `theorem name : ∀ (A : Nat → Nat → Rat), Not (det2 (A 0 0) (A 0
-/// 1) (A 1 0) (A 1 1) = 0) → concl`, given closures building the conclusion
+/// Declare `theorem name : ∀ (A : Nat → Nat → Rat), Not (det2 (A 0 0) (A 0 1) (A 1 0) (A 1 1) = 0) → concl`, given closures building the conclusion
 /// and the proof from `A` (and the hypothesis, for the proof).
 fn mat_theorem_hyp(
     d: &mut IntDev<'_>,
@@ -664,18 +663,15 @@ fn right_entry_proof(
     let step5 = rsymm(d, combined, mid4, distrib_fwd);
 
     let adj_pf = d.lemma(adj_lemma, adj_args); // xy+wz = det, or xy+wz = 0
-    let (target, step6, final_target, final_step) = match diag {
-        Some((det, h)) => {
-            let step = rcongr(d, combined_inner, det, adj_pf, &|d, t| rmul(d, inv_d, t));
-            let one = rone(d, p);
-            let cancel = inv_det2_cancel(d, p, det, inv_d, h);
-            (rmul(d, inv_d, det), step, one, cancel)
-        }
-        None => {
-            let step = rcongr(d, combined_inner, zero_r, adj_pf, &|d, t| rmul(d, inv_d, t));
-            let mz = d.lemma(p.mul_zero, &[inv_d]); // invD*0 = 0
-            (rmul(d, inv_d, zero_r), step, zero_r, mz)
-        }
+    let (target, step6, final_target, final_step) = if let Some((det, h)) = diag {
+        let step = rcongr(d, combined_inner, det, adj_pf, &|d, t| rmul(d, inv_d, t));
+        let one = rone(d, p);
+        let cancel = inv_det2_cancel(d, p, det, inv_d, h);
+        (rmul(d, inv_d, det), step, one, cancel)
+    } else {
+        let step = rcongr(d, combined_inner, zero_r, adj_pf, &|d, t| rmul(d, inv_d, t));
+        let mz = d.lemma(p.mul_zero, &[inv_d]); // invD*0 = 0
+        (rmul(d, inv_d, zero_r), step, zero_r, mz)
     };
 
     let (_, proof) = rchain(

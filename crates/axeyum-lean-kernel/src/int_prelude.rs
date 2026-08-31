@@ -1494,6 +1494,9 @@ pub struct IntPrelude {
     /// → ModEq (m.ediv (ofNat (m.gcd c))) a b` -- Mathlib's
     /// `Int.ModEq.cancel_right_div_gcd` (`modeq_cancel_div_gcd.rs`).
     pub mod_eq_cancel_right_div_gcd: NameId,
+    /// `euler_unit_coprime_iff : ∀ n a k, 0 < n → 0 ≤ k → k < n → Coprime a n → (Coprime k n ↔ Coprime (emod (a*k) n) n)`
+    /// -- the predicate-preservation step Euler's theorem needs
+    /// (`euler_unit_preserve.rs`).
     pub euler_unit_coprime_iff: NameId,
     /// `euler_unit_perm_injective : ∀ n a, 0 < n → Coprime a (ofNat n) →
     /// InjectiveOn (fun k => natAbs (emod (a * ofNat k) (ofNat n))) n` --

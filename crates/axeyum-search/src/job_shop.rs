@@ -497,7 +497,8 @@ impl JobShopProblem {
             }
             let mut seen = vec![false; machines];
             let mut operations = Vec::with_capacity(machines);
-            for pair in row.chunks_exact(2) {
+            let (pairs, _tail) = row.as_chunks::<2>();
+            for pair in pairs {
                 let (machine, duration) = (pair[0], pair[1]);
                 if machine >= machines || seen[machine] {
                     return Err(JobShopError::Parse(format!(

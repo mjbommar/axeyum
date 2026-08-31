@@ -1491,8 +1491,7 @@ pub struct NatPrelude {
     /// `F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8`. See
     /// `nat_prelude::add_factorial_lt`.
     pub add_factorial_lt_factorial_add: NameId,
-    /// `Nat.add_factorial_succ_lt_factorial_add_succ : ∀ i n, Le 2 i → Lt (i
-    /// + (n+1)!) ((i+n+1)!)`. Closes
+    /// `Nat.add_factorial_succ_lt_factorial_add_succ : ∀ i n, Le 2 i → Lt (i + (n+1)!) ((i+n+1)!)`. Closes
     /// `F:ml430-nat-add-factorial-succ-lt-factorial-add-succ-ec0fa8d3`.
     /// Corollary of [`Self::add_factorial_lt_factorial_add`].
     pub add_factorial_succ_lt_factorial_add_succ: NameId,

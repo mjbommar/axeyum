@@ -221,7 +221,7 @@ fn main() {
         value: full_val,
     }) {
         Ok(()) => {
-            println!("KERNEL ACCEPTS: the generic-route proof, wrapped as a real theorem, admits.")
+            println!("KERNEL ACCEPTS: the generic-route proof, wrapped as a real theorem, admits.");
         }
         Err(e) => {
             println!("KERNEL REJECTS: {e:?}");

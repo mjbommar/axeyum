@@ -371,6 +371,10 @@ fn classify(kernel: &mut Kernel) -> BTreeMap<String, Representability> {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::too_many_lines)]
+// ^ A census test: it enumerates the whole constructed-real surface and
+// reports per-declaration verdicts. Splitting it would separate the
+// enumeration from the assertions that give it meaning.
 fn pinned_lean_independently_admits_every_representable_constructed_real_declaration_by_name() {
     // `creal` needs 16 MiB in debug (`artifacts/kernel-stack-envelope.tsv`) and
     // a `#[test]` thread has 2 MiB, so the prelude build aborts with a SIGABRT
@@ -445,12 +449,12 @@ fn pinned_lean_independently_admits_every_representable_constructed_real_declara
             println!("{CENSUS_MARKER} non-representable reason=theorem-type-not-prop name={name}");
         }
         for name in &blocked {
-            let Some(Representability::BlockedBy(blocker)) = verdicts.get(*name) else {
+            let Some(Representability::BlockedBy(blocking_dep)) = verdicts.get(*name) else {
                 unreachable!("filtered above")
             };
             println!(
                 "{CENSUS_MARKER} non-representable reason=blocked-by-dependency \
-                 name={name} blocker={blocker}"
+                 name={name} blocker={blocking_dep}"
             );
         }
 
