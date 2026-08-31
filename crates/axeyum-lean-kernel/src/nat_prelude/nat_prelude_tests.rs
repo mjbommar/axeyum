@@ -1365,6 +1365,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gauss_fold_shift_injective_on,
         // Item 2 of the connecting theorem (ADR-1070): gcd(m!, pp) = 1.
         p.coprime_factorial_of_lt_prime,
+        // `gauss-final` lane, item 1 of the connecting theorem (ADR-1130):
+        // the two branch halves of the per-term congruence.
+        p.gauss_fold_modeq_of_sign_false,
+        p.gauss_fold_add_modeq_zero_of_sign_true,
     ]
 }
 

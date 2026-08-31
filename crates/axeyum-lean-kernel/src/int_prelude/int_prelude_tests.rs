@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 235] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 237] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -259,6 +259,11 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 235] {
         p.gauss_sign_prod_eq_pow_neg_one_of_count,
         p.factorial_eq_of_nat_factorial,
         p.coprime_factorial_of_lt_prime,
+        // `gauss-final` lane: `int_prelude/gauss_term_congruence.rs`,
+        // `int_prelude/gauss_assembly.rs` -- item 1 and item 3 of the
+        // connecting theorem (ADR-1130), i.e. Gauss's lemma itself.
+        p.gauss_term_mod_eq,
+        p.gauss_lemma_sign_count,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -5088,4 +5093,224 @@ fn dvd_mul_split_applies_at_a_discriminating_negative_and_free_degenerate_instan
             "mp result at the free degenerate branch should have the exists type"
         );
     }
+}
+
+/// `Int.gaussTermModEq` (ADR-1130, connecting-theorem item 1) at `pp := 7`,
+/// `a := 3`, on BOTH branches of `Nat.gaussSignNeg` -- one branch alone
+/// would leave the other's whole derivation unexercised, and the two
+/// branches share no proof step.
+///
+/// Values recomputed independently in Python before being written here
+/// (`r := (a*k) mod pp`, `half := pp div 2`, negative iff `r > half`,
+/// `fold := pp - r` when negative else `r`):
+///
+/// | `k` | `r` | negative? | `gaussFold` | `ε` | check |
+/// | --- | --- | --- | --- | --- | --- |
+/// | 1 | 3 | no (`3 ≤ 3`) | 3 | `1` | `3·1 = 3 ≡ 1·3` |
+/// | 2 | 6 | yes (`6 > 3`) | 1 | `-1` | `3·2 = 6 ≡ -1·1` |
+///
+/// `Int.ModEq n a b` unfolds to `emod a n = emod b n`, so the congruence
+/// itself is CHECKED BY COMPUTATION here, not merely asserted to have the
+/// stated type -- and the negative control flips only the `k = 2` sign
+/// (a single constant, leaving both sides concrete numerals) and requires
+/// the kernel to REFUSE it.
+#[test]
+fn gauss_term_mod_eq_computes_on_both_sign_branches_at_pp_7_a_3() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.gauss_term_mod_eq).is_empty(),
+        "Int.gaussTermModEq must rest on no axiom"
+    );
+    let mut d = IntDev::new(&mut k, p);
+
+    let pp = d.num(7);
+    let a = d.num(3);
+    let n_int = d.of_nat(pp);
+    let a_int = d.of_nat(a);
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+
+    for (k_val, fold_val, negative) in [(1_u32, 3_u32, false), (2, 1, true)] {
+        let kk = d.num(k_val);
+        let k_int = d.of_nat(kk);
+
+        // The concrete sign and fold, read off the definitions themselves.
+        let sign = d.const_app(p.nat.gauss_sign_neg, &[pp, a, kk]);
+        let expected_sign = if negative {
+            d.bool_true()
+        } else {
+            d.bool_false()
+        };
+        assert!(
+            d.kernel().def_eq(sign, expected_sign),
+            "gaussSignNeg 7 3 {k_val} must compute to {negative}"
+        );
+        let fold = d.const_app(p.nat.gauss_fold, &[pp, a, kk]);
+        let expected_fold = d.num(fold_val);
+        assert!(
+            d.kernel().def_eq(fold, expected_fold),
+            "gaussFold 7 3 {k_val} must compute to {fold_val}"
+        );
+
+        let sel = super::prod::bool_select_int(&mut d, sign, neg_one, one_i);
+        let expected_sel = if negative { neg_one } else { one_i };
+        assert!(
+            d.kernel().def_eq(sel, expected_sel),
+            "the sign selector at k = {k_val} must compute to the expected unit"
+        );
+
+        // The congruence itself, by computation: `ModEq n x y` unfolds to
+        // `emod x n = emod y n`.
+        let lhs = d.imul(a_int, k_int);
+        let fold_int = d.of_nat(fold);
+        let rhs = d.imul(sel, fold_int);
+        let emod_lhs = d.iemod(lhs, n_int);
+        let emod_rhs = d.iemod(rhs, n_int);
+        assert!(
+            d.kernel().def_eq(emod_lhs, emod_rhs),
+            "3*{k_val} and its signed fold must have the same residue mod 7"
+        );
+
+        // ...and the theorem, instantiated at these arguments, states it.
+        let pos_pp = {
+            // Lt 0 7 = Le 1 7 = Le 1 (add 1 6), via le_add_right(1, 6).
+            let one_n = d.num(1);
+            let six = d.num(6);
+            d.lemma(p.nat.le_add_right, &[one_n, six])
+        };
+        let lemma_fn = d.lemma(p.gauss_term_mod_eq, &[pp, a, kk]);
+        let applied = d.apply(lemma_fn, &[pos_pp]);
+        let inferred = d
+            .kernel()
+            .infer(applied)
+            .unwrap_or_else(|e| panic!("gaussTermModEq must apply at k = {k_val}: {e:?}"));
+        let expected = super::modeq::imodeq(&mut d, n_int, lhs, rhs);
+        assert!(
+            d.kernel().def_eq(inferred, expected),
+            "gaussTermModEq's instantiated type at k = {k_val} must match the \
+             direct sign/fold computation"
+        );
+    }
+
+    // NEGATIVE CONTROL: at `k = 2` the sign is genuinely `-1`. Replacing it
+    // with `+1` -- one constant, both sides still concrete numerals -- makes
+    // the congruence FALSE (`emod 6 7 = 6` against `emod 1 7 = 1`), so a
+    // wrong-branch defect could not pass the checks above vacuously.
+    let two = d.num(2);
+    let two_int = d.of_nat(two);
+    let lhs_two = d.imul(a_int, two_int);
+    let fold_two = d.num(1);
+    let fold_two_int = d.of_nat(fold_two);
+    let wrong_rhs = d.imul(one_i, fold_two_int);
+    let emod_lhs_two = d.iemod(lhs_two, n_int);
+    let emod_wrong = d.iemod(wrong_rhs, n_int);
+    assert!(
+        !d.kernel().def_eq(emod_lhs_two, emod_wrong),
+        "control: 3*2 = 6 must NOT be congruent to +1 * gaussFold 7 3 2 = 1 mod 7"
+    );
+}
+
+/// **Gauss's lemma**, `Int.gaussLemmaSignCount` (ADR-1130), at `pp := 7`
+/// (`m := 3`) for `a := 3` and `a := 2` -- the two multipliers chosen because
+/// their sign counts have OPPOSITE parity, so the count-to-sign link is
+/// genuinely exercised rather than agreeing by accident:
+///
+/// | `a` | `gaussNegCount 7 a 3` | `a^3 mod 7` | `(-1)^count mod 7` |
+/// | --- | --- | --- | --- |
+/// | 3 | 1 (odd) | `27 ≡ 6` | `-1 ≡ 6` |
+/// | 2 | 2 (even) | `8 ≡ 1` | `+1 ≡ 1` |
+///
+/// (Recomputed in Python, not inherited: `sum(1 for k in 1..=3 if (a*k)%7 >
+/// 3)` gives 1 and 2 respectively.)
+///
+/// `Nat.PrimeCond 7` is a free variable in a `LocalContext` -- the
+/// conclusion's TYPE does not depend on which proof inhabits it, and building
+/// a closed witness needs a divisor case analysis that adds nothing here
+/// (the same choice `coprime_factorial_of_lt_prime_computes_at_pp_seven_m_four`
+/// makes). The coprimality hypothesis is a GENUINE witness: `gcd a 7` reduces
+/// to `1` for both multipliers, so `Eq.refl 1` inhabits it.
+#[test]
+fn gauss_lemma_matches_direct_computation_at_pp_7_for_both_parities() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.gauss_lemma_sign_count).is_empty(),
+        "Int.gaussLemmaSignCount must rest on no axiom"
+    );
+    let mut d = IntDev::new(&mut k, p);
+
+    let m = d.num(3);
+    let pp = d.num(7);
+    let n_int = d.of_nat(pp);
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+
+    for (a_val, count_val, residue) in [(3_u32, 1_u32, 6_u32), (2, 2, 1)] {
+        let a = d.num(a_val);
+        let a_int = d.of_nat(a);
+
+        let count = d.const_app(p.nat.gauss_neg_count, &[pp, a, m]);
+        let expected_count = d.num(count_val);
+        assert!(
+            d.kernel().def_eq(count, expected_count),
+            "gaussNegCount 7 {a_val} 3 must compute to {count_val}"
+        );
+
+        let pow_a = d.ipow(a_int, m);
+        let pow_neg = d.ipow(neg_one, count);
+        let emod_pow_a = d.iemod(pow_a, n_int);
+        let emod_pow_neg = d.iemod(pow_neg, n_int);
+        let expected_residue = numeral(d.kernel(), &p, i32::try_from(residue).expect("small"));
+        assert!(
+            d.kernel().def_eq(emod_pow_a, expected_residue),
+            "{a_val}^3 mod 7 must compute to {residue}"
+        );
+        assert!(
+            d.kernel().def_eq(emod_pow_neg, expected_residue),
+            "(-1)^gaussNegCount(7,{a_val},3) mod 7 must compute to {residue}"
+        );
+
+        // The theorem itself, at these arguments.
+        let prime_ty = super::wilson::prime_condition(&mut d, pp);
+        let prime_fv = d.fresh_fvar();
+        let prime_proof = d.kernel().fvar(prime_fv);
+        // `gcd a (succ (mul 2 3))` reduces to `1`, so `Eq.refl 1` inhabits
+        // the coprimality hypothesis -- a real witness, not a placeholder.
+        let one_n = d.num(1);
+        let cop_proof = d.refl(one_n);
+
+        let lemma_fn = d.lemma(p.gauss_lemma_sign_count, &[m, a]);
+        let applied = d.apply(lemma_fn, &[prime_proof, cop_proof]);
+
+        let anon = d.anon_name();
+        let mut ctx = LocalContext::new();
+        ctx.push(LocalDecl {
+            fvar: prime_fv,
+            name: anon,
+            ty: prime_ty,
+            info: BinderInfo::Default,
+        });
+        let inferred = d
+            .kernel()
+            .infer_in(applied, &mut ctx)
+            .unwrap_or_else(|e| panic!("Gauss's lemma must apply at a = {a_val}: {e:?}"));
+        let expected = super::modeq::imodeq(&mut d, n_int, pow_a, pow_neg);
+        assert!(
+            d.kernel().def_eq(inferred, expected),
+            "Gauss's lemma's instantiated type at a = {a_val} must match the \
+             direct pow/gaussNegCount computation"
+        );
+    }
+
+    // NEGATIVE CONTROL: the parity genuinely matters. At `a := 3` the count
+    // is ODD, so `(-1)^count ≡ -1 ≡ 6`; the even-count value `+1 ≡ 1` is a
+    // different residue, and the kernel must refuse to identify them.
+    let emod_one = d.iemod(one_i, n_int);
+    let six = numeral(d.kernel(), &p, 6);
+    assert!(
+        !d.kernel().def_eq(emod_one, six),
+        "control: +1 and 6 must be different residues mod 7, so the odd-count \
+         sign at a = 3 is not vacuously satisfied"
+    );
 }
