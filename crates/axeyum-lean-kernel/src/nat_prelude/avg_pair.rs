@@ -30,6 +30,18 @@
 //! needs literal `Prod`/`Prod.mk` constants) — only the one-directional
 //! `pair` is reachable this way.
 //!
+//! **CORRECTION (2026-08-31, ADR-1220): that is right about `Nat.unpair` and
+//! wrong about the unpairING, and reading it as the latter cost a lane a
+//! sizing.** The claim is about a TYPE: Mathlib's `Nat.unpair` returns a
+//! product, so *that constant* stays out of reach and every `ml430` mirror
+//! stated over it stays `open`. But the two PROJECTIONS have type
+//! `Nat → Nat`, which mentions no product — the standing Bool-selected-scalar
+//! workaround (`Nat.xgcdAux (sel : Bool)`, `Nat.divModState`) applied one
+//! level down. [`super::unpair`] declares them, plus `Nat.unpaired`, whose
+//! Mathlib type `(Nat → Nat → Nat) → Nat → Nat` mentions no product either;
+//! only the BODY of Mathlib's version needs `unpair`. Its round-trip test
+//! inverts THIS module's `Nat.pair` at every argument in `[0,2]²`.
+//!
 //! The strict order test is built from the kernel's Bool-valued `Nat.ble`:
 //! there is no direct Bool `<` primitive, so [`blt`] uses `ble (succ a) b`,
 //! definitionally Mathlib's/Lean core's `Nat.blt` and matching `Nat.lt`'s

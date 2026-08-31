@@ -97,10 +97,7 @@ fn unpair_projections_evaluate_correctly() {
 
     for &(n, left, right) in &table {
         let lhs = f.const_app(p.unpair_left, &[num[n]]);
-        assert!(
-            f.k.def_eq(lhs, num[left]),
-            "unpairLeft {n} must be {left}"
-        );
+        assert!(f.k.def_eq(lhs, num[left]), "unpairLeft {n} must be {left}");
         let rhs = f.const_app(p.unpair_right, &[num[n]]);
         assert!(
             f.k.def_eq(rhs, num[right]),
@@ -238,10 +235,7 @@ fn unpaired_applies_the_projections_in_order() {
     };
 
     let at_6 = f.const_app(p.unpaired, &[sub_fn, six]);
-    assert!(
-        f.k.def_eq(at_6, two),
-        "unpaired sub 6 must be sub 2 0 = 2"
-    );
+    assert!(f.k.def_eq(at_6, two), "unpaired sub 6 must be sub 2 0 = 2");
     assert!(
         !f.k.def_eq(at_6, zero),
         "negative control: unpaired sub 6 must NOT be 0 (projections swapped)"

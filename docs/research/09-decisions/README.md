@@ -790,3 +790,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1185](adr-1185-general-row-expansion-closes-and-the-guard-had-to-be-a-recursion.md) | ADR-1155 landed general-row expansion's index and range layers | accepted |
 | [1190](adr-1190-a-claim-is-paired-to-its-own-sentence-not-its-whole-block.md) | `scripts/check-absence-claims.py`'s census budget had been | accepted |
 | [1205](adr-1205-the-bucket-bug-recurred-one-layer-over-the-depth-spine-stays-a-proposal.md) | Third re-measurement of `curriculum.toml`'s `kernel_decls` | accepted |
+| [1220](adr-1220-index-0-is-now-the-binding-slot.md) | Draw 15 consumed the last three free early-sorting families, and | accepted |
