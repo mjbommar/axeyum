@@ -7,5 +7,6 @@
 //! machine claim.
 
 pub mod a0;
+mod a0_error;
 pub mod rv64;
 pub mod x64;
