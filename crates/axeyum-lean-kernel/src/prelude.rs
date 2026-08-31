@@ -353,6 +353,16 @@ pub struct LogicPrelude {
     pub decidable_by_cases: NameId,
     /// The universe parameter `v` of [`Self::decidable_by_cases`].
     pub decidable_by_cases_vparam: NameId,
+    /// `DecidablePred.{u} : Π (α : Sort u) (p : α → Prop), Sort (max u 1)` —
+    /// Mathlib's `DecidablePred`, `fun α p => Π (a : α), Decidable (p a)`,
+    /// with `α` explicit because this kernel has no instance implicits. A
+    /// [`Declaration::Definition`] like [`Self::decide`]. This is the
+    /// vocabulary a Mathlib statement quantifying over a decidable predicate
+    /// needs before it can be STATED here at all; `Nat.findGreatest`
+    /// (`nat_prelude/find_greatest.rs`) is its first consumer.
+    pub decidable_pred: NameId,
+    /// The universe parameter `u` of [`Self::decidable_pred`].
+    pub decidable_pred_uparam: NameId,
     /// `Decidable.ofBool : Π (p : Prop) (b : Bool), (Eq Bool b Bool.true → p) →
     /// (Eq Bool b Bool.false → (p → False)) → Decidable p` — the bridge from a
     /// computed `Bool` plus its two spec directions to a `Decidable` witness:
@@ -3943,6 +3953,83 @@ pub(crate) fn build_logic_prelude_uncached(
             })?;
         }
 
+        // --- DecidablePred.{u} : Π (α : Sort u) (p : α → Prop), -------------
+        //     Sort (max u 1) := fun α p => Π (a : α), Decidable (p a) --------
+        // Mathlib's own definition, verbatim (`Init.Core`:
+        // `abbrev DecidablePred {α : Sort u} (p : α → Prop) := ∀ a, Decidable
+        // (p a)`), with `α` explicit because this kernel has no instance
+        // implicits. A `Definition`, not a `Theorem`: its codomain is a
+        // `Sort`, like `decide` and `byCases` above.
+        //
+        // Declared here rather than in `nat_prelude` even though `Nat.
+        // findGreatest` is its only consumer today, for two reasons. It is a
+        // root-namespace LOGIC notion about `Decidable`, which lives here; and
+        // `nat_prelude`'s `every_nat_declaration_is_checked_and_axiom_free`
+        // filters the environment on the `Nat.` prefix, so a root-level name
+        // declared from there would be invisible to the one assertion that
+        // reads coverage from the environment rather than from a list.
+        //
+        // The declared codomain is `Sort (max u 1)` and the value's actual
+        // type is `Sort (imax u 1)`; those are the same level here because
+        // `IMax` is `Zero` only when its RIGHT argument is, and `1` is not.
+        let decidable_pred_uparam = kernel.name_str(anon, "u");
+        let decidable_pred = kernel.name_str(anon, "DecidablePred");
+        {
+            let prop = kernel.prop();
+            let u_lvl = kernel.level_param(decidable_pred_uparam);
+            let sort_u = kernel.sort(u_lvl);
+            let level_zero = kernel.level_zero();
+            let level_one = kernel.level_succ(level_zero);
+            let max_u_one = kernel.level_max(u_lvl, level_one);
+            let sort_max_u_one = kernel.sort(max_u_one);
+
+            let alpha_fvar = 24_120;
+            let pred_fvar = 24_121;
+            let arg_fvar = 24_122;
+
+            let alpha = kernel.fvar(alpha_fvar);
+            // α → Prop
+            let pred_ty = kernel.pi(anon, alpha, prop, BinderInfo::Default);
+            let pred = kernel.fvar(pred_fvar);
+            let arg = kernel.fvar(arg_fvar);
+            let pred_at_arg = kernel.app(pred, arg);
+            let decidable_const = kernel.const_(decidable, vec![]);
+            let decidable_pred_at_arg = kernel.app(decidable_const, pred_at_arg);
+
+            // value: fun α p => Π (a : α), Decidable (p a).
+            let body = pi_fvar(
+                kernel,
+                arg_fvar,
+                alpha,
+                decidable_pred_at_arg,
+                BinderInfo::Default,
+            );
+            let with_pred = lam_fvar(kernel, pred_fvar, pred_ty, body, BinderInfo::Default);
+            let decidable_pred_value =
+                lam_fvar(kernel, alpha_fvar, sort_u, with_pred, BinderInfo::Default);
+
+            // type: Π (α : Sort u) (p : α → Prop), Sort (max u 1).
+            let ty_inner = pi_fvar(
+                kernel,
+                pred_fvar,
+                pred_ty,
+                sort_max_u_one,
+                BinderInfo::Default,
+            );
+            let decidable_pred_ty =
+                pi_fvar(kernel, alpha_fvar, sort_u, ty_inner, BinderInfo::Default);
+
+            kernel.add_declaration(Declaration::Definition {
+                name: decidable_pred,
+                uparams: vec![decidable_pred_uparam],
+                ty: decidable_pred_ty,
+                value: decidable_pred_value,
+                // Unfolds as readily as `byCases`: every consumer has to see
+                // through it to a `Pi` before it can apply the witness.
+                hint: ReducibilityHint::Regular(0),
+            })?;
+        }
+
         // --- Decidable.ofBool : Π (p : Prop) (b : Bool), --------------------
         //     (Eq Bool b Bool.true → p) → (Eq Bool b Bool.false → (p → False))
         //     → Decidable p --------------------------------------------------
@@ -4547,6 +4634,8 @@ pub(crate) fn build_logic_prelude_uncached(
             decidable_em,
             decidable_by_cases,
             decidable_by_cases_vparam,
+            decidable_pred,
+            decidable_pred_uparam,
             decidable_of_bool,
             decidable_and,
             decidable_or,

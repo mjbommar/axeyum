@@ -306,6 +306,7 @@ fn prelude_admits_all_declarations() {
         p.of_decide_eq_false,
         p.decidable_em,
         p.decidable_by_cases,
+        p.decidable_pred,
     ] {
         assert!(
             k.environment().contains(name),
@@ -2480,6 +2481,7 @@ fn double_negation_and_decidable_are_present_and_axiom_free() {
         p.of_decide_eq_false,
         p.decidable_em,
         p.decidable_by_cases,
+        p.decidable_pred,
     ] {
         assert!(
             k.environment().contains(name),

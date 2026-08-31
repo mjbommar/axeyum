@@ -182,6 +182,7 @@ mod fermat_number;
 mod fermat_number_mirrors;
 mod fermat_witness;
 mod fibonacci;
+mod find_greatest;
 mod finite;
 mod finite_set;
 mod gauss_lemma;
@@ -338,6 +339,7 @@ use finite::{
     declare_fin, declare_injective_surjective, declare_pigeonhole, declare_restrict_injective,
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
+use find_greatest::declare_find_greatest_all;
 use finite_set::declare_finite_set_all;
 use gauss_lemma::declare_gauss_lemma_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
@@ -4983,6 +4985,18 @@ pub struct NatPrelude {
     /// shape as [`Self::choose`], different base row and a coefficient;
     /// see `stirling.rs`.
     pub stirling_first: NameId,
+
+    // -- `unblock-draw-15` lane: `find_greatest.rs` --
+    // (ADR-1160. Opens `Mathlib.Data.Nat.Find` for cycle index 3, the slot
+    // ADR-1100 identified as the scarce one and ADR-1115 could not fill.
+    // Construction only, ADR-0653 -- no theorem about it is declared.)
+    /// `Nat.findGreatest : Π (P : Nat → Prop), DecidablePred Nat P → Nat →
+    /// Nat` -- the greatest `m` with `1 <= m <= n` satisfying `P`, or `0` if
+    /// there is none. Mathlib's structural recursion, with the
+    /// `DecidablePred` witness explicit (no instance implicits here) and
+    /// [`crate::LogicPrelude::decidable_by_cases`] in place of `ite`; see
+    /// `find_greatest.rs` for why the `ml430` mirror stays `open`.
+    pub find_greatest: NameId,
     /// `Nat.stirlingSecond (n k : Nat) : Nat` -- the Stirling numbers of
     /// the second kind, `S(n+1,k+1) = (k+1) * S(n,k+1) + S(n,k)`. Differs
     /// from [`Self::stirling_first`] ONLY in that coefficient.
@@ -5970,6 +5984,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "gauss_fold_add_modeq_zero_of_sign_true"),
             avg: kernel.name_str(nat, "avg"),
             pair_fn: kernel.name_str(nat, "pair"),
+            find_greatest: kernel.name_str(nat, "findGreatest"),
             abundant: kernel.name_str(nat, "Abundant"),
             deficient: kernel.name_str(nat, "Deficient"),
             stirling_first: kernel.name_str(nat, "stirlingFirst"),
@@ -6879,6 +6894,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Mathlib.Combinatorics.Enumerative.Stirling` for the autogenesis
         // screen (ADR-1100). Nothing needs it, so it goes last.
         declare_stirling_all(&mut d, &p)?;
+        // `Nat.findGreatest` (`find_greatest.rs`): needs only `Nat.rec`,
+        // `Nat.succ` and the logic prelude's `DecidablePred` /
+        // `Decidable.byCases`. Opens `Mathlib.Data.Nat.Find` for the
+        // autogenesis screen at cycle index 3 (ADR-1160). Nothing needs it,
+        // so it goes last.
+        declare_find_greatest_all(&mut d, &p)?;
         // `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` (`minmax.rs`):
         // needs only `Nat.ble`/`bool_select_nat`, both far above. Opens
         // `Init.Data.Nat.MinMax` for the autogenesis screen
@@ -6907,6 +6928,9 @@ mod nat_prelude_tests;
 
 #[cfg(test)]
 mod abundant_deficient_tests;
+
+#[cfg(test)]
+mod find_greatest_tests;
 
 #[cfg(test)]
 mod avg_pair_tests;
