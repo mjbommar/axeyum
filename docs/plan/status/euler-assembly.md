@@ -40,7 +40,7 @@ Landed in order, each verified against `cargo test -p axeyum-lean-kernel
 Full derivation and the one Rust-level hazard worth remembering (`d.foo(d.bar(...))`
 — nested mutable borrows of the same `IntDev` do not compile, `E0499`; every
 sub-expression needed its own `let` binding) are in
-[ADR-1110](../research/09-decisions/adr-1110-euler-totient-theorem-lands-axiom-free-first-attempt.md).
+[ADR-1110](../../research/09-decisions/adr-1110-euler-totient-theorem-lands-axiom-free-first-attempt.md).
 
 **Route taken vs. handoff's sizing:** the handoff (ADR-1025) called item 3
 "an induction this kernel has not built before" and left it unsized beyond
