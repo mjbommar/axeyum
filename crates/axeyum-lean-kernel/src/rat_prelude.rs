@@ -1979,6 +1979,21 @@ pub struct RatPrelude {
     /// which is the only way a pointwise matrix identity reaches a `det` in
     /// this kernel (there is no `funext`).
     pub det_minor_col_comm: NameId,
+    /// `Rat.sumRange_peel_head : ∀ f n, sumRange f (succ n) =
+    /// add (f 0) (sumRange (fun k => f (succ k)) n)` — peel the FIRST summand.
+    /// [`Self::sum_range_succ`] peels from the right, so every left-side
+    /// reindexing over `Rat.sumRange` starts here.
+    pub sum_range_peel_head: NameId,
+    /// `Rat.sumRange_matSkip : ∀ n f j, Nat.ble j n = true →
+    /// add (sumRange (fun k => f (matSkip j k)) n) (f j) = sumRange f (succ n)`
+    /// — summing over `[0, n)` reindexed by the injection that misses `j`
+    /// recovers the full sum over `[0, n+1)` once `f j` is added back.
+    ///
+    /// The **range half** of a Laplace expansion: it converts a cofactor
+    /// sum over a range one short, reindexed by `matSkip`, into a sum over
+    /// the full range, which is what makes the plain rectangle Fubini
+    /// [`Self::sum_range_swap`] applicable to a double cofactor expansion.
+    pub sum_range_mat_skip: NameId,
 }
 
 impl RatPrelude {
@@ -2362,6 +2377,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mat_skip_comm: child(kernel, "matSkip_comm"),
         mat_minor_col_comm: child(kernel, "matMinor_col_comm"),
         det_minor_col_comm: child(kernel, "det_minor_col_comm"),
+        sum_range_peel_head: child(kernel, "sumRange_peel_head"),
+        sum_range_mat_skip: child(kernel, "sumRange_matSkip"),
     }
 }
 

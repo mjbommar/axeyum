@@ -132,7 +132,9 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_mat_skip_succ_succ(d, p)?;
     declare_mat_skip_comm(d, p)?;
     declare_mat_minor_col_comm(d, p)?;
-    declare_det_minor_col_comm(d, p)
+    declare_det_minor_col_comm(d, p)?;
+    declare_sum_range_peel_head(d, p)?;
+    declare_sum_range_mat_skip(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -1983,4 +1985,361 @@ fn declare_det_minor_col_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), K
         d.lam_fv(m_fv, nat, over_a)
     };
     d.declare_theorem(p.det_minor_col_comm, ty, value)
+}
+
+/// `fun k => f (succ k)`, the tail reindexing
+/// [`declare_sum_range_peel_head`] introduces.
+fn shift_fn(d: &mut IntDev<'_>, f: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let sk = d.succ(k);
+    let body = d.apply(f, &[sk]);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `fun k => f (matSkip j k)`, the summand of a sum over the range with index
+/// `j` deleted.
+fn skip_fn(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, j: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let idx = rmat_skip(d, p, j, k);
+    let body = d.apply(f, &[idx]);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// Admit `Rat.sumRange_peel_head : ∀ f n, sumRange f (succ n) =
+/// add (f 0) (sumRange (fun k => f (succ k)) n)`.
+///
+/// `Rat.sumRange` peels from the RIGHT (`sumRange f (succ n) ≡
+/// sumRange f n + f n`), so nothing in this prelude hands you the FIRST
+/// summand — [`declare_sum_range_head_of_tail_zero`] had to be written for
+/// exactly that reason, and it only reaches the special case where everything
+/// past index `0` vanishes. This is the general form, and every left-side
+/// reindexing needs it.
+///
+/// Induction on `n` with `f` fixed: the base is `add_comm` on
+/// `zero + f 0` against `f 0 + zero`, and the step is the induction hypothesis
+/// under `add _ (f (succ j))` followed by one `add_assoc`. The right-hand
+/// side's own `sumRange` peel is definitional, which is why the step needs no
+/// third move.
+fn declare_sum_range_peel_head(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let zero_n = d.zero();
+    let head = d.apply(f, &[zero_n]);
+    let tail_fn = shift_fn(d, f);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let sx = d.succ(x);
+        let lhs = rsum_range(d, p, f, sx);
+        let tail = rsum_range(d, p, tail_fn, x);
+        let rhs = radd(d, head, tail);
+        req(d, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        // `sumRange f 1 ≡ zero + f 0` and `f 0 + sumRange _ 0 ≡ f 0 + zero`.
+        &|d| {
+            let zero_r = rzero(d, p);
+            d.lemma(p.add_comm, &[zero_r, head])
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let prior = rsum_range(d, p, f, sj);
+            let fsj = d.apply(f, &[sj]);
+            let start = radd(d, prior, fsj);
+
+            let tail_j = rsum_range(d, p, tail_fn, j);
+            let peeled = radd(d, head, tail_j);
+            let s1 = rcongr(d, prior, peeled, ih, &|d, t| radd(d, t, fsj));
+            let mid1 = radd(d, peeled, fsj);
+
+            let s2 = d.lemma(p.add_assoc, &[head, tail_j, fsj]);
+            let end = {
+                let inner = radd(d, tail_j, fsj);
+                radd(d, head, inner)
+            };
+
+            let (_e, proof) = rchain(d, start, &[(mid1, s1), (end, s2)]);
+            proof
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(f_fv, fn_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(f_fv, fn_ty, over_n)
+    };
+    d.declare_theorem(p.sum_range_peel_head, ty, value)
+}
+
+/// Admit `Rat.sumRange_matSkip : ∀ n f j, Nat.ble j n = true →
+/// add (sumRange (fun k => f (matSkip j k)) n) (f j) = sumRange f (succ n)`.
+///
+/// **The range half of a Laplace expansion.** `matSkip j` is the
+/// order-preserving bijection `[0, n) → [0, n+1) \ {j}`, so summing `f` along
+/// it and adding `f j` back recovers the whole sum. It is what turns a
+/// cofactor sum — which runs over a range ONE SHORT, reindexed by `matSkip` —
+/// into a sum over the full range, and a double cofactor expansion whose two
+/// sums both run over the full range is a plain rectangle, reachable by
+/// [`RatPrelude::sum_range_swap`] with no triangle decomposition and no
+/// `Nat.sub`.
+///
+/// The dimension is quantified OUTERMOST and **`f` is quantified under the
+/// motive**, which is what makes the induction go through: the successor step
+/// at `j = succ j'` applies the induction hypothesis at the SHIFTED function
+/// `fun k => f (succ k)`, not at `f`. This is the same shape
+/// [`declare_det_congr`] needs and for the same reason — an induction
+/// hypothesis that cannot move to a different argument is useless here.
+///
+/// The hypothesis is the BOOLEAN `Nat.ble j n = true` for the reason
+/// [`declare_mat_skip_comm`] gives: the case `j = succ j'`, `n = succ m`
+/// reduces it to `ble j' m = true` by iota alone, and the case `n = 0`,
+/// `j = succ j'` reduces it to `false = true`. Choosing `Nat.le` would put an
+/// inversion lemma in both places.
+///
+/// The step, at `n = succ m`:
+///
+/// - `j = 0`: `matSkip 0 k ≡ succ k`, so the reindexed sum is *definitionally*
+///   the shifted sum and the goal is [`declare_sum_range_peel_head`] after one
+///   `add_comm`. No induction hypothesis is used.
+/// - `j = succ j'`: peel the head off the reindexed sum
+///   (`matSkip (succ j') 0 ≡ 0`, so that head is `f 0` definitionally), move
+///   the tail across [`declare_mat_skip_succ_succ`] with
+///   [`RatPrelude::sum_range_congr`], and the remainder is the induction
+///   hypothesis at `(fun k => f (succ k), j')` under one `add_assoc`.
+fn declare_sum_range_mat_skip(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let carrier = rat_ty(d);
+        let fn_ty = d.arrow(nat, carrier);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hyp = ble_true_ty(d, j, x);
+        let reindexed = skip_fn(d, p, f, j);
+        let partial = rsum_range(d, p, reindexed, x);
+        let fj = d.apply(f, &[j]);
+        let lhs = radd(d, partial, fj);
+        let sx = d.succ(x);
+        let rhs = rsum_range(d, p, f, sx);
+        let eq = req(d, lhs, rhs);
+        let with_h = d.arrow(hyp, eq);
+        let over_j = d.pi_fv(j_fv, nat, with_h);
+        d.pi_fv(f_fv, fn_ty, over_j)
+    };
+    let stmt = motive(d, n);
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let nat = d.nat_ty();
+        let carrier = rat_ty(d);
+        let fn_ty = d.arrow(nat, carrier);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+
+        let motive_j = |d: &mut IntDev<'_>, j: ExprId| -> ExprId {
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, j, zero_n);
+            let reindexed = skip_fn(d, p, f, j);
+            let partial = rsum_range(d, p, reindexed, zero_n);
+            let fj = d.apply(f, &[j]);
+            let lhs = radd(d, partial, fj);
+            let one_n = d.succ(zero_n);
+            let rhs = rsum_range(d, p, f, one_n);
+            let eq = req(d, lhs, rhs);
+            d.arrow(hyp, eq)
+        };
+
+        let j_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            // `sumRange _ 0 ≡ zero` on both sides, and `j` is `0`, so the two
+            // sides are the same term.
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, zero_n, zero_n);
+            let h_fv = d.fresh_fvar();
+            let zero_r = rzero(d, p);
+            let f0 = d.apply(f, &[zero_n]);
+            let shape = radd(d, zero_r, f0);
+            let pf = rrefl(d, shape);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let j_at_succ = |d: &mut IntDev<'_>, jp: ExprId| -> ExprId {
+            // `ble (succ j') zero ≡ false`, so the premise is `false = true`.
+            let zero_n = d.zero();
+            let sjp = d.succ(jp);
+            let hyp = ble_true_ty(d, sjp, zero_n);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let reindexed = skip_fn(d, p, f, sjp);
+            let partial = rsum_range(d, p, reindexed, zero_n);
+            let fj = d.apply(f, &[sjp]);
+            let lhs = radd(d, partial, fj);
+            let one_n = d.succ(zero_n);
+            let rhs = rsum_range(d, p, f, one_n);
+            let target = req(d, lhs, rhs);
+            let pf = d.false_true_elim(target, h);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let per_j = d.induct(&motive_j, &j_at_zero, &|d, jp, _ih| j_at_succ(d, jp), j);
+        let over_j = d.lam_fv(j_fv, nat, per_j);
+        d.lam_fv(f_fv, fn_ty, over_j)
+    };
+
+    let step = |d: &mut IntDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let carrier = rat_ty(d);
+        let fn_ty = d.arrow(nat, carrier);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let sm = d.succ(m);
+        let ssm = d.succ(sm);
+        let zero_n = d.zero();
+        let head = d.apply(f, &[zero_n]);
+        let tail_fn = shift_fn(d, f);
+
+        let motive_j = |d: &mut IntDev<'_>, j: ExprId| -> ExprId {
+            let hyp = ble_true_ty(d, j, sm);
+            let reindexed = skip_fn(d, p, f, j);
+            let partial = rsum_range(d, p, reindexed, sm);
+            let fj = d.apply(f, &[j]);
+            let lhs = radd(d, partial, fj);
+            let rhs = rsum_range(d, p, f, ssm);
+            let eq = req(d, lhs, rhs);
+            d.arrow(hyp, eq)
+        };
+
+        let j_at_zero = |d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            let hyp = ble_true_ty(d, zero_n, sm);
+            let h_fv = d.fresh_fvar();
+
+            // `fun k => f (matSkip 0 k)` is definitionally `fun k => f (succ k)`.
+            let reindexed = skip_fn(d, p, f, zero_n);
+            let partial = rsum_range(d, p, reindexed, sm);
+            let start = radd(d, partial, head);
+            let s1 = d.lemma(p.add_comm, &[partial, head]);
+            let mid1 = radd(d, head, partial);
+
+            let shifted_sum = rsum_range(d, p, tail_fn, sm);
+            let peeled = radd(d, head, shifted_sum);
+            let full = rsum_range(d, p, f, ssm);
+            let peel = d.lemma(p.sum_range_peel_head, &[f, sm]);
+            let s2 = super::ops::rsymm(d, full, peeled, peel);
+
+            let (_e, pf) = rchain(d, start, &[(mid1, s1), (full, s2)]);
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let j_at_succ = |d: &mut IntDev<'_>, jp: ExprId| -> ExprId {
+            let nat = d.nat_ty();
+            let sjp = d.succ(jp);
+            let hyp = ble_true_ty(d, sjp, sm);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let reindexed = skip_fn(d, p, f, sjp);
+            let partial = rsum_range(d, p, reindexed, sm);
+            let fj = d.apply(f, &[sjp]);
+            let start = radd(d, partial, fj);
+
+            // 1. peel the head off the reindexed sum; `matSkip (succ j') 0 ≡ 0`
+            //    so that head is `f 0` definitionally.
+            let zero_n = d.zero();
+            let phi_head = d.apply(reindexed, &[zero_n]);
+            let phi_tail_fn = shift_fn(d, reindexed);
+            let phi_tail = rsum_range(d, p, phi_tail_fn, m);
+            let peeled = radd(d, phi_head, phi_tail);
+            let peel = d.lemma(p.sum_range_peel_head, &[reindexed, m]);
+            let s1 = rcongr(d, partial, peeled, peel, &|d, t| radd(d, t, fj));
+            let mid1 = radd(d, peeled, fj);
+
+            // 2. `f (matSkip (succ j') (succ k)) = (fun i => f (succ i)) (matSkip j' k)`
+            //    at every `k`, by `matSkip_succ_succ`.
+            let inner_fn = skip_fn(d, p, tail_fn, jp);
+            let inner_sum = rsum_range(d, p, inner_fn, m);
+            let pointwise = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sk = d.succ(k);
+                let from = rmat_skip(d, p, sjp, sk);
+                let skipped = rmat_skip(d, p, jp, k);
+                let to = d.succ(skipped);
+                let mss = d.lemma(p.mat_skip_succ_succ, &[jp, k]);
+                let body = nat_eq_to_rat(d, from, to, mss, &|d, t| d.apply(f, &[t]));
+                d.lam_fv(k_fv, nat, body)
+            };
+            let congr_sum = d.lemma(
+                p.sum_range_congr,
+                &[phi_tail_fn, inner_fn, m, pointwise],
+            );
+            let s2 = rcongr(d, phi_tail, inner_sum, congr_sum, &|d, t| {
+                let inner = radd(d, phi_head, t);
+                radd(d, inner, fj)
+            });
+            let mid2 = {
+                let inner = radd(d, phi_head, inner_sum);
+                radd(d, inner, fj)
+            };
+
+            // 3. reassociate so the induction hypothesis's own left-hand side
+            //    appears as a subterm.
+            let s3 = d.lemma(p.add_assoc, &[phi_head, inner_sum, fj]);
+            let ih_lhs = radd(d, inner_sum, fj);
+            let mid3 = radd(d, phi_head, ih_lhs);
+
+            // 4. the induction hypothesis, at the SHIFTED function.
+            let ih_at = d.apply(ih, &[tail_fn, jp, h]);
+            let shifted_full = rsum_range(d, p, tail_fn, sm);
+            let s4 = rcongr(d, ih_lhs, shifted_full, ih_at, &|d, t| radd(d, phi_head, t));
+            let mid4 = radd(d, phi_head, shifted_full);
+
+            // 5. `f 0 + sumRange (fun k => f (succ k)) (succ m) = sumRange f (succ (succ m))`.
+            let peeled_full = radd(d, head, shifted_full);
+            let full = rsum_range(d, p, f, ssm);
+            let peel_f = d.lemma(p.sum_range_peel_head, &[f, sm]);
+            let s5 = super::ops::rsymm(d, full, peeled_full, peel_f);
+
+            let (_e, pf) = rchain(
+                d,
+                start,
+                &[(mid1, s1), (mid2, s2), (mid3, s3), (mid4, s4), (full, s5)],
+            );
+            d.lam_fv(h_fv, hyp, pf)
+        };
+
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let per_j = d.induct(&motive_j, &j_at_zero, &|d, jp, _ih| j_at_succ(d, jp), j);
+        let over_j = d.lam_fv(j_fv, nat, per_j);
+        d.lam_fv(f_fv, fn_ty, over_j)
+    };
+
+    let proof = d.induct(&motive, &base, &step, n);
+    let ty = d.pi_fv(n_fv, nat, stmt);
+    let value = d.lam_fv(n_fv, nat, proof);
+    d.declare_theorem(p.sum_range_mat_skip, ty, value)
 }
