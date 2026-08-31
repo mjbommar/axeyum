@@ -7660,6 +7660,12 @@
       "prose_sha256": "b42573df3a75a6ec9404433d3710aad7a1b69396c1cb7df32e1896f12604f524"
     },
     {
+      "fact_id": "F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef",
+      "language": "lean4-surface",
+      "statement_sha256": "ea0c24662ffe819744eec113ecefa37eda85b47bc592d7e281e83f0bc8290554",
+      "prose_sha256": "38ea58da98ced245f65006425e501f29cdef55e61682e2f3e148eaafc9ee1256"
+    },
+    {
       "fact_id": "F:ml430-nat-add-comm-56a2d614",
       "language": "lean4-surface",
       "statement_sha256": "50cf83163399903358d23447f8d7bb955a5c71844f2e1b210dcdc474663648a2",
