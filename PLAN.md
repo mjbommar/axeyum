@@ -118,6 +118,8 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-31 | quadratic-residue-two | `Int.euler_criterion_residue_imp_one` + `Int.euler_criterion_neg_one_imp_not_residue` land axiom-free in new `int_prelude/qr_criterion.rs`, extending Euler's criterion toward the second supplementary law (ADR-0960); the law itself stays open, sized for the next lane. |
+| 2026-08-31 | `74ca7790b` | `proof_plan.rs` + compiler; three families rewritten; digest probe |
+| 2026-08-31 | `ba2b22bbb` | add missing type-leak decline test; mutation-verify all 5 guards |
 | 2026-08-30 | int-sign-product | New `int_prelude/sign_product.rs`: `Int.mul_pos_iff`, `Int.mul_neg_iff`, `Int.mul_nonneg_iff`, `Int.mul_nonpos_iff`, `Int.mul_nonneg_of_nonneg_or_nonpos`, all built from one sign case-split; 5 facts flipped open->proved |
 | 2026-08-30 | totient-mult-finish | `Nat.totient_coprime_totient_iff` (closed, `F:ml430-nat-totient-coprime-totient-iff-3932cf83` flips to proved) and `Nat.coprime_mul_of_coprime` (new, axiom-free, the first of the multiplicative formula's two weakest steps — route (b), the prime-divisor contrapositive via `coprime_of_forall_prime_dvd`+`euclid_lemma`, worked first try and needed no Bézout algebra) landed and verified. `Nat.count_range_row_major` (the second weak piece, the genuinely novel row-major double-counting induction) and the three facts needing the full multiplicative formula remain open, per this task's own "don't force the formula" guidance. |
 | 2026-08-30 | queue-sweep | No fact closed. All three assigned non-sign dispatchable facts (`totient_dvd_of_dvd`, `totient_gcd_mul_totient_mul`, `eq_or_eq_of_totient_eq_totient`) declined for this session: correctly-stated Mathlib mirrors this kernel does not yet have the general multiplicative-function theory to prove, distinct from the divergence-registry category. Corrected a false numerical claim in `301-totient-multiplicative.md`'s Step 4 (`count_range_row_major` is NOT coprimality-independent — fails at every tested non-coprime pair, e.g. `totient(4)=2 ≠ totient(2)*totient(2)=1`), which would have sent the next totient lane at a statement a sound kernel cannot admit. |
@@ -38808,6 +38810,67 @@ documented, in-tree, as different propositions from Mathlib's.
   twin or bare declaration) likely generalizes beyond the `land` family
   once other prelude modules are scanned the same way; not attempted here
   for scope.
+
+**Landed (l3-d5-proof-plan-ir, 2026-08-31).** D5's IR and compiler are in
+`crates/axeyum-lean-kernel/src/proof_plan.rs`: a `Plan` enum with the ten
+node shapes the phase names (Exact, Apply, Rewrite, Symmetry, Transitivity,
+Constructor, Transport, Eliminate, Induction, Witness, Compute), compiled to
+ordinary kernel terms via the existing `NatOps` builder methods — the kernel
+never sees a `Plan`. Three real families shortened by routing their `Eq ->
+Iff` lift and `Iff` chain/flip through `proof_plan::iff_lift`/`iff_chain`/
+`iff_flip` instead of a hand-copied local `pred_iff_of_eq`/`iff_trans`/
+`iff_symm`:
+
+| file | before | after |
+|---|---|---|
+| `nat_prelude/dvd_add_iff_left.rs` | 116 | 71 |
+| `nat_prelude/gcd_dvd_mirrors.rs` | 476 | 423 |
+| `nat_prelude/gcd_mul_right_mirrors.rs` | 273 | 217 |
+
+Identity/footprint preserved: `examples/proof_plan_digest_probe.rs` hashes
+each affected theorem's `Kernel::render_lean(type)|render_lean(value)` with
+SHA-256. Run against this working tree and against a
+`scripts/lane-snapshot.sh HEAD` build of the pre-refactor commit
+(`246970caa`), all six digests are byte-identical and `axiom_footprint` is 0
+in both. `cargo test -p axeyum-lean-kernel --lib nat_prelude::` is 240
+passed (nonzero) after the rewrite.
+
+Five malformed-plan declines, each mutation-verified (guard deleted, exactly
+one test observed to fail, then reverted):
+
+| guard | location | test killed |
+|---|---|---|
+| `Compute` non-defeq | `compile`, `Plan::Compute` | `compute_on_non_defeq_terms_declines` |
+| `Transitivity` empty chain | `compile`, `Plan::Transitivity` | `empty_transitivity_chain_declines` |
+| `Eliminate` zero cases | `compile`, `Plan::Eliminate` | `eliminate_with_no_cases_declines` |
+| `theorem_plan` type leak | `theorem_plan` | `theorem_plan_declines_a_leaked_free_variable_in_the_type` |
+| `theorem_plan` value leak | `theorem_plan` | `theorem_plan_declines_a_leaked_free_variable` |
+
+Reverting the type-leak and value-leak guards each fell back to the
+kernel's own opaque `KernelError::UnboundFVar { id }` — direct evidence the
+guard converts an unnamed kernel rejection into a typed, localized decline,
+which is the concrete form of "a plan language that gets binder scope right
+automatically" the phase brief asks for.
+
+Gate: `just proof-plan` / `python3 scripts/check-proof-plan.py` (three
+guards: unit tests nonzero, digest probe runs and names all six subjects,
+footprint unchanged at 0), plus `scripts/tests/test-proof-plan-check.py`
+(in-process positive/negative controls on the checker script's own three
+guards, no cargo invocation, <1s). Registered in `justfile`'s `check:` list
+and at the end of `scripts/check.sh` (append-only, matching the existing —
+imperfect — convention there; did not restructure either file). ADR-0980
+records the trust-boundary argument, reusing ADR-0965's shape.
+
+Deliberately out of scope this session: `Induction`/`Eliminate`/`Witness`
+nodes exist and compile (each has a decline path exercised in tests where
+applicable — `Eliminate`'s zero-case guard), but none of the three
+rewritten families uses them; they were not exercised against a REAL
+family, only structurally. No `gen-proof-plan.py` — see the module doc for
+why D5 needed no code generation, unlike D1's spec pilot.
+
+`python3 scripts/check-autogenesis-holdout-isolation.py` — measured before
+touching anything and again at the end of this session — PASS both times
+(held_out unchanged; this lane never touched `artifacts/autogenesis/`).
 
 **Lane `l4-c2-checked-interchange`.** DONE for the bounded credited-root
 population this lane scoped; wider population growth is future work, not a
