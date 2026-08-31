@@ -253,6 +253,7 @@ mod totient_mul_coprime;
 mod totient_multiplicative;
 mod totient_prime_pow;
 pub(crate) mod transposition;
+mod primrec;
 mod unpair;
 mod vandermonde;
 mod xor;
@@ -453,6 +454,7 @@ use transposition::{
     declare_transposition_injective, declare_transposition_involutive,
     declare_transposition_maps_into,
 };
+use primrec::declare_primrec_all;
 use unpair::declare_unpair_all;
 use vandermonde::declare_vandermonde_all;
 use xor::declare_xor_all;
@@ -5000,6 +5002,39 @@ pub struct NatPrelude {
     /// (unpairLeft n) (unpairRight n)` -- Mathlib's own type, `Prod`-free.
     pub unpaired: NameId,
 
+    // -- `unblock-index-zero` lane: `primrec.rs` --
+    // `docs/research/09-decisions/adr-1240-index-zero-is-filled-primitive-recursion.md`
+    // Cycle index 0 of the nursery draw needs `Nat.Primrec` and
+    // `Nat.casesOn`. Construction only, ADR-0653 -- no theorem about either.
+    /// `Nat.casesOn.{u} {motive : Nat -> Sort u} (t : Nat) : motive 0 ->
+    /// ((n : Nat) -> motive n.succ) -> motive t` -- `Nat.rec` with the
+    /// induction hypothesis discarded. Lean generates this; we declare it.
+    pub cases_on: NameId,
+    /// The universe parameter `u` of [`Self::cases_on`].
+    pub cases_on_uparam: NameId,
+    /// `Nat.Primrec : (Nat -> Nat) -> Prop` -- the inductive predicate
+    /// "this function is primitive recursive". An inductive `Prop`, so it
+    /// admits no evaluation test; see `primrec.rs` for what replaces one.
+    pub primrec: NameId,
+    /// `Nat.Primrec.zero : Nat.Primrec (fun _ => 0)`.
+    pub primrec_zero: NameId,
+    /// `Nat.Primrec.succ : Nat.Primrec Nat.succ`.
+    pub primrec_succ: NameId,
+    /// `Nat.Primrec.left : Nat.Primrec Nat.unpairLeft` -- Mathlib states this
+    /// as `fun n => n.unpair.1`; we have the projection, not the `Prod`.
+    pub primrec_left: NameId,
+    /// `Nat.Primrec.right : Nat.Primrec Nat.unpairRight`.
+    pub primrec_right: NameId,
+    /// `Nat.Primrec.pair : Primrec f -> Primrec g -> Primrec (fun n =>
+    /// Nat.pair (f n) (g n))`.
+    pub primrec_pair: NameId,
+    /// `Nat.Primrec.comp : Primrec f -> Primrec g -> Primrec (fun n =>
+    /// f (g n))`.
+    pub primrec_comp: NameId,
+    /// `Nat.Primrec.prec` -- closure under primitive recursion, Mathlib's
+    /// `Nat.unpaired`-wrapped `Nat.rec` conclusion verbatim.
+    pub primrec_prec: NameId,
+
     // -- `unblock-four-families` lane: `abundant_deficient.rs` --
     // `docs/research/09-decisions/adr-1100-four-families-for-draw-14.md`
     // (ADR-1095's measured gap: the free family supply all sorts EARLY, so
@@ -5198,6 +5233,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let le = kernel.name_str(nat, "le");
         let fin = kernel.name_str(nat, "Fin");
         let pair = kernel.name_str(nat, "Pair");
+        let primrec = kernel.name_str(nat, "Primrec");
+        let cases_on_uparam_name = {
+            let anon = kernel.anon_name();
+            kernel.name_str(anon, "u")
+        };
         let p = NatPrelude {
             logic,
             nat,
@@ -6113,6 +6153,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             unpair_left: kernel.name_str(nat, "unpairLeft"),
             unpair_right: kernel.name_str(nat, "unpairRight"),
             unpaired: kernel.name_str(nat, "unpaired"),
+            cases_on: kernel.name_str(nat, "casesOn"),
+            cases_on_uparam: cases_on_uparam_name,
+            primrec,
+            primrec_zero: kernel.name_str(primrec, "zero"),
+            primrec_succ: kernel.name_str(primrec, "succ"),
+            primrec_left: kernel.name_str(primrec, "left"),
+            primrec_right: kernel.name_str(primrec, "right"),
+            primrec_pair: kernel.name_str(primrec, "pair"),
+            primrec_comp: kernel.name_str(primrec, "comp"),
+            primrec_prec: kernel.name_str(primrec, "prec"),
             find_greatest: kernel.name_str(nat, "findGreatest"),
             abundant: kernel.name_str(nat, "Abundant"),
             deficient: kernel.name_str(nat, "Deficient"),
@@ -7046,6 +7096,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // its TESTS. Inverts the pairing `declare_avg_pair_all` just
         // declared, so it goes immediately after it. Nothing needs it.
         declare_unpair_all(&mut d, &p)?;
+        // `Nat.casesOn` and `Nat.Primrec` (`primrec.rs`): cycle index 0 of
+        // the nursery draw. AFTER `unpair`, which the `left`/`right`
+        // constructors name. Construction only, ADR-0653.
+        declare_primrec_all(&mut d, &p)?;
         // `Nat.Abundant`/`Nat.Deficient` (`abundant_deficient.rs`): needs
         // `Nat.sumDivisors` (`perfect.rs`, far above), `Nat.mul` and
         // `Nat.lt`. Opens `Mathlib.NumberTheory.FactorisationProperties`
