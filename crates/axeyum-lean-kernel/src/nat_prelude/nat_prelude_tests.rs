@@ -995,6 +995,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.desc_factorial_of_lt,
         p.desc_factorial_succ_eq_succ_mul,
         p.desc_factorial_eq_factorial_mul_choose,
+        p.add_choose_mul_factorial_mul_factorial,
         p.factorial_dvd_desc_factorial,
         p.desc_factorial_self,
         p.desc_factorial_le,

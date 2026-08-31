@@ -148,6 +148,7 @@ mod cantor;
 mod cardinality;
 mod catalan;
 mod choose;
+mod choose_factorial_add;
 mod clog;
 mod coprime_lemmas;
 mod count_range_permute;
@@ -274,6 +275,7 @@ use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
 use choose::declare_choose_all;
+use choose_factorial_add::declare_add_choose_mul_factorial_mul_factorial;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
 use count_range_permute::{
@@ -516,6 +518,9 @@ pub struct NatPrelude {
     /// induction hypothesis, `mul_left_comm`, [`Self::succ_mul_choose_eq`],
     /// `mul_assoc`, and [`Self::factorial_succ`].
     pub desc_factorial_eq_factorial_mul_choose: NameId,
+    /// `Nat.add_choose_mul_factorial_mul_factorial : ∀ i j, (i+j).choose j *
+    /// i! * j! = (i+j)!`. See `nat_prelude::choose_factorial_add`.
+    pub add_choose_mul_factorial_mul_factorial: NameId,
     /// `factorial_dvd_descFactorial : ∀ n k, k! ∣ n.descFactorial k`.
     /// Closes `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`. Immediate
     /// from [`Self::desc_factorial_eq_factorial_mul_choose`] plus `dvd_mul`.
@@ -4783,6 +4788,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             desc_factorial_succ_eq_succ_mul: kernel.name_str(nat, "descFactorial_succ_eq_succ_mul"),
             desc_factorial_eq_factorial_mul_choose: kernel
                 .name_str(nat, "descFactorial_eq_factorial_mul_choose"),
+            add_choose_mul_factorial_mul_factorial: kernel
+                .name_str(nat, "add_choose_mul_factorial_mul_factorial"),
             factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),
             desc_factorial_self: kernel.name_str(nat, "descFactorial_self"),
             desc_factorial_le: kernel.name_str(nat, "descFactorial_le"),
@@ -5952,6 +5959,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mul_zero`, `mul_one`); nothing needs `Nat.descFactorial`, so it
         // goes last too.
         declare_desc_factorial_all(&mut d, &p)?;
+        // Needs `Nat.descFactorial_eq_factorial_mul_choose`/
+        // `Nat.descFactorial_succ_eq_succ_mul` (`declare_desc_factorial_all`,
+        // just above) plus `mul_comm`/`mul_assoc`/`one_mul`/`factorial_succ`,
+        // all far above; nothing needs this closed `ml430` mirror.
+        declare_add_choose_mul_factorial_mul_factorial(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul`/`Nat.beq` (`declare_arithmetic`/
         // `declare_boolean_equality`) and `Nat.div`/`Nat.mod`
         // (`declare_executable_division`), all far above; nothing needs
@@ -6457,3 +6469,6 @@ mod bit_extra_tests;
 
 #[cfg(test)]
 mod size_extra_tests;
+
+#[cfg(test)]
+mod choose_factorial_add_tests;
