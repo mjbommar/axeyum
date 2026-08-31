@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1962,
+    "min_identity_bound": 1964,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -8621,6 +8621,20 @@
           "prose_sha256": "501ffc526453f06d0b0a5e707ad6a4726b923eab28119be89f636a2c57a84ab4"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-int-exists-gcd-one-657db3e2",
+      "language": "lean4-surface",
+      "statement_sha256": "7ac14acd8599aa51376190148d84829e7a6259bf2a6d101ee6aa6fb62afbb6c7",
+      "prose_sha256": "e2866724c233145581984a65888d1bc7dce66459217182c6db9b0901d4b1814a",
+      "kernel_theorem": "Int.exists_gcd_one'"
+    },
+    {
+      "fact_id": "F:ml430-int-exists-gcd-one-d8820780",
+      "language": "lean4-surface",
+      "statement_sha256": "1ff320623dae35443450e7932d0975de4e2dda622612dd400238eb54237d7190",
+      "prose_sha256": "2af0cc6d58c56e3e4fc0d41e3631f45df924322fc1f4e850024b4827bf01b9d3",
+      "kernel_theorem": "Int.exists_gcd_one"
     },
     {
       "fact_id": "F:ml430-int-fib-add-181b6a2c",
