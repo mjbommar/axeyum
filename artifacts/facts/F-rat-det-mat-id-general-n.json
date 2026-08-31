@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-mat-id-general-n",
+  "title": "Rat.det_matId: the determinant of the identity matrix is 1 at a symbolic dimension",
+  "statement": "Rat.det is the determinant over the constructed rationals at GENERAL n -- the dimension is an argument -- by cofactor expansion along the first row (F:rat-det-general-n-eq-det2 records the construction and its agreement with the fixed 2x2 determinant). Rat.matId is the identity matrix, defined at every index pair at once as matId i j = if Nat.beq i j then 1 else 0, carrying no dimension argument. This fact records det matId n = 1 for a SYMBOLIC n: a universally quantified law over the dimension, not an evaluation at one numeral. It is the first of the four laws ADR-1120 left open over the general-n determinant, and the one that establishes the general-n construction supports induction on the dimension at all. What it does NOT establish is multiplicativity, transpose invariance, or expansion along a general row, which remain open.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_matId : ((x0 : AxNat) -> Eq.{1} Rat (Rat.det Rat.matId x0) Rat.one)",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Rat.det_matId"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-det-general-n-eq-det2",
+    "F:rat-det-congr-pointwise",
+    "F:rat-sum-range-head-of-tail-zero",
+    "F:rat-mul-comm",
+    "F:rat-mul-one",
+    "F:rat-mul-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_matId",
+      "kind": "kernel-term",
+      "supports": "Rat.det_matId is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_matId 2>/dev/null | grep -cE '^Rat\\.det_matId[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.det_matId",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation: this tool consumes only its first name argument and silently discards the rest. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Rat.det_matId",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_matId.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty rat surface bounds every declaration in it."
+    },
+    {
+      "id": "suite-det-mat-id",
+      "kind": "kernel-term",
+      "supports": "The statement is pinned at a SYMBOLIC dimension (no numeral anywhere in it), and the three ingredients of the proof each rest on a def_eq control that can fail.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_determinant_laws_are_stated_at_a_symbolic_dimension",
+        "rat_prelude_tests::the_determinant_law_ingredients_reject_the_degenerate_reading"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib determinant_law 2>&1 | grep -cE '^test result: ok\\. 2 passed'",
+      "checker_seconds": 60,
+      "notes": "The count is tested, not just the exit status: `2 passed` fails if a test is renamed away or silently filtered out, which a bare `cargo test <filter>` cannot detect (a filter matching nothing prints 'running 0 tests ... ok' and exits 0). The shape pin asserts det_matId contains NO `AxNat.succ`, so an edit restating it at a fixed dimension -- turning the general law back into an evaluation example while every axiom-footprint check stayed green -- fails here. The three ingredient controls are each a paired def_eq on ADJACENT ground terms: matMinor matId 0 0 0 0 equals matId 0 0 while matMinor matId 0 1 0 0 does not (rules out a matSkip that ignores the deleted index); det matId 3 computes to 1 while det (matMinor matId 0 1) 2 does not (rules out det returning 1 regardless of its matrix, the reading that would make this fact vacuous); sumRange (fun _ => 1) 1 equals 1 while sumRange (fun _ => 1) 2 does not (rules out a sumRange that collapses to its head). Each negative differs from its positive in a SMALL term and every value is 0 or 1 at dimension at most three, so no failing def_eq here is unbounded. What these do NOT separate: a sign flip -- det (matMinor matId 0 1) 2 is 0 and neg 0 = 0 -- which is F:rat-det-general-n-evaluates's job at value 13."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane determinant-laws, against ADR-1120's four open laws over the general-n determinant. Design note: ADR-1135."
+  },
+  "notes": "The blocker ADR-1120 named -- 'an induction relating minor structure across dimensions' -- is narrower than that phrasing suggests, and it is one lemma. Rat.det's recursive call is at the MINOR, so an induction over the dimension arrives at a matrix that is only POINTWISE the one the induction hypothesis is about: matMinor matId 0 0 is the identity at every index pair and is not the same term. This kernel has no funext (positive control of the same kind, present: congrFun), so the matrix argument cannot be rewritten and det needs its own congruence, F:rat-det-congr-pointwise. Given that, the induction is short: the tail of the cofactor sum dies because matId 0 (succ k) reduces definitionally to Rat.zero (Nat.beq 0 (succ k) is false and matId is a Bool.rec), the surviving j=0 term is 1 * (1 * det (matMinor matId 0 0) n) because altSign 0 and matId 0 0 both reduce to Rat.one, det_congr recognises the minor, and the induction hypothesis closes it. Every magnitude formed is 0 or 1. Note what this law does NOT add over F:rat-det-general-n-eq-det2: it is not a stronger check on the index shift or the sign. Measured in this lane by mutation, swapping Rat.matSkip's two branches makes build_rat_prelude fail at Rat.det_eq_det2 -- and Rat.matMinor_matId, being Eq.refl, survives that same mutation, because matSkip 0 x is x under both readings. The agreement theorem remains the discriminator for an index bug; this fact's contribution is a general statement at symbolic n and a reusable congruence."
+}

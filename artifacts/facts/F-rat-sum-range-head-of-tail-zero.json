@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-sum-range-head-of-tail-zero",
+  "title": "Rat.sumRange_head_of_tail_zero: a finite sum whose tail vanishes equals its first summand",
+  "statement": "Rat.sumRange f n is the finite sum of f over [0,n) in the constructed rationals, defined by structural Nat.rec on the bound, so that sumRange f 0 = 0 and sumRange f (j+1) = sumRange f j + f j. The recursion peels from the RIGHT, so its defining equations give the LAST summand and nothing in this prelude gives the first. This fact records that if f vanishes everywhere past index 0 -- for all k, f (k+1) = 0 -- then sumRange f (n+1) = f 0, for every n. The hypothesis is necessary: without it the statement is false at n = 1 for the constant function 1, where the sum is 2 and the first summand is 1.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.sumRange_head_of_tail_zero : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> Eq.{1} Rat (x0 (AxNat.succ x2)) Rat.zero)) -> Eq.{1} Rat (Rat.sumRange x0 (AxNat.succ x1)) (x0 AxNat.zero))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "Rat.sumRange_head_of_tail_zero"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-zero-add",
+    "F:rat-add-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.sumRange_head_of_tail_zero",
+      "kind": "kernel-term",
+      "supports": "Rat.sumRange_head_of_tail_zero is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.sumRange_head_of_tail_zero 2>/dev/null | grep -cE '^Rat\\.sumRange_head_of_tail_zero[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.sumRange_head_of_tail_zero",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-Rat.sumRange_head_of_tail_zero",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds this theorem.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "control-tail-hypothesis-is-necessary",
+      "kind": "kernel-term",
+      "supports": "The tail hypothesis is load-bearing: the conclusion is false without it at a concrete, ground witness.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_determinant_law_ingredients_reject_the_degenerate_reading"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib determinant_law 2>&1 | grep -cE '^test result: ok\\. 2 passed'",
+      "checker_seconds": 60,
+      "notes": "The count is tested, not just the exit status. The control is a PAIR on adjacent ground terms: sumRange (fun _ => 1) 1 IS def_eq to Rat.one and sumRange (fun _ => 1) 2 is NOT. The pairing is what makes it non-vacuous -- the same def_eq call returns both answers on inputs differing only in the bound -- and the negative rules out a sumRange that collapses to its head, which is the reading under which this theorem would hold with no hypothesis at all. It does NOT say anything about the ORDER of summation. Both values are 1 or 2, so the failing def_eq is between two closed Rat numerals and has no unbounded search."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane determinant-laws; needed by F:rat-det-mat-id-general-n to collapse the cofactor sum of the identity to its j=0 term. Design note: ADR-1135."
+  },
+  "notes": "Direct induction on n, four lines of chain. The base is Rat.zero_add: sumRange f (0+1) reduces definitionally to 0 + f 0. The step is sumRange f (j+2) = sumRange f (j+1) + f (j+1), rewritten by the induction hypothesis to f 0 + f (j+1), then by the tail hypothesis at j to f 0 + 0, then closed by Rat.add_zero. It is declared in rat_prelude/matrix_det.rs rather than rat_prelude/sum.rs for the same reason Rat.sumRange_delta lives in rat_prelude/matrix_n.rs: the shape is the one the cofactor expansion needs, and nothing else in this prelude sums a function supported at a single index. If a second consumer appears it should move to sum.rs."
+}

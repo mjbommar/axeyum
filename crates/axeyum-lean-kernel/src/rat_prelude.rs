@@ -1916,6 +1916,31 @@ pub struct RatPrelude {
     /// `Rat.det_eval_example4 : det A 4 = ofInt 2` — the first dimension
     /// neither [`Self::det2`] nor [`Self::det3`] can reach.
     pub det_eval_example4: NameId,
+
+    // --- the determinant laws (`rat_prelude::matrix_det`, ADR-1135) ---------
+    /// `Rat.sumRange_head_of_tail_zero : ∀ f n, (∀ k, f (succ k) = 0) →
+    /// sumRange f (succ n) = f 0` — the first summand of a sum whose tail
+    /// vanishes. [`Self::sum_range_succ`] peels from the RIGHT, so nothing
+    /// else in this prelude hands you the value at index `0`.
+    pub sum_range_head_of_tail_zero: NameId,
+    /// `Rat.det_congr : ∀ n A B, (∀ r c, A r c = B r c) → det A n = det B n`
+    /// — the determinant respects **pointwise** equality of matrices.
+    ///
+    /// The lemma the absence of `funext` forces. [`Self::det`]'s recursive
+    /// call is at the minor, so any induction over the dimension arrives at a
+    /// matrix that is only *pointwise* the one the induction hypothesis is
+    /// about; with `funext` one would rewrite the matrix argument, and
+    /// without it `det` needs its own congruence.
+    pub det_congr: NameId,
+    /// `Rat.matMinor_matId : ∀ r c, matMinor matId 0 0 r c = matId r c` — the
+    /// identity's leading minor is the identity, at every index pair.
+    /// `Eq.refl`, because `Nat.ble 0 r ≡ true` and
+    /// `Nat.beq (succ r) (succ c) ≡ Nat.beq r c`.
+    pub mat_minor_mat_id: NameId,
+    /// `Rat.det_matId : ∀ n, det matId n = 1` — the determinant of the
+    /// identity at a **symbolic** dimension, the first of the four laws
+    /// ADR-1120 left open over [`Self::det`].
+    pub det_mat_id: NameId,
 }
 
 impl RatPrelude {
@@ -2290,6 +2315,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_eval_example: child(kernel, "det_eval_example"),
         det_eval_singular: child(kernel, "det_eval_singular"),
         det_eval_example4: child(kernel, "det_eval_example4"),
+        sum_range_head_of_tail_zero: child(kernel, "sumRange_head_of_tail_zero"),
+        det_congr: child(kernel, "det_congr"),
+        mat_minor_mat_id: child(kernel, "matMinor_matId"),
+        det_mat_id: child(kernel, "det_matId"),
     }
 }
 

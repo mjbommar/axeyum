@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-congr-pointwise",
+  "title": "Rat.det_congr: the general-n determinant respects pointwise equality of matrices",
+  "statement": "Rat.det is the determinant over the constructed rationals at GENERAL n, by cofactor expansion along the first row, over matrices encoded as functions Nat -> Nat -> Rat plus an explicit bound (F:rat-det-general-n-eq-det2 records the construction). This fact records that if two matrices agree at every index pair -- for all r and c, A r c = B r c -- then det A n = det B n, for every n. The hypothesis is POINTWISE and cannot be strengthened to an equation between the two matrices, because this kernel has no funext; the unhypothesized form is false. This is the lemma that unblocks induction over the dimension: det's recursive call is at the MINOR, so any such induction arrives at a matrix that is only pointwise the one the induction hypothesis is about.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_congr : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat) -> Eq.{1} Rat (x1 x3 x4) (x2 x3 x4)))) -> Eq.{1} Rat (Rat.det x1 x0) (Rat.det x2 x0)))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Rat.det_congr"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-det-general-n-eq-det2",
+    "F:rat-sumrange-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_congr",
+      "kind": "kernel-term",
+      "supports": "Rat.det_congr is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_congr 2>/dev/null | grep -cE '^Rat\\.det_congr[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Rat.det_congr",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Pass ONE name per invocation. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-Rat.det_congr",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_congr.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "suite-det-congr-hypothesis",
+      "kind": "kernel-term",
+      "supports": "The statement still carries its pointwise hypothesis, and det genuinely depends on its matrix argument -- so the hypothesis is not discardable.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests::the_determinant_laws_are_stated_at_a_symbolic_dimension",
+        "rat_prelude_tests::the_determinant_law_ingredients_reject_the_degenerate_reading"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib determinant_law 2>&1 | grep -cE '^test result: ok\\. 2 passed'",
+      "checker_seconds": 60,
+      "notes": "The count is tested, not just the exit status: `2 passed` fails if a test is renamed away or silently filtered out. The shape pin asserts the rendered type still applies the first matrix to two indices, which only happens inside the pointwise premise -- a statement that lost the premise would match neither. The non-vacuity control is that det (matMinor matId 0 1) 2 is NOT def_eq to Rat.one while det matId 3 is: two matrices built by the same machinery whose determinants differ, so det does not ignore its matrix argument and det_congr is not the trivially-true statement it would be if it did."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane determinant-laws, against ADR-1120's four open laws over the general-n determinant. Design note: ADR-1135."
+  },
+  "notes": "Two shape choices are load-bearing and neither is cosmetic. First, the dimension is quantified OUTERMOST and the two matrices live under the Nat.rec motive fun n => forall A B, (forall r c, A r c = B r c) -> det A n = det B n: the induction hypothesis has to be applicable at a DIFFERENT pair of matrices (the two minors), which it cannot be if A and B are fixed outside the induction. Second, the hypothesis is a Pi over two Nat indices rather than an Eq between two Nat -> Nat -> Rat values, because funext is absent here (positive control of the same kind, present: congrFun). The successor step is Rat.sumRange_congr on the two cofactor sums; the per-index obligation splits into the entry (h 0 c) and the minor determinant, and fun r c' => h (matSkip 0 r) (matSkip c c') types as the minors' pointwise premise because Rat.matMinor delta-beta-reduces to exactly that application -- no lemma is needed to bridge it. The base case is Eq.refl, both sides reducing to Rat.one."
+}
