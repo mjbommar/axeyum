@@ -1217,6 +1217,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.asc_factorial_succ_eq_factorial_mul_choose,
         p.factorial_dvd_asc_factorial,
         p.add_desc_factorial_eq_asc_factorial,
+        p.asc_factorial_eq_div,
         p.multichoose_zero_right,
         p.multichoose_one,
         p.multichoose_one_right,

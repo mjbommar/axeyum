@@ -62,7 +62,12 @@ fn desc_factorial(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, k: ExprId) -> E
 /// `descFactorial (i+j) j * i! = (i+j)!`, for the GIVEN `i` (a captured
 /// symbolic term, possibly a bound fvar from the caller's own theorem) and
 /// `j` (the induction target). See the module doc for the route.
-fn desc_factorial_add_eq_factorial_at(
+///
+/// `pub(super)` rather than `pub` per this crate's "extract, don't
+/// re-derive" convention: `add_desc_factorial_asc_factorial.rs`'s
+/// `Nat.ascFactorial_eq_div` reuses this same identity rather than
+/// re-proving it by a second induction.
+pub(super) fn desc_factorial_add_eq_factorial_at(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     i: ExprId,

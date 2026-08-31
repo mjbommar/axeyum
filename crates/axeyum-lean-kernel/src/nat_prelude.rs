@@ -135,6 +135,7 @@ mod add_pos;
 mod algebra;
 mod and_or_distrib;
 mod asc_factorial;
+mod asc_factorial_div;
 mod base_induction;
 mod bezout;
 mod binary;
@@ -261,6 +262,7 @@ use algebra::{
 };
 use and_or_distrib::declare_and_or_distrib_all;
 use asc_factorial::declare_asc_factorial_all;
+use asc_factorial_div::declare_asc_factorial_eq_div;
 use base_induction::declare_base_induction;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all, declare_zero_of_test_bit};
@@ -595,6 +597,10 @@ pub struct NatPrelude {
     /// applications chained through the shared RHS `k! * choose (n+k) k`
     /// (no induction). See `nat_prelude::add_desc_factorial_asc_factorial`.
     pub add_desc_factorial_eq_asc_factorial: NameId,
+    /// `Nat.ascFactorial_eq_div : ∀ n k, (n+1).ascFactorial k = (n+k)! /
+    /// n!`. Closes `F:ml430-nat-ascfactorial-eq-div-87d768e8`. See
+    /// `nat_prelude::asc_factorial_div`.
+    pub asc_factorial_eq_div: NameId,
     /// `Nat.multichoose n k` — the number of size-`k` multisets from an
     /// `n`-element type, defined directly as `choose (pred (add n k)) k`
     /// (i.e. `(n + k - 1).choose k`) rather than by a fresh recursion. See
@@ -4866,6 +4872,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             factorial_dvd_asc_factorial: kernel.name_str(nat, "factorial_dvd_ascFactorial"),
             add_desc_factorial_eq_asc_factorial: kernel
                 .name_str(nat, "add_descFactorial_eq_ascFactorial"),
+            asc_factorial_eq_div: kernel.name_str(nat, "ascFactorial_eq_div"),
             multichoose: kernel.name_str(nat, "multichoose"),
             multichoose_zero_right: kernel.name_str(nat, "multichoose_zero_right"),
             multichoose_one: kernel.name_str(nat, "multichoose_one"),
@@ -6243,6 +6250,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_asc_factorial_all`, just above); nothing needs this
         // closed `ml430` mirror.
         declare_add_desc_factorial_eq_asc_factorial(&mut d, &p)?;
+        // Needs `Nat.add_descFactorial_eq_ascFactorial` (just above),
+        // `choose_factorial_add::desc_factorial_add_eq_factorial_at`
+        // (`declare_add_choose_mul_factorial_mul_factorial`'s home module,
+        // far above) and `Nat.div`/`div_mul_cancel_of_dvd`/`dvd_mul`
+        // (`declare_euclidean_division`, far above); nothing needs this
+        // closed `ml430` mirror.
+        declare_asc_factorial_eq_div(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.pred`/`Nat.choose`, all far above (`choose`'s
         // own `choose_zero_right`/`choose_self`/`choose_one_right`, all
         // declared by `declare_choose_all`); nothing needs `Nat.multichoose`,
@@ -6586,3 +6600,6 @@ mod add_choose_div_tests;
 
 #[cfg(test)]
 mod add_desc_factorial_asc_factorial_tests;
+
+#[cfg(test)]
+mod asc_factorial_div_tests;
