@@ -36,6 +36,15 @@
       "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
       "recorded_by": "coordinator",
       "recorded_in": "da61dcef9"
+    },
+    {
+      "fact_id": "F:creal-evt-attained-max-decides-sign",
+      "date": "2026-08-31",
+      "from_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
+      "to_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
+      "from_prose_sha256": "0f7a0cadfded5e45948d25e248961652430ca132303e0464a632a997162aa911",
+      "to_prose_sha256": "f2e5ace030cf42f7d6788fab929c01ecfc9f65edb5d10ae1d2b129c36dd72a62",
+      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256) and `drifted=0` throughout. The reader-facing text changed for two reasons, both narrowing the claim rather than widening it. (1) Non-vacuity for row 2 is now evidenced IN THIS LEDGER (lane `evt-row2-nonvacuity`, 2026-08-31): the old text said this fact supplies no such evidence and parenthetically conceded 'it plainly is' satisfiable, which is precisely the unfalsifiable form -- an assertion with no checker behind it. Two evidence rows now cite tests that fail when broken. (2) The old text cited `creal/supremum.rs`'s module documentation as saying `CReal.supOn` is 'still not landed'. That phrase occurs ZERO times in that file (control: 32 mentions of `supOn`), and the same stale citation was corrected the same day in `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`. What the new text must NOT be read as: an upgrade of EVT's standing. It still says, and this is the substantive remaining gap, that no operator here PRODUCES an attaining maximiser; `F:creal-evt-approx-max` supplies only the approximate row-1 substitute. The fact remains a refutation of the classical conclusion."
     }
   ],
   "pins": [
@@ -3157,7 +3166,7 @@
       "fact_id": "F:creal-evt-attained-max-decides-sign",
       "language": "lean4",
       "statement_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
-      "prose_sha256": "0f7a0cadfded5e45948d25e248961652430ca132303e0464a632a997162aa911",
+      "prose_sha256": "f2e5ace030cf42f7d6788fab929c01ecfc9f65edb5d10ae1d2b129c36dd72a62",
       "kernel_theorem": "CReal.evt_attained_max_decides_sign"
     },
     {

@@ -89,8 +89,6 @@
         "F:ml430-nat-add-eq-one-iff-f8463abc",
         "F:ml430-nat-add-eq-right-9067eb1a",
         "F:ml430-nat-add-eq-three-iff-799a0a8f",
-        "F:ml430-nat-add-eq-two-iff-25385c65",
-        "F:ml430-nat-add-eq-zero-64233539",
         "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
         "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
         "F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb",
@@ -289,7 +287,7 @@
         "F:nat-zero-add"
       ],
       "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 244 -> 251 members by `rescope-nursery-exemption.py`, which refuses when any member is held-out. Partition census at re-scope: {'development': 304, 'train': 194, 'longitudinal': 4}. Zero held-out members, so the crossing stays benign under ADR-0542."
+      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 244 -> 251 members by `rescope-nursery-exemption.py`, which refuses when any member is held-out. Partition census at re-scope: {'development': 304, 'train': 194, 'longitudinal': 4}. Zero held-out members, so the crossing stays benign under ADR-0542.  RE-SCOPED 2026-08-31 (coordinator): dropped F:ml430-nat-add-eq-two-iff-25385c65, F:ml430-nat-add-eq-zero-64233539 -- both left the nursery entirely when they became `proved` and the `natural-basic-arithmetic` family's manifest window shifted past them (the snapshot refresh recorded in ADR-1095). Both were partition `train`, never held-out, verified against every entry in v1 and the extension before removal, so this narrows the exemption and cannot license a cross-partition edge. Ids absent from the nursery cannot appear in any live component, so keeping them would only make the exemption unmatchable -- which is exactly how it was failing."
     },
     {
       "authority": "ADR-0855",
