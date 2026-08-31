@@ -193,7 +193,7 @@ impl Conditions {
 )]
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct Memory {
-    inner: a0::Memory,
+    pub(super) inner: a0::Memory,
 }
 
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]

@@ -2,7 +2,9 @@
 # ruff: noqa: E501, F401, F403, F405
 
 from . import a0
+from . import rv64
 __all__ = [
     "a0",
+    "rv64",
 ]
 

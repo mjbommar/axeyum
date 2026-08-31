@@ -164,3 +164,110 @@ def test_a0_run_and_prefix_report_distinct_stop_reasons() -> None:
     assert halted.stop == "halted"
     assert len(halted.states) == 2
     assert machine.a0.step(halt, halted.states[-1]).encode() == halted.states[-1].encode()
+
+
+def rv64_code(*instructions: object) -> bytes:
+    return b"".join(instruction.encode().to_bytes(4, "little") for instruction in instructions)
+
+
+def test_rv64_all_selected_instruction_factories_round_trip() -> None:
+    instructions = [
+        machine.rv64.Instruction.add_immediate(3, 2, -7),
+        machine.rv64.Instruction.add(3, 2, 1),
+        machine.rv64.Instruction.sub(3, 2, 1),
+        machine.rv64.Instruction.or_(3, 2, 1),
+        machine.rv64.Instruction.xor(3, 2, 1),
+        machine.rv64.Instruction.load_double(3, 2, 8),
+        machine.rv64.Instruction.store_double(2, 3, 8),
+        machine.rv64.Instruction.branch_equal(2, 3, -4),
+        machine.rv64.Instruction.branch_not_equal(2, 3, 4),
+        machine.rv64.Instruction.branch_greater_equal(2, 3, 4),
+        machine.rv64.Instruction.jump_and_link(1, 8),
+        machine.rv64.Instruction.jump_and_link_register(1, 2, 8),
+    ]
+    assert len({instruction.kind for instruction in instructions}) == 12
+    for instruction in instructions:
+        assert machine.rv64.Instruction.decode(instruction.encode()) == instruction
+
+    with pytest.raises(ValueError, match="InvalidRegister"):
+        machine.rv64.Instruction.add(32, 1, 2)
+    with pytest.raises(ValueError, match="MisalignedImmediate"):
+        machine.rv64.Instruction.branch_equal(1, 2, 3)
+
+
+def test_rv64_step_preserves_x0_and_uses_instruction_pc_for_branches() -> None:
+    add = machine.rv64.Instruction.add(0, 1, 2)
+    branch = machine.rv64.Instruction.branch_not_equal(1, 2, -4)
+    program = machine.rv64.Program(0, rv64_code(add, branch))
+    state = machine.rv64.State(machine.a0.Memory.zeroed(0), 0)
+    state = state.with_register(0, 99).with_register(1, 7).with_register(2, 5)
+    after_add = machine.rv64.step(program, state)
+    assert after_add.register(0) == 0
+    assert after_add.pc == 4
+    after_branch = machine.rv64.step(program, after_add)
+    assert after_branch.pc == 0
+
+
+def test_rv64_load_store_projection_and_atomic_trap() -> None:
+    store = machine.rv64.Instruction.store_double(1, 2, 0)
+    load = machine.rv64.Instruction.load_double(3, 1, 0)
+    program = machine.rv64.Program(0, rv64_code(store, load))
+    state = machine.rv64.State(machine.a0.Memory.zeroed(8), 0)
+    state = state.with_register(1, 0).with_register(2, 0x0123456789ABCDEF)
+    stored = machine.rv64.step(program, state)
+    loaded = machine.rv64.step(program, stored)
+    assert loaded.register(3) == 0x0123456789ABCDEF
+    assert loaded.memory.entries() == list(enumerate(bytes.fromhex("efcdab8967452301")))
+
+    projection = machine.rv64.project_state(loaded, [3, 0])
+    assert projection.registers == [(0, 0), (3, 0x0123456789ABCDEF)]
+    assert projection.pc == 8
+    with pytest.raises(ValueError, match="DuplicateRegister"):
+        machine.rv64.project_state(loaded, [3, 3])
+
+    small = machine.rv64.State(machine.a0.Memory.zeroed(7), 0)
+    small = small.with_register(2, 0x0123456789ABCDEF)
+    trapped = machine.rv64.step(program, small)
+    assert trapped.outcome.kind == "trapped"
+    assert trapped.outcome.trap.kind == "data-access-fault"
+    assert trapped.memory.entries() == list(enumerate(bytes(7)))
+
+
+def test_rv64_source_identity_and_all_declared_traps_are_visible() -> None:
+    assert machine.rv64.SOURCE_RELEASE == "20260120"
+    assert len(machine.rv64.SOURCE_SHA256) == 64
+    assert machine.rv64.RV64I_VERSION == "2.1"
+    assert len(machine.rv64.SELECTED_FORMS) == 12
+
+    empty = machine.a0.Memory.zeroed(0)
+    cases = [
+        (
+            machine.rv64.Program(0, bytes(4)),
+            machine.rv64.State(empty, 2),
+            "instruction-address-misaligned",
+        ),
+        (
+            machine.rv64.Program(0, bytes(4)),
+            machine.rv64.State(empty, 4),
+            "incomplete-instruction-fetch",
+        ),
+        (
+            machine.rv64.Program(0, bytes(4)),
+            machine.rv64.State(empty, 0),
+            "illegal-instruction",
+        ),
+        (
+            machine.rv64.Program(0, rv64_code(machine.rv64.Instruction.load_double(2, 1, 0))),
+            machine.rv64.State(machine.a0.Memory.zeroed(8), 0).with_register(1, 1),
+            "data-address-misaligned",
+        ),
+        (
+            machine.rv64.Program(0, rv64_code(machine.rv64.Instruction.load_double(2, 1, 0))),
+            machine.rv64.State(machine.a0.Memory.zeroed(7), 0),
+            "data-access-fault",
+        ),
+    ]
+    for program, state, expected in cases:
+        trapped = machine.rv64.step(program, state)
+        assert trapped.outcome.trap.kind == expected
+        assert machine.rv64.step(program, trapped).registers == trapped.registers

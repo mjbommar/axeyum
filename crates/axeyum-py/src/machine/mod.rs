@@ -5,6 +5,7 @@
 //! or transition meaning.
 
 pub(crate) mod a0;
+pub(crate) mod rv64;
 
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
@@ -22,8 +23,10 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
         "tier R -- executable instruction-set teaching semantics projected from Rust.",
     )?;
     let a0_module = a0::register(&module)?;
+    let rv64_module = rv64::register(&module)?;
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("axeyum._native.machine.a0", &a0_module)?;
+    sys_modules.set_item("axeyum._native.machine.rv64", &rv64_module)?;
     parent.add("machine", &module)?;
     Ok(module)
 }
