@@ -200,7 +200,6 @@ pub(super) fn declare_sum_range_const(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
 ) -> Result<(), KernelError> {
-    let _p = *p;
     d.theorem(p.sum_range_const, 2, &|d, v| {
         let (c, n) = (v[0], v[1]);
         let f = const_fn(d, c);
@@ -598,10 +597,7 @@ pub(super) fn declare_count_rectangle_partition(
         let body = d.lemma(p.count_range_eq_sum_range, &[r_row, n]);
         d.lam_fv(x_fv, nat, body)
     };
-    let h_rows = d.lemma(
-        p.sum_range_congr,
-        &[r_rows, sel_r_rows, m, pointwise_rows],
-    );
+    let h_rows = d.lemma(p.sum_range_congr, &[r_rows, sel_r_rows, m, pointwise_rows]);
     let h_swap = d.lemma(p.sum_range_swap, &[sel_r, m, n]);
     // `∀ y, Eq (sel_r_cols y) (r_cols y)` — the same bridge, backwards.
     let pointwise_cols = {
@@ -615,10 +611,7 @@ pub(super) fn declare_count_rectangle_partition(
         let body = d.symm(count_y, sum_y, fwd);
         d.lam_fv(y_fv, nat, body)
     };
-    let h_cols = d.lemma(
-        p.sum_range_congr,
-        &[sel_r_cols, r_cols, n, pointwise_cols],
-    );
+    let h_cols = d.lemma(p.sum_range_congr, &[sel_r_cols, r_cols, n, pointwise_cols]);
     let (_e, h_fubini) = d.chain(
         sum_r_rows,
         &[
@@ -652,9 +645,7 @@ pub(super) fn declare_count_rectangle_partition(
         d.symm(sum_r_rows, sum_r_cols, fwd)
     };
     let step_1 = d.add(sum_q_rows, sum_r_rows);
-    let h_1 = d.congr(sum_r_cols, sum_r_rows, h_back, &|d, t| {
-        d.add(sum_q_rows, t)
-    });
+    let h_1 = d.congr(sum_r_cols, sum_r_rows, h_back, &|d, t| d.add(sum_q_rows, t));
     let (_e, body) = d.chain(
         start,
         &[
@@ -810,10 +801,7 @@ pub(super) fn declare_count_rectangle_partition_compl(
 ///
 /// Returns the trusted gate's rejection for the first declaration that does
 /// not type-check.
-pub(super) fn declare_lattice_count(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_lattice_count(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_sum_range_const(d, p)?;
     declare_count_range_eq_sum_range(d, p)?;
     declare_sum_range_swap(d, p)?;

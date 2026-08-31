@@ -361,6 +361,7 @@ use land::declare_land_all;
 use land_div_two::declare_land_div_two_all;
 use land_low_bit::declare_land_low_bit_all;
 use land_self::declare_land_self_all;
+use lattice_count::declare_lattice_count;
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd, declare_mod_lcm,
@@ -425,7 +426,6 @@ use rec_agreement::{
     declare_lor_aux_ne_zero_of_right_ne_zero_all, declare_lor_comm,
     declare_lor_fuel_irrelevance_all, declare_rec_agreement_all,
 };
-use lattice_count::declare_lattice_count;
 use rectangle::declare_rectangle;
 use rel_prime::{declare_coprime_iff_is_rel_prime, declare_is_rel_prime};
 use relation::{
@@ -5807,8 +5807,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_eq_sum_range: kernel.name_str(nat, "countRange_eq_sumRange"),
             sum_range_swap: kernel.name_str(nat, "sumRange_swap"),
             count_rectangle_partition: kernel.name_str(nat, "countRectangle_partition"),
-            count_rectangle_partition_compl: kernel
-                .name_str(nat, "countRectangle_partition_compl"),
+            count_rectangle_partition_compl: kernel.name_str(nat, "countRectangle_partition_compl"),
             choose_add_convolution: kernel.name_str(nat, "choose_add_convolution"),
             sum_choose_sq: kernel.name_str(nat, "sum_choose_sq"),
             restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),
