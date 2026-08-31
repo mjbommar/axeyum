@@ -1274,6 +1274,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dist_pos_of_ne,
         p.dist_eq_intro,
         p.dist_triangle_inequality,
+        p.land_div_two,
     ]
 }
 
@@ -22734,5 +22735,66 @@ fn dist_triangle_inequality_applies_at_concrete_instances() {
     assert!(
         f.k.axiom_footprint(p.dist_triangle_inequality).is_empty(),
         "dist_triangle_inequality must rest on zero axioms"
+    );
+}
+
+/// `Nat.land_div_two` (`F:ml430-nat-and-div-two-1a2f7c33`,
+/// draw9-second-theorems) applies at symbolic `a`/`b` and at a concrete,
+/// DISCRIMINATING instance (`land 13 11 = 9`, `13 = 0b1101`, `11 = 0b1011`).
+#[test]
+fn land_div_two_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    {
+        let name = f.name("land_div_two_restated");
+        f.theorem(name, 2, &|d, values| {
+            let a = values[0];
+            let b = values[1];
+            let two = d.num(2);
+            let land_ab = d.const_app(p.land, &[a, b]);
+            let lhs = d.div(land_ab, two);
+            let div_a = d.div(a, two);
+            let div_b = d.div(b, two);
+            let rhs = d.const_app(p.land, &[div_a, div_b]);
+            let stmt = d.eq(lhs, rhs);
+            let proof = d.lemma(p.land_div_two, &[a, b]);
+            (stmt, proof)
+        })
+        .expect("land_div_two must apply at symbolic a/b");
+    }
+
+    {
+        let thirteen = f.num(13);
+        let eleven = f.num(11);
+        let two = f.num(2);
+        let land_ab = f.const_app(p.land, &[thirteen, eleven]);
+        let lhs = f.div(land_ab, two);
+        let div_a = f.div(thirteen, two);
+        let div_b = f.div(eleven, two);
+        let rhs = f.const_app(p.land, &[div_a, div_b]);
+        let applied = f.lemma(p.land_div_two, &[thirteen, eleven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_div_two must apply at (a=13, b=11): {shown}")
+        });
+        let want = f.eq(lhs, rhs);
+        assert!(f.k.def_eq(inferred, want));
+        let nine = f.num(9);
+        assert!(
+            f.k.def_eq(land_ab, nine),
+            "land 13 11 must compute to 9 (0b1101 & 0b1011 = 0b1001)"
+        );
+        let four = f.num(4);
+        assert!(f.k.def_eq(lhs, four), "9 / 2 must compute to 4");
+        assert!(
+            f.k.def_eq(rhs, four),
+            "land (13/2) (11/2) = land 6 5 must compute to 4"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.land_div_two).is_empty(),
+        "land_div_two must rest on zero axioms"
     );
 }

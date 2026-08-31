@@ -180,6 +180,7 @@ mod group;
 mod helpers;
 mod irrational;
 mod land;
+mod land_div_two;
 mod land_low_bit;
 mod land_self;
 mod lcm;
@@ -311,6 +312,7 @@ use gcd_mul_right_mirrors::declare_gcd_mul_right_mirrors;
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
+use land_div_two::declare_land_div_two_all;
 use land_low_bit::declare_land_low_bit_all;
 use land_self::declare_land_self_all;
 use lcm::{
@@ -4127,6 +4129,13 @@ pub struct NatPrelude {
     /// reduces this to a purely numeric fact about a product of two `{0,1}`
     /// values, closed by [`super::ops::cases_mod_two`] twice.
     pub land_mod_two_eq_one: NameId,
+    /// `Nat.land_div_two : ∀ a b, Eq (div (land a b) 2) (land (div a 2)
+    /// (div b 2))` — `F:ml430-nat-and-div-two-1a2f7c33`. The `div` twin of
+    /// [`Self::land_mod_two_eq_mul`]: one unfold of `landAux`'s succ-row plus
+    /// `div_two_mul_add_of_lt` erases the LOW bit, and fuel-irrelevance
+    /// (`land_aux_agree_of_fuel`) relates the erased recursive term to the
+    /// canonical `land (div a 2) (div b 2)` (`nat_prelude::land_div_two`).
+    pub land_div_two: NameId,
     /// `Nat.bit_div_two : ∀ test n, Eq (div (bit test n) 2) n` — one half of
     /// the `Nat.bit` decode bridge (`nat_prelude::bit_decode`), via
     /// `div_mod_unique` against the executable `div_mod_exec` projections.
@@ -5420,6 +5429,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             land_one_is_mod: kernel.name_str(nat, "land_one_is_mod"),
             land_mod_two_eq_mul: kernel.name_str(nat, "land_mod_two_eq_mul"),
             land_mod_two_eq_one: kernel.name_str(nat, "land_mod_two_eq_one"),
+            land_div_two: kernel.name_str(nat, "land_div_two"),
             bit_div_two: kernel.name_str(nat, "bit_div_two"),
             bit_mod_two: kernel.name_str(nat, "bit_mod_two"),
             land_bit: kernel.name_str(nat, "land_bit"),
@@ -5984,7 +5994,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `declare_land_fuel_irrelevance_all`'s neighbourhood, far above).
         // Draw 9 (`natural-bitwise-basics`,
         // `docs/plan/status/draw9-second-theorems.md`).
-                declare_land_self_all(&mut d, &p)?;
+        declare_land_self_all(&mut d, &p)?;
         // `Nat.land_one_is_mod`/`Nat.land_mod_two_eq_mul`/
         // `Nat.land_mod_two_eq_one`: needs `Nat.landAux`/`Nat.land`
         // (`declare_land_all`), `Nat.land_comm` (above),
@@ -5994,7 +6004,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // above), and `mod_two_mul_add_of_lt` (`parity.rs`, far above).
         // Draw 9 (`natural-bitwise-basics`,
         // `docs/plan/status/draw9-second-theorems.md`).
-                declare_land_low_bit_all(&mut d, &p)?;
+        declare_land_low_bit_all(&mut d, &p)?;
+        // `Nat.land_div_two`: needs `Nat.landAux`/`Nat.land` (`declare_land_all`,
+        // far above), `Nat.land_zero_left`/`Nat.land_zero_right`
+        // (`declare_land_all`), `Nat.land_aux_agree_of_fuel`
+        // (`declare_land_fuel_irrelevance_all`, far above), and
+        // `half_le_predecessor_of_succ`/`Nat.div_mod_exec`/
+        // `Nat.div_mod_unique`/`Nat.zero_div`/`Nat.zero_mul`/`Nat.one_mul`/
+        // `Nat.mod_lt`/`Nat.le_refl` (all far above). Draw 9
+        // (`natural-bitwise-basics`,
+        // `docs/plan/status/draw9-second-theorems.md`).
+        declare_land_div_two_all(&mut d, &p)?;
         // `Nat.lor_aux_ne_zero_of_right_ne_zero`: needs `Nat.lorAux`
         // (`declare_lor_all`, far above), `Nat.succ_ne_zero`
         // (`declare_no_confusion_all`, far above), `Nat.mul_eq_zero`
