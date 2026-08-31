@@ -197,3 +197,103 @@ fn fib_lt_fib_succ_applies_concretely_and_symbolically_and_needs_its_hypothesis(
          the `2 <= n` hypothesis cannot be dropped"
     );
 }
+
+/// `Nat.fib_add` (declared in `fibonacci.rs`, not here) had inventory
+/// coverage but no instantiation test; the `ml430` mirror flip rests on its
+/// statement, so it gets one.
+///
+/// # Controls
+///
+/// * The statement is checked at a genuinely FREE `m` and `n`. That is the
+///   discriminating check: at concrete numerals both sides collapse to one
+///   literal, which is control failure mechanism 1.
+/// * The negative control replaces the second product's first factor with
+///   `fib m` (giving `fib m * fib n + fib m * fib (succ n)`). It is rejected
+///   symbolically, and it is not vacuous: at `(m, n) = (1, 3)` it evaluates
+///   to `1*2 + 1*3 = ...` -- concretely `4`, against the true `fib 5 = 5`.
+/// * Note what the concrete point does NOT rule out: at `(3, 4)` the
+///   TRANSPOSED product order also evaluates to 21, so a concrete check alone
+///   cannot separate the two orderings. Only the symbolic check does.
+#[test]
+fn fib_add_states_the_addition_formula_symbolically_and_evaluates_concretely() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    assert!(
+        f.k.axiom_footprint(p.fib_add).is_empty(),
+        "fib_add must rest on zero axioms"
+    );
+
+    // Symbolic: free m and n in an explicit LocalContext.
+    let m_fv = f.fresh_fvar();
+    let m = f.k.fvar(m_fv);
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let anon = f.anon_name();
+    let nat = f.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: n_fv,
+        name: anon,
+        ty: nat,
+        info: BinderInfo::Default,
+    });
+
+    let applied = f.const_app(p.fib_add, &[m, n]);
+    let inferred =
+        f.k.infer_in(applied, &mut ctx)
+            .unwrap_or_else(|e| panic!("fib_add must apply at free m, n: {}", f.explain(&e)));
+
+    let sum = f.add(m, n);
+    let succ_sum = f.succ(sum);
+    let lhs = f.const_app(p.fib, &[succ_sum]);
+    let fib_m = f.const_app(p.fib, &[m]);
+    let fib_n = f.const_app(p.fib, &[n]);
+    let sm = f.succ(m);
+    let sn = f.succ(n);
+    let fib_sm = f.const_app(p.fib, &[sm]);
+    let fib_sn = f.const_app(p.fib, &[sn]);
+    let prod1 = f.mul(fib_m, fib_n);
+    let prod2 = f.mul(fib_sm, fib_sn);
+    let rhs = f.add(prod1, prod2);
+    let want = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "fib_add must state fib (succ (m + n)) = fib m * fib n + fib (succ m) * fib (succ n)"
+    );
+
+    // Negative control: wrong first factor in the second product.
+    let bad_prod2 = f.mul(fib_m, fib_sn);
+    let bad_rhs = f.add(prod1, bad_prod2);
+    let bad = f.eq(lhs, bad_rhs);
+    assert!(
+        !f.k.def_eq(inferred, bad),
+        "negative control: fib_add must not state ... + fib m * fib (succ n)"
+    );
+
+    // Concrete: (m, n) = (3, 4). fib 8 = 21 = 2*3 + 3*5.
+    let three = f.num(3);
+    let four = f.num(4);
+    let concrete = f.const_app(p.fib_add, &[three, four]);
+    let concrete_ty =
+        f.k.infer(concrete)
+            .unwrap_or_else(|e| panic!("fib_add at (3,4) must type-check: {}", f.explain(&e)));
+    let eight = f.num(8);
+    let fib_eight = f.const_app(p.fib, &[eight]);
+    let twentyone = f.num(21);
+    assert!(
+        f.k.def_eq(fib_eight, twentyone),
+        "fib 8 must reduce to 21 -- the concrete point the formula is read at"
+    );
+    let want_concrete = f.eq(fib_eight, twentyone);
+    assert!(
+        f.k.def_eq(concrete_ty, want_concrete),
+        "fib_add at (3,4) must be defeq to the numeric identity fib 8 = 21"
+    );
+}
