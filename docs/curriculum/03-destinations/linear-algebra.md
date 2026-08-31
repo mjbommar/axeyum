@@ -125,6 +125,14 @@ the new `Rat.det`/`matSkip`/`matMinor`/`altSign`/`matInv2*` declarations under
 The remaining genuine gap is everything spectral — eigenvalues, eigenvectors,
 the characteristic polynomial's roots — which is Mathlib-scale.
 
+**Re-measured 2026-08-31, ADR-1205: 90.** ADR-1155's Laplace row-expansion
+layer landed nine more declarations, and one of them
+(`Rat.sumRange_matSkip`, a reindexing lemma the expansion needs) had the same
+bucket-attribution bug ADR-1140 fixed one layer over: its name starts with
+`sumRange_`, not `mat`, so it fell through to the `rationals` catch-all until
+the pattern was widened. Fixed in the same pass; the gap named above is
+unchanged.
+
 ## Graded-family treatment
 
 [`../graded-statement-families-number-theory-and-linear-algebra.md`](../graded-statement-families-number-theory-and-linear-algebra.md)

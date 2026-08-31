@@ -32,6 +32,31 @@ L9 (eigenvalues) and N11 (quadratic reciprocity) remain the genuine open
 frontiers on their respective spines; L3 (span) and N7′ (factorization
 uniqueness, restated) remain as this proposal describes them below.
 
+**Correction, 2026-08-31 (ADR-1205).** Re-measuring again after ADR-1140 found
+a second instance of the same bucket-attribution bug ADR-1140 had just fixed,
+this time on N11 itself: the second supplementary law
+(`Int.secondSupplementaryLaw`, ADR-1150) and Gauss's lemma
+(`Int.gaussLemmaSignCount`, ADR-1130) landed a real chunk of the quadratic-
+residue apparatus — 29 declarations — and every one of them fell through
+`number-theory`'s bucket pattern to the `naturals`/`integers` catch-alls,
+because the pattern's only Gauss's-lemma alternative was the literal string
+`gauss_fold_injective`, written when one declaration of that shape existed.
+Fixed by widening the pattern (deliberately *not* to match bare `gauss_lemma`,
+which is an unrelated divisibility theorem correctly filed under
+`divisibility-and-euclid`); `number-theory`'s `kernel_decls` moves 108 → 137.
+A parallel one-declaration miss on the linear-algebra side
+(`Rat.sumRange_matSkip`, from ADR-1155's Laplace row-expansion layer) moved
+`linear-algebra` 81 → 90. **N11's genuine open frontier is narrower than this
+proposal's own text below still says**: not "quadratic reciprocity is absent"
+in full, but specifically the general law relating two distinct odd primes —
+Gauss's lemma and the second supplementary law are both landed routes toward
+it. See the corrected N11 row and
+[`03-destinations/number-theory.md`](03-destinations/number-theory.md) for the
+current state. The ~30-node graph-surgery decision is unaffected: neither
+addition is a status flip, both are `kernel_decls` corrections, and the reasons
+ADR-1075/ADR-1140 gave for not doing the surgery (the consumer surface, and no
+self-checking scenario family for the open rungs) are unchanged by this pass.
+
 Every "kernel has it" claim below is grounded in one measurement, not in prose:
 
 ```sh
@@ -120,7 +145,7 @@ proposing work.
 | N8 | **Congruences and modular arithmetic** | N2 | **have.** `Int.ModEq`, `Nat.modeq`, ~104 declarations |
 | N9 | **CRT** | N5, N8 | **have, twice.** `Nat.crt_unique` (Nat-native) and `Int.crt_exists`/`Int.crt_unique`. Note the two live in `nat_prelude/crt.rs` and `int_prelude/crt.rs`; three separate triages checked only the Int one and concluded it did not transport |
 | N10 | **The multiplicative group mod n** — Fermat, Euler, Wilson | N9, counting | **have.** `Nat.pow_prime_modeq_self` (Fermat, all `a`), `Int.wilson`/`wilson_converse`/`wilson_iff`, `Nat.totient` with `totient_mul_of_coprime`, `totient_prime_pow`, `totient_prime`, and **`Int.euler_totient_theorem` (`a^φ(n) ≡ 1 (mod n)`, ADR-1110)** — landed 2026-08-31, axiom-free, from the residue-permutation ingredients (`Int.prodRangeIf_permute` and friends) this row used to list as the missing piece |
-| N11 | **Quadratic residues** | N10 | **partly.** `Int.euler_criterion_pm_one` and the two implication halves are landed; **quadratic reciprocity is absent** and is the subject's genuine frontier |
+| N11 | **Quadratic residues** | N10 | **partly, further than this row says (ADR-1205).** `Int.euler_criterion_pm_one` and its two implication halves, Gauss's lemma (`Int.gaussLemmaSignCount`, ADR-1130) and the second supplementary law (`Int.secondSupplementaryLaw`, ADR-1150) are all landed, axiom-free; **the general reciprocity law relating two distinct odd primes is absent** and is the subject's genuine frontier |
 
 Two side spurs the spine should carry as nodes rather than as footnotes,
 because both already have kernel content that nothing in the graph points at:
@@ -147,11 +172,12 @@ brief against. That is the whole argument for the decomposition.
 ## 2. Linear algebra — a nine-rung spine, and the honest gap
 
 Today: one node, `covered`, `Family::LinearAlgebra`. Measured kernel
-attribution (2026-08-31, post-ADR-1120): **81 declarations** — the
-`Rat.det2`/`det3` fixed-size determinant theory plus the **general-`n`
-determinant** (`Rat.det`, `matSkip`, `matMinor`, `altSign`, `matInv2*`,
-ADR-1120), `Rat.dotN` at general `n`, the matrix layer (`matMul`, `matId`,
-`matTranspose`), Cramer's rule at 2×2 and the 2×2 adjugate inverse. Add
+attribution (2026-08-31, post-ADR-1120; re-measured post-ADR-1155/ADR-1205):
+**90 declarations** — the `Rat.det2`/`det3` fixed-size determinant theory plus
+the **general-`n` determinant** (`Rat.det`, `matSkip`, `matMinor`, `altSign`,
+`matInv2*`, ADR-1120) with its Laplace row-expansion layer (`sumRange_matSkip`
+and friends, ADR-1155), `Rat.dotN` at general `n`, the matrix layer (`matMul`,
+`matId`, `matTranspose`), Cramer's rule at 2×2 and the 2×2 adjugate inverse. Add
 `Rat.sumRange_swap` and `Rat.sumRange_diagonal`, filed under `counting` because
 that is their aggregate but load-bearing here, and `CPoint`'s 116 declarations,
 a genuine 2-D inner-product space over the constructed reals, filed under

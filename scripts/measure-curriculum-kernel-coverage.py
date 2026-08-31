@@ -85,6 +85,20 @@ BUCKETS: list[tuple[str, str]] = [
     # `Nat.exists_prime_gt`, `Nat.pow_prime_modeq_self` and
     # `Nat.least_residue_ne_zero_of_coprime` to fall through to the `naturals`
     # carrier bucket, which understates the destination it is measuring.
+    #
+    # ADR-1205: the N11 quadratic-residue / second-supplementary-law cluster
+    # (ADR-1130 Gauss's lemma, ADR-1150 the second supplementary law) landed
+    # with camelCase names (`gaussLemmaSignCount`, `gaussSignNeg`, `gaussFold`,
+    # `gaussNegCount`, ...) and snake_case ones (`gauss_neg_count_*`,
+    # `gauss_fold_*`, `gauss_residue_*`), and NONE of the pre-existing
+    # alternatives here matched them -- 32 declarations fell through to the
+    # `naturals`/`integers` catch-alls, the exact ADR-1140 failure mode
+    # recurring on the very rung (N11) that proposal names as the open
+    # frontier. `gauss[A-Z]` deliberately does NOT match bare `gauss_lemma`
+    # (`Nat.gauss_lemma`/`Int.gauss_lemma` in `lcm.rs` is a DIFFERENT theorem
+    # -- the divisibility one, `gcd x y = 1 -> x|yz -> x|z` -- correctly
+    # bucketed to `divisibility-and-euclid` below by the literal `gauss_lemma`
+    # alternative there; same colloquial name, unrelated statement).
     ("number-theory",
      r"^(Nat|Int)\.(prime|Prime|totient|fib|Fib|fastFib|perfect|Perfect|"
      r"Squarefree|squarefree|wilson|Wilson|euler|Euler|"
@@ -94,7 +108,10 @@ BUCKETS: list[tuple[str, str]] = [
      r"dvd_of_forall_prime|coprime_fermatNumber|least_divisor|least_residue|"
      r"pow_mul_prime|pow_two_ne_pow_two_mul_prime|pow_of_pow_add_prime|"
      r"self_inverse_mod_prime|factorial_interior_modeq|factorial_sq_modeq|"
-     r"add_pow_modeq_prime|gauss_fold_injective)"),
+     r"add_pow_modeq_prime|gauss_fold_injective|"
+     r"gauss[A-Z]|gauss_neg_count|gauss_fold_|gauss_residue|leastResidue|"
+     r"secondSupplementaryLaw|is_quadratic_residue|pow_neg_one_of|"
+     r"half_ceil_parity)"),
     # NOT `matrix|determinant|eigen`. That pattern returns ZERO, and the zero
     # is an artefact of the query: this kernel spells its linear algebra
     # `Rat.det2` / `Rat.det3` / `Rat.dotN` (a vector is a finite function plus
@@ -115,9 +132,13 @@ BUCKETS: list[tuple[str, str]] = [
     # `Rat.matSkip`, `Rat.matMinor`, `Rat.altSign`, `Rat.matInv2*`), the same
     # failure this comment already describes, recurring on the very rung the
     # DEPTH-PROPOSAL named as the keystone.
+    # `Rat.sumRange_matSkip` (a Laplace-expansion reindexing lemma in
+    # `matrix_det.rs`) doesn't start with any of the `mat(...)` alternatives
+    # above -- the `sumRange_` prefix comes first -- so it fell through to
+    # `rationals`. One declaration, same anchoring hazard.
     ("linear-algebra",
      r"^Rat\.(det|dotN|mat(Id|Mul|Transpose|Skip|Minor|Inv2)|altSign|"
-     r"cramer|inv2_|mul_adj2_)"),
+     r"cramer|inv2_|mul_adj2_|sumRange_matSkip)"),
     # layer 2 structures
     ("divisibility-and-euclid",
      r"^(Nat|Int)\.(gcd|Gcd|lcm|dvd|Dvd|bezout|Bezout|xgcd|"

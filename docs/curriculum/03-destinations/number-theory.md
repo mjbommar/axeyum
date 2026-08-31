@@ -60,16 +60,21 @@ landed in the in-tree Lean kernel, general and axiom-free**:
 | Wilson's theorem, **both directions** | `Int.wilson`, `Int.wilson_converse`, `Int.wilson_iff` | 0 |
 | Euler's criterion | `Int.euler_criterion_pm_one` | 0 |
 | **Euler's theorem `a^φ(n) ≡ 1 (mod n)`, all `a` (ADR-1110, landed 2026-08-31)** | `Int.euler_totient_theorem` | 0 |
+| Gauss's lemma (the sign-count route to quadratic reciprocity, ADR-1130) | `Int.gaussLemmaSignCount` | 0 |
+| Second supplementary law `2` is a QR mod `p` iff `p ≡ ±1 (mod 8)` (ADR-1150) | `Int.secondSupplementaryLaw` | 0 |
 
 Read these from the kernel, not from this table — it is a snapshot:
 `prelude_theorem_inventory --release --include-constructed`.
 
 ## Still Lean-horizon, and why
 
-- **Quadratic reciprocity** — genuinely absent (control: `Int.euler_criterion_pm_one`,
-  `Int.is_quadratic_residue` both FOUND by the same method). The Legendre symbol
-  at a fixed `p` is decidable by Euler's criterion, so the *decidable fragment*
-  is cheap; the reciprocity law itself is unbuilt.
+- **Quadratic reciprocity (the general law relating `(p/q)` and `(q/p)`)** — still
+  genuinely absent, but two of its named routes are now landed: Gauss's lemma
+  (`Int.gaussLemmaSignCount`, ADR-1130) and the second supplementary law
+  (`Int.secondSupplementaryLaw`, ADR-1150) — both axiom-free, both on the first
+  attempt. What remains is the general law itself, relating two *distinct* odd
+  primes. The Legendre symbol at a fixed `p` is decidable by Euler's criterion,
+  so the *decidable fragment* is cheap regardless.
 - **Uniqueness of prime factorization** — blocked by the kernel's *type theory*,
   not by decidability: there is no `List`, `Finset`, product type or quotient by
   permutation in which to state multiset equality. The expressible reformulation
