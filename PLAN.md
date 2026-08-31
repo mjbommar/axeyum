@@ -191,6 +191,7 @@ now. Nothing was deleted.
 | 2026-08-30 | `0a68b7ec2` | Replace the dense memory shortcut with a canonical sparse finite map, modular wrapped range checks, atomic trapped stores, and address-bound state serialization. The semantic package advances to v9. |
 | 2026-08-30 | `f267f50b5` | Extend the source-bound memory report with wrapped sparse addresses, stored bytes, missing-address trap, and complete-map preservation. |
 | 2026-08-30 | `29c7ab0fd` | Advance the widened sparse-memory evidence contract to schema v2 so the old dense and new sparse report shapes cannot share one schema identity. |
+| 2026-08-30 | `cfa215a12` | Derive concrete and symbolic A0 loads/stores from one domain-parametric orchestration; certify arbitrary-address frame laws at all eight widths through checked array elimination plus DRAT/LRAT, with a satisfiable and concretely replayed partial-store mutation. Semantic package v10. |
 | 2026-08-30 | blocked-mirror-divergences | Verified multichoose/minFac divergences against pinned Mathlib source (already resolved by prior lanes, confirmed not re-derived); landed `Nat.testBit_land`/`Nat.testBit_lor` (`F:nat-testbit-land`, `F:nat-testbit-lor`, both axiom-free, transported from the existing `Nat.testBit_xor` technique); wrote ADR-0840 correcting `Nat.fastFib`'s sizing (Mathlib's `fastFibAux` uses a non-dependent `binaryRec` motive, so the existing fuel-based `binaryRec` suffices, but `Nat.fib`'s own divergent construction independently keeps the mirror unflippable regardless) |
 | 2026-08-30 | l0-s6-credit-transaction | Crash-safe two-phase-commit engine (`scripts/credit-transaction.py`) + gate (`scripts/check-credit-transaction.py`) + 27-test suite + 9-guard mutation table (`scripts/tests/test-credit-transaction*`), registered in justfile and check.sh; ADR-0785. |
 | 2026-08-30 | l1-c0-artifact-contract | Library-artifact pack contract (`artifacts/library-artifact/`: README spec, JSON Schema doc, 9-declaration positive pack + type-only projection + external population registry) + two independent readers (`scripts/check-library-artifact-contract{,-reader-b}.py`) + 14-test suite + 5-guard 1:1 mutation table (`scripts/tests/test-library-artifact-contract*`), registered in justfile and check.sh; ADR-0800. |
@@ -34704,9 +34705,10 @@ specifically (exactly the gap the two "explained" survivals trace to).
 Build the semantic and evidence layers required by *Instruction Sets,
 Programs, and Proofs*. The first slice adds the `axeyum-machine` boundary and
 complete A0 concrete execution. The reusable word layer exposes and audits
-explicit extension and truncation, and complete states now have a canonical
-binary artifact codec. Next: the A0 symbolic memory-frame theorem, then independently pinned RV64I and
-x86-64 teaching slices, broader semantic relations, manifests, Python
+explicit extension and truncation, complete states have a canonical binary
+artifact codec, and the source-derived symbolic memory-frame route covers all
+eight supported widths. Next: independently pinned RV64I and x86-64 teaching
+slices, broader semantic relations, manifests, Python
 projection, and clean-checkout book gates. A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.

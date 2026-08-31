@@ -441,3 +441,49 @@ same schema identity. Advanced the report schema to
 `axeyum.a0.memory-trace.v2`. This changes no machine semantics; it makes the
 artifact boundary accurately identify the report that producers, checkers,
 manifests, and the book exchange.
+
+## 2026-08-30 — source-derived symbolic A0 memory-frame theorem
+
+The concrete sparse traces could not establish the universal frame claim. A
+second handwritten solver formula would not close that gap either: it could
+agree with the book while bypassing the executable load/store implementation.
+Refactored A0 memory access around a public `MemoryDomain` boundary, parallel
+to the existing `AdditionDomain`. One shared `memory_load` and `memory_store`
+orchestration now owns modular address enumeration, per-address presence,
+little-endian split/join, validity conjunction, tentative writes, and the
+all-or-nothing choice between the updated and complete original memories. The
+ordinary `Memory::load` and `Memory::store` paths instantiate that definition
+with concrete words, bytes, Booleans, and the canonical sparse map.
+
+Added a symbolic instantiation using a word-indexed byte array and a separate
+one-bit presence array. For each of the eight supported widths, the theorem
+uses arbitrary old arrays, base address, stored word, and probe address. It
+checks that load validity is exactly the conjunction of the addressed presence
+bits; successful load reconstructs the selected bytes in little-endian order;
+store validity is the same predicate; an arbitrary successor probe contains
+the corresponding source byte exactly when the valid write footprint contains
+it and otherwise retains the old byte; a trapped store retains the old byte;
+and store preserves the complete presence domain. Because the probe is an
+arbitrary word, the pointwise result establishes complete-memory equality and
+the store frame law without using unsupported array equality.
+
+Each width saves the exact rendered-assertion digest, deterministic
+array-eliminated DIMACS, DRAT, LRAT, and the number of re-derived select
+congruence constraints. The checker rebuilds terms from the compiled source,
+re-runs the array elimination, re-derives its congruence witness, confirms the
+saved DIMACS, and independently replays DRAT and LRAT. All eight widths pass.
+The largest width has 72 select-congruence constraints; the complete report is
+about 384 KiB.
+
+The load-bearing mutation commits the tentative map even when a later address
+is absent. Its width-16 symbolic negation is satisfiable. A concrete encoded A0
+store at address 65,535 over the sparse domain containing only that first
+address traps and preserves byte zero, while the mutated orchestration leaves
+`0xcd`. Thus the negative control exercises the same atomic-failure clause as
+the theorem rather than merely corrupting unrelated report metadata.
+
+This proves the A0 word-sized load/store frame theorem for the eight declared
+finite bit-vector widths and arbitrary finite-domain characteristic arrays. It
+does not prove an induction theorem for widths outside A0, instruction decode,
+or any RV64I or x86-64 memory behavior. The semantic package advances to
+version 10 and declares `domain-parametric-memory`.
