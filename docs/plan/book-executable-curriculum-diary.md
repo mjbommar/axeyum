@@ -430,3 +430,14 @@ boundary trap, it records wrapped addresses `[65535, 0]`, stored bytes
 `[0xcd, 0xab]`, the sparse-hole trap, and complete-map preservation. The
 existing reversed-byte-order mutation remains load-bearing and rejects the
 widened report.
+
+## 2026-08-30 — version the widened memory evidence contract
+
+The sparse-memory repair added wrapped addresses, sparse stored bytes, a
+missing-address trap, and complete-map preservation to the public memory
+report. Leaving that materially wider JSON contract under
+`axeyum.a0.memory-trace.v1` would make two different report shapes claim the
+same schema identity. Advanced the report schema to
+`axeyum.a0.memory-trace.v2`. This changes no machine semantics; it makes the
+artifact boundary accurately identify the report that producers, checkers,
+manifests, and the book exchange.

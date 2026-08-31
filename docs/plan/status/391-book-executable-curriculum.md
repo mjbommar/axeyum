@@ -30,3 +30,4 @@ interfaces as implemented until those routes run and their controls fire.
 | 2026-08-30 | `70dfcf3d6` | Canonical complete-state binary codec across all widths and outcome/trap forms; ten malformed encodings rejected, with a trailing-byte acceptance control. The semantic package advances to v8. |
 | 2026-08-30 | `0a68b7ec2` | Replace the dense memory shortcut with a canonical sparse finite map, modular wrapped range checks, atomic trapped stores, and address-bound state serialization. The semantic package advances to v9. |
 | 2026-08-30 | `f267f50b5` | Extend the source-bound memory report with wrapped sparse addresses, stored bytes, missing-address trap, and complete-map preservation. |
+| 2026-08-30 | `29c7ab0fd` | Advance the widened sparse-memory evidence contract to schema v2 so the old dense and new sparse report shapes cannot share one schema identity. |
