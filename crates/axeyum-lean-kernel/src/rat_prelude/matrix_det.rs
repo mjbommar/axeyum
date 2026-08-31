@@ -1600,13 +1600,9 @@ fn declare_mat_skip_succ_succ(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), K
         let right = d.succ(right_inner);
         NatOps::eq(d, left, right)
     };
-    let proof = bool_cases(
-        d,
-        cond,
-        &motive,
-        &|d| NatOps::refl(d, ssx),
-        &|d| NatOps::refl(d, sx),
-    );
+    let proof = bool_cases(d, cond, &motive, &|d| NatOps::refl(d, ssx), &|d| {
+        NatOps::refl(d, sx)
+    });
 
     let ty = {
         let inner = d.pi_fv(x_fv, nat, stmt);
@@ -2292,10 +2288,7 @@ fn declare_sum_range_mat_skip(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), K
                 let body = nat_eq_to_rat(d, from, to, mss, &|d, t| d.apply(f, &[t]));
                 d.lam_fv(k_fv, nat, body)
             };
-            let congr_sum = d.lemma(
-                p.sum_range_congr,
-                &[phi_tail_fn, inner_fn, m, pointwise],
-            );
+            let congr_sum = d.lemma(p.sum_range_congr, &[phi_tail_fn, inner_fn, m, pointwise]);
             let s2 = rcongr(d, phi_tail, inner_sum, congr_sum, &|d, t| {
                 let inner = radd(d, phi_head, t);
                 radd(d, inner, fj)
