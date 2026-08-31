@@ -7781,6 +7781,12 @@
       "kernel_theorem": "Nat.add_one_lt_of_even"
     },
     {
+      "fact_id": "F:ml430-nat-add-one-mul-choose-eq-d364de16",
+      "language": "lean4-surface",
+      "statement_sha256": "2fbe03b196f78ba43c20417cfc6adbed63c260407be650374e5500a2b28fa7f4",
+      "prose_sha256": "e1596a0eaea060a2c47f1bb045e47459940e0083c92678ccce29e03fa1d76e12"
+    },
+    {
       "fact_id": "F:ml430-nat-add-pos-right-e43374dc",
       "language": "lean4-surface",
       "statement_sha256": "6b9b870fee61739f0971428c28093ffff410e6af988c539d25d6cfc6de1c6c2a",
@@ -8094,6 +8100,18 @@
       "prose_sha256": "262a6b4313a24b52beae06ac8814bc82b87eb3852f56d734379a40ee75e9e235"
     },
     {
+      "fact_id": "F:ml430-nat-coprime-dvd-mul-left-e799d04c",
+      "language": "lean4-surface",
+      "statement_sha256": "d85dcb3d1e7835e06c479f0302bb320cc64b3161e1f4b3aaccb75616ad2e1b8c",
+      "prose_sha256": "83b27ff1bfe62af9c097e496f3c493eb6fe6e3eda048c77eb94557329f37da8f"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-dvd-mul-right-7cd1c3c8",
+      "language": "lean4-surface",
+      "statement_sha256": "482ca39d0fa9705dfbd38c6909a634b4d61a084a82a6c648a050f23c6f9e718c",
+      "prose_sha256": "2a709b403196bde926bbd8507662bc83327f3b720f09d8e217a8e570eedd2116"
+    },
+    {
       "fact_id": "F:ml430-nat-coprime-dvd-of-dvd-mul-left-b0608cb9",
       "language": "lean4-surface",
       "statement_sha256": "399b0787d63bff0ce03eadbdb57c4e07f0ab67d87bb24c6debf50dfc8a2271eb",
@@ -8104,6 +8122,12 @@
       "language": "lean4-surface",
       "statement_sha256": "2eb96376f754c23f454aa932ef61599d4f173ba50be75ad8d8940bdfe41fcaa6",
       "prose_sha256": "ce4d9d166615dfb42f4a3c072f976ebf18faa49327d5e86a563f164017619e3c"
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-eq-of-mul-eq-zero-a2026bd5",
+      "language": "lean4-surface",
+      "statement_sha256": "421117b33e0e5c3e065b275e6b87eb23be06f2ea5dfd7e938950a47c9401b358",
+      "prose_sha256": "1afebf8eee0a014ba9abdb88f45fb01a5788654eed2a96dc27748d51f425393d"
     },
     {
       "fact_id": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",

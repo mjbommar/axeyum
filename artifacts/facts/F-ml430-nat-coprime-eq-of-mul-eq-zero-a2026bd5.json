@@ -8,10 +8,33 @@
     "statement": "∀ {m n : ℕ}, m.Coprime n → m * n = 0 → m = 0 ∧ n = 1 ∨ m = 1 ∧ n = 0",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": ["F:nat-gcd-zero-left", "F:nat-mul-eq-zero"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_eq_of_mul_eq_zero 2>/dev/null | grep -Ec '^Nat\\.coprime_eq_of_mul_eq_zero[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.coprime_eq_of_mul_eq_zero",
+      "kind": "kernel-term",
+      "notes": "`Nat.coprime_eq_of_mul_eq_zero` (nat_prelude/draw11_mirrors.rs, `declare_coprime_eq_of_mul_eq_zero`, lane draw11-theorems-b) is a fresh construction: `Nat.mul_eq_zero` splits `m*n=0` into `m=0 ∨ n=0`; each disjunct is substituted into the coprimality hypothesis and collapsed with `Nat.gcd_zero_left` (the `n=0` case additionally uses `Nat.gcd_comm`, since the zero then sits on the wrong side for `gcd_zero_left` directly) to force the OTHER variable to `1`, then packaged with `And.intro`/`Or.inl`/`Or.inr`. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) -> ((x3 : Eq.{1} AxNat (AxNat.mul x0 x1) AxNat.zero) -> Or (And (Eq.{1} AxNat x0 AxNat.zero) (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero))) (And (Eq.{1} AxNat x0 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 AxNat.zero))))))`, matching `formal.statement` verbatim. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. A discriminating unit test in `nat_prelude_tests.rs` (`coprime_eq_of_mul_eq_zero_selects_the_correct_disjunct`) applies the theorem to real witnesses at `(m,n)=(0,1)` (both hypotheses `rfl`) all the way to a proof term inferred against the LEFT disjunct, and checks the type shape at `(m,n)=(1,0)` selects the RIGHT disjunct -- discriminating a swapped `Or.inl`/`Or.inr`.",
+      "supports": "∀ {m n : ℕ}, m.Coprime n → m * n = 0 → m = 0 ∧ n = 1 ∨ m = 1 ∧ n = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured 2026-08-31: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.coprime_eq_of_mul_eq_zero`'s footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it).",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.coprime_eq_of_mul_eq_zero"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +49,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed 2026-08-31 by lane draw11-theorems-b: a fresh construction in `nat_prelude/draw11_mirrors.rs`, not a transcription of Mathlib's proof. `depends_on` was populated by `scripts/check-fact-depends-derived.py --fix` from the proof term itself, not asserted by hand."
 }
