@@ -1313,6 +1313,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gauss_neg_count_nineteen_two,
         p.gauss_neg_count_twentythree_two,
         p.gauss_neg_count_seven_three,
+        // `gauss-lemma-closed-form-b` lane (ADR-0970/ADR-0985): the general
+        // closed form and its specialization to the odd-prime shape.
+        p.gauss_count_ble_closed_form_disj,
+        p.gauss_neg_count_two_closed_form,
     ]
 }
 
