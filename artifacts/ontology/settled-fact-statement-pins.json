@@ -8120,6 +8120,12 @@
       "kernel_theorem": "Nat.coprime_iff_isRelPrime"
     },
     {
+      "fact_id": "F:ml430-nat-coprime-lcm-eq-mul-edf52888",
+      "language": "lean4-surface",
+      "statement_sha256": "32cf090ff748b98aff932d7b0bfa3428feeb82700433f0344332ce2b913cea78",
+      "prose_sha256": "642c0948d03b650d4d8a825bb7c0d15bd3f0052db9f15993c3e7078202ea7abd"
+    },
+    {
       "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
       "language": "lean4-surface",
       "statement_sha256": "44292a0dfc66e00938a481c3fd3fc25d1acb78205630fa74b3b77b2bf0be2591",
@@ -8392,6 +8398,18 @@
       "statement_sha256": "a7a3d7edadbefc62a42ed27021a8570241a79f16f7a3e0cab0f2fb9a14f6b753",
       "prose_sha256": "839bbdfa92799b5532bd9b400b36574bc7c8515d5a4bdd34d064198d18df1e14",
       "kernel_theorem": "Nat.dvd_antisymm"
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-dvd-nat-lcm-left-6143311e",
+      "language": "lean4-surface",
+      "statement_sha256": "ac73c05e89d79243ef80bea5065badaf14f2780c5621a728c0d5f59fd125a903",
+      "prose_sha256": "b83dbe30ef804b5a2a6af14ab72ae9220b3ccfd2541e8a10c22cdef922a3ac91"
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-dvd-nat-lcm-right-d05db50b",
+      "language": "lean4-surface",
+      "statement_sha256": "f8de6430a7b71c41586fc28518659daf06ba207e60832f6fd1f07360259579ab",
+      "prose_sha256": "414256345b000a6e8f5d6877c670a2fcdaae004dad767d96c4e8f2a153a50547"
     },
     {
       "fact_id": "F:ml430-nat-dvd-gcd-e5184fc5",

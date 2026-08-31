@@ -8,10 +8,33 @@
     "statement": "∀ {a b : ℕ}, a ∣ b → ∀ (c : ℕ), a ∣ b.lcm c",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": ["F:ml430-nat-dvd-lcm-left-c83bcebc", "F:nat-dvd-trans"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_lcm_of_dvd_left 2>/dev/null | grep -Ec '^Nat\\.dvd_lcm_of_dvd_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.dvd_lcm_of_dvd_left",
+      "kind": "kernel-term",
+      "notes": "This mirror was ALREADY PROVED in this ledger under a different name: `Nat.dvd_lcm_of_dvd_left` (nat_prelude/primes.rs, `declare_dvd_lcm_of_dvd`) states `dvd a b -> dvd a (lcm b c)` for universally quantified `a b c`, which is exactly Mathlib's `a ∣ b → ∀ c, a ∣ b.lcm c` up to Pi-binder order. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.dvd x0 (AxNat.lcm x1 x2)))))` -- reading `x0=a, x1=b, x2=c`, this is `dvd a b -> dvd a (lcm b c)`, matching `formal.statement` verbatim. No new Rust was needed; `draw11-theorems-b` lane confirmed the existing declaration's rendered type and wrote this evidence. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ {a b : ℕ}, a ∣ b → ∀ (c : ℕ), a ∣ b.lcm c"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured 2026-08-31: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.dvd_lcm_of_dvd_left`'s footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.dvd_lcm_of_dvd_left"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +49,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed 2026-08-31 by lane draw11-theorems-b: `formal.statement` is a byte-identical quotation of the pinned extractor's pretty-printed Mathlib type, and Axeyum's own `Nat.dvd_lcm_of_dvd_left` (nat_prelude/primes.rs) already states the identical proposition up to a harmless Pi-binder reordering. No new Rust was needed; this fact's status flip is the whole task. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority."
 }

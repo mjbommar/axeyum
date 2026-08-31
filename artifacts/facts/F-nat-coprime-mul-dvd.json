@@ -22,7 +22,8 @@
   "depends_on": [
     "F:nat-coprime-lcm-eq-mul",
     "F:nat-lcm-dvd",
-    "F:ml430-nat-lcm-dvd-07899eea"
+    "F:ml430-nat-lcm-dvd-07899eea",
+    "F:ml430-nat-coprime-lcm-eq-mul-edf52888"
   ],
   "axiom_footprint": [],
   "evidence": [
