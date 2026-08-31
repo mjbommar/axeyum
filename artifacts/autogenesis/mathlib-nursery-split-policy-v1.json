@@ -104,6 +104,23 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-08-30",
+      "family": "natural-bit-decode",
+      "from": "held-out",
+      "to": "development",
+      "reason": "two of the ten rows were already decided by reduction, not proved: F:ml430-nat-bit-false-zero-d996adbf (Nat.bit false 0 = 0) closes over Nat.bit, admitted by 2facd789 on 2026-08-28 06:23:04, and F:ml430-nat-size-one-e23e5f71 (Nat.size 1 = 1) closes over Nat.size, admitted by a7ac623d7 on 2026-08-24 15:30:55 -- both confirmed ancestors of draw 11's preregistering commit 882ae1a52 (2026-08-30 23:07:25) by git merge-base --is-ancestor. This is ADR-0695's fermat-numbers defect repeated: the DEFINITION spends a ground equation the instant it is admitted, whatever anyone has or has not proved about it, and the evaluation test that demonstrates the reduction (bit_false_zero_evaluates / size_one_evaluates-shaped assertions) is a witness to the spend, not its cause. scripts/check-holdout-closed-evaluation.py's own classifier, run over the whole held-out population across both manifests (156 rows, snapshot at 2,507 declarations), finds these are the ONLY two closed-shaped rows; the remaining eight (Nat.bit_add, Nat.bit_add', Nat.bit_le, Nat.bit_lt_bit, Nat.bit_ne_zero, Nat.size_bit, Nat.size_eq_zero, Nat.size_le_size) are genuinely quantified and stay usable evaluation targets in development. The family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible, the same unit ADR-0695 applied to fermat-numbers even though only three of its ten rows were spent. No fact is reopened; every row keeps whatever epistemic_status it holds. Held-out shrinks from 156 to 146 rows (v2 extension alone: 100 to 90, 10 to 9 families) and, per ADR-0762, Mathlib.Data.Nat.{Bits,Size} does not return to the drawable held-out pool for a future draw -- that is the price of these two rows not having been blind. ADR-0950's draw-time R12 screen in gen-autogenesis-nursery-refill.py is the corresponding draw-time fix, so a third occurrence of this shape is refused before a manifest is written rather than found in the next audit.",
+      "breach": {
+        "fact_id": "F:ml430-nat-bit-false-zero-d996adbf",
+        "proof_shape": "natural-bit-decode:unconditional-equality",
+        "operation_id": "no-operation-closed-evaluation-decided-by-the-unblocking-definitions",
+        "registered_commit": "2facd789",
+        "registered_date": "2026-08-28",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "authority": {
