@@ -66,8 +66,7 @@ fn add_factorial_le_factorial_add_computes_at_i2_n3() {
     assert!(f.k.def_eq(rhs, hundred_twenty), "(2+3)! must reduce to 120");
 
     assert!(
-        f.k
-            .axiom_footprint(p.add_factorial_le_factorial_add)
+        f.k.axiom_footprint(p.add_factorial_le_factorial_add)
             .is_empty(),
         "add_factorial_le_factorial_add must rest on zero axioms"
     );
@@ -100,14 +99,10 @@ fn add_factorial_succ_le_factorial_add_succ_computes_at_i2_n2() {
         "must state Le (2 + (2+1)!) ((2+(2+1))!)"
     );
     assert!(f.k.def_eq(lhs, eight), "2 + 3! must reduce to 8");
-    assert!(
-        f.k.def_eq(rhs, hundred_twenty),
-        "(2+3)! must reduce to 120"
-    );
+    assert!(f.k.def_eq(rhs, hundred_twenty), "(2+3)! must reduce to 120");
 
     assert!(
-        f.k
-            .axiom_footprint(p.add_factorial_succ_le_factorial_add_succ)
+        f.k.axiom_footprint(p.add_factorial_succ_le_factorial_add_succ)
             .is_empty(),
         "add_factorial_succ_le_factorial_add_succ must rest on zero axioms"
     );

@@ -60,8 +60,14 @@ fn add_desc_factorial_eq_asc_factorial_computes_at_n2_k3() {
 
     // Sanity: both sides reduce to the same concrete numeral, confirming
     // this isn't a vacuous defeq between two stuck terms.
-    assert!(f.k.def_eq(df, sixty), "(2+3).descFactorial 3 must reduce to 60");
-    assert!(f.k.def_eq(af, sixty), "(2+1).ascFactorial 3 must reduce to 60");
+    assert!(
+        f.k.def_eq(df, sixty),
+        "(2+3).descFactorial 3 must reduce to 60"
+    );
+    assert!(
+        f.k.def_eq(af, sixty),
+        "(2+1).ascFactorial 3 must reduce to 60"
+    );
     assert!(f.k.def_eq(sn, three), "succ 2 must reduce to 3");
     let _ = five;
 
@@ -75,8 +81,7 @@ fn add_desc_factorial_eq_asc_factorial_computes_at_n2_k3() {
     );
 
     assert!(
-        f.k
-            .axiom_footprint(p.add_desc_factorial_eq_asc_factorial)
+        f.k.axiom_footprint(p.add_desc_factorial_eq_asc_factorial)
             .is_empty(),
         "add_desc_factorial_eq_asc_factorial must rest on zero axioms"
     );

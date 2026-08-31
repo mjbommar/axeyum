@@ -39,10 +39,9 @@ fn add_choose_computes_at_i2_j3() {
     let two = f.num(2);
     let three = f.num(3);
     let applied = f.const_app(p.add_choose, &[two, three]);
-    let inferred = f
-        .k
-        .infer(applied)
-        .unwrap_or_else(|e| panic!("add_choose must type-check: {}", f.explain(&e)));
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("add_choose must type-check: {}", f.explain(&e)));
 
     let five = f.num(5);
     let ten = f.num(10);

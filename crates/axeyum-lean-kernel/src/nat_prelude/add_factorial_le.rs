@@ -145,7 +145,8 @@ pub(super) fn declare_add_factorial_le_factorial_add(
             let add_mul_f = d.add(mul_f_inj, ffact);
             let comm_growth = d.lemma(p.add_comm, &[mul_f_inj, ffact]); // Eq(add_mul_f, add_f_mul)
             let comm_growth_rev = d.symm(add_mul_f, add_f_mul, comm_growth); // Eq(add_f_mul, add_mul_f)
-            let growth = le_transport_rhs(d, ffact_one, add_f_mul, add_mul_f, comm_growth_rev, growth0);
+            let growth =
+                le_transport_rhs(d, ffact_one, add_f_mul, add_mul_f, comm_growth_rev, growth0);
             // growth : Le(ffact_one, add_mul_f) -- defeq Le(succ(ffact), add_mul_f)
 
             let succ_ffact = d.succ(ffact);

@@ -80,12 +80,18 @@ pub(super) fn declare_add_choose(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
         // by chaining k_mul_choose -> choose_mul_k -> lhs -> fact_ij.
         let step1 = d.symm(choose_mul_k, k_mul_choose, comm);
         let step2 = d.symm(lhs, choose_mul_k, assoc);
-        let (_e, mul_eq) = d.chain(k_mul_choose, &[(choose_mul_k, step1), (lhs, step2), (fact_ij, h)]);
+        let (_e, mul_eq) = d.chain(
+            k_mul_choose,
+            &[(choose_mul_k, step1), (lhs, step2), (fact_ij, h)],
+        );
 
         // k_pos : Le 1 k
         let one_le_fact_i = d.lemma(p.one_le_factorial, &[i]);
         let one_le_fact_j = d.lemma(p.one_le_factorial, &[j]);
-        let k_pos = d.lemma(p.one_le_mul, &[fact_i, fact_j, one_le_fact_i, one_le_fact_j]);
+        let k_pos = d.lemma(
+            p.one_le_mul,
+            &[fact_i, fact_j, one_le_fact_i, one_le_fact_j],
+        );
 
         // cancel : Eq(div(fact_ij, k), choose_ij)
         let cancel = div_eq_of_mul_eq(d, &p, k, choose_ij, fact_ij, k_pos, mul_eq);

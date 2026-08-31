@@ -5157,8 +5157,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             factorial_le: kernel.name_str(nat, "factorial_le"),
             factorial_lt_of_lt: kernel.name_str(nat, "factorial_lt_of_lt"),
             factorial_ne_zero: kernel.name_str(nat, "factorial_ne_zero"),
-            add_factorial_le_factorial_add: kernel
-                .name_str(nat, "add_factorial_le_factorial_add"),
+            add_factorial_le_factorial_add: kernel.name_str(nat, "add_factorial_le_factorial_add"),
             add_factorial_succ_le_factorial_add_succ: kernel
                 .name_str(nat, "add_factorial_succ_le_factorial_add_succ"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),

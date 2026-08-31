@@ -39,12 +39,9 @@ fn asc_factorial_eq_div_computes_at_n2_k3() {
     let two = f.num(2);
     let three = f.num(3);
     let applied = f.const_app(p.asc_factorial_eq_div, &[two, three]);
-    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
-        panic!(
-            "asc_factorial_eq_div must type-check: {}",
-            f.explain(&e)
-        )
-    });
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("asc_factorial_eq_div must type-check: {}", f.explain(&e)));
 
     let sixty = f.num(60);
     let sn = f.succ(two);
