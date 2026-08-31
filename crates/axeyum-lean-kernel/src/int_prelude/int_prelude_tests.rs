@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 223] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 224] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -247,6 +247,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 223] {
         p.inverse_index_involutive,
         p.factorial_sq_modeq_one,
         p.prod_range_mul,
+        p.prod_range_const_pow,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -1031,6 +1032,71 @@ fn prod_range_computes_and_rejects_a_false_product() {
     assert!(
         result.is_err(),
         "the trusted gate accepted a false claim that prodRange (fun _ => 2) 3 = 7"
+    );
+}
+
+/// `Int.prodRange_const_pow` applied at concrete `a := 3, n := 4` proves a
+/// statement that itself computes to `81 = 81` on both sides -- the
+/// symbolic proof term (fully general over `a`, `n`) is checked by kernel
+/// admission (the general theorem is declared axiom-free), and this test is
+/// the complementary concrete-instantiation check the standing rule asks
+/// for: a symbolic accept can hide a defeq-shaped gap that only a concrete
+/// reduction exposes, and a concrete-only check can hide a chain that does
+/// not compose symbolically. Both together, per CLAUDE.md's Gotchas.
+#[test]
+fn prod_range_const_pow_matches_direct_computation() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+    let three = numeral(&mut k, &p, 3);
+    let four_n = numeral_nat(&mut k, &p, 4);
+
+    let lemma = k.const_(p.prod_range_const_pow, vec![]);
+    let lemma_a = k.app(lemma, three);
+    let applied = k.app(lemma_a, four_n);
+    let inferred = k
+        .infer(applied)
+        .expect("prod_range_const_pow must apply at concrete a, n");
+
+    // The instantiated statement is `Eq Int (prodRange (fun _ => 3) 4) (pow
+    // 3 4)`; build that expected shape directly and confirm the general
+    // theorem's application infers exactly it.
+    let three_lambda = k.lam(anon, nat_ty, three, BinderInfo::Default);
+    let prod_range_c = k.const_(p.prod_range, vec![]);
+    let prod_range_f = k.app(prod_range_c, three_lambda);
+    let lhs_direct = k.app(prod_range_f, four_n);
+    let pow_c = k.const_(p.pow, vec![]);
+    let pow_a = k.app(pow_c, three);
+    let rhs_direct = k.app(pow_a, four_n);
+    let int_ty = k.const_(p.z, vec![]);
+    let eq_c = k.const_(p.logic.eq, vec![level_one]);
+    let expected = {
+        let e = k.app(eq_c, int_ty);
+        let e = k.app(e, lhs_direct);
+        k.app(e, rhs_direct)
+    };
+    assert!(
+        k.def_eq(inferred, expected),
+        "prod_range_const_pow's instantiated type must match the direct \
+         prodRange/pow application at a := 3, n := 4"
+    );
+
+    // And both sides genuinely compute to the SAME concrete numeral --
+    // 3*3*3*3 = 81 = 3^4 -- so this is not merely a defeq-shaped statement
+    // that could paper over a wrong `pow`/`prodRange` pairing.
+    let eighty_one = numeral(&mut k, &p, 81);
+    assert!(
+        k.def_eq(lhs_direct, eighty_one),
+        "prodRange (fun _ => 3) 4 should compute to 81"
+    );
+    assert!(
+        k.def_eq(rhs_direct, eighty_one),
+        "pow 3 4 should compute to 81"
     );
 }
 

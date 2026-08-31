@@ -887,6 +887,82 @@ pub(super) fn declare_modeq_prod_range_lt(d: &mut IntDev<'_>) -> Result<(), Kern
     })
 }
 
+/// `fun (_ : Nat) => a` — the constant `Nat → Int` function `prodRange`
+/// folds over in [`declare_prod_range_const_pow`].
+fn const_int_fn(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    d.lam_fv(k_fv, nat, a)
+}
+
+/// `Int.prodRange_const_pow : ∀ a n, Eq Int (prodRange (fun _ => a) n) (pow a n)`
+/// — a product of `n` copies of the same factor is that factor raised to the
+/// `n`th power. Sized in ADR-0990 as the first missing piece of Gauss's
+/// lemma's connecting-theorem assembly (`∏_{k=1}^m (a·k) = a^m · m!`, this
+/// lemma supplying the `a^m` half once combined with `Int.prodRange_mul` and
+/// `Int.factorial`'s own defeq unfold to `prodRange (fun k => ofNat (succ
+/// k))`).
+///
+/// Induction on `n`: the base case is `Eq.refl one` (`prodRange _ zero` and
+/// `pow a zero` both reduce to `Int.one` by δι alone, regardless of `a`); the
+/// successor step is a single [`IntDev::icongr`] on the induction hypothesis
+/// through `fun t => mul t a`, since `prodRange (const a) (succ j)` reduces
+/// (via `prodRange_succ`) to `mul (prodRange (const a) j) a` and `pow a
+/// (succ j)` reduces (via `pow_succ`) to the identical shape `mul (pow a j)
+/// a` — no case split needed anywhere, unlike the sign-selected products
+/// this lemma's sibling ([`super::euler_theorem::declare_prod_range_if_const_eq_pow_count`])
+/// needs.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prod_range_const_pow(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let p = d.int();
+        let ca = const_int_fn(d, a);
+        let lhs = d.const_app(p.prod_range, &[ca, x]);
+        let rhs = d.ipow(a, x);
+        d.ieq(lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let one_i = d.ione();
+            d.irefl(one_i)
+        },
+        &|d, j, ih| {
+            // ih : Eq Int (prodRange (const a) j) (pow a j).
+            let ca = const_int_fn(d, a);
+            let p = d.int();
+            let pr_j = d.const_app(p.prod_range, &[ca, j]);
+            let pow_a_j = d.ipow(a, j);
+            d.icongr(pr_j, pow_a_j, ih, &|d, t| d.imul(t, a))
+        },
+        n,
+    );
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(a_fv, int_ty, with_n)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(a_fv, int_ty, with_n)
+    };
+    d.declare_theorem(p.prod_range_const_pow, ty, value)
+}
+
 /// `Int.prodRange_swap_adjacent` — swapping `f`'s values at one adjacent pair
 /// of indices `(i, succ i)` leaves the product unchanged, given `g` supplied
 /// (not computed) with the two matching values and full agreement elsewhere.

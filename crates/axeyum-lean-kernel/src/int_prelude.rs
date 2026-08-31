@@ -492,6 +492,10 @@ pub struct IntPrelude {
     /// closing the successor step with a `mul_assoc`/`mul_comm`
     /// rearrangement of the four factors (`prod.rs`'s `mul_swap_inner`).
     pub prod_range_mul: NameId,
+    /// `prodRange_const_pow : ∀ a n, Eq Int (prodRange (fun _ => a) n) (pow a n)`
+    /// — a product of `n` copies of one factor is that factor to the `n`th
+    /// power. `prod.rs::declare_prod_range_const_pow`.
+    pub prod_range_const_pow: NameId,
     /// `prodRangeIf : (Nat → Bool) → (Nat → Int) → Nat → Int := fun pred f n
     ///   => prodRange (fun i => bool_select_int (pred i) (f i) one) n` — the
     /// `Int` counterpart of `Nat.prodRangeIf`
@@ -1619,6 +1623,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_swap: child(kernel, "prodRange_swap"),
         prod_range_permute: child(kernel, "prodRange_permute"),
         prod_range_mul: child(kernel, "prodRange_mul"),
+        prod_range_const_pow: child(kernel, "prodRange_constPow"),
         prod_range_if: child(kernel, "prodRangeIf"),
         prod_range_if_zero: child(kernel, "prodRangeIf_zero"),
         prod_range_if_succ: child(kernel, "prodRangeIf_succ"),
@@ -1965,6 +1970,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range_swap(&mut d)?;
         prod::declare_prod_range_permute(&mut d)?;
         prod::declare_prod_range_mul(&mut d)?;
+        prod::declare_prod_range_const_pow(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
         prod::declare_modeq_prod_range_lt(&mut d)?;
         wilson::declare_factorial(&mut d)?;
