@@ -85,13 +85,40 @@ different for the two theorems**:
 | row 3 — decidable-fragment exact form | present, and the substantive half is `cas-internal` | present, and the substantive half is `cas-internal` |
 | row 4 — labeled import | **ABSENT** | **ABSENT** |
 
-**IVT is defensibly Pareto-positioned. EVT is not, and the reason is
-structural rather than cosmetic: EVT has a refutation of the classical
-statement with nothing constructive standing in its place.** The repository
-already knows this and says so — `crates/axeyum-lean-kernel/src/creal/supremum.rs`
-states in its module documentation that `CReal.supOn` is "still not landed" —
-but no fact, and no line of `07-the-cost-model-and-pareto-position.md`, records
-that EVT's row 1 is missing while EVT is being cited as a dominance example.
+**IVT is defensibly Pareto-positioned. EVT is not — but the reason is now a
+bookkeeping one, NOT the structural one this paragraph used to assert.**
+
+**Correction, 2026-08-31 (coordinator).** The two sentences that stood here
+contradicted the table directly above them, and both were measurably false.
+They read: *"EVT has a refutation of the classical statement with nothing
+constructive standing in its place. The repository already knows this and says
+so — `creal/supremum.rs` states in its module documentation that `CReal.supOn`
+is 'still not landed'."*
+
+- **"nothing constructive standing in its place" is false.** `CReal.evt_approx_max`
+  is declared in `crates/axeyum-lean-kernel/src/creal.rs` (field at :6624,
+  interned at :7402), and its build step is labelled
+  `evt_row1::declare_evt_approx_max` — the row it is named for. The table above
+  was updated when it landed on 2026-08-30; this paragraph was not.
+- **The `supremum.rs` citation is false.** The quoted phrase "still not landed"
+  occurs **zero** times in that file, and `not landed` occurs zero times
+  anywhere in it, against a control of **32** mentions of `supOn`. Nor is
+  `supOn_ub`/`supOn_approx_lub` in that file at all — they live in `creal.rs`,
+  `creal/lub_boundary.rs` and `creal/sup_laws.rs`. The citation named the module
+  where the reader would *expect* the supremum work to live, which is the
+  retrieval hazard this repository documents elsewhere, arriving in a doc rather
+  than in a lane.
+
+This is the failure mode CLAUDE.md names: a file that records obstacles
+accumulates stale ones by construction, and its authority is exactly what makes
+them expensive. The stale sentence sat in the verdict paragraph of the document
+that carries the Pareto claim.
+
+**What actually remains for EVT**, from the table above rather than from prose:
+row 2 is present with its hypothesis class proved but carries **no non-vacuity
+evidence in the ledger** — so nothing rules out its being a refutation of an
+empty class — and row 4 (labeled import) is ABSENT for EVT *and* for IVT. Those
+are closable tasks. Neither is the structural absence claimed here before.
 
 ## Method, and a correction to the survey this lane was given
 
