@@ -303,8 +303,7 @@ pub(super) fn declare_second_supplementary_law(d: &mut IntDev<'_>) -> Result<(),
         let pow_at_count = d.ipow(neg_one, count);
         let index_eq = d.nat_eq_to_int(count_name, count, closed, &|d, x| d.ipow(neg_one, x));
         let motive_index = d.ieq_motive(pow_at_name, &|d, x| imodeq(d, pp_int, pow_two_m, x));
-        let gauss_closed =
-            d.itransport(pow_at_name, motive_index, gauss, pow_at_count, index_eq);
+        let gauss_closed = d.itransport(pow_at_name, motive_index, gauss, pow_at_count, index_eq);
 
         // --- split on the parity of that count ------------------------------
         let parity = d.const_app(np.half_ceil_parity, &[m]);
@@ -335,8 +334,7 @@ pub(super) fn declare_second_supplementary_law(d: &mut IntDev<'_>) -> Result<(),
 
             let sign_eq = d.const_app(sign_lemma, &[count, parity_proof]);
             let motive_sign = d.ieq_motive(pow_at_count, &|d, x| imodeq(d, pp_int, pow_two_m, x));
-            let final_modeq =
-                d.itransport(pow_at_count, motive_sign, gauss_closed, sign, sign_eq);
+            let final_modeq = d.itransport(pow_at_count, motive_sign, gauss_closed, sign, sign_eq);
 
             let modeq_ty = if is_even { modeq_plus } else { modeq_minus };
             let conj = d.const_app(

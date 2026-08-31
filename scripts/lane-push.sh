@@ -121,6 +121,33 @@ if git rev-parse --verify -q "$upstream" >/dev/null && \
   exit 1
 fi
 
+# A DIRTY TRACKED WORKTREE IS WORTH KNOWING BEFORE THE HOOK, NOT AFTER IT.
+# `hooks/pre-push` already refuses a dirty tree -- but it does so at the END of a
+# 545-second battery, so the whole cost is paid for a push that was never going
+# to land. Measured twice on 2026-08-31, both times mine: the formatter
+# reformatted files, I read its exit 3 and started the push anyway, and the hook
+# rejected it minutes later.
+#
+# The narrower hazard underneath is why this cannot be left to the hook. After
+# the formatter runs, `cargo fmt --check` PASSES -- the worktree is fixed -- while
+# the COMMITS being pushed still carry the old bytes. Green gate, broken commit.
+# Checking for a dirty tree up front catches that and every other variant, and
+# it costs milliseconds.
+#
+# My first draft of this guard ran the formatter in --check mode and exited 0,
+# because by then the worktree was already formatted. It checked the wrong
+# thing. The state that matters is UNCOMMITTED, not UNFORMATTED.
+if [ "${LANE_PUSH_ALLOW_DIRTY:-0}" != 1 ]; then
+  dirty=$(git status --porcelain --untracked-files=no)
+  if [ -n "$dirty" ]; then
+    echo "lane-push: DECLINING -- tracked files are modified and uncommitted." >&2
+    printf '%s\n' "$dirty" | sed 's/^/  /' >&2
+    echo "  hooks/pre-push refuses this too, but only after the full battery." >&2
+    echo "  Commit or stash them first. LANE_PUSH_ALLOW_DIRTY=1 overrides." >&2
+    exit 1
+  fi
+fi
+
 [ "$DRY" = 1 ] && { echo "lane-push: --dry-run, not pushing"; exit 0; }
 
 # The fast-forward check above cannot close the window it opens. The hook runs
