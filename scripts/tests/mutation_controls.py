@@ -4828,6 +4828,85 @@ SUITES["l0-gate-enforcement"] = (
     ],
 )
 
+SUITES["curriculum-bucket-cohesion"] = (
+    "scripts/measure-curriculum-kernel-coverage.py",
+    "scripts.tests.test_curriculum_bucket_cohesion",
+    [
+        # ADR-1215. The curriculum classifier attributes by NAME against an
+        # ordered pattern table whose tail entries are catch-alls, so a
+        # declaration attributed to the WRONG bucket is attributed, counted,
+        # and invisible -- twice in two days (ADR-1140 `det2|det3`, ADR-1205
+        # `gauss_fold_injective`). Each mutation below removes one of the
+        # three guards or one of the two input refusals; the suite's two
+        # RED cases replay the historical pattern tables against a slice of
+        # the real projection, and its control asserts the SHIPPED table is
+        # green on the same slice -- so a guard that fired on everything
+        # would not pass.
+        (
+            "G1: an unpinned split bucket set is refused",
+            "            if splits.get(key) != nodes:",
+            "            if False:",
+        ),
+        (
+            "G2: an unpinned pure-catch-all family is refused",
+            "                if families.get(key) != node:",
+            "                if False:",
+        ),
+        (
+            "G3: a stale split pin is refused",
+            "    for key in sorted(set(splits) - seen_split):",
+            "    for key in sorted(set() - seen_split):",
+        ),
+        (
+            "G3: a stale family pin is refused",
+            "    for key in sorted(set(families) - seen_family):",
+            "    for key in sorted(set() - seen_family):",
+        ),
+        # The floor is what keeps G2 from reddening on ordinary new work. A
+        # floor of 1 turns every single-declaration family in a carrier
+        # bucket into a finding, which is the design the brief for this lane
+        # ruled out ("disabled within a week").
+        (
+            "the family floor bounds G2's false positives",
+            "FAMILY_FLOOR = 8",
+            "FAMILY_FLOOR = 1",
+        ),
+        # `det2`, `det3` and `det` must be ONE family or ADR-1140's exact
+        # shape -- a pattern naming the numbered instances while the general
+        # construction grows past them -- never produces a split at all.
+        (
+            "trailing digits are stripped from a name stem",
+            '    return carrier, (stem.rstrip("0123456789") or stem)',
+            "    return carrier, stem",
+        ),
+        # `Nat.gaussFold` and `Nat.gauss_neg_count_succ` must be ONE family:
+        # this kernel spells a single mathematical family both ways, and a
+        # guard keyed on the raw spelling sees two families and compares
+        # neither.
+        (
+            "camelCase folds into the same stem as snake_case",
+            "    words = _STEM_WORDS.findall(first)",
+            "    words = [first]",
+        ),
+        # A short projection makes a newly-landed family look like it was
+        # always in the catch-all -- the failure these guards exist to catch,
+        # arriving through the INPUT rather than the table.
+        (
+            "a stale or truncated projection is refused",
+            "PROJECTION_FLOOR = 2500",
+            "PROJECTION_FLOOR = 0",
+        ),
+        # A missing pin file reads as an EMPTY pin, which is right for a
+        # hand run and catastrophic for the gate: every guard would examine
+        # nothing and exit 0.
+        (
+            "--require-pin refuses a missing pin file",
+            "    if args.require_pin and not os.path.isfile(args.cohesion_pin):",
+            "    if False:",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import os
 import re
 import sys
 
@@ -466,6 +467,14 @@ def main() -> int:
     if unknown:
         sys.exit(f"error: --require-node names no curriculum node: {unknown}")
 
+    # Checked BEFORE the projection is read. A missing pin means every
+    # cohesion guard would examine an empty table and exit 0, and the gate
+    # must not reach that state for any reason -- including a projection
+    # problem that would otherwise mask it.
+    if args.require_pin and not os.path.isfile(args.cohesion_pin):
+        sys.exit(f"error: --require-pin and {args.cohesion_pin} does not "
+                 "exist -- the cohesion guards would examine nothing")
+
     if args.run_projection:
         rows = parse_rows(run_projection().splitlines())
     else:
@@ -528,12 +537,6 @@ def main() -> int:
                 fh.write(render_pin(groups))
             print(f"wrote {args.cohesion_pin}")
             return status
-        import os
-        if args.require_pin and not os.path.isfile(args.cohesion_pin):
-            print(f"FAIL: --require-pin and {args.cohesion_pin} does not "
-                  "exist -- the cohesion guards examined nothing",
-                  file=sys.stderr)
-            return 1
         splits, families = read_pin(args.cohesion_pin)
         findings = cohesion_findings(groups, splits, families)
         print(f"cohesion: {len(groups)} name families, "

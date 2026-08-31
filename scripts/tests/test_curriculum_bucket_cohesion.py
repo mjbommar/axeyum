@@ -223,28 +223,60 @@ class ControlTests(unittest.TestCase):
         self.assertIn("G2 FAMILY", findings[0])
 
     def test_below_the_family_floor_does_not_fire(self):
-        rows = {f"Nat.widget_{i}": ("nat", "theorem")
-                for i in range(mck.FAMILY_FLOOR - 1)}
+        """The false-positive bound on G2, with the sizes written OUT rather
+        than derived from `FAMILY_FLOOR`. A test that reads the constant it is
+        testing adapts to any value and measures nothing -- the floor could be
+        moved to 1, reddening every one-declaration family in a carrier
+        bucket, and this would still pass."""
         buckets = [("naturals", r"^Nat\.")]
-        self.assertEqual([], mck.cohesion_findings(
-            mck.stem_groups(mck.assign(rows, buckets)), {}, {}))
 
-    def test_a_stale_pin_fires(self):
+        def findings(n):
+            rows = {f"Nat.widget_{i}": ("nat", "theorem") for i in range(n)}
+            return mck.cohesion_findings(
+                mck.stem_groups(mck.assign(rows, buckets)), {}, {})
+
+        self.assertEqual(8, mck.FAMILY_FLOOR,
+                         "the sizes below are written for a floor of 8")
+        for n in (1, 2, 3, 7):
+            self.assertEqual([], findings(n), f"{n} declarations fired G2")
+        self.assertEqual(1, len(findings(8)), "8 declarations did NOT fire G2")
+
+    def test_a_stale_split_pin_fires(self):
         """G3's own control: without it the pin rots into a list of things
-        that used to be true and G1/G2 weaken with nothing reporting it."""
+        that used to be true and G1/G2 weaken with nothing reporting it.
+        Split and family halves are separate tests deliberately -- two
+        mutations naming ONE dead test cannot tell you both halves are
+        covered."""
         findings = mck.cohesion_findings(
-            {}, {("Rat", "gone"): ("linear-algebra", "rationals")},
-            {("Nat", "vanished"): "naturals"})
-        self.assertEqual(2, len(findings), findings)
-        self.assertTrue(all("G3 STALE" in f for f in findings), findings)
+            {}, {("Rat", "gone"): ("linear-algebra", "rationals")}, {})
+        self.assertEqual(1, len(findings), findings)
+        self.assertIn("G3 STALE split pin", findings[0])
 
-    def test_stem_folds_camel_and_snake_spellings(self):
-        """`Nat.gaussFold` and `Nat.gauss_neg_count_succ` are ONE family. A
-        guard keyed on the raw spelling sees two and neither incident fires."""
+    def test_a_stale_family_pin_fires(self):
+        findings = mck.cohesion_findings(
+            {}, {}, {("Nat", "vanished"): "naturals"})
+        self.assertEqual(1, len(findings), findings)
+        self.assertIn("G3 STALE family pin", findings[0])
+
+    def test_stem_folds_camelcase_into_the_snake_case_family(self):
+        """`Nat.gaussFold` and `Nat.gauss_neg_count_succ` are ONE family. This
+        kernel spells a single mathematical family both ways -- measured over
+        447 `CReal` names, 315 carry an underscore and 225 an internal
+        capital -- so a guard keyed on the raw spelling sees two families and
+        compares neither, and ADR-1205 never fires."""
         self.assertEqual(("Nat", "gauss"), mck.name_stem("Nat.gaussFold"))
         self.assertEqual(("Nat", "gauss"),
                          mck.name_stem("Nat.gauss_neg_count_succ"))
+        self.assertEqual(("Nat", "gauss"),
+                         mck.name_stem("Nat.gaussLemmaSignCount"))
+
+    def test_stem_strips_trailing_digits(self):
+        """`det2`, `det3` and `det` are ONE family, or ADR-1140's exact shape
+        -- a pattern naming the NUMBERED instances while the general
+        construction grows past them -- never produces a split at all."""
         self.assertEqual(("Rat", "det"), mck.name_stem("Rat.det2"))
+        self.assertEqual(("Rat", "det"), mck.name_stem("Rat.det3"))
+        self.assertEqual(("Rat", "det"), mck.name_stem("Rat.det"))
         self.assertEqual(("Rat", "det"), mck.name_stem("Rat.det_eq_det2"))
 
 
@@ -270,6 +302,75 @@ class PinRoundTripTests(unittest.TestCase):
     def test_missing_pin_reads_as_empty_not_as_error(self):
         splits, families = mck.read_pin("/nonexistent/pin.tsv")
         self.assertEqual(({}, {}), (splits, families))
+
+
+class ProjectionInputTests(unittest.TestCase):
+    """The guards are only as good as the projection they read. A SHORT index
+    makes a newly-landed family look like it was always in the catch-all --
+    the same failure the guards exist to catch, arriving through the input."""
+
+    def _run(self, *args):
+        import subprocess
+        return subprocess.run(
+            ["python3", str(ROOT / "scripts/measure-curriculum-kernel-coverage.py"),
+             *args],
+            capture_output=True, text=True, cwd=ROOT, check=False)
+
+    def test_a_short_projection_is_refused(self):
+        proc = self._run(str(FIXTURE))
+        self.assertNotEqual(0, proc.returncode,
+                            "a 124-row projection was accepted as the authority")
+        self.assertIn("STALE or truncated", proc.stdout + proc.stderr)
+
+    def test_require_pin_refuses_a_missing_pin(self):
+        proc = self._run(str(FIXTURE), "--require-pin",
+                         "--cohesion-pin", "/nonexistent/pin.tsv")
+        self.assertNotEqual(0, proc.returncode)
+        # Assert the REASON. Without this the test passes on the projection
+        # floor's refusal instead, and `--require-pin` is never exercised.
+        self.assertIn("--require-pin", proc.stdout + proc.stderr)
+        self.assertNotIn("STALE or truncated", proc.stdout + proc.stderr)
+
+    def test_the_script_still_runs_and_prints_a_table(self):
+        """Positive control for the two refusals above: without it, a script
+        that refused EVERYTHING would pass them both."""
+        proc = self._run("--help")
+        self.assertEqual(0, proc.returncode, proc.stderr)
+        self.assertIn("--cohesion-pin", proc.stdout)
+
+
+class RunProjectionTests(unittest.TestCase):
+    """`--run-projection` is what `scripts/check.sh` registers, so its failure
+    modes have to be exercised somewhere that is not the gate itself."""
+
+    def _fake_cargo(self, body: str) -> str:
+        import os, stat, tempfile
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, "cargo")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("#!/bin/sh\n" + body)
+        os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
+        self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
+        return path
+
+    def test_it_passes_release_and_returns_stdout(self):
+        cargo = self._fake_cargo(
+            'printf \'%s\\n\' "$*" > "$0.args"\n'
+            'printf "nat\\ttheorem\\tNat.probe\\n"\n')
+        out = mck.run_projection(cargo)
+        self.assertIn("Nat.probe", out)
+        with open(cargo + ".args", encoding="utf-8") as fh:
+            args = fh.read()
+        # `--release` is MANDATORY: in debug this example SIGABRTs on a stack
+        # overflow, which reads as a broken tool rather than a finding.
+        self.assertIn("--release", args)
+        self.assertIn("kernel_declaration_projection", args)
+
+    def test_a_failing_tool_is_not_reported_as_a_finding(self):
+        cargo = self._fake_cargo("echo boom >&2\nexit 101\n")
+        with self.assertRaises(SystemExit) as caught:
+            mck.run_projection(cargo)
+        self.assertIn("the tool itself failed", str(caught.exception))
 
 
 if __name__ == "__main__":
