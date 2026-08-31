@@ -61,7 +61,7 @@ pub struct MathNode {
 // fully undecidable (general-theorem undecidability is captured by
 // `Status::LeanHorizon`), so it is not imported here.
 use Decidability::{Bounded, Computable, Decidable};
-use Status::{Covered, LeanHorizon};
+use Status::{Covered, LeanHorizon, Planned};
 
 /// Every curriculum node, mirroring `docs/curriculum/curriculum.toml`.
 pub const NODES: &[MathNode] = &[
@@ -280,6 +280,15 @@ pub const NODES: &[MathNode] = &[
         decidability: Bounded,
         family: None,
         status: LeanHorizon,
+    },
+    MathNode {
+        id: "probability",
+        title: "Probability",
+        layer: 3,
+        prerequisites: &["rationals", "counting"],
+        decidability: Computable,
+        family: None,
+        status: Planned,
     },
 ];
 

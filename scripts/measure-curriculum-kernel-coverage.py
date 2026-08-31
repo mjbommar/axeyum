@@ -55,6 +55,14 @@ import sys
 # docstring warns about.
 BUCKETS: list[tuple[str, str]] = [
     # layer 3 destinations claim their topic names first
+    # `probability` (ADR-1082) must precede the generic `rationals` catch-all
+    # below, or these 47 `Rat.*` names fall through to it as they did before
+    # the node existed.
+    ("probability",
+     r"^Rat\.(IsDistribution|expectation|Expectation|variance|Variance|"
+     r"covariance|Covariance|markov|Markov|chebyshev|Chebyshev|weak_law|"
+     r"bernoulli|Bernoulli|uniform|Uniform|indicator|Indicator|prob_|"
+     r"sumVars|PairwiseUncorrelated)"),
     ("calculus",
      r"^CReal\.(HasDerivative|hasDerivative|deriv|antideriv|integral|"
      r"riemannSum|riemannSample|reblock|mesh|fineBlock|fineSample|"
@@ -144,7 +152,7 @@ NODES = [
     "naturals", "integers", "rationals", "reals", "complex",
     "divisibility-and-euclid", "modular-arithmetic", "groups", "rings",
     "fields", "polynomials", "sequences-and-limits", "counting",
-    "number-theory", "linear-algebra", "calculus",
+    "number-theory", "linear-algebra", "calculus", "probability",
 ]
 
 

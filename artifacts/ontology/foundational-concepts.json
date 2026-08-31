@@ -474,7 +474,7 @@
       "curriculum_status": "lean-horizon",
       "curriculum_family": "",
       "resource_status": "proof-horizon",
-      "summary": "Counting and bijections; finite cardinality is checkable, infinite cardinality is Lean-horizon.",
+      "summary": "Counting and bijections. The kernel constructs Nat.countRange with split/union-inter/complement/permutation-invariance and a point-change lemma; infinite cardinality has no carrier here and stays Lean-horizon.",
       "prerequisites": [
         "curriculum_relations_and_functions"
       ],
@@ -690,7 +690,8 @@
       ],
       "unlocks": [
         "curriculum_reals",
-        "curriculum_fields"
+        "curriculum_fields",
+        "curriculum_probability"
       ],
       "decidability": "computable",
       "axeyum_fragments": [
@@ -1077,7 +1078,7 @@
       "curriculum_status": "lean-horizon",
       "curriculum_family": "",
       "resource_status": "proof-horizon",
-      "summary": "Pairs of reals with field structure; algebraic identities checkable, analysis is Lean-horizon.",
+      "summary": "Pairs of constructed reals with field structure. The kernel has the Complex ring and the CPoint plane (collinearity, circles, Varignon); complex ANALYSIS -- holomorphy, contour integration -- is untouched and stays Lean-horizon.",
       "prerequisites": [
         "curriculum_reals"
       ],
@@ -1724,7 +1725,7 @@
       "curriculum_status": "lean-horizon",
       "curriculum_family": "",
       "resource_status": "proof-horizon",
-      "summary": "Convergence and limits; specific algebraic limit values are checkable, the \u03b5\u2013N definition is Lean-horizon.",
+      "summary": "Convergence and limits. The \u03b5\u2013N definition is NOT a horizon: the kernel declares CReal.Converges, CReal.Cauchy and CReal.limit with uniqueness, squeeze, the algebra of limits, and Bishop completeness (limitSeq). What stays open is non-constructive limit reasoning, which this carrier cannot state.",
       "prerequisites": [
         "curriculum_reals"
       ],
@@ -1820,7 +1821,8 @@
         "curriculum_naturals"
       ],
       "unlocks": [
-        "curriculum_number_theory"
+        "curriculum_number_theory",
+        "curriculum_probability"
       ],
       "decidability": "computable",
       "axeyum_fragments": [
@@ -2417,7 +2419,7 @@
       "curriculum_status": "lean-horizon",
       "curriculum_family": "",
       "resource_status": "proof-horizon",
-      "summary": "Limits, derivatives, integrals, series; derivative-rule and polynomial-identity checks are decidable, \u03b5\u2013\u03b4 is Lean-horizon.",
+      "summary": "Limits, derivatives, integrals, series. \u03b5\u2013\u03b4 is NOT a horizon: the kernel has HasDerivativeOn with an explicit modulus, sum/product/chain/power rules, CReal.integral over uniformly continuous functions with additivity and integration by parts, the fundamental theorem (integral_eq_antideriv_diff), Rolle, the mean value theorem, IVT with an exact root, EVT, supOn, uniform convergence and the Weierstrass M-test, exp/sin/cos and sqrt. It is `lean-horizon` in the SCENARIO sense only -- a reconstruction target rather than a bounded benchmark family.",
       "prerequisites": [
         "curriculum_reals",
         "curriculum_sequences_and_limits",
@@ -2571,6 +2573,70 @@
         "status": "planned",
         "criteria": [
           "Create and validate planned curriculum example packs, starting with artifacts/examples/math/calculus-algebraic-shadow-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_probability",
+      "kind": "curriculum-node",
+      "title": "Probability",
+      "domain": "mathematics",
+      "field_ids": [
+        "probability_theory",
+        "statistics"
+      ],
+      "curriculum_node": "probability",
+      "curriculum_layer": 3,
+      "curriculum_area": "destinations",
+      "curriculum_status": "planned",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "Finite probability over exact rationals: distributions, expectation, variance/covariance with Cauchy-Schwarz, Markov's and Chebyshev's inequalities, and the weak law of large numbers. ADR-1082: a Spivak-shaped spine built entirely over Rat.sumRange, `planned` because no self-checking scenario Family exists for it yet even though the content is bounded/computable, not Lean-horizon.",
+      "prerequisites": [
+        "curriculum_rationals",
+        "curriculum_counting"
+      ],
+      "unlocks": [],
+      "decidability": "computable",
+      "axeyum_fragments": [
+        "LRA (exact rational, finite distributions)"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-probability-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-probability-v0",
+          "notes": "Finite probability distributions, expectation, variance/covariance, and mass-table replay over exact rationals."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Rat.sumRange-backed replay now; Rat.IsDistribution/expectation/variance/covariance with Cauchy-Schwarz, Markov, Chebyshev, and the weak law of large numbers are already axiom-free in the kernel (ADR-1082) but have no dedicated self-checking scenario Family yet.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Finite probability distributions, expectation, variance/covariance, and mass-table replay over exact rationals."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/03-destinations/probability.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-probability-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -17149,7 +17215,8 @@
       "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions",
       "prerequisites": [],
       "unlocks": [
-        "curriculum_counting"
+        "curriculum_counting",
+        "curriculum_probability"
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
@@ -18148,7 +18215,9 @@
       "resource_status": "seeded",
       "summary": "Undergraduate / graduate applied math and data science. First Axeyum slice: Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, small Bayesian tables",
       "prerequisites": [],
-      "unlocks": [],
+      "unlocks": [
+        "curriculum_probability"
+      ],
       "decidability": "numerical",
       "axeyum_fragments": [
         "Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, small Bayesian tables"
