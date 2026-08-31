@@ -34,15 +34,14 @@
       "blocked_fact_ids": [
         "F:ml430-nat-fastfib-eq-cde11774"
       ],
-      "capability_gap": "induction-motive",
+      "capability_gap": "definitional-non-equivalence",
       "evidence": [
-        "artifacts/autogenesis/mirror-divergence-registry.json#Nat.fastFib",
-        "crates/axeyum-lean-kernel/src/nat_prelude/binary_rec.rs ('Is this Mathlib's binaryRec? No.')",
-        "crates/axeyum-lean-kernel/src/prelude.rs (well_founded_fix_eq)"
+        "docs/research/09-decisions/adr-0840-a-flip-needs-every-constituent-construction-to-match-not-just-the-outermost-one.md",
+        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs ('Two-step recursion, without a tuple type')"
       ],
       "id": "nat-fastfib-recursion-principle",
-      "reason": "Mathlib's binaryRec is WellFounded.fix with a DEPENDENT motive. This kernel's Nat.binaryRec (nat_prelude/binary_rec.rs) is a fuel encoding with a motive CONSTANT in n, which is forced for a fuel encoding (the exhaustion row must return a value for an arbitrary n with only motive 0 in hand) -- confirmed by reading the module's own 'Is this Mathlib's binaryRec? No.' section. But this kernel already has a general WellFounded.fix with a checked WellFounded.fix_eq (prelude.rs, already used by gcd/bezout/modeq/wilson), so a dependent binaryRec built THAT way is ordinary construction work, not a foundational gap. No producer is evaluable until it exists.",
-      "removability": "new-construction"
+      "reason": "ADR-0840 verified in-tree that fastFib's mirror is blocked by TWO independent construction divergences, not the recursion-principle gap an earlier analysis named. Mathlib's fastFibAux instantiates binaryRec at a non-dependent motive, so this kernel's existing fuel binaryRec is already sufficient -- building a well-founded one buys nothing here. The real, un-removable divergence is Nat.fib itself: this kernel's fib is a curried-accumulator fuel recursion (fibAux i a b, no tuple type to hold a pair), not Mathlib's own recurrence. Per the compositional mirror-flip criterion (ADR-0840), one divergence in the chain keeps the mirror open regardless of the other's status. The honest path is a new local fact over our own fastFib/fib once built, not a flip.",
+      "removability": "not-removable"
     },
     {
       "blocked_fact_ids": [

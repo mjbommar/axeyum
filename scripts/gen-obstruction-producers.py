@@ -73,19 +73,27 @@ against. The 6th (`n.testBit i = n.bits.getI i`) needs `List Bool`, a type
 this kernel's closed inductive set does not have at all; classified
 `not-removable`.
 
-`Nat.multichoose` (3 mirrors) and `Nat.minFac` (1 mirror) are classified
-`not-removable`: both constructions are recorded, IN THIS TREE, as computing
-the same VALUES as Mathlib's by a DIFFERENT construction, and the project's
-own standing mirror-flip criterion (CLAUDE.md, "WHEN IS FLIPPING AN `ml430`
-MIRROR HONEST") says a theorem about Mathlib's construction is a different
+`Nat.multichoose` (3 mirrors), `Nat.minFac` (1 mirror), and `Nat.fastFib`
+(1 mirror) are all classified `not-removable`: each is recorded, IN THIS
+TREE, as computing the same VALUES as Mathlib's by a DIFFERENT construction,
+and the project's own standing mirror-flip criterion (CLAUDE.md, "WHEN IS
+FLIPPING AN `ml430` MIRROR HONEST", generalized compositionally by
+ADR-0840) says a theorem about Mathlib's construction is a different
 proposition from one about ours. `minFac` looked, at first, like a candidate
 for `extensional-duplicate-close` (same predicate symbols, an already-proved
 native analogue) -- `nat_prelude/min_fac.rs`'s own module doc and
 `F-nat-coprime-of-lt-minfac.json`'s own `notes` field BOTH explicitly say
-this is not a flip and must not be treated as one. That correction is kept
-in this docstring because it is itself the lesson: syntactic similarity is
-not propositional identity, and the two files that refuted the hypothesis
-were sitting in the tree before this script existed.
+this is not a flip and must not be treated as one. `fastFib` looked, at
+first (and was classified in an earlier draft of this script), like
+`new-construction` -- Mathlib's `binaryRec` needs a dependent motive a fuel
+encoding cannot supply -- until ADR-0840 verified in-tree that (a) Mathlib's
+own `fastFibAux` only ever instantiates `binaryRec` at a NON-dependent
+motive, so the fuel `binaryRec` already built here is sufficient, and (b)
+`Nat.fib` itself is a second, independently divergent construction
+(curried-accumulator, no tuple type). Both corrections are kept in this
+docstring because they are themselves the lesson: syntactic/structural
+similarity is not propositional identity, and the files that refuted each
+hypothesis were sitting in the tree before this script existed.
 
 Usage:
     python3 scripts/gen-obstruction-producers.py            # write artifacts
@@ -304,27 +312,48 @@ def classify_definitional_divergence(
 
 
 def classify_fastfib() -> dict[str, Any]:
+    """Corrected per ADR-0840, which this compiler must not re-regress on.
+
+    An EARLIER draft of this function (and the CLAUDE.md Gotcha it was
+    copied from) classified this as `new-construction`, reasoning that
+    Mathlib's `binaryRec` needs a dependent motive a fuel encoding cannot
+    supply. ADR-0840 verified, in-tree, that this is doubly wrong for THIS
+    mirror: (1) Mathlib's `fastFibAux` instantiates `binaryRec` at a
+    NON-dependent motive (`fun _ => Nat.Pair`), so the fuel `binaryRec`
+    already built here is sufficient -- no well-founded rebuild is a
+    prerequisite; (2) even granting a well-founded `binaryRec`, `Nat.fib`
+    ITSELF is a second, independently divergent construction (a
+    curried-accumulator fuel recursion, `fibonacci.rs`'s own module doc,
+    because this kernel has no tuple type) against Mathlib's own
+    `Nat.rec`/well-founded recurrence. A flip needs every constituent
+    construction a statement names to match, not just the outermost
+    combinator -- so this is the SAME class as multichoose/minFac
+    (construction-level divergence), not a missing-primitive gap.
+    """
     return {
         "id": "nat-fastfib-recursion-principle",
-        "capability_gap": "induction-motive",
-        "removability": "new-construction",
+        "capability_gap": "definitional-non-equivalence",
+        "removability": "not-removable",
         "reason": (
-            "Mathlib's binaryRec is WellFounded.fix with a DEPENDENT motive. "
-            "This kernel's Nat.binaryRec (nat_prelude/binary_rec.rs) is a fuel "
-            "encoding with a motive CONSTANT in n, which is forced for a fuel "
-            "encoding (the exhaustion row must return a value for an arbitrary n "
-            "with only motive 0 in hand) -- confirmed by reading the module's own "
-            "'Is this Mathlib's binaryRec? No.' section. But this kernel already "
-            "has a general WellFounded.fix with a checked WellFounded.fix_eq "
-            "(prelude.rs, already used by gcd/bezout/modeq/wilson), so a "
-            "dependent binaryRec built THAT way is ordinary construction work, "
-            "not a foundational gap. No producer is evaluable until it exists."
+            "ADR-0840 verified in-tree that fastFib's mirror is blocked by "
+            "TWO independent construction divergences, not the recursion-"
+            "principle gap an earlier analysis named. Mathlib's fastFibAux "
+            "instantiates binaryRec at a non-dependent motive, so this "
+            "kernel's existing fuel binaryRec is already sufficient -- "
+            "building a well-founded one buys nothing here. The real, "
+            "un-removable divergence is Nat.fib itself: this kernel's fib is "
+            "a curried-accumulator fuel recursion (fibAux i a b, no tuple "
+            "type to hold a pair), not Mathlib's own recurrence. Per the "
+            "compositional mirror-flip criterion (ADR-0840), one divergence "
+            "in the chain keeps the mirror open regardless of the other's "
+            "status. The honest path is a new local fact over our own "
+            "fastFib/fib once built, not a flip."
         ),
         "evidence": [
-            "artifacts/autogenesis/mirror-divergence-registry.json#Nat.fastFib",
-            "crates/axeyum-lean-kernel/src/nat_prelude/binary_rec.rs "
-            "('Is this Mathlib's binaryRec? No.')",
-            "crates/axeyum-lean-kernel/src/prelude.rs (well_founded_fix_eq)",
+            "docs/research/09-decisions/adr-0840-a-flip-needs-every-"
+            "constituent-construction-to-match-not-just-the-outermost-one.md",
+            "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs "
+            "('Two-step recursion, without a tuple type')",
         ],
         "blocked_fact_ids": ["F:ml430-nat-fastfib-eq-cde11774"],
     }
