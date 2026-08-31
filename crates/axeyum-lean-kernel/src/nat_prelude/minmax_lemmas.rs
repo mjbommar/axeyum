@@ -113,6 +113,7 @@ fn min_of(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
 /// boolean value. `hb : Eq Bool (ble a b) known`, and `result` is whichever of
 /// `on_true`/`on_false` the literal `known` selects — so the `refl` case
 /// iota-reduces and the transport lands on the stuck form.
+#[allow(clippy::too_many_arguments)]
 fn select_eq_under(
     d: &mut NatDev<'_>,
     a: ExprId,
