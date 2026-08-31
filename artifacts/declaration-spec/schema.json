@@ -1,0 +1,125 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "axeyum-declaration-spec-v1",
+  "title": "Axeyum declarative declaration specification (L3 phase D1, ADR-0965)",
+  "description": "One file describes one subsystem: a set of kernel declarations built from a small typed expression DSL, plus their build phase, dependencies, and evaluation equations. See docs/research/09-decisions/adr-0965-declarative-declaration-spec-pilot.md for the design and TCB argument. This schema is versioned by top-level `spec_version`; a consumer MUST reject a file whose version it does not recognize rather than guess a compatible interpretation.",
+  "type": "object",
+  "required": ["spec_version", "subsystem", "prelude", "declarations"],
+  "properties": {
+    "spec_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Bump on any breaking change to the expression DSL or the top-level shape; a consumer must fail closed on an unrecognized version rather than attempt best-effort parsing."
+    },
+    "subsystem": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A short identifier for the subsystem this file describes, e.g. 'nat-squarefree'. Used only for reporting; not itself a kernel name."
+    },
+    "prelude": {
+      "type": "string",
+      "enum": ["nat", "logic", "integer", "rat", "creal", "complex", "string"],
+      "description": "Which prelude's namespace convention and dependency set this subsystem builds against. The pilot targets 'nat'."
+    },
+    "declarations": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per kernel declaration, in the exact order they must be admitted. Order in this array IS the build order within this file; combined with `phase` it is checked for a total order across the whole corpus.",
+      "items": { "$ref": "#/definitions/declaration" }
+    }
+  },
+  "definitions": {
+    "declaration": {
+      "type": "object",
+      "required": ["local_name", "namespace", "kind", "phase", "universe_params", "binders", "value", "dependencies"],
+      "properties": {
+        "local_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The declaration's name within its namespace, e.g. 'squarefreeAux'."
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Dotted namespace the name is interned under. Empty string means the bare root namespace (e.g. Mathlib's 'Squarefree', not 'Nat.Squarefree' -- see squarefree.rs's module doc for why this matters for the autogenesis screen)."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["Definition"],
+          "description": "Declaration kind. Only 'Definition' is supported by this pilot's interpreter -- a spec MUST NOT describe a Theorem's proof term (see ADR-0965: the spec/generator boundary keeps proof terms hand-written and kernel-checked exactly as today). A future extension may allow a Theorem's public SIGNATURE (for accessor generation) with an explicit 'proof: hand-written' marker, but no such extension exists yet, and none is implemented here."
+        },
+        "phase": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Topological build-order key. A declaration's `phase` must be >= every non-extern dependency's phase, and dependencies must not form a cycle. Missing or non-integer phase is a hard validation failure."
+        },
+        "universe_params": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Universe parameter names. Empty for the pilot (everything here is Prop/Type 0-level Nat/Bool)."
+        },
+        "binders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "$ref": "#/definitions/expr" }
+            }
+          },
+          "description": "Informational: the declaration's leading binder list, for documentation/inventory generation. The actual type is built from `type` below via the same expression DSL; `binders` is not independently interpreted (avoids a second source of truth for the same Pi-chain)."
+        },
+        "type": {
+          "$ref": "#/definitions/expr",
+          "description": "Expression DSL recipe for the declaration's full type (a chain of arrows over `binders`, ending at the codomain sort)."
+        },
+        "value": {
+          "$ref": "#/definitions/expr",
+          "description": "Expression DSL recipe for the declaration's value."
+        },
+        "reducibility_hint": {
+          "type": "string",
+          "pattern": "^(Opaque|Abbrev|Regular\\([0-9]+\\))$",
+          "default": "Regular(0)"
+        },
+        "mirrors_existing": {
+          "type": "boolean",
+          "default": false,
+          "description": "true ONLY for a spec that deliberately describes an already-landed declaration (e.g. a digest-parity pilot comparing generated output against hand-written code). Exempts this declaration from the cross-prelude duplicate guard, which otherwise treats any name already present in the real kernel's name inventory as a collision. A spec proposing genuinely new work MUST NOT set this -- it exists to let one specific, self-documented use case (see nat-squarefree.json) coexist with the guard the Nat.inverseIndex collision motivated, not to silence that guard generally."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "extern"],
+            "properties": {
+              "name": { "type": "string", "description": "Fully-dotted name, e.g. 'Nat.mul' or 'squarefreeAux' (spec-local, resolved by local_name within this file)." },
+              "extern": { "type": "boolean", "description": "true if this dependency is an existing kernel/prelude primitive (exempt from the phase/cycle check against this file's own declarations); false if it must resolve to another `local_name` declared in this same spec (subject to the phase/cycle check)." }
+            }
+          },
+          "description": "Every name this declaration's `type`/`value` recipe references via a `const_ref` node, used for the cycle/phase guard and for generated inventory rows. This is declared data, not re-derived from the expression tree, so the generator can and does cross-check consistency between `dependencies` and the recipe's actual `const_ref` nodes and fails if they disagree."
+        },
+        "equations": {
+          "type": "array",
+          "description": "Concrete evaluation checks: reduce the declaration to normal form at these arguments and compare against the given expected output. Required for every Bool/Nat-valued Definition (this crate's CLAUDE.md: 'the trusted gate cannot tell you a Definition is wrong -- only evaluation can').",
+          "items": {
+            "type": "object",
+            "required": ["args", "expect"],
+            "properties": {
+              "args": { "type": "array", "items": { "type": "integer" } },
+              "expect": {}
+            }
+          }
+        }
+      }
+    },
+    "expr": {
+      "description": "A node in the small expression DSL. `op` selects the constructor; remaining fields are op-specific. See declaration_spec_pilot.rs's `Node`/`parse_node` for the exact op set this pilot's interpreter implements (nat_ty, bool_ty, arrow, lam, var, zero, num, succ, mul, mod, beq, bool_true, bool_false, bool_ite, apply, const_ref, nat_rec). Adding an op here without a matching interpreter arm is a validation-time error, not a silent no-op.",
+      "type": "object",
+      "required": ["op"],
+      "properties": {
+        "op": { "type": "string" }
+      }
+    }
+  }
+}

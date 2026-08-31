@@ -35,6 +35,14 @@ axeyum-ir.workspace = true
 # resolved transitively in Cargo.lock via other workspace crates, so this
 # adds no new C/C++ surface (ADR-0002) and no new network-visible version.
 sha2 = "0.11"
+# `examples/declaration_spec_pilot.rs` (L3 phase D1, ADR-0965) reads a
+# declaration-spec JSON file at runtime (artifacts/declaration-spec/) and
+# interprets its expression DSL into kernel builder calls. `serde_json::Value`
+# only -- no derive macros, no schema-specific types -- to parse a fixed,
+# already-Python-validated JSON shape with minimal new surface. Already a
+# dev-dependency of other workspace crates (axeyum-bench, axeyum-smtlib, …),
+# so this adds no new dependency to the tree, only a new edge to it.
+serde_json = "1"
 
 [lints]
 workspace = true

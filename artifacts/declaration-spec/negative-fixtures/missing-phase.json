@@ -1,0 +1,23 @@
+{
+  "spec_version": 1,
+  "subsystem": "negative-fixture-missing-phase",
+  "prelude": "nat",
+  "declarations": [
+    {
+      "local_name": "fixtureMissingPhase",
+      "namespace": "Nat",
+      "kind": "Definition",
+      "universe_params": [],
+      "binders": [ { "name": "n", "type": { "op": "nat_ty" } } ],
+      "type": { "op": "arrow", "dom": { "op": "nat_ty" }, "cod": { "op": "nat_ty" } },
+      "value": {
+        "op": "lam", "param": "n", "domain": { "op": "nat_ty" },
+        "body": { "op": "var", "name": "n" }
+      },
+      "reducibility_hint": "Regular(0)",
+      "dependencies": [],
+      "equations": []
+    }
+  ],
+  "_comment": "Adversarial fixture: the declaration has no 'phase' field at all. The generator's phase guard must refuse this before kernel construction, naming the declaration."
+}

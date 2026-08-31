@@ -1,0 +1,18 @@
+[
+  {
+    "fq_name": "Nat.squarefreeAux",
+    "kind": "Definition",
+    "phase": 0,
+    "dependencies": [],
+    "subsystem": "nat-squarefree"
+  },
+  {
+    "fq_name": "Squarefree",
+    "kind": "Definition",
+    "phase": 1,
+    "dependencies": [
+      "squarefreeAux"
+    ],
+    "subsystem": "nat-squarefree"
+  }
+]
