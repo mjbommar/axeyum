@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1980,
+    "min_identity_bound": 1983,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -17743,6 +17743,13 @@
       ]
     },
     {
+      "fact_id": "F:rat-det-congr-pointwise",
+      "language": "lean4",
+      "statement_sha256": "ed647094fece513b0215a30743eefdc9070b463e1ed4144f2e621377c0c60913",
+      "prose_sha256": "7baeee972e5da765b37249896c31c64c35bad09daa2a54e7cf1f3cc3a87ad280",
+      "kernel_theorem": "Rat.det_congr"
+    },
+    {
       "fact_id": "F:rat-det-general-n-eq-det2",
       "language": "lean4",
       "statement_sha256": "428a4648688969cca12918c3e1c93885b54152ef895320dbb61fbfebdbeb9464",
@@ -17762,6 +17769,13 @@
       "statement_sha256": "c7aa1e6b203e9c120ae3d1e6275bc280516236dccc3f0f3d20a2a84ca62644d8",
       "prose_sha256": "2a514e57133a55fba6b81f7de13cdb59ac5e82ec47ccd06e540e070d2dbb5aa3",
       "kernel_theorem": "Rat.det_eval_example"
+    },
+    {
+      "fact_id": "F:rat-det-mat-id-general-n",
+      "language": "lean4",
+      "statement_sha256": "fac83e6890756806f44985a3a0988c5027f0af0e0e80a7ae902236bc621cedf7",
+      "prose_sha256": "0f68c75750fee6eef9507859cc5da2e8048d4bd4710c38a4050d2e4cd36d9d77",
+      "kernel_theorem": "Rat.det_matId"
     },
     {
       "fact_id": "F:rat-det2-eq-zero-of-lin-dep",
@@ -19693,6 +19707,13 @@
           "prose_sha256": "91667aa67b70a865f56e195f840c38865379558b42b3551d427745376672e1c4"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-sum-range-head-of-tail-zero",
+      "language": "lean4",
+      "statement_sha256": "8ca2251f1e29450137864ed07d46124c02e839058c2ba3947b30d8c8b6b60768",
+      "prose_sha256": "4cacc9f76590eadbb6e7878cdeb3e27ac78febaba42ff990dd0995b16aa802bb",
+      "kernel_theorem": "Rat.sumRange_head_of_tail_zero"
     },
     {
       "fact_id": "F:rat-sumrange-add",
