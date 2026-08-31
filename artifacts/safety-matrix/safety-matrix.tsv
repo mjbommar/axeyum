@@ -1958,11 +1958,13 @@ F:rat-lt-trans	kernel-lean	generated-unreviewed	lean4	Rat.lt_trans	2	2	1	138	yes
 F:rat-lt-trichotomy	kernel-lean	-	lean4	Rat.lt_trichotomy	2	2	1	117	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	no
 F:rat-markov-constructed	kernel-lean	-	lean4	Rat.markov_constructed	2	2	1	117	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
 F:rat-markov-inequality	kernel-lean	generated-unreviewed	lean4	Rat.markov_inequality	2	2	1	138	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
+F:rat-matinv2-matmul-top-left	kernel-lean	-	lean4	-	3	3	2	3	no	no	no	no	no	no	no	no	0	no	-	no	yes	no
 F:rat-matmul-assoc	kernel-lean	-	lean4	Rat.matMul_assoc	4	4	1	117	yes	no	yes	no	yes	no	no	yes	4	yes	-	no	yes	no
 F:rat-matmul-id-left	kernel-lean	-	lean4	Rat.matMul_id_left	3	3	1	117	yes	no	yes	no	yes	no	no	yes	4	yes	-	no	yes	no
 F:rat-matmul-id-right	kernel-lean	-	lean4	Rat.matMul_id_right	3	3	1	117	yes	no	yes	no	yes	no	no	yes	4	yes	-	no	yes	no
-F:rat-mattranspose-mul	kernel-lean	-	lean4	-	4	4	1	2	no	no	no	no	yes	no	no	no	1	yes	-	no	yes	no
-F:rat-mattranspose-transpose	kernel-lean	-	lean4	-	4	4	1	2	no	no	no	no	yes	no	no	no	1	yes	-	no	yes	no
+F:rat-matmul-matinv2-top-left	kernel-lean	-	lean4	-	4	4	1	2	no	no	no	no	yes	no	no	no	1	no	-	no	yes	no
+F:rat-mattranspose-mul	kernel-lean	-	lean4	-	4	4	1	3	no	no	no	no	yes	no	no	no	1	yes	-	no	yes	no
+F:rat-mattranspose-transpose	kernel-lean	-	lean4	-	4	4	1	3	no	no	no	no	yes	no	no	no	1	yes	-	no	yes	no
 F:rat-max-cases	kernel-lean	generated-unreviewed	lean4	Rat.max_cases	2	2	1	138	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
 F:rat-max-le	kernel-lean	generated-unreviewed	lean4	Rat.max_le	2	2	1	138	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
 F:rat-min-cases	kernel-lean	generated-unreviewed	lean4	Rat.min_cases	2	2	1	138	yes	no	yes	no	no	no	no	yes	3	yes	-	no	yes	yes
