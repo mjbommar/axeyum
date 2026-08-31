@@ -1409,8 +1409,19 @@ def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
     # gates) and because it needs the fact ledger to recover v1's Mathlib names.
     # It is imported rather than reimplemented, and an import failure is a
     # REFUSAL: a draw that cannot run the adjacency screen has not passed it.
+    #
+    # R12 -- ADR-0695's closed-evaluation rule, applied at DRAW TIME rather
+    # than found by the standing gate in a later audit. ADR-0695 recorded the
+    # `fermat-numbers` spend and wrote in prose that "the next unblocking
+    # constant should be screened for this before it is declared, not after."
+    # Draw 11 repeated it anyway: `natural-bit-decode` preregistered held-out
+    # on 2026-08-30 even though `Nat.bit false 0 = 0` and `Nat.size 1 = 1`
+    # were already decided by reduction over `Nat.bit` (2026-08-28) and
+    # `Nat.size` (2026-08-24), both admitted days before the draw (ADR-0950).
+    # Prose did not hold the second time either, so this is a guard now.
     if new_entries:
         _adjacency_screen(new_entries, env)
+        _closed_evaluation_screen(new_entries, env)
 
 
 def _adjacency_screen(new_entries: list[dict[str, Any]], env: set[str]) -> None:
@@ -1448,6 +1459,54 @@ def _adjacency_screen(new_entries: list[dict[str, Any]], env: set[str]) -> None:
                                      existing_partition, env=env)
     except adjacency.RefusalError as exc:
         raise RefillError(str(exc))
+
+
+def _closed_evaluation_screen(new_entries: list[dict[str, Any]], env: set[str]) -> None:
+    """R12's body. ADR-0695/ADR-0950: a NEW held-out row already decided by
+    reduction is not blind, whatever anyone has or has not proved about it.
+
+    Scoped to rows THIS DRAW ADDS, matching R9 and R11 -- an earlier draw's
+    rows are frozen, and repairing one already drawn is an ADR-0542 amendment,
+    not something a later invocation of this generator can silently undo.
+
+    Imports the standing gate (`check-holdout-closed-evaluation.py`) by path
+    rather than reimplementing its classifier, mirroring `_adjacency_screen`'s
+    pattern for `check-holdout-adjacency.py`: a failed import is a REFUSAL,
+    not a silent skip, so a draw that cannot run this screen has not passed
+    it either.
+    """
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_holdout_closed_evaluation",
+            ROOT / "scripts/check-holdout-closed-evaluation.py")
+        classifier = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(classifier)
+    except Exception as exc:  # noqa: BLE001 -- any failure means the screen did not run
+        raise RefillError(
+            "R12 the closed-evaluation screen (scripts/"
+            "check-holdout-closed-evaluation.py) could not be loaded, so "
+            f"ADR-0695's rule was not applied: {exc}")
+
+    violations = []
+    for e in new_entries:
+        if e.get("partition") != "held-out":
+            continue
+        statement = e.get("statement")
+        if not statement or not classifier.is_closed_evaluation(statement):
+            continue
+        names = classifier.constants(statement)
+        undeclared = [n for n in names
+                      if n not in env and not classifier.source_declares(n)]
+        if undeclared:
+            continue
+        violations.append((e["fact_id"], e.get("family", "?"), statement))
+    if violations:
+        raise RefillError(
+            f"R12 {len(violations)} held-out candidate(s) are closed "
+            f"evaluations already decided by reduction over constants this "
+            f"kernel already declares, so they are not blind: "
+            f"{violations[:5]}. Exclude these rows before preregistering; "
+            f"see ADR-0695 and ADR-0950.")
 
 
 def stored_surface_validation() -> dict[str, Any]:
