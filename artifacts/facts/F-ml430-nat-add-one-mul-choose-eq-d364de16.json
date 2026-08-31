@@ -8,10 +8,33 @@
     "statement": "∀ (n k : ℕ), (n + 1) * n.choose k = (n + 1).choose (k + 1) * (k + 1)",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": ["F:nat-mul-comm", "F:nat-succ-mul-choose-eq"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- add_one_mul_choose_eq 2>/dev/null | grep -Ec '^Nat\\.add_one_mul_choose_eq[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.add_one_mul_choose_eq",
+      "kind": "kernel-term",
+      "notes": "`Nat.add_one_mul_choose_eq` (nat_prelude/draw11_mirrors.rs, `declare_add_one_mul_choose_eq`, lane draw11-theorems-b) is a fresh construction: `Nat.succ_mul_choose_eq(n,k) : (succ k) * choose(succ n)(succ k) = (succ n) * choose n k` read backwards (`symm`) already states the target equation with the two products' factor order swapped on the right-hand side; one `Nat.mul_comm` on that product finishes it. This codebase spells `n+1` as `Nat.succ n`, definitionally equal to `Nat.add n 1`. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.succ x0) (AxNat.choose x0 x1)) (AxNat.mul (AxNat.choose (AxNat.succ x0) (AxNat.succ x1)) (AxNat.succ x1))))` -- reading `x0=n, x1=k`, this is `mul (succ n) (choose n k) = mul (choose (succ n)(succ k)) (succ k)`, matching `formal.statement` (`(n+1) * n.choose k = (n+1).choose(k+1) * (k+1)`) verbatim. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. A discriminating unit test in `nat_prelude_tests.rs` (`add_one_mul_choose_eq_holds_at_a_concrete_point`) checks the RENDERED type at `(n,k)=(3,1)` (not just the reduced value, which the dropped-`mul_comm` variant would also satisfy at `4*3=2*6=12` if compared only numerically) and confirms both sides reduce to `12`.",
+      "supports": "∀ (n k : ℕ), (n + 1) * n.choose k = (n + 1).choose (k + 1) * (k + 1)"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured 2026-08-31: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds `Nat.add_one_mul_choose_eq`'s footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it).",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.add_one_mul_choose_eq"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +49,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed 2026-08-31 by lane draw11-theorems-b: a fresh construction in `nat_prelude/draw11_mirrors.rs`, not a transcription of Mathlib's proof. `depends_on` was populated by `scripts/check-fact-depends-derived.py --fix` from the proof term itself (`Nat.succ_mul_choose_eq`/`Nat.mul_comm`), not asserted by hand."
 }
