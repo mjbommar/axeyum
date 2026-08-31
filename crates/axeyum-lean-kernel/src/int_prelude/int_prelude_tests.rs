@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 237] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 240] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -264,6 +264,11 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 237] {
         // connecting theorem (ADR-1130), i.e. Gauss's lemma itself.
         p.gauss_term_mod_eq,
         p.gauss_lemma_sign_count,
+        // `second-supplementary-law` lane (ADR-1150): the second supplementary
+        // law of quadratic reciprocity and the two sign lemmas it consumes.
+        p.pow_neg_one_of_even,
+        p.pow_neg_one_of_odd,
+        p.second_supplementary_law,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -5312,5 +5317,171 @@ fn gauss_lemma_matches_direct_computation_at_pp_7_for_both_parities() {
         !d.kernel().def_eq(emod_one, six),
         "control: +1 and 6 must be different residues mod 7, so the odd-count \
          sign at a = 3 is not vacuously satisfied"
+    );
+}
+
+/// **The second supplementary law of quadratic reciprocity**,
+/// `Int.secondSupplementaryLaw` (ADR-1150), exercised at ALL FOUR residue
+/// classes of `p mod 8` — every one of them an actual odd prime, so the
+/// numeric half of each check is a true statement rather than a vacuous one:
+///
+/// | `m` | `p = 2m+1` | `p mod 8` | class index | `2^m mod p` | law says |
+/// | --- | --- | --- | --- | --- | --- |
+/// | 1 | 3  | 3 | 1 | 2  | `-1` |
+/// | 2 | 5  | 5 | 2 | 4  | `-1` |
+/// | 3 | 7  | 7 | 3 | 1  | `+1` |
+/// | 8 | 17 | 1 | 0 | 1  | `+1` |
+///
+/// Recomputed in Python, not inherited from the plan:
+///
+/// ```sh
+/// python3 -c "
+/// for m in [1,2,3,8]:
+///     p=2*m+1; q=(m//2)//2
+///     print(m, p, p%8, [r for r in range(4) if 4*q+r==m], pow(2,m,p), (-1)%p)
+/// "
+/// ```
+///
+/// Three things are checked per row, and the second and third are what make
+/// this a measurement rather than a restatement:
+///
+/// 1. the class shape the law names for that row really IS `m` — `class_shape`
+///    at `q := div (div m 2) 2` reduces to the numeral `m`;
+/// 2. the OTHER THREE class shapes are NOT `m`, so the four classes genuinely
+///    separate and the disjunction is not satisfiable by accident;
+/// 3. `2^m mod p` is the claimed sign's residue and is NOT the other sign's —
+///    a negative control that differs in one small term (`1` against `p-1`).
+///
+/// Finally the theorem is applied at a genuinely FREE `m` and its inferred
+/// type compared against the independently rebuilt statement, because a
+/// concrete instantiation reduces every numeral and hides any defeq-shaped
+/// gap a symbolic one would expose.
+#[test]
+fn second_supplementary_law_classifies_all_four_residues_mod_eight() {
+    use crate::nat_prelude::half_ceil_parity::{class_shape, components};
+
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    for (name, label) in [
+        (p.second_supplementary_law, "Int.secondSupplementaryLaw"),
+        (p.pow_neg_one_of_even, "Int.pow_neg_one_of_even"),
+        (p.pow_neg_one_of_odd, "Int.pow_neg_one_of_odd"),
+    ] {
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{label} must rest on no axiom"
+        );
+    }
+    let mut d = IntDev::new(&mut k, p);
+    let two_nat = d.num(2);
+    let one_i = d.ione();
+    let neg_one = d.ineg(one_i);
+
+    for (m_val, p_val, class_index, is_plus) in [
+        (1_u32, 3_u32, 1_u8, false),
+        (2, 5, 2, false),
+        (3, 7, 3, true),
+        (8, 17, 0, true),
+    ] {
+        let m = d.num(m_val);
+        let half = d.div(m, two_nat);
+        let quarter = d.div(half, two_nat);
+
+        // (1)/(2) the four class shapes separate, and exactly one is `m`.
+        for r in 0_u8..4 {
+            let shape = class_shape(&mut d, quarter, r);
+            let matches = d.kernel().def_eq(shape, m);
+            assert_eq!(
+                matches,
+                r == class_index,
+                "at m = {m_val} (p = {p_val}) class shape {r} must{} be m",
+                if r == class_index { "" } else { " NOT" }
+            );
+        }
+
+        // (3) the sign, with the opposite sign as the negative control.
+        let mul2m = d.mul(two_nat, m);
+        let pp = d.succ(mul2m);
+        let pp_int = d.of_nat(pp);
+        let two_int = d.of_nat(two_nat);
+        let pow_two_m = d.ipow(two_int, m);
+        let residue = d.iemod(pow_two_m, pp_int);
+        let plus_residue = d.iemod(one_i, pp_int);
+        let minus_residue = d.iemod(neg_one, pp_int);
+        let (expected, rejected) = if is_plus {
+            (plus_residue, minus_residue)
+        } else {
+            (minus_residue, plus_residue)
+        };
+        assert!(
+            d.kernel().def_eq(residue, expected),
+            "2^{m_val} mod {p_val} must be the {} residue the law names",
+            if is_plus { "+1" } else { "-1" }
+        );
+        assert!(
+            !d.kernel().def_eq(residue, rejected),
+            "control: at m = {m_val} (p = {p_val}) the two signs must be \
+             DIFFERENT residues, or the sign claim is vacuous"
+        );
+    }
+
+    // The theorem itself, at a genuinely free `m`.
+    let m_fv = d.fresh_fvar();
+    let m_sym = d.kernel().fvar(m_fv);
+    let mul2m = d.mul(two_nat, m_sym);
+    let pp_sym = d.succ(mul2m);
+    let prime_ty = super::wilson::prime_condition(&mut d, pp_sym);
+    let prime_fv = d.fresh_fvar();
+    let prime_proof = d.kernel().fvar(prime_fv);
+
+    let lemma_fn = d.lemma(p.second_supplementary_law, &[m_sym]);
+    let applied = d.apply(lemma_fn, &[prime_proof]);
+
+    let anon = d.anon_name();
+    let nat_ty = d.nat_ty();
+    let mut ctx = LocalContext::new();
+    ctx.push(LocalDecl {
+        fvar: m_fv,
+        name: anon,
+        ty: nat_ty,
+        info: BinderInfo::Default,
+    });
+    ctx.push(LocalDecl {
+        fvar: prime_fv,
+        name: anon,
+        ty: prime_ty,
+        info: BinderInfo::Default,
+    });
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .unwrap_or_else(|e| panic!("the law must apply at a free m: {e:?}"));
+
+    let nat_prelude = p.nat;
+    let [plus_classes, minus_classes, _, _] = components(&mut d, &nat_prelude, m_sym);
+    let pp_int_sym = d.of_nat(pp_sym);
+    let two_int = d.of_nat(two_nat);
+    let pow_two_m_sym = d.ipow(two_int, m_sym);
+    let modeq_plus = super::modeq::imodeq(&mut d, pp_int_sym, pow_two_m_sym, one_i);
+    let modeq_minus = super::modeq::imodeq(&mut d, pp_int_sym, pow_two_m_sym, neg_one);
+    let logic = p.logic;
+    let left = d.const_app(logic.and, &[plus_classes, modeq_plus]);
+    let right = d.const_app(logic.and, &[minus_classes, modeq_minus]);
+    let expected = d.const_app(logic.or, &[left, right]);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "the law's symbolic conclusion must be the p = +-1 / p = +-3 (mod 8) \
+         dichotomy over the Gauss's-lemma power residue"
+    );
+
+    // Control: the dichotomy is not symmetric -- swapping the two SIGNS while
+    // keeping the classes gives a different (and false) statement.
+    let swapped_left = d.const_app(logic.and, &[plus_classes, modeq_minus]);
+    let swapped_right = d.const_app(logic.and, &[minus_classes, modeq_plus]);
+    let swapped = d.const_app(logic.or, &[swapped_left, swapped_right]);
+    assert!(
+        !d.kernel().def_eq(inferred, swapped),
+        "control: the law must not be invariant under swapping +1 and -1, or \
+         the sign half of the classification says nothing"
     );
 }

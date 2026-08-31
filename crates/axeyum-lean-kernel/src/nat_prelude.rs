@@ -186,6 +186,7 @@ mod find_greatest;
 mod finite;
 mod finite_set;
 mod gauss_lemma;
+pub(crate) mod half_ceil_parity;
 mod gcd;
 mod gcd_dvd_mirrors;
 mod gcd_mul_right;
@@ -342,6 +343,7 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use gauss_lemma::declare_gauss_lemma_all;
+use half_ceil_parity::declare_half_ceil_parity_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use gcd_mul_right::declare_gcd_mul_right;
@@ -4842,6 +4844,18 @@ pub struct NatPrelude {
     /// `a := 2` and `pp := 2*m+1` (the classical odd-prime shape), landing
     /// the closed form ADR-0970 sized and left open (ADR-0985).
     pub gauss_neg_count_two_closed_form: NameId,
+    /// `Nat.half_ceil_parity : ∀ m,`
+    /// `  Or (And (Or (Eq m ((q+q)+(q+q))) (Eq m (succ (succ(q+q)+succ(q+q)))))`
+    /// `          (Even (sub m (div m 2))))`
+    /// `     (And (Or (Eq m (succ ((q+q)+(q+q)))) (Eq m (succ(q+q)+succ(q+q))))`
+    /// `          (Odd (sub m (div m 2))))`, where `q := div (div m 2) 2`
+    /// (`half_ceil_parity.rs`) — the parity of `⌈m/2⌉` classified by
+    /// `m mod 4`. With `pp := 2m+1` the four shapes are `pp = 8q+1, 8q+3,
+    /// 8q+5, 8q+7`, so the left disjunct is exactly `p ≡ ±1 (mod 8)`. The
+    /// arithmetic core of the SECOND SUPPLEMENTARY LAW of quadratic
+    /// reciprocity (ADR-1150): Gauss's lemma turns `2^m mod p` into
+    /// `(−1)^(sub m (div m 2))`, and this decides the sign.
+    pub half_ceil_parity: NameId,
     /// `Nat.least_residue_injective_of_coprime : ∀ pp a k k', 0 < pp →
     ///   gcd a pp = 1 → k < pp → k' < pp → leastResidue pp a k =
     ///   leastResidue pp a k' → k = k'` (`gauss_lemma.rs`) — the least-residue
@@ -5967,6 +5981,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_neg_count_seven_three: kernel.name_str(nat, "gauss_neg_count_seven_three"),
             gauss_count_ble_closed_form_disj: kernel.name_str(nat, "gaussCountBleClosedFormDisj"),
             gauss_neg_count_two_closed_form: kernel.name_str(nat, "gaussNegCountTwoClosedForm"),
+            half_ceil_parity: kernel.name_str(nat, "half_ceil_parity"),
             least_residue_injective_of_coprime: kernel
                 .name_str(nat, "least_residue_injective_of_coprime"),
             least_residue_ne_zero_of_coprime: kernel
@@ -6900,6 +6915,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // autogenesis screen at cycle index 3 (ADR-1160). Nothing needs it,
         // so it goes last.
         declare_find_greatest_all(&mut d, &p)?;
+        // `Nat.half_ceil_parity` (`half_ceil_parity.rs`): needs
+        // `Nat.even_or_odd` (`powsq.rs`, far above), `Nat.Even`/`Nat.Odd` and
+        // `succ_double_eq` (`declare_parity_all`, far above), and
+        // `Nat.add_sub_cancel_left` (far above). The arithmetic core of the
+        // second supplementary law of quadratic reciprocity (ADR-1150).
+        // Nothing later needs it, so it goes last.
+        declare_half_ceil_parity_all(&mut d, &p)?;
         // `Max.max`/`Min.min`/`Nat.instMax`/`instMinNat` (`minmax.rs`):
         // needs only `Nat.ble`/`bool_select_nat`, both far above. Opens
         // `Init.Data.Nat.MinMax` for the autogenesis screen

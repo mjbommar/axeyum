@@ -194,7 +194,7 @@ fn declare_even_or_odd_exists(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
 
 /// `Eq (add (succ m) (succ m)) (succ (succ (add m m)))` — peel one `succ`
 /// off each side of a doubled successor via `add_succ` then `succ_add`.
-fn succ_double_eq(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
+pub(super) fn succ_double_eq(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
     let p = *p;
     let succ_m = d.succ(m);
     let lhs = d.add(succ_m, succ_m);

@@ -1350,6 +1350,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // closed form and its specialization to the odd-prime shape.
         p.gauss_count_ble_closed_form_disj,
         p.gauss_neg_count_two_closed_form,
+        // `second-supplementary-law` lane (ADR-1150): the parity of
+        // `ceil(m/2)` classified by `m mod 4` -- the arithmetic core of the
+        // second supplementary law of quadratic reciprocity.
+        p.half_ceil_parity,
         // `gauss-lemma-connecting-b` lane (ADR-0970/ADR-0985 connecting
         // theorem, piece 1): least-residue map injectivity given positivity
         // + coprimality.
