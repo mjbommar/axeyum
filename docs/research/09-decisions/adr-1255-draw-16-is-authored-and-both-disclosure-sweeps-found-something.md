@@ -318,7 +318,8 @@ The first pair is the **same statement** with a different root function.
 **This is not a leak and R11 is right to be clean.** ADR-0653's rule is about a
 held-out family whose mathematics a DEVELOPMENT or TRAIN family already
 publishes; `natural-nth-root` is held-out, nothing about `Nat.nthRoot` is
-published, and `--const Nat.nthRoot` is ABSENT. What it does mean is that the
+published, and the `--const Nat.nthRoot` probe returns zero declarations at
+2711 against a control returning 21. What it does mean is that the
 blind population's two "root" families are **not independent signals**: a route
 that establishes `ceilRoot_pow_self` very probably establishes `nthRoot_pow` by
 the same skeleton, so whoever reads a held-out result over either should count
