@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 243] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 245] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -273,6 +273,10 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 243] {
         // law's non-residue half and the `ModEq` congruence it needs.
         p.is_quadratic_residue_of_mod_eq,
         p.first_supplementary_law_not_residue,
+        // `first-supplementary-residue` lane (ADR-1235): the residue half and
+        // the parity-general Wilson split that supplies its witness.
+        p.wilson_half_split,
+        p.first_supplementary_law_residue,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,

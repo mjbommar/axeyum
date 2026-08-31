@@ -688,6 +688,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_of_mul_le_mul_left,
         p.mul_left_cancel_of_pos,
         p.sub_add_cancel,
+        p.sub_sub_self,
         p.sub_eq_zero_of_le,
         p.sub_le_iff_le_add,
         p.mul_sub_left_distrib,

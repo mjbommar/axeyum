@@ -878,6 +878,15 @@ pub struct NatPrelude {
     pub mul_left_cancel_of_pos: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
     pub sub_add_cancel: NameId,
+    /// `sub_sub_self : ∀ n k, Le k n → sub n (sub n k) = k` — subtracting a
+    /// difference recovers the subtrahend, which is exactly the statement that
+    /// the reflection `k ↦ (n-1) - k` is an INVOLUTION on `[0,n)`. Bounded on
+    /// purpose: `Nat.sub` truncates, so `k ↦ sub n k` is not a global
+    /// involution (`sub 3 (sub 3 5) = 3`, not `5`), and the injectivity
+    /// argument every reflection/reversal proof needs takes the bounded form.
+    /// Derived from [`Self::sub_add_cancel`] and
+    /// [`Self::add_sub_cancel_left`] with no induction of its own.
+    pub sub_sub_self: NameId,
     /// `sub_eq_zero_of_le : ∀ a b, Le a b → sub a b = zero`.
     pub sub_eq_zero_of_le: NameId,
     /// `sub_le_iff_le_add : ∀ x y z, Iff (Le (sub x y) z) (Le x (add z y))`.
@@ -5339,6 +5348,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             le_of_mul_le_mul_left: kernel.name_str(nat, "le_of_mul_le_mul_left"),
             mul_left_cancel_of_pos: kernel.name_str(nat, "mul_left_cancel_of_pos"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
+            sub_sub_self: kernel.name_str(nat, "sub_sub_self"),
             sub_eq_zero_of_le: kernel.name_str(nat, "sub_eq_zero_of_le"),
             sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
