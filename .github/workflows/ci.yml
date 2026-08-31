@@ -280,6 +280,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: python3 scripts/check-trust-closure.py --quiet
+      # L0 shape duplicates (ADR-1170), in THIS job because it is the other
+      # gate that needs a release build of `axeyum-lean-kernel` -- it shells
+      # out to `cargo run --release --example shape_search -- --duplicates`,
+      # so it reuses what the step above already built and adds only the
+      # example's own link plus a ~50s constructed-environment build.
+      #
+      # It reports declarations whose admitted TYPES are identical up to
+      # binder naming: two proofs of one proposition, which is what failed
+      # retrieval produces. Written 2026-08-27, and until 2026-08-31 named by
+      # NO gate -- `check.sh` registered only its unit tests. Its first
+      # automatic run found five unadjudicated groups, one of them a genuine
+      # independent re-derivation.
+      - run: python3 scripts/check-shape-duplicates.py
 
   deny:
     name: cargo-deny
@@ -419,7 +432,9 @@ jobs:
       - run: python3 scripts/check-semantic-control-fixtures.py --check
       - run: python3 scripts/check-credit-transaction-ledger.py
       - run: python3 scripts/check-proposition-duplication.py
-      # ADR-1050: assert the seven above stay wired. This gate is the
+      # ADR-1050: assert all eight L0 gates stay wired (the five above, the
+      # two in the l0-kernel-differential / l0-trust-closure jobs, and
+      # check-shape-duplicates alongside the latter). This gate is the
       # reason the block exists at all -- prose did not keep them wired,
       # so a gate does. ~0.1s, pure Python, no build.
       - run: python3 scripts/check-l0-gate-enforcement.py

@@ -428,7 +428,16 @@ facts:
     # ...and its controls: 9 cases, then 8 guard deletions each required to
     # kill EXACTLY ONE.
     bash scripts/tests/test-proposition-duplication.sh
-    # ADR-1050: the seven L0 gates must be wired to something that runs
+    # ADR-1170: the same defect one level up, in the KERNEL environment rather
+    # than the ledger -- two declarations whose admitted types are identical up
+    # to binder naming, which is what a lane that could not find an existing
+    # lemma produces. This checker existed from 2026-08-27 and `check.sh`
+    # registered only its UNIT TESTS, so it ran only when a human typed it;
+    # its first automatic run found five unadjudicated groups, one of them a
+    # real re-derivation of right-distributivity over Int. ~110s (shells out to
+    # `cargo run --release --example shape_search -- --duplicates`).
+    python3 scripts/check-shape-duplicates.py
+    # ADR-1050: the eight L0 gates must be wired to something that runs
     # on its own. Measured 2026-08-31 they were in NO automated context
     # -- not ci.yml, not hooks/pre-push, not scripts/local-ci.sh.
     python3 scripts/check-l0-gate-enforcement.py

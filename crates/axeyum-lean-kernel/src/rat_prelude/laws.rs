@@ -36,7 +36,16 @@ use crate::nat_prelude::NatOps;
 fn declare_bridges(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     let int = p.int;
 
-    // int_right_distrib : (a+b)*c = a*c + b*c, from left_distrib and mul_comm.
+    // int_right_distrib : (a+b)*c = a*c + b*c.
+    //
+    // `Int.add_mul` (`int_prelude/add_basics.rs`) states this identical
+    // proposition -- same chain, `mul_comm` thrice plus `left_distrib` once --
+    // and was an independent re-derivation of it, reported as a NEW duplicate
+    // group by `shape_search --duplicates` the first time
+    // `scripts/check-shape-duplicates.py` was ever run automatically
+    // (2026-08-31, ADR-1170). This name stays because 20 call sites across
+    // `rat_prelude/` and `creal/sqrt.rs` reference it, but the proof term is
+    // now shared rather than duplicated: one proof, two names.
     d.int_theorem(p.int_right_distrib, 3, &|d, v| {
         let (a, b, c) = (v[0], v[1], v[2]);
         let sum = d.iadd(a, b);
@@ -45,26 +54,7 @@ fn declare_bridges(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
         let second = d.imul(b, c);
         let right = d.iadd(first, second);
         let stmt = d.ieq(left, right);
-        let flipped = d.imul(c, sum);
-        let commute = d.lemma(int.mul_comm, &[sum, c]);
-        let expanded = d.lemma(int.left_distrib, &[c, a, b]);
-        let head = d.imul(c, a);
-        let tail = d.imul(c, b);
-        let opened = d.iadd(head, tail);
-        let head_commute = d.lemma(int.mul_comm, &[c, a]);
-        let with_head = d.icongr(head, first, head_commute, &|d, t| d.iadd(t, tail));
-        let staged = d.iadd(first, tail);
-        let tail_commute = d.lemma(int.mul_comm, &[c, b]);
-        let with_tail = d.icongr(tail, second, tail_commute, &|d, t| d.iadd(first, t));
-        let (_, proof) = d.ichain(
-            left,
-            &[
-                (flipped, commute),
-                (opened, expanded),
-                (staged, with_head),
-                (right, with_tail),
-            ],
-        );
+        let proof = d.lemma(int.add_mul, &[a, b, c]);
         (stmt, proof)
     })?;
 

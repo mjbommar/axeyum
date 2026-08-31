@@ -314,7 +314,7 @@ rc=0
 # L0 trusted-library safety gates (ADR-1050), FIRST of all — cheaper than the
 # preflight's own toolchain checks, and this file is what ci.yml, hooks/
 # pre-push and CLAUDE.md all call "the authoritative gate for main". Until now
-# these seven ran ONLY from `scripts/check.sh` and the `justfile` — that is,
+# these eight ran ONLY from `scripts/check.sh` and the `justfile` — that is,
 # only when a human typed a command; `check-l0-gate-enforcement.py` measured
 # ZERO references to any of them here, against positive controls of 10
 # `scripts/` references in this same file. Nothing stopped a change that
@@ -340,6 +340,19 @@ run python3 scripts/check-credit-transaction-ledger.py || rc=$?
 run python3 scripts/check-kernel-differential.py || rc=$?
 run python3 scripts/check-trust-closure.py --quiet || rc=$?
 run python3 scripts/check-proposition-duplication.py || rc=$?
+# THE RETRIEVAL GATE, AND IT HAD NEVER RUN ANYWHERE (ADR-1170). Retrieval is
+# the binding gate on marginal cost per theorem (07-the-cost-model), and a
+# duplicate declaration is what failed retrieval PRODUCES -- two proofs of one
+# proposition that must stay in sync while the kernel happily verifies both.
+# `check-shape-duplicates.py` was written 2026-08-27 to catch exactly that, and
+# `check.sh` registered only its UNIT TESTS: the checker itself was named by no
+# gate, so it ran only when a human typed it. Its first automatic run
+# (2026-08-31) reported FIVE unadjudicated groups accumulated in the four days
+# since — four deliberate Mathlib-name aliases and one real independent
+# re-derivation (`Rat.int_right_distrib` / `Int.add_mul`, now forwarding).
+# ~110s: shells out to `cargo run --release --example shape_search
+# --duplicates`, of which ~50s is the constructed-environment build.
+run python3 scripts/check-shape-duplicates.py || rc=$?
 # A GENERATED ARTIFACT WITH NO AUTOMATIC RE-DERIVATION DRIFTS SILENTLY.
 # `artifacts/import-backlog.json` went stale at 147 rows while the fact ledger
 # moved to 164, and nobody noticed, because `gen-import-backlog.py --check` was
@@ -357,7 +370,7 @@ run python3 scripts/gen-import-backlog.py --check || rc=$?
 # 177 -> 198 (one amendment, `natural-logarithm`, held-out -> development,
 # 2026-08-30, ADR-0542) unnoticed for a day. Pure Python, sub-second.
 run python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check || rc=$?
-# Assert the seven above stay wired -- in ci.yml, hooks/pre-push AND this
+# Assert the eight above stay wired -- in ci.yml, hooks/pre-push AND this
 # script. The reason the block above exists at all: prose did not keep them
 # wired, so a gate does.
 run python3 scripts/check-l0-gate-enforcement.py || rc=$?
