@@ -51,6 +51,9 @@ The blocker that was missing — a `prodRange` SPLIT at a symbolic point —
 **is now landed** (`Int.prodRange_split`, above). `prod.rs` peeled one front
 term (`prodRange_shiftFront`) and one back term (`prodRange_succ`); neither cut
 the range in two.
+<!-- was-absent: Int.prodRange_split -- built by this same lane (ADR-1230). The
+     sentence above is history, not a live claim; this marker is what lets
+     check-absence-claims.py expire it rather than count it forever. -->
 
 **The remaining blocker, checked rather than assumed: `InjectiveOn` and
 `MapsInto` for the reflection `k -> sub (pred m) k` on `[0,m)`**, which
