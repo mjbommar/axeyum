@@ -14,9 +14,15 @@ use axeyum_machine::a0::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+mod rv64;
 mod symbolic_addition;
 mod symbolic_memory;
 
+pub use rv64::{
+    Rv64EncodingRecord, Rv64ExecutionReport, Rv64SourceReport, check_rv64_branch_base_control,
+    check_rv64_execution, check_rv64_source, check_rv64_source_digest_control,
+    rv64_execution_report, rv64_source_report,
+};
 pub use symbolic_addition::{
     SymbolicAdditionReport, SymbolicAdditionWidthProof, SymbolicCounterexample,
     check_symbolic_addition, check_symbolic_addition_inverted_carry_control,

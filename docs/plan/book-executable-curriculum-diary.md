@@ -520,3 +520,86 @@ memory domain. Strict Clippy passes.
 This code slice does not yet close either RV64 obligation. The book-facing
 source manifest, independently replayed decoder/step evidence, mutation suite,
 and pinned Axeyum revision still need to land and run.
+
+## 2026-08-30 — replayable RV64I source and execution evidence
+
+Added two book-facing evidence producers and checkers. The source route emits
+the official document URL, release 20260120, PDF digest, byte and page counts,
+RV64I version 2.1, the exact twelve selected forms, the compiled implementation
+digest, profile choices, and exclusions. Its negative control changes the
+official-source digest and the checker rejects the result.
+
+The decoder/step route decodes and canonically re-encodes thirteen words printed
+in Chapters 6, 12, and 15, including every word of the XOR program. It also
+executes each of the twelve selected forms as a real transition and checks the
+form's architectural effect. The same executor runs the complete nine-word XOR
+program on empty, singleton, and three-word inputs and obtains `0`,
+`0x0123456789abcdef`, and `7`. Separate checks exercise `x0`, canonical state
+projection, five distinct trap classes, and three load-bearing semantic
+mutations.
+
+During review, the first draft's `forms_executed` count was found to cover only
+encode/decode round trips. That was not a truthful execution claim. The final
+route now steps all twelve forms and checks register, memory, PC, link, or
+branch effects as appropriate. The branch-base control likewise executes the
+book's taken `BNE` at PC 28 and observes target 12 before comparing it with the
+mutated sequential-PC target 16; it no longer relies on a handwritten target
+constant alone.
+
+The focused machine and evidence run passes 47 integration tests, including the
+two new end-to-end RV64 route tests. Strict all-target Clippy passes. Direct CLI
+replay accepts both generated reports; the source-digest and sequential-PC
+controls each exit nonzero with `semantic-mismatch`. The implementation landed
+as `eac21f4d4`. This closes the Axeyum producer/checker side, but the two book
+objects remain open until their manifests, saved reports, wrapper checks, and
+`make check-run` bindings land in the book repository.
+
+## 2026-08-30 — first source-pinned x86-64 decoder and step slice
+
+The six x86-64 listings in the manuscript require more than the XOR loop. The
+complete printed form set includes 32-bit XOR and immediate MOV, 64-bit TEST,
+three short conditions, a 64-bit memory-source XOR, sign-extended immediate
+ADD and SUB, register MOV and ADD, NEG, LEA with an eight-bit displacement,
+PUSH, POP, direct near CALL, and RET. The implementation covers all seventeen
+of those selected form families rather than reducing the slice to the case
+study alone.
+
+Pinned the slice to Intel's combined Volume 2 instruction reference, order
+number 325383-092US, June 2026. The official PDF retrieved from Intel on
+2026-08-30 is 11,258,123 bytes and 2,573 pages with SHA-256
+`db01e5918a710c16487e27a9e71a19af201f39b3311c55550559baaf0805160b`.
+The slice accepts only the exact legacy and REX.W shapes used by the book. It
+excludes extended registers, SIB and RIP-relative addressing, longer
+displacements, near conditional jumps, non-integer state, privileged forms,
+and every vector or newer prefix family.
+
+Added `axeyum-machine::x64` with variable-length decode and canonical encode,
+the low eight general-purpose registers, RIP, finite byte memory, running or
+trapped outcome, and CF, PF, AF, ZF, SF, and OF. Flags can be explicitly
+undefined; logical XOR and TEST therefore do not invent an AF value. A
+32-bit destination write clears the upper half. Short branches use the address
+after the decoded instruction. Arithmetic computes all six selected flags.
+Memory-source XOR permits unaligned byte-map accesses, while missing bytes
+trap without a partial effect.
+
+The stack and control forms expose their implicit behavior. PUSH, CALL, POP,
+and RET read or write the finite stack memory and update RSP in architectural
+order. CALL pushes the following RIP before applying its signed relative
+displacement. RET reads the continuation before advancing RSP. A review found
+and fixed the special POP-to-RSP write order even though the book prints only
+`pop rbx`; the accepted form family must be correct for every register it
+admits.
+
+Eight direct tests cover source identity; canonical round trips for every
+selected family; exact absolute-value and write-zero bytes; the complete
+21-byte XOR program on empty, singleton, and three-word inputs; EAX clearing,
+defined and undefined flags, and following-RIP branch bases; stack control and
+atomic faults; decode traps and canonical projection; and executable witnesses
+for all six manuscript listings, including leaf and non-leaf procedures.
+Thirty-two existing A0 and RV64 tests remain green. Strict all-target Clippy
+passes. The semantic slice landed as `3c5d2cafb`.
+
+This closes the first Axeyum semantic layer, not the two x86-64 book
+obligations. The source report, independently replayed decoder/step report,
+length and implicit-effect mutations, pinned manifest, and book bindings still
+need to land and pass `make check-run`.

@@ -8,3 +8,4 @@
 
 pub mod a0;
 pub mod rv64;
+pub mod x64;

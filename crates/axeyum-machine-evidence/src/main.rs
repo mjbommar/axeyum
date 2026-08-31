@@ -7,15 +7,18 @@ use axeyum_machine_evidence::{
     check_branch_target_control, check_branch_trace, check_decoder_reserved_bit_control,
     check_decoder_roundtrip, check_memory_byte_order_control, check_memory_trace,
     check_observation_omission_control, check_observation_separation, check_run_classification,
-    check_run_false_halt_control, check_state_codec, check_state_codec_trailing_byte_control,
-    check_step_coverage, check_step_hidden_write_control, check_step_mutation_suite_control,
-    check_symbolic_addition, check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
+    check_run_false_halt_control, check_rv64_branch_base_control, check_rv64_execution,
+    check_rv64_source, check_rv64_source_digest_control, check_state_codec,
+    check_state_codec_trailing_byte_control, check_step_coverage, check_step_hidden_write_control,
+    check_step_mutation_suite_control, check_symbolic_addition,
+    check_symbolic_addition_inverted_carry_control, check_symbolic_memory,
     check_symbolic_memory_partial_store_control, check_word_package,
     check_word_package_signed_zero_extension_control, check_word_roundtrip,
     check_word_roundtrip_reversed_control, decoder_roundtrip_report, memory_trace_report,
-    observation_separation_report, run_classification_report, semantic_package, state_codec_report,
-    step_coverage_report, symbolic_addition_report, symbolic_memory_report, word_package_report,
-    word_roundtrip_report, write_json,
+    observation_separation_report, run_classification_report, rv64_execution_report,
+    rv64_source_report, semantic_package, state_codec_report, step_coverage_report,
+    symbolic_addition_report, symbolic_memory_report, word_package_report, word_roundtrip_report,
+    write_json,
 };
 
 fn main() {
@@ -316,6 +319,58 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_symbolic_memory_partial_store_control(Path::new(package), Path::new(report))?;
             return Err("control-failure: partial trapped store was accepted".into());
         }
+        [command, output] if command == "emit-rv64-source" => {
+            let report = rv64_source_report();
+            write_json(Path::new(output), &report)?;
+            println!(
+                "rv64-source: PASS: release={} rv64i={} forms={} source_sha256={}",
+                report.source_release,
+                report.rv64i_version,
+                report.selected_forms.len(),
+                report.source_sha256
+            );
+        }
+        [command, report] if command == "check-rv64-source" => {
+            let checked = check_rv64_source(Path::new(report))?;
+            println!(
+                "rv64-source: PASS: release={} rv64i={} forms={} source_sha256={}",
+                checked.source_release,
+                checked.rv64i_version,
+                checked.selected_forms.len(),
+                checked.source_sha256
+            );
+        }
+        [command, report] if command == "control-rv64-source-digest" => {
+            check_rv64_source_digest_control(Path::new(report))?;
+            return Err("control-failure: corrupt RV64 source digest was accepted".into());
+        }
+        [command, output] if command == "emit-rv64-execution" => {
+            let report = rv64_execution_report()?;
+            write_json(Path::new(output), &report)?;
+            println!(
+                "rv64-execution: PASS: forms={} encodings={} traps={} mutations={} xor={:?}",
+                report.forms_executed,
+                report.book_encodings.len(),
+                report.trap_classes_checked,
+                report.mutations_rejected,
+                report.xor_results
+            );
+        }
+        [command, report] if command == "check-rv64-execution" => {
+            let checked = check_rv64_execution(Path::new(report))?;
+            println!(
+                "rv64-execution: PASS: forms={} encodings={} traps={} mutations={} xor={:?}",
+                checked.forms_executed,
+                checked.book_encodings.len(),
+                checked.trap_classes_checked,
+                checked.mutations_rejected,
+                checked.xor_results
+            );
+        }
+        [command, report] if command == "control-rv64-branch-base" => {
+            check_rv64_branch_base_control(Path::new(report))?;
+            return Err("control-failure: sequential-PC RV64 branch base was accepted".into());
+        }
         _ => {
             return Err("usage: axeyum-machine-evidence emit-a0-package OUTPUT | \
                  emit-word-roundtrip PACKAGE OUTPUT | check-word-roundtrip PACKAGE REPORT | \
@@ -346,7 +401,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                  check-symbolic-addition PACKAGE REPORT | \
                  control-symbolic-addition-inverted-carry PACKAGE REPORT | \
                  emit-symbolic-memory PACKAGE OUTPUT | check-symbolic-memory PACKAGE REPORT | \
-                 control-symbolic-memory-partial-store PACKAGE REPORT"
+                 control-symbolic-memory-partial-store PACKAGE REPORT | \
+                 emit-rv64-source OUTPUT | check-rv64-source REPORT | \
+                 control-rv64-source-digest REPORT | emit-rv64-execution OUTPUT | \
+                 check-rv64-execution REPORT | control-rv64-branch-base REPORT"
                 .into());
         }
     }
