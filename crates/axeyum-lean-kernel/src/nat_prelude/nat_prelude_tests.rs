@@ -558,6 +558,11 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.unpair_left,
         p.unpair_right,
         p.unpaired,
+        // `unblock-index-zero` lane (ADR-1240): `primrec.rs`. `Nat.casesOn`
+        // only -- the inductive `Nat.Primrec`, its seven constructors and its
+        // recursor are checked by name below, since this list is scoped to
+        // `Definition`/`Theorem` kinds. Construction only (ADR-0653).
+        p.cases_on,
         // `unblock-draw-15` lane (ADR-1160): `find_greatest.rs`. A
         // definition only, deliberately (ADR-0653).
         p.find_greatest,
@@ -1550,6 +1555,19 @@ fn every_promised_name_is_admitted_with_the_expected_kind() {
     for name in [
         p.nat, p.zero, p.succ, p.rec, p.le, p.le_refl, p.le_step, p.le_rec, p.fin, p.fin_mk,
         p.fin_rec, p.pair, p.pair_mk, p.pair_rec,
+        // `Nat.Primrec` (ADR-1240, `primrec.rs`). An inductive `Prop`, so it
+        // is invisible to `every_nat_declaration_is_checked_and_axiom_free`,
+        // which is scoped to `Definition`/`Theorem`. All seven constructors
+        // are named so that one silently dropped from `add_inductive` fails
+        // here rather than leaving a weaker predicate nothing checks.
+        p.primrec,
+        p.primrec_zero,
+        p.primrec_succ,
+        p.primrec_left,
+        p.primrec_right,
+        p.primrec_pair,
+        p.primrec_comp,
+        p.primrec_prec,
     ] {
         let display = f.k.display_name(name).to_string();
         assert!(
