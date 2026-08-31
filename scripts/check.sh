@@ -440,6 +440,14 @@ step proposition-duplication python3 scripts/check-proposition-duplication.py
 # ...and its controls: 9 cases, then 8 guard deletions each required to kill
 # EXACTLY ONE.
 step proposition-duplication-controls bash scripts/tests/test-proposition-duplication.sh
+# ADR-1050: the seven L0 gates must be wired to something that runs on its
+# own. Measured 2026-08-31, they were referenced ZERO times in ci.yml,
+# hooks/pre-push AND scripts/local-ci.sh -- they ran only when a human typed a
+# command. This checks the WIRING; each gate's own findings are its own job.
+step l0-gate-enforcement python3 scripts/check-l0-gate-enforcement.py
+# ...and its controls: 11 cases; each of the six guards is required to
+# kill the test that names it (suite `l0-gate-enforcement`).
+step l0-gate-enforcement-controls python3 -m unittest scripts.tests.test_l0_gate_enforcement
 # ADR-0810: the same engine wired into the REAL write set -- measured by
 # instrumenting an actual flip, not assumed from the ADR-0785 fixture:
 # artifacts/facts/<id>.json, the settled-fact-statement pins manifest, and
