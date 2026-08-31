@@ -216,10 +216,14 @@ pub(super) fn cancel_neg_add(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId
 }
 
 /// `Eq Int (neg (add a b)) (add (neg a) (neg b))` — negation distributes over
-/// `add`, via `neg t = mul (neg one) t` and `Int.left_distrib`. Private:
-/// [`declare_modeq_add_right`] is the only caller (through
-/// [`cancel_common_addend`]).
-fn neg_add(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+/// `add`, via `neg t = mul (neg one) t` and `Int.left_distrib`.
+///
+/// Was private, with [`declare_modeq_add_right`] its only caller (through
+/// [`cancel_common_addend`]). Widened to `pub(super)` for
+/// [`super::sum`], whose `sumRange_neg` step is exactly this equation read
+/// backwards, and which also declares it as the public theorem `Int.neg_add` —
+/// the prelude had the proof and had never stated it.
+pub(super) fn neg_add(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let p = d.int();
     let ab = d.iadd(a, b);
     let start = d.ineg(ab);

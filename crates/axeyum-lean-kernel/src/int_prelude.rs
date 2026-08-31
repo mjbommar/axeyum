@@ -126,6 +126,7 @@ mod sign;
 mod sign_product;
 mod statements;
 mod sub;
+mod sum;
 mod sub_nat_nat;
 mod two_sided_induction;
 mod wilson;
@@ -434,6 +435,41 @@ pub struct IntPrelude {
     /// multiplied onto the right of the prior product). A checked definition,
     /// not an axiom.
     pub prod_range: NameId,
+    /// `sumRange : (Nat → Int) → Nat → Int` — the **signed** finite sum,
+    /// `sumRange f n = f 0 + … + f (n−1)`, exclusive bound, `Int.zero` at the
+    /// base, fresh term added on the right. The `Int` counterpart of
+    /// [`Self::prod_range`], and the aggregate Eisenstein's lemma needs because
+    /// it subtracts inside a sum. `sum.rs::declare_sum_range`.
+    pub sum_range: NameId,
+    /// `sumRange_zero : ∀ f, Eq Int (sumRange f zero) zero` — `Eq.refl`.
+    pub sum_range_zero: NameId,
+    /// `sumRange_succ : ∀ f n,
+    /// Eq Int (sumRange f (succ n)) (add (sumRange f n) (f n))` — `Eq.refl`.
+    pub sum_range_succ: NameId,
+    /// `sumRange_congr : ∀ f g n, (∀ k, Eq Int (f k) (g k)) →
+    /// Eq Int (sumRange f n) (sumRange g n)`.
+    pub sum_range_congr: NameId,
+    /// `sumRange_add : ∀ f g n,
+    /// Eq Int (sumRange (fun k => add (f k) (g k)) n)
+    ///        (add (sumRange f n) (sumRange g n))`.
+    pub sum_range_add: NameId,
+    /// `sumRange_neg : ∀ f n,
+    /// Eq Int (sumRange (fun k => neg (f k)) n) (neg (sumRange f n))`.
+    pub sum_range_neg: NameId,
+    /// `sumRange_sub : ∀ f g n,
+    /// Eq Int (sumRange (fun k => sub (f k) (g k)) n)
+    ///        (sub (sumRange f n) (sumRange g n))` — subtraction inside a
+    /// finite sum, the step `Int.prodRange` has no analogue of.
+    pub sum_range_sub: NameId,
+    /// `sumRange_ofNat : ∀ (f : Nat → Nat) n,
+    /// Eq Int (sumRange (fun k => ofNat (f k)) n) (ofNat (Nat.sumRange f n))`
+    /// — the ℕ→ℤ bridge that lets a lattice-point count enter a signed
+    /// identity.
+    pub sum_range_of_nat: NameId,
+    /// `neg_add : ∀ a b, Eq Int (neg (add a b)) (add (neg a) (neg b))`.
+    /// The proof already existed as `modeq.rs`'s private helper; this is the
+    /// first time it is stated as a theorem.
+    pub neg_add: NameId,
     /// `prodRange_zero : ∀ f, Eq Int (prodRange f zero) one` — closes by
     /// `Eq.refl`.
     pub prod_range_zero: NameId,
@@ -858,6 +894,14 @@ pub struct IntPrelude {
     /// this is declared by hand rather than through
     /// `ops::IntDev::int_theorem`.
     pub mod_eq_prod_range: NameId,
+    /// `modEq_sumRange : ∀ n f g m, (∀ k, ModEq n (f k) (g k)) →
+    /// ModEq n (sumRange f m) (sumRange g m)` — a finite sum reduces modulo
+    /// `n` term by term. **UNCONDITIONAL in `n`**, unlike
+    /// [`Self::mod_eq_prod_range`]: the step goes through
+    /// [`Self::mod_eq_add_right`]/[`Self::mod_eq_add_left`], which this prelude
+    /// proves without a positivity hypothesis, where the product's step needs
+    /// the positivity-scoped [`Self::mod_eq_mul`]. `sum.rs`.
+    pub mod_eq_sum_range: NameId,
     /// `modEq_prodRange_lt :
     /// ∀ n f g m, 0 < n → (∀ k, Lt k m → ModEq n (f k) (g k)) →
     ///   ModEq n (prodRange f m) (prodRange g m)` — [`Self::mod_eq_prod_range`]'s
@@ -1791,6 +1835,16 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         pow_succ: child(kernel, "pow_succ"),
         pow_add: child(kernel, "pow_add"),
         pow_mul: child(kernel, "pow_mul"),
+        sum_range: child(kernel, "sumRange"),
+        sum_range_zero: child(kernel, "sumRange_zero"),
+        sum_range_succ: child(kernel, "sumRange_succ"),
+        sum_range_congr: child(kernel, "sumRange_congr"),
+        sum_range_add: child(kernel, "sumRange_add"),
+        sum_range_neg: child(kernel, "sumRange_neg"),
+        sum_range_sub: child(kernel, "sumRange_sub"),
+        sum_range_of_nat: child(kernel, "sumRange_ofNat"),
+        mod_eq_sum_range: child(kernel, "modEq_sumRange"),
+        neg_add: child(kernel, "neg_add"),
         prod_range: child(kernel, "prodRange"),
         prod_range_zero: child(kernel, "prodRange_zero"),
         prod_range_succ: child(kernel, "prodRange_succ"),
@@ -2176,6 +2230,21 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range_const_pow(&mut d)?;
         prod::declare_modeq_prod_range(&mut d)?;
         prod::declare_modeq_prod_range_lt(&mut d)?;
+        // The signed finite sum (ADR-1260's named obstruction for Eisenstein's
+        // lemma). Placed immediately after the product family because it needs
+        // the same prerequisites plus the `ModEq` congruences declared above:
+        // `add_assoc`/`add_comm`/`add_zero` (`add_basics`, `algebra`),
+        // `neg_one_mul`/`left_distrib` for `neg_add`, and
+        // `modEq_refl`/`trans`/`add_right`/`add_left` for `modEq_sumRange`.
+        sum::declare_neg_add(&mut d)?;
+        sum::declare_sum_range(&mut d)?;
+        sum::declare_sum_range_equations(&mut d)?;
+        sum::declare_sum_range_congr(&mut d)?;
+        sum::declare_sum_range_add(&mut d)?;
+        sum::declare_sum_range_neg(&mut d)?;
+        sum::declare_sum_range_sub(&mut d)?;
+        sum::declare_sum_range_of_nat(&mut d)?;
+        sum::declare_modeq_sum_range(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;
         gauss_factorial_product::declare_prod_range_scaled_index_eq_pow_mul_factorial(&mut d)?;
