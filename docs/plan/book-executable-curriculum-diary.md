@@ -902,3 +902,38 @@ The book object and artifact still need to bind it before the obligation can
 move from open to computed. A universal symbolic simulation, the A0
 equivalence/counterexample route, scalar minimality, and the complete XOR
 three-machine case remain open.
+
+## 2026-08-31 — finite A0 equivalence queries and decoded-model replay
+
+Implemented the first semantics-backed A0 equivalence route around the exact
+one-instruction pair used in Chapter 11: `movi r0,0` and `xor r0,r0,r0`. A
+canonical query now binds both encoded programs, width, one-step bound,
+precondition, observation, and complete finite input family. The checker
+decodes both programs and executes the existing A0 step function for every
+admitted state; it does not introduce a second instruction semantics.
+
+The route runs four queries at width eight. Result-only equivalence checks all
+4,096 combinations of `r0` and Z/N/C/V. A destination mutation writing `r1`
+instead produces a canonical encoded-state witness whose first observed
+difference is `r0`. Full-state equivalence without a condition premise also
+produces a witness; deterministic minimization chooses an initial state with
+Z and C set so carry is the only successor difference. The exact premise
+Z=true and N=C=V=false then establishes full-state equality for all 256 `r0`
+values in that restricted family.
+
+Every counterexample stores the complete canonical initial state and both
+complete successor states. The checker decodes the saved model, reruns the
+encoded programs, and requires the same successors and first observation
+difference. One control mutates the XOR destination and requires a replayed
+`r0` witness. A second changes one byte of the saved initial-state model and
+requires concrete replay to reject it. Direct production and checking pass;
+both controls exit nonzero with `semantic-mismatch`. The report SHA-256 is
+`1f7697bc7e06a98f9c16edd055376d2a8c0c0ed8e6ce6c6ef9b166d4ebf4dc06`.
+Strict all-target Clippy and the focused route test pass.
+
+The scope is deliberately exact. This is exhaustive evidence for the declared
+width-eight state families, not a solver certificate, a theorem for all A0
+widths, arbitrary memory, multi-instruction programs, or termination. It now
+provides the executable equivalence and counterexample-replay substrate needed
+by the first bounded scalar-minimality route. The book object and manifest
+remain to be bound before `OP.rel.a0-equivalence` can move from open.
