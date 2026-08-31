@@ -152,7 +152,12 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_laplace_summand_row_zero(d, p)?;
     declare_laplace_summand_row_i(d, p)?;
     declare_laplace_summand_diag(d, p)?;
-    declare_det_row_expansion(d, p)
+    declare_det_row_expansion(d, p)?;
+    declare_mat_minor_row_col_comm(d, p)?;
+    declare_det_minor_row_col_comm(d, p)?;
+    declare_det_col_expansion(d, p)?;
+    declare_mat_minor_transpose(d, p)?;
+    declare_det_transpose(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -4780,4 +4785,887 @@ fn declare_det_row_expansion(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
     let value = d.lam_fv(m_fv, nat, proof);
     let _ = mty;
     d.declare_theorem(p.det_row_expansion, ty, value)
+}
+
+// --- transpose invariance (ADR-1210) ---------------------------------------
+
+/// `fun c => altSign c * (M 0 c * det (matMinor M 0 c) m)` — the summand
+/// `Rat.det_succ` unfolds `det M (succ m)` to, expansion along the FIRST ROW.
+fn row_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+    let c_fv = d.fresh_fvar();
+    let col = d.kernel().fvar(c_fv);
+    let sign = ralt_sign(d, p, col);
+    let entry = d.apply(mat, &[zero_n, col]);
+    let minor = rmat_minor_of(d, p, mat, zero_n, col);
+    let sub = rdet(d, p, minor, m);
+    let product = rmul(d, entry, sub);
+    let body = rmul(d, sign, product);
+    d.lam_fv(c_fv, nat, body)
+}
+
+/// `fun r => altSign r * (M r 0 * det (matMinor M r 0) m)` — expansion along
+/// the FIRST COLUMN, the summand [`declare_det_col_expansion`] proves equal to
+/// `det M (succ m)`.
+fn col_zero_expansion_fn(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+    let r_fv = d.fresh_fvar();
+    let row = d.kernel().fvar(r_fv);
+    let sign = ralt_sign(d, p, row);
+    let entry = d.apply(mat, &[row, zero_n]);
+    let minor = rmat_minor_of(d, p, mat, row, zero_n);
+    let sub = rdet(d, p, minor, m);
+    let product = rmul(d, entry, sub);
+    let body = rmul(d, sign, product);
+    d.lam_fv(r_fv, nat, body)
+}
+
+/// `Rat.matTranspose A`, partially applied — itself a `Nat → Nat → Rat`.
+fn rmat_transpose_of(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId) -> ExprId {
+    d.const_app(p.mat_transpose, &[a])
+}
+
+/// The `(c, p)` term of the ROW-`0`-then-COLUMN-`0` double expansion, exactly
+/// as [`declare_det_col_expansion`]'s left-hand chain builds it: the outer
+/// cofactor at column `succ c`, then the induction hypothesis expanding that
+/// minor along ITS first column at row `p`.
+fn l_term_body(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    m: ExprId,
+    c: ExprId,
+    row: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+    let sc = d.succ(c);
+    let sign = ralt_sign(d, p, sc);
+    let entry = d.apply(mat, &[zero_n, sc]);
+    let minor = rmat_minor_of(d, p, mat, zero_n, sc);
+    let inner = col_zero_expansion_fn(d, p, minor, m);
+    let at_row = d.apply(inner, &[row]);
+    let scaled = rmul(d, entry, at_row);
+    rmul(d, sign, scaled)
+}
+
+/// The `(p, c)` term of the COLUMN-`0`-then-ROW-`0` double expansion — the
+/// same square, summed in the other order.
+fn r_term_body(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    m: ExprId,
+    row: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+    let sr = d.succ(row);
+    let sign = ralt_sign(d, p, sr);
+    let entry = d.apply(mat, &[sr, zero_n]);
+    let minor = rmat_minor_of(d, p, mat, sr, zero_n);
+    let inner = row_zero_expansion_fn(d, p, minor, m);
+    let at_c = d.apply(inner, &[c]);
+    let scaled = rmul(d, entry, at_c);
+    rmul(d, sign, scaled)
+}
+
+/// Admit `Rat.matMinor_row_col_comm : ∀ A p q r c,
+/// matMinor (matMinor A 0 (succ q)) p 0 r c =
+/// matMinor (matMinor A (succ p) 0) 0 q r c` — POINTWISE, and
+/// **unconditionally**.
+///
+/// The double-minor identification the column expansion needs, and the place
+/// this route is genuinely cheaper than ADR-1185's. There, both expansions ran
+/// along ROWS, so the two column deletions had to be ordered against each
+/// other and [`declare_mat_skip_comm`]'s `Nat.ble a b = true` hypothesis was
+/// unavoidable. Here one expansion deletes a row and the other a column, the
+/// two exchanges happen on DIFFERENT axes, and neither constrains the other:
+/// the whole content is [`declare_mat_skip_succ_succ`] once per axis, with no
+/// hypothesis and no case split.
+///
+/// Both sides delta-beta-iota-reduce to an application of `A`, using
+/// `Nat.ble zero x ≡ true` (so `matSkip 0 x ≡ succ x`) on each side.
+fn declare_mat_minor_row_col_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let p_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(p_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let zero_n = d.zero();
+    let sq = d.succ(q);
+    let spp = d.succ(pp);
+
+    let left_outer = rmat_minor_of(d, p, mat, zero_n, sq);
+    let lhs = rmat_minor(d, p, left_outer, pp, zero_n, r, c);
+    let right_outer = rmat_minor_of(d, p, mat, spp, zero_n);
+    let rhs = rmat_minor(d, p, right_outer, zero_n, q, r, c);
+    let stmt = req(d, lhs, rhs);
+
+    // `matSkip 0 (matSkip p r) ≡ succ (matSkip p r)`, and likewise on the
+    // column axis, so the two reduced sides differ in exactly two indices.
+    let row_left = {
+        let inner = rmat_skip(d, p, pp, r);
+        d.succ(inner)
+    };
+    let row_right = {
+        let sr = d.succ(r);
+        rmat_skip(d, p, spp, sr)
+    };
+    let col_left = {
+        let sc = d.succ(c);
+        rmat_skip(d, p, sq, sc)
+    };
+    let col_right = {
+        let inner = rmat_skip(d, p, q, c);
+        d.succ(inner)
+    };
+
+    let start = d.apply(mat, &[row_left, col_left]);
+    let mid = d.apply(mat, &[row_left, col_right]);
+    let end = d.apply(mat, &[row_right, col_right]);
+
+    let s1 = {
+        let h = d.lemma(p.mat_skip_succ_succ, &[q, c]);
+        nat_eq_to_rat(d, col_left, col_right, h, &|d, t| {
+            d.apply(mat, &[row_left, t])
+        })
+    };
+    let s2 = {
+        let h = d.lemma(p.mat_skip_succ_succ, &[pp, r]);
+        let flipped = d.symm(row_right, row_left, h);
+        nat_eq_to_rat(d, row_left, row_right, flipped, &|d, t| {
+            d.apply(mat, &[t, col_right])
+        })
+    };
+    let (_e, proof) = rchain(d, start, &[(mid, s1), (end, s2)]);
+
+    let ty = {
+        let over_c = d.pi_fv(c_fv, nat, stmt);
+        let over_r = d.pi_fv(r_fv, nat, over_c);
+        let over_q = d.pi_fv(q_fv, nat, over_r);
+        let over_p = d.pi_fv(p_fv, nat, over_q);
+        d.pi_fv(a_fv, mty, over_p)
+    };
+    let value = {
+        let over_c = d.lam_fv(c_fv, nat, proof);
+        let over_r = d.lam_fv(r_fv, nat, over_c);
+        let over_q = d.lam_fv(q_fv, nat, over_r);
+        let over_p = d.lam_fv(p_fv, nat, over_q);
+        d.lam_fv(a_fv, mty, over_p)
+    };
+    d.declare_theorem(p.mat_minor_row_col_comm, ty, value)
+}
+
+/// Admit `Rat.det_minor_row_col_comm : ∀ m A p q,
+/// det (matMinor (matMinor A 0 (succ q)) p 0) m =
+/// det (matMinor (matMinor A (succ p) 0) 0 q) m`.
+///
+/// [`declare_mat_minor_row_col_comm`] carried through [`declare_det_congr`] —
+/// the only route a pointwise matrix identity has to a `det` in a kernel with
+/// no `funext`, exactly as [`declare_det_minor_col_comm`] does for the
+/// same-axis exchange.
+fn declare_det_minor_row_col_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let p_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(p_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let zero_n = d.zero();
+    let sq = d.succ(q);
+    let spp = d.succ(pp);
+
+    let left = {
+        let outer = rmat_minor_of(d, p, mat, zero_n, sq);
+        rmat_minor_of(d, p, outer, pp, zero_n)
+    };
+    let right = {
+        let outer = rmat_minor_of(d, p, mat, spp, zero_n);
+        rmat_minor_of(d, p, outer, zero_n, q)
+    };
+    let lhs = rdet(d, p, left, m);
+    let rhs = rdet(d, p, right, m);
+    let stmt = req(d, lhs, rhs);
+
+    let pointwise = d.const_app(p.mat_minor_row_col_comm, &[mat, pp, q]);
+    let proof = d.lemma(p.det_congr, &[m, left, right, pointwise]);
+
+    let ty = {
+        let over_q = d.pi_fv(q_fv, nat, stmt);
+        let over_p = d.pi_fv(p_fv, nat, over_q);
+        let over_a = d.pi_fv(a_fv, mty, over_p);
+        d.pi_fv(m_fv, nat, over_a)
+    };
+    let value = {
+        let over_q = d.lam_fv(q_fv, nat, proof);
+        let over_p = d.lam_fv(p_fv, nat, over_q);
+        let over_a = d.lam_fv(a_fv, mty, over_p);
+        d.lam_fv(m_fv, nat, over_a)
+    };
+    d.declare_theorem(p.det_minor_row_col_comm, ty, value)
+}
+
+/// `l_term_body c p = r_term_body p c` — the termwise agreement of the two
+/// double expansions, at every `(c, p)` and with no bound at all.
+///
+/// Eight moves: [`declare_det_minor_row_col_comm`] exchanges the double minor,
+/// `Rat.mul_perm4` moves the two cofactor coefficients past each other, and the
+/// remaining six carry the single `Rat.neg` from `altSign (succ c)` over to
+/// `altSign (succ p)` through `neg_mul`/`mul_neg`. The two `altSign_succ`
+/// rewrites are written out rather than left to `Eq.refl`, so a change in
+/// `Rat.altSign`'s shape would fail here loudly instead of silently.
+fn l_eq_r_term(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    m: ExprId,
+    c: ExprId,
+    row: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+    let sc = d.succ(c);
+    let srow = d.succ(row);
+
+    let sign_c = ralt_sign(d, p, sc);
+    let sign_row = ralt_sign(d, p, row);
+    let sign_srow = ralt_sign(d, p, srow);
+    let sign_cc = ralt_sign(d, p, c);
+    let neg_sign_cc = rneg(d, sign_cc);
+    let neg_sign_row = rneg(d, sign_row);
+
+    let entry_top = d.apply(mat, &[zero_n, sc]);
+    let minor_l = rmat_minor_of(d, p, mat, zero_n, sc);
+    let entry_left = d.apply(minor_l, &[row, zero_n]);
+    let double_l = rmat_minor_of(d, p, minor_l, row, zero_n);
+    let det_l = rdet(d, p, double_l, m);
+
+    let minor_r = rmat_minor_of(d, p, mat, srow, zero_n);
+    let double_r = rmat_minor_of(d, p, minor_r, zero_n, c);
+    let det_r = rdet(d, p, double_r, m);
+
+    let start = {
+        let inner = rmul(d, entry_left, det_l);
+        let signed = rmul(d, sign_row, inner);
+        let scaled = rmul(d, entry_top, signed);
+        rmul(d, sign_c, scaled)
+    };
+
+    // 1. the two double minors are the same submatrix.
+    let t1 = {
+        let inner = rmul(d, entry_left, det_r);
+        let signed = rmul(d, sign_row, inner);
+        let scaled = rmul(d, entry_top, signed);
+        rmul(d, sign_c, scaled)
+    };
+    let s1 = {
+        let h = d.const_app(p.det_minor_row_col_comm, &[m, mat, row, c]);
+        rcongr(d, det_l, det_r, h, &|d, t| {
+            let inner = rmul(d, entry_left, t);
+            let signed = rmul(d, sign_row, inner);
+            let scaled = rmul(d, entry_top, signed);
+            rmul(d, sign_c, scaled)
+        })
+    };
+
+    // 2. `x*(a*(y*(b*d))) = y*(b*(x*(a*d)))` swaps the two cofactor
+    //    coefficients, which is the whole reindexing at the term level.
+    let w = rmul(d, entry_top, det_r);
+    let t2 = {
+        let inner = rmul(d, sign_c, w);
+        let outer = rmul(d, entry_left, inner);
+        rmul(d, sign_row, outer)
+    };
+    let s2 = d.lemma(p.mul_perm4, &[sign_c, entry_top, sign_row, entry_left, det_r]);
+
+    // 3. `altSign (succ c) = neg (altSign c)`.
+    let t3 = {
+        let inner = rmul(d, neg_sign_cc, w);
+        let outer = rmul(d, entry_left, inner);
+        rmul(d, sign_row, outer)
+    };
+    let s3 = {
+        let h = d.lemma(p.alt_sign_succ, &[c]);
+        rcongr(d, sign_c, neg_sign_cc, h, &|d, t| {
+            let inner = rmul(d, t, w);
+            let outer = rmul(d, entry_left, inner);
+            rmul(d, sign_row, outer)
+        })
+    };
+
+    // 4-7. carry the `neg` out to the front and back down onto `altSign p`.
+    let z = rmul(d, sign_cc, w);
+    let neg_z = rneg(d, z);
+    let t4 = {
+        let outer = rmul(d, entry_left, neg_z);
+        rmul(d, sign_row, outer)
+    };
+    let s4 = {
+        let h = d.lemma(p.neg_mul, &[sign_cc, w]);
+        let from = rmul(d, neg_sign_cc, w);
+        rcongr(d, from, neg_z, h, &|d, t| {
+            let outer = rmul(d, entry_left, t);
+            rmul(d, sign_row, outer)
+        })
+    };
+
+    let ez = rmul(d, entry_left, z);
+    let neg_ez = rneg(d, ez);
+    let t5 = rmul(d, sign_row, neg_ez);
+    let s5 = {
+        let h = d.lemma(p.mul_neg, &[entry_left, z]);
+        let from = rmul(d, entry_left, neg_z);
+        rcongr(d, from, neg_ez, h, &|d, t| rmul(d, sign_row, t))
+    };
+
+    let pez = rmul(d, sign_row, ez);
+    let t6 = rneg(d, pez);
+    let s6 = d.lemma(p.mul_neg, &[sign_row, ez]);
+
+    let t7 = rmul(d, neg_sign_row, ez);
+    let s7 = {
+        let h = d.lemma(p.neg_mul, &[sign_row, ez]);
+        super::ops::rsymm(d, t7, t6, h)
+    };
+
+    // 8. `neg (altSign p) = altSign (succ p)`.
+    let end = r_term_body(d, p, mat, m, row, c);
+    let s8 = {
+        let h = d.lemma(p.alt_sign_succ, &[row]);
+        let flipped = super::ops::rsymm(d, sign_srow, neg_sign_row, h);
+        rcongr(d, neg_sign_row, sign_srow, flipped, &|d, t| rmul(d, t, ez))
+    };
+
+    let (_e, proof) = rchain(
+        d,
+        start,
+        &[
+            (t1, s1),
+            (t2, s2),
+            (t3, s3),
+            (t4, s4),
+            (t5, s5),
+            (t6, s6),
+            (t7, s7),
+            (end, s8),
+        ],
+    );
+    proof
+}
+
+/// Admit `Rat.det_col_expansion : ∀ m A, det A (succ m) =
+/// sumRange (fun p => altSign p * (A p 0 * det (matMinor A p 0) m)) (succ m)` —
+/// **cofactor expansion along the first COLUMN**.
+///
+/// The crux of transpose invariance, and it does NOT come from
+/// [`declare_det_row_expansion`]. Each column summand is precisely the `c = 0`
+/// slice of the row-`p` expansion, so the row law constrains each summand's
+/// SIBLINGS and never the column sum; ADR-1210 §9 measures that. What IS reused
+/// is the INDEX and RANGE layer ADR-1155 landed, not ADR-1185's summand layer —
+/// there is no `Rat.laplaceSummand`, no `Rat.unskip`, no `Nat.beq` diagonal
+/// guard and no `Rat.sumRange_congr_lt` anywhere below.
+///
+/// One induction on the dimension, with the matrix under the motive:
+///
+/// - **Base.** `det A 1` and the column sum at bound `1` are the SAME term:
+///   both reduce to `zero + altSign 0 * (A 0 0 * det (matMinor A 0 0) 0)`.
+///   `Eq.refl`.
+/// - **Step,** at `m = succ m'`. `det_succ` opens the row-`0` expansion;
+///   [`declare_sum_range_peel_head`] peels the index-`0` summand off each side,
+///   and **the two heads are the same term**, so nothing has to be proved about
+///   them. Under the tails, the induction hypothesis (left) and `det_succ`
+///   (right) expand each minor one more step, and two `Rat.mul_sumRange` pulls
+///   take the cofactor coefficients inside. What is left is one rectangle
+///   summed in the two orders, so `Rat.sumRange_swap` is the entire reindexing
+///   and [`l_eq_r_term`] is the termwise agreement.
+///
+/// The head split is what replaces ADR-1185's diagonal guard: there both
+/// expansions ran over the same index space and the `p = q` cell had to be
+/// shown to vanish; here the surviving row index and the surviving column index
+/// are independent, and the only cell needing separate treatment is the one
+/// both peels remove.
+fn declare_det_col_expansion(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let motive = |d: &mut IntDev<'_>, m: ExprId| -> ExprId {
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let sm = d.succ(m);
+        let lhs = rdet(d, p, mat, sm);
+        let summand = col_zero_expansion_fn(d, p, mat, m);
+        let rhs = rsum_range(d, p, summand, sm);
+        let eq = req(d, lhs, rhs);
+        d.pi_fv(a_fv, mty, eq)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let zero_n = d.zero();
+        let one_n = d.succ(zero_n);
+        let lhs = rdet(d, p, mat, one_n);
+        let refl = rrefl(d, lhs);
+        d.lam_fv(a_fv, mty, refl)
+    };
+
+    let step = |d: &mut IntDev<'_>, mp: ExprId, ih: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let zero_n = d.zero();
+        let n1 = d.succ(mp);
+        let n2 = d.succ(n1);
+
+        let row_fn = row_zero_expansion_fn(d, p, mat, n1);
+        let col_fn = col_zero_expansion_fn(d, p, mat, n1);
+        let head = d.apply(row_fn, &[zero_n]);
+
+        let l_shift = shift_fn(d, row_fn);
+        let r_shift = shift_fn(d, col_fn);
+
+        // `fun c => sumRange (fun p => L c p) n1`.
+        let l_double = {
+            let c_fv = d.fresh_fvar();
+            let col = d.kernel().fvar(c_fv);
+            let inner = {
+                let r_fv = d.fresh_fvar();
+                let row = d.kernel().fvar(r_fv);
+                let body = l_term_body(d, p, mat, mp, col, row);
+                d.lam_fv(r_fv, nat, body)
+            };
+            let body = rsum_range(d, p, inner, n1);
+            d.lam_fv(c_fv, nat, body)
+        };
+        // `fun c p => L c p`, the square `sumRange_swap` transposes.
+        let square = {
+            let c_fv = d.fresh_fvar();
+            let col = d.kernel().fvar(c_fv);
+            let r_fv = d.fresh_fvar();
+            let row = d.kernel().fvar(r_fv);
+            let body = l_term_body(d, p, mat, mp, col, row);
+            let inner = d.lam_fv(r_fv, nat, body);
+            d.lam_fv(c_fv, nat, inner)
+        };
+        // `fun p => sumRange (fun c => L c p) n1`, the same square by rows.
+        let l_swapped = {
+            let r_fv = d.fresh_fvar();
+            let row = d.kernel().fvar(r_fv);
+            let inner = {
+                let c_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(c_fv);
+                let body = l_term_body(d, p, mat, mp, col, row);
+                d.lam_fv(c_fv, nat, body)
+            };
+            let body = rsum_range(d, p, inner, n1);
+            d.lam_fv(r_fv, nat, body)
+        };
+        // `fun p => sumRange (fun c => R p c) n1`.
+        let r_double = {
+            let r_fv = d.fresh_fvar();
+            let row = d.kernel().fvar(r_fv);
+            let inner = {
+                let c_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(c_fv);
+                let body = r_term_body(d, p, mat, mp, row, col);
+                d.lam_fv(c_fv, nat, body)
+            };
+            let body = rsum_range(d, p, inner, n1);
+            d.lam_fv(r_fv, nat, body)
+        };
+
+        // --- the row-0 tail: the induction hypothesis, twice pulled in -------
+        let pointwise_l = {
+            let c_fv = d.fresh_fvar();
+            let col = d.kernel().fvar(c_fv);
+            let sc = d.succ(col);
+            let sign = ralt_sign(d, p, sc);
+            let entry = d.apply(mat, &[zero_n, sc]);
+            let minor = rmat_minor_of(d, p, mat, zero_n, sc);
+            let sub = rdet(d, p, minor, n1);
+            let start = {
+                let product = rmul(d, entry, sub);
+                rmul(d, sign, product)
+            };
+
+            let inner_fn = col_zero_expansion_fn(d, p, minor, mp);
+            let inner_sum = rsum_range(d, p, inner_fn, n1);
+            let mid1 = {
+                let product = rmul(d, entry, inner_sum);
+                rmul(d, sign, product)
+            };
+            let s1 = {
+                let pf = d.apply(ih, &[minor]);
+                rcongr(d, sub, inner_sum, pf, &|d, t| {
+                    let product = rmul(d, entry, t);
+                    rmul(d, sign, product)
+                })
+            };
+
+            let scaled_fn = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let at_k = d.apply(inner_fn, &[k]);
+                let body = rmul(d, entry, at_k);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let scaled_sum = rsum_range(d, p, scaled_fn, n1);
+            let mid2 = rmul(d, sign, scaled_sum);
+            let s2 = {
+                let pf = d.lemma(p.mul_sum_range, &[entry, inner_fn, n1]);
+                let from = rmul(d, entry, inner_sum);
+                rcongr(d, from, scaled_sum, pf, &|d, t| rmul(d, sign, t))
+            };
+
+            let signed_fn = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let body = l_term_body(d, p, mat, mp, col, k);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let end = rsum_range(d, p, signed_fn, n1);
+            let s3 = d.lemma(p.mul_sum_range, &[sign, scaled_fn, n1]);
+
+            let (_e, pf) = rchain(d, start, &[(mid1, s1), (mid2, s2), (end, s3)]);
+            d.lam_fv(c_fv, nat, pf)
+        };
+
+        // --- the column-0 tail: `det_succ`, twice pulled in ------------------
+        let pointwise_r = {
+            let r_fv = d.fresh_fvar();
+            let row = d.kernel().fvar(r_fv);
+            let sr = d.succ(row);
+            let sign = ralt_sign(d, p, sr);
+            let entry = d.apply(mat, &[sr, zero_n]);
+            let minor = rmat_minor_of(d, p, mat, sr, zero_n);
+            let sub = rdet(d, p, minor, n1);
+            let start = {
+                let product = rmul(d, entry, sub);
+                rmul(d, sign, product)
+            };
+
+            let inner_fn = row_zero_expansion_fn(d, p, minor, mp);
+            let inner_sum = rsum_range(d, p, inner_fn, n1);
+            let mid1 = {
+                let product = rmul(d, entry, inner_sum);
+                rmul(d, sign, product)
+            };
+            let s1 = {
+                let pf = d.lemma(p.det_succ, &[minor, mp]);
+                rcongr(d, sub, inner_sum, pf, &|d, t| {
+                    let product = rmul(d, entry, t);
+                    rmul(d, sign, product)
+                })
+            };
+
+            let scaled_fn = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let at_k = d.apply(inner_fn, &[k]);
+                let body = rmul(d, entry, at_k);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let scaled_sum = rsum_range(d, p, scaled_fn, n1);
+            let mid2 = rmul(d, sign, scaled_sum);
+            let s2 = {
+                let pf = d.lemma(p.mul_sum_range, &[entry, inner_fn, n1]);
+                let from = rmul(d, entry, inner_sum);
+                rcongr(d, from, scaled_sum, pf, &|d, t| rmul(d, sign, t))
+            };
+
+            let signed_fn = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let body = r_term_body(d, p, mat, mp, row, k);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let end = rsum_range(d, p, signed_fn, n1);
+            let s3 = d.lemma(p.mul_sum_range, &[sign, scaled_fn, n1]);
+
+            let (_e, pf) = rchain(d, start, &[(mid1, s1), (mid2, s2), (end, s3)]);
+            d.lam_fv(r_fv, nat, pf)
+        };
+
+        // --- the two orders of summation, termwise ---------------------------
+        let pointwise_swap = {
+            let r_fv = d.fresh_fvar();
+            let row = d.kernel().fvar(r_fv);
+            let l_at_row = {
+                let c_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(c_fv);
+                let body = l_term_body(d, p, mat, mp, col, row);
+                d.lam_fv(c_fv, nat, body)
+            };
+            let r_at_row = {
+                let c_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(c_fv);
+                let body = r_term_body(d, p, mat, mp, row, col);
+                d.lam_fv(c_fv, nat, body)
+            };
+            let termwise = {
+                let c_fv = d.fresh_fvar();
+                let col = d.kernel().fvar(c_fv);
+                let body = l_eq_r_term(d, p, mat, mp, col, row);
+                d.lam_fv(c_fv, nat, body)
+            };
+            let pf = d.lemma(p.sum_range_congr, &[l_at_row, r_at_row, n1, termwise]);
+            d.lam_fv(r_fv, nat, pf)
+        };
+
+        let start = rdet(d, p, mat, n2);
+        let l1 = rsum_range(d, p, row_fn, n2);
+        let s1 = d.lemma(p.det_succ, &[mat, n1]);
+
+        let l2 = {
+            let tail = rsum_range(d, p, l_shift, n1);
+            radd(d, head, tail)
+        };
+        let s2 = d.lemma(p.sum_range_peel_head, &[row_fn, n1]);
+
+        let l3 = {
+            let tail = rsum_range(d, p, l_double, n1);
+            radd(d, head, tail)
+        };
+        let s3 = {
+            let pf = d.lemma(p.sum_range_congr, &[l_shift, l_double, n1, pointwise_l]);
+            let from = rsum_range(d, p, l_shift, n1);
+            let to = rsum_range(d, p, l_double, n1);
+            rcongr(d, from, to, pf, &|d, t| radd(d, head, t))
+        };
+
+        let l4 = {
+            let tail = rsum_range(d, p, l_swapped, n1);
+            radd(d, head, tail)
+        };
+        let s4 = {
+            let pf = d.lemma(p.sum_range_swap, &[square, n1, n1]);
+            let from = rsum_range(d, p, l_double, n1);
+            let to = rsum_range(d, p, l_swapped, n1);
+            rcongr(d, from, to, pf, &|d, t| radd(d, head, t))
+        };
+
+        let l5 = {
+            let tail = rsum_range(d, p, r_double, n1);
+            radd(d, head, tail)
+        };
+        let s5 = {
+            let pf = d.lemma(p.sum_range_congr, &[l_swapped, r_double, n1, pointwise_swap]);
+            let from = rsum_range(d, p, l_swapped, n1);
+            let to = rsum_range(d, p, r_double, n1);
+            rcongr(d, from, to, pf, &|d, t| radd(d, head, t))
+        };
+
+        let l6 = {
+            let tail = rsum_range(d, p, r_shift, n1);
+            radd(d, head, tail)
+        };
+        let s6 = {
+            let pf = d.lemma(p.sum_range_congr, &[r_shift, r_double, n1, pointwise_r]);
+            let from = rsum_range(d, p, r_shift, n1);
+            let to = rsum_range(d, p, r_double, n1);
+            let flipped = super::ops::rsymm(d, from, to, pf);
+            rcongr(d, to, from, flipped, &|d, t| radd(d, head, t))
+        };
+
+        let target = rsum_range(d, p, col_fn, n2);
+        let s7 = {
+            let pf = d.lemma(p.sum_range_peel_head, &[col_fn, n1]);
+            super::ops::rsymm(d, target, l6, pf)
+        };
+
+        let (_e, proof) = rchain(
+            d,
+            start,
+            &[
+                (l1, s1),
+                (l2, s2),
+                (l3, s3),
+                (l4, s4),
+                (l5, s5),
+                (l6, s6),
+                (target, s7),
+            ],
+        );
+        d.lam_fv(a_fv, mty, proof)
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let stmt = motive(d, m);
+    let proof = d.induct(&motive, &base, &step, m);
+    let ty = d.pi_fv(m_fv, nat, stmt);
+    let value = d.lam_fv(m_fv, nat, proof);
+    d.declare_theorem(p.det_col_expansion, ty, value)
+}
+
+/// Admit `Rat.matMinor_transpose : ∀ A q r c,
+/// matMinor (matTranspose A) 0 q r c = matTranspose (matMinor A q 0) r c` —
+/// POINTWISE, and `Eq.refl`.
+///
+/// Both sides delta-beta-iota-reduce to `A (matSkip q c) (matSkip 0 r)`:
+/// deleting row `0` and column `q` from `Aᵀ` is deleting row `q` and column `0`
+/// from `A` and then transposing. Stated at an index pair because `funext` is
+/// absent, which is also why [`declare_det_congr`] has to carry it to the
+/// determinant.
+fn declare_mat_minor_transpose(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let zero_n = d.zero();
+    let transposed = rmat_transpose_of(d, p, mat);
+    let lhs = rmat_minor(d, p, transposed, zero_n, q, r, c);
+    let rhs = {
+        let minor = rmat_minor_of(d, p, mat, q, zero_n);
+        let t = rmat_transpose_of(d, p, minor);
+        d.apply(t, &[r, c])
+    };
+    let stmt = req(d, lhs, rhs);
+    let proof = rrefl(d, lhs);
+
+    let ty = {
+        let over_c = d.pi_fv(c_fv, nat, stmt);
+        let over_r = d.pi_fv(r_fv, nat, over_c);
+        let over_q = d.pi_fv(q_fv, nat, over_r);
+        d.pi_fv(a_fv, mty, over_q)
+    };
+    let value = {
+        let over_c = d.lam_fv(c_fv, nat, proof);
+        let over_r = d.lam_fv(r_fv, nat, over_c);
+        let over_q = d.lam_fv(q_fv, nat, over_r);
+        d.lam_fv(a_fv, mty, over_q)
+    };
+    d.declare_theorem(p.mat_minor_transpose, ty, value)
+}
+
+/// Admit `Rat.det_transpose : ∀ n A, det (matTranspose A) n = det A n` — the
+/// THIRD of the four determinant laws ADR-1120 named, at a **symbolic**
+/// dimension.
+///
+/// One induction on the dimension with the matrix under the motive. The step is
+/// three moves and no case split:
+///
+/// 1. `det_succ` expands `det Aᵀ (succ m)` along `Aᵀ`'s first row, whose
+///    entries are `A`'s first COLUMN — `matTranspose A 0 q ≡ A q 0` by delta
+///    and beta alone.
+/// 2. Under `Rat.sumRange_congr`, [`declare_mat_minor_transpose`] plus
+///    [`declare_det_congr`] rewrite each `matMinor Aᵀ 0 q` into
+///    `matTranspose (matMinor A q 0)`, which the induction hypothesis strips.
+/// 3. What remains is expansion along `A`'s first column, and
+///    [`declare_det_col_expansion`] closes it.
+///
+/// [`declare_det_row_expansion`] is NOT used, and cannot be: expansion along a
+/// column of `A` IS expansion along a row of `Aᵀ`, so reaching for the row law
+/// here is circular. The column law had to be proved on its own, and that is
+/// where this lane's work went.
+fn declare_det_transpose(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let motive = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let transposed = rmat_transpose_of(d, p, mat);
+        let lhs = rdet(d, p, transposed, n);
+        let rhs = rdet(d, p, mat, n);
+        let eq = req(d, lhs, rhs);
+        d.pi_fv(a_fv, mty, eq)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        // `det _ 0 ≡ one` on both sides.
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let one = rone(d, p);
+        let refl = rrefl(d, one);
+        d.lam_fv(a_fv, mty, refl)
+    };
+
+    let step = |d: &mut IntDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let mat = d.kernel().fvar(a_fv);
+        let zero_n = d.zero();
+        let sm = d.succ(m);
+        let transposed = rmat_transpose_of(d, p, mat);
+
+        let row_fn = row_zero_expansion_fn(d, p, transposed, m);
+        let col_fn = col_zero_expansion_fn(d, p, mat, m);
+
+        let pointwise = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let sign = ralt_sign(d, p, q);
+            let entry = d.apply(transposed, &[zero_n, q]);
+            let minor_t = rmat_minor_of(d, p, transposed, zero_n, q);
+            let minor = rmat_minor_of(d, p, mat, q, zero_n);
+            let minor_transposed = rmat_transpose_of(d, p, minor);
+
+            let det_t = rdet(d, p, minor_t, m);
+            let det_mid = rdet(d, p, minor_transposed, m);
+            let det_plain = rdet(d, p, minor, m);
+
+            let h_pointwise = d.const_app(p.mat_minor_transpose, &[mat, q]);
+            let h1 = d.lemma(p.det_congr, &[m, minor_t, minor_transposed, h_pointwise]);
+            let h2 = d.apply(ih, &[minor]);
+            let h = rtrans(d, det_t, det_mid, det_plain, h1, h2);
+
+            let body = rcongr(d, det_t, det_plain, h, &|d, t| {
+                let product = rmul(d, entry, t);
+                rmul(d, sign, product)
+            });
+            d.lam_fv(q_fv, nat, body)
+        };
+
+        let start = rdet(d, p, transposed, sm);
+        let l1 = rsum_range(d, p, row_fn, sm);
+        let s1 = d.lemma(p.det_succ, &[transposed, m]);
+
+        let l2 = rsum_range(d, p, col_fn, sm);
+        let s2 = d.lemma(p.sum_range_congr, &[row_fn, col_fn, sm, pointwise]);
+
+        let target = rdet(d, p, mat, sm);
+        let s3 = {
+            let pf = d.lemma(p.det_col_expansion, &[m, mat]);
+            super::ops::rsymm(d, target, l2, pf)
+        };
+
+        let (_e, proof) = rchain(d, start, &[(l1, s1), (l2, s2), (target, s3)]);
+        d.lam_fv(a_fv, mty, proof)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt = motive(d, n);
+    let proof = d.induct(&motive, &base, &step, n);
+    let ty = d.pi_fv(n_fv, nat, stmt);
+    let value = d.lam_fv(n_fv, nat, proof);
+    d.declare_theorem(p.det_transpose, ty, value)
 }
