@@ -818,3 +818,38 @@ This is a single-step concrete projection, matching the current Rust API. It
 does not invent a Python-only runner. RV64 bounded traces, x86-64, instruction
 effect sets, symbolic execution, and cross-machine relations remain open.
 The implementation and generated reader contract landed as `3884b8d04`.
+
+## 2026-08-30 — reader-facing x86-64 Python projection
+
+Added `axeyum.machine.x64` as the direct projection of the source-pinned Intel
+teaching slice. It exposes the pinned source revision and digest, the exact
+seventeen selected form families, typed constructors for all fifteen Rust
+instruction variants including the three admitted short conditions, variable-
+length canonical encode/decode with consumed length, immutable program bytes,
+six three-valued flags, complete state, finite memory, categorized traps,
+canonical state projection, and one-step execution.
+
+Instruction factories validate through the Rust canonical encoder. Short-jump
+conditions accept a small documented spelling set and return one canonical
+name. Flag values are `clear`, `set`, or `undefined`; the Python surface does
+not collapse an architecturally undefined flag to false. Register reads and
+immutable updates check the selected low-eight boundary before calling Rust.
+All instruction behavior, variable-length fetch, following-RIP arithmetic,
+partial-register behavior, implicit stack access, and trapping remain in
+`axeyum_machine::x64::step`.
+
+Four new reader test groups cover all seventeen selected forms and exact decode
+lengths; EAX upper-half clearing, logical flag definitions, undefined AF, and
+taken following-RIP-relative branches; CALL/RET continuation and RSP effects
+plus atomic failed PUSH; and source identity, canonical projection, duplicate
+rejection, incomplete fetch, illegal instruction, and terminal stuttering.
+The eight native x86 tests still execute all six printed manuscript listings.
+Eight PyO3 library tests also pass. Strict all-target, all-feature Clippy
+passes. Runtime/stub parity now covers 27 modules and 1,828 symbols; typed-stub
+coverage reaches 95.2 percent, `stubtest` passes, the type budget is unchanged,
+and Ruff lint and formatting pass.
+
+Like RV64, this is a complete selected single-step projection, not a new
+Python-only runner. Real-ISA bounded trace types, instruction effect sets,
+symbolic execution, and cross-machine relations remain open.
+The implementation and generated reader contract landed as `ebcbfc618`.

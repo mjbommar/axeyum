@@ -12,8 +12,8 @@ eight supported widths. Next: independently pinned RV64I and x86-64 teaching
 slices, broader semantic relations, manifests, the remaining Python machine
 projection, and clean-checkout book gates. The PyO3 layer now projects the
 complete A0 word, state, memory, instruction, step, and trace surface. The
-source-pinned RV64I slice now has a complete reader-facing single-step Python
-projection; x86-64, real-ISA bounded traces, and cross-machine relations remain.
+source-pinned RV64I and x86-64 slices now have complete reader-facing
+single-step Python projections; real-ISA bounded traces and cross-machine relations remain.
 A0 addition has fixed-width symbolic certificates;
 do not generalize them into an arbitrary-width theorem. Do not describe future
 interfaces as implemented until those routes run and their controls fire.
@@ -46,3 +46,4 @@ interfaces as implemented until those routes run and their controls fire.
 | 2026-08-30 | `4e93f9d62` | Complete the reader-facing A0 Python surface: memory, state codec, all seventeen typed instruction families, step, bounded traces, categorized traps, generated stubs, and thirteen direct reader controls. Rust, runtime/stub, static-type, lint, and formatting gates pass; RV64, x86-64, cross-machine, and book bindings remain open. |
 | 2026-08-30 | `4548f3dda` | Move reader-facing A0 error formatting outside the source-pinned semantic file. The exact v10 digest is restored without relabeling message-only changes as new semantics; all sixteen book routes replay successfully again. |
 | 2026-08-30 | `3884b8d04` | Project the complete source-pinned twelve-form RV64I single-step slice through Python: typed instructions, canonical encoding, complete state, traps, memory, projection, source identity, generated stubs, and reader controls. Bounded RV64 traces and cross-machine interfaces remain open. |
+| 2026-08-30 | `ebcbfc618` | Project the complete source-pinned seventeen-form x86-64 single-step slice through Python: variable-length decode, explicit undefined flags, complete state, traps, stack effects, projection, source identity, generated stubs, and reader controls. Real-ISA bounded traces and cross-machine interfaces remain open. |
