@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 1980,
+    "min_identity_bound": 1984,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -6540,6 +6540,13 @@
       "kernel_theorem": "Int.coprime_of_bezout_one"
     },
     {
+      "fact_id": "F:int-coprimefactorialofltprime",
+      "language": "lean4",
+      "statement_sha256": "00f0e72ec61a5720b9ac67d50527a85483ee57fab482fe3cd3f791963ce53631",
+      "prose_sha256": "090664077e4a08651b7b88f5b7d3355838d3a95f2d44610a7dafda94aa1aa574",
+      "kernel_theorem": "Int.coprimeFactorialOfLtPrime"
+    },
+    {
       "fact_id": "F:int-crt-exists",
       "language": "lean4",
       "statement_sha256": "5697fe9ee7f3cfb2f5cbc642666cc8b50b0de8a2532e68877147439b959dace3",
@@ -6828,6 +6835,13 @@
       "kernel_theorem": "Int.factorial_zero"
     },
     {
+      "fact_id": "F:int-factorialeqofnatfactorial",
+      "language": "lean4",
+      "statement_sha256": "7cd512bf726a77c4940478283fbf6d24b03a44af2d97dcfd069ed43388eb34b8",
+      "prose_sha256": "6dfe8c70e2ad6f979d841fcd186ce185aff4618d37653e1727ff040b47f10be1",
+      "kernel_theorem": "Int.factorialEqOfNatFactorial"
+    },
+    {
       "fact_id": "F:int-fib-rec",
       "language": "lean4",
       "statement_sha256": "a93aa3a898ba5a1655fe61d01e5a60ad98e7fa273e89c538931baf33470ba4ef",
@@ -6842,11 +6856,25 @@
       "kernel_theorem": "Int.gauss_lemma"
     },
     {
+      "fact_id": "F:int-gausslemmasigncount",
+      "language": "lean4",
+      "statement_sha256": "f6aa8a2f8557612664a688a452750fd0e3dddc44eb0fd42ed40fa1c4928b6c36",
+      "prose_sha256": "8e67a0805f2bf1701b81d91be91c7e6a73b05be4c17261048f1b5ecf0ed6e198",
+      "kernel_theorem": "Int.gaussLemmaSignCount"
+    },
+    {
       "fact_id": "F:int-gausssignprodeqpownegoneofcount",
       "language": "lean4",
       "statement_sha256": "de767430d001f9b8705fc3a40da878977a61f60fa3519e844e75ec3932d6d669",
       "prose_sha256": "562478be6f3ab607f5eb5cf7e3b41da1576e0e54b4c1e46ddac3f01271f5db66",
       "kernel_theorem": "Int.gaussSignProdEqPowNegOneOfCount"
+    },
+    {
+      "fact_id": "F:int-gausstermmodeq",
+      "language": "lean4",
+      "statement_sha256": "2310281f6fc5a89699b7226aed175645d8094ec6d51f73c0beea5412e25322d3",
+      "prose_sha256": "c4b3805a7825a99d58330ab6d2678c1fed609ff8243527ebe0157b6fbd1e3aed",
+      "kernel_theorem": "Int.gaussTermModEq"
     },
     {
       "fact_id": "F:int-gcd-comm",

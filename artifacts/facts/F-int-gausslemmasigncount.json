@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "F:int-gausslemmasigncount",
+  "title": "Gauss's lemma (quadratic residues), over the constructed integers",
+  "statement": "Gauss's lemma, the sign-counting criterion: for an odd modulus pp = 2m+1 satisfying this kernel's PrimeCond and a multiplier a coprime to pp, a^m is congruent to (-1)^N modulo pp, where N = gaussNegCount pp a m is the number of k in 1..m whose least positive residue of a*k mod pp exceeds pp/2. Nothing here is imported or axiomatised: the count is this kernel's own `AxNat.countRange (fun j => AxNat.gaussSignNeg pp a (succ j)) m`, built from `AxNat.mod`/`AxNat.ble`, and the congruence is `Int.ModEq`, which unfolds to an `Int.emod` equality over the constructed integers. `Kernel::axiom_footprint` for this declaration is EMPTY. WHAT THIS DOES NOT CLAIM. It is the connecting theorem, not the quadratic-reciprocity supplement that consumes it: no evaluation of gaussNegCount at a general a is asserted (only the a := 2 closed form `Nat.gaussNegCountTwoClosedForm` exists, separately), so the mod-8 criterion for whether 2 is a quadratic residue is NOT established here. Both hypotheses are load-bearing and neither is discharged: primality is what makes m! invertible mod pp, and coprimality of a is what makes the signed-fold map injective. The oddness of the modulus is structural rather than hypothetical -- pp is written `succ (mul 2 m)`, so no even modulus can be substituted. Note the name: `Int.gauss_lemma` in this same prelude is EUCLID's lemma, a different theorem carrying the same common misnomer.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.gaussLemmaSignCount : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))) -> ((x3 : Eq.{1} AxNat (AxNat.gcd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (AxNat.succ AxNat.zero)) -> Int.ModEq (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (Int.pow (Int.ofNat x1) x0) (Int.pow (Int.neg Int.one) (AxNat.gaussNegCount (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0)) x1 x0))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Int.gaussLemmaSignCount"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-coprimefactorialofltprime",
+    "F:int-gausssignprodeqpownegoneofcount",
+    "F:int-gausstermmodeq",
+    "F:int-modeq-cancel",
+    "F:int-modeq-prodrange-lt",
+    "F:int-mul-comm",
+    "F:int-prodrange-congr-lt",
+    "F:int-prodrange-mul",
+    "F:int-prodrange-permute",
+    "F:int-prodrange-scaledindexeqpowmulfactorial",
+    "F:nat-le-add-right",
+    "F:nat-le-succ-succ",
+    "F:nat-lt-succ-of-le",
+    "F:nat-one-mul",
+    "F:nat-succ-mul",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.gaussLemmaSignCount",
+      "kind": "kernel-term",
+      "supports": "Int.gaussLemmaSignCount is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.gaussLemmaSignCount 2>/dev/null | grep -cE '^Int\\.gaussLemmaSignCount[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Int.gaussLemmaSignCount",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.gaussLemmaSignCount",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.gaussLemmaSignCount.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it, including Int.gaussLemmaSignCount. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored. `title`, `statement` and `notes` were then REPLACED by hand (lane gauss-final, ADR-1130); every other field is the generator's output unmodified."
+  },
+  "notes": "Route, all of it in-kernel and none of it new induction (`int_prelude/gauss_assembly.rs`): a^m * m! = prod_{j<m} (a * (j+1)) [prodRange_scaledIndexEqPowMulFactorial] is congruent termwise to prod (eps_j * fold_j) [gaussTermModEq, lifted by modEq_prodRange_lt], which splits [prodRange_mul] into (prod eps_j) * (prod fold_j) = (-1)^N * m!, and m! cancels [Int.ModEq.cancel] because it is coprime to the prime pp. The same skeleton as `Int.euler_totient_theorem` (a permuted product cancelled by ModEq.cancel), with a SIGN in place of Euler's coprimality predicate -- which is why this folds an unrestricted `prodRange` where Euler folds `prodRangeIf`. TWO THINGS A READER SHOULD KNOW. First, `prod_j (ofNat (gaussFold pp a (succ j))) = m!` is `Int.prodRange_permute` at the Nat-typed self-map `sigma j := pred (gaussFold pp a (succ j))`, with NO Nat/Int bridging code -- `prodRange_permute` already quantifies over `Nat -> Nat`, which an earlier sizing of this step had assumed would need a natAbs round trip. Second, the bound `m < pp` that the factorial's coprimality needs is derived WITHOUT any positivity hypothesis on m: `gauss_lemma.rs`'s own in-range proof routes through `lt_two_mul_of_pos`, which requires 0 < m and would have silently excluded m = 0 (pp = 1) from the statement; this file goes `le_add_right m m` transported along 2m = m+m, then `lt_succ_of_le`. CONCRETE CHECK, disjoint from the symbolic one: `gauss_lemma_matches_direct_computation_at_pp_7_for_both_parities` instantiates at pp = 7 for a = 3 (count 1, ODD, 27 = 6 mod 7) and a = 2 (count 2, EVEN, 8 = 1 mod 7) -- opposite parities, so the count-to-sign link cannot agree by accident -- with a negative control requiring the kernel to refuse the even-count sign at a = 3.",
+  "external_status": "proved"
+}

@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:int-gausstermmodeq",
+  "title": "Gauss's-lemma per-term congruence: a*k = (sign) * gaussFold(pp,a,k) mod pp",
+  "statement": "The per-term congruence underneath Gauss's lemma: for any modulus pp > 0 and any a, k, the product a*k is congruent mod pp to eps * gaussFold(pp,a,k), where eps is -1 when `AxNat.gaussSignNeg pp a k` holds (the least residue of a*k exceeds pp/2) and +1 otherwise, and gaussFold folds a 'negative' residue r back to pp - r. Stated over the constructed integers because eps is; `Kernel::axiom_footprint` is EMPTY. WHAT THIS DOES NOT CLAIM. Nothing about the product over k, and nothing about primality: the only hypothesis is 0 < pp, so this holds at composite moduli and at a not coprime to pp -- it is Gauss's lemma's termwise input, not a criterion of its own.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.gaussTermModEq : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero x0) -> Int.ModEq (Int.ofNat x0) (Int.mul (Int.ofNat x1) (Int.ofNat x2)) (Int.mul (Bool.rec.{1} (fun (x4 : Bool) => Int) Int.one (Int.neg Int.one) (AxNat.gaussSignNeg x0 x1 x2)) (Int.ofNat (AxNat.gaussFold x0 x1 x2)))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Int.gaussTermModEq"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-add-comm",
+    "F:int-add-neg-cancel-right",
+    "F:int-add-zero",
+    "F:int-modeq-add-right",
+    "F:int-modeq-of-nat-modeq",
+    "F:int-neg-one-mul",
+    "F:int-one-mul"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.gaussTermModEq",
+      "kind": "kernel-term",
+      "supports": "Int.gaussTermModEq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.gaussTermModEq 2>/dev/null | grep -cE '^Int\\.gaussTermModEq[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "Int.gaussTermModEq",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.gaussTermModEq",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.gaussTermModEq.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it, including Int.gaussTermModEq. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored. `title`, `statement` and `notes` were then REPLACED by hand (lane gauss-final, ADR-1130); every other field is the generator's output unmodified."
+  },
+  "notes": "`Nat` has no negation, so the two branches of `gaussSignNeg` are two DIFFERENT Nat statements rather than one (`nat_prelude/gauss_lemma.rs`): the non-negative branch is a plain `Nat.modEq pp (a*k) (gaussFold pp a k)`, and the negative branch is the ADDITIVE `Nat.modEq pp (a*k + gaussFold pp a k) 0`. This declaration lifts each through `Int.modEq_of_nat_modEq` and turns the sum into the negation with one shift by -gaussFold (`Int.ModEq.add_right` plus `add_neg_cancel_right`). That is why the Nat sum puts a*k on the LEFT: `add_neg_cancel_right` consumes (x+y)+(-y), and the other order would need a commutation first. Three carrier bridges are free by defeq here and were checked rather than assumed: `Int.mul (ofNat a) (ofNat k) = ofNat (a*k)` at SYMBOLIC arguments (Int.mul's case split dispatches on the outer Int constructor only), the same for `Int.add`, and `Int.zero = Int.ofNat 0` (its own Definition body). What is NOT free is the selector, which only iota-reduces once the Bool condition is a literal -- supplied by the case split. CONCRETE CHECK: `gauss_term_mod_eq_computes_on_both_sign_branches_at_pp_7_a_3` instantiates BOTH branches (k = 1 non-negative, fold 3; k = 2 negative, fold 1) -- they share no proof step, so one branch says nothing about the other -- and because `Int.ModEq` unfolds to an `emod` equality the congruence itself is verified by computation, with a control requiring the kernel to refuse the +1 sign at k = 2.",
+  "external_status": "proved"
+}
