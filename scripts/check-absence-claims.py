@@ -165,6 +165,74 @@ CODE_SPAN_RE = re.compile(r"`[^`]*`")
 
 SCAN_GLOBS = ("docs/**/*.md", "*.md", "crates/**/*.rs")
 
+# --- claim-to-declaration association ---------------------------------------
+#
+# A claim is paired with the names in its OWN unit, not its whole block. The
+# block stays the unit a MARKER attaches to (a marker is written near the
+# paragraph it corrects, not spliced into the sentence), but the census's
+# question -- "which declaration is this claim about?" -- is answered at
+# sentence granularity.
+#
+# Measured 2026-08-31 over the real tree: block-granular association produced
+# 250 bare named sites against 118 sentence-granular ones, and its worst single
+# site harvested **93** candidates from one Markdown table -- a claim phrase in
+# one row, and every `Root.name` in every other row read as its subject. Two
+# independent audits (2026-08-27: 55 of 70 rejected; 2026-08-31: every one of
+# the remaining 249 rejected) found the surplus was entirely names cited as
+# PRESENT evidence in a neighbouring sentence.
+
+# A sentence ends at `.`/`!`/`?` FOLLOWED BY WHITESPACE. Requiring the
+# whitespace is what keeps `nat_prelude.rs:1909`, `Ch.22-23` and a bare
+# `Root.name` from splitting a sentence in half.
+#
+# Deliberately NOT `:` or `;`. Both carry a claim's own subjects across:
+#   "(do not exist in the merged tree): `CReal.alternatingBracketUpper`, ..."
+#   "neither of which has a ready-made `Nat.gcd_comm` ... (this development
+#    has no such lemma; only `gcd_zero_left`, ...)"
+# -- the first names its subjects after the colon, the second before the
+# semicolon, and both are among the 8 stale claims this gate has caught.
+SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s")
+
+# A line that OPENS a new structural record: a Markdown table row, or a list
+# item at any indent, optionally behind a Rust line-comment prefix. A wrapped
+# item's continuation lines carry no marker, so they stay with the item they
+# continue. `*` is a list bullet in Markdown but a block-comment continuation
+# in Rust, so it is a record opener only in Markdown.
+RECORD_MD_RE = re.compile(r"^\s*(?:\||[-*+]\s|\d+[.)]\s)")
+RECORD_RS_RE = re.compile(r"^\s*(?://[/!]?)?\s*(?:\||[-+]\s|\d+[.)]\s)")
+
+
+def claim_units(path: str, body: str) -> list[tuple[int, str]]:
+    """Split a block body into `(line offset, text)` claim units.
+
+    Records first (a table row or list item is its own assertion), then
+    sentences within each record.
+    """
+    record_re = RECORD_RS_RE if path.endswith(".rs") else RECORD_MD_RE
+    units: list[tuple[int, str]] = []
+    chunk: list[str] = []
+    chunk_start = 0
+    for i, line in enumerate(body.splitlines()):
+        if chunk and record_re.match(line):
+            units.extend(_sentences(chunk_start, chunk))
+            chunk = []
+        if not chunk:
+            chunk_start = i
+        chunk.append(line)
+    if chunk:
+        units.extend(_sentences(chunk_start, chunk))
+    return units
+
+
+def _sentences(start: int, chunk: list[str]) -> list[tuple[int, str]]:
+    text = "\n".join(chunk)
+    out: list[tuple[int, str]] = []
+    pos = 0
+    for piece in SENTENCE_SPLIT_RE.split(text):
+        out.append((start + text.count("\n", 0, pos), piece))
+        pos += len(piece) + 1
+    return out
+
 
 class CensusFormatError(ValueError):
     """`scripts/absence-claim-census.json` is malformed."""
@@ -405,19 +473,48 @@ def scan(
                 except MarkerError as exc:
                     errors.append(exc)
         for start, block in blocks(rel, lines):
-            annotated = any(MARKER_RE.search(line) for line in block)
+            # A marker attaches to its BLOCK, but it only silences the claims
+            # it actually NAMES. With one site per block that distinction was
+            # unreachable; at sentence granularity a block routinely carries
+            # several independent claims, and a marker for one of them must
+            # not read as an answer to the others. Measured 2026-08-31: four
+            # sites were covered by a marker naming something else.
+            marker_names: set[str] = set()
+            for line in block:
+                for match in MARKER_RE.finditer(line):
+                    try:
+                        parsed = parse_marker(rel, 0, match)
+                    except MarkerError:
+                        continue  # reported by the marker pass above
+                    marker_names |= set(parsed.names)
             # The marker's own text is stripped before the claim phrases are
             # matched, so a marker's note can quote a claim without the block
             # counting itself as a fresh claim.
             body = MARKER_RE.sub(" ", "\n".join(block))
-            match = CLAIM_RE.search(body)
-            if match is None:
-                continue
-            offset = body.count("\n", 0, match.start())
-            candidates = tuple(dict.fromkeys(DECL_RE.findall(body)))
-            sites.append(
-                ClaimSite(rel, start + offset, body.splitlines()[offset].strip()[:200], candidates, annotated)
-            )
+            body_lines = body.splitlines()
+            for offset, unit in claim_units(rel, body):
+                if CLAIM_RE.search(unit) is None:
+                    continue
+                candidates = tuple(dict.fromkeys(DECL_RE.findall(unit)))
+                # Exact first, then spelling-normalized -- the same two-step
+                # `Authority.resolve` uses, and for the same reason: a marker
+                # written `CReal.congr_of_uniformly_continuous` must cover
+                # prose written `CReal.congrOfUniformlyContinuous`.
+                exact_hit = bool(set(candidates) & marker_names)
+                normalized_hit = bool(
+                    {normalize_spelling(n) for n in candidates}
+                    & {normalize_spelling(n) for n in marker_names}
+                )
+                annotated = exact_hit or normalized_hit
+                sites.append(
+                    ClaimSite(
+                        rel,
+                        start + offset,
+                        body_lines[offset].strip()[:200],
+                        candidates,
+                        annotated,
+                    )
+                )
     return files, markers, sites, errors, quoted
 
 

@@ -119,6 +119,20 @@ class Harness(unittest.TestCase):
         """One bare absence claim, so the detector-vacuity guard is satisfied."""
         self.write("docs/baseline.md", "A helper for this does not exist yet.\n")
 
+    def seed_marker(self) -> None:
+        """One SATISFIED marker, so the zero-marker vacuity guard is satisfied.
+
+        Its own claim names the declaration the marker names, so it is an
+        annotated site and contributes nothing to the bare-claim budget --
+        which lets a test set that budget to 0 and read the result as being
+        about its own fixture.
+        """
+        self.write(
+            "docs/seed-marker.md",
+            "`CReal.weierstrassMTest` does not exist.\n"
+            "<!-- was-absent: CReal.weierstrassMTest -->\n",
+        )
+
 
 class ExpiryGuards(Harness):
     def test_G1_absent_marker_on_a_present_declaration_fails(self) -> None:
@@ -443,11 +457,14 @@ class SurfaceGuards(Harness):
         """A marker one blank line away belongs to a different paragraph."""
         self.seed_baseline_claim()
         self.write("docs/other.md", "It does not exist.\n<!-- absent: CReal.nope -->\n")
+        # The marker NAMES the claim's subject, so only the blank line between
+        # them keeps the claim bare. Gathering markers file-wide instead of
+        # block-wide would silence it.
         self.write(
             "docs/split.md",
             "A lemma about `Nat.add` does not exist.\n"
             "\n"
-            "<!-- absent: CReal.nope -->\n",
+            "<!-- was-absent: Nat.add -->\n",
         )
         status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
         self.assertEqual(status, 1, self.quoted(out))
@@ -533,6 +550,242 @@ class ExitStatusGuards(Harness):
         self.assertIn("census:", out)
         self.assertIn("do NOT", out)
         self.assertIn("STRUCTURALLY UNCHECKABLE", out)
+
+
+class ClaimUnitGuards(Harness):
+    """A claim is paired with the names in its OWN unit, not its whole block.
+
+    Block-granular association made the census track NOISE: measured
+    2026-08-31 over the real tree, 250 bare named sites against 118
+    sentence-granular ones, with one Markdown table contributing a single site
+    that harvested **93** candidates. Every guard here is about the surplus,
+    and every one has a control in the opposite direction -- a narrowed
+    matcher that drops a real claim is a weakening, not an improvement.
+    """
+
+    def test_G21_a_neighbouring_sentences_names_are_not_the_claims_subject(
+        self,
+    ) -> None:
+        """G21: the surplus. Present evidence beside a claim is not its subject."""
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/block.md",
+            "`Nat.add` and `CReal.integral` are both landed and in daily use.\n"
+            "Something else entirely does not exist.\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 0, self.quoted(out))
+        self.assertNotIn("docs/block.md", out)
+
+    def test_G21_control_a_name_in_the_claims_own_sentence_IS_its_subject(
+        self,
+    ) -> None:
+        """The other direction: narrowing must not drop the real subject."""
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write("docs/block.md", "`CReal.integral` does not exist in this kernel.\n")
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("CReal.integral", out)
+
+    def test_G22_a_colon_does_not_end_a_claim_unit(self) -> None:
+        """G22: a claim routinely names its subjects AFTER a colon.
+
+        `(do not exist in the merged tree): CReal.alternatingBracketUpper, ...`
+        is one of the 8 stale claims this gate has caught. Splitting on `:`
+        would carry its subjects into the next unit and lose them.
+        """
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/colon.md",
+            "**NOT registered** (do not exist in the merged tree): "
+            "`CReal.integral` -- see Findings below.\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("CReal.integral", out)
+
+    def test_G23_a_markdown_table_row_is_its_own_claim_unit(self) -> None:
+        """G23: the 93-candidate site. A table row is an independent record."""
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/table.md",
+            "| 1 | nothing of that shape exists here |\n"
+            "| 2 | `CReal.integral` landed and carries its algebra |\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 0, self.quoted(out))
+        self.assertNotIn("docs/table.md", out)
+
+    def test_G23_control_a_name_in_the_claims_own_row_IS_attributed(self) -> None:
+        """Row-splitting must not blind the gate to a claim inside one row."""
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/table.md",
+            "| 1 | `CReal.integral` does not exist |\n"
+            "| 2 | `Nat.add` landed and is in daily use |\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("CReal.integral", out)
+        self.assertNotIn("Nat.add", out)
+
+    def test_G23_a_wrapped_list_item_keeps_its_continuation_lines(self) -> None:
+        """Only a line that OPENS a record breaks one; a wrap must not.
+
+        `- ...since `Nat.even_or_odd`\\n  does not exist...` is one of the 8
+        stale claims, and its subject sits on the line above the phrase.
+        """
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/wrap.md",
+            "- a note mentioning `CReal.integral`\n"
+            "  which does not exist on this branch\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("CReal.integral", out)
+
+    def test_G24_a_marker_only_silences_a_claim_it_NAMES(self) -> None:
+        """G24: one block, two claims, a marker answering only one of them.
+
+        At block granularity this distinction was unreachable -- a single
+        `annotated` flag covered every claim in the block. Four real sites
+        were covered by a marker naming something else.
+        """
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/two.md",
+            "- `CReal.weierstrassMTest` does not exist.\n"
+            "<!-- was-absent: CReal.weierstrassMTest -->\n"
+            "- `CReal.integral` does not exist either.\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("CReal.integral", out)
+
+    def test_G24_control_the_marker_DOES_silence_the_claim_it_names(self) -> None:
+        """The other direction: a marker naming the subject must still cover it."""
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/one.md",
+            "`CReal.weierstrassMTest` does not exist.\n"
+            "<!-- was-absent: CReal.weierstrassMTest -->\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 0, self.quoted(out))
+
+    def test_G24_the_marker_match_is_spelling_normalized(self) -> None:
+        """`congr_of_uniformly_continuous` and `congrOfUniformlyContinuous`.
+
+        There is no single spelling in this repository, so a marker written in
+        the design-document spelling must still cover prose written in the
+        kernel spelling -- or the narrowing invents bare sites out of a naming
+        convention.
+        """
+        self.seed_baseline_claim()
+        self.seed_marker()
+        self.write(
+            "docs/spell.md",
+            "`CReal.congrOfUniformlyContinuous` does not exist.\n"
+            "<!-- was-absent: CReal.congr_of_uniformly_continuous -->\n",
+        )
+        status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
+        self.assertEqual(status, 0, self.quoted(out))
+
+
+# The 8 genuinely-stale absence claims the 2026-08-31 `absence-and-orphans`
+# lane found and corrected, in their PRE-CORRECTION text, cut verbatim out of
+# `335cb3661^` at the block the checker segments. Eleven declarations across
+# eight claims. A narrowed matcher that stops attributing any one of these to
+# its claim is a WEAKENING, and this is the suite that says so.
+STALE_FIXTURES: list[tuple[str, list[str]]] = [
+    ("133-uniform-converges-add.md", ["CReal.uniform_converges_add"]),
+    ("133-even-or-odd.md", ["Nat.even_or_odd"]),
+    (
+        "133-alternating.md",
+        [
+            "CReal.alternatingBracketUpper",
+            "CReal.alternatingLowerBound",
+            "CReal.alternatingUpperBound",
+        ],
+    ),
+    ("200-asc-desc-factorial.md", ["Nat.ascFactorial", "Nat.descFactorial"]),
+    ("206-clog.md", ["Nat.clog"]),
+    ("complex-of-int.rs", ["Rat.ofInt"]),
+    ("irrational-creal-sqrt.rs", ["CReal.sqrt"]),
+    ("gcd-comm.rs", ["Nat.gcd_comm"]),
+]
+
+FIXTURE_DIR = ROOT / "scripts" / "tests" / "fixtures" / "absence-stale-claims"
+
+
+class StaleClaimRegression(Harness):
+    """Every declaration of the 8 known-stale claims is still attributed."""
+
+    def _stage(self) -> "cac.Authority":
+        names = sorted({n for _, decls in STALE_FIXTURES for n in decls})
+        for stem, _ in STALE_FIXTURES:
+            src = FIXTURE_DIR / stem
+            rel = f"docs/{stem}" if stem.endswith(".md") else f"crates/a/src/{stem}"
+            self.write(rel, src.read_text())
+        return cac.parse_projection(projection(names + AUTHORITY_NAMES), 1)
+
+    def test_all_eleven_declarations_are_still_attributed_to_their_claim(
+        self,
+    ) -> None:
+        authority = self._stage()
+        _, _, sites, errors, _ = cac.scan(self.root)
+        self.assertEqual(errors, [])
+        missed = []
+        for stem, decls in STALE_FIXTURES:
+            rel = f"docs/{stem}" if stem.endswith(".md") else f"crates/a/src/{stem}"
+            attributed = {n for s in sites if s.path == rel for n in s.names(authority)}
+            for decl in decls:
+                if decl not in attributed:
+                    missed.append(f"{rel}: {decl}")
+        self.assertEqual(
+            missed,
+            [],
+            "the narrowed matcher stopped attributing a known-stale claim to "
+            "its subject -- that is a weakening, not an improvement:\n"
+            + "\n".join(f"    {m}" for m in missed),
+        )
+
+    def test_the_fixture_corpus_is_not_silently_empty(self) -> None:
+        """A regression suite whose fixtures vanished would pass vacuously."""
+        self.assertTrue(FIXTURE_DIR.is_dir(), f"{FIXTURE_DIR} is gone")
+        present = sorted(p.name for p in FIXTURE_DIR.iterdir() if p.is_file())
+        self.assertEqual(present, sorted(stem for stem, _ in STALE_FIXTURES))
+        self.assertEqual(sum(len(d) for _, d in STALE_FIXTURES), 11)
+
+    def test_the_stale_claims_would_have_been_CAUGHT_end_to_end(self) -> None:
+        """Restore the stale text, and the gate goes red at a zero budget.
+
+        Attribution alone is not the finding -- the gate has to FAIL. Only the
+        `133-alternating` fixture carried a marker at that commit, so seven of
+        the eight are bare and the budget guard fires on them.
+        """
+        names = sorted({n for _, decls in STALE_FIXTURES for n in decls})
+        self.seed_baseline_claim()
+        self._stage()
+        status, out = self.run_gate(
+            census_path=self.census(bare_named_claim_budget=0),
+            projection_text=projection(names + AUTHORITY_NAMES),
+        )
+        self.assertEqual(status, 1, self.quoted(out))
+        for stem, _ in STALE_FIXTURES:
+            if stem == "133-alternating.md":
+                continue  # already carried a `was-absent:` marker at that commit
+            rel = f"docs/{stem}" if stem.endswith(".md") else f"crates/a/src/{stem}"
+            self.assertIn(rel, out, self.quoted(out))
 
 
 if __name__ == "__main__":

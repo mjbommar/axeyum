@@ -3920,9 +3920,43 @@ SUITES["absence-claims"] = (
             "            quoted += 0",
         ),
         (
+            # A marker attaches to its own BLOCK. Gathering names file-wide
+            # would silence a claim a paragraph away that the marker never
+            # answered -- the exact defect the 133-ledger-uc.md stale claim
+            # had in reverse (a correct marker one blank line too far).
             "a marker attaches to its own block",
-            "            annotated = any(MARKER_RE.search(line) for line in block)",
-            "            annotated = True",
+            "            for line in block:\n                for match in MARKER_RE.finditer(line):",
+            "            for line in lines:\n                for match in MARKER_RE.finditer(line):",
+        ),
+        (
+            "G21 a claim's subjects are the names in its OWN unit",
+            "    for piece in SENTENCE_SPLIT_RE.split(text):",
+            "    for piece in [text]:",
+        ),
+        (
+            "G22 a colon does not end a claim unit",
+            'SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\\s")',
+            'SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?:;])\\s")',
+        ),
+        (
+            "G23 a table row / list item is its own claim unit",
+            'RECORD_MD_RE = re.compile(r"^\\s*(?:\\||[-*+]\\s|\\d+[.)]\\s)")',
+            'RECORD_MD_RE = re.compile(r"(?!x)x")',
+        ),
+        (
+            "G23 a wrapped item's continuation lines stay with it",
+            "        if chunk and record_re.match(line):",
+            "        if chunk:",
+        ),
+        (
+            "G24 a marker only silences a claim it NAMES",
+            "                annotated = exact_hit or normalized_hit",
+            "                annotated = bool(marker_names)",
+        ),
+        (
+            "G24 the marker match falls back to the normalized spelling",
+            "                annotated = exact_hit or normalized_hit",
+            "                annotated = exact_hit",
         ),
         (
             "--update-budget reports that the number moved",
