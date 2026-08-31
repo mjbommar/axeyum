@@ -7,7 +7,7 @@
   ],
   "description": "Facts with epistemic_status=open and external_status=proved: settled in the wider literature, not yet established here (ADR-0601 SS3). Never edit by hand -- regenerate with `python3 scripts/gen-import-backlog.py`.",
   "ordering": "dependency_ready rows before blocked ones; within that, curriculum_node-mapped rows before unmapped ones, ordered by (curriculum_layer, curriculum_node); ties (and the whole unmapped population) broken by fact id ascending. See docs/autogenesis/263-import-backlog-artifact.md.",
-  "count": 147,
+  "count": 164,
   "rows": [
     {
       "id": "F:fol-validity-undecidable",
@@ -235,44 +235,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-int-dvd-gcd-mul-gcd-iff-dvd-mul-8ea752a5",
-      "statement": "The proposition declared as `Int.dvd_gcd_mul_gcd_iff_dvd_mul` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-int-dvd-gcd-mul-iff-dvd-mul-12f61b99",
-      "statement": "The proposition declared as `Int.dvd_gcd_mul_iff_dvd_mul` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-int-dvd-mul-3a7b94cd",
-      "statement": "The proposition declared as `Int.dvd_mul` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
       "id": "F:ml430-int-dvd-mul-emod-add-of-dvd-mul-add-8a4f82e3",
       "statement": "The proposition declared as `Int.dvd_mul_emod_add_of_dvd_mul_add` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-int-dvd-mul-gcd-iff-dvd-mul-22d6488e",
-      "statement": "The proposition declared as `Int.dvd_mul_gcd_iff_dvd_mul` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -291,6 +255,15 @@
     {
       "id": "F:ml430-int-dvd-of-mul-dvd-c09d49d1",
       "statement": "The proposition declared as `Int.dvd_of_mul_dvd` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-int-emod-eq-sub-self-emod-8ceed103",
+      "statement": "The proposition declared as `Int.emod_eq_sub_self_emod` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -487,6 +460,15 @@
       "curriculum_title": null
     },
     {
+      "id": "F:ml430-int-lt-or-eq-of-le-28b5d4e8",
+      "statement": "The proposition declared as `Int.lt_or_eq_of_le` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
       "id": "F:ml430-int-lt-tonat-18a10163",
       "statement": "The proposition declared as `Int.lt_toNat` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
@@ -496,17 +478,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-int-modeq-cancel-left-div-gcd-b2d407e8",
-      "statement": "The proposition declared as `Int.ModEq.cancel_left_div_gcd` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-int-modeq-cancel-right-div-gcd-00cd73fa",
-      "statement": "The proposition declared as `Int.ModEq.cancel_right_div_gcd` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-int-mul-ediv-le-mul-ediv-assoc-114d9ea9",
+      "statement": "The proposition declared as `Int.mul_ediv_le_mul_ediv_assoc` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -739,8 +712,71 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-add-one-lt-of-even-3464b374",
-      "statement": "The proposition declared as `Nat.add_one_lt_of_even` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-int-not-le-eq-a1aa34a4",
+      "statement": "The proposition declared as `Int.not_le_eq` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-int-not-lt-eq-120ae6c2",
+      "statement": "The proposition declared as `Int.not_lt_eq` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-int-ofnat-eq-coe-f82fca8a",
+      "statement": "The proposition declared as `Int.ofNat_eq_coe` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-int-ofnat-eq-natcast-001cc3e2",
+      "statement": "The proposition declared as `Int.ofNat_eq_natCast` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-int-ofnat-one-8ef5badc",
+      "statement": "The proposition declared as `Int.ofNat_one` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-int-ofnat-two-20e97f9e",
+      "statement": "The proposition declared as `Int.ofNat_two` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-int-ofnat-zero-0d364f22",
+      "statement": "The proposition declared as `Int.ofNat_zero` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-add-mul-lt-mul-of-lt-of-lt-4d1d3fbc",
+      "statement": "The proposition declared as `Nat.add_mul_lt_mul_of_lt_of_lt` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -793,15 +829,6 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-clog-antitone-left-44a87771",
-      "statement": "The proposition declared as `Nat.clog_antitone_left` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
       "id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
       "statement": "The proposition declared as `Nat.coprime_of_lt_minFac` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
@@ -829,26 +856,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-div-two-mul-two-add-one-of-odd-9e3e8b82",
-      "statement": "The proposition declared as `Nat.div_two_mul_two_add_one_of_odd` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-div-two-mul-two-of-even-9ccc5340",
-      "statement": "The proposition declared as `Nat.div_two_mul_two_of_even` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-dvd-add-iff-left-332cbe04",
-      "statement": "The proposition declared as `Nat.dvd_add_iff_left` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-nat-div-right-comm-ab79d5f8",
+      "statement": "The proposition declared as `Nat.div_right_comm` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -883,26 +892,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-dvd-mul-ebd102e2",
-      "statement": "The proposition declared as `Nat.dvd_mul` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
       "id": "F:ml430-nat-dvd-right-iff-eq-4ce70bc6",
       "statement": "The proposition declared as `Nat.dvd_right_iff_eq` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
-      "statement": "The proposition declared as `Nat.eq_or_eq_of_totient_eq_totient` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -919,8 +910,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-even-add-31386639",
-      "statement": "The proposition declared as `Nat.even_add` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-nat-exists-not-and-succ-of-not-zero-of-exists-07952ae8",
+      "statement": "The proposition declared as `Nat.exists_not_and_succ_of_not_zero_of_exists` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -928,8 +919,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-even-add-39e3bc07",
-      "statement": "The proposition declared as `Nat.even_add'` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-nat-exists-pow-eq-iff-b8198130",
+      "statement": "The proposition declared as `Nat.exists_pow_eq_iff'` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -937,26 +928,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-even-add-one-15b5cb18",
-      "statement": "The proposition declared as `Nat.even_add_one` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-even-div-395c6b5e",
-      "statement": "The proposition declared as `Nat.even_div` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-even-iff-024826e9",
-      "statement": "The proposition declared as `Nat.even_iff` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-nat-exists-pow-eq-iff-f581ca30",
+      "statement": "The proposition declared as `Nat.exists_pow_eq_iff` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -966,6 +939,24 @@
     {
       "id": "F:ml430-nat-fastfib-eq-cde11774",
       "statement": "The proposition declared as `Nat.fastFib_eq` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-fermat-primefactors-one-lt-58343c6f",
+      "statement": "The proposition declared as `Nat.fermat_primeFactors_one_lt` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-forall-ne-zero-iff-37819136",
+      "statement": "The proposition declared as `Nat.forall_ne_zero_iff` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -1009,11 +1000,36 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-log2-eq-log-two-28085932",
-      "statement": "The proposition declared as `Nat.log2_eq_log_two` in the pinned Mathlib v4.30 source.",
-      "depends_on": [
-        "F:ml430-nat-log-zero-right-8ea186db"
-      ],
+      "id": "F:ml430-nat-le-nth-of-lt-nth-succ-6d69133f",
+      "statement": "The proposition declared as `Nat.le_nth_of_lt_nth_succ` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-le-nthroot-iff-82e243be",
+      "statement": "The proposition declared as `Nat.le_nthRoot_iff` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-le-succ-iff-eq-or-le-0cd6331b",
+      "statement": "The proposition declared as `Nat.le_succ_iff_eq_or_le` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-le-zero-eq-336b502d",
+      "statement": "The proposition declared as `Nat.le_zero_eq` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
       "curriculum_layer": null,
@@ -1022,6 +1038,15 @@
     {
       "id": "F:ml430-nat-lt-of-testbit-72f64ab8",
       "statement": "The proposition declared as `Nat.lt_of_testBit` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-lt-pow-nthroot-add-one-7442ac90",
+      "statement": "The proposition declared as `Nat.lt_pow_nthRoot_add_one` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -1038,35 +1063,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-modeq-add-le-of-lt-c774015b",
-      "statement": "The proposition declared as `Nat.ModEq.add_le_of_lt` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-modeq-cancel-left-div-gcd-57ef8287",
-      "statement": "The proposition declared as `Nat.ModEq.cancel_left_div_gcd` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-modeq-cancel-left-div-gcd-cfca1225",
-      "statement": "The proposition declared as `Nat.ModEq.cancel_left_div_gcd'` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-modeq-cancel-right-div-gcd-22a4f40d",
-      "statement": "The proposition declared as `Nat.ModEq.cancel_right_div_gcd` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-nat-mul-add-lt-mul-of-lt-of-lt-3567e87f",
+      "statement": "The proposition declared as `Nat.mul_add_lt_mul_of_lt_of_lt` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -1083,6 +1081,24 @@
       "curriculum_title": null
     },
     {
+      "id": "F:ml430-nat-nat-repr-len-aux-e53093d1",
+      "statement": "The proposition declared as `Nat.nat_repr_len_aux` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-not-exists-sq-3678b0c0",
+      "statement": "The proposition declared as `Nat.not_exists_sq` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
       "id": "F:ml430-nat-not-two-dvd-bit1-d5b4bf00",
       "statement": "The proposition declared as `Nat.not_two_dvd_bit1` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
@@ -1092,8 +1108,8 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-odd-of-mul-left-2c6c2553",
-      "statement": "The proposition declared as `Nat.Odd.of_mul_left` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-nat-nth-add-a9dfaba9",
+      "statement": "The proposition declared as `Nat.nth_add` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -1101,8 +1117,125 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-odd-of-mul-right-fe6d20ff",
-      "statement": "The proposition declared as `Nat.Odd.of_mul_right` in the pinned Mathlib v4.30 source.",
+      "id": "F:ml430-nat-nth-add-one-3fc46c88",
+      "statement": "The proposition declared as `Nat.nth_add_one` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nth-eq-zero-mono-2dbbfdd5",
+      "statement": "The proposition declared as `Nat.nth_eq_zero_mono` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nth-false-969b255e",
+      "statement": "The proposition declared as `Nat.nth_false` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nth-mem-anti-db30d674",
+      "statement": "The proposition declared as `Nat.nth_mem_anti` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nth-mem-of-ne-zero-c1d86fab",
+      "statement": "The proposition declared as `Nat.nth_mem_of_ne_zero` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nth-ne-zero-anti-aab2a2dc",
+      "statement": "The proposition declared as `Nat.nth_ne_zero_anti` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nth-of-forall-eef6b587",
+      "statement": "The proposition declared as `Nat.nth_of_forall` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nth-true-8ba7e1e1",
+      "statement": "The proposition declared as `Nat.nth_true` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nthroot-eq-of-le-of-lt-55ab78a4",
+      "statement": "The proposition declared as `Nat.nthRoot_eq_of_le_of_lt` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nthroot-lt-iff-a71b6995",
+      "statement": "The proposition declared as `Nat.nthRoot_lt_iff` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nthroot-lt-pow-go-succ-aux-7ebd25d8",
+      "statement": "The proposition declared as `Nat.nthRoot.lt_pow_go_succ_aux` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nthroot-one-right-9744d156",
+      "statement": "The proposition declared as `Nat.nthRoot_one_right` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nthroot-pow-02612a4b",
+      "statement": "The proposition declared as `Nat.nthRoot_pow` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-nthroot-zero-left-8560aafb",
+      "statement": "The proposition declared as `Nat.nthRoot_zero_left` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -1112,6 +1245,33 @@
     {
       "id": "F:ml430-nat-prime-sum-four-squares-a60fd297",
       "statement": "The proposition declared as `Nat.Prime.sum_four_squares` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-simproc-le-add-le-bc6f7c5c",
+      "statement": "The proposition declared as `Nat.Simproc.le_add_le` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-size-bit-c601dbf0",
+      "statement": "The proposition declared as `Nat.size_bit` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-size-le-size-c4b98f53",
+      "statement": "The proposition declared as `Nat.size_le_size` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -1148,6 +1308,15 @@
     {
       "id": "F:ml430-nat-sqrt-lt-4909537f",
       "statement": "The proposition declared as `Nat.sqrt_lt` in the pinned Mathlib v4.30 source.",
+      "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:ml430-nat-squarefree-ext-iff-7218327d",
+      "statement": "The proposition declared as `Nat.Squarefree.ext_iff` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -1193,24 +1362,6 @@
     {
       "id": "F:ml430-nat-testbit-lor-7644e067",
       "statement": "The proposition declared as `Nat.testBit_lor` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
-      "statement": "The proposition declared as `Nat.totient_dvd_of_dvd` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-totient-gcd-mul-totient-mul-2e1d13c7",
-      "statement": "The proposition declared as `Nat.totient_gcd_mul_totient_mul` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,
