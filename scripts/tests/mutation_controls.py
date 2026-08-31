@@ -4907,6 +4907,91 @@ SUITES["curriculum-bucket-cohesion"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# `prelude-inventory-ownership` -- the gate that reads a prelude's inventory
+# from the AUTHORITY rather than from a namespace prefix.
+#
+# Every "every X is checked and axiom-free" test in the kernel was fixed once
+# already (the `creal` array that found twelve unchecked declarations), and each
+# fix filters `kernel.environment()` by a NAMESPACE PREFIX that is itself a
+# hand-written literal. Measured 2026-08-31, 27 introduced declarations sit
+# outside their introducing prelude's filter and seven are reached by no
+# completeness guard at all.
+#
+# The mutations below each remove one guard of the replacement gate. The suite
+# they run is the cheap control module (`logic` + `nat` only, ~5 s); the gate
+# itself builds ten preludes and takes ~180 s, which no mutation loop can pay.
+# --------------------------------------------------------------------------
+
+SUITES["prelude-inventory-ownership"] = (
+    "crates/axeyum-lean-kernel/src/cross_prelude_collision_tests.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "cross_prelude_collision_tests::inventory_control",
+        ),
+        "prelude-inventory-ownership",
+    ),
+    [
+        # A declaration admitted with NO checked proof body, introduced by a
+        # prelude `ASSUMED_BY` does not license. Every prelude but `axreal`
+        # measures zero and that is the headline claim.
+        (
+            "an unlicensed prelude introducing an axiom is reported",
+            "                    if allowed == 0 {",
+            "                    if false {",
+        ),
+        # Exact in both directions: an axiom LEAVING `axreal` changes the
+        # trusted base as much as one arriving, and `>=` would not see it.
+        (
+            "the licensed trusted count is exact, not a ceiling",
+            "        if trusted != allowed {",
+            "        if false {",
+        ),
+        # A proof reaching something assumed.
+        (
+            "a declaration resting on an axiom is reported",
+            "                        && !footprint.is_empty()",
+            "                        && false",
+        ),
+        # The footprints are computed only when the environment carries
+        # something trusted -- emptiness follows by construction otherwise.
+        # Switching that off makes the guard above unreachable, which is a
+        # DIFFERENT way for the same finding to disappear.
+        (
+            "footprints are measured once anything is assumed",
+            "        let footprints = if any_trusted {",
+            "        let footprints = if false {",
+        ),
+        # The record that licenses skipping those footprints. If a prelude
+        # holding an axiom were still recorded as carrying nothing trusted,
+        # the by-construction argument would be applied where it is false.
+        (
+            "an environment carrying nothing trusted is recorded as such",
+            "        if !group.any_trusted() {",
+            "        if false {",
+        ),
+        # Exhaustiveness of the ownership partition. A declaration in some
+        # prelude's environment that no prelude on its dependency chain
+        # introduces was inspected under no owner, while the gate's `checked`
+        # count stayed large and reassuring.
+        (
+            "a declaration owned by no prelude is reported",
+            "                        report.unattributed.push(format!(\"{label}: {name}\"));",
+            "                        let _ = format!(\"{label}: {name}\");",
+        ),
+        (
+            "a declaration owned by two preludes on one chain is reported",
+            "                _ => report\n                    .doubly_attributed\n"
+            "                    .push(format!(\"{label}: {name} introduced by {owners:?}\")),",
+            "                _ => {\n                    let _ = &owners;\n                }",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
