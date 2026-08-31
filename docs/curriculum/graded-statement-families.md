@@ -1,6 +1,8 @@
 # Graded statement families: MVT, LUB, Taylor remainder, FTA
 
-Status: measurement note (2026-08-27)
+Status: measurement note (2026-08-27), §2 AMENDED 2026-08-31 (LUB's row 2 is
+landed — `CReal.lub_decides_em`, ADR-1010; the superseded absence assessment is
+quoted in place rather than deleted)
 
 [ADR-0603](../research/09-decisions/adr-0603-classical-theorems-land-as-graded-statement-families.md)
 decided that a classical theorem lands as a four-row family — constructive
@@ -67,17 +69,38 @@ exists).
 
 | Row | Status |
 |---|---|
-| **1. Constructive general form** | **Bishop completeness**, `crates/axeyum-lean-kernel/src/creal/completeness.rs` (488 lines): every `RegularSeq` has a constructed limit — `CReal.limitSeq` (the diagonal `seq (X (2n+1)) (2n+1)`), `CReal.limitSeq_regular`, `CReal.limit`, `CReal.limit_dist`. All confirmed present via `prelude_theorem_inventory`/source read; the module doc states this is "constructed rather than merely asserted." |
-| **2. Boundary refutation** | **Pure absence — no refutation exists anywhere in the repository.** `grep -rliE "least.upper.bound\|\blub\b\|supremum" crates/axeyum-lean-kernel/src/` matches only `arith_model.rs` and its test file, and both mentions are about `AxReal` **not carrying** a completeness axiom (a *design* fact, not a counterexample). No function is exhibited whose classical supremum is not constructively computable (the standard Brouwerian move — a bounded set built from an undecidable predicate whose sup would decide it — is not in this codebase under any name I could find: `specker`, `no.computable.supremum`, `LPO` all miss). `spivak.md`'s existing Ch. 8 row ("classical LUB unavailable") does not overclaim — it never says "refuted" — but this note makes explicit what was implicit: **the unavailability is asserted, not proved.** Building row 2 would need an actual constructive counterexample (e.g. a bounded, inhabited, located set with no computable least upper bound), which is standard Bishop-style material but is not built here. |
+| **1. Constructive general form** | **Bishop completeness**, `crates/axeyum-lean-kernel/src/creal/completeness.rs` (488 lines): every `RegularSeq` has a constructed limit — `CReal.limitSeq` (the diagonal `seq (X (2n+1)) (2n+1)`), `CReal.limitSeq_regular`, `CReal.limit`, `CReal.limit_dist`. All confirmed present via `prelude_theorem_inventory`/source read; the module doc states this is "constructed rather than merely asserted." **Updated 2026-08-31**: `CReal.supOn` landed 2026-08-30, after this note was written, together with `CReal.supOn_ub` (upper bound) and `CReal.supOn_approx_lub` (the approximation property) in `creal/sup_laws.rs`. So row 1 now has two constructions, not one: the limit of a **regular sequence** (which carries its own rate) and the supremum of a **uniformly continuous function on a compact interval** (where the modulus supplies the locatedness). Row 2 below is exactly the statement that generalises past both. |
+| **2. Boundary refutation** | **CLOSED 2026-08-31 — this row was the one clean absence in this note and it is now a kernel-checked theorem, `CReal.lub_decides_em` (`crates/axeyum-lean-kernel/src/creal/lub_boundary.rs`, ADR-1010).** The counterexample family is a set carved out by an arbitrary proposition, which is what Spivak's P13 actually quantifies over: `CReal.lubSet A := fun x => Or (le x zero) (And A (le x one))`, i.e. `(−∞, 0] ∪ ((−∞, 1] if A)`. Both of classical LUB's hypotheses about it are **proved, not asserted** — `CReal.lubSet_inhabited` (`∀ A, lubSet A zero`, an exhibited witness rather than an `∃`) and `CReal.lubSet_bounded` (`∀ A x, lubSet A x → le x one`, an explicit bound rather than an `∃`) — so the family is machine-checked to lie inside LUB's hypothesis class. Given a supremum in **Bishop's** sense (an upper bound plus the approximation property, which is the clause `supOn_approx_lub` proves for the located case; the classical leastness clause is deliberately NOT assumed, because it yields only `¬¬A` and the reduction through it would be circular), one `lt_cotrans` call on `zero < one` at `z := s` gives `Or A (Not A)` for an **arbitrary `Prop`**. Statement read from `kernel_declaration_projection`'s `render_lean` column, not from prose: `(x0 : Prop) → (x1 : CReal) → ((x2 : CReal) → CReal.lubSet x0 x2 → CReal.le x2 x1) → ((x3 : CReal) → CReal.lt x3 x1 → Exists.{1} CReal (fun x5 => And (CReal.lubSet x0 x5) (CReal.lt x3 x5))) → Or x0 (Not x0)`; all four declarations carry footprint **0**. **The principle is UNRESTRICTED EXCLUDED MIDDLE, which is strictly stronger than the analytic LLPO IVT's and EVT's rows land on** — LLPO is consistent with Bishop's constructive mathematics and `em` is not, and this kernel contains only `Decidable.em` (which takes a `Decidable` instance) plus the four conditional bridges `em_of_dne`/`dne_of_em`/`em_of_peirce`/`peirce_of_em`, which take unrestricted `em` as a hypothesis and never assert it (ADR-0716 §2 measures that absence with controls). Non-vacuity is discharged as ADR-0603 Amendment 2 requires: at `A := True` BOTH hypotheses are built and `Kernel::infer` accepts the instance (`creal/lub_boundary_tests.rs`), with the conclusion pinned verbatim against an independently built `Or True (Not True)` and a negative control differing in one small term. Honest scope, unchanged from the sibling rows: this does not prove `em` FALSE — `em` is consistent here, so the classical conclusion is *unprovable* rather than refutable, and it is falsifiable in Amendment 2's sense (land an unrestricted `em` and this becomes a route to LUB rather than a boundary). Registered as `F:creal-lub-decides-em`. |
 | **3. Exact form on the decidable fragment** | **`extremum::polynomial_extremum` computes exactly this for a polynomial on a closed interval.** For rational `p` on `[a,b]`, the supremum of `p`'s range *is* the maximum, and it is attained at a nameable algebraic point — decidable, exact, with an independent re-derivation checker (`verify_extremum_certificate`). This is the same file EVT's row 3 uses (ADR-0603 already labels it EVT row 3); it doubles as LUB's row 3 for the polynomial-range special case (attained sup ⇒ sup exists and is nameable). It does **not** generalize to an arbitrary bounded set of algebraic numbers (only ranges of a single polynomial over an interval), so it is a genuine but narrow row 3, not "LUB solved for the algebraic fragment" in full generality. |
 | **4. Labeled import** | **Does not exist, and cannot attach to anything yet.** Confirmed via `arith_model.rs`, `docs/mathematics-2026-08/diary-real-keystone.md:26-30`, and ADR-0512 §(consequences): `AxReal` declares **no completeness/supremum axiom at all** — "There is no completeness (supremum) axiom, no Archimedean axiom, no density axiom — so nothing in it distinguishes ℝ from ℚ." A classical-LUB labeled import would need a *new* axiom added to (or a new package alongside) `AxReal` first; there is currently nothing to label. |
 
-**Verdict**: row 1 is solid and well-documented (Bishop completeness). Row 2
-is a **clean absence** — this is the single clearest case in this note of an
-unavailability that is asserted in prose but never proved with a
-counterexample, exactly the "hole in the Pareto argument" the task asked to
-surface. Row 3 exists but only for the polynomial-range special case, reusing
-EVT's own row 3 file. Row 4 has no target axiom to import against.
+**Verdict (rewritten 2026-08-31; the original is quoted below because the gap
+it named is what this row now closes)**: row 1 is solid and has grown a second
+construction (Bishop completeness, plus `CReal.supOn` and its two
+characterisation laws, landed 2026-08-30). **Row 2 is landed and is the
+strongest boundary in this note**: `CReal.lub_decides_em` extracts unrestricted
+excluded middle, where the IVT and EVT rows extract analytic LLPO — a
+difference that matters, since LLPO is consistent with BISH and `em` is not.
+Row 3 exists but only for the polynomial-range special case, reusing EVT's own
+row 3 file, and is CAS-internal (no kernel reconstruction). Row 4 still has no
+target axiom to import against.
+
+> **Superseded, 2026-08-27**: "Row 2 is a **clean absence** — this is the
+> single clearest case in this note of an unavailability that is asserted in
+> prose but never proved with a counterexample, exactly the 'hole in the Pareto
+> argument' the task asked to surface."
+
+That assessment was accurate when written and is what the work recorded here
+was aimed at. It is kept rather than deleted for the reason ADR-0603
+Amendment 4 exists: an absence claim that quietly disappears once it is closed
+leaves no way to check that it was ever true, and this repository's own
+retrospectives record stale obstacle text costing more than the obstacles.
+One thing the original got wrong is worth naming, because it shaped the sizing:
+it looked for "a bounded, inhabited, **located** set with no computable least
+upper bound". A located set is the wrong target — locatedness is exactly the
+data that makes `supOn` work — and the reduction went through in four
+declarations, using no primitive that was not already present, once the family
+was allowed to be un-located.
 
 ---
 

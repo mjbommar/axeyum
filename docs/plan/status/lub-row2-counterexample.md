@@ -1,61 +1,97 @@
-# Lane: lub-row2-counterexample
+# Lane: lub-row2-counterexample — the least-upper-bound boundary, proved
 
-Status: IN PROGRESS (early commit — plan only, nothing built yet)
+<!-- plan-section: lane-status -->
 
-## Assignment
+Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
 
-`docs/curriculum/graded-statement-families.md` §2 records LUB/completeness
-(Spivak ch. 8) row 2 — the boundary refutation — as **pure absence**: "the
-unavailability is asserted, not proved." Close it, or measure precisely why
-it cannot be closed.
+Outcome 1 of the three the brief listed: **a proved implication from a stated
+LUB principle to an omniscience principle**. The principle is *unrestricted
+excluded middle*, not the analytic LLPO the two sibling rows reach.
 
-## What the two existing row-2 results look like (read, 2026-08-31)
+## What was there before
+
+`docs/curriculum/graded-statement-families.md` §2 recorded LUB's row 2 as
+**pure absence** — "the unavailability is asserted, not proved" — the one
+clean absence in that note, and the load-bearing one, since row 2 is the axis
+ADR-0603's dominance argument rests on. An asserted unavailability cannot
+fail, so it is not evidence.
+
+## What the two existing row-2 results look like
 
 Both are first-order implications taking the CLASSICAL CONCLUSION at a
-specific family as a hypothesis and deriving a decision principle:
+specific family as a hypothesis and deriving a decision principle, both with
+their family's hypothesis-class membership proved rather than asserted:
 
-- `CReal.evt_attained_max_decides_sign : forall v c, le zero c -> le c one ->
-  (forall t, le zero t -> le t one -> le (mul t v) (mul c v)) ->
-  Or (le v zero) (le zero v)` — `creal/extreme_value.rs`, family
+- `CReal.evt_attained_max_decides_sign` (`creal/extreme_value.rs`), family
   `CReal.evtLinear v := fun t => mul t v`, plus
-  `evtLinear_uniformly_continuous` proving the family is inside EVT's
-  hypothesis class.
-- `CReal.ivt_exact_root_decides_sign : forall v c, le zero c -> le c one ->
-  Equiv (min c (max (add c (neg one)) v)) zero -> Or (le v zero) (le zero v)`
-  — `creal/ivt_boundary.rs`, family `CReal.ivtPlateau`, plus its three
-  hypothesis-class lemmas.
+  `evtLinear_uniformly_continuous`.
+- `CReal.ivt_exact_root_decides_sign` (`creal/ivt_boundary.rs`), family
+  `CReal.ivtPlateau`, plus its three hypothesis lemmas.
 
-Both land on **analytic LLPO** (`forall v, v <= 0 or 0 <= v`, i.e. the
-`lt_total` `creal/cotransitivity.rs` says is neither assumed nor provable),
-and both carry an "Honest scope" section: the classical conclusion is proved
-AT LEAST AS STRONG as a decision principle this kernel lacks, not proved
-false.
+Both land on `∀ v, Or (le v zero) (le zero v)` — **analytic LLPO**, i.e. the
+`lt_total` `creal/cotransitivity.rs` says is neither assumed nor provable.
+Both carry an "Honest scope" section: the classical conclusion is proved at
+least as strong as a principle this kernel lacks, not proved false.
 
-## Planned statement (LUB's own row 2)
+## What landed
 
-Spivak ch. 8's LUB quantifies over an ARBITRARY inhabited bounded-above set,
-so the faithful family is a set given by an arbitrary predicate:
+`crates/axeyum-lean-kernel/src/creal/lub_boundary.rs` — four declarations, all
+**first-attempt kernel accepts**, all footprint **0** (read from
+`kernel_declaration_projection`, not from prose):
 
-```text
-CReal.lubSet A := fun x => Or (le x zero) (And A (le x one))
--- i.e. {x <= 0} union ({x <= 1} if A)
-```
+| declaration | type (`render_lean` column, verbatim) | kind |
+|---|---|---|
+| `CReal.lubSet` | `(x0 : Prop) -> ((x1 : CReal) -> Prop)` | definition |
+| `CReal.lubSet_inhabited` | `(x0 : Prop) -> CReal.lubSet x0 CReal.zero` | theorem |
+| `CReal.lubSet_bounded` | `(x0 : Prop) -> ((x1 : CReal) -> ((x2 : CReal.lubSet x0 x1) -> CReal.le x1 CReal.one))` | theorem |
+| `CReal.lub_decides_em` | `(x0 : Prop) -> ((x1 : CReal) -> ((x2 : ((x2 : CReal) -> ((x3 : CReal.lubSet x0 x2) -> CReal.le x2 x1))) -> ((x3 : ((x3 : CReal) -> ((x4 : CReal.lt x3 x1) -> Exists.{1} CReal (fun (x5 : CReal) => And (CReal.lubSet x0 x5) (CReal.lt x3 x5))))) -> Or x0 (Not x0))))` | theorem |
 
-inhabited at `zero`, bounded above by `one`. Given a supremum `s` with the
-upper-bound law and the APPROXIMATION law (`forall t < s, exists x in S,
-t < x` — the "least" half in the form the constructive reals need),
-`lt_cotrans` on `zero_lt_one` at `z := s` gives `0 < s or s < 1`, and each
-branch decides `A`:
+`CReal.lubSet A := fun x => Or (le x zero) (And A (le x one))` — the set
+`(−∞, 0] ∪ ((−∞, 1] if A)`. Spivak's P13 quantifies over an ARBITRARY
+inhabited bounded-above set, so a set carved out by an arbitrary `Prop` is
+faithful to the classical statement rather than a strawman.
 
-- `0 < s` -> approximation at `t := 0` -> some `x` in `S` with `0 < x` -> the
-  `x <= 0` disjunct is absurd -> `A`.
-- `s < 1` -> if `A` then `1` is in `S` so `1 <= s`, contradiction -> `Not A`.
+Why the conclusion is stronger than the siblings': `Or A (Not A)` for an
+arbitrary `Prop` is unrestricted excluded middle. This kernel has only
+`Decidable.em` (which takes a `Decidable` instance) and the four conditional
+bridges that take unrestricted `em` as a HYPOTHESIS. LLPO is consistent with
+BISH; `em` is not.
 
-Conclusion `Or A (Not A)` for an ARBITRARY `A : Prop` — **unrestricted
-excluded middle**, which ADR-0716 §2 measures as absent from this kernel
-(only `Decidable.em`, which takes a `Decidable` instance). That is a
-STRICTLY STRONGER boundary than IVT's/EVT's LLPO.
+Why Bishop's supremum and not the classical one: the classical leastness
+clause yields only `¬¬A` here, and `¬¬A → A` is itself the principle at issue,
+so the reduction through it would be circular. The approximation property is
+also exactly the clause `CReal.supOn_approx_lub` proves for the located case,
+so row 2 refutes precisely the generalisation row 1 stops short of.
 
-## Next
+## Verification
 
-Build it in a new `crates/axeyum-lean-kernel/src/creal/lub_boundary.rs`.
+- `creal_prelude_builds` — passes. Cost measured by toggling the build step in
+  this worktree: **120.6 s** stubbed out against **130.5 s / 134.0 s** live
+  (two runs), so ~+11 s / 9%. Not a multiple.
+- `creal::lub_boundary_tests` — **4 passed**, in a new file rather than in
+  `creal_tests.rs` (the append point every concurrent `creal` lane collides
+  on). The one that matters is the ADR-0603 Amendment 2 non-vacuity control:
+  at `A := True` BOTH supremum hypotheses are discharged and `Kernel::infer`
+  accepts the instance, conclusion pinned verbatim against an independently
+  built `Or True (Not True)`.
+- `creal::` full sweep — see the landed-changes row below.
+- `kernel_declaration_projection --require-declaration` discriminates:
+  verified by asking for `CReal.lubSet_nonexistent_control`, which exits 1.
+- `python3 scripts/validate-facts.py` — 2365 facts, 0 errors.
+- `python3 scripts/check-settled-fact-statements.py` — PASS.
+- `python3 scripts/check-autogenesis-holdout-isolation.py` — PASS before and
+  after, `held_out=146 settled=0 references=0` both times. Nothing under
+  `artifacts/autogenesis/` was touched.
+
+## One thing worth carrying forward
+
+The superseded §2 assessment looked for "a bounded, inhabited, **located** set
+with no computable least upper bound". Locatedness is the wrong target — it is
+exactly the data that makes `supOn` work. Dropping it is what made the
+reduction four declarations long, using no primitive that was not already
+present.
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-31 | `a6ccca023` | `creal/lub_boundary.rs`: `CReal.lubSet`, `lubSet_inhabited`, `lubSet_bounded`, `lub_decides_em` — ADR-0603 row 2 for the least upper bound property |
+| 2026-08-31 | `29c593d2a` | `creal/lub_boundary_tests.rs`: non-vacuity discharge at `A := True`, negative control, statement pin, footprint check |
