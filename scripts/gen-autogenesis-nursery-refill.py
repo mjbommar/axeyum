@@ -588,6 +588,102 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
         "Init.SimpLemmas", "Init.Data.Nat.Simproc",
         "Mathlib.Algebra.Order.Group.Nat", "Mathlib.Order.Monotone.Basic",
         "Mathlib.Data.Nat.Sqrt", "Mathlib.Data.Nat.Digits.Defs"),
+    # --- draw 11, 2026-08-30 (ADR-0925) ---------------------------------------
+    # ADR-0910 declared `Nat.nthRoot`/`Squarefree` construction-only, predicting
+    # this would open exactly two new held-out-safe un-owned modules once the
+    # environment snapshot is refreshed. Re-screened here after a fresh release
+    # build: both DO open (`Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas`,
+    # 13 rows R9 0/10; `Mathlib.Data.Nat.Squarefree`, 11 rows R9 0/10), exactly
+    # as measured. But R11 -- the adjacency screen, landed as CODE only today
+    # per its own module docstring -- REFUSES `Squarefree` for held-out: 6 of
+    # its drawn 10 rows are about `Nat.Coprime`/`Nat.Prime`/`Nat.gcd`, over the
+    # vocabulary allowance of 5. This is a stricter, mechanised version of the
+    # SAME judgment draw 8's note already made by hand
+    # (docs/plan/notes/383-nursery-draw-8.md, "Eight of ten mention Nat.Prime,
+    # Nat.Coprime or Nat.gcd... a different thing"). ADR-0910 did not run this
+    # simulation, so this is new information: the two-construction plan alone
+    # does not clear guard(). `Squarefree` is placed in `train` below instead
+    # (R11 does not screen non-held-out partitions), which is not a loss --
+    # ADR-0653's contamination-is-a-feature rule applies outside held-out.
+    #
+    # The substitute second held-out family is a below-floor combination in
+    # the shape ADR-0900 already found and left unresolved: `Mathlib.Data.Nat.
+    # {Size,Bits}` combined (12 rows, R9 clean). R11 permits it as a
+    # DISCLOSURE rather than a refusal (topic 0, vocabulary 0/10 -- this
+    # kernel's own extensive `Nat.bit`/`Nat.testBit`/`Nat.bitwise`/`Nat.size`
+    # development shares no TOPIC or VOCABULARY with the drawn statements'
+    # constants, it just shares the SUBJECT). `natural-nth-root` carries the
+    # same kind of disclosure (stems `root`/`nth`/`nthroot` hit `CReal.
+    # ivt_exact_root*`, `Complex.root_of_unity*`, `Nat.nth`/`nthAux` -- all
+    # unrelated mathematics sharing a word, the same false-positive class
+    # `natural-square-root`'s own accepted review names). Both reviewed by
+    # hand and recorded in `holdout-adjacency-review-v1.json` (name-by-name,
+    # not by count) before drawing; see that file for what was compared.
+    #
+    # TWO CAVEATS RECORDED, NOT RESOLVED, per docs/plan/notes/383-nursery-draw-8.md
+    # and this draw's own status note:
+    #   * `Nat.nthRoot_zero_left : forall a, Nat.nthRoot 0 a = 1` is drawn in
+    #     `natural-nth-root`'s first ten and is very likely `Eq.refl` the
+    #     instant ADR-0910's construction exists (its `n = 0` branch returns
+    #     `1` unconditionally, independent of `a`), because the recursion
+    #     branches on the LITERAL-zero first argument and never touches the
+    #     second. `check-holdout-closed-evaluation.py`'s classifier requires a
+    #     binder-free statement and this one has `forall (a : Nat)`, so it is
+    #     invisible to that gate by the gate's own documented design -- this is
+    #     the EXACT example its module docstring uses. Not excluded here
+    #     (no lawful mechanism in this generator's scope removes one row from
+    #     an alphabetically-drawn pool without an ADR-0542 amendment after the
+    #     fact, and amending before a row is even preregistered has no defined
+    #     meaning) -- flagged so a dispatch lane does not read a trivial
+    #     acceptance of this ONE row as evidence of producer capability.
+    #     `Nat.nthRoot_one_right : n.nthRoot 1 = 1` is NOT judged free by the
+    #     same mechanism: `Nat.pow` recurses on its exponent, which is
+    #     symbolic `n` here, so the search does not obviously reduce without
+    #     real content (an argument close to `Nat.one_pow`).
+    #   * `Nat.nthRoot.lt_pow_go_succ_aux` is drawn in the same ten and is an
+    #     honest restatement of MATHLIB'S Newton-iteration auxiliary
+    #     (`b <> 0 -> a < ((a / b^n + n*b)/(n+1) + 1)^(n+1)`), which our
+    #     fuel-bounded linear-search construction has no counterpart to. It
+    #     may be unprovable here for reasons unrelated to genuine mathematical
+    #     difficulty; judge before dispatch, not after.
+    #
+    # A THIRD caveat, measured (not merely reasoned about) after this comment
+    # was first drafted: `scripts/check-holdout-closed-evaluation.py` reports
+    # `verdict=FAIL` against `natural-bit-decode` -- 2 of its drawn 10 rows,
+    # `Nat.bit_false_zero : Nat.bit false 0 = 0` and `Nat.size_one : Nat.size
+    # 1 = 1`, are BINDER-FREE ground equations decided by reduction over
+    # `Nat.bit`/`Nat.size`, which this kernel already declared natively long
+    # before this draw (unrelated to ADR-0910's constructions). Confirmed the
+    # baseline (this file's committed state, no draw-11 families) passes this
+    # gate at `violations=0`, so the 2 violations are introduced by drawing
+    # this family, not inherited.
+    #
+    # An exhaustive substitute search (every below-floor un-owned module not
+    # already excluded above, all pairs and triples, screened for R9 +
+    # closed-evaluation + R11 topic/vocabulary together) found ZERO
+    # alternatives -- reproducing ADR-0900's own conclusion that Bits+Size is
+    # the only mechanically-clean-on-every-OTHER-axis below-floor combination.
+    # `natural-nth-root` alone cannot satisfy R5's two-held-out-family
+    # minimum, so the choice is exactly the one ADR-0695's docstring already
+    # names for this shape: "accept and record the spend, but do not read
+    # closed-eval 0 as nothing is spent" (383-nursery-draw-8.md, written about
+    # `Nat.nthRoot_zero_left`, applies verbatim here). Accepted on that
+    # precedent, same as `fermat-numbers` (3 of 10 closed, drawn before this
+    # checker existed, repaired afterward by ADR-0542 amendment) -- the
+    # difference here is the repair is flagged BEFORE preregistration rather
+    # than discovered after. A future lane may reasonably amend
+    # `Nat.bit_false_zero`/`Nat.size_one` (or the whole family) out of
+    # held-out via ADR-0542 once dispatch reaches them; this lane does not,
+    # per its own generator's rule that amending before a row is even
+    # preregistered has no defined meaning.
+    "natural-nth-root": ("Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas",),
+    "natural-gcd-and-bitwise-basics": (
+        "Mathlib.Data.Int.GCD", "Mathlib.Data.Nat.GCD.Basic",
+        "Batteries.Data.Nat.Bitwise.Lemmas"),
+    "natural-factorial-choose-and-squarefree": (
+        "Mathlib.Data.Nat.Choose.Basic", "Mathlib.Data.Nat.Factorial.Basic",
+        "Mathlib.Data.Nat.Squarefree"),
+    "natural-bit-decode": ("Mathlib.Data.Nat.Size", "Mathlib.Data.Nat.Bits"),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -642,6 +738,13 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
     "natural-bitwise-basics": ("kernel-induction", "kernel-library-application"),
     "natural-distance": ("kernel-induction", "kernel-library-application"),
     "natural-elementary-bounds": ("kernel-induction", "kernel-library-application"),
+    # --- draw 11, 2026-08-30 (ADR-0925) ---------------------------------------
+    "natural-nth-root": ("kernel-induction", "recursive-function-reconstruction"),
+    "natural-gcd-and-bitwise-basics": (
+        "divisibility-library-application", "kernel-library-application"),
+    "natural-factorial-choose-and-squarefree": (
+        "divisibility-library-application", "kernel-induction"),
+    "natural-bit-decode": ("kernel-induction", "kernel-library-application"),
 }
 
 PER_FAMILY = 10
@@ -1355,6 +1458,30 @@ def stored_surface_validation() -> dict[str, Any]:
     return got if isinstance(got, dict) else {}
 
 
+def stored_cross_population_exemptions() -> list[dict[str, Any]]:
+    """Carry `cross_population_component_split_exemptions` across a regen.
+
+    ADR-0855 introduced this key directly on the committed manifest, by hand,
+    reviewed against a live union-component sweep -- it is authored, not
+    derived, so `build_extension` has no formula to reproduce it. Without this
+    function a plain (non-`--check`) regeneration silently drops the key
+    (ADR-0900 named this as a residual, unfixed defect: "a REAL run of the
+    generator would still overwrite the file and drop that key"). Measured
+    while landing draw 11: dropping it un-exempts three already-reviewed
+    cross-population components with zero held-out members and a component
+    digest each of which still matches its recorded `component_fact_ids`
+    verbatim -- so `check-autogenesis-nursery.py` goes red on work this draw
+    never touched. Carrying the raw list forward is safe specifically because
+    `validate_exemptions` re-derives each entry's digest from its own
+    `component_fact_ids` and refuses silently-stale ones; this function does
+    not interpret the list, only preserves it for that revalidation.
+    """
+    if not EXTENSION.is_file():
+        return []
+    got = load_json(EXTENSION).get("cross_population_component_split_exemptions")
+    return got if isinstance(got, list) else []
+
+
 def surface_validation(entries: list[dict[str, Any]],
                        ingest: pathlib.Path | None = None) -> dict[str, Any]:
     """Derive the surface grade from a real Lean run, never assert one.
@@ -1644,6 +1771,11 @@ def build_extension(entries: list[dict[str, Any]],
         },
         "limitations": limitations(validation),
         "entries": entries,
+        # ADR-0855, carried forward rather than derived here -- see
+        # `stored_cross_population_exemptions`'s docstring for why a plain
+        # regeneration used to drop this key silently (ADR-0900).
+        "cross_population_component_split_exemptions":
+            stored_cross_population_exemptions(),
     }
     extension["extension_sha256"] = digest(extension)
     return extension
