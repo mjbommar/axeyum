@@ -65,6 +65,7 @@ pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
 mod matrix;
+mod matrix_det;
 mod matrix_invertible;
 mod matrix_n;
 mod matrix_transpose;
@@ -1854,6 +1855,67 @@ pub struct RatPrelude {
     /// in named-constant form) bridged to the plain numeral `ofInt 1` by the
     /// kernel's own delta/beta/iota computation.
     pub mat_inv2_example: NameId,
+
+    // --- the determinant at general `n` (`rat_prelude::matrix_det`) ----------
+    /// `Rat.matSkip : Nat → Nat → Nat`,
+    /// `matSkip p x := if Nat.ble p x then Nat.succ x else x` — the
+    /// order-preserving injection `[0,n) → [0,n+1)` whose image misses `p`,
+    /// which is how [`Self::mat_minor`] deletes an index without a container
+    /// type.
+    pub mat_skip: NameId,
+    /// `Rat.matMinor : (Nat → Nat → Rat) → Nat → Nat → Nat → Nat → Rat`,
+    /// `matMinor A i j r c := A (matSkip i r) (matSkip j c)` — the submatrix
+    /// with row `i` and column `j` deleted, as an index reindex. Applied
+    /// (five arguments) rather than matrix-valued, because this kernel has no
+    /// `funext`.
+    pub mat_minor: NameId,
+    /// `Rat.altSign : Nat → Rat`, `(-1)^j`, by `Nat.rec` so that both
+    /// defining equations are `Eq.refl`.
+    pub alt_sign: NameId,
+    /// `Rat.altSign_zero : altSign 0 = 1` — `Eq.refl`.
+    pub alt_sign_zero: NameId,
+    /// `Rat.altSign_succ : ∀ j, altSign (succ j) = neg (altSign j)` —
+    /// `Eq.refl`.
+    pub alt_sign_succ: NameId,
+    /// `Rat.det : (Nat → Nat → Rat) → Nat → Rat` — the determinant at
+    /// **general `n`**, by cofactor expansion along the first row. The
+    /// `Nat.rec` motive is the function type `(Nat → Nat → Rat) → Rat`,
+    /// because the recursive call is at the minor rather than at the same
+    /// matrix.
+    pub det: NameId,
+    /// `Rat.det_zero : ∀ A, det A 0 = 1` — `Eq.refl`.
+    pub det_zero: NameId,
+    /// `Rat.det_succ : ∀ A m, det A (succ m) = sumRange (fun j => altSign j *
+    /// (A 0 j * det (matMinor A 0 j) m)) (succ m)` — `Eq.refl`.
+    pub det_succ: NameId,
+    /// `Rat.det_one : ∀ A, det A 1 = A 0 0`.
+    pub det_one: NameId,
+    /// `Rat.det_eq_det2 : ∀ A, det A 2 = det2 (A 0 0) (A 0 1) (A 1 0)
+    /// (A 1 1)` — the general-`n` determinant agrees with the fixed 2×2 one,
+    /// **symbolically** in the matrix. Since [`Self::det2`] was written
+    /// independently, this is the strongest available check that the cofactor
+    /// recursion means what it says.
+    pub det_eq_det2: NameId,
+    /// `Rat.det_eq_det3 : ∀ A, det A 3 = det3 (A 0 0) … (A 2 2)` — the same
+    /// agreement one dimension up, where the sign pattern first has three
+    /// terms and `altSign 2` must come back to `+1`.
+    pub det_eq_det3: NameId,
+    /// `Rat.matMinor_eval_example : matMinor A 0 1 1 0 = ofInt 7` for the
+    /// non-symmetric `A := [[1,2,3],[4,5,6],[7,8,9]]` — the discriminating
+    /// evaluation test the new `Definition` needs (Hard Rules: a well-typed
+    /// `Definition` is admitted whatever it computes). A transposed index
+    /// gives 3 and a shift on the wrong axis gives 8.
+    pub mat_minor_eval_example: NameId,
+    /// `Rat.det_eval_example : det A 3 = ofInt 13` for
+    /// `A := [[1,2,0],[0,1,3],[2,0,1]]` — inverting the alternating sign
+    /// gives −13, so this separates the sign convention.
+    pub det_eval_example: NameId,
+    /// `Rat.det_eval_singular : det A 3 = 0` for the singular, zero-free
+    /// `A := [[1,2,1],[2,1,3],[3,3,4]]` (row 2 = row 0 + row 1).
+    pub det_eval_singular: NameId,
+    /// `Rat.det_eval_example4 : det A 4 = ofInt 2` — the first dimension
+    /// neither [`Self::det2`] nor [`Self::det3`] can reach.
+    pub det_eval_example4: NameId,
 }
 
 impl RatPrelude {
@@ -2213,6 +2275,21 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         matinv2_matmul_bottom_right: child(kernel, "matInv2_matMul_bottom_right"),
         mat_inv2_eval_example: child(kernel, "matInv2_eval_example"),
         mat_inv2_example: child(kernel, "matInv2_example"),
+        mat_skip: child(kernel, "matSkip"),
+        mat_minor: child(kernel, "matMinor"),
+        alt_sign: child(kernel, "altSign"),
+        alt_sign_zero: child(kernel, "altSign_zero"),
+        alt_sign_succ: child(kernel, "altSign_succ"),
+        det: child(kernel, "det"),
+        det_zero: child(kernel, "det_zero"),
+        det_succ: child(kernel, "det_succ"),
+        det_one: child(kernel, "det_one"),
+        det_eq_det2: child(kernel, "det_eq_det2"),
+        det_eq_det3: child(kernel, "det_eq_det3"),
+        mat_minor_eval_example: child(kernel, "matMinor_eval_example"),
+        det_eval_example: child(kernel, "det_eval_example"),
+        det_eval_singular: child(kernel, "det_eval_singular"),
+        det_eval_example4: child(kernel, "det_eval_example4"),
     }
 }
 
@@ -2268,6 +2345,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         matrix_n::declare_matrix_n(&mut d, prelude)?;
         matrix_transpose::declare_matrix_transpose(&mut d, prelude)?;
         matrix_invertible::declare_matrix_invertible(&mut d, prelude)?;
+        matrix_det::declare_matrix_det(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();

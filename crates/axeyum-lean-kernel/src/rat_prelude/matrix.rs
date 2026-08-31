@@ -133,7 +133,7 @@ fn declare_det2_def(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError
 }
 
 /// `Rat.det2 x y z w` — the folded application, for building statements.
-fn rdet2(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, y: ExprId, z: ExprId, w: ExprId) -> ExprId {
+pub(super) fn rdet2(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, y: ExprId, z: ExprId, w: ExprId) -> ExprId {
     let _ = p;
     d.const_app(p.det2, &[x, y, z, w])
 }
@@ -3307,7 +3307,7 @@ fn declare_det3_def(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError
 /// statements. Argument order matches [`declare_det3_def`]: row-major,
 /// `[[a,b,c],[d,e,f],[g,h,i]]`.
 #[allow(clippy::too_many_arguments)]
-fn rdet3(
+pub(super) fn rdet3(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     a: ExprId,
