@@ -936,6 +936,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_eq_sum_range,
         p.sum_range_swap,
         p.count_rectangle_partition,
+        p.count_rectangle_partition_compl,
         p.choose_add_convolution,
         p.sum_choose_sq,
         p.test_bit_zero,

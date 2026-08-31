@@ -2653,6 +2653,15 @@ pub struct NatPrelude {
     /// — a side condition that belongs in the consumer, not here. Nothing in
     /// this theorem knows about primality or division.
     pub count_rectangle_partition: NameId,
+    /// `Nat.countRectangle_partition_compl : ∀ Q m n,
+    ///   add (sumRange (fun x => countRange (fun y => Q x y) n) m)
+    ///       (sumRange (fun y => countRange (setCompl (fun x => Q x y)) m) n)
+    ///     = mul n m`
+    /// — [`Self::count_rectangle_partition`] at `R := setCompl Q`, so no
+    /// hypothesis remains. It also **proves that hypothesis is satisfiable**:
+    /// a theorem nothing can discharge is vacuous, and no axiom-footprint
+    /// check, prelude build or inventory sweep can see that.
+    pub count_rectangle_partition_compl: NameId,
 
     // --- Vandermonde's convolution (`vandermonde.rs`) -----------------------
     /// `Nat.choose_add_convolution : ∀ m n k, choose (add m n) k = sumRange
@@ -5798,6 +5807,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_eq_sum_range: kernel.name_str(nat, "countRange_eq_sumRange"),
             sum_range_swap: kernel.name_str(nat, "sumRange_swap"),
             count_rectangle_partition: kernel.name_str(nat, "countRectangle_partition"),
+            count_rectangle_partition_compl: kernel
+                .name_str(nat, "countRectangle_partition_compl"),
             choose_add_convolution: kernel.name_str(nat, "choose_add_convolution"),
             sum_choose_sq: kernel.name_str(nat, "sum_choose_sq"),
             restrict_pair_injective: kernel.name_str(nat, "restrict_pair_injective"),

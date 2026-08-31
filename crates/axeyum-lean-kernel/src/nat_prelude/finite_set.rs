@@ -734,7 +734,7 @@ pub(super) fn declare_count_range_le_of_subset(
 /// literal constructors `false`/`true` (never a free `q k`), so both sides
 /// collapse to the numeral `1` by pure `ι`/`δ` reduction with no lemma at
 /// all.
-fn compl_sum_eq(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
+pub(super) fn compl_sum_eq(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId) -> ExprId {
     let p_ = *p;
     let bool_ty = d.bool_ty();
     let true_ = d.bool_true();

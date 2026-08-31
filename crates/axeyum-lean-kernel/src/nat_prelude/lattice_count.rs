@@ -682,6 +682,125 @@ pub(super) fn declare_count_rectangle_partition(
 }
 
 // ---------------------------------------------------------------------------
+// `Nat.countRectangle_partition_compl`.
+// ---------------------------------------------------------------------------
+
+/// `Nat.countRectangle_partition_compl : ∀ Q m n,
+///   add (sumRange (fun x => countRange (fun y => Q x y) n) m)
+///       (sumRange (fun y => countRange (setCompl (fun x => Q x y)) m) n)
+///     = mul n m`
+///
+/// [`declare_count_rectangle_partition`] with the second predicate taken to
+/// be the complement of the first, so **no hypothesis remains**.
+///
+/// It exists for two reasons and the second is the load-bearing one:
+///
+/// 1. It is the form a consumer wants whenever the two halves really are
+///    complementary everywhere (as opposed to Eisenstein's, which are
+///    complementary only inside the rectangle).
+/// 2. **It proves the general theorem's hypothesis is satisfiable.** A
+///    theorem whose hypothesis nothing can discharge is vacuous, and no
+///    axiom-footprint check, prelude build or inventory sweep can see that.
+///    Deriving this corollary constructs an actual inhabitant of that
+///    hypothesis inside the kernel, at a genuinely free `Q`.
+///
+/// The per-point witness is `finite_set::compl_sum_eq`, which was already
+/// built there for `Nat.countRange_compl`'s induction step and was private.
+/// It is exported rather than re-derived: two proofs of one fact that must
+/// stay in sync is exactly the cost this repository keeps paying for
+/// re-derivation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+pub(super) fn declare_count_rectangle_partition_compl(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let pred_ty = pred2_ty(d);
+
+    let qq_fv = d.fresh_fvar();
+    let qq = d.kernel().fvar(qq_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    // `R x y := setCompl (fun x' => Q x' y) x` — the COLUMN complement, so
+    // that `fun x => R x y` is `setCompl (fun x' => Q x' y)` up to eta.
+    let rr = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let q_col = col_inner(d, qq, y);
+        let compl_col = d.const_app(p.set_compl, &[q_col]);
+        let body = d.apply(compl_col, &[x]);
+        let inner = d.lam_fv(y_fv, nat, body);
+        d.lam_fv(x_fv, nat, inner)
+    };
+
+    // The hypothesis, discharged pointwise and unconditionally.
+    let hc = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hx_ty = d.lt(x, m);
+        let hx_fv = d.fresh_fvar();
+        let hy_ty = d.lt(y, n);
+        let hy_fv = d.fresh_fvar();
+        let qxy = d.apply(qq, &[x, y]);
+        let witness = super::finite_set::compl_sum_eq(d, &p, qxy);
+        let with_hy = d.lam_fv(hy_fv, hy_ty, witness);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_hy);
+        let over_y = d.lam_fv(y_fv, nat, with_hx);
+        d.lam_fv(x_fv, nat, over_y)
+    };
+
+    let proof = d.lemma(p.count_rectangle_partition, &[qq, rr, m, n, hc]);
+
+    // The statement, spelled with `setCompl` rather than with `R`.
+    let q_rows = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let q_row = row_inner(d, qq, x);
+        let body = count_range(d, &p, q_row, n);
+        d.lam_fv(x_fv, nat, body)
+    };
+    let compl_cols = {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let q_col = col_inner(d, qq, y);
+        let compl_col = d.const_app(p.set_compl, &[q_col]);
+        let body = count_range(d, &p, compl_col, m);
+        d.lam_fv(y_fv, nat, body)
+    };
+    let lhs = {
+        let a = d.sum_range(q_rows, m);
+        let b = d.sum_range(compl_cols, n);
+        d.add(a, b)
+    };
+    let rhs = d.mul(n, m);
+    let stmt = d.eq(lhs, rhs);
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, stmt);
+        let with_m = d.pi_fv(m_fv, nat, with_n);
+        d.pi_fv(qq_fv, pred_ty, with_m)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof);
+        let with_m = d.lam_fv(m_fv, nat, with_n);
+        d.lam_fv(qq_fv, pred_ty, with_m)
+    };
+    d.declare_theorem(p.count_rectangle_partition_compl, ty, value)
+}
+
+// ---------------------------------------------------------------------------
 // Build order.
 // ---------------------------------------------------------------------------
 
@@ -699,5 +818,6 @@ pub(super) fn declare_lattice_count(
     declare_count_range_eq_sum_range(d, p)?;
     declare_sum_range_swap(d, p)?;
     declare_count_rectangle_partition(d, p)?;
+    declare_count_rectangle_partition_compl(d, p)?;
     Ok(())
 }
