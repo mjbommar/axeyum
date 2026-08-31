@@ -2417,6 +2417,171 @@ pub(super) fn declare_coprime_factorial_of_lt_prime(
     Ok(())
 }
 
+// ============================================================================
+// Item 1 of the connecting theorem (ADR-1070): the per-term congruence
+// `a·k ≡ ε_k · gaussFold(pp, a, k) [pp]`, `Nat`-side halves.
+//
+// The sign `ε_k` is `Int`-typed and has no `Nat` counterpart, so the two
+// branches of `gaussSignNeg pp a k` produce two DIFFERENT `Nat` statements
+// rather than one:
+//
+// - sign `false` (`gaussFold` is the least residue itself): a plain
+//   `Nat.modEq pp (a*k) (gaussFold pp a k)`;
+// - sign `true` (`gaussFold` is `pp - leastResidue`): the ADDITIVE form
+//   `Nat.modEq pp (a*k + gaussFold pp a k) 0`, because `Nat` has no
+//   negation to state `a*k ≡ -gaussFold [pp]` with. `int_prelude`'s
+//   `gauss_term_congruence.rs` turns that sum into the `Int` negation by
+//   shifting both sides by `-gaussFold` -- which is exactly why the `Nat`
+//   statement puts `a*k` on the LEFT of the sum (`Int.add_neg_cancel_right`
+//   consumes `(x+y)+(-y)`, not `(y+x)+(-y)`).
+// ============================================================================
+
+/// `Nat.gauss_fold_modeq_of_sign_false : ∀ pp a k, Lt zero pp →
+///   Eq Bool (gaussSignNeg pp a k) false → modEq pp (mul a k) (gaussFold pp a k)`.
+///
+/// [`mod_self_congr`] gives `modEq pp (a*k) (mod (a*k) pp)`, and `mod (a*k)
+/// pp` is defeq `leastResidue pp a k`; [`fold_eq_branch`] at `false` gives
+/// `gaussFold pp a k = leastResidue pp a k`, so the only proof step is one
+/// transport along that equation, reversed.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_gauss_fold_modeq_of_sign_false(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.gauss_fold_modeq_of_sign_false, 3, &|d, v| {
+        let (pp, a, k) = (v[0], v[1], v[2]);
+        let zero = d.zero();
+        let pos_ty = d.lt(zero, pp);
+        let test = gauss_sign_neg(d, &p, pp, a, k);
+        let false_ = d.bool_false();
+        let sign_ty = d.bool_eq(test, false_);
+
+        let ak = d.mul(a, k);
+        let fold = gauss_fold(d, &p, pp, a, k);
+        let concl = d.mod_eq(pp, ak, fold);
+
+        let stmt = {
+            let inner = d.arrow(sign_ty, concl);
+            d.arrow(pos_ty, inner)
+        };
+
+        let pos_fv = d.fresh_fvar();
+        let pos = d.kernel().fvar(pos_fv);
+        let sign_fv = d.fresh_fvar();
+        let sign = d.kernel().fvar(sign_fv);
+
+        // modEq pp (a*k) (mod (a*k) pp), and `mod (a*k) pp` is defeq
+        // `leastResidue pp a k` (its definition is exactly that composition).
+        let base = mod_self_congr(d, &p, pp, pos, ak);
+        let lr = least_residue(d, &p, pp, a, k);
+
+        // Eq (gaussFold pp a k) (leastResidue pp a k): the `false` branch of
+        // `gaussFold`'s own `bool_select_nat`, ι-reduced.
+        let fold_eq = fold_eq_branch(d, &p, pp, a, k, false_, sign);
+        let fold_eq_rev = d.symm(fold, lr, fold_eq); // Eq lr fold
+
+        let motive = d.eq_motive(lr, &|d, x| d.mod_eq(pp, ak, x));
+        let result = d.transport(lr, motive, base, fold, fold_eq_rev);
+
+        let with_sign = d.lam_fv(sign_fv, sign_ty, result);
+        let proof = d.lam_fv(pos_fv, pos_ty, with_sign);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.gauss_fold_add_modeq_zero_of_sign_true : ∀ pp a k, Lt zero pp →
+///   Eq Bool (gaussSignNeg pp a k) true →
+///   modEq pp (add (mul a k) (gaussFold pp a k)) zero`.
+///
+/// `a*k ≡ leastResidue [pp]` ([`mod_self_congr`]), so adding `gaussFold` to
+/// both sides (`Nat.mod_eq_add_right`) gives `a*k + gaussFold ≡
+/// leastResidue + gaussFold [pp]`. On the `true` branch `gaussFold = pp -
+/// leastResidue` ([`fold_eq_branch`]), and `leastResidue < pp`
+/// (`Nat.mod_lt`, needing `0 < pp`), so `Nat.sub_add_cancel` closes
+/// `leastResidue + gaussFold = pp` after one `Nat.add_comm` to match its
+/// `(n - m) + m` orientation. `pp ≡ 0 [pp]` is [`mod_self_congr`] at `pp`
+/// itself, rewritten by `Nat.mod_self`; `Nat.mod_eq_trans` chains the two.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_gauss_fold_add_modeq_zero_of_sign_true(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.gauss_fold_add_modeq_zero_of_sign_true, 3, &|d, v| {
+        let (pp, a, k) = (v[0], v[1], v[2]);
+        let zero = d.zero();
+        let pos_ty = d.lt(zero, pp);
+        let test = gauss_sign_neg(d, &p, pp, a, k);
+        let true_ = d.bool_true();
+        let sign_ty = d.bool_eq(test, true_);
+
+        let ak = d.mul(a, k);
+        let fold = gauss_fold(d, &p, pp, a, k);
+        let sum = d.add(ak, fold);
+        let concl = d.mod_eq(pp, sum, zero);
+
+        let stmt = {
+            let inner = d.arrow(sign_ty, concl);
+            d.arrow(pos_ty, inner)
+        };
+
+        let pos_fv = d.fresh_fvar();
+        let pos = d.kernel().fvar(pos_fv);
+        let sign_fv = d.fresh_fvar();
+        let sign = d.kernel().fvar(sign_fv);
+
+        let lr = least_residue(d, &p, pp, a, k);
+
+        // step1 : modEq pp (a*k + fold) (lr + fold).
+        let base = mod_self_congr(d, &p, pp, pos, ak); // modEq pp ak lr (defeq)
+        let step1 = d.lemma(p.mod_eq_add_right, &[pp, ak, lr, fold, base]);
+        let lr_plus_fold = d.add(lr, fold);
+
+        // eq_pp : Eq (lr + fold) pp.
+        let sub_term = d.sub(pp, lr);
+        let fold_eq = fold_eq_branch(d, &p, pp, a, k, true_, sign); // Eq fold sub_term
+        let c1 = d.congr(fold, sub_term, fold_eq, &|d, x| d.add(lr, x));
+        let lr_plus_sub = d.add(lr, sub_term);
+        let c2 = d.lemma(p.add_comm, &[lr, sub_term]); // Eq (lr + sub) (sub + lr)
+        let sub_plus_lr = d.add(sub_term, lr);
+        let lt_lr_pp = d.lemma(p.mod_lt, &[ak, pp, pos]); // Lt lr pp (defeq)
+        let succ_lr = d.succ(lr);
+        let le_lr_succ = d.lemma(p.le_succ, &[lr]);
+        let le_lr_pp = d.lemma(p.le_trans, &[lr, succ_lr, pp, le_lr_succ, lt_lr_pp]);
+        let c3 = d.lemma(p.sub_add_cancel, &[lr, pp, le_lr_pp]); // Eq (sub + lr) pp
+        let (_e, eq_pp) = d.chain(
+            lr_plus_fold,
+            &[(lr_plus_sub, c1), (sub_plus_lr, c2), (pp, c3)],
+        );
+
+        // step2 : modEq pp (a*k + fold) pp.
+        let motive1 = d.eq_motive(lr_plus_fold, &|d, x| d.mod_eq(pp, sum, x));
+        let step2 = d.transport(lr_plus_fold, motive1, step1, pp, eq_pp);
+
+        // step3 : modEq pp pp zero.
+        let self_congr = mod_self_congr(d, &p, pp, pos, pp); // modEq pp pp (mod pp pp)
+        let mod_pp_pp = d.modulo(pp, pp);
+        let mod_self = d.lemma(p.mod_self, &[pp]); // Eq (mod pp pp) zero
+        let motive2 = d.eq_motive(mod_pp_pp, &|d, x| d.mod_eq(pp, pp, x));
+        let step3 = d.transport(mod_pp_pp, motive2, self_congr, zero, mod_self);
+
+        let result = d.lemma(p.mod_eq_trans, &[pp, sum, pp, zero, step2, step3]);
+
+        let with_sign = d.lam_fv(sign_fv, sign_ty, result);
+        let proof = d.lam_fv(pos_fv, pos_ty, with_sign);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Everything this module declares, in dependency order. Goes last in
 /// `build_nat_prelude`: it needs only `Nat.countRange`
 /// (`declare_totient_all`), `Nat.mod_eq_self_of_lt` (`declare_size_all`, via
@@ -2469,6 +2634,10 @@ pub(super) fn declare_gauss_lemma_all(
     declare_gauss_fold_shift_injective_on(d, p)?;
     // Item 2 of the connecting theorem (ADR-1070): gcd(m!, pp) = 1.
     declare_coprime_factorial_of_lt_prime(d, p)?;
+    // Item 1 of the connecting theorem (ADR-1070): the `Nat`-side halves of
+    // the per-term congruence, one per branch of `gaussSignNeg`.
+    declare_gauss_fold_modeq_of_sign_false(d, p)?;
+    declare_gauss_fold_add_modeq_zero_of_sign_true(d, p)?;
     Ok(())
 }
 

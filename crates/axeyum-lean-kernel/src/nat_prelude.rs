@@ -4925,6 +4925,19 @@ pub struct NatPrelude {
     /// is, by induction combining factors with `coprime_mul_of_coprime`.
     /// Needed to cancel `m!` from the final congruence in item 3.
     pub coprime_factorial_of_lt_prime: NameId,
+    /// `Nat.gauss_fold_modeq_of_sign_false : ∀ pp a k, Lt zero pp →
+    ///   Eq Bool (gaussSignNeg pp a k) false →
+    ///   modEq pp (mul a k) (gaussFold pp a k)` (`gauss_lemma.rs`) — the
+    /// non-negative branch of item 1 of Gauss's-lemma connecting theorem
+    /// (ADR-1070/ADR-1130): on that branch `gaussFold` IS the least residue.
+    pub gauss_fold_modeq_of_sign_false: NameId,
+    /// `Nat.gauss_fold_add_modeq_zero_of_sign_true : ∀ pp a k, Lt zero pp →
+    ///   Eq Bool (gaussSignNeg pp a k) true →
+    ///   modEq pp (add (mul a k) (gaussFold pp a k)) zero` (`gauss_lemma.rs`)
+    /// — the negative branch of item 1 (ADR-1070/ADR-1130), stated
+    /// ADDITIVELY because `Nat` has no negation: `gaussFold = pp -
+    /// leastResidue` there, so `a*k + gaussFold ≡ pp ≡ 0`.
+    pub gauss_fold_add_modeq_zero_of_sign_true: NameId,
 
     // -- `avg-pair-constructions` lane: `avg_pair.rs` --
     // `docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md`
@@ -5952,6 +5965,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_fold_shift_maps_into: kernel.name_str(nat, "gauss_fold_shift_maps_into"),
             gauss_fold_shift_injective_on: kernel.name_str(nat, "gauss_fold_shift_injective_on"),
             coprime_factorial_of_lt_prime: kernel.name_str(nat, "coprime_factorial_of_lt_prime"),
+            gauss_fold_modeq_of_sign_false: kernel
+                .name_str(nat, "gauss_fold_modeq_of_sign_false"),
+            gauss_fold_add_modeq_zero_of_sign_true: kernel
+                .name_str(nat, "gauss_fold_add_modeq_zero_of_sign_true"),
             avg: kernel.name_str(nat, "avg"),
             pair_fn: kernel.name_str(nat, "pair"),
             abundant: kernel.name_str(nat, "Abundant"),
