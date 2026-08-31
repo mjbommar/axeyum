@@ -346,12 +346,22 @@ pub(super) fn declare_sum_range_swap(
                 d.lam_fv(j_fv, nat, body)
             };
             let h_congr = d.lemma(p.sum_range_congr, &[cols0, zero_fn, n, pointwise]);
-            let h_zero = d.lemma(p.sum_range_const_zero, &[n]);
+            // `Nat.sumRange_const_zero` says exactly this, but it lives in
+            // `binary.rs` and is declared LATER in the build order than this
+            // module; routing through `sumRange_const` (declared just above)
+            // plus `zero_mul` keeps this module's dependencies behind it.
+            let zero_c = d.zero();
+            let h_const = d.lemma(p.sum_range_const, &[zero_c, n]);
+            let mul_zero_n = d.mul(zero_c, n);
+            let h_zero = d.lemma(p.zero_mul, &[n]);
 
             let start = d.sum_range(cols0, n);
             let mid = d.sum_range(zero_fn, n);
             let zero_end = d.zero();
-            let (_e, forward) = d.chain(start, &[(mid, h_congr), (zero_end, h_zero)]);
+            let (_e, forward) = d.chain(
+                start,
+                &[(mid, h_congr), (mul_zero_n, h_const), (zero_end, h_zero)],
+            );
             // `Eq zero (sumRange cols0 n)`, and `zero` is `sumRange rows zero`.
             d.symm(start, zero_end, forward)
         },
