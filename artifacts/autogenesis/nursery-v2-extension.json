@@ -75,7 +75,10 @@
         "F:ml430-int-mul-pos-iff-e4bfa31d",
         "F:ml430-nat-add-add-add-comm-74d2c151",
         "F:ml430-nat-add-assoc-8c87a1f1",
+        "F:ml430-nat-add-choose-eb49fa11",
+        "F:ml430-nat-add-choose-mul-factorial-mul-factorial-26ba01ef",
         "F:ml430-nat-add-comm-56a2d614",
+        "F:ml430-nat-add-descfactorial-eq-ascfactorial-5faac784",
         "F:ml430-nat-add-div-left-1b15b2b2",
         "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0",
         "F:ml430-nat-add-div-right-4b60b393",
@@ -84,6 +87,8 @@
         "F:ml430-nat-add-eq-three-iff-799a0a8f",
         "F:ml430-nat-add-eq-two-iff-25385c65",
         "F:ml430-nat-add-eq-zero-64233539",
+        "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
+        "F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb",
         "F:ml430-nat-add-mod-left-6b337077",
         "F:ml430-nat-add-mod-right-c047c67a",
         "F:ml430-nat-add-mul-div-left-e20827dd",
@@ -97,6 +102,7 @@
         "F:ml430-nat-and-one-is-mod-d861e96b",
         "F:ml430-nat-and-or-distrib-left-fe131f64",
         "F:ml430-nat-and-or-distrib-right-0daaa284",
+        "F:ml430-nat-ascfactorial-eq-div-87d768e8",
         "F:ml430-nat-base-induction-83561d4c",
         "F:ml430-nat-bit-add-b1edcc8e",
         "F:ml430-nat-bit-ne-zero-181bd65c",
@@ -276,7 +282,7 @@
         "F:nat-zero-add"
       ],
       "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 230 -> 238 members by `rescope-nursery-exemption.py`, which refuses when any member is held-out. Partition census at re-scope: {'development': 294, 'train': 178, 'longitudinal': 4}. Zero held-out members, so the crossing stays benign under ADR-0542."
+      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development/longitudinal via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified against every member's nursery partition). This is ADR-0855's 206-member exemption RE-SCOPED 238 -> 244 members by `rescope-nursery-exemption.py`, which refuses when any member is held-out. Partition census at re-scope: {'development': 294, 'train': 190, 'longitudinal': 4}. Zero held-out members, so the crossing stays benign under ADR-0542."
     },
     {
       "authority": "ADR-0855",
@@ -12325,7 +12331,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "2cbc51780c6eeda864e7f136942ee42a7d86b80f171432c2b93b2d3c6a35f5a7",
+  "extension_sha256": "41f5f6babc35b9801641cf5b89822987ce70805e324ead65c10847fcbf67f261",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",

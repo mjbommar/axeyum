@@ -5,7 +5,7 @@
   "statement": "The proposition declared as `Nat.Dvd.dvd.nat_lcm_right` in the pinned Mathlib v4.30 source.",
   "formal": {
     "language": "lean4-surface",
-    "statement": "∀ {a b : ℕ}, a ∣ b → ∀ (c : ℕ), a ∣ b.lcm c",
+    "statement": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 b.lcm c",
     "fragment": "Nat",
     "kernel_theorem": "Nat.dvd_lcm_of_dvd_left"
   },
@@ -13,15 +13,18 @@
   "external_status": "proved",
   "proof_route": "kernel-lean",
   "axiom_footprint": [],
-  "depends_on": ["F:ml430-nat-dvd-lcm-left-c83bcebc", "F:nat-dvd-trans"],
+  "depends_on": [
+    "F:ml430-nat-dvd-lcm-left-c83bcebc",
+    "F:nat-dvd-trans"
+  ],
   "evidence": [
     {
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_lcm_of_dvd_left 2>/dev/null | grep -Ec '^Nat\\.dvd_lcm_of_dvd_left[[:space:]]')\" -ge 1",
       "id": "kernel-Nat.dvd_lcm_of_dvd_left",
       "kind": "kernel-term",
-      "notes": "This mirror was ALREADY PROVED in this ledger under a different name: `Nat.dvd_lcm_of_dvd_left` (nat_prelude/primes.rs, `declare_dvd_lcm_of_dvd`) states `dvd a b -> dvd a (lcm b c)` for universally quantified `a b c`, which is exactly Mathlib's `a ∣ b → ∀ c, a ∣ b.lcm c` up to Pi-binder order. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.dvd x0 (AxNat.lcm x1 x2)))))` -- reading `x0=a, x1=b, x2=c`, this is `dvd a b -> dvd a (lcm b c)`, matching `formal.statement` verbatim. No new Rust was needed; `draw11-theorems-b` lane confirmed the existing declaration's rendered type and wrote this evidence. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
-      "supports": "∀ {a b : ℕ}, a ∣ b → ∀ (c : ℕ), a ∣ b.lcm c"
+      "notes": "This mirror was ALREADY PROVED in this ledger under a different name: `Nat.dvd_lcm_of_dvd_left` (nat_prelude/primes.rs, `declare_dvd_lcm_of_dvd`) states `dvd a b -> dvd a (lcm b c)` for universally quantified `a b c`, which is exactly Mathlib's `a \u2223 b \u2192 \u2200 c, a \u2223 b.lcm c` up to Pi-binder order. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.dvd x0 (AxNat.lcm x1 x2)))))` -- reading `x0=a, x1=b, x2=c`, this is `dvd a b -> dvd a (lcm b c)`, matching `formal.statement` verbatim. No new Rust was needed; `draw11-theorems-b` lane confirmed the existing declaration's rendered type and wrote this evidence. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "\u2200 {a b : \u2115}, a \u2223 b \u2192 \u2200 (c : \u2115), a \u2223 b.lcm c"
     },
     {
       "check_status": "checked",
@@ -50,5 +53,8 @@
       }
     ]
   },
-  "notes": "Closed 2026-08-31 by lane draw11-theorems-b: `formal.statement` is a byte-identical quotation of the pinned extractor's pretty-printed Mathlib type, and Axeyum's own `Nat.dvd_lcm_of_dvd_left` (nat_prelude/primes.rs) already states the identical proposition up to a harmless Pi-binder reordering. No new Rust was needed; this fact's status flip is the whole task. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority."
+  "notes": "Closed 2026-08-31 by lane draw11-theorems-b: `formal.statement` is a byte-identical quotation of the pinned extractor's pretty-printed Mathlib type, and Axeyum's own `Nat.dvd_lcm_of_dvd_left` (nat_prelude/primes.rs) already states the identical proposition up to a harmless Pi-binder reordering. No new Rust was needed; this fact's status flip is the whole task. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority.\n\n2026-08-31: marked as restating [[F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb]]. Both mirrors resolve to the same kernel theorem `Nat.dvd_lcm_of_dvd_left` and state the same proposition -- Mathlib carries it under two names, and the left/right in the two mirror ids refer to opposite arguments, which is why the pairing looks crossed. Caught by `guard_shared_declaration_pair`, which sees two facts naming ONE declaration -- a shape the identity-class guard is structurally blind to.",
+  "equivalent_to": [
+    "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb"
+  ]
 }
