@@ -14,8 +14,18 @@ pub struct SpecDeclRow {
 
 #[allow(dead_code, missing_docs)]
 pub const SPEC_DECLARATIONS: &[SpecDeclRow] = &[
-    SpecDeclRow { namespace: "Nat", local_name: "squarefreeAux", kind: "Definition", phase: 0 },
-    SpecDeclRow { namespace: "", local_name: "Squarefree", kind: "Definition", phase: 1 },
+    SpecDeclRow {
+        namespace: "Nat",
+        local_name: "squarefreeAux",
+        kind: "Definition",
+        phase: 0,
+    },
+    SpecDeclRow {
+        namespace: "",
+        local_name: "Squarefree",
+        kind: "Definition",
+        phase: 1,
+    },
 ];
 
 #[allow(dead_code, missing_docs)]
@@ -27,11 +37,39 @@ pub struct SpecEquationRow {
 
 #[allow(dead_code, missing_docs)]
 pub const SPEC_EQUATIONS: &[SpecEquationRow] = &[
-    SpecEquationRow { local_name: "Squarefree", args: &[0], expect_bool: false },
-    SpecEquationRow { local_name: "Squarefree", args: &[1], expect_bool: true },
-    SpecEquationRow { local_name: "Squarefree", args: &[2], expect_bool: true },
-    SpecEquationRow { local_name: "Squarefree", args: &[4], expect_bool: false },
-    SpecEquationRow { local_name: "Squarefree", args: &[6], expect_bool: true },
-    SpecEquationRow { local_name: "Squarefree", args: &[9], expect_bool: false },
-    SpecEquationRow { local_name: "Squarefree", args: &[12], expect_bool: false },
+    SpecEquationRow {
+        local_name: "Squarefree",
+        args: &[0],
+        expect_bool: false,
+    },
+    SpecEquationRow {
+        local_name: "Squarefree",
+        args: &[1],
+        expect_bool: true,
+    },
+    SpecEquationRow {
+        local_name: "Squarefree",
+        args: &[2],
+        expect_bool: true,
+    },
+    SpecEquationRow {
+        local_name: "Squarefree",
+        args: &[4],
+        expect_bool: false,
+    },
+    SpecEquationRow {
+        local_name: "Squarefree",
+        args: &[6],
+        expect_bool: true,
+    },
+    SpecEquationRow {
+        local_name: "Squarefree",
+        args: &[9],
+        expect_bool: false,
+    },
+    SpecEquationRow {
+        local_name: "Squarefree",
+        args: &[12],
+        expect_bool: false,
+    },
 ];

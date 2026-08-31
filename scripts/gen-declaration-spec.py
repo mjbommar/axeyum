@@ -350,7 +350,17 @@ def gen_rust_names_table(spec: dict, out_dir: Path) -> Path:
     ]
     for decl in spec["declarations"]:
         lines.append(
-            "    SpecDeclRow { namespace: \"%s\", local_name: \"%s\", kind: \"%s\", phase: %d },"
+            # rustfmt breaks this struct literal across lines at the default
+            # width, so a single-line form makes `cargo fmt --check` reject the
+            # generated file -- and the freshness check then regenerates the
+            # unformatted form, undoing any external fixup. Two gates in direct
+            # conflict, with the generator losing. Emit the shape rustfmt wants.
+            "    SpecDeclRow {\n"
+            "        namespace: \"%s\",\n"
+            "        local_name: \"%s\",\n"
+            "        kind: \"%s\",\n"
+            "        phase: %d,\n"
+            "    },"
             % (
                 rust_escape(decl["namespace"]),
                 rust_escape(decl["local_name"]),
@@ -376,7 +386,11 @@ def gen_rust_names_table(spec: dict, out_dir: Path) -> Path:
             if not isinstance(expect, bool):
                 continue  # pilot's Rust table only carries the Bool-valued equations
             lines.append(
-                "    SpecEquationRow { local_name: \"%s\", args: &[%s], expect_bool: %s },"
+                "    SpecEquationRow {\n"
+                "        local_name: \"%s\",\n"
+                "        args: &[%s],\n"
+                "        expect_bool: %s,\n"
+                "    },"
                 % (rust_escape(decl["local_name"]), args_str, "true" if expect else "false")
             )
     lines.append("];")
