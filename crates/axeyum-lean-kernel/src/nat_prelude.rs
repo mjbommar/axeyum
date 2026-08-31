@@ -6437,3 +6437,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
 
 #[cfg(test)]
 mod nat_prelude_tests;
+
+#[cfg(test)]
+mod bit_extra_tests;
