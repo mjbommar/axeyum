@@ -59,7 +59,8 @@ error: no declaration named `CReal.supOn_upper_bound` in any prelude
 
 The third line is the whole defect in one command: `supOn_upper_bound` is a
 **guessed** name, and it has never existed. `08-…`'s own probe script
-(`scratch-probe.sh`, committed alongside its draft) searched for
+(`docs/formalized-math-2026-08/evidence/ivt-evt/probe-kernel-declarations.sh`)
+searched for
 `CReal.supOn_upper_bound` among nine candidate names, all reported absent —
 correctly, since none of the nine is the name the theorem actually shipped
 under. **An absence probe that searches for a guessed name proves nothing

@@ -31359,8 +31359,9 @@ being cited as a dominance example while its row 1 is missing.
 
 - Audit: `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`
 - Decision: `docs/research/09-decisions/adr-0675-evt-is-a-refutation-with-no-row-one-behind-it.md`
-- Instruments committed beside them: `scratch-probe.sh`, `scratch-ivt-dump.py`,
-  and the raw `scratch-inventory.txt` / `scratch-ivt-types.txt` they produced.
+- Instruments and raw outputs are retained under
+  `docs/formalized-math-2026-08/evidence/ivt-evt/`: the declaration probe,
+  fact-dump script, kernel declaration inventory, and IVT/EVT fact dump.
 
 ## Also found
 

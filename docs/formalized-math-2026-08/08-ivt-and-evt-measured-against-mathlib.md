@@ -352,7 +352,8 @@ under test:       0 theorems matching sup|attain|argmax|maximum|extreme
 CReal.supOn:      not in the environment
 ```
 
-The definition-level probe (`scratch-probe.sh`) ran four positive controls —
+The definition-level probe
+(`evidence/ivt-evt/probe-kernel-declarations.sh`) ran four positive controls —
 `CReal.UniformlyContinuousOn` (inductive), `CReal.lt_cotrans` (theorem),
 `CReal.maxRange` (definition), `CReal.ivt_approx` (theorem) — all found, and
 nine names under test, all reported absent by name:

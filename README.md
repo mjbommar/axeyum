@@ -363,6 +363,27 @@ cargo build --target wasm32-unknown-unknown -p axeyum-wasm
 The crate split is deliberately minimal — boundaries are added only once proven
 by use (each is accepted in an ADR).
 
+The repository's top-level directories also separate inputs, checked evidence,
+measurements, implementations, and developer infrastructure. They are not
+interchangeable output buckets:
+
+| Directory | Role |
+|---|---|
+| [`crates/`](crates) | Root Rust workspace and product implementations. |
+| [`python/`](python) | Python package, examples, benchmarks, and binding tests. |
+| [`corpus/`](corpus/README.md) | Solver inputs and minimized regression cases. |
+| [`artifacts/`](artifacts) | Checkable evidence, ledgers, schemas, and replay inputs. |
+| [`bench-results/`](bench-results/README.md) | Measured benchmark outputs and scoreboards. |
+| [`render/`](render/Cargo.toml) | Deliberately standalone document-rendering workspace; promotion into `crates/` requires its planned ADR. |
+| [`docs/`](docs/README.md) | User, contributor, research, decision, and planning documentation. |
+| [`scripts/`](scripts) and [`tools/`](tools) | Repository-wide automation and the Python binding's focused type/stub tools. |
+| [`hooks/`](hooks) | Version-controlled `commit-msg` and `pre-push` gates installed by fleet provisioning. |
+| [`references/`](references/README.md) | Manifest for optional, gitignored reference-project clones. |
+
+Hidden `.config/` and `.github/` directories hold standard tool and CI
+configuration. The ignored `target/` directory is disposable Rust build output
+and can be removed with `cargo clean`.
+
 **Core IR & solving**
 
 | Crate | Purpose |
