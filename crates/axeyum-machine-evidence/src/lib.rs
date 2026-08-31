@@ -15,15 +15,20 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 mod symbolic_addition;
+mod symbolic_memory;
 
 pub use symbolic_addition::{
     SymbolicAdditionReport, SymbolicAdditionWidthProof, SymbolicCounterexample,
     check_symbolic_addition, check_symbolic_addition_inverted_carry_control,
     symbolic_addition_report,
 };
+pub use symbolic_memory::{
+    PartialStoreCounterexample, SymbolicMemoryReport, SymbolicMemoryWidthProof,
+    check_symbolic_memory, check_symbolic_memory_partial_store_control, symbolic_memory_report,
+};
 
 const A0_SOURCE: &[u8] = include_bytes!("../../axeyum-machine/src/a0.rs");
-const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v9";
+const PACKAGE_SCHEMA: &str = "axeyum.a0.semantic-package.v10";
 const ROUNDTRIP_SCHEMA: &str = "axeyum.a0.word-roundtrip.v1";
 const WORD_PACKAGE_SCHEMA: &str = "axeyum.a0.word-package.v1";
 const STATE_CODEC_SCHEMA: &str = "axeyum.a0.state-codec.v1";
@@ -331,7 +336,7 @@ impl From<serde_json::Error> for EvidenceError {
 pub fn semantic_package() -> A0SemanticPackage {
     A0SemanticPackage {
         schema: PACKAGE_SCHEMA.to_owned(),
-        version: "9".to_owned(),
+        version: "10".to_owned(),
         source_path: "crates/axeyum-machine/src/a0.rs".to_owned(),
         source_sha256: sha256_hex(A0_SOURCE),
         word_widths: (8..=64).step_by(8).collect(),
@@ -352,6 +357,7 @@ pub fn semantic_package() -> A0SemanticPackage {
             "bounded-trace",
             "returned-prefix",
             "domain-parametric-addition",
+            "domain-parametric-memory",
         ]
         .into_iter()
         .map(str::to_owned)

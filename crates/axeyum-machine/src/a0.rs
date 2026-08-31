@@ -237,6 +237,120 @@ pub fn addition<D: AdditionDomain>(
     }
 }
 
+/// Result of one shared A0 memory load orchestration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MemoryLoad<W, B> {
+    /// Whether every byte address required by the access is present.
+    pub valid: B,
+    /// Little-endian reconstruction of the addressed bytes.
+    ///
+    /// The value is meaningful only when [`Self::valid`] holds.
+    pub value: W,
+}
+
+/// Result of one shared A0 memory store orchestration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MemoryStore<M, B> {
+    /// Whether every byte address required by the access is present.
+    pub valid: B,
+    /// Successful updated memory, or the complete original memory on failure.
+    pub memory: M,
+}
+
+/// Primitive operations used by the shared A0 load/store definitions.
+///
+/// Implementations form the explicit boundary between the architecture's
+/// address-by-address orchestration and a concrete or symbolic memory domain.
+pub trait MemoryDomain {
+    /// Complete memory representation.
+    type Memory: Clone;
+    /// Word-valued byte address.
+    type Address: Copy;
+    /// One stored byte.
+    type Byte: Copy;
+    /// One architectural word.
+    type Word: Copy;
+    /// Boolean validity result.
+    type Bit: Copy;
+
+    /// Number of bytes in one architectural word.
+    fn word_bytes(&self) -> usize;
+    /// Boolean truth.
+    fn true_bit(&mut self) -> Self::Bit;
+    /// Boolean conjunction.
+    fn and(&mut self, lhs: Self::Bit, rhs: Self::Bit) -> Self::Bit;
+    /// Modular address addition by a nonnegative byte offset.
+    fn address_offset(&mut self, base: Self::Address, offset: usize) -> Self::Address;
+    /// Tests whether one byte address belongs to the finite memory domain.
+    fn present(&mut self, memory: &Self::Memory, address: Self::Address) -> Self::Bit;
+    /// Reads one byte, returning a domain-defined placeholder when absent.
+    fn read_byte(&mut self, memory: &Self::Memory, address: Self::Address) -> Self::Byte;
+    /// Joins bytes in increasing address order into one little-endian word.
+    fn join_little_endian(&mut self, bytes: &[Self::Byte]) -> Self::Word;
+    /// Splits one word into bytes from least to most significant.
+    fn split_little_endian(&mut self, word: Self::Word) -> Vec<Self::Byte>;
+    /// Returns memory with one byte updated. An absent address may remain
+    /// unchanged because the final validity choice discards the tentative map.
+    fn write_byte(
+        &mut self,
+        memory: Self::Memory,
+        address: Self::Address,
+        byte: Self::Byte,
+    ) -> Self::Memory;
+    /// Chooses the complete success or failure memory from the validity bit.
+    fn choose_memory(
+        &mut self,
+        valid: Self::Bit,
+        success: Self::Memory,
+        failure: Self::Memory,
+    ) -> Self::Memory;
+}
+
+/// Applies the A0 address, validity, byte-order, and reconstruction rules for a
+/// word-sized load in any concrete or symbolic memory domain.
+pub fn memory_load<D: MemoryDomain>(
+    domain: &mut D,
+    memory: &D::Memory,
+    address: D::Address,
+) -> MemoryLoad<D::Word, D::Bit> {
+    let mut valid = domain.true_bit();
+    let mut bytes = Vec::with_capacity(domain.word_bytes());
+    for offset in 0..domain.word_bytes() {
+        let candidate = domain.address_offset(address, offset);
+        let present = domain.present(memory, candidate);
+        valid = domain.and(valid, present);
+        bytes.push(domain.read_byte(memory, candidate));
+    }
+    MemoryLoad {
+        valid,
+        value: domain.join_little_endian(&bytes),
+    }
+}
+
+/// Applies the A0 address, validity, byte-order, atomic-failure, and update
+/// rules for a word-sized store in any concrete or symbolic memory domain.
+pub fn memory_store<D: MemoryDomain>(
+    domain: &mut D,
+    memory: &D::Memory,
+    address: D::Address,
+    value: D::Word,
+) -> MemoryStore<D::Memory, D::Bit> {
+    let bytes = domain.split_little_endian(value);
+    debug_assert_eq!(bytes.len(), domain.word_bytes());
+    let mut valid = domain.true_bit();
+    let mut updated = memory.clone();
+    for (offset, byte) in bytes.into_iter().enumerate() {
+        let candidate = domain.address_offset(address, offset);
+        let present = domain.present(memory, candidate);
+        valid = domain.and(valid, present);
+        updated = domain.write_byte(updated, candidate, byte);
+    }
+    MemoryStore {
+        valid,
+        memory: domain.choose_memory(valid, updated, memory.clone()),
+    }
+}
+
 /// A reason that a running A0 machine trapped.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -353,19 +467,35 @@ impl Memory {
         self.entries.iter().copied()
     }
 
-    fn checked_addresses(&self, address: Word, bytes: usize) -> Result<Vec<u64>, Trap> {
-        let addresses: Vec<u64> = (0..bytes)
-            .map(|offset| {
-                address
-                    .wrapping_add_signed(i128::try_from(offset).expect("word byte count fits i128"))
-                    .unsigned()
-            })
-            .collect();
-        if addresses
-            .iter()
-            .all(|candidate| self.byte_at(*candidate).is_some())
-        {
-            Ok(addresses)
+    fn load(&self, address: Word) -> Result<Word, Trap> {
+        let bytes = usize::from(address.width() / 8);
+        let access = memory_load(
+            &mut ConcreteMemoryDomain {
+                width: address.width(),
+            },
+            self,
+            address,
+        );
+        access.valid.then_some(access.value).ok_or(Trap::DataRange {
+            address: address.unsigned(),
+            bytes,
+            memory_len: self.len(),
+        })
+    }
+
+    fn store(&mut self, address: Word, value: Word) -> Result<(), Trap> {
+        let bytes = usize::from(value.width() / 8);
+        let access = memory_store(
+            &mut ConcreteMemoryDomain {
+                width: value.width(),
+            },
+            self,
+            address,
+            value,
+        );
+        if access.valid {
+            *self = access.memory;
+            Ok(())
         } else {
             Err(Trap::DataRange {
                 address: address.unsigned(),
@@ -374,32 +504,63 @@ impl Memory {
             })
         }
     }
+}
 
-    fn load(&self, address: Word) -> Result<Word, Trap> {
-        let bytes = usize::from(address.width() / 8);
-        let addresses = self.checked_addresses(address, bytes)?;
-        let loaded: Vec<u8> = addresses
-            .into_iter()
-            .map(|candidate| self.byte_at(candidate).expect("checked address is present"))
-            .collect();
-        Word::from_little_endian(&loaded).map_err(|_| Trap::DataRange {
-            address: address.unsigned(),
-            bytes,
-            memory_len: self.len(),
-        })
+struct ConcreteMemoryDomain {
+    width: u8,
+}
+
+impl MemoryDomain for ConcreteMemoryDomain {
+    type Memory = Memory;
+    type Address = Word;
+    type Byte = u8;
+    type Word = Word;
+    type Bit = bool;
+
+    fn word_bytes(&self) -> usize {
+        usize::from(self.width / 8)
     }
 
-    fn store(&mut self, address: Word, value: Word) -> Result<(), Trap> {
-        let bytes = value.little_endian_bytes();
-        let addresses = self.checked_addresses(address, bytes.len())?;
-        for (candidate, byte) in addresses.into_iter().zip(bytes) {
-            let index = self
-                .entries
-                .binary_search_by_key(&candidate, |(entry, _)| *entry)
-                .expect("checked address is present");
-            self.entries[index].1 = byte;
+    fn true_bit(&mut self) -> bool {
+        true
+    }
+
+    fn and(&mut self, lhs: bool, rhs: bool) -> bool {
+        lhs && rhs
+    }
+
+    fn address_offset(&mut self, base: Word, offset: usize) -> Word {
+        base.wrapping_add_signed(i128::try_from(offset).expect("word byte count fits i128"))
+    }
+
+    fn present(&mut self, memory: &Memory, address: Word) -> bool {
+        memory.byte_at(address.unsigned()).is_some()
+    }
+
+    fn read_byte(&mut self, memory: &Memory, address: Word) -> u8 {
+        memory.byte_at(address.unsigned()).unwrap_or(0)
+    }
+
+    fn join_little_endian(&mut self, bytes: &[u8]) -> Word {
+        Word::from_little_endian(bytes).expect("one A0 word has a supported byte width")
+    }
+
+    fn split_little_endian(&mut self, word: Word) -> Vec<u8> {
+        word.little_endian_bytes()
+    }
+
+    fn write_byte(&mut self, mut memory: Memory, address: Word, byte: u8) -> Memory {
+        if let Ok(index) = memory
+            .entries
+            .binary_search_by_key(&address.unsigned(), |(entry, _)| *entry)
+        {
+            memory.entries[index].1 = byte;
         }
-        Ok(())
+        memory
+    }
+
+    fn choose_memory(&mut self, valid: bool, success: Memory, failure: Memory) -> Memory {
+        if valid { success } else { failure }
     }
 }
 
