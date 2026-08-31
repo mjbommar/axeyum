@@ -173,6 +173,7 @@ mod fermat_witness;
 mod fibonacci;
 mod finite;
 mod finite_set;
+mod gauss_lemma;
 mod gcd;
 mod gcd_dvd_mirrors;
 mod gcd_mul_right;
@@ -309,6 +310,7 @@ use finite::{
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
 use finite_set::declare_finite_set_all;
+use gauss_lemma::declare_gauss_lemma_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use gcd_mul_right::declare_gcd_mul_right;
@@ -4680,6 +4682,33 @@ pub struct NatPrelude {
     /// `and_or_distrib.rs`'s `bit_and_or_distrib_right`. See
     /// `nat_prelude::and_or_distrib`.
     pub and_or_distrib_right: NameId,
+    /// `Nat.leastResidue pp a k := mod (mul a k) pp` (`gauss_lemma.rs`,
+    /// toward Gauss's lemma / the second supplementary law).
+    pub least_residue: NameId,
+    /// `Nat.gaussSignNeg pp a k := ble (succ (div pp 2)) (leastResidue pp a
+    /// k)` (`gauss_lemma.rs`).
+    pub gauss_sign_neg: NameId,
+    /// `Nat.gaussNegCount pp a m := countRange (fun j => gaussSignNeg pp a
+    /// (succ j)) m` (`gauss_lemma.rs`).
+    pub gauss_neg_count: NameId,
+    /// `Nat.gauss_residue_two_eq_double_of_lt` (`gauss_lemma.rs`): at
+    /// `a := 2`, `mul 2 k < pp → leastResidue pp 2 k = mul 2 k`.
+    pub gauss_residue_two_eq_double_of_lt: NameId,
+    /// `gaussNegCount 7 2 3 = 2` (`gauss_lemma.rs`).
+    pub gauss_neg_count_seven_two: NameId,
+    /// `gaussNegCount 11 2 5 = 3` (`gauss_lemma.rs`).
+    pub gauss_neg_count_eleven_two: NameId,
+    /// `gaussNegCount 13 2 6 = 3` (`gauss_lemma.rs`).
+    pub gauss_neg_count_thirteen_two: NameId,
+    /// `gaussNegCount 17 2 8 = 4` (`gauss_lemma.rs`).
+    pub gauss_neg_count_seventeen_two: NameId,
+    /// `gaussNegCount 19 2 9 = 5` (`gauss_lemma.rs`).
+    pub gauss_neg_count_nineteen_two: NameId,
+    /// `gaussNegCount 23 2 11 = 6` (`gauss_lemma.rs`).
+    pub gauss_neg_count_twentythree_two: NameId,
+    /// `gaussNegCount 7 3 3 = 1` (`gauss_lemma.rs`) — confirms the count
+    /// depends on `a`, not only on `pp` (contrast `gauss_neg_count_seven_two`).
+    pub gauss_neg_count_seven_three: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5582,6 +5611,19 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lnp_unrestricted_implies_em: kernel.name_str(nat, "lnp_unrestricted_implies_em"),
             and_or_distrib_left: kernel.name_str(nat, "and_or_distrib_left"),
             and_or_distrib_right: kernel.name_str(nat, "and_or_distrib_right"),
+            least_residue: kernel.name_str(nat, "leastResidue"),
+            gauss_sign_neg: kernel.name_str(nat, "gaussSignNeg"),
+            gauss_neg_count: kernel.name_str(nat, "gaussNegCount"),
+            gauss_residue_two_eq_double_of_lt: kernel
+                .name_str(nat, "gauss_residue_two_eq_double_of_lt"),
+            gauss_neg_count_seven_two: kernel.name_str(nat, "gauss_neg_count_seven_two"),
+            gauss_neg_count_eleven_two: kernel.name_str(nat, "gauss_neg_count_eleven_two"),
+            gauss_neg_count_thirteen_two: kernel.name_str(nat, "gauss_neg_count_thirteen_two"),
+            gauss_neg_count_seventeen_two: kernel.name_str(nat, "gauss_neg_count_seventeen_two"),
+            gauss_neg_count_nineteen_two: kernel.name_str(nat, "gauss_neg_count_nineteen_two"),
+            gauss_neg_count_twentythree_two: kernel
+                .name_str(nat, "gauss_neg_count_twentythree_two"),
+            gauss_neg_count_seven_three: kernel.name_str(nat, "gauss_neg_count_seven_three"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -6382,6 +6424,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.zero_le`/`Nat.le_antisymm`/`Nat.lt_or_eq_of_le` (far above,
         // via `ops::cases_lt_bound`). Nothing needs it, so it goes last.
         declare_and_or_distrib_all(&mut d, &p)?;
+        // `gauss_lemma.rs`: needs only `Nat.countRange` (`declare_totient_all`,
+        // far above), `Nat.mod_eq_self_of_lt` (`declare_size_all`, far above),
+        // and `Nat.mod`/`Nat.mul`/`Nat.div`/`Nat.ble` (all far above). Nothing
+        // needs it, so it goes last.
+        declare_gauss_lemma_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
