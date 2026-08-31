@@ -3,8 +3,8 @@
   "kind": "axeyum-settled-fact-statement-pins",
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
-    "min_identity_bound": 1300,
     "max_unpinned_settled": 0,
+    "min_identity_bound": 1300,
     "max_header_exempt": 30
   },
   "amendments": [
@@ -7827,6 +7827,18 @@
       "language": "lean4-surface",
       "statement_sha256": "99ff66ce36298b9201e9e4fd7298b3cad06ddceca4a3a946f0c0f01c46c73cec",
       "prose_sha256": "933083b5604b6921818df334490ed214edbe4af9790f31493934f4c7c548173c"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-or-distrib-left-fe131f64",
+      "language": "lean4-surface",
+      "statement_sha256": "1252416f68909f80866d2807c0f6a4a1c74832c86b5cd27f55a90ebab034c594",
+      "prose_sha256": "68cd9ec2d932efaf5073419c6f326c76e7c3f10d0df9fb36988589efb58460a2"
+    },
+    {
+      "fact_id": "F:ml430-nat-and-or-distrib-right-0daaa284",
+      "language": "lean4-surface",
+      "statement_sha256": "3cbed89d57352aeec93de3978f841027fc6999d24d47d8c4854bf2ca8b6378e4",
+      "prose_sha256": "a0bfe527524b84eae6aa7e2eebae3c663e6a41b56485812c6b693f73ecf4b1eb"
     },
     {
       "fact_id": "F:ml430-nat-and-self-06a84ccc",
