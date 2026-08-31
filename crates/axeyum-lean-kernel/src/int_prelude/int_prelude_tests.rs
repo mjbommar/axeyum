@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 242] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 243] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -291,6 +291,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 242] {
         p.prod_range_zero,
         p.prod_range_succ,
         p.prod_range_shift_front,
+        p.prod_range_split,
         p.prod_range_congr,
         p.prod_range_congr_lt,
         p.prod_range_swap_adjacent,
@@ -5647,5 +5648,135 @@ fn first_supplementary_law_refuses_neg_one_exactly_when_the_half_is_odd() {
         "control: `1` IS a quadratic residue mod every modulus, so the mutated \
          statement is not merely different -- it is refuted by an \
          already-admitted theorem"
+    );
+}
+
+/// `Int.prodRange_split` cuts a finite product at a symbolic point, and this
+/// test measures that the cut is at the RIGHT point rather than merely that
+/// some identity type-checks.
+///
+/// Two disjoint checks, and the concrete one carries the negative control
+/// deliberately: a symbolic `!def_eq` between two `prodRange`s at a free bound
+/// forces the kernel to unfold `Nat.rec` with no early exit (the pathology
+/// `creal`'s riemann-sum control hit), while at concrete numerals every side
+/// reduces and the same discrimination is free.
+///
+/// 1. **Concrete, at `f k = ofNat (succ k)`, `a = 2`, `b = 3`.** Both sides
+///    reduce to `ofNat 120` (`5!`), and the SHIFT is what makes them agree:
+///    with the tail function left un-shifted the right side is `2! * 3! = 12`,
+///    which the control asserts is NOT the left side. Without that row the
+///    concrete check would pass for a split that forgot the offset entirely.
+/// 2. **Symbolic**, at genuinely free `f`, `a`, `b`: the inferred type is
+///    compared against an independently rebuilt statement.
+#[test]
+fn prod_range_split_cuts_at_the_offset_and_not_merely_somewhere() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    assert!(
+        k.axiom_footprint(p.prod_range_split).is_empty(),
+        "Int.prodRange_split must rest on no axiom"
+    );
+    let mut d = IntDev::new(&mut k, p);
+    let nat = d.nat_ty();
+
+    // `fun k => ofNat (succ k)` -- `Int.factorial`'s own index function.
+    let index_fn = |d: &mut IntDev<'_>| -> ExprId {
+        let nat = d.nat_ty();
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let body = d.of_nat(sk);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // (1) concrete, with the offset and without it.
+    {
+        let f = index_fn(&mut d);
+        let two = d.num(2);
+        let three = d.num(3);
+        let five = d.num(5);
+        let whole = d.const_app(p.prod_range, &[f, five]);
+        let expected = {
+            let n = d.num(120);
+            d.of_nat(n)
+        };
+        assert!(
+            d.kernel().def_eq(whole, expected),
+            "prodRange over [0,5) of (k+1) must be 5! = 120"
+        );
+
+        let head = d.const_app(p.prod_range, &[f, two]);
+        let shifted = {
+            let k_fv = d.fresh_fvar();
+            let kk = d.kernel().fvar(k_fv);
+            let idx = d.add(two, kk);
+            let sk = d.succ(idx);
+            let body = d.of_nat(sk);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let tail = d.const_app(p.prod_range, &[shifted, three]);
+        let split = d.imul(head, tail);
+        assert!(
+            d.kernel().def_eq(split, expected),
+            "the SHIFTED split 2! * (3*4*5) must also be 120"
+        );
+
+        // Control: drop the offset from the tail function. `2! * 3! = 12`.
+        let unshifted_tail = d.const_app(p.prod_range, &[f, three]);
+        let wrong = d.imul(head, unshifted_tail);
+        assert!(
+            !d.kernel().def_eq(wrong, expected),
+            "control: without the `add a k` offset the split is 2! * 3! = 12, \
+             not 120 -- if this agrees, the concrete check cannot tell a split \
+             that forgot the offset from one that did not"
+        );
+    }
+
+    // (2) symbolic, at genuinely free `f`, `a`, `b`.
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let applied = d.lemma(p.prod_range_split, &[f, a, b]);
+
+    let anon = d.anon_name();
+    let mut ctx = LocalContext::new();
+    for (fvar, ty) in [(f_fv, fn_ty), (a_fv, nat), (b_fv, nat)] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .unwrap_or_else(|e| panic!("the split must apply at free f, a, b: {e:?}"));
+
+    let expected = {
+        let bound = d.add(a, b);
+        let lhs = d.const_app(p.prod_range, &[f, bound]);
+        let head = d.const_app(p.prod_range, &[f, a]);
+        let tail_fn = {
+            let k_fv = d.fresh_fvar();
+            let kk = d.kernel().fvar(k_fv);
+            let shifted = d.add(a, kk);
+            let body = d.apply(f, &[shifted]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let tail = d.const_app(p.prod_range, &[tail_fn, b]);
+        let rhs = d.imul(head, tail);
+        d.ieq(lhs, rhs)
+    };
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "the split's symbolic statement must be \
+         prodRange f (a+b) = prodRange f a * prodRange (fun k => f (a+k)) b"
     );
 }

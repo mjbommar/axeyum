@@ -3288,3 +3288,114 @@ pub(super) fn declare_prod_range_permute(d: &mut IntDev<'_>) -> Result<(), Kerne
 
     d.declare_theorem(p.prod_range_permute, full_stmt, value)
 }
+
+/// `Int.prodRange_split :
+///   ∀ f a b, Eq Int (prodRange f (add a b))
+///     (mul (prodRange f a) (prodRange (fun k => f (add a k)) b))`
+/// — splits a finite product at a SYMBOLIC point.
+///
+/// [`declare_prod_range_shift_front`] peels one term off the front and
+/// `prodRange_succ` peels one off the back; neither cuts the range in two at
+/// an arbitrary index, which is what a reflection argument over `[0,2m)`
+/// needs (ADR-1230's handoff for the first supplementary law's residue half).
+///
+/// Induction on `b` with `f` and `a` fixed. No associativity of `Nat.add` is
+/// needed anywhere, and that is not luck: `Nat.add` recurses on its RIGHT
+/// argument, so `add a (succ j)` iota-reduces to `succ (add a j)` and the
+/// induction's own index arithmetic is pure defeq. Putting the induction
+/// variable on the LEFT would have forfeited that.
+///
+/// The base case is `mul_one` reversed (`add a zero` reduces to `a` and
+/// `prodRange _ zero` to `one`); the successor case is the induction
+/// hypothesis under `mul _ (f (add a j))` followed by one `mul_assoc`. The
+/// tail factor `(fun k => f (add a k)) j` beta-reduces to `f (add a j)`, so
+/// the two spellings need no rewrite between them.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prod_range_split(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+    let int_ty = d.int_ty();
+    let fn_ty = d.arrow(nat, int_ty);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    // `fun k => f (add a k)`, rebuilt at every use so the fvar it binds never
+    // escapes (the same discipline `shifted_of` above keeps).
+    let tail_of = |d: &mut IntDev<'_>, f: ExprId, a: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let shifted = d.add(a, k);
+        let body = d.apply(f, &[shifted]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let bound = d.add(a, x);
+        let lhs = d.const_app(p.prod_range, &[f, bound]);
+        let head = d.const_app(p.prod_range, &[f, a]);
+        let tail_fn = tail_of(d, f, a);
+        let tail = d.const_app(p.prod_range, &[tail_fn, x]);
+        let rhs = d.imul(head, tail);
+        d.ieq(lhs, rhs)
+    };
+    let stmt = motive(d, b);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            // `add a zero` reduces to `a` and `prodRange _ zero` to `one`, so
+            // the goal is `prodRange f a = mul (prodRange f a) one`.
+            let p = d.int();
+            let head = d.const_app(p.prod_range, &[f, a]);
+            let one_i = d.ione();
+            let head_one = d.imul(head, one_i);
+            let step = d.const_app(p.mul_one, &[head]);
+            d.isymm(head_one, head, step)
+        },
+        &|d, j, ih| {
+            let p = d.int();
+            // `add a (succ j)` reduces to `succ (add a j)`, and `prodRange f
+            // (succ X)` to `mul (prodRange f X) (f X)`, so the goal's left
+            // side is this product.
+            let bound = d.add(a, j);
+            let prior = d.const_app(p.prod_range, &[f, bound]);
+            let factor = d.apply(f, &[bound]);
+            let start = d.imul(prior, factor);
+
+            let head = d.const_app(p.prod_range, &[f, a]);
+            let tail_fn = tail_of(d, f, a);
+            let tail_j = d.const_app(p.prod_range, &[tail_fn, j]);
+            let split = d.imul(head, tail_j);
+            let h1 = d.icongr(prior, split, ih, &|d, t| d.imul(t, factor));
+            let after_ih = d.imul(split, factor);
+
+            let inner = d.imul(tail_j, factor);
+            let end_ = d.imul(head, inner);
+            let h2 = d.const_app(p.mul_assoc, &[head, tail_j, factor]);
+
+            let (_e, proof) = d.ichain(start, &[(after_ih, h1), (end_, h2)]);
+            proof
+        },
+        b,
+    );
+
+    let ty = {
+        let over_b = d.pi_fv(b_fv, nat, stmt);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        d.pi_fv(f_fv, fn_ty, over_a)
+    };
+    let value = {
+        let over_b = d.lam_fv(b_fv, nat, proof);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        d.lam_fv(f_fv, fn_ty, over_a)
+    };
+    d.declare_theorem(p.prod_range_split, ty, value)
+}

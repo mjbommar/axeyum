@@ -451,6 +451,17 @@ pub struct IntPrelude {
     /// Built for `wilson.rs`'s reindex of the interior product over
     /// `Nat.inverseIndex`'s two fixed points.
     pub prod_range_shift_front: NameId,
+    /// `prodRange_split : ∀ f a b, Eq Int (prodRange f (add a b))
+    ///   (mul (prodRange f a) (prodRange (fun k => f (add a k)) b))` — splits a
+    /// finite product at a SYMBOLIC point. [`Self::prod_range_shift_front`]
+    /// peels one term off the front and [`Self::prod_range_succ`] one off the
+    /// back; neither cuts the range in two at an arbitrary index, which is what
+    /// a reflection argument over `[0,2m)` needs (ADR-1230's handoff for the
+    /// first supplementary law's residue half). Induction on `b`; no
+    /// `Nat.add_assoc` anywhere, because `Nat.add` recurses on its RIGHT
+    /// argument so `add a (succ j)` iota-reduces to `succ (add a j)`.
+    /// `prod.rs::declare_prod_range_split`.
+    pub prod_range_split: NameId,
     /// `prodRange_congr : ∀ f g n, (∀ k, Eq Int (f k) (g k)) → Eq Int (prodRange f n) (prodRange g n)`
     /// — pointwise-equal factors give equal products, by induction on `n`.
     pub prod_range_congr: NameId,
@@ -1762,6 +1773,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_zero: child(kernel, "prodRange_zero"),
         prod_range_succ: child(kernel, "prodRange_succ"),
         prod_range_shift_front: child(kernel, "prodRange_shiftFront"),
+        prod_range_split: child(kernel, "prodRange_split"),
         prod_range_congr: child(kernel, "prodRange_congr"),
         prod_range_congr_lt: child(kernel, "prodRange_congr_lt"),
         prod_range_swap_adjacent: child(kernel, "prodRange_swap_adjacent"),
@@ -2130,6 +2142,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prod::declare_prod_range(&mut d)?;
         prod::declare_prod_range_equations(&mut d)?;
         prod::declare_prod_range_shift_front(&mut d)?;
+        prod::declare_prod_range_split(&mut d)?;
         prod::declare_prod_range_congr(&mut d)?;
         prod::declare_prod_range_congr_lt(&mut d)?;
         prod::declare_prod_range_swap_adjacent(&mut d)?;
