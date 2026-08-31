@@ -39,4 +39,23 @@ if [ "$COUNT" -eq 0 ]; then
   exit 0
 fi
 echo "LANE_PREPUSH_FMT|examined=$COUNT|reformatted=$TOUCHED|base=$BASE"
+
+# REFORMATTING LEAVES THE WORKTREE DIRTY, AND THE COMMITS STILL UNFORMATTED.
+# Measured 2026-08-31: this script reformatted two files, I started a push in
+# the next breath, and `hooks/pre-push` rejected it on its dirty-worktree
+# guard -- correctly. The subtler hazard is the one that guard happens to
+# catch for us: `cargo fmt --all --check` in the hook reads the WORKTREE,
+# which this script has just fixed, while the COMMITS being pushed still hold
+# the unformatted content. That is the repository's documented "green gate,
+# broken commit" trap, and here it would have pushed unformatted code to main
+# for CI to reject.
+#
+# So a run that reformatted anything exits NONZERO. Commit the result, then
+# push. Exit 3 is deliberately distinct from a --check failure (1).
+if [ "$MODE" != "--check" ] && [ "$TOUCHED" -gt 0 ]; then
+  echo "LANE_PREPUSH_FMT|COMMIT-REQUIRED|$TOUCHED file(s) were reformatted and are UNCOMMITTED." >&2
+  echo "  The push hook checks the worktree; the commits still carry the old bytes." >&2
+  echo "  Commit them, then push." >&2
+  exit 3
+fi
 [ "$TOUCHED" -eq 0 ] || [ "$MODE" != "--check" ]
