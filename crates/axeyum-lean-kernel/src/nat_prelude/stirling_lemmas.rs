@@ -318,11 +318,7 @@ fn declare_eq_zero_of_lt(
                     let step_three = d.refl(zero);
                     let (_end, final_) = d.chain(
                         start,
-                        &[
-                            (mid_one, step_one),
-                            (mid_two, step_two),
-                            (zero, step_three),
-                        ],
+                        &[(mid_one, step_one), (mid_two, step_two), (zero, step_three)],
                     );
                     d.lam_fv(h_fv, hyp_ty, final_)
                 },
@@ -413,10 +409,7 @@ fn declare_stirling_first_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
 /// so the step is the hypothesis followed by ONE `mul_comm`, because this
 /// prelude's `factorial_succ` is `factorial n * succ n` where Mathlib's is
 /// `succ n * factorial n`.
-fn declare_stirling_first_one_right(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
+fn declare_stirling_first_one_right(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let first = p.stirling_first;
     d.theorem(p.stirling_first_one_right, 1, &|d, v| {
@@ -533,8 +526,7 @@ fn declare_stirling_first_succ_self_left(
                 };
                 let mul_one = d.lemma(p.mul_one, &[sm]);
                 let scaled_one = d.mul(sm, one);
-                let step_three =
-                    d.congr(scaled_one, sm, mul_one, &|d, x| d.add(x, choose_sm_two));
+                let step_three = d.congr(scaled_one, sm, mul_one, &|d, x| d.add(x, choose_sm_two));
                 let mid_three = d.add(sm, choose_sm_two);
                 // choose_one_right sm : choose sm 1 = sm
                 let choose_one = d.lemma(p.choose_one_right, &[sm]);

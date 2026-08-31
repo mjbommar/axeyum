@@ -126,7 +126,9 @@ fn the_four_defining_equations_state_mathlibs_recurrence() {
 
     // stirlingFirst_zero : stirlingFirst 0 0 = 1
     let proof = f.k.const_(p.stirling_first_zero, vec![]);
-    let inferred = f.k.infer(proof).expect("stirlingFirst_zero must type-check");
+    let inferred =
+        f.k.infer(proof)
+            .expect("stirlingFirst_zero must type-check");
     let zero = f.zero();
     let lhs = f.first(zero, zero);
     let one = f.num(1);
@@ -146,10 +148,9 @@ fn the_four_defining_equations_state_mathlibs_recurrence() {
     let mut ctx = LocalContext::new();
     let k_free = f.free_nat(&mut ctx);
     let proof = f.lemma(p.stirling_first_zero_succ, &[k_free]);
-    let inferred = f
-        .k
-        .infer_in(proof, &mut ctx)
-        .expect("stirlingFirst_zero_succ must type-check");
+    let inferred =
+        f.k.infer_in(proof, &mut ctx)
+            .expect("stirlingFirst_zero_succ must type-check");
     let zero = f.zero();
     let sk = f.succ(k_free);
     let lhs = f.first(zero, sk);
@@ -187,10 +188,9 @@ fn the_four_defining_equations_state_mathlibs_recurrence() {
     let mut ctx = LocalContext::new();
     let n_free = f.free_nat(&mut ctx);
     let proof = f.lemma(p.stirling_first_succ_zero, &[n_free]);
-    let inferred = f
-        .k
-        .infer_in(proof, &mut ctx)
-        .expect("stirlingFirst_succ_zero must type-check");
+    let inferred =
+        f.k.infer_in(proof, &mut ctx)
+            .expect("stirlingFirst_succ_zero must type-check");
     let sn = f.succ(n_free);
     let zero = f.zero();
     let lhs = f.first(sn, zero);
@@ -225,10 +225,9 @@ fn the_four_defining_equations_state_mathlibs_recurrence() {
     let n_free = f.free_nat(&mut ctx);
     let k_free = f.free_nat(&mut ctx);
     let proof = f.lemma(p.stirling_first_succ_succ, &[n_free, k_free]);
-    let inferred = f
-        .k
-        .infer_in(proof, &mut ctx)
-        .expect("stirlingFirst_succ_succ must type-check");
+    let inferred =
+        f.k.infer_in(proof, &mut ctx)
+            .expect("stirlingFirst_succ_succ must type-check");
     let sn = f.succ(n_free);
     let sk = f.succ(k_free);
     let lhs = f.first(sn, sk);
@@ -325,10 +324,9 @@ fn eq_zero_of_lt_states_the_conditional_and_the_condition_is_load_bearing() {
             info: BinderInfo::Default,
         });
         let proof = f.lemma(theorem, &[n_free, k_free, h]);
-        let inferred = f
-            .k
-            .infer_in(proof, &mut ctx)
-            .expect("eq_zero_of_lt must type-check at a free (n, k)");
+        let inferred =
+            f.k.infer_in(proof, &mut ctx)
+                .expect("eq_zero_of_lt must type-check at a free (n, k)");
         let lhs = if is_first {
             f.first(n_free, k_free)
         } else {
@@ -397,10 +395,9 @@ fn stirling_first_self_states_the_diagonal_is_one() {
     let mut ctx = LocalContext::new();
     let n_free = f.free_nat(&mut ctx);
     let proof = f.lemma(p.stirling_first_self, &[n_free]);
-    let inferred = f
-        .k
-        .infer_in(proof, &mut ctx)
-        .expect("stirlingFirst_self must type-check at a free n");
+    let inferred =
+        f.k.infer_in(proof, &mut ctx)
+            .expect("stirlingFirst_self must type-check at a free n");
     let lhs = f.first(n_free, n_free);
     let one = f.num(1);
     let expected = f.eq(lhs, one);
@@ -446,10 +443,9 @@ fn the_column_one_mirrors_separate_the_two_kinds() {
     let mut ctx = LocalContext::new();
     let n_free = f.free_nat(&mut ctx);
     let proof = f.lemma(p.stirling_first_one_right, &[n_free]);
-    let inferred = f
-        .k
-        .infer_in(proof, &mut ctx)
-        .expect("stirlingFirst_one_right must type-check at a free n");
+    let inferred =
+        f.k.infer_in(proof, &mut ctx)
+            .expect("stirlingFirst_one_right must type-check at a free n");
     let sn = f.succ(n_free);
     let one = f.num(1);
     let lhs = f.first(sn, one);
@@ -471,10 +467,9 @@ fn the_column_one_mirrors_separate_the_two_kinds() {
     let mut ctx = LocalContext::new();
     let n_free = f.free_nat(&mut ctx);
     let proof = f.lemma(p.stirling_second_one_right, &[n_free]);
-    let inferred = f
-        .k
-        .infer_in(proof, &mut ctx)
-        .expect("stirlingSecond_one_right must type-check at a free n");
+    let inferred =
+        f.k.infer_in(proof, &mut ctx)
+            .expect("stirlingSecond_one_right must type-check at a free n");
     let sn = f.succ(n_free);
     let one = f.num(1);
     let lhs = f.second(sn, one);
@@ -529,10 +524,9 @@ fn stirling_first_succ_self_left_meets_pascals_rule() {
     let mut ctx = LocalContext::new();
     let n_free = f.free_nat(&mut ctx);
     let proof = f.lemma(p.stirling_first_succ_self_left, &[n_free]);
-    let inferred = f
-        .k
-        .infer_in(proof, &mut ctx)
-        .expect("stirlingFirst_succ_self_left must type-check at a free n");
+    let inferred =
+        f.k.infer_in(proof, &mut ctx)
+            .expect("stirlingFirst_succ_self_left must type-check at a free n");
     let sn = f.succ(n_free);
     let two = f.num(2);
     let lhs = f.first(sn, n_free);

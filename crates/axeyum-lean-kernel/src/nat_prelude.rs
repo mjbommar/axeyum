@@ -370,7 +370,6 @@ use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
 use minmax::declare_minmax_all;
 use minmax_lemmas::declare_minmax_lemmas_all;
-use stirling_lemmas::declare_stirling_lemmas_all;
 use mod_mul_lemmas::declare_mod_mul_family;
 use modeq_add_cancel::declare_mod_eq_add_cancel;
 use modeq_add_le_of_lt::declare_mod_eq_add_le_of_lt;
@@ -434,6 +433,7 @@ use size_extra::declare_size_extra_all;
 use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
+use stirling_lemmas::declare_stirling_lemmas_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -6132,14 +6132,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             stirling_first_zero_succ: kernel.name_str(nat, "stirlingFirst_zero_succ"),
             stirling_first_succ_zero: kernel.name_str(nat, "stirlingFirst_succ_zero"),
             stirling_first_succ_succ: kernel.name_str(nat, "stirlingFirst_succ_succ"),
-            stirling_first_eq_zero_of_lt: kernel
-                .name_str(nat, "stirlingFirst_eq_zero_of_lt"),
+            stirling_first_eq_zero_of_lt: kernel.name_str(nat, "stirlingFirst_eq_zero_of_lt"),
             stirling_first_self: kernel.name_str(nat, "stirlingFirst_self"),
-            stirling_first_succ_self_left: kernel
-                .name_str(nat, "stirlingFirst_succ_self_left"),
+            stirling_first_succ_self_left: kernel.name_str(nat, "stirlingFirst_succ_self_left"),
             stirling_first_one_right: kernel.name_str(nat, "stirlingFirst_one_right"),
-            stirling_second_eq_zero_of_lt: kernel
-                .name_str(nat, "stirlingSecond_eq_zero_of_lt"),
+            stirling_second_eq_zero_of_lt: kernel.name_str(nat, "stirlingSecond_eq_zero_of_lt"),
             stirling_second_one_right: kernel.name_str(nat, "stirlingSecond_one_right"),
         };
 
