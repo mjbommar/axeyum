@@ -310,6 +310,42 @@ run() {
 }
 
 rc=0
+# ---------------------------------------------------------------------------
+# L0 trusted-library safety gates (ADR-1050), FIRST of all — cheaper than the
+# preflight's own toolchain checks, and this file is what ci.yml, hooks/
+# pre-push and CLAUDE.md all call "the authoritative gate for main". Until now
+# these seven ran ONLY from `scripts/check.sh` and the `justfile` — that is,
+# only when a human typed a command; `check-l0-gate-enforcement.py` measured
+# ZERO references to any of them here, against positive controls of 10
+# `scripts/` references in this same file. Nothing stopped a change that
+# breaks statement identity, admits a circular trust closure, contaminates the
+# blind-evaluation partition or silently drops a semantic control from
+# reaching `main` through this route.
+#
+# Ordered cheapest-first (measured warm on s4, single run) so a fast violation
+# is reported without paying for the slow ones: holdout-closed-evaluation
+# 0.06s, settled-fact-statements 0.09s, semantic-control-fixtures 1.09s,
+# credit-transaction-ledger 10.6s, kernel-differential 7-27s (hard-requires
+# the pinned Lean toolchain — the script sets AXEYUM_REQUIRE_LEAN=1 itself, so
+# a host without it FAILS this step rather than skipping it), trust-closure
+# ~58s (shells out to `cargo run --release`), proposition-duplication 55-72s
+# despite being pure Python.
+#
+# No `|| true`, no skip switch: these feed `rc` exactly like every other step
+# below, so a failure here fails the whole gate.
+run python3 scripts/check-holdout-closed-evaluation.py || rc=$?
+run python3 scripts/check-settled-fact-statements.py || rc=$?
+run python3 scripts/check-semantic-control-fixtures.py --check || rc=$?
+run python3 scripts/check-credit-transaction-ledger.py || rc=$?
+run python3 scripts/check-kernel-differential.py || rc=$?
+run python3 scripts/check-trust-closure.py --quiet || rc=$?
+run python3 scripts/check-proposition-duplication.py || rc=$?
+# Assert the seven above stay wired -- in ci.yml, hooks/pre-push AND this
+# script. The reason the block above exists at all: prose did not keep them
+# wired, so a gate does.
+run python3 scripts/check-l0-gate-enforcement.py || rc=$?
+# ---------------------------------------------------------------------------
+
 # Lint + format gates FIRST — these mirror the hosted-CI light checks. Clippy is
 # pinned to STABLE on purpose: the frontier is developed against nightly clippy,
 # which does not flag some stable lints (e.g. needless_raw_string_hashes), so a
