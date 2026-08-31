@@ -132,6 +132,7 @@ mod add_basics;
 mod add_choose_div;
 mod add_desc_factorial_asc_factorial;
 mod add_factorial_le;
+mod add_factorial_lt;
 mod add_pos;
 mod algebra;
 mod and_or_distrib;
@@ -257,6 +258,9 @@ use add_choose_div::declare_add_choose;
 use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factorial;
 use add_factorial_le::{
     declare_add_factorial_le_factorial_add, declare_add_factorial_succ_le_factorial_add_succ,
+};
+use add_factorial_lt::{
+    declare_add_factorial_lt_factorial_add, declare_add_factorial_succ_lt_factorial_add_succ,
 };
 use add_pos::declare_add_pos;
 use algebra::{
@@ -1476,6 +1480,16 @@ pub struct NatPrelude {
     /// `F:ml430-nat-add-factorial-succ-le-factorial-add-succ-e8145feb`.
     /// Corollary of [`Self::add_factorial_le_factorial_add`].
     pub add_factorial_succ_le_factorial_add_succ: NameId,
+    /// `Nat.add_factorial_lt_factorial_add : ∀ i n, Le 2 i → Le 1 n → Lt (i +
+    /// n!) ((i+n)!)`. Closes
+    /// `F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8`. See
+    /// `nat_prelude::add_factorial_lt`.
+    pub add_factorial_lt_factorial_add: NameId,
+    /// `Nat.add_factorial_succ_lt_factorial_add_succ : ∀ i n, Le 2 i → Lt (i
+    /// + (n+1)!) ((i+n+1)!)`. Closes
+    /// `F:ml430-nat-add-factorial-succ-lt-factorial-add-succ-ec0fa8d3`.
+    /// Corollary of [`Self::add_factorial_lt_factorial_add`].
+    pub add_factorial_succ_lt_factorial_add_succ: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -5189,6 +5203,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             add_factorial_le_factorial_add: kernel.name_str(nat, "add_factorial_le_factorial_add"),
             add_factorial_succ_le_factorial_add_succ: kernel
                 .name_str(nat, "add_factorial_succ_le_factorial_add_succ"),
+            add_factorial_lt_factorial_add: kernel.name_str(nat, "add_factorial_lt_factorial_add"),
+            add_factorial_succ_lt_factorial_add_succ: kernel
+                .name_str(nat, "add_factorial_succ_lt_factorial_add_succ"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
             le_of_dvd: kernel.name_str(nat, "le_of_dvd"),
@@ -5857,6 +5874,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `ml430` mirrors, so they go here.
         declare_add_factorial_le_factorial_add(&mut d, &p)?;
         declare_add_factorial_succ_le_factorial_add_succ(&mut d, &p)?;
+        // Same dependency footprint as the `≤` pair just above, plus
+        // `Nat.factorial_lt_of_lt`/`Nat.factorial_le`/`Nat.mul_le_mul_left`/
+        // `Nat.mul_one`/`Nat.le_succ`/`Nat.lt_succ_self` (`declare_factorial_order`
+        // and the general order/algebra block, both far above `declare_euclid`).
+        declare_add_factorial_lt_factorial_add(&mut d, &p)?;
+        declare_add_factorial_succ_lt_factorial_add_succ(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;
         declare_combinatorial_identities(&mut d, &p)?;

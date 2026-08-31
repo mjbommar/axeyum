@@ -1056,6 +1056,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.factorial_ne_zero,
         p.add_factorial_le_factorial_add,
         p.add_factorial_succ_le_factorial_add_succ,
+        p.add_factorial_lt_factorial_add,
+        p.add_factorial_succ_lt_factorial_add_succ,
         p.fib_mono,
         p.even_or_odd_exists,
         p.add_self_ne_succ_add_self,
