@@ -693,6 +693,54 @@ mod tests {
         );
     }
 
+    #[test]
+    fn verify_rejects_an_endpoint_witness_at_the_right_bound() {
+        // Mirror of `verify_rejects_an_endpoint_witness`, but at `b` instead
+        // of `a` -- ADR-1435 found the sturm/real_algebraic IVT bridge's
+        // strictness at the RIGHT endpoint rested on an incidental guard
+        // that no test isolated; step 5 here (`below_b != Ordering::Less`)
+        // is a single combined check covering both bounds, so this confirms
+        // the right-endpoint branch is independently exercised too, not just
+        // assumed symmetric with the left-endpoint test above.
+        //
+        // q(x) = -x^3 + 8x^2 - 16x on [0, 4]: q(0) = 0, q(4) = -64+128-64 = 0,
+        // so slope = 0. q' = -3x^2 + 16x - 16, roots at x = 4/3 (genuinely
+        // interior) and x = 4 (the RIGHT ENDPOINT itself, by construction --
+        // q is p(4-x) for the left-endpoint example's p = x^3 - 4x^2,
+        // reflecting its endpoint coincidence from a to b). Both satisfy
+        // q'(x) = slope = 0 exactly.
+        let q = poly_from(&[0, -16, 8, -1]);
+        let cert = polynomial_mvt(&q, Rational::integer(0), Rational::integer(4))
+            .expect("must not decline");
+        assert_eq!(cert.slope, Rational::zero());
+        // Sanity: the genuine witness the producer found must be interior
+        // (4/3), not the endpoint (4).
+        assert_eq!(verify_mvt_certificate(&cert), Some(true));
+        assert_ne!(cert.c.rational_value(), Some(Rational::integer(4)));
+
+        // Now corrupt c to the endpoint x = 4 (b itself), which DOES satisfy
+        // q'(4) = 0 = slope exactly.
+        let mut mutated = cert;
+        mutated.c = rational_as_algebraic_real(Rational::integer(4)).unwrap();
+        // Confirm the coincidence: q'(4) really does equal slope, so the
+        // slope-equation check ALONE would pass here.
+        let q_prime = poly::rat_derivative(&mutated.poly).unwrap();
+        let value_at_4 = eval_poly_at_algebraic(&q_prime, &mutated.c).unwrap();
+        assert_eq!(
+            algebraic_cmp(
+                &value_at_4,
+                &RealAlgebraic::from_rational(mutated.slope).unwrap()
+            ),
+            Some(Ordering::Equal),
+            "sanity: q'(4) = slope really does hold, making this the adversarial case"
+        );
+        assert_eq!(
+            verify_mvt_certificate(&mutated),
+            Some(false),
+            "an endpoint root at b is not MVT either, however good the arithmetic looks"
+        );
+    }
+
     // ---- cost curve (wall clock; measured, not estimated) ----
 
     #[test]

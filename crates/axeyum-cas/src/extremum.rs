@@ -726,6 +726,91 @@ mod tests {
         assert_eq!(verify_extremum_certificate(&cert), Some(false));
     }
 
+    // ---- boundary-critical-point audit (ADR-1435's open-interval finding,
+    // checked against this module: unlike the IVT bridge, endpoints are
+    // LEGITIMATE extremum candidates here -- `value_a`/`value_b` are always
+    // compared directly -- so this is a completeness question about
+    // `critical_points`/`is_strictly_inside`, not a soundness one about the
+    // reported maximum. Audited and confirmed clean; these tests pin it. ----
+
+    #[test]
+    fn producer_excludes_a_critical_point_sitting_exactly_at_the_left_endpoint() {
+        // p = x^2 on [0, 2]: p' = 2x, whose only root x = 0 IS the left
+        // endpoint `a` itself. The completeness argument (module doc) says
+        // interior candidates are strictly inside (a, b), so this root must
+        // not appear in `critical_points` -- the max is decided by the two
+        // endpoints alone (p(0) = 0, p(2) = 4).
+        let p = poly_from(&[0, 0, 1]);
+        let cert = polynomial_extremum(&p, Rational::integer(0), Rational::integer(2))
+            .expect("must not decline");
+        assert!(
+            cert.critical_points.is_empty(),
+            "the boundary root x=0 must not be listed as an interior candidate"
+        );
+        assert_eq!(cert.argmax, ExtremumLocation::Right);
+        assert_eq!(verify_extremum_certificate(&cert), Some(true));
+    }
+
+    #[test]
+    fn verify_rejects_a_critical_point_forged_exactly_at_the_left_endpoint() {
+        // Adversarial: take the clean certificate above and forge in the
+        // excluded boundary root as if it were a genuine interior candidate,
+        // claiming it as the argmax with the (wrong) value p(0) = 0. Only
+        // `is_strictly_inside` (step 3) -- and, independently, the
+        // completeness recount (step 5) -- can catch this; there is no
+        // incidental unrelated guard doing it by accident here.
+        let p = poly_from(&[0, 0, 1]);
+        let mut cert = polynomial_extremum(&p, Rational::integer(0), Rational::integer(2))
+            .expect("must not decline");
+        let boundary_root = crate::algebraic::real_roots(&poly_from(&[0, 1]))
+            .unwrap()
+            .pop()
+            .unwrap();
+        assert_eq!(boundary_root.rational_value(), Some(Rational::zero()));
+        cert.critical_points = vec![boundary_root];
+        cert.argmax = ExtremumLocation::Critical(0);
+        cert.max_value = RealAlgebraic::from_rational(Rational::zero()).unwrap();
+        assert_eq!(
+            verify_extremum_certificate(&cert),
+            Some(false),
+            "a critical point forged exactly at `a` is not a genuine interior candidate"
+        );
+    }
+
+    #[test]
+    fn producer_excludes_a_critical_point_sitting_exactly_at_the_right_endpoint() {
+        // Mirror at `b`: p = x^2 on [-2, 0], p' = 2x, root x = 0 = b.
+        let p = poly_from(&[0, 0, 1]);
+        let cert = polynomial_extremum(&p, Rational::integer(-2), Rational::integer(0))
+            .expect("must not decline");
+        assert!(
+            cert.critical_points.is_empty(),
+            "the boundary root x=0 must not be listed as an interior candidate"
+        );
+        assert_eq!(cert.argmax, ExtremumLocation::Left);
+        assert_eq!(verify_extremum_certificate(&cert), Some(true));
+    }
+
+    #[test]
+    fn verify_rejects_a_critical_point_forged_exactly_at_the_right_endpoint() {
+        let p = poly_from(&[0, 0, 1]);
+        let mut cert = polynomial_extremum(&p, Rational::integer(-2), Rational::integer(0))
+            .expect("must not decline");
+        let boundary_root = crate::algebraic::real_roots(&poly_from(&[0, 1]))
+            .unwrap()
+            .pop()
+            .unwrap();
+        assert_eq!(boundary_root.rational_value(), Some(Rational::zero()));
+        cert.critical_points = vec![boundary_root];
+        cert.argmax = ExtremumLocation::Critical(0);
+        cert.max_value = RealAlgebraic::from_rational(Rational::zero()).unwrap();
+        assert_eq!(
+            verify_extremum_certificate(&cert),
+            Some(false),
+            "a critical point forged exactly at `b` is not a genuine interior candidate"
+        );
+    }
+
     // ---- cost curve (wall clock; measured, not estimated) ----
 
     #[test]
