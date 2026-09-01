@@ -117,6 +117,7 @@ mod order;
 mod order_add;
 mod order_coercion;
 mod parity;
+mod prime_dvd_mul_mirrors;
 mod prod;
 mod qr_criterion;
 mod rat;
@@ -1193,6 +1194,63 @@ pub struct IntPrelude {
     /// comment on `declare_euclid_infinitude` has the full reasoning).
     pub euclid_infinitude: NameId,
 
+    /// `prime_dvd_mul' : ∀ (m n : Int) (p : Nat), (2 ≤ p ∧ ∀ d, d ∣ p → d = 1
+    /// ∨ d = p) → ofNat p ∣ m*n → ofNat p ∣ m ∨ ofNat p ∣ n` — `ml430` mirror
+    /// `Int.Prime.dvd_mul'` (`F:ml430-int-prime-dvd-mul-23b73e69`). Direct
+    /// application of [`Self::euclid_lemma`] at `pr := ofNat p`: `natAbs
+    /// (ofNat p) ≡ p` by `rfl`, so the stated primality hypothesis is
+    /// definitionally the one `euclid_lemma` needs. See `int_prelude::
+    /// prime_dvd_mul_mirrors`.
+    pub prime_dvd_mul_prime: NameId,
+    /// `prime_dvd_mul : ∀ (m n : Int) (p : Nat), (2 ≤ p ∧ ∀ d, d ∣ p → d = 1
+    /// ∨ d = p) → ofNat p ∣ m*n → p ∣ natAbs m ∨ p ∣ natAbs n` — `ml430`
+    /// mirror `Int.Prime.dvd_mul` (`F:ml430-int-prime-dvd-mul-90351ba0`).
+    /// Same route as [`Self::prime_dvd_mul_prime`], with each disjunct
+    /// dropped to `Nat` via [`Self::nat_abs_dvd_nat_abs_of_dvd`]. See
+    /// `int_prelude::prime_dvd_mul_mirrors`.
+    pub prime_dvd_mul: NameId,
+    /// `not_prime_of_int_mul : ∀ (a b : Int) (c : Nat), natAbs a ≠ 1 →
+    /// natAbs b ≠ 1 → a*b = ofNat c → ¬(2 ≤ c ∧ ∀ d, d ∣ c → d = 1 ∨ d = c)`
+    /// — `ml430` mirror `Int.not_prime_of_int_mul`
+    /// (`F:ml430-int-not-prime-of-int-mul-e3060f5d`). Built at `Nat` from
+    /// `natAbs a`/`natAbs b`: neither magnitude is `1`, so their product is
+    /// composite (a divisor `x := natAbs a` divides the product and, since
+    /// `natAbs b ≠ 1`, is not equal to it — `Nat.mul_left_cancel_of_pos`
+    /// closes that inequality — nor equal to `1`), and the `x = 0` corner
+    /// falls out of `Nat.prime_ne_zero` directly. See
+    /// `int_prelude::prime_dvd_mul_mirrors`.
+    pub not_prime_of_int_mul: NameId,
+    /// `gcd_ne_one_iff_gcd_mul_right_ne_one : ∀ (a : Int) (m n : Nat), Iff
+    /// (Not (Eq (gcd a (ofNat m * ofNat n)) one)) (Or (Not (Eq (gcd a (ofNat
+    /// m)) one)) (Not (Eq (gcd a (ofNat n)) one)))` — `ml430` mirror
+    /// `Int.gcd_ne_one_iff_gcd_mul_right_ne_one`
+    /// (`F:ml430-int-gcd-ne-one-iff-gcd-mul-right-ne-one-ae6099bd`). Built at
+    /// `Nat` from `x := natAbs a` (`Int.gcd a b` reduces to `Nat.gcd (natAbs
+    /// a) (natAbs b)` by `rfl`, and `natAbs (ofNat m * ofNat n)` reduces to
+    /// `mul m n`): the already-proved `Nat.coprime_mul_iff` gives `Iff (Eq
+    /// (gcd x (m*n)) one) (And (Eq (gcd x m) one) (Eq (gcd x n) one))`, then
+    /// two purely-intuitionistic `Iff` transports (`Not`/`Not`, no
+    /// decidability) and one classical step — deciding `Eq (gcd x m) one`
+    /// via `Nat.beq`'s soundness/completeness — turn `Not (And q1 q2)` into
+    /// `Or (Not q1) (Not q2)`. See `int_prelude::prime_dvd_mul_mirrors`.
+    pub gcd_ne_one_iff_gcd_mul_right_ne_one: NameId,
+    /// `succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul : ∀ (p : Nat), (2 ≤ p ∧ ∀ d,
+    /// d ∣ p → d = 1 ∨ d = p) → ∀ (m n : Int) (k l : Nat), ofNat (pow p k) ∣
+    /// m → ofNat (pow p l) ∣ n → ofNat (pow p (k+l+1)) ∣ m*n → ofNat (pow p
+    /// (k+1)) ∣ m ∨ ofNat (pow p (l+1)) ∣ n` — `ml430` mirror
+    /// `Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul`
+    /// (`F:ml430-int-succ-dvd-or-succ-dvd-of-succ-sum-dvd-mul-435a4948`).
+    /// Bridged to a `Nat`-level core (`X := natAbs m`, `Y := natAbs n`) via
+    /// `nat_abs_dvd_nat_abs_of_dvd`/`dvd_of_nat_abs_dvd`/`nat_abs_mul`: write
+    /// `X = p^k·x'`, `Y = p^l·y'` (`Nat.dvd` elimination), regroup `X·Y =
+    /// p^(k+l)·(x'·y')` (`Nat.pow_add`, `Nat.mul_assoc`/`mul_comm`), cancel
+    /// the positive factor `p^(k+l)` from `p^(k+l+1) ∣ X·Y` (`Nat.pow_pos`,
+    /// `Nat.mul_left_cancel_of_pos`) to get `p ∣ x'·y'`, then
+    /// `Nat.euclid_lemma` gives `p ∣ x'` or `p ∣ y'`, each of which regroups
+    /// back to `p^(k+1) ∣ X` or `p^(l+1) ∣ Y`. See
+    /// `int_prelude::prime_dvd_mul_mirrors`.
+    pub succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul: NameId,
+
     // --- the Chinese Remainder Theorem ----------------------------------------
     /// `crt_exists : ∀ m n a b, 0 < m → 0 < n → Coprime m n →
     /// ∃ x, ModEq m x a ∧ ModEq n x b`.
@@ -2030,6 +2088,14 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         gcd_greatest: child(kernel, "gcd_greatest"),
         euclid_lemma: child(kernel, "euclid_lemma"),
         euclid_infinitude: child(kernel, "euclid_infinitude"),
+        prime_dvd_mul_prime: child(kernel, "prime_dvd_mul'"),
+        prime_dvd_mul: child(kernel, "prime_dvd_mul"),
+        not_prime_of_int_mul: child(kernel, "not_prime_of_int_mul"),
+        gcd_ne_one_iff_gcd_mul_right_ne_one: child(kernel, "gcd_ne_one_iff_gcd_mul_right_ne_one"),
+        succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul: child(
+            kernel,
+            "succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul",
+        ),
         crt_exists: child(kernel, "crt_exists"),
         crt_unique: child(kernel, "crt_unique"),
         rat,
@@ -2506,6 +2572,16 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // last for the same reason as the mirror modules above it.
         exists_gcd_one::declare_exists_gcd_one(&mut d)?;
         exists_gcd_one::declare_exists_gcd_one_prime(&mut d)?;
+        // `int-prime-dvd` lane: three `ml430` mirrors built directly from
+        // `gcd::declare_euclid_lemma` (`prime_dvd_mul'`, `prime_dvd_mul`) and
+        // from `Nat.not_prime_of_dvd_of_ne`/`Nat.prime_ne_zero`
+        // (`not_prime_of_int_mul`). Placed last for the same reason as the
+        // mirror modules above it.
+        prime_dvd_mul_mirrors::declare_prime_dvd_mul_prime(&mut d)?;
+        prime_dvd_mul_mirrors::declare_prime_dvd_mul(&mut d)?;
+        prime_dvd_mul_mirrors::declare_not_prime_of_int_mul(&mut d)?;
+        prime_dvd_mul_mirrors::declare_gcd_ne_one_iff_gcd_mul_right_ne_one(&mut d)?;
+        prime_dvd_mul_mirrors::declare_succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul(&mut d)?;
         Ok(prelude)
     })();
     match built {
