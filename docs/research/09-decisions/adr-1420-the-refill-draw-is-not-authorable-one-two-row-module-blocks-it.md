@@ -108,6 +108,28 @@ held-out family can exist at a time**.
 
 R5 needs two. **Draw 17 is refused.**
 
+## What the exhaustive screen approximates, and in which direction
+
+Two things separate this search from `screen_family()` verbatim, and both were
+checked rather than assumed.
+
+**Plumbing.** The real screen computes
+`plumbing({**published_rows, family: rows})`; the search computes it over the
+published families alone. Adding a family can push a constant into the plumbing
+set, which would REMOVE it from the vocabulary owners and make the search
+over-count hits. Probed over 19 cases -- every topic-clean module alone, and all
+18 together -- plumbing moved in **6** of them and added only logical
+connectives (`Ne`, `And`, `Or`), and the vocabulary-owner map was **identical in
+every case**: 26 plumbing constants, 24 owners, unchanged. So the approximation
+is exact in the dimension that matters. The probe is 19 cases rather than all
+`2^18`, so this is a strong sample, not a proof.
+
+**Same-draw publication.** `screen_draw` adds a draw's OWN development/train
+families to the published set before screening its held-out ones. The search
+scores against today's published families only, so the real hit count can only
+be **higher**. That direction is safe for a refusal: a subset the search calls
+non-viable stays non-viable.
+
 ## What this means, precisely
 
 - It is a supply problem in the vocabulary-clean dimension, not in raw rows.
