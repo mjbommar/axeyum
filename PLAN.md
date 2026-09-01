@@ -125,6 +125,7 @@ now. Nothing was deleted.
 | 2026-09-01 | `53a0065d2` | 4 of 10: the `natAbs_inj_of_*` mirrors, first attempt each. Three of four branches close on the sign hypothesis alone, because `Int.le Int.zero (negSucc n)` IS `False`. |
 | 2026-09-01 | `ce3a4cbac` | 5 more: the `mul_self` cluster (3 new `Nat` squaring lemmas carry all its content) and the `coe_sub_coe` pair (`subNatNat_elim` after the `ofNat_add_negOfNat` bridge — the two stuck terms are NOT defeq). Plus the `Nat.`-namespace axiom-freedom gap, 13 declarations. |
 | 2026-09-01 | `32e338978` | Row 1, `natAbs_emod_two`: the family scores **10 of 10**. Its two parity cases take different routes — there is no `Nat.odd_iff_even_succ` to mirror `even_iff_odd_succ` with. |
+| 2026-09-01 | kernel-rustdoc-links | Fixed all 23 broken rustdoc intra-doc-links in `crates/axeyum-lean-kernel/src/{nat_prelude,ipc_heyting,ipc_provable,rat_prelude}.rs`; `cargo doc -p axeyum-lean-kernel --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 (was exit 101, 24 error lines). Workspace-wide doc build still red: 8 errors in `axeyum-cas` (out of scope, reported not fixed). |
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
 | 2026-09-01 | `PENDING` | Established that `held_out=186` is CORRECT before moving the stale `held_out=146` pin — composition 16 (v1) + 170 (v2, matching the extension's own `coverage.partition_counts`), two RISES from draws with v1 unchanged so no ledger amendment is owed, and all 186 rows measured `open` / no evidence / unreferenced by any of the 29 operations against a positive control of 191/191/37 over the 198 train rows. Pin now carries a failure message naming the procedure. Control mutates the SUBJECT: perturbing the gate's reported count kills the pin. |
 | 2026-09-01 | `PENDING` | `check-generated-artifact-ownership.py`: one of its two COVER failures was a fiction — `schema.json` reported as a three-producer artifact because basenames were matched as substrings of `fact.schema.json` and `obstruction-graph.schema.json`. Recording it would have put an invention into the ratchet's population. Now extracts whole `*.json` path components per producer (35 -> 34 candidates, dropping only `schema.json`, adding none, removing none of the 32 recorded; also 112 s -> 0.05 s, past a timeout that made the gate unrunnable), and the genuinely multi-named `mirror-divergence-registry.json` is recorded. Gate `fails=0|PASS`. |
@@ -41063,6 +41064,30 @@ it stays fresh) —
 `multi_target_operations=4` (was 3). `python3 scripts/gen-adr-index.py
 --check` — unchanged (ADR-0602's front matter was not touched, only its
 body).
+
+**Your lane's block (`DONE`, kernel-rustdoc-links, 2026-09-01).** Fixed all 23
+broken intra-doc-links (24 `error:` lines including the summary) that made
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-lean-kernel --no-deps` fail —
+confirmed by reproducing the failure first (exit 101, 24 `error:` lines) and
+re-running the identical command after the edits (exit 0, 0 errors). Every
+fix is doc-comment-only: two real public items (`NatPrelude`, `NatOps`'s
+trait methods, both re-exported at the crate root) got an explicit
+`crate::`-rooted path; every other link named a `pub(super)`/private
+free function, a private submodule (`ops`, `parity`, `matrix_n`,
+`rec_agreement`), or a Lean-level name with no Rust item at all
+(`Formula`, `FormulaList`) — those were demoted to plain code-formatted text
+since fixing them into a real link would need a visibility/code change, out
+of scope for a doc-comment-only fix. Touched files:
+`nat_prelude.rs`, `ipc_heyting.rs`, `ipc_provable.rs`, `rat_prelude.rs` (the
+last two beyond the three files the initial repro named — `rat_prelude.rs`
+carried 2 of the 23 broken links, discovered during reproduction).
+`rustfmt --edition 2024` on all four touched files: no diff, already clean.
+
+Also ran `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
+--no-deps` once, report-only, no fix: exit 101, 8 `error:` lines, all in
+`crates/axeyum-cas` (`inverse.rs`, `normalforms.rs`, `rationality.rs`) —
+same defect class (public docs linking to private items), out of this
+lane's scope. Not fixed here.
 
 **Status:** complete — all seven L0 gates wired, each proved able to fail, and
 an enforcement gate added so the wiring cannot silently regress (ADR-1050).
