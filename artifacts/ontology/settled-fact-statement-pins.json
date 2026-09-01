@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2102,
+    "min_identity_bound": 2108,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -11815,11 +11815,25 @@
       "prose_sha256": "d310acf806d05d16d10038732f3a34b602a29f20f2ee6a82f7dd00767ceb0869"
     },
     {
+      "fact_id": "F:ml430-nat-clog-anti-left-d72bd6cd",
+      "language": "lean4-surface",
+      "statement_sha256": "c3971ba8e95930b744caa3455998f8655976a132d0fba2a769b35e5686de5ae8",
+      "prose_sha256": "e5b0dbecd2187a27a8d33ed72002f1c187fb1a78ceb911656ce17dfe7649726f",
+      "kernel_theorem": "Nat.clog_anti_left"
+    },
+    {
       "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
       "language": "lean4-surface",
       "statement_sha256": "04c8e3f211c8b4bab4116e81b6eb79745d527e992ea9225faed1c1117b36910d",
       "prose_sha256": "9f402933264653a476d675b15ad301ae5f374e728862cd1511c6e67ce685d190",
       "kernel_theorem": "Nat.clog_antitone_left"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-mono-74b44081",
+      "language": "lean4-surface",
+      "statement_sha256": "9b7968a1d7addc5038f72e18d11ba016cbadb337c01d78dc18f1369faf69ce02",
+      "prose_sha256": "17bddc3e685c02e5ea668ad083e94a14c138e8787dc50e0b1e828d8a474bdf73",
+      "kernel_theorem": "Nat.clog_mono"
     },
     {
       "fact_id": "F:ml430-nat-clog-mono-right-8d87a410",
@@ -11834,6 +11848,20 @@
       "statement_sha256": "0cdc77a06ad4ac41ba7dbaa36630ae2f039c6bd4ba161817a3ddb9dfb78c02a6",
       "prose_sha256": "2769226bd233123c31783872bf04dd952b56d32834e44a873aedb309378467d4",
       "kernel_theorem": "Nat.clog_monotone"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-of-left-le-one-a6640cee",
+      "language": "lean4-surface",
+      "statement_sha256": "4540752b37bf394e3a66a6916001c4eecd92c107929934a9339d3f67362db89e",
+      "prose_sha256": "6da477336dc25d3533bb617850d74a6dc98dd0fedd7304ff58cd01218f0e8cd6",
+      "kernel_theorem": "Nat.clog_of_left_le_one"
+    },
+    {
+      "fact_id": "F:ml430-nat-clog-of-right-le-one-8f11b62f",
+      "language": "lean4-surface",
+      "statement_sha256": "ac2c0d4e02b2aad388c27b616717ac70ef65d908bc85d07c32d00f72aca7c17e",
+      "prose_sha256": "5ee42e6abc8772f455eb509d4d8fd81c77001d8654a93c1e802ba17f156b6d68",
+      "kernel_theorem": "Nat.clog_of_right_le_one"
     },
     {
       "fact_id": "F:ml430-nat-clog-one-left-b496af12",
@@ -13522,11 +13550,25 @@
       "kernel_theorem": "Nat.le_refl"
     },
     {
+      "fact_id": "F:ml430-nat-log-anti-left-b72490ec",
+      "language": "lean4-surface",
+      "statement_sha256": "97adc6c184b6c58779d98fb2fba90e1ae4ff7e56b98b7489f20e1a6c37485b7e",
+      "prose_sha256": "025a9582d5cc44f0152755b0a0bbc971733dc36e934e3dbbac4c329567d80a32",
+      "kernel_theorem": "Nat.log_anti_left"
+    },
+    {
       "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
       "language": "lean4-surface",
       "statement_sha256": "ae6d33557300447315fc66bc19a4df6800aefdecaf2af095e44593a3f719adb2",
       "prose_sha256": "6cc914781ce13c481c0f812ed38fe72fd95fb739c55c7ed83d9bfd7f176ef276",
       "kernel_theorem": "Nat.log_antitone_left"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-eq-zero-iff-819cea74",
+      "language": "lean4-surface",
+      "statement_sha256": "90d1e27f9dfc1526aa32a7fa36c495396a76d6418bbe5fd2783f66bdc5a09ada",
+      "prose_sha256": "ced1d1c4e18a28c7a51183b2f4f02b0f6ba4e991a82cc80a3890650016d069a9",
+      "kernel_theorem": "Nat.log_eq_zero_iff"
     },
     {
       "fact_id": "F:ml430-nat-log-le-clog-ac8ab2d4",
