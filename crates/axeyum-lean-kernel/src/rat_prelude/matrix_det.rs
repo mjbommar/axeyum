@@ -94,7 +94,7 @@
 //! form rather than as a matrix-valued equation.
 
 use super::RatPrelude;
-use super::matrix::{rdet2, rdet3};
+use super::matrix::{det2_zero_of_ad_eq_bc, rdet2, rdet3};
 use super::ops::{
     nat_eq_to_rat, nat_rewrite_prop, radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg,
     rone, rrefl, rsum_range, rtrans, rzero,
@@ -170,7 +170,8 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_det_minor_row_col_comm(d, p)?;
     declare_det_col_expansion(d, p)?;
     declare_mat_minor_transpose(d, p)?;
-    declare_det_transpose(d, p)
+    declare_det_transpose(d, p)?;
+    declare_det_alternating(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -5697,4 +5698,921 @@ fn declare_det_transpose(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kernel
     let ty = d.pi_fv(n_fv, nat, stmt);
     let value = d.lam_fv(n_fv, nat, proof);
     d.declare_theorem(p.det_transpose, ty, value)
+}
+
+// --- alternating property (ADR-1310 step 2) ---------------------------------
+
+/// `h : Eq Nat a b ⊢ Eq Bool (f a) (f b)` — the `Nat`-hypothesis, `Bool`-
+/// conclusion twin of [`super::ops::nat_eq_to_rat`] (same shape, `Bool`
+/// conclusion instead of `Rat`). Needed wherever a `Nat.ble`/`Nat.beq` fact
+/// about one value must be transported to a DIFFERENT but Nat-equal value —
+/// [`declare_det_alternating`]'s bound derivations.
+fn congr_nat_to_bool(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = NatOps::eq_motive(d, a, &|d, x| {
+        let fx = f(d, x);
+        d.bool_eq(fa, fx)
+    });
+    let refl_case = d.bool_refl(fa);
+    NatOps::transport(d, a, motive, refl_case, b, h)
+}
+
+/// From `h : Eq Nat a b` and a proof that `f b` reduces to `Bool.true` by
+/// pure iota (the caller's responsibility — checked only by the trusted
+/// gate accepting the declaration), derive `Eq Bool (f a) true`.
+fn bool_true_via_eq(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let true_ = d.bool_true();
+    let fb_true = d.bool_refl(true_);
+    let step = congr_nat_to_bool(d, a, b, h, f);
+    let fa = f(d, a);
+    let fb = f(d, b);
+    d.bool_trans(fa, fb, true_, step, fb_true)
+}
+
+/// From `hi : Eq i v`, `hj : Eq j v` (the SAME concrete `v`, needed so that
+/// `Nat.beq v v` iota-reduces to `Bool.true`) and `hne : Eq Bool (beq i j)
+/// false`, derive `target` (any `Prop`) via `False.elim` — the contradiction
+/// every base-dimension leaf of [`declare_det_alternating`] closes with.
+fn contradiction_of_eq_via_beq(
+    d: &mut IntDev<'_>,
+    i: ExprId,
+    j: ExprId,
+    v: ExprId,
+    hi: ExprId,
+    hj: ExprId,
+    hne: ExprId,
+    target: ExprId,
+) -> ExprId {
+    let false_ = d.bool_false();
+    let beq_ij = d.beq(i, j);
+    let beq_vj = d.beq(v, j);
+    let beq_vv = d.beq(v, v);
+
+    let step1 = congr_nat_to_bool(d, i, v, hi, &|d, x| d.beq(x, j));
+    let step2 = congr_nat_to_bool(d, j, v, hj, &|d, x| d.beq(v, x));
+    let chain = d.bool_trans(beq_ij, beq_vj, beq_vv, step1, step2);
+    let symm_chain = d.bool_symm(beq_ij, beq_vv, chain);
+    let at_vv = d.bool_trans(beq_vv, beq_ij, false_, symm_chain, hne);
+    let swapped = d.bool_symm(beq_vv, false_, at_vv);
+    d.false_true_elim(target, swapped)
+}
+
+/// From `h : Eq Bool (ble x 0) true`, derive `Eq x 0`. Induction on `x`,
+/// discarding the IH: `x = 0` is `Eq.refl`; `x = succ x'` makes `h` defeq
+/// `Eq Bool false true` (`ble (succ _) 0` is the ONE-step base case), so
+/// any conclusion follows via `false_true_elim`.
+fn nat_eq_zero_of_ble_zero_true(d: &mut IntDev<'_>, x: ExprId, h: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let zero_n = d.zero();
+        let hyp = ble_true_ty(d, x, zero_n);
+        let concl = NatOps::eq(d, x, zero_n);
+        d.arrow(hyp, concl)
+    };
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let zero_n = d.zero();
+        let hyp = ble_true_ty(d, zero_n, zero_n);
+        let h_fv = d.fresh_fvar();
+        let pf = NatOps::refl(d, zero_n);
+        d.lam_fv(h_fv, hyp, pf)
+    };
+    let step = |d: &mut IntDev<'_>, xp: ExprId, _ih: ExprId| -> ExprId {
+        let zero_n = d.zero();
+        let sxp = d.succ(xp);
+        let hyp = ble_true_ty(d, sxp, zero_n);
+        let h_fv = d.fresh_fvar();
+        let hh = d.kernel().fvar(h_fv);
+        let concl = NatOps::eq(d, sxp, zero_n);
+        let pf = d.false_true_elim(concl, hh);
+        d.lam_fv(h_fv, hyp, pf)
+    };
+    let proof_fn = d.induct(&motive, &base, &step, x);
+    d.apply(proof_fn, &[h])
+}
+
+/// From `h : Eq Bool (beq x 0) true`, derive `Eq x 0`. Same shape as
+/// [`nat_eq_zero_of_ble_zero_true`], `Nat.beq` in place of `Nat.ble`.
+fn nat_eq_zero_of_beq_zero_true(d: &mut IntDev<'_>, x: ExprId, h: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let zero_n = d.zero();
+        let b = d.beq(x, zero_n);
+        let t = d.bool_true();
+        let hyp = d.bool_eq(b, t);
+        let concl = NatOps::eq(d, x, zero_n);
+        d.arrow(hyp, concl)
+    };
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let zero_n = d.zero();
+        let b = d.beq(zero_n, zero_n);
+        let t = d.bool_true();
+        let hyp = d.bool_eq(b, t);
+        let h_fv = d.fresh_fvar();
+        let pf = NatOps::refl(d, zero_n);
+        d.lam_fv(h_fv, hyp, pf)
+    };
+    let step = |d: &mut IntDev<'_>, xp: ExprId, _ih: ExprId| -> ExprId {
+        let zero_n = d.zero();
+        let sxp = d.succ(xp);
+        let b = d.beq(sxp, zero_n);
+        let t = d.bool_true();
+        let hyp = d.bool_eq(b, t);
+        let h_fv = d.fresh_fvar();
+        let hh = d.kernel().fvar(h_fv);
+        let target = NatOps::eq(d, sxp, zero_n);
+        let pf = d.false_true_elim(target, hh);
+        d.lam_fv(h_fv, hyp, pf)
+    };
+    let proof_fn = d.induct(&motive, &base, &step, x);
+    d.apply(proof_fn, &[h])
+}
+
+/// From `h : Eq Bool (beq x 0) false`, derive `Eq x (succ (pred x))` — `x`
+/// is nonzero, exhibited via its OWN `pred`, not a fresh unrelated variable
+/// (which would be useless: a case-split via `Nat.rec` on an already-fixed
+/// free variable does not hand the branch any usable fact connecting the
+/// two). Induction on `x`, discarding the IH: `x = 0` makes `h` defeq
+/// `Eq Bool true false`, contradiction; `x = succ x'` is `Eq.refl` since
+/// `pred (succ x') ≡ x'`.
+fn nat_succ_pred_of_beq_zero_false(d: &mut IntDev<'_>, x: ExprId, h: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let zero_n = d.zero();
+        let b = d.beq(x, zero_n);
+        let f_ = d.bool_false();
+        let hyp = d.bool_eq(b, f_);
+        let px = d.pred(x);
+        let spx = d.succ(px);
+        let concl = NatOps::eq(d, x, spx);
+        d.arrow(hyp, concl)
+    };
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let zero_n = d.zero();
+        let beq00 = d.beq(zero_n, zero_n);
+        let f_ = d.bool_false();
+        let hyp = d.bool_eq(beq00, f_);
+        let h_fv = d.fresh_fvar();
+        let hh = d.kernel().fvar(h_fv);
+        let px = d.pred(zero_n);
+        let spx = d.succ(px);
+        let target = NatOps::eq(d, zero_n, spx);
+        let swapped = d.bool_symm(beq00, f_, hh);
+        let pf = d.false_true_elim(target, swapped);
+        d.lam_fv(h_fv, hyp, pf)
+    };
+    let step = |d: &mut IntDev<'_>, xp: ExprId, _ih: ExprId| -> ExprId {
+        let zero_n = d.zero();
+        let sxp = d.succ(xp);
+        let b = d.beq(sxp, zero_n);
+        let f_ = d.bool_false();
+        let hyp = d.bool_eq(b, f_);
+        let h_fv = d.fresh_fvar();
+        let pf = NatOps::refl(d, sxp);
+        d.lam_fv(h_fv, hyp, pf)
+    };
+    let proof_fn = d.induct(&motive, &base, &step, x);
+    d.apply(proof_fn, &[h])
+}
+
+/// `Eq Bool (Nat.beq i j) false`, the distinctness hypothesis
+/// [`declare_det_alternating`] carries.
+fn alt_hyp_ne(d: &mut IntDev<'_>, i: ExprId, j: ExprId) -> ExprId {
+    let b = d.beq(i, j);
+    let f_ = d.bool_false();
+    d.bool_eq(b, f_)
+}
+
+/// `∀ c, A i c = A j c` — the pointwise row-equality hypothesis.
+fn alt_row_eq_ty(d: &mut IntDev<'_>, mat: ExprId, i: ExprId, j: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let ai = d.apply(mat, &[i, c]);
+    let aj = d.apply(mat, &[j, c]);
+    let eq = req(d, ai, aj);
+    d.pi_fv(c_fv, nat, eq)
+}
+
+/// `Nat.beq i j = false → Nat.ble i (succ mp) = true → Nat.ble j (succ mp) =
+/// true → (∀ c, A i c = A j c) → det A (succ (succ mp)) = 0` at fixed `mat`,
+/// `i`, `j`, `mp` — the arrow chain every leaf of
+/// [`declare_det_alternating`]'s step case produces a value of.
+fn alt_arrow_chain_ty(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    i: ExprId,
+    j: ExprId,
+    mp: ExprId,
+) -> ExprId {
+    let smp = d.succ(mp);
+    let hne_ty = alt_hyp_ne(d, i, j);
+    let hbi_ty = ble_true_ty(d, i, smp);
+    let hbj_ty = ble_true_ty(d, j, smp);
+    let hrow_ty = alt_row_eq_ty(d, mat, i, j);
+    let ssmp = d.succ(smp);
+    let det_val = rdet(d, p, mat, ssmp);
+    let zero_r = rzero(d, p);
+    let concl = req(d, det_val, zero_r);
+    let arr = d.arrow(hrow_ty, concl);
+    let arr = d.arrow(hbj_ty, arr);
+    let arr = d.arrow(hbi_ty, arr);
+    d.arrow(hne_ty, arr)
+}
+
+/// `∀ j, <alt_arrow_chain_ty at this i,j,mp>` — the `Prop`-valued motive
+/// [`alt_step`]'s outer case split on `i` uses.
+fn alt_inner_over_j(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, i: ExprId, mp: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let body = alt_arrow_chain_ty(d, p, mat, i, j, mp);
+    d.pi_fv(j_fv, nat, body)
+}
+
+/// Expand `mat` (dimension `succ n1`) along row `k` (`hk : ble k n1 = true`)
+/// and collapse the resulting sum to `0`, given a proof (for an ARBITRARY
+/// column `q`) that the cofactor determinant `det (matMinor mat k q) n1`
+/// vanishes. Every summand is then `sign * (entry * 0) = 0` via
+/// `Rat.mul_zero` twice, and `Rat.sumRange_eq_zero_of_lt` collapses the sum.
+/// Shared by every branch of [`declare_det_alternating`] that expands.
+fn zero_sum_via_expansion(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    k: ExprId,
+    hk: ExprId,
+    n1: ExprId,
+    minor_zero: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let sn1 = d.succ(n1);
+
+    let expand = d.lemma(p.det_row_expansion, &[n1, mat, k, hk]);
+
+    let summand = row_expansion_fn(d, p, mat, k, n1);
+    let summed = rsum_range(d, p, summand, sn1);
+    let zero_r = rzero(d, p);
+
+    let per_q = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let lt_fv = d.fresh_fvar();
+        let lt_ty = d.lt(q, sn1);
+
+        let mz = minor_zero(d, q);
+        let index = d.add(q, k);
+        let sign = ralt_sign(d, p, index);
+        let entry = d.apply(mat, &[k, q]);
+        let minor = rmat_minor_of(d, p, mat, k, q);
+        let sub = rdet(d, p, minor, n1);
+
+        let step1 = rcongr(d, sub, zero_r, mz, &|d, t| rmul(d, entry, t));
+        let ez1 = d.lemma(p.mul_zero, &[entry]);
+        let product = rmul(d, entry, sub);
+        let ez_prod = rmul(d, entry, zero_r);
+        let prod_zero = rtrans(d, product, ez_prod, zero_r, step1, ez1);
+
+        let step2 = rcongr(d, product, zero_r, prod_zero, &|d, t| rmul(d, sign, t));
+        let ez2 = d.lemma(p.mul_zero, &[sign]);
+        let body = rmul(d, sign, product);
+        let ez_body = rmul(d, sign, zero_r);
+        let sign_zero = rtrans(d, body, ez_body, zero_r, step2, ez2);
+
+        let with_lt = d.lam_fv(lt_fv, lt_ty, sign_zero);
+        d.lam_fv(q_fv, nat, with_lt)
+    };
+    let collapse = d.lemma(p.sum_range_eq_zero_of_lt, &[summand, sn1, per_q]);
+
+    let det_val = rdet(d, p, mat, sn1);
+    let (_e, proof) = rchain(d, det_val, &[(summed, expand), (zero_r, collapse)]);
+    proof
+}
+
+/// The `i = 0`, `j = succ (succ jpp)` leaf (`j >= 2`): expand along row `1`.
+/// `matSkip 1` fixes `0` (below the cut) and shifts `succ jpp` to `j`
+/// (above it) — both by pure iota once the case split has put the `succ` in
+/// place, so no extra `matSkip` lemma is needed. The induction hypothesis's
+/// bounds on the minor's rows `0`/`succ jpp` are either vacuous (`ble 0 _ =
+/// true`, `beq 0 (succ _) = false`, always) or the ORIGINAL `hbj_other`
+/// reduced by one `succ`/`succ` peel — never rebuilt from scratch.
+fn alt_core_ge2(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    other_pp: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+    hbj_other: ExprId,
+    hrow_zero_other: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let smp = d.succ(mp);
+    let other_p = d.succ(other_pp);
+
+    let hk = {
+        let t = d.bool_true();
+        d.bool_refl(t)
+    };
+
+    zero_sum_via_expansion(d, p, mat, one_n, hk, smp, &|d, q| {
+        let minor = rmat_minor_of(d, p, mat, one_n, q);
+        let hne2 = {
+            let f_ = d.bool_false();
+            d.bool_refl(f_)
+        };
+        let hbi2 = {
+            let t = d.bool_true();
+            d.bool_refl(t)
+        };
+        let hbj2 = hbj_other;
+        let hrow2 = {
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let shifted = rmat_skip(d, p, q, c);
+            let body = d.apply(hrow_zero_other, &[shifted]);
+            d.lam_fv(c_fv, nat, body)
+        };
+        d.apply(ih, &[minor, zero_n, other_p, hne2, hbi2, hbj2, hrow2])
+    })
+}
+
+/// The `i = 0`, `j = 1` corner: no third row exists, so this closes
+/// directly via `det_eq_det2` when `mp = 0`, and via row-`2` expansion
+/// (which needs `mp >= 1`, derived from `Nat.beq mp 0 = false`) otherwise.
+fn alt_core_eq1(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+    hrow_zero_one: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+    let cond = d.beq(mp, zero_n);
+    let target = {
+        let smp = d.succ(mp);
+        let ssmp = d.succ(smp);
+        let det_val = rdet(d, p, mat, ssmp);
+        let zero_r = rzero(d, p);
+        req(d, det_val, zero_r)
+    };
+
+    let at_true = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let hyp_ty = {
+            let t = d.bool_true();
+            d.bool_eq(cond, t)
+        };
+        let body = alt_2x2_via_beq(d, p, mat, mp, h, hrow_zero_one);
+        d.lam_fv(h_fv, hyp_ty, body)
+    };
+    let at_false = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let hyp_ty = {
+            let f_ = d.bool_false();
+            d.bool_eq(cond, f_)
+        };
+        let body = alt_k2_via_beq(d, p, mat, mp, h, ih, hrow_zero_one);
+        d.lam_fv(h_fv, hyp_ty, body)
+    };
+    bool_cases_eq(d, cond, target, at_true, at_false)
+}
+
+/// `mp = 0` half of [`alt_core_eq1`]: `det A 2 = 0` from `A00 = A10`,
+/// `A01 = A11` (the row-equality hypothesis at columns `0`,`1`) via
+/// `Rat.mul_comm` and [`det2_zero_of_ad_eq_bc`], lifted from dimension `2`
+/// to `succ (succ mp)` along `h : beq mp 0 = true`.
+fn alt_2x2_via_beq(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    mp: ExprId,
+    h: ExprId,
+    hrow: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let heq0 = nat_eq_zero_of_beq_zero_true(d, mp, h);
+
+    let a00 = d.apply(mat, &[zero_n, zero_n]);
+    let a01 = d.apply(mat, &[zero_n, one_n]);
+    let a10 = d.apply(mat, &[one_n, zero_n]);
+    let a11 = d.apply(mat, &[one_n, one_n]);
+
+    let h0 = d.apply(hrow, &[zero_n]);
+    let h1 = d.apply(hrow, &[one_n]);
+
+    let step1 = rcongr(d, a00, a10, h0, &|d, t| rmul(d, t, a11));
+    let h1_symm = super::ops::rsymm(d, a01, a11, h1);
+    let step2 = rcongr(d, a11, a01, h1_symm, &|d, t| rmul(d, a10, t));
+    let step3 = d.lemma(p.mul_comm, &[a10, a01]);
+
+    let ad = rmul(d, a00, a11);
+    let mid1 = rmul(d, a10, a11);
+    let mid2 = rmul(d, a10, a01);
+    let bc = rmul(d, a01, a10);
+    let (_e, ad_eq_bc) = rchain(d, ad, &[(mid1, step1), (mid2, step2), (bc, step3)]);
+
+    let det2_zero = det2_zero_of_ad_eq_bc(d, p, a00, a01, a10, a11, ad_eq_bc);
+    let two_n = d.succ(one_n);
+    let det_at_2 = rdet(d, p, mat, two_n);
+    let det_eq = d.lemma(p.det_eq_det2, &[mat]);
+    let det2_val = rdet2(d, p, a00, a01, a10, a11);
+    let zero_r = rzero(d, p);
+    let body0 = rtrans(d, det_at_2, det2_val, zero_r, det_eq, det2_zero);
+
+    let heq2 = NatOps::congr(d, mp, zero_n, heq0, &|d, t| {
+        let s1 = d.succ(t);
+        d.succ(s1)
+    });
+    let smp = d.succ(mp);
+    let ssmp = d.succ(smp);
+    let lifted = nat_eq_to_rat(d, ssmp, two_n, heq2, &|d, t| rdet(d, p, mat, t));
+    let det_at_mp = rdet(d, p, mat, ssmp);
+    rtrans(d, det_at_mp, det_at_2, zero_r, lifted, body0)
+}
+
+/// `mp = succ mpp` half of [`alt_core_eq1`]: expand along row `2`, which
+/// needs `Nat.ble 2 (succ mp) = true` — derived from `h : beq mp 0 = false`
+/// via [`nat_succ_pred_of_beq_zero_false`] and [`bool_true_via_eq`], since
+/// `ble 2 (succ (succ mpp)) = true` reduces by pure iota for ANY `mpp`.
+fn alt_k2_via_beq(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    mp: ExprId,
+    h: ExprId,
+    ih: ExprId,
+    hrow: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+    let smp = d.succ(mp);
+
+    let heq = nat_succ_pred_of_beq_zero_false(d, mp, h);
+    let mpp = d.pred(mp);
+    let smpp = d.succ(mpp);
+
+    let heq_s = NatOps::congr(d, mp, smpp, heq, &|d, t| d.succ(t));
+    let ssmpp = d.succ(smpp);
+    let hk = bool_true_via_eq(d, smp, ssmpp, heq_s, &|d, t| d.ble(two_n, t));
+    let hbj2 = bool_true_via_eq(d, mp, smpp, heq, &|d, t| d.ble(one_n, t));
+
+    zero_sum_via_expansion(d, p, mat, two_n, hk, smp, &|d, q| {
+        let minor = rmat_minor_of(d, p, mat, two_n, q);
+        let hne2 = {
+            let f_ = d.bool_false();
+            d.bool_refl(f_)
+        };
+        let hbi2 = {
+            let t = d.bool_true();
+            d.bool_refl(t)
+        };
+        let hrow2 = {
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let shifted = rmat_skip(d, p, q, c);
+            let body = d.apply(hrow, &[shifted]);
+            d.lam_fv(c_fv, nat, body)
+        };
+        d.apply(ih, &[minor, zero_n, one_n, hne2, hbi2, hbj2, hrow2])
+    })
+}
+
+/// `i = j = 0` leaf: `Nat.beq 0 0` reduces to `true`, contradicting `hne`.
+fn alt_zero_zero(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, mp: ExprId) -> ExprId {
+    let zero_n = d.zero();
+    let smp = d.succ(mp);
+    let hne_ty = alt_hyp_ne(d, zero_n, zero_n);
+    let hbi_ty = ble_true_ty(d, zero_n, smp);
+    let hbj_ty = ble_true_ty(d, zero_n, smp);
+    let hrow_ty = alt_row_eq_ty(d, mat, zero_n, zero_n);
+    let ssmp = d.succ(smp);
+    let det_val = rdet(d, p, mat, ssmp);
+    let zero_r = rzero(d, p);
+    let target = req(d, det_val, zero_r);
+
+    let hne_fv = d.fresh_fvar();
+    let hne = d.kernel().fvar(hne_fv);
+    let beq00 = d.beq(zero_n, zero_n);
+    let false_ = d.bool_false();
+    let swapped = d.bool_symm(beq00, false_, hne);
+    let body = d.false_true_elim(target, swapped);
+
+    let hbi_fv = d.fresh_fvar();
+    let hbj_fv = d.fresh_fvar();
+    let hrow_fv = d.fresh_fvar();
+    let with_hrow = d.lam_fv(hrow_fv, hrow_ty, body);
+    let with_hbj = d.lam_fv(hbj_fv, hbj_ty, with_hrow);
+    let with_hbi = d.lam_fv(hbi_fv, hbi_ty, with_hbj);
+    d.lam_fv(hne_fv, hne_ty, with_hbi)
+}
+
+/// `i = 0`, `j = 1` leaf: bind the outer hypotheses (only `hrow` is used —
+/// [`alt_core_eq1`] rebuilds `hne`/`hbi`/`hbj` at the minor's dimension
+/// itself, since the bound ones are at the WRONG dimension to reuse).
+fn alt_zero_one(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, mp: ExprId, ih: ExprId) -> ExprId {
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let smp = d.succ(mp);
+    let hne_ty = alt_hyp_ne(d, zero_n, one_n);
+    let hbi_ty = ble_true_ty(d, zero_n, smp);
+    let hbj_ty = ble_true_ty(d, one_n, smp);
+    let hrow_ty = alt_row_eq_ty(d, mat, zero_n, one_n);
+
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+    let body = alt_core_eq1(d, p, mat, mp, ih, hrow);
+
+    let hne_fv = d.fresh_fvar();
+    let hbi_fv = d.fresh_fvar();
+    let hbj_fv = d.fresh_fvar();
+    let with_hrow = d.lam_fv(hrow_fv, hrow_ty, body);
+    let with_hbj = d.lam_fv(hbj_fv, hbj_ty, with_hrow);
+    let with_hbi = d.lam_fv(hbi_fv, hbi_ty, with_hbj);
+    d.lam_fv(hne_fv, hne_ty, with_hbi)
+}
+
+/// `i = 0`, `j = succ (succ jpp)` leaf.
+fn alt_zero_ge2(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    jpp: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+    let jp2 = d.succ(jpp);
+    let j = d.succ(jp2);
+    let smp = d.succ(mp);
+    let hne_ty = alt_hyp_ne(d, zero_n, j);
+    let hbi_ty = ble_true_ty(d, zero_n, smp);
+    let hbj_ty = ble_true_ty(d, j, smp);
+    let hrow_ty = alt_row_eq_ty(d, mat, zero_n, j);
+
+    let hbj_fv = d.fresh_fvar();
+    let hbj = d.kernel().fvar(hbj_fv);
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+    let body = alt_core_ge2(d, p, mat, jpp, mp, ih, hbj, hrow);
+
+    let hne_fv = d.fresh_fvar();
+    let hbi_fv = d.fresh_fvar();
+    let with_hrow = d.lam_fv(hrow_fv, hrow_ty, body);
+    let with_hbj = d.lam_fv(hbj_fv, hbj_ty, with_hrow);
+    let with_hbi = d.lam_fv(hbi_fv, hbi_ty, with_hbj);
+    d.lam_fv(hne_fv, hne_ty, with_hbi)
+}
+
+/// `i = 0` branch of [`alt_step`]'s outer case split: further case-splits
+/// `j`.
+fn alt_branch_i_zero(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, mp: ExprId, ih: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+
+    let motive_j = |d: &mut IntDev<'_>, j: ExprId| -> ExprId { alt_arrow_chain_ty(d, p, mat, zero_n, j, mp) };
+    let j_at_zero = |d: &mut IntDev<'_>| -> ExprId { alt_zero_zero(d, p, mat, mp) };
+    let j_at_succ = |d: &mut IntDev<'_>, jp: ExprId, _ihj: ExprId| -> ExprId {
+        alt_zero_succ(d, p, mat, jp, mp, ih)
+    };
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let per_j = d.induct(&motive_j, &j_at_zero, &|d, jp, ihj| j_at_succ(d, jp, ihj), j);
+    d.lam_fv(j_fv, nat, per_j)
+}
+
+/// `i = 0`, `j = succ jp`: further case-split on `jp` (`j = 1` vs `j >= 2`).
+fn alt_zero_succ(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    jp: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+
+    let motive_jp = |d: &mut IntDev<'_>, jpv: ExprId| -> ExprId {
+        let j = d.succ(jpv);
+        alt_arrow_chain_ty(d, p, mat, zero_n, j, mp)
+    };
+    let jp_at_zero = |d: &mut IntDev<'_>| -> ExprId { alt_zero_one(d, p, mat, mp, ih) };
+    let jp_at_succ = |d: &mut IntDev<'_>, jpp: ExprId, _ihj: ExprId| -> ExprId {
+        alt_zero_ge2(d, p, mat, jpp, mp, ih)
+    };
+    d.induct(&motive_jp, &jp_at_zero, &|d, jpp, ihj| jp_at_succ(d, jpp, ihj), jp)
+}
+
+/// `i = succ ip`, `j = succ jp` leaf (LEAF 1: both rows nonzero): expand
+/// along row `0`. `matSkip 0` is unconditionally `succ` ([`declare_mat_skip_zero`]),
+/// so the minor's rows `ip`,`jp` are the original `i`,`j` by pure iota, and
+/// because `Nat.beq`/`Nat.ble` at two `succ`s iota-reduce by peeling one
+/// layer, the OUTER `hne`/`hbi`/`hbj` are already, up to defeq, exactly what
+/// the induction hypothesis wants at `ip`,`jp` — reused verbatim, no
+/// rebuilding.
+fn alt_succ_succ(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    ip: ExprId,
+    jp: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+    let i = d.succ(ip);
+    let j = d.succ(jp);
+    let smp = d.succ(mp);
+    let hne_ty = alt_hyp_ne(d, i, j);
+    let hbi_ty = ble_true_ty(d, i, smp);
+    let hbj_ty = ble_true_ty(d, j, smp);
+    let hrow_ty = alt_row_eq_ty(d, mat, i, j);
+
+    let hne_fv = d.fresh_fvar();
+    let hne = d.kernel().fvar(hne_fv);
+    let hbi_fv = d.fresh_fvar();
+    let hbi = d.kernel().fvar(hbi_fv);
+    let hbj_fv = d.fresh_fvar();
+    let hbj = d.kernel().fvar(hbj_fv);
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+
+    let hk = {
+        let t = d.bool_true();
+        d.bool_refl(t)
+    };
+
+    let body = zero_sum_via_expansion(d, p, mat, zero_n, hk, smp, &|d, q| {
+        let minor = rmat_minor_of(d, p, mat, zero_n, q);
+        let hrow2 = {
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let shifted = rmat_skip(d, p, q, c);
+            let bd = d.apply(hrow, &[shifted]);
+            d.lam_fv(c_fv, nat, bd)
+        };
+        d.apply(ih, &[minor, ip, jp, hne, hbi, hbj, hrow2])
+    });
+
+    let with_hrow = d.lam_fv(hrow_fv, hrow_ty, body);
+    let with_hbj = d.lam_fv(hbj_fv, hbj_ty, with_hrow);
+    let with_hbi = d.lam_fv(hbi_fv, hbi_ty, with_hbj);
+    d.lam_fv(hne_fv, hne_ty, with_hbi)
+}
+
+/// `i = 1`, `j = 0` leaf: [`alt_core_eq1`] with the row-equality hypothesis
+/// flipped by `rsymm`.
+fn alt_one_zero(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, mp: ExprId, ih: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let smp = d.succ(mp);
+    let hne_ty = alt_hyp_ne(d, one_n, zero_n);
+    let hbi_ty = ble_true_ty(d, one_n, smp);
+    let hbj_ty = ble_true_ty(d, zero_n, smp);
+    let hrow_ty = alt_row_eq_ty(d, mat, one_n, zero_n);
+
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+    let hrow_swapped = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let m1c = d.apply(mat, &[one_n, c]);
+        let m0c = d.apply(mat, &[zero_n, c]);
+        let hc = d.apply(hrow, &[c]);
+        let sw = super::ops::rsymm(d, m1c, m0c, hc);
+        d.lam_fv(c_fv, nat, sw)
+    };
+    let body = alt_core_eq1(d, p, mat, mp, ih, hrow_swapped);
+
+    let hne_fv = d.fresh_fvar();
+    let hbi_fv = d.fresh_fvar();
+    let hbj_fv = d.fresh_fvar();
+    let with_hrow = d.lam_fv(hrow_fv, hrow_ty, body);
+    let with_hbj = d.lam_fv(hbj_fv, hbj_ty, with_hrow);
+    let with_hbi = d.lam_fv(hbi_fv, hbi_ty, with_hbj);
+    d.lam_fv(hne_fv, hne_ty, with_hbi)
+}
+
+/// `i = succ (succ ipp)`, `j = 0` leaf: [`alt_core_ge2`] with the
+/// row-equality hypothesis flipped and `hbi` supplying the bound
+/// [`alt_core_ge2`] expects for the nonzero row.
+fn alt_ge2_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    ipp: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_n = d.zero();
+    let ip2 = d.succ(ipp);
+    let i = d.succ(ip2);
+    let smp = d.succ(mp);
+    let hne_ty = alt_hyp_ne(d, i, zero_n);
+    let hbi_ty = ble_true_ty(d, i, smp);
+    let hbj_ty = ble_true_ty(d, zero_n, smp);
+    let hrow_ty = alt_row_eq_ty(d, mat, i, zero_n);
+
+    let hbi_fv = d.fresh_fvar();
+    let hbi = d.kernel().fvar(hbi_fv);
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+    let hrow_swapped = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let mic = d.apply(mat, &[i, c]);
+        let m0c = d.apply(mat, &[zero_n, c]);
+        let hc = d.apply(hrow, &[c]);
+        let sw = super::ops::rsymm(d, mic, m0c, hc);
+        d.lam_fv(c_fv, nat, sw)
+    };
+    let body = alt_core_ge2(d, p, mat, ipp, mp, ih, hbi, hrow_swapped);
+
+    let hne_fv = d.fresh_fvar();
+    let hbj_fv = d.fresh_fvar();
+    let with_hrow = d.lam_fv(hrow_fv, hrow_ty, body);
+    let with_hbj = d.lam_fv(hbj_fv, hbj_ty, with_hrow);
+    let with_hbi = d.lam_fv(hbi_fv, hbi_ty, with_hbj);
+    d.lam_fv(hne_fv, hne_ty, with_hbi)
+}
+
+/// `i = succ ip`, `j = 0`: further case-split on `ip` (`i = 1` vs `i >= 2`),
+/// mirroring [`alt_zero_succ`].
+fn alt_succ_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    ip: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let zero_n = d.zero();
+
+    let motive_ip = |d: &mut IntDev<'_>, ipv: ExprId| -> ExprId {
+        let i = d.succ(ipv);
+        alt_arrow_chain_ty(d, p, mat, i, zero_n, mp)
+    };
+    let ip_at_zero = |d: &mut IntDev<'_>| -> ExprId { alt_one_zero(d, p, mat, mp, ih) };
+    let ip_at_succ = |d: &mut IntDev<'_>, ipp: ExprId, _ih2: ExprId| -> ExprId {
+        alt_ge2_zero(d, p, mat, ipp, mp, ih)
+    };
+    d.induct(&motive_ip, &ip_at_zero, &|d, ipp, ih2| ip_at_succ(d, ipp, ih2), ip)
+}
+
+/// `i = succ ip` branch of [`alt_step`]'s outer case split: further
+/// case-splits `j` (`j = 0`, the symmetric branch, vs `j = succ jp`, LEAF 1).
+fn alt_branch_i_succ(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    ip: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let i = d.succ(ip);
+
+    let motive_j = |d: &mut IntDev<'_>, j: ExprId| -> ExprId { alt_arrow_chain_ty(d, p, mat, i, j, mp) };
+    let j_at_zero = |d: &mut IntDev<'_>| -> ExprId { alt_succ_zero(d, p, mat, ip, mp, ih) };
+    let j_at_succ = |d: &mut IntDev<'_>, jp: ExprId, _ihj: ExprId| -> ExprId {
+        alt_succ_succ(d, p, mat, ip, jp, mp, ih)
+    };
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let per_j = d.induct(&motive_j, &j_at_zero, &|d, jp, ihj| j_at_succ(d, jp, ihj), j);
+    d.lam_fv(j_fv, nat, per_j)
+}
+
+/// `∀ A i j, ...` at a fixed dimension `m` — [`declare_det_alternating`]'s
+/// motive.
+fn alt_motive_at(d: &mut IntDev<'_>, p: RatPrelude, m: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let hne = alt_hyp_ne(d, i, j);
+    let hbi = ble_true_ty(d, i, m);
+    let hbj = ble_true_ty(d, j, m);
+    let hrow = alt_row_eq_ty(d, mat, i, j);
+    let sm = d.succ(m);
+    let det_val = rdet(d, p, mat, sm);
+    let zero_r = rzero(d, p);
+    let concl = req(d, det_val, zero_r);
+
+    let arr = d.arrow(hrow, concl);
+    let arr = d.arrow(hbj, arr);
+    let arr = d.arrow(hbi, arr);
+    let arr = d.arrow(hne, arr);
+    let over_j = d.pi_fv(j_fv, nat, arr);
+    let over_i = d.pi_fv(i_fv, nat, over_j);
+    d.pi_fv(a_fv, mty, over_i)
+}
+
+/// `m = 0` base case: `ble i 0 = true` and `ble j 0 = true` force `i = j =
+/// 0`, contradicting `hne`.
+fn alt_base(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let zero_n = d.zero();
+    let hne_ty = alt_hyp_ne(d, i, j);
+    let hbi_ty = ble_true_ty(d, i, zero_n);
+    let hbj_ty = ble_true_ty(d, j, zero_n);
+    let hrow_ty = alt_row_eq_ty(d, mat, i, j);
+    let one_n = d.succ(zero_n);
+    let det_val = rdet(d, p, mat, one_n);
+    let zero_r = rzero(d, p);
+    let target = req(d, det_val, zero_r);
+
+    let hne_fv = d.fresh_fvar();
+    let hne = d.kernel().fvar(hne_fv);
+    let hbi_fv = d.fresh_fvar();
+    let hbi = d.kernel().fvar(hbi_fv);
+    let hbj_fv = d.fresh_fvar();
+    let hbj = d.kernel().fvar(hbj_fv);
+    let hrow_fv = d.fresh_fvar();
+
+    let hi0 = nat_eq_zero_of_ble_zero_true(d, i, hbi);
+    let hj0 = nat_eq_zero_of_ble_zero_true(d, j, hbj);
+    let body = contradiction_of_eq_via_beq(d, i, j, zero_n, hi0, hj0, hne, target);
+
+    let with_hrow = d.lam_fv(hrow_fv, hrow_ty, body);
+    let with_hbj = d.lam_fv(hbj_fv, hbj_ty, with_hrow);
+    let with_hbi = d.lam_fv(hbi_fv, hbi_ty, with_hbj);
+    let with_hne = d.lam_fv(hne_fv, hne_ty, with_hbi);
+    let over_j = d.lam_fv(j_fv, nat, with_hne);
+    let over_i = d.lam_fv(i_fv, nat, over_j);
+    d.lam_fv(a_fv, mty, over_i)
+}
+
+/// `m = succ mp` step: case-split `i`, then `j`, into the four shapes
+/// described on [`RatPrelude::det_alternating`].
+fn alt_step(d: &mut IntDev<'_>, p: RatPrelude, mp: ExprId, ih: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let a_fv = d.fresh_fvar();
+    let mat = d.kernel().fvar(a_fv);
+
+    let motive_i = |d: &mut IntDev<'_>, i: ExprId| -> ExprId { alt_inner_over_j(d, p, mat, i, mp) };
+    let i_at_zero = |d: &mut IntDev<'_>| -> ExprId { alt_branch_i_zero(d, p, mat, mp, ih) };
+    let i_at_succ = |d: &mut IntDev<'_>, ip: ExprId, _ihi: ExprId| -> ExprId {
+        alt_branch_i_succ(d, p, mat, ip, mp, ih)
+    };
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let per_i = d.induct(&motive_i, &i_at_zero, &|d, ip, ihi| i_at_succ(d, ip, ihi), i);
+    let over_i = d.lam_fv(i_fv, nat, per_i);
+    d.lam_fv(a_fv, mty, over_i)
+}
+
+/// Admit `Rat.det_alternating` — see [`RatPrelude::det_alternating`] for the
+/// statement and the proof outline.
+fn declare_det_alternating(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let motive = |d: &mut IntDev<'_>, m: ExprId| -> ExprId { alt_motive_at(d, p, m) };
+    let base = |d: &mut IntDev<'_>| -> ExprId { alt_base(d, p) };
+    let step = |d: &mut IntDev<'_>, mp: ExprId, ih: ExprId| -> ExprId { alt_step(d, p, mp, ih) };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let stmt = motive(d, m);
+    let proof = d.induct(&motive, &base, &step, m);
+    let ty = d.pi_fv(m_fv, nat, stmt);
+    let value = d.lam_fv(m_fv, nat, proof);
+    d.declare_theorem(p.det_alternating, ty, value)
 }
