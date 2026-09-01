@@ -686,6 +686,22 @@
       "to_sha256": "be991eafaa2b42231e74a999623080a45feb3b8a86303a120cfb52c485bb8d87",
       "reason": "CORRECTION TOWARD THE KERNEL, not a route change and not a widening. `formal.statement` was a hand-written Lean-ish paraphrase that no tool produced and none could check; it is now `Kernel::render_lean`'s own rendering of the SAME declaration `Complex.no_compatible_order`, headed so that `check-settled-fact-statements.py`'s structural bind -- the header must name the fact's `kernel_theorem` -- applies to it. This is the same kind of edit as `66cb03eff`, which replaced hand-written seed types with kernel-dumped ones. The two forms agree hypothesis for hypothesis (le_refl, lt_irrefl, lt_of_le_of_lt, add_le_add, le_congr, sq_nonneg, zero_lt_one, then False), checked by hand against the rendered type; the reader-facing `statement`, which is what most readers see, is BYTE-IDENTICAL (from_prose == to_prose, so no prose digests are recorded here); and the superseded text is preserved verbatim in the fact's `notes`. Nothing is claimed that was not claimed before. The lane's tool `scripts/header-settled-fact-statements.py` REFUSED this one as DIVERGENT precisely because it is a content change; it was made by hand, with this record, rather than made to look mechanical.",
       "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:excluded-middle-not-intuitionistic",
+      "date": "2026-08-31",
+      "from_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
+      "to_sha256": "4222465e2fd7a6f5bad2d0932a0e0060c48737b42bf632e1895b91e775027326",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for ipc_excluded_middle_not_provable (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem ipc_excluded_middle_not_provable : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:heyting-3-chain-refutes-excluded-middle",
+      "date": "2026-08-31",
+      "from_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
+      "to_sha256": "afb64e393e0ba3daefb97a25e4c333db6998bd9103249ebd9800c1fa7f5af797",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for ipc_heyting_join_not_ne_top (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem ipc_heyting_join_not_ne_top : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
     }
   ],
   "pins": [
@@ -6819,7 +6835,7 @@
     {
       "fact_id": "F:excluded-middle-not-intuitionistic",
       "language": "lean4",
-      "statement_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
+      "statement_sha256": "4222465e2fd7a6f5bad2d0932a0e0060c48737b42bf632e1895b91e775027326",
       "prose_sha256": "aca36f63b84e65bbca307bf185cd9ad31465902f71df12521fb5ab2b4bfdc1e8",
       "kernel_theorem": "ipc_excluded_middle_not_provable",
       "history": [
@@ -6827,6 +6843,12 @@
           "language": "lean4",
           "statement_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
           "prose_sha256": "aca36f63b84e65bbca307bf185cd9ad31465902f71df12521fb5ab2b4bfdc1e8"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
+          "prose_sha256": "aca36f63b84e65bbca307bf185cd9ad31465902f71df12521fb5ab2b4bfdc1e8",
+          "kernel_theorem": "ipc_excluded_middle_not_provable"
         }
       ]
     },
@@ -7207,7 +7229,7 @@
     {
       "fact_id": "F:heyting-3-chain-refutes-excluded-middle",
       "language": "lean4",
-      "statement_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
+      "statement_sha256": "afb64e393e0ba3daefb97a25e4c333db6998bd9103249ebd9800c1fa7f5af797",
       "prose_sha256": "af25d412ebf5bfbd01f1b0c5e00255eaea678278e327e0e2075ba7086e6685fe",
       "kernel_theorem": "ipc_heyting_join_not_ne_top",
       "history": [
@@ -7215,6 +7237,12 @@
           "language": "lean4",
           "statement_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
           "prose_sha256": "af25d412ebf5bfbd01f1b0c5e00255eaea678278e327e0e2075ba7086e6685fe"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
+          "prose_sha256": "af25d412ebf5bfbd01f1b0c5e00255eaea678278e327e0e2075ba7086e6685fe",
+          "kernel_theorem": "ipc_heyting_join_not_ne_top"
         }
       ]
     },

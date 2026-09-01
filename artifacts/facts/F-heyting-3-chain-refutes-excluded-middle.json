@@ -5,7 +5,7 @@
   "statement": "Represent the 3-element linearly ordered Heyting algebra {0, 1, 2} directly as Nat values, with join3 = max, and himp3 a b = 2 (top) if a <= b else b (the Gödel/relative-pseudocomplement implication), and not3 a := himp3 a 0. At the valuation p := 1, join3(1, not3(1)) = 1, which is NOT the algebra's top element 2. So 'p or not p', evaluated in this Heyting algebra at p := 1, is not valid.",
   "formal": {
     "language": "lean4",
-    "statement": "Not (Eq.{1} AxNat (join3 (AxNat.succ AxNat.zero) (not3 (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))",
+    "statement": "theorem ipc_heyting_join_not_ne_top : Not (Eq.{1} AxNat (join3 (AxNat.succ AxNat.zero) (not3 (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))",
     "kernel_theorem": "ipc_heyting_join_not_ne_top",
     "fragment": "Nat",
     "free_symbols": []

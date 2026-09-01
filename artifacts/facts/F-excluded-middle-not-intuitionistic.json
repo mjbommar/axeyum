@@ -5,7 +5,7 @@
   "statement": "There is no derivation of (p or not p), for a propositional variable p, in intuitionistic propositional natural deduction.",
   "formal": {
     "language": "lean4",
-    "statement": "Not (Provable FormulaList.nil (Formula.or_ (Formula.var AxNat.zero) (Formula.imp (Formula.var AxNat.zero) Formula.bot)))",
+    "statement": "theorem ipc_excluded_middle_not_provable : Not (Provable FormulaList.nil (Formula.or_ (Formula.var AxNat.zero) (Formula.imp (Formula.var AxNat.zero) Formula.bot)))",
     "kernel_theorem": "ipc_excluded_middle_not_provable",
     "fragment": "Nat",
     "free_symbols": []
