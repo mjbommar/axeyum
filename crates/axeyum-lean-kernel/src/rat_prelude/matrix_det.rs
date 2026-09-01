@@ -5931,7 +5931,13 @@ fn alt_arrow_chain_ty(
 
 /// `∀ j, <alt_arrow_chain_ty at this i,j,mp>` — the `Prop`-valued motive
 /// [`alt_step`]'s outer case split on `i` uses.
-fn alt_inner_over_j(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, i: ExprId, mp: ExprId) -> ExprId {
+fn alt_inner_over_j(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    i: ExprId,
+    mp: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let j_fv = d.fresh_fvar();
     let j = d.kernel().fvar(j_fv);
@@ -6283,11 +6289,18 @@ fn alt_zero_ge2(
 
 /// `i = 0` branch of [`alt_step`]'s outer case split: further case-splits
 /// `j`.
-fn alt_branch_i_zero(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, mp: ExprId, ih: ExprId) -> ExprId {
+fn alt_branch_i_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    mat: ExprId,
+    mp: ExprId,
+    ih: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let zero_n = d.zero();
 
-    let motive_j = |d: &mut IntDev<'_>, j: ExprId| -> ExprId { alt_arrow_chain_ty(d, p, mat, zero_n, j, mp) };
+    let motive_j =
+        |d: &mut IntDev<'_>, j: ExprId| -> ExprId { alt_arrow_chain_ty(d, p, mat, zero_n, j, mp) };
     let j_at_zero = |d: &mut IntDev<'_>| -> ExprId { alt_zero_zero(d, p, mat, mp) };
     let j_at_succ = |d: &mut IntDev<'_>, jp: ExprId, _ihj: ExprId| -> ExprId {
         alt_zero_succ(d, p, mat, jp, mp, ih)
@@ -6295,7 +6308,12 @@ fn alt_branch_i_zero(d: &mut IntDev<'_>, p: RatPrelude, mat: ExprId, mp: ExprId,
 
     let j_fv = d.fresh_fvar();
     let j = d.kernel().fvar(j_fv);
-    let per_j = d.induct(&motive_j, &j_at_zero, &|d, jp, ihj| j_at_succ(d, jp, ihj), j);
+    let per_j = d.induct(
+        &motive_j,
+        &j_at_zero,
+        &|d, jp, ihj| j_at_succ(d, jp, ihj),
+        j,
+    );
     d.lam_fv(j_fv, nat, per_j)
 }
 
@@ -6318,7 +6336,12 @@ fn alt_zero_succ(
     let jp_at_succ = |d: &mut IntDev<'_>, jpp: ExprId, _ihj: ExprId| -> ExprId {
         alt_zero_ge2(d, p, mat, jpp, mp, ih)
     };
-    d.induct(&motive_jp, &jp_at_zero, &|d, jpp, ihj| jp_at_succ(d, jpp, ihj), jp)
+    d.induct(
+        &motive_jp,
+        &jp_at_zero,
+        &|d, jpp, ihj| jp_at_succ(d, jpp, ihj),
+        jp,
+    )
 }
 
 /// `i = succ ip`, `j = succ jp` leaf (LEAF 1: both rows nonzero): expand
@@ -6477,7 +6500,12 @@ fn alt_succ_zero(
     let ip_at_succ = |d: &mut IntDev<'_>, ipp: ExprId, _ih2: ExprId| -> ExprId {
         alt_ge2_zero(d, p, mat, ipp, mp, ih)
     };
-    d.induct(&motive_ip, &ip_at_zero, &|d, ipp, ih2| ip_at_succ(d, ipp, ih2), ip)
+    d.induct(
+        &motive_ip,
+        &ip_at_zero,
+        &|d, ipp, ih2| ip_at_succ(d, ipp, ih2),
+        ip,
+    )
 }
 
 /// `i = succ ip` branch of [`alt_step`]'s outer case split: further
@@ -6493,7 +6521,8 @@ fn alt_branch_i_succ(
     let nat = d.nat_ty();
     let i = d.succ(ip);
 
-    let motive_j = |d: &mut IntDev<'_>, j: ExprId| -> ExprId { alt_arrow_chain_ty(d, p, mat, i, j, mp) };
+    let motive_j =
+        |d: &mut IntDev<'_>, j: ExprId| -> ExprId { alt_arrow_chain_ty(d, p, mat, i, j, mp) };
     let j_at_zero = |d: &mut IntDev<'_>| -> ExprId { alt_succ_zero(d, p, mat, ip, mp, ih) };
     let j_at_succ = |d: &mut IntDev<'_>, jp: ExprId, _ihj: ExprId| -> ExprId {
         alt_succ_succ(d, p, mat, ip, jp, mp, ih)
@@ -6501,7 +6530,12 @@ fn alt_branch_i_succ(
 
     let j_fv = d.fresh_fvar();
     let j = d.kernel().fvar(j_fv);
-    let per_j = d.induct(&motive_j, &j_at_zero, &|d, jp, ihj| j_at_succ(d, jp, ihj), j);
+    let per_j = d.induct(
+        &motive_j,
+        &j_at_zero,
+        &|d, jp, ihj| j_at_succ(d, jp, ihj),
+        j,
+    );
     d.lam_fv(j_fv, nat, per_j)
 }
 
@@ -6594,7 +6628,12 @@ fn alt_step(d: &mut IntDev<'_>, p: RatPrelude, mp: ExprId, ih: ExprId) -> ExprId
 
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);
-    let per_i = d.induct(&motive_i, &i_at_zero, &|d, ip, ihi| i_at_succ(d, ip, ihi), i);
+    let per_i = d.induct(
+        &motive_i,
+        &i_at_zero,
+        &|d, ip, ihi| i_at_succ(d, ip, ihi),
+        i,
+    );
     let over_i = d.lam_fv(i_fv, nat, per_i);
     d.lam_fv(a_fv, mty, over_i)
 }
