@@ -555,11 +555,11 @@ fn declare_pi_half_term_le_pow_half(
         // A : mul term_j (ofRat c) ≤ mul term_j half.
         let step_a = d.lemma(
             p.mul_le_mul_of_nonneg_left,
-            &[c_c, hp, term_j, term_nonneg, c_le_half],
+            &[term_j, c_c, hp, term_nonneg, c_le_half],
         );
         // B : mul half term_j ≤ mul half (pow half j).
         let half_nn = half_nonneg_proof(d, p);
-        let step_b = d.lemma(p.mul_le_mul_of_nonneg_left, &[term_j, pw_j, hp, half_nn, ih]);
+        let step_b = d.lemma(p.mul_le_mul_of_nonneg_left, &[hp, term_j, pw_j, half_nn, ih]);
 
         let mul_tj_c = cmul(d, p, term_j, c_c);
         let mul_tj_h = cmul(d, p, term_j, hp);
@@ -615,7 +615,7 @@ fn pow_half_le_dominant(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprI
 
     let scaled = d.lemma(
         p.mul_le_mul_of_nonneg_left,
-        &[one_cc, two_c, pw, pw_nonneg, one_le_two],
+        &[pw, one_cc, two_c, pw_nonneg, one_le_two],
     );
     // scaled : le (mul pw one) (mul pw two)
 
@@ -937,7 +937,7 @@ fn declare_pi_half_le_two(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         let two_nn = two_nonneg_proof(d, p);
         let mul_le = d.lemma(
             p.mul_le_mul_of_nonneg_left,
-            &[y_n, one_cc, two_c, two_nn, y_le_one],
+            &[two_c, y_n, one_cc, two_nn, y_le_one],
         );
         let mul_two_one = cmul(d, p, two_c, one_cc);
         let fold = d.lemma(p.mul_one, &[two_c]);
@@ -1008,7 +1008,7 @@ fn declare_pi_le_four(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
     let bound = d.kernel().const_(p.pi_half_le_two, vec![]);
     let value = d.lemma(
         p.mul_le_mul_of_nonneg_left,
-        &[pi_half_c, two_c, two_c, two_nn, bound],
+        &[two_c, pi_half_c, two_c, two_nn, bound],
     );
     let pi_c = d.kernel().const_(p.pi, vec![]);
     let four = cmul(d, p, two_c, two_c);
@@ -1099,7 +1099,7 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
     let two_nn = two_nonneg_proof(d, p);
     let scaled = d.lemma(
         p.mul_le_mul_of_nonneg_left,
-        &[three_halves_c, pi_half_c, two_c, two_nn, lower],
+        &[two_c, three_halves_c, pi_half_c, two_nn, lower],
     );
     // scaled : le (mul two (ofRat 3/2)) (mul two piHalf)
 
