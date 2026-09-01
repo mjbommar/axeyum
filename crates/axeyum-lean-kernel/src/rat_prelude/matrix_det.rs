@@ -172,7 +172,12 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_mat_minor_transpose(d, p)?;
     declare_det_transpose(d, p)?;
     declare_det_alternating(d, p)?;
-    declare_det_row_swap(d, p)
+    declare_det_row_swap(d, p)?;
+    declare_det_row_replaced(d, p)?;
+    declare_det_row_zero(d, p)?;
+    declare_det_row_smul(d, p)?;
+    declare_det_row_multilinear(d, p)?;
+    declare_det_mat_mul_2(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -7715,4 +7720,892 @@ fn declare_det_row_swap(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
     let value = d.lam_fv(m_fv, nat, body);
 
     d.declare_theorem(p.det_row_swap, ty, value)
+}
+
+// --- row multilinearity (`matrix_det`, ADR-1440 / ADR-1310 step 4) ---------
+//
+// ADR-1310's route to `det (A·B) = det A · det B` is Cauchy–Binet: expand
+// each row of `A·B` — which is a `Rat.sumRange` of rows of `B` — by
+// LINEARITY IN THAT ROW, `n` times, and collect the result as a sum over all
+// maps `[0,n) → [0,n)`. Nothing in this file supplied that linearity. What
+// existed was [`row_add_split`], a PRIVATE two-term additivity phrased in
+// terms of the private `rset_row`/`wrapped_matrix` builders and therefore
+// unusable from outside; `Rat.det_row_swap` was its only consumer.
+//
+// The four theorems below are that gap, stated EXTENSIONALLY like everything
+// else in this file (`funext` is absent, so a matrix relationship is a
+// hypothesis, never a defined function):
+//
+// - `Rat.det_row_replaced` — the workhorse. Expanding along row `t` sees the
+//   rest of the matrix ONLY through `A`'s minors, so a matrix agreeing with
+//   `A` off row `t` has its determinant fixed by that row's own values.
+// - `Rat.det_row_zero` — a zero row kills the determinant.
+// - `Rat.det_row_smul` — scaling a row scales the determinant.
+// - `Rat.det_row_multilinear` — row `t` given as a `sumRange` of `n`
+//   coefficient rows splits into a `sumRange` of `n` determinants.
+//
+// **No new induction.** Every one is straight-line at a symbolic `m`:
+// `Rat.det_row_expansion` is already dimension-general, and the only new
+// observation is the one `row_add_split` already used privately — the row-`t`
+// minor never mentions row `t`, because `Rat.beq_matSkip_left` says
+// `matSkip t r` is never `t`. `Rat.det_congr` IS needed (once, inside
+// `det_row_replaced`; every other theorem here reaches it through that one),
+// which is a third data point against reading `det_alternating`'s "did not
+// need it" as a rule.
+
+/// `∀ c, M t c = h c` — row `t` of `M` is the function `h`.
+fn row_value_ty(d: &mut IntDev<'_>, m_mat: ExprId, t: ExprId, h: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let lhs = d.apply(m_mat, &[t, c]);
+    let rhs = d.apply(h, &[c]);
+    let eq = req(d, lhs, rhs);
+    d.pi_fv(c_fv, nat, eq)
+}
+
+/// `∀ r, Nat.beq r t = false → ∀ c, M r c = A r c` — every row of `M` OTHER
+/// than `t` agrees with `A`. Same shape as [`swap_other_ty`], one excluded
+/// row instead of two.
+fn row_other_ty(d: &mut IntDev<'_>, a: ExprId, m_mat: ExprId, t: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let hne = alt_hyp_ne(d, r, t);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let mr = d.apply(m_mat, &[r, c]);
+    let ar = d.apply(a, &[r, c]);
+    let eq = req(d, mr, ar);
+    let inner = d.pi_fv(c_fv, nat, eq);
+    let arr = d.arrow(hne, inner);
+    d.pi_fv(r_fv, nat, arr)
+}
+
+/// `fun q => altSign (q + t) * (h q * det (matMinor A t q) m)` — the cofactor
+/// summand with the row entries taken from `h` and the minors from `A`.
+/// [`row_expansion_fn`] is the special case `h := A t`, `A := M`.
+fn row_replaced_fn(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    h: ExprId,
+    t: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let index = d.add(q, t);
+    let sign = ralt_sign(d, p, index);
+    let entry = d.apply(h, &[q]);
+    let minor = rmat_minor_of(d, p, a, t, q);
+    let sub = rdet(d, p, minor, m);
+    let product = rmul(d, entry, sub);
+    let body = rmul(d, sign, product);
+    d.lam_fv(q_fv, nat, body)
+}
+
+/// `∀ r c, matMinor M t q r c = matMinor A t q r c`, from `hoff` — deleting
+/// row `t` erases every dependence on row `t`, so two matrices agreeing OFF
+/// row `t` have literally the same row-`t` minor.
+///
+/// `Rat.beq_matSkip_left` (`Nat.beq (matSkip t r) t = false`) discharges
+/// `hoff`'s side condition at every `r`; the same fact
+/// [`minor_indep_of_set_row`] uses, lifted from the private `rset_row`
+/// encoding to an arbitrary hypothesis.
+fn minor_agrees_off_row(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    t: ExprId,
+    q: ExprId,
+    hoff: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let skip_r = rmat_skip(d, p, t, r);
+    let skip_c = rmat_skip(d, p, q, c);
+    let hne = d.lemma(p.beq_mat_skip_left, &[t, r]);
+    let inst = d.apply(hoff, &[skip_r, hne, skip_c]);
+    let inner = d.lam_fv(c_fv, nat, inst);
+    d.lam_fv(r_fv, nat, inner)
+}
+
+/// Admit `Rat.det_row_replaced` — see [`RatPrelude::det_row_replaced`].
+fn declare_det_row_replaced(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let carrier = rat_ty(d);
+    let row_ty = d.arrow(nat, carrier);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let mm_fv = d.fresh_fvar();
+    let mm = d.kernel().fvar(mm_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let hble_ty = ble_true_ty(d, t, m);
+    let hrow_ty = row_value_ty(d, mm, t, h);
+    let hoff_ty = row_other_ty(d, a, mm, t);
+
+    let sm = d.succ(m);
+    let det_mm = rdet(d, p, mm, sm);
+    let target_fn = row_replaced_fn(d, p, a, h, t, m);
+    let target_sum = rsum_range(d, p, target_fn, sm);
+    let concl = req(d, det_mm, target_sum);
+
+    let arr = d.arrow(hoff_ty, concl);
+    let arr = d.arrow(hrow_ty, arr);
+    let arr = d.arrow(hble_ty, arr);
+    let over_t = d.pi_fv(t_fv, nat, arr);
+    let over_h = d.pi_fv(h_fv, row_ty, over_t);
+    let over_mm = d.pi_fv(mm_fv, mty, over_h);
+    let over_a = d.pi_fv(a_fv, mty, over_mm);
+    let ty = d.pi_fv(m_fv, nat, over_a);
+
+    // --- the proof ---
+    let hble_fv = d.fresh_fvar();
+    let hble = d.kernel().fvar(hble_fv);
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+    let hoff_fv = d.fresh_fvar();
+    let hoff = d.kernel().fvar(hoff_fv);
+
+    let expand = {
+        let l = d.lemma(p.det_row_expansion, &[m, mm, t]);
+        d.apply(l, &[hble])
+    };
+    let source_fn = row_expansion_fn(d, p, mm, t, m);
+    let source_sum = rsum_range(d, p, source_fn, sm);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let sign = {
+        let idx = d.add(q, t);
+        ralt_sign(d, p, idx)
+    };
+    let entry_raw = d.apply(mm, &[t, q]);
+    let entry_h = d.apply(h, &[q]);
+    let hrow_q = d.apply(hrow, &[q]);
+    let minor_mm = rmat_minor_of(d, p, mm, t, q);
+    let minor_a = rmat_minor_of(d, p, a, t, q);
+    let det_minor_mm = rdet(d, p, minor_mm, m);
+    let det_minor_a = rdet(d, p, minor_a, m);
+    let minor_pw = minor_agrees_off_row(d, p, t, q, hoff);
+    let det_minor_eq = {
+        let l = d.lemma(p.det_congr, &[m, minor_mm, minor_a]);
+        d.apply(l, &[minor_pw])
+    };
+
+    let l0 = {
+        let prod = rmul(d, entry_raw, det_minor_mm);
+        rmul(d, sign, prod)
+    };
+    let l1 = {
+        let prod = rmul(d, entry_h, det_minor_mm);
+        rmul(d, sign, prod)
+    };
+    let s1 = rcongr(d, entry_raw, entry_h, hrow_q, &|d, v| {
+        let prod = rmul(d, v, det_minor_mm);
+        rmul(d, sign, prod)
+    });
+    let l2 = {
+        let prod = rmul(d, entry_h, det_minor_a);
+        rmul(d, sign, prod)
+    };
+    let s2 = rcongr(d, det_minor_mm, det_minor_a, det_minor_eq, &|d, v| {
+        let prod = rmul(d, entry_h, v);
+        rmul(d, sign, prod)
+    });
+    let (_end, pointwise_q) = rchain(d, l0, &[(l1, s1), (l2, s2)]);
+    let pointwise = d.lam_fv(q_fv, nat, pointwise_q);
+
+    let congr = {
+        let l = d.lemma(p.sum_range_congr, &[source_fn, target_fn, sm]);
+        d.apply(l, &[pointwise])
+    };
+    let proof = rtrans(d, det_mm, source_sum, target_sum, expand, congr);
+
+    let body = d.lam_fv(hoff_fv, hoff_ty, proof);
+    let body = d.lam_fv(hrow_fv, hrow_ty, body);
+    let body = d.lam_fv(hble_fv, hble_ty, body);
+    let body = d.lam_fv(t_fv, nat, body);
+    let body = d.lam_fv(h_fv, row_ty, body);
+    let body = d.lam_fv(mm_fv, mty, body);
+    let body = d.lam_fv(a_fv, mty, body);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    d.declare_theorem(p.det_row_replaced, ty, value)
+}
+
+/// Admit `Rat.det_row_zero` — see [`RatPrelude::det_row_zero`].
+fn declare_det_row_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let zero_r = rzero(d, p);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let mm_fv = d.fresh_fvar();
+    let mm = d.kernel().fvar(mm_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let hble_ty = ble_true_ty(d, t, m);
+    let hrow_ty = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let lhs = d.apply(mm, &[t, c]);
+        let eq = req(d, lhs, zero_r);
+        d.pi_fv(c_fv, nat, eq)
+    };
+
+    let sm = d.succ(m);
+    let det_mm = rdet(d, p, mm, sm);
+    let concl = req(d, det_mm, zero_r);
+    let arr = d.arrow(hrow_ty, concl);
+    let arr = d.arrow(hble_ty, arr);
+    let over_t = d.pi_fv(t_fv, nat, arr);
+    let over_mm = d.pi_fv(mm_fv, mty, over_t);
+    let ty = d.pi_fv(m_fv, nat, over_mm);
+
+    let hble_fv = d.fresh_fvar();
+    let hble = d.kernel().fvar(hble_fv);
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+
+    let expand = {
+        let l = d.lemma(p.det_row_expansion, &[m, mm, t]);
+        d.apply(l, &[hble])
+    };
+    let source_fn = row_expansion_fn(d, p, mm, t, m);
+    let source_sum = rsum_range(d, p, source_fn, sm);
+
+    // `∀ q, Lt q (succ m) → source_fn q = 0`.
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let hlt_fv = d.fresh_fvar();
+    let hlt_ty = d.lt(q, sm);
+    let sign = {
+        let idx = d.add(q, t);
+        ralt_sign(d, p, idx)
+    };
+    let entry_raw = d.apply(mm, &[t, q]);
+    let hrow_q = d.apply(hrow, &[q]);
+    let minor_mm = rmat_minor_of(d, p, mm, t, q);
+    let det_minor_mm = rdet(d, p, minor_mm, m);
+
+    let z0 = {
+        let prod = rmul(d, entry_raw, det_minor_mm);
+        rmul(d, sign, prod)
+    };
+    let zero_times = rmul(d, zero_r, det_minor_mm);
+    let z1 = rmul(d, sign, zero_times);
+    let sz1 = rcongr(d, entry_raw, zero_r, hrow_q, &|d, v| {
+        let prod = rmul(d, v, det_minor_mm);
+        rmul(d, sign, prod)
+    });
+    // `0 * X = X * 0 = 0`: this prelude has `mul_zero` but no `zero_mul`.
+    let times_zero = rmul(d, det_minor_mm, zero_r);
+    let comm = d.lemma(p.mul_comm, &[zero_r, det_minor_mm]);
+    let mz = d.lemma(p.mul_zero, &[det_minor_mm]);
+    let (_e, zero_mul) = rchain(d, zero_times, &[(times_zero, comm), (zero_r, mz)]);
+    let z2 = rmul(d, sign, zero_r);
+    let sz2 = rcongr(d, zero_times, zero_r, zero_mul, &|d, v| rmul(d, sign, v));
+    let sz3 = d.lemma(p.mul_zero, &[sign]);
+    let (_e2, summand_zero) = rchain(d, z0, &[(z1, sz1), (z2, sz2), (zero_r, sz3)]);
+    let bounded = {
+        let inner = d.lam_fv(hlt_fv, hlt_ty, summand_zero);
+        d.lam_fv(q_fv, nat, inner)
+    };
+
+    let sum_zero = {
+        let l = d.lemma(p.sum_range_eq_zero_of_lt, &[source_fn, sm]);
+        d.apply(l, &[bounded])
+    };
+    let proof = rtrans(d, det_mm, source_sum, zero_r, expand, sum_zero);
+
+    let body = d.lam_fv(hrow_fv, hrow_ty, proof);
+    let body = d.lam_fv(hble_fv, hble_ty, body);
+    let body = d.lam_fv(t_fv, nat, body);
+    let body = d.lam_fv(mm_fv, mty, body);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    d.declare_theorem(p.det_row_zero, ty, value)
+}
+
+/// Admit `Rat.det_row_smul` — see [`RatPrelude::det_row_smul`].
+fn declare_det_row_smul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let carrier = rat_ty(d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let mm_fv = d.fresh_fvar();
+    let mm = d.kernel().fvar(mm_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    // `h := fun c => z * A t c`.
+    let h_lam = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let atc = d.apply(a, &[t, c]);
+        let body = rmul(d, z, atc);
+        d.lam_fv(c_fv, nat, body)
+    };
+
+    let hble_ty = ble_true_ty(d, t, m);
+    // Written REDUCED rather than as `row_value_ty(.., h_lam)`, which would
+    // leave a `(fun c => z * A t c) c` beta-redex in the rendered hypothesis
+    // and make every caller stare at it. Defeq to what `det_row_replaced`
+    // wants, so `hrow` passes straight through.
+    let hrow_ty = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let lhs = d.apply(mm, &[t, c]);
+        let atc = d.apply(a, &[t, c]);
+        let rhs = rmul(d, z, atc);
+        let eq = req(d, lhs, rhs);
+        d.pi_fv(c_fv, nat, eq)
+    };
+    let hoff_ty = row_other_ty(d, a, mm, t);
+
+    let sm = d.succ(m);
+    let det_mm = rdet(d, p, mm, sm);
+    let det_a = rdet(d, p, a, sm);
+    let z_det_a = rmul(d, z, det_a);
+    let concl = req(d, det_mm, z_det_a);
+
+    let arr = d.arrow(hoff_ty, concl);
+    let arr = d.arrow(hrow_ty, arr);
+    let arr = d.arrow(hble_ty, arr);
+    let over_t = d.pi_fv(t_fv, nat, arr);
+    let over_z = d.pi_fv(z_fv, carrier, over_t);
+    let over_mm = d.pi_fv(mm_fv, mty, over_z);
+    let over_a = d.pi_fv(a_fv, mty, over_mm);
+    let ty = d.pi_fv(m_fv, nat, over_a);
+
+    // --- the proof ---
+    let hble_fv = d.fresh_fvar();
+    let hble = d.kernel().fvar(hble_fv);
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+    let hoff_fv = d.fresh_fvar();
+    let hoff = d.kernel().fvar(hoff_fv);
+
+    let replaced = {
+        let l = d.lemma(p.det_row_replaced, &[m, a, mm, h_lam, t]);
+        d.apply(l, &[hble, hrow, hoff])
+    };
+    let scaled_fn = row_replaced_fn(d, p, a, h_lam, t, m);
+    let scaled_sum = rsum_range(d, p, scaled_fn, sm);
+
+    let plain_fn = row_expansion_fn(d, p, a, t, m);
+    let plain_sum = rsum_range(d, p, plain_fn, sm);
+    let expand_a = {
+        let l = d.lemma(p.det_row_expansion, &[m, a, t]);
+        d.apply(l, &[hble])
+    };
+
+    // `pulled_fn q := z * (altSign (q+t) * (A t q * det (matMinor A t q) m))`.
+    let pulled_fn = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let idx = d.add(q, t);
+        let sign = ralt_sign(d, p, idx);
+        let atq = d.apply(a, &[t, q]);
+        let minor = rmat_minor_of(d, p, a, t, q);
+        let sub = rdet(d, p, minor, m);
+        let prod = rmul(d, atq, sub);
+        let signed = rmul(d, sign, prod);
+        let body = rmul(d, z, signed);
+        d.lam_fv(q_fv, nat, body)
+    };
+    let pulled_sum = rsum_range(d, p, pulled_fn, sm);
+
+    // pointwise: `sign * ((z * a1) * X) = z * (sign * (a1 * X))`.
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let sign = {
+        let idx = d.add(q, t);
+        ralt_sign(d, p, idx)
+    };
+    let a1 = d.apply(a, &[t, q]);
+    let minor = rmat_minor_of(d, p, a, t, q);
+    let xx = rdet(d, p, minor, m);
+    let z_a1 = rmul(d, z, a1);
+    let a1_x = rmul(d, a1, xx);
+    let z_a1_x = rmul(d, z_a1, xx);
+    let x0 = rmul(d, sign, z_a1_x);
+    let z_of_a1x = rmul(d, z, a1_x);
+    let x1 = rmul(d, sign, z_of_a1x);
+    let step_a = {
+        let pf = d.lemma(p.mul_assoc, &[z, a1, xx]);
+        rcongr(d, z_a1_x, z_of_a1x, pf, &|d, v| rmul(d, sign, v))
+    };
+    let sign_z = rmul(d, sign, z);
+    let x2 = rmul(d, sign_z, a1_x);
+    let step_b = {
+        let pf = d.lemma(p.mul_assoc, &[sign, z, a1_x]);
+        rsymm(d, x2, x1, pf)
+    };
+    let z_sign = rmul(d, z, sign);
+    let x3 = rmul(d, z_sign, a1_x);
+    let step_c = {
+        let pf = d.lemma(p.mul_comm, &[sign, z]);
+        rcongr(d, sign_z, z_sign, pf, &|d, v| rmul(d, v, a1_x))
+    };
+    let sign_a1x = rmul(d, sign, a1_x);
+    let x4 = rmul(d, z, sign_a1x);
+    let step_d = d.lemma(p.mul_assoc, &[z, sign, a1_x]);
+    let (_e, pointwise_q) = rchain(
+        d,
+        x0,
+        &[(x1, step_a), (x2, step_b), (x3, step_c), (x4, step_d)],
+    );
+    let pointwise = d.lam_fv(q_fv, nat, pointwise_q);
+
+    let congr = {
+        let l = d.lemma(p.sum_range_congr, &[scaled_fn, pulled_fn, sm]);
+        d.apply(l, &[pointwise])
+    };
+    // `z * sumRange plain_fn sm = sumRange pulled_fn sm`, read backwards.
+    let pull = d.lemma(p.mul_sum_range, &[z, plain_fn, sm]);
+    let z_plain = rmul(d, z, plain_sum);
+    let pull_back = rsymm(d, z_plain, pulled_sum, pull);
+    let expand_a_rev = rsymm(d, det_a, plain_sum, expand_a);
+    let last = rcongr(d, plain_sum, det_a, expand_a_rev, &|d, v| rmul(d, z, v));
+
+    let (_e2, proof) = rchain(
+        d,
+        det_mm,
+        &[
+            (scaled_sum, replaced),
+            (pulled_sum, congr),
+            (z_plain, pull_back),
+            (z_det_a, last),
+        ],
+    );
+
+    let body = d.lam_fv(hoff_fv, hoff_ty, proof);
+    let body = d.lam_fv(hrow_fv, hrow_ty, body);
+    let body = d.lam_fv(hble_fv, hble_ty, body);
+    let body = d.lam_fv(t_fv, nat, body);
+    let body = d.lam_fv(z_fv, carrier, body);
+    let body = d.lam_fv(mm_fv, mty, body);
+    let body = d.lam_fv(a_fv, mty, body);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    d.declare_theorem(p.det_row_smul, ty, value)
+}
+
+/// Admit `Rat.det_row_multilinear` — see [`RatPrelude::det_row_multilinear`].
+///
+/// The Cauchy–Binet expansion step. Row `t` of `M` is a `sumRange` of `n`
+/// coefficient rows; the determinant splits into a `sumRange` of `n` cofactor
+/// sums, one per coefficient row, all sharing `A`'s minors.
+///
+/// The whole content after [`declare_det_row_replaced`] is moving a
+/// `Rat.sumRange` out of the middle of a product and then exchanging the two
+/// summations: two applications of `Rat.mul_sumRange` around one
+/// `Rat.mul_comm`, then `Rat.sumRange_swap`. `sumRange_swap`'s binder order is
+/// `(f, INNER bound, OUTER bound)` — the transposition `matrix_n.rs`'s
+/// associativity proof paid a kernel rejection for.
+fn declare_det_row_multilinear(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let carrier = rat_ty(d);
+    let row_ty = d.arrow(nat, carrier);
+    let coef_ty = d.arrow(nat, row_ty);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let mm_fv = d.fresh_fvar();
+    let mm = d.kernel().fvar(mm_fv);
+    let coef_fv = d.fresh_fvar();
+    let coef = d.kernel().fvar(coef_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    // `h := fun c => sumRange (fun k => coef k c) n`.
+    let h_lam = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let inner = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let body = d.apply(coef, &[k, c]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let body = rsum_range(d, p, inner, n);
+        d.lam_fv(c_fv, nat, body)
+    };
+
+    let hble_ty = ble_true_ty(d, t, m);
+    // Reduced, for the same reason as [`declare_det_row_smul`]'s.
+    let hrow_ty = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let lhs = d.apply(mm, &[t, c]);
+        let over_k = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let body = d.apply(coef, &[k, c]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let rhs = rsum_range(d, p, over_k, n);
+        let eq = req(d, lhs, rhs);
+        d.pi_fv(c_fv, nat, eq)
+    };
+    let hoff_ty = row_other_ty(d, a, mm, t);
+
+    let sm = d.succ(m);
+    let det_mm = rdet(d, p, mm, sm);
+
+    // `outer_fn k := sumRange (fun q => altSign (q+t) * (coef k q *
+    //                 det (matMinor A t q) m)) (succ m)`.
+    let outer_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let inner = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let idx = d.add(q, t);
+            let sign = ralt_sign(d, p, idx);
+            let ckq = d.apply(coef, &[k, q]);
+            let minor = rmat_minor_of(d, p, a, t, q);
+            let sub = rdet(d, p, minor, m);
+            let prod = rmul(d, ckq, sub);
+            let body = rmul(d, sign, prod);
+            d.lam_fv(q_fv, nat, body)
+        };
+        let body = rsum_range(d, p, inner, sm);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let target_sum = rsum_range(d, p, outer_fn, n);
+    let concl = req(d, det_mm, target_sum);
+
+    let arr = d.arrow(hoff_ty, concl);
+    let arr = d.arrow(hrow_ty, arr);
+    let arr = d.arrow(hble_ty, arr);
+    let over_n = d.pi_fv(n_fv, nat, arr);
+    let over_t = d.pi_fv(t_fv, nat, over_n);
+    let over_coef = d.pi_fv(coef_fv, coef_ty, over_t);
+    let over_mm = d.pi_fv(mm_fv, mty, over_coef);
+    let over_a = d.pi_fv(a_fv, mty, over_mm);
+    let ty = d.pi_fv(m_fv, nat, over_a);
+
+    // --- the proof ---
+    let hble_fv = d.fresh_fvar();
+    let hble = d.kernel().fvar(hble_fv);
+    let hrow_fv = d.fresh_fvar();
+    let hrow = d.kernel().fvar(hrow_fv);
+    let hoff_fv = d.fresh_fvar();
+    let hoff = d.kernel().fvar(hoff_fv);
+
+    let replaced = {
+        let l = d.lemma(p.det_row_replaced, &[m, a, mm, h_lam, t]);
+        d.apply(l, &[hble, hrow, hoff])
+    };
+    let start_fn = row_replaced_fn(d, p, a, h_lam, t, m);
+    let start_sum = rsum_range(d, p, start_fn, sm);
+
+    // `pair_fn q k := altSign (q+t) * (coef k q * det (matMinor A t q) m)`.
+    let pair_fn = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let idx = d.add(q, t);
+        let sign = ralt_sign(d, p, idx);
+        let ckq = d.apply(coef, &[k, q]);
+        let minor = rmat_minor_of(d, p, a, t, q);
+        let sub = rdet(d, p, minor, m);
+        let prod = rmul(d, ckq, sub);
+        let body = rmul(d, sign, prod);
+        let inner = d.lam_fv(k_fv, nat, body);
+        d.lam_fv(q_fv, nat, inner)
+    };
+    // `inner_fn q := sumRange (fun k => pair_fn q k) n`, written reduced.
+    let inner_fn = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let over_k = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let idx = d.add(q, t);
+            let sign = ralt_sign(d, p, idx);
+            let ckq = d.apply(coef, &[k, q]);
+            let minor = rmat_minor_of(d, p, a, t, q);
+            let sub = rdet(d, p, minor, m);
+            let prod = rmul(d, ckq, sub);
+            let body = rmul(d, sign, prod);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let body = rsum_range(d, p, over_k, n);
+        d.lam_fv(q_fv, nat, body)
+    };
+    let inner_sum = rsum_range(d, p, inner_fn, sm);
+
+    // pointwise at `q`: `sign * (S * X) = sumRange (fun k => sign * (coef k q * X)) n`
+    // where `S = sumRange (fun k => coef k q) n`.
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let sign = {
+        let idx = d.add(q, t);
+        ralt_sign(d, p, idx)
+    };
+    let minor_q = rmat_minor_of(d, p, a, t, q);
+    let xx = rdet(d, p, minor_q, m);
+    let coef_q = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.apply(coef, &[k, q]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let s_val = rsum_range(d, p, coef_q, n);
+
+    let s_x = rmul(d, s_val, xx);
+    let y0 = rmul(d, sign, s_x);
+    let x_s = rmul(d, xx, s_val);
+    let y1 = rmul(d, sign, x_s);
+    let step1 = {
+        let pf = d.lemma(p.mul_comm, &[s_val, xx]);
+        rcongr(d, s_x, x_s, pf, &|d, v| rmul(d, sign, v))
+    };
+    // `X * S = sumRange (fun k => X * coef k q) n`.
+    let x_coef_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let ckq = d.apply(coef, &[k, q]);
+        let body = rmul(d, xx, ckq);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let x_coef_sum = rsum_range(d, p, x_coef_fn, n);
+    let y2 = rmul(d, sign, x_coef_sum);
+    let step2 = {
+        let pf = d.lemma(p.mul_sum_range, &[xx, coef_q, n]);
+        rcongr(d, x_s, x_coef_sum, pf, &|d, v| rmul(d, sign, v))
+    };
+    // `sign * sumRange x_coef_fn n = sumRange (fun k => sign * (X * coef k q)) n`.
+    let sign_x_coef_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let ckq = d.apply(coef, &[k, q]);
+        let prod = rmul(d, xx, ckq);
+        let body = rmul(d, sign, prod);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let y3 = rsum_range(d, p, sign_x_coef_fn, n);
+    let step3 = d.lemma(p.mul_sum_range, &[sign, x_coef_fn, n]);
+    // termwise `sign * (X * coef k q) = sign * (coef k q * X)`.
+    let final_k_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let ckq = d.apply(coef, &[k, q]);
+        let prod = rmul(d, ckq, xx);
+        let body = rmul(d, sign, prod);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let y4 = rsum_range(d, p, final_k_fn, n);
+    let step4 = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let ckq = d.apply(coef, &[k, q]);
+        let x_ck = rmul(d, xx, ckq);
+        let ck_x = rmul(d, ckq, xx);
+        let pf = d.lemma(p.mul_comm, &[xx, ckq]);
+        let termwise = rcongr(d, x_ck, ck_x, pf, &|d, v| rmul(d, sign, v));
+        let pw = d.lam_fv(k_fv, nat, termwise);
+        let l = d.lemma(p.sum_range_congr, &[sign_x_coef_fn, final_k_fn, n]);
+        d.apply(l, &[pw])
+    };
+    let (_e, pointwise_q) = rchain(d, y0, &[(y1, step1), (y2, step2), (y3, step3), (y4, step4)]);
+    let pointwise = d.lam_fv(q_fv, nat, pointwise_q);
+
+    let congr = {
+        let l = d.lemma(p.sum_range_congr, &[start_fn, inner_fn, sm]);
+        d.apply(l, &[pointwise])
+    };
+    // `sumRange_swap` binder order: `(f, INNER bound, OUTER bound)`.
+    let swap = d.lemma(p.sum_range_swap, &[pair_fn, n, sm]);
+
+    let (_e2, proof) = rchain(
+        d,
+        det_mm,
+        &[
+            (start_sum, replaced),
+            (inner_sum, congr),
+            (target_sum, swap),
+        ],
+    );
+
+    let body = d.lam_fv(hoff_fv, hoff_ty, proof);
+    let body = d.lam_fv(hrow_fv, hrow_ty, body);
+    let body = d.lam_fv(hble_fv, hble_ty, body);
+    let body = d.lam_fv(n_fv, nat, body);
+    let body = d.lam_fv(t_fv, nat, body);
+    let body = d.lam_fv(coef_fv, coef_ty, body);
+    let body = d.lam_fv(mm_fv, mty, body);
+    let body = d.lam_fv(a_fv, mty, body);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    d.declare_theorem(p.det_row_multilinear, ty, value)
+}
+
+// --- multiplicativity at a CONCRETE dimension (`matrix_det`, ADR-1440) -----
+//
+// `Rat.det_matMul_2 : ∀ A B, det (matMul A B 2) 2 = det A 2 * det B 2`.
+//
+// The symbolic-`n` statement is NOT proved (see the "what is still missing"
+// account in ADR-1440); this is the `n = 2` instance, and it is cheap for a
+// reason worth recording rather than for a reason that generalizes. The
+// eight-variable ring identity underneath it — `Rat.det2_mul`, landed with the
+// fixed-dimension `matrix` module long before `Rat.det` existed — is already
+// proved, and `Rat.det_eq_det2` already identifies `det A 2` with `det2` on
+// the four entries SYMBOLICALLY in `A`. So all this declaration does is reduce
+// `matMul A B 2 i j` at the four index pairs and line the entries up.
+//
+// That reduction is where the whole `n = 2` shortcut lives: `Rat.sumRange`'s
+// base case is `Rat.zero`, so `matMul A B 2 i j` iota-reduces to
+// `(0 + A i 0 * B 0 j) + A i 1 * B 1 j` — one stray `zero +` per entry, killed
+// by `Rat.zero_add` under a congruence. At symbolic `n` nothing reduces at
+// all (a recursor applied to a bare free variable is stuck), which is exactly
+// why the general case needs `Rat.det_row_multilinear` and an induction over
+// the rows instead.
+//
+// `n = 3` is NOT done and is not cheap the same way: there is no `det3_mul`,
+// and the corresponding identity has eighteen variables.
+
+/// Admit `Rat.det_matMul_2` — see [`RatPrelude::det_mat_mul_2`].
+fn declare_det_mat_mul_2(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let i0 = d.zero();
+    let i1 = d.num(1);
+    let i2 = d.num(2);
+
+    let a00 = d.apply(a, &[i0, i0]);
+    let a01 = d.apply(a, &[i0, i1]);
+    let a10 = d.apply(a, &[i1, i0]);
+    let a11 = d.apply(a, &[i1, i1]);
+    let b00 = d.apply(b, &[i0, i0]);
+    let b01 = d.apply(b, &[i0, i1]);
+    let b10 = d.apply(b, &[i1, i0]);
+    let b11 = d.apply(b, &[i1, i1]);
+
+    // `C := matMul A B 2`, a `Nat → Nat → Rat` in its own right.
+    let c_mat = d.const_app(p.mat_mul, &[a, b, i2]);
+
+    let det_c = rdet(d, p, c_mat, i2);
+    let det_a = rdet(d, p, a, i2);
+    let det_b = rdet(d, p, b, i2);
+    let rhs = rmul(d, det_a, det_b);
+    let ty = {
+        let stmt = req(d, det_c, rhs);
+        let over_b = d.pi_fv(b_fv, mty, stmt);
+        d.pi_fv(a_fv, mty, over_b)
+    };
+
+    // The four entries of `C`, each in the shape `matMul` iota-reduces to,
+    // and each in the shape `det2_mul` states.
+    let zero_r = rzero(d, p);
+    let entry = |d: &mut IntDev<'_>, x: ExprId, y: ExprId, u: ExprId, v: ExprId| {
+        let xy = rmul(d, x, y);
+        let uv = rmul(d, u, v);
+        let raw = {
+            let head = radd(d, zero_r, xy);
+            radd(d, head, uv)
+        };
+        let tidy = radd(d, xy, uv);
+        // `(0 + xy) + uv = xy + uv`.
+        let head = radd(d, zero_r, xy);
+        let za = d.lemma(p.zero_add, &[xy]);
+        let pf = rcongr(d, head, xy, za, &|d, w| radd(d, w, uv));
+        (raw, tidy, pf)
+    };
+
+    let (c00_raw, c00, p00) = entry(d, a00, b00, a01, b10);
+    let (c01_raw, c01, p01) = entry(d, a00, b01, a01, b11);
+    let (c10_raw, c10, p10) = entry(d, a10, b00, a11, b10);
+    let (c11_raw, c11, p11) = entry(d, a10, b01, a11, b11);
+
+    // `det C 2 = det2 (C 0 0) (C 0 1) (C 1 0) (C 1 1)`, whose right-hand side
+    // is defeq to `det2 c00_raw c01_raw c10_raw c11_raw`.
+    let expand_c = d.lemma(p.det_eq_det2, &[c_mat]);
+    let d_raw = rdet2(d, p, c00_raw, c01_raw, c10_raw, c11_raw);
+
+    let d_1 = rdet2(d, p, c00, c01_raw, c10_raw, c11_raw);
+    let s_1 = rcongr(d, c00_raw, c00, p00, &|d, w| {
+        rdet2(d, p, w, c01_raw, c10_raw, c11_raw)
+    });
+    let d_2 = rdet2(d, p, c00, c01, c10_raw, c11_raw);
+    let s_2 = rcongr(d, c01_raw, c01, p01, &|d, w| {
+        rdet2(d, p, c00, w, c10_raw, c11_raw)
+    });
+    let d_3 = rdet2(d, p, c00, c01, c10, c11_raw);
+    let s_3 = rcongr(d, c10_raw, c10, p10, &|d, w| {
+        rdet2(d, p, c00, c01, w, c11_raw)
+    });
+    let d_4 = rdet2(d, p, c00, c01, c10, c11);
+    let s_4 = rcongr(d, c11_raw, c11, p11, &|d, w| rdet2(d, p, c00, c01, c10, w));
+
+    // `Rat.det2_mul` — the eight-variable identity, already proved.
+    let det2_a = rdet2(d, p, a00, a01, a10, a11);
+    let det2_b = rdet2(d, p, b00, b01, b10, b11);
+    let product = rmul(d, det2_a, det2_b);
+    let s_mul = d.lemma(p.det2_mul, &[a00, a01, a10, a11, b00, b01, b10, b11]);
+
+    // Back to `det A 2` and `det B 2`.
+    let expand_a = d.lemma(p.det_eq_det2, &[a]);
+    let expand_b = d.lemma(p.det_eq_det2, &[b]);
+    let a_back = rsymm(d, det_a, det2_a, expand_a);
+    let b_back = rsymm(d, det_b, det2_b, expand_b);
+    let mid = rmul(d, det_a, det2_b);
+    let s_a = rcongr(d, det2_a, det_a, a_back, &|d, w| rmul(d, w, det2_b));
+    let s_b = rcongr(d, det2_b, det_b, b_back, &|d, w| rmul(d, det_a, w));
+
+    let (_end, proof) = rchain(
+        d,
+        det_c,
+        &[
+            (d_raw, expand_c),
+            (d_1, s_1),
+            (d_2, s_2),
+            (d_3, s_3),
+            (d_4, s_4),
+            (product, s_mul),
+            (mid, s_a),
+            (rhs, s_b),
+        ],
+    );
+
+    let value = {
+        let over_b = d.lam_fv(b_fv, mty, proof);
+        d.lam_fv(a_fv, mty, over_b)
+    };
+    d.declare_theorem(p.det_mat_mul_2, ty, value)
 }
