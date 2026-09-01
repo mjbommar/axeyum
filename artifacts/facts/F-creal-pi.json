@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-pi",
+  "title": "pi is constructed as a total, axiom-free CReal value, with no root and no intermediate value theorem",
+  "statement": "pi := CReal.mul two piHalf, where piHalf := CReal.mk (speedup (diagonal piHalfSeriesPartial) K) (...) -- by CReal.mk on an EXPLICIT concrete regular sequence, exactly as CReal.e and CReal.cosOne are, never by an Exists-elimination into data. The series is Euler's transform of Leibniz, pi/2 = sum_k 2^k (k!)^2 / (2k+1)!, and it is defined by its RECURSION (CReal.piHalfCoef: t 0 = 1, t (k+1) = t k * (k+1)/(2k+3)) rather than by that closed form, so the ratio t(k+1)/t k is definitional and no factorial identity is ever built. The consequence that matters: pi is NOT downstream of a root of cos, and therefore not downstream of the exact-root construction creal/ivt.rs refutes. The standing claim that it was (docs/curriculum/foundational-books/spivak.md, Ch 15-17 row) was a statement about ONE DEFINITION of pi presented as a statement about pi; it is corrected in place. Leibniz itself is the wrong series here: its terms are dominated by no geometric series, so CReal.e's concrete Cauchy witness does not reach it. Euler's transform has ratio (k+1)/(2k+3) <= 1/2 with no case split, all terms positive (no (-1)^k factor, so none of creal/alternating.rs), and CReal.e's own expDominant serves as the dominating series unchanged.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def CReal.pi : CReal",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.pi"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.pi",
+      "kind": "kernel-term",
+      "supports": "CReal.pi is admitted by the trusted kernel gate as a definition with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.pi --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\\.pi[[:space:]]'",
+      "checker_seconds": 12,
+      "notes": "A theorem inventory cannot answer this: prelude_theorem_inventory / theorem_dependency_inventory / nat_theorem_inventory all filter to Declaration::Theorem and return ZERO rows for any Definition, so a grep against them confirms nothing. --require-declaration exits non-zero when no exact display-name match of the required kind exists, and grep -c (never -q) consumes the pipe and asserts the count. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-CReal.pi",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds this declaration",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including this one. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Independently re-measured this session by kernel_declaration_projection, whose footprint-size column reads 0 for all fourteen CReal.pi* declarations."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/pi.rs, declare_pi_family)",
+    "source": "canonical type and axiom-footprint size read from kernel_declaration_projection --release on this tree (the creal-prelude row), not from source text or a doc comment."
+  },
+  "notes": "depends_on is empty for the same reason F:creal-e's is: pi's own building blocks (CReal.piHalf, CReal.piHalfSeriesPartial, CReal.piHalfTerm, CReal.piHalfCoef, CReal.speedup, CReal.mk, and the concrete Cauchy witness reproduced from exponential.rs) are either plain Definitions or private helpers with no registered proposition. The propositions ABOUT pi are the separate facts F:creal-pi-le-four, F:creal-two-le-pi and F:creal-three-le-pi.",
+  "external_status": "proved"
+}

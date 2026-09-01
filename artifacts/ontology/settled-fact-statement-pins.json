@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2079,
+    "min_identity_bound": 2083,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -5462,6 +5462,20 @@
       "kernel_theorem": "CReal.order_reflect_of_pos_deriv"
     },
     {
+      "fact_id": "F:creal-pi",
+      "language": "lean4",
+      "statement_sha256": "3b4ee5e1f2b953e48727f29c5018494226319430f878fafe8889067211e6fd57",
+      "prose_sha256": "706d0da172d99075e990259cc19c6ce6e8aa1112dd6afdf76222aa18f4422b85",
+      "kernel_theorem": "CReal.pi"
+    },
+    {
+      "fact_id": "F:creal-pi-le-four",
+      "language": "lean4",
+      "statement_sha256": "3ccdba62a1efe3f87f5dfc182e04fb84a2847ca47b228b2657ca78a064e9e608",
+      "prose_sha256": "6472f81d6fe6597f6968a350fe94a5dcbd3097a42c3ad2cce19433f43f8984f5",
+      "kernel_theorem": "CReal.piLeFour"
+    },
+    {
       "fact_id": "F:creal-polyadd",
       "language": "lean4",
       "statement_sha256": "22147e659d85ebeb60134606f4769c6b3b50afeb6df578738a6f5d862306d68e",
@@ -6494,6 +6508,13 @@
       "kernel_theorem": "CReal.supOn_ub"
     },
     {
+      "fact_id": "F:creal-three-le-pi",
+      "language": "lean4",
+      "statement_sha256": "9fffd9572fb35a005bfd5627dfb54213b8b8d34ed2f929e79aca25015c4e60ad",
+      "prose_sha256": "89d4ef80c9ea9c92d6f6b968cfbdc642c9731787ae8bc377f53f4e0fef0ee23e",
+      "kernel_theorem": "CReal.threeLePi"
+    },
+    {
       "fact_id": "F:creal-trueexpofmodulus-mono",
       "language": "lean4",
       "statement_sha256": "4371341a723a5b7ae2f4c18e22c594811790dfc5287e09ad00b3d566dddc5e09",
@@ -6527,6 +6548,13 @@
       "statement_sha256": "3797952551efb33df6ae61d10d98dea763907436a21de28b91a8d7434708c5ce",
       "prose_sha256": "d68ed9e4fd0c12d48fcbecefc120d6b5c884d6611dc3b0502a5735105804108c",
       "kernel_theorem": "CReal.two_le_e"
+    },
+    {
+      "fact_id": "F:creal-two-le-pi",
+      "language": "lean4",
+      "statement_sha256": "de901ddf972d58ded9c8d4a93f85d90362188c4051a04a08ac9b8bf0fd7a1525",
+      "prose_sha256": "dcecac655ba3a943ad40797f014efb7d954442217b9db0972f7b3b355ac8c88b",
+      "kernel_theorem": "CReal.twoLePi"
     },
     {
       "fact_id": "F:creal-two-sided-of-abs-sub-le",
