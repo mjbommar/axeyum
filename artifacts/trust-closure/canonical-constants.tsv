@@ -1,0 +1,45 @@
+# One canonical definition per mathematical object.
+#
+# Gated by `scripts/check-constant-canonicity.py` against the kernel
+# environment (`kernel_declaration_projection --release`), in BOTH
+# directions: a nullary data-valued definition with no row here fails the
+# gate, and a row naming a constant the kernel no longer declares fails it
+# too.  The population is DERIVED, never listed by hand -- this file only
+# carries the adjudication the kernel cannot make.
+#
+# Why a declarative registry at all: `CReal.Equiv` is undecidable, so no
+# tool can answer "is this constructed real the same real as that one".
+# Every `CReal`-valued constant also has the identical type `CReal`, so the
+# type-shape detector (`check-shape-duplicates.py`) is structurally blind
+# here -- measured 2026-08-31, 15 duplicate groups and not one containing a
+# constant.
+#
+# The discipline: an ALTERNATIVE construction of an object that already has
+# a canonical constant lands as a THEOREM relating the two, never as a
+# second definition.  Machin's formula is `CReal.pi_eq_machin`, not
+# `CReal.piMachin`.  Where a second definition is genuinely wanted, it is
+# `role=alternate` and must name a `bridge` theorem whose STATED TYPE
+# mentions both constants -- checked against the kernel, not asserted.
+#
+# columns: carrier <TAB> constant <TAB> object <TAB> role <TAB> bridge <TAB> reason
+#
+# `role`   canonical = the definition of record for `object`
+#          alternate = a second construction, bridged to the canonical one
+# `bridge` `-` for canonical; a theorem name for alternate
+carrier	constant	object	role	bridge	reason
+CReal	CReal.zero	zero	canonical	-	The additive identity of the constructed reals; `CReal.apart_zero_one` separates it from `CReal.one` in the kernel.
+CReal	CReal.one	one	canonical	-	The multiplicative identity; separated from `CReal.zero` by `CReal.apart_zero_one`.
+CReal	CReal.e	e	canonical	-	Euler's number, defined by the exponential series. `CReal.expFn_one_equiv_e` is the discipline this registry enforces, already practised: the alternative construction `expFn 1` landed as a THEOREM equating it to this constant, not as a second definition.
+CReal	CReal.cosOne	cos-1	canonical	-	cos 1, defined by the cosine series. TWO alternative constructions are already bridged to it by theorem rather than redefined: `CReal.cosFn_one_equiv_cosOne` and `CReal.cosFnWide_one_equiv_cosOne`.
+CReal	CReal.sinOne	sin-1	canonical	-	sin 1, defined by the sine series; `CReal.sinOne_nonneg` is stated about this constant.
+CReal	CPoint.Scalar.two	cpoint-scalar-2	canonical	-	The scalar 2 as used by the plane-geometry development. A distinct declaration from any `CReal` numeral because `CPoint` builds its scalars in its own namespace; it denotes the real number 2, and nothing else here does.
+CReal	CPoint.Scalar.three	cpoint-scalar-3	canonical	-	The scalar 3 for the plane-geometry development; denotes the real number 3, and nothing else here does.
+CReal	CPoint.Scalar.inv2	cpoint-scalar-half	canonical	-	The scalar 1/2; `CPoint.Scalar.one_sub_inv2` ties it to `CReal.one` in the kernel.
+CReal	CPoint.Scalar.inv3	cpoint-scalar-third	canonical	-	The scalar 1/3 for the plane-geometry development.
+Complex	Complex.zero	zero	canonical	-	The additive identity of the complex numbers; `Complex.Equiv.not_zero_one` and `Complex.Equiv.not_zero_I` separate it from both siblings in the kernel.
+Complex	Complex.one	one	canonical	-	The multiplicative identity; separated from `Complex.zero` by `Complex.Equiv.not_zero_one`.
+Complex	Complex.I	i	canonical	-	The imaginary unit; `Complex.I_sq` characterises it and `Complex.Equiv.not_zero_I` separates it from `Complex.zero`.
+Int	Int.zero	zero	canonical	-	The additive identity of the integers; `Int.Characterization.zero_ne_one` separates it from `Int.one`.
+Int	Int.one	one	canonical	-	The multiplicative identity; separated from `Int.zero` by `Int.Characterization.zero_ne_one`.
+Rat	Rat.zero	zero	canonical	-	The additive identity of the rationals; `Rat.one_ne_zero` separates it from `Rat.one`.
+Rat	Rat.one	one	canonical	-	The multiplicative identity; separated from `Rat.zero` by `Rat.one_ne_zero`.
