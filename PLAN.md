@@ -125,6 +125,7 @@ now. Nothing was deleted.
 | 2026-09-01 | `53a0065d2` | 4 of 10: the `natAbs_inj_of_*` mirrors, first attempt each. Three of four branches close on the sign hypothesis alone, because `Int.le Int.zero (negSucc n)` IS `False`. |
 | 2026-09-01 | `ce3a4cbac` | 5 more: the `mul_self` cluster (3 new `Nat` squaring lemmas carry all its content) and the `coe_sub_coe` pair (`subNatNat_elim` after the `ofNat_add_negOfNat` bridge — the two stuck terms are NOT defeq). Plus the `Nat.`-namespace axiom-freedom gap, 13 declarations. |
 | 2026-09-01 | `32e338978` | Row 1, `natAbs_emod_two`: the family scores **10 of 10**. Its two parity cases take different routes — there is no `Nat.odd_iff_even_succ` to mirror `even_iff_odd_succ` with. |
+| 2026-09-01 | `pending` | Lane opened; status stub and starting measurements recorded. |
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
 | 2026-09-01 | `PENDING` | Established that `held_out=186` is CORRECT before moving the stale `held_out=146` pin — composition 16 (v1) + 170 (v2, matching the extension's own `coverage.partition_counts`), two RISES from draws with v1 unchanged so no ledger amendment is owed, and all 186 rows measured `open` / no evidence / unreferenced by any of the 29 operations against a positive control of 191/191/37 over the 198 train rows. Pin now carries a failure message naming the procedure. Control mutates the SUBJECT: perturbing the gate's reported count kills the pin. |
 | 2026-09-01 | `PENDING` | `check-generated-artifact-ownership.py`: one of its two COVER failures was a fiction — `schema.json` reported as a three-producer artifact because basenames were matched as substrings of `fact.schema.json` and `obstruction-graph.schema.json`. Recording it would have put an invention into the ratchet's population. Now extracts whole `*.json` path components per producer (35 -> 34 candidates, dropping only `schema.json`, adding none, removing none of the 32 recorded; also 112 s -> 0.05 s, past a timeout that made the gate unrunnable), and the genuinely multi-named `mirror-divergence-registry.json` is recorded. Gate `fails=0|PASS`. |
@@ -37525,6 +37526,35 @@ depending on `|x|` — the power-series row, Spivak ch 24 — and after that the
 construction `creal/ivt.rs` refutes. Sharpening `π ≤ 3.2` needs the tail
 bounded from index 4 rather than 0 (a re-indexed domination), the same call
 `declare_e_le_four` makes for `e ≤ 4` versus `e ≤ 3`.
+
+**Started** (`WIP`, creal-split, 2026-09-01). Working the refactor named in
+[2026-08-27-architecture-review.md](docs/research/11-design-review/2026-08-27-architecture-review.md)
+§1: `crates/axeyum-lean-kernel/src/creal.rs` fuses the name registry, the
+`CRealPrelude` field struct, the build ORDER, and dispatch.
+
+Starting state, measured on this lane's base commit `5c8eaf7b8` (the review's
+2026-08-27 numbers in parentheses):
+
+- `creal.rs`: **17,050** lines (9,284)
+- `CRealPrelude`: **607** fields (441)
+- `STEPS` build-order table: **211** entries (135 at the level-1 landing)
+
+The level-1 fix already landed (lane `creal-steps`, `de853af65`): each
+`BuildStep` names `requires`/`provides` as function pointers, and
+`validate_step_order` checks the *hand-written* order is a valid topological
+order. What has NOT happened is the review's actual recommendation — the
+builder does not *sort*; it validates a linearization a human still maintains.
+This lane's slices:
+
+- **A** — measure the real dependency graph from the source and check the
+  hand-written `requires`/`provides` table against it.
+- **B** — make the build order *computed* (topological sort, stable tie-break
+  by source order) rather than hand-maintained.
+- **C** — per-module registries behind a facade (ADR-1512), one module moved.
+
+Invariant instrument: `target/release/examples/kernel_declaration_projection`,
+captured before any change. Before-snapshot SHA-256 recorded below once the
+release build completes (`did not run` until then).
 
 **Landed and green** (`WIP`, creal-steps, 2026-08-27). Applied the spike's
 level 1 ([2026-08-27-prelude-build-spike.md](docs/research/11-design-review/2026-08-27-prelude-build-spike.md))
