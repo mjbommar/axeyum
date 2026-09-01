@@ -133,45 +133,6 @@
         "note": "the divergence is in the definition's body (Finsupp product vs bounded search), not the pinned statement; not re-derivable by this gate"
       },
       "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
-    },
-    {
-      "mathlib_constant": "Nat.Abundant",
-      "surface_forms": [
-        "Abundant"
-      ],
-      "class": "definitional",
-      "why": "Mathlib's `def Abundant (n : \u2115) : Prop := n < \u2211 i \u2208 properDivisors n, i` (FactorisationProperties.lean) is a Finset sum over `n.properDivisors`. This kernel has no Finset, so that body cannot be written at all. Ours (nat_prelude/abundant_deficient.rs, ADR-1100) is `Abundant n := Lt (mul 2 n) (sumDivisors n)`, where `sumDivisors` sums every divisor of `n` in `[0,n]` including `n` itself via `sumRange` -- provably equivalent to Mathlib's phrasing for n != 0 (sumDivisors n = properDivisorsSum + n) but a structurally different construction, not a Finset sum. The module doc reaches this conclusion itself, citing the `Nat.minFac`/`Nat.multichoose` mirror-flip criterion directly.",
-      "mathlib_source": {
-        "path": "Mathlib/NumberTheory/FactorisationProperties.lean",
-        "note": "the divergence is in the definition's body (Finset.sum over properDivisors vs a sumDivisors-based Lt), not the pinned statement; not re-derivable by this gate"
-      },
-      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
-    },
-    {
-      "mathlib_constant": "Nat.Deficient",
-      "surface_forms": [
-        "Deficient"
-      ],
-      "class": "definitional",
-      "why": "Mathlib's `def Deficient (n : \u2115) : Prop := \u2211 i \u2208 properDivisors n, i < n` (FactorisationProperties.lean), the same Finset-sum shape as `Abundant`. Ours (nat_prelude/abundant_deficient.rs, ADR-1100) is `Deficient n := Lt (sumDivisors n) (mul 2 n)` -- provably equivalent for n != 0, structurally different, no Finset in this kernel to state Mathlib's version at all.",
-      "mathlib_source": {
-        "path": "Mathlib/NumberTheory/FactorisationProperties.lean",
-        "note": "the divergence is in the definition's body (Finset.sum over properDivisors vs a sumDivisors-based Lt), not the pinned statement; not re-derivable by this gate"
-      },
-      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
-    },
-    {
-      "mathlib_constant": "Nat.Perfect",
-      "surface_forms": [
-        "Perfect"
-      ],
-      "class": "definitional",
-      "why": "Mathlib's `def Perfect (n : \u2115) : Prop := \u2211 i \u2208 properDivisors n, i = n \u2227 0 < n` (Divisors.lean) is a Finset sum with an explicit positivity conjunct. Ours (nat_prelude/perfect.rs) is `Perfect n := Eq (sumDivisors n) (mul 2 n)`, with no positivity conjunct at all -- and the two are not merely differently-constructed but EXTENSIONALLY different at n = 0: sumDivisors 0 = 0 = mul 2 0, so ours has `Perfect 0` TRUE, while Mathlib's `Perfect 0` is FALSE (`0 < 0` fails). Same Finset-sum-vs-sumDivisors divergence as `Nat.Abundant`/`Nat.Deficient` above, one step stronger.",
-      "mathlib_source": {
-        "path": "Mathlib/NumberTheory/Divisors.lean",
-        "note": "the divergence is in the definition's body (Finset.sum over properDivisors plus a positivity conjunct vs a bare sumDivisors equation), not the pinned statement; not re-derivable by this gate"
-      },
-      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
     }
   ]
 }
