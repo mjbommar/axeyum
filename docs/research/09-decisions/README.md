@@ -811,3 +811,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1310](adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md) | Twelve documents state "this kernel has no `List`/`Finset`/`Prod`, | accepted |
 | [1315](adr-1315-row-3-is-cheap-where-a-decision-procedure-replaces-a-limit.md) | row 3 is cheap exactly where a DECISION PROCEDURE replaces a limit | Accepted |
 | [1320](adr-1320-one-canonical-definition-per-mathematical-object.md) | one canonical definition per mathematical object | Accepted |
+| [1410](adr-1410-a-re-derivation-must-be-budgeted-wired-and-reachable.md) | a re-derivation must be budgeted, wired, and reachable | Accepted |
