@@ -1018,6 +1018,25 @@ pub struct IntPrelude {
     /// `nat_abs_inj_of_nonpos_of_nonneg : ∀ a b, a ≤ 0 → 0 ≤ b →
     /// (natAbs a = natAbs b ↔ -a = b)`.
     pub nat_abs_inj_of_nonpos_of_nonneg: NameId,
+    /// `Nat.mul_self_le_mul_self_iff : ∀ m n, m ≤ n ↔ m * m ≤ n * n` —
+    /// declared into the `Nat` namespace from here, like `Nat.inverseIndex`.
+    pub nat_mul_self_le_mul_self_iff: NameId,
+    /// `Nat.mul_self_lt_mul_self_iff : ∀ m n, m < n ↔ m * m < n * n`.
+    pub nat_mul_self_lt_mul_self_iff: NameId,
+    /// `Nat.mul_self_eq_mul_self_iff : ∀ m n, m = n ↔ m * m = n * n`.
+    pub nat_mul_self_eq_mul_self_iff: NameId,
+    /// `nat_abs_le_iff_mul_self_le : ∀ a b, natAbs a ≤ natAbs b ↔ a * a ≤ b * b`.
+    pub nat_abs_le_iff_mul_self_le: NameId,
+    /// `nat_abs_lt_iff_mul_self_lt : ∀ a b, natAbs a < natAbs b ↔ a * a < b * b`.
+    pub nat_abs_lt_iff_mul_self_lt: NameId,
+    /// `nat_abs_eq_iff_mul_self_eq : ∀ a b, natAbs a = natAbs b ↔ a * a = b * b`.
+    pub nat_abs_eq_iff_mul_self_eq: NameId,
+    /// `nat_abs_coe_sub_coe_le_of_le : ∀ a b n : ℕ, a ≤ n → b ≤ n →
+    /// natAbs (ofNat a - ofNat b) ≤ n`.
+    pub nat_abs_coe_sub_coe_le_of_le: NameId,
+    /// `nat_abs_coe_sub_coe_lt_of_lt : ∀ a b n : ℕ, a < n → b < n →
+    /// natAbs (ofNat a - ofNat b) < n`.
+    pub nat_abs_coe_sub_coe_lt_of_lt: NameId,
 
     // --- `Int.gcd`, Euclid's Book VII transported from `ℕ` -------------------
     /// `Int.gcd a b := Nat.gcd (natAbs a) (natAbs b)` — a `Nat`-valued gcd, as
@@ -2085,6 +2104,14 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_abs_inj_of_nonpos_of_nonpos: child(kernel, "nat_abs_inj_of_nonpos_of_nonpos"),
         nat_abs_inj_of_nonneg_of_nonpos: child(kernel, "nat_abs_inj_of_nonneg_of_nonpos"),
         nat_abs_inj_of_nonpos_of_nonneg: child(kernel, "nat_abs_inj_of_nonpos_of_nonneg"),
+        nat_mul_self_le_mul_self_iff: kernel.name_str(nat_root, "mul_self_le_mul_self_iff"),
+        nat_mul_self_lt_mul_self_iff: kernel.name_str(nat_root, "mul_self_lt_mul_self_iff"),
+        nat_mul_self_eq_mul_self_iff: kernel.name_str(nat_root, "mul_self_eq_mul_self_iff"),
+        nat_abs_le_iff_mul_self_le: child(kernel, "nat_abs_le_iff_mul_self_le"),
+        nat_abs_lt_iff_mul_self_lt: child(kernel, "nat_abs_lt_iff_mul_self_lt"),
+        nat_abs_eq_iff_mul_self_eq: child(kernel, "nat_abs_eq_iff_mul_self_eq"),
+        nat_abs_coe_sub_coe_le_of_le: child(kernel, "nat_abs_coe_sub_coe_le_of_le"),
+        nat_abs_coe_sub_coe_lt_of_lt: child(kernel, "nat_abs_coe_sub_coe_lt_of_lt"),
         gcd: child(kernel, "gcd"),
         nat_abs_mul: child(kernel, "nat_abs_mul"),
         dvd_of_nat_abs_dvd: child(kernel, "dvd_of_nat_abs_dvd"),

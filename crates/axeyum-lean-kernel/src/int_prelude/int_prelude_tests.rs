@@ -27,7 +27,9 @@ use super::ops::IntDev;
 use crate::ExprId;
 use crate::env::Declaration;
 use crate::nat_prelude::NatOps;
-use crate::{BinderInfo, IntPrelude, Kernel, LocalContext, LocalDecl, build_int_prelude};
+use crate::{
+    BinderInfo, IntPrelude, Kernel, LocalContext, LocalDecl, build_int_prelude, build_nat_prelude,
+};
 
 /// A fixture: a kernel with the integer prelude plus an abstract point `x : Z`;
 /// hypotheses are added per-test.
@@ -473,7 +475,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 263] {
 /// working parts of five of the laws above, and a footprint that leaked into one
 /// of them would leak into the law. They are checked to exactly the same
 /// standard.
-fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 42] {
+fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 47] {
     [
         p.sub_nat_nat_succ_succ,
         p.sub_nat_nat_add_add,
@@ -514,6 +516,11 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 42] {
         p.nat_abs_inj_of_nonpos_of_nonpos,
         p.nat_abs_inj_of_nonneg_of_nonpos,
         p.nat_abs_inj_of_nonpos_of_nonneg,
+        p.nat_abs_le_iff_mul_self_le,
+        p.nat_abs_lt_iff_mul_self_lt,
+        p.nat_abs_eq_iff_mul_self_eq,
+        p.nat_abs_coe_sub_coe_le_of_le,
+        p.nat_abs_coe_sub_coe_lt_of_lt,
         // Base case theorems for Int.fib, added by int-fib-base lane
         p.fib_zero,
         p.fib_one,
@@ -666,6 +673,70 @@ fn every_int_declaration_is_checked_and_axiom_free() {
             // check below applies only to the derived laws/lemmas.
             continue;
         }
+        let footprint = k.axiom_footprint(*name);
+        assert!(
+            footprint.is_empty(),
+            "{shown} must have an empty axiom footprint, found {:?}",
+            footprint
+                .iter()
+                .map(|n| k.display_name(*n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// Every declaration this prelude makes into the **`Nat`** namespace is a
+/// checked, axiom-free `Theorem` or `Definition`.
+///
+/// `every_int_declaration_is_checked_and_axiom_free` scopes itself with
+/// `starts_with("Int.")`, which is right for what it measures and leaves a
+/// real gap: this prelude also declares into `Nat.` -- `wilson.rs`'s
+/// `Nat.inverseIndex` family, and the `Nat.mul_self_*_iff` squaring lemmas the
+/// `natAbs` order mirrors rest on. Nothing was watching any of them.
+///
+/// Like its `Int.` sibling this derives its subject from the ENVIRONMENT rather
+/// than from a literal: it enumerates every `Nat.`-named declaration in the
+/// built `Int` model, subtracts everything the `Nat` prelude itself declares,
+/// and requires an empty footprint for the remainder. A future declaration into
+/// `Nat` from here is therefore covered the day it lands, with nobody
+/// remembering to list it.
+#[test]
+fn every_nat_namespace_declaration_from_the_int_prelude_is_axiom_free() {
+    let mut nat_only = Kernel::new();
+    let _ = build_nat_prelude(&mut nat_only).expect("the Nat model must build");
+    let from_nat: std::collections::HashSet<String> = nat_only
+        .environment()
+        .iter()
+        .map(|(name, _)| nat_only.display_name(*name).to_string())
+        .collect();
+
+    let mut k = Kernel::new();
+    let _ = build_int_prelude(&mut k).expect("the Int model must build");
+    let mine: Vec<(crate::NameId, Declaration)> = k
+        .environment()
+        .iter()
+        .filter(|(name, _)| {
+            let shown = k.display_name(**name).to_string();
+            shown.starts_with("Nat.") && !from_nat.contains(&shown)
+        })
+        .map(|(name, decl)| (*name, decl.clone()))
+        .collect();
+
+    // Without this the test passes vacuously the moment the two preludes stop
+    // differing -- the exact failure this repository refuses to ship.
+    assert!(
+        !mine.is_empty(),
+        "the Int prelude declares nothing into `Nat`; if that ever becomes \
+         genuinely true this test has no subject and must be deleted rather \
+         than left green"
+    );
+
+    for (name, decl) in &mine {
+        let shown = k.display_name(*name).to_string();
+        assert!(
+            !matches!(decl, Declaration::Axiom { .. }),
+            "{shown} is declared into `Nat` from the `Int` prelude as an axiom"
+        );
         let footprint = k.axiom_footprint(*name);
         assert!(
             footprint.is_empty(),
