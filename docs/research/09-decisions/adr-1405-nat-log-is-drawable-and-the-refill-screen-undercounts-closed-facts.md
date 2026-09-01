@@ -1,4 +1,4 @@
-# ADR-1400: `Mathlib.Data.Nat.Log` is drawable; `propose-nursery-refill.py --names` undercounts already-closed facts
+# ADR-1405: `Mathlib.Data.Nat.Log` is drawable; `propose-nursery-refill.py --names` undercounts already-closed facts
 
 Date: 2026-09-01
 Status: Accepted
