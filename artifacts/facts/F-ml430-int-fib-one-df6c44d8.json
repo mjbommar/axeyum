@@ -8,13 +8,52 @@
     "statement": "Int.fib 1 = 1",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.fib_one",
+      "kind": "kernel-term",
+      "supports": "Int.fib_one is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "int_theorem_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory 2>/dev/null | grep -cE '^theorem[[:space:]]Int.fib_one[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "int_theorem_inventory lists every Declaration::Theorem in the integer prelude with its canonical type; the grep asserts the exact tab-anchored name. --release is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.fib_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds this theorem",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: integer trusted surface = 0. That bounds every declaration in the integer environment, including this theorem. --release is MANDATORY here."
+    },
+    {
+      "id": "coverage-Int.fib_one",
+      "kind": "witness-replay",
+      "supports": "int_prelude_tests.rs's every_int_declaration_is_checked_and_axiom_free asserts, against the ENVIRONMENT rather than a hand-maintained list, that every live Int.* Definition/Theorem (this one included) is listed in derived_laws/derived_lemmas/asserted_laws/definition_names and carries an empty axiom footprint.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test int_prelude::int_prelude_tests::every_int_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::every_int_declaration_is_checked_and_axiom_free 2>&1 | grep -c '^test result: ok\\. 1 passed'",
+      "checker_seconds": 15,
+      "notes": "Guards against the class of gap CLAUDE.md documents repeatedly: a Definition/Theorem live in the prelude but absent from every hand-maintained list, which would otherwise receive no axiom-footprint check at all."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
+    "date": "2026-09-01",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs)",
     "source": "statement-only extraction of `Int.fib_one` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +65,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Closed by landing Int.fib base cases in the kernel. Our Int.fib definition is structurally different from Mathlib's (we use Int.rec with (-1)^m sign factor; Mathlib uses nested if-then on toNat conversion), but they agree extensionally. The equivalence is already proved in this kernel:\n- F:ml430-int-fib-neg-b4021d37 (proved): Int.fib (-n) = if Even n then -Int.fib n else Int.fib n (Mathlib's definition restated as a theorem about ours)\n- F:ml430-int-fib-natcast-d5886be4 (proved): Int.fib \u2191n = \u2191(Nat.fib n) (positive case agreement)\n\nThis base case reduces by definition (via Int.rec on ofNat/negSucc constructors and Nat.fib base cases) and is admitted as d.irefl (identity) with zero axiom assumptions. The flip is honest because the extensional equivalence is already established.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
