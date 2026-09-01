@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2039,
+    "min_identity_bound": 2048,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -7294,6 +7294,13 @@
       "kernel_theorem": "Int.modEq_sub"
     },
     {
+      "fact_id": "F:int-modeq-sumrange",
+      "language": "lean4",
+      "statement_sha256": "d002cb3fff795ab57f9693721ca8acfc6df91956c129b4995a7f0ff5fa41232e",
+      "prose_sha256": "8918930f100855776da47f9204bd5b54e0288980061e69ea81121e3533e4ca65",
+      "kernel_theorem": "Int.modEq_sumRange"
+    },
+    {
       "fact_id": "F:int-modeq-symm",
       "language": "lean4",
       "statement_sha256": "b9eec0130aed0da096ccfd222b232c80d6fe10aeccc655453a590a8eac3114e6",
@@ -7545,6 +7552,13 @@
       "statement_sha256": "fccfa5b999877be43a1593a716856a77f9657c0eb699a51ae0eafb67417bca4b",
       "prose_sha256": "31a1d066a7cead0a60b8fc4b9555943ad781b8c50f85427f85d7292dbe532b8d",
       "kernel_theorem": "Int.nat_abs_pow"
+    },
+    {
+      "fact_id": "F:int-neg-add",
+      "language": "lean4",
+      "statement_sha256": "9125febe638ffad44c17611855f0c5bb5ed8e63b07bb528ea1e4f45d9b5b2ba9",
+      "prose_sha256": "b1c888503be605fb449bbae08b87d1bd406734bff975befbae3280ec8cd3f471",
+      "kernel_theorem": "Int.neg_add"
     },
     {
       "fact_id": "F:int-neg-of-nat-add-neg-of-nat",
@@ -8079,6 +8093,55 @@
       "statement_sha256": "827ed3159eb954f8b73177e371e42d74f9b0d6ff004e6ffdddfa65174f85bdfd",
       "prose_sha256": "61d45debb078d03f5c8f132a556b470d4cc43bcc340edb265f0ccacb89e56ac8",
       "kernel_theorem": "Int.subNatNat_zero"
+    },
+    {
+      "fact_id": "F:int-sumrange-add",
+      "language": "lean4",
+      "statement_sha256": "d7e92e28e6762f9353f6d4d02907eb55fd00e6132af5ad571e65a6697820046f",
+      "prose_sha256": "1977fdb949d2155fb825f5688426d1a53fc6a7fd882317152eb247cfc1b7f016",
+      "kernel_theorem": "Int.sumRange_add"
+    },
+    {
+      "fact_id": "F:int-sumrange-congr",
+      "language": "lean4",
+      "statement_sha256": "0202d4a8988f4a04dc7bef6c4cc5afb9a2fa6f59bf054bc72f65fbf0070ec969",
+      "prose_sha256": "741f7697e341d9ec01a7a247301f3f77fa257b3949e5010a274e5c551bca82ed",
+      "kernel_theorem": "Int.sumRange_congr"
+    },
+    {
+      "fact_id": "F:int-sumrange-neg",
+      "language": "lean4",
+      "statement_sha256": "96aca74ec5d2604c915982305eefa723da7936d368c833dfaf6ad3f3bbe89f68",
+      "prose_sha256": "ff9c01fc3793eb2409de11e25ac8d7f90720cfcf29da8cf77ac23128d2f884e0",
+      "kernel_theorem": "Int.sumRange_neg"
+    },
+    {
+      "fact_id": "F:int-sumrange-ofnat",
+      "language": "lean4",
+      "statement_sha256": "4fc75ab78ba52c77406b79389fad2eb5192d33fb0257dee3e28ccfe546ab72ce",
+      "prose_sha256": "15af1302ef78fde8b3b2327aa2c2ff16eb6b2f5e0feaa8dc7aed8ec18b3e3c26",
+      "kernel_theorem": "Int.sumRange_ofNat"
+    },
+    {
+      "fact_id": "F:int-sumrange-sub",
+      "language": "lean4",
+      "statement_sha256": "7ad6bcf65cdfeb6a89173049b5006790d86c29cccce250350c75e5d8540d9ee5",
+      "prose_sha256": "fe0e909be80fff155a1f58f487446fbf4484f870e76a3f2652adcaa994268a3e",
+      "kernel_theorem": "Int.sumRange_sub"
+    },
+    {
+      "fact_id": "F:int-sumrange-succ",
+      "language": "lean4",
+      "statement_sha256": "580d1afb160f6e17e54eec5b9a957d3f167b2fa3b194bd466f93f77aa9513906",
+      "prose_sha256": "9af113b494798fc78a888c7b5d27319d5c474d8bcc3c5b64f1f12a49b9707858",
+      "kernel_theorem": "Int.sumRange_succ"
+    },
+    {
+      "fact_id": "F:int-sumrange-zero",
+      "language": "lean4",
+      "statement_sha256": "a140160a36af16bd2f44099a2cf3ee452b67d53d0ce3e98474ebedaf78ba4ece",
+      "prose_sha256": "8fb97b992cc1a2bee99a6d33f915bd1ebac2b59c433ed7eadf761f1eada0fbad",
+      "kernel_theorem": "Int.sumRange_zero"
     },
     {
       "fact_id": "F:int-two-sided-induction",
