@@ -1,4 +1,6 @@
-# Lane `queue-unblock-four-families`
+# Lane: queue-unblock-four-families — open four nursery families so a draw becomes authorable
+
+<!-- plan-section: lane-status -->
 
 **Status:** complete. `Nat.count` and `Nat.divMaxPow` declared (definitions and
 evaluation tests only, ADR-0653); a four-family draw now passes R5 / R9 /
