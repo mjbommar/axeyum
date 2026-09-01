@@ -419,6 +419,21 @@ pub fn polynomial_ivt(poly: &[Rational], a: Rational, b: Rational) -> Option<Ivt
 /// **recompute** the Sturm count on that interval (rather than trusting
 /// `root`'s own bookkeeping) to confirm it isolates exactly one root.
 ///
+/// `root.isolating_interval()` (see [`crate::algebraic::AlgebraicReal`]) is a
+/// **half-open** `(lower, upper]`: `lower` is excluded (`root` is always
+/// strictly greater than it) but `upper` is included (`root` may equal it
+/// exactly, e.g. a rational root). This certificate's claim is the *classical*
+/// (open) IVT interval `(a, b)`, so the two boundary checks below are NOT
+/// symmetric under this distinction: `lower >= a` alone is already enough to
+/// conclude `root > a` (exclusivity is free), but `upper <= b` alone is
+/// **not** enough to conclude `root < b` — that needs `root != b` as a
+/// separate fact, re-derived directly from `root`'s own minimal polynomial
+/// rather than inferred from the unrelated `poly`-level sign-change checks
+/// above (ADR-1400: a certificate's boundary treatment must be re-derivable
+/// from the certificate's own data, not an accident of check ordering — see
+/// `verify_rejects_a_root_forged_exactly_at_the_open_upper_bound` below for
+/// the adversarial fixture this specifically defeats).
+///
 /// `Some(true)` — valid; `Some(false)` — the certificate is definitely wrong
 /// (a corrupted coefficient, a shifted endpoint, …); `None` — declined
 /// (overflow), never a false accept.
@@ -444,6 +459,21 @@ pub fn verify_ivt_certificate(cert: &IvtCertificate) -> Option<bool> {
     }
     if lower.checked_cmp(&upper) != Some(Ordering::Less) {
         return Some(false);
+    }
+    // The half-open bracket's INCLUSIVE `upper` means `root <= upper <= b`
+    // alone permits `root == b`, which would place `root` on the boundary of
+    // the OPEN interval `(a, b)` rather than strictly inside it. Re-derive
+    // strictness directly: `b` cannot equal `root` if `b` is not itself a
+    // root of `root`'s own minimal polynomial. This is checked independently
+    // of `poly`/`pb` above (a genuinely separate re-derivation, not a
+    // restatement of the same fact under a different name) so it still
+    // catches a forged certificate even if the `pb.is_zero()` guard above is
+    // ever weakened or reordered.
+    if upper.checked_cmp(b) == Some(Ordering::Equal) {
+        let minimal_at_b = poly::eval_rat_poly(root.minimal_polynomial(), *b)?;
+        if minimal_at_b.is_zero() {
+            return Some(false);
+        }
     }
     // `root`'s minimal polynomial must genuinely be a factor of `poly` (a
     // corrupted `poly` coefficient, or a `root` swapped in from an unrelated
@@ -857,6 +887,83 @@ mod tests {
     fn verify_accepts_the_unmutated_control() {
         let p = cubic_minus_two();
         let cert = polynomial_ivt(&p, Rational::integer(1), Rational::integer(2)).unwrap();
+        assert_eq!(verify_ivt_certificate(&cert), Some(true));
+    }
+
+    // -- sturm.rs's half-open `(lower, upper]` convention, machine-checked --
+    //
+    // `root.isolating_interval()` excludes `lower` and includes `upper`. The
+    // certificate claims `root` lies in the OPEN interval `(a, b)`. These
+    // tests are adversarial: `make_unchecked` builds an `AlgebraicReal` whose
+    // bracket is a legitimate half-open isolation (it genuinely contains
+    // exactly one root of the stated minimal polynomial) but is fed to a
+    // forged `IvtCertificate` whose `a`/`b` are chosen so the claimed OPEN
+    // interval does not actually contain that root -- exactly the shape
+    // ADR-1400 requires a certificate checker to reject.
+
+    /// `x - 2` has its one root at exactly `2`. The half-open bracket `(1, 2]`
+    /// legitimately isolates it (`upper` is inclusive). A forged certificate
+    /// claims this root lies in the OPEN interval `(0, 2)` -- but `2` is not
+    /// strictly less than `2`, so the claim is false, and the checker must
+    /// reject it even though `upper <= b` (the loose containment check) holds
+    /// exactly at equality.
+    #[test]
+    fn verify_rejects_a_root_forged_exactly_at_the_open_upper_bound() {
+        let minimal_poly = poly_from(&[-2, 1]); // x - 2, root = 2
+        let root = crate::algebraic::test_support::make_unchecked(
+            minimal_poly.clone(),
+            Rational::integer(1),
+            Rational::integer(2), // (1, 2], root = 2 sits at the inclusive end
+        );
+        let cert = IvtCertificate {
+            poly: minimal_poly,
+            a: Rational::integer(0),
+            b: Rational::integer(2), // == root: the open claim (0, 2) is false
+            root,
+        };
+        assert_eq!(verify_ivt_certificate(&cert), Some(false));
+    }
+
+    /// Same shape, positive control: `b` strictly greater than the root, so
+    /// the OPEN-interval claim is genuinely true and must be accepted. This
+    /// is the non-vacuity check for the test above -- without it, a checker
+    /// that rejected *every* certificate would also "pass".
+    #[test]
+    fn verify_accepts_a_loose_but_genuinely_open_upper_bound() {
+        let minimal_poly = poly_from(&[-2, 1]); // x - 2, root = 2
+        let root = crate::algebraic::test_support::make_unchecked(
+            minimal_poly.clone(),
+            Rational::integer(1),
+            Rational::integer(2),
+        );
+        let cert = IvtCertificate {
+            poly: minimal_poly,
+            a: Rational::integer(0),
+            b: Rational::new(5, 2), // 2.5, strictly past the root: (0, 2.5) is genuine
+            root,
+        };
+        assert_eq!(verify_ivt_certificate(&cert), Some(true));
+    }
+
+    /// The mirrored lower-bound case is NOT a soundness risk, and this test
+    /// records why: `lower` is EXCLUDED from the half-open bracket, so
+    /// `root > lower >= a` is strict for free -- no `root != a` re-derivation
+    /// is needed on that side. Confirms `lower == a` exactly is still
+    /// correctly accepted (a completeness check, not a soundness one).
+    #[test]
+    fn verify_accepts_a_root_bracket_touching_the_open_lower_bound_exactly() {
+        let minimal_poly = poly_from(&[-2, 1]); // x - 2, root = 2
+        let root = crate::algebraic::test_support::make_unchecked(
+            minimal_poly.clone(),
+            Rational::integer(1), // lower == a below: excluded, so root > a holds
+            Rational::integer(3),
+        );
+        let cert = IvtCertificate {
+            poly: minimal_poly,
+            a: Rational::integer(1),
+            b: Rational::integer(3),
+            root,
+        };
         assert_eq!(verify_ivt_certificate(&cert), Some(true));
     }
 
