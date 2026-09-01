@@ -64,6 +64,32 @@
       "finding": "The \"bit\" stem's 45 hits are overwhelmingly this kernel's exhaustively-developed native Nat.bit/Nat.bitwise/Nat.testBit family (Nat.bit, Nat.bit_true, Nat.bit_false, Nat.bitwise, Nat.bitwiseAux, Nat.bitwise_and_eq_land, Nat.land_bit, Nat.lor_bit, Nat.ldiff_bit, Nat.testBit and its lemmas, etc.) plus one false positive (CReal.integralSplitArbitrary -- \"bit\" is a substring of \"Arbitrary\", unrelated subject, the same false-positive class ADR-0900 already named). The \"size\" stem's 6 hits are 5 genuine Nat.size declarations (Nat.size, Nat.sizeAux, Nat.size_zero, Nat.size_aux_lt_pow, Nat.lt_pow_size) plus one false positive (CReal.meshLevelCount_ge_of_size, an unrelated CReal integration-mesh construction). Compared against the drawn ten (Nat.bit_add, Nat.bit_add', Nat.bit_false_zero, Nat.bit_le, Nat.bit_lt_bit, Nat.bit_ne_zero, Nat.size_bit, Nat.size_eq_zero, Nat.size_le_size, Nat.size_one): none is a mirror by name, and Mathlib's Nat.bit : Bool -> Nat -> Nat matches our kernel's own Nat.bit signature exactly, so this is a genuine subject-level overlap (this kernel could plausibly prove several of these rows from existing infrastructure) -- the same judgment call ADR-0900 recorded and left unresolved (\"a judgement call, and it does not by itself solve this draw\"), and the same shape as the accepted natural-square-root precedent (Nat.sqrt/sqrt_zero/sqrt_one already declared, none a literal mirror of the held-out rows). Accepted on that precedent: no row is SETTLED by an existing declaration, only the general subject is developed.",
       "authority": "ADR-0925 (nursery draw 11)"
     },
+    "natural-factorization-lcm": {
+      "swept": [
+        [
+          "lcm",
+          "Nat.coprime_lcm_eq_mul",
+          20
+        ],
+        [
+          "lcm",
+          "Nat.coprime_lcm_eq_mul",
+          20
+        ],
+        [
+          "factorization",
+          "Nat.exists_prime_factorization",
+          3
+        ],
+        [
+          "factorization",
+          "Nat.exists_prime_factorization",
+          3
+        ]
+      ],
+      "finding": "Screened by the `factorization-lcm-unblock` lane per ADR-1450's measured unblock (declare a construction opening a module sorting before Mathlib.Data.Nat.MaxPowDiv, topic/vocabulary clean, leaving room for two families in the LCM->MaxPowDiv window). Nat.factorizationLCMLeft/Right were declared FIRST as pure definitions plus an evaluation test (ADR-0653), no theorems, and this review was re-swept AFTER declaring against a freshly rebuilt shape_search (declarations=2838). THE DRAWN TEN are Nat.coprime_factorizationLCMLeft_factorizationLCMRight, Nat.factorizationLCMLeft_dvd_left, Nat.factorizationLCMLeft_mul_factorizationLCMRight, Nat.factorizationLCMLeft_pos, Nat.factorizationLCMLeft_zero_left, Nat.factorizationLCMLeft_zero_right, Nat.factorizationLCMRight_dvd_right, Nat.factorizationLCMRight_pos, Nat.factorizationLCMRight_zero_right, Nat.factorizationLCRight_zero_left (Mathlib's own name, missing the second M -- not a transcription error here). STEM BY STEM, against the FULL sweep (not just the top-4 the disclosure line truncates to): `lcm` (18 kernel names, plus the 2 new declarations themselves) is entirely ORDINARY lcm/gcd arithmetic -- Nat.coprime_lcm_eq_mul (gcd a b = 1 -> lcm a b = a * b, a SPECIAL-CASE identity, not the general per-prime split), Nat.dvd_lcm_left/_right, Nat.dvd_lcm_of_dvd_left/_right, Nat.dvd_of_lcm_left_dvd/_right_dvd, Nat.eq_zero_of_lcm_eq_zero, Nat.gcd_mul_lcm, Nat.lcm itself, Nat.lcm_assoc/_comm/_div/_dvd/_zero_left, Nat.mod_lcm, Nat.prime_dvd_lcm_iff, Nat.prime_dvd_or_dvd_of_dvd_lcm -- none states or entails the prime-comparison split factorizationLCMLeft/Right compute. `factorization` (1) is Nat.exists_prime_factorization, a bare EXISTENCE witness with no per-prime map, used by irrational.rs/totient_dvd_chain.rs; it cannot state anything about a specific prime's exponent in a specific number, so it cannot entail any of the ten rows. CHECKED FOR A HIDDEN COINCIDENCE, NOT JUST A NAME MATCH: lcm.rs also builds a DIFFERENT coprime cofactor split via gcd_cofactors_coprime/lcm_eq_scaled_cofactors -- g := gcd a b, a1 := a/g, b1 := b/g, lcm a b = g*a1*b1, gcd a1 b1 = 1 -- which LOOKS related but is NOT the same construction: at (a,b) = (12,18), g*a1 = a = 12 while factorizationLCMLeft 12 18 = 4 (verified by kernel evaluation in nat_prelude_tests.rs's factorization_lcm_left_right_evaluate_correctly). VERDICT: our development settles nothing in the drawn ten, under any name. Clean; family is held-out-safe on this evidence.",
+      "authority": "docs/research/09-decisions/adr-1450-the-count-family-is-not-blind-and-draw-17-is-refused.md (unblock instruction); screened and re-swept by the factorization-lcm-unblock lane, 2026-09-01"
+    },
     "natural-find-greatest": {
       "swept": [
         [
