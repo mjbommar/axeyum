@@ -673,5 +673,225 @@ class LimitationsTests(unittest.TestCase):
                          MODULE.limitations(manifest["surface_validation"]))
 
 
+class HistoricalDrawTests(unittest.TestCase):
+    """ADR-1445 -- a family an earlier draw preregistered is not re-screened.
+
+    The case that matters is `test_a_new_divergence_leaves_a_drawn_family_alone`
+    and its twin `..._breaks_the_gate_without_the_freeze`: the property being
+    established is not "the 2026-09-01 regression is fixed" but "the NEXT honest
+    divergence will not break it". The twin is what makes the first non-vacuous
+    -- run it with `drawn_freeze` neutered and the same inputs raise.
+
+    Everything here is hermetic. The real inventory lives on `/nas3` and a suite
+    that silently skips when it is unreachable is a suite that cannot fail.
+    """
+
+    FAMILIES = {"drawn-alpha": "Test.DrawnAlpha", "drawn-beta": "Test.DrawnBeta"}
+    ADMISSIBLE_CONSTANT = "Nat.add"
+
+    def setUp(self):
+        self.dir = pathlib.Path(tempfile.mkdtemp())
+        self.extension = self.dir / "nursery-v2-extension.json"
+        modules = {f: (m,) for f, m in self.FAMILIES.items()}
+        routes = {f: ("kernel-induction", "kernel-library-application")
+                  for f in self.FAMILIES}
+        for patch in (mock.patch.object(MODULE, "FAMILY_MODULES", modules),
+                      mock.patch.object(MODULE, "FAMILY_ROUTES", routes),
+                      mock.patch.object(MODULE, "EXTENSION", self.extension)):
+            patch.start()
+            self.addCleanup(patch.stop)
+        self.env = {self.ADMISSIBLE_CONSTANT}
+        self.vocabulary = {"bridge": []}
+
+    def inventory(self, per_family: int = MODULE.PER_FAMILY + 2) -> dict:
+        """`per_family` candidates each, all screen-clean, named so that the
+        alphabetical `pool[:PER_FAMILY]` slice is predictable."""
+        rows = {}
+        for family, module in self.FAMILIES.items():
+            tag = family.split("-")[1].capitalize()
+            for index in range(per_family):
+                rows[f"Nat.{tag}_lemma{index:02d}"] = {
+                    "module": module,
+                    "type": f"∀ (n : ℕ), {tag}Op{index:02d} n = n",
+                    "type_repr": f"Lean.Expr.const `{self.ADMISSIBLE_CONSTANT}",
+                }
+        return rows
+
+    def draw(self, inventory: dict, registry: list) -> list[dict]:
+        entries, _ = MODULE.select(inventory, self.env, self.vocabulary,
+                                   registry, set())
+        return entries
+
+    def freeze(self, entries: list[dict]) -> None:
+        """Write the drawn manifest, exactly as a real draw would leave it."""
+        partitions = {e["family"]: e["partition"] for e in entries}
+        body = {
+            "family_partitions": partitions,
+            "preregistered_family_partitions": dict(partitions),
+            "entries": entries,
+        }
+        body["extension_sha256"] = MODULE.digest(
+            {k: v for k, v in body.items() if k != "extension_sha256"})
+        self.extension.write_text(json.dumps(body))
+
+    @staticmethod
+    def divergence(surface_form: str) -> dict:
+        """A registry entry in the committed shape. `blockers_for` matches
+        `surface_forms` against the STATEMENT text, which is why the synthetic
+        statements above carry a per-family operator name."""
+        return {
+            "mathlib_constant": f"Test.{surface_form}",
+            "surface_forms": [surface_form],
+            "class": "definitional",
+            "why": "synthetic, correct-by-construction for this control",
+        }
+
+    # -- the regression control ---------------------------------------------
+
+    def test_a_new_divergence_leaves_a_drawn_family_alone(self):
+        inventory = self.inventory()
+        drawn = self.draw(inventory, [])
+        self.assertEqual(len(drawn), 2 * MODULE.PER_FAMILY)
+        self.freeze(drawn)
+
+        # A new, correct divergence that screens out EVERY candidate of one
+        # already-drawn family -- the `natural-find-greatest` shape, pool 10 to
+        # pool 0.
+        registry = [self.divergence("AlphaOp")]
+        redrawn = self.draw(inventory, registry)
+        self.assertEqual(redrawn, drawn)
+
+        # ...and the thinning is reported rather than absorbed.
+        drift = MODULE.screen_drift(redrawn, inventory, self.env,
+                                    self.vocabulary, registry, set())
+        self.assertEqual(len(drift), MODULE.PER_FAMILY)
+        self.assertEqual({r["family"] for r in drift}, {"drawn-alpha"})
+        self.assertEqual({r["reason"] for r in drift}, {"divergence-registry"})
+        self.assertEqual(MODULE.drift_block(drift)["by_partition"],
+                         {drawn[0]["partition"]: MODULE.PER_FAMILY})
+
+    def test_the_same_divergence_breaks_the_gate_without_the_freeze(self):
+        """The twin. Neutering `drawn_freeze` restores the pre-ADR-1445
+        behaviour, and the identical inputs fail -- so the case above is
+        measuring the freeze and not measuring nothing."""
+        inventory = self.inventory()
+        self.freeze(self.draw(inventory, []))
+        registry = [self.divergence("AlphaOp")]
+        with mock.patch.object(MODULE, "drawn_freeze", lambda: {}):
+            with self.assertRaises(MODULE.RefillError) as caught:
+                self.draw(inventory, registry)
+        self.assertIn("drawn-alpha", str(caught.exception))
+        self.assertIn("fewer than the", str(caught.exception))
+
+    def test_a_divergence_that_only_shifts_the_selected_slice_is_also_absorbed(self):
+        """The fourth family of the 2026-09-01 regression, which the floor never
+        saw: a pool comfortably above `PER_FAMILY` whose alphabetical slice
+        MOVES when one row is screened out. A floor-only fix leaves this red."""
+        inventory = self.inventory(per_family=MODULE.PER_FAMILY + 5)
+        drawn = self.draw(inventory, [])
+        self.freeze(drawn)
+        # Screens out the FIRST alphabetical candidate, so the unfrozen
+        # re-derivation would slide a new row into the tenth slot.
+        registry = [self.divergence("AlphaOp00")]
+        self.assertEqual(self.draw(inventory, registry), drawn)
+        with mock.patch.object(MODULE, "drawn_freeze", lambda: {}):
+            shifted = self.draw(inventory, registry)
+        self.assertNotEqual(shifted, drawn)
+        self.assertEqual(len(shifted), len(drawn))
+
+    # -- the freeze is not a checker that cannot fail -----------------------
+
+    def test_a_drawn_row_absent_from_the_inventory_is_refused(self):
+        inventory = self.inventory()
+        drawn = self.draw(inventory, [])
+        self.freeze(drawn)
+        thinned = {k: v for k, v in inventory.items()
+                   if k != drawn[0]["source_name"]}
+        with self.assertRaises(MODULE.RefillError) as caught:
+            self.draw(thinned, [])
+        self.assertIn("F1", str(caught.exception))
+
+    def test_a_drawn_row_whose_pinned_statement_changed_is_refused(self):
+        inventory = self.inventory()
+        drawn = self.draw(inventory, [])
+        self.freeze(drawn)
+        edited = copy.deepcopy(inventory)
+        edited[drawn[0]["source_name"]]["type"] += " -- rewritten"
+        with self.assertRaises(MODULE.RefillError) as caught:
+            self.draw(edited, [])
+        self.assertIn("F3", str(caught.exception))
+        self.assertIn("source_statement_sha256", str(caught.exception))
+
+    def test_a_drawn_row_whose_module_remapped_is_refused(self):
+        inventory = self.inventory()
+        drawn = self.draw(inventory, [])
+        self.freeze(drawn)
+        edited = copy.deepcopy(inventory)
+        edited[drawn[0]["source_name"]]["module"] = self.FAMILIES["drawn-beta"]
+        with self.assertRaises(MODULE.RefillError) as caught:
+            self.draw(edited, [])
+        self.assertIn("F2", str(caught.exception))
+
+    def test_a_drawn_family_recording_the_wrong_row_count_is_refused(self):
+        inventory = self.inventory()
+        drawn = self.draw(inventory, [])
+        self.freeze([e for e in drawn if e is not drawn[0]])
+        with self.assertRaises(MODULE.RefillError) as caught:
+            self.draw(inventory, [])
+        self.assertIn("F4", str(caught.exception))
+
+    def test_a_manifest_failing_its_own_digest_cannot_be_the_drawn_freeze(self):
+        inventory = self.inventory()
+        self.freeze(self.draw(inventory, []))
+        body = json.loads(self.extension.read_text())
+        body["entries"][0]["statement"] = "hand-edited"
+        self.extension.write_text(json.dumps(body))
+        with self.assertRaises(MODULE.RefillError) as caught:
+            MODULE.drawn_freeze()
+        self.assertIn("extension_sha256", str(caught.exception))
+
+    def test_an_amendment_still_moves_a_frozen_family(self):
+        """`partition` is re-stamped, not frozen. Freezing it would refuse
+        exactly the repair ADR-0542 prescribes."""
+        inventory = self.inventory()
+        drawn = self.draw(inventory, [])
+        self.freeze(drawn)
+        was = {e["family"]: e["partition"] for e in drawn}
+        moved = next(f for f, p in was.items() if p == "held-out")
+        with ledger(amendment(moved, "held-out", "development")):
+            amended = self.draw(inventory, [])
+        by_family = {e["family"]: e["partition"] for e in amended}
+        self.assertEqual(by_family[moved], "development")
+        self.assertEqual([e["source_name"] for e in amended],
+                         [e["source_name"] for e in drawn])
+
+    # -- false-positive controls against the real repository ----------------
+
+    def test_the_real_manifest_is_its_own_drawn_freeze(self):
+        with mock.patch.object(  # the real EXTENSION, not setUp's temp one
+                MODULE, "EXTENSION",
+                ROOT / "artifacts/autogenesis/nursery-v2-extension.json"):
+            frozen = MODULE.drawn_freeze()
+        manifest = json.loads(
+            (ROOT / "artifacts/autogenesis/nursery-v2-extension.json").read_text())
+        self.assertEqual(sum(len(v) for v in frozen.values()),
+                         len(manifest["entries"]))
+        self.assertTrue(all(len(v) == MODULE.PER_FAMILY
+                            for v in frozen.values()))
+
+    def test_the_committed_drift_block_is_the_measured_one(self):
+        """Non-vacuity: the drift is real and it is not empty. If this ever
+        reads zero, either the registry shrank or the report stopped looking."""
+        manifest = json.loads(
+            (ROOT / "artifacts/autogenesis/nursery-v2-extension.json").read_text())
+        block = manifest["historical_draw_screen_drift"]
+        self.assertEqual(block["rows"], len(block["entries"]))
+        self.assertGreater(block["rows"], 0)
+        self.assertEqual(sum(block["by_family"].values()), block["rows"])
+        self.assertEqual(sum(block["by_partition"].values()), block["rows"])
+        drawn = {e["fact_id"] for e in manifest["entries"]}
+        self.assertTrue({r["fact_id"] for r in block["entries"]} <= drawn)
+
+
 if __name__ == "__main__":
     unittest.main()

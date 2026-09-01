@@ -4146,6 +4146,92 @@ SUITES["nursery-refill-amendment"] = (
 
 
 # --------------------------------------------------------------------------
+# `nursery-refill-historical-draw` — ADR-1445.
+#
+# `select()` re-screened EVERY family on every invocation, so a divergence
+# registered after a draw retroactively removed rows from it. Measured
+# 2026-09-01: the ADR-1415 sweep took 31 drawn rows out of four families, 30 of
+# them held-out, and `--check` went red with no legal remedy — un-registering a
+# true divergence or deleting held-out rows are both forbidden.
+#
+# The mutants below are aimed at the failure this fix could EASILY have
+# introduced, which is the opposite one: a freeze that simply copies recorded
+# rows through is a checker that cannot fail, and the manifest becomes its own
+# authority about its own rows (the R10 hole, one level down). So each F-guard
+# has a case, and the first mutant deletes the freeze itself — killed by the
+# twin that proves the regression control is not vacuous.
+#
+# NOT registered, because it cannot be killed: freezing `partition` alongside
+# the pinned fields. That mutant makes `test_an_amendment_still_moves_a_frozen_family`
+# fail, which is a KILL — but it is the guard being wrong rather than the guard
+# being removed, so it belongs in the source comment (it is there) and not here.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-refill-historical-draw"] = (
+    "scripts/gen-autogenesis-nursery-refill.py",
+    Unittest("scripts.tests.test_gen_autogenesis_nursery_refill"),
+    [
+        (
+            "the membership freeze itself — without it a later divergence "
+            "re-screens an already-drawn family",
+            "        recorded = drawn.get(family)\n"
+            "        if recorded is not None:",
+            "        recorded = drawn.get(family)\n"
+            "        if False:",
+        ),
+        (
+            "F1 a drawn row absent from the pinned inventory",
+            "        if record is None:\n"
+            "            raise RefillError(\n"
+            "                f\"F1 drawn row",
+            "        if False:\n"
+            "            raise RefillError(\n"
+            "                f\"F1 drawn row",
+        ),
+        (
+            "F2 a drawn row whose module now maps to another family",
+            '        if module_family.get(record["module"]) != family:',
+            "        if False:",
+        ),
+        (
+            "F3 a drawn row that no longer re-derives from the pinned source",
+            "        differing = sorted(field for field in PINNED_ENTRY_FIELDS\n"
+            "                           if rebuilt[field] != row.get(field))",
+            "        differing = []",
+        ),
+        (
+            "F4 a drawn family recording the wrong number of rows",
+            "    if len(recorded) != PER_FAMILY:",
+            "    if False:",
+        ),
+        (
+            "the drawn freeze's own digest check — a hand-edited manifest "
+            "must not become the freeze",
+            "    if digest(body) != recorded:\n"
+            "        raise RefillError(\n"
+            "            f\"{EXTENSION.name} does not match its own "
+            "extension_sha256, so its \"\n"
+            "            f\"recorded entries cannot be trusted as the drawn "
+            "freeze\")",
+            "    if False:\n"
+            "        raise RefillError(\n"
+            "            f\"{EXTENSION.name} does not match its own "
+            "extension_sha256, so its \"\n"
+            "            f\"recorded entries cannot be trusted as the drawn "
+            "freeze\")",
+        ),
+        (
+            "the drift report — the freeze must not make the thinning invisible",
+            "        if reason is None:\n"
+            "            continue",
+            "        if True:\n"
+            "            continue",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # cas-substance (ADR-0622).
 #
 # The defect being guarded against is one level up from a weak checker: the
