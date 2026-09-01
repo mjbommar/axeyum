@@ -332,7 +332,8 @@ fn rational_gosper_with_ratio(
                     evidence,
                 });
             }
-            None => continue,
+            // Nothing at this degree bound; the next one may still work.
+            None => {}
         }
     }
     None
