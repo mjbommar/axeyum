@@ -10271,6 +10271,14 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
 /// sequence) reproduces that sequence exactly, in order. A silent reorder or
 /// drop fails here, naming which position changed, rather than showing up as
 /// an opaque `Kernel::add_declaration` rejection several steps later.
+///
+/// **What this pins changed when the builder started sorting.** The array
+/// order is now only `plan_step_order`'s tie-break, so a REORDER no longer
+/// changes what the kernel sees -- `planned_order_is_the_array_order_today`
+/// is the test that would notice that. What this one still catches, and
+/// nothing else does, is a step DROPPED from the table: a missing entry is
+/// not a phase-order bug the planner can repair, it is a declaration that
+/// never happens.
 #[test]
 fn steps_table_matches_recorded_extraction() {
     let labels: Vec<&str> = super::STEPS.iter().map(|s| s.label).collect();
@@ -10357,6 +10365,180 @@ fn order_violation_reports_missing_provider_as_table_bug() {
         violation.provider, None,
         "no step in this table provides `equiv`, so provider must be None"
     );
+}
+
+// ---------------------------------------------------------------------------
+// `plan_step_order`: the build order is COMPUTED (level 2 of the phase-order
+// fix, architecture review §1)
+// ---------------------------------------------------------------------------
+
+/// The plan is the array order, exactly, for `STEPS` as it stands.
+///
+/// This is the no-behaviour-change pin: the kernel must see the identical
+/// sequence of `add_declaration` calls before and after the builder started
+/// sorting. It holds because the array order is already valid and the
+/// tie-break is the array index, so the lexicographically smallest valid
+/// topological order IS the array order. If this ever fails, the build's
+/// declaration ORDER changed and the projection must be re-diffed.
+#[test]
+fn planned_order_is_the_array_order_today() {
+    let (_, prelude) = built();
+    let plan = super::plan_step_order(prelude, super::STEPS)
+        .expect("STEPS must be plannable: no duplicate provider, no cycle");
+    let identity: Vec<usize> = (0..super::STEPS.len()).collect();
+    assert_eq!(
+        plan, identity,
+        "the planned order must reproduce the array order byte-for-byte while \
+         the array order is itself valid"
+    );
+}
+
+/// A step placed BEFORE its provider is moved back, rather than aborting the
+/// build.
+///
+/// This is the whole point of level 2, and it is the case level 1 could only
+/// report. `BROKEN_ORDER` is the same fixture
+/// `order_violation_is_detected_and_precise` uses to show
+/// `validate_step_order` rejects it -- so the two tests together are the
+/// before/after of one input.
+#[test]
+fn planned_order_repairs_a_consumer_placed_before_its_provider() {
+    let (_, prelude) = built();
+    assert!(
+        super::validate_step_order(prelude, BROKEN_ORDER).is_err(),
+        "precondition: the level-1 check must REJECT this order, or this test \
+         proves nothing about the sort"
+    );
+    let plan = super::plan_step_order(prelude, BROKEN_ORDER)
+        .expect("a mis-ordered but acyclic table must be plannable");
+    assert_eq!(
+        plan,
+        vec![1, 0],
+        "the provider (index 1) must be scheduled before its consumer (index 0)"
+    );
+}
+
+/// A requirement nothing provides is still a table bug, reported precisely --
+/// the sort must not silently drop the step or invent a provider.
+#[test]
+fn planned_order_reports_an_unprovided_requirement() {
+    let (_, prelude) = built();
+    let error = super::plan_step_order(prelude, INCOMPLETE_ORDER)
+        .expect_err("a requirement nobody provides must be rejected");
+    match error {
+        super::PlanError::Order(violation) => {
+            assert_eq!(violation.consumer_index, 0);
+            assert_eq!(violation.missing, prelude.equiv);
+            assert_eq!(violation.provider, None);
+        }
+        other @ super::PlanError::Duplicate(_) => {
+            panic!("expected an order violation, got {other:?}")
+        }
+    }
+}
+
+/// Two steps claiming one declaration is unorderable, and must be named as a
+/// TABLE bug rather than silently resolved to one of them.
+///
+/// This guard is why `mul_self_zero::declare_mul_self_zero` no longer claims
+/// `p.seq` and `p.shared_index_to_canonical`: it declares neither, and the
+/// false claim told `validate_step_order` that
+/// `CReal.sharedIndexToCanonical` was available 48 steps before its real
+/// provider (measured by `scripts/creal-declare-deps.py`, 2026-09-01).
+static DUPLICATE_PROVIDER_ORDER: &[super::BuildStep] = &[
+    super::BuildStep {
+        label: "the_real_provider",
+        requires: &[],
+        provides: &[|p: CRealPrelude| p.equiv],
+        run: super::declare_equiv, // never invoked; planning does not call `run`
+    },
+    super::BuildStep {
+        label: "claims_what_it_does_not_declare",
+        requires: &[],
+        provides: &[|p: CRealPrelude| p.equiv],
+        run: super::declare_carrier, // never invoked
+    },
+];
+
+#[test]
+fn duplicate_provider_is_reported_as_a_table_bug() {
+    let (_, prelude) = built();
+    let error = super::plan_step_order(prelude, DUPLICATE_PROVIDER_ORDER)
+        .expect_err("two steps claiming one declaration must be rejected");
+    match error {
+        super::PlanError::Duplicate(duplicate) => {
+            assert_eq!(duplicate.name, prelude.equiv);
+            assert_eq!(duplicate.first, (0, "the_real_provider"));
+            assert_eq!(duplicate.second, (1, "claims_what_it_does_not_declare"));
+        }
+        other @ super::PlanError::Order(_) => {
+            panic!("expected a duplicate-provider error, got {other:?}")
+        }
+    }
+}
+
+/// `STEPS` itself has no duplicate provider -- the positive control for the
+/// guard above, and the assertion that the two false claims stay deleted.
+///
+/// Derived from `STEPS`, never from a literal list, so it measures the table
+/// rather than the maintainer's memory.
+#[test]
+fn every_steps_declaration_has_exactly_one_provider() {
+    let (_, prelude) = built();
+    let mut seen: std::collections::HashMap<crate::NameId, &'static str> =
+        std::collections::HashMap::new();
+    let mut duplicates: Vec<String> = Vec::new();
+    for step in super::STEPS {
+        for &provides in step.provides {
+            let name = provides(prelude);
+            if let Some(first) = seen.insert(name, step.label) {
+                duplicates.push(format!("{first} and {}", step.label));
+            }
+        }
+    }
+    assert!(
+        duplicates.is_empty(),
+        "every STEPS declaration must have exactly one provider, found: \
+         {duplicates:?}"
+    );
+}
+
+/// A cycle is unorderable and must be reported as one -- not looped forever,
+/// and not silently truncated to the steps that could be scheduled.
+static CYCLIC_ORDER: &[super::BuildStep] = &[
+    super::BuildStep {
+        label: "needs_what_the_other_provides",
+        requires: &[|p: CRealPrelude| p.equiv],
+        provides: &[|p: CRealPrelude| p.creal],
+        run: super::declare_carrier, // never invoked
+    },
+    super::BuildStep {
+        label: "needs_what_the_first_provides",
+        requires: &[|p: CRealPrelude| p.creal],
+        provides: &[|p: CRealPrelude| p.equiv],
+        run: super::declare_equiv, // never invoked
+    },
+];
+
+#[test]
+fn planned_order_reports_a_cycle_rather_than_dropping_steps() {
+    let (_, prelude) = built();
+    let error = super::plan_step_order(prelude, CYCLIC_ORDER)
+        .expect_err("mutually dependent steps must be rejected");
+    match error {
+        super::PlanError::Order(violation) => {
+            assert_eq!(violation.consumer_index, 0);
+            assert_eq!(violation.missing, prelude.equiv);
+            assert_eq!(
+                violation.provider,
+                Some((1, "needs_what_the_first_provides")),
+                "must name the step that provides it and is itself blocked"
+            );
+        }
+        other @ super::PlanError::Duplicate(_) => {
+            panic!("expected an order violation, got {other:?}")
+        }
+    }
 }
 
 /// **Concrete corroboration for `CReal.maxRange`** — not `CReal.supOn`, which

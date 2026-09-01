@@ -1462,10 +1462,7 @@
       {
         "index": 50,
         "label": "mul_self_zero::declare_mul_self_zero",
-        "provides_in_table_not_measured": [
-          "seq",
-          "shared_index_to_canonical"
-        ],
+        "provides_in_table_not_measured": [],
         "provides_missing_from_table": [],
         "requires_missing_from_table": [
           "creal",
@@ -3519,8 +3516,8 @@
   "schema": "creal-declare-deps/v1",
   "source": {
     "creal_prelude_fields": 606,
-    "creal_rs_lines": 17051,
-    "functions_indexed": 1914,
+    "creal_rs_lines": 17244,
+    "functions_indexed": 1915,
     "modules_indexed": 48,
     "steps": 211
   },
@@ -6291,9 +6288,7 @@
         "rat_index_ratio_le_one",
         "rat_sq_le",
         "rat_sq_sandwich",
-        "rat_unit_eq_one",
-        "seq",
-        "shared_index_to_canonical"
+        "rat_unit_eq_one"
       ],
       "declared_requires": [
         "equiv_of_bounded",

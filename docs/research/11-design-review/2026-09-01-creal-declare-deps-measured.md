@@ -127,3 +127,44 @@ Re-run after any merge that touches `creal`:
 
 `--strict` exits **2** when the table and the code disagree, so the exit
 status depends on the finding. It exits 2 today.
+
+## Addendum: Slice B landed, and what it does and does not fix
+
+`build_creal_prelude_uncached` now computes its order (`plan_step_order`,
+Kahn's algorithm with the array index as tie-break) instead of validating a
+hand-written one, and the two false `provides` above are deleted.
+
+**No behaviour change today.** The tie-break makes the plan the array order
+whenever the array order is valid, which it is — so the kernel sees the
+identical sequence of `add_declaration` calls. `kernel_declaration_projection`
+is byte-identical across the change: SHA-256
+`576296bf531513e04749c77fb2162f374e3006cb837355ee0f06c7721ecd0c87`, 14,673
+rows, before and after. `creal` prelude construction (release,
+`AXEYUM_PRELUDE_CACHE=0`, three iterations) 20.196 / 20.272 / 20.215 s before
+against 20.110 / 20.494 / 20.135 s after.
+
+**The order-inversion demonstration.** With `declare_projections` and
+`declare_carrier` swapped in the table — the second requires `CReal`, which
+the first provides:
+
+| builder | result |
+| --- | --- |
+| level 1 (`validate_step_order` preflight) | **exit 101**, `step 1 ('declare_projections') requires CReal, provider Some((2, "declare_carrier"))` — build refused |
+| level 2 (`plan_step_order`) | **exit 0**, projection byte-identical to the unpermuted run, same SHA-256 |
+
+Both measured by rebuilding `kernel_declaration_projection` against the
+permuted table; the permutation was then reverted.
+
+**What is NOT fixed.** The planner can only use the edges the table names, and
+the table names 3,934 of 4,831. A reordering across one of the missing 897 is
+outside what the plan constrains. Closing that means generating
+`requires`/`provides` rather than maintaining them by hand — the same remedy
+`PLAN.md` and the ADR index already needed, for the same reason.
+
+**"Second dispatch entry point" patches: none found.** The review predicted
+duplicate declarations added elsewhere to work around order. There are zero:
+every one of the 606 fields is declared by exactly one step. The 23 modules
+with more than one `STEPS` entry are legitimately multi-step (`integral` has
+46), not patched. The failure the review saw left a different trace — the two
+false `provides` claims, which is a table that *says* a second provider
+exists rather than code that has one.
