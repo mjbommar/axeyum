@@ -114,7 +114,9 @@ pub use assumptions::{Assumptions, Sign};
 pub use boolean::BoolExpr;
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use geometry::{Circle, Line, Point};
-pub use gosper::{geometric_power, gosper_sum};
+pub use gosper::{
+    CertifiedGosperSum, GosperEvidence, geometric_power, gosper_sum, gosper_sum_certified,
+};
 pub use groebner::{MonomialOrder, groebner_basis, ideal_contains, reduce};
 pub use groebner_cert::{
     CofactorOutcome, DeclineReason, Limits as CofactorLimits, reduce_many_with_cofactors,
@@ -29482,7 +29484,9 @@ mod exact_positivity_tests {
 
         assert!(!is_certainly_positive(&CasExpr::int(-2)));
         assert!(!is_certainly_positive(&CasExpr::var("t")));
-        assert!(!is_certainly_positive(&CasExpr::Neg(Box::new(CasExpr::int(2).sqrt()))));
+        assert!(!is_certainly_positive(&CasExpr::Neg(Box::new(
+            CasExpr::int(2).sqrt()
+        ))));
 
         // `ln(½·√2) = ln½ + ½·ln2` is the documented case; it must still expand
         // into the prime basis rather than stay an opaque `ln`.
