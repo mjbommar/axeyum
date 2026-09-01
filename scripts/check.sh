@@ -390,6 +390,13 @@ step ntheory-certificates scripts/check-ntheory-certificates.sh
 # panic rather than refuse when removed, per the script's own header). ~50s
 # uncontended, ~23 incremental `axeyum-cas` builds via cargo-serialized.sh.
 step ntheory-certificate-guards ./scripts/tests/test-ntheory-certificate-guards.sh
+# ADR-1300: the Spivak spine table must state a CAS (ADR-0603 row 3) verdict on
+# every row. It did not: the legend said "Three routes, not two", chapter 20 read
+# `| 20 | Taylor polynomials | -- | open |` while `taylor.rs` shipped Taylor's
+# theorem with the Lagrange remainder, and chapter 19 had no row at all. A blank
+# `C` cell is now a failure, not a claim.
+step spivak-cas-column python3 scripts/check-spivak-cas-column.py
+step spivak-cas-column-tests python3 -m unittest scripts.tests.test_check_spivak_cas_column
 step cas-substance python3 scripts/check-cas-substance.py
 step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substance
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements

@@ -5025,6 +5025,74 @@ SUITES["prelude-inventory-ownership"] = (
 )
 
 # --------------------------------------------------------------------------
+# spivak-cas-column (ADR-1300): the Spivak spine table must state a CAS
+# (ADR-0603 row 3) verdict on every row.
+#
+# The defect this gate exists to prevent already happened. `spivak.md`'s legend
+# read "Three routes, not two: S / K / X", the string `axeyum-cas` appeared once
+# in the whole file, and chapter 20 read `| 20 | Taylor polynomials | - | open |`
+# while `crates/axeyum-cas/src/taylor.rs` shipped Taylor's theorem with the
+# Lagrange remainder, naming ADR-0603 row 3 and Spivak ch. 20 in its own module
+# doc. Chapter 19 had no row at all. The wrong answer was then reported to the
+# user from that column.
+#
+# The guards are split so that each fails on something the others cannot see --
+# a blank cell (R3), an unexplained "none" (R4), an assertion with no citation
+# (R5), a missing chapter (R6), a dangling fact id (R7), a dropped pipe (R2), a
+# stale legend (R8), and an absent table that would make every per-row guard
+# iterate over nothing (R1). CLAUDE.md records a suite where six of seven guards
+# were removable with everything green because all seven rejected through one
+# shared check; that is the shape being avoided here.
+# --------------------------------------------------------------------------
+
+SUITES["spivak-cas-column"] = (
+    "scripts/check-spivak-cas-column.py",
+    Unittest("scripts.tests.test_check_spivak_cas_column"),
+    [
+        (
+            "R1 an absent table is not a vacuous pass",
+            '        fail(errors, f"{doc}: no spine table found '
+            '(no line starting {HEADER_START!r})")',
+            "        return errors",
+        ),
+        (
+            "R2 a row whose cell count does not match the header",
+            "        if len(cells) != len(header):",
+            "        if False:",
+        ),
+        (
+            "R3 an empty or dashed C cell (the original defect)",
+            '        if not bare or bare in {"-", "—", "–", "?", "TBD", "UNAUDITED"}:',
+            "        if False:",
+        ),
+        (
+            "R4 audited-none carrying no reason",
+            "            if len(reason) < MIN_REASON_CHARS:",
+            "            if False:",
+        ),
+        (
+            "R5 a C cell asserting a route and citing nothing",
+            "        elif not names_artifact:",
+            "        elif False:",
+        ),
+        (
+            "R7 a C cell citing a non-cas-certificate fact id",
+            "            if fid not in cas_ids:",
+            "            if False:",
+        ),
+        (
+            "R6 a Spivak chapter with no row",
+            "    missing = sorted(set(range(1, 31)) - seen_chapters)",
+            "    missing = []",
+        ),
+        (
+            "R8 the legend still advertising three routes",
+            '    if re.search(r"Three routes, not two", text):',
+            "    if False:",
+        ),
+    ],
+)
+
 # `header-settled-fact-statements` rewrites the `formal.statement` of SETTLED
 # facts -- the field `check-settled-fact-statements.py` exists to keep from
 # moving quietly. What makes that safe is not the rewrite; it is the four

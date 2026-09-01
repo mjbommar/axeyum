@@ -3,6 +3,25 @@
 The first three documents ask what we can decide, certify and prove. This one
 asks the prior question: **what mathematics can axeyum express at all?**
 
+> **2026-08-31 — this document's answer is missing a producer.** Lane
+> `cas-coverage-audit`. "What can axeyum express at all?" is answered here from
+> the curriculum DAG and the kernel, and the string `CAS` appears **zero** times
+> in 571 lines. `crates/axeyum-cas` is 53 modules and ~77,600 lines of exact
+> algebra, and under [ADR-0603](../research/09-decisions/adr-0603-classical-theorems-land-as-graded-statement-families.md)
+> it is **row 3** of every graded statement family: the exact CLASSICAL
+> statement, decided where it is decidable, with a re-checkable certificate.
+>
+> That changes the reachability answer for whole chapters. The classical MVT,
+> EVT, IVT, Taylor's theorem with Lagrange remainder, partial-fraction
+> decomposition, Gosper and Zeilberger summation, and exact limits of rational
+> functions are all *expressible and decided* on the polynomial / rational
+> fragment, and none of them are visible from the DAG this document reads.
+>
+> A reachability claim measured only against the kernel is a claim about ONE of
+> three producers (ADR-0601). The chapter-by-chapter version, including where
+> the CAS reaches nothing, is
+> [`spivak.md`](../curriculum/foundational-books/spivak.md)'s `C` column.
+
 The project already has a map for this and does not use it as one. The
 curriculum is a machine-readable prerequisite DAG in which every node carries a
 decidability class, the axeyum theory it maps to, and the `axeyum-scenarios`
