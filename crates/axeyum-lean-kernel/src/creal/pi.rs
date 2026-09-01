@@ -1281,3 +1281,136 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
         value,
     })
 }
+
+// ---------------------------------------------------------------------------
+// Evaluation tests.
+//
+// `CReal.piHalfCoef` is a `Definition`, and `Kernel::add_declaration` cannot
+// tell anyone it is WRONG: a function that computes the wrong rational still
+// has type `Nat → Rat`. Every guard this development leans on — the prelude
+// build, `axiom_footprint`,
+// `every_creal_declaration_is_checked_and_axiom_free` — is blind to that. The
+// mathematics of this file lives entirely in that one recursion, so it is
+// pinned here by reduction at concrete indices against independently computed
+// values, with negative controls chosen to separate the specific typos that
+// would otherwise type-check.
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::super::creal_tests::built;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{normalize, one_le_succ};
+
+    /// `Rat.normalize (ofNat num) den _`, built independently of anything in
+    /// `pi.rs`.
+    fn rat_literal(d: &mut IntDev<'_>, num_val: u32, den_val: u32) -> crate::expr::ExprId {
+        assert!(den_val >= 1, "denominator must be positive");
+        let k = d.num(den_val - 1);
+        let denominator = d.succ(k);
+        let positive = one_le_succ(d, k);
+        let num_nat = d.num(num_val);
+        let numerator = d.of_nat(num_nat);
+        normalize(d, numerator, denominator, positive)
+    }
+
+    /// `piHalfCoef k` reduces to `2ᵏ(k!)²/(2k+1)!` at `k = 0..3` — `1`, `1/3`,
+    /// `2/15`, `2/35`, the values `scripts/check-pi-series-numeric.py` pins
+    /// against the closed form and against `π/2`.
+    ///
+    /// Two negative controls, each aimed at a mutation that would type-check:
+    ///
+    /// - `piHalfCoef 2` must NOT be `1/15`. That is what a numerator typo in
+    ///   the ratio (`natDivSucc k` for `natDivSucc (succ k)`) produces, and it
+    ///   would still be a well-typed `Nat → Rat`.
+    /// - `piHalfCoef 3` must NOT equal `piHalfCoef 2`. That separates a
+    ///   recursion which advances from one whose step silently returns its
+    ///   own input — the shape a wrong `Nat.rec` minor premise gives.
+    #[test]
+    fn pi_half_coef_computes_its_first_four_values() {
+        let (mut kernel, p) = built();
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        for (k_val, num_val, den_val) in [(0u32, 1u32, 1u32), (1, 1, 3), (2, 2, 15), (3, 2, 35)] {
+            let k = d.num(k_val);
+            let coef = d.const_app(p.pi_half_coef, &[k]);
+            let expected = rat_literal(&mut d, num_val, den_val);
+            assert!(
+                d.kernel().def_eq(coef, expected),
+                "piHalfCoef {k_val} should reduce to {num_val}/{den_val}"
+            );
+        }
+
+        let two = d.num(2);
+        let coef2 = d.const_app(p.pi_half_coef, &[two]);
+        let one_fifteenth = rat_literal(&mut d, 1, 15);
+        assert!(
+            !d.kernel().def_eq(coef2, one_fifteenth),
+            "piHalfCoef 2 must NOT be 1/15 -- that is the value a numerator \
+             typo in the ratio gives, and it would type-check; if this \
+             passes, the positive checks above are not discriminating"
+        );
+
+        let three = d.num(3);
+        let coef3 = d.const_app(p.pi_half_coef, &[three]);
+        assert!(
+            !d.kernel().def_eq(coef3, coef2),
+            "piHalfCoef 3 must differ from piHalfCoef 2 -- a step that \
+             returned its own input would be well-typed and would make every \
+             bound in this file vacuous"
+        );
+    }
+
+    /// The two WEAKENED bounds `declare_three_le_pi` uses are tight, and the
+    /// next tighter rational fails.
+    ///
+    /// `1/9 ≤ 2/15` is `15 ≤ 18` and `1/18 ≤ 2/35` is `35 ≤ 36` — one step
+    /// from false in each case. That tightness is the whole reason the
+    /// theorem reaches `3/2` at four terms, so an off-by-one in either
+    /// denominator would either break the proof (harmless) or, if it went the
+    /// other way, leave a bound too weak to be worth stating. The negative
+    /// halves check the FIRST of those: `1/8 ≤ 2/15` still holds, so the
+    /// controls here are the ones one step past what is used.
+    #[test]
+    fn the_weakened_term_bounds_are_one_step_from_false() {
+        let (mut kernel, p) = built();
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let rat = p.rat;
+
+        let ble = |d: &mut IntDev<'_>, a: crate::expr::ExprId, b: crate::expr::ExprId| -> bool {
+            let value = d.const_app(rat.ble, &[a, b]);
+            let true_c = d.bool_true();
+            d.kernel().def_eq(value, true_c)
+        };
+
+        let two_nat = d.num(2);
+        let three_nat = d.num(3);
+        let coef2 = d.const_app(p.pi_half_coef, &[two_nat]);
+        let coef3 = d.const_app(p.pi_half_coef, &[three_nat]);
+
+        let ninth = rat_literal(&mut d, 1, 9);
+        assert!(ble(&mut d, ninth, coef2), "1/9 <= 2/15 (15 <= 18)");
+        let eighth_of_a_ninth = rat_literal(&mut d, 1, 8);
+        assert!(
+            ble(&mut d, eighth_of_a_ninth, coef2),
+            "1/8 <= 2/15 (15 <= 16) -- the looser bound also holds, so the \
+             choice of 1/9 is about arithmetic size, not about truth"
+        );
+        let seventh = rat_literal(&mut d, 1, 7);
+        assert!(
+            !ble(&mut d, seventh, coef2),
+            "1/7 <= 2/15 must be FALSE (15 <= 14) -- if it passes, this \
+             comparison is not deciding anything"
+        );
+
+        let eighteenth = rat_literal(&mut d, 1, 18);
+        assert!(ble(&mut d, eighteenth, coef3), "1/18 <= 2/35 (35 <= 36)");
+        let seventeenth = rat_literal(&mut d, 1, 17);
+        assert!(
+            !ble(&mut d, seventeenth, coef3),
+            "1/17 <= 2/35 must be FALSE (35 <= 34) -- one step from the bound \
+             the proof uses, which is what makes 3/2 reachable at four terms"
+        );
+    }
+}
