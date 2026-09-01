@@ -142,18 +142,26 @@ fn junk_map(d: &mut IntDev<'_>) -> ExprId {
     d.kernel().lam(anon, nat, zero, BinderInfo::Default)
 }
 
-/// `Int.zero_mul : mul zero z = zero`, derived inline from `mul_comm` and
-/// `mul_zero` rather than declared — it is needed only by the two
-/// `sumRange_mul_*` base cases in this file, and `Int.zero_mul` does not exist
-/// in this prelude (checked: only `Nat.zero_mul` does).
-fn zero_mul_proof(d: &mut IntDev<'_>, z: ExprId) -> ExprId {
+/// `zero = mul zero z`, derived inline from `mul_comm` and `mul_zero` rather
+/// than declared — `Int.zero_mul` does not exist in this prelude (checked:
+/// only `Nat.zero_mul` does), and it is needed only by the two
+/// `sumRange_mul_*` base cases in this file.
+///
+/// Stated in the **reversed** direction on purpose. At `n = 0` the goal is
+/// `sumRange _ 0 = mul (sumRange f 0) z`, whose left side reduces to `zero`
+/// and whose right side reduces to `mul zero z` — so what the induction wants
+/// is `zero = mul zero z`, not the natural reading `mul zero z = zero`. The
+/// first draft had it the natural way round and the kernel rejected the whole
+/// prelude with an opaque `TypeMismatch` naming neither side.
+fn zero_eq_zero_mul_proof(d: &mut IntDev<'_>, z: ExprId) -> ExprId {
     let p = d.int();
     let zero = d.izero();
     let comm = d.lemma(p.mul_comm, &[zero, z]);
     let mz = d.lemma(p.mul_zero, &[z]);
     let lhs = d.imul(zero, z);
     let mid = d.imul(z, zero);
-    d.itrans(lhs, mid, zero, comm, mz)
+    let fwd = d.itrans(lhs, mid, zero, comm, mz);
+    d.isymm(lhs, zero, fwd)
 }
 
 /// Admit `Int.sumMaps : Nat -> Nat -> ((Nat -> Nat) -> Int) -> Int`.
@@ -373,7 +381,7 @@ pub(super) fn declare_sum_range_mul_right(d: &mut IntDev<'_>) -> Result<(), Kern
 
     let proof = d.induct(
         &motive,
-        &|d| zero_mul_proof(d, z),
+        &|d| zero_eq_zero_mul_proof(d, z),
         &|d, j, ih| {
             // LHS(succ j) ≡ add (sumRange scaled j) (mul (f j) z)
             //            = add (mul (sumRange f j) z) (mul (f j) z)   [ih]
@@ -450,7 +458,14 @@ pub(super) fn declare_sum_range_mul_left(d: &mut IntDev<'_>) -> Result<(), Kerne
 
     let proof = d.induct(
         &motive,
-        &|d| d.lemma(p.mul_zero, &[z]),
+        &|d| {
+            // Goal at n = 0: `zero = mul z zero`. `mul_zero` states the
+            // opposite direction, so it needs `isymm`.
+            let zero = d.izero();
+            let mz = d.lemma(p.mul_zero, &[z]);
+            let lhs = d.imul(z, zero);
+            d.isymm(lhs, zero, mz)
+        },
         &|d, j, ih| {
             let prior_scaled = d.const_app(p.sum_range, &[scaled, j]);
             let prior = d.const_app(p.sum_range, &[f, j]);
