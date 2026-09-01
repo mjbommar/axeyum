@@ -830,3 +830,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1480](adr-1480-a-recorded-score-is-not-a-breach-and-the-blind-population-is-cashed.md) | A recorded score is not a breach, and the held-out population is cashed for the first time | Accepted |
 | [1485](adr-1485-ivt-evt-dominance-recheck-re-ranks-the-distinction-gap-again.md) | re-checking IVT/EVT dominance finds five of ADR-1400's eleven findings fixed, and the weakest point moves to `geometry_certify.rs` | Accepted |
 | [1495](adr-1495-abstraction-over-structures-is-already-expressible-the-gap-is-surface.md) | `docs/curriculum/foundational-books/axler.md` closes roughly half | accepted |
+| [1500](adr-1500-a-soundness-fix-is-not-pinned-until-a-control-dies-without-it.md) | ADR-1495 closed a `Type : Type` hole in | accepted |

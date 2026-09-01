@@ -2361,6 +2361,72 @@ fn prop_exemption_is_sound_because_large_elimination_is_denied() {
     );
 }
 
+/// **Which refusal wins when a constructor is illegal twice over**, measured
+/// rather than assumed. `BadBoth : Sort 1` with
+/// `mk : Sort 1 → (BadBoth → BadBoth) → BadBoth` breaks two rules: field 0
+/// stores `Sort 1` in a `Sort 1` family (ADR-1495's universe constraint), and
+/// field 1 puts `BadBoth` to the left of an arrow (positivity).
+///
+/// Positivity wins, and the reason is structural rather than incidental:
+/// `check_group_constructor_positivity` is a **whole separate pre-pass over
+/// every constructor**, called before the `check_group_ctor` loop, while the
+/// universe constraint lives inside that loop's field walk. So positivity
+/// precedes the universe check for ALL fields, not merely for an
+/// earlier-indexed one — note the reported `field_index` here is **1**, the
+/// non-positive field, while the universe-illegal field is **0**.
+///
+/// This test was written the other way round first, on the strength of
+/// `reject_ctor_wrong_param`'s doc comment ("the two checks run in Lean's
+/// order, universe per field, result at the end"), and the kernel refuted it.
+/// That comment is about the universe check versus the RESULT-shape check and
+/// says nothing about positivity; the pre-pass is a third thing.
+///
+/// Nothing is unsound about one refusal masking another — both refuse. It
+/// matters because it fixes the expected verdict for any grammar case that
+/// combines an illegal universe with a negative production, which is the
+/// interaction that makes restoring illegal coverage to
+/// `mutual_inductive_group_grammar` more than adding an axis (ADR-1500).
+///
+/// This is an ORDERING control, **not** a guard pin: it passes with and
+/// without the universe guard, because without it `BadBoth` is still refused
+/// for positivity with the identical error. The non-vacuity partner — that
+/// the same shape *minus* the positivity violation is refused for its
+/// universe — is [`reject_ctor_field_universe_above_result_universe`], which
+/// is a separate `#[test]` precisely so each is observed in both
+/// configurations.
+#[test]
+fn positivity_prepass_precedes_the_universe_check() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+
+    let bn = k.name_str(anon, "BadBoth");
+    let mk = k.name_str(bn, "mk");
+    let b_const = k.const_(bn, vec![]);
+
+    // mk : Sort 1 → (BadBoth → BadBoth) → BadBoth
+    let non_positive = k.pi(anon, b_const, b_const, BinderInfo::Default);
+    let inner = k.pi(anon, non_positive, b_const, BinderInfo::Default);
+    let sort1 = k.sort(l1);
+    let mk_ty = k.pi(anon, sort1, inner, BinderInfo::Default);
+    let sort1b = k.sort(l1);
+    let err = k
+        .add_inductive(bn, &[], 0, sort1b, &[(mk, mk_ty)])
+        .unwrap_err();
+    match err {
+        KernelError::NonPositiveInductiveOccurrence { field_index, .. } => {
+            assert_eq!(
+                field_index, 1,
+                "the positivity pre-pass reports the NON-POSITIVE field, not \
+                 the earlier universe-illegal one"
+            );
+        }
+        other => panic!("expected the positivity pre-pass to win; got {other:?}"),
+    }
+    assert!(!k.environment().contains(bn));
+}
+
 /// Reject: a constructor whose result is the inductive applied to the **wrong**
 /// parameter. For `Box.{u} (α : Sort u) : Sort (u+1)` with
 /// `mk : Π (α : Sort u) (β : Sort u), Box β` (the result uses the *second*
