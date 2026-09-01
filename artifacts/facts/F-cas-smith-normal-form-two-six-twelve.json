@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-smith-normal-form-two-six-twelve",
+  "title": "The Smith normal form of a concrete singular-looking 3x3 integer matrix is diag(2,6,12), with the invariant-factor chain verified",
+  "statement": "The integer matrix A = [[2,4,4],[-6,6,12],[10,-4,-16]] has Smith normal form diag(2, 6, 12): there exist unimodular U and V over the integers with U*A*V = diag(2,6,12). The three claims are checked separately and each is capable of failing: the factorization U*A*V = D re-multiplied and compared; det(U) = det(V) = +-1 computed from the matrices rather than assumed; D diagonal, checked entry by entry; the invariant-factor divisibility chain 2 | 6 | 12 checked by exact integer remainder; and the product of the invariant factors equal to |det A| = 144. Cas-internal under ADR-0601 SS2.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(smith-normal-form\n  (matrix a ((2 4 4) (-6 6 12) (10 -4 -16)))\n  (assert (= (* u a v) d))\n  (assert (unimodular u)) (assert (unimodular v))\n  (assert (diagonal d))\n  (assert (= d (diag 2 6 12)))\n  (assert (divides 2 6)) (assert (divides 6 12))\n  (assert (= (* 2 6 12) 144)))",
+    "fragment": "integer-matrix-smith-normal-form",
+    "free_symbols": [],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-integer-matrix-arithmetic: the factorization and the determinants are computed in axeyum-cas's own exact arithmetic, not through crate::Kernel::add_declaration.",
+    "cas.equal-zero-test-decides-the-matrix-comparison: the U*A*V = D comparison and the det = +-1 test both route through the crate-global equal() zero-test on CasExpr, which the producer's own internal self-check also uses. That zero-test is shared between producer and checker here.",
+    "cas.normalform-shape-is-checked-only-by-this-test: AUDITED 2026-09-01 and disclosed rather than left implicit. normalforms::smith_normal_form's INTERNAL self-check (certify_product_equals + is_unimodular, normalforms.rs:399 and :423) verifies ONLY U*A*V = D and det = +-1. It does not check that D is diagonal, and it does not check the invariant-factor divisibility chain -- which is the entire point of the Smith normal form. Any diagonal-or-not D with a unimodular factorization is accepted by the producer. The diagonality and the chain 2 | 6 | 12 are asserted NOWHERE in the crate except the unit test this fact cites. So a caller of smith_normal_form in production gets no guarantee of either, and there is no field in the returned tuple in which to record one."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-smith-normal-form-two-six-twelve-replay",
+      "kind": "witness-replay",
+      "supports": "U*A*V = diag(2,6,12) with U and V unimodular, D diagonal, and the invariant-factor chain 2 | 6 | 12 -- each asserted separately against exact integer values",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::normalforms::smith_normal_form (producer; its internal self-check covers the factorization and unimodularity only)",
+        "normalforms::tests::smith_first_matrix (the only place in the crate where diagonality, the divisibility chain, the exact invariant factors (2,6,12) and their product 144 are asserted at all)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib normalforms::tests::smith_first_matrix -- --exact 2>/dev/null | grep -cE '^test normalforms::tests::smith_first_matrix \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/normalforms.rs",
+      "notes": "The pinned values (2,6,12) are what make this command fail on a broken run rather than on a broken build: the test asserts the exact tuple, not merely that some diagonal form exists, so a producer that returned a different-but-still-unimodular factorization fails here. The `grep -cE` on the test's own `... ok` line additionally fails if the test is renamed or deleted, which a bare `cargo test` filter cannot detect (an unmatched filter prints `0 filtered out` and exits 0). A SIBLING instance, normalforms::tests::smith_diagonal_restructures_gcd_lcm, pins diag(2,3,4) -> diag(1,2,12) and is the better test of the restructuring itself; it is not cited here because this fact states one proposition."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-ledger-audit lane, auditing crates/axeyum-cas against the fact ledger per docs/research/11-design-review/2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md and its follow-up 2026-09-01-cas-certificate-reconstruction-audit.md. The certificate and its checkers pre-existed this fact; the ledger row did not.",
+    "source": "Smith's 1861 normal form for integer matrices; the invariant factors are the classifying data for the cokernel as a finitely generated abelian group, which is why the divisibility chain is the content rather than a normalization convention.",
+    "prior_art": [
+      {
+        "who": "Henry John Stephen Smith",
+        "what": "the normal form for integer matrices and its invariant factors",
+        "year": 1861,
+        "where": "Philosophical Transactions of the Royal Society of London 151, 293-326",
+        "attribution": "standard attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "AUDIT NOTE. This is the sharpest instance in the crate of a producer self-check that verifies the FACTORIZATION and not the NORMAL FORM. certify_product_equals + is_unimodular would accept (U, D) = (I, A) as a Hermite normal form of A, and would accept any non-diagonal, non-chained D as a Smith normal form -- both satisfy U*A = H (resp. U*A*V = D) with a unimodular factor. Upper-triangularity, strictly positive pivots, reduction of above-pivot entries into 0..pivot, diagonality, and the invariant-factor chain are all distinctions the PRODUCER makes -- they are what its pivot walk and its gcd/lcm restructuring exist to establish -- and there is no field in the returned tuple to express any of them and no check outside the unit tests. Recording this fact makes those unit tests load-bearing for a ledger claim, which is the smallest useful step; the real fix is a NormalFormCertificate carrying the shape as data, which does not exist."
+}

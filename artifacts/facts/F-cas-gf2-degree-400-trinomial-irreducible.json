@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-gf2-degree-400-trinomial-irreducible",
+  "title": "x^400 + x^5 + x^3 + x^2 + 1 is irreducible over GF(2), by a Rabin certificate checked twice with disjoint arithmetic",
+  "statement": "The polynomial f = x^400 + x^5 + x^3 + x^2 + 1 is irreducible over GF(2). The evidence is a replayable Rabin certificate, not a decision procedure's word: axeyum_cas::gf2::IrreducibilityCertificate carries (a) a Frobenius chain of 400 recorded reductions, each asserting the polynomial identity previous^2 = quotient*f + remainder, so the chain re-derives x^(2^400) mod f one squaring at a time; and (b) for each prime divisor p of 400 -- that is p = 2 and p = 5 -- a Bezout witness (a, b) asserting a*f + b*(r_{400/p} + x) = 1, which establishes gcd(x^(2^(400/p)) - x, f) = 1. Every claim in the certificate is a polynomial identity over GF(2), checkable without re-running the search that produced it. The certificate is checked by TWO implementations with disjoint arithmetic: gf2::check_irreducible_certificate over packed u64 words, and gf2_independent::check_irreducible_certificate_independent over one byte per coefficient with its own schoolbook multiply, its own work budget and its own prime-factor enumeration. Cas-internal under ADR-0601 SS2: this kernel has no GF(2)[x], so no bridge exists or is near.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(gf2-irreducibility-certificate\n  (poly f (+ (^ x 400) (^ x 5) (^ x 3) (^ x 2) 1))\n  (frobenius-chain-length 400)\n  (assert (forall i (= (^ r_i 2) (+ (* quotient_i f) r_{i+1}))))\n  (prime-divisors-of-400 2 5)\n  (assert (forall p (= (+ (* a_p f) (* b_p (+ r_{400/p} x))) 1)))\n  (conclude (irreducible f (gf 2))))",
+    "fragment": "gf2-rabin-irreducibility",
+    "free_symbols": [
+      "x"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.gf2-packed-and-dense-polynomial-arithmetic: the two checkers agree by construction of the identities, but both are Rust arithmetic over GF(2)[x] rather than kernel terms. The mitigation is that their arithmetic is DISJOINT -- packed u64 words versus one byte per coefficient, with independently written multiply and squaring routines -- so a defect would have to be duplicated in two implementations written to be different. That is the strongest available substitute for a kernel re-derivation here and it is not the same thing.",
+    "cas.rabin-irreducibility-criterion: that a Frobenius chain of length n together with a coprimality witness at each prime divisor of n implies irreducibility is Rabin's criterion, taken as read. The certificate makes the criterion's HYPOTHESES replayable; it does not re-derive the criterion.",
+    "cas.gf2-no-kernel-carrier: crate::Kernel has no characteristic-2 polynomial ring. Building one is a new prelude, not a translator, so unlike the geometry and partial-fraction routes there is no bounded piece of work that would move this to kernel-reconstructed."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-gf2-degree-400-packed-checker",
+      "kind": "witness-replay",
+      "supports": "the degree-400 Rabin certificate re-checks under the packed-word checker, which re-derives every Frobenius reduction and every Bezout identity from the certificate's own fields",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::gf2::certify_irreducible (producer, untrusted)",
+        "axeyum_cas::gf2::check_irreducible_certificate (packed u64 replay; requires chain length == degree, every remainder reduced, the supplied prime list EXACTLY equal to the recomputed prime divisors of 400 so a dropped obligation is caught, and the final residue == x)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib gf2::tests::degree_400_known_witness_is_checked -- --exact 2>/dev/null | grep -cE '^test gf2::tests::degree_400_known_witness_is_checked \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/gf2.rs",
+      "notes": "The `grep -cE` consumes the pipe and tests the count, so this command fails in BOTH of the two ways that matter: the test failing, and the filter matching no test at all (a renamed or deleted test yields zero `ok` lines and grep exits 1). A bare `cargo test` with a filter that matches nothing prints `0 filtered out` and exits 0 -- the shape this repository audited at 40 of 162 checker runs in 2026-08-15."
+    },
+    {
+      "id": "cas-gf2-degree-400-independent-checker",
+      "kind": "witness-replay",
+      "supports": "the SAME certificate re-checks under a second implementation whose polynomial arithmetic shares no code with the first",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::gf2_independent::check_irreducible_certificate_independent (dense one-byte-per-coefficient arithmetic, its own add/square/multiply, its own Budget, its own copy of distinct_prime_factors)",
+        "gf2_independent::tests::independent_checker_rejects_packed_checker_mutations (the negative control: a certificate with one Frobenius quotient replaced by 1 must be REJECTED, so the independent checker is shown to be capable of rejecting)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib gf2_independent::tests::independent_checker_accepts_degree_400_witness -- --exact 2>/dev/null | grep -cE '^test gf2_independent::tests::independent_checker_accepts_degree_400_witness \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/gf2_independent.rs",
+      "notes": "This is the row that makes the fact worth more than a single-implementation replay. The two checkers are deliberately built to be different: the packed one works in u64 words, the independent one expands to one byte per coefficient and reimplements multiply schoolbook. gf2_artifact::validate runs BOTH. The paired negative control (independent_checker_rejects_packed_checker_mutations) is what makes this a checker rather than a decoration; without it, a checker that accepts everything would pass this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-ledger-audit lane, auditing crates/axeyum-cas against the fact ledger per docs/research/11-design-review/2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md and its follow-up 2026-09-01-cas-certificate-reconstruction-audit.md. The certificate and its checkers pre-existed this fact; the ledger row did not.",
+    "source": "Rabin's irreducibility test for polynomials over a finite field, made certificate-carrying: the Frobenius chain and the per-prime coprimality witnesses are recorded as replayable polynomial identities rather than consumed inside a decision procedure.",
+    "prior_art": [
+      {
+        "who": "Michael O. Rabin",
+        "what": "the irreducibility test: f of degree n over F_q is irreducible iff f divides x^(q^n) - x and gcd(x^(q^(n/p)) - x, f) = 1 for every prime p dividing n",
+        "year": 1980,
+        "where": "SIAM Journal on Computing 9(2), 273-280",
+        "attribution": "standard attribution; this lane did not consult the primary source. The certificate format, the dual checkers and the negative controls are this repository's."
+      }
+    ]
+  },
+  "notes": "AUDIT NOTE, recorded because it is what this audit exists to surface. On the question of whether the certificate records every distinction its producer makes, this module comes out well and the reason is instructive: the completeness conditions are ENFORCED BY RECOMPUTATION rather than trusted from a field. The checker recomputes the prime divisors of the degree and requires exact vector equality with the supplied list, so a certificate that DROPS a prime obligation is rejected rather than silently under-checked; and gf2_artifact::validate recomputes the half-degree shape bound as degree/2 rather than reading the serialized tail_degree_bound, with the parsed artifact re-rendered and byte-compared so a lie in the serialized degree cannot survive. Re-derivation is strictly stronger than recording, and it is why there is no strict-versus-non-strict ambiguity here. The distinction this module does NOT carry is on the decline side: certify_irreducible returns Ok(None) for 'reducible' and a typed Err for a resource decline, but a HOLDER of a certificate cannot tell which producer verdict it came from -- correctly, since the identities stand alone. The genuinely unrecorded negative in this cluster is elsewhere: gf2_shard::check_shard_directory accepts a ShardStatus::Exhausted row -- 'every sparse candidate at this degree was reducible', a real negative theorem -- on the producer's word, incrementing a counter and re-deriving nothing, and the default axeyum-gf2-check-shard invocation does not even notice (--require-all-found is opt-in). That is not claimed by this fact and no fact should claim it until there is a witness form for it."
+}
