@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-lib-integrate-polynomial-certified",
+  "title": "The integral of 3x^2+2x is x^3+x^2, and the answer proves itself: differentiating it back and zero-testing against the integrand certifies exact equality",
+  "statement": "For the polynomial integrand 3x^2+2x, axeyum_cas::integrate(&integrand, \"x\") returns a CertifiedIntegral whose antiderivative is EXACTLY x^3+x^2 and whose certificate field is ZeroTest::Certified{equal:true,..}, obtained by differentiating x^3+x^2 back to 3x^2+2x and deciding the resulting equality by axeyum-cas's own exact zero-test. This exercises the DIRECT branch of axeyum_cas::prove_derivative -- the polynomial derivative matches the claimed derivative on the first exact-rational comparison, never reaching prove_derivative's half-angle trigonometric fallback (which does not record that a rewrite was applied) and never reaching equal()'s log-canonicalization path (whose positivity side condition was itself an f64 sign test until it was replaced by an exact structural predicate, is_certainly_positive). Cas-internal under ADR-0601 SS2: the certification is CAS-internal exact-rational zero-testing; the kernel has no symbolic differentiation operator, so nothing here is reconstructed through crate::Kernel::add_declaration.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(certified-integral\n  (integrand (+ (* 3 (pow x 2)) (* 2 x)))\n  (antiderivative (+ (pow x 3) (pow x 2)))\n  (assert (= (diff antiderivative x) integrand))\n  (certificate Certified true))",
+    "fragment": "cas-certified-integral-direct-branch",
+    "free_symbols": [
+      "x"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-differentiation-and-zero-test: differentiation (CasExpr::differentiate) and the equality decision (crate::equal, via equal_core on the polynomial normal form) both run in axeyum-cas's own exact-rational arithmetic, not through crate::Kernel::add_declaration.",
+    "cas.no-kernel-differentiation-operator: this kernel has rat_prelude/polynomial.rs (Rat.polyEval) but no symbolic derivative operator and no notion of an indefinite integral, so there is no bounded translator work that would move even this purely-polynomial certified integral to kernel-reconstructed -- unlike, e.g., the partial-fractions or geometry bridges, which translate a finite coefficient identity.",
+    "cas.direct-branch-only: AUDITED 2026-09-01. This fact's evidence exercises ONLY prove_derivative's direct branch (the first `equal(&derivative, claimed)` call, which certifies true immediately for this polynomial pair). It makes no claim about the half-angle trigonometric fallback (lib.rs, prove_derivative, ~line 13447), which the crate's own comments note returns a witness that does not record a rewrite was applied -- an open ADR-1400 residue this fact does not touch or resolve."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-lib-integrate-cubic-quadratic-antiderivative",
+      "kind": "witness-replay",
+      "supports": "integrate(3x^2+2x, x) returns the antiderivative x^3+x^2 exactly, with a Certified{equal:true} proof obtained by differentiating back and zero-testing",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::integrate (producer)",
+        "axeyum_cas::prove_derivative (the direct-branch certification: differentiate the returned antiderivative and zero-test against the integrand)",
+        "tests::integrate_polynomial_is_certified (asserts result.is_certified(), assert_equal(&result.antiderivative, &(x^3+x^2)) -- the EXACT antiderivative, not merely 'some certified value' -- and result.certificate.certainty() == Certainty::Certified)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib tests::integrate_polynomial_is_certified -- --exact 2>/dev/null | grep -cE '^test tests::integrate_polynomial_is_certified \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/lib.rs",
+      "notes": "Verified both directions on this host: the real test path gives count=1, exit=0; the same command against a deliberately wrong test path (…_WRONG) gives count=0, exit=1. `grep -cE` consumes the pipe so it cannot SIGPIPE. The pinned antiderivative x^3+x^2 is what makes this fail on a wrong computation rather than merely on a broken build or a decline: a producer that returned any other polynomial with the correct derivative up to a constant term difference (e.g. a wrong lower-order term) would fail assert_equal here even if some OTHER certificate happened to certify."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "lane cas-facts-round-two, following docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md, which named lib.rs::integrate (CertifiedIntegral, :13442) as cas-internal with no naming fact -- the witness for the general fragment involves atomized transcendental heads the kernel has no carrier for. This fact scopes to the narrower, entirely-rational polynomial fragment, which is also the crate's own doctest example for axeyum_cas::integrate.",
+    "source": "elementary polynomial calculus; the certified-integral design (compute an antiderivative, then differentiate it back and zero-test against the integrand) is this repository's own proof-carrying-answer architecture, stated in lib.rs's module documentation as 'axeyum = (compute, like a CAS) + (certify, like a proof/decision engine)'.",
+    "prior_art": []
+  },
+  "notes": "AUDIT NOTE. Deliberately the narrowest honest slice of a much larger surface: axeyum_cas::integrate handles rational functions, logarithms, arctangent, hyperbolic and trigonometric fragments, Bessel-pair families and more, several of which the audit's finding #9 flags as carrying UNRESOLVED ADR-1400 residues (the half-angle fallback not recording that a rewrite was applied). This fact does not claim any of that surface is sound or complete; it claims exactly one thing, pinned to an exact antiderivative, about the polynomial fast path, which never touches the fallback or (as of this audit) the log-canonicalization f64 predicate that has since been replaced by an exact one (is_certainly_positive, lib.rs ~line 2213). A future fact wanting to cover the rational-function, logarithm, or trigonometric fragments of integrate should read whether prove_derivative's half-angle fallback is reached, and if so should not claim the result is 'proved' with the same confidence this fact does, per ADR-1400's finding #9."
+}

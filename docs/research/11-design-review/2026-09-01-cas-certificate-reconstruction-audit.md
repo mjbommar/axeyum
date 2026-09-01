@@ -383,3 +383,73 @@ because a lane's report of what remains is reliably pessimistic.
   the coordinator re-runs the aggregate gate before merging regardless. Each of
   the six new commands was verified individually, which is the part a lane can
   do and the aggregate cannot substitute for.
+
+## Round two (lane cas-facts-round-two): re-deriving the list, not trusting it
+
+The "thirteen-module gap is now seven" paragraph above names a list that
+disagrees with its own count (ten names for "seven"). Rather than resolving
+that inconsistency by inspection, this lane re-derived which of the ten named
+modules actually have no naming fact today, by checking what each existing
+fact's `checker_command` / `evidence.checkers` actually exercises (not just
+grepping the module's own filename against fact text — several facts name a
+*test file* that imports the module rather than the module's own basename,
+which is why a literal string search under-counted).
+
+Re-derived, before this lane's own additions:
+
+| module | status | how |
+| --- | --- | --- |
+| `boolean_circuit` | closed | `F:cas-boolean-circuit-nand-only-full-adder` |
+| `gf2_tensor` | closed | `F:cas-gf2-tensor-karatsuba-degree-2-rank-three` |
+| `gf2_artifact` | **closed, previously miscounted** | `F:cas-gf2-tensor-karatsuba-degree-2-rank-three`'s own evidence text names it explicitly as excluded, but `F:gf2-general-monomial-composition-criterion`'s `--test gf2_artifact_cli capell_audit` row directly imports and calls `axeyum_cas::gf2_artifact::{ArtifactLimits, HalfDegreeArtifact, to_canonical_json}` |
+| `geometry_json` | **closed, previously miscounted** | 17 `F:geometry-*` facts cite `cargo test -p axeyum-cas --test geometry_certificate_artifacts`, whose test file imports `axeyum_cas::geometry_json::{from_json, to_json}` directly — the fact text never says "geometry_json" but the checker exercises it |
+| `telescoping_json` | **closed, previously miscounted** | nine telescoping facts (`F:apery-numbers-recurrence` and siblings) run `cargo test -p axeyum-cas --test telescoping_certificate_artifacts`, which imports `axeyum_cas::telescoping_json::{CertificateDocument, from_json, to_json}` |
+| `gf2_search` | open (closed by this lane, see below) | no fact's checker touched it |
+| `gf2_shard` | open (closed by this lane, see below) | no fact's checker touched it |
+| `gosper` | open (closed by this lane, see below) | no fact's checker touched it |
+| `groebner_cert` | open (closed by this lane, see below) | reachable indirectly through the geometry bridges' `certify_by_linear_elimination`, but no fact's checker names its own tests |
+| `lib` (`integrate`/`CertifiedIntegral`) | open (closed by this lane, see below) | no fact's checker touched `integrate` specifically |
+
+So the real gap **before this lane** was five modules, not seven or ten:
+`gf2_search`, `gf2_shard`, `gosper`, `groebner_cert`, `lib`. Three of the
+`cas-internal` ADR-1400 violations §3 named had also been repaired since the
+audit was written and were verified by reading the current code, not assumed
+from the earlier prose: `gosper.rs` now has a typed `GosperEvidence` recording
+which of five acceptance modes fired (§3 finding #1); `gf2_shard.rs` now
+re-derives an `Exhausted` claim by re-running `gf2_search::search_sparse_half_degree`
+under the manifest's own declared policy rather than trusting the producer's
+word (§3 finding #2); and the `f64` sign test §3 finding #9 flagged inside
+`equal`'s log-canonicalization path (`evalf(e, &[]).is_some_and(|v| v > 0.0)`)
+has been replaced by an exact structural predicate, `is_certainly_positive`,
+whose own doc comment explains why the `f64` version was unsound. The
+half-angle fallback in finding #9 (an unrecorded rewrite) is **still open** —
+this lane's `lib`-naming fact deliberately routes around it rather than
+claiming it is fixed.
+
+Four facts landed, closing all five remaining modules (`gf2_search` and
+`gf2_shard` share one fact, since the re-derivation in `gf2_shard` calls
+`gf2_search` directly):
+
+- `F:cas-gf2-degree-8-trinomial-exhaustion-rederived` — `gf2_shard`, `gf2_search`
+- `F:cas-gosper-acceptance-mode-distinguishes-geometric-from-telescoping` — `gosper`
+- `F:cas-groebner-cofactor-unit-ideal-witness` — `groebner_cert`
+- `F:cas-lib-integrate-polynomial-certified` — `lib`
+
+**The thirteen-module gap from the original audit is now genuinely zero** —
+every module the audit's masked certificate-surface query flagged is named by
+at least one fact's evidence, whether or not that fact's own prose happens to
+contain the module's filename. `scripts/validate-facts.py`: 2536 facts, 0
+errors; `cas-certificate` routes now 60 (46 `cas-internal`, 14
+`kernel-reconstructed`), up from 56.
+
+What this round did NOT do, each marked by why: no new kernel bridge was
+attempted (same reasoning as the first round — every `COULD RECONSTRUCT` row
+above is a sizing from reading the crate, not from trying it); `gosper`'s
+`ReducedGosperIdentity` fallback mode — the specific case §3 finding #1 was
+most worried about — is asserted to fire by a comment in
+`weighted_vandermonde_wz_term_uses_reduced_certificate`, but that test never
+inspects `.evidence`, so this round's fact does not claim to have exercised it
+and neither should a reader infer it from the comment alone; `cargo test
+--workspace` did not run (no Rust source was touched); each of the four new
+`checker_command`s was verified individually, both for a real test path and a
+deliberately wrong one.
