@@ -71,6 +71,33 @@ criterion applied exactly as written:
   `a.factorization : Finsupp`, which this kernel cannot express; ours is a
   bounded search, extensionally equal and definitionally not.
 
+All five were re-read against the Mathlib checkout at
+`/data0/axeyum/lean-import-toolchain/mathlib4`, confirmed at
+`git rev-parse HEAD` = `c5ea00351c28e24afc9f0f84379aa41082b1188f`, rather than
+taken from the registry's own `why` text:
+
+```
+Mathlib/Algebra/Squarefree/Basic.lean:41   def Squarefree [Monoid R] (r : R) : Prop
+Mathlib/Data/Nat/Factorization/Root.lean:54   def floorRoot (n a : ℕ) : ℕ :=
+  if n = 0 ∨ a = 0 then 0 else a.factorization.prod fun p k ↦ p ^ (k / n)
+Mathlib/Data/Nat/Factorization/Root.lean:113  def ceilRoot (n a : ℕ) : ℕ :=
+  if n = 0 ∨ a = 0 then 0 else a.factorization.prod fun p k ↦ p ^ ((k + n - 1) / n)
+Mathlib/Data/Nat/Nth.lean:60   noncomputable def nth (p : ℕ → Prop) (n : ℕ) : ℕ := by
+  classical exact
+    if h : Set.Finite (setOf p) then h.toFinset.sort.getD n 0
+    else @Nat.Subtype.orderIsoOfNat (setOf p) (Set.Infinite.to_subtype h) n
+Mathlib/Data/Nat/Find.lean:168   def findGreatest (P : ℕ → Prop) [DecidablePred P] : ℕ → ℕ
+```
+
+One correction, in the registry rather than in the substance: the
+`Nat.findGreatest` entry records `mathlib_source.path` as
+`Mathlib/Order/Basic.lean`, "re-exported through Mathlib.Data.Nat.Find". At this
+commit the `def` is **in** `Mathlib/Data/Nat/Find.lean:168`, and
+`Mathlib/Order/Basic.lean` does not define it. The divergence the entry claims —
+instance-implicit `DecidablePred` against this kernel's explicit argument — is
+exactly right; only the file it points at is wrong. Not repaired here, because
+this lane must not touch the registry.
+
 `natural-find-greatest` at pool 0 is **not** a different situation from the
 others at pool 0; the three zero-pool families each rest on a single registry
 entry that covers their whole module. The one-row family differs only in degree.
@@ -181,5 +208,6 @@ floor.**
   per-entry allowlist that grows with the registry, and it hides the thinning
   rather than reporting it.
 * **Withdraw a registry entry.** Refused on the brief's hard constraint and on
-  the merits: all five were re-read against Mathlib at the pinned commit while
-  writing this ADR and all five are correct.
+  the merits: all five definitions were read from the Mathlib checkout at the
+  pinned commit while writing this ADR (output quoted above) and all five
+  divergences are correct.
