@@ -5184,6 +5184,155 @@ SUITES["header-settled-fact-statements"] = (
     ],
 )
 
+# `constant-canonicity` -- one canonical definition per mathematical object.
+#
+# The registry this gate reads is a DECLARATIVE adjudication, because
+# `CReal.Equiv` is undecidable and no tool can answer "is this constructed
+# real the same real as that one". A declarative registry is exactly the
+# shape this repository has been burned by: a list maintained by hand
+# measures the maintainer's memory. What keeps it honest is that the
+# POPULATION is derived from the kernel and every guard below is removable
+# in one edit -- so each one has to be shown to kill a test.
+#
+# Note why the failure tests assert `evaluate()` rather than `main()`'s exit
+# status. If they all went through `main()`, the single mutation
+# `return 1` -> `return 0` would kill eleven tests at once, and a control
+# that kills eleven tests measures nothing about the eleven guards it was
+# supposed to distinguish. `MainExitStatusTests` is the one place the status
+# is asserted, so that mutation kills exactly one test -- and that mutation
+# is the most important one here, because a checker that exits 0 on
+# completion alone is the defect this file exists to prevent.
+# --------------------------------------------------------------------------
+
+SUITES["constant-canonicity"] = (
+    "scripts/check-constant-canonicity.py",
+    Unittest("scripts.tests.test_check_constant_canonicity"),
+    [
+        # G1 is the guard with no evasion: a constant the kernel declares and
+        # the registry does not mention. Every other guard here constrains how
+        # an adjudication may be written; this one forces there to BE one.
+        (
+            "G1 a kernel constant with no registry row",
+            '            findings.append(\n                f"G1 UNADJUDICATED',
+            '            [].append(\n                f"G1 UNADJUDICATED',
+        ),
+        # Without the stale half the registry silently accumulates rows for
+        # constants that were renamed or removed, and "this is adjudicated"
+        # reads as still-considered when it is not.
+        (
+            "G2 a row naming a constant the kernel no longer declares",
+            '            findings.append(\n                f"G2 STALE',
+            '            [].append(\n                f"G2 STALE',
+        ),
+        (
+            "G3 a row whose carrier is not the kernel's type",
+            '            findings.append(\n                f"G3 CARRIER-MISMATCH',
+            '            [].append(\n                f"G3 CARRIER-MISMATCH',
+        ),
+        # Two canonical constants for one object IS the twenty-pi outcome,
+        # written down. Without this guard the registry records it and passes.
+        (
+            "G4 two canonical constants for one mathematical object",
+            '            findings.append(\n                f"G4 AMBIGUOUS',
+            '            [].append(\n                f"G4 AMBIGUOUS',
+        ),
+        (
+            "G5 an alternate whose object has no canonical constant",
+            '            findings.append(\n                f"G5 ORPHAN-ALTERNATE',
+            '            [].append(\n                f"G5 ORPHAN-ALTERNATE',
+        ),
+        # An alternate with no bridge is a second definition wearing a label.
+        (
+            "G6 an alternate naming no bridge theorem",
+            '            findings.append(\n                f"G6 MISSING-BRIDGE',
+            '            [].append(\n                f"G6 MISSING-BRIDGE',
+        ),
+        (
+            "G7 a bridge that is not a theorem in the environment",
+            '            findings.append(\n                f"G7 ABSENT-BRIDGE',
+            '            [].append(\n                f"G7 ABSENT-BRIDGE',
+        ),
+        # G8 is what stops the registry being self-certifying: without it any
+        # real theorem name satisfies an alternate row, and the "bridge" column
+        # becomes a field nobody reads.
+        (
+            "G8 a bridge whose stated type relates neither constant",
+            '            findings.append(\n                f"G8 VACUOUS-BRIDGE',
+            '            [].append(\n                f"G8 VACUOUS-BRIDGE',
+        ),
+        (
+            "G9 a row carrying no reason",
+            '            findings.append(\n                f"G9 NO-REASON',
+            '            [].append(\n                f"G9 NO-REASON',
+        ),
+        # G10 is the heuristic that fires on `CReal.pi` + `CReal.piMachin`
+        # without anyone having anticipated the pair.
+        (
+            "G10 prefix-matching names registered as different objects",
+            '                findings.append(\n                    f"G10 NAME-COLLISION',
+            '                [].append(\n                    f"G10 NAME-COLLISION',
+        ),
+        # The escape hatch must stay an escape hatch. Removing it makes G10
+        # unappealable, which is how a gate gets deleted rather than obeyed.
+        (
+            "G10's explicit distinct-from claim is honoured",
+            "                if token in other.reason or "
+            'f"distinct-from:{other.object}" in shorter.reason:',
+            "                if False:",
+        ),
+        (
+            "G11 two rows for one constant",
+            '            findings.append(\n                f"G11 DUPLICATE-ROW',
+            '            [].append(\n                f"G11 DUPLICATE-ROW',
+        ),
+        # The `Prop` exclusion is DERIVED (the head symbol's own declaration is
+        # looked up and its result sort read), not a hand-written exemption
+        # list. Deleting it demands a registry row for every proof-valued
+        # nullary definition -- the shape of gate lanes turn off.
+        (
+            "a nullary Prop-valued definition is excluded as a proof",
+            "        and not is_proof_valued(d.canonical_type, decls)",
+            "        and True",
+        ),
+        # A bridge must be stated, not merely used. Reading the all-kinds
+        # dependency column instead of the type column accepts any theorem
+        # whose PROOF happens to touch both constants.
+        (
+            "a bridge is read from the theorem's type, not its proof term",
+            "        _label, kind, name, _footprint, type_deps_field, _all_deps, _thm_deps, ctype = fields",
+            "        _label, kind, name, _footprint, _type_deps, type_deps_field, _thm_deps, ctype = fields",
+        ),
+        # An empty population is a broken projection, not a clean tree. This
+        # repository has shipped gates that exit 0 on completion alone.
+        (
+            "an empty authority is an error, not a quiet pass",
+            "    if not pop:",
+            "    if False:",
+        ),
+        # The exit status must depend on the finding.
+        (
+            "a finding exits nonzero",
+            "        return 1\n\n    print(",
+            "        return 0\n\n    print(",
+        ),
+        (
+            "a projection row with the wrong field count is rejected",
+            "        if len(fields) != 8:",
+            "        if False:",
+        ),
+        (
+            "a registry with no header line is rejected",
+            "            if tuple(f.strip() for f in fields) != COLUMNS:",
+            "            if False:",
+        ),
+        (
+            "an unknown role is rejected",
+            "        if role not in ROLES:",
+            "        if False:",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

@@ -447,6 +447,23 @@ facts:
     # real re-derivation of right-distributivity over Int. ~110s (shells out to
     # `cargo run --release --example shape_search -- --duplicates`).
     python3 scripts/check-shape-duplicates.py
+    # ...AND THE COMPANION GATE FOR THE CASE THE SHAPE DETECTOR IS STRUCTURALLY
+    # BLIND TO (ADR-1320). `shape_search --duplicates` groups declarations by
+    # admitted TYPE. Every `CReal`-valued CONSTANT has the identical type `CReal`,
+    # so a type-based detector over constants is either useless (one group holding
+    # `zero`, `one`, `e`, `cosOne`, `sinOne`, ...) or blind -- measured 2026-08-31,
+    # 15 duplicate groups and not one containing a constant. And `CReal.Equiv` is
+    # undecidable, so there is no mechanical "is this the same real" test either.
+    # So a second `CReal.pi` would land with nothing objecting. This gate derives
+    # the constant population from `kernel_declaration_projection` (16 nullary
+    # data-valued definitions over CReal/Complex/Int/Rat; the `Prop`-valued
+    # exclusion is derived from the head symbol's own result sort, not exempted)
+    # and requires each one to be adjudicated in
+    # `artifacts/trust-closure/canonical-constants.tsv`, in BOTH directions.
+    # ~40s: shells out to `cargo run --release --example
+    # kernel_declaration_projection`.
+    python3 scripts/check-constant-canonicity.py
+    python3 -m unittest scripts.tests.test_check_constant_canonicity
     # ADR-1050: the eight L0 gates must be wired to something that runs
     # on its own. Measured 2026-08-31 they were in NO automated context
     # -- not ci.yml, not hooks/pre-push, not scripts/local-ci.sh.
