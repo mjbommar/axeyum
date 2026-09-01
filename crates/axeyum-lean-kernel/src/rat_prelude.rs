@@ -66,7 +66,6 @@ pub(crate) mod lattice;
 mod laws;
 mod matrix;
 mod matrix_det;
-#[allow(dead_code)]
 mod matrix_det_selection;
 mod matrix_invertible;
 mod matrix_n;
@@ -2339,6 +2338,22 @@ pub struct RatPrelude {
     /// the rows instead. `n = 3` is not done: there is no `det3_mul`, and that
     /// identity has eighteen variables.
     pub det_mat_mul_2: NameId,
+    /// `Rat.det_row_selection_of_duplicate : ∀ m B g i j,
+    /// Nat.beq i j = false → Nat.ble i m = true → Nat.ble j m = true →
+    /// Eq Nat (g i) (g j) →
+    /// Eq Rat (det (fun r c => B (g r) c) (succ m))
+    ///        (mul (det (fun r c => matId (g r) c) (succ m)) (det B (succ m)))`
+    /// — the FREE half of the ADR-1440 obligation-2 selection lemma: given
+    /// an explicit duplicate pair, both sides are `0`.
+    ///
+    /// The full selection lemma `det (B∘g) n = det (matId∘g) n * det B n`
+    /// needs a `MapsInto g n` hypothesis (the literal target with NO
+    /// hypotheses is FALSE — counterexample `n=1, g 0 = 5`: `det (B∘g) 1 =
+    /// B 5 0`, generically nonzero, while `det (matId∘g) 1 = matId 5 0 =
+    /// 0`) and, for the injective case, a cursor induction this lane did
+    /// not land (ADR-1470). `InjectiveOn` alone (this declaration's shape)
+    /// needs neither `MapsInto` nor that induction.
+    pub det_row_selection_of_duplicate: NameId,
 }
 
 impl RatPrelude {
@@ -2757,6 +2772,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_row_smul: child(kernel, "det_row_smul"),
         det_row_multilinear: child(kernel, "det_row_multilinear"),
         det_mat_mul_2: child(kernel, "det_matMul_2"),
+        det_row_selection_of_duplicate: child(kernel, "det_row_selection_of_duplicate"),
     }
 }
 
@@ -2813,6 +2829,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         matrix_transpose::declare_matrix_transpose(&mut d, prelude)?;
         matrix_invertible::declare_matrix_invertible(&mut d, prelude)?;
         matrix_det::declare_matrix_det(&mut d, prelude)?;
+        matrix_det_selection::declare_det_row_selection(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
