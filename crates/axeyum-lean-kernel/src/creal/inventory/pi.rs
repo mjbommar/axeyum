@@ -45,6 +45,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.pi", p.pi, "def"),
         ("CReal.piHalfLeTwo", p.pi_half_le_two, "theorem"),
         ("CReal.piLeFour", p.pi_le_four, "theorem"),
+        ("CReal.twoLePi", p.two_le_pi, "theorem"),
         ("CReal.threeLePi", p.three_le_pi, "theorem"),
     ]
 }

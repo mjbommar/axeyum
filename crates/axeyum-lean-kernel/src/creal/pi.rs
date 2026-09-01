@@ -122,8 +122,15 @@ pub(super) fn declare_pi_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     declare_pi_half(d, p, raw, k_final, body)?;
     declare_pi_half_converges(d, p, raw, k_final, body)?;
     declare_pi(d, p)?;
+    if std::env::var("AXEYUM_PI_BISECT").as_deref() == Ok("core") {
+        return Ok(());
+    }
     declare_pi_half_le_two(d, p)?;
     declare_pi_le_four(d, p)?;
+    declare_two_le_pi(d, p)?;
+    if std::env::var("AXEYUM_PI_BISECT").as_deref() == Ok("four") {
+        return Ok(());
+    }
     declare_three_le_pi(d, p)
 }
 
@@ -1021,123 +1028,257 @@ fn declare_pi_le_four(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
     })
 }
 
-/// `CReal.threeLePi : le (ofRat (natDivSucc 3 0)) pi`.
-///
-/// `piHalfSeriesPartial 4 = 1 + 1/3 + 2/15 + 2/35 = 32/21 ≥ 3/2`, decided by
-/// `Rat.ble` on the reduced value (largest formed `Nat`: 800, from the last
-/// `Rat.add`'s cross product). The partial sums are monotone because every
-/// term is nonnegative, so
-/// [`CRealPrelude::converges_lower_bound_shift`] at shift `4` lifts that to
-/// `3/2 ≤ piHalf`, and scaling by `two` gives `3 ≤ pi`.
-fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    let rp = p.rat;
+/// `Rat.natDivSucc num idx`, both literals.
+fn ndiv(d: &mut IntDev<'_>, p: CRealPrelude, num: u32, idx: u32) -> ExprId {
+    let n = d.num(num);
+    let j = d.num(idx);
+    d.const_app(p.rat.nat_div_succ, &[n, j])
+}
+
+/// `∀ n, le b (piHalfSeriesPartial (Nat.add n s))` from `base : le b
+/// (sumRange piHalfTerm s)`, by [`CRealPrelude::sum_range_mono_outer`] at the
+/// nonnegative `piHalfTerm` — the shape
+/// [`CRealPrelude::converges_lower_bound_shift`] consumes. Reproduced in
+/// shape from `exponential.rs::declare_two_le_e`'s own `h1_shift`.
+fn shifted_lower_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    bound: ExprId,
+    shift: ExprId,
+    base: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let term_c = d.kernel().const_(p.pi_half_term, vec![]);
     let nonneg_c = d.kernel().const_(p.pi_half_term_nonneg, vec![]);
+    let zero_nat = d.num(0);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let shifted = NatOps::add(d, n, shift);
+    let zero_le_n = {
+        let np = d.prelude();
+        d.lemma(np.zero_le, &[n])
+    };
+    let shift_le_shifted = {
+        let np = d.prelude();
+        d.lemma(np.add_le_add_right, &[shift, zero_nat, n, zero_le_n])
+    };
+    let mono = d.const_app(
+        p.sum_range_mono_outer,
+        &[term_c, nonneg_c, shift, shifted, shift_le_shifted],
+    );
+    let sum_at_shift = d.const_app(p.sum_range, &[term_c, shift]);
+    let sum_shifted = d.const_app(p.sum_range, &[term_c, shifted]);
+    let step = d.lemma(p.le_trans, &[bound, sum_at_shift, sum_shifted, base, mono]);
+    d.lam_fv(n_fv, nat, step)
+}
+
+/// `le (mul two b) (mul two piHalf)` from `lower : le b piHalf` — one
+/// [`CRealPrelude::mul_le_mul_of_nonneg_left`], and `mul two piHalf` IS `pi`.
+fn scale_lower_bound_to_pi(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    bound: ExprId,
+    lower: ExprId,
+) -> ExprId {
+    let two_c = two(d, p);
+    let two_nn = two_nonneg_proof(d, p);
+    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
+    d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[two_c, bound, pi_half_c, two_nn, lower],
+    )
+}
+
+/// `CReal.twoLePi : le two pi`.
+///
+/// The cheapest honest lower bound, and the exact analogue of
+/// `exponential.rs::declare_two_le_e`: `piHalfSeriesPartial 1` is
+/// `add zero (piHalfTerm 0)`, which δι-reduces to `CReal.one`'s own `Rat.mk`
+/// (`Rat.add Rat.zero (natDivSucc 1 0)` normalises to `1/1`), so `le_refl one`
+/// type-checks against `le one (sumRange piHalfTerm 1)` with no rewrite. Every
+/// partial sum from there on is at least as large
+/// ([`CRealPrelude::sum_range_mono_outer`], all terms nonnegative), so
+/// [`CRealPrelude::converges_lower_bound_shift`] at shift `1` gives
+/// `1 ≤ piHalf`, and scaling by `two` gives `2 ≤ pi`.
+fn declare_two_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
     let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
     let converges = d.kernel().const_(p.pi_half_converges, vec![]);
 
-    let four_nat = d.num(4);
-    let zero_nat = d.num(0);
     let one_nat = d.num(1);
-
-    // 3/2, 32/21, 3/1 -- all as `Rat.natDivSucc`, whose `ofRat` embedding
-    // `creal/cos_sign.rs` already relies on being defeq to the obvious value.
-    let three_nat = d.num(3);
-    let three_halves_r = d.const_app(rp.nat_div_succ, &[three_nat, one_nat]);
-    let three_r = d.const_app(rp.nat_div_succ, &[three_nat, zero_nat]);
-    let thirty_two = d.num(32);
-    let twenty = d.num(20);
-    let value_r = d.const_app(rp.nat_div_succ, &[thirty_two, twenty]);
-    let three_halves_c = embed(d, p, three_halves_r);
-    let three_c = embed(d, p, three_r);
-
-    // 3/2 ≤ piHalfSeriesPartial 4, by `Rat.ble` on the reduced value.
-    let le_rat = rat_le_by_ble(d, p, three_halves_r, value_r);
-    let base = d.lemma(p.of_rat_le, &[three_halves_r, value_r, le_rat]);
-
-    let shift_hyp = {
-        let n_fv = d.fresh_fvar();
-        let n = d.kernel().fvar(n_fv);
-        let shifted = NatOps::add(d, n, four_nat);
-        let zero_le_n = {
-            let np = d.prelude();
-            d.lemma(np.zero_le, &[n])
-        };
-        let four_le_shifted = {
-            let np = d.prelude();
-            d.lemma(np.add_le_add_right, &[four_nat, zero_nat, n, zero_le_n])
-        };
-        let mono = d.const_app(
-            p.sum_range_mono_outer,
-            &[term_c, nonneg_c, four_nat, shifted, four_le_shifted],
-        );
-        let sum_at_4 = d.const_app(p.sum_range, &[term_c, four_nat]);
-        let sum_shift = d.const_app(p.sum_range, &[term_c, shifted]);
-        let step = d.lemma(
-            p.le_trans,
-            &[three_halves_c, sum_at_4, sum_shift, base, mono],
-        );
-        d.lam_fv(n_fv, nat, step)
-    };
+    let one_cc = one_c(d, p);
+    let base = d.lemma(p.le_refl, &[one_cc]);
+    let shift_hyp = shifted_lower_bound(d, p, one_cc, one_nat, base);
 
     let lower = d.const_app(
         p.converges_lower_bound_shift,
-        &[
-            four_nat,
-            three_halves_c,
-            partial_c,
-            pi_half_c,
-            shift_hyp,
-            converges,
-        ],
+        &[one_nat, one_cc, partial_c, pi_half_c, shift_hyp, converges],
     );
-    // lower : le (ofRat 3/2) piHalf
+    // lower : le one piHalf
+
+    let scaled = scale_lower_bound_to_pi(d, p, one_cc, lower);
+    // scaled : le (mul two one) (mul two piHalf)
 
     let two_c = two(d, p);
-    let two_nn = two_nonneg_proof(d, p);
-    let scaled = d.lemma(
-        p.mul_le_mul_of_nonneg_left,
-        &[two_c, three_halves_c, pi_half_c, two_nn, lower],
-    );
-    // scaled : le (mul two (ofRat 3/2)) (mul two piHalf)
-
-    let (two_r, _, _) = two_normalize(d, p);
-    let prod_r = rmul(d, two_r, three_halves_r);
-    // split : Equiv (mul two (ofRat 3/2)) (ofRat (2 · 3/2))
-    let split = d.lemma(p.of_rat_mul, &[two_r, three_halves_r]);
-    let prod_c = embed(d, p, prod_r);
-    let mul_two_th = cmul(d, p, two_c, three_halves_c);
-
-    // `2 · 3/2 = 3/1` at `Rat`, by `Rat.ble` in both directions -- both sides
-    // reduce to the same `Rat.mk`, so `Eq.refl` would do; the antisymmetric
-    // pair is used instead because this development has no `Rat.le_antisymm`
-    // dependency here and the equivalence only has to be an order fact.
-    let prod_le_three = rat_le_by_ble(d, p, prod_r, three_r);
-    let prod_le_three_c = d.lemma(p.of_rat_le, &[prod_r, three_r, prod_le_three]);
-    let three_le_prod = rat_le_by_ble(d, p, three_r, prod_r);
-    let three_le_prod_c = d.lemma(p.of_rat_le, &[three_r, prod_r, three_le_prod]);
-    let prod_equiv_three = d.lemma(
-        p.equiv_of_le_le,
-        &[prod_c, three_c, prod_le_three_c, three_le_prod_c],
-    );
-
-    let mul_equiv_three = d.lemma(
-        p.equiv_trans,
-        &[mul_two_th, prod_c, three_c, split, prod_equiv_three],
-    );
+    let mul_two_one = cmul(d, p, two_c, one_cc);
+    let fold = d.lemma(p.mul_one, &[two_c]); // Equiv (mul two one) two
     let pi_c = d.kernel().const_(p.pi, vec![]);
     let refl_pi = d.lemma(p.equiv_refl, &[pi_c]);
     let mul_two_pi_half = cmul(d, p, two_c, pi_half_c);
     let value = d.lemma(
         p.le_congr,
         &[
-            mul_two_th,
+            mul_two_one,
+            two_c,
+            mul_two_pi_half,
+            pi_c,
+            fold,
+            refl_pi,
+            scaled,
+        ],
+    );
+    let ty = cle(d, p, two_c, pi_c);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.two_le_pi,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.threeLePi : le (ofRat (natDivSucc 3 0)) pi`.
+///
+/// **Four terms, and every rational in the argument is chosen to keep the
+/// formed `Nat`s small.** The exact partial sum is
+/// `S 4 = 1 + 1/3 + 2/15 + 2/35 = 32/21`, and asking the kernel to see that
+/// directly is what the first attempt did — it ran **past 600 s and 5.9 GB
+/// RSS** before being killed, while everything else in this file built the
+/// whole `creal` prelude in 118 s. The cost is `Rat.normalize 800 525`: this
+/// kernel's numerals are unary, so `Nat.gcd 800 525` runs Euclid by repeated
+/// unary subtraction and the two `Nat.div`s that follow are 32 and 21
+/// iterations over 800- and 525-deep `Nat.succ` towers.
+///
+/// So the terms are weakened FIRST, to bounds whose running sums have short
+/// divisions: `t0 ≥ 1`, `t1 ≥ 1/3`, `t2 ≥ 1/8` (against the exact `2/15`) and
+/// `t3 ≥ 1/24` (against `2/35`), whose partial sums are `1`, `4/3`, `35/24`
+/// and exactly `3/2`. The largest `Nat` formed is **864**, normalised by
+/// `gcd 864 576 = 288` in two remainder steps and divisions of 3 and 2
+/// iterations — against 53 for the exact route.
+///
+/// Same lesson as the `587 s → 113 s` case in `CLAUDE.md`: choose the
+/// intermediate bound that lands on what the next step needs, not the exact
+/// quotient.
+fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
+    let converges = d.kernel().const_(p.pi_half_converges, vec![]);
+    let term_c = d.kernel().const_(p.pi_half_term, vec![]);
+
+    // Per-term lower bounds, and the running sums they add up to.
+    let b1 = ndiv(d, p, 1, 2); //  1/3
+    let b2 = ndiv(d, p, 1, 7); //  1/8   <=  2/15
+    let b3 = ndiv(d, p, 1, 23); // 1/24  <=  2/35
+    let c1 = ndiv(d, p, 1, 0); //  1
+    let c2 = ndiv(d, p, 4, 2); //  4/3
+    let c3 = ndiv(d, p, 35, 23); // 35/24
+    let c4 = ndiv(d, p, 3, 1); //  3/2
+
+    // `le (ofRat b_i) (piHalfTerm i)`, each decided by `Rat.ble` on operands
+    // under 50 (`1·3 ≤ 3·1`, `1·15 ≤ 8·2`, `1·35 ≤ 24·2`).
+    let term_bound = |d: &mut IntDev<'_>, i: u32, b: ExprId| -> ExprId {
+        let idx = d.num(i);
+        let coef = d.const_app(p.pi_half_coef, &[idx]);
+        let rat_proof = rat_le_by_ble(d, p, b, coef);
+        d.lemma(p.of_rat_le, &[b, coef, rat_proof])
+    };
+    let h1 = term_bound(d, 1, b1);
+    let h2 = term_bound(d, 2, b2);
+    let h3 = term_bound(d, 3, b3);
+
+    // `g_k : le (ofRat c_k) (sumRange piHalfTerm k)`.
+    //
+    // `sumRange f (succ k)` IS `add (sumRange f k) (f k)` by iota, and
+    // `add (ofRat a) (ofRat b)` is `Equiv` to `ofRat (a + b)`
+    // ([`CRealPrelude::of_rat_add`]) whose value is defeq to the next `c`.
+    let step = |d: &mut IntDev<'_>,
+                c_prev: ExprId,
+                b_here: ExprId,
+                c_next: ExprId,
+                k_prev: u32,
+                g_prev: ExprId,
+                h_here: ExprId|
+     -> ExprId {
+        let prev_c = embed(d, p, c_prev);
+        let here_c = embed(d, p, b_here);
+        let next_c = embed(d, p, c_next);
+        let k_nat = d.num(k_prev);
+        let idx = d.num(k_prev);
+        let sum_prev = d.const_app(p.sum_range, &[term_c, k_nat]);
+        let term_here = d.const_app(p.pi_half_term, &[idx]);
+
+        let grown = d.lemma(
+            p.add_le_add,
+            &[prev_c, sum_prev, here_c, term_here, g_prev, h_here],
+        );
+        // grown : le (add prev_c here_c) (add sum_prev term_here), and the
+        // right-hand side IS `sumRange piHalfTerm (k_prev + 1)`.
+
+        let lhs = cadd(d, p, prev_c, here_c);
+        let rhs = cadd(d, p, sum_prev, term_here);
+        // `of_rat_add c_prev b_here : Equiv lhs (ofRat (c_prev + b_here))`,
+        // ascribed at `Equiv lhs next_c` -- the two right-hand sides are the
+        // same `Rat.mk` after normalisation.
+        let fold = d.lemma(p.of_rat_add, &[c_prev, b_here]);
+        let refl_rhs = d.lemma(p.equiv_refl, &[rhs]);
+        d.lemma(
+            p.le_congr,
+            &[lhs, next_c, rhs, rhs, fold, refl_rhs, grown],
+        )
+    };
+
+    // `sumRange f 1` IS `add zero (f 0)`, and `Rat.add Rat.zero (natDivSucc 1
+    // 0)` normalises to `1/1` -- the same `Rat.mk` as `ofRat c1`, so `le_refl`
+    // type-checks directly.
+    let c1_c = embed(d, p, c1);
+    let g1 = d.lemma(p.le_refl, &[c1_c]);
+    let g2 = step(d, c1, b1, c2, 1, g1, h1);
+    let g3 = step(d, c2, b2, c3, 2, g2, h2);
+    let g4 = step(d, c3, b3, c4, 3, g3, h3);
+
+    let four_nat = d.num(4);
+    let c4_c = embed(d, p, c4);
+    let shift_hyp = shifted_lower_bound(d, p, c4_c, four_nat, g4);
+    let lower = d.const_app(
+        p.converges_lower_bound_shift,
+        &[four_nat, c4_c, partial_c, pi_half_c, shift_hyp, converges],
+    );
+    // lower : le (ofRat 3/2) piHalf
+
+    let scaled = scale_lower_bound_to_pi(d, p, c4_c, lower);
+    // scaled : le (mul two (ofRat 3/2)) (mul two piHalf)
+
+    // `mul two (ofRat 3/2) ~ ofRat (2 · 3/2)`, whose value normalises to
+    // `Rat.mk 3 1` -- the same value `natDivSucc 3 0` reduces to, so
+    // `of_rat_mul` ascribes directly at `Equiv (mul two (ofRat 3/2))
+    // (ofRat (natDivSucc 3 0))`.
+    let two_c = two(d, p);
+    let (two_r, _, _) = two_normalize(d, p);
+    let three_r = ndiv(d, p, 3, 0);
+    let three_c = embed(d, p, three_r);
+    let split = d.lemma(p.of_rat_mul, &[two_r, c4]);
+    let mul_two_c4 = cmul(d, p, two_c, c4_c);
+    let pi_c = d.kernel().const_(p.pi, vec![]);
+    let refl_pi = d.lemma(p.equiv_refl, &[pi_c]);
+    let mul_two_pi_half = cmul(d, p, two_c, pi_half_c);
+    let value = d.lemma(
+        p.le_congr,
+        &[
+            mul_two_c4,
             three_c,
             mul_two_pi_half,
             pi_c,
-            mul_equiv_three,
+            split,
             refl_pi,
             scaled,
         ],

@@ -6777,6 +6777,8 @@ pub struct CRealPrelude {
     pub pi_half_le_two: NameId,
     /// `CReal.piLeFour : le pi (mul two two)`.
     pub pi_le_four: NameId,
+    /// `CReal.twoLePi : le two pi`.
+    pub two_le_pi: NameId,
     /// `CReal.threeLePi : le (ofRat (Rat.natDivSucc 3 0)) pi`.
     pub three_le_pi: NameId,
 }
@@ -7454,6 +7456,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pi: kernel.name_str(creal, "pi"),
         pi_half_le_two: kernel.name_str(creal, "piHalfLeTwo"),
         pi_le_four: kernel.name_str(creal, "piLeFour"),
+        two_le_pi: kernel.name_str(creal, "twoLePi"),
         three_le_pi: kernel.name_str(creal, "threeLePi"),
     }
 }
@@ -13498,12 +13501,12 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.neg,
             |p: CRealPrelude| p.neg_le_neg,
             |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
             |p: CRealPrelude| p.of_rat_le,
             |p: CRealPrelude| p.of_rat_mul,
             |p: CRealPrelude| p.one,
             |p: CRealPrelude| p.pow,
             |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.rat_index_ratio_le_one,
             |p: CRealPrelude| p.regular_of_scaled_cauchy,
             |p: CRealPrelude| p.speedup,
             |p: CRealPrelude| p.speedup_close,
@@ -13528,6 +13531,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.pi_half_term_nonneg,
             |p: CRealPrelude| p.pi_le_four,
             |p: CRealPrelude| p.three_le_pi,
+            |p: CRealPrelude| p.two_le_pi,
         ],
         run: pi::declare_pi_family,
     },
