@@ -65,7 +65,7 @@ staleness this lane's edit fixes.
   `sturm.rs`) plus a separately-found and fixed wrong `Certified` (the
   `ln(x^2)` f64 sign test). `ratint.rs` retired (mischaracterized, not fixed).
   Weakest open finding re-ranked to `geometry_certify.rs`'s minimality gap.
-- Wrote [ADR-1485](../research/09-decisions/adr-1485-ivt-evt-dominance-recheck-re-ranks-the-distinction-gap-again.md).
+- Wrote [ADR-1485](../../research/09-decisions/adr-1485-ivt-evt-dominance-recheck-re-ranks-the-distinction-gap-again.md).
 - Updated the dominance document in place (new preamble note, §8.1, §9.1,
   a pointer at the stale `cas-certificate=54/56` passage).
 - `python3 scripts/gen-adr-index.py` (0 new duplicates) and
