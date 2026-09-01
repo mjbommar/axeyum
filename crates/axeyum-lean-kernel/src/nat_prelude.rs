@@ -234,6 +234,7 @@ mod permutation;
 mod pow_add_prime;
 mod powsq;
 mod prime_char;
+mod prime_dvd_factorial_lcm;
 mod prime_dvd_mirrors;
 mod primes;
 mod primrec;
@@ -408,6 +409,7 @@ use prime_char::{
     declare_prime_mul_eq_prime_sq_iff, declare_prime_not_coprime_iff_dvd,
     declare_prime_not_prime_pow_all,
 };
+use prime_dvd_factorial_lcm::declare_prime_dvd_factorial_lcm_all;
 use prime_dvd_mirrors::declare_prime_dvd_mirrors_all;
 use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
@@ -1751,6 +1753,32 @@ pub struct NatPrelude {
     /// `gcd_dvd_right` both orderings plus `dvd_gcd`), so `dvd_antisymm`
     /// gives `gcd a b = gcd b a` and the hypothesis transports along it.
     pub coprime_symmetric: NameId,
+    /// `Nat.Prime.coprime_factorial_of_lt : ∀ p n, prime_condition p → Lt n
+    /// p → Eq (gcd p n!) one`. Closes
+    /// `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`. See
+    /// `nat_prelude::prime_dvd_factorial_lcm`.
+    pub prime_coprime_factorial_of_lt: NameId,
+    /// `Nat.Prime.coprime_descFactorial_of_lt_of_le : ∀ p n k,
+    /// prime_condition p → Lt n p → Le k n → Eq (gcd p (n.descFactorial k))
+    /// one`. Closes
+    /// `F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3`. See
+    /// `nat_prelude::prime_dvd_factorial_lcm`.
+    pub prime_coprime_desc_factorial_of_lt_of_le: NameId,
+    /// `Nat.Prime.dvd_factorial : ∀ p n, prime_condition p → Iff (dvd p n!)
+    /// (Le p n)`. Closes `F:ml430-nat-prime-dvd-factorial-5ace903f`. See
+    /// `nat_prelude::prime_dvd_factorial_lcm`.
+    pub prime_dvd_factorial_iff_le: NameId,
+    /// `Nat.Prime.dvd_lcm : ∀ p a b, prime_condition p → Iff (dvd p (lcm a
+    /// b)) (Or (dvd p a) (dvd p b))`. Closes
+    /// `F:ml430-nat-prime-dvd-lcm-237d267c`. See
+    /// `nat_prelude::prime_dvd_factorial_lcm`.
+    pub prime_dvd_lcm_iff: NameId,
+    /// `Nat.Prime.dvd_or_dvd_of_dvd_lcm : ∀ p a b, prime_condition p → dvd p
+    /// (lcm a b) → Or (dvd p a) (dvd p b)` — the forward direction of
+    /// [`Self::prime_dvd_lcm_iff`], cited by name. Closes
+    /// `F:ml430-nat-prime-dvd-or-dvd-of-dvd-lcm-58280948`. See
+    /// `nat_prelude::prime_dvd_factorial_lcm`.
+    pub prime_dvd_or_dvd_of_dvd_lcm: NameId,
     /// `Nat.Coprime.mul_add_mul_ne_mul : ∀ m n a b, Coprime m n → a ≠ 0 → b ≠
     /// 0 → a*m + b*n ≠ m*n`. Closes
     /// `F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70`. See
@@ -5714,6 +5742,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_lt_min_fac: kernel.name_str(nat, "coprime_of_lt_min_fac"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
+            prime_coprime_factorial_of_lt: kernel
+                .name_str(nat, "prime_coprime_factorial_of_lt"),
+            prime_coprime_desc_factorial_of_lt_of_le: kernel
+                .name_str(nat, "prime_coprime_descFactorial_of_lt_of_le"),
+            prime_dvd_factorial_iff_le: kernel.name_str(nat, "prime_dvd_factorial_iff_le"),
+            prime_dvd_lcm_iff: kernel.name_str(nat, "prime_dvd_lcm_iff"),
+            prime_dvd_or_dvd_of_dvd_lcm: kernel.name_str(nat, "prime_dvd_or_dvd_of_dvd_lcm"),
             coprime_mul_add_mul_ne_mul: kernel.name_str(nat, "coprime_mul_add_mul_ne_mul"),
             not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
             coprime_one_left_iff: kernel.name_str(nat, "coprime_one_left_iff"),
@@ -7296,6 +7331,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `ble`/order bridges, all far above. Nothing needs it yet, so it goes
         // last.
         declare_floor_count_all(&mut d, &p)?;
+        // `prime_dvd_factorial_lcm.rs`: needs `Nat.coprime_of_lt_prime`/
+        // `Nat.coprime_symmetric` (`primes.rs`, far above),
+        // `Nat.coprime_mul_of_coprime` (`totient_multiplicative.rs`, far
+        // above), `Nat.dvd_factorial_of_le`/`Nat.factorial_succ` (far
+        // above), `Nat.descFactorial`/`Nat.desc_factorial_succ`
+        // (`declare_desc_factorial_all`, far above), `Nat.euclid_lemma`/
+        // `Nat.gcd_mul_lcm`/`Nat.dvd_lcm_left`/`Nat.dvd_lcm_right` (far
+        // above), and `Nat.prime_not_dvd_one`/`Nat.prime_one_le`
+        // (`declare_prime_dvd_mirrors_all`, just above). Nothing needs it,
+        // so it goes last.
+        declare_prime_dvd_factorial_lcm_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
