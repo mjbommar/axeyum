@@ -471,7 +471,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 261] {
 /// working parts of five of the laws above, and a footprint that leaked into one
 /// of them would leak into the law. They are checked to exactly the same
 /// standard.
-fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
+fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 33] {
     [
         p.sub_nat_nat_succ_succ,
         p.sub_nat_nat_add_add,
@@ -505,6 +505,12 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
         // axiom footprint.
         p.nat_abs_neg_of_nat,
         p.nat_abs_neg,
+        // Base case theorems for Int.fib, added by int-fib-base lane
+        p.fib_zero,
+        p.fib_one,
+        p.fib_two,
+        p.fib_neg_one,
+        p.fib_neg_two,
     ]
 }
 
