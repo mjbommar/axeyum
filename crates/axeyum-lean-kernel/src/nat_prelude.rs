@@ -278,7 +278,6 @@ pub use ops::{NatDev, NatOps, NatState};
 use abundant_deficient::declare_abundant_deficient_all;
 use abundant_deficient_lemmas::declare_abundant_deficient_lemmas_all;
 use add_basics::declare_add_basics;
-use divisor_sum_scale::declare_divisor_sum_scale_all;
 use add_choose_div::declare_add_choose;
 use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factorial;
 use add_factorial_le::{
@@ -342,6 +341,7 @@ use div_mod_lemmas::{
 use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
+use divisor_sum_scale::declare_divisor_sum_scale_all;
 use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
